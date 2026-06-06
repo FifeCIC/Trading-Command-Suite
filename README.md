@@ -45,6 +45,11 @@ npm run dev
 - `npm run lint` — ESLint
 - `npm run check:bundle` — Check bundle budget constraints
 
+## Handoff And Ops
+
+- AmazonQ handoff guide: [docs/AMAZONQ-HANDOFF.md](docs/AMAZONQ-HANDOFF.md)
+- Optional local infra helper (placeholder scaffold): [scripts/setup-local-infra.ps1](scripts/setup-local-infra.ps1)
+
 ## Why Not Create React App / Next.js?
 
 Trading Command Suite is for projects that need:
