@@ -110,6 +110,73 @@
   color: #152749;
 }
 
+.architecture-status-mini-card {
+  border: 1px solid #cfdaeb;
+  border-radius: 12px;
+  background: #f6f9ff;
+  padding: 12px;
+}
+
+.architecture-status-mini-card h4 {
+  margin: 0 0 8px;
+  color: #18305f;
+}
+
+.architecture-live-list {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.architecture-live-list li + li {
+  margin-top: 6px;
+}
+
+.architecture-live-note {
+  margin: 0 0 10px;
+  color: #445171;
+}
+
+.architecture-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+
+.architecture-chip-ok {
+  background: #eaf9ef;
+  color: #146c2e;
+  border-color: #9fddb0;
+}
+
+.architecture-chip-warn {
+  background: #fff7e8;
+  color: #8a5a11;
+  border-color: #f2cf8f;
+}
+
+.architecture-chip-error {
+  background: #ffeff0;
+  color: #8a1f2a;
+  border-color: #efb2b8;
+}
+
+.architecture-chip-info {
+  background: #ebf4ff;
+  color: #194d95;
+  border-color: #b5cff3;
+}
+
+.architecture-chip-neutral {
+  background: #eef2f8;
+  color: #344866;
+  border-color: #c9d5e6;
+}
+
 .architecture-section-header p,
 .architecture-index-shell p {
   margin: 4px 0 0;
