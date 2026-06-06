@@ -1,0 +1,251 @@
+.architecture-page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 12px 8px 24px;
+}
+
+.architecture-controls-bar,
+.architecture-index-shell,
+.architecture-section {
+  margin-bottom: 16px;
+}
+
+.architecture-controls-bar,
+.architecture-index-shell,
+.architecture-card,
+.architecture-status-card,
+.architecture-section {
+  border-radius: 16px;
+  border: 1px solid #d5dde8;
+  background: linear-gradient(160deg, #fcfdff 0%, #eef4ff 100%);
+  box-shadow: 0 12px 30px rgba(17, 35, 73, 0.08);
+}
+
+.architecture-controls-bar,
+.architecture-index-shell,
+.architecture-section {
+  padding: 16px;
+}
+
+.architecture-hero {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.architecture-page .eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  font-size: 12px;
+  color: #785e3f;
+  margin: 0;
+}
+
+.architecture-hero h1 {
+  margin: 4px 0 8px;
+  font-size: 34px;
+  letter-spacing: -0.02em;
+  color: #16213a;
+}
+
+.architecture-subcopy {
+  margin: 0;
+  color: #445171;
+  max-width: 70ch;
+}
+
+.architecture-status-card,
+.architecture-card {
+  padding: 16px;
+}
+
+.architecture-status-card p,
+.architecture-card p,
+.architecture-card li {
+  color: #213157;
+}
+
+.architecture-status-card p {
+  margin: 0 0 8px;
+}
+
+.architecture-grid:last-child {
+  margin-bottom: 0;
+}
+
+.architecture-card-full {
+  margin-bottom: 16px;
+}
+
+.architecture-section-header {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.architecture-section-header h2,
+.architecture-index-shell h2,
+.architecture-card h2,
+.architecture-card h3 {
+  margin-top: 0;
+}
+
+.architecture-section-header h2,
+.architecture-index-shell h2,
+.architecture-card h2 {
+  margin: 0 0 8px;
+  color: #152749;
+}
+
+.architecture-status-card p:last-child {
+  margin-bottom: 0;
+}
+
+.architecture-card h3 {
+  margin-bottom: 12px;
+  color: #152749;
+}
+
+.architecture-section-header p,
+.architecture-index-shell p {
+  margin: 4px 0 0;
+  color: #445171;
+}
+
+.architecture-toggle,
+.architecture-actions button,
+.architecture-index-chip {
+  border: 1px solid #b3bfd3;
+  border-radius: 10px;
+  background: #f8fbff;
+  color: #1f315a;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.architecture-toggle,
+.architecture-actions button {
+  padding: 8px 14px;
+}
+
+.architecture-index-chip {
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.architecture-toggle:hover,
+.architecture-actions button:hover,
+.architecture-index-chip:hover {
+  background: #eef5ff;
+}
+
+.architecture-search {
+  display: grid;
+  gap: 8px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.architecture-search span {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6a7898;
+  font-weight: 700;
+}
+
+.architecture-search input {
+  border: 1px solid #b8c5d8;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #1f315a;
+  background: #fff;
+}
+
+.architecture-controls-bar {
+  display: flex;
+  gap: 14px;
+  align-items: end;
+}
+
+.architecture-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.architecture-index-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.architecture-table-wrap {
+  overflow-x: auto;
+}
+
+.architecture-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+.architecture-table th,
+.architecture-table td {
+  border: 1px solid #d8e0ea;
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+  color: #213157;
+}
+
+.architecture-table th {
+  background: #edf3ff;
+  color: #18305f;
+}
+
+.architecture-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.architecture-card h2 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #152749;
+}
+
+.architecture-card ul,
+.architecture-card ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.architecture-card li + li {
+  margin-top: 8px;
+}
+
+@media (max-width: 920px) {
+  .architecture-hero,
+  .architecture-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .architecture-controls-bar,
+  .architecture-section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .architecture-hero h1 {
+    font-size: 28px;
+  }
+}
