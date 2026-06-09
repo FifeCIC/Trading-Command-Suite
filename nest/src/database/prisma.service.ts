@@ -1,32 +1,45 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { PrismaPg } from '@prisma/adapter-pg';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { Pool } from 'pg';
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
-  private readonly pool: Pool;
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
+  private readonly logger = new Logger(PrismaService.name);
+  private _isAvailable = false;
 
   constructor() {
-    const connectionString = process.env.DATABASE_URL;
+    super();
+  }
 
-    if (!connectionString) {
-      throw new Error('DATABASE_URL is required for Prisma initialization.');
-    }
-
-    const pool = new Pool({ connectionString });
-    const adapter = new PrismaPg(pool);
-
-    super({ adapter });
-
-    this.pool = pool;
+  get isAvailable(): boolean {
+    return this._isAvailable;
   }
 
   async onModuleInit(): Promise<void> {
-    await this.$connect();
+    if (!process.env.DATABASE_URL) {
+      this.logger.warn(
+        'DATABASE_URL not set — Prisma will operate in no-connection mode.',
+      );
+      this._isAvailable = false;
+      return;
+    }
+
+    try {
+      await this.$connect();
+      await this.$queryRaw`SELECT 1`;
+      this._isAvailable = true;
+      this.logger.log('Prisma connected to MySQL and verified.');
+    } catch (error) {
+      this.logger.warn(
+        `Prisma connection or verification failed: ${String(error)}. Operating in no-connection mode.`,
+      );
+      this._isAvailable = false;
+    }
   }
 
   async onModuleDestroy(): Promise<void> {
-    await this.pool.end();
+    await this.$disconnect();
   }
 }

@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { DevtoolsModule } from '@nestjs/devtools-integration';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { QueueModule } from './queue/queue.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { SymbolsModule } from './modules/symbols/symbols.module';
 import { StrategiesModule } from './modules/strategies/strategies.module';
@@ -24,6 +25,7 @@ import { ProvidersModule } from './modules/providers/providers.module';
     DevtoolsModule.register({
       http: process.env.NODE_ENV !== 'production',
     }),
+    QueueModule.forRoot(),
     AuthModule,
     SymbolsModule,
     StrategiesModule,

@@ -1,7 +1,9 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ModeService } from '../../config/mode.service';
 import { ImportJobsService } from '../import-jobs/import-jobs.service';
 import { CheckFreshnessDto } from './dto/check-freshness.dto';
+import { FreshnessService } from './freshness.service';
 import { MarketDataService } from './market-data.service';
 
 @ApiTags('market-data')
@@ -9,14 +11,36 @@ import { MarketDataService } from './market-data.service';
 export class MarketDataController {
   constructor(
     private readonly marketDataService: MarketDataService,
+    private readonly freshnessService: FreshnessService,
     private readonly importJobsService: ImportJobsService,
+    private readonly modeService: ModeService,
   ) {}
+
+  private modeMeta() {
+    const info = this.modeService.getModeInfo();
+    return {
+      mode: info.mode,
+      services: {
+        database: info.database,
+        queue: info.queue,
+        redis: info.redis,
+      },
+    };
+  }
+
+  @Get('freshness')
+  @ApiOperation({ summary: 'Check freshness for all active symbols' })
+  @ApiOkResponse({ description: 'Batch freshness results' })
+  async checkAll(@Query('timeframe') timeframe = '1h', @Query('maxAgeMinutes') maxAgeMinutes?: string) {
+    const maxAge = maxAgeMinutes ? Number(maxAgeMinutes) : undefined;
+    return this.freshnessService.checkAllActive(timeframe, Number.isFinite(maxAge) ? maxAge : undefined);
+  }
 
   @Get('freshness/:symbolId')
   @ApiOperation({ summary: 'Check market data freshness for one symbol and optionally queue import' })
   @ApiOkResponse({ description: 'Freshness result with optional queued run info' })
   async checkFreshness(@Param('symbolId') symbolId: string, @Query() query: CheckFreshnessDto) {
-    const freshness = await this.marketDataService.evaluateFreshness(
+    const freshness = await this.freshnessService.checkOne(
       symbolId,
       query.timeframe,
       query.maxAgeMinutes,
@@ -31,12 +55,16 @@ export class MarketDataController {
       });
 
       return {
+        ...this.modeMeta(),
         ...freshness,
         queuedImport: queued,
       };
     }
 
-    return freshness;
+    return {
+      ...this.modeMeta(),
+      ...freshness,
+    };
   }
 
   @Get('latest/:symbolId')

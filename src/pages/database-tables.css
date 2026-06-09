@@ -1,0 +1,83 @@
+.database-tables-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  color: #e0e0e0;
+}
+
+.page-header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.4rem;
+}
+
+.page-header p {
+  color: #888;
+  margin: 0 0 1.5rem;
+  font-size: 0.85rem;
+}
+
+.page-footer {
+  margin-top: 2rem;
+  font-size: 0.75rem;
+  color: #555;
+}
+
+.hint {
+  color: #ffaa00;
+  margin-top: 0.3rem;
+}
+
+/* --- Table --- */
+
+.tables-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tables-table th {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 2px solid #2a2a2a;
+  color: #888;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tables-table td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid #1a1a1a;
+  font-size: 0.85rem;
+}
+
+.tables-table code {
+  background: #1a1a1a;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  color: #00f5ff;
+  font-size: 0.8rem;
+}
+
+.tables-table .num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: #aaa;
+}
+
+/* --- Shared chips --- */
+
+.chip {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.chip--ok { background: #00ff4120; color: #00ff41; }
+.chip--warn { background: #ffaa0020; color: #ffaa00; }
+.chip--neutral { background: #2a2a2a; color: #888; }
+.chip--error { background: #ff004020; color: #ff0040; }

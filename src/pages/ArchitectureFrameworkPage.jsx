@@ -188,8 +188,14 @@ export default function ArchitectureFrameworkPage() {
     refetchOnWindowFocus: true,
   })
 
-  const providerHealth = Array.isArray(providerHealthQuery.data) ? providerHealthQuery.data : []
-  const recentImportRuns = Array.isArray(importRunsQuery.data) ? importRunsQuery.data : []
+  const providerHealthData = providerHealthQuery.data || {}
+  const importRunsData = importRunsQuery.data || {}
+  
+  const systemMode = providerHealthData.mode || importRunsData.mode || null
+  const systemServices = providerHealthData.services || importRunsData.services || {}
+  
+  const providerHealth = Array.isArray(providerHealthData.providers) ? providerHealthData.providers : Array.isArray(providerHealthData) ? providerHealthData : []
+  const recentImportRuns = Array.isArray(importRunsData.runs) ? importRunsData.runs : Array.isArray(importRunsData) ? importRunsData : []
 
   const providerStatusCounts = useMemo(
     () => countBy(providerHealth, (item) => item.status || 'unknown'),
@@ -260,6 +266,26 @@ export default function ArchitectureFrameworkPage() {
       </section>
 
       <section className="architecture-controls-bar">
+        <div className="architecture-live-status">
+          <span className={`architecture-mode-badge mode-${systemMode || 'unknown'}`}>
+            {systemMode || '...'}
+          </span>
+          <span className="architecture-status-item">
+            DB: <StatusChip label={systemServices.databaseConnected ? 'connected' : systemServices.database ? 'unreachable' : 'off'} tone={systemServices.databaseConnected ? 'ok' : systemServices.database ? 'warn' : 'neutral'} />
+          </span>
+          <span className="architecture-status-item">
+            Queue: <StatusChip label={systemServices.queue ? 'on' : 'off'} tone={systemServices.queue ? 'ok' : 'neutral'} />
+          </span>
+          <span className="architecture-status-item">
+            Redis: <StatusChip label={systemServices.redis ? 'connected' : 'off'} tone={systemServices.redis ? 'ok' : 'neutral'} />
+          </span>
+          <span className="architecture-status-item">
+            Symbols: {providerHealth.length > 0 ? providerHealth.length : '—'}
+          </span>
+          <span className="architecture-status-item">
+            {providerHealthQuery.isFetching ? '⟳ refreshing' : `✓ ${formatDateTime(latestProviderCheck)}`}
+          </span>
+        </div>
         <label className="architecture-search">
           <span>Filter Sections</span>
           <input
@@ -330,6 +356,33 @@ export default function ArchitectureFrameworkPage() {
                   Auto Refresh: {autoRefreshEnabled ? 'On (30s)' : 'Off'}
                 </button>
               </div>
+              {systemMode && (
+                <article className="architecture-status-mini-card architecture-mode-notice">
+                  <h4>System Mode</h4>
+                  <div className="architecture-mode-badge">
+                    <StatusChip 
+                      label={systemMode === 'fallback' ? 'Fallback Mode' : 'Full Mode'} 
+                      tone={systemMode === 'fallback' ? 'warn' : 'ok'}
+                    />
+                  </div>
+                  <ul className="architecture-live-list">
+                    <li>Database: {systemServices.database ? '✓ Connected' : '✗ Not available'}</li>
+                    <li>Queue: {systemServices.queue ? '✓ Enabled' : '✗ Disabled'}</li>
+                    <li>Redis: {systemServices.redis ? '✓ Connected' : '✗ Not available'}</li>
+                  </ul>
+                  {systemMode === 'fallback' && (
+                    <div className="architecture-mode-help">
+                      <p><strong>What this means:</strong></p>
+                      <ul>
+                        <li>{!systemServices.database && '• Database not configured - using in-memory storage'}</li>
+                        <li>{!systemServices.redis && '• Redis not available - queue processing disabled'}</li>
+                        <li>• Demo data shown below</li>
+                      </ul>
+                      <p><strong>Next steps:</strong> Run <code>scripts/setup-local-infra.ps1</code> to install PostgreSQL/Redis</p>
+                    </div>
+                  )}
+                </article>
+              )}
               <div className="architecture-grid architecture-grid-wide">
                 <article className="architecture-status-mini-card">
                   <h4>API Connectivity</h4>

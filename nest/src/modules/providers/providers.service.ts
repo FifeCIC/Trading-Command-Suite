@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { ModeService } from '../../config/mode.service';
 
 type ProviderConfig = {
   id: string;
@@ -33,9 +34,13 @@ const PROVIDERS: ProviderConfig[] = [
 export class ProvidersService {
   private readonly logger = new Logger(ProvidersService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly modeService: ModeService,
+  ) {}
 
   async getHealth() {
+    const modeInfo = this.modeService.getModeInfo();
     let dbRows: Awaited<ReturnType<PrismaService['providerHealth']['findMany']>> = [];
 
     try {
@@ -46,7 +51,14 @@ export class ProvidersService {
 
     const dbByProvider = new Map(dbRows.map((row) => [row.provider.toLowerCase(), row]));
 
-    return PROVIDERS.map((provider) => {
+    return {
+      mode: modeInfo.mode,
+      services: {
+        database: modeInfo.database,
+        queue: modeInfo.queue,
+        redis: modeInfo.redis,
+      },
+      providers: PROVIDERS.map((provider) => {
       const credentialsConfigured = Boolean(process.env[provider.envKey]);
       const row = dbByProvider.get(provider.id);
 
@@ -60,7 +72,8 @@ export class ProvidersService {
         checkedAt: row?.checkedAt?.toISOString() ?? null,
         latencyMs: row?.latencyMs ?? null,
       };
-    });
+    }),
+    };
   }
 
   async updateHealth(provider: string, status: string, message?: string, latencyMs?: number | null) {

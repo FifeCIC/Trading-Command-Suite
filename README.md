@@ -45,9 +45,11 @@ npm run dev
 - `npm run lint` — ESLint
 - `npm run check:bundle` — Check bundle budget constraints
 
-## Handoff And Ops
+## Ops Notes
 
-- AmazonQ handoff guide: [docs/AMAZONQ-HANDOFF.md](docs/AMAZONQ-HANDOFF.md)
+- Central docs map: `G:/My Drive/Project Management/Live/Trading-Command-Suite-Documentation/DOCUMENTATION-INDEX.md`
+- Agent rules: `G:/My Drive/Project Management/Live/Trading-Command-Suite-Documentation/.agent-rules.md`
+- Active execution queue: `G:/My Drive/Project Management/Live/Trading-Command-Suite-Documentation/.agenticmemory/SPRINT.md`
 - Optional local infra helper (placeholder scaffold): [scripts/setup-local-infra.ps1](scripts/setup-local-infra.ps1)
 
 ## Why Not Create React App / Next.js?

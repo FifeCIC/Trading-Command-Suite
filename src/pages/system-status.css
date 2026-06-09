@@ -1,0 +1,220 @@
+.system-status-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  color: #e0e0e0;
+}
+
+.status-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.status-page-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.overall-status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mode-badge {
+  background: #2a2a2a;
+  color: #00f5ff;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-dot .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #666;
+}
+
+.status-dot.ok .dot {
+  background: #00ff41;
+  box-shadow: 0 0 6px #00ff41;
+}
+
+.status-dot.warn .dot {
+  background: #ffaa00;
+  box-shadow: 0 0 6px #ffaa00;
+}
+
+.status-dot.error .dot {
+  background: #ff0040;
+  box-shadow: 0 0 6px #ff0040;
+}
+
+/* --- Grid --- */
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+/* --- Card --- */
+
+.status-card {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.status-card h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: #ccc;
+}
+
+.status-card--ok {
+  border-color: #00ff4133;
+}
+
+.status-card--warn {
+  border-color: #ffaa0033;
+}
+
+.status-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* --- Metric row --- */
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.metric-label {
+  color: #888;
+}
+
+.metric-value {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+/* --- Hint --- */
+
+.status-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: #888;
+  line-height: 1.5;
+}
+
+.status-hint code {
+  background: #2a2a2a;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  color: #00f5ff;
+}
+
+/* --- Chips --- */
+
+.chip {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.chip--ok {
+  background: #00ff4120;
+  color: #00ff41;
+}
+
+.chip--warn {
+  background: #ffaa0020;
+  color: #ffaa00;
+}
+
+.chip--neutral {
+  background: #2a2a2a;
+  color: #888;
+}
+
+/* --- Provider list --- */
+
+.provider-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.provider-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.provider-list li > span:first-child {
+  flex: 1;
+}
+
+/* --- Symbol table --- */
+
+.symbol-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.symbol-table th {
+  text-align: left;
+  color: #888;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.symbol-table td {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.symbol-table strong {
+  color: #00f5ff;
+}
+
+/* --- Footer --- */
+
+.status-footer {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #555;
+}

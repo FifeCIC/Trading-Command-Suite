@@ -1,0 +1,233 @@
+.setup-wizard {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  color: #e0e0e0;
+}
+
+.wizard-header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+}
+
+.wizard-header p {
+  color: #888;
+  margin: 0 0 1.5rem;
+}
+
+/* --- Step chips --- */
+
+.wizard-steps {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.wizard-step-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  background: #1a1a1a;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: border-color 0.2s;
+}
+
+.wizard-step-chip:hover {
+  border-color: #444;
+}
+
+.wizard-step-chip.active {
+  border-color: #00f5ff;
+  color: #e0e0e0;
+}
+
+.wizard-step-chip.done {
+  border-color: #00ff4133;
+}
+
+.wizard-step-chip.done .step-number {
+  background: #00ff4120;
+  color: #00ff41;
+}
+
+.step-number {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #2a2a2a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.wizard-step-chip.active .step-number {
+  background: #00f5ff20;
+  color: #00f5ff;
+}
+
+/* --- Body --- */
+
+.wizard-body h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.15rem;
+}
+
+.wizard-summary {
+  color: #888;
+  margin: 0 0 1.25rem;
+}
+
+/* --- Checks --- */
+
+.wizard-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.wizard-check {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+}
+
+.wizard-check.pass {
+  border-color: #00ff4133;
+}
+
+.wizard-check.fail {
+  border-color: #ff004033;
+}
+
+.wizard-icon {
+  font-size: 1rem;
+  font-weight: 700;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.wizard-check.pass .wizard-icon {
+  background: #00ff4120;
+  color: #00ff41;
+}
+
+.wizard-check.fail .wizard-icon {
+  background: #ff004020;
+  color: #ff0040;
+}
+
+.wizard-check strong {
+  display: block;
+  font-size: 0.85rem;
+}
+
+.wizard-check p {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: #888;
+  line-height: 1.4;
+}
+
+/* --- Result --- */
+
+.wizard-result {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.wizard-result.all-ok {
+  background: #00ff4110;
+  border: 1px solid #00ff4133;
+}
+
+.wizard-result.needs-work {
+  background: #ffaa0010;
+  border: 1px solid #ffaa0033;
+}
+
+.wizard-result h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.wizard-result p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #aaa;
+  line-height: 1.5;
+}
+
+/* --- Action --- */
+
+.wizard-action {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.wizard-action p {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.wizard-action code {
+  display: block;
+  background: #111;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #00f5ff;
+  word-break: break-all;
+}
+
+/* --- Footer --- */
+
+.wizard-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 1rem;
+  border-top: 1px solid #2a2a2a;
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.wizard-footer button {
+  padding: 0.4rem 1rem;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.wizard-footer button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.wizard-footer button:hover:not(:disabled) {
+  border-color: #00f5ff;
+}

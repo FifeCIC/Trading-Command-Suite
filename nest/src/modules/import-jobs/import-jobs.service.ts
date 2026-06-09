@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { ModeService } from '../../config/mode.service';
 
 type EnqueueImportInput = {
   symbolId: string;
@@ -12,7 +13,10 @@ type EnqueueImportInput = {
 export class ImportJobsService {
   private readonly logger = new Logger(ImportJobsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly modeService: ModeService,
+  ) {}
 
   async enqueueImport(input: EnqueueImportInput): Promise<{ runId: string; queueJobId: string }> {
     const symbol = await this.prisma.symbol.findUnique({ where: { id: input.symbolId } });
@@ -39,8 +43,9 @@ export class ImportJobsService {
   }
 
   async listRecent(limit = 20) {
+    const modeInfo = this.modeService.getModeInfo();
     try {
-      return await this.prisma.importRun.findMany({
+      const runs = await this.prisma.importRun.findMany({
         orderBy: [{ requestedAt: 'desc' }],
         take: limit,
         include: {
@@ -53,9 +58,26 @@ export class ImportJobsService {
           },
         },
       });
+      return {
+        mode: modeInfo.mode,
+        services: {
+          database: modeInfo.database,
+          queue: modeInfo.queue,
+          redis: modeInfo.redis,
+        },
+        runs,
+      };
     } catch (error) {
       this.logger.warn(`Database unavailable while loading import runs: ${String(error)}`);
-      return [];
+      return {
+        mode: modeInfo.mode,
+        services: {
+          database: modeInfo.database,
+          queue: modeInfo.queue,
+          redis: modeInfo.redis,
+        },
+        runs: [],
+      };
     }
   }
 }

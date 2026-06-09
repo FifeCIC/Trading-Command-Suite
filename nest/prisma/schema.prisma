@@ -8,15 +8,16 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 model Symbol {
-  id        String   @id @default(uuid())
-  ticker    String   @unique
-  name      String
-  exchange  String
-  type      String
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  ticker    String   @unique @db.VarChar(20)
+  name      String   @db.VarChar(200)
+  exchange  String   @db.VarChar(50)
+  type      String   @db.VarChar(50)
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -28,9 +29,9 @@ model Symbol {
 }
 
 model Strategy {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  name        String   @db.VarChar(200)
+  description String?  @db.Text
   config      Json
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -42,10 +43,10 @@ model Strategy {
 }
 
 model Directive {
-  id         String   @id @default(uuid())
-  strategyId String
-  name       String
-  type       String
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  strategyId String   @db.VarChar(36)
+  name       String   @db.VarChar(200)
+  type       String   @db.VarChar(50)
   weight     Float
   config     Json
   active     Boolean  @default(true)
@@ -58,12 +59,12 @@ model Directive {
 }
 
 model Score {
-  id        String   @id @default(uuid())
-  symbolId  String
-  strategyId String
-  value     Float
-  breakdown Json
-  timestamp DateTime @default(now())
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  symbolId   String   @db.VarChar(36)
+  strategyId String   @db.VarChar(36)
+  value      Float
+  breakdown  Json
+  timestamp  DateTime @default(now())
 
   symbol   Symbol   @relation(fields: [symbolId], references: [id], onDelete: Cascade)
   strategy Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
@@ -73,14 +74,14 @@ model Score {
 }
 
 model Signal {
-  id         String   @id @default(uuid())
-  symbolId   String
-  strategyId String
-  type       String
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  symbolId   String   @db.VarChar(36)
+  strategyId String   @db.VarChar(36)
+  type       String   @db.VarChar(50)
   strength   Float
   price      Float
   reason     Json
-  status     String
+  status     String   @db.VarChar(50)
   createdAt  DateTime @default(now())
 
   symbol   Symbol   @relation(fields: [symbolId], references: [id], onDelete: Cascade)
@@ -91,10 +92,10 @@ model Signal {
 }
 
 model MarketBar {
-  id         String   @id @default(uuid())
-  symbolId   String
-  provider   String
-  timeframe  String
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  symbolId   String   @db.VarChar(36)
+  provider   String   @db.VarChar(50)
+  timeframe  String   @db.VarChar(20)
   timestamp  DateTime
   open       Float
   high       Float
@@ -110,16 +111,16 @@ model MarketBar {
 }
 
 model ImportRun {
-  id          String    @id @default(uuid())
-  symbolId    String
-  provider    String
-  timeframe   String
-  status      String
-  source      String
+  id          String    @id @default(uuid()) @db.VarChar(36)
+  symbolId    String    @db.VarChar(36)
+  provider    String    @db.VarChar(50)
+  timeframe   String    @db.VarChar(20)
+  status      String    @db.VarChar(50)
+  source      String    @db.VarChar(100)
   requestedAt DateTime  @default(now())
   startedAt   DateTime?
   completedAt DateTime?
-  error       String?
+  error       String?   @db.Text
 
   symbol Symbol @relation(fields: [symbolId], references: [id], onDelete: Cascade)
 
@@ -128,14 +129,14 @@ model ImportRun {
 }
 
 model ProviderHealth {
-  id            String   @id @default(uuid())
-  provider      String   @unique
-  status        String
-  message       String?
+  id            String   @id @default(uuid()) @db.VarChar(36)
+  provider      String   @unique @db.VarChar(50)
+  status        String   @db.VarChar(50)
+  message       String?  @db.Text
   latencyMs     Int?
   checkedAt     DateTime @default(now())
   credentialsOk Boolean  @default(false)
-  endpoint      String?
+  endpoint      String?  @db.VarChar(500)
 
   @@index([status, checkedAt])
 }

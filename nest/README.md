@@ -6,7 +6,7 @@ NestJS backend for the Trading Command Suite application, providing SEES (Scorin
 
 ### Prerequisites
 - Node.js 18+ and npm
-- Optional: PostgreSQL 14+ (for persistent data)
+- Optional: MySQL (for persistent data — WAMP already provides this)
 - Optional: Redis 6+ (for queue management)
 
 ### Local Development (Fallback Mode)
@@ -26,14 +26,26 @@ Backend will start on **http://localhost:3201**
 Test the endpoints used by the Architecture Framework page:
 
 ```bash
-# Version check
+# Version check (includes mode info)
 curl http://localhost:3201/api/version
 
-# Provider health
+# Provider health (includes mode info)
 curl http://localhost:3201/api/providers/health
 
-# Import runs (last 5)
+# Import runs (includes mode info)
 curl http://localhost:3201/api/imports/runs?limit=5
+```
+
+Expected response includes `mode` field:
+```json
+{
+  "mode": "fallback",
+  "services": {
+    "database": false,
+    "queue": false,
+    "redis": false
+  }
+}
 ```
 
 ## Project Structure
@@ -87,21 +99,34 @@ Create `.env` file in the `nest/` directory:
 PORT=3201
 NODE_ENV=development
 
-# Database (Optional - falls back to in-memory)
-DATABASE_URL=postgresql://user:password@localhost:5432/tradingcs
+# Database (Optional - falls back to no-connection mode)
+DATABASE_URL=mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs
 
 # Redis (Optional - queue disabled without it)
 REDIS_HOST=localhost
 REDIS_PORT=6379
 
-# Queue Mode
-QUEUE_MODE=off                    # off | local
-
-# Feature Flags
-ENABLE_DATABASE=false             # Enable PostgreSQL
-ENABLE_REDIS=false                # Enable Redis queues
-ENABLE_MT5=false                  # Enable MT5 integration
+# Queue Mode (Required for queue processing)
+QUEUE_MODE=off                    # off (default) | local
+# off = no Redis connection, no queue initialization
+# local = enable queue if Redis is available
 ```
+
+### Queue Mode Configuration
+
+**QUEUE_MODE=off** (Default):
+- No Redis connection attempted
+- No BullMQ initialization
+- No background job processing
+- Import jobs logged but not queued
+- Minimal resource usage for local development
+
+**QUEUE_MODE=local**:
+- Redis connection required (checks REDIS_HOST)
+- BullMQ queue initialization
+- Background job processing enabled
+- Import jobs queued and processed
+- Requires Redis running on configured port
 
 ### Local Mode vs Full Mode
 
@@ -141,11 +166,23 @@ To change the backend port from 3201:
 
 ### Core Endpoints
 
+All responses include system mode information:
+```json
+{
+  "mode": "fallback" | "full",
+  "services": {
+    "database": boolean,
+    "queue": boolean,
+    "redis": boolean
+  }
+}
+```
+
 | Endpoint | Method | Description | Fallback Mode |
 |----------|--------|-------------|---------------|
-| `/api/version` | GET | API version and status | ✅ Yes |
-| `/api/providers/health` | GET | Provider health status | ✅ Yes (demo) |
-| `/api/imports/runs` | GET | Recent import runs | ✅ Yes (demo) |
+| `/api/version` | GET | API version and mode | ✅ Yes |
+| `/api/providers/health` | GET | Provider health + mode | ✅ Yes (demo) |
+| `/api/imports/runs` | GET | Recent import runs + mode | ✅ Yes (demo) |
 | `/api/symbols` | GET | Symbol list | ✅ Yes (in-memory) |
 | `/api/strategies` | GET | Trading strategies | ✅ Yes (in-memory) |
 | `/api/scoring/execute` | POST | Execute scoring | ✅ Yes (in-memory) |
@@ -156,11 +193,54 @@ To change the backend port from 3201:
 - `signal:generated` - Trading signal generated
 - `import:completed` - Data import finished
 
-## Database Setup (Optional)
+## Database Setup
 
-### Install PostgreSQL
+The backend uses **MySQL** via Prisma 5. Your WAMP stack already provides MySQL 9.1.
 
-See `../scripts/setup-local-infra.ps1` for automated setup.
+### First-Time Setup (already done for this machine)
+
+```bash
+# 1. Create the database and user (run once via WAMP MySQL CLI)
+"C:\wamp64\bin\mysql\mysql9.1.0\bin\mysql.exe" -u root -e "CREATE DATABASE IF NOT EXISTS tradingcs CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; CREATE USER IF NOT EXISTS 'tradingcs'@'localhost' IDENTIFIED BY 'tradingcs_dev_2026'; GRANT ALL PRIVILEGES ON tradingcs.* TO 'tradingcs'@'localhost'; GRANT CREATE ON *.* TO 'tradingcs'@'localhost'; FLUSH PRIVILEGES;"
+
+# 2. Push schema to database
+cd nest
+npx prisma db push
+
+# 3. Seed test data
+npx prisma db seed
+```
+
+### Credentials (local dev only)
+
+| Setting | Value |
+|---|---|
+| Host | localhost:3306 |
+| Database | tradingcs |
+| User | tradingcs |
+| Password | tradingcs_dev_2026 |
+| DATABASE_URL | `mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs` |
+
+### Prisma Version Note
+
+We use **Prisma 5.22.0**. Prisma 7+ requires driver adapters for MySQL. To upgrade later:
+
+1. Install a MySQL adapter: `npm install @prisma/adapter-libsql @libsql/client`
+2. Update `PrismaService` constructor to pass the adapter
+3. One dependency, one constructor change — not a major refactor
+
+This is tracked here intentionally so it doesn't become a forgotten surprise.
+
+### Repeat Installation
+
+To set up from scratch on a new machine:
+
+1. Install WAMP (provides MySQL)
+2. Run the SQL commands in "First-Time Setup" above
+3. `cd nest && npm install && npm run start:dev`
+4. Check http://localhost:3201/api/version confirms `databaseConnected: true`
+
+No other services are required for basic operation.
 
 Manual setup:
 ```bash
@@ -182,6 +262,13 @@ Core entities:
 
 ## Queue Setup (Optional)
 
+### Prerequisites
+
+Queue processing requires:
+1. Redis 6+ installed and running
+2. `REDIS_HOST` configured in `.env`
+3. `QUEUE_MODE=local` in `.env`
+
 ### Install Redis
 
 See `../scripts/setup-local-infra.ps1` for automated setup.
@@ -193,20 +280,47 @@ choco install memurai-developer
 
 # Start Redis
 redis-server
+
+# Verify connection
+redis-cli ping
 ```
 
 ### Enable Queue Processing
 
 Update `.env`:
 ```bash
+REDIS_HOST=localhost
+REDIS_PORT=6379
 QUEUE_MODE=local
-ENABLE_REDIS=true
 ```
 
-Queue jobs:
-- `fetch-market-data` - Import market data
-- `calculate-scores` - Run scoring engine
-- `generate-signals` - Generate trading signals
+Restart backend:
+```bash
+npm run start:dev
+```
+
+Check startup logs:
+```
+[QueueConfigService] Queue mode: local
+[QueueConfigService] Queue enabled: true
+[QueueConfigService] Redis configured: true
+```
+
+### Queue Jobs
+
+When `QUEUE_MODE=local`:
+- `fetch-market-data` - Import market data from providers
+- `calculate-scores` - Run scoring engine on symbols
+- `generate-signals` - Generate trading signals from scores
+
+### Disable Queue Processing
+
+To disable without uninstalling Redis:
+```bash
+QUEUE_MODE=off
+```
+
+Backend will skip Redis connection and queue initialization entirely.
 
 ## Architecture Integration
 
@@ -219,7 +333,7 @@ This backend integrates with the **Architecture Framework** page in the React fr
 
 Endpoint contracts are documented in:
 - `../docs/data/DATA-ARCHITECTURE.md`
-- `../docs/AMAZONQ-HANDOFF.md`
+- `G:/My Drive/Project Management/Live/Trading-Command-Suite-Documentation/DOCUMENTATION-INDEX.md`
 
 ## Development Workflow
 
@@ -291,7 +405,26 @@ Backend automatically falls back to in-memory mode if PostgreSQL is unavailable.
 
 ### Redis Connection Failed
 
-Queue processing is disabled if Redis is unavailable. Set:
+Queue processing is disabled if Redis is unavailable. Check startup logs:
+
+```
+[QueueConfigService] Queue mode: off
+[QueueConfigService] Queue processing is disabled. Set QUEUE_MODE=local to enable.
+```
+
+Or if mode is local but Redis is missing:
+
+```
+[QueueConfigService] QUEUE_MODE=local but Redis configuration is missing. Queue will not initialize.
+```
+
+To fix:
+1. Verify Redis is running: `redis-cli ping` (should return PONG)
+2. Check `.env` has `REDIS_HOST=localhost`
+3. Set `QUEUE_MODE=local`
+4. Restart backend
+
+To disable queue without errors:
 ```bash
 QUEUE_MODE=off
 ```
@@ -309,7 +442,7 @@ Check frontend API base URL configuration.
 
 - **Frontend**: `../README.md` (React app)
 - **Architecture**: `../docs/README.md`
-- **Handoff Plan**: `../docs/AMAZONQ-HANDOFF.md`
+- **Execution Rules**: `G:/My Drive/Project Management/Live/Trading-Command-Suite-Documentation/.agent-rules.md`
 - **Exit WordPress**: `G:\My Drive\Project Management\Live\TradePress-Documentation\exit-wordpress\`
 
 ## Technology Stack

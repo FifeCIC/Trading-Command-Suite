@@ -7,7 +7,13 @@ import { FEATURE_FLAGS } from './core/features/flags';
 import { withDevTag } from './dev-runtime/tags';
 import { getPerformanceSnapshot, startPerformanceMonitoring } from './performance/monitor';
 import ArchitectureFrameworkPage from './pages/ArchitectureFrameworkPage';
+import DatabaseTablesPage from './pages/DatabaseTablesPage';
 import SeesLiveStackMockPage from './pages/SeesLiveStackMockPage';
+import SetupWizardPage from './pages/SetupWizardPage';
+import SettingsPage from './pages/SettingsPage';
+import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
+import SystemStatusPage from './pages/SystemStatusPage';
+import ThemePage from './pages/ThemePage';
 import { useUiStore } from './stores/useUiStore';
 import { useThemeRuntime } from './theme/useThemeRuntime';
 
@@ -24,19 +30,36 @@ const NAV_STRUCTURE = {
     { id: 'runtime', label: 'Dev Runtime' }
   ],
   trading: [
-    { id: 'sees-live-stack', label: 'SEES Live Stack' }
+    { id: 'sees-live-stack', label: 'SEES Live Stack' },
+    { id: 'symbols-browser', label: 'Symbols' }
+  ],
+  data: [
+    { id: 'database-tables', label: 'Tables' }
+  ],
+  theme: [
+    { id: 'theme-packs', label: 'Theme Packs' }
   ],
   ops: [
+    { id: 'setup', label: 'Setup' },
     { id: 'status', label: 'System Status' },
     { id: 'analytics', label: 'Analytics' },
     { id: 'security', label: 'Security' }
   ],
   community: [
     { id: 'about', label: 'About' },
+    { id: 'settings', label: 'Settings' },
     { id: 'roadmap', label: 'Roadmap' },
     { id: 'support', label: 'Support' }
   ]
 };
+
+const THEME_CARDS = [
+  { id: 'core', name: 'Core', description: 'Clean, neutral palette.', colors: ['#f4f7fb', '#0ea5a6', '#0f172a'] },
+  { id: 'oceanic', name: 'Oceanic', description: 'Deep blue with teal.', colors: ['#0f1b2e', '#00d9ff', '#d6e8ff'] },
+  { id: 'scifi', name: 'Sci-Fi', description: 'Dark navy, cyan neon.', colors: ['#0a1428', '#00d9ff', '#c1d0e0'] },
+  { id: 'terminal', name: 'Terminal', description: 'Black, neon green.', colors: ['#0a0a0a', '#00ff41', '#e0e0e0'] },
+  { id: 'void', name: 'Void', description: 'Black, neon purple.', colors: ['#08080d', '#8a50ff', '#d4d0e8'] },
+];
 
 function BadgePill({ label, status = 'neutral' }) {
   return <span className={`badge-pill badge-${status}`}>{label}</span>;
@@ -345,28 +368,27 @@ export default function App() {
     }
 
     if (secondaryView === 'status') {
-      return (
-        <div className="content-grid">
-          <ContentCard title="Ready">
-            <p>
-              <strong>{readiness.level}</strong>
-            </p>
-            <p>{readiness.summary}</p>
-          </ContentCard>
-          <ContentCard title="API Connection">
-            {healthQuery.isLoading && <p>Checking API health...</p>}
-            {healthQuery.error && <p className="error">API not reachable yet. {healthQuery.error.message}</p>}
-            {healthQuery.data && <p className="ok">Connected to API version: {healthQuery.data.version || 'unknown'}</p>}
-          </ContentCard>
-          <ContentCard title="Platform Health">
-            <p>Theme policy: {policyMeta.policyEnforced ? 'enforced' : 'not enforced'}</p>
-            <p>Fail-closed: {policyMeta.failClosed ? 'on' : 'off'}</p>
-            <p>
-              Blocked modules: {(policyMeta.blockedPacks || []).length + (policyMeta.blockedAdapters || []).length}
-            </p>
-          </ContentCard>
-        </div>
-      );
+      return <SystemStatusPage />;
+    }
+
+    if (secondaryView === 'setup') {
+      return <SetupWizardPage />;
+    }
+
+    if (secondaryView === 'settings') {
+      return <SettingsPage />;
+    }
+
+    if (secondaryView === 'symbols-browser') {
+      return <SymbolsBrowserPage />;
+    }
+
+    if (secondaryView === 'database-tables') {
+      return <DatabaseTablesPage />;
+    }
+
+    if (secondaryView === 'theme-packs') {
+      return <ThemePage />;
     }
 
     if (secondaryView === 'analytics') {
@@ -511,6 +533,68 @@ export default function App() {
             </button>
           ))}
         </div>
+
+        {primaryArea === 'theme' && (
+          <>
+            <div className="rail-block">
+              <p className="muted">Mode</p>
+              <div className="inline-actions">
+                <button type="button" className={themeMode === 'light' ? 'cta' : ''} onClick={() => setThemeMode('light')}>
+                  Light
+                </button>
+                <button type="button" className={themeMode === 'dark' ? 'cta' : ''} onClick={() => setThemeMode('dark')}>
+                  Dark
+                </button>
+              </div>
+            </div>
+
+            <div className="rail-block">
+              <p className="muted">Theme Pack</p>
+              <div className="rail-links">
+                {availablePacks.map((packId) => (
+                  <button
+                    key={packId}
+                    type="button"
+                    className={themePack === packId ? 'nav-active' : ''}
+                    onClick={() => {
+                      setThemePack(packId);
+                      pushActivity('THEME', `Pack switched to ${packId}`);
+                    }}
+                  >
+                    {packId}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rail-block preview-cards-rail">
+              <p className="muted">Preview</p>
+              <div className="preview-cards">
+                {THEME_CARDS.filter((c) => availablePacks.includes(c.id)).map((card) => (
+                  <button
+                    key={card.id}
+                    type="button"
+                    className={`preview-card-rail ${themePack === card.id ? 'active' : ''}`}
+                    onClick={() => { setThemePack(card.id); pushActivity('THEME', `Preview clicked ${card.id}`); }}
+                  >
+                    <div className="preview-card-swatch" style={{ background: card.colors[0] }}>
+                      <span className="preview-card-accent" style={{ background: card.colors[1] }} />
+                      <span className="preview-card-line" style={{ background: card.colors[2], opacity: 0.3 }} />
+                      <span className="preview-card-line short" style={{ background: card.colors[2], opacity: 0.2 }} />
+                    </div>
+                    <span className="preview-card-name">{card.name}</span>
+                    <span className="preview-card-desc">{card.description}</span>
+                    <div className="preview-card-bars">
+                      {card.colors.map((c) => (
+                        <span key={c} className="preview-card-bar" style={{ background: c }} title={c} />
+                      ))}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </aside>
 
       <main className="main-stage" {...withDevTag('main.stage', { area: secondaryView })}>
@@ -529,25 +613,15 @@ export default function App() {
               Dark
             </button>
           </div>
-        </div>
-
-        <div className="rail-block">
-          <p className="muted">Theme Pack</p>
-          <div className="rail-links">
-            {availablePacks.map((packId) => (
-              <button
-                key={packId}
-                type="button"
-                className={themePack === packId ? 'nav-active' : ''}
-                onClick={() => {
-                  setThemePack(packId);
-                  pushActivity('THEME', `Pack switched to ${packId}`);
-                }}
-              >
-                {packId}
-              </button>
-            ))}
-          </div>
+          <p className="muted" style={{ marginTop: 6 }}>Pack: <strong>{themePack}</strong></p>
+          <button
+            type="button"
+            className="cta"
+            style={{ marginTop: 4 }}
+            onClick={() => { setPrimaryArea('theme'); setSecondaryView('theme-packs'); }}
+          >
+            Open Theme Page
+          </button>
         </div>
 
         <div className="rail-block">

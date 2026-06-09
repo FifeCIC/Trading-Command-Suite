@@ -1,0 +1,140 @@
+.symbols-browser {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  color: #e0e0e0;
+}
+
+.page-header h1 {
+  margin: 0 0 0.2rem;
+  font-size: 1.4rem;
+}
+
+.page-header p {
+  color: #888;
+  margin: 0 0 1.25rem;
+  font-size: 0.85rem;
+}
+
+/* --- Layout --- */
+
+.symbols-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+/* --- Table --- */
+
+.symbols-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.symbols-table th {
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 2px solid #2a2a2a;
+  color: #888;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.symbols-table td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid #1a1a1a;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.symbols-table tr:hover td {
+  background: #ffffff06;
+}
+
+.symbols-table .row-selected td {
+  background: #00f5ff0a;
+  border-left: 2px solid #00f5ff;
+}
+
+.symbols-table strong {
+  color: #00f5ff;
+}
+
+/* --- Detail panel --- */
+
+.symbol-detail {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 1.25rem;
+}
+
+.symbol-detail h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #00f5ff;
+}
+
+.symbol-name {
+  margin: 0.1rem 0 1rem;
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.detail-label {
+  font-size: 0.7rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.detail-value {
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+.detail-section {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #2a2a2a;
+}
+
+.detail-section h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* --- Chips (shared) --- */
+
+.chip {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.chip--ok { background: #00ff4120; color: #00ff41; }
+.chip--warn { background: #ffaa0020; color: #ffaa00; }
+.chip--neutral { background: #2a2a2a; color: #888; }
+.chip--error { background: #ff004020; color: #ff0040; }
