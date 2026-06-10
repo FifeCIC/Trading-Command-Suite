@@ -23,6 +23,36 @@
   box-sizing: border-box;
 }
 
+/* --- Breadcrumbs --- */
+
+.breadcrumbs {
+  padding: 0 0 0.5rem;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.breadcrumbs a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+  text-decoration: underline;
+}
+
+.breadcrumbs-sep {
+  color: var(--line);
+  font-size: 0.9rem;
+}
+
+.breadcrumbs-current {
+  color: var(--ink);
+  font-weight: 600;
+}
+
 body {
   margin: 0;
   font-family: var(--font-body);
@@ -358,6 +388,20 @@ button.nav-active {
   align-items: center;
   gap: 0.4rem;
   flex-wrap: wrap;
+}
+
+.topbar-theme-toggle {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.15rem 0.4rem;
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: border-color 0.15s;
+}
+.topbar-theme-toggle:hover {
+  border-color: var(--accent);
 }
 
 .topbar-menu-wrap {

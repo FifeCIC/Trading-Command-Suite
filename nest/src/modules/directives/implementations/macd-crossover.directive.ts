@@ -24,6 +24,7 @@ export class MacdCrossoverDirective implements IDirective {
   readonly name = 'MACD Bullish Crossover';
   readonly description =
     'Scores symbols where MACD line crosses above the signal line.';
+  readonly priority = 80;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map((b) => b.close);
@@ -32,6 +33,7 @@ export class MacdCrossoverDirective implements IDirective {
         score: 0,
         confidence: 0.1,
         reason: `Insufficient data: need ${MIN_BARS} bars, have ${closes.length}.`,
+        signalClass: 'neutral',
       };
     }
 
@@ -42,6 +44,7 @@ export class MacdCrossoverDirective implements IDirective {
         score: 0,
         confidence: 0.1,
         reason: 'Not enough MACD data for crossover detection.',
+        signalClass: 'neutral',
       };
     }
 
@@ -65,6 +68,7 @@ export class MacdCrossoverDirective implements IDirective {
         score: Math.min(100, Math.round(score)),
         confidence: Math.min(0.95, 0.7 + strength * 0.2),
         reason: `Fresh bullish crossover. Histogram: ${previousHist.toFixed(3)} → ${currentHist.toFixed(3)}.`,
+        signalClass: 'bullish',
       };
     }
 
@@ -78,6 +82,7 @@ export class MacdCrossoverDirective implements IDirective {
         score: Math.round(score),
         confidence: 0.55,
         reason: `MACD bullish and accelerating. Histogram: ${currentHist.toFixed(3)}.`,
+        signalClass: 'bullish',
       };
     }
 
@@ -89,6 +94,7 @@ export class MacdCrossoverDirective implements IDirective {
         score,
         confidence: 0.3,
         reason: `MACD bearish${narrowing ? ' but narrowing' : ''}. Histogram: ${currentHist.toFixed(3)}.`,
+        signalClass: 'bearish',
       };
     }
 
@@ -96,6 +102,7 @@ export class MacdCrossoverDirective implements IDirective {
       score: 30,
       confidence: 0.4,
       reason: `MACD neutral. Histogram: ${currentHist.toFixed(3)}.`,
+      signalClass: 'neutral',
     };
   }
 }

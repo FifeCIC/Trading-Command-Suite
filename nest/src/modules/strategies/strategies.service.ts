@@ -1,14 +1,10 @@
 /**
- * PLACEHOLDER — implement per SPRINT.md Task 5.
- *
  * Strategies Service
  * ==================
  * Combines directive scores into weighted strategy aggregate scores.
- * - Strategy model includes directive weights (must sum to 100%).
- * - calculateScore() aggregates weighted directive scores.
- * - Response includes breakdown per directive.
- *
- * Contract: input is a map of directiveId → DirectiveResult from the directives service.
+ * - Canonical weights from docs/CANONICAL-DIRECTIVE-REFERENCE.md
+ * - totalScore = Σ(directive.score × weight / 100), capped 0-100
+ * - confidence = weighted average of directive confidences
  */
 
 import { Injectable, Logger } from '@nestjs/common';
@@ -36,9 +32,18 @@ export interface StrategyScore {
   confidence: number; // 0–1, weighted average
   breakdown: ScoreBreakdownItem[];
   timeframe: string;
-  guidance: string; // e.g. "short-term buy signal"
+  guidance: string;
   timestamp: string;
 }
+
+/** Canonical directive names for breakdown display */
+const DIRECTIVE_NAMES: Record<string, string> = {
+  'rsi-oversold': 'RSI Oversold Reversion',
+  'macd-crossover': 'MACD Bullish Crossover',
+  'ema-structure': 'Price Above EMA Structure',
+  'atr-dip': 'ATR Normalized Dip',
+  'volume-confirmation': 'Volume Confirmation',
+};
 
 @Injectable()
 export class StrategiesService {
@@ -46,30 +51,67 @@ export class StrategiesService {
 
   constructor(private readonly modeService: ModeService) {}
 
-  /**
-   * Aggregate directive results into a strategy score.
-   * PLACEHOLDER — returns a stub result.
-   */
   calculateScore(
-    _symbolId: string,
-    _symbolTicker: string,
-    _directiveResults: Map<string, DirectiveResult>,
-    _weights: StrategyDirectiveWeight[],
-    _timeframe: string,
+    symbolId: string,
+    symbolTicker: string,
+    directiveResults: Map<string, DirectiveResult>,
+    weights: StrategyDirectiveWeight[],
+    timeframe: string,
   ): StrategyScore {
-    const modeInfo = this.modeService.getModeInfo();
-    this.logger.debug('StrategiesService.calculateScore stub — PLACEHOLDER.');
+    const breakdown: ScoreBreakdownItem[] = [];
+    let totalScore = 0;
+    let totalConfidence = 0;
+    let weightSum = 0;
+
+    for (const { directiveId, weight } of weights) {
+      const result = directiveResults.get(directiveId);
+      if (!result) {
+        this.logger.warn(`Directive '${directiveId}' missing from results for ${symbolTicker} — skipping.`);
+        continue;
+      }
+
+      const contribution = (result.score * weight) / 100;
+      totalScore += contribution;
+      totalConfidence += result.confidence * weight;
+      weightSum += weight;
+
+      breakdown.push({
+        directiveId,
+        name: DIRECTIVE_NAMES[directiveId] ?? directiveId,
+        rawScore: result.score,
+        weight,
+        contribution: Number(contribution.toFixed(1)),
+      });
+    }
+
+    const finalScore = Math.min(100, Math.max(0, Number(totalScore.toFixed(1))));
+    const avgConfidence = weightSum > 0 ? Number((totalConfidence / weightSum).toFixed(2)) : 0;
+
+    const guidance = this.buildGuidance(finalScore, timeframe, symbolTicker);
 
     return {
-      strategyId: 'placeholder',
-      strategyName: 'PLACEHOLDER Strategy',
-      symbolId: _symbolId,
-      totalScore: 0,
-      confidence: 0,
-      breakdown: [],
-      timeframe: _timeframe,
-      guidance: `Mode: ${modeInfo.mode}. Strategy scoring not yet implemented (PLACEHOLDER).`,
+      strategyId: 'conviction-dip-accumulation',
+      strategyName: 'Conviction Dip Accumulation',
+      symbolId,
+      totalScore: finalScore,
+      confidence: avgConfidence,
+      breakdown,
+      timeframe,
+      guidance,
       timestamp: new Date().toISOString(),
     };
+  }
+
+  private buildGuidance(score: number, timeframe: string, ticker: string): string {
+    if (score >= 60) {
+      return `Entry signal for ${ticker} on ${timeframe} timeframe. Score ${score}/100 exceeds entry threshold.`;
+    }
+    if (score >= 40) {
+      return `Watchlist candidate: ${ticker} on ${timeframe}. Score ${score}/100 — monitor for improvement.`;
+    }
+    if (score >= 25) {
+      return `Defensive hold: ${ticker} on ${timeframe}. Score ${score}/100 — no new entries.`;
+    }
+    return `Active concern: ${ticker} on ${timeframe}. Score ${score}/100 — review position.`;
   }
 }

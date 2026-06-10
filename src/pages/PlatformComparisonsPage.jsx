@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import LoadingSkeleton from '../components/LoadingSkeleton'
 import './trading-platforms.css'
 
 const STORAGE_KEY = 'tcs:comparisons'
@@ -84,7 +85,15 @@ export default function PlatformComparisonsPage() {
   }, [])
 
   if (!comparisonSeed) {
-    return <div className="trading-platforms-page"><p>Loading comparison data...</p></div>
+    return (
+      <div className="trading-platforms-page">
+        <header className="tp-page-header">
+          <h1>Platform Comparisons</h1>
+        </header>
+        <LoadingSkeleton variant="card" count={3} />
+        <LoadingSkeleton variant="table" rows={6} cols={5} className="ls-spacer-top" />
+      </div>
+    )
   }
 
   return <PlatformComparisonsInner seed={comparisonSeed} />

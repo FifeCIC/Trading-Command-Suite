@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { analytics, trackAppView, trackSupportClick } from './analytics';
+import Breadcrumbs from './components/Breadcrumbs';
 import DevOverlay from './components/DevOverlay';
+import ErrorBoundary from './components/ErrorBoundary';
 import { apiGet } from './core/api/client';
 import { FEATURE_FLAGS } from './core/features/flags';
 import { withDevTag } from './dev-runtime/tags';
@@ -10,11 +13,13 @@ import ArchitectureFrameworkPage from './pages/ArchitectureFrameworkPage';
 import ActiveSymbolsPage from './pages/ActiveSymbolsPage';
 import ApiEndpointsPage from './pages/ApiEndpointsPage';
 import DatabaseTablesPage from './pages/DatabaseTablesPage';
+import DataStatusPage from './pages/DataStatusPage';
 import DirectivesManagerPage from './pages/DirectivesManagerPage';
 import DirectivesStatusPage from './pages/DirectivesStatusPage';
 import ScoringOverviewPage from './pages/ScoringOverviewPage';
 import EventsCalendarPage from './pages/EventsCalendarPage';
 import ExecutionQueuePage from './pages/ExecutionQueuePage';
+import ImportJobsPage from './pages/ImportJobsPage';
 import NewsIntelPage from './pages/NewsIntelPage';
 import PlatformComparisonsPage from './pages/PlatformComparisonsPage';
 import PluginTabSkeletonPage from './pages/PluginTabSkeletonPage';
@@ -24,6 +29,7 @@ import SeesLiveStackMockPage from './pages/SeesLiveStackMockPage';
 import SetupWizardPage from './pages/SetupWizardPage';
 import SignalsWorkbenchPage from './pages/SignalsWorkbenchPage';
 import SettingsPage from './pages/SettingsPage';
+import StrategiesPage from './pages/StrategiesPage';
 import StrategyBuilderPage from './pages/StrategyBuilderPage';
 import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
 import SystemStatusPage from './pages/SystemStatusPage';
@@ -59,9 +65,12 @@ function ContentCard({ title, children }) {
   );
 }
 
-export default function App() {
-  const [primaryArea, setPrimaryArea] = useState('trading');
-  const [secondaryView, setSecondaryView] = useState('sees-live-stack');
+function AppShell() {
+  const { area, view } = useParams();
+  const navigate = useNavigate();
+  
+  const primaryArea = area || 'trading';
+  const secondaryView = view || 'sees-live-stack';
   const [demoPrompt, setDemoPrompt] = useState('Generate a responsive planning concept for eco garden week.');
   const [demoOutput, setDemoOutput] = useState('');
   const [activityLog, setActivityLog] = useState([]);
@@ -127,11 +136,11 @@ export default function App() {
     if (!hasCurrentView) {
       const firstView = views[0]?.id;
       if (firstView) {
-        setSecondaryView(firstView);
+        navigate(`/${primaryArea}/${firstView}`, { replace: true });
       }
     }
     pushActivity('NAV', `Primary changed to ${primaryArea}`);
-  }, [primaryArea, secondaryView]);
+  }, [primaryArea, secondaryView, navigate]);
 
   useEffect(() => {
     setHeaderMenuOpen(false);
@@ -166,12 +175,14 @@ export default function App() {
     pushActivity('REPORT', 'Report downloaded');
   }
 
-  function onPrimarySelect(area) {
-    setPrimaryArea(area);
+  function onPrimarySelect(newArea) {
+    const views = NAV_STRUCTURE[newArea] || [];
+    const firstView = views[0]?.id || 'overview';
+    navigate(`/${newArea}/${firstView}`);
   }
 
   function onSecondarySelect(viewId) {
-    setSecondaryView(viewId);
+    navigate(`/${primaryArea}/${viewId}`);
     pushActivity('VIEW', `Opened ${viewId}`);
   }
 
@@ -378,8 +389,16 @@ export default function App() {
       return <DatabaseTablesPage />;
     }
 
+    if (secondaryView === 'data-status') {
+      return <DataStatusPage />;
+    }
+
     if (secondaryView === 'theme-packs') {
       return <ThemePage />;
+    }
+
+    if (secondaryView === 'import-jobs') {
+      return <ImportJobsPage />;
     }
 
     if (secondaryView === 'trading-platforms') {
@@ -404,6 +423,10 @@ export default function App() {
 
     if (secondaryView === 'events-calendar') {
       return <EventsCalendarPage />;
+    }
+
+    if (secondaryView === 'strategies') {
+      return <StrategiesPage />;
     }
 
     if (secondaryView === 'signals-workbench') {
@@ -543,6 +566,14 @@ export default function App() {
             <BadgePill label={isApiOnline ? 'API Online' : 'API Offline'} status={isApiOnline ? 'ok' : 'warn'} />
             <BadgePill label={isDbOnline ? 'DB Ready' : 'DB Offline'} status={isDbOnline ? 'ok' : 'warn'} />
             <BadgePill label="Omni Layout" status="neutral" />
+            <button
+              type="button"
+              className="topbar-theme-toggle"
+              onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
+              title={`Switch to ${themeMode === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {themeMode === 'dark' ? '☀' : '🌙'}
+            </button>
           </div>
 
           <div className="topbar-title-block">
@@ -702,7 +733,10 @@ export default function App() {
       </aside>
 
       <main className="main-stage" {...withDevTag('main.stage', { area: secondaryView })}>
-        {renderMainContent()}
+        <Breadcrumbs />
+        <ErrorBoundary message="Something went wrong rendering this view.">
+          {renderMainContent()}
+        </ErrorBoundary>
       </main>
 
       <aside className="right-rail" aria-label="Admin and status">
@@ -722,7 +756,7 @@ export default function App() {
             type="button"
             className="cta"
             style={{ marginTop: 4 }}
-            onClick={() => { setPrimaryArea('theme'); setSecondaryView('theme-packs'); }}
+            onClick={() => navigate('/settings/theme-packs')}
           >
             Open Theme Page
           </button>
@@ -809,5 +843,20 @@ export default function App() {
         )}
       </footer>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <ErrorBoundary message="The application encountered a critical error.">
+        <Routes>
+          <Route path="/:area/:view" element={<AppShell />} />
+          <Route path="/:area" element={<AppShell />} />
+          <Route path="/" element={<Navigate to="/trading/sees-live-stack" replace />} />
+          <Route path="*" element={<Navigate to="/trading/sees-live-stack" replace />} />
+        </Routes>
+      </ErrorBoundary>
+    </BrowserRouter>
   );
 }

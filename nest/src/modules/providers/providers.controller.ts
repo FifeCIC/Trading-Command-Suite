@@ -5,9 +5,11 @@ import {
   ParseIntPipe,
   Post,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ProvidersService } from './providers.service';
+import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
 
 @ApiTags('providers')
 @Controller('providers')
@@ -15,6 +17,7 @@ export class ProvidersController {
   constructor(private readonly providersService: ProvidersService) {}
 
   @Get('health')
+  @UseInterceptors(new CacheInterceptor(60000))
   @ApiOperation({ summary: 'Get provider connectivity and credential health' })
   @ApiOkResponse({ description: 'Provider health state list' })
   health() {

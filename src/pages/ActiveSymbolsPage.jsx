@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiGet, apiPost, apiPatch } from '../core/api/client'
+import { exportCsv } from '../utils/exportCsv'
 import './trading-platforms.css'
 
 const SYMBOL_TYPES = ['stock', 'crypto', 'forex']
@@ -10,6 +11,9 @@ export default function ActiveSymbolsPage() {
   const [showAdd, setShowAdd] = useState(false)
   const [filterActive, setFilterActive] = useState('all')
   const [filterType, setFilterType] = useState('all')
+  const [search, setSearch] = useState('')
+  const [sortKey, setSortKey] = useState('ticker')
+  const [sortDir, setSortDir] = useState('asc')
   const [form, setForm] = useState({ ticker: '', name: '', exchange: '', type: 'stock' })
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState(null)
@@ -23,15 +27,34 @@ export default function ActiveSymbolsPage() {
   const syms = Array.isArray(symbols.data?.symbols) ? symbols.data.symbols : []
   const mode = symbols.data?.mode ?? '...'
 
-  const filtered = syms.filter((s) => {
-    if (filterActive === 'active' && !s.active) return false
-    if (filterActive === 'inactive' && s.active !== false) return false
-    if (filterType !== 'all' && s.type !== filterType) return false
-    return true
-  })
+  const filtered = useMemo(() => {
+    let list = [...syms]
+
+    if (filterActive === 'active') list = list.filter((s) => s.active !== false)
+    if (filterActive === 'inactive') list = list.filter((s) => s.active === false)
+    if (filterType !== 'all') list = list.filter((s) => s.type === filterType)
+    if (search) {
+      const q = search.toLowerCase()
+      list = list.filter((s) => s.ticker.toLowerCase().includes(q) || s.name.toLowerCase().includes(q))
+    }
+
+    list.sort((a, b) => {
+      const aVal = (a[sortKey] ?? '').toString().toLowerCase()
+      const bVal = (b[sortKey] ?? '').toString().toLowerCase()
+      return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+    })
+
+    return list
+  }, [syms, filterActive, filterType, search, sortKey, sortDir])
 
   const activeCount = syms.filter((s) => s.active !== false).length
   const inactiveCount = syms.filter((s) => s.active === false).length
+
+  function toggleSort(key) {
+    if (sortKey === key) { setSortDir((d) => (d === 'asc' ? 'desc' : 'asc')) }
+    else { setSortKey(key); setSortDir('asc') }
+  }
+  function sortIcon(key) { return sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕' }
 
   async function toggleActive(sym) {
     try {
@@ -96,8 +119,36 @@ export default function ActiveSymbolsPage() {
               {SYMBOL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </label>
+          <label className="tp-control">
+            <span>Search</span>
+            <input type="text" placeholder="Ticker or name..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          </label>
           <button type="button" className="btn btn-primary" onClick={() => setShowAdd(!showAdd)}>
             {showAdd ? 'Cancel' : '+ Add Symbol'}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              const columns = [
+                { key: 'ticker', label: 'Ticker' },
+                { key: 'name', label: 'Name' },
+                { key: 'exchange', label: 'Exchange' },
+                { key: 'type', label: 'Type' },
+                {
+                  key: 'active',
+                  label: 'Active',
+                  format: (v) => (v !== false ? 'Yes' : 'No'),
+                },
+              ]
+              const comments = [
+                `Total symbols: ${syms.length}`,
+                `Mode: ${mode}`,
+              ]
+              exportCsv(filtered, columns, 'active-symbols.csv', { comments })
+            }}
+          >
+            Export CSV
           </button>
         </div>
       </section>
@@ -137,10 +188,10 @@ export default function ActiveSymbolsPage() {
           <table className="tp-comparison-table">
             <thead>
               <tr>
-                <th>Ticker</th>
-                <th>Name</th>
-                <th>Exchange</th>
-                <th>Type</th>
+                <th onClick={() => toggleSort('ticker')} style={{ cursor: 'pointer' }}>Ticker{sortIcon('ticker')}</th>
+                <th onClick={() => toggleSort('name')} style={{ cursor: 'pointer' }}>Name{sortIcon('name')}</th>
+                <th onClick={() => toggleSort('exchange')} style={{ cursor: 'pointer' }}>Exchange{sortIcon('exchange')}</th>
+                <th onClick={() => toggleSort('type')} style={{ cursor: 'pointer' }}>Type{sortIcon('type')}</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>

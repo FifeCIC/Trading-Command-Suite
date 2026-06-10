@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
+import LoadingSkeleton from '../components/LoadingSkeleton'
 import {
   AI_GUARDRAILS,
+  ARCHITECTURE_INDEX,
   CONTRACTS,
   CONTRACT_CARDS,
+  CONTRACT_REGISTER_LAST_UPDATED,
   CURRENT_FLOW_CONTRACTS,
   CURRENT_ROUTE_CONTRACTS,
   CURRENT_SLICE,
@@ -175,6 +178,7 @@ export default function ArchitectureFrameworkPage() {
   const [collapsedSections, setCollapsedSections] = useState([])
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true)
   const [viewMode, setViewMode] = useState('framework')
+  const [dodChecked, setDodChecked] = useState(() => new Set())
 
   const providerHealthQuery = useQuery({
     queryKey: ['architecture', 'provider-health'],
@@ -448,7 +452,7 @@ export default function ArchitectureFrameworkPage() {
 
                 <article className="architecture-status-mini-card">
                   <h4>Provider Health Mix</h4>
-                  {providerHealthQuery.isLoading && <p>Checking provider health...</p>}
+                  {providerHealthQuery.isLoading && <LoadingSkeleton variant="text" lines={4} />}
                   {providerHealthQuery.error && <p>Provider health is not reachable from this shell yet.</p>}
                   {!providerHealthQuery.isLoading && !providerHealthQuery.error && (
                     <ul className="architecture-live-list">
@@ -462,7 +466,7 @@ export default function ArchitectureFrameworkPage() {
 
                 <article className="architecture-status-mini-card">
                   <h4>Import Pipeline Pulse</h4>
-                  {importRunsQuery.isLoading && <p>Loading recent import runs...</p>}
+                  {importRunsQuery.isLoading && <LoadingSkeleton variant="text" lines={4} />}
                   {importRunsQuery.error && <p>Recent import runs are not reachable from this shell yet.</p>}
                   {!importRunsQuery.isLoading && !importRunsQuery.error && (
                     <ul className="architecture-live-list">
@@ -475,6 +479,38 @@ export default function ArchitectureFrameworkPage() {
                 </article>
               </div>
             </article>
+          </div>
+        </SectionBlock>
+      )}
+
+      {visibleIds.has('index') && (
+        <SectionBlock
+          id="index"
+          title="Architecture Index — 20-Section Parity"
+          summary="Table of contents showing all 20 architecture sections and their implementation status."
+          collapsed={collapsedSections.includes('index')}
+          onToggle={toggleSection}
+        >
+          <div className="architecture-card architecture-card-full">
+            <div className="architecture-table-wrap">
+              <table className="architecture-table">
+                <thead><tr><th>#</th><th>Section</th><th>Status</th></tr></thead>
+                <tbody>
+                  {ARCHITECTURE_INDEX.map((item, i) => (
+                    <tr key={item.name}>
+                      <td>{i + 1}</td>
+                      <td>{item.name}</td>
+                      <td>
+                        <span className="architecture-mode-badge" style={item.status === 'done' ? { background: '#00ff4120', color: '#00a63e' } : item.status === 'partial' ? { background: '#ffaa0020', color: '#9a6400' } : { background: '#8882', color: '#888' }}>
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="hint" style={{ marginTop: 12 }}>All 20 sections implemented. 20/20 done.</p>
           </div>
         </SectionBlock>
       )}
@@ -805,26 +841,33 @@ export default function ArchitectureFrameworkPage() {
                     <th>Method</th>
                     <th>Permission</th>
                     <th>Owner</th>
+                    <th>Status</th>
                     <th>Contract</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {CURRENT_ROUTE_CONTRACTS.map((row) => (
+                  {CURRENT_ROUTE_CONTRACTS.map((row) => {
+                    const statusClass = row.status === 'active' ? 'architecture-mode-badge' : row.status === 'migration' ? 'architecture-mode-badge' : 'architecture-mode-badge'
+                    const statusStyle = row.status === 'active' ? { background: '#00ff4120', color: '#00a63e' } : row.status === 'migration' ? { background: '#ffaa0020', color: '#9a6400' } : { background: '#8882', color: '#888' }
+                    return (
                     <tr key={row.route}>
                       <td>{row.route}</td>
                       <td>{row.method}</td>
                       <td>{row.permission}</td>
                       <td>{row.owner}</td>
+                      <td><span className={statusClass} style={statusStyle}>{row.status || 'active'}</span></td>
                       <td>{row.contract}</td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
+            <p className="hint" style={{ marginTop: 12 }}>Last updated: {CONTRACT_REGISTER_LAST_UPDATED}. Update this register when routes, payloads, read paths, or response shapes change.</p>
           </div>
           <div className="architecture-card architecture-card-full">
             <h3>Live Provider Health Register</h3>
-            {providerHealthQuery.isLoading && <p>Loading live provider health...</p>}
+            {providerHealthQuery.isLoading && <LoadingSkeleton variant="table" rows={4} cols={2} />}
             {providerHealthQuery.error && <p>Live provider health is not available from the current API base URL.</p>}
             {!providerHealthQuery.isLoading && !providerHealthQuery.error && providerHealth.length === 0 && (
               <p>No provider health entries have been recorded yet.</p>
@@ -860,7 +903,7 @@ export default function ArchitectureFrameworkPage() {
           </div>
           <div className="architecture-card architecture-card-full">
             <h3>Recent Import Runs</h3>
-            {importRunsQuery.isLoading && <p>Loading recent import runs...</p>}
+            {importRunsQuery.isLoading && <LoadingSkeleton variant="table" rows={4} cols={3} />}
             {importRunsQuery.error && <p>Recent import runs are not reachable from the current API base URL.</p>}
             {!importRunsQuery.isLoading && !importRunsQuery.error && recentImportRuns.length === 0 && (
               <p>No import runs have been recorded yet.</p>
@@ -968,11 +1011,29 @@ export default function ArchitectureFrameworkPage() {
           <div className="architecture-grid architecture-grid-wide">
             <article className="architecture-card">
               <h3>Definition Of Done</h3>
-              <ul>
-                {DEFINITION_OF_DONE.map((item) => (
-                  <li key={item}>{item}</li>
+              <ul className="architecture-dod-list">
+                {DEFINITION_OF_DONE.map((item, i) => (
+                  <li key={i} className="architecture-dod-item">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={dodChecked.has(i)}
+                        onChange={() => {
+                          setDodChecked((prev) => {
+                            const next = new Set(prev)
+                            if (next.has(i)) next.delete(i); else next.add(i)
+                            return next
+                          })
+                        }}
+                      />{' '}
+                      <span className={dodChecked.has(i) ? 'architecture-dod-done' : ''}>{item}</span>
+                    </label>
+                  </li>
                 ))}
               </ul>
+              <p className="architecture-dod-progress">
+                {dodChecked.size} of {DEFINITION_OF_DONE.length} complete
+              </p>
             </article>
             <article className="architecture-card">
               <h3>Handoff Checklist</h3>

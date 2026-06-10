@@ -14,6 +14,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { fetchRankedSymbols } from '../core/api/scoring';
+import LoadingSkeleton from '../components/LoadingSkeleton';
 import './scoring-overview.css';
 
 /** @param {{ low: number, high: number }} bucket @param {number} val */
@@ -55,13 +56,10 @@ export default function ScoringOverviewPage() {
       <div className="so-page">
         <header className="so-page-header">
           <h1>Scoring Overview</h1>
-          <p className="so-subtitle">Loading from scoring pipeline...</p>
         </header>
-        <div className="so-skeleton-grid">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="so-skeleton-card" />
-          ))}
-        </div>
+        <LoadingSkeleton variant="card" count={4} />
+        <LoadingSkeleton variant="chart" count={8} className="ls-spacer-top" />
+        <LoadingSkeleton variant="table" rows={5} cols={4} className="ls-spacer-top" />
       </div>
     );
   }

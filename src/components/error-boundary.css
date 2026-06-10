@@ -1,0 +1,88 @@
+/* Error Boundary & Error Display — error-boundary.css */
+
+/* ---- ErrorDisplay ---- */
+
+.ed-wrap {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  border: 1px solid;
+  margin: 0.75rem 0;
+  align-items: flex-start;
+}
+
+.ed-icon {
+  font-size: 1.3rem;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.ed-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ed-body p {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.ed-retry-btn {
+  display: inline-block;
+  padding: 0.35rem 0.85rem;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.ed-retry-btn:hover {
+  opacity: 0.8;
+}
+
+.ed-stack {
+  margin-top: 0.6rem;
+  font-size: 0.78rem;
+}
+
+.ed-stack summary {
+  cursor: pointer;
+  opacity: 0.7;
+  margin-bottom: 0.3rem;
+}
+
+.ed-stack pre {
+  margin: 0;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* ---- Severity variants ---- */
+
+.ed--error {
+  border-color: color-mix(in srgb, var(--danger, #dc2626) 40%, var(--line, #d9e2ec));
+  background: color-mix(in srgb, var(--danger, #dc2626) 6%, var(--panel, #fff));
+  color: var(--danger, #dc2626);
+}
+
+.ed--warning {
+  border-color: color-mix(in srgb, #d97706 40%, var(--line, #d9e2ec));
+  background: color-mix(in srgb, #d97706 6%, var(--panel, #fff));
+  color: #b45309;
+}
+
+.ed--critical {
+  border-color: #991b1b;
+  background: color-mix(in srgb, #991b1b 8%, var(--panel, #fff));
+  color: #991b1b;
+}

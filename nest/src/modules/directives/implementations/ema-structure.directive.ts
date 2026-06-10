@@ -23,6 +23,7 @@ export class EmaStructureDirective implements IDirective {
   readonly name = 'Price Above EMA Structure';
   readonly description =
     'Scores symbols where price sits above EMA20 which sits above EMA50.';
+  readonly priority = 75;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map((b) => b.close);
@@ -31,6 +32,7 @@ export class EmaStructureDirective implements IDirective {
         score: 0,
         confidence: 0.1,
         reason: `Insufficient data: need ${MIN_BARS} bars, have ${closes.length}.`,
+        signalClass: 'neutral',
       };
     }
 
@@ -58,6 +60,7 @@ export class EmaStructureDirective implements IDirective {
         score: Math.min(100, Math.round(score)),
         confidence: Number(confidence.toFixed(2)),
         reason: `Full alignment: price (${currentPrice.toFixed(2)}) > EMA20 (${currentEma20.toFixed(2)}) > EMA50 (${currentEma50.toFixed(2)}).`,
+        signalClass: 'bullish',
       };
     }
 
@@ -67,6 +70,7 @@ export class EmaStructureDirective implements IDirective {
         score: 35,
         confidence: 0.45,
         reason: `Price above EMA20 but EMA20 (${currentEma20.toFixed(2)}) below EMA50 (${currentEma50.toFixed(2)}).`,
+        signalClass: 'neutral',
       };
     }
 
@@ -76,6 +80,7 @@ export class EmaStructureDirective implements IDirective {
         score: 25,
         confidence: 0.4,
         reason: `EMA structure intact but price (${currentPrice.toFixed(2)}) below EMA20 (${currentEma20.toFixed(2)}).`,
+        signalClass: 'bullish',
       };
     }
 
@@ -84,6 +89,7 @@ export class EmaStructureDirective implements IDirective {
       score: 10,
       confidence: 0.3,
       reason: `No EMA alignment: price (${currentPrice.toFixed(2)}), EMA20 (${currentEma20.toFixed(2)}), EMA50 (${currentEma50.toFixed(2)}).`,
+      signalClass: 'bearish',
     };
   }
 }

@@ -214,6 +214,48 @@
 .chip--info { background: #0ea5a620; color: #0ea5a6; }
 .chip--error { background: #ff004020; color: #dc2626; }
 
+/* Keyboard shortcuts help overlay */
+.sees-help-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.sees-help-modal {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.5rem;
+  min-width: 300px;
+  box-shadow: var(--shadow-card);
+}
+.sees-help-modal h2 { margin: 0 0 1rem; }
+.sees-help-table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+.sees-help-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--line); font-size: 0.85rem; }
+.sees-help-table kbd {
+  background: color-mix(in srgb, var(--line) 60%, var(--panel));
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 0.8rem;
+}
+.sees-shortcuts-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  opacity: 0.6;
+}
+.sees-shortcuts-hint kbd {
+  background: color-mix(in srgb, var(--line) 50%, transparent);
+  padding: 0.05rem 0.3rem;
+  border-radius: 2px;
+  font-family: monospace;
+  font-size: 0.7rem;
+}
+
 .signal-entry {
   background: #1f8b4c;
 }

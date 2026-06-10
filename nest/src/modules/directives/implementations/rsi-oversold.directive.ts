@@ -23,6 +23,7 @@ export class RsiOversoldDirective implements IDirective {
   readonly name = 'RSI Oversold Reversion';
   readonly description =
     'Scores oversold symbols where RSI is below threshold and starting to curl up.';
+  readonly priority = 85;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map((b) => b.close);
@@ -31,6 +32,7 @@ export class RsiOversoldDirective implements IDirective {
         score: 0,
         confidence: 0.1,
         reason: `Insufficient data: need ${MIN_BARS} bars, have ${closes.length}.`,
+        signalClass: 'neutral',
       };
     }
 
@@ -40,6 +42,7 @@ export class RsiOversoldDirective implements IDirective {
         score: 0,
         confidence: 0.1,
         reason: 'Not enough RSI values to detect curl.',
+        signalClass: 'neutral',
       };
     }
 
@@ -55,6 +58,7 @@ export class RsiOversoldDirective implements IDirective {
         score: Math.round(score),
         confidence: 0.4,
         reason: `RSI at ${currentRsi.toFixed(1)} — above oversold threshold (${OVERSOLD_THRESHOLD}).`,
+        signalClass: 'neutral',
       };
     }
 
@@ -70,6 +74,7 @@ export class RsiOversoldDirective implements IDirective {
       score: Math.min(100, Math.round(rawScore)),
       confidence: Number(confidence.toFixed(2)),
       reason: `RSI(14) = ${currentRsi.toFixed(1)}, ${curling ? 'curling up' : 'still declining'}. Depth factor: ${(depthFactor * 100).toFixed(0)}%.`,
+      signalClass: 'bullish',
     };
   }
 }

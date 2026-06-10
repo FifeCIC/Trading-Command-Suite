@@ -1,0 +1,130 @@
+/* Loading Skeleton — loading-skeleton.css */
+/* CSS-only pulse animation, zero external deps */
+
+@keyframes ls-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes ls-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.ls-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.ls-card {
+  background: var(--panel, #ffffff);
+  border: 1px solid var(--line, #d9e2ec);
+  border-radius: 8px;
+  padding: 1rem;
+  animation: ls-pulse 1.6s ease-in-out infinite;
+}
+
+.ls-card-bar {
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--line, #d9e2ec) 25%,
+    #e8edf4 50%,
+    var(--line, #d9e2ec) 75%
+  );
+  background-size: 200% 100%;
+  animation: ls-shimmer 1.8s ease-in-out infinite;
+  margin-bottom: 10px;
+}
+
+.ls-card-bar:last-child {
+  margin-bottom: 0;
+}
+
+.ls-card-bar--wide { width: 85%; }
+.ls-card-bar--medium { width: 60%; }
+.ls-card-bar--narrow { width: 40%; }
+
+/* ---- Table variant ---- */
+
+.ls-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ls-table-row {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--line, #d9e2ec);
+}
+
+.ls-table-row:last-child {
+  border-bottom: none;
+}
+
+.ls-table-cell {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--line, #d9e2ec) 25%,
+    #e8edf4 50%,
+    var(--line, #d9e2ec) 75%
+  );
+  background-size: 200% 100%;
+  animation: ls-shimmer 1.8s ease-in-out infinite;
+}
+
+/* ---- Text variant ---- */
+
+.ls-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0.25rem 0;
+}
+
+.ls-text-line {
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--line, #d9e2ec) 25%,
+    #e8edf4 50%,
+    var(--line, #d9e2ec) 75%
+  );
+  background-size: 200% 100%;
+  animation: ls-shimmer 1.8s ease-in-out infinite;
+}
+
+/* ---- Chart variant ---- */
+
+.ls-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 130px;
+  padding: 0.5rem 0;
+}
+
+.ls-chart-bar {
+  flex: 1;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(
+    180deg,
+    var(--accent, #0ea5a6) 0%,
+    var(--line, #d9e2ec) 100%
+  );
+  opacity: 0.35;
+  animation: ls-pulse 1.6s ease-in-out infinite;
+}
+
+/* ---- Utility ---- */
+
+.ls-spacer-top {
+  margin-top: 1rem;
+}

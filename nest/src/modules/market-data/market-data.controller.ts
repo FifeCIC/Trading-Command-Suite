@@ -1,10 +1,11 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseInterceptors } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ModeService } from '../../config/mode.service';
 import { ImportJobsService } from '../import-jobs/import-jobs.service';
 import { CheckFreshnessDto } from './dto/check-freshness.dto';
 import { FreshnessService } from './freshness.service';
 import { MarketDataService } from './market-data.service';
+import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
 
 @ApiTags('market-data')
 @Controller('market-data')
@@ -29,6 +30,7 @@ export class MarketDataController {
   }
 
   @Get('freshness')
+  @UseInterceptors(new CacheInterceptor(30000))
   @ApiOperation({ summary: 'Check freshness for all active symbols' })
   @ApiOkResponse({ description: 'Batch freshness results' })
   async checkAll(

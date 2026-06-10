@@ -22,6 +22,7 @@ export class VolumeConfirmationDirective implements IDirective {
   readonly name = 'Volume Confirmation';
   readonly description =
     'Scores symbols where recent volume exceeds the average.';
+  readonly priority = 60;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -30,6 +31,7 @@ export class VolumeConfirmationDirective implements IDirective {
         score: 0,
         confidence: 0.1,
         reason: `Insufficient data: need ${MIN_BARS} bars, have ${bars.length}.`,
+        signalClass: 'neutral',
       };
     }
 
@@ -42,6 +44,7 @@ export class VolumeConfirmationDirective implements IDirective {
         score: 0,
         confidence: 0.1,
         reason: 'Average volume is zero — no reference for comparison.',
+        signalClass: 'neutral',
       };
     }
 
@@ -75,6 +78,7 @@ export class VolumeConfirmationDirective implements IDirective {
       score: Math.min(100, Math.max(0, Math.round(score))),
       confidence: Number(confidence.toFixed(2)),
       reason,
+      signalClass: ratio >= 1.3 ? 'bullish' : ratio < 0.8 ? 'bearish' : 'neutral',
     };
   }
 }

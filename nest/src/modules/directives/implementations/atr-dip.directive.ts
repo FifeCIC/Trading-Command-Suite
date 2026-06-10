@@ -23,6 +23,7 @@ export class AtrDipDirective implements IDirective {
   readonly name = 'ATR Normalized Dip';
   readonly description =
     'Scores pullback quality using ATR-normalized distance from recent high.';
+  readonly priority = 70;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -31,6 +32,7 @@ export class AtrDipDirective implements IDirective {
         score: 0,
         confidence: 0.1,
         reason: `Insufficient data: need ${MIN_BARS} bars, have ${bars.length}.`,
+        signalClass: 'neutral',
       };
     }
 
@@ -40,7 +42,7 @@ export class AtrDipDirective implements IDirective {
 
     const atrValues = atr(highs, lows, closes, ATR_PERIOD);
     if (atrValues.length === 0) {
-      return { score: 0, confidence: 0.1, reason: 'Could not compute ATR.' };
+      return { score: 0, confidence: 0.1, reason: 'Could not compute ATR.', signalClass: 'neutral' };
     }
 
     const currentAtr = atrValues[atrValues.length - 1];
@@ -66,23 +68,29 @@ export class AtrDipDirective implements IDirective {
     let score: number;
     let reason: string;
 
+    let signalClass: 'bullish' | 'bearish' | 'neutral' = 'bullish';
+
     if (dipInAtrs < 0.5) {
       score = 20 + dipInAtrs * 30;
       reason = `Shallow dip: ${dipInAtrs.toFixed(2)} ATR from high. May not offer meaningful entry.`;
+      signalClass = 'neutral';
     } else if (dipInAtrs <= 2) {
       // Ideal zone — score peaks around 1.2-1.5 ATR
       const ideal = 1.3;
       const proximity = 1 - Math.abs(dipInAtrs - ideal) / ideal;
       score = 65 + proximity * 35;
       reason = `Quality dip: ${dipInAtrs.toFixed(2)} ATR from high (${recentHigh.toFixed(2)}). Healthy consolidation.`;
+      signalClass = 'bullish';
     } else if (dipInAtrs <= 3) {
       // Extended — still tradeable but higher risk
       score = 40 - (dipInAtrs - 2) * 15;
       reason = `Extended dip: ${dipInAtrs.toFixed(2)} ATR from high. Approaching breakdown territory.`;
+      signalClass = 'neutral';
     } else {
       // Likely breakdown
       score = 5;
       reason = `Deep drop: ${dipInAtrs.toFixed(2)} ATR from high. Likely breakdown, not a dip.`;
+      signalClass = 'bearish';
     }
 
     const confidence = dipInAtrs >= 0.5 && dipInAtrs <= 2.5 ? 0.7 : 0.35;
@@ -91,6 +99,7 @@ export class AtrDipDirective implements IDirective {
       score: Math.min(100, Math.max(0, Math.round(score))),
       confidence,
       reason,
+      signalClass,
     };
   }
 }

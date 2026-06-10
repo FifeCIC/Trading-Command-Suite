@@ -40,6 +40,7 @@ export const NAV_TREE = {
       { id: 'configure-directives', label: 'Configure Directives' },
       { id: 'directives-status', label: 'Directive Status' },
       { id: 'algorithm-lab', label: 'Algorithm Lab' },
+      { id: 'strategies', label: 'Strategy Overview' },
       { id: 'create-scoring-strategies', label: 'Create Strategies' },
       { id: 'manage-scoring-strategies', label: 'Manage Strategies' },
       { id: 'view-scoring-strategies', label: 'View Strategies' },
@@ -78,6 +79,7 @@ export const NAV_TREE = {
     label: 'Data',
     views: [
       { id: 'trading-platforms', label: 'Sources' },
+      { id: 'import-jobs', label: 'Import Jobs' },
       { id: 'data-elements', label: 'Data Elements' },
       { id: 'manual-import', label: 'Manual Import' },
       { id: 'decoder', label: 'Decoder' },

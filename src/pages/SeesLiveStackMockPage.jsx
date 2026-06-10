@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { buildSeesRanking } from '../core/sees/sees-engine'
 import { fetchRankedSymbols } from '../core/api/scoring'
+import { exportCsv } from '../utils/exportCsv'
+import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts'
 import './sees-live-stack.css'
 
 const INITIAL_SYMBOLS = [
@@ -19,6 +21,7 @@ export default function SeesLiveStackMockPage() {
   const [tick, setTick] = useState(0)
   const [lastUpdated, setLastUpdated] = useState(new Date())
   const [isAutoSorting, setIsAutoSorting] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
 
   const apiQuery = useQuery({
     queryKey: ['scoring-ranked', tick],
@@ -119,6 +122,14 @@ export default function SeesLiveStackMockPage() {
     return () => window.clearInterval(id)
   }, [isAutoSorting])
 
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    r: () => { setTick((t) => t + 1); setLastUpdated(new Date()); apiQuery.refetch(); },
+    a: () => setIsAutoSorting((v) => !v),
+    '?': () => setShowHelp((v) => !v),
+    Escape: () => setShowHelp(false),
+  });
+
   return (
     <main className="sees-page">
       <section className="sees-header">
@@ -196,7 +207,33 @@ export default function SeesLiveStackMockPage() {
         )}
         {isAutoSorting && (
           <button type="button" className="btn" onClick={() => setIsAutoSorting(false)}>Stop Auto-Re-Sorting</button>
-        )}
+        )}        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            const directives = rankingState.directives
+            const columns = [
+              { key: 'ticker', label: 'Ticker' },
+              { key: 'score', label: 'Score' },
+              { key: 'confidence', label: 'Confidence' },
+              { key: 'signal', label: 'Signal' },
+              { key: 'freshness', label: 'Freshness' },
+              ...directives.map((d) => ({
+                key: `directives.${d.id}`,
+                label: d.label,
+                format: (v) => (v != null ? Number(v).toFixed(1) : ''),
+              })),
+            ]
+            const comments = [
+              `Strategy: ${rankingState.strategy.name}`,
+              `Mode: ${rankingState.mode}`,
+              `Source: ${dataSource}`,
+            ]
+            exportCsv(rankedSymbols, columns, 'sees-ranking.csv', { comments })
+          }}
+        >
+          Export CSV
+        </button>
       </section>
 
       <section className="sees-logic-card">
@@ -259,17 +296,17 @@ export default function SeesLiveStackMockPage() {
                 </div>
                 <div>
                   <span className="k">Confidence</span>
-                  <span className="v">{(row.confidence * 100).toFixed(0)}%</span>
+                  <span className="v">{row.confidence != null ? (row.confidence * 100).toFixed(0) : '—'}%</span>
                 </div>
                 {row.directives ? (
                   <>
                     <div>
                       <span className="k">Trend</span>
-                      <span className="v">{row.directives.trend.toFixed(1)}</span>
+                      <span className="v">{row.directives.trend?.toFixed(1) ?? '—'}</span>
                     </div>
                     <div>
                       <span className="k">Momentum</span>
-                      <span className="v">{row.directives.momentum.toFixed(1)}</span>
+                      <span className="v">{row.directives.momentum?.toFixed(1) ?? '—'}</span>
                     </div>
                   </>
                 ) : (
@@ -280,7 +317,7 @@ export default function SeesLiveStackMockPage() {
                 )}
                 <div>
                   <span className="k">Base Score</span>
-                  <span className="v">{row.baseScore.toFixed(1)}</span>
+                  <span className="v">{row.baseScore?.toFixed(1) ?? '—'}</span>
                 </div>
                 <div>
                   <span className="k">Source</span>
@@ -352,6 +389,25 @@ export default function SeesLiveStackMockPage() {
           </>
         )}
       </section>
+
+      {showHelp && (
+        <div className="sees-help-overlay" onClick={() => setShowHelp(false)}>
+          <div className="sees-help-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>⌨ Keyboard Shortcuts</h2>
+            <table className="sees-help-table">
+              <tbody>
+                <tr><td><kbd>R</kbd></td><td>Refresh data</td></tr>
+                <tr><td><kbd>A</kbd></td><td>Toggle auto-sort ({isAutoSorting ? 'ON' : 'OFF'})</td></tr>
+                <tr><td><kbd>?</kbd></td><td>Show/hide this help</td></tr>
+                <tr><td><kbd>Esc</kbd></td><td>Close help</td></tr>
+              </tbody>
+            </table>
+            <button type="button" className="btn" onClick={() => setShowHelp(false)}>Close</button>
+          </div>
+        </div>
+      )}
+
+      <p className="sees-shortcuts-hint">Press <kbd>?</kbd> for keyboard shortcuts</p>
     </main>
   )
 }

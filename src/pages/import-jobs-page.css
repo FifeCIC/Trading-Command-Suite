@@ -1,0 +1,327 @@
+/* ─── Import Jobs Page ────────────────────────────────────── */
+
+.import-jobs-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.import-jobs-header {
+  margin-bottom: 1.5rem;
+}
+
+.import-jobs-header h1 {
+  margin: 0 0 0.4rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.import-jobs-subtitle {
+  color: var(--text-muted, #64748b);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  max-width: 640px;
+}
+
+.auto-refresh-note {
+  color: var(--accent, #0ea5a6);
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+
+/* ─── Summary Cards ───────────────────────────────────────── */
+
+.import-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary-card {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.summary-card--wide {
+  grid-column: span 2;
+}
+
+.summary-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text, #1e293b);
+}
+
+.summary-value.success {
+  color: #16a34a;
+}
+
+.summary-value.failed {
+  color: #dc2626;
+}
+
+.summary-value-sm {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+}
+
+.summary-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #64748b);
+  text-align: center;
+}
+
+/* ─── Trigger Form ────────────────────────────────────────── */
+
+.import-trigger-section {
+  background: var(--bg-subtle, #f1f5f9);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.import-trigger-form label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text, #1e293b);
+}
+
+.trigger-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.trigger-input {
+  flex: 1;
+  max-width: 260px;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: var(--card-bg, #ffffff);
+  color: var(--text, #1e293b);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.trigger-input:focus {
+  border-color: var(--accent, #0ea5a6);
+  box-shadow: 0 0 0 2px rgba(14, 165, 166, 0.15);
+}
+
+.trigger-btn {
+  background: var(--accent, #0ea5a6);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.45rem 1.2rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.trigger-btn:hover:not(:disabled) {
+  background: var(--accent-hover, #0891b2);
+}
+
+.trigger-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.trigger-status {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.trigger-status--success {
+  color: #16a34a;
+}
+
+.trigger-status--error {
+  color: #dc2626;
+}
+
+/* ─── Runs Table ──────────────────────────────────────────── */
+
+.import-runs-section h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+
+.import-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+}
+
+.import-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.import-table thead {
+  background: var(--bg-subtle, #f1f5f9);
+}
+
+.import-table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #64748b);
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  white-space: nowrap;
+}
+
+.import-table td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+  vertical-align: middle;
+}
+
+.import-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.import-table tbody tr:hover {
+  background: var(--bg-subtle, #f1f5f9);
+}
+
+/* Row color hints */
+.run-row--completed {
+  border-left: 3px solid #16a34a;
+}
+
+.run-row--running {
+  border-left: 3px solid #2563eb;
+}
+
+.run-row--failed {
+  border-left: 3px solid #dc2626;
+}
+
+.run-row--queued {
+  border-left: 3px solid #d97706;
+}
+
+/* Cell styles */
+.cell-timestamp {
+  white-space: nowrap;
+  font-size: 0.8rem;
+  color: var(--text-muted, #64748b);
+}
+
+.cell-symbol {
+  min-width: 100px;
+}
+
+.ticker {
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-right: 0.35rem;
+}
+
+.symbol-name {
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748b);
+}
+
+.cell-duration {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cell-error {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.error-text {
+  color: #dc2626;
+  font-size: 0.8rem;
+  cursor: help;
+}
+
+/* ─── Status Badges ───────────────────────────────────────── */
+
+.status-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.badge-completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-running {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.badge-failed {
+  background: #fce4ec;
+  color: #b71c1c;
+}
+
+.badge-queued {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.badge-unknown {
+  background: var(--bg-subtle, #f1f5f9);
+  color: var(--text-muted, #64748b);
+}
+
+/* ─── Empty / Loading states ──────────────────────────────── */
+
+.import-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted, #64748b);
+  border: 1px dashed var(--border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.import-error {
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.import-count {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted, #64748b);
+}

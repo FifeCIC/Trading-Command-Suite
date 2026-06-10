@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
+import LoadingSkeleton from '../components/LoadingSkeleton'
 import './trading-platforms.css'
 
 const PROVIDER_LABELS = {
@@ -20,7 +21,15 @@ export default function ProviderHealthPage() {
   const items = Array.isArray(healthQuery.data) ? healthQuery.data : []
   const mode = healthQuery.data?.mode ?? '...'
 
-  if (healthQuery.isLoading) return <div className="trading-platforms-page"><p>Loading provider health...</p></div>
+  if (healthQuery.isLoading) return (
+    <div className="trading-platforms-page">
+      <header className="tp-page-header">
+        <h1>Provider Health</h1>
+      </header>
+      <LoadingSkeleton variant="card" count={3} />
+      <LoadingSkeleton variant="table" rows={6} cols={3} className="ls-spacer-top" />
+    </div>
+  )
   if (healthQuery.isError) return <div className="trading-platforms-page"><p className="error">Failed to load provider health data.</p></div>
 
   const healthyCount = items.filter((p) => p.status === 'healthy').length

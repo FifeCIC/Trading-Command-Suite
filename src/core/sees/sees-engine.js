@@ -8,9 +8,10 @@
  *    The production directives are:
  *    rsi-oversold, macd-crossover, ema-structure, atr-dip, volume-confirmation
  *
- * 🔴 The abstract directive names below (trend, momentum, volatility, breadth,
- *    conviction) and the boost/multiplier "moments" system are SIMULATION ONLY.
- *    They must NOT influence the NestJS backend directive specification.
+ * 🔴 DIRECTIVE NAMES now match canonical production IDs (rsi-oversold, macd-crossover,
+ *    ema-structure, atr-dip, volume-confirmation) but the math is still SIMULATION ONLY.
+ *    The boost/multiplier "moments" system is also SIMULATION ONLY.
+ *    These must NOT influence the NestJS backend directive specification.
  *
  * This file is consumed by SeesLiveStackMockPage.jsx (note: "Mock") for
  * visual prototyping. The production scoring pipeline lives in:
@@ -25,53 +26,52 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
 export const SEES_DIRECTIVES = [
   {
-    id: 'trend',
-    label: 'Trend Strength',
-    indicator: 'EMA slope + price position',
-    weight: 0.28,
-    description: 'Rewards sustained directional movement and price staying above the local baseline.',
-  },
-  {
-    id: 'momentum',
-    label: 'Momentum',
-    indicator: 'Rate of change + acceleration',
+    id: 'rsi-oversold',
+    label: 'RSI Oversold Reversion (Simulation)',
+    indicator: 'Synthetic mean reversion proxy',
     weight: 0.24,
-    description: 'Rewards acceleration when the recent move is still expanding rather than fading.',
+    description: 'SIMULATION: Approximates mean reversion behavior. Production uses RSI(14).',
   },
   {
-    id: 'volatility',
-    label: 'Volatility Control',
-    indicator: 'Range compression + shock penalty',
+    id: 'macd-crossover',
+    label: 'MACD Bullish Crossover (Simulation)',
+    indicator: 'Synthetic momentum shift proxy',
+    weight: 0.22,
+    description: 'SIMULATION: Approximates momentum shift. Production uses MACD line/signal crossover.',
+  },
+  {
+    id: 'atr-dip',
+    label: 'ATR Normalized Dip (Simulation)',
+    indicator: 'Synthetic pullback quality proxy',
     weight: 0.18,
-    description: 'Rewards controlled movement and penalizes unstable swings.',
+    description: 'SIMULATION: Approximates pullback quality. Production uses ATR-normalized dip.',
   },
   {
-    id: 'breadth',
-    label: 'Market Breadth',
-    indicator: 'Relative rank vs market average',
+    id: 'ema-structure',
+    label: 'Price Above EMA Structure (Simulation)',
+    indicator: 'Synthetic trend alignment proxy',
+    weight: 0.20,
+    description: 'SIMULATION: Approximates trend alignment. Production uses EMA20/EMA50 structure.',
+  },
+  {
+    id: 'volume-confirmation',
+    label: 'Volume Confirmation (Simulation)',
+    indicator: 'Synthetic participation filter proxy',
     weight: 0.16,
-    description: 'Rewards names moving better than the rest of the sample set.',
-  },
-  {
-    id: 'conviction',
-    label: 'Conviction',
-    indicator: 'Confidence + baseline quality',
-    weight: 0.14,
-    description: 'Rewards stable names that keep their score while the tape changes.',
+    description: 'SIMULATION: Approximates participation filter. Production uses volume support.',
   },
 ]
 
 export const SEES_STRATEGY = {
-  id: 'direct-route-core',
-  name: 'Direct Route Core (🧪 Simulation)',
-  description: 'A SIMULATION strategy for visual prototyping. Uses synthetic math — not real market indicators. Production strategy is "Conviction Dip Accumulation" using rsi-oversold, macd-crossover, ema-structure, atr-dip, volume-confirmation directives.',
+  id: 'conviction-dip-accumulation-sim',
+  name: 'Conviction Dip Accumulation (Simulation)',
+  description: 'SIMULATION strategy for visual prototyping. Uses synthetic math — not real market indicators. Canonical thresholds: entry=60, watch=40, defense=25. Simulation thresholds differ for visual effect.',
   entryThreshold: 112,
   watchThreshold: 86,
   defenseThreshold: 58,
-  activeDirectives: ['trend', 'momentum', 'volatility', 'breadth', 'conviction'],
+  activeDirectives: ['rsi-oversold', 'macd-crossover', 'atr-dip', 'ema-structure', 'volume-confirmation'],
   notes: [
-    '🔴 SIMULATION ONLY — see docs/CANONICAL-DIRECTIVE-REFERENCE.md for production directives.',
-    'This strategy uses abstract synthetic directives for visual prototyping.',
+    '🔴 SIMULATION ONLY — directive names are canonical but math is still synthetic.',
     'Boost and multiplier values are part of the simulation, not the production scoring model.',
     'Final score is intentionally not capped — this is a simulation behavior, not production.',
     'Scores are deterministic to keep debugging and review repeatable.',
@@ -96,25 +96,28 @@ function deriveLiveState(symbol, tick, index) {
 }
 
 function buildDirectiveBreakdown(liveRow, marketAverageChange) {
-  const trend = clamp(52 + liveRow.changePercent * 16 + (liveRow.price - liveRow.basePrice) * 1.8, 0, 100)
-  const momentum = clamp(50 + liveRow.changePercent * 19 + Math.sin((liveRow.price / 12) + liveRow.baseBias) * 6, 0, 100)
-  const volatility = clamp(100 - Math.abs(liveRow.changePercent) * 21 - Math.abs(liveRow.price - liveRow.basePrice) * 2.2, 0, 100)
-  const breadth = clamp(50 + (liveRow.changePercent - marketAverageChange) * 18, 0, 100)
-  const conviction = clamp((liveRow.baseQuality * 0.62) + (liveRow.stability * 0.38), 0, 100)
+  // SIMULATION math using synthetic data, not real RSI/MACD/EMA/ATR/Volume.
+  // Names match canonical directives for visual parity.
+  const rsiOversold = clamp(52 + liveRow.changePercent * 16 + (liveRow.price - liveRow.basePrice) * 1.8, 0, 100)
+  const macdCrossover = clamp(50 + liveRow.changePercent * 19 + Math.sin((liveRow.price / 12) + liveRow.baseBias) * 6, 0, 100)
+  const atrDip = clamp(100 - Math.abs(liveRow.changePercent) * 21 - Math.abs(liveRow.price - liveRow.basePrice) * 2.2, 0, 100)
+  const emaStructure = clamp(50 + (liveRow.changePercent - marketAverageChange) * 18, 0, 100)
+  const volumeConfirmation = clamp((liveRow.baseQuality * 0.62) + (liveRow.stability * 0.38), 0, 100)
 
   return {
-    trend,
-    momentum,
-    volatility,
-    breadth,
-    conviction,
+    'rsi-oversold': rsiOversold,
+    'macd-crossover': macdCrossover,
+    'atr-dip': atrDip,
+    'ema-structure': emaStructure,
+    'volume-confirmation': volumeConfirmation,
   }
 }
 
 function detectSignificantMoments(liveRow, directives) {
   const moments = []
 
-  if (liveRow.changePercent > 1.0 && directives.trend > 78 && directives.momentum > 75) {
+  // SIMULATION: uses canonical-named but synthetic directive scores
+  if (liveRow.changePercent > 1.0 && directives['rsi-oversold'] > 78 && directives['macd-crossover'] > 75) {
     moments.push({
       id: 'breakout-acceleration',
       label: 'Breakout Acceleration',
@@ -123,7 +126,7 @@ function detectSignificantMoments(liveRow, directives) {
     })
   }
 
-  if (directives.breadth > 68 && directives.volatility > 66) {
+  if (directives['ema-structure'] > 68 && directives['atr-dip'] > 66) {
     moments.push({
       id: 'broad-risk-on',
       label: 'Broad Risk-On Alignment',
@@ -141,7 +144,7 @@ function detectSignificantMoments(liveRow, directives) {
     })
   }
 
-  if (Math.abs(liveRow.changePercent) > 1.2 && directives.momentum < 46) {
+  if (Math.abs(liveRow.changePercent) > 1.2 && directives['macd-crossover'] < 46) {
     moments.push({
       id: 'reversion-risk',
       label: 'Mean Reversion Risk',

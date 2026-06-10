@@ -16,6 +16,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { fetchRankedSymbols } from '../core/api/scoring'
+import LoadingSkeleton from './LoadingSkeleton'
 
 export default function SeesScoringPanel({ strategyId, limit = 20 }) {
   const rankQuery = useQuery({
@@ -30,7 +31,11 @@ export default function SeesScoringPanel({ strategyId, limit = 20 }) {
   const services = data.services ?? {}
 
   if (rankQuery.isLoading) {
-    return <div className="sees-panel"><p>Loading rankings...</p></div>
+    return (
+      <div className="sees-panel">
+        <LoadingSkeleton variant="table" rows={5} cols={4} />
+      </div>
+    )
   }
 
   if (rankQuery.isError) {

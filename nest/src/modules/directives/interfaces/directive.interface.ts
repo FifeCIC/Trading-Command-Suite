@@ -36,6 +36,8 @@ export interface DirectiveResult {
   score: number; // 0–100
   confidence: number; // 0–1
   reason: string; // Human-readable explanation
+  /** Directional bias. Defaults to 'neutral' when absent. */
+  signalClass?: 'bullish' | 'bearish' | 'neutral';
 }
 
 export interface IDirective {
@@ -47,6 +49,14 @@ export interface IDirective {
 
   /** Brief description of what this directive evaluates. */
   readonly description: string;
+
+  /**
+   * Importance priority 1–100.
+   * Higher = more influential in dominance/cancellation decisions.
+   * Priority 80+ can override lower-priority opposing directives.
+   * Defaults to 50 when absent.
+   */
+  readonly priority?: number;
 
   /**
    * Evaluate the directive against the provided market data.

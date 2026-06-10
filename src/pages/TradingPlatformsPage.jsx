@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
+import LoadingSkeleton from '../components/LoadingSkeleton'
 import './trading-platforms.css'
 
 const PLATFORMS = [
@@ -107,7 +108,10 @@ export default function TradingPlatformsPage() {
       </nav>
 
       {isLoading && (
-        <section className="tp-banner tp-banner--info">Loading provider and environment status...</section>
+        <div style={{ marginBottom: '1rem' }}>
+          <LoadingSkeleton variant="card" count={3} />
+          <LoadingSkeleton variant="table" rows={4} cols={3} className="ls-spacer-top" />
+        </div>
       )}
 
       {hasError && (

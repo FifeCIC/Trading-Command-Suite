@@ -8,32 +8,40 @@ import { EmaStructureDirective } from './implementations/ema-structure.directive
 import { AtrDipDirective } from './implementations/atr-dip.directive';
 import { VolumeConfirmationDirective } from './implementations/volume-confirmation.directive';
 
+// Implemented candlestick patterns
+import { DojiPatternDirective } from './implementations/doji-pattern.directive';
+import { EngulfingPatternDirective } from './implementations/engulfing-pattern.directive';
+import { HammerPatternDirective } from './implementations/hammer-pattern.directive';
+import { ThreeSoldiersPatternDirective } from './implementations/three-soldiers-pattern.directive';
+// Implemented volume
+import { ObvDirective } from './implementations/obv.directive';
+// Implemented momentum
+import { MfiDirective } from './implementations/mfi.directive';
+import { AdxDirective } from './implementations/adx.directive';
+import { StochasticDirective } from './implementations/stochastic.directive';
+// Implemented trend
+import { PriceAboveSmaDirective } from './implementations/price-above-sma.directive';
+import { RsiOverboughtDirective } from './implementations/rsi-overbought.directive';
+import { MaCrossoverDirective } from './implementations/ma-crossover.directive';
+// Implemented volatility
+import { BollingerBandsDirective } from './implementations/bollinger-bands.directive';
+import { CciDirective } from './implementations/cci.directive';
+// Implemented volume rhythm
+import { VolumeRhythmDirective } from './implementations/volume-rhythm.directive';
+import { VwapDirective } from './implementations/vwap.directive';
+import { VolumeSurgeDirective } from './implementations/volume-surge.directive';
+import { BollingerBandSqueezeDirective } from './implementations/bollinger-squeeze.directive';
+
 // Stubs (placeholder — PHP math at TradePress, awaiting NestJS port)
 import {
   // Momentum
-  StochasticDirective,
-  CciDirective,
-  MfiDirective,
-  AdxDirective,
-  RsiOverboughtDirective,
   MomentumContinuationComboDirective,
   // Trend
   MovingAveragesDirective,
-  MaCrossoverDirective,
-  PriceAboveSma50Directive,
   // Volatility
-  BollingerBandSqueezeDirective,
   VolatilityToolsDirective,
-  // Volume
-  ObvDirective,
-  VolumeSurgeDirective,
-  VolumeRhythmDirective,
-  // Candlestick Patterns
-  DojiPatternDirective,
-  HammerPatternDirective,
-  EngulfingPatternDirective,
+  // Candlestick Patterns (now real implementations)
   PinBarPatternDirective,
-  ThreeSoldiersPatternDirective,
   // Macro / Regime
   VixRegimeDirective,
   GoldMacroCorrelationDirective,
@@ -70,8 +78,6 @@ import {
   // Portfolio
   PortfolioPerformanceDirective,
   // Additional TradePress (rounding out full 56)
-  BollingerBandsDirective,
-  VwapDirective,
   BasicWeeklyRhythmDirective,
   IntradayUPatternDirective,
   InstitutionalTimingDirective,
@@ -99,30 +105,36 @@ import {
     EmaStructureDirective,
     AtrDipDirective,
     VolumeConfirmationDirective,
-    // Stubs — Momentum
-    StochasticDirective,
-    CciDirective,
+    // Implemented — Momentum
     MfiDirective,
     AdxDirective,
+    StochasticDirective,
     RsiOverboughtDirective,
+    // Stubs — Momentum
     MomentumContinuationComboDirective,
+    // Implemented — Trend
+    PriceAboveSmaDirective,
+    MaCrossoverDirective,
     // Stubs — Trend
     MovingAveragesDirective,
-    MaCrossoverDirective,
-    PriceAboveSma50Directive,
-    // Stubs — Volatility
+    // Implemented — Volatility
+    BollingerBandsDirective,
+    CciDirective,
     BollingerBandSqueezeDirective,
+    // Stubs — Volatility
     VolatilityToolsDirective,
-    // Stubs — Volume
+    // Implemented — Volume
     ObvDirective,
-    VolumeSurgeDirective,
     VolumeRhythmDirective,
-    // Stubs — Patterns
+    VwapDirective,
+    VolumeSurgeDirective,
+    // Implemented — Patterns
     DojiPatternDirective,
-    HammerPatternDirective,
     EngulfingPatternDirective,
-    PinBarPatternDirective,
+    HammerPatternDirective,
     ThreeSoldiersPatternDirective,
+    // Stubs — Patterns
+    PinBarPatternDirective,
     // Stubs — Macro
     VixRegimeDirective,
     GoldMacroCorrelationDirective,
@@ -158,8 +170,6 @@ import {
     IsaResetDirective,
     PortfolioPerformanceDirective,
     // Stubs — Additional TradePress (rounding out full 56)
-    BollingerBandsDirective,
-    VwapDirective,
     BasicWeeklyRhythmDirective,
     IntradayUPatternDirective,
     InstitutionalTimingDirective,
@@ -188,30 +198,36 @@ export class DirectivesModule implements OnModuleInit {
     private readonly ema: EmaStructureDirective,
     private readonly atrDip: AtrDipDirective,
     private readonly volume: VolumeConfirmationDirective,
-    // Stubs — Momentum
-    private readonly stochastic: StochasticDirective,
-    private readonly cci: CciDirective,
+    // Implemented — Momentum
     private readonly mfi: MfiDirective,
     private readonly adx: AdxDirective,
+    private readonly stochastic: StochasticDirective,
     private readonly rsiOverbought: RsiOverboughtDirective,
+    // Stubs — Momentum
     private readonly momentumCont: MomentumContinuationComboDirective,
+    // Implemented — Trend
+    private readonly priceAboveSma: PriceAboveSmaDirective,
+    private readonly maCrossover: MaCrossoverDirective,
     // Stubs — Trend
     private readonly movingAverages: MovingAveragesDirective,
-    private readonly maCrossover: MaCrossoverDirective,
-    private readonly priceAboveSma50: PriceAboveSma50Directive,
+    // Implemented — Volatility
+    private readonly bollingerBands: BollingerBandsDirective,
+    private readonly cci: CciDirective,
+    private readonly bollingerSqueeze: BollingerBandSqueezeDirective,
     // Stubs — Volatility
-    private readonly bollinger: BollingerBandSqueezeDirective,
     private readonly volTools: VolatilityToolsDirective,
-    // Stubs — Volume
+    // Implemented — Volume
     private readonly obv: ObvDirective,
-    private readonly volumeSurge: VolumeSurgeDirective,
     private readonly volumeRhythm: VolumeRhythmDirective,
-    // Stubs — Patterns
+    private readonly vwap: VwapDirective,
+    private readonly volumeSurge: VolumeSurgeDirective,
+    // Implemented — Patterns
     private readonly doji: DojiPatternDirective,
-    private readonly hammer: HammerPatternDirective,
     private readonly engulfing: EngulfingPatternDirective,
-    private readonly pinBar: PinBarPatternDirective,
+    private readonly hammer: HammerPatternDirective,
     private readonly threeSoldiers: ThreeSoldiersPatternDirective,
+    // Stubs — Patterns
+    private readonly pinBar: PinBarPatternDirective,
     // Stubs — Macro
     private readonly vixRegime: VixRegimeDirective,
     private readonly goldMacro: GoldMacroCorrelationDirective,
@@ -247,8 +263,6 @@ export class DirectivesModule implements OnModuleInit {
     private readonly isa: IsaResetDirective,
     private readonly portfolio: PortfolioPerformanceDirective,
     // Stubs — Additional TradePress
-    private readonly bollingerBands: BollingerBandsDirective,
-    private readonly vwap: VwapDirective,
     private readonly basicWeekly: BasicWeeklyRhythmDirective,
     private readonly intradayU: IntradayUPatternDirective,
     private readonly instTiming: InstitutionalTimingDirective,
@@ -274,30 +288,36 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.ema);
     this.directivesService.register(this.atrDip);
     this.directivesService.register(this.volume);
-    // Stubs — Momentum
-    this.directivesService.register(this.stochastic);
-    this.directivesService.register(this.cci);
+    // Implemented — Momentum
     this.directivesService.register(this.mfi);
     this.directivesService.register(this.adx);
+    this.directivesService.register(this.stochastic);
     this.directivesService.register(this.rsiOverbought);
+    // Stubs — Momentum
     this.directivesService.register(this.momentumCont);
+    // Implemented — Trend
+    this.directivesService.register(this.priceAboveSma);
+    this.directivesService.register(this.maCrossover);
     // Stubs — Trend
     this.directivesService.register(this.movingAverages);
-    this.directivesService.register(this.maCrossover);
-    this.directivesService.register(this.priceAboveSma50);
+    // Implemented — Volatility
+    this.directivesService.register(this.bollingerBands);
+    this.directivesService.register(this.cci);
+    this.directivesService.register(this.bollingerSqueeze);
     // Stubs — Volatility
-    this.directivesService.register(this.bollinger);
     this.directivesService.register(this.volTools);
-    // Stubs — Volume
+    // Implemented — Volume
     this.directivesService.register(this.obv);
-    this.directivesService.register(this.volumeSurge);
     this.directivesService.register(this.volumeRhythm);
-    // Stubs — Patterns
+    this.directivesService.register(this.vwap);
+    this.directivesService.register(this.volumeSurge);
+    // Implemented — Patterns
     this.directivesService.register(this.doji);
     this.directivesService.register(this.hammer);
     this.directivesService.register(this.engulfing);
-    this.directivesService.register(this.pinBar);
     this.directivesService.register(this.threeSoldiers);
+    // Stubs — Patterns
+    this.directivesService.register(this.pinBar);
     // Stubs — Macro
     this.directivesService.register(this.vixRegime);
     this.directivesService.register(this.goldMacro);
@@ -333,8 +353,6 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.isa);
     this.directivesService.register(this.portfolio);
     // Stubs — Additional TradePress
-    this.directivesService.register(this.bollingerBands);
-    this.directivesService.register(this.vwap);
     this.directivesService.register(this.basicWeekly);
     this.directivesService.register(this.intradayU);
     this.directivesService.register(this.instTiming);

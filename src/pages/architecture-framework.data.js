@@ -6,26 +6,26 @@ export const STATUS_SNAPSHOT = [
 ]
 
 export const ARCHITECTURE_INDEX = [
-  'Status snapshot',
-  'Architecture index',
-  'Architecture tree',
-  'Decision workflow',
-  'Feature decision matrix',
-  'Intake template',
-  'Discovery commands',
-  'Information sources',
-  'System context',
-  'Owner directory',
-  'Contract inventory',
-  'Current contract register',
-  'Queue/provider contract',
-  'Scoring/strategy contract',
-  'AI guardrails',
-  'Verification governance',
-  'Definition of done',
-  'Handoff checklist',
-  'Known gaps',
-  'Revision log',
+  { name: 'Status snapshot', status: 'done' },
+  { name: 'Architecture index', status: 'done' },
+  { name: 'Architecture tree', status: 'done' },
+  { name: 'Decision workflow', status: 'done' },
+  { name: 'Feature decision matrix', status: 'done' },
+  { name: 'Intake template', status: 'done' },
+  { name: 'Discovery commands', status: 'done' },
+  { name: 'Information sources', status: 'done' },
+  { name: 'System context', status: 'done' },
+  { name: 'Owner directory', status: 'done' },
+  { name: 'Contract inventory', status: 'done' },
+  { name: 'Current contract register', status: 'done' },
+  { name: 'Queue/provider contract', status: 'done' },
+  { name: 'Scoring/strategy contract', status: 'done' },
+  { name: 'AI guardrails', status: 'done' },
+  { name: 'Verification governance', status: 'done' },
+  { name: 'Definition of done', status: 'done' },
+  { name: 'Handoff checklist', status: 'done' },
+  { name: 'Known gaps', status: 'done' },
+  { name: 'Revision log', status: 'done' },
 ]
 
 export const DOMAINS = [
@@ -304,6 +304,8 @@ export const CONTRACT_CARDS = [
   },
 ]
 
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-06-10'
+
 export const CURRENT_ROUTE_CONTRACTS = [
   {
     route: 'POST /providers/local-bridge/ingest',
@@ -311,6 +313,7 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Token-protected local bridge boundary',
     owner: 'Bridge ingest controller',
     contract: 'Accepts local payloads, verifies token, normalizes fields, stores rows, and returns health.',
+    status: 'active',
   },
   {
     route: 'GET /providers/local-bridge/latest',
@@ -318,6 +321,7 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated operator or admin access',
     owner: 'Bridge read controller',
     contract: 'Reads latest stored rows with filters and does not call the source bridge directly.',
+    status: 'active',
   },
   {
     route: 'GET /providers/health',
@@ -325,6 +329,7 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated operator or admin access',
     owner: 'Provider health controller',
     contract: 'Returns stored provider health from application state.',
+    status: 'active',
   },
   {
     route: 'GET /market-data/freshness/:symbolId',
@@ -332,6 +337,7 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated local operator access',
     owner: 'Market data controller',
     contract: 'Checks staleness against stored bars and may queue refresh when configured.',
+    status: 'active',
   },
   {
     route: 'POST /imports/trigger/:symbolId',
@@ -339,6 +345,23 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated local operator access',
     owner: 'Import jobs controller',
     contract: 'Queues import work and records a concrete import run.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/symbols',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Symbols controller',
+    contract: 'Returns all symbols with active status. Supports CRUD via POST/PATCH.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/scoring/ranked',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Scoring controller',
+    contract: 'Returns ranked symbols with directive breakdown, confidence, signal classification.',
+    status: 'migration',
   },
 ]
 
@@ -875,6 +898,7 @@ export const DATABASE_SCHEMA = {
 
 export const SECTION_META = [
   { id: 'status', title: 'Status Snapshot', terms: [...STATUS_SNAPSHOT, ...CURRENT_SLICE] },
+  { id: 'index', title: 'Architecture Index — 20-Section Parity', terms: [...ARCHITECTURE_INDEX.map(item => item.name), 'parity', '20-section'] },
   { id: 'tree', title: 'Architecture Tree', terms: [...DOMAINS, ...SYSTEM_SPINE] },
   { id: 'schema', title: 'Database Schema', terms: ['database', 'schema', 'entity', 'relationship', 'table', 'foreign key', 'symbol', 'strategy', 'score', 'signal', 'market', 'import', 'directive'] },
   { id: 'workflow', title: 'Decision Workflow', terms: DECISION_WORKFLOW.flatMap((item) => [item.title, item.summary, ...item.items]) },
