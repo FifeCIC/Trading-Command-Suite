@@ -9,7 +9,8 @@
     "build:guard": "npm run build && npm run check:bundle",
     "preview": "vite preview",
     "lint": "eslint .",
-    "check:bundle": "node ./scripts/check-bundle-budget.mjs"
+    "check:bundle": "node ./scripts/check-bundle-budget.mjs",
+    "extract:provider-comparisons": "node ./scripts/extract-provider-comparisons.cjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.20",

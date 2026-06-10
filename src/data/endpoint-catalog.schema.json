@@ -1,0 +1,367 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tcs:endpoint-catalog.schema.json",
+  "title": "Endpoint Catalog Entry Schema",
+  "description": "Normalized endpoint/capability catalog for trading data providers. Each entry describes a single provider endpoint or data capability with enough detail for automated adapter generation, React table rendering, and API ingestion.",
+  "type": "object",
+  "required": ["$meta", "providers"],
+  "properties": {
+    "$meta": {
+      "type": "object",
+      "description": "Catalog-level metadata — source provenance, extraction date, schema version.",
+      "required": ["schemaVersion", "generatedAt", "sourceFiles"],
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-z]+)?$",
+          "description": "Semantic version of this schema (NOT the data). Bump on breaking field changes.",
+          "examples": ["1.0.0-alpha"]
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO-8601 UTC timestamp when this catalog was generated/last updated."
+        },
+        "generatedBy": {
+          "type": "string",
+          "description": "Tool or process that generated this catalog (e.g. 'extract-endpoints.cjs')."
+        },
+        "sourceFiles": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Files this catalog was derived from (plugin PHP, docs, public API docs URLs)."
+        },
+        "confidenceScoring": {
+          "type": "object",
+          "description": "Explanation of the confidence levels used throughout this catalog.",
+          "properties": {
+            "confirmed": { "type": "string", "description": "Verified against provider docs or live API testing." },
+            "likely": { "type": "string", "description": "Inferred from known patterns, public docs, or community sources but not directly tested." },
+            "uncertain": { "type": "string", "description": "Best-guess based on limited information; needs verification." },
+            "unknown": { "type": "string", "description": "Explicitly unknown; field is null with a reason." }
+          }
+        }
+      }
+    },
+    "providers": {
+      "type": "object",
+      "description": "Map of provider IDs to their endpoint catalog entries.",
+      "additionalProperties": {
+        "$ref": "#/$defs/providerCatalog"
+      }
+    },
+    "rateLimitCategories": {
+      "type": "object",
+      "description": "Reusable rate-limit category definitions. Providers reference these by key.",
+      "additionalProperties": {
+        "$ref": "#/$defs/rateLimitCategory"
+      }
+    },
+    "payloadClasses": {
+      "type": "object",
+      "description": "Reusable payload class definitions. Endpoints reference these by key.",
+      "additionalProperties": {
+        "$ref": "#/$defs/payloadClass"
+      }
+    }
+  },
+  "$defs": {
+    "providerCatalog": {
+      "type": "object",
+      "required": ["providerId", "displayName", "providerType", "auth", "environments", "endpoints", "rateLimitProfile"],
+      "properties": {
+        "providerId": {
+          "type": "string",
+          "description": "Machine-friendly slug matching the provider ID in provider-comparisons.seed.json. Lowercase, underscores for separators.",
+          "examples": ["trading212", "interactive_brokers", "alpaca"]
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Human-readable name for UI rendering.",
+          "examples": ["Trading 212", "Interactive Brokers"]
+        },
+        "providerType": {
+          "type": "string",
+          "enum": ["brokerage", "data-only", "hybrid"],
+          "description": "Brokerage = can execute trades. Data-only = market data only. Hybrid = both but different tiers."
+        },
+        "adapterStatus": {
+          "type": "object",
+          "description": "Implementation status in the Nest adapter layer.",
+          "properties": {
+            "implemented": { "type": "boolean" },
+            "adapterFile": { "type": ["string", "null"] },
+            "methodsImplemented": {
+              "type": "array",
+              "items": { "type": "string", "enum": ["getQuote", "getCandles", "getProfile", "healthCheck"] }
+            },
+            "isMockOnly": { "type": "boolean", "description": "True if adapter returns mock data even with credentials present." }
+          }
+        },
+        "auth": {
+          "type": "object",
+          "required": ["method", "credentialFields"],
+          "properties": {
+            "method": {
+              "type": "string",
+              "enum": ["api_key_header", "api_key_query", "bearer_token", "oauth2", "basic_auth", "mtls", "proprietary"],
+              "description": "Authentication method used by the provider API."
+            },
+            "credentialFields": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Environment variable / secret names needed. e.g. ['ALPACA_API_KEY', 'ALPACA_API_SECRET']"
+            },
+            "headerName": {
+              "type": ["string", "null"],
+              "description": "If method is api_key_header or bearer_token, the header name (e.g. 'Authorization', 'X-API-KEY')."
+            },
+            "tokenPrefix": {
+              "type": ["string", "null"],
+              "description": "If bearer token, the prefix before the token value (e.g. 'Bearer')."
+            },
+            "oauthGrantTypes": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "If oauth2, supported grant types."
+            },
+            "confidence": {
+              "$ref": "#/$defs/confidence"
+            }
+          }
+        },
+        "environments": {
+          "type": "object",
+          "description": "Supported environments with base URLs.",
+          "properties": {
+            "paper": {
+              "type": ["string", "null"],
+              "description": "Base URL for paper/sandbox/demo environment, or null if not available."
+            },
+            "live": {
+              "type": "string",
+              "description": "Base URL for live/production environment."
+            }
+          }
+        },
+        "rateLimitProfile": {
+          "type": "object",
+          "required": ["freeTier", "paidTier"],
+          "properties": {
+            "freeTier": {
+              "$ref": "#/$defs/rateLimitTier"
+            },
+            "paidTier": {
+              "$ref": "#/$defs/rateLimitTier"
+            },
+            "notes": { "type": "string" }
+          }
+        },
+        "endpoints": {
+          "type": "array",
+          "description": "Ordered list of cataloged endpoints for this provider.",
+          "items": {
+            "$ref": "#/$defs/endpointEntry"
+          }
+        },
+        "freshnessSLA": {
+          "$ref": "#/$defs/freshnessSLA"
+        },
+        "capabilityMatrix": {
+          "type": "object",
+          "description": "Cross-reference keys back to the provider-comparisons.seed.json capability fields for traceability.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "value": { "type": "string" },
+              "notes": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "endpointEntry": {
+      "type": "object",
+      "required": ["id", "method", "path", "category", "confidence"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Machine-friendly endpoint ID. Convention: {verb}_{resource}. Examples: 'get_quote', 'get_candles', 'post_order'."
+        },
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "WS"],
+          "description": "HTTP method. Use 'WS' for WebSocket endpoints."
+        },
+        "path": {
+          "type": "string",
+          "description": "URL path relative to base URL. Use {placeholder} for path parameters. Always starts with /.",
+          "examples": ["/v2/stocks/{symbol}/quotes", "/v1/account"]
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "quotes", "candles", "profiles", "fundamentals",
+            "order_management", "account", "portfolio",
+            "streaming", "reference", "screening", "news",
+            "options", "forex", "crypto", "indicators"
+          ],
+          "description": "Functional category for grouping in UI and adapter routing."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Human-readable short label for React table rendering."
+        },
+        "description": {
+          "type": "string",
+          "description": "One-line description of what this endpoint returns."
+        },
+        "payloadClass": {
+          "type": "string",
+          "description": "Key into the top-level payloadClasses map. Describes the response shape."
+        },
+        "timeframeSupport": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["tick", "1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w", "1M"] },
+          "description": "For candle/bar endpoints: supported timeframes. Empty array if not a candles endpoint."
+        },
+        "assetClasses": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["equity", "etf", "option", "forex", "crypto", "index", "futures", "bond", "cfd"] },
+          "description": "Asset classes this endpoint supports."
+        },
+        "rateLimitCategory": {
+          "type": "string",
+          "description": "Key into the top-level rateLimitCategories map. Describes the rate limit for this specific endpoint."
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Required and optional parameters for this endpoint.",
+          "properties": {
+            "required": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/parameterSpec" }
+            },
+            "optional": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/parameterSpec" }
+            }
+          }
+        },
+        "freshnessSLA": {
+          "$ref": "#/$defs/freshnessSLA"
+        },
+        "paginationSupport": {
+          "type": "string",
+          "enum": ["none", "cursor", "offset", "page", "token"],
+          "description": "Pagination strategy supported by this endpoint."
+        },
+        "maxPageSize": {
+          "type": ["number", "null"],
+          "description": "Maximum items per page, or null if not paginated."
+        },
+        "deprecated": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if endpoint is deprecated by the provider."
+        },
+        "deprecationDate": {
+          "type": ["string", "null"],
+          "format": "date",
+          "description": "Date when deprecated, if known."
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        }
+      }
+    },
+    "parameterSpec": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["string", "number", "integer", "boolean", "array", "enum"] },
+        "description": { "type": "string" },
+        "default": {},
+        "enumValues": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "min": { "type": "number" },
+        "max": { "type": "number" }
+      }
+    },
+    "rateLimitCategory": {
+      "type": "object",
+      "required": ["requestsPerMinute", "burstAllowance", "windowType"],
+      "properties": {
+        "requestsPerMinute": { "type": ["number", "null"], "description": "Steady-state RPM. null if uncapped." },
+        "requestsPerDay": { "type": ["number", "null"] },
+        "burstAllowance": { "type": "number", "description": "Maximum concurrent or short-burst requests allowed." },
+        "windowType": { "type": "string", "enum": ["sliding", "fixed", "token_bucket", "leaky_bucket", "unknown"] },
+        "headersProvided": { "type": "boolean", "description": "Whether the provider returns X-RateLimit-* headers." },
+        "costPerRequest": { "type": ["number", "null"], "description": "If provider uses a 'cost' model per endpoint (e.g. weighted requests)." },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      }
+    },
+    "rateLimitTier": {
+      "type": "object",
+      "properties": {
+        "requestsPerMinute": { "type": ["number", "null"] },
+        "requestsPerDay": { "type": ["number", "null"] },
+        "websocketConnections": { "type": ["number", "null"] },
+        "websocketSubscriptions": { "type": ["number", "null"] },
+        "notes": { "type": "string" }
+      }
+    },
+    "payloadClass": {
+      "type": "object",
+      "required": ["id", "description"],
+      "properties": {
+        "id": { "type": "string", "description": "Machine-friendly payload class ID." },
+        "description": { "type": "string" },
+        "exampleKeys": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Top-level keys in the JSON response for this payload shape."
+        },
+        "schemaType": {
+          "type": "string",
+          "enum": ["object", "array", "scalar"],
+          "description": "Root JSON type of the response."
+        }
+      }
+    },
+    "freshnessSLA": {
+      "type": "object",
+      "description": "Freshness expectations for data returned by this endpoint/provider.",
+      "properties": {
+        "expectedLatencyMs": {
+          "type": ["number", "null"],
+          "description": "Expected data latency from market event to API delivery, in milliseconds."
+        },
+        "staleThresholdMinutes": {
+          "type": "number",
+          "description": "Minutes after which cached data is considered stale for this endpoint."
+        },
+        "updateFrequency": {
+          "type": "string",
+          "enum": ["realtime", "per_second", "per_minute", "per_5min", "per_15min", "per_hour", "eod", "weekly", "monthly", "on_demand", "unknown"],
+          "description": "How frequently the provider updates this data."
+        },
+        "marketHoursOnly": {
+          "type": "boolean",
+          "description": "True if data only flows during market hours."
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        }
+      }
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["confirmed", "likely", "uncertain", "unknown"],
+      "description": "Confidence level for this field. confirmed=verified against provider docs or live testing, likely=inferred from patterns/public docs, uncertain=best-guess limited info, unknown=explicitly null."
+    }
+  }
+}

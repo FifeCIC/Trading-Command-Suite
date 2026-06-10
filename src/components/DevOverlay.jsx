@@ -4,7 +4,6 @@ import { findTaggedElements } from '../dev-runtime/tags';
 
 export default function DevOverlay() {
   const open = useUiStore((state) => state.devOverlayOpen);
-  const close = useUiStore((state) => state.closeDevOverlay);
 
   const tags = useMemo(() => {
     if (!open) {
@@ -19,11 +18,7 @@ export default function DevOverlay() {
   }
 
   return (
-    <aside className="dev-overlay" role="dialog" aria-label="Developer Runtime Overlay">
-      <div className="dev-overlay-head">
-        <h2>Developer Runtime</h2>
-        <button type="button" onClick={close}>Close</button>
-      </div>
+    <div className="dev-overlay-content">
       <p className="muted">Tagged elements discovered at runtime.</p>
       <ul className="dev-tag-list">
         {tags.map((item, index) => (
@@ -33,6 +28,6 @@ export default function DevOverlay() {
           </li>
         ))}
       </ul>
-    </aside>
+    </div>
   );
 }

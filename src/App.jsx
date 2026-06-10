@@ -8,50 +8,28 @@ import { withDevTag } from './dev-runtime/tags';
 import { getPerformanceSnapshot, startPerformanceMonitoring } from './performance/monitor';
 import ArchitectureFrameworkPage from './pages/ArchitectureFrameworkPage';
 import DatabaseTablesPage from './pages/DatabaseTablesPage';
+import DirectivesManagerPage from './pages/DirectivesManagerPage';
+import EventsCalendarPage from './pages/EventsCalendarPage';
+import ExecutionQueuePage from './pages/ExecutionQueuePage';
+import NewsIntelPage from './pages/NewsIntelPage';
+import PlatformComparisonsPage from './pages/PlatformComparisonsPage';
+import PluginTabSkeletonPage from './pages/PluginTabSkeletonPage';
+import RiskControlsPage from './pages/RiskControlsPage';
 import SeesLiveStackMockPage from './pages/SeesLiveStackMockPage';
 import SetupWizardPage from './pages/SetupWizardPage';
+import SignalsWorkbenchPage from './pages/SignalsWorkbenchPage';
 import SettingsPage from './pages/SettingsPage';
+import StrategyBuilderPage from './pages/StrategyBuilderPage';
 import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
 import SystemStatusPage from './pages/SystemStatusPage';
 import ThemePage from './pages/ThemePage';
+import TradingPlatformsPage from './pages/TradingPlatformsPage';
 import { useUiStore } from './stores/useUiStore';
 import { useThemeRuntime } from './theme/useThemeRuntime';
+import { NAV_TREE, PRIMARY_PAGES, QUICK_MENU, getNavStructure } from './core/nav-tree';
+import { PLUGIN_TAB_SKELETONS } from './pages/plugin-tab-skeletons';
 
-const NAV_STRUCTURE = {
-  showcase: [
-    { id: 'overview', label: 'Overview' },
-    { id: 'demos', label: 'Live Demo' },
-    { id: 'use-cases', label: 'Use Cases' }
-  ],
-  builder: [
-    { id: 'architecture-framework', label: 'Architecture' },
-    { id: 'theme-lab', label: 'Theme Lab' },
-    { id: 'component-lab', label: 'Component Lab' },
-    { id: 'runtime', label: 'Dev Runtime' }
-  ],
-  trading: [
-    { id: 'sees-live-stack', label: 'SEES Live Stack' },
-    { id: 'symbols-browser', label: 'Symbols' }
-  ],
-  data: [
-    { id: 'database-tables', label: 'Tables' }
-  ],
-  theme: [
-    { id: 'theme-packs', label: 'Theme Packs' }
-  ],
-  ops: [
-    { id: 'setup', label: 'Setup' },
-    { id: 'status', label: 'System Status' },
-    { id: 'analytics', label: 'Analytics' },
-    { id: 'security', label: 'Security' }
-  ],
-  community: [
-    { id: 'about', label: 'About' },
-    { id: 'settings', label: 'Settings' },
-    { id: 'roadmap', label: 'Roadmap' },
-    { id: 'support', label: 'Support' }
-  ]
-};
+const NAV_STRUCTURE = getNavStructure();
 
 const THEME_CARDS = [
   { id: 'core', name: 'Core', description: 'Clean, neutral palette.', colors: ['#f4f7fb', '#0ea5a6', '#0f172a'] },
@@ -60,6 +38,8 @@ const THEME_CARDS = [
   { id: 'terminal', name: 'Terminal', description: 'Black, neon green.', colors: ['#0a0a0a', '#00ff41', '#e0e0e0'] },
   { id: 'void', name: 'Void', description: 'Black, neon purple.', colors: ['#08080d', '#8a50ff', '#d4d0e8'] },
 ];
+
+
 
 function BadgePill({ label, status = 'neutral' }) {
   return <span className={`badge-pill badge-${status}`}>{label}</span>;
@@ -75,17 +55,21 @@ function ContentCard({ title, children }) {
 }
 
 export default function App() {
-  const [primaryArea, setPrimaryArea] = useState('showcase');
-  const [secondaryView, setSecondaryView] = useState('overview');
+  const [primaryArea, setPrimaryArea] = useState('trading');
+  const [secondaryView, setSecondaryView] = useState('sees-live-stack');
   const [demoPrompt, setDemoPrompt] = useState('Generate a responsive planning concept for eco garden week.');
   const [demoOutput, setDemoOutput] = useState('');
   const [activityLog, setActivityLog] = useState([]);
 
   const toggleDevOverlay = useUiStore((state) => state.toggleDevOverlay);
+  const devOverlayOpen = useUiStore((state) => state.devOverlayOpen);
   const themeMode = useUiStore((state) => state.themeMode);
   const themePack = useUiStore((state) => state.themePack);
   const setThemeMode = useUiStore((state) => state.setThemeMode);
   const setThemePack = useUiStore((state) => state.setThemePack);
+  const backgroundTone = useUiStore((state) => state.backgroundTone);
+  const setBackgroundTone = useUiStore((state) => state.setBackgroundTone);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const { adapters, meta } = useThemeRuntime({ mode: themeMode, packId: themePack });
   const availablePacks = Array.isArray(meta?.availablePacks) ? meta.availablePacks : [];
   const availableAdapters = Array.isArray(meta?.availableAdapters) ? meta.availableAdapters : [];
@@ -133,12 +117,24 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const firstView = NAV_STRUCTURE[primaryArea]?.[0]?.id;
-    if (firstView) {
-      setSecondaryView(firstView);
-      pushActivity('NAV', `Primary changed to ${primaryArea}`);
+    const views = NAV_STRUCTURE[primaryArea] || [];
+    const hasCurrentView = views.some((item) => item.id === secondaryView);
+    if (!hasCurrentView) {
+      const firstView = views[0]?.id;
+      if (firstView) {
+        setSecondaryView(firstView);
+      }
     }
-  }, [primaryArea]);
+    pushActivity('NAV', `Primary changed to ${primaryArea}`);
+  }, [primaryArea, secondaryView]);
+
+  useEffect(() => {
+    setHeaderMenuOpen(false);
+  }, [primaryArea, secondaryView]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-bg-tone', backgroundTone);
+  }, [backgroundTone]);
 
   function onSupportClick(surface) {
     trackSupportClick(surface);
@@ -174,6 +170,8 @@ export default function App() {
     pushActivity('VIEW', `Opened ${viewId}`);
   }
 
+
+
   function runDemo() {
     const output = `Demo response for "${demoPrompt}":\n- Theme: sci-fi curriculum board\n- Activity flow: intro > collaboration > reflection\n- Evidence capture: photo + annotation + outcome tag\n- Parent digest summary prepared`;
     setDemoOutput(output);
@@ -182,34 +180,6 @@ export default function App() {
       promptLength: demoPrompt.length
     });
     pushActivity('DEMO', 'Generated demo output');
-  }
-
-  function startPanelDrag(event) {
-    const panel = event.currentTarget;
-    const target = event.target;
-
-    if (target instanceof HTMLElement && target.closest('a,button,textarea,input')) {
-      return;
-    }
-
-    const rect = panel.getBoundingClientRect();
-    const startX = event.clientX - rect.left;
-    const startY = event.clientY - rect.top;
-
-    const onMouseMove = (moveEvent) => {
-      panel.style.left = `${moveEvent.clientX - startX}px`;
-      panel.style.top = `${moveEvent.clientY - startY}px`;
-      panel.style.right = 'auto';
-      panel.style.bottom = 'auto';
-    };
-
-    const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
   }
 
   function renderMainContent() {
@@ -383,12 +353,52 @@ export default function App() {
       return <SymbolsBrowserPage />;
     }
 
+    if (secondaryView === 'directives-manager') {
+      return <DirectivesManagerPage />;
+    }
+
     if (secondaryView === 'database-tables') {
       return <DatabaseTablesPage />;
     }
 
     if (secondaryView === 'theme-packs') {
       return <ThemePage />;
+    }
+
+    if (secondaryView === 'trading-platforms') {
+      return <TradingPlatformsPage />;
+    }
+
+    if (secondaryView === 'platform-comparisons') {
+      return <PlatformComparisonsPage />;
+    }
+
+    if (secondaryView === 'news-intel') {
+      return <NewsIntelPage />;
+    }
+
+    if (secondaryView === 'events-calendar') {
+      return <EventsCalendarPage />;
+    }
+
+    if (secondaryView === 'signals-workbench') {
+      return <SignalsWorkbenchPage />;
+    }
+
+    if (secondaryView === 'strategy-builder') {
+      return <StrategyBuilderPage />;
+    }
+
+    if (secondaryView === 'risk-controls') {
+      return <RiskControlsPage />;
+    }
+
+    if (secondaryView === 'execution-queue') {
+      return <ExecutionQueuePage />;
+    }
+
+    if (PLUGIN_TAB_SKELETONS[secondaryView]) {
+      return <PluginTabSkeletonPage tabId={secondaryView} />;
     }
 
     if (secondaryView === 'analytics') {
@@ -492,35 +502,48 @@ export default function App() {
     );
   }
 
+  const isApiOnline = Boolean(healthQuery.data?.version);
+  const isDbOnline = healthQuery.data?.services?.databaseConnected === true;
   return (
-    <div className="site-shell" {...withDevTag('app.shell', { product: 'tradingcs' })}>
+    <div className={`site-shell layout-omni background-${backgroundTone}`} {...withDevTag('app.shell', { product: 'tradingcs' })}>
       <div className="sci-bg" aria-hidden="true">
         <div className="sci-stars" />
         <div className="sci-grid" />
         <div className="sci-glow" />
       </div>
 
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Trading Command Suite</p>
-          <h1>SEES + MT5 Integration Platform</h1>
-        </div>
-        <nav className="primary-nav" aria-label="Primary areas">
-          {Object.keys(NAV_STRUCTURE).map((area) => (
-            <button
-              key={area}
-              type="button"
-              className={primaryArea === area ? 'nav-active' : ''}
-              onClick={() => onPrimarySelect(area)}
-            >
-              {area}
+      <header className="topbar topbar-omni">
+        <div className="topbar-row topbar-row-main">
+          <div className="topbar-status-cluster">
+            <BadgePill label={isApiOnline ? 'API Online' : 'API Offline'} status={isApiOnline ? 'ok' : 'warn'} />
+            <BadgePill label={isDbOnline ? 'DB Ready' : 'DB Offline'} status={isDbOnline ? 'ok' : 'warn'} />
+            <BadgePill label="Omni Layout" status="neutral" />
+          </div>
+
+          <div className="topbar-title-block">
+            <p className="eyebrow">Trading Command Suite</p>
+            <h1>{(NAV_STRUCTURE[primaryArea] || []).find((v) => v.id === secondaryView)?.label || secondaryView}</h1>
+          </div>
+
+          <div className="topbar-menu-wrap">
+            <button type="button" onClick={() => setHeaderMenuOpen((open) => !open)}>
+              Quick Menu
             </button>
-          ))}
-        </nav>
+            {headerMenuOpen && (
+              <div className="topbar-menu-dropdown">
+                <p className="muted">Primary Pages</p>
+                {QUICK_MENU.map((item) => (
+                  <button key={item.id} type="button" onClick={() => onPrimarySelect(item.id)}>{item.label}</button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
       </header>
 
       <aside className="left-rail" aria-label="Section navigation">
-        <h2>{primaryArea}</h2>
+        <h2>{NAV_TREE[primaryArea]?.label || primaryArea}</h2>
         <div className="rail-links">
           {(NAV_STRUCTURE[primaryArea] || []).map((item) => (
             <button
@@ -534,7 +557,27 @@ export default function App() {
           ))}
         </div>
 
-        {primaryArea === 'theme' && (
+        {FEATURE_FLAGS.devRuntime && (
+          <div className="rail-block">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <p className="muted" style={{ margin: 0 }}>Dev Runtime</p>
+              <button
+                type="button"
+                className={devOverlayOpen ? 'cta' : ''}
+                onClick={() => {
+                  toggleDevOverlay();
+                  pushActivity('RUNTIME', 'Toggled dev overlay');
+                }}
+                style={{ padding: '0.4rem 0.7rem', fontSize: '0.85rem' }}
+              >
+                {devOverlayOpen ? 'Hide' : 'Show'}
+              </button>
+            </div>
+            <DevOverlay />
+          </div>
+        )}
+
+        {primaryArea === 'settings' && (
           <>
             <div className="rail-block">
               <p className="muted">Mode</p>
@@ -544,6 +587,42 @@ export default function App() {
                 </button>
                 <button type="button" className={themeMode === 'dark' ? 'cta' : ''} onClick={() => setThemeMode('dark')}>
                   Dark
+                </button>
+              </div>
+            </div>
+
+            <div className="rail-block">
+              <p className="muted">Background</p>
+              <div className="inline-actions">
+                <button
+                  type="button"
+                  className={backgroundTone === 'aura' ? 'cta' : ''}
+                  onClick={() => {
+                    setBackgroundTone('aura');
+                    pushActivity('THEME', 'Background tone set to aura');
+                  }}
+                >
+                  Aura
+                </button>
+                <button
+                  type="button"
+                  className={backgroundTone === 'slate' ? 'cta' : ''}
+                  onClick={() => {
+                    setBackgroundTone('slate');
+                    pushActivity('THEME', 'Background tone set to slate');
+                  }}
+                >
+                  Slate
+                </button>
+                <button
+                  type="button"
+                  className={backgroundTone === 'black' ? 'cta' : ''}
+                  onClick={() => {
+                    setBackgroundTone('black');
+                    pushActivity('THEME', 'Background tone set to black');
+                  }}
+                >
+                  Pure Black
                 </button>
               </div>
             </div>
@@ -648,64 +727,62 @@ export default function App() {
               Toggle Dev Overlay
             </button>
           )}
-          <a
-            className="support-link-button"
-            href="https://www.buymeacoffee.com/ryanbayne"
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => onSupportClick('right-rail.support')}
-          >
-            Support Ryan
-          </a>
           <button type="button" onClick={onDownloadRuntimeReport}>Export Report</button>
         </div>
       </aside>
 
-      <section
-        className="floating-panel floating-insights"
-        onMouseDown={startPanelDrag}
-        {...withDevTag('floating.insights', { kind: 'hidden-info' })}
-      >
-        <div className="floating-title">
-          <span>Hidden Info</span>
-          <BadgePill label={themePack} status="ok" />
-        </div>
-        <p>Policy: {policyMeta.policyEnforced ? 'enforced' : 'not enforced'}</p>
-        <p>Fail-closed: {policyMeta.failClosed ? 'on' : 'off'}</p>
-        <p>Vitals tracked: {Object.keys(performanceSnapshot.metrics).length}</p>
-      </section>
+      <footer className="app-footer">
+        <section className="app-footer-nav" aria-label="Areas navigation">
+          <p className="muted">Areas</p>
+          <div className="app-footer-nav-links">
+            {PRIMARY_PAGES.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={primaryArea === item.id ? 'nav-active' : ''}
+                onClick={() => onPrimarySelect(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </section>
 
-      <section
-        className="floating-panel floating-log"
-        onMouseDown={startPanelDrag}
-        {...withDevTag('floating.log', { kind: 'activity-log' })}
-      >
-        <div className="floating-title">
-          <span>Live Activity Log</span>
-          <BadgePill label={`${activityLog.length}`} status="neutral" />
-        </div>
-        <div className="log-scroll">
-          {activityLog.length === 0 && <p className="muted">Interact with the shell to populate log events.</p>}
-          {activityLog.map((item) => (
-            <p key={item.id} className="log-line">
-              {item.timestamp} [{item.type}] {item.details}
-            </p>
-          ))}
-        </div>
-      </section>
+        {devOverlayOpen && (
+          <div className="dev-footer">
+            <section
+              className="footer-panel footer-insights"
+              {...withDevTag('floating.insights', { kind: 'hidden-info' })}
+            >
+              <div className="floating-title">
+                <span>Hidden Info</span>
+                <BadgePill label={themePack} status="ok" />
+              </div>
+              <p>Policy: {policyMeta.policyEnforced ? 'enforced' : 'not enforced'}</p>
+              <p>Fail-closed: {policyMeta.failClosed ? 'on' : 'off'}</p>
+              <p>Vitals tracked: {Object.keys(performanceSnapshot.metrics).length}</p>
+            </section>
 
-      <a
-        className="support-fab"
-        href="https://www.buymeacoffee.com/ryanbayne"
-        target="_blank"
-        rel="noreferrer"
-        onClick={() => onSupportClick('support-fab.link')}
-        {...withDevTag('support.fab', { placement: 'fixed' })}
-      >
-        Buy Ryan a Coffee
-      </a>
-
-      {FEATURE_FLAGS.devRuntime && <DevOverlay />}
+            <section
+              className="footer-panel footer-log"
+              {...withDevTag('floating.log', { kind: 'activity-log' })}
+            >
+              <div className="floating-title">
+                <span>Live Activity Log</span>
+                <BadgePill label={`${activityLog.length}`} status="neutral" />
+              </div>
+              <div className="log-scroll">
+                {activityLog.length === 0 && <p className="muted">Interact with the shell to populate log events.</p>}
+                {activityLog.map((item) => (
+                  <p key={item.id} className="log-line">
+                    {item.timestamp} [{item.type}] {item.details}
+                  </p>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+      </footer>
     </div>
   );
 }

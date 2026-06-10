@@ -1,0 +1,71 @@
+/**
+ * PLACEHOLDER — implement per SPRINT.md Task 3.
+ *
+ * Provider Adapter Contract
+ * =========================
+ * Every market-data provider adapter MUST implement this interface.
+ * The adapter registry in providers.service.ts selects the active adapter
+ * based on environment config (PROVIDER_ACTIVE or per-provider env key).
+ *
+ * Contract rules (from Architecture Framework):
+ * - Do NOT call external providers during page rendering.
+ * - Adapters are consumed by queue processors and freshness checks.
+ * - Fallback mode: adapters return mock data with explicit mode/status flags.
+ * - Full mode: adapters call real provider APIs.
+ */
+
+export interface MarketBar {
+  timestamp: Date;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface ProviderQuote {
+  symbol: string;
+  bid: number | null;
+  ask: number | null;
+  last: number | null;
+  timestamp: Date;
+}
+
+export interface ProviderProfile {
+  symbol: string;
+  name: string;
+  exchange: string;
+  sector: string | null;
+  industry: string | null;
+  marketCap: number | null;
+}
+
+export interface IProviderAdapter {
+  /** Human-readable adapter name, used in health responses. */
+  readonly name: string;
+
+  /**
+   * Fetch current quote (bid/ask/last) for one symbol.
+   * Must NOT throw — return null on failure and let the caller handle logging.
+   */
+  getQuote(symbol: string): Promise<ProviderQuote | null>;
+
+  /**
+   * Fetch OHLCV candles for a symbol and timeframe.
+   * @param symbol  e.g. "AAPL"
+   * @param timeframe e.g. "1h", "1d"
+   * @param limit   max bars to return (1-1000)
+   */
+  getCandles(symbol: string, timeframe: string, limit?: number): Promise<MarketBar[]>;
+
+  /**
+   * Fetch company profile / fundamental data.
+   */
+  getProfile(symbol: string): Promise<ProviderProfile | null>;
+
+  /**
+   * Lightweight connectivity check. Return true if the provider API
+   * responded within a reasonable timeout.
+   */
+  healthCheck(): Promise<boolean>;
+}

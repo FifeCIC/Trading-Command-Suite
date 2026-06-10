@@ -1,0 +1,2336 @@
+{
+  "$meta": {
+    "schemaVersion": "1.0.0-alpha",
+    "generatedAt": "2026-06-10T18:00:00.000Z",
+    "generatedBy": "manual-catalog-expansion",
+    "sourceFiles": [
+      "src/data/provider-comparisons.seed.json",
+      "scripts/extract-provider-comparisons.cjs",
+      "nest/src/modules/providers/adapters/trading212.adapter.ts",
+      "nest/src/modules/providers/adapters/alpaca.adapter.ts",
+      "nest/src/modules/providers/adapters/alpha-vantage.adapter.ts",
+      "nest/src/modules/providers/interfaces/provider-adapter.interface.ts",
+      "docs/TRADING212-IMPLEMENTATION-PROGRESS.md",
+      "docs/DATA-ELEMENTS-SPECIFICATION.md"
+    ],
+    "confidenceScoring": {
+      "confirmed": "Verified against provider docs or live API testing.",
+      "likely": "Inferred from known patterns, public docs, or community sources but not directly tested.",
+      "uncertain": "Best-guess based on limited information; needs verification.",
+      "unknown": "Explicitly unknown; field is null with a reason."
+    }
+  },
+  "providers": {
+    "trading212": {
+      "providerId": "trading212",
+      "displayName": "Trading 212",
+      "providerType": "brokerage",
+      "adapterStatus": {
+        "implemented": true,
+        "adapterFile": "nest/src/modules/providers/adapters/trading212.adapter.ts",
+        "methodsImplemented": ["getQuote", "getCandles", "getProfile", "healthCheck"],
+        "isMockOnly": true
+      },
+      "auth": {
+        "method": "api_key_header",
+        "credentialFields": ["TRADING212_API_KEY"],
+        "headerName": "Authorization",
+        "tokenPrefix": null,
+        "confidence": "confirmed"
+      },
+      "environments": {
+        "paper": "https://demo.trading212.com/api/v0",
+        "live": "https://live.trading212.com/api/v0"
+      },
+      "rateLimitProfile": {
+        "freeTier": {
+          "requestsPerMinute": null,
+          "requestsPerDay": null,
+          "notes": "No free tier — requires funded account"
+        },
+        "paidTier": {
+          "requestsPerMinute": 60,
+          "requestsPerDay": null,
+          "notes": "Per API key; exact limits undocumented publicly"
+        },
+        "notes": "Rate limits inferred from community reports; Trading212 does not publish explicit rate-limit docs. Confidence: uncertain."
+      },
+      "freshnessSLA": {
+        "expectedLatencyMs": 1500,
+        "staleThresholdMinutes": 5,
+        "updateFrequency": "per_second",
+        "marketHoursOnly": false,
+        "confidence": "likely"
+      },
+      "endpoints": [
+        {
+          "id": "get_account_info",
+          "method": "GET",
+          "path": "/equity/account/info",
+          "category": "account",
+          "displayName": "Account Info",
+          "description": "Returns account balance, currency, and status.",
+          "payloadClass": "account_info",
+          "parameters": {
+            "required": [],
+            "optional": []
+          },
+          "rateLimitCategory": "t212_standard",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 5, "updateFrequency": "on_demand", "marketHoursOnly": false, "confidence": "likely" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_portfolio",
+          "method": "GET",
+          "path": "/equity/portfolio",
+          "category": "portfolio",
+          "displayName": "Portfolio Positions",
+          "description": "Returns all open positions with quantity, average price, P&L.",
+          "payloadClass": "portfolio_positions",
+          "parameters": {
+            "required": [],
+            "optional": []
+          },
+          "rateLimitCategory": "t212_standard",
+          "freshnessSLA": { "expectedLatencyMs": 1000, "staleThresholdMinutes": 2, "updateFrequency": "per_second", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_instruments",
+          "method": "GET",
+          "path": "/equity/metadata/instruments",
+          "category": "reference",
+          "displayName": "Instrument List",
+          "description": "Returns available instruments (tickers, ISINs, types).",
+          "payloadClass": "instrument_list",
+          "parameters": {
+            "required": [],
+            "optional": []
+          },
+          "rateLimitCategory": "t212_standard",
+          "freshnessSLA": { "expectedLatencyMs": 2000, "staleThresholdMinutes": 1440, "updateFrequency": "eod", "marketHoursOnly": false, "confidence": "likely" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_order_list",
+          "method": "GET",
+          "path": "/equity/orders",
+          "category": "order_management",
+          "displayName": "Order List",
+          "description": "Returns pending and historical orders.",
+          "payloadClass": "order_list",
+          "parameters": {
+            "required": [],
+            "optional": [
+              { "name": "cursor", "type": "string", "description": "Pagination cursor from previous response." },
+              { "name": "ticker", "type": "string", "description": "Filter by ticker symbol." },
+              { "name": "limit", "type": "integer", "description": "Max orders to return (default 20).", "min": 1, "max": 50 }
+            ]
+          },
+          "rateLimitCategory": "t212_standard",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 1, "updateFrequency": "realtime", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "cursor",
+          "maxPageSize": 50,
+          "confidence": "confirmed"
+        },
+        {
+          "id": "post_order_limit",
+          "method": "POST",
+          "path": "/equity/orders/limit",
+          "category": "order_management",
+          "displayName": "Place Limit Order",
+          "description": "Places a limit order for an instrument.",
+          "payloadClass": "order_confirmation",
+          "parameters": {
+            "required": [
+              { "name": "ticker", "type": "string", "description": "Instrument ticker symbol." },
+              { "name": "quantity", "type": "number", "description": "Number of shares/units." },
+              { "name": "limitPrice", "type": "number", "description": "Limit price for the order." },
+              { "name": "action", "type": "enum", "enumValues": ["BUY", "SELL"], "description": "Direction of the order." }
+            ],
+            "optional": [
+              { "name": "timeValidity", "type": "enum", "enumValues": ["DAY", "GTC"], "description": "Order duration. Default DAY." }
+            ]
+          },
+          "rateLimitCategory": "t212_order_write",
+          "freshnessSLA": { "expectedLatencyMs": 2000, "staleThresholdMinutes": 0, "updateFrequency": "on_demand", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "post_order_market",
+          "method": "POST",
+          "path": "/equity/orders/market",
+          "category": "order_management",
+          "displayName": "Place Market Order",
+          "description": "Places a market order for an instrument.",
+          "payloadClass": "order_confirmation",
+          "parameters": {
+            "required": [
+              { "name": "ticker", "type": "string" },
+              { "name": "quantity", "type": "number" },
+              { "name": "action", "type": "enum", "enumValues": ["BUY", "SELL"] }
+            ],
+            "optional": []
+          },
+          "rateLimitCategory": "t212_order_write",
+          "freshnessSLA": { "expectedLatencyMs": 2000, "staleThresholdMinutes": 0, "updateFrequency": "on_demand", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "post_order_stop",
+          "method": "POST",
+          "path": "/equity/orders/stop",
+          "category": "order_management",
+          "displayName": "Place Stop Order",
+          "description": "Places a stop-loss or stop-entry order.",
+          "payloadClass": "order_confirmation",
+          "parameters": {
+            "required": [
+              { "name": "ticker", "type": "string" },
+              { "name": "quantity", "type": "number" },
+              { "name": "stopPrice", "type": "number" },
+              { "name": "action", "type": "enum", "enumValues": ["BUY", "SELL"] }
+            ],
+            "optional": [
+              { "name": "limitPrice", "type": "number", "description": "Optional limit price for stop-limit orders." }
+            ]
+          },
+          "rateLimitCategory": "t212_order_write",
+          "freshnessSLA": { "expectedLatencyMs": 2000, "staleThresholdMinutes": 0, "updateFrequency": "on_demand", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "delete_order",
+          "method": "DELETE",
+          "path": "/equity/orders/{orderId}",
+          "category": "order_management",
+          "displayName": "Cancel Order",
+          "description": "Cancels a pending order by ID.",
+          "payloadClass": "order_confirmation",
+          "parameters": {
+            "required": [
+              { "name": "orderId", "type": "string", "description": "Order ID returned from order placement." }
+            ],
+            "optional": []
+          },
+          "rateLimitCategory": "t212_order_write",
+          "freshnessSLA": { "expectedLatencyMs": 1000, "staleThresholdMinutes": 0, "updateFrequency": "on_demand", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_historical_bars",
+          "method": "GET",
+          "path": "/equity/history",
+          "category": "candles",
+          "displayName": "Historical Candles",
+          "description": "Returns OHLCV candle data for a ticker and interval. Limited time range per call.",
+          "payloadClass": "candle_bars",
+          "timeframeSupport": ["1m", "5m", "15m", "30m", "1h", "4h", "1d"],
+          "assetClasses": ["equity", "etf", "forex", "crypto", "cfd"],
+          "parameters": {
+            "required": [
+              { "name": "ticker", "type": "string" },
+              { "name": "from", "type": "string", "description": "ISO-8601 start timestamp." },
+              { "name": "to", "type": "string", "description": "ISO-8601 end timestamp." },
+              { "name": "candlesize", "type": "enum", "enumValues": ["1", "5", "15", "30", "60", "240", "1440"], "description": "Candle interval in minutes." }
+            ],
+            "optional": []
+          },
+          "rateLimitCategory": "t212_standard",
+          "freshnessSLA": { "expectedLatencyMs": 3000, "staleThresholdMinutes": 1440, "updateFrequency": "eod", "marketHoursOnly": true, "confidence": "likely" },
+          "paginationSupport": "none",
+          "maxPageSize": null,
+          "confidence": "likely"
+        },
+        {
+          "id": "get_quote",
+          "method": "GET",
+          "path": "/equity/quote/{ticker}",
+          "category": "quotes",
+          "displayName": "Quote",
+          "description": "Returns current bid/ask/last for a single ticker. NOT documented officially for REST; may be batch-only or websocket.",
+          "payloadClass": "quote_snapshot",
+          "assetClasses": ["equity", "etf", "forex", "crypto", "cfd"],
+          "parameters": {
+            "required": [{ "name": "ticker", "type": "string" }],
+            "optional": []
+          },
+          "rateLimitCategory": "t212_standard",
+          "freshnessSLA": { "expectedLatencyMs": 1500, "staleThresholdMinutes": 2, "updateFrequency": "realtime", "marketHoursOnly": true, "confidence": "uncertain" },
+          "paginationSupport": "none",
+          "confidence": "uncertain"
+        },
+        {
+          "id": "ws_market_data",
+          "method": "WS",
+          "path": "wss://live.trading212.com/streaming/events",
+          "category": "streaming",
+          "displayName": "WebSocket Market Stream",
+          "description": "Real-time streaming of quotes and trades. NOT publicly documented; may be internal/proprietary.",
+          "payloadClass": "ws_tick",
+          "assetClasses": ["equity", "forex", "crypto", "cfd"],
+          "parameters": {
+            "required": [],
+            "optional": []
+          },
+          "rateLimitCategory": "t212_ws",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 0, "updateFrequency": "realtime", "marketHoursOnly": true, "confidence": "uncertain" },
+          "paginationSupport": "none",
+          "confidence": "uncertain"
+        }
+      ],
+      "capabilityMatrix": {
+        "real_time_data": { "value": "Yes", "notes": "Real-time quotes for funded accounts" },
+        "historical_data": { "value": "Yes", "notes": "Historical price data available" },
+        "tick_data": { "value": "No", "notes": "Not available via API" },
+        "minute_data": { "value": "Yes", "notes": "Minute-level data available" },
+        "fundamental_data": { "value": "Limited", "notes": "Basic company info only" },
+        "fractional_shares": { "value": "Yes", "notes": "Fractional shares supported" },
+        "trailing_stops": { "value": "No", "notes": "Not available via API" }
+      }
+    },
+    "interactive_brokers": {
+      "providerId": "interactive_brokers",
+      "displayName": "Interactive Brokers",
+      "providerType": "brokerage",
+      "adapterStatus": {
+        "implemented": false,
+        "adapterFile": null,
+        "methodsImplemented": [],
+        "isMockOnly": false
+      },
+      "auth": {
+        "method": "oauth2",
+        "credentialFields": ["IB_GATEWAY_URL", "IB_OAUTH_CLIENT_ID", "IB_OAUTH_CLIENT_SECRET"],
+        "headerName": "Authorization",
+        "tokenPrefix": "Bearer",
+        "oauthGrantTypes": ["authorization_code", "client_credentials"],
+        "confidence": "likely"
+      },
+      "environments": {
+        "paper": "https://localhost:5000/v1/api",
+        "live": "https://localhost:5000/v1/api"
+      },
+      "rateLimitProfile": {
+        "freeTier": {
+          "requestsPerMinute": null,
+          "requestsPerDay": null,
+          "notes": "No free tier — requires funded IBKR account"
+        },
+        "paidTier": {
+          "requestsPerMinute": 50,
+          "requestsPerDay": null,
+          "websocketConnections": 1,
+          "websocketSubscriptions": 100,
+          "notes": "Client Portal API throttles at ~50 req/min; TWS API has different limits. Confidence: likely."
+        },
+        "notes": "IB has multiple API surfaces (Client Portal REST, TWS socket, Web API). Rate limits differ per surface. This catalog primarily models the Client Portal REST API."
+      },
+      "freshnessSLA": {
+        "expectedLatencyMs": 100,
+        "staleThresholdMinutes": 2,
+        "updateFrequency": "realtime",
+        "marketHoursOnly": true,
+        "confidence": "likely"
+      },
+      "endpoints": [
+        {
+          "id": "get_account_summary",
+          "method": "GET",
+          "path": "/portfolio/{accountId}/summary",
+          "category": "account",
+          "displayName": "Account Summary",
+          "description": "Returns account balances, margin, and NAV for a given account.",
+          "payloadClass": "account_summary",
+          "parameters": {
+            "required": [{ "name": "accountId", "type": "string", "description": "IB account ID (e.g. 'DU123456')." }],
+            "optional": []
+          },
+          "rateLimitCategory": "ibkr_rest_standard",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 5, "updateFrequency": "on_demand", "marketHoursOnly": false, "confidence": "likely" },
+          "paginationSupport": "none",
+          "confidence": "likely"
+        },
+        {
+          "id": "get_portfolio_positions",
+          "method": "GET",
+          "path": "/portfolio/{accountId}/positions/{pageId}",
+          "category": "portfolio",
+          "displayName": "Portfolio Positions",
+          "description": "Returns paginated list of open positions with market value, P&L, cost basis.",
+          "payloadClass": "portfolio_positions",
+          "parameters": {
+            "required": [
+              { "name": "accountId", "type": "string" },
+              { "name": "pageId", "type": "integer", "description": "Zero-based page index. IB paginates by page, not cursor.", "default": 0 }
+            ],
+            "optional": []
+          },
+          "rateLimitCategory": "ibkr_rest_standard",
+          "freshnessSLA": { "expectedLatencyMs": 1000, "staleThresholdMinutes": 2, "updateFrequency": "per_second", "marketHoursOnly": true, "confidence": "likely" },
+          "paginationSupport": "page",
+          "maxPageSize": null,
+          "confidence": "likely"
+        },
+        {
+          "id": "get_orders_live",
+          "method": "GET",
+          "path": "/iserver/account/orders",
+          "category": "order_management",
+          "displayName": "Live Orders",
+          "description": "Returns all live (pending/working) orders for the session.",
+          "payloadClass": "order_list",
+          "parameters": {
+            "required": [],
+            "optional": [
+              { "name": "filters", "type": "array", "description": "Status filters. Options: 'All', 'Cancelled', 'Filled', 'Inactive', 'Submitted'." }
+            ]
+          },
+          "rateLimitCategory": "ibkr_rest_standard",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 1, "updateFrequency": "realtime", "marketHoursOnly": true, "confidence": "likely" },
+          "paginationSupport": "none",
+          "confidence": "likely"
+        },
+        {
+          "id": "post_order",
+          "method": "POST",
+          "path": "/iserver/account/{accountId}/orders",
+          "category": "order_management",
+          "displayName": "Place Order",
+          "description": "Places an order (market, limit, stop, stop-limit, trailing stop, etc.). Order type specified in payload.",
+          "payloadClass": "order_confirmation",
+          "parameters": {
+            "required": [
+              { "name": "accountId", "type": "string" },
+              { "name": "conid", "type": "integer", "description": "IB contract ID (not ticker). Must fetch via search first." },
+              { "name": "orderType", "type": "enum", "enumValues": ["MKT", "LMT", "STP", "STP_LMT", "TRAIL", "TRAIL_LMT", "REL"], "description": "IB order type code." },
+              { "name": "quantity", "type": "number" },
+              { "name": "side", "type": "enum", "enumValues": ["BUY", "SELL"] }
+            ],
+            "optional": [
+              { "name": "price", "type": "number", "description": "Required for LMT orders." },
+              { "name": "auxPrice", "type": "number", "description": "Stop price for STP orders." },
+              { "name": "trailingAmt", "type": "number", "description": "Trailing amount for TRAIL orders." },
+              { "name": "tif", "type": "enum", "enumValues": ["DAY", "GTC", "IOC", "OPG"], "description": "Time in force. Default DAY." },
+              { "name": "outsideRTH", "type": "boolean", "description": "Allow execution outside regular trading hours." }
+            ]
+          },
+          "rateLimitCategory": "ibkr_order_write",
+          "freshnessSLA": { "expectedLatencyMs": 1000, "staleThresholdMinutes": 0, "updateFrequency": "on_demand", "marketHoursOnly": false, "confidence": "likely" },
+          "paginationSupport": "none",
+          "confidence": "likely"
+        },
+        {
+          "id": "delete_order",
+          "method": "DELETE",
+          "path": "/iserver/account/{accountId}/orders/{orderId}",
+          "category": "order_management",
+          "displayName": "Cancel Order",
+          "description": "Cancels a pending order by order ID.",
+          "payloadClass": "order_confirmation",
+          "parameters": {
+            "required": [
+              { "name": "accountId", "type": "string" },
+              { "name": "orderId", "type": "string" }
+            ],
+            "optional": []
+          },
+          "rateLimitCategory": "ibkr_order_write",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 0, "updateFrequency": "on_demand", "marketHoursOnly": false, "confidence": "likely" },
+          "paginationSupport": "none",
+          "confidence": "likely"
+        },
+        {
+          "id": "get_market_snapshot",
+          "method": "GET",
+          "path": "/iserver/marketdata/snapshot",
+          "category": "quotes",
+          "displayName": "Market Snapshot",
+          "description": "Returns current bid/ask/last for one or more conids. Includes extended fields like change, change%, high, low.",
+          "payloadClass": "quote_snapshot",
+          "assetClasses": ["equity", "etf", "option", "forex", "index", "futures"],
+          "parameters": {
+            "required": [
+              { "name": "conids", "type": "string", "description": "Comma-delimited list of IB contract IDs." },
+              { "name": "fields", "type": "string", "description": "Comma-delimited field codes (e.g. '31,84,85,86')." }
+            ],
+            "optional": []
+          },
+          "rateLimitCategory": "ibkr_market_data",
+          "freshnessSLA": { "expectedLatencyMs": 200, "staleThresholdMinutes": 1, "updateFrequency": "realtime", "marketHoursOnly": true, "confidence": "likely" },
+          "paginationSupport": "none",
+          "confidence": "likely"
+        },
+        {
+          "id": "get_historical_bars",
+          "method": "GET",
+          "path": "/iserver/marketdata/history",
+          "category": "candles",
+          "displayName": "Historical Candles",
+          "description": "Returns OHLCV bars for a conid, period, and bar size. Period is relative (e.g. '1d', '1w', '1m').",
+          "payloadClass": "candle_bars",
+          "timeframeSupport": ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"],
+          "assetClasses": ["equity", "etf", "option", "forex", "index", "futures", "crypto"],
+          "parameters": {
+            "required": [
+              { "name": "conid", "type": "integer" },
+              { "name": "period", "type": "string", "description": "Relative period string. E.g. '1d', '5d', '1w', '1m', '1y'." },
+              { "name": "bar", "type": "string", "description": "Bar size. E.g. '1min', '5mins', '1h', '1d'." }
+            ],
+            "optional": [
+              { "name": "outsideRth", "type": "boolean", "description": "Include data outside regular trading hours." }
+            ]
+          },
+          "rateLimitCategory": "ibkr_market_data",
+          "freshnessSLA": { "expectedLatencyMs": 1000, "staleThresholdMinutes": 1440, "updateFrequency": "eod", "marketHoursOnly": true, "confidence": "likely" },
+          "paginationSupport": "none",
+          "maxPageSize": null,
+          "confidence": "likely"
+        },
+        {
+          "id": "get_search_by_symbol",
+          "method": "GET",
+          "path": "/iserver/secdef/search",
+          "category": "reference",
+          "displayName": "Contract Search",
+          "description": "Search for contracts by symbol/name. Returns conid needed for other endpoints. CRITICAL: IB uses conids, not tickers.",
+          "payloadClass": "contract_search",
+          "parameters": {
+            "required": [{ "name": "symbol", "type": "string", "description": "Ticker or partial name to search." }],
+            "optional": [
+              { "name": "name", "type": "boolean", "description": "Set true to search by company name instead of symbol." },
+              { "name": "secType", "type": "enum", "enumValues": ["STK", "OPT", "FUT", "CASH", "BOND", "FUND", "WAR", "CFD"], "description": "Filter by security type." }
+            ]
+          },
+          "rateLimitCategory": "ibkr_rest_standard",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 1440, "updateFrequency": "eod", "marketHoursOnly": false, "confidence": "likely" },
+          "paginationSupport": "none",
+          "confidence": "likely"
+        },
+        {
+          "id": "ws_market_data",
+          "method": "WS",
+          "path": "wss://localhost:5000/v1/api/ws",
+          "category": "streaming",
+          "displayName": "WebSocket Market Data",
+          "description": "TWS-style streaming via the Client Portal gateway. Subscribes to market data, account updates, order status.",
+          "payloadClass": "ws_tick",
+          "assetClasses": ["equity", "etf", "option", "forex", "index", "futures", "crypto"],
+          "parameters": {
+            "required": [],
+            "optional": []
+          },
+          "rateLimitCategory": "ibkr_ws",
+          "freshnessSLA": { "expectedLatencyMs": 100, "staleThresholdMinutes": 0, "updateFrequency": "realtime", "marketHoursOnly": true, "confidence": "likely" },
+          "paginationSupport": "none",
+          "confidence": "likely"
+        },
+        {
+          "id": "get_fundamentals",
+          "method": "GET",
+          "path": "/fundamentals/{conid}",
+          "category": "fundamentals",
+          "displayName": "Fundamentals",
+          "description": "Returns company fundamentals: financials, ratios, ESG scores, analyst estimates. Endpoint path approximate.",
+          "payloadClass": "fundamentals_profile",
+          "parameters": {
+            "required": [{ "name": "conid", "type": "integer" }],
+            "optional": [
+              { "name": "type", "type": "enum", "enumValues": ["financials", "ratios", "esg", "estimates", "ownership"], "description": "Fundamental data type to retrieve." }
+            ]
+          },
+          "rateLimitCategory": "ibkr_rest_standard",
+          "freshnessSLA": { "expectedLatencyMs": 2000, "staleThresholdMinutes": 10080, "updateFrequency": "weekly", "marketHoursOnly": false, "confidence": "uncertain" },
+          "paginationSupport": "none",
+          "confidence": "uncertain"
+        }
+      ],
+      "capabilityMatrix": {
+        "real_time_data": { "value": "Yes (Paid)", "notes": "Market data subscriptions required" },
+        "historical_data": { "value": "Yes", "notes": "Extensive historical data" },
+        "tick_data": { "value": "Yes (Paid)", "notes": "Level II data available" },
+        "fundamental_data": { "value": "Yes", "notes": "Comprehensive fundamental data" },
+        "options_data": { "value": "Yes", "notes": "Full options chain data" },
+        "fractional_shares": { "value": "Limited", "notes": "Select US stocks only" },
+        "trailing_stops": { "value": "Yes", "notes": "Trailing stop orders" }
+      }
+    },
+    "alpaca": {
+      "providerId": "alpaca",
+      "displayName": "Alpaca",
+      "providerType": "brokerage",
+      "adapterStatus": {
+        "implemented": true,
+        "adapterFile": "nest/src/modules/providers/adapters/alpaca.adapter.ts",
+        "methodsImplemented": ["getQuote", "getCandles", "getProfile", "healthCheck"],
+        "isMockOnly": true
+      },
+      "auth": {
+        "method": "api_key_header",
+        "credentialFields": ["ALPACA_API_KEY", "ALPACA_API_SECRET"],
+        "headerName": "APCA-API-KEY-ID",
+        "tokenPrefix": null,
+        "confidence": "confirmed"
+      },
+      "environments": {
+        "paper": "https://paper-api.alpaca.markets/v2",
+        "live": "https://api.alpaca.markets/v2"
+      },
+      "rateLimitProfile": {
+        "freeTier": {
+          "requestsPerMinute": 200,
+          "requestsPerDay": null,
+          "notes": "Free tier with paper trading; real-time data throttled"
+        },
+        "paidTier": {
+          "requestsPerMinute": null,
+          "requestsPerDay": null,
+          "notes": "Unlimited for paid data subscriptions. Trading endpoint has separate limit."
+        },
+        "notes": "Alpaca is generous with rate limits but enforces via 429 responses with Retry-After headers. Data v2 API has separate limit from trading v2 API."
+      },
+      "freshnessSLA": {
+        "expectedLatencyMs": 50,
+        "staleThresholdMinutes": 2,
+        "updateFrequency": "realtime",
+        "marketHoursOnly": true,
+        "confidence": "confirmed"
+      },
+      "endpoints": [
+        {
+          "id": "get_account",
+          "method": "GET",
+          "path": "/account",
+          "category": "account",
+          "displayName": "Account Info",
+          "description": "Returns account status, buying power, cash balance, portfolio value, PDT status.",
+          "payloadClass": "account_info",
+          "parameters": { "required": [], "optional": [] },
+          "rateLimitCategory": "alpaca_trading",
+          "freshnessSLA": { "expectedLatencyMs": 200, "staleThresholdMinutes": 5, "updateFrequency": "on_demand", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_positions",
+          "method": "GET",
+          "path": "/positions",
+          "category": "portfolio",
+          "displayName": "Open Positions",
+          "description": "Returns all open positions with quantity, avg entry price, current price, P&L, change%.",
+          "payloadClass": "portfolio_positions",
+          "parameters": {
+            "required": [],
+            "optional": []
+          },
+          "rateLimitCategory": "alpaca_trading",
+          "freshnessSLA": { "expectedLatencyMs": 200, "staleThresholdMinutes": 1, "updateFrequency": "per_second", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_position_by_symbol",
+          "method": "GET",
+          "path": "/positions/{symbol}",
+          "category": "portfolio",
+          "displayName": "Position by Symbol",
+          "description": "Returns a single open position by ticker symbol.",
+          "payloadClass": "position_detail",
+          "parameters": {
+            "required": [{ "name": "symbol", "type": "string", "description": "Ticker symbol (e.g. 'AAPL')." }],
+            "optional": []
+          },
+          "rateLimitCategory": "alpaca_trading",
+          "freshnessSLA": { "expectedLatencyMs": 200, "staleThresholdMinutes": 1, "updateFrequency": "per_second", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_orders",
+          "method": "GET",
+          "path": "/orders",
+          "category": "order_management",
+          "displayName": "List Orders",
+          "description": "Returns orders with optional status filter. Supports pagination via until/after/link headers.",
+          "payloadClass": "order_list",
+          "parameters": {
+            "required": [],
+            "optional": [
+              { "name": "status", "type": "enum", "enumValues": ["open", "closed", "all"], "description": "Filter by order status. Default: open." },
+              { "name": "limit", "type": "integer", "description": "Max orders (1-500, default 50).", "min": 1, "max": 500 },
+              { "name": "after", "type": "string", "description": "ISO-8601 timestamp for cursor-based pagination." },
+              { "name": "until", "type": "string", "description": "ISO-8601 timestamp for cursor-based pagination." },
+              { "name": "direction", "type": "enum", "enumValues": ["asc", "desc"], "description": "Sort direction." },
+              { "name": "symbols", "type": "string", "description": "Comma-delimited tickers to filter by." }
+            ]
+          },
+          "rateLimitCategory": "alpaca_trading",
+          "freshnessSLA": { "expectedLatencyMs": 200, "staleThresholdMinutes": 1, "updateFrequency": "realtime", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "cursor",
+          "maxPageSize": 500,
+          "confidence": "confirmed"
+        },
+        {
+          "id": "post_order",
+          "method": "POST",
+          "path": "/orders",
+          "category": "order_management",
+          "displayName": "Place Order",
+          "description": "Places an order. Supports market, limit, stop, stop_limit, trailing_stop. Fractional qty via notional param.",
+          "payloadClass": "order_confirmation",
+          "parameters": {
+            "required": [
+              { "name": "symbol", "type": "string" },
+              { "name": "side", "type": "enum", "enumValues": ["buy", "sell"] },
+              { "name": "type", "type": "enum", "enumValues": ["market", "limit", "stop", "stop_limit", "trailing_stop"], "description": "Order type." },
+              { "name": "time_in_force", "type": "enum", "enumValues": ["day", "gtc", "opg", "cls", "ioc", "fok"], "description": "TIF. Default: day." }
+            ],
+            "optional": [
+              { "name": "qty", "type": "number", "description": "Number of shares. Required unless notional is used." },
+              { "name": "notional", "type": "number", "description": "Dollar amount for fractional orders. Cannot combine with qty." },
+              { "name": "limit_price", "type": "number", "description": "Required for limit and stop_limit orders." },
+              { "name": "stop_price", "type": "number", "description": "Required for stop and stop_limit orders." },
+              { "name": "trail_price", "type": "number", "description": "Trailing stop by price offset." },
+              { "name": "trail_percent", "type": "number", "description": "Trailing stop by percentage offset." },
+              { "name": "client_order_id", "type": "string", "description": "Client-specified unique order ID (max 48 chars)." },
+              { "name": "extended_hours", "type": "boolean", "description": "Allow execution outside RTH." },
+              { "name": "order_class", "type": "enum", "enumValues": ["simple", "bracket", "oco", "oto"], "description": "Order class. Default: simple." }
+            ]
+          },
+          "rateLimitCategory": "alpaca_trading",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 0, "updateFrequency": "on_demand", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "delete_order",
+          "method": "DELETE",
+          "path": "/orders/{order_id}",
+          "category": "order_management",
+          "displayName": "Cancel Order",
+          "description": "Cancels a pending order by ID or client_order_id.",
+          "payloadClass": "null_response",
+          "parameters": {
+            "required": [{ "name": "order_id", "type": "string", "description": "Alpaca order UUID or client_order_id." }],
+            "optional": []
+          },
+          "rateLimitCategory": "alpaca_trading",
+          "freshnessSLA": { "expectedLatencyMs": 200, "staleThresholdMinutes": 0, "updateFrequency": "on_demand", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "delete_all_orders",
+          "method": "DELETE",
+          "path": "/orders",
+          "category": "order_management",
+          "displayName": "Cancel All Orders",
+          "description": "Cancels all open orders in one call.",
+          "payloadClass": "bulk_cancel_result",
+          "parameters": { "required": [], "optional": [] },
+          "rateLimitCategory": "alpaca_trading",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 0, "updateFrequency": "on_demand", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_quote",
+          "method": "GET",
+          "path": "/stocks/{symbol}/quotes/latest",
+          "category": "quotes",
+          "displayName": "Latest Quote",
+          "description": "Returns latest bid/ask/last for a single ticker.",
+          "payloadClass": "quote_snapshot",
+          "assetClasses": ["equity", "etf"],
+          "parameters": {
+            "required": [{ "name": "symbol", "type": "string" }],
+            "optional": [{ "name": "feed", "type": "enum", "enumValues": ["iex", "sip"], "description": "Data feed. IEX=free, SIP=paid. Default depends on subscription." }]
+          },
+          "rateLimitCategory": "alpaca_data",
+          "freshnessSLA": { "expectedLatencyMs": 50, "staleThresholdMinutes": 1, "updateFrequency": "realtime", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_bars",
+          "method": "GET",
+          "path": "/stocks/{symbol}/bars",
+          "category": "candles",
+          "displayName": "Historical Bars",
+          "description": "Returns OHLCV bars for a ticker in a time range. Max 10000 bars per call.",
+          "payloadClass": "candle_bars",
+          "timeframeSupport": ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"],
+          "assetClasses": ["equity", "etf", "crypto"],
+          "parameters": {
+            "required": [
+              { "name": "symbol", "type": "string" },
+              { "name": "timeframe", "type": "enum", "enumValues": ["1Min", "5Min", "15Min", "30Min", "1Hour", "4Hour", "1Day", "1Week"], "description": "Bar timeframe." },
+              { "name": "start", "type": "string", "description": "ISO-8601 start time." }
+            ],
+            "optional": [
+              { "name": "end", "type": "string", "description": "ISO-8601 end time (default: now)." },
+              { "name": "limit", "type": "integer", "description": "Max bars (1-10000, default 1000).", "min": 1, "max": 10000 },
+              { "name": "adjustment", "type": "enum", "enumValues": ["raw", "split", "dividend", "all"], "description": "Corporate action adjustment. Default: raw." },
+              { "name": "feed", "type": "enum", "enumValues": ["iex", "sip"], "description": "Data feed." },
+              { "name": "sort", "type": "enum", "enumValues": ["asc", "desc"], "description": "Sort order." }
+            ]
+          },
+          "rateLimitCategory": "alpaca_data",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 1440, "updateFrequency": "eod", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "cursor",
+          "maxPageSize": 10000,
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_snapshot",
+          "method": "GET",
+          "path": "/stocks/snapshots",
+          "category": "quotes",
+          "displayName": "Multi-Symbol Snapshots",
+          "description": "Returns latest quote, latest trade, minute bar, daily bar, and previous daily bar for multiple symbols in one call.",
+          "payloadClass": "multi_snapshot",
+          "assetClasses": ["equity", "etf"],
+          "parameters": {
+            "required": [
+              { "name": "symbols", "type": "string", "description": "Comma-delimited ticker list." }
+            ],
+            "optional": [
+              { "name": "feed", "type": "enum", "enumValues": ["iex", "sip"] }
+            ]
+          },
+          "rateLimitCategory": "alpaca_data",
+          "freshnessSLA": { "expectedLatencyMs": 100, "staleThresholdMinutes": 1, "updateFrequency": "realtime", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_crypto_bars",
+          "method": "GET",
+          "path": "/crypto/{symbol}/bars",
+          "category": "candles",
+          "displayName": "Crypto Historical Bars",
+          "description": "Returns OHLCV bars for crypto pairs. 24/7 data. Max 10000 bars per call.",
+          "payloadClass": "candle_bars",
+          "timeframeSupport": ["1m", "5m", "15m", "1h", "1d"],
+          "assetClasses": ["crypto"],
+          "parameters": {
+            "required": [
+              { "name": "symbol", "type": "string", "description": "Crypto pair (e.g. 'BTC/USD')." },
+              { "name": "timeframe", "type": "enum", "enumValues": ["1Min", "5Min", "15Min", "1Hour", "1Day"] },
+              { "name": "start", "type": "string" }
+            ],
+            "optional": [
+              { "name": "end", "type": "string" },
+              { "name": "limit", "type": "integer", "min": 1, "max": 10000 }
+            ]
+          },
+          "rateLimitCategory": "alpaca_data",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 1440, "updateFrequency": "eod", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "cursor",
+          "maxPageSize": 10000,
+          "confidence": "confirmed"
+        },
+        {
+          "id": "ws_stock_data",
+          "method": "WS",
+          "path": "wss://stream.data.alpaca.markets/v2/{feed}",
+          "category": "streaming",
+          "displayName": "Stock WebSocket Stream",
+          "description": "Real-time streaming for quotes, trades, bars (1Min, 1Hour, 1Day). Requires separate data subscription key.",
+          "payloadClass": "ws_tick",
+          "assetClasses": ["equity", "etf"],
+          "parameters": {
+            "required": [
+              { "name": "feed", "type": "enum", "enumValues": ["iex", "sip"], "description": "Data feed. IEX=free, SIP=paid." }
+            ],
+            "optional": []
+          },
+          "rateLimitCategory": "alpaca_ws",
+          "freshnessSLA": { "expectedLatencyMs": 1, "staleThresholdMinutes": 0, "updateFrequency": "realtime", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_clock",
+          "method": "GET",
+          "path": "/clock",
+          "category": "reference",
+          "displayName": "Market Clock",
+          "description": "Returns current market status (open/closed) and next open/close times.",
+          "payloadClass": "market_clock",
+          "parameters": { "required": [], "optional": [] },
+          "rateLimitCategory": "alpaca_trading",
+          "freshnessSLA": { "expectedLatencyMs": 100, "staleThresholdMinutes": 5, "updateFrequency": "per_minute", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        }
+      ],
+      "capabilityMatrix": {
+        "real_time_data": { "value": "Yes (Paid)", "notes": "Free IEX feed is delayed 15min; real-time requires paid SIP subscription" },
+        "historical_data": { "value": "Yes", "notes": "REST API with up to 7 years of history" },
+        "paper_trading": { "value": "Yes", "notes": "Full paper trading environment" },
+        "fractional_shares": { "value": "Yes", "notes": "Via notional order parameter" },
+        "trailing_stops": { "value": "Yes", "notes": "Trailing stop by price or percentage" }
+      }
+    },
+    "alphavantage": {
+      "providerId": "alphavantage",
+      "displayName": "Alpha Vantage",
+      "providerType": "data-only",
+      "adapterStatus": {
+        "implemented": true,
+        "adapterFile": "nest/src/modules/providers/adapters/alpha-vantage.adapter.ts",
+        "methodsImplemented": ["getQuote", "getCandles", "getProfile", "healthCheck"],
+        "isMockOnly": true
+      },
+      "auth": {
+        "method": "api_key_query",
+        "credentialFields": ["ALPHA_VANTAGE_API_KEY"],
+        "headerName": null,
+        "tokenPrefix": null,
+        "confidence": "confirmed"
+      },
+      "environments": {
+        "paper": null,
+        "live": "https://www.alphavantage.co/query"
+      },
+      "rateLimitProfile": {
+        "freeTier": {
+          "requestsPerMinute": 5,
+          "requestsPerDay": 500,
+          "notes": "Standard free tier. 5 API requests per minute, 500 per day."
+        },
+        "paidTier": {
+          "requestsPerMinute": 75,
+          "requestsPerDay": null,
+          "notes": "Premium plans start at $49.99/mo for 75 RPM. Enterprise custom limits available."
+        },
+        "notes": "Free tier is one of the most restrictive among data providers. Each function call counts as 1 request regardless of data volume returned."
+      },
+      "freshnessSLA": {
+        "expectedLatencyMs": 5000,
+        "staleThresholdMinutes": 1440,
+        "updateFrequency": "eod",
+        "marketHoursOnly": true,
+        "confidence": "confirmed"
+      },
+      "endpoints": [
+        {
+          "id": "get_global_quote",
+          "method": "GET",
+          "path": "/query?function=GLOBAL_QUOTE&symbol={symbol}",
+          "category": "quotes",
+          "displayName": "Global Quote",
+          "description": "Returns latest price, change, change%, volume for a single equity. Delayed data on free tier.",
+          "payloadClass": "alpha_vantage_global_quote",
+          "assetClasses": ["equity", "etf"],
+          "parameters": {
+            "required": [
+              { "name": "symbol", "type": "string", "description": "Ticker symbol (e.g. 'AAPL')." },
+              { "name": "function", "type": "enum", "enumValues": ["GLOBAL_QUOTE"], "description": "Fixed to GLOBAL_QUOTE for this endpoint." }
+            ],
+            "optional": [
+              { "name": "datatype", "type": "enum", "enumValues": ["json", "csv"], "description": "Response format. Default: json." }
+            ]
+          },
+          "rateLimitCategory": "av_free",
+          "freshnessSLA": { "expectedLatencyMs": 5000, "staleThresholdMinutes": 15, "updateFrequency": "per_minute", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_time_series_intraday",
+          "method": "GET",
+          "path": "/query?function=TIME_SERIES_INTRADAY&symbol={symbol}&interval={interval}",
+          "category": "candles",
+          "displayName": "Intraday Time Series",
+          "description": "Returns OHLCV intraday bars. Free tier limited to last 100 data points. Extended history requires paid plan.",
+          "payloadClass": "alpha_vantage_time_series",
+          "timeframeSupport": ["1m", "5m", "15m", "30m", "1h"],
+          "assetClasses": ["equity", "etf", "forex", "crypto"],
+          "parameters": {
+            "required": [
+              { "name": "symbol", "type": "string" },
+              { "name": "interval", "type": "enum", "enumValues": ["1min", "5min", "15min", "30min", "60min"], "description": "Time interval between data points." },
+              { "name": "function", "type": "enum", "enumValues": ["TIME_SERIES_INTRADAY"], "description": "Fixed function name." }
+            ],
+            "optional": [
+              { "name": "adjusted", "type": "boolean", "description": "Include adjusted close. Default: true." },
+              { "name": "extended_hours", "type": "boolean", "description": "Include pre/post market. Default: true." },
+              { "name": "month", "type": "string", "description": "YYYY-MM filter for historical intraday (paid only)." },
+              { "name": "outputsize", "type": "enum", "enumValues": ["compact", "full"], "description": "compact=100 points, full=full history (paid). Default: compact." },
+              { "name": "datatype", "type": "enum", "enumValues": ["json", "csv"] }
+            ]
+          },
+          "rateLimitCategory": "av_free",
+          "freshnessSLA": { "expectedLatencyMs": 5000, "staleThresholdMinutes": 15, "updateFrequency": "per_minute", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "maxPageSize": null,
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_time_series_daily",
+          "method": "GET",
+          "path": "/query?function=TIME_SERIES_DAILY&symbol={symbol}",
+          "category": "candles",
+          "displayName": "Daily Time Series",
+          "description": "Returns OHLCV daily bars. Up to 20+ years of history. Compact: last 100 days; Full: all history.",
+          "payloadClass": "alpha_vantage_time_series",
+          "timeframeSupport": ["1d"],
+          "assetClasses": ["equity", "etf", "forex", "crypto"],
+          "parameters": {
+            "required": [
+              { "name": "symbol", "type": "string" },
+              { "name": "function", "type": "enum", "enumValues": ["TIME_SERIES_DAILY", "TIME_SERIES_DAILY_ADJUSTED"], "description": "Use DAILY_ADJUSTED for split/dividend-adjusted data." }
+            ],
+            "optional": [
+              { "name": "outputsize", "type": "enum", "enumValues": ["compact", "full"], "description": "compact=100 days, full=all data. Default: compact." },
+              { "name": "datatype", "type": "enum", "enumValues": ["json", "csv"] }
+            ]
+          },
+          "rateLimitCategory": "av_free",
+          "freshnessSLA": { "expectedLatencyMs": 5000, "staleThresholdMinutes": 1440, "updateFrequency": "eod", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "maxPageSize": null,
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_company_overview",
+          "method": "GET",
+          "path": "/query?function=OVERVIEW&symbol={symbol}",
+          "category": "profiles",
+          "displayName": "Company Overview",
+          "description": "Returns company profile: name, sector, industry, market cap, P/E, EPS, dividend, beta, 52-week, description.",
+          "payloadClass": "alpha_vantage_company_overview",
+          "parameters": {
+            "required": [
+              { "name": "symbol", "type": "string" },
+              { "name": "function", "type": "enum", "enumValues": ["OVERVIEW"] }
+            ],
+            "optional": []
+          },
+          "rateLimitCategory": "av_free",
+          "freshnessSLA": { "expectedLatencyMs": 5000, "staleThresholdMinutes": 10080, "updateFrequency": "weekly", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_fx_rate",
+          "method": "GET",
+          "path": "/query?function=CURRENCY_EXCHANGE_RATE&from_currency={from}&to_currency={to}",
+          "category": "forex",
+          "displayName": "FX Exchange Rate",
+          "description": "Returns real-time exchange rate for a currency pair.",
+          "payloadClass": "alpha_vantage_fx_rate",
+          "assetClasses": ["forex"],
+          "parameters": {
+            "required": [
+              { "name": "from_currency", "type": "string", "description": "Base currency code (e.g. 'GBP')." },
+              { "name": "to_currency", "type": "string", "description": "Quote currency code (e.g. 'USD')." },
+              { "name": "function", "type": "enum", "enumValues": ["CURRENCY_EXCHANGE_RATE"] }
+            ],
+            "optional": []
+          },
+          "rateLimitCategory": "av_free",
+          "freshnessSLA": { "expectedLatencyMs": 5000, "staleThresholdMinutes": 15, "updateFrequency": "per_minute", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_fx_daily",
+          "method": "GET",
+          "path": "/query?function=FX_DAILY&from_symbol={from}&to_symbol={to}",
+          "category": "forex",
+          "displayName": "FX Daily Time Series",
+          "description": "Returns daily OHLCV for a currency pair.",
+          "payloadClass": "alpha_vantage_time_series",
+          "timeframeSupport": ["1d"],
+          "assetClasses": ["forex"],
+          "parameters": {
+            "required": [
+              { "name": "from_symbol", "type": "string" },
+              { "name": "to_symbol", "type": "string" },
+              { "name": "function", "type": "enum", "enumValues": ["FX_DAILY"] }
+            ],
+            "optional": [
+              { "name": "outputsize", "type": "enum", "enumValues": ["compact", "full"] },
+              { "name": "datatype", "type": "enum", "enumValues": ["json", "csv"] }
+            ]
+          },
+          "rateLimitCategory": "av_free",
+          "freshnessSLA": { "expectedLatencyMs": 5000, "staleThresholdMinutes": 1440, "updateFrequency": "eod", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "maxPageSize": null,
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_crypto_rating",
+          "method": "GET",
+          "path": "/query?function=CRYPTO_RATING&symbol={symbol}",
+          "category": "crypto",
+          "displayName": "Crypto Rating",
+          "description": "Returns a proprietary FCAS crypto rating and score. Paid plan feature.",
+          "payloadClass": "alpha_vantage_crypto_rating",
+          "assetClasses": ["crypto"],
+          "parameters": {
+            "required": [
+              { "name": "symbol", "type": "string", "description": "Crypto symbol (e.g. 'BTC')." },
+              { "name": "function", "type": "enum", "enumValues": ["CRYPTO_RATING"] }
+            ],
+            "optional": []
+          },
+          "rateLimitCategory": "av_free",
+          "freshnessSLA": { "expectedLatencyMs": 5000, "staleThresholdMinutes": 10080, "updateFrequency": "weekly", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_technical_rsi",
+          "method": "GET",
+          "path": "/query?function=RSI&symbol={symbol}&interval={interval}&time_period={period}&series_type={seriesType}",
+          "category": "indicators",
+          "displayName": "RSI Indicator",
+          "description": "Returns RSI (Relative Strength Index) values. Part of Alpha Vantage's technical indicator API.",
+          "payloadClass": "alpha_vantage_indicator",
+          "parameters": {
+            "required": [
+              { "name": "symbol", "type": "string" },
+              { "name": "interval", "type": "enum", "enumValues": ["1min", "5min", "15min", "30min", "60min", "daily", "weekly", "monthly"] },
+              { "name": "time_period", "type": "integer", "description": "Number of data points for RSI calculation (e.g. 14)." },
+              { "name": "series_type", "type": "enum", "enumValues": ["close", "open", "high", "low"], "description": "Price series to calculate on." },
+              { "name": "function", "type": "enum", "enumValues": ["RSI"] }
+            ],
+            "optional": [
+              { "name": "datatype", "type": "enum", "enumValues": ["json", "csv"] }
+            ]
+          },
+          "rateLimitCategory": "av_free",
+          "freshnessSLA": { "expectedLatencyMs": 5000, "staleThresholdMinutes": 15, "updateFrequency": "per_minute", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_technical_macd",
+          "method": "GET",
+          "path": "/query?function=MACD&symbol={symbol}&interval={interval}&series_type={seriesType}",
+          "category": "indicators",
+          "displayName": "MACD Indicator",
+          "description": "Returns MACD values (MACD, signal, histogram) with configurable fast/slow/signal periods.",
+          "payloadClass": "alpha_vantage_indicator",
+          "parameters": {
+            "required": [
+              { "name": "symbol", "type": "string" },
+              { "name": "interval", "type": "enum", "enumValues": ["1min", "5min", "15min", "30min", "60min", "daily", "weekly", "monthly"] },
+              { "name": "series_type", "type": "enum", "enumValues": ["close", "open", "high", "low"] },
+              { "name": "function", "type": "enum", "enumValues": ["MACD"] }
+            ],
+            "optional": [
+              { "name": "fastperiod", "type": "integer", "description": "Fast EMA period. Default: 12." },
+              { "name": "slowperiod", "type": "integer", "description": "Slow EMA period. Default: 26." },
+              { "name": "signalperiod", "type": "integer", "description": "Signal EMA period. Default: 9." },
+              { "name": "datatype", "type": "enum", "enumValues": ["json", "csv"] }
+            ]
+          },
+          "rateLimitCategory": "av_free",
+          "freshnessSLA": { "expectedLatencyMs": 5000, "staleThresholdMinutes": 15, "updateFrequency": "per_minute", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_technical_adx",
+          "method": "GET",
+          "path": "/query?function=ADX&symbol={symbol}&interval={interval}&time_period={period}",
+          "category": "indicators",
+          "displayName": "ADX Indicator",
+          "description": "Returns ADX (Average Directional Index) values.",
+          "payloadClass": "alpha_vantage_indicator",
+          "parameters": {
+            "required": [
+              { "name": "symbol", "type": "string" },
+              { "name": "interval", "type": "enum", "enumValues": ["1min", "5min", "15min", "30min", "60min", "daily", "weekly", "monthly"] },
+              { "name": "time_period", "type": "integer" },
+              { "name": "function", "type": "enum", "enumValues": ["ADX"] }
+            ],
+            "optional": [{ "name": "datatype", "type": "enum", "enumValues": ["json", "csv"] }]
+          },
+          "rateLimitCategory": "av_free",
+          "freshnessSLA": { "expectedLatencyMs": 5000, "staleThresholdMinutes": 15, "updateFrequency": "per_minute", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_news_sentiment",
+          "method": "GET",
+          "path": "/query?function=NEWS_SENTIMENT&tickers={symbol}",
+          "category": "news",
+          "displayName": "News & Sentiment",
+          "description": "Returns news articles with sentiment scores for one or more tickers. Paid plan feature; free tier limited.",
+          "payloadClass": "alpha_vantage_news_sentiment",
+          "parameters": {
+            "required": [
+              { "name": "tickers", "type": "string", "description": "Comma-delimited tickers or 'FOREX:XXX' for currencies." },
+              { "name": "function", "type": "enum", "enumValues": ["NEWS_SENTIMENT"] }
+            ],
+            "optional": [
+              { "name": "time_from", "type": "string", "description": "ISO-8601 start time. Default: last 24 hours." },
+              { "name": "time_to", "type": "string", "description": "ISO-8601 end time." },
+              { "name": "limit", "type": "integer", "description": "Max articles (1-1000). Default: 50.", "min": 1, "max": 1000 },
+              { "name": "topics", "type": "string", "description": "Comma-delimited topics filter." },
+              { "name": "sort", "type": "enum", "enumValues": ["LATEST", "EARLIEST", "RELEVANCE"], "description": "Sort order." }
+            ]
+          },
+          "rateLimitCategory": "av_free",
+          "freshnessSLA": { "expectedLatencyMs": 5000, "staleThresholdMinutes": 60, "updateFrequency": "per_hour", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        }
+      ],
+      "capabilityMatrix": {
+        "real_time_data": { "value": "No", "notes": "Free data is delayed; real-time requires premium subscription" },
+        "historical_data": { "value": "Yes", "notes": "Extensive historical data across multiple timeframes" },
+        "fundamental_data": { "value": "Yes", "notes": "Company overviews, income statements, balance sheets" },
+        "technical_indicators": { "value": "Yes", "notes": "50+ technical indicators via dedicated API functions" },
+        "news_sentiment": { "value": "Yes", "notes": "News sentiment analysis available (paid tier for full access)" }
+      }
+    },
+    "polygon": {
+      "providerId": "polygon",
+      "displayName": "Polygon.io",
+      "providerType": "data-only",
+      "adapterStatus": {
+        "implemented": false,
+        "adapterFile": null,
+        "methodsImplemented": [],
+        "isMockOnly": false
+      },
+      "auth": {
+        "method": "api_key_query",
+        "credentialFields": ["POLYGON_API_KEY"],
+        "headerName": null,
+        "tokenPrefix": null,
+        "confidence": "confirmed"
+      },
+      "environments": {
+        "paper": null,
+        "live": "https://api.polygon.io"
+      },
+      "rateLimitProfile": {
+        "freeTier": {
+          "requestsPerMinute": 5,
+          "requestsPerDay": null,
+          "notes": "Free tier: 5 requests/minute. Delayed data only (15 min for equities)."
+        },
+        "paidTier": {
+          "requestsPerMinute": null,
+          "requestsPerDay": null,
+          "notes": "Unlimited API calls on paid plans. Plans start at $29/mo (Basic), $79/mo (Starter), $199/mo (Developer), $399/mo (Advanced). Limits vary by plan tier."
+        },
+        "notes": "Polygon does not publish hard rate limits for paid tiers. They use a 'fair use' policy with rate-limit headers on responses."
+      },
+      "freshnessSLA": {
+        "expectedLatencyMs": 100,
+        "staleThresholdMinutes": 2,
+        "updateFrequency": "realtime",
+        "marketHoursOnly": true,
+        "confidence": "confirmed"
+      },
+      "endpoints": [
+        {
+          "id": "get_aggregates_bars",
+          "method": "GET",
+          "path": "/v2/aggs/ticker/{stocksTicker}/range/{multiplier}/{timespan}/{from}/{to}",
+          "category": "candles",
+          "displayName": "Aggregate Bars",
+          "description": "Returns OHLCV aggregate bars for a ticker over a date range. Primary candles endpoint.",
+          "payloadClass": "polygon_aggregates",
+          "timeframeSupport": ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w", "1M"],
+          "assetClasses": ["equity", "etf", "forex", "crypto", "index"],
+          "parameters": {
+            "required": [
+              { "name": "stocksTicker", "type": "string", "description": "Ticker symbol (e.g. 'AAPL')." },
+              { "name": "multiplier", "type": "integer", "description": "Size of the timespan multiplier (e.g. 1, 5, 15)." },
+              { "name": "timespan", "type": "enum", "enumValues": ["minute", "hour", "day", "week", "month", "quarter", "year"], "description": "Base timespan unit." },
+              { "name": "from", "type": "string", "description": "ISO-8601 or YYYY-MM-DD start date." },
+              { "name": "to", "type": "string", "description": "ISO-8601 or YYYY-MM-DD end date." }
+            ],
+            "optional": [
+              { "name": "adjusted", "type": "boolean", "description": "Adjust for splits. Default: true." },
+              { "name": "sort", "type": "enum", "enumValues": ["asc", "desc"], "description": "Sort order. Default: asc." },
+              { "name": "limit", "type": "integer", "description": "Max results (1-50000).", "min": 1, "max": 50000 }
+            ]
+          },
+          "rateLimitCategory": "polygon_stocks",
+          "freshnessSLA": { "expectedLatencyMs": 200, "staleThresholdMinutes": 1440, "updateFrequency": "eod", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "cursor",
+          "maxPageSize": 50000,
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_grouped_daily_bars",
+          "method": "GET",
+          "path": "/v2/aggs/grouped/locale/us/market/stocks/{date}",
+          "category": "candles",
+          "displayName": "Grouped Daily Bars",
+          "description": "Returns OHLCV for ALL US stocks on a single date. Efficient for batch EOD processing.",
+          "payloadClass": "polygon_aggregates",
+          "timeframeSupport": ["1d"],
+          "assetClasses": ["equity", "etf"],
+          "parameters": {
+            "required": [
+              { "name": "date", "type": "string", "description": "Date in YYYY-MM-DD format." }
+            ],
+            "optional": [
+              { "name": "adjusted", "type": "boolean" },
+              { "name": "include_otc", "type": "boolean", "description": "Include OTC securities. Default: false." }
+            ]
+          },
+          "rateLimitCategory": "polygon_stocks",
+          "freshnessSLA": { "expectedLatencyMs": 1000, "staleThresholdMinutes": 1440, "updateFrequency": "eod", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_previous_close",
+          "method": "GET",
+          "path": "/v2/aggs/ticker/{stocksTicker}/prev",
+          "category": "quotes",
+          "displayName": "Previous Close",
+          "description": "Returns previous day's OHLCV for a ticker. Includes adjusted close.",
+          "payloadClass": "polygon_prev_close",
+          "assetClasses": ["equity", "etf"],
+          "parameters": {
+            "required": [{ "name": "stocksTicker", "type": "string" }],
+            "optional": [{ "name": "adjusted", "type": "boolean" }]
+          },
+          "rateLimitCategory": "polygon_stocks",
+          "freshnessSLA": { "expectedLatencyMs": 200, "staleThresholdMinutes": 1440, "updateFrequency": "eod", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_last_trade",
+          "method": "GET",
+          "path": "/v2/last/trade/{stocksTicker}",
+          "category": "quotes",
+          "displayName": "Last Trade",
+          "description": "Returns the most recent trade (price, size, exchange, conditions) for a ticker. Sub-second latency on paid plans.",
+          "payloadClass": "polygon_last_trade",
+          "assetClasses": ["equity", "etf", "forex", "crypto"],
+          "parameters": {
+            "required": [{ "name": "stocksTicker", "type": "string" }],
+            "optional": []
+          },
+          "rateLimitCategory": "polygon_stocks",
+          "freshnessSLA": { "expectedLatencyMs": 100, "staleThresholdMinutes": 1, "updateFrequency": "realtime", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_last_quote",
+          "method": "GET",
+          "path": "/v2/last/nbbo/{stocksTicker}",
+          "category": "quotes",
+          "displayName": "Last NBBO Quote",
+          "description": "Returns the most recent NBBO (National Best Bid and Offer) quote.",
+          "payloadClass": "polygon_nbbo_quote",
+          "assetClasses": ["equity", "etf"],
+          "parameters": {
+            "required": [{ "name": "stocksTicker", "type": "string" }],
+            "optional": []
+          },
+          "rateLimitCategory": "polygon_stocks",
+          "freshnessSLA": { "expectedLatencyMs": 100, "staleThresholdMinutes": 1, "updateFrequency": "realtime", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_snapshot_all",
+          "method": "GET",
+          "path": "/v2/snapshot/locale/us/markets/stocks/tickers",
+          "category": "quotes",
+          "displayName": "Snapshot (All Tickers)",
+          "description": "Returns minute snapshot for ALL US tickers. Massive response — use with caution. Good for batch scanning.",
+          "payloadClass": "polygon_snapshot_array",
+          "assetClasses": ["equity", "etf"],
+          "parameters": {
+            "required": [],
+            "optional": [
+              { "name": "tickers", "type": "string", "description": "Comma-delimited ticker list to filter. If omitted, returns ALL tickers." }
+            ]
+          },
+          "rateLimitCategory": "polygon_snapshot",
+          "freshnessSLA": { "expectedLatencyMs": 1000, "staleThresholdMinutes": 1, "updateFrequency": "per_minute", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_ticker_details",
+          "method": "GET",
+          "path": "/v3/reference/tickers/{stocksTicker}",
+          "category": "reference",
+          "displayName": "Ticker Details",
+          "description": "Returns ticker metadata: name, market, locale, currency, active status, listing date, type.",
+          "payloadClass": "polygon_ticker_details",
+          "parameters": {
+            "required": [{ "name": "stocksTicker", "type": "string" }],
+            "optional": [
+              { "name": "date", "type": "string", "description": "YYYY-MM-DD for historical ticker lookups." }
+            ]
+          },
+          "rateLimitCategory": "polygon_reference",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 10080, "updateFrequency": "weekly", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_tickers_list",
+          "method": "GET",
+          "path": "/v3/reference/tickers",
+          "category": "reference",
+          "displayName": "Ticker List",
+          "description": "Returns paginated list of all available tickers with filters (market, type, active status, date).",
+          "payloadClass": "polygon_ticker_list",
+          "parameters": {
+            "required": [],
+            "optional": [
+              { "name": "market", "type": "enum", "enumValues": ["stocks", "crypto", "fx", "otc", "indices"], "description": "Market type filter." },
+              { "name": "exchange", "type": "string", "description": "Exchange mic code." },
+              { "name": "active", "type": "boolean", "description": "Filter active/inactive tickers." },
+              { "name": "type", "type": "enum", "enumValues": ["CS", "ADR", "ETF", "ETN", "SP", "FUND", "WARRANT", "STRUCTURED", "RIGHT", "UNIT"], "description": "Security type filter." },
+              { "name": "search", "type": "string", "description": "Search by ticker or name fragment." },
+              { "name": "limit", "type": "integer", "description": "Max results per page (1-1000).", "min": 1, "max": 1000 },
+              { "name": "cursor", "type": "string", "description": "Pagination cursor from previous response." }
+            ]
+          },
+          "rateLimitCategory": "polygon_reference",
+          "freshnessSLA": { "expectedLatencyMs": 1000, "staleThresholdMinutes": 10080, "updateFrequency": "weekly", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "cursor",
+          "maxPageSize": 1000,
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_options_chain",
+          "method": "GET",
+          "path": "/v3/reference/options/contracts",
+          "category": "options",
+          "displayName": "Options Contracts List",
+          "description": "Returns list of options contracts with filters: underlying, expiration, type, strike range.",
+          "payloadClass": "polygon_options_contracts",
+          "assetClasses": ["option"],
+          "parameters": {
+            "required": [{ "name": "underlying_ticker", "type": "string", "description": "Underlying equity ticker." }],
+            "optional": [
+              { "name": "contract_type", "type": "enum", "enumValues": ["call", "put"] },
+              { "name": "expiration_date", "type": "string", "description": "YYYY-MM-DD or range YYYY-MM-DD..YYYY-MM-DD." },
+              { "name": "strike_price", "type": "number" },
+              { "name": "strike_price.gte", "type": "number" },
+              { "name": "strike_price.lte", "type": "number" },
+              { "name": "expired", "type": "boolean" },
+              { "name": "limit", "type": "integer", "min": 1, "max": 1000 }
+            ]
+          },
+          "rateLimitCategory": "polygon_options",
+          "freshnessSLA": { "expectedLatencyMs": 1000, "staleThresholdMinutes": 10080, "updateFrequency": "weekly", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "cursor",
+          "maxPageSize": 1000,
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_options_snapshot",
+          "method": "GET",
+          "path": "/v3/snapshot/options/{underlyingAsset}",
+          "category": "options",
+          "displayName": "Options Snapshot",
+          "description": "Returns snapshot of ALL options contracts for an underlying ticker with greeks, IV, and pricing.",
+          "payloadClass": "polygon_options_snapshot",
+          "assetClasses": ["option"],
+          "parameters": {
+            "required": [{ "name": "underlyingAsset", "type": "string" }],
+            "optional": [
+              { "name": "strike_price", "type": "number" },
+              { "name": "expiration_date", "type": "string" },
+              { "name": "contract_type", "type": "enum", "enumValues": ["call", "put"] }
+            ]
+          },
+          "rateLimitCategory": "polygon_snapshot",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 1, "updateFrequency": "per_minute", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_news",
+          "method": "GET",
+          "path": "/v2/reference/news",
+          "category": "news",
+          "displayName": "News Articles",
+          "description": "Returns news articles with ticker tagging, publisher info, and categories.",
+          "payloadClass": "polygon_news",
+          "parameters": {
+            "required": [],
+            "optional": [
+              { "name": "ticker", "type": "string", "description": "Filter to articles tagged with this ticker." },
+              { "name": "published_utc", "type": "string", "description": "Date filter YYYY-MM-DD or range." },
+              { "name": "limit", "type": "integer", "min": 1, "max": 1000 },
+              { "name": "order", "type": "enum", "enumValues": ["asc", "desc"] },
+              { "name": "sort", "type": "enum", "enumValues": ["published_utc"] },
+              { "name": "cursor", "type": "string" }
+            ]
+          },
+          "rateLimitCategory": "polygon_reference",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 60, "updateFrequency": "per_hour", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "cursor",
+          "maxPageSize": 1000,
+          "confidence": "confirmed"
+        },
+        {
+          "id": "ws_stocks",
+          "method": "WS",
+          "path": "wss://socket.polygon.io/stocks",
+          "category": "streaming",
+          "displayName": "Stock WebSocket Stream",
+          "description": "Real-time streaming for US stocks: Second aggregates (A), Minute aggregates (AM), Quotes (Q), Trades (T). 25 concurrent tickers per cluster on free tier.",
+          "payloadClass": "polygon_ws_message",
+          "assetClasses": ["equity", "etf"],
+          "parameters": {
+            "required": [],
+            "optional": []
+          },
+          "rateLimitCategory": "polygon_ws",
+          "freshnessSLA": { "expectedLatencyMs": 1, "staleThresholdMinutes": 0, "updateFrequency": "realtime", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "ws_crypto",
+          "method": "WS",
+          "path": "wss://socket.polygon.io/crypto",
+          "category": "streaming",
+          "displayName": "Crypto WebSocket Stream",
+          "description": "Real-time crypto streaming: trades (XT), quotes (XQ), second/minute aggregates (XA/XAM).",
+          "payloadClass": "polygon_ws_message",
+          "assetClasses": ["crypto"],
+          "parameters": { "required": [], "optional": [] },
+          "rateLimitCategory": "polygon_ws",
+          "freshnessSLA": { "expectedLatencyMs": 1, "staleThresholdMinutes": 0, "updateFrequency": "realtime", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "ws_forex",
+          "method": "WS",
+          "path": "wss://socket.polygon.io/forex",
+          "category": "streaming",
+          "displayName": "Forex WebSocket Stream",
+          "description": "Real-time forex streaming: trades and quotes for currency pairs.",
+          "payloadClass": "polygon_ws_message",
+          "assetClasses": ["forex"],
+          "parameters": { "required": [], "optional": [] },
+          "rateLimitCategory": "polygon_ws",
+          "freshnessSLA": { "expectedLatencyMs": 1, "staleThresholdMinutes": 0, "updateFrequency": "realtime", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        }
+      ],
+      "capabilityMatrix": {
+        "real_time_data": { "value": "Yes (Paid)", "notes": "Real-time data with paid plans. Free tier is delayed 15 minutes." },
+        "historical_data": { "value": "Yes", "notes": "Extensive historical data with 50000 bar pagination" },
+        "tick_data": { "value": "Yes (Paid)", "notes": "Tick-level data via WebSocket streams and flat files" },
+        "fundamental_data": { "value": "Yes", "notes": "Company financials and details via vX/reference endpoints" },
+        "options_data": { "value": "Yes (Paid)", "notes": "Full options chains, greeks, and IV via snapshot and reference endpoints" }
+      }
+    },
+    "tradier": {
+      "providerId": "tradier",
+      "displayName": "Tradier",
+      "providerType": "brokerage",
+      "adapterStatus": {
+        "implemented": false,
+        "adapterFile": null,
+        "methodsImplemented": [],
+        "isMockOnly": false
+      },
+      "auth": {
+        "method": "bearer_token",
+        "credentialFields": ["TRADIER_ACCESS_TOKEN"],
+        "headerName": "Authorization",
+        "tokenPrefix": "Bearer",
+        "confidence": "confirmed"
+      },
+      "environments": {
+        "paper": "https://sandbox.tradier.com/v1",
+        "live": "https://api.tradier.com/v1"
+      },
+      "rateLimitProfile": {
+        "freeTier": {
+          "requestsPerMinute": null,
+          "requestsPerDay": null,
+          "notes": "No free tier — requires brokerage account"
+        },
+        "paidTier": {
+          "requestsPerMinute": 120,
+          "requestsPerDay": null,
+          "notes": "Standard API rate limit across all endpoints. Per-account throttling applies."
+        },
+        "notes": "Tradier rate limits are published as 120 requests/min across all endpoints for brokerage API. Streaming uses separate connection limits."
+      },
+      "freshnessSLA": {
+        "expectedLatencyMs": 200,
+        "staleThresholdMinutes": 2,
+        "updateFrequency": "realtime",
+        "marketHoursOnly": true,
+        "confidence": "confirmed"
+      },
+      "endpoints": [
+        {
+          "id": "get_account_balances",
+          "method": "GET",
+          "path": "/accounts/{accountId}/balances",
+          "category": "account",
+          "displayName": "Account Balances",
+          "description": "Returns account cash balance, market value, equity, and buying power.",
+          "payloadClass": "tradier_balances",
+          "parameters": {
+            "required": [{ "name": "accountId", "type": "string", "description": "Tradier account ID." }],
+            "optional": []
+          },
+          "rateLimitCategory": "tradier_standard",
+          "freshnessSLA": { "expectedLatencyMs": 200, "staleThresholdMinutes": 5, "updateFrequency": "on_demand", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_account_positions",
+          "method": "GET",
+          "path": "/accounts/{accountId}/positions",
+          "category": "portfolio",
+          "displayName": "Account Positions",
+          "description": "Returns all open positions with quantity, cost basis, market value, P&L, change%.",
+          "payloadClass": "tradier_positions",
+          "parameters": {
+            "required": [{ "name": "accountId", "type": "string" }],
+            "optional": []
+          },
+          "rateLimitCategory": "tradier_standard",
+          "freshnessSLA": { "expectedLatencyMs": 200, "staleThresholdMinutes": 1, "updateFrequency": "per_second", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_account_history",
+          "method": "GET",
+          "path": "/accounts/{accountId}/history",
+          "category": "account",
+          "displayName": "Account History",
+          "description": "Returns account activity: orders, dividends, transfers, fees, interest.",
+          "payloadClass": "tradier_history",
+          "parameters": {
+            "required": [{ "name": "accountId", "type": "string" }],
+            "optional": [
+              { "name": "page", "type": "integer", "description": "Page number." },
+              { "name": "limit", "type": "integer", "description": "Items per page (1-100).", "min": 1, "max": 100 },
+              { "name": "type", "type": "enum", "enumValues": ["trade", "option", "dividend", "interest", "fee", "transfer", "journal", "margin_interest", "all"], "description": "Activity type filter." },
+              { "name": "start", "type": "string", "description": "Start date YYYY-MM-DD." },
+              { "name": "end", "type": "string", "description": "End date YYYY-MM-DD." }
+            ]
+          },
+          "rateLimitCategory": "tradier_standard",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 1440, "updateFrequency": "eod", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "page",
+          "maxPageSize": 100,
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_orders",
+          "method": "GET",
+          "path": "/accounts/{accountId}/orders",
+          "category": "order_management",
+          "displayName": "Open Orders",
+          "description": "Returns all open/pending orders for an account.",
+          "payloadClass": "tradier_orders",
+          "parameters": {
+            "required": [{ "name": "accountId", "type": "string" }],
+            "optional": [
+              { "name": "includeTags", "type": "boolean", "description": "Include order tags in response." }
+            ]
+          },
+          "rateLimitCategory": "tradier_standard",
+          "freshnessSLA": { "expectedLatencyMs": 200, "staleThresholdMinutes": 1, "updateFrequency": "realtime", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "post_order",
+          "method": "POST",
+          "path": "/accounts/{accountId}/orders",
+          "category": "order_management",
+          "displayName": "Place Order",
+          "description": "Places an equity or option order. Supports market, limit, stop, stop_limit. Options use symbol + option_symbol for legs.",
+          "payloadClass": "tradier_order_confirmation",
+          "parameters": {
+            "required": [
+              { "name": "accountId", "type": "string", "description": "Account ID." },
+              { "name": "class", "type": "enum", "enumValues": ["equity", "option", "multileg", "combo"], "description": "Order class." },
+              { "name": "symbol", "type": "string", "description": "Ticker symbol or underlying for options." },
+              { "name": "side", "type": "enum", "enumValues": ["buy", "sell", "buy_to_open", "buy_to_close", "sell_to_open", "sell_to_close"], "description": "Order side. use buy/sell for equity; _to_open/_to_close for options." },
+              { "name": "quantity", "type": "integer", "description": "Number of shares/contracts. Must be integer (no fractional)." },
+              { "name": "type", "type": "enum", "enumValues": ["market", "limit", "stop", "stop_limit"], "description": "Order type." },
+              { "name": "duration", "type": "enum", "enumValues": ["day", "gtc", "pre", "post"], "description": "Time in force." }
+            ],
+            "optional": [
+              { "name": "option_symbol", "type": "string", "description": "Required for option orders. OCC option symbol." },
+              { "name": "price", "type": "number", "description": "Required for limit and stop_limit orders." },
+              { "name": "stop", "type": "number", "description": "Required for stop and stop_limit orders." },
+              { "name": "tag", "type": "string", "description": "Custom order tag for filtering (max 255 chars)." }
+            ]
+          },
+          "rateLimitCategory": "tradier_standard",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 0, "updateFrequency": "on_demand", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "delete_order",
+          "method": "DELETE",
+          "path": "/accounts/{accountId}/orders/{orderId}",
+          "category": "order_management",
+          "displayName": "Cancel Order",
+          "description": "Cancels a pending order by ID.",
+          "payloadClass": "tradier_order_confirmation",
+          "parameters": {
+            "required": [
+              { "name": "accountId", "type": "string" },
+              { "name": "orderId", "type": "string" }
+            ],
+            "optional": []
+          },
+          "rateLimitCategory": "tradier_standard",
+          "freshnessSLA": { "expectedLatencyMs": 200, "staleThresholdMinutes": 0, "updateFrequency": "on_demand", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_quote",
+          "method": "GET",
+          "path": "/markets/quotes",
+          "category": "quotes",
+          "displayName": "Get Quotes",
+          "description": "Returns real-time quotes for one or more symbols. Comma-delimited list. Includes bid, ask, last, change, change%, volume.",
+          "payloadClass": "tradier_quotes",
+          "assetClasses": ["equity", "etf"],
+          "parameters": {
+            "required": [
+              { "name": "symbols", "type": "string", "description": "Comma-delimited list of tickers (e.g. 'AAPL,MSFT,GOOGL')." }
+            ],
+            "optional": [
+              { "name": "greeks", "type": "boolean", "description": "Include greeks for option symbols. Default: false." }
+            ]
+          },
+          "rateLimitCategory": "tradier_standard",
+          "freshnessSLA": { "expectedLatencyMs": 200, "staleThresholdMinutes": 1, "updateFrequency": "realtime", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_option_chain",
+          "method": "GET",
+          "path": "/markets/options/chains",
+          "category": "options",
+          "displayName": "Options Chain",
+          "description": "Returns full options chain: all strikes and expirations for an underlying with greeks, OI, volume, bid/ask.",
+          "payloadClass": "tradier_option_chain",
+          "assetClasses": ["option"],
+          "parameters": {
+            "required": [
+              { "name": "symbol", "type": "string", "description": "Underlying ticker symbol." },
+              { "name": "expiration", "type": "string", "description": "Expiration date YYYY-MM-DD." }
+            ],
+            "optional": [
+              { "name": "strike", "type": "number", "description": "Filter to a specific strike price." },
+              { "name": "greeks", "type": "boolean", "description": "Include delta, gamma, theta, vega, rho. Default: false." }
+            ]
+          },
+          "rateLimitCategory": "tradier_market_data",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 1, "updateFrequency": "per_minute", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_option_expirations",
+          "method": "GET",
+          "path": "/markets/options/expirations",
+          "category": "options",
+          "displayName": "Options Expirations",
+          "description": "Returns list of available expiration dates for an underlying symbol.",
+          "payloadClass": "tradier_expirations",
+          "assetClasses": ["option"],
+          "parameters": {
+            "required": [
+              { "name": "symbol", "type": "string" }
+            ],
+            "optional": [
+              { "name": "includeAllRoots", "type": "boolean", "description": "Include all option roots. Default: false." },
+              { "name": "strikes", "type": "boolean", "description": "Include strike counts. Default: false." }
+            ]
+          },
+          "rateLimitCategory": "tradier_market_data",
+          "freshnessSLA": { "expectedLatencyMs": 200, "staleThresholdMinutes": 1440, "updateFrequency": "eod", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_time_sales",
+          "method": "GET",
+          "path": "/markets/timesales",
+          "category": "quotes",
+          "displayName": "Time & Sales",
+          "description": "Returns time and sales data (recent trades) for a ticker. Includes price, size, exchange, conditions.",
+          "payloadClass": "tradier_time_sales",
+          "assetClasses": ["equity", "etf"],
+          "parameters": {
+            "required": [
+              { "name": "symbol", "type": "string" }
+            ],
+            "optional": [
+              { "name": "interval", "type": "enum", "enumValues": ["tick", "1min", "5min", "15min"], "description": "Aggregation interval. Default: tick." },
+              { "name": "start", "type": "string", "description": "Start datetime YYYY-MM-DD HH:MM." },
+              { "name": "end", "type": "string", "description": "End datetime YYYY-MM-DD HH:MM." },
+              { "name": "session_filter", "type": "enum", "enumValues": ["all", "open"], "description": "open=market hours only. Default: all." }
+            ]
+          },
+          "rateLimitCategory": "tradier_market_data",
+          "freshnessSLA": { "expectedLatencyMs": 200, "staleThresholdMinutes": 5, "updateFrequency": "realtime", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_historical_prices",
+          "method": "GET",
+          "path": "/markets/history",
+          "category": "candles",
+          "displayName": "Historical Prices",
+          "description": "Returns OHLCV daily bars for a ticker over a date range.",
+          "payloadClass": "tradier_history_bars",
+          "timeframeSupport": ["1d"],
+          "assetClasses": ["equity", "etf"],
+          "parameters": {
+            "required": [
+              { "name": "symbol", "type": "string" }
+            ],
+            "optional": [
+              { "name": "interval", "type": "enum", "enumValues": ["daily", "weekly", "monthly"], "description": "Bar interval. Default: daily." },
+              { "name": "start", "type": "string", "description": "Start date YYYY-MM-DD." },
+              { "name": "end", "type": "string", "description": "End date YYYY-MM-DD." }
+            ]
+          },
+          "rateLimitCategory": "tradier_market_data",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 1440, "updateFrequency": "eod", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "maxPageSize": null,
+          "confidence": "confirmed"
+        },
+        {
+          "id": "get_company_profile",
+          "method": "GET",
+          "path": "/markets/fundamentals/company",
+          "category": "fundamentals",
+          "displayName": "Company Profile",
+          "description": "Returns company fundamentals: name, sector, industry, employees, description. Limited compared to Polygon/Alpha Vantage.",
+          "payloadClass": "tradier_company_profile",
+          "parameters": {
+            "required": [{ "name": "symbols", "type": "string", "description": "Comma-delimited ticker list." }],
+            "optional": []
+          },
+          "rateLimitCategory": "tradier_standard",
+          "freshnessSLA": { "expectedLatencyMs": 500, "staleThresholdMinutes": 10080, "updateFrequency": "weekly", "marketHoursOnly": false, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        },
+        {
+          "id": "ws_market_data",
+          "method": "WS",
+          "path": "wss://ws.tradier.com/v1/markets/events",
+          "category": "streaming",
+          "displayName": "Market WebSocket Stream",
+          "description": "Real-time streaming for quotes, trades, timesales, and tradex (extended) events. Session-based auth.",
+          "payloadClass": "tradier_ws_message",
+          "assetClasses": ["equity", "etf"],
+          "parameters": {
+            "required": [],
+            "optional": []
+          },
+          "rateLimitCategory": "tradier_ws",
+          "freshnessSLA": { "expectedLatencyMs": 50, "staleThresholdMinutes": 0, "updateFrequency": "realtime", "marketHoursOnly": true, "confidence": "confirmed" },
+          "paginationSupport": "none",
+          "confidence": "confirmed"
+        }
+      ],
+      "capabilityMatrix": {
+        "real_time_data": { "value": "Yes", "notes": "Real-time quotes included" },
+        "historical_data": { "value": "Yes", "notes": "Historical price data available (daily/weekly/monthly)" },
+        "options_data": { "value": "Yes", "notes": "Full options chains with greeks and data" },
+        "fundamental_data": { "value": "Limited", "notes": "Basic company information only" },
+        "fractional_shares": { "value": "No", "notes": "Whole shares only" },
+        "forex_data": { "value": "No", "notes": "Forex not supported" },
+        "crypto_data": { "value": "No", "notes": "Crypto not supported" }
+      }
+    }
+  },
+  "rateLimitCategories": {
+    "t212_standard": {
+      "requestsPerMinute": 60,
+      "requestsPerDay": null,
+      "burstAllowance": 10,
+      "windowType": "sliding",
+      "headersProvided": false,
+      "costPerRequest": 1,
+      "confidence": "uncertain"
+    },
+    "t212_order_write": {
+      "requestsPerMinute": 20,
+      "requestsPerDay": null,
+      "burstAllowance": 5,
+      "windowType": "sliding",
+      "headersProvided": false,
+      "costPerRequest": 1,
+      "confidence": "uncertain"
+    },
+    "t212_ws": {
+      "requestsPerMinute": null,
+      "requestsPerDay": null,
+      "burstAllowance": 1,
+      "windowType": "unknown",
+      "headersProvided": false,
+      "costPerRequest": null,
+      "confidence": "uncertain"
+    },
+    "ibkr_rest_standard": {
+      "requestsPerMinute": 50,
+      "requestsPerDay": null,
+      "burstAllowance": 10,
+      "windowType": "sliding",
+      "headersProvided": false,
+      "costPerRequest": 1,
+      "confidence": "likely"
+    },
+    "ibkr_market_data": {
+      "requestsPerMinute": 50,
+      "requestsPerDay": null,
+      "burstAllowance": 10,
+      "windowType": "sliding",
+      "headersProvided": false,
+      "costPerRequest": 1,
+      "confidence": "likely"
+    },
+    "ibkr_order_write": {
+      "requestsPerMinute": 30,
+      "requestsPerDay": null,
+      "burstAllowance": 5,
+      "windowType": "sliding",
+      "headersProvided": false,
+      "costPerRequest": 1,
+      "confidence": "likely"
+    },
+    "ibkr_ws": {
+      "requestsPerMinute": null,
+      "requestsPerDay": null,
+      "burstAllowance": 1,
+      "windowType": "unknown",
+      "headersProvided": false,
+      "costPerRequest": null,
+      "confidence": "likely"
+    },
+    "alpaca_trading": {
+      "requestsPerMinute": 200,
+      "requestsPerDay": null,
+      "burstAllowance": 50,
+      "windowType": "sliding",
+      "headersProvided": true,
+      "costPerRequest": 1,
+      "confidence": "confirmed"
+    },
+    "alpaca_data": {
+      "requestsPerMinute": 200,
+      "requestsPerDay": null,
+      "burstAllowance": 50,
+      "windowType": "sliding",
+      "headersProvided": true,
+      "costPerRequest": 1,
+      "confidence": "confirmed"
+    },
+    "alpaca_ws": {
+      "requestsPerMinute": null,
+      "requestsPerDay": null,
+      "burstAllowance": 1,
+      "windowType": "unknown",
+      "headersProvided": false,
+      "costPerRequest": null,
+      "confidence": "confirmed"
+    },
+    "av_free": {
+      "requestsPerMinute": 5,
+      "requestsPerDay": 500,
+      "burstAllowance": 1,
+      "windowType": "fixed",
+      "headersProvided": false,
+      "costPerRequest": 1,
+      "confidence": "confirmed"
+    },
+    "polygon_stocks": {
+      "requestsPerMinute": null,
+      "requestsPerDay": null,
+      "burstAllowance": 100,
+      "windowType": "unknown",
+      "headersProvided": true,
+      "costPerRequest": 1,
+      "confidence": "likely"
+    },
+    "polygon_snapshot": {
+      "requestsPerMinute": null,
+      "requestsPerDay": null,
+      "burstAllowance": 10,
+      "windowType": "unknown",
+      "headersProvided": true,
+      "costPerRequest": 10,
+      "confidence": "likely"
+    },
+    "polygon_reference": {
+      "requestsPerMinute": null,
+      "requestsPerDay": null,
+      "burstAllowance": 50,
+      "windowType": "unknown",
+      "headersProvided": true,
+      "costPerRequest": 1,
+      "confidence": "likely"
+    },
+    "polygon_options": {
+      "requestsPerMinute": null,
+      "requestsPerDay": null,
+      "burstAllowance": 50,
+      "windowType": "unknown",
+      "headersProvided": true,
+      "costPerRequest": 1,
+      "confidence": "likely"
+    },
+    "polygon_ws": {
+      "requestsPerMinute": null,
+      "requestsPerDay": null,
+      "burstAllowance": 1,
+      "windowType": "unknown",
+      "headersProvided": false,
+      "costPerRequest": null,
+      "confidence": "likely"
+    },
+    "tradier_standard": {
+      "requestsPerMinute": 120,
+      "requestsPerDay": null,
+      "burstAllowance": 20,
+      "windowType": "sliding",
+      "headersProvided": true,
+      "costPerRequest": 1,
+      "confidence": "confirmed"
+    },
+    "tradier_market_data": {
+      "requestsPerMinute": 120,
+      "requestsPerDay": null,
+      "burstAllowance": 20,
+      "windowType": "sliding",
+      "headersProvided": true,
+      "costPerRequest": 1,
+      "confidence": "confirmed"
+    },
+    "tradier_ws": {
+      "requestsPerMinute": null,
+      "requestsPerDay": null,
+      "burstAllowance": 1,
+      "windowType": "unknown",
+      "headersProvided": false,
+      "costPerRequest": null,
+      "confidence": "confirmed"
+    }
+  },
+  "payloadClasses": {
+    "account_info": {
+      "id": "account_info",
+      "description": "Account-level information: balances, status, buying power, currency.",
+      "exampleKeys": ["account_id", "status", "currency", "cash", "portfolio_value", "buying_power", "equity"],
+      "schemaType": "object"
+    },
+    "account_summary": {
+      "id": "account_summary",
+      "description": "IB-style account summary with multi-currency balances and margin detail.",
+      "exampleKeys": ["account", "balance", "availablefunds", "buyingpower", "equity", "margin", "currency"],
+      "schemaType": "object"
+    },
+    "portfolio_positions": {
+      "id": "portfolio_positions",
+      "description": "List of open positions with quantity, avg price, market value, P&L.",
+      "exampleKeys": ["symbol", "quantity", "average_price", "current_price", "market_value", "unrealized_pl", "unrealized_plpc"],
+      "schemaType": "array"
+    },
+    "position_detail": {
+      "id": "position_detail",
+      "description": "Single position detail object.",
+      "exampleKeys": ["symbol", "qty", "avg_entry_price", "current_price", "market_value", "unrealized_pl", "change_today"],
+      "schemaType": "object"
+    },
+    "order_list": {
+      "id": "order_list",
+      "description": "List of orders with status, type, side, quantity, price, fills.",
+      "exampleKeys": ["id", "symbol", "side", "type", "qty", "filled_qty", "status", "created_at", "updated_at"],
+      "schemaType": "array"
+    },
+    "order_confirmation": {
+      "id": "order_confirmation",
+      "description": "Order acknowledgement or cancellation response.",
+      "exampleKeys": ["id", "client_order_id", "symbol", "side", "type", "qty", "status", "created_at"],
+      "schemaType": "object"
+    },
+    "null_response": {
+      "id": "null_response",
+      "description": "HTTP 204 No Content or minimal acknowledgement.",
+      "exampleKeys": [],
+      "schemaType": "scalar"
+    },
+    "bulk_cancel_result": {
+      "id": "bulk_cancel_result",
+      "description": "Result of bulk cancellation operation.",
+      "exampleKeys": ["status", "body"],
+      "schemaType": "array"
+    },
+    "quote_snapshot": {
+      "id": "quote_snapshot",
+      "description": "Single quote: bid, ask, last, timestamp.",
+      "exampleKeys": ["symbol", "bid", "ask", "last", "bid_size", "ask_size", "timestamp"],
+      "schemaType": "object"
+    },
+    "multi_snapshot": {
+      "id": "multi_snapshot",
+      "description": "Multi-ticker snapshot response (Alpaca style) with latest quote, trade, minute bar, daily bar per symbol.",
+      "exampleKeys": ["symbol", "latestQuote", "latestTrade", "minuteBar", "dailyBar", "prevDailyBar"],
+      "schemaType": "object"
+    },
+    "candle_bars": {
+      "id": "candle_bars",
+      "description": "OHLCV bars array. Common response shape across most providers.",
+      "exampleKeys": ["t", "o", "h", "l", "c", "v", "timestamp", "open", "high", "low", "close", "volume"],
+      "schemaType": "array"
+    },
+    "instrument_list": {
+      "id": "instrument_list",
+      "description": "Flat or paginated list of available instruments with metadata.",
+      "exampleKeys": ["ticker", "isin", "name", "type", "currency", "exchange"],
+      "schemaType": "array"
+    },
+    "contract_search": {
+      "id": "contract_search",
+      "description": "IB-style contract search response returning conids with contract metadata.",
+      "exampleKeys": ["conid", "symbol", "description", "exchange", "type", "currency"],
+      "schemaType": "array"
+    },
+    "market_clock": {
+      "id": "market_clock",
+      "description": "Market open/close status with timestamps.",
+      "exampleKeys": ["timestamp", "is_open", "next_open", "next_close"],
+      "schemaType": "object"
+    },
+    "ws_tick": {
+      "id": "ws_tick",
+      "description": "Generic WebSocket message payload. Structure varies by provider.",
+      "exampleKeys": ["ev", "sym", "T", "type", "symbol"],
+      "schemaType": "object"
+    },
+    "fundamentals_profile": {
+      "id": "fundamentals_profile",
+      "description": "IB-style fundamentals response: financials, ratios, ESG, estimates.",
+      "exampleKeys": ["conid", "financials", "ratios", "esg", "estimates"],
+      "schemaType": "object"
+    },
+    "alpha_vantage_global_quote": {
+      "id": "alpha_vantage_global_quote",
+      "description": "Alpha Vantage GLOBAL_QUOTE response: latest price, change, volume for one equity.",
+      "exampleKeys": ["Global Quote", "01. symbol", "02. open", "03. high", "04. low", "05. price", "06. volume", "07. latest trading day", "08. previous close", "09. change", "10. change percent"],
+      "schemaType": "object"
+    },
+    "alpha_vantage_time_series": {
+      "id": "alpha_vantage_time_series",
+      "description": "Alpha Vantage time series response (intraday, daily, FX). Keyed by timestamp strings. Root key varies by function (e.g. 'Time Series (5min)').",
+      "exampleKeys": ["Meta Data", "Time Series (5min)", "Time Series (Daily)"],
+      "schemaType": "object"
+    },
+    "alpha_vantage_company_overview": {
+      "id": "alpha_vantage_company_overview",
+      "description": "Alpha Vantage OVERVIEW response: 50+ fundamental fields for one equity.",
+      "exampleKeys": ["Symbol", "Name", "Sector", "Industry", "MarketCapitalization", "PERatio", "EPS", "Beta", "52WeekHigh", "52WeekLow", "DividendYield", "Description"],
+      "schemaType": "object"
+    },
+    "alpha_vantage_fx_rate": {
+      "id": "alpha_vantage_fx_rate",
+      "description": "Alpha Vantage CURRENCY_EXCHANGE_RATE response: bid/ask for a currency pair.",
+      "exampleKeys": ["Realtime Currency Exchange Rate", "1. From_Currency Code", "3. To_Currency Code", "5. Exchange Rate", "8. Bid Price", "9. Ask Price"],
+      "schemaType": "object"
+    },
+    "alpha_vantage_crypto_rating": {
+      "id": "alpha_vantage_crypto_rating",
+      "description": "Alpha Vantage CRYPTO_RATING response: FCAS crypto rating and scores.",
+      "exampleKeys": ["Crypto Rating (FCAS)", "1. symbol", "2. name", "3. fcas rating", "4. fcas score", "5. developer score", "6. market maturity score", "7. utility score"],
+      "schemaType": "object"
+    },
+    "alpha_vantage_indicator": {
+      "id": "alpha_vantage_indicator",
+      "description": "Alpha Vantage technical indicator response (RSI, MACD, ADX, etc.). Root key varies by indicator function.",
+      "exampleKeys": ["Meta Data", "Technical Analysis: RSI", "Technical Analysis: MACD", "Technical Analysis: ADX"],
+      "schemaType": "object"
+    },
+    "alpha_vantage_news_sentiment": {
+      "id": "alpha_vantage_news_sentiment",
+      "description": "Alpha Vantage NEWS_SENTIMENT response: articles with sentiment scores.",
+      "exampleKeys": ["items", "feed", "sentiment_score_definition"],
+      "schemaType": "object"
+    },
+    "polygon_aggregates": {
+      "id": "polygon_aggregates",
+      "description": "Polygon v2 Aggregates response: OHLCV bars with ticker, query metadata, and results array.",
+      "exampleKeys": ["ticker", "queryCount", "resultsCount", "adjusted", "results", "status", "request_id"],
+      "schemaType": "object"
+    },
+    "polygon_prev_close": {
+      "id": "polygon_prev_close",
+      "description": "Polygon v2 Previous Close response: single-day OHLCV with adjusted close.",
+      "exampleKeys": ["ticker", "queryCount", "resultsCount", "adjusted", "results", "status"],
+      "schemaType": "object"
+    },
+    "polygon_last_trade": {
+      "id": "polygon_last_trade",
+      "description": "Polygon v2 Last Trade response: most recent trade price, size, exchange, conditions.",
+      "exampleKeys": ["status", "request_id", "results"],
+      "schemaType": "object"
+    },
+    "polygon_nbbo_quote": {
+      "id": "polygon_nbbo_quote",
+      "description": "Polygon v2 Last NBBO Quote response: most recent National Best Bid and Offer.",
+      "exampleKeys": ["status", "request_id", "results"],
+      "schemaType": "object"
+    },
+    "polygon_snapshot_array": {
+      "id": "polygon_snapshot_array",
+      "description": "Polygon v2 Snapshot response: minute-level snapshots for all or filtered tickers. Very large response.",
+      "exampleKeys": ["status", "tickers"],
+      "schemaType": "object"
+    },
+    "polygon_ticker_details": {
+      "id": "polygon_ticker_details",
+      "description": "Polygon v3 Ticker Details response: single ticker metadata.",
+      "exampleKeys": ["ticker", "name", "market", "locale", "primary_exchange", "type", "active", "currency_name", "cik", "composite_figi", "share_class_figi", "last_updated_utc"],
+      "schemaType": "object"
+    },
+    "polygon_ticker_list": {
+      "id": "polygon_ticker_list",
+      "description": "Polygon v3 Tickers List response: paginated list of tickers with cursor.",
+      "exampleKeys": ["results", "status", "request_id", "count", "next_url"],
+      "schemaType": "object"
+    },
+    "polygon_options_contracts": {
+      "id": "polygon_options_contracts",
+      "description": "Polygon v3 Options Contracts response: filtered list of option contracts.",
+      "exampleKeys": ["results", "status", "request_id", "count", "next_url"],
+      "schemaType": "object"
+    },
+    "polygon_options_snapshot": {
+      "id": "polygon_options_snapshot",
+      "description": "Polygon v3 Options Snapshot response: all options for an underlying with greeks.",
+      "exampleKeys": ["status", "request_id", "results"],
+      "schemaType": "object"
+    },
+    "polygon_news": {
+      "id": "polygon_news",
+      "description": "Polygon v2 News response: articles with ticker tags, publisher, and categories.",
+      "exampleKeys": ["results", "status", "request_id", "count", "next_url"],
+      "schemaType": "object"
+    },
+    "polygon_ws_message": {
+      "id": "polygon_ws_message",
+      "description": "Polygon WebSocket message payload. Channel-dependent structure. Common types: A (second agg), AM (minute agg), Q (quote), T (trade), XA/XQ/XT (crypto/forex equivalents).",
+      "exampleKeys": ["ev", "sym", "T", "o", "h", "l", "c", "v", "a", "b", "t", "p", "s"],
+      "schemaType": "object"
+    },
+    "tradier_balances": {
+      "id": "tradier_balances",
+      "description": "Tradier Account Balances response.",
+      "exampleKeys": ["balances", "cash", "equity", "market_value", "total_equity", "option_short_value", "margin_equity"],
+      "schemaType": "object"
+    },
+    "tradier_positions": {
+      "id": "tradier_positions",
+      "description": "Tradier Account Positions response.",
+      "exampleKeys": ["positions", "position"],
+      "schemaType": "object"
+    },
+    "tradier_history": {
+      "id": "tradier_history",
+      "description": "Tradier Account History response: paginated account activity.",
+      "exampleKeys": ["history", "history_type", "page", "count", "events"],
+      "schemaType": "object"
+    },
+    "tradier_orders": {
+      "id": "tradier_orders",
+      "description": "Tradier Order List response: all open orders.",
+      "exampleKeys": ["orders", "order"],
+      "schemaType": "object"
+    },
+    "tradier_order_confirmation": {
+      "id": "tradier_order_confirmation",
+      "description": "Tradier Order placement/cancellation response.",
+      "exampleKeys": ["order", "id", "status", "partner_id"],
+      "schemaType": "object"
+    },
+    "tradier_quotes": {
+      "id": "tradier_quotes",
+      "description": "Tradier Quotes response: real-time quotes for one or more symbols.",
+      "exampleKeys": ["quotes", "quote"],
+      "schemaType": "object"
+    },
+    "tradier_option_chain": {
+      "id": "tradier_option_chain",
+      "description": "Tradier Options Chain response: all strikes and expirations for an underlying.",
+      "exampleKeys": ["options", "option"],
+      "schemaType": "object"
+    },
+    "tradier_expirations": {
+      "id": "tradier_expirations",
+      "description": "Tradier Options Expirations response: available expiration dates.",
+      "exampleKeys": ["expirations", "expiration", "date"],
+      "schemaType": "object"
+    },
+    "tradier_time_sales": {
+      "id": "tradier_time_sales",
+      "description": "Tradier Time & Sales response: recent trades with price, size, exchange.",
+      "exampleKeys": ["series", "data"],
+      "schemaType": "object"
+    },
+    "tradier_history_bars": {
+      "id": "tradier_history_bars",
+      "description": "Tradier Historical Prices response: OHLCV daily/weekly/monthly bars.",
+      "exampleKeys": ["history", "day"],
+      "schemaType": "object"
+    },
+    "tradier_company_profile": {
+      "id": "tradier_company_profile",
+      "description": "Tradier Company Profile response: basic fundamentals.",
+      "exampleKeys": ["profile", "company", "sector", "industry", "employees", "description"],
+      "schemaType": "object"
+    },
+    "tradier_ws_message": {
+      "id": "tradier_ws_message",
+      "description": "Tradier WebSocket message payload. Event types: quote, trade, timesale, tradex.",
+      "exampleKeys": ["type", "symbol", "bid", "ask", "last", "trade", "volume"],
+      "schemaType": "object"
+    }
+  }
+}

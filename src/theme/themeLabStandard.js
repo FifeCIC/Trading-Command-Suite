@@ -52,12 +52,12 @@ export function buildThemeExport(config) {
   };
 }
 
-export function mapThemeToWordPressVars(config) {
+export function mapThemeToCssVars(config) {
   return {
-    '--wp--preset--color--primary': config.primaryColor,
-    '--wp--preset--color--secondary': config.accentColor,
-    '--wp--preset--color--surface': config.surfaceColor,
-    '--wp--preset--radius--base': config.radius,
-    '--wp--preset--font-family--base': config.fontFamily
+    '--theme-primary': config.primaryColor,
+    '--theme-accent': config.accentColor,
+    '--theme-surface': config.surfaceColor,
+    '--theme-radius': config.radius,
+    '--theme-font-family': config.fontFamily
   };
 }

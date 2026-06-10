@@ -56,7 +56,6 @@ export default function SetupWizardPage() {
   const dbOk = svc.databaseConnected === true
   const dbConfigured = svc.database === true
   const symbolsOk = syms.length >= 3
-  const anyCredentials = provs.some((pr) => pr.credentialsConfigured)
   const providersOk = provs.length > 0
 
   const checks = [
@@ -72,7 +71,6 @@ export default function SetupWizardPage() {
   return (
     <div className="setup-wizard">
       <header className="wizard-header">
-        <h1>Setup Wizard</h1>
         <p>This wizard checks your system and guides you to a working state.</p>
       </header>
 

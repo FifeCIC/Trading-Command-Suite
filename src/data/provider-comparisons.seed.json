@@ -1,0 +1,4657 @@
+{
+  "source": {
+    "pluginFile": "admin/page/tradingplatforms/comparisons.php",
+    "extractedAt": "2026-06-10T18:14:29.378Z",
+    "notes": "Auto-extracted from plugin comparison table source by line-pattern parser.",
+    "lastCapabilityPass": "2026-06-10T18:35:21.048Z",
+    "capabilityNotes": "P05 pass: filled 123 missing entries, enriched 599 with confidence/source"
+  },
+  "categories": [
+    {
+      "id": "data_offerings",
+      "title": "Data Offerings",
+      "fields": [
+        {
+          "id": "real_time_data",
+          "label": "Real-Time Data"
+        },
+        {
+          "id": "historical_data",
+          "label": "Historical Data"
+        },
+        {
+          "id": "tick_data",
+          "label": "Tick-by-Tick Data"
+        },
+        {
+          "id": "minute_data",
+          "label": "Minute Data"
+        },
+        {
+          "id": "eod_data",
+          "label": "End-of-Day Data"
+        },
+        {
+          "id": "fundamental_data",
+          "label": "Fundamental Data"
+        },
+        {
+          "id": "options_data",
+          "label": "Options Data"
+        },
+        {
+          "id": "forex_data",
+          "label": "Forex Data"
+        },
+        {
+          "id": "crypto_data",
+          "label": "Crypto Data"
+        }
+      ]
+    },
+    {
+      "id": "data_delivery",
+      "title": "Data Delivery",
+      "fields": [
+        {
+          "id": "rest_api",
+          "label": "REST API"
+        },
+        {
+          "id": "websocket_streaming",
+          "label": "WebSocket Streaming"
+        },
+        {
+          "id": "webhook_support",
+          "label": "Webhook Support"
+        },
+        {
+          "id": "csv_downloads",
+          "label": "CSV Downloads"
+        },
+        {
+          "id": "bulk_data_feeds",
+          "label": "Bulk Data Feeds"
+        },
+        {
+          "id": "polling_frequency",
+          "label": "Polling Frequency"
+        },
+        {
+          "id": "data_latency",
+          "label": "Data Latency"
+        }
+      ]
+    },
+    {
+      "id": "rate_limits",
+      "title": "Rate Limits",
+      "fields": [
+        {
+          "id": "free_rate_limit",
+          "label": "Free Tier Rate Limit"
+        },
+        {
+          "id": "paid_rate_limit",
+          "label": "Paid Tier Rate Limit"
+        }
+      ]
+    },
+    {
+      "id": "trading_features",
+      "title": "Trading Features",
+      "fields": [
+        {
+          "id": "paper_trading",
+          "label": "Paper Trading"
+        },
+        {
+          "id": "real_trading",
+          "label": "Real Trading"
+        },
+        {
+          "id": "market_orders",
+          "label": "Market Orders"
+        },
+        {
+          "id": "limit_orders",
+          "label": "Limit Orders"
+        },
+        {
+          "id": "stop_orders",
+          "label": "Stop Orders"
+        },
+        {
+          "id": "trailing_stops",
+          "label": "Trailing Stops"
+        },
+        {
+          "id": "fractional_shares",
+          "label": "Fractional Shares"
+        },
+        {
+          "id": "order_cancellation",
+          "label": "Order Cancellation"
+        }
+      ]
+    },
+    {
+      "id": "cost_structure",
+      "title": "Cost Structure",
+      "fields": [
+        {
+          "id": "free_tier",
+          "label": "Free Tier Available"
+        },
+        {
+          "id": "free_tier_limitations",
+          "label": "Free Tier Limitations"
+        },
+        {
+          "id": "paid_tiers",
+          "label": "Paid Tier Pricing"
+        },
+        {
+          "id": "commission_fees",
+          "label": "Commission Fees"
+        }
+      ]
+    },
+    {
+      "id": "technical_analysis",
+      "title": "Technical Analysis",
+      "fields": [
+        {
+          "id": "technical_indicators",
+          "label": "Technical Indicators"
+        },
+        {
+          "id": "aggregate_indicators",
+          "label": "Aggregate Indicators"
+        },
+        {
+          "id": "candlestick_patterns",
+          "label": "Candlestick Patterns"
+        },
+        {
+          "id": "support_resistance",
+          "label": "Support/Resistance Levels"
+        },
+        {
+          "id": "news_sentiment",
+          "label": "News Sentiment Analysis"
+        }
+      ]
+    },
+    {
+      "id": "technical_aspects",
+      "title": "Technical Aspects",
+      "fields": [
+        {
+          "id": "authentication",
+          "label": "Authentication Method"
+        },
+        {
+          "id": "api_documentation",
+          "label": "API Documentation Quality"
+        },
+        {
+          "id": "sdk_availability",
+          "label": "SDK Availability"
+        },
+        {
+          "id": "webhook_support",
+          "label": "Webhook Support"
+        }
+      ]
+    }
+  ],
+  "providerIds": [
+    "trading212",
+    "interactive_brokers",
+    "etoro",
+    "fidelity",
+    "polygon",
+    "tradier",
+    "twelvedata",
+    "iexcloud",
+    "alphavantage",
+    "alltick",
+    "eodhd",
+    "finnhub",
+    "fmp",
+    "intrinio",
+    "marketstack",
+    "tradingview",
+    "tradingapi",
+    "webull",
+    "alpaca",
+    "allow",
+    "warn",
+    "degrade",
+    "block"
+  ],
+  "providers": {
+    "trading212": {
+      "real_time_data": {
+        "value": "Yes",
+        "notes": "Real-time quotes for funded accounts",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Historical price data available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "No",
+        "notes": "Not available via API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Minute-level data available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "End-of-day data available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Limited",
+        "notes": "Basic company info only",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "No",
+        "notes": "Options not supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "Yes",
+        "notes": "FX pairs available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "Yes",
+        "notes": "Crypto CFDs available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Yes",
+        "notes": "RESTful API endpoints",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "No",
+        "notes": "Not currently available",
+        "confidence": "likely",
+        "source": "api-reference"
+      },
+      "polling_frequency": {
+        "value": "Rate limited",
+        "notes": "Subject to API limits",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "~1-2 seconds",
+        "notes": "Near real-time",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "No free tier",
+        "notes": "Requires funded account",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "60 requests/min",
+        "notes": "Per API key",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "Yes",
+        "notes": "Demo account available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "Yes",
+        "notes": "Live trading supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "Yes",
+        "notes": "Market orders supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "Yes",
+        "notes": "Limit orders supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "Yes",
+        "notes": "Stop loss orders",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "No",
+        "notes": "Not available via API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "Yes",
+        "notes": "Fractional shares supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "Yes",
+        "notes": "Pending orders can be cancelled",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "No",
+        "notes": "Requires funded account",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "N/A",
+        "notes": "No free tier available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "Free trading",
+        "notes": "No monthly fees",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "None",
+        "notes": "Commission-free trading",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "API Key",
+        "notes": "API key authentication",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Good",
+        "notes": "Clear documentation with examples",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "No",
+        "notes": "No official SDKs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "No",
+        "notes": "Not currently supported",
+        "confidence": "likely",
+        "source": "api-reference"
+      },
+      "csv_downloads": {
+        "value": "No",
+        "notes": "API-only delivery, no CSV export endpoint",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "bulk_data_feeds": {
+        "value": "No",
+        "notes": "No bulk data feed products; real-time API only",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "technical_indicators": {
+        "value": "No",
+        "notes": "Raw price data only; indicators must be computed client-side",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "aggregate_indicators": {
+        "value": "No",
+        "notes": "No aggregate indicator endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "candlestick_patterns": {
+        "value": "No",
+        "notes": "No pattern recognition endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "support_resistance": {
+        "value": "No",
+        "notes": "No S/R level endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "news_sentiment": {
+        "value": "No",
+        "notes": "No news or sentiment endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      }
+    },
+    "interactive_brokers": {
+      "real_time_data": {
+        "value": "Yes (Paid)",
+        "notes": "Market data subscriptions required",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Extensive historical data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "Yes (Paid)",
+        "notes": "Level II data available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Minute bars available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "End-of-day data included",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Yes",
+        "notes": "Comprehensive fundamental data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "Yes",
+        "notes": "Full options chain data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "Yes",
+        "notes": "FX pairs and rates",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "Limited",
+        "notes": "Select crypto products",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Yes",
+        "notes": "Client Portal Web API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "Yes",
+        "notes": "TWS API streaming",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "Real-time",
+        "notes": "Streaming data available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "<100ms",
+        "notes": "Professional-grade latency",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "No free tier",
+        "notes": "Requires funded account",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "High",
+        "notes": "Professional limits",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "Yes",
+        "notes": "Full paper trading account",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "Yes",
+        "notes": "Global markets access",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "Yes",
+        "notes": "All order types supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "Yes",
+        "notes": "Advanced order types",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "Yes",
+        "notes": "Stop and stop-limit orders",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "Yes",
+        "notes": "Trailing stop orders",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "Limited",
+        "notes": "Select US stocks only",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "Yes",
+        "notes": "Full order management",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "No",
+        "notes": "Requires account minimum",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "N/A",
+        "notes": "No free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "$0.005/share",
+        "notes": "Tiered commission structure",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "Yes",
+        "notes": "Per-share/contract fees",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "OAuth 2.0",
+        "notes": "Secure OAuth authentication",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Excellent",
+        "notes": "Comprehensive documentation",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "Yes",
+        "notes": "Multiple language SDKs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "Limited",
+        "notes": "Event notifications available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "Yes",
+        "notes": "CSV export via TWS API and Client Portal",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "bulk_data_feeds": {
+        "value": "Yes",
+        "notes": "Bulk market data via TWS API subscriptions",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "technical_indicators": {
+        "value": "Limited",
+        "notes": "Some computed values via TWS; full indicator suite requires client-side",
+        "confidence": "likely",
+        "source": "api-reference"
+      },
+      "aggregate_indicators": {
+        "value": "No",
+        "notes": "No aggregate indicator API; raw data delivery model",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "candlestick_patterns": {
+        "value": "Limited",
+        "notes": "Scanner-based pattern recognition via TWS API",
+        "confidence": "likely",
+        "source": "api-reference"
+      },
+      "support_resistance": {
+        "value": "No",
+        "notes": "No dedicated S/R endpoints; available via third-party integrations",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "news_sentiment": {
+        "value": "Yes",
+        "notes": "News feeds available via TWS API and Client Portal",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      }
+    },
+    "etoro": {
+      "real_time_data": {
+        "value": "Yes",
+        "notes": "Real-time prices for platform users",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Limited",
+        "notes": "Basic historical data available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "No",
+        "notes": "Not available via API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Limited",
+        "notes": "Basic minute data only",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "End-of-day pricing available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Limited",
+        "notes": "Basic company information",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "No",
+        "notes": "CFDs only, no options",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "Yes",
+        "notes": "Extensive FX pairs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "Yes",
+        "notes": "Major cryptocurrencies",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Limited",
+        "notes": "Restricted API access",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "No",
+        "notes": "Not publicly available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "Limited",
+        "notes": "Restricted access",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "~5-15 seconds",
+        "notes": "Consumer-grade latency",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "No public API",
+        "notes": "API not publicly available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "Restricted",
+        "notes": "Limited partner access",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "Yes",
+        "notes": "Virtual portfolio available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "Yes",
+        "notes": "CFD and stock trading",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "Yes",
+        "notes": "Market orders supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "Yes",
+        "notes": "Limit orders available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "Yes",
+        "notes": "Stop loss orders",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "No",
+        "notes": "Not available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "Yes",
+        "notes": "Fractional investing available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "Yes",
+        "notes": "Order management available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "No",
+        "notes": "Requires account funding",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "N/A",
+        "notes": "No free API access",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "Spread-based",
+        "notes": "No commission, spread costs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "None",
+        "notes": "Spread-based pricing",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "Proprietary",
+        "notes": "Custom authentication system",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Limited",
+        "notes": "Restricted documentation",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "No",
+        "notes": "No public SDKs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "No",
+        "notes": "Not available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "Limited",
+        "notes": "Account statement CSV export only; no API CSV",
+        "confidence": "likely",
+        "source": "community"
+      },
+      "bulk_data_feeds": {
+        "value": "No",
+        "notes": "No bulk data products; consumer platform",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "technical_indicators": {
+        "value": "Limited",
+        "notes": "Platform-internal indicators only; not exposed via API",
+        "confidence": "likely",
+        "source": "community"
+      },
+      "aggregate_indicators": {
+        "value": "No",
+        "notes": "No API-accessible aggregate indicators",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "candlestick_patterns": {
+        "value": "No",
+        "notes": "No pattern recognition via API",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "support_resistance": {
+        "value": "No",
+        "notes": "No S/R endpoints",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "news_sentiment": {
+        "value": "Limited",
+        "notes": "Platform-integrated news feed; no API sentiment scoring",
+        "confidence": "likely",
+        "source": "community"
+      }
+    },
+    "fidelity": {
+      "real_time_data": {
+        "value": "Yes (Paid)",
+        "notes": "Real-time quotes for account holders",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Extensive historical data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "No",
+        "notes": "Not available via API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Intraday data available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "End-of-day data included",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Yes",
+        "notes": "Company fundamentals available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "Yes",
+        "notes": "Options chains and data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "Limited",
+        "notes": "Limited FX offerings",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "No",
+        "notes": "Crypto not supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Yes",
+        "notes": "RESTful API available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "Limited",
+        "notes": "Limited streaming capabilities",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "Rate limited",
+        "notes": "Subject to API limits",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "~1-3 seconds",
+        "notes": "Near real-time for account holders",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "No free tier",
+        "notes": "Requires Fidelity account",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "120 requests/min",
+        "notes": "Standard rate limits",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "Limited",
+        "notes": "Virtual trading available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "Yes",
+        "notes": "Full trading capabilities",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "Yes",
+        "notes": "Market orders supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "Yes",
+        "notes": "Limit orders available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "Yes",
+        "notes": "Stop loss orders",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "Yes",
+        "notes": "Trailing stop orders",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "Yes",
+        "notes": "Fractional shares supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "Yes",
+        "notes": "Order management available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "No",
+        "notes": "Requires Fidelity brokerage account",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "N/A",
+        "notes": "No free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "Free trades",
+        "notes": "No commission on stocks/ETFs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "None",
+        "notes": "Commission-free stock trading",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "OAuth 2.0",
+        "notes": "OAuth authentication required",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Good",
+        "notes": "Comprehensive developer docs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "Limited",
+        "notes": "Some language support",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "No",
+        "notes": "Webhooks not supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "Yes",
+        "notes": "CSV export via Active Trader Pro and website",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "bulk_data_feeds": {
+        "value": "Limited",
+        "notes": "Bulk downloads via website; no dedicated bulk API",
+        "confidence": "likely",
+        "source": "official-docs"
+      },
+      "technical_indicators": {
+        "value": "Limited",
+        "notes": "Platform-internal via ATP; limited API exposure",
+        "confidence": "likely",
+        "source": "api-reference"
+      },
+      "aggregate_indicators": {
+        "value": "No",
+        "notes": "No aggregate indicator API endpoints",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "candlestick_patterns": {
+        "value": "Limited",
+        "notes": "Pattern recognition in ATP platform; not API-accessible",
+        "confidence": "likely",
+        "source": "community"
+      },
+      "support_resistance": {
+        "value": "No",
+        "notes": "No S/R API endpoints",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "news_sentiment": {
+        "value": "Yes",
+        "notes": "News and research available via API and platform",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      }
+    },
+    "polygon": {
+      "real_time_data": {
+        "value": "Yes (Paid)",
+        "notes": "Real-time data with paid plans",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Extensive historical data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "Yes (Paid)",
+        "notes": "Tick-level data available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Minute aggregates available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "Daily aggregates included",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Yes",
+        "notes": "Company financials and details",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "Yes (Paid)",
+        "notes": "Options contracts and chains",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "Yes",
+        "notes": "FX real-time and historical",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "Yes",
+        "notes": "Crypto aggregates and trades",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Yes",
+        "notes": "Comprehensive REST API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "Yes (Paid)",
+        "notes": "Real-time WebSocket feeds",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "High",
+        "notes": "Based on subscription tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "<100ms",
+        "notes": "Low latency for paid tiers",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "5 requests/min",
+        "notes": "Very limited free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "Up to 1000/min",
+        "notes": "Varies by plan",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "Yes",
+        "notes": "Very limited free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "5 requests/min, 2 years historical",
+        "notes": "Severe limitations",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "$99-$399/mo",
+        "notes": "Professional data plans",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "N/A",
+        "notes": "Data subscription model",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "API Key",
+        "notes": "Simple API key authentication",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Excellent",
+        "notes": "Comprehensive and well-organized",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "Yes",
+        "notes": "Multiple language SDKs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "Yes",
+        "notes": "WebSocket streaming available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "Yes",
+        "notes": "Flat files product provides CSV downloads for bulk data",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "bulk_data_feeds": {
+        "value": "Yes",
+        "notes": "Flat files and bulk data products available",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "technical_indicators": {
+        "value": "Limited",
+        "notes": "Simple moving averages available via aggregates; full suite requires client-side",
+        "confidence": "likely",
+        "source": "api-reference"
+      },
+      "aggregate_indicators": {
+        "value": "No",
+        "notes": "Raw aggregates provided; no derived indicator composites",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "candlestick_patterns": {
+        "value": "No",
+        "notes": "No native pattern recognition; raw OHLCV provided",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "support_resistance": {
+        "value": "No",
+        "notes": "No S/R endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "news_sentiment": {
+        "value": "Yes",
+        "notes": "News API with ticker-based filtering available",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      }
+    },
+    "tradier": {
+      "real_time_data": {
+        "value": "Yes",
+        "notes": "Real-time quotes included",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Historical price data available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "No",
+        "notes": "Tick data not available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Intraday minute data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "End-of-day data included",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Limited",
+        "notes": "Basic company information",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "Yes",
+        "notes": "Full options chains and data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "No",
+        "notes": "Forex not supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "No",
+        "notes": "Crypto not supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Yes",
+        "notes": "Comprehensive REST API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "Yes",
+        "notes": "Real-time streaming available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "High",
+        "notes": "Professional rate limits",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "~200ms",
+        "notes": "Near real-time data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "No free tier",
+        "notes": "Requires brokerage account",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "120 requests/min",
+        "notes": "Standard API limits",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "Yes",
+        "notes": "Sandbox environment available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "Yes",
+        "notes": "Full brokerage capabilities",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "Yes",
+        "notes": "Market orders supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "Yes",
+        "notes": "Limit orders available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "Yes",
+        "notes": "Stop orders supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "Yes",
+        "notes": "Trailing stop orders",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "No",
+        "notes": "Whole shares only",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "Yes",
+        "notes": "Full order management",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "No",
+        "notes": "Requires funded brokerage account",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "N/A",
+        "notes": "No free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "$0.35/contract",
+        "notes": "Per-contract options pricing",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "Yes",
+        "notes": "Options: $0.35/contract, Stocks: varies",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "OAuth 2.0",
+        "notes": "OAuth authentication required",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Excellent",
+        "notes": "Comprehensive developer docs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "Yes",
+        "notes": "Multiple language SDKs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "Yes",
+        "notes": "Account event webhooks",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "No",
+        "notes": "API-only delivery; no CSV export endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "bulk_data_feeds": {
+        "value": "No",
+        "notes": "No bulk data products; streaming and REST only",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "technical_indicators": {
+        "value": "No",
+        "notes": "Raw market data only; indicators computed client-side",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "aggregate_indicators": {
+        "value": "No",
+        "notes": "No aggregate indicator endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "candlestick_patterns": {
+        "value": "No",
+        "notes": "No pattern recognition endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "support_resistance": {
+        "value": "No",
+        "notes": "No S/R level endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "news_sentiment": {
+        "value": "Limited",
+        "notes": "Basic market news available; no sentiment scoring",
+        "confidence": "likely",
+        "source": "api-reference"
+      }
+    },
+    "twelvedata": {
+      "real_time_data": {
+        "value": "Yes (Paid)",
+        "notes": "Real-time data with paid plans",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Extensive historical data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "No",
+        "notes": "Tick data not available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Minute-level intraday data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "End-of-day data included",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Yes",
+        "notes": "Company profiles and financials",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "No",
+        "notes": "Options data not available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "Yes",
+        "notes": "Comprehensive FX pairs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "Yes",
+        "notes": "Major cryptocurrencies",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Yes",
+        "notes": "Comprehensive REST API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "Yes (Paid)",
+        "notes": "Real-time WebSocket feeds",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "High",
+        "notes": "Based on subscription plan",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "~1-5 seconds",
+        "notes": "Near real-time for paid plans",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "8 requests/min",
+        "notes": "Free tier available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "Up to 5000/min",
+        "notes": "Varies by plan",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "Yes",
+        "notes": "Basic free tier available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "8 requests/min, delayed data",
+        "notes": "Limited functionality",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "$8-$149/mo",
+        "notes": "Multiple subscription tiers",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "N/A",
+        "notes": "Subscription-based pricing",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "API Key",
+        "notes": "Simple API key authentication",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Excellent",
+        "notes": "Clear and comprehensive docs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "Yes",
+        "notes": "Multiple language SDKs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "Yes",
+        "notes": "WebSocket streaming available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "Yes",
+        "notes": "CSV export available via API parameters",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "bulk_data_feeds": {
+        "value": "Limited",
+        "notes": "Bulk data via API with higher-tier plans",
+        "confidence": "likely",
+        "source": "official-docs"
+      },
+      "technical_indicators": {
+        "value": "Yes",
+        "notes": "Comprehensive technical indicators: SMA, EMA, RSI, MACD, etc.",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "aggregate_indicators": {
+        "value": "No",
+        "notes": "Individual indicators only; no aggregate composites",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "candlestick_patterns": {
+        "value": "No",
+        "notes": "No pattern recognition endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "support_resistance": {
+        "value": "No",
+        "notes": "No S/R level endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "news_sentiment": {
+        "value": "No",
+        "notes": "No news or sentiment endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      }
+    },
+    "iexcloud": {
+      "real_time_data": {
+        "value": "Yes (Paid)",
+        "notes": "Real-time data with paid plans",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Extensive historical data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "No",
+        "notes": "Tick data not available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Intraday minute data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "End-of-day data included",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Yes",
+        "notes": "Company stats and financials",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "Limited",
+        "notes": "Basic options data only",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "Yes",
+        "notes": "Major currency pairs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "Yes",
+        "notes": "Major cryptocurrencies",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Yes",
+        "notes": "Comprehensive REST API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "Yes (Paid)",
+        "notes": "SSE streaming available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "High",
+        "notes": "Based on subscription",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "~15ms",
+        "notes": "Very low latency",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "100 requests/day",
+        "notes": "Very limited free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "Up to 1M/month",
+        "notes": "Message-based pricing",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "Yes",
+        "notes": "Very limited free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "100 requests/day, delayed data",
+        "notes": "Extremely limited",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "$0.0005-$0.05/message",
+        "notes": "Pay-per-use pricing",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "N/A",
+        "notes": "Message-based pricing",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "API Key",
+        "notes": "Token-based authentication",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Excellent",
+        "notes": "Clear and comprehensive",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "Yes",
+        "notes": "Multiple language SDKs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "Yes",
+        "notes": "SSE streaming available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "No",
+        "notes": "JSON-only API responses; no CSV export",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "bulk_data_feeds": {
+        "value": "Limited",
+        "notes": "Bulk data available via higher-tier plans",
+        "confidence": "likely",
+        "source": "official-docs"
+      },
+      "technical_indicators": {
+        "value": "Limited",
+        "notes": "Basic indicators via premium plans",
+        "confidence": "likely",
+        "source": "api-reference"
+      },
+      "aggregate_indicators": {
+        "value": "No",
+        "notes": "No aggregate indicator composites",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "candlestick_patterns": {
+        "value": "No",
+        "notes": "No pattern recognition",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "support_resistance": {
+        "value": "No",
+        "notes": "No S/R endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "news_sentiment": {
+        "value": "Yes",
+        "notes": "News API with sentiment scores available",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      }
+    },
+    "alphavantage": {
+      "real_time_data": {
+        "value": "Yes (Paid)",
+        "notes": "Real-time with premium plans",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Extensive historical data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "No",
+        "notes": "Tick data not available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Intraday minute data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "Daily time series data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Yes",
+        "notes": "Company overview and financials",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "No",
+        "notes": "Options data not available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "Yes",
+        "notes": "Comprehensive FX pairs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "Yes",
+        "notes": "Major cryptocurrencies",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Yes",
+        "notes": "Simple REST API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "No",
+        "notes": "No streaming available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "Rate limited",
+        "notes": "Based on subscription",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "~15 minutes",
+        "notes": "Delayed data on free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "25 requests/day",
+        "notes": "Very limited free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "75-1200/min",
+        "notes": "Varies by plan",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "Yes",
+        "notes": "Very limited free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "25 requests/day, 15min delay",
+        "notes": "Severe limitations",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "$25-$1200/mo",
+        "notes": "Multiple subscription tiers",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "N/A",
+        "notes": "Subscription-based pricing",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "API Key",
+        "notes": "Simple API key authentication",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Good",
+        "notes": "Clear documentation with examples",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "Limited",
+        "notes": "Community SDKs available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "No",
+        "notes": "No webhook support",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "technical_indicators": {
+        "value": "Yes",
+        "notes": "Comprehensive technical indicators: RSI, MACD, CCI, ADX, Bollinger Bands, EMA, SMA, etc.",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "aggregate_indicators": {
+        "value": "No",
+        "notes": "Individual indicators only, no aggregate analysis",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "candlestick_patterns": {
+        "value": "No",
+        "notes": "No pattern recognition",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "support_resistance": {
+        "value": "No",
+        "notes": "No support/resistance analysis",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "news_sentiment": {
+        "value": "Yes",
+        "notes": "News sentiment data available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "Yes",
+        "notes": "CSV output format available via datatype=csv parameter",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "bulk_data_feeds": {
+        "value": "No",
+        "notes": "API-only delivery; no bulk download products",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      }
+    },
+    "alltick": {
+      "real_time_data": {
+        "value": "Yes",
+        "notes": "Real-time tick data available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Historical tick and bar data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "Yes",
+        "notes": "Tick-by-tick data available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Minute bar data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "Daily bar data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Limited",
+        "notes": "Basic instrument info only",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "Yes",
+        "notes": "Options tick data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "Yes",
+        "notes": "FX tick data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "Yes",
+        "notes": "Crypto tick data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Yes",
+        "notes": "REST API for queries",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "Yes",
+        "notes": "Real-time WebSocket feeds",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "Real-time",
+        "notes": "Streaming tick data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "<50ms",
+        "notes": "Very low latency",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "No free tier",
+        "notes": "Paid service only",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "High",
+        "notes": "Professional limits",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "No",
+        "notes": "No free tier available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "N/A",
+        "notes": "Paid service only",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "Custom pricing",
+        "notes": "Enterprise pricing model",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "N/A",
+        "notes": "Subscription-based",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "API Key",
+        "notes": "Token-based authentication",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Limited",
+        "notes": "Basic documentation available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "Limited",
+        "notes": "Some language support",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "Yes",
+        "notes": "WebSocket streaming",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "Yes",
+        "notes": "CSV export via API for historical ticks",
+        "confidence": "likely",
+        "source": "api-reference"
+      },
+      "bulk_data_feeds": {
+        "value": "Yes",
+        "notes": "Bulk tick data delivery; core offering",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "technical_indicators": {
+        "value": "No",
+        "notes": "Raw tick data only; indicators computed client-side",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "aggregate_indicators": {
+        "value": "No",
+        "notes": "No indicator endpoints",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "candlestick_patterns": {
+        "value": "No",
+        "notes": "No pattern recognition",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "support_resistance": {
+        "value": "No",
+        "notes": "No S/R endpoints",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "news_sentiment": {
+        "value": "No",
+        "notes": "No news or sentiment data",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      }
+    },
+    "eodhd": {
+      "real_time_data": {
+        "value": "Yes (Paid)",
+        "notes": "Real-time data with premium plans",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Extensive historical data (their specialty)",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "No",
+        "notes": "Tick data not available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Intraday minute data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "End-of-day data (core offering)",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Yes",
+        "notes": "Comprehensive fundamentals",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "Yes",
+        "notes": "Options historical data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "Yes",
+        "notes": "FX historical data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "Yes",
+        "notes": "Crypto historical data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Yes",
+        "notes": "Comprehensive REST API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "No",
+        "notes": "No streaming available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "Rate limited",
+        "notes": "Based on subscription",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "~15 minutes",
+        "notes": "Delayed data on free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "20 requests/day",
+        "notes": "Very limited free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "100K-1M/day",
+        "notes": "High daily limits",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "Yes",
+        "notes": "Limited free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "20 requests/day, delayed data",
+        "notes": "Very restrictive",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "$19.99-$79.99/mo",
+        "notes": "Affordable pricing tiers",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "N/A",
+        "notes": "Subscription-based pricing",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "API Key",
+        "notes": "Simple token authentication",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Excellent",
+        "notes": "Comprehensive documentation",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "Yes",
+        "notes": "Multiple language SDKs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "No",
+        "notes": "No webhook support",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "Yes",
+        "notes": "CSV export available via API",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "bulk_data_feeds": {
+        "value": "Limited",
+        "notes": "Bulk EOD data via higher-tier plans",
+        "confidence": "likely",
+        "source": "official-docs"
+      },
+      "technical_indicators": {
+        "value": "Yes",
+        "notes": "Technical indicators available via API",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "aggregate_indicators": {
+        "value": "No",
+        "notes": "Individual indicators only",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "candlestick_patterns": {
+        "value": "No",
+        "notes": "No pattern recognition",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "support_resistance": {
+        "value": "No",
+        "notes": "No S/R endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "news_sentiment": {
+        "value": "Yes",
+        "notes": "News API with sentiment filtering available",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      }
+    },
+    "finnhub": {
+      "real_time_data": {
+        "value": "Yes (Paid)",
+        "notes": "Real-time data with paid plans",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Historical price data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "No",
+        "notes": "Tick data not available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Minute resolution data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "Daily candles available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Yes",
+        "notes": "Company profiles, metrics, earnings, news",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "No",
+        "notes": "Options data not available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "Yes",
+        "notes": "FX rates and data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "Yes",
+        "notes": "Crypto exchanges data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Yes",
+        "notes": "Comprehensive REST API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "Yes (Paid)",
+        "notes": "Real-time WebSocket feeds",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "High",
+        "notes": "Based on subscription",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "~1 second",
+        "notes": "Near real-time",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "60 requests/min",
+        "notes": "Generous free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "300-600/min",
+        "notes": "Higher limits with paid plans",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "Yes",
+        "notes": "Generous free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "60 requests/min, delayed data",
+        "notes": "Good free access",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "$7.99-$99.99/mo",
+        "notes": "Affordable pricing",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "N/A",
+        "notes": "Subscription-based pricing",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "API Key",
+        "notes": "Simple token authentication",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Excellent",
+        "notes": "Clear and comprehensive",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "Yes",
+        "notes": "Multiple language SDKs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "Yes",
+        "notes": "WebSocket streaming available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "technical_indicators": {
+        "value": "No",
+        "notes": "No built-in technical indicators",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "aggregate_indicators": {
+        "value": "Yes",
+        "notes": "Aggregate technical analysis with buy/sell signals, includes ADX",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "candlestick_patterns": {
+        "value": "Yes",
+        "notes": "Candlestick pattern detection and recognition",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "support_resistance": {
+        "value": "Yes",
+        "notes": "Support and resistance level identification",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "news_sentiment": {
+        "value": "Yes",
+        "notes": "News sentiment analysis and buzz metrics",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "No",
+        "notes": "JSON-only API; no CSV export endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "bulk_data_feeds": {
+        "value": "No",
+        "notes": "API-only delivery; no bulk products",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      }
+    },
+    "fmp": {
+      "real_time_data": {
+        "value": "Yes (Paid)",
+        "notes": "Real-time quotes with paid plans",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Extensive historical data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "No",
+        "notes": "Tick data not available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Intraday minute data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "Daily historical data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Yes",
+        "notes": "Comprehensive fundamentals (specialty)",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "Limited",
+        "notes": "Basic options data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "Yes",
+        "notes": "FX rates available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "Yes",
+        "notes": "Crypto prices",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Yes",
+        "notes": "Comprehensive REST API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "No",
+        "notes": "No streaming available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "Rate limited",
+        "notes": "Based on subscription",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "~15 minutes",
+        "notes": "Delayed on free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "250 requests/day",
+        "notes": "Decent free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "300-10K/day",
+        "notes": "Daily limits vary by plan",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "Yes",
+        "notes": "Good free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "250 requests/day, delayed data",
+        "notes": "Reasonable limits",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "$14-$399/mo",
+        "notes": "Multiple pricing tiers",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "N/A",
+        "notes": "Subscription-based pricing",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "API Key",
+        "notes": "Simple API key authentication",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Excellent",
+        "notes": "Comprehensive with examples",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "Yes",
+        "notes": "Multiple language SDKs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "No",
+        "notes": "No webhook support",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "Yes",
+        "notes": "CSV export via API parameter",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "bulk_data_feeds": {
+        "value": "Limited",
+        "notes": "Bulk data via higher-tier plans",
+        "confidence": "likely",
+        "source": "official-docs"
+      },
+      "technical_indicators": {
+        "value": "Yes",
+        "notes": "Technical indicators available via API",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "aggregate_indicators": {
+        "value": "No",
+        "notes": "Individual indicators only",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "candlestick_patterns": {
+        "value": "No",
+        "notes": "No pattern recognition",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "support_resistance": {
+        "value": "Limited",
+        "notes": "Key metrics include 52-week high/low; no dynamic S/R",
+        "confidence": "likely",
+        "source": "api-reference"
+      },
+      "news_sentiment": {
+        "value": "Yes",
+        "notes": "News and sentiment via stock news endpoint",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      }
+    },
+    "intrinio": {
+      "real_time_data": {
+        "value": "Yes (Paid)",
+        "notes": "Real-time data with premium plans",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Extensive historical data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "No",
+        "notes": "Tick data not available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Intraday minute bars",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "Daily price data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Yes",
+        "notes": "Comprehensive fundamentals",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "Yes",
+        "notes": "Options prices and Greeks",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "Limited",
+        "notes": "Basic FX data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "No",
+        "notes": "Crypto not supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Yes",
+        "notes": "Professional REST API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "Yes (Paid)",
+        "notes": "Real-time streaming feeds",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "High",
+        "notes": "Professional limits",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "~100ms",
+        "notes": "Low latency feeds",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "No free tier",
+        "notes": "Enterprise-focused",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "High",
+        "notes": "Professional rate limits",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "No",
+        "notes": "No free tier available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "N/A",
+        "notes": "Enterprise pricing only",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "Custom pricing",
+        "notes": "Enterprise sales model",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "N/A",
+        "notes": "Subscription-based",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "API Key",
+        "notes": "Secure API authentication",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Excellent",
+        "notes": "Professional documentation",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "Yes",
+        "notes": "Multiple language SDKs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "Yes",
+        "notes": "Real-time streaming available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "Yes",
+        "notes": "CSV export available via API",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "bulk_data_feeds": {
+        "value": "Yes",
+        "notes": "Bulk data packages available for enterprise",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "technical_indicators": {
+        "value": "Yes",
+        "notes": "Technical indicators via API",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "aggregate_indicators": {
+        "value": "No",
+        "notes": "Individual indicators only",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "candlestick_patterns": {
+        "value": "No",
+        "notes": "No pattern recognition",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "support_resistance": {
+        "value": "No",
+        "notes": "No S/R endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "news_sentiment": {
+        "value": "Yes",
+        "notes": "News API with company-level filtering",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      }
+    },
+    "marketstack": {
+      "real_time_data": {
+        "value": "Yes (Paid)",
+        "notes": "Real-time data with paid plans",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Extensive historical data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "No",
+        "notes": "Tick data not available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Intraday minute data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "End-of-day data (core offering)",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Limited",
+        "notes": "Basic company information",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "No",
+        "notes": "Options data not available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "No",
+        "notes": "Forex not supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "No",
+        "notes": "Crypto not supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Yes",
+        "notes": "Simple REST API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "No",
+        "notes": "No streaming available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "Rate limited",
+        "notes": "Based on subscription",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "~15 minutes",
+        "notes": "Delayed on free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "1000 requests/month",
+        "notes": "Limited free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "10K-1M/month",
+        "notes": "Monthly limits",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "No",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "N/A",
+        "notes": "Data-only provider",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "Yes",
+        "notes": "Basic free tier",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "1000 requests/month, delayed data",
+        "notes": "Very limited",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "$9.99-$99.99/mo",
+        "notes": "Affordable pricing",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "N/A",
+        "notes": "Subscription-based pricing",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "API Key",
+        "notes": "Simple API key authentication",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Good",
+        "notes": "Clear documentation",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "Limited",
+        "notes": "Basic SDK support",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "No",
+        "notes": "No webhook support",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "No",
+        "notes": "JSON-only API; no CSV export",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "bulk_data_feeds": {
+        "value": "No",
+        "notes": "API-only; no bulk data products",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "technical_indicators": {
+        "value": "No",
+        "notes": "EOD data only; no technical indicators",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "aggregate_indicators": {
+        "value": "No",
+        "notes": "No indicator endpoints",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "candlestick_patterns": {
+        "value": "No",
+        "notes": "No pattern recognition",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "support_resistance": {
+        "value": "No",
+        "notes": "No S/R endpoints",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "news_sentiment": {
+        "value": "No",
+        "notes": "No news or sentiment endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      }
+    },
+    "tradingview": {
+      "real_time_data": {
+        "value": "Yes (Paid)",
+        "notes": "Real-time data with premium subscriptions",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Extensive historical data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "No",
+        "notes": "Tick data not available via API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Minute-level chart data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "Daily chart data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Limited",
+        "notes": "Basic company info",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "Limited",
+        "notes": "Basic options data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "Yes",
+        "notes": "Comprehensive FX data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "Yes",
+        "notes": "Major crypto exchanges",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Limited",
+        "notes": "Charting Library API only",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "Yes (Paid)",
+        "notes": "Real-time feeds for partners",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "Limited",
+        "notes": "Restricted API access",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "~1 second",
+        "notes": "Near real-time for premium",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "No public API",
+        "notes": "No free public API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "Partner only",
+        "notes": "Requires partnership agreement",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "Yes",
+        "notes": "Paper trading available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "Yes (Partners)",
+        "notes": "Via broker integrations",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "Yes (Partners)",
+        "notes": "Through integrated brokers",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "Yes (Partners)",
+        "notes": "Through integrated brokers",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "Yes (Partners)",
+        "notes": "Through integrated brokers",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "Yes (Partners)",
+        "notes": "Through integrated brokers",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "Depends on broker",
+        "notes": "Varies by integrated broker",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "Yes (Partners)",
+        "notes": "Through integrated brokers",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "No",
+        "notes": "No free API access",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "N/A",
+        "notes": "Partnership required",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "Custom partnership",
+        "notes": "Enterprise partnership model",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "Depends on broker",
+        "notes": "Varies by integrated broker",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "OAuth 2.0",
+        "notes": "Partner authentication",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Limited",
+        "notes": "Partner-only documentation",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "Yes",
+        "notes": "Charting Library SDK",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "Yes (Partners)",
+        "notes": "For integrated brokers",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "Limited",
+        "notes": "CSV export via chart UI; not programmatic",
+        "confidence": "confirmed",
+        "source": "community"
+      },
+      "bulk_data_feeds": {
+        "value": "No",
+        "notes": "No bulk data products for external consumption",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "technical_indicators": {
+        "value": "Yes",
+        "notes": "100+ built-in indicators via Pine Script and charting",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "aggregate_indicators": {
+        "value": "Limited",
+        "notes": "Composite indicators possible via Pine Script; not pre-built",
+        "confidence": "likely",
+        "source": "community"
+      },
+      "candlestick_patterns": {
+        "value": "Yes",
+        "notes": "Built-in candlestick pattern recognition",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "support_resistance": {
+        "value": "Yes",
+        "notes": "Auto S/R levels via charting; not via API",
+        "confidence": "likely",
+        "source": "community"
+      },
+      "news_sentiment": {
+        "value": "Yes",
+        "notes": "News feed and sentiment indicators available",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      }
+    },
+    "tradingapi": {
+      "real_time_data": {
+        "value": "Yes",
+        "notes": "Real-time market data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Historical price data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "No",
+        "notes": "Tick data not available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Minute-level data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "End-of-day data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Limited",
+        "notes": "Basic company information",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "Yes",
+        "notes": "Options trading data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "No",
+        "notes": "Forex not supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "No",
+        "notes": "Crypto not supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Yes",
+        "notes": "RESTful API endpoints",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "Limited",
+        "notes": "Basic streaming available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "Rate limited",
+        "notes": "Standard rate limits",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "~2-5 seconds",
+        "notes": "Near real-time",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "No free tier",
+        "notes": "Paid service only",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "100-500/min",
+        "notes": "Varies by plan",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "Yes",
+        "notes": "Sandbox environment",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "Yes",
+        "notes": "Live trading supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "Yes",
+        "notes": "Market orders supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "Yes",
+        "notes": "Limit orders available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "Yes",
+        "notes": "Stop orders supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "Limited",
+        "notes": "Basic trailing stops",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "No",
+        "notes": "Whole shares only",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "Yes",
+        "notes": "Order management available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "No",
+        "notes": "No free tier available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "N/A",
+        "notes": "Paid service only",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "Custom pricing",
+        "notes": "Contact for pricing",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "Yes",
+        "notes": "Per-trade commissions",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "API Key",
+        "notes": "API key authentication",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Limited",
+        "notes": "Basic documentation available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "No",
+        "notes": "No official SDKs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "Limited",
+        "notes": "Basic webhook support",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "No",
+        "notes": "JSON-only; SDK-focused delivery",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "bulk_data_feeds": {
+        "value": "No",
+        "notes": "No bulk data products",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "technical_indicators": {
+        "value": "No",
+        "notes": "Raw order/execution data; no indicators",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "aggregate_indicators": {
+        "value": "No",
+        "notes": "Execution-only API",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "candlestick_patterns": {
+        "value": "No",
+        "notes": "No pattern recognition",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "support_resistance": {
+        "value": "No",
+        "notes": "No S/R endpoints",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "news_sentiment": {
+        "value": "No",
+        "notes": "No news or sentiment endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      }
+    },
+    "webull": {
+      "real_time_data": {
+        "value": "Yes",
+        "notes": "Real-time quotes for account holders",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Historical price data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "No",
+        "notes": "Tick data not available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Minute-level data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "End-of-day data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Yes",
+        "notes": "Company fundamentals and news",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "Yes",
+        "notes": "Options chains and data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "Limited",
+        "notes": "Basic FX data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "Yes",
+        "notes": "Crypto trading data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Limited",
+        "notes": "Unofficial/reverse-engineered APIs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "Limited",
+        "notes": "Unofficial streaming",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "Limited",
+        "notes": "Unofficial API limits",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "~1-3 seconds",
+        "notes": "Near real-time",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "No official API",
+        "notes": "Unofficial APIs only",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "No official API",
+        "notes": "No official paid API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "Yes",
+        "notes": "Paper trading account available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "Yes",
+        "notes": "Live trading (app/web only)",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "Yes",
+        "notes": "Market orders supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "Yes",
+        "notes": "Limit orders available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "Yes",
+        "notes": "Stop orders supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "Yes",
+        "notes": "Trailing stop orders",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "Yes",
+        "notes": "Fractional shares supported",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "Yes",
+        "notes": "Order management available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "No official API",
+        "notes": "No official API available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "N/A",
+        "notes": "No official API",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "Commission-free",
+        "notes": "No API fees (no official API)",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "None",
+        "notes": "Commission-free trading",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "Unofficial",
+        "notes": "Reverse-engineered auth",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "None",
+        "notes": "No official documentation",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "No",
+        "notes": "No official SDKs",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "No",
+        "notes": "No webhook support",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "Limited",
+        "notes": "Account statement CSV export; no API CSV",
+        "confidence": "likely",
+        "source": "community"
+      },
+      "bulk_data_feeds": {
+        "value": "No",
+        "notes": "No bulk data products; consumer brokerage",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "technical_indicators": {
+        "value": "Limited",
+        "notes": "Platform-internal indicators; limited API exposure",
+        "confidence": "likely",
+        "source": "community"
+      },
+      "aggregate_indicators": {
+        "value": "No",
+        "notes": "No aggregate indicator API",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "candlestick_patterns": {
+        "value": "No",
+        "notes": "No pattern recognition API",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "support_resistance": {
+        "value": "No",
+        "notes": "No S/R endpoints",
+        "confidence": "confirmed",
+        "source": "inferred"
+      },
+      "news_sentiment": {
+        "value": "Limited",
+        "notes": "Platform-integrated news; no API sentiment scoring",
+        "confidence": "likely",
+        "source": "community"
+      }
+    },
+    "alpaca": {
+      "real_time_data": {
+        "value": "Yes (Paid)",
+        "notes": "Free with funded account",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "historical_data": {
+        "value": "Yes",
+        "notes": "Free tier available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "tick_data": {
+        "value": "Yes (Paid)",
+        "notes": "Via Data API subscription",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "minute_data": {
+        "value": "Yes",
+        "notes": "Free tier available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "eod_data": {
+        "value": "Yes",
+        "notes": "Free tier available",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fundamental_data": {
+        "value": "Limited",
+        "notes": "Basic company info only",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "options_data": {
+        "value": "Yes (Paid)",
+        "notes": "Via Market Data subscription",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "forex_data": {
+        "value": "No",
+        "notes": "",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "crypto_data": {
+        "value": "Yes",
+        "notes": "Limited selection",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "rest_api": {
+        "value": "Yes",
+        "notes": "Comprehensive endpoints",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "websocket_streaming": {
+        "value": "Yes",
+        "notes": "For real-time data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "polling_frequency": {
+        "value": "Unlimited",
+        "notes": "Subject to rate limits",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "data_latency": {
+        "value": "~500ms",
+        "notes": "For real-time data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_rate_limit": {
+        "value": "200 requests/min",
+        "notes": "For market data",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_rate_limit": {
+        "value": "Higher",
+        "notes": "Varies by subscription",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paper_trading": {
+        "value": "Yes",
+        "notes": "Full-featured",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "real_trading": {
+        "value": "Yes",
+        "notes": "With funded account",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "market_orders": {
+        "value": "Yes",
+        "notes": "",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "limit_orders": {
+        "value": "Yes",
+        "notes": "",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "stop_orders": {
+        "value": "Yes",
+        "notes": "",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "trailing_stops": {
+        "value": "Yes",
+        "notes": "",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "fractional_shares": {
+        "value": "Yes",
+        "notes": "",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "order_cancellation": {
+        "value": "Yes",
+        "notes": "",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier": {
+        "value": "Yes",
+        "notes": "With limitations",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "free_tier_limitations": {
+        "value": "Delayed data, rate limits",
+        "notes": "",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "paid_tiers": {
+        "value": "$9-$99/mo",
+        "notes": "Based on plan level",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "commission_fees": {
+        "value": "None",
+        "notes": "Commission-free trading",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "authentication": {
+        "value": "API Key",
+        "notes": "Key ID & Secret",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "api_documentation": {
+        "value": "Excellent",
+        "notes": "Clear and comprehensive",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "sdk_availability": {
+        "value": "Yes",
+        "notes": "Multiple languages",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "webhook_support": {
+        "value": "Yes",
+        "notes": "For account activities",
+        "confidence": "confirmed",
+        "source": "plugin-reference"
+      },
+      "csv_downloads": {
+        "value": "Yes",
+        "notes": "CSV export via API and dashboard",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "bulk_data_feeds": {
+        "value": "Yes",
+        "notes": "Bulk data via REST API with pagination",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      },
+      "technical_indicators": {
+        "value": "No",
+        "notes": "Raw market data only; indicators computed client-side",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "aggregate_indicators": {
+        "value": "No",
+        "notes": "No aggregate indicator endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "candlestick_patterns": {
+        "value": "No",
+        "notes": "No pattern recognition; raw OHLCV data provided",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "support_resistance": {
+        "value": "No",
+        "notes": "No S/R level endpoints",
+        "confidence": "confirmed",
+        "source": "api-reference"
+      },
+      "news_sentiment": {
+        "value": "Yes",
+        "notes": "News API available with sentiment scoring",
+        "confidence": "confirmed",
+        "source": "official-docs"
+      }
+    },
+    "allow": {},
+    "warn": {},
+    "degrade": {},
+    "block": {}
+  },
+  "directiveCapabilityAlpha": [
+    {
+      "id": "adx",
+      "label": "ADX",
+      "status": "Alpha Release",
+      "requiredData": [
+        "adx",
+        "quote"
+      ]
+    },
+    {
+      "id": "rsi",
+      "label": "RSI",
+      "status": "Alpha Release",
+      "requiredData": [
+        "rsi",
+        "quote"
+      ]
+    },
+    {
+      "id": "volume",
+      "label": "Volume",
+      "status": "Alpha Release",
+      "requiredData": [
+        "volume",
+        "quote"
+      ]
+    },
+    {
+      "id": "cci",
+      "label": "CCI",
+      "status": "Alpha Release",
+      "requiredData": [
+        "cci",
+        "quote"
+      ]
+    },
+    {
+      "id": "macd",
+      "label": "MACD",
+      "status": "Alpha Release",
+      "requiredData": [
+        "macd",
+        "quote"
+      ]
+    }
+  ]
+}

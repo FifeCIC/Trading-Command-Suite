@@ -1,0 +1,259 @@
+.directives-page {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 1.2rem 1rem 1.8rem;
+}
+
+.directives-header {
+  display: grid;
+  grid-template-columns: 1fr minmax(220px, 320px);
+  gap: 0.9rem;
+  margin-bottom: 0.8rem;
+}
+
+.directives-header h1 {
+  margin: 0;
+}
+
+.directives-header p {
+  margin: 0.3rem 0 0;
+  color: var(--ink-soft);
+}
+
+.directives-eyebrow {
+  margin: 0;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.directives-header-stats {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 92%, var(--bg) 8%);
+  padding: 0.7rem 0.8rem;
+  align-self: start;
+}
+
+.directives-header-stats p {
+  margin: 0;
+}
+
+.directives-header-stats p + p {
+  margin-top: 0.36rem;
+}
+
+.directives-toolbar {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 95%, var(--bg) 5%);
+  padding: 0.6rem 0.8rem;
+  display: grid;
+  gap: 0.38rem;
+  margin-bottom: 0.8rem;
+}
+
+.directives-toolbar label {
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+
+.directives-toolbar input {
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  padding: 0.5rem 0.65rem;
+}
+
+.directives-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  gap: 0.85rem;
+}
+
+.directives-table-wrap {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--panel) 92%, var(--bg) 8%);
+}
+
+.directives-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.directives-table thead th {
+  text-align: left;
+  font-size: 0.77rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--line);
+  padding: 0.58rem 0.62rem;
+}
+
+.directives-table td {
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent 30%);
+  padding: 0.52rem 0.62rem;
+  vertical-align: top;
+}
+
+.directive-row.is-selected {
+  background: color-mix(in srgb, var(--accent) 10%, transparent 90%);
+}
+
+.directive-primary {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.44rem;
+  padding: 0;
+  text-align: left;
+}
+
+.directive-primary small {
+  display: block;
+  color: var(--ink-soft);
+}
+
+.directive-chevron {
+  margin-top: 0.05rem;
+  color: var(--accent);
+}
+
+.directive-chip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.16rem 0.47rem;
+}
+
+.tone-ok {
+  border-color: #3bd9ff;
+  color: #3bd9ff;
+}
+
+.tone-warn {
+  border-color: #ffbb53;
+  color: #ffbb53;
+}
+
+.tone-neutral {
+  border-color: #8f7dff;
+  color: #8f7dff;
+}
+
+.tone-muted {
+  border-color: var(--line);
+  color: var(--ink-soft);
+}
+
+.directive-weight-meta {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 0.79rem;
+}
+
+.directive-expand td {
+  background: color-mix(in srgb, var(--panel) 85%, var(--bg) 15%);
+}
+
+.directive-expand-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  gap: 0.7rem;
+}
+
+.directive-expand-grid h3 {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.directive-expand-grid p,
+.directive-expand-grid ul {
+  margin: 0.35rem 0 0;
+  color: var(--ink-soft);
+}
+
+.directive-expand-grid ul {
+  padding-left: 1rem;
+}
+
+.directive-detail-rail {
+  position: sticky;
+  top: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 93%, var(--bg) 7%);
+  padding: 0.72rem;
+  height: max-content;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.directive-detail-rail h2,
+.directive-detail-rail h3,
+.directive-detail-rail p,
+.directive-detail-rail ul {
+  margin: 0;
+}
+
+.directive-detail-rail h3 {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  margin-bottom: 0.33rem;
+}
+
+.directive-detail-rail ul {
+  padding-left: 1rem;
+  color: var(--ink-soft);
+  display: grid;
+  gap: 0.26rem;
+}
+
+.directive-detail-rail pre {
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg) 92%, var(--panel) 8%);
+  padding: 0.45rem;
+  overflow-x: auto;
+  font-size: 0.74rem;
+}
+
+@media (max-width: 1050px) {
+  .directives-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .directive-detail-rail {
+    position: static;
+  }
+
+  .directive-expand-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 840px) {
+  .directives-header {
+    grid-template-columns: 1fr;
+  }
+
+  .directives-table {
+    font-size: 0.9rem;
+  }
+}

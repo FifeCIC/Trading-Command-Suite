@@ -2,16 +2,16 @@
   max-width: 1100px;
   margin: 0 auto;
   padding: 1.5rem;
-  color: #e0e0e0;
+  color: var(--ink);
 }
 
-.page-header h1 {
+.symbols-browser .sb-page-header h1 {
   margin: 0 0 0.2rem;
   font-size: 1.4rem;
 }
 
-.page-header p {
-  color: #888;
+.symbols-browser .sb-page-header p {
+  color: var(--ink-soft);
   margin: 0 0 1.25rem;
   font-size: 0.85rem;
 }
@@ -35,8 +35,8 @@
 .symbols-table th {
   text-align: left;
   padding: 0.5rem 0.6rem;
-  border-bottom: 2px solid #2a2a2a;
-  color: #888;
+  border-bottom: 2px solid var(--line);
+  color: var(--ink-soft);
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -45,42 +45,43 @@
 
 .symbols-table td {
   padding: 0.45rem 0.6rem;
-  border-bottom: 1px solid #1a1a1a;
+  border-bottom: 1px solid var(--line);
   font-size: 0.85rem;
   cursor: pointer;
 }
 
 .symbols-table tr:hover td {
-  background: #ffffff06;
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel));
 }
 
 .symbols-table .row-selected td {
-  background: #00f5ff0a;
-  border-left: 2px solid #00f5ff;
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  border-left: 2px solid var(--accent);
 }
 
 .symbols-table strong {
-  color: #00f5ff;
+  color: var(--accent);
 }
 
 /* --- Detail panel --- */
 
 .symbol-detail {
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 1.25rem;
+  box-shadow: var(--shadow-card);
 }
 
 .symbol-detail h2 {
   margin: 0;
   font-size: 1.25rem;
-  color: #00f5ff;
+  color: var(--accent);
 }
 
 .symbol-name {
   margin: 0.1rem 0 1rem;
-  color: #888;
+  color: var(--ink-soft);
   font-size: 0.85rem;
 }
 
@@ -98,7 +99,7 @@
 
 .detail-label {
   font-size: 0.7rem;
-  color: #666;
+  color: var(--ink-soft);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -111,20 +112,18 @@
 .detail-section {
   margin-top: 1rem;
   padding-top: 0.75rem;
-  border-top: 1px solid #2a2a2a;
+  border-top: 1px solid var(--line);
 }
 
 .detail-section h3 {
   margin: 0 0 0.5rem;
   font-size: 0.8rem;
-  color: #888;
+  color: var(--ink-soft);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-/* --- Chips (shared) --- */
-
-.chip {
+.sb-chip {
   display: inline-block;
   padding: 0.1rem 0.45rem;
   border-radius: 3px;
@@ -134,7 +133,7 @@
   letter-spacing: 0.03em;
 }
 
-.chip--ok { background: #00ff4120; color: #00ff41; }
-.chip--warn { background: #ffaa0020; color: #ffaa00; }
-.chip--neutral { background: #2a2a2a; color: #888; }
-.chip--error { background: #ff004020; color: #ff0040; }
+.sb-chip--ok { background: #00ff4120; color: #00a63e; }
+.sb-chip--warn { background: #ffaa0020; color: #9a6400; }
+.sb-chip--neutral { background: color-mix(in srgb, var(--line) 75%, var(--panel)); color: var(--ink-soft); }
+.sb-chip--error { background: #ff004020; color: var(--danger); }

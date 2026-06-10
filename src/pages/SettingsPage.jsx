@@ -16,7 +16,6 @@ export default function SettingsPage() {
   return (
     <div className="settings-page">
       <header className="settings-header">
-        <h1>Settings</h1>
         <p>Application configuration. More options will appear as features are built.</p>
       </header>
 

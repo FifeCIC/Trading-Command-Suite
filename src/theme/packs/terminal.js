@@ -11,7 +11,7 @@ const TERMINAL_PALETTE = {
   danger: '#ff0040',
 };
 
-export function createTerminalTokens(mode = 'dark') {
+export function createTerminalTokens() {
   const base = createThemeTokens('dark');
 
   return {

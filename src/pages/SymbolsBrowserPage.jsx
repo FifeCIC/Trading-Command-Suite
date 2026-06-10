@@ -29,8 +29,7 @@ export default function SymbolsBrowserPage() {
 
   return (
     <div className="symbols-browser">
-      <header className="page-header">
-        <h1>Symbols</h1>
+      <header className="sb-page-header">
         <p>{syms.length} symbol{syms.length !== 1 ? 's' : ''} in database · Mode: {s.mode || '...'}</p>
       </header>
 
@@ -58,9 +57,9 @@ export default function SymbolsBrowserPage() {
                     <td><strong>{sym.ticker}</strong></td>
                     <td>{sym.name}</td>
                     <td>{sym.exchange}</td>
-                    <td><span className="chip chip--neutral">{sym.type}</span></td>
+                    <td><span className="sb-chip sb-chip--neutral">{sym.type}</span></td>
                     <td>
-                      <span className={`chip chip--${f?.status === 'fresh' ? 'ok' : f?.status === 'stale' ? 'warn' : 'neutral'}`}>
+                      <span className={`sb-chip sb-chip--${f?.status === 'fresh' ? 'ok' : f?.status === 'stale' ? 'warn' : 'neutral'}`}>
                         {f?.status ?? '...'}
                       </span>
                     </td>
@@ -87,7 +86,7 @@ export default function SymbolsBrowserPage() {
               </div>
               <div className="detail-item">
                 <span className="detail-label">Active</span>
-                <span className={`chip chip--${selected.active ? 'ok' : 'warn'}`}>
+                <span className={`sb-chip sb-chip--${selected.active ? 'ok' : 'warn'}`}>
                   {selected.active ? 'Yes' : 'No'}
                 </span>
               </div>
@@ -103,7 +102,7 @@ export default function SymbolsBrowserPage() {
                 <div className="detail-grid">
                   <div className="detail-item">
                     <span className="detail-label">Status</span>
-                    <span className={`chip chip--${selectedFreshness.status === 'fresh' ? 'ok' : selectedFreshness.status === 'stale' ? 'warn' : 'neutral'}`}>
+                    <span className={`sb-chip sb-chip--${selectedFreshness.status === 'fresh' ? 'ok' : selectedFreshness.status === 'stale' ? 'warn' : 'neutral'}`}>
                       {selectedFreshness.status}
                     </span>
                   </div>

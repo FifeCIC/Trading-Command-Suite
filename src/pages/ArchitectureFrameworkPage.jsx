@@ -8,6 +8,7 @@ import {
   CURRENT_FLOW_CONTRACTS,
   CURRENT_ROUTE_CONTRACTS,
   CURRENT_SLICE,
+  DATABASE_SCHEMA,
   DATA_STATES,
   DECISION_WORKFLOW,
   DEFINITION_OF_DONE,
@@ -22,6 +23,7 @@ import {
   OWNER_DIRECTORY,
   QUEUE_PROVIDER_CARDS,
   REVISION_LOG,
+  ROADMAP_ITEMS,
   SCORING_STRATEGY_CARDS,
   SECTION_META,
   STATUS_SNAPSHOT,
@@ -32,6 +34,7 @@ import {
 import './architecture-framework.css'
 
 const LIVE_REFRESH_INTERVAL_MS = 30_000
+const EMPTY_OBJ = {}
 function normalize(value) {
   return String(value).toLowerCase()
 }
@@ -171,6 +174,7 @@ export default function ArchitectureFrameworkPage() {
   const [query, setQuery] = useState('')
   const [collapsedSections, setCollapsedSections] = useState([])
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true)
+  const [viewMode, setViewMode] = useState('framework')
 
   const providerHealthQuery = useQuery({
     queryKey: ['architecture', 'provider-health'],
@@ -188,14 +192,18 @@ export default function ArchitectureFrameworkPage() {
     refetchOnWindowFocus: true,
   })
 
-  const providerHealthData = providerHealthQuery.data || {}
-  const importRunsData = importRunsQuery.data || {}
+  const providerHealthData = providerHealthQuery.data ?? EMPTY_OBJ
+  const importRunsData = importRunsQuery.data ?? EMPTY_OBJ
   
   const systemMode = providerHealthData.mode || importRunsData.mode || null
   const systemServices = providerHealthData.services || importRunsData.services || {}
   
-  const providerHealth = Array.isArray(providerHealthData.providers) ? providerHealthData.providers : Array.isArray(providerHealthData) ? providerHealthData : []
-  const recentImportRuns = Array.isArray(importRunsData.runs) ? importRunsData.runs : Array.isArray(importRunsData) ? importRunsData : []
+  const providerHealth = useMemo(() => {
+    return Array.isArray(providerHealthData.providers) ? providerHealthData.providers : Array.isArray(providerHealthData) ? providerHealthData : []
+  }, [providerHealthData])
+  const recentImportRuns = useMemo(() => {
+    return Array.isArray(importRunsData.runs) ? importRunsData.runs : Array.isArray(importRunsData) ? importRunsData : []
+  }, [importRunsData])
 
   const providerStatusCounts = useMemo(
     () => countBy(providerHealth, (item) => item.status || 'unknown'),
@@ -252,18 +260,50 @@ export default function ArchitectureFrameworkPage() {
       <section className="architecture-hero">
         <div>
           <p className="eyebrow">Trading Command Suite</p>
-          <h1>Architecture Framework</h1>
-          <p className="architecture-subcopy">
-            This page is the in-app mirror of the project north star. It exists early so design,
-            implementation, and AI-assisted work all reference the same model while the system is still small.
-          </p>
+          <div className="architecture-view-toggle">
+            <button type="button" className={viewMode === 'framework' ? 'active' : ''} onClick={() => setViewMode('framework')}>Framework</button>
+            <button type="button" className={viewMode === 'roadmap' ? 'active' : ''} onClick={() => setViewMode('roadmap')}>Roadmap</button>
+          </div>
         </div>
         <div className="architecture-status-card">
           <p><strong>Priority:</strong> P0 foundation</p>
           <p><strong>Role:</strong> active decision reference</p>
-          <p><strong>Mode:</strong> interactive shell now, live contract surface next</p>
+          <p><strong>Mode:</strong> {viewMode === 'roadmap' ? 'roadmap overlay' : 'framework'}</p>
         </div>
       </section>
+
+      {viewMode === 'roadmap' && (
+        <section className="architecture-section" id="roadmap">
+          <h2>Roadmap — Sorted by Architecture Domain</h2>
+          <p className="architecture-subcopy">
+            Tasks and GitHub Issues mapped to the domains they implement. Status is updated from SPRINT.md.
+          </p>
+
+          <div className="architecture-grid architecture-grid-wide">
+            {ROADMAP_ITEMS.map((domain) => (
+              <article className="architecture-card" key={domain.domain}>
+                <h3>{domain.domain}</h3>
+                <ul>
+                  {domain.items.map((item) => (
+                    <li key={item.issue}>
+                      <span className={`architecture-chip architecture-chip-${item.status === 'done' ? 'ok' : item.status === 'active' ? 'info' : 'neutral'}`}>
+                        {item.status}
+                      </span>{' '}
+                      {item.gh ? (
+                        <a href={item.gh} target="_blank" rel="noreferrer">{item.issue}: {item.label}</a>
+                      ) : (
+                        <span>{item.issue}: {item.label}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {viewMode !== 'roadmap' && (<>
 
       <section className="architecture-controls-bar">
         <div className="architecture-live-status">
@@ -463,6 +503,136 @@ export default function ArchitectureFrameworkPage() {
                   <li key={item}>{item}</li>
                 ))}
               </ol>
+            </article>
+          </div>
+        </SectionBlock>
+      )}
+
+      {visibleIds.has('schema') && (
+        <SectionBlock
+          id="schema"
+          title="Database Schema"
+          summary="Complete entity-relationship diagram for AI guidance. Shows all current and planned tables with relationships to guide implementation decisions."
+          collapsed={collapsedSections.includes('schema')}
+          onToggle={toggleSection}
+        >
+          <div className="architecture-card architecture-card-full">
+            <h3>Core Trading Entities (Implemented)</h3>
+            <div className="architecture-schema-grid">
+              {DATABASE_SCHEMA.coreEntities.map((entity) => (
+                <article className="architecture-schema-card" key={entity.table}>
+                  <h4>{entity.table}</h4>
+                  <p className="architecture-schema-desc">{entity.description}</p>
+                  <div className="architecture-schema-section">
+                    <strong>Fields:</strong>
+                    <ul>
+                      {entity.fields.map((field) => (
+                        <li key={field}>{field}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  {entity.relationships.length > 0 && (
+                    <div className="architecture-schema-section">
+                      <strong>Relationships:</strong>
+                      <ul>
+                        {entity.relationships.map((rel) => (
+                          <li key={rel}>{rel}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div className="architecture-card architecture-card-full">
+            <h3>Market Data Entities (Implemented)</h3>
+            <div className="architecture-schema-grid">
+              {DATABASE_SCHEMA.marketDataEntities.map((entity) => (
+                <article className="architecture-schema-card" key={entity.table}>
+                  <h4>{entity.table}</h4>
+                  <p className="architecture-schema-desc">{entity.description}</p>
+                  <div className="architecture-schema-section">
+                    <strong>Fields:</strong>
+                    <ul>
+                      {entity.fields.map((field) => (
+                        <li key={field}>{field}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  {entity.relationships.length > 0 && (
+                    <div className="architecture-schema-section">
+                      <strong>Relationships:</strong>
+                      <ul>
+                        {entity.relationships.map((rel) => (
+                          <li key={rel}>{rel}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {entity.indexes && (
+                    <div className="architecture-schema-section">
+                      <strong>Indexes:</strong>
+                      <ul>
+                        {entity.indexes.map((idx) => (
+                          <li key={idx}>{idx}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div className="architecture-card architecture-card-full">
+            <h3>Planned Meta & Extension Tables</h3>
+            <div className="architecture-schema-grid architecture-schema-grid-compact">
+              {DATABASE_SCHEMA.plannedMetaTables.map((entity) => (
+                <article className="architecture-schema-card architecture-schema-card-planned" key={entity.table}>
+                  <h4>{entity.table}</h4>
+                  <p className="architecture-schema-desc">{entity.description}</p>
+                  <div className="architecture-schema-section">
+                    <strong>Key Fields:</strong>
+                    <ul>
+                      {entity.fields.slice(0, 5).map((field) => (
+                        <li key={field}>{field}</li>
+                      ))}
+                      {entity.fields.length > 5 && <li>... +{entity.fields.length - 5} more</li>}
+                    </ul>
+                  </div>
+                  {entity.relationships.length > 0 && (
+                    <div className="architecture-schema-section">
+                      <strong>Relations:</strong>
+                      <ul>
+                        {entity.relationships.map((rel) => (
+                          <li key={rel}>{rel}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div className="architecture-grid architecture-grid-wide">
+            <article className="architecture-card">
+              <h3>Key Relationships</h3>
+              <ul>
+                {DATABASE_SCHEMA.keyRelationships.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </article>
+            <article className="architecture-card">
+              <h3>Data Flow Pattern</h3>
+              <ul>
+                {DATABASE_SCHEMA.dataFlow.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
             </article>
           </div>
         </SectionBlock>
@@ -843,6 +1013,8 @@ export default function ArchitectureFrameworkPage() {
             </article>
           </div>
         </SectionBlock>
+      )}
+      </>
       )}
     </main>
   )

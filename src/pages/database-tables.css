@@ -2,16 +2,16 @@
   max-width: 900px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
-  color: #e0e0e0;
+  color: var(--ink);
 }
 
-.page-header h1 {
+.database-tables-page .db-page-header h1 {
   margin: 0 0 0.25rem;
   font-size: 1.4rem;
 }
 
-.page-header p {
-  color: #888;
+.database-tables-page .db-page-header p {
+  color: var(--ink-soft);
   margin: 0 0 1.5rem;
   font-size: 0.85rem;
 }
@@ -19,11 +19,11 @@
 .page-footer {
   margin-top: 2rem;
   font-size: 0.75rem;
-  color: #555;
+  color: var(--ink-soft);
 }
 
-.hint {
-  color: #ffaa00;
+.db-hint {
+  color: #9a6400;
   margin-top: 0.3rem;
 }
 
@@ -37,8 +37,8 @@
 .tables-table th {
   text-align: left;
   padding: 0.6rem 0.75rem;
-  border-bottom: 2px solid #2a2a2a;
-  color: #888;
+  border-bottom: 2px solid var(--line);
+  color: var(--ink-soft);
   font-size: 0.8rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -47,27 +47,33 @@
 
 .tables-table td {
   padding: 0.55rem 0.75rem;
-  border-bottom: 1px solid #1a1a1a;
+  border-bottom: 1px solid var(--line);
   font-size: 0.85rem;
 }
 
 .tables-table code {
-  background: #1a1a1a;
+  background: color-mix(in srgb, var(--line) 75%, var(--panel));
   padding: 0.15rem 0.4rem;
   border-radius: 3px;
-  color: #00f5ff;
+  color: var(--accent);
   font-size: 0.8rem;
 }
 
 .tables-table .num {
   font-variant-numeric: tabular-nums;
   text-align: right;
-  color: #aaa;
+  color: var(--ink-soft);
 }
 
-/* --- Shared chips --- */
+.tables-table .row-planned {
+  opacity: 0.6;
+}
 
-.chip {
+.tables-table .row-planned code {
+  color: var(--ink-soft);
+}
+
+.db-chip {
   display: inline-block;
   padding: 0.1rem 0.5rem;
   border-radius: 3px;
@@ -77,7 +83,8 @@
   letter-spacing: 0.03em;
 }
 
-.chip--ok { background: #00ff4120; color: #00ff41; }
-.chip--warn { background: #ffaa0020; color: #ffaa00; }
-.chip--neutral { background: #2a2a2a; color: #888; }
-.chip--error { background: #ff004020; color: #ff0040; }
+.db-chip--ok { background: #00ff4120; color: #00a63e; }
+.db-chip--warn { background: #ffaa0020; color: #9a6400; }
+.db-chip--neutral { background: color-mix(in srgb, var(--line) 75%, var(--panel)); color: var(--ink-soft); }
+.db-chip--error { background: #ff004020; color: var(--danger); }
+.db-chip--info { background: #0ea5a620; color: var(--accent); }

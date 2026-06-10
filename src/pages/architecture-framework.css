@@ -103,6 +103,35 @@
   max-width: 70ch;
 }
 
+/* --- View toggle --- */
+
+.architecture-view-toggle {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.architecture-view-toggle button {
+  padding: 0.35rem 0.9rem;
+  border: 1px solid #d5dde8;
+  border-radius: 8px;
+  background: #fff;
+  color: #445171;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.architecture-view-toggle button.active {
+  background: #16213a;
+  color: #fff;
+  border-color: #16213a;
+}
+
+.architecture-view-toggle button:hover:not(.active) {
+  border-color: #785e3f;
+}
+
 .architecture-status-card,
 .architecture-card {
   padding: 16px;
@@ -401,4 +430,86 @@
   .architecture-hero h1 {
     font-size: 28px;
   }
+}
+
+/* --- Database Schema Section --- */
+
+.architecture-schema-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.architecture-schema-grid-compact {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.architecture-schema-card {
+  border: 1px solid #d5dde8;
+  border-radius: 12px;
+  background: #f9fbff;
+  padding: 14px;
+  box-shadow: 0 4px 12px rgba(17, 35, 73, 0.06);
+}
+
+.architecture-schema-card-planned {
+  border-color: #c9d5e6;
+  background: #f3f6fa;
+  opacity: 0.85;
+}
+
+.architecture-schema-card h4 {
+  margin: 0 0 6px;
+  color: #152749;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.architecture-schema-desc {
+  margin: 0 0 12px;
+  color: #445171;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.architecture-schema-section {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e5ebf3;
+}
+
+.architecture-schema-section:first-of-type {
+  margin-top: 8px;
+}
+
+.architecture-schema-section strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #18305f;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+
+.architecture-schema-section ul {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 13px;
+  color: #344866;
+}
+
+.architecture-schema-section li {
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.architecture-schema-card-planned .architecture-schema-section strong {
+  color: #4a5a74;
+}
+
+.architecture-schema-card-planned .architecture-schema-section ul {
+  color: #556680;
 }

@@ -11,7 +11,7 @@ const VOID_PALETTE = {
   danger: '#ff3355',
 };
 
-export function createVoidTokens(mode = 'dark') {
+export function createVoidTokens() {
   const base = createThemeTokens('dark');
 
   return {

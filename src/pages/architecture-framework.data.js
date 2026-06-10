@@ -650,11 +650,233 @@ export const REVISION_LOG = [
   'System Boundaries: added context and ownership visibility.',
   'Contracts: added concrete route, bridge, queue, UI, and scoring contract categories.',
   'Governance: added guardrails, verification, definition of done, and gaps.',
+  'Database Schema: added comprehensive entity-relationship diagram for AI guidance.',
 ]
+
+// Database Schema for AI Guidance
+export const DATABASE_SCHEMA = {
+  coreEntities: [
+    {
+      table: 'Symbol',
+      description: 'Trading symbols and company data',
+      fields: ['id (PK)', 'ticker (unique)', 'name', 'exchange', 'type', 'active', 'createdAt', 'updatedAt'],
+      relationships: [
+        '→ Score (one-to-many)',
+        '→ Signal (one-to-many)',
+        '→ MarketBar (one-to-many)',
+        '→ ImportRun (one-to-many)',
+      ],
+    },
+    {
+      table: 'Strategy',
+      description: 'Trading strategies and rules',
+      fields: ['id (PK)', 'name', 'description', 'config (JSON)', 'active', 'createdAt', 'updatedAt'],
+      relationships: [
+        '→ Directive (one-to-many)',
+        '→ Score (one-to-many)',
+        '→ Signal (one-to-many)',
+      ],
+    },
+    {
+      table: 'Directive',
+      description: 'Scoring directive definitions',
+      fields: ['id (PK)', 'strategyId (FK)', 'name', 'type', 'weight', 'config (JSON)', 'active', 'createdAt', 'updatedAt'],
+      relationships: [
+        '← Strategy (many-to-one)',
+      ],
+    },
+    {
+      table: 'Score',
+      description: 'Symbol scoring history',
+      fields: ['id (PK)', 'symbolId (FK)', 'strategyId (FK)', 'value', 'breakdown (JSON)', 'timestamp'],
+      relationships: [
+        '← Symbol (many-to-one)',
+        '← Strategy (many-to-one)',
+      ],
+    },
+    {
+      table: 'Signal',
+      description: 'Trading signal records',
+      fields: ['id (PK)', 'symbolId (FK)', 'strategyId (FK)', 'type', 'strength', 'price', 'reason (JSON)', 'status', 'createdAt'],
+      relationships: [
+        '← Symbol (many-to-one)',
+        '← Strategy (many-to-one)',
+      ],
+    },
+  ],
+  marketDataEntities: [
+    {
+      table: 'MarketBar',
+      description: 'OHLCV price data from imports',
+      fields: ['id (PK)', 'symbolId (FK)', 'provider', 'timeframe', 'timestamp', 'open', 'high', 'low', 'close', 'volume', 'importedAt'],
+      relationships: [
+        '← Symbol (many-to-one)',
+      ],
+      indexes: ['symbolId + timeframe + timestamp', 'provider + importedAt'],
+    },
+    {
+      table: 'ImportRun',
+      description: 'Data import job tracking',
+      fields: ['id (PK)', 'symbolId (FK)', 'provider', 'timeframe', 'status', 'source', 'requestedAt', 'startedAt', 'completedAt', 'error'],
+      relationships: [
+        '← Symbol (many-to-one)',
+      ],
+      indexes: ['symbolId + requestedAt', 'status + requestedAt'],
+    },
+    {
+      table: 'ProviderHealth',
+      description: 'Provider connectivity status',
+      fields: ['id (PK)', 'provider (unique)', 'status', 'message', 'latencyMs', 'checkedAt', 'credentialsOk', 'endpoint'],
+      relationships: [],
+      indexes: ['status + checkedAt'],
+    },
+  ],
+  plannedMetaTables: [
+    {
+      table: 'SymbolMeta',
+      description: 'Extended symbol metadata',
+      fields: ['id (PK)', 'symbolId (FK)', 'metaKey', 'metaValue', 'source', 'updatedAt'],
+      relationships: ['← Symbol (many-to-one)'],
+    },
+    {
+      table: 'SymbolFundamentals',
+      description: 'Fundamental data (PE, EPS, etc.)',
+      fields: ['id (PK)', 'symbolId (FK)', 'metricName', 'metricValue', 'metricText', 'period', 'reportDate', 'source', 'createdAt'],
+      relationships: ['← Symbol (many-to-one)'],
+    },
+    {
+      table: 'SymbolTechnical',
+      description: 'Technical indicators by timeframe',
+      fields: ['id (PK)', 'symbolId (FK)', 'indicatorName', 'indicatorValue', 'timeframe', 'calculationDate', 'source', 'createdAt'],
+      relationships: ['← Symbol (many-to-one)'],
+    },
+    {
+      table: 'ApiCalls',
+      description: 'API call tracking for rate limiting',
+      fields: ['id (PK)', 'provider', 'endpoint', 'callTime', 'responseCode', 'responseTimeMs', 'cacheHit', 'errorMessage'],
+      relationships: [],
+    },
+    {
+      table: 'DataSourcesMeta',
+      description: 'Data source configurations',
+      fields: ['id (PK)', 'sourceName', 'sourceType', 'configKey', 'configValue', 'isActive', 'updatedAt'],
+      relationships: [],
+    },
+    {
+      table: 'ApiCredentials',
+      description: 'Encrypted API credentials',
+      fields: ['id (PK)', 'provider (unique with type)', 'credentialType', 'encryptedValue', 'isActive', 'expiresAt', 'createdAt', 'updatedAt'],
+      relationships: [],
+    },
+    {
+      table: 'CacheMeta',
+      description: 'Cache metadata for invalidation',
+      fields: ['id (PK)', 'cacheKey (unique)', 'cacheGroup', 'dataType', 'symbolId (FK)', 'expiresAt', 'invalidationTriggers', 'createdAt'],
+      relationships: [],
+    },
+    {
+      table: 'StrategyMeta',
+      description: 'Strategy parameters and configs',
+      fields: ['id (PK)', 'strategyId (FK)', 'parameterName', 'parameterValue', 'parameterType', 'isRequired', 'updatedAt'],
+      relationships: ['← Strategy (many-to-one)'],
+    },
+    {
+      table: 'StrategyPerformance',
+      description: 'Strategy performance tracking',
+      fields: ['id (PK)', 'strategyId (FK)', 'metricName', 'metricValue', 'periodStart', 'periodEnd', 'symbolId (FK)', 'calculatedAt'],
+      relationships: ['← Strategy (many-to-one)', '← Symbol (many-to-one)'],
+    },
+    {
+      table: 'UserPreferences',
+      description: 'User trading preferences',
+      fields: ['id (PK)', 'userId (FK)', 'preferenceKey', 'preferenceValue', 'preferenceType', 'updatedAt'],
+      relationships: [],
+    },
+    {
+      table: 'Watchlist',
+      description: 'User watchlists',
+      fields: ['id (PK)', 'userId (FK)', 'name', 'symbolIds (JSON array)', 'createdAt', 'updatedAt'],
+      relationships: [],
+    },
+    {
+      table: 'WatchlistMeta',
+      description: 'Watchlist metadata',
+      fields: ['id (PK)', 'watchlistId (FK)', 'metaKey', 'metaValue', 'updatedAt'],
+      relationships: ['← Watchlist (many-to-one)'],
+    },
+    {
+      table: 'CronMeta',
+      description: 'CRON job metadata and status',
+      fields: ['id (PK)', 'jobName (unique)', 'jobStatus', 'lastRun', 'nextRun', 'runCount', 'errorCount', 'lastError', 'configData (JSON)', 'createdAt', 'updatedAt'],
+      relationships: [],
+    },
+    {
+      table: 'ProcessMeta',
+      description: 'Background process metadata',
+      fields: ['id (PK)', 'processName', 'processType', 'status', 'progressPercent', 'totalItems', 'processedItems', 'errorMessage', 'startedAt', 'completedAt', 'createdAt'],
+      relationships: [],
+    },
+    {
+      table: 'MarketSessions',
+      description: 'Market session information',
+      fields: ['id (PK)', 'exchange', 'sessionDate', 'sessionType', 'openTime', 'closeTime', 'isTradingDay', 'notes'],
+      relationships: [],
+    },
+    {
+      table: 'NewsMeta',
+      description: 'News sentiment metadata',
+      fields: ['id (PK)', 'newsId (FK)', 'sentimentScore', 'relevanceScore', 'symbolMentions (JSON)', 'keywords (JSON)', 'sourceReliability', 'analyzedAt'],
+      relationships: [],
+    },
+    {
+      table: 'Order',
+      description: 'Trading orders',
+      fields: ['id (PK)', 'symbolId (FK)', 'strategyId (FK)', 'orderType', 'side', 'quantity', 'price', 'status', 'createdAt', 'updatedAt'],
+      relationships: ['← Symbol (many-to-one)', '← Strategy (many-to-one)'],
+    },
+    {
+      table: 'OrderExecution',
+      description: 'Order execution history',
+      fields: ['id (PK)', 'orderId (FK)', 'executedQuantity', 'executedPrice', 'executionTime', 'commission', 'executionVenue'],
+      relationships: ['← Order (many-to-one)'],
+    },
+    {
+      table: 'Position',
+      description: 'Open trading positions',
+      fields: ['id (PK)', 'symbolId (FK)', 'quantity', 'averagePrice', 'currentPrice', 'unrealizedPnL', 'openedAt', 'updatedAt'],
+      relationships: ['← Symbol (many-to-one)'],
+    },
+    {
+      table: 'Trade',
+      description: 'Completed trade records',
+      fields: ['id (PK)', 'symbolId (FK)', 'strategyId (FK)', 'entryPrice', 'exitPrice', 'quantity', 'realizedPnL', 'entryTime', 'exitTime', 'duration'],
+      relationships: ['← Symbol (many-to-one)', '← Strategy (many-to-one)'],
+    },
+  ],
+  keyRelationships: [
+    'Symbol is the central entity - connects to scores, signals, market data, and imports',
+    'Strategy defines rules - directives execute strategy logic',
+    'Score links Symbol + Strategy - stores evaluation results with breakdown',
+    'Signal links Symbol + Strategy - actionable trading signals',
+    'MarketBar stores OHLCV data - linked to Symbol for price history',
+    'ImportRun tracks data imports - linked to Symbol for freshness tracking',
+    'Planned: SymbolMeta/Fundamentals/Technical extend Symbol with additional data',
+    'Planned: StrategyMeta/Performance extend Strategy with parameters and tracking',
+    'Planned: Order/Position/Trade tables for order management and trade tracking',
+  ],
+  dataFlow: [
+    '1. Symbol created → 2. ImportRun queued → 3. MarketBar data stored',
+    '4. Strategy + Directives defined → 5. Score calculated using MarketBar data',
+    '6. Signal generated based on Score → 7. Order created from Signal (planned)',
+    'ProviderHealth tracked independently - monitors data source availability',
+    'Meta tables store extended attributes without modifying core schema',
+  ],
+}
 
 export const SECTION_META = [
   { id: 'status', title: 'Status Snapshot', terms: [...STATUS_SNAPSHOT, ...CURRENT_SLICE] },
   { id: 'tree', title: 'Architecture Tree', terms: [...DOMAINS, ...SYSTEM_SPINE] },
+  { id: 'schema', title: 'Database Schema', terms: ['database', 'schema', 'entity', 'relationship', 'table', 'foreign key', 'symbol', 'strategy', 'score', 'signal', 'market', 'import', 'directive'] },
   { id: 'workflow', title: 'Decision Workflow', terms: DECISION_WORKFLOW.flatMap((item) => [item.title, item.summary, ...item.items]) },
   { id: 'matrix', title: 'Feature Decision Matrix', terms: FEATURE_MATRIX.flat() },
   { id: 'intake', title: 'Intake Template', terms: INTAKE_TEMPLATE.flatMap((item) => [item.title, ...item.items]) },
@@ -667,4 +889,56 @@ export const SECTION_META = [
   { id: 'scoring', title: 'Scoring And Strategy Contract', terms: SCORING_STRATEGY_CARDS.flatMap((item) => [item.title, item.summary, ...item.items]) },
   { id: 'governance', title: 'Governance And Guardrails', terms: [...MAINTENANCE_WORKFLOW.flatMap((item) => [item.title, item.summary, ...item.items]), ...AI_GUARDRAILS.flatMap((item) => [item.title, item.summary, ...item.items]), ...VERIFICATION_GOVERNANCE.flatMap((item) => [item.title, item.summary, ...item.items]), ...DEFINITION_OF_DONE, ...HANDOFF_CHECKLIST] },
   { id: 'gaps', title: 'Known Gaps And Revision Log', terms: [...KNOWN_GAPS, ...REVISION_LOG] },
+  { id: 'roadmap', title: 'Roadmap', terms: ['roadmap', 'issue', 'github', 'sprint', 'p0', 'p1', 'p2', 'task', 'status', 'priority'] },
+]
+
+export const ROADMAP_ITEMS = [
+  {
+    domain: 'Market data import and freshness',
+    items: [
+      { issue: 'Task 1', label: 'Data Model Baseline & Migrations', status: 'done', gh: null },
+      { issue: 'Task 2', label: 'Data Freshness Service', status: 'done', gh: null },
+    ],
+  },
+  {
+    domain: 'Provider integration and health',
+    items: [
+      { issue: 'Task 3', label: 'Provider Adapter Contract & Stubs', status: 'active', gh: null },
+      { issue: 'Page', label: 'Trading Platforms UI (sources → Trading Platforms)', status: 'done', gh: null },
+      { issue: 'Task 8', label: 'API Management Health Panel', status: 'queued', gh: null },
+    ],
+  },
+  {
+    domain: 'Directive execution',
+    items: [
+      { issue: 'Task 4', label: 'Five-Directive Scoring Engine', status: 'queued', gh: null },
+    ],
+  },
+  {
+    domain: 'Strategy aggregation',
+    items: [
+      { issue: 'Task 5', label: 'Strategy Aggregator with Breakdown', status: 'queued', gh: null },
+    ],
+  },
+  {
+    domain: 'Scoring and ranking',
+    items: [
+      { issue: 'Task 6', label: 'SEES Ranking API Endpoint', status: 'queued', gh: null },
+      { issue: 'Task 7', label: 'SEES UI Reorder Panel', status: 'queued', gh: null },
+    ],
+  },
+  {
+    domain: 'SEES presentation layer',
+    items: [
+      { issue: 'GH #1', label: 'Multi-Strategy Dashboard', status: 'planned', gh: 'https://github.com/FifeCIC/trading-command-suite/issues/1' },
+      { issue: 'GH #2', label: 'TradingView Chart Integration', status: 'planned', gh: 'https://github.com/FifeCIC/trading-command-suite/issues/2' },
+      { issue: 'GH #3', label: 'Pullback Scoring Indicator', status: 'planned', gh: 'https://github.com/FifeCIC/trading-command-suite/issues/3' },
+    ],
+  },
+  {
+    domain: 'Signals and decision support',
+    items: [
+      { issue: 'GH #4', label: 'VIX News Sentiment Engine', status: 'planned', gh: 'https://github.com/FifeCIC/trading-command-suite/issues/4' },
+    ],
+  },
 ]

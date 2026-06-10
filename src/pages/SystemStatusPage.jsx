@@ -72,7 +72,6 @@ export default function SystemStatusPage() {
   return (
     <div className="system-status-page">
       <header className="status-page-header">
-        <h1>System Status</h1>
         <div className="overall-status">
           <StatusDot ok={overallOk} label="Overall" />
           <span className="mode-badge">{mode}</span>
@@ -131,10 +130,10 @@ export default function SystemStatusPage() {
               {provs.map((pr) => (
                 <li key={pr.provider}>
                   <span>{pr.displayName}</span>
-                  <span className={`chip chip--${pr.credentialsConfigured ? 'ok' : 'warn'}`}>
+                  <span className={`ss-chip ss-chip--${pr.credentialsConfigured ? 'ok' : 'warn'}`}>
                     {pr.credentialsConfigured ? 'Creds OK' : 'No Credentials'}
                   </span>
-                  <span className={`chip chip--${pr.status === 'healthy' ? 'ok' : pr.status === 'missing-credentials' ? 'warn' : 'neutral'}`}>
+                  <span className={`ss-chip ss-chip--${pr.status === 'healthy' ? 'ok' : pr.status === 'missing-credentials' ? 'warn' : 'neutral'}`}>
                     {pr.status}
                   </span>
                 </li>

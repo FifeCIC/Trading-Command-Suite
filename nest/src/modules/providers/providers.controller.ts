@@ -25,4 +25,34 @@ export class ProvidersController {
   ) {
     return this.providersService.updateHealth(provider, status, message, latencyMs ?? null);
   }
+
+  @Get('test/:provider/:symbol')
+  @ApiOperation({ summary: 'Test adapter getQuote method with a symbol' })
+  @ApiOkResponse({ description: 'Quote data from the specified provider adapter' })
+  async testAdapter(
+    @Param('provider') providerId: string,
+    @Param('symbol') symbol: string,
+  ) {
+    const adapter = this.providersService.getAdapter(providerId);
+    
+    if (!adapter) {
+      return {
+        error: 'Provider adapter not found',
+        providerId,
+        availableProviders: ['alpaca', 'alphavantage', 'trading212'],
+      };
+    }
+
+    const quote = await adapter.getQuote(symbol);
+    const healthOk = await adapter.healthCheck();
+
+    return {
+      provider: providerId,
+      adapterName: adapter.name,
+      symbol,
+      quote,
+      healthOk,
+      timestamp: new Date().toISOString(),
+    };
+  }
 }

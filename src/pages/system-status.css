@@ -2,7 +2,7 @@
   max-width: 960px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
-  color: #e0e0e0;
+  color: var(--ink);
 }
 
 .status-page-header {
@@ -24,8 +24,8 @@
 }
 
 .mode-badge {
-  background: #2a2a2a;
-  color: #00f5ff;
+  background: color-mix(in srgb, var(--line) 75%, var(--panel));
+  color: var(--accent);
   padding: 0.2rem 0.6rem;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -45,7 +45,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #666;
+  background: var(--ink-soft);
 }
 
 .status-dot.ok .dot {
@@ -54,8 +54,8 @@
 }
 
 .status-dot.warn .dot {
-  background: #ffaa00;
-  box-shadow: 0 0 6px #ffaa00;
+  background: #cc7a00;
+  box-shadow: 0 0 6px rgba(204, 122, 0, 0.6);
 }
 
 .status-dot.error .dot {
@@ -74,16 +74,17 @@
 /* --- Card --- */
 
 .status-card {
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 1.25rem;
+  box-shadow: var(--shadow-card);
 }
 
 .status-card h3 {
   margin: 0 0 0.75rem;
   font-size: 1rem;
-  color: #ccc;
+  color: var(--ink);
 }
 
 .status-card--ok {
@@ -110,7 +111,7 @@
 }
 
 .metric-label {
-  color: #888;
+  color: var(--ink-soft);
 }
 
 .metric-value {
@@ -125,21 +126,19 @@
 .status-hint {
   margin: 0.5rem 0 0;
   font-size: 0.8rem;
-  color: #888;
+  color: var(--ink-soft);
   line-height: 1.5;
 }
 
 .status-hint code {
-  background: #2a2a2a;
+  background: color-mix(in srgb, var(--line) 75%, var(--panel));
   padding: 0.1rem 0.3rem;
   border-radius: 3px;
   font-size: 0.75rem;
-  color: #00f5ff;
+  color: var(--accent);
 }
 
-/* --- Chips --- */
-
-.chip {
+.ss-chip {
   display: inline-block;
   padding: 0.1rem 0.5rem;
   border-radius: 3px;
@@ -148,19 +147,19 @@
   text-transform: uppercase;
 }
 
-.chip--ok {
+.ss-chip--ok {
   background: #00ff4120;
-  color: #00ff41;
+  color: #00a63e;
 }
 
-.chip--warn {
+.ss-chip--warn {
   background: #ffaa0020;
-  color: #ffaa00;
+  color: #9a6400;
 }
 
-.chip--neutral {
-  background: #2a2a2a;
-  color: #888;
+.ss-chip--neutral {
+  background: color-mix(in srgb, var(--line) 75%, var(--panel));
+  color: var(--ink-soft);
 }
 
 /* --- Provider list --- */
@@ -195,18 +194,18 @@
 
 .symbol-table th {
   text-align: left;
-  color: #888;
+  color: var(--ink-soft);
   padding: 0.35rem 0.5rem;
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid var(--line);
 }
 
 .symbol-table td {
   padding: 0.35rem 0.5rem;
-  border-bottom: 1px solid #1a1a1a;
+  border-bottom: 1px solid var(--line);
 }
 
 .symbol-table strong {
-  color: #00f5ff;
+  color: var(--accent);
 }
 
 /* --- Footer --- */
@@ -216,5 +215,5 @@
   display: flex;
   justify-content: space-between;
   font-size: 0.75rem;
-  color: #555;
+  color: var(--ink-soft);
 }
