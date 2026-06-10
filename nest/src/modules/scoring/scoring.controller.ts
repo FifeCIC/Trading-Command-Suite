@@ -1,6 +1,4 @@
 /**
- * PLACEHOLDER — implement per SPRINT.md Task 6.
- *
  * Scoring Controller
  * ==================
  * Exposes the ranked symbol endpoint consumed by the SEES UI panel.
@@ -21,7 +19,9 @@ export class ScoringController {
 
   @Get('ranked')
   @ApiOperation({ summary: 'Get symbols ranked by aggregate score' })
-  @ApiOkResponse({ description: 'Ranked symbol list with scores' })
+  @ApiOkResponse({
+    description: 'Ranked symbol list with scores and directive breakdown',
+  })
   ranked(
     @Query('strategy_id') strategyId?: string,
     @Query('limit') limit?: string,

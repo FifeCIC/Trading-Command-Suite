@@ -29,13 +29,13 @@ export interface MarketBar {
 
 export interface DirectiveInput {
   symbol: string;
-  bars: MarketBar[];       // Price candles ordered oldest → newest
+  bars: MarketBar[]; // Price candles ordered oldest → newest
 }
 
 export interface DirectiveResult {
-  score: number;           // 0–100
-  confidence: number;      // 0–1
-  reason: string;          // Human-readable explanation
+  score: number; // 0–100
+  confidence: number; // 0–1
+  reason: string; // Human-readable explanation
 }
 
 export interface IDirective {

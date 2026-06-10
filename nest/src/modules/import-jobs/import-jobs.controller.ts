@@ -11,7 +11,10 @@ export class ImportJobsController {
   @Post('trigger/:symbolId')
   @ApiOperation({ summary: 'Queue market data import for one symbol' })
   @ApiOkResponse({ description: 'Import queued successfully' })
-  trigger(@Param('symbolId') symbolId: string, @Query() query: TriggerImportDto) {
+  trigger(
+    @Param('symbolId') symbolId: string,
+    @Query() query: TriggerImportDto,
+  ) {
     return this.importJobsService.enqueueImport({
       symbolId,
       timeframe: query.timeframe,
@@ -25,7 +28,9 @@ export class ImportJobsController {
   @ApiOkResponse({ description: 'Recent import runs' })
   listRuns(@Query('limit') limit?: string) {
     const parsedLimit = Number(limit ?? 20);
-    const safeLimit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 100) : 20;
+    const safeLimit = Number.isFinite(parsedLimit)
+      ? Math.min(Math.max(parsedLimit, 1), 100)
+      : 20;
 
     return this.importJobsService.listRecent(safeLimit);
   }

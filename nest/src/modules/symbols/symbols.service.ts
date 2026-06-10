@@ -16,7 +16,9 @@ export class SymbolsService {
 
   async create(dto: CreateSymbolDto): Promise<Symbol> {
     if (!this.prisma.isAvailable) {
-      throw new Error('Database is not available. Cannot create symbol in fallback mode.');
+      throw new Error(
+        'Database is not available. Cannot create symbol in fallback mode.',
+      );
     }
 
     const data: Prisma.SymbolCreateInput = {
@@ -41,14 +43,18 @@ export class SymbolsService {
         orderBy: [{ ticker: 'asc' }],
       });
     } catch (error) {
-      this.logger.warn(`Database unavailable while listing symbols: ${String(error)}`);
+      this.logger.warn(
+        `Database unavailable while listing symbols: ${String(error)}`,
+      );
       return [];
     }
   }
 
   async findOne(id: string): Promise<Symbol> {
     if (!this.prisma.isAvailable) {
-      throw new Error('Database is not available. Cannot retrieve symbol in fallback mode.');
+      throw new Error(
+        'Database is not available. Cannot retrieve symbol in fallback mode.',
+      );
     }
 
     const symbol = await this.prisma.symbol.findUnique({ where: { id } });
@@ -61,7 +67,9 @@ export class SymbolsService {
 
   async update(id: string, dto: UpdateSymbolDto): Promise<Symbol> {
     if (!this.prisma.isAvailable) {
-      throw new Error('Database is not available. Cannot update symbol in fallback mode.');
+      throw new Error(
+        'Database is not available. Cannot update symbol in fallback mode.',
+      );
     }
 
     await this.findOne(id);
@@ -81,7 +89,9 @@ export class SymbolsService {
 
   async setActive(id: string, active: boolean): Promise<Symbol> {
     if (!this.prisma.isAvailable) {
-      throw new Error('Database is not available. Cannot update symbol in fallback mode.');
+      throw new Error(
+        'Database is not available. Cannot update symbol in fallback mode.',
+      );
     }
 
     await this.findOne(id);

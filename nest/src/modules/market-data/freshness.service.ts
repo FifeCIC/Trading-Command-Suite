@@ -42,7 +42,9 @@ export class FreshnessService {
     const modeInfo = this.modeService.getModeInfo();
 
     if (!this.prisma.isAvailable) {
-      this.logger.warn('Database unavailable — returning empty freshness batch.');
+      this.logger.warn(
+        'Database unavailable — returning empty freshness batch.',
+      );
       return {
         mode: modeInfo.mode,
         services: {
@@ -61,8 +63,7 @@ export class FreshnessService {
         orderBy: { ticker: 'asc' },
       });
 
-      const threshold =
-        maxAgeMinutes ?? this.resolveDefaultThreshold();
+      const threshold = maxAgeMinutes ?? this.resolveDefaultThreshold();
 
       const results = await Promise.all(
         symbols.map((s) =>
@@ -113,8 +114,7 @@ export class FreshnessService {
     timeframe = '1h',
     maxAgeMinutes?: number,
   ): Promise<FreshnessResult> {
-    const threshold =
-      maxAgeMinutes ?? this.resolveDefaultThreshold();
+    const threshold = maxAgeMinutes ?? this.resolveDefaultThreshold();
 
     return this.evaluateSingle(symbolId, undefined, timeframe, threshold);
   }
@@ -149,11 +149,17 @@ export class FreshnessService {
         this.logger.debug(
           `Freshness ${symbolId}/${timeframe}: missing (no bars stored).`,
         );
-        return { symbolId, ticker, timeframe, status: 'missing', latestTimestamp: null, ageMinutes: null };
+        return {
+          symbolId,
+          ticker,
+          timeframe,
+          status: 'missing',
+          latestTimestamp: null,
+          ageMinutes: null,
+        };
       }
 
-      const ageMinutes =
-        (Date.now() - latest.timestamp.getTime()) / 60000;
+      const ageMinutes = (Date.now() - latest.timestamp.getTime()) / 60000;
       const status: FreshnessStatus =
         ageMinutes <= maxAgeMinutes ? 'fresh' : 'stale';
 
@@ -173,7 +179,14 @@ export class FreshnessService {
       this.logger.warn(
         `Freshness check failed for ${symbolId}: ${String(error)}`,
       );
-      return { symbolId, ticker, timeframe, status: 'missing', latestTimestamp: null, ageMinutes: null };
+      return {
+        symbolId,
+        ticker,
+        timeframe,
+        status: 'missing',
+        latestTimestamp: null,
+        ageMinutes: null,
+      };
     }
   }
 

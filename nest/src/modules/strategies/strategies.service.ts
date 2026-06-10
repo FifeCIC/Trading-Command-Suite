@@ -32,11 +32,11 @@ export interface StrategyScore {
   strategyId: string;
   strategyName: string;
   symbolId: string;
-  totalScore: number;       // 0–100, weighted aggregate
-  confidence: number;       // 0–1, weighted average
+  totalScore: number; // 0–100, weighted aggregate
+  confidence: number; // 0–1, weighted average
   breakdown: ScoreBreakdownItem[];
   timeframe: string;
-  guidance: string;         // e.g. "short-term buy signal"
+  guidance: string; // e.g. "short-term buy signal"
   timestamp: string;
 }
 
@@ -50,13 +50,13 @@ export class StrategiesService {
    * Aggregate directive results into a strategy score.
    * PLACEHOLDER — returns a stub result.
    */
-  async calculateScore(
+  calculateScore(
     _symbolId: string,
     _symbolTicker: string,
     _directiveResults: Map<string, DirectiveResult>,
     _weights: StrategyDirectiveWeight[],
     _timeframe: string,
-  ): Promise<StrategyScore> {
+  ): StrategyScore {
     const modeInfo = this.modeService.getModeInfo();
     this.logger.debug('StrategiesService.calculateScore stub — PLACEHOLDER.');
 

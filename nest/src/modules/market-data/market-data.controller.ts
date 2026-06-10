@@ -31,22 +31,39 @@ export class MarketDataController {
   @Get('freshness')
   @ApiOperation({ summary: 'Check freshness for all active symbols' })
   @ApiOkResponse({ description: 'Batch freshness results' })
-  async checkAll(@Query('timeframe') timeframe = '1h', @Query('maxAgeMinutes') maxAgeMinutes?: string) {
+  async checkAll(
+    @Query('timeframe') timeframe = '1h',
+    @Query('maxAgeMinutes') maxAgeMinutes?: string,
+  ) {
     const maxAge = maxAgeMinutes ? Number(maxAgeMinutes) : undefined;
-    return this.freshnessService.checkAllActive(timeframe, Number.isFinite(maxAge) ? maxAge : undefined);
+    return this.freshnessService.checkAllActive(
+      timeframe,
+      Number.isFinite(maxAge) ? maxAge : undefined,
+    );
   }
 
   @Get('freshness/:symbolId')
-  @ApiOperation({ summary: 'Check market data freshness for one symbol and optionally queue import' })
-  @ApiOkResponse({ description: 'Freshness result with optional queued run info' })
-  async checkFreshness(@Param('symbolId') symbolId: string, @Query() query: CheckFreshnessDto) {
+  @ApiOperation({
+    summary:
+      'Check market data freshness for one symbol and optionally queue import',
+  })
+  @ApiOkResponse({
+    description: 'Freshness result with optional queued run info',
+  })
+  async checkFreshness(
+    @Param('symbolId') symbolId: string,
+    @Query() query: CheckFreshnessDto,
+  ) {
     const freshness = await this.freshnessService.checkOne(
       symbolId,
       query.timeframe,
       query.maxAgeMinutes,
     );
 
-    if (query.queueIfStale && (freshness.status === 'stale' || freshness.status === 'missing')) {
+    if (
+      query.queueIfStale &&
+      (freshness.status === 'stale' || freshness.status === 'missing')
+    ) {
       const queued = await this.importJobsService.enqueueImport({
         symbolId,
         timeframe: query.timeframe,
@@ -68,9 +85,14 @@ export class MarketDataController {
   }
 
   @Get('latest/:symbolId')
-  @ApiOperation({ summary: 'Get latest stored market bar for one symbol and timeframe' })
+  @ApiOperation({
+    summary: 'Get latest stored market bar for one symbol and timeframe',
+  })
   @ApiOkResponse({ description: 'Latest market bar record' })
-  latest(@Param('symbolId') symbolId: string, @Query('timeframe') timeframe = '1h') {
+  latest(
+    @Param('symbolId') symbolId: string,
+    @Query('timeframe') timeframe = '1h',
+  ) {
     return this.marketDataService.getLatestBar(symbolId, timeframe);
   }
 }

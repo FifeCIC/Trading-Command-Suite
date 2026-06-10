@@ -56,7 +56,11 @@ export interface IProviderAdapter {
    * @param timeframe e.g. "1h", "1d"
    * @param limit   max bars to return (1-1000)
    */
-  getCandles(symbol: string, timeframe: string, limit?: number): Promise<MarketBar[]>;
+  getCandles(
+    symbol: string,
+    timeframe: string,
+    limit?: number,
+  ): Promise<MarketBar[]>;
 
   /**
    * Fetch company profile / fundamental data.

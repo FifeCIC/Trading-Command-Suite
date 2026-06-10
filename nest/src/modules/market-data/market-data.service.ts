@@ -16,7 +16,11 @@ export type FreshnessResult = {
 export class MarketDataService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async evaluateFreshness(symbolId: string, timeframe: string, maxAgeMinutes: number): Promise<FreshnessResult> {
+  async evaluateFreshness(
+    symbolId: string,
+    timeframe: string,
+    maxAgeMinutes: number,
+  ): Promise<FreshnessResult> {
     const latest = await this.prisma.marketBar.findFirst({
       where: {
         symbolId,
@@ -40,7 +44,8 @@ export class MarketDataService {
     }
 
     const ageMinutes = (Date.now() - latest.timestamp.getTime()) / 60000;
-    const status: FreshnessStatus = ageMinutes <= maxAgeMinutes ? 'fresh' : 'stale';
+    const status: FreshnessStatus =
+      ageMinutes <= maxAgeMinutes ? 'fresh' : 'stale';
 
     return {
       symbolId,
@@ -60,5 +65,16 @@ export class MarketDataService {
       },
       orderBy: [{ timestamp: 'desc' }],
     });
+  }
+
+  /** Return the most recent N bars for a symbol, ordered oldest → newest (directive contract). */
+  async getBars(symbolId: string, timeframe: string, count: number) {
+    const bars = await this.prisma.marketBar.findMany({
+      where: { symbolId, timeframe },
+      orderBy: [{ timestamp: 'desc' }],
+      take: count,
+    });
+    // Reverse to oldest→newest per DirectiveInput contract
+    return bars.reverse();
   }
 }

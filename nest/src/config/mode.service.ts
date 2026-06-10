@@ -23,7 +23,7 @@ export class ModeService {
 
     const hasDatabaseUrl = Boolean(this.configService.get('DATABASE_URL'));
     const hasRedis = Boolean(this.configService.get('REDIS_HOST'));
-    const queueMode = this.configService.get('QUEUE_MODE', 'off');
+    const queueMode: string = this.configService.get('QUEUE_MODE', 'off');
 
     const database = hasDatabaseUrl;
     const queue = hasRedis && queueMode === 'local';

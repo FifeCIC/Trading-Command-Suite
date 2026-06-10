@@ -34,43 +34,67 @@ export default function SeesLiveStackMockPage() {
   const localRanking = useMemo(() => buildSeesRanking(INITIAL_SYMBOLS, tick), [tick])
 
   // Derive display state: prefer API data when available.
-  // API returns { symbolId, ticker, score, confidence, freshness, timestamp }.
-  // Strategy metadata and thresholds still come from the local engine until Task 5-6 deliver full API contracts.
+  // API now returns breakdown[] per symbol with real directive scores.
   const apiRankingState = useMemo(() => {
     if (!useApi) return null
 
     const mode = apiQuery.data?.mode ?? 'api'
-    const strategy = localRanking.strategy
-    const directives = localRanking.directives
+    const apiStrategy = apiQuery.data?.strategy ?? {}
+    const strategy = {
+      name: apiStrategy.name || localRanking.strategy.name,
+      description: 'Real directive pipeline: 5 MVP directives with weighted aggregation.',
+      entryThreshold: apiStrategy.entryThreshold ?? localRanking.strategy.entryThreshold,
+      watchThreshold: apiStrategy.watchThreshold ?? localRanking.strategy.watchThreshold,
+      defenseThreshold: localRanking.strategy.defenseThreshold,
+    }
 
-    const ranked = apiRanked.map((r) => ({
-      symbolId: r.symbolId,
-      ticker: r.ticker,
-      name: r.ticker,
-      industry: '—',
-      price: null,
-      changePercent: null,
-      score: r.score,
-      confidence: r.confidence,
-      signal: r.score >= strategy.entryThreshold ? 'entry'
-        : r.score >= strategy.watchThreshold ? 'watch'
-        : 'defensive',
-      baseScore: r.score,
-      boostScore: null,
-      scoreMultiplier: null,
-      directives: null,
-      moments: null,
-      freshness: r.freshness ?? 'api',
-      timestamp: r.timestamp,
-      _source: 'api',
-    }))
+    // Use real directive list from API breakdown, or fall back to simulation labels
+    const hasBreakdown = apiRanked.some((r) => Array.isArray(r.breakdown) && r.breakdown.length > 0)
+    const directives = hasBreakdown
+      ? [...new Set(apiRanked.flatMap((r) => (r.breakdown || []).map((b) => b.directiveId)))]
+          .map((id, i) => {
+            const sample = apiRanked.flatMap((r) => r.breakdown || []).find((b) => b.directiveId === id)
+            return { id, label: sample?.name || id, indicator: 'API directive', weight: (sample?.weight || 20) / 100, description: 'Real directive from scoring pipeline.' }
+          })
+      : localRanking.directives
+
+    const ranked = apiRanked.map((r) => {
+      const breakdown = Array.isArray(r.breakdown) ? r.breakdown : []
+      const breakdownDirectives = breakdown.length > 0
+        ? Object.fromEntries(breakdown.map((b) => [b.directiveId, b.contribution || 0]))
+        : null
+
+      return {
+        symbolId: r.symbolId,
+        ticker: r.ticker,
+        name: r.ticker,
+        industry: '—',
+        price: null,
+        changePercent: null,
+        score: r.score,
+        confidence: r.confidence,
+        signal: r.signal || (r.score >= strategy.entryThreshold ? 'entry'
+          : r.score >= strategy.watchThreshold ? 'watch'
+          : 'defensive'),
+        baseScore: r.score,
+        boostScore: null,
+        scoreMultiplier: null,
+        directives: breakdownDirectives,
+        moments: null,
+        freshness: r.freshness ?? 'api',
+        timestamp: r.timestamp,
+        _source: 'api',
+        _breakdown: breakdown,
+      }
+    })
 
     return { strategy, directives, mode, ranked, marketAverageChange: null }
-  }, [useApi, apiRanked, apiQuery.data?.mode, localRanking.strategy, localRanking.directives])
+  }, [useApi, apiRanked, apiQuery.data?.mode, apiQuery.data?.strategy, localRanking.strategy, localRanking.directives])
 
   const rankingState = apiRankingState ?? localRanking
   const rankedSymbols = rankingState.ranked
   const dataSource = useApi ? 'api' : 'local-direct-route'
+  const hasRealBreakdown = useApi && apiRanked.some((r) => Array.isArray(r.breakdown) && r.breakdown.length > 0)
   const apiMeta = useApi ? {
     freshness: [...new Set(apiRanked.map(r => r.freshness))].join(', '),
     symbolCount: apiRanked.length,
@@ -99,7 +123,7 @@ export default function SeesLiveStackMockPage() {
     <main className="sees-page">
       <section className="sees-header">
         <div className="sees-title-wrap">
-          <p className="eyebrow">Direct route operating mode <span className="mode-badge mode-local-direct-route" style={{ marginLeft: '0.5rem' }}>🧪 SIMULATION</span></p>
+          <p className="eyebrow">Direct route operating mode <span className={`mode-badge ${hasRealBreakdown ? 'mode-full' : 'mode-local-direct-route'}`} style={{ marginLeft: '0.5rem' }}>{hasRealBreakdown ? '🔌 LIVE PIPELINE' : '🧪 SIMULATION'}</span></p>
         </div>
 
         <div className="sees-status-card" role="status" aria-live="polite">
@@ -124,7 +148,7 @@ export default function SeesLiveStackMockPage() {
               <p className="sees-panel-label">Strategy</p>
               <h2>{rankingState.strategy.name}</h2>
             </div>
-            <div className="mode-badge mode-local-direct-route">{rankingState.mode}</div>
+            <div className={`mode-badge ${hasRealBreakdown ? 'mode-full' : 'mode-local-direct-route'}`}>{rankingState.mode}</div>
           </header>
           <p className="sees-summary-text">{rankingState.strategy.description}</p>
           <div className="sees-thresholds">
@@ -259,34 +283,46 @@ export default function SeesLiveStackMockPage() {
                   <span className="v">{row.baseScore.toFixed(1)}</span>
                 </div>
                 <div>
-                  <span className="k">Boost</span>
-                  <span className="v">{row.boostScore != null ? `${row.boostScore >= 0 ? '+' : ''}${row.boostScore.toFixed(1)}` : '—'}</span>
-                </div>
-                <div>
-                  <span className="k">Multiplier</span>
-                  <span className="v">{row.scoreMultiplier != null ? `x${row.scoreMultiplier.toFixed(3)}` : '—'}</span>
+                  <span className="k">Source</span>
+                  <span className="v" style={{ fontSize: '0.78rem', color: isApiRow ? 'var(--ink-soft)' : 'var(--ink-soft)' }}>
+                    {isApiRow ? '🔌 API pipeline' : '🧪 simulation'}
+                  </span>
                 </div>
               </div>
 
-              {row.directives && (
+              {row._breakdown && row._breakdown.length > 0 ? (
+                <div className="directive-breakdown">
+                  {row._breakdown.map((b) => (
+                    <div className="directive-chip" key={`${row.symbolId}-${b.directiveId}`} title={b.reason || ''}>
+                      <span>{b.name || b.directiveId}</span>
+                      <strong>{b.contribution != null ? b.contribution.toFixed(1) : '—'}</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : row.directives ? (
                 <div className="directive-breakdown">
                   {rankingState.directives.map((directive) => (
                     <div className="directive-chip" key={`${row.symbolId}-${directive.id}`}>
                       <span>{directive.label}</span>
-                      <strong>{row.directives[directive.id].toFixed(1)}</strong>
+                      <strong>{row.directives[directive.id]?.toFixed(1) ?? '—'}</strong>
                     </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {row._breakdown && row._breakdown.length > 0 && (
+                <div style={{ marginTop: 8, fontSize: '0.78rem', color: '#888' }}>
+                  {row._breakdown.slice(0, 2).map((b) => (
+                    b.reason ? <p key={b.directiveId} style={{ margin: '2px 0' }}>• {b.name}: {b.reason}</p> : null
                   ))}
                 </div>
               )}
 
               {row.moments && row.moments.length > 0 && (
                 <div className="directive-breakdown">
-                  {row.moments.map((moment) => (
-                    <div className="directive-chip" key={`${row.symbolId}-${moment.id}`}>
-                      <span>{moment.label}</span>
-                      <strong>{moment.boost >= 0 ? '+' : ''}{moment.boost} · x{moment.multiplier}</strong>
-                    </div>
-                  ))}
+                  <p className="sees-summary-note" style={{ margin: 0, fontSize: '0.78rem' }}>
+                    🧪 Simulation events: {row.moments.map((m) => m.label).join(', ')}
+                  </p>
                 </div>
               )}
             </article>
@@ -295,12 +331,26 @@ export default function SeesLiveStackMockPage() {
       </section>
 
       <section className="sees-notes-card">
-        <h2>Why this direct route is not wasted work</h2>
-        <ul>
-          <li>The scoring engine is now a real module with explicit directive weights, additive boosts, and multipliers.</li>
-          <li>The final score is intentionally not capped at 100, so significant moments can materially amplify rank outcomes.</li>
-          <li>The UI is compact and explainable, so the project can evolve without prematurely building the complex strategy wizard flow.</li>
-        </ul>
+        {dataSource === 'api' && apiRanked.some((r) => Array.isArray(r.breakdown) && r.breakdown.length > 0) ? (
+          <>
+            <h2>🔌 Live Pipeline — real directive scoring</h2>
+            <ul>
+              <li>Scoring is powered by 5 real directives: RSI Oversold, MACD Crossover, EMA Structure, ATR Dip, Volume Confirmation.</li>
+              <li>Each directive returns a score (0–100), confidence (0–1), and human-readable reason — visible in chips and tooltips above.</li>
+              <li>Aggregate scores use canonical weights (24/22/20/18/16) per <code>docs/CANONICAL-DIRECTIVE-REFERENCE.md</code>.</li>
+              <li>The UI layout is compact and explainable, driven by real pipeline output from the NestJS backend.</li>
+            </ul>
+          </>
+        ) : (
+          <>
+            <h2>🧪 Simulation — not production scoring</h2>
+            <ul>
+              <li>This page uses synthetic math for visual prototyping. Real directive implementation lives in <code>nest/src/modules/directives/</code>.</li>
+              <li>The production scoring model is a simple weighted average capped at 0–100. No boosts, no multipliers. See <code>docs/CANONICAL-DIRECTIVE-REFERENCE.md</code>.</li>
+              <li>The UI layout and component structure are reusable — only the scoring math needs replacement when real directives ship.</li>
+            </ul>
+          </>
+        )}
       </section>
     </main>
   )

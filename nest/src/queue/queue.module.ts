@@ -12,7 +12,10 @@ export class QueueModule {
       imports: [
         BullModule.forRootAsync({
           inject: [ConfigService, QueueConfigService],
-          useFactory: async (configService: ConfigService, queueConfigService: QueueConfigService) => {
+          useFactory: (
+            configService: ConfigService,
+            queueConfigService: QueueConfigService,
+          ) => {
             const isEnabled = queueConfigService.isQueueEnabled();
 
             if (!isEnabled) {

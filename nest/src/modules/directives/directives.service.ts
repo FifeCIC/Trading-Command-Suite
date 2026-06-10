@@ -12,7 +12,11 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { DirectiveInput, DirectiveResult, IDirective } from './interfaces/directive.interface';
+import {
+  DirectiveInput,
+  DirectiveResult,
+  IDirective,
+} from './interfaces/directive.interface';
 
 @Injectable()
 export class DirectivesService {
@@ -21,10 +25,14 @@ export class DirectivesService {
 
   register(directive: IDirective): void {
     if (this.registry.has(directive.id)) {
-      this.logger.warn(`Directive ${directive.id} already registered — overwriting.`);
+      this.logger.warn(
+        `Directive ${directive.id} already registered — overwriting.`,
+      );
     }
     this.registry.set(directive.id, directive);
-    this.logger.log(`Registered directive: ${directive.id} (${directive.name})`);
+    this.logger.log(
+      `Registered directive: ${directive.id} (${directive.name})`,
+    );
   }
 
   get(id: string): IDirective | undefined {
@@ -36,7 +44,7 @@ export class DirectivesService {
   }
 
   /** Run all registered directives against the same input. */
-  async runAll(input: DirectiveInput): Promise<Map<string, DirectiveResult>> {
+  runAll(input: DirectiveInput): Map<string, DirectiveResult> {
     const results = new Map<string, DirectiveResult>();
 
     for (const [id, directive] of this.registry) {
@@ -44,7 +52,11 @@ export class DirectivesService {
         results.set(id, directive.calculate(input));
       } catch (error) {
         this.logger.error(`Directive ${id} threw: ${String(error)}`);
-        results.set(id, { score: 0, confidence: 0, reason: `Error: ${String(error)}` });
+        results.set(id, {
+          score: 0,
+          confidence: 0,
+          reason: `Error: ${String(error)}`,
+        });
       }
     }
 

@@ -1,26 +1,80 @@
 /**
- * PLACEHOLDER — implement per SPRINT.md Task 4.
- *
  * Volume Confirmation
  * ===================
- * Scores symbols where recent volume exceeds the moving average,
- * confirming that price moves have market participation behind them.
- *
- * Reference spec: exit-wordpress/03-MVP-DIRECTIVE-PACK.md
+ * Bullish setups score higher with volume support.
+ * Compares recent volume to the 20-period average.
  */
 
-import { Injectable, Logger } from '@nestjs/common';
-import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
+import { Injectable } from '@nestjs/common';
+import {
+  DirectiveInput,
+  DirectiveResult,
+  IDirective,
+} from '../interfaces/directive.interface';
+import { sma } from '../utils/indicators';
+
+const VOLUME_MA_PERIOD = 20;
+const MIN_BARS = VOLUME_MA_PERIOD + 1;
 
 @Injectable()
 export class VolumeConfirmationDirective implements IDirective {
   readonly id = 'volume-confirmation';
   readonly name = 'Volume Confirmation';
-  readonly description = 'Scores symbols where recent volume exceeds the average.';
-  private readonly logger = new Logger(VolumeConfirmationDirective.name);
+  readonly description =
+    'Scores symbols where recent volume exceeds the average.';
 
-  calculate(_input: DirectiveInput): DirectiveResult {
-    this.logger.debug('VolumeConfirmationDirective.calculate stub — PLACEHOLDER.');
-    return { score: 0, confidence: 0, reason: 'PLACEHOLDER — not yet implemented.' };
+  calculate(input: DirectiveInput): DirectiveResult {
+    const { bars } = input;
+    if (bars.length < MIN_BARS) {
+      return {
+        score: 0,
+        confidence: 0.1,
+        reason: `Insufficient data: need ${MIN_BARS} bars, have ${bars.length}.`,
+      };
+    }
+
+    const volumes = bars.map((b) => b.volume);
+    const avgVolume = sma(volumes.slice(0, -1), VOLUME_MA_PERIOD); // Average of prior bars
+    const currentVolume = volumes[volumes.length - 1];
+
+    if (avgVolume <= 0) {
+      return {
+        score: 0,
+        confidence: 0.1,
+        reason: 'Average volume is zero — no reference for comparison.',
+      };
+    }
+
+    const ratio = currentVolume / avgVolume;
+
+    let score: number;
+    let reason: string;
+
+    if (ratio >= 2.0) {
+      // Very high volume — strong confirmation
+      score = 85 + Math.min(15, (ratio - 2) * 10);
+      reason = `Strong volume surge: ${ratio.toFixed(2)}x average (${currentVolume.toLocaleString()} vs avg ${Math.round(avgVolume).toLocaleString()}).`;
+    } else if (ratio >= 1.3) {
+      // Above-average volume — good confirmation
+      score = 55 + (ratio - 1.3) * 43;
+      reason = `Above-average volume: ${ratio.toFixed(2)}x (${currentVolume.toLocaleString()} vs avg ${Math.round(avgVolume).toLocaleString()}).`;
+    } else if (ratio >= 0.8) {
+      // Normal volume — neutral
+      score = 30 + (ratio - 0.8) * 50;
+      reason = `Normal volume: ${ratio.toFixed(2)}x average. No strong confirmation.`;
+    } else {
+      // Below-average volume — weak
+      score = ratio * 37;
+      reason = `Below-average volume: ${ratio.toFixed(2)}x average. Weak participation.`;
+    }
+
+    const confidence =
+      ratio >= 1.3 ? Math.min(0.85, 0.5 + (ratio - 1) * 0.3) : 0.4;
+
+    return {
+      score: Math.min(100, Math.max(0, Math.round(score))),
+      confidence: Number(confidence.toFixed(2)),
+      reason,
+    };
   }
 }

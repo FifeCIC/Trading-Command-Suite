@@ -7,13 +7,18 @@ import { FEATURE_FLAGS } from './core/features/flags';
 import { withDevTag } from './dev-runtime/tags';
 import { getPerformanceSnapshot, startPerformanceMonitoring } from './performance/monitor';
 import ArchitectureFrameworkPage from './pages/ArchitectureFrameworkPage';
+import ActiveSymbolsPage from './pages/ActiveSymbolsPage';
+import ApiEndpointsPage from './pages/ApiEndpointsPage';
 import DatabaseTablesPage from './pages/DatabaseTablesPage';
 import DirectivesManagerPage from './pages/DirectivesManagerPage';
+import DirectivesStatusPage from './pages/DirectivesStatusPage';
+import ScoringOverviewPage from './pages/ScoringOverviewPage';
 import EventsCalendarPage from './pages/EventsCalendarPage';
 import ExecutionQueuePage from './pages/ExecutionQueuePage';
 import NewsIntelPage from './pages/NewsIntelPage';
 import PlatformComparisonsPage from './pages/PlatformComparisonsPage';
 import PluginTabSkeletonPage from './pages/PluginTabSkeletonPage';
+import ProviderHealthPage from './pages/ProviderHealthPage';
 import RiskControlsPage from './pages/RiskControlsPage';
 import SeesLiveStackMockPage from './pages/SeesLiveStackMockPage';
 import SetupWizardPage from './pages/SetupWizardPage';
@@ -353,8 +358,20 @@ export default function App() {
       return <SymbolsBrowserPage />;
     }
 
+    if (secondaryView === 'active-symbols') {
+      return <ActiveSymbolsPage />;
+    }
+
     if (secondaryView === 'directives-manager') {
       return <DirectivesManagerPage />;
+    }
+
+    if (secondaryView === 'directives-status') {
+      return <DirectivesStatusPage />;
+    }
+
+    if (secondaryView === 'scoring-overview') {
+      return <ScoringOverviewPage />;
     }
 
     if (secondaryView === 'database-tables') {
@@ -367,6 +384,14 @@ export default function App() {
 
     if (secondaryView === 'trading-platforms') {
       return <TradingPlatformsPage />;
+    }
+
+    if (secondaryView === 'api-endpoints') {
+      return <ApiEndpointsPage />;
+    }
+
+    if (secondaryView === 'provider-health') {
+      return <ProviderHealthPage />;
     }
 
     if (secondaryView === 'platform-comparisons') {

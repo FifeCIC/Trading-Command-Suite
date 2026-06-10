@@ -198,6 +198,22 @@
   color: #fff;
 }
 
+/* Chip classes — used by SeesScoringPanel for freshness/status badges */
+.chip {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.chip--ok { background: #00ff4120; color: #00a63e; }
+.chip--warn { background: #ffaa0020; color: #9a6400; }
+.chip--neutral { background: #d9e2ec; color: #445171; }
+.chip--info { background: #0ea5a620; color: #0ea5a6; }
+.chip--error { background: #ff004020; color: #dc2626; }
+
 .signal-entry {
   background: #1f8b4c;
 }

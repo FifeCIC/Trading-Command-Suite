@@ -57,7 +57,7 @@ export class ProvidersService {
    */
   getActiveAdapter(): IProviderAdapter {
     const activeProviderId = process.env.PROVIDER_ACTIVE?.toLowerCase();
-    
+
     if (activeProviderId && this.adapters.has(activeProviderId)) {
       return this.adapters.get(activeProviderId)!;
     }
@@ -89,15 +89,21 @@ export class ProvidersService {
 
   async getHealth() {
     const modeInfo = this.modeService.getModeInfo();
-    let dbRows: Awaited<ReturnType<PrismaService['providerHealth']['findMany']>> = [];
+    let dbRows: Awaited<
+      ReturnType<PrismaService['providerHealth']['findMany']>
+    > = [];
 
     try {
       dbRows = await this.prisma.providerHealth.findMany();
     } catch (error) {
-      this.logger.warn(`Database unavailable while loading provider health: ${String(error)}`);
+      this.logger.warn(
+        `Database unavailable while loading provider health: ${String(error)}`,
+      );
     }
 
-    const dbByProvider = new Map(dbRows.map((row) => [row.provider.toLowerCase(), row]));
+    const dbByProvider = new Map(
+      dbRows.map((row) => [row.provider.toLowerCase(), row]),
+    );
     const activeAdapter = this.getActiveAdapter();
 
     return {
@@ -107,7 +113,9 @@ export class ProvidersService {
         queue: modeInfo.queue,
         redis: modeInfo.redis,
       },
-      activeProvider: activeAdapter ? this.getProviderIdFromAdapter(activeAdapter) : null,
+      activeProvider: activeAdapter
+        ? this.getProviderIdFromAdapter(activeAdapter)
+        : null,
       providers: PROVIDERS.map((provider) => {
         const credentialsConfigured = Boolean(process.env[provider.envKey]);
         const row = dbByProvider.get(provider.id);
@@ -119,8 +127,14 @@ export class ProvidersService {
           endpoint: provider.endpoint,
           adapterType: adapter?.name || 'Unknown',
           credentialsConfigured,
-          status: row?.status ?? (credentialsConfigured ? 'unknown' : 'missing-credentials'),
-          message: row?.message ?? (credentialsConfigured ? 'No health check recorded yet' : 'Missing API credentials'),
+          status:
+            row?.status ??
+            (credentialsConfigured ? 'unknown' : 'missing-credentials'),
+          message:
+            row?.message ??
+            (credentialsConfigured
+              ? 'No health check recorded yet'
+              : 'Missing API credentials'),
           checkedAt: row?.checkedAt?.toISOString() ?? null,
           latencyMs: row?.latencyMs ?? null,
         };
@@ -137,7 +151,12 @@ export class ProvidersService {
     return null;
   }
 
-  async updateHealth(provider: string, status: string, message?: string, latencyMs?: number | null) {
+  async updateHealth(
+    provider: string,
+    status: string,
+    message?: string,
+    latencyMs?: number | null,
+  ) {
     const providerId = provider.toLowerCase();
     const knownProvider = PROVIDERS.find((item) => item.id === providerId);
 

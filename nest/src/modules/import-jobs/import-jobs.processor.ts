@@ -18,7 +18,9 @@ export class ImportJobsProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<ImportJobPayload>): Promise<{ runId: string; status: string }> {
+  async process(
+    job: Job<ImportJobPayload>,
+  ): Promise<{ runId: string; status: string }> {
     const startedAt = new Date();
 
     await this.prisma.importRun.update({
@@ -96,7 +98,10 @@ export class ImportJobsProcessor extends WorkerHost {
         status: 'completed',
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown import processor error';
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unknown import processor error';
       this.logger.error(`Import run ${job.data.runId} failed: ${message}`);
 
       await this.prisma.importRun.update({

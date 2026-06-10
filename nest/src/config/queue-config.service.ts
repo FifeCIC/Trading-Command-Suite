@@ -16,7 +16,9 @@ export class QueueConfigService {
     if (enabled) {
       const hasRedis = this.hasRedisConfig();
       if (!hasRedis) {
-        this.logger.warn('QUEUE_MODE=local but Redis configuration is missing. Queue will not initialize.');
+        this.logger.warn(
+          'QUEUE_MODE=local but Redis configuration is missing. Queue will not initialize.',
+        );
         return false;
       }
     }
@@ -25,7 +27,9 @@ export class QueueConfigService {
   }
 
   getQueueMode(): QueueMode {
-    const mode = this.configService.get<string>('QUEUE_MODE', 'off').toLowerCase();
+    const mode = this.configService
+      .get<string>('QUEUE_MODE', 'off')
+      .toLowerCase();
     return mode === 'local' ? 'local' : 'off';
   }
 
@@ -53,11 +57,15 @@ export class QueueConfigService {
     this.logger.log(`Redis configured: ${hasRedis}`);
 
     if (mode === 'local' && !hasRedis) {
-      this.logger.warn('Queue mode set to "local" but REDIS_HOST not configured');
+      this.logger.warn(
+        'Queue mode set to "local" but REDIS_HOST not configured',
+      );
     }
 
     if (mode === 'off') {
-      this.logger.log('Queue processing is disabled. Set QUEUE_MODE=local to enable.');
+      this.logger.log(
+        'Queue processing is disabled. Set QUEUE_MODE=local to enable.',
+      );
     }
   }
 }

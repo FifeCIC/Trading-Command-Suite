@@ -18,8 +18,12 @@ export class ImportJobsService {
     private readonly modeService: ModeService,
   ) {}
 
-  async enqueueImport(input: EnqueueImportInput): Promise<{ runId: string; queueJobId: string }> {
-    const symbol = await this.prisma.symbol.findUnique({ where: { id: input.symbolId } });
+  async enqueueImport(
+    input: EnqueueImportInput,
+  ): Promise<{ runId: string; queueJobId: string }> {
+    const symbol = await this.prisma.symbol.findUnique({
+      where: { id: input.symbolId },
+    });
     if (!symbol) {
       throw new NotFoundException(`Symbol ${input.symbolId} not found`);
     }
@@ -34,7 +38,9 @@ export class ImportJobsService {
       },
     });
 
-    this.logger.warn('Import queue is disabled in local mode (Redis not configured). Run record created without enqueue.');
+    this.logger.warn(
+      'Import queue is disabled in local mode (Redis not configured). Run record created without enqueue.',
+    );
 
     return {
       runId: run.id,
@@ -68,7 +74,9 @@ export class ImportJobsService {
         runs,
       };
     } catch (error) {
-      this.logger.warn(`Database unavailable while loading import runs: ${String(error)}`);
+      this.logger.warn(
+        `Database unavailable while loading import runs: ${String(error)}`,
+      );
       return {
         mode: modeInfo.mode,
         services: {
