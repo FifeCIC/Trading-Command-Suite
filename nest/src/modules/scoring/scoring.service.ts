@@ -53,9 +53,14 @@ export interface RankedSymbol {
   symbolId: string;
   ticker: string;
   score: number;
+  normalizedScore: number;
+  maxPossibleScore: number;
+  totalDirectives: number;
+  activeDirectives: number;
   confidence: number;
   freshness: string;
   signal: string;
+  dataStatus: 'live' | 'stale' | 'no_data' | 'error';
   breakdown: DirectiveBreakdown[];
   timestamp: string;
 }
@@ -64,6 +69,7 @@ export interface RankedResult {
   mode: string;
   services: { database: boolean; queue: boolean; redis: boolean };
   strategy: { name: string; entryThreshold: number; watchThreshold: number };
+  summary: { symbolsWithData: number; symbolsWithoutData: number; totalSymbols: number };
   ranked: RankedSymbol[];
 }
 
@@ -95,7 +101,7 @@ export class ScoringService {
     };
 
     if (!this.prisma.isAvailable) {
-      return { ...base, ranked: [] };
+      return { ...base, summary: { symbolsWithData: 0, symbolsWithoutData: 0, totalSymbols: 0 }, ranked: [] };
     }
 
     const symbols = await this.prisma.symbol.findMany({
@@ -105,7 +111,7 @@ export class ScoringService {
     });
 
     if (symbols.length === 0) {
-      return { ...base, ranked: [] };
+      return { ...base, summary: { symbolsWithData: 0, symbolsWithoutData: 0, totalSymbols: 0 }, ranked: [] };
     }
 
     const ranked: RankedSymbol[] = [];
@@ -195,10 +201,13 @@ export class ScoringService {
         }
       }
 
-      // Phase 3: Compute weighted score with suppressed directives zeroed
+      // Phase 3: Compute weighted score with suppression + normalization
       let totalScore = 0;
       let totalConfidence = 0;
       let weightSum = 0;
+      let maxPossibleScore = 0;
+      let activeDirectives = 0;
+      const totalDirectives = breakdown.length;
 
       for (const d of breakdown) {
         const effectiveScore = suppressedIds.has(d.directiveId) ? 0 : d.score;
@@ -207,6 +216,12 @@ export class ScoringService {
         totalScore += contribution;
         totalConfidence += d.confidence * d.weight;
         weightSum += d.weight;
+
+        // Track normalization: only directives that produced a result count toward max
+        if (d.score > 0 || d.confidence > 0) {
+          maxPossibleScore += d.weight;
+          activeDirectives++;
+        }
       }
 
       // Rule C: Confluence bonus — if multiple high-priority directives agree
@@ -221,26 +236,53 @@ export class ScoringService {
 
       const avgConfidence = weightSum > 0 ? totalConfidence / weightSum : 0;
       const finalScore = Math.min(100, Math.max(0, totalScore + confluenceBonus));
-      const signal =
-        finalScore >= ENTRY_THRESHOLD
-          ? 'entry'
-          : finalScore >= WATCH_THRESHOLD
-            ? 'watch'
-            : 'defensive';
+
+      // Normalized score: percentage of achievable maximum
+      const normScore = maxPossibleScore > 0
+        ? Math.min(100, Math.max(0, (finalScore / maxPossibleScore) * 100))
+        : 0;
+
+      // Determine data status and signal (rebase on normalizedScore)
+      const hasData = bars.length > 0;
+      const dataStatus: RankedSymbol['dataStatus'] = hasData ? 'live' : 'no_data';
+      const signal = !hasData
+        ? 'no_data'
+        : maxPossibleScore === 0
+          ? 'no_data'
+          : normScore >= ENTRY_THRESHOLD
+            ? 'entry'
+            : normScore >= WATCH_THRESHOLD
+              ? 'watch'
+              : 'defensive';
+
+      if (!hasData) {
+        this.logger.warn(`Scoring: ${symbol.ticker} has no bars — returning no_data`);
+      }
 
       ranked.push({
         symbolId: symbol.id,
         ticker: symbol.ticker,
-        score: Number(finalScore.toFixed(1)),
-        confidence: Number(avgConfidence.toFixed(2)),
-        freshness: bars.length > 0 ? 'live' : 'deterministic',
+        score: hasData ? Number(finalScore.toFixed(1)) : 0,
+        normalizedScore: hasData ? Number(normScore.toFixed(1)) : 0,
+        maxPossibleScore: hasData ? maxPossibleScore : 0,
+        totalDirectives,
+        activeDirectives,
+        confidence: hasData ? Number(avgConfidence.toFixed(2)) : 0,
+        freshness: hasData ? 'live' : 'deterministic',
         signal,
-        breakdown,
+        dataStatus,
+        breakdown: hasData ? breakdown : [],
         timestamp: new Date().toISOString(),
       });
     }
 
     ranked.sort((a, b) => b.score - a.score);
+
+    const summary = {
+      symbolsWithData: ranked.filter((r) => r.dataStatus === 'live' || r.dataStatus === 'stale').length,
+      symbolsWithoutData: ranked.filter((r) => r.dataStatus === 'no_data').length,
+      totalSymbols: ranked.length,
+    };
 
     // Persist score snapshots for history endpoints
     try {
@@ -261,7 +303,65 @@ export class ScoringService {
       this.logger.warn(`Failed to persist score snapshots: ${String(err)}`);
     }
 
-    return { ...base, ranked: ranked.slice(0, limit) };
+    return { ...base, summary, ranked: ranked.slice(0, limit) };
+  }
+
+  /**
+   * POST /api/scoring/run — Trigger a full scoring run.
+   * Accepts optional symbol filter and timeframe.
+   */
+  async runScoring(symbols?: string[], _timeframe?: string) {
+    const result = await this.rankAll(undefined, symbols ? symbols.length : 20);
+
+    if (symbols && symbols.length > 0) {
+      result.ranked = result.ranked.filter((r) =>
+        symbols.includes(r.ticker),
+      );
+    }
+
+    this.logger.log(
+      `Scoring run complete: ${result.ranked.length} symbols scored`,
+    );
+
+    return result;
+  }
+
+  /**
+   * GET /api/scoring/summary — Quick scoring overview for health checks.
+   */
+  async getSummary() {
+    const result = await this.rankAll(undefined, 50);
+    const ranked = result.ranked;
+
+    const totalDirectives = ranked.length > 0 ? ranked[0].totalDirectives : 0;
+    const activeDirectives = ranked.length > 0 ? ranked[0].activeDirectives : 0;
+    const avgScore =
+      ranked.length > 0
+        ? Number(
+            (
+              ranked.reduce((sum, r) => sum + r.score, 0) / ranked.length
+            ).toFixed(1),
+          )
+        : 0;
+    const avgNormalized =
+      ranked.length > 0
+        ? Number(
+            (
+              ranked.reduce((sum, r) => sum + r.normalizedScore, 0) /
+              ranked.length
+            ).toFixed(1),
+          )
+        : 0;
+
+    return {
+      mode: result.mode,
+      symbolsScored: ranked.length,
+      averageScore: avgScore,
+      averageNormalized: avgNormalized,
+      directivesActive: activeDirectives,
+      directivesTotal: totalDirectives,
+      timestamp: new Date().toISOString(),
+    };
   }
 
   /**

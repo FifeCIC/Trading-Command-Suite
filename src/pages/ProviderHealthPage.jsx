@@ -72,12 +72,12 @@ export default function ProviderHealthPage() {
                 </div>
 
                 {p.message && (
-                  <p style={{ marginTop: 12, fontSize: '0.85rem', color: '#888', background: '#f5f5f5', padding: '8px 12px', borderRadius: 6 }}>
+                  <p style={{ marginTop: 12, fontSize: '0.85rem', color: 'var(--ink-soft)', background: 'var(--panel)', padding: '8px 12px', borderRadius: 6 }}>
                     {p.message}
                   </p>
                 )}
                 {p.endpoint && (
-                  <p style={{ marginTop: 4, fontSize: '0.75rem', color: '#aaa' }}>
+                  <p style={{ marginTop: 4, fontSize: '0.75rem', color: 'var(--ink-soft)' }}>
                     Endpoint: <code>{p.endpoint}</code>
                   </p>
                 )}

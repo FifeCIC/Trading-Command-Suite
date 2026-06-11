@@ -1,0 +1,61 @@
+# Trading Command Suite — CI Test Workflow
+# Runs on push to master and all PRs.
+# Validates: install, lint, test, and build for both frontend + backend.
+
+name: CI Test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            nest/package-lock.json
+
+      # ── Frontend (Vite/React) ──
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Lint frontend
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Build frontend
+        run: npm run build
+
+      # ── Backend (NestJS) ──
+      - name: Install backend dependencies
+        working-directory: ./nest
+        run: npm ci
+
+      - name: Lint backend
+        working-directory: ./nest
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Run backend unit tests
+        working-directory: ./nest
+        run: npm run test
+
+      - name: Build backend
+        working-directory: ./nest
+        run: npm run build

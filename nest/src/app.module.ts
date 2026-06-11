@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { DevtoolsModule } from '@nestjs/devtools-integration';
 import { AppController } from './app.controller';
@@ -15,6 +15,10 @@ import { DatabaseModule } from './database/database.module';
 import { ImportJobsModule } from './modules/import-jobs/import-jobs.module';
 import { MarketDataModule } from './modules/market-data/market-data.module';
 import { ProvidersModule } from './modules/providers/providers.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { SystemModule } from './modules/system/system.module';
+import { RateLimiterMiddleware } from './common/middleware/rate-limiter.middleware';
+import { MetricsMiddleware } from './common/middleware/metrics.middleware';
 
 @Module({
   imports: [
@@ -37,8 +41,19 @@ import { ProvidersModule } from './modules/providers/providers.module';
     ImportJobsModule,
     MarketDataModule,
     ProvidersModule,
+    WebhooksModule,
+    SystemModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(MetricsMiddleware)
+      .forRoutes('*');
+    consumer
+      .apply(RateLimiterMiddleware)
+      .forRoutes('api/providers', 'api/webhooks');
+  }
+}

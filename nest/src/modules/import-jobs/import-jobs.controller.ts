@@ -1,5 +1,6 @@
-import { Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query, UseInterceptors } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { PaginationInterceptor } from '../../common/interceptors/pagination.interceptor';
 import { TriggerImportDto } from './dto/trigger-import.dto';
 import { ImportJobsService } from './import-jobs.service';
 
@@ -24,6 +25,7 @@ export class ImportJobsController {
   }
 
   @Get('runs')
+  @UseInterceptors(new PaginationInterceptor('runs'))
   @ApiOperation({ summary: 'List recent import runs' })
   @ApiOkResponse({ description: 'Recent import runs' })
   listRuns(@Query('limit') limit?: string) {

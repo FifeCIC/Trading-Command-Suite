@@ -7,8 +7,10 @@ import {
   Patch,
   Post,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { PaginationInterceptor } from '../../common/interceptors/pagination.interceptor';
 import { Symbol } from '@prisma/client';
 import { ModeService } from '../../config/mode.service';
 import { CreateSymbolDto } from './dto/create-symbol.dto';
@@ -44,6 +46,7 @@ export class SymbolsController {
   }
 
   @Get()
+  @UseInterceptors(new PaginationInterceptor('symbols'))
   @ApiOperation({ summary: 'List all symbols' })
   @ApiOkResponse({ description: 'All symbols' })
   async findAll() {

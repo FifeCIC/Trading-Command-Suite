@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate, Link } 
 import { useQuery } from '@tanstack/react-query';
 import { analytics, trackAppView, trackSupportClick } from './analytics';
 import Breadcrumbs from './components/Breadcrumbs';
+import GlobalSearch from './components/GlobalSearch';
 import DevOverlay from './components/DevOverlay';
 import ErrorBoundary from './components/ErrorBoundary';
 import { apiGet } from './core/api/client';
@@ -13,9 +14,11 @@ import ArchitectureFrameworkPage from './pages/ArchitectureFrameworkPage';
 import ActiveSymbolsPage from './pages/ActiveSymbolsPage';
 import ApiEndpointsPage from './pages/ApiEndpointsPage';
 import DatabaseTablesPage from './pages/DatabaseTablesPage';
+import DataAreaLandingPage from './pages/DataAreaLandingPage';
 import DataStatusPage from './pages/DataStatusPage';
 import DirectivesManagerPage from './pages/DirectivesManagerPage';
 import DirectivesStatusPage from './pages/DirectivesStatusPage';
+import DirectivesConfigPage from './pages/DirectivesConfigPage';
 import ScoringOverviewPage from './pages/ScoringOverviewPage';
 import EventsCalendarPage from './pages/EventsCalendarPage';
 import ExecutionQueuePage from './pages/ExecutionQueuePage';
@@ -32,11 +35,14 @@ import SettingsPage from './pages/SettingsPage';
 import StrategiesPage from './pages/StrategiesPage';
 import StrategyBuilderPage from './pages/StrategyBuilderPage';
 import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
+import SymbolDetailPage from './pages/SymbolDetailPage';
 import SystemStatusPage from './pages/SystemStatusPage';
+import SystemLogPage from './pages/SystemLogPage';
 import ThemePage from './pages/ThemePage';
 import TradingPlatformsPage from './pages/TradingPlatformsPage';
 import { useUiStore } from './stores/useUiStore';
 import { useThemeRuntime } from './theme/useThemeRuntime';
+import { featureFlags } from './utils/featureFlags';
 import { NAV_TREE, PRIMARY_PAGES, QUICK_MENU, getNavStructure } from './core/nav-tree';
 import { PLUGIN_TAB_SKELETONS } from './pages/plugin-tab-skeletons';
 
@@ -66,14 +72,16 @@ function ContentCard({ title, children }) {
 }
 
 function AppShell() {
-  const { area, view } = useParams();
+  const { area, view, symbolId } = useParams();
   const navigate = useNavigate();
   
-  const primaryArea = area || 'trading';
-  const secondaryView = view || 'sees-live-stack';
+  const primaryArea = symbolId ? 'research' : (area || 'trading');
+  const secondaryView = symbolId ? 'symbol-detail' : (view || 'sees-live-stack');
   const [demoPrompt, setDemoPrompt] = useState('Generate a responsive planning concept for eco garden week.');
   const [demoOutput, setDemoOutput] = useState('');
   const [activityLog, setActivityLog] = useState([]);
+  const [ffState, setFfState] = useState(() => featureFlags.getFlags());
+  const [showFlagsPanel, setShowFlagsPanel] = useState(false);
 
   const toggleDevOverlay = useUiStore((state) => state.toggleDevOverlay);
   const devOverlayOpen = useUiStore((state) => state.devOverlayOpen);
@@ -84,6 +92,7 @@ function AppShell() {
   const backgroundTone = useUiStore((state) => state.backgroundTone);
   const setBackgroundTone = useUiStore((state) => state.setBackgroundTone);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { adapters, meta } = useThemeRuntime({ mode: themeMode, packId: themePack });
   const availablePacks = Array.isArray(meta?.availablePacks) ? meta.availablePacks : [];
   const availableAdapters = Array.isArray(meta?.availableAdapters) ? meta.availableAdapters : [];
@@ -149,6 +158,10 @@ function AppShell() {
   useEffect(() => {
     document.documentElement.setAttribute('data-bg-tone', backgroundTone);
   }, [backgroundTone]);
+
+  useEffect(() => {
+    return featureFlags.subscribe(setFfState);
+  }, []);
 
   function onSupportClick(surface) {
     trackSupportClick(surface);
@@ -357,6 +370,10 @@ function AppShell() {
       return <SystemStatusPage />;
     }
 
+    if (secondaryView === 'system-log') {
+      return <SystemLogPage />;
+    }
+
     if (secondaryView === 'setup') {
       return <SetupWizardPage />;
     }
@@ -367,6 +384,10 @@ function AppShell() {
 
     if (secondaryView === 'symbols-browser') {
       return <SymbolsBrowserPage />;
+    }
+
+    if (secondaryView === 'symbol-detail') {
+      return <SymbolDetailPage />;
     }
 
     if (secondaryView === 'active-symbols') {
@@ -381,8 +402,16 @@ function AppShell() {
       return <DirectivesStatusPage />;
     }
 
+    if (secondaryView === 'configure-directives') {
+      return <DirectivesConfigPage />;
+    }
+
     if (secondaryView === 'scoring-overview') {
       return <ScoringOverviewPage />;
+    }
+
+    if (secondaryView === 'data-landing') {
+      return <DataAreaLandingPage />;
     }
 
     if (secondaryView === 'database-tables') {
@@ -563,6 +592,17 @@ function AppShell() {
       <header className="topbar topbar-omni">
         <div className="topbar-row topbar-row-main">
           <div className="topbar-status-cluster">
+            <button
+              type="button"
+              className="mobile-nav-toggle"
+              onClick={() => setMobileNavOpen((v) => !v)}
+              aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+              aria-expanded={mobileNavOpen}
+            >
+              <span className="hamburger-line" />
+              <span className="hamburger-line" />
+              <span className="hamburger-line" />
+            </button>
             <BadgePill label={isApiOnline ? 'API Online' : 'API Offline'} status={isApiOnline ? 'ok' : 'warn'} />
             <BadgePill label={isDbOnline ? 'DB Ready' : 'DB Offline'} status={isDbOnline ? 'ok' : 'warn'} />
             <BadgePill label="Omni Layout" status="neutral" />
@@ -581,6 +621,8 @@ function AppShell() {
             <h1>{(NAV_STRUCTURE[primaryArea] || []).find((v) => v.id === secondaryView)?.label || secondaryView}</h1>
           </div>
 
+          <GlobalSearch />
+
           <div className="topbar-menu-wrap">
             <button type="button" onClick={() => setHeaderMenuOpen((open) => !open)}>
               Quick Menu
@@ -598,15 +640,38 @@ function AppShell() {
 
       </header>
 
-      <aside className="left-rail" aria-label="Section navigation">
-        <h2>{NAV_TREE[primaryArea]?.label || primaryArea}</h2>
+      {mobileNavOpen && (
+        <div
+          className="mobile-nav-overlay"
+          onClick={() => setMobileNavOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+      <aside className={`left-rail${mobileNavOpen ? ' left-rail--open' : ''}`} aria-label="Section navigation">
+        <div className="left-rail-header">
+          <h2>{NAV_TREE[primaryArea]?.label || primaryArea}</h2>
+          <button
+            type="button"
+            className="mobile-nav-close"
+            onClick={() => setMobileNavOpen(false)}
+            aria-label="Close navigation"
+          >
+            ✕
+          </button>
+        </div>
         <div className="rail-links">
-          {(NAV_STRUCTURE[primaryArea] || []).map((item) => (
+          {(NAV_STRUCTURE[primaryArea] || []).filter((item) => {
+            if (item.id === 'import-jobs' && !ffState.importJobs) return false;
+            return true;
+          }).map((item) => (
             <button
               key={item.id}
               type="button"
               className={secondaryView === item.id ? 'nav-active' : ''}
-              onClick={() => onSecondarySelect(item.id)}
+              onClick={() => {
+                onSecondarySelect(item.id);
+                setMobileNavOpen(false);
+              }}
             >
               {item.label}
             </button>
@@ -807,6 +872,27 @@ function AppShell() {
           </div>
         </section>
 
+        <section className="app-footer-ff">
+          <button type="button" className="ff-toggle" onClick={() => setShowFlagsPanel((v) => !v)}>
+            ⚙️ Flags
+          </button>
+          {showFlagsPanel && (
+            <div className="ff-panel">
+              {Object.entries(ffState).map(([name, enabled]) => (
+                <label key={name} className="ff-row">
+                  <input
+                    type="checkbox"
+                    checked={enabled}
+                    onChange={() => enabled ? featureFlags.disable(name) : featureFlags.enable(name)}
+                  />
+                  <span>{name}</span>
+                </label>
+              ))}
+              <button type="button" className="ff-reset" onClick={() => featureFlags.reset()}>Reset defaults</button>
+            </div>
+          )}
+        </section>
+
         {devOverlayOpen && (
           <div className="dev-footer">
             <section
@@ -851,6 +937,7 @@ export default function App() {
     <BrowserRouter>
       <ErrorBoundary message="The application encountered a critical error.">
         <Routes>
+          <Route path="/research/symbol/:symbolId" element={<AppShell />} />
           <Route path="/:area/:view" element={<AppShell />} />
           <Route path="/:area" element={<AppShell />} />
           <Route path="/" element={<Navigate to="/trading/sees-live-stack" replace />} />

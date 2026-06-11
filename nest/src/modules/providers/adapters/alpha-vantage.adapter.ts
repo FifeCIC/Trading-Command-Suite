@@ -18,6 +18,7 @@ export class AlphaVantageAdapter implements IProviderAdapter {
         `AlphaVantageAdapter.getQuote(${symbol}) — no credentials, returning mock`,
       );
     }
+    // TODO: Switch to httpClient when going real
     return Promise.resolve(this.getMockQuote(symbol));
   }
 
@@ -31,6 +32,7 @@ export class AlphaVantageAdapter implements IProviderAdapter {
         `AlphaVantageAdapter.getCandles(${symbol}, ${timeframe}, ${limit}) — no credentials, returning mock`,
       );
     }
+    // TODO: Switch to httpClient when going real
     return Promise.resolve(this.getMockCandles(symbol, limit));
   }
 

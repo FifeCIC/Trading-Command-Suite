@@ -348,7 +348,7 @@ export default function SeesLiveStackMockPage() {
               ) : null}
 
               {row._breakdown && row._breakdown.length > 0 && (
-                <div style={{ marginTop: 8, fontSize: '0.78rem', color: '#888' }}>
+                <div style={{ marginTop: 8, fontSize: '0.78rem', color: 'var(--ink-soft)' }}>
                   {row._breakdown.slice(0, 2).map((b) => (
                     b.reason ? <p key={b.directiveId} style={{ margin: '2px 0' }}>• {b.name}: {b.reason}</p> : null
                   ))}

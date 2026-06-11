@@ -1,0 +1,47 @@
+# Trading Command Suite — Lint Workflow
+# Runs ESLint checks on PRs and reports results.
+
+name: Lint Check
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            nest/package-lock.json
+
+      # ── Frontend lint ──
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: ESLint frontend
+        run: npm run lint
+        continue-on-error: false
+
+      # ── Backend lint ──
+      - name: Install backend dependencies
+        working-directory: ./nest
+        run: npm ci
+
+      - name: ESLint backend
+        working-directory: ./nest
+        run: npm run lint
+        continue-on-error: false

@@ -1,0 +1,34 @@
+.sd-page { max-width: 960px; margin: 0 auto; padding: 1.5rem; color: var(--ink); }
+.sd-back { color: var(--accent); font-size: 0.82rem; text-decoration: none; display: inline-block; margin-bottom: 1rem; }
+.sd-back:hover { text-decoration: underline; }
+.sd-error { color: var(--danger); }
+
+.sd-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.sd-header h1 { margin: 0; font-size: 1.6rem; }
+.sd-header p { margin: 0.2rem 0 0; color: var(--ink-soft); }
+
+.sd-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+.sd-chip { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 4px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+.sd-chip--ok { background: #00ff4120; color: #00a63e; }
+.sd-chip--warn { background: #ffaa0020; color: #9a6400; }
+.sd-chip--neutral { background: color-mix(in srgb, var(--line) 75%, var(--panel)); color: var(--ink-soft); }
+
+.sd-grid { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 0.8rem; margin-bottom: 1rem; }
+
+.sd-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1rem; box-shadow: var(--shadow-card); }
+.sd-card h2 { margin: 0 0 0.5rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
+.sd-card--wide { grid-column: span 1; }
+
+.sd-stat { font-size: 2rem; font-weight: 700; }
+.sd-sub { margin: 0.3rem 0 0; font-size: 0.8rem; color: var(--ink-soft); }
+
+.sd-bars { display: flex; align-items: flex-end; gap: 3px; height: 100px; }
+.sd-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+.sd-bar { width: 100%; max-width: 24px; background: var(--accent); border-radius: 3px 3px 0 0; min-height: 2px; transition: height 0.3s; }
+.sd-bar-label { font-size: 0.55rem; color: var(--ink-soft); margin-top: 3px; }
+
+.sd-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+.sd-table th { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 2px solid var(--line); font-size: 0.72rem; text-transform: uppercase; color: var(--ink-soft); }
+.sd-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--line); font-size: 0.82rem; }
+.sd-reason { color: var(--ink-soft); font-size: 0.78rem; max-width: 300px; }

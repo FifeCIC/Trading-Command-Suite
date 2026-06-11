@@ -1,90 +1,56 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ModeService } from '../../config/mode.service';
+import { AdapterFactory } from './adapter-factory';
 import { IProviderAdapter } from './interfaces/provider-adapter.interface';
-import { AlpacaAdapter } from './adapters/alpaca.adapter';
-import { AlphaVantageAdapter } from './adapters/alpha-vantage.adapter';
-import { Trading212Adapter } from './adapters/trading212.adapter';
-
-type ProviderConfig = {
-  id: string;
-  name: string;
-  envKey: string;
-  endpoint: string;
-};
-
-const PROVIDERS: ProviderConfig[] = [
-  {
-    id: 'alpaca',
-    name: 'Alpaca',
-    envKey: 'ALPACA_API_KEY',
-    endpoint: 'https://paper-api.alpaca.markets',
-  },
-  {
-    id: 'alphavantage',
-    name: 'Alpha Vantage',
-    envKey: 'ALPHA_VANTAGE_API_KEY',
-    endpoint: 'https://www.alphavantage.co',
-  },
-  {
-    id: 'trading212',
-    name: 'Trading212',
-    envKey: 'TRADING212_API_KEY',
-    endpoint: 'https://live.trading212.com',
-  },
-];
 
 @Injectable()
 export class ProvidersService {
   private readonly logger = new Logger(ProvidersService.name);
-  private readonly adapters: Map<string, IProviderAdapter> = new Map();
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly modeService: ModeService,
-    private readonly alpacaAdapter: AlpacaAdapter,
-    private readonly alphaVantageAdapter: AlphaVantageAdapter,
-    private readonly trading212Adapter: Trading212Adapter,
-  ) {
-    this.adapters.set('alpaca', alpacaAdapter);
-    this.adapters.set('alphavantage', alphaVantageAdapter);
-    this.adapters.set('trading212', trading212Adapter);
-  }
+    private readonly adapterFactory: AdapterFactory,
+  ) {}
 
   /**
-   * Get the active provider adapter based on environment config.
-   * Priority: PROVIDER_ACTIVE env var, then first configured provider, then alpaca as default.
+   * Get the active provider adapter based on environment config or factory failover.
    */
   getActiveAdapter(): IProviderAdapter {
-    const activeProviderId = process.env.PROVIDER_ACTIVE?.toLowerCase();
+    const preferredId = process.env.PROVIDER_ACTIVE?.toLowerCase();
+    const instance = this.adapterFactory.getActive(preferredId);
 
-    if (activeProviderId && this.adapters.has(activeProviderId)) {
-      return this.adapters.get(activeProviderId)!;
+    if (instance) return instance;
+
+    // Last resort: try creating any registered adapter
+    const adapters = this.adapterFactory.listAdapters();
+    for (const config of adapters) {
+      const created = this.adapterFactory.create(config.id);
+      if (created) return created;
     }
 
-    // Fallback: find first provider with credentials
-    for (const provider of PROVIDERS) {
-      if (process.env[provider.envKey] && this.adapters.has(provider.id)) {
-        return this.adapters.get(provider.id)!;
-      }
-    }
-
-    // Default to Alpaca
-    return this.alpacaAdapter;
+    this.logger.error('No provider adapters available');
+    throw new Error('No provider adapters registered');
   }
 
   /**
-   * Get a specific adapter by ID.
+   * Get a specific adapter by ID via the factory.
    */
   getAdapter(providerId: string): IProviderAdapter | null {
-    return this.adapters.get(providerId.toLowerCase()) || null;
+    return this.adapterFactory.create(providerId.toLowerCase());
   }
 
   /**
-   * Get all available adapters.
+   * Get all available adapters via the factory.
    */
   getAllAdapters(): IProviderAdapter[] {
-    return Array.from(this.adapters.values());
+    const instances: IProviderAdapter[] = [];
+    for (const config of this.adapterFactory.listAdapters()) {
+      const instance = this.adapterFactory.create(config.id);
+      if (instance) instances.push(instance);
+    }
+    return instances;
   }
 
   async getHealth() {
@@ -105,6 +71,7 @@ export class ProvidersService {
       dbRows.map((row) => [row.provider.toLowerCase(), row]),
     );
     const activeAdapter = this.getActiveAdapter();
+    const adapterConfigs = this.adapterFactory.listAdapters();
 
     return {
       mode: modeInfo.mode,
@@ -113,18 +80,16 @@ export class ProvidersService {
         queue: modeInfo.queue,
         redis: modeInfo.redis,
       },
-      activeProvider: activeAdapter
-        ? this.getProviderIdFromAdapter(activeAdapter)
-        : null,
-      providers: PROVIDERS.map((provider) => {
-        const credentialsConfigured = Boolean(process.env[provider.envKey]);
-        const row = dbByProvider.get(provider.id);
-        const adapter = this.adapters.get(provider.id);
+      activeProvider: activeAdapter?.name ?? null,
+      providers: adapterConfigs.map((config) => {
+        const credentialsConfigured = this.adapterFactory.hasCredentials(config.id);
+        const row = dbByProvider.get(config.id);
+        const adapter = this.adapterFactory.create(config.id);
 
         return {
-          provider: provider.id,
-          displayName: provider.name,
-          endpoint: provider.endpoint,
+          provider: config.id,
+          displayName: config.name,
+          endpoint: config.baseUrl ?? '',
           adapterType: adapter?.name || 'Unknown',
           credentialsConfigured,
           status:
@@ -142,15 +107,6 @@ export class ProvidersService {
     };
   }
 
-  private getProviderIdFromAdapter(adapter: IProviderAdapter): string | null {
-    for (const [id, adapterInstance] of this.adapters.entries()) {
-      if (adapterInstance === adapter) {
-        return id;
-      }
-    }
-    return null;
-  }
-
   async updateHealth(
     provider: string,
     status: string,
@@ -158,10 +114,8 @@ export class ProvidersService {
     latencyMs?: number | null,
   ) {
     const providerId = provider.toLowerCase();
-    const knownProvider = PROVIDERS.find((item) => item.id === providerId);
-
-    const envKey = knownProvider?.envKey;
-    const credentialsOk = envKey ? Boolean(process.env[envKey]) : false;
+    const config = this.adapterFactory.getConfig(providerId);
+    const credentialsOk = this.adapterFactory.hasCredentials(providerId);
 
     return this.prisma.providerHealth.upsert({
       where: { provider: providerId },
@@ -171,7 +125,7 @@ export class ProvidersService {
         latencyMs: latencyMs ?? null,
         checkedAt: new Date(),
         credentialsOk,
-        endpoint: knownProvider?.endpoint ?? providerId,
+        endpoint: config?.baseUrl ?? providerId,
       },
       create: {
         provider: providerId,
@@ -180,7 +134,7 @@ export class ProvidersService {
         latencyMs: latencyMs ?? null,
         checkedAt: new Date(),
         credentialsOk,
-        endpoint: knownProvider?.endpoint ?? providerId,
+        endpoint: config?.baseUrl ?? providerId,
       },
     });
   }

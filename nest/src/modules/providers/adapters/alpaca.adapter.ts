@@ -14,115 +14,130 @@ export class AlpacaAdapter implements IProviderAdapter {
   private readonly apiSecret = process.env.ALPACA_API_SECRET;
   private readonly baseUrl =
     process.env.ALPACA_BASE_URL || 'https://paper-api.alpaca.markets';
+  private readonly dataUrl = 'https://data.alpaca.markets';
 
-  getQuote(symbol: string): Promise<ProviderQuote | null> {
-    if (!this.apiKey || !this.apiSecret) {
-      this.logger.debug(
-        `AlpacaAdapter.getQuote(${symbol}) — no credentials, returning mock`,
-      );
-    }
-    return Promise.resolve(this.getMockQuote(symbol));
+  private authHeaders(): Record<string, string> {
+    return {
+      'APCA-API-KEY-ID': this.apiKey || '',
+      'APCA-API-SECRET-KEY': this.apiSecret || '',
+    };
   }
 
-  getCandles(
+  private checkCredentials(): void {
+    if (!this.apiKey || !this.apiSecret) {
+      throw new Error('Alpaca credentials not configured');
+    }
+  }
+
+  async getQuote(symbol: string): Promise<ProviderQuote | null> {
+    try {
+      this.checkCredentials();
+      this.logger.log(`Alpaca: fetching quote for ${symbol}`);
+      const res = await fetch(
+        `${this.dataUrl}/v2/stocks/${symbol}/quotes/latest`,
+        { headers: this.authHeaders() },
+      );
+      if (res.status === 401 || res.status === 403) {
+        throw new Error('Alpaca authentication failed — check API keys');
+      }
+      if (res.status === 429) {
+        this.logger.warn(`Alpaca rate limit hit for quote ${symbol}`);
+        return null;
+      }
+      if (!res.ok) return null;
+      const data = await res.json();
+      const q = data.quote;
+      if (!q) return null;
+      return {
+        symbol,
+        bid: q.bp ?? 0,
+        ask: q.ap ?? 0,
+        last: q.ap ?? q.bp ?? 0,
+        timestamp: new Date(q.t || Date.now()),
+      };
+    } catch (err) {
+      this.logger.error(`Alpaca getQuote(${symbol}) failed: ${(err as Error).message}`);
+      return null;
+    }
+  }
+
+  async getCandles(
     symbol: string,
-    timeframe: string,
+    timeframe = '1Hour',
     limit = 100,
   ): Promise<MarketBar[]> {
-    if (!this.apiKey || !this.apiSecret) {
-      this.logger.debug(
-        `AlpacaAdapter.getCandles(${symbol}, ${timeframe}, ${limit}) — no credentials, returning mock`,
+    try {
+      this.checkCredentials();
+      this.logger.log(`Alpaca: fetching ${limit} candles for ${symbol} (${timeframe})`);
+      const res = await fetch(
+        `${this.dataUrl}/v2/stocks/${symbol}/bars?timeframe=${timeframe}&limit=${limit}`,
+        { headers: this.authHeaders() },
       );
+      if (res.status === 401 || res.status === 403) {
+        throw new Error('Alpaca authentication failed — check API keys');
+      }
+      if (res.status === 429) {
+        this.logger.warn(`Alpaca rate limit hit for candles ${symbol}`);
+        return [];
+      }
+      if (!res.ok) return [];
+      const data = await res.json();
+      const bars = data.bars || [];
+      this.logger.log(`Alpaca: got ${bars.length} candles for ${symbol} (${timeframe})`);
+      return bars.map((b: any) => ({
+        timestamp: new Date(b.t),
+        open: b.o,
+        high: b.h,
+        low: b.l,
+        close: b.c,
+        volume: b.v,
+      }));
+    } catch (err) {
+      this.logger.error(`Alpaca getCandles(${symbol}) failed: ${(err as Error).message}`);
+      return [];
     }
-    return Promise.resolve(this.getMockCandles(symbol, limit));
   }
 
-  getProfile(symbol: string): Promise<ProviderProfile | null> {
-    if (!this.apiKey || !this.apiSecret) {
-      this.logger.debug(
-        `AlpacaAdapter.getProfile(${symbol}) — no credentials, returning mock`,
+  async getProfile(symbol: string): Promise<ProviderProfile | null> {
+    try {
+      this.checkCredentials();
+      const res = await fetch(
+        `${this.dataUrl}/v2/assets/${symbol}`,
+        { headers: this.authHeaders() },
       );
+      if (res.status === 429) return null;
+      if (!res.ok) return null;
+      const asset = await res.json();
+      return {
+        symbol,
+        name: asset.name || symbol,
+        sector: asset.class || 'unknown',
+        exchange: asset.exchange || 'unknown',
+        industry: null,
+        marketCap: null,
+      };
+    } catch (err) {
+      this.logger.error(`Alpaca getProfile(${symbol}) failed: ${(err as Error).message}`);
+      return null;
     }
-    return Promise.resolve(this.getMockProfile(symbol));
   }
 
-  healthCheck(): Promise<boolean> {
-    if (!this.apiKey || !this.apiSecret) {
-      this.logger.debug(
-        'AlpacaAdapter.healthCheck — no credentials configured',
-      );
-      return Promise.resolve(false);
+  async healthCheck(): Promise<boolean> {
+    try {
+      this.checkCredentials();
+      const res = await fetch(`${this.baseUrl}/v2/clock`, {
+        headers: this.authHeaders(),
+      });
+      if (res.status === 401 || res.status === 403) {
+        this.logger.warn('Alpaca healthCheck: authentication failed');
+        return false;
+      }
+      const ok = res.ok;
+      this.logger.log(`Alpaca healthCheck: ${ok ? 'OK' : 'failed'} (${res.status})`);
+      return ok;
+    } catch (err) {
+      this.logger.error(`Alpaca healthCheck failed: ${(err as Error).message}`);
+      return false;
     }
-    return Promise.resolve(true);
-  }
-
-  private getMockQuote(symbol: string): ProviderQuote {
-    const basePrice = this.getBasePriceForSymbol(symbol);
-    const spread = basePrice * 0.001;
-    return {
-      symbol,
-      bid: basePrice - spread / 2,
-      ask: basePrice + spread / 2,
-      last: basePrice,
-      timestamp: new Date(),
-    };
-  }
-
-  private getMockCandles(symbol: string, limit: number): MarketBar[] {
-    const bars: MarketBar[] = [];
-    const basePrice = this.getBasePriceForSymbol(symbol);
-    const now = Date.now();
-    const hourMs = 60 * 60 * 1000;
-
-    for (let i = limit - 1; i >= 0; i--) {
-      const timestamp = new Date(now - i * hourMs);
-      const volatility = basePrice * 0.02;
-      const open = basePrice + (Math.random() - 0.5) * volatility;
-      const close = basePrice + (Math.random() - 0.5) * volatility;
-      const high = Math.max(open, close) + Math.random() * volatility * 0.5;
-      const low = Math.min(open, close) - Math.random() * volatility * 0.5;
-      const volume = Math.floor(1000000 + Math.random() * 5000000);
-      bars.push({ timestamp, open, high, low, close, volume });
-    }
-    return bars;
-  }
-
-  private getMockProfile(symbol: string): ProviderProfile {
-    const profiles: Record<string, Partial<ProviderProfile>> = {
-      AAPL: {
-        name: 'Apple Inc.',
-        sector: 'Technology',
-        industry: 'Consumer Electronics',
-        marketCap: 3000000000000,
-      },
-      NVDA: {
-        name: 'NVIDIA Corporation',
-        sector: 'Technology',
-        industry: 'Semiconductors',
-        marketCap: 2000000000000,
-      },
-      TSLA: {
-        name: 'Tesla Inc.',
-        sector: 'Consumer Cyclical',
-        industry: 'Auto Manufacturers',
-        marketCap: 800000000000,
-      },
-    };
-    const profile = profiles[symbol.toUpperCase()] || {
-      name: `${symbol} Corporation`,
-      sector: 'Technology',
-      industry: 'Software',
-      marketCap: 50000000000,
-    };
-    return { symbol, exchange: 'NASDAQ', ...profile } as ProviderProfile;
-  }
-
-  private getBasePriceForSymbol(symbol: string): number {
-    const prices: Record<string, number> = {
-      AAPL: 175.5,
-      NVDA: 485.25,
-      TSLA: 248.75,
-    };
-    return prices[symbol.toUpperCase()] || 100.0;
   }
 }

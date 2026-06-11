@@ -8,7 +8,8 @@
  *   Returns: RankedResult with mode+services metadata and ranked symbols.
  */
 
-import { Controller, Get, Param, Query, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseInterceptors } from '@nestjs/common';
+import { PaginationInterceptor } from '../../common/interceptors/pagination.interceptor';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { ScoringService } from './scoring.service';
 import { ScoreHistoryService } from './score-history.service';
@@ -24,6 +25,7 @@ export class ScoringController {
 
   @Get('ranked')
   @UseInterceptors(new CacheInterceptor(15000))
+  @UseInterceptors(new PaginationInterceptor('ranked'))
   @ApiOperation({ summary: 'Get symbols ranked by aggregate score' })
   @ApiOkResponse({
     description: 'Ranked symbol list with scores and directive breakdown',
@@ -38,6 +40,22 @@ export class ScoringController {
       : 20;
 
     return this.scoringService.rankAll(strategyId, safeLimit);
+  }
+
+  @Post('run')
+  @ApiOperation({ summary: 'Trigger a full scoring run for active symbols' })
+  @ApiOkResponse({ description: 'Ranked results with normalized scores' })
+  async runScoring(
+    @Body() body?: { symbols?: string[]; timeframe?: string },
+  ) {
+    return this.scoringService.runScoring(body?.symbols, body?.timeframe);
+  }
+
+  @Get('summary')
+  @ApiOperation({ summary: 'Quick scoring overview for health checks' })
+  @ApiOkResponse({ description: 'Aggregated scoring stats' })
+  async getSummary() {
+    return this.scoringService.getSummary();
   }
 
   @Get('test/min-to-min')

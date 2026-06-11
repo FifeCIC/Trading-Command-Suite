@@ -31,11 +31,18 @@ import { VolumeRhythmDirective } from './implementations/volume-rhythm.directive
 import { VwapDirective } from './implementations/vwap.directive';
 import { VolumeSurgeDirective } from './implementations/volume-surge.directive';
 import { BollingerBandSqueezeDirective } from './implementations/bollinger-squeeze.directive';
+import { SupportResistanceLevelsDirective } from './implementations/support-resistance.directive';
+import { OverheadSupplyPressureDirective } from './implementations/overhead-supply.directive';
+import { PanicExhaustionAbsorptionDirective } from './implementations/panic-exhaustion.directive';
+import { PriceActionDirective } from './implementations/price-action.directive';
+import { MomentumContinuationComboDirective } from './implementations/momentum-continuation.directive';
+import { ConfluenceReversalComboDirective } from './implementations/confluence-reversal.directive';
+import { NewsSentimentPositiveDirective } from './implementations/news-sentiment.directive';
+import { EarningsProximityDirective } from './implementations/earnings-proximity.directive';
+import { VixRegimeDirective } from './implementations/vix-regime.directive';
 
 // Stubs (placeholder — PHP math at TradePress, awaiting NestJS port)
 import {
-  // Momentum
-  MomentumContinuationComboDirective,
   // Trend
   MovingAveragesDirective,
   // Volatility
@@ -43,7 +50,6 @@ import {
   // Candlestick Patterns (now real implementations)
   PinBarPatternDirective,
   // Macro / Regime
-  VixRegimeDirective,
   GoldMacroCorrelationDirective,
   CadUsdOilCorrelationDirective,
   // Temporal / Calendar
@@ -63,15 +69,8 @@ import {
   TslaSentimentAmplifierDirective,
   // Fundamental
   DividendYieldAttractiveDirective,
-  EarningsProximityDirective,
-  NewsSentimentPositiveDirective,
   // Composite
-  ConfluenceReversalComboDirective,
-  PriceActionDirective,
   // Risk / Support-Resistance
-  SupportResistanceLevelsDirective,
-  OverheadSupplyPressureDirective,
-  PanicExhaustionAbsorptionDirective,
   TimeBasedSupportDirective,
   // ISA / Special
   IsaResetDirective,
@@ -110,7 +109,6 @@ import {
     AdxDirective,
     StochasticDirective,
     RsiOverboughtDirective,
-    // Stubs — Momentum
     MomentumContinuationComboDirective,
     // Implemented — Trend
     PriceAboveSmaDirective,
@@ -135,8 +133,9 @@ import {
     ThreeSoldiersPatternDirective,
     // Stubs — Patterns
     PinBarPatternDirective,
-    // Stubs — Macro
+    // Implemented — Macro
     VixRegimeDirective,
+    // Stubs — Macro
     GoldMacroCorrelationDirective,
     CadUsdOilCorrelationDirective,
     // Stubs — Temporal
@@ -154,17 +153,19 @@ import {
     // Stubs — Equity-Specific
     NvdaEarningsMomentumDirective,
     TslaSentimentAmplifierDirective,
+    // Implemented — Fundamental
+    NewsSentimentPositiveDirective,
+    EarningsProximityDirective,
     // Stubs — Fundamental
     DividendYieldAttractiveDirective,
-    EarningsProximityDirective,
-    NewsSentimentPositiveDirective,
-    // Stubs — Composite
-    ConfluenceReversalComboDirective,
+    // Implemented — Composite
     PriceActionDirective,
-    // Stubs — Risk
+    ConfluenceReversalComboDirective,
+    // Implemented — Risk
     SupportResistanceLevelsDirective,
     OverheadSupplyPressureDirective,
     PanicExhaustionAbsorptionDirective,
+    // Stubs — Risk
     TimeBasedSupportDirective,
     // Stubs — Special
     IsaResetDirective,
@@ -203,7 +204,6 @@ export class DirectivesModule implements OnModuleInit {
     private readonly adx: AdxDirective,
     private readonly stochastic: StochasticDirective,
     private readonly rsiOverbought: RsiOverboughtDirective,
-    // Stubs — Momentum
     private readonly momentumCont: MomentumContinuationComboDirective,
     // Implemented — Trend
     private readonly priceAboveSma: PriceAboveSmaDirective,
@@ -228,8 +228,9 @@ export class DirectivesModule implements OnModuleInit {
     private readonly threeSoldiers: ThreeSoldiersPatternDirective,
     // Stubs — Patterns
     private readonly pinBar: PinBarPatternDirective,
-    // Stubs — Macro
+    // Implemented — Macro
     private readonly vixRegime: VixRegimeDirective,
+    // Stubs — Macro
     private readonly goldMacro: GoldMacroCorrelationDirective,
     private readonly cadUsdOil: CadUsdOilCorrelationDirective,
     // Stubs — Temporal
@@ -247,17 +248,19 @@ export class DirectivesModule implements OnModuleInit {
     // Stubs — Equity-Specific
     private readonly nvdaEarnings: NvdaEarningsMomentumDirective,
     private readonly tslaSentiment: TslaSentimentAmplifierDirective,
+    // Implemented — Fundamental
+    private readonly newsSentiment: NewsSentimentPositiveDirective,
+    private readonly earningsProx: EarningsProximityDirective,
     // Stubs — Fundamental
     private readonly dividend: DividendYieldAttractiveDirective,
-    private readonly earningsProx: EarningsProximityDirective,
-    private readonly newsSentiment: NewsSentimentPositiveDirective,
-    // Stubs — Composite
-    private readonly confluence: ConfluenceReversalComboDirective,
+    // Implemented — Composite
     private readonly priceAction: PriceActionDirective,
-    // Stubs — Risk
+    private readonly confluence: ConfluenceReversalComboDirective,
+    // Implemented — Risk
     private readonly supportResist: SupportResistanceLevelsDirective,
     private readonly overheadSupply: OverheadSupplyPressureDirective,
     private readonly panicExhaust: PanicExhaustionAbsorptionDirective,
+    // Stubs — Risk
     private readonly timeSupport: TimeBasedSupportDirective,
     // Stubs — Special
     private readonly isa: IsaResetDirective,
@@ -293,7 +296,6 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.adx);
     this.directivesService.register(this.stochastic);
     this.directivesService.register(this.rsiOverbought);
-    // Stubs — Momentum
     this.directivesService.register(this.momentumCont);
     // Implemented — Trend
     this.directivesService.register(this.priceAboveSma);
@@ -318,8 +320,9 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.threeSoldiers);
     // Stubs — Patterns
     this.directivesService.register(this.pinBar);
-    // Stubs — Macro
+    // Implemented — Macro
     this.directivesService.register(this.vixRegime);
+    // Stubs — Macro
     this.directivesService.register(this.goldMacro);
     this.directivesService.register(this.cadUsdOil);
     // Stubs — Temporal
@@ -337,17 +340,19 @@ export class DirectivesModule implements OnModuleInit {
     // Stubs — Equity-Specific
     this.directivesService.register(this.nvdaEarnings);
     this.directivesService.register(this.tslaSentiment);
+    // Implemented — Fundamental
+    this.directivesService.register(this.newsSentiment);
+    this.directivesService.register(this.earningsProx);
     // Stubs — Fundamental
     this.directivesService.register(this.dividend);
-    this.directivesService.register(this.earningsProx);
-    this.directivesService.register(this.newsSentiment);
-    // Stubs — Composite
-    this.directivesService.register(this.confluence);
+    // Implemented — Composite
     this.directivesService.register(this.priceAction);
-    // Stubs — Risk
+    this.directivesService.register(this.confluence);
+    // Implemented — Risk
     this.directivesService.register(this.supportResist);
     this.directivesService.register(this.overheadSupply);
     this.directivesService.register(this.panicExhaust);
+    // Stubs — Risk
     this.directivesService.register(this.timeSupport);
     // Stubs — Special
     this.directivesService.register(this.isa);

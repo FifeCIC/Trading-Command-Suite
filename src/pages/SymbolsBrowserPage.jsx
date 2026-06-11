@@ -63,11 +63,11 @@ export default function SymbolsBrowserPage() {
       <section className="sb-controls" style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'end' }}>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.8rem' }}>
           Search
-          <input type="text" placeholder="Ticker or name..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #444', background: '#1a1a1a', color: '#e0e0e0', fontSize: '0.85rem' }} />
+          <input type="text" placeholder="Ticker or name..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--line)', background: 'var(--panel)', color: 'var(--ink)', fontSize: '0.85rem' }} />
         </label>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.8rem' }}>
           Type
-          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #444', background: '#1a1a1a', color: '#e0e0e0', fontSize: '0.85rem' }}>
+          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--line)', background: 'var(--panel)', color: 'var(--ink)', fontSize: '0.85rem' }}>
             <option value="all">All Types</option>
             {SYMBOL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>

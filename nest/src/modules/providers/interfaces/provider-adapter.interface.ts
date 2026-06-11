@@ -44,6 +44,9 @@ export interface IProviderAdapter {
   /** Human-readable adapter name, used in health responses. */
   readonly name: string;
 
+  /** Unique identifier (e.g. 'alpaca') — used by AdapterFactory. */
+  readonly id?: string;
+
   /**
    * Fetch current quote (bid/ask/last) for one symbol.
    * Must NOT throw — return null on failure and let the caller handle logging.
@@ -72,4 +75,40 @@ export interface IProviderAdapter {
    * responded within a reasonable timeout.
    */
   healthCheck(): Promise<boolean>;
+
+  // ─── Optional: Factory capability methods ─────────────────
+
+  /**
+   * List supported data types this provider can serve.
+   * Used by AdapterFactory for capability-based routing.
+   */
+  getCapabilities?(): string[];
+
+  /**
+   * Authenticate with provider using stored credentials.
+   * Returns true if authentication succeeded.
+   */
+  authenticate?(credentials?: Record<string, string>): Promise<boolean>;
+
+  /**
+   * Generic data fetch — allows factory to route arbitrary queries.
+   * @param query  Provider-specific query object
+   */
+  fetchData?(query: Record<string, any>): Promise<any>;
+
+  /**
+   * Normalize a raw provider response into a standard schema.
+   * @param raw  Raw response from the provider API
+   * @param schema  Target schema name ('MarketBar', 'ProviderQuote', etc.)
+   */
+  normalizeResponse?(raw: any, schema: string): any;
+
+  /**
+   * Return current rate limit state (remaining, limit, resetAt).
+   */
+  getRateLimit?(): Promise<{
+    remaining: number;
+    limit: number;
+    resetAt: Date | null;
+  } | null>;
 }

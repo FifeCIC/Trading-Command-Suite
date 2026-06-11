@@ -20,6 +20,7 @@ export class Trading212Adapter implements IProviderAdapter {
         `Trading212Adapter.getQuote(${symbol}) — no credentials, returning mock`,
       );
     }
+    // TODO: Switch to httpClient when going real
     return Promise.resolve(this.getMockQuote(symbol));
   }
 
@@ -33,6 +34,7 @@ export class Trading212Adapter implements IProviderAdapter {
         `Trading212Adapter.getCandles(${symbol}, ${timeframe}, ${limit}) — no credentials, returning mock`,
       );
     }
+    // TODO: Switch to httpClient when going real
     return Promise.resolve(this.getMockCandles(symbol, limit));
   }
 

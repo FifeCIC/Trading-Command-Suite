@@ -78,6 +78,7 @@ export const NAV_TREE = {
   data: {
     label: 'Data',
     views: [
+      { id: 'data-landing', label: 'Data Overview' },
       { id: 'trading-platforms', label: 'Sources' },
       { id: 'import-jobs', label: 'Import Jobs' },
       { id: 'data-elements', label: 'Data Elements' },
