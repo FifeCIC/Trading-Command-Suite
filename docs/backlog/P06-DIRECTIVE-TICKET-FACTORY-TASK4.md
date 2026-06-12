@@ -296,7 +296,7 @@ Each ticket targets a single dev session. Order respects dependency chains.
 | **Blocks** | T4-11 (API endpoint) |
 | **Effort** | 1 session |
 
-**Scope:** Replace the deterministic ticker-hash placeholder in `ScoringService.rankAll()` with real directive execution. The pipeline: fetch symbols → build `DirectiveInput` from market data → run directives → aggregate → rank.
+**Scope:** ✅ DONE (Q09 verified). ScoringService.rankAll() now runs real directives via DirectivesService.runAll(), aggregates with weighted average, and returns ranked results with full breakdown. No deterministic hash remains.
 
 **Acceptance Criteria:**
 - [ ] `rankAll(strategyId?, limit)` fetches active symbols from DB

@@ -9,12 +9,38 @@ import {
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ProvidersService } from './providers.service';
+import { AdapterFactory } from './adapter-factory';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
 
 @ApiTags('providers')
 @Controller('providers')
 export class ProvidersController {
-  constructor(private readonly providersService: ProvidersService) {}
+  constructor(
+    private readonly providersService: ProvidersService,
+    private readonly adapterFactory: AdapterFactory,
+  ) {}
+
+  @Get('rate-limits')
+  @ApiOperation({ summary: 'Get rate limit state for all provider adapters' })
+  @ApiOkResponse({ description: 'Rate limit states with tripped/warning flags' })
+  getRateLimits() {
+    const states = this.adapterFactory.getAllRateLimits();
+    const active = this.adapterFactory.getActive();
+    const activeId = active ? this.findInstanceId(active) : null;
+    return {
+      adapters: states,
+      activeAdapter: activeId,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /** Find the instance ID for an adapter. */
+  private findInstanceId(adapter: any): string | null {
+    for (const [id, instance] of (this.adapterFactory as any).instances) {
+      if (instance === adapter) return id;
+    }
+    return null;
+  }
 
   @Get('health')
   @UseInterceptors(new CacheInterceptor(60000))

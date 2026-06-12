@@ -82,14 +82,14 @@ Every scoring response MUST include:
 
 | Canonical ID | NestJS Implementation | Status |
 |---|---|---|
-| `rsi-oversold` | `nest/.../implementations/rsi-oversold.directive.ts` | PLACEHOLDER stub |
-| `macd-crossover` | `nest/.../implementations/macd-crossover.directive.ts` | PLACEHOLDER stub |
-| `ema-structure` | `nest/.../implementations/ema-structure.directive.ts` | PLACEHOLDER stub |
-| `atr-dip` | `nest/.../implementations/atr-dip.directive.ts` | PLACEHOLDER stub |
-| `volume-confirmation` | `nest/.../implementations/volume-confirmation.directive.ts` | PLACEHOLDER stub |
+| `rsi-oversold` | `nest/.../implementations/rsi-oversold.directive.ts` | ✅ Implemented |
+| `macd-crossover` | `nest/.../implementations/macd-crossover.directive.ts` | ✅ Implemented |
+| `ema-structure` | `nest/.../implementations/ema-structure.directive.ts` | ✅ Implemented |
+| `atr-dip` | `nest/.../implementations/atr-dip.directive.ts` | ✅ Implemented |
+| `volume-confirmation` | `nest/.../implementations/volume-confirmation.directive.ts` | ✅ Implemented |
 
 **The React `sees-engine.js` is a local simulation engine, not the production directive engine.** Its abstract directive names (trend, momentum, etc.) and boost/multiplier system are simulation-only and must not influence the backend directive specification.
 
 ---
 
-*Last updated: 2026-06-10. If you edit this file, update the date and explain why in the commit message.*
+*Last updated: 2026-06-11. Updated status from PLACEHOLDER to Implemented — all 5 directives have real indicator math as of Task 4 completion (verified Q09).*

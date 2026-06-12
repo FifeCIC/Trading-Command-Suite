@@ -16,7 +16,9 @@ import { ImportJobsModule } from './modules/import-jobs/import-jobs.module';
 import { MarketDataModule } from './modules/market-data/market-data.module';
 import { ProvidersModule } from './modules/providers/providers.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { ScenariosModule } from './modules/scenarios/scenario.module';
 import { SystemModule } from './modules/system/system.module';
+import { BacktestModule } from './modules/backtest/backtest.module';
 import { RateLimiterMiddleware } from './common/middleware/rate-limiter.middleware';
 import { MetricsMiddleware } from './common/middleware/metrics.middleware';
 
@@ -42,7 +44,10 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     MarketDataModule,
     ProvidersModule,
     WebhooksModule,
+    ScenariosModule,
     SystemModule,
+    BacktestModule,
+    ScenariosModule,
   ],
   controllers: [AppController],
   providers: [AppService],

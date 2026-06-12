@@ -243,7 +243,7 @@ export default function SeesLiveStackMockPage() {
             <p className="hint">Backend API active — scores computed by NestJS scoring pipeline.</p>
             <ol>
               <li>Fetch active symbols from database.</li>
-              <li>Score each symbol through the deterministic scoring service (directive engine pending).</li>
+              <li>Score each symbol through the 5-directive pipeline (RSI, MACD, EMA, ATR, Volume).</li>
               <li>Apply strategy thresholds to classify entry, watch, or defense states.</li>
               <li>Rank the output and return via <code>GET /api/scoring/ranked</code>.</li>
             </ol>
@@ -382,7 +382,8 @@ export default function SeesLiveStackMockPage() {
           <>
             <h2>🧪 Simulation — not production scoring</h2>
             <ul>
-              <li>This page uses synthetic math for visual prototyping. Real directive implementation lives in <code>nest/src/modules/directives/</code>.</li>
+              <li>This page uses synthetic math for visual prototyping when API is unavailable.</li>
+              <li>The real directive engine is implemented in <code>nest/src/modules/directives/implementations/</code> and drives the API pipeline when the backend is connected.</li>
               <li>The production scoring model is a simple weighted average capped at 0–100. No boosts, no multipliers. See <code>docs/CANONICAL-DIRECTIVE-REFERENCE.md</code>.</li>
               <li>The UI layout and component structure are reusable — only the scoring math needs replacement when real directives ship.</li>
             </ul>

@@ -446,3 +446,79 @@
     justify-self: start;
   }
 }
+
+/* ─── Q114: Scoring Panel Enhancements ───────────────────── */
+
+.sees-summary-bar {
+  display: flex;
+  gap: 1rem;
+  padding: 0.5rem 0 0.75rem;
+  font-size: 0.82rem;
+  color: var(--text-muted, #64748b);
+  border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+  margin-bottom: 0.5rem;
+}
+
+.sees-summary-stat strong {
+  color: var(--text, #1e293b);
+}
+
+.sees-summary-stat--muted strong {
+  color: var(--text-muted, #64748b);
+}
+
+.sees-row--no_data {
+  opacity: 0.55;
+}
+
+.sees-row--stale {
+  border-left: 3px solid #d97706;
+}
+
+.sees-row--no_data td {
+  color: var(--text-muted, #64748b);
+}
+
+.sees-ticker--muted {
+  color: var(--text-muted, #94a3b8);
+  font-weight: 500 !important;
+}
+
+.sees-raw-score {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.sees-normalized {
+  font-size: 0.78rem;
+  color: var(--text-muted, #64748b);
+}
+
+.sees-directive-count {
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-muted, #64748b);
+}
+
+.sees-empty-no-data {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted, #64748b);
+}
+
+.sees-empty-icon {
+  font-size: 2.5rem;
+  margin: 0 0 0.5rem;
+}
+
+.sees-empty-no-data code {
+  background: var(--bg-subtle, #f1f5f9);
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.85rem;
+}
+
+.sees-empty-actions .btn {
+  padding: 0.4rem 1rem;
+  font-size: 0.85rem;
+}

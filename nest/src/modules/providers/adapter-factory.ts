@@ -14,6 +14,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { IProviderAdapter } from './interfaces/provider-adapter.interface';
+import { RateLimitTracker, RateLimitState } from './rate-limit-tracker';
 
 /**
  * Capability types a provider can support.
@@ -61,6 +62,26 @@ export class AdapterFactory {
   private readonly registry = new Map<string, AdapterRegistration>();
   private readonly instances = new Map<string, IProviderAdapter>();
   private readonly instanceConfigs = new Map<string, AdapterConfig>();
+  private readonly rateLimitTrackers = new Map<string, RateLimitTracker>();
+
+  /** Register a rate limit tracker for an adapter instance. */
+  setRateLimiter(instanceId: string, tracker: RateLimitTracker): void {
+    this.rateLimitTrackers.set(instanceId, tracker);
+  }
+
+  /** Get rate limit state for all tracked instances. */
+  getAllRateLimits(): RateLimitState[] {
+    const states: RateLimitState[] = [];
+    for (const [id, tracker] of this.rateLimitTrackers) {
+      states.push(tracker.getState());
+    }
+    return states.sort((a, b) => a.providerId.localeCompare(b.providerId));
+  }
+
+  /** Get tracker for a specific adapter instance. */
+  getRateLimiter(instanceId: string): RateLimitTracker | undefined {
+    return this.rateLimitTrackers.get(instanceId);
+  }
 
   /**
    * Register a provider adapter class with its configuration.
@@ -120,8 +141,10 @@ export class AdapterFactory {
   }
 
   /**
-   * Get the active adapter, with optional failover.
-   * Tries providers in failoverPriority order until one returns a healthy instance.
+   * Get the active adapter with smart rate-limit-aware selection.
+   * Picks the provider with the highest remaining rate limit.
+   * Skips tripped providers and those with <5 remaining calls.
+   * Falls back to failoverPriority order if no rate limit data.
    */
   getActive(preferredId?: string): IProviderAdapter | null {
     if (preferredId) {
@@ -129,24 +152,44 @@ export class AdapterFactory {
       if (instance) return instance;
     }
 
-    // Sort by failover priority (lower = first)
-    const sorted = Array.from(this.instanceConfigs.entries())
-      .sort(([, a], [, b]) => a.failoverPriority - b.failoverPriority);
+    // Collect all usable instances with their rate limit info
+    const candidates: Array<{ id: string; instance: IProviderAdapter; remaining: number }> = [];
 
-    for (const [id] of sorted) {
-      if (id === preferredId) continue; // already tried
-      const instance = this.instances.get(id);
-      if (instance) return instance;
+    for (const [id, instance] of this.instances) {
+      const tracker = this.rateLimitTrackers.get(id);
+
+      if (tracker && !tracker.isUsable()) {
+        this.logger.debug(`Skipping ${id} — rate limited or tripped`);
+        continue;
+      }
+
+      const remaining = tracker ? tracker.getState().remaining : Infinity;
+      candidates.push({ id, instance, remaining });
     }
 
-    // Try creating any registered adapter
-    for (const [id] of this.registry) {
-      if (id === preferredId) continue;
-      const instance = this.create(id);
-      if (instance) return instance;
+    if (candidates.length === 0) {
+      // No cached instances — try creating from registry in priority order
+      const sorted = Array.from(this.registry.entries())
+        .sort(([, a], [, b]) => a.config.failoverPriority - b.config.failoverPriority);
+
+      for (const [id] of sorted) {
+        const instance = this.create(id);
+        if (instance) return instance;
+      }
+      return null;
     }
 
-    return null;
+    // Pick the candidate with the highest remaining rate limit
+    candidates.sort((a, b) => b.remaining - a.remaining);
+
+    if (candidates.length > 1) {
+      this.logger.debug(
+        `Rate-limit aware selection: ${candidates[0].id} (${candidates[0].remaining} remaining) ` +
+        `over ${candidates[1].id} (${candidates[1].remaining} remaining)`,
+      );
+    }
+
+    return candidates[0].instance;
   }
 
   /**

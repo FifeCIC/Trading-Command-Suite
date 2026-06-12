@@ -11,6 +11,9 @@ import { FEATURE_FLAGS } from './core/features/flags';
 import { withDevTag } from './dev-runtime/tags';
 import { getPerformanceSnapshot, startPerformanceMonitoring } from './performance/monitor';
 import ArchitectureFrameworkPage from './pages/ArchitectureFrameworkPage';
+import BacktestPage from './pages/BacktestPage';
+import MultiStrategyComparisonPage from './pages/MultiStrategyComparisonPage';
+import ScenarioAnalysisPage from './pages/ScenarioAnalysisPage';
 import ActiveSymbolsPage from './pages/ActiveSymbolsPage';
 import ApiEndpointsPage from './pages/ApiEndpointsPage';
 import DatabaseTablesPage from './pages/DatabaseTablesPage';
@@ -360,6 +363,18 @@ function AppShell() {
 
     if (secondaryView === 'sees-live-stack') {
       return <SeesLiveStackMockPage />;
+    }
+
+    if (secondaryView === 'backtest') {
+      return <BacktestPage />;
+    }
+
+    if (secondaryView === 'strategies-compare') {
+      return <MultiStrategyComparisonPage />;
+    }
+
+    if (secondaryView === 'scenario-analysis') {
+      return <ScenarioAnalysisPage />;
     }
 
     if (secondaryView === 'architecture-framework') {
