@@ -18,6 +18,9 @@ import { ProvidersModule } from './modules/providers/providers.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { ScenariosModule } from './modules/scenarios/scenario.module';
 import { SchedulerModule } from './modules/scheduler/scheduler.module';
+import { RiskModule } from './modules/risk/risk.module';
+import { TradingGatesModule } from './modules/trading-gates/trading-gates.module';
+import { PerformanceModule } from './modules/performance/performance.module';
 import { SystemModule } from './modules/system/system.module';
 import { BacktestModule } from './modules/backtest/backtest.module';
 import { RateLimiterMiddleware } from './common/middleware/rate-limiter.middleware';
@@ -47,6 +50,9 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     WebhooksModule,
     ScenariosModule,
     SchedulerModule,
+    RiskModule,
+    TradingGatesModule,
+    PerformanceModule,
     SystemModule,
     BacktestModule,
   ],

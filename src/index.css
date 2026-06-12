@@ -976,6 +976,18 @@ button.nav-active {
 .pf-suggestion { padding: 0.5rem 0.75rem; margin-bottom: 0.4rem; background: color-mix(in srgb, #ffaa00 8%, transparent); border-radius: 6px; font-size: 0.8rem; }
 .pf-add-form { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
 .pf-add-form input { padding: 0.35rem 0.5rem; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); font-size: 0.82rem; width: 100px; }
+.pf-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+.pf-header h1 { margin: 0; }
+.pf-mode-badge { font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 4px; letter-spacing: 0.05em; }
+.pf-mode-live { background: color-mix(in srgb, #dc2626 15%, transparent); color: #dc2626; border: 1px solid color-mix(in srgb, #dc2626 30%, transparent); }
+.pf-mode-demo { background: color-mix(in srgb, #d97706 15%, transparent); color: #d97706; border: 1px solid color-mix(in srgb, #d97706 30%, transparent); }
+.pf-mode-mock { background: color-mix(in srgb, #9ca3af 15%, transparent); color: #8b8f96; border: 1px solid color-mix(in srgb, #9ca3af 30%, transparent); }
+.pf-refresh-indicator { font-size: 0.7rem; color: var(--ink-soft); margin-bottom: 0.5rem; }
+.pf-account-detail { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem 1rem; }
+.pf-account-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; }
+.pf-account-grid div { display: flex; flex-direction: column; font-size: 0.75rem; }
+.pf-account-grid div span { color: var(--ink-soft); margin-bottom: 0.1rem; }
+.pf-account-grid div strong { font-size: 1rem; }
 
 .dev-footer {
   display: grid;

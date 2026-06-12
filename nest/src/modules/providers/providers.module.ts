@@ -2,15 +2,17 @@ import { Module, OnModuleInit } from '@nestjs/common';
 import { DatabaseModule } from '../../database/database.module';
 import { ModeService } from '../../config/mode.service';
 import { ProvidersController } from './providers.controller';
+import { Mt5Controller } from './mt5.controller';
 import { ProvidersService } from './providers.service';
 import { AdapterFactory } from './adapter-factory';
 import { AlpacaAdapter } from './adapters/alpaca.adapter';
 import { AlphaVantageAdapter } from './adapters/alpha-vantage.adapter';
 import { Trading212Adapter } from './adapters/trading212.adapter';
+import { Mt5Adapter } from './adapters/mt5.adapter';
 
 @Module({
   imports: [DatabaseModule],
-  controllers: [ProvidersController],
+  controllers: [ProvidersController, Mt5Controller],
   providers: [
     ProvidersService,
     ModeService,
@@ -18,6 +20,7 @@ import { Trading212Adapter } from './adapters/trading212.adapter';
     AlpacaAdapter,
     AlphaVantageAdapter,
     Trading212Adapter,
+    Mt5Adapter,
   ],
   exports: [ProvidersService, AdapterFactory],
 })
@@ -47,6 +50,14 @@ export class ProvidersModule implements OnModuleInit {
       baseUrl: 'https://live.trading212.com/api/v0',
       capabilities: ['quotes', 'candles', 'trades'],
       failoverPriority: 30,
+    });
+
+    this.adapterFactory.register('mt5', Mt5Adapter, {
+      name: 'MetaTrader 5',
+      apiKeyEnv: 'MT5_ACCOUNT',
+      baseUrl: process.env.MT5_BRIDGE_URL || 'http://localhost:5000',
+      capabilities: ['quotes', 'candles'],
+      failoverPriority: 40,
     });
   }
 }

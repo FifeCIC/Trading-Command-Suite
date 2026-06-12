@@ -14,6 +14,11 @@ import { DojiPatternDirective } from './implementations/doji-pattern.directive';
 import { EngulfingPatternDirective } from './implementations/engulfing-pattern.directive';
 import { HammerPatternDirective } from './implementations/hammer-pattern.directive';
 import { ThreeSoldiersPatternDirective } from './implementations/three-soldiers-pattern.directive';
+// MT5 ported patterns
+import { Mt5EngulfingDirective } from './implementations/mt5-engulfing.directive';
+import { Mt5HaramiDirective } from './implementations/mt5-harami.directive';
+import { Mt5StarDojiDirective } from './implementations/mt5-star-doji.directive';
+import { Mt5HammerDirective } from './implementations/mt5-hammer.directive';
 // Implemented volume
 import { ObvDirective } from './implementations/obv.directive';
 // Implemented momentum
@@ -133,6 +138,11 @@ import {
     EngulfingPatternDirective,
     HammerPatternDirective,
     ThreeSoldiersPatternDirective,
+    // MT5 ported patterns
+    Mt5EngulfingDirective,
+    Mt5HaramiDirective,
+    Mt5StarDojiDirective,
+    Mt5HammerDirective,
     // Stubs — Patterns
     PinBarPatternDirective,
     // Implemented — Macro
@@ -228,6 +238,11 @@ export class DirectivesModule implements OnModuleInit {
     private readonly engulfing: EngulfingPatternDirective,
     private readonly hammer: HammerPatternDirective,
     private readonly threeSoldiers: ThreeSoldiersPatternDirective,
+    // MT5 ported patterns
+    private readonly mt5Engulfing: Mt5EngulfingDirective,
+    private readonly mt5Harami: Mt5HaramiDirective,
+    private readonly mt5StarDoji: Mt5StarDojiDirective,
+    private readonly mt5Hammer: Mt5HammerDirective,
     // Stubs — Patterns
     private readonly pinBar: PinBarPatternDirective,
     // Implemented — Macro
@@ -320,6 +335,11 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.hammer);
     this.directivesService.register(this.engulfing);
     this.directivesService.register(this.threeSoldiers);
+    // MT5 ported patterns
+    this.directivesService.register(this.mt5Engulfing);
+    this.directivesService.register(this.mt5Harami);
+    this.directivesService.register(this.mt5StarDoji);
+    this.directivesService.register(this.mt5Hammer);
     // Stubs — Patterns
     this.directivesService.register(this.pinBar);
     // Implemented — Macro
