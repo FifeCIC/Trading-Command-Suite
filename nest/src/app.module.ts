@@ -17,6 +17,7 @@ import { MarketDataModule } from './modules/market-data/market-data.module';
 import { ProvidersModule } from './modules/providers/providers.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { ScenariosModule } from './modules/scenarios/scenario.module';
+import { SchedulerModule } from './modules/scheduler/scheduler.module';
 import { SystemModule } from './modules/system/system.module';
 import { BacktestModule } from './modules/backtest/backtest.module';
 import { RateLimiterMiddleware } from './common/middleware/rate-limiter.middleware';
@@ -45,9 +46,9 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     ProvidersModule,
     WebhooksModule,
     ScenariosModule,
+    SchedulerModule,
     SystemModule,
     BacktestModule,
-    ScenariosModule,
   ],
   controllers: [AppController],
   providers: [AppService],

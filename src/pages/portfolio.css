@@ -1,0 +1,35 @@
+.pf-page { max-width: 1060px; margin: 0 auto; padding: 1.35rem; color: var(--ink); }
+.pf-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.pf-header h1 { margin: 0; }
+.pf-add-btn { padding: 0.4rem 1rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); cursor: pointer; }
+.pf-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.7rem; margin-bottom: 1rem; }
+.pf-stat { border: 1px solid var(--line); border-radius: 12px; padding: 0.85rem; background: color-mix(in srgb, var(--panel) 92%, var(--bg) 8%); }
+.pf-stat-label { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); }
+.pf-stat-value { display: block; font-size: 1.4rem; font-weight: 700; margin-top: 0.15rem; }
+.pf-positive { color: #00a63e; }
+.pf-negative { color: #ef4444; }
+.pf-section { border: 1px solid var(--line); border-radius: 12px; padding: 1rem; background: color-mix(in srgb, var(--panel) 92%, var(--bg) 8%); margin-bottom: 1rem; }
+.pf-section h2 { margin: 0 0 0.6rem; }
+.pf-muted { color: var(--ink-soft); margin: 0; }
+.pf-allocation { display: grid; gap: 0.4rem; }
+.pf-alloc-row { display: grid; grid-template-columns: 60px 1fr 50px auto; align-items: center; gap: 0.5rem; }
+.pf-alloc-label { font-size: 0.82rem; color: var(--ink); }
+.pf-alloc-track { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
+.pf-alloc-bar { height: 100%; border-radius: 5px; min-width: 2px; }
+.pf-bar-up { background: #10b981; }
+.pf-bar-down { background: #ef4444; }
+.pf-bar-cash { background: var(--line); }
+.pf-alloc-pct { font-size: 0.78rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.pf-warn { font-size: 0.68rem; color: #e6a700; }
+.pf-table { width: 100%; border-collapse: collapse; }
+.pf-table th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); border-bottom: 1px solid var(--line); padding: 0.5rem 0.55rem; }
+.pf-table td { padding: 0.45rem 0.55rem; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent 40%); font-variant-numeric: tabular-nums; }
+.pf-error { color: #ef4444; }
+.pf-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.pf-modal { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1.5rem; width: 360px; display: grid; gap: 0.6rem; }
+.pf-modal h3 { margin: 0; }
+.pf-modal input { padding: 0.5rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.pf-modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+.pf-btn-cancel { padding: 0.4rem 0.8rem; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); cursor: pointer; }
+.pf-btn-save { padding: 0.4rem 0.8rem; border: none; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer; }
+@media (max-width: 600px) { .pf-summary { grid-template-columns: repeat(2, 1fr); } .pf-alloc-row { grid-template-columns: 40px 1fr 40px; } }

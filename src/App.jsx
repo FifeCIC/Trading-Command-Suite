@@ -14,6 +14,8 @@ import ArchitectureFrameworkPage from './pages/ArchitectureFrameworkPage';
 import BacktestPage from './pages/BacktestPage';
 import MultiStrategyComparisonPage from './pages/MultiStrategyComparisonPage';
 import ScenarioAnalysisPage from './pages/ScenarioAnalysisPage';
+import FaqPage from './pages/FaqPage';
+import PortfolioPage from './pages/PortfolioPage';
 import ActiveSymbolsPage from './pages/ActiveSymbolsPage';
 import ApiEndpointsPage from './pages/ApiEndpointsPage';
 import DatabaseTablesPage from './pages/DatabaseTablesPage';
@@ -377,6 +379,10 @@ function AppShell() {
       return <ScenarioAnalysisPage />;
     }
 
+    if (secondaryView === 'portfolio-overview') {
+      return <PortfolioPage />;
+    }
+
     if (secondaryView === 'architecture-framework') {
       return <ArchitectureFrameworkPage />;
     }
@@ -391,6 +397,10 @@ function AppShell() {
 
     if (secondaryView === 'setup') {
       return <SetupWizardPage />;
+    }
+
+    if (secondaryView === 'faq') {
+      return <FaqPage />;
     }
 
     if (secondaryView === 'settings') {

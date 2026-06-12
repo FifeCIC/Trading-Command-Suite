@@ -1,5 +1,6 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { DirectivesService } from './directives.service';
+import { DirectivesController } from './directives.controller';
 
 // Implemented (real math)
 import { RsiOversoldDirective } from './implementations/rsi-oversold.directive';
@@ -96,6 +97,7 @@ import {
 } from './implementations/placeholder-directives.stub';
 
 @Module({
+  controllers: [DirectivesController],
   providers: [
     DirectivesService,
     // Implemented

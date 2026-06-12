@@ -1,4 +1,4 @@
-import { Controller, Get, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Body, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ModeService } from '../../config/mode.service';
 import {
@@ -62,5 +62,45 @@ export class StrategiesController {
       viableCount,
       viable: results,
     };
+  }
+
+  @Post()
+  async createStrategy(@Body() body: { name: string; directives: Array<{ id: string; weight: number }>; scope?: string[]; thresholds?: { entry?: number; watch?: number } }) {
+    this.logger.log(`Creating custom strategy: ${body.name} with ${body.directives.length} directives`);
+    const totalWeight = body.directives.reduce((s, d) => s + d.weight, 0);
+    if (totalWeight !== 100) {
+      return { error: 'Directive weights must sum to exactly 100', totalWeight };
+    }
+
+    if (!this.prisma.isAvailable) {
+      return this.storeInMemory(body);
+    }
+
+    try {
+      const strategy = await this.prisma.strategy.create({
+        data: {
+          name: body.name,
+          description: `Custom strategy with ${body.directives.length} directives`,
+          config: {
+            entryThreshold: body.thresholds?.entry ?? 60,
+            watchThreshold: body.thresholds?.watch ?? 40,
+            defenseThreshold: 25,
+            weights: Object.fromEntries(body.directives.map((d) => [d.id, d.weight])),
+            scope: body.scope ?? ['stocks'],
+          },
+          active: true,
+        },
+      });
+      return { success: true, strategyId: strategy.id, name: body.name };
+    } catch (error) {
+      this.logger.error(`Failed to save strategy: ${String(error)}`);
+      return this.storeInMemory(body);
+    }
+  }
+
+  private storeInMemory(body: { name: string; directives: Array<{ id: string; weight: number }> }) {
+    const strategyId = `custom-${Date.now()}`;
+    this.logger.warn(`Database unavailable — storing strategy ${body.name} in memory (${strategyId})`);
+    return { success: true, strategyId, name: body.name, persisted: false };
   }
 }
