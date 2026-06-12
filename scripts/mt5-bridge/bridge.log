@@ -1,0 +1,140 @@
+2026-06-12 15:46:43,344 [INFO] MetaTrader5 package loaded successfully
+2026-06-12 15:46:43,348 [INFO] Starting MT5 Bridge on port 5000...
+2026-06-12 15:46:43,348 [INFO] MT5 package available: True
+2026-06-12 15:46:43,348 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 15:47:49,945 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 15:48:01,908 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 15:49:08,472 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 15:49:08,476 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 15:50:14,694 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 15:50:14,695 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 15:51:21,047 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 15:51:21,047 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 15:52:27,606 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 15:52:27,608 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 15:55:48,482 [INFO] MetaTrader5 package loaded successfully
+2026-06-12 15:55:48,494 [INFO] Starting MT5 Bridge on port 5000...
+2026-06-12 15:55:48,494 [INFO] MT5 package available: True
+2026-06-12 15:55:48,494 [INFO] Flask server starting — MT5 will connect on first API request
+2026-06-12 15:55:49,064 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 15:56:55,827 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 15:56:55,832 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 15:58:02,267 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 15:58:02,269 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 15:59:08,643 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 15:59:08,643 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:00:15,115 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:00:15,115 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:01:21,415 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:01:21,417 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:02:27,768 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:02:27,770 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:03:34,305 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:03:34,306 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:04:40,863 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:04:40,865 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:05:47,467 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:05:47,469 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:06:54,061 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:06:54,063 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:08:00,661 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:08:00,662 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:09:07,257 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:09:07,258 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:10:13,857 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:10:13,858 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:11:20,342 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:11:20,344 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:12:26,790 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:12:26,791 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:13:33,284 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:13:33,286 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:14:39,739 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:14:39,741 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:15:46,243 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:15:46,244 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:16:52,739 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:16:52,741 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:17:59,238 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:17:59,239 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:19:05,756 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:19:05,758 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:20:12,198 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:20:12,200 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:21:18,650 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:21:18,652 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:22:25,237 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:22:25,239 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:23:31,829 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:23:31,831 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:24:38,314 [ERROR] MT5 initialization failed: (-10005, 'IPC timeout')
+2026-06-12 16:24:38,315 [INFO] Connecting to MT5: server=ICMarketsSC-MT5-3, account=8026714 (account #6)
+2026-06-12 16:25:07,676 [INFO] MT5 connected: balance=1000.0, server=MetaQuotes-Demo
+2026-06-12 16:26:54,361 [INFO] Quote for EURUSD: bid=1.15814, ask=1.15816
+2026-06-12 16:26:54,383 [INFO] Quote for EURUSD: bid=1.15814, ask=1.15816
+2026-06-12 16:29:15,756 [INFO] MetaTrader5 package loaded successfully
+2026-06-12 16:29:15,760 [INFO] Starting MT5 Bridge on port 5000...
+2026-06-12 16:29:15,760 [INFO] MT5 package available: True
+2026-06-12 16:29:15,760 [INFO] Flask server starting — MT5 will connect on first API request
+2026-06-12 16:29:43,007 [INFO] MetaTrader5 package loaded successfully
+2026-06-12 16:29:43,011 [INFO] Starting MT5 Bridge on port 5000...
+2026-06-12 16:29:43,011 [INFO] MT5 package available: True
+2026-06-12 16:29:43,012 [INFO] Flask server starting — MT5 will connect on first API request
+2026-06-12 16:30:19,452 [INFO] MetaTrader5 package loaded successfully
+2026-06-12 16:30:19,456 [INFO] Starting MT5 Bridge on port 5000...
+2026-06-12 16:30:19,456 [INFO] MT5 package available: True
+2026-06-12 16:30:19,457 [INFO] Flask server starting — MT5 will connect on first API request
+2026-06-12 16:30:53,418 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-12 16:30:53,435 [INFO] MT5 connected: balance=1000.0, server=MetaQuotes-Demo
+2026-06-12 16:31:23,931 [INFO] Quote for EURUSD: bid=1.15822, ask=1.15823
+2026-06-12 16:31:23,944 [INFO] Quote for EURUSD: bid=1.15822, ask=1.15823
+2026-06-12 16:31:28,995 [INFO] Quote for EURUSD: bid=1.15826, ask=1.15826
+2026-06-12 16:31:29,007 [INFO] Quote for EURUSD: bid=1.15826, ask=1.15826
+2026-06-12 16:31:34,020 [INFO] Quote for EURUSD: bid=1.15821, ask=1.15821
+2026-06-12 16:31:34,034 [INFO] Quote for EURUSD: bid=1.15821, ask=1.15821
+2026-06-12 16:31:39,040 [INFO] Quote for EURUSD: bid=1.15824, ask=1.15824
+2026-06-12 16:31:39,053 [INFO] Quote for EURUSD: bid=1.15824, ask=1.15824
+2026-06-12 16:31:44,069 [INFO] Quote for EURUSD: bid=1.15823, ask=1.15824
+2026-06-12 16:31:44,081 [INFO] Quote for EURUSD: bid=1.15823, ask=1.15824
+2026-06-12 16:31:49,082 [INFO] Quote for EURUSD: bid=1.15825, ask=1.15826
+2026-06-12 16:31:49,095 [INFO] Quote for EURUSD: bid=1.15825, ask=1.15826
+2026-06-12 16:31:54,096 [INFO] Quote for EURUSD: bid=1.15824, ask=1.15824
+2026-06-12 16:31:54,107 [INFO] Quote for EURUSD: bid=1.15824, ask=1.15824
+2026-06-12 16:31:59,113 [INFO] Quote for EURUSD: bid=1.15824, ask=1.15825
+2026-06-12 16:31:59,125 [INFO] Quote for EURUSD: bid=1.15824, ask=1.15825
+2026-06-12 16:32:04,130 [INFO] Quote for EURUSD: bid=1.15823, ask=1.15823
+2026-06-12 16:32:04,141 [INFO] Quote for EURUSD: bid=1.15823, ask=1.15823
+2026-06-12 16:32:09,144 [INFO] Quote for EURUSD: bid=1.1582, ask=1.15821
+2026-06-12 16:32:09,156 [INFO] Quote for EURUSD: bid=1.1582, ask=1.15821
+2026-06-12 16:32:14,167 [INFO] Quote for EURUSD: bid=1.15822, ask=1.15822
+2026-06-12 16:32:14,178 [INFO] Quote for EURUSD: bid=1.15822, ask=1.15822
+2026-06-12 16:32:19,181 [INFO] Quote for EURUSD: bid=1.15823, ask=1.15823
+2026-06-12 16:32:19,194 [INFO] Quote for EURUSD: bid=1.15823, ask=1.15823
+2026-06-12 16:32:24,199 [INFO] Quote for EURUSD: bid=1.15821, ask=1.15821
+2026-06-12 16:32:24,211 [INFO] Quote for EURUSD: bid=1.15821, ask=1.15821
+2026-06-12 16:32:29,214 [INFO] Quote for EURUSD: bid=1.15817, ask=1.15817
+2026-06-12 16:32:29,226 [INFO] Quote for EURUSD: bid=1.15817, ask=1.15817
+2026-06-12 16:32:34,229 [INFO] Quote for EURUSD: bid=1.15816, ask=1.15817
+2026-06-12 16:32:34,241 [INFO] Quote for EURUSD: bid=1.15816, ask=1.15817
+2026-06-12 16:32:39,246 [INFO] Quote for EURUSD: bid=1.15816, ask=1.15816
+2026-06-12 16:32:39,258 [INFO] Quote for EURUSD: bid=1.15816, ask=1.15816
+2026-06-12 16:32:44,262 [INFO] Quote for EURUSD: bid=1.15816, ask=1.15816
+2026-06-12 16:32:44,273 [INFO] Quote for EURUSD: bid=1.15816, ask=1.15817
+2026-06-12 16:32:49,276 [INFO] Quote for EURUSD: bid=1.15815, ask=1.15816
+2026-06-12 16:32:49,288 [INFO] Quote for EURUSD: bid=1.15815, ask=1.15816
+2026-06-12 16:32:54,290 [INFO] Quote for EURUSD: bid=1.1581299999999999, ask=1.1581299999999999
+2026-06-12 16:32:54,303 [INFO] Quote for EURUSD: bid=1.1581299999999999, ask=1.1581299999999999
+2026-06-12 16:32:59,304 [INFO] Quote for EURUSD: bid=1.1581299999999999, ask=1.15814
+2026-06-12 16:32:59,316 [INFO] Quote for EURUSD: bid=1.1581299999999999, ask=1.15814
+2026-06-12 16:33:04,321 [INFO] Quote for EURUSD: bid=1.15815, ask=1.15815
+2026-06-12 16:33:04,334 [INFO] Quote for EURUSD: bid=1.15815, ask=1.15816
+2026-06-12 16:33:09,341 [INFO] Quote for EURUSD: bid=1.15815, ask=1.15816
+2026-06-12 16:33:09,351 [INFO] Quote for EURUSD: bid=1.15815, ask=1.15816
+2026-06-12 16:33:14,360 [INFO] Quote for EURUSD: bid=1.15819, ask=1.15819
+2026-06-12 16:33:14,371 [INFO] Quote for EURUSD: bid=1.15819, ask=1.15819
+2026-06-12 16:33:19,374 [INFO] Quote for EURUSD: bid=1.15814, ask=1.15814
+2026-06-12 16:33:19,386 [INFO] Quote for EURUSD: bid=1.15814, ask=1.15814
+2026-06-12 16:33:24,387 [INFO] Quote for EURUSD: bid=1.15814, ask=1.15815
+2026-06-12 16:33:24,400 [INFO] Quote for EURUSD: bid=1.15814, ask=1.15815
+2026-06-12 16:33:29,401 [INFO] Quote for EURUSD: bid=1.15819, ask=1.15819
+2026-06-12 16:33:29,412 [INFO] Quote for EURUSD: bid=1.15819, ask=1.15819

@@ -32,7 +32,18 @@ function timeAgo(iso) {
 export default function Mt5StatusPage() {
   const [selectedSymbol, setSelectedSymbol] = useState('EURUSD')
   const [logEntries, setLogEntries] = useState([])
+  const [accounts, setAccounts] = useState([])
+  const [activeAccount, setActiveAccount] = useState(null)
+  const [switching, setSwitching] = useState(false)
   const logEndRef = useRef(null)
+
+  // Fetch MT5 accounts
+  const accountsQuery = useQuery({
+    queryKey: ['mt5-accounts'],
+    queryFn: () => apiGet('/api/providers/mt5/accounts'),
+    refetchInterval: 30_000,
+    retry: 1,
+  })
 
   // Fetch MT5 diagnostics
   const diagQuery = useQuery({
@@ -96,6 +107,94 @@ export default function Mt5StatusPage() {
       setTimeout(() => diagQuery.refetch(), 2000)
     } catch {
       // ignore
+    }
+  }, [])
+
+  const handleRefreshData = useCallback(async () => {
+    try {
+      const now = new Date().toLocaleTimeString()
+      setLogEntries((prev) => [
+        ...prev.slice(-49),
+        { time: now, msg: 'Refreshing MT5 data from broker...', type: 'info' },
+      ])
+      const res = await apiPost('/api/providers/mt5/refresh', {})
+      const data = res ?? {}
+      const now2 = new Date().toLocaleTimeString()
+      if (data.refreshed) {
+        setLogEntries((prev) => [
+          ...prev.slice(-49),
+          { time: now2, msg: `Refreshed ${data.refreshed}/${data.total} symbols`, type: 'ok' },
+        ])
+      } else {
+        setLogEntries((prev) => [
+          ...prev.slice(-49),
+          { time: now2, msg: `Refresh failed: ${data.error || 'unknown'}`, type: 'error' },
+        ])
+      }
+      setTimeout(() => diagQuery.refetch(), 1000)
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  const handleReconnect = useCallback(async () => {
+    try {
+      const now = new Date().toLocaleTimeString()
+      setLogEntries((prev) => [
+        ...prev.slice(-49),
+        { time: now, msg: 'Reconnecting to MT5 terminal...', type: 'warn' },
+      ])
+      const res = await apiPost('/api/providers/mt5/reconnect', {})
+      const data = res ?? {}
+      const now2 = new Date().toLocaleTimeString()
+      if (data.success) {
+        setLogEntries((prev) => [
+          ...prev.slice(-49),
+          { time: now2, msg: `Reconnected — balance: $${Number(data.balance).toLocaleString()}`, type: 'ok' },
+        ])
+      } else {
+        setLogEntries((prev) => [
+          ...prev.slice(-49),
+          { time: now2, msg: `Reconnect failed: ${data.error || 'unknown'}`, type: 'error' },
+        ])
+      }
+      setTimeout(() => diagQuery.refetch(), 2000)
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  const handleSwitchAccount = useCallback(async (accountNum) => {
+    setSwitching(true)
+    try {
+      const now = new Date().toLocaleTimeString()
+      setLogEntries((prev) => [
+        ...prev.slice(-49),
+        { time: now, msg: `Switching to account #${accountNum}...`, type: 'warn' },
+      ])
+      const res = await apiPost(`/api/providers/mt5/switch/${accountNum}`, {})
+      const data = res ?? {}
+      const now2 = new Date().toLocaleTimeString()
+      if (data.success) {
+        setActiveAccount(data.activeAccount)
+        setLogEntries((prev) => [
+          ...prev.slice(-49),
+          { time: now2, msg: `Switched to #${accountNum}: ${data.account} @ ${data.server} — $${Number(data.balance).toLocaleString()}`, type: 'ok' },
+        ])
+        setTimeout(() => { diagQuery.refetch(); accountsQuery.refetch() }, 1000)
+      } else {
+        setLogEntries((prev) => [
+          ...prev.slice(-49),
+          { time: now2, msg: `Switch failed: ${data.error || 'unknown'}`, type: 'error' },
+        ])
+      }
+    } catch {
+      setLogEntries((prev) => [
+        ...prev.slice(-49),
+        { time: new Date().toLocaleTimeString(), msg: 'Switch failed — bridge unreachable', type: 'error' },
+      ])
+    } finally {
+      setSwitching(false)
     }
   }, [])
 
@@ -174,11 +273,46 @@ export default function Mt5StatusPage() {
           <button type="button" className="btn btn-primary" onClick={handleTestConnection}>
             Test Connection
           </button>
+          <button type="button" className="btn btn-primary" onClick={handleRefreshData}>
+            Refresh Data
+          </button>
+          <button type="button" className="btn" onClick={handleReconnect}>
+            Reconnect MT5
+          </button>
           <button type="button" className="btn" onClick={handleRestartBridge}>
-            Restart Bridge
+            Reset Circuit Breaker
           </button>
         </div>
       </section>
+
+      {/* Section: Account Switcher */}
+      {accountsQuery.data?.accounts?.length > 0 && (
+        <section className="mt5-section">
+          <h2>Accounts</h2>
+          <div className="mt5-accounts-grid">
+            {accountsQuery.data.accounts.map((acc) => (
+              <div key={acc.number} className={`mt5-account-card ${acc.active ? 'mt5-account-active' : ''}`}>
+                <div className="mt5-account-header">
+                  <span className="mt5-account-num">#{acc.number}</span>
+                  {acc.active && <span className="mt5-account-badge">Active</span>}
+                </div>
+                <div className="mt5-account-login">{acc.login}</div>
+                <div className="mt5-account-server">{acc.server}</div>
+                {!acc.active && (
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    onClick={() => handleSwitchAccount(acc.number)}
+                    disabled={switching}
+                  >
+                    {switching ? 'Switching...' : 'Switch'}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Section 2: Live Data Preview */}
       <section className="mt5-section">

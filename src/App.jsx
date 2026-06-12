@@ -17,6 +17,7 @@ import MultiStrategyComparisonPage from './pages/MultiStrategyComparisonPage';
 import ScenarioAnalysisPage from './pages/ScenarioAnalysisPage';
 import FaqPage from './pages/FaqPage';
 import PortfolioPage from './pages/PortfolioPage';
+import Mt5TradingPage from './pages/Mt5TradingPage';
 import ReportsPage from './pages/ReportsPage';
 import ActiveSymbolsPage from './pages/ActiveSymbolsPage';
 import ApiEndpointsPage from './pages/ApiEndpointsPage';
@@ -394,6 +395,10 @@ function AppShell() {
       return <ReportsPage />;
     }
 
+    if (secondaryView === 'mt5-trading') {
+      return <Mt5TradingPage />;
+    }
+
     if (secondaryView === 'architecture-framework') {
       return <ArchitectureFrameworkPage />;
     }
@@ -468,6 +473,10 @@ function AppShell() {
 
     if (secondaryView === 'mt5-status') {
       return <Mt5StatusPage />;
+    }
+
+    if (secondaryView === 'mt5-trading') {
+      return <Mt5TradingPage />;
     }
 
     if (secondaryView === 'trading-platforms') {

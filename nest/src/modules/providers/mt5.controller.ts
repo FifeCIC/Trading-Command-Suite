@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Logger } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdapterFactory } from './adapter-factory';
 import { Mt5Adapter } from './adapters/mt5.adapter';
@@ -103,5 +103,132 @@ export class Mt5Controller {
       message: 'Circuit breaker reset. Bridge will reconnect on next request.',
       timestamp: new Date().toISOString(),
     };
+  }
+
+  @Post('refresh')
+  @ApiOperation({ summary: 'Force MT5 bridge to refresh data and reconnect to broker' })
+  @ApiOkResponse({ description: 'Refresh results with symbol status' })
+  async refreshData() {
+    try {
+      const res = await fetch('http://localhost:5000/refresh', {
+        method: 'POST',
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) {
+        return { success: false, error: `Bridge returned HTTP ${res.status}`, timestamp: new Date().toISOString() };
+      }
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Bridge unreachable', instructions: 'Start the bridge: cd scripts/mt5-bridge && python mt5_bridge.py', timestamp: new Date().toISOString() };
+    }
+  }
+
+  @Post('reconnect')
+  @ApiOperation({ summary: 'Force MT5 bridge to fully reconnect to terminal' })
+  @ApiOkResponse({ description: 'Reconnection result' })
+  async reconnect() {
+    try {
+      const res = await fetch('http://localhost:5000/reconnect', {
+        method: 'POST',
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        return { success: false, error: (body as any).error || `Bridge returned HTTP ${res.status}`, timestamp: new Date().toISOString() };
+      }
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Bridge unreachable', instructions: 'Start the bridge: cd scripts/mt5-bridge && python mt5_bridge.py', timestamp: new Date().toISOString() };
+    }
+  }
+
+  @Get('accounts')
+  @ApiOperation({ summary: 'List configured MT5 accounts' })
+  async getAccounts() {
+    try {
+      const res = await fetch('http://localhost:5000/accounts', { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) return { accounts: [], error: `Bridge returned HTTP ${res.status}` };
+      return await res.json();
+    } catch (err: any) {
+      return { accounts: [], error: err.message || 'Bridge unreachable' };
+    }
+  }
+
+  @Post('switch/:accountNum')
+  @ApiOperation({ summary: 'Switch MT5 to a different account' })
+  async switchAccount(@Param('accountNum') accountNum: string) {
+    try {
+      const res = await fetch(`http://localhost:5000/switch/${accountNum}`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        return { success: false, error: (body as any).error || `Bridge returned HTTP ${res.status}` };
+      }
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Bridge unreachable' };
+    }
+  }
+
+  // ── Trading Endpoints ─────────────────────────────────────
+
+  @Get('positions')
+  async getPositions() {
+    try {
+      const res = await fetch('http://localhost:5000/positions', { signal: AbortSignal.timeout(10000) });
+      if (!res.ok) return { positions: [], error: `Bridge HTTP ${res.status}` };
+      return await res.json();
+    } catch (err: any) {
+      return { positions: [], error: err.message || 'Bridge unreachable' };
+    }
+  }
+
+  @Post('order')
+  async placeOrder(@Body() body: { symbol: string; type: string; volume: number; price?: number; sl?: number; tp?: number }) {
+    try {
+      const res = await fetch('http://localhost:5000/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        return { success: false, error: (errBody as any).error || `Bridge HTTP ${res.status}` };
+      }
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Bridge unreachable' };
+    }
+  }
+
+  @Post('close/:ticket')
+  async closePosition(@Param('ticket') ticket: string) {
+    try {
+      const res = await fetch(`http://localhost:5000/close/${ticket}`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        return { success: false, error: (errBody as any).error || `Bridge HTTP ${res.status}` };
+      }
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Bridge unreachable' };
+    }
+  }
+
+  @Get('history')
+  async getHistory() {
+    try {
+      const res = await fetch('http://localhost:5000/history', { signal: AbortSignal.timeout(10000) });
+      if (!res.ok) return { orders: [], error: `Bridge HTTP ${res.status}` };
+      return await res.json();
+    } catch (err: any) {
+      return { orders: [], error: err.message || 'Bridge unreachable' };
+    }
   }
 }
