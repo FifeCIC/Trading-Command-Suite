@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Param, Body } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { BacktestService } from './backtest.service';
 import type { BacktestRunRequest } from './backtest.service';
@@ -32,5 +32,16 @@ export class BacktestController {
   @Get('summary/:symbol')
   getSummary(@Param('symbol') symbol: string) {
     return this.backtestService.getSummary(symbol);
+  }
+
+  @Get('chart-data')
+  @ApiOperation({ summary: 'Get chart-ready data with bars, signals, and indicators' })
+  async getChartData(
+    @Query('symbol') symbol: string,
+    @Query('timeframe') timeframe?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.backtestService.getChartData(symbol, timeframe || '1d', from, to);
   }
 }

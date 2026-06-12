@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
 import { ModeService } from '../../config/mode.service';
+import { NotificationService } from '../notifications/notifications.service';
 
 export interface SchedulerRun {
   id: string;
@@ -20,6 +21,7 @@ export class TradingSchedulerService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly modeService: ModeService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   /** Default schedule: 9am Mon-Fri */
@@ -60,6 +62,13 @@ export class TradingSchedulerService {
 
       // Step 5: Optionally auto-execute
       this.maybeAutoExecute(run);
+
+      // Step 6: Send daily summary notification
+      if (run.suggestions.length > 0) {
+        this.notificationService.notifyDailySummary(run.suggestions).catch(err => {
+          this.logger.warn(`Daily summary notification failed: ${err.message}`);
+        });
+      }
 
     } catch (err) {
       this.logger.error(`Routine failed: ${(err as Error).message}`);
@@ -140,5 +149,34 @@ export class TradingSchedulerService {
   async triggerManual(): Promise<SchedulerRun> {
     await this.handleDailyRoutine();
     return this.runs[this.runs.length - 1];
+  }
+
+  // ── Controller-compatible wrappers ──
+
+  start(): { ok: boolean } {
+    this.logger.log('Scheduler start requested (always active via @Cron)');
+    return { ok: true };
+  }
+
+  stop(): { ok: boolean } {
+    this.logger.log('Scheduler stop requested (ignored — cron is compile-time)');
+    return { ok: true };
+  }
+
+  getStatus(): { running: boolean; runs: number; lastRun: string | null } {
+    const last = this.runs[this.runs.length - 1];
+    return {
+      running: this.isRunning,
+      runs: this.runs.length,
+      lastRun: last?.timestamp ?? null,
+    };
+  }
+
+  async runNow(): Promise<SchedulerRun> {
+    return this.triggerManual();
+  }
+
+  getHistory(limit = 20): SchedulerRun[] {
+    return this.getRuns(limit);
   }
 }

@@ -38,8 +38,7 @@ export class PortfolioService {
   constructor(private readonly t212: Trading212Adapter) {}
 
   async getPortfolio(): Promise<PortfolioResponse> {
-    const hasCredentials = !!(process.env.TRADING212_API_KEY);
-    const isMock = !hasCredentials;
+    const isMock = this.t212.mode === 'none';
 
     // Fetch positions and account in parallel
     const [rawPositions, account] = await Promise.all([
@@ -87,7 +86,7 @@ export class PortfolioService {
       pnlPct,
       positionCount: positions.length,
       provider: 'Trading212',
-      mode: isMock ? 'mock' : (process.env.TRADING212_BASE_URL?.includes('demo') ? 'demo' : 'live'),
+      mode: isMock ? 'mock' : this.t212.mode,
     };
 
     this.logger.log(

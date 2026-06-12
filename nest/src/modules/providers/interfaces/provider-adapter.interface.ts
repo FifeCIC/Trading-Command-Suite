@@ -111,4 +111,33 @@ export interface IProviderAdapter {
     limit: number;
     resetAt: Date | null;
   } | null>;
+
+  /**
+   * Fetch news headlines for a symbol (optional — Finnhub-specific).
+   */
+  getNews?(symbol: string): Promise<NewsItem[] | null>;
+
+  /**
+   * Fetch aggregate sentiment for a symbol (optional — Finnhub-specific).
+   */
+  getSentiment?(symbol: string): Promise<SentimentData | null>;
+}
+
+/** A single news headline from a provider. */
+export interface NewsItem {
+  datetime: Date;
+  headline: string;
+  summary: string;
+  source: string;
+  url?: string;
+  category?: string;
+  sentiment?: number;
+}
+
+/** Aggregate sentiment data from Finnhub news-sentiment endpoint. */
+export interface SentimentData {
+  buzz: { articlesInLastWeek: number; buzzWordCount?: number };
+  companyNewsScore: number;
+  sectorAverageBullishPercent: number;
+  symbol: string;
 }

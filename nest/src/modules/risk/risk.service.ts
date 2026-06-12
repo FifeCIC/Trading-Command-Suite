@@ -6,6 +6,7 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { NotificationService } from '../notifications/notifications.service';
 
 // ---- Interfaces ----
 
@@ -38,6 +39,8 @@ export interface PositionSizeResult {
 @Injectable()
 export class RiskService {
   private readonly logger = new Logger(RiskService.name);
+
+  constructor(private readonly notificationService: NotificationService) {}
 
   // ---- Stop Loss Calculators ----
 
@@ -163,10 +166,17 @@ export class RiskService {
 
   checkDrawdown(peakValue: number, currentValue: number, risk: PortfolioRisk): { inDrawdown: boolean; drawdownPercent: number } {
     const drawdown = peakValue > 0 ? (peakValue - currentValue) / peakValue : 0;
-    return {
-      inDrawdown: drawdown >= risk.maxDrawdown,
-      drawdownPercent: drawdown,
-    };
+    const inDrawdown = drawdown >= risk.maxDrawdown;
+
+    // Notify if drawdown exceeds warning (12%) or critical (maxDrawdown) levels
+    if (drawdown >= 0.12 || inDrawdown) {
+      const level = inDrawdown ? 'critical' : 'warning';
+      this.notificationService.notifyDrawdown('Portfolio', drawdown * 100, level).catch(err => {
+        this.logger.warn(`Drawdown notification failed: ${err.message}`);
+      });
+    }
+
+    return { inDrawdown, drawdownPercent: drawdown };
   }
 
   canOpenPosition(currentPositions: number, portfolioValue: number, newCapital: number, risk: PortfolioRisk): { allowed: boolean; reason: string } {

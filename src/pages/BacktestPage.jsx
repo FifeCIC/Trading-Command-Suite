@@ -1,15 +1,20 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
+import BacktestChartPane from '../components/backtest/BacktestChartPane';
 
 export default function BacktestPage() {
   const [symbol, setSymbol] = useState('NVDA');
   const [days, setDays] = useState(365);
   const [runId, setRunId] = useState('');
+  const [showChart, setShowChart] = useState(false);
 
   const runMutation = useMutation({
     mutationFn: () => apiPost('/api/backtest/run', { symbol, days, timeframe: '1d' }),
-    onSuccess: (data) => setRunId(data.id),
+    onSuccess: (data) => {
+      setRunId(data.id);
+      setShowChart(true);
+    },
   });
 
   const resultQuery = useQuery({
@@ -62,6 +67,14 @@ export default function BacktestPage() {
           </div>
 
           {result?.period && <p className="bt-period">Period: {result.period}</p>}
+
+          {/* Chart visualization */}
+          {showChart && (
+            <div className="bt-chart-section">
+              <h3>Price Chart &amp; Signals</h3>
+              <BacktestChartPane initialSymbol={symbol} />
+            </div>
+          )}
 
           {result?.entrySignals?.length > 0 && (
             <table className="bt-table">

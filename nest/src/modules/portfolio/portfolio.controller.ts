@@ -1,7 +1,7 @@
 import { Controller, Get, Logger } from '@nestjs/common';
 import { PortfolioService, PortfolioResponse } from './portfolio.service';
 
-@Controller('api/portfolio')
+@Controller('portfolio')
 export class PortfolioController {
   private readonly logger = new Logger(PortfolioController.name);
 

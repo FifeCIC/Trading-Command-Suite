@@ -21,6 +21,7 @@ export const NAV_TREE = {
     views: [
       { id: 'trading-strategies', label: 'Trading Strategies' },
       { id: 'sees-live-stack', label: 'SEES Live Stack' },
+      { id: 'mt5-status', label: 'MT5 Bridge Status' },
       { id: 'signals-workbench', label: 'SEES Diagnostics' },
 
       { id: 'strategy-builder', label: 'Strategy Builder' },
@@ -181,6 +182,7 @@ export const NAV_TREE = {
       { id: 'qa-lab', label: 'QA Lab' },
       { id: 'performance-lab', label: 'Performance Lab' },
       { id: 'long-run-tests', label: 'Long-Run Tests' },
+      { id: 'backtest', label: 'Backtest Engine' },
     ],
   },
   settings: {

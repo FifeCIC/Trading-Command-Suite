@@ -9,6 +9,11 @@ import { AlpacaAdapter } from './adapters/alpaca.adapter';
 import { AlphaVantageAdapter } from './adapters/alpha-vantage.adapter';
 import { Trading212Adapter } from './adapters/trading212.adapter';
 import { Mt5Adapter } from './adapters/mt5.adapter';
+import { YahooFinanceAdapter } from './adapters/yahoo-finance.adapter';
+import { PolygonAdapter } from './adapters/polygon.adapter';
+import { FinnhubAdapter } from './adapters/finnhub.adapter';
+import { TwelveDataAdapter } from './adapters/twelve-data.adapter';
+import { FmpAdapter } from './adapters/fmp.adapter';
 
 @Module({
   imports: [DatabaseModule],
@@ -21,6 +26,11 @@ import { Mt5Adapter } from './adapters/mt5.adapter';
     AlphaVantageAdapter,
     Trading212Adapter,
     Mt5Adapter,
+    YahooFinanceAdapter,
+    PolygonAdapter,
+    FinnhubAdapter,
+    TwelveDataAdapter,
+    FmpAdapter,
   ],
   exports: [ProvidersService, AdapterFactory],
 })
@@ -58,6 +68,46 @@ export class ProvidersModule implements OnModuleInit {
       baseUrl: process.env.MT5_BRIDGE_URL || 'http://localhost:5000',
       capabilities: ['quotes', 'candles'],
       failoverPriority: 40,
+    });
+
+    this.adapterFactory.register('yahoo', YahooFinanceAdapter, {
+      name: 'Yahoo Finance',
+      apiKeyEnv: '', // No API key required
+      baseUrl: 'https://query1.finance.yahoo.com',
+      capabilities: ['quotes', 'candles', 'profiles'],
+      failoverPriority: 60,
+    });
+
+    this.adapterFactory.register('polygon', PolygonAdapter, {
+      name: 'Polygon.io',
+      apiKeyEnv: 'POLYGON_API_KEY',
+      baseUrl: 'https://api.polygon.io',
+      capabilities: ['quotes', 'candles', 'profiles'],
+      failoverPriority: 45,
+    });
+
+    this.adapterFactory.register('finnhub', FinnhubAdapter, {
+      name: 'Finnhub',
+      apiKeyEnv: 'FINNHUB_API_KEY',
+      baseUrl: 'https://finnhub.io/api/v1',
+      capabilities: ['quotes', 'candles', 'profiles', 'news', 'fundamentals'],
+      failoverPriority: 50,
+    });
+
+    this.adapterFactory.register('twelvedata', TwelveDataAdapter, {
+      name: 'Twelve Data',
+      apiKeyEnv: 'TWELVE_DATA_API_KEY',
+      baseUrl: 'https://api.twelvedata.com',
+      capabilities: ['quotes', 'candles'],
+      failoverPriority: 55,
+    });
+
+    this.adapterFactory.register('fmp', FmpAdapter, {
+      name: 'FMP',
+      apiKeyEnv: 'FMP_API_KEY',
+      baseUrl: 'https://financialmodelingprep.com/api/v3',
+      capabilities: ['quotes', 'candles', 'profiles', 'fundamentals'],
+      failoverPriority: 50,
     });
   }
 }

@@ -1,0 +1,169 @@
+/* HealthStatusBar — compact service status indicator row */
+
+.health-status-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+
+.health-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+  transition: background 0.2s, border-color 0.2s;
+  line-height: 1.3;
+}
+
+.health-dot:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.health-dot--active {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.health-dot--online { }
+.health-dot--degraded { }
+.health-dot--offline { }
+.health-dot--unknown { opacity: 0.5; }
+
+.health-dot-icon {
+  font-size: 8px;
+  line-height: 1;
+}
+
+.health-dot-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+/* Detail Panel */
+.health-detail-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 280px;
+  background: #1a1d2e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.health-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.health-overall {
+  font-size: 11px;
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+.health-overall--online { color: #4ade80; }
+.health-overall--degraded { color: #facc15; }
+.health-overall--offline { color: #f87171; }
+.health-overall--unknown { color: #9ca3af; }
+
+.health-detail-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.health-detail-close:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.health-detail-body {
+  padding: 8px 14px;
+}
+
+.health-service-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.health-service-row:last-child {
+  border-bottom: none;
+}
+
+.health-service-icon {
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.health-service-name {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  min-width: 50px;
+}
+
+.health-service-status {
+  color: rgba(255, 255, 255, 0.55);
+  margin-left: auto;
+}
+
+.health-service-latency {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 10px;
+}
+
+.health-service-reason {
+  display: block;
+  width: 100%;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 10px;
+  font-style: italic;
+}
+
+.health-detail-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.health-retry-btn {
+  margin-left: auto;
+  padding: 3px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.health-retry-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}

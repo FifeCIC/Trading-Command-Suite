@@ -162,6 +162,165 @@ export class BacktestService {
     return { symbol, runs };
   }
 
+  async getChartData(
+    symbol: string,
+    timeframe = '1d',
+    from?: string,
+    to?: string,
+  ): Promise<{
+    bars: Array<{ time: string; open: number; high: number; low: number; close: number; volume: number }>;
+    signals: Array<{ time: string; type: string; score: number; label: string; price: number; pnl?: number }>;
+    indicators: {
+      rsi: Array<{ time: string; value: number }>;
+      macd: Array<{ time: string; macd: number; signal: number; histogram: number }>;
+      ema9: Array<{ time: string; value: number }>;
+      ema21: Array<{ time: string; value: number }>;
+    };
+  }> {
+    const where: Record<string, unknown> = {
+      symbol: { ticker: symbol.toUpperCase() },
+      timeframe,
+    };
+
+    if (from) {
+      where.timestamp = { ...(where.timestamp as Record<string, unknown> || {}), gte: new Date(from) };
+    }
+    if (to) {
+      where.timestamp = { ...(where.timestamp as Record<string, unknown> || {}), lte: new Date(to) };
+    }
+
+    const rows = await this.prisma.marketBar.findMany({
+      where,
+      orderBy: { timestamp: 'asc' },
+      take: 2000,
+    });
+
+    const closes = rows.map(r => Number(r.close));
+    const highs = rows.map(r => Number(r.high));
+    const lows = rows.map(r => Number(r.low));
+    const volumes = rows.map(r => Number(r.volume));
+
+    // Compute indicators
+    const rsiValues = this.computeRSI(closes, 14);
+    const macdData = this.computeMACD(closes);
+    const ema9 = this.computeEMA(closes, 9);
+    const ema21 = this.computeEMA(closes, 21);
+
+    // Format bars for lightweight-charts
+    const bars = rows.map((r, i) => ({
+      time: r.timestamp.toISOString().split('T')[0],
+      open: Number(r.open),
+      high: Number(r.high),
+      low: Number(r.low),
+      close: Number(r.close),
+      volume: Number(r.volume),
+    }));
+
+    // Generate signals from directive scoring on the full window
+    const signals: Array<{ time: string; type: string; score: number; label: string; price: number; pnl?: number }> = [];
+    const windowSize = 100;
+
+    for (let day = windowSize; day < rows.length; day++) {
+      const window = rows.slice(day - windowSize, day).map(r => ({
+        timestamp: r.timestamp,
+        open: Number(r.open),
+        high: Number(r.high),
+        low: Number(r.low),
+        close: Number(r.close),
+        volume: Number(r.volume),
+      }));
+
+      const input: DirectiveInput = { symbol, bars: window };
+      const results = this.directivesService.runAll(input);
+
+      let totalScore = 0;
+      for (const [id, result] of results) {
+        const weight = STRATEGY_WEIGHTS[id] ?? 0;
+        totalScore += (result.score * weight) / 100;
+      }
+
+      const score = Math.min(100, totalScore);
+      const currentClose = window[window.length - 1].close;
+
+      if (score >= ENTRY_THRESHOLD) {
+        const future10 = rows[day + 10]?.close;
+        const pnl = future10 ? Number(((Number(future10) - currentClose) / currentClose * 100).toFixed(2)) : undefined;
+
+        signals.push({
+          time: window[window.length - 1].timestamp.toISOString().split('T')[0],
+          type: 'entry',
+          score: Number(score.toFixed(1)),
+          label: `Entry: score ${score.toFixed(0)}`,
+          price: currentClose,
+          pnl,
+        });
+      }
+    }
+
+    return {
+      bars,
+      signals,
+      indicators: {
+        rsi: rsiValues.map((v, i) => ({ time: rows[i]?.timestamp.toISOString().split('T')[0] ?? '', value: v })),
+        macd: macdData.map((m, i) => ({ time: rows[i]?.timestamp.toISOString().split('T')[0] ?? '', ...m })),
+        ema9: ema9.map((v, i) => ({ time: rows[i]?.timestamp.toISOString().split('T')[0] ?? '', value: v })),
+        ema21: ema21.map((v, i) => ({ time: rows[i]?.timestamp.toISOString().split('T')[0] ?? '', value: v })),
+      },
+    };
+  }
+
+  // ── Indicator helpers (pure functions) ──
+
+  private computeRSI(closes: number[], period: number): number[] {
+    const result = Array(closes.length).fill(0);
+    if (closes.length < period + 1) return result;
+
+    let gains = 0, losses = 0;
+    for (let i = 1; i <= period; i++) {
+      const diff = closes[i] - closes[i - 1];
+      if (diff > 0) gains += diff; else losses -= diff;
+    }
+    let avgGain = gains / period;
+    let avgLoss = losses / period;
+    result[period] = 100 - 100 / (1 + avgGain / (avgLoss || 1e-10));
+
+    for (let i = period + 1; i < closes.length; i++) {
+      const diff = closes[i] - closes[i - 1];
+      avgGain = (avgGain * (period - 1) + (diff > 0 ? diff : 0)) / period;
+      avgLoss = (avgLoss * (period - 1) + (diff < 0 ? -diff : 0)) / period;
+      result[i] = 100 - 100 / (1 + avgGain / (avgLoss || 1e-10));
+    }
+    return result;
+  }
+
+  private computeMACD(closes: number[]): Array<{ macd: number; signal: number; histogram: number }> {
+    const ema12 = this.computeEMA(closes, 12);
+    const ema26 = this.computeEMA(closes, 26);
+    const macdLine = ema12.map((v, i) => v - ema26[i]);
+    const signalLine = this.computeEMA(macdLine, 9);
+    return macdLine.map((macd, i) => ({
+      macd: Number(macd.toFixed(4)),
+      signal: Number((signalLine[i] || 0).toFixed(4)),
+      histogram: Number((macd - (signalLine[i] || 0)).toFixed(4)),
+    }));
+  }
+
+  private computeEMA(values: number[], period: number): number[] {
+    const result = Array(values.length).fill(0);
+    if (values.length < period) return result;
+
+    // SMA seed
+    let sum = 0;
+    for (let i = 0; i < period; i++) sum += values[i];
+    result[period - 1] = sum / period;
+
+    const multiplier = 2 / (period + 1);
+    for (let i = period; i < values.length; i++) {
+      result[i] = (values[i] - result[i - 1]) * multiplier + result[i - 1];
+    }
+    return result;
+  }
+
   async getDatasets(): Promise<Array<{ symbol: string; type: string; bars: number; from: string; to: string; source: string }>> {
     const datasets: Array<{ symbol: string; type: string; bars: number; from: string; to: string; source: string }> = [];
 

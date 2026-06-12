@@ -6,6 +6,7 @@ import Breadcrumbs from './components/Breadcrumbs';
 import GlobalSearch from './components/GlobalSearch';
 import DevOverlay from './components/DevOverlay';
 import ErrorBoundary from './components/ErrorBoundary';
+import HealthStatusBar from './components/HealthStatusBar';
 import { apiGet } from './core/api/client';
 import { FEATURE_FLAGS } from './core/features/flags';
 import { withDevTag } from './dev-runtime/tags';
@@ -16,6 +17,7 @@ import MultiStrategyComparisonPage from './pages/MultiStrategyComparisonPage';
 import ScenarioAnalysisPage from './pages/ScenarioAnalysisPage';
 import FaqPage from './pages/FaqPage';
 import PortfolioPage from './pages/PortfolioPage';
+import ReportsPage from './pages/ReportsPage';
 import ActiveSymbolsPage from './pages/ActiveSymbolsPage';
 import ApiEndpointsPage from './pages/ApiEndpointsPage';
 import DatabaseTablesPage from './pages/DatabaseTablesPage';
@@ -28,6 +30,7 @@ import ScoringOverviewPage from './pages/ScoringOverviewPage';
 import EventsCalendarPage from './pages/EventsCalendarPage';
 import ExecutionQueuePage from './pages/ExecutionQueuePage';
 import ImportJobsPage from './pages/ImportJobsPage';
+import Mt5StatusPage from './pages/Mt5StatusPage';
 import NewsIntelPage from './pages/NewsIntelPage';
 import PlatformComparisonsPage from './pages/PlatformComparisonsPage';
 import PluginTabSkeletonPage from './pages/PluginTabSkeletonPage';
@@ -45,6 +48,8 @@ import SystemStatusPage from './pages/SystemStatusPage';
 import SystemLogPage from './pages/SystemLogPage';
 import ThemePage from './pages/ThemePage';
 import TradingPlatformsPage from './pages/TradingPlatformsPage';
+import PwaInstallPrompt from './components/PwaInstallPrompt';
+import { useNetworkStatus } from './utils/networkStatus';
 import { useUiStore } from './stores/useUiStore';
 import { useThemeRuntime } from './theme/useThemeRuntime';
 import { featureFlags } from './utils/featureFlags';
@@ -105,6 +110,8 @@ function AppShell() {
   const policyMeta = meta?.policy || {};
   const [analyticsSnapshot, setAnalyticsSnapshot] = useState(() => analytics.getSnapshot());
   const [performanceSnapshot, setPerformanceSnapshot] = useState(() => getPerformanceSnapshot());
+
+  const { isOnline, wasOffline, lastOnlineAt } = useNetworkStatus();
 
   const healthQuery = useQuery({
     queryKey: ['health'],
@@ -383,6 +390,10 @@ function AppShell() {
       return <PortfolioPage />;
     }
 
+    if (secondaryView === 'reports') {
+      return <ReportsPage />;
+    }
+
     if (secondaryView === 'architecture-framework') {
       return <ArchitectureFrameworkPage />;
     }
@@ -453,6 +464,10 @@ function AppShell() {
 
     if (secondaryView === 'import-jobs') {
       return <ImportJobsPage />;
+    }
+
+    if (secondaryView === 'mt5-status') {
+      return <Mt5StatusPage />;
     }
 
     if (secondaryView === 'trading-platforms') {
@@ -608,6 +623,19 @@ function AppShell() {
   const isDbOnline = healthQuery.data?.services?.databaseConnected === true;
   return (
     <div className={`site-shell layout-omni background-${backgroundTone}`} {...withDevTag('app.shell', { product: 'tradingcs' })}>
+      {!isOnline && (
+        <div className="network-status-bar offline">
+          📡 Offline — showing cached data (last sync: {lastOnlineAt?.toLocaleTimeString() || 'never'})
+        </div>
+      )}
+      {wasOffline && isOnline && (
+        <div className="network-status-bar online">
+          ✅ Back online — data is updating
+        </div>
+      )}
+
+      <PwaInstallPrompt />
+
       <div className="sci-bg" aria-hidden="true">
         <div className="sci-stars" />
         <div className="sci-grid" />
@@ -631,6 +659,7 @@ function AppShell() {
             <BadgePill label={isApiOnline ? 'API Online' : 'API Offline'} status={isApiOnline ? 'ok' : 'warn'} />
             <BadgePill label={isDbOnline ? 'DB Ready' : 'DB Offline'} status={isDbOnline ? 'ok' : 'warn'} />
             <BadgePill label="Omni Layout" status="neutral" />
+            <HealthStatusBar />
             <button
               type="button"
               className="topbar-theme-toggle"

@@ -58,8 +58,8 @@ export class Mt5Adapter implements IProviderAdapter {
   readonly id = 'mt5';
   private readonly logger = new Logger(Mt5Adapter.name);
   private readonly bridgeUrl: string;
-  private consecutiveErrors = 0;
-  private tripped = false;
+  consecutiveErrors = 0;
+  tripped = false;
   private trippedAt: number | null = null;
 
   constructor() {

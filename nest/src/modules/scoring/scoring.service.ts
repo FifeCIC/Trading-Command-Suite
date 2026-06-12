@@ -20,6 +20,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { ModeService } from '../../config/mode.service';
 import { DirectivesService } from '../directives/directives.service';
 import { ScoreHistoryService } from './score-history.service';
+import { NotificationService } from '../notifications/notifications.service';
 import {
   DirectiveInput,
   MarketBar,
@@ -82,6 +83,7 @@ export class ScoringService {
     private readonly modeService: ModeService,
     private readonly directivesService: DirectivesService,
     private readonly scoreHistoryService: ScoreHistoryService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async rankAll(_strategyId?: string, limit = 20): Promise<RankedResult> {
@@ -257,6 +259,13 @@ export class ScoringService {
 
       if (!hasData) {
         this.logger.warn(`Scoring: ${symbol.ticker} has no bars — returning no_data`);
+      }
+
+      // Fire notification on entry signal
+      if (signal === 'entry') {
+        this.notificationService.notifyEntrySignal(symbol.ticker, Number(normScore.toFixed(1))).catch(err => {
+          this.logger.warn(`Entry notification failed for ${symbol.ticker}: ${err.message}`);
+        });
       }
 
       ranked.push({

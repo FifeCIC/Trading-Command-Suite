@@ -1,4 +1,10 @@
 import { Module } from '@nestjs/common';
+import { SignalsService } from './signals.service';
+import { SignalsController } from './signals.controller';
 
-@Module({})
+@Module({
+  controllers: [SignalsController],
+  providers: [SignalsService],
+  exports: [SignalsService],
+})
 export class SignalsModule {}

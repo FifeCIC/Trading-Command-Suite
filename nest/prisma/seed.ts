@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { PrismaClient } from '@prisma/client';
+import { seedFaq } from './seed-faq';
 
 const prisma = new PrismaClient();
 
@@ -27,6 +28,10 @@ async function main() {
   }
 
   console.log('Seed complete.');
+
+  // Seed FAQ entries
+  const faqCount = await seedFaq(prisma);
+  console.log(`  ✓ ${faqCount} FAQ entries seeded.`);
 }
 
 main()

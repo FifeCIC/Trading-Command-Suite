@@ -882,6 +882,9 @@ button.nav-active {
 .bt-row-loss { background: color-mix(in srgb, var(--danger) 4%, transparent); }
 .bt-green { color: #00a63e; }
 .bt-red { color: var(--danger); }
+.bt-chart-section { margin: 1.2rem 0 1.5rem; }
+.bt-chart-section h3 { font-size: 1rem; color: var(--ink); margin: 0 0 0.6rem; }
+.bt-chart-heading { font-size: 1rem; color: var(--ink); margin: 0 0 0.6rem; }
 
 /* Multi-Strategy Comparison */
 .msc-page { max-width: 100%; padding: 1rem 1.5rem; color: var(--ink); }
@@ -988,6 +991,24 @@ button.nav-active {
 .pf-account-grid div { display: flex; flex-direction: column; font-size: 0.75rem; }
 .pf-account-grid div span { color: var(--ink-soft); margin-bottom: 0.1rem; }
 .pf-account-grid div strong { font-size: 1rem; }
+
+/* Share Card */
+.share-card { border: 1px solid var(--line); border-radius: 8px; padding: 1rem; background: var(--panel); max-width: 320px; text-align: center; }
+.share-card-symbol { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
+.share-card-score { font-size: 2.5rem; font-weight: 700; color: #3fb950; margin: 0.25rem 0; }
+.share-card-signal { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 4px; font-weight: 600; font-size: 0.8rem; }
+.share-sig-buy { background: #1b3a1b; color: #3fb950; }
+.share-sig-sell { background: #3a1b1b; color: #f85149; }
+.share-sig-hold { background: #1b2a3a; color: #79c0ff; }
+.share-card-meta { font-size: 0.75rem; color: var(--ink-soft); margin: 0.5rem 0; }
+.share-card-link { font-size: 0.75rem; }
+
+/* Reports Page */
+.rp-page { max-width: 960px; margin: 0 auto; padding: 1.5rem; color: var(--ink); }
+.rp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.75rem; margin-top: 1rem; }
+.rp-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 1rem; }
+.rp-card h2 { font-size: 0.9rem; margin: 0 0 0.35rem; }
+.rp-card p { font-size: 0.78rem; color: var(--ink-soft); margin: 0 0 0.75rem; }
 
 .dev-footer {
   display: grid;
@@ -1256,4 +1277,60 @@ button.nav-active {
 
   .topbar-theme-toggle { min-height: 36px; min-width: 36px; }
 
+  /* ── Mobile: horizontal scroll for tables ──────────────── */
+  table, .data-table, .table-wrap {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    width: 100%;
+  }
+
+  table td, table th, .data-table td, .data-table th {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.78rem;
+  }
+
+  /* ── Cards full width on mobile ────────────────────────── */
+  .content-card, .insight-card, .dashboard-card {
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* ── Bottom padding for install banner ─────────────────── */
+  .site-shell {
+    padding-bottom: 80px;
+  }
+
+  /* ── Stack grids vertically ────────────────────────────── */
+  .grid-2, .grid-3, .grid-4 {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem;
+  }
+
+  /* ── Reduce font sizes ─────────────────────────────────── */
+  body {
+    font-size: 14px;
+  }
+
+  h1 { font-size: 1.25rem; }
+  h2 { font-size: 1.1rem; }
+  h3 { font-size: 1rem; }
+
+  /* ── Wider touch targets for form elements ─────────────── */
+  input, select, textarea {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+    min-height: 44px;
+  }
+
+  /* ── PWA safe area insets ──────────────────────────────── */
+  .site-shell {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  .pwa-install-banner {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
 }
