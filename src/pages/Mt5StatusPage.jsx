@@ -14,7 +14,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton'
 import './mt5-status.css'
 
 const FOREX_PAIRS = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'NZDUSD']
-const STATUS_QUERY_INTERVAL = 5_000
+const STATUS_QUERY_INTERVAL = 10_000 // 10s default, not 3-5s
 
 function formatTime(iso) {
   if (!iso) return '—'
@@ -51,6 +51,7 @@ export default function Mt5StatusPage() {
     queryFn: () => apiGet('/api/providers/mt5/diagnostics'),
     refetchInterval: STATUS_QUERY_INTERVAL,
     retry: 1,
+    placeholderData: (prev) => prev, // Keep previous data on refetch — no flash
   })
 
   // Fetch live quote
@@ -59,6 +60,7 @@ export default function Mt5StatusPage() {
     queryFn: () => apiGet(`/api/providers/mt5/diagnostics`),
     refetchInterval: STATUS_QUERY_INTERVAL,
     enabled: diagQuery.data?.connected,
+    placeholderData: (prev) => prev,
   })
 
   const diagnostics = diagQuery.data ?? {}
@@ -198,8 +200,9 @@ export default function Mt5StatusPage() {
     }
   }, [])
 
-  // ---- Loading state ----
-  if (diagQuery.isLoading) {
+  // ---- Loading state (initial only — not on refetch) ----
+  const isInitialLoading = diagQuery.isLoading && !diagQuery.data;
+  if (isInitialLoading) {
     return (
       <div className="mt5-page">
         <header className="mt5-header"><h1>MT5 Bridge Status</h1></header>

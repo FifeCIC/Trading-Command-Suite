@@ -1,6 +1,15 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { apiGet } from '../core/api/client';
+
+// ── Available data sources ──────────────────────────────────
+const PLATFORMS = [
+  { id: 'all', label: 'Merged' },
+  { id: 'trading212', label: 'Trading212' },
+  { id: 'mt5', label: 'MT5' },
+  { id: 'alpaca', label: 'Alpaca' },
+];
 
 // ── Mock fallback when API is unavailable or Trading212 not configured ──
 const MOCK_PORTFOLIO = {
@@ -58,19 +67,29 @@ export default function PortfolioPage() {
   const [newSymbol, setNewSymbol] = useState('');
   const [newShares, setNewShares] = useState('');
   const [newCost, setNewCost] = useState('');
+  const [source, setSource] = useState('trading212');
 
   // Real API call — falls back to mock data on error
   const portfolioQuery = useQuery({
-    queryKey: ['portfolio'],
+    queryKey: ['portfolio', source],
     queryFn: async () => {
       try {
-        const data = await apiGet('/api/portfolio');
+        const url = source === 'all' ? '/api/portfolio/holdings?source=all' : `/api/portfolio?source=${source}`;
+        const data = await apiGet(url);
         if (data?.summary?.mode !== 'mock') return data;
       } catch { /* fall through to mock */ }
       return MOCK_PORTFOLIO;
     },
     staleTime: 30_000,
     refetchInterval: 60_000,
+  });
+
+  // Scores query
+  const scoresQuery = useQuery({
+    queryKey: ['portfolio-scores'],
+    queryFn: () => apiGet('/api/portfolio/scores').then((d) => d?.scores || []).catch(() => []),
+    staleTime: 60_000,
+    refetchInterval: 120_000,
   });
 
   const data = portfolioQuery.data || MOCK_PORTFOLIO;
@@ -89,6 +108,12 @@ export default function PortfolioPage() {
     <div className="pf-page">
       <div className="pf-header">
         <h1>Portfolio</h1>
+        <select className="pf-source-select" value={source} onChange={(e) => setSource(e.target.value)}>
+          <option value="trading212">Trading 212</option>
+          <option value="mt5">MT5</option>
+          <option value="alpaca">Alpaca</option>
+          <option value="all">All Platforms</option>
+        </select>
         <ModeBadge mode={summary.mode} />
       </div>
 
@@ -124,10 +149,12 @@ export default function PortfolioPage() {
         ) : (
           <table className="pf-table">
             <thead>
-              <tr><th>Symbol</th><th>Shares</th><th>Avg Cost</th><th>Price</th><th>Value</th><th>P&amp;L</th><th>%</th></tr>
+              <tr><th>Symbol</th><th>Shares</th><th>Avg Cost</th><th>Price</th><th>Value</th><th>P&amp;L</th><th>%</th><th>Signal</th><th></th></tr>
             </thead>
             <tbody>
-              {positions.map((p) => (
+              {positions.map((p) => {
+                const s = (scoresQuery.data || []).find((sc) => sc.symbol === p.symbol);
+                return (
                 <tr key={p.symbol}>
                   <td><strong>{p.symbol}</strong></td>
                   <td>{p.shares.toLocaleString()}</td>
@@ -136,8 +163,10 @@ export default function PortfolioPage() {
                   <td>${p.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   <td className={p.pnl >= 0 ? 'pf-green' : 'pf-red'}>{p.pnl >= 0 ? '+' : ''}{p.pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   <td className={p.pnlPct >= 0 ? 'pf-green' : 'pf-red'}>{p.pnlPct >= 0 ? '+' : ''}{p.pnlPct.toFixed(1)}%</td>
+                  <td>{s ? <span className={`pf-sig pf-sig-${s.signal}`}>{s.signal.toUpperCase()}</span> : '—'}</td>
+                  <td><a href="/trading/mt5-trading" className="pf-action-btn" title="Trade this symbol">↗</a></td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         )}

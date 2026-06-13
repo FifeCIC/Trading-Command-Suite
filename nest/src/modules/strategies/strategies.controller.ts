@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ModeService } from '../../config/mode.service';
 import {
@@ -98,9 +98,93 @@ export class StrategiesController {
     }
   }
 
-  private storeInMemory(body: { name: string; directives: Array<{ id: string; weight: number }> }) {
+  private storeInMemory(body: { name: string; directives: Array<{ id: string; weight: number }>; description?: string; goals?: string; symbolFocus?: string[] }) {
     const strategyId = `custom-${Date.now()}`;
     this.logger.warn(`Database unavailable — storing strategy ${body.name} in memory (${strategyId})`);
     return { success: true, strategyId, name: body.name, persisted: false };
+  }
+
+  @Get('saved')
+  async listSaved() {
+    if (!this.prisma.isAvailable) {
+      return { strategies: [] };
+    }
+    try {
+      const strategies = await this.prisma.strategy.findMany({
+        orderBy: { updatedAt: 'desc' },
+        take: 50,
+      });
+      return {
+        strategies: strategies.map((s) => ({
+          id: s.id,
+          name: s.name,
+          description: s.description,
+          active: s.active,
+          directives: s.config && typeof s.config === 'object' && 'weights' in (s.config as any)
+            ? Object.entries((s.config as any).weights as Record<string, number>).map(([id, weight]) => ({ id, weight }))
+            : [],
+          symbolFocus: s.config && typeof s.config === 'object' && 'scope' in (s.config as any)
+            ? (s.config as any).scope as string[]
+            : [],
+          goals: s.config && typeof s.config === 'object' && 'goals' in (s.config as any)
+            ? (s.config as any).goals as string
+            : '',
+          updatedAt: s.updatedAt,
+        })),
+      };
+    } catch {
+      return { strategies: [] };
+    }
+  }
+
+  @Get(':id')
+  async getStrategy(@Param('id') id: string) {
+    if (!this.prisma.isAvailable) return { error: 'DB unavailable' };
+    const s = await this.prisma.strategy.findUnique({ where: { id } });
+    if (!s) return { error: 'Not found' };
+    return { id: s.id, name: s.name, description: s.description, config: s.config };
+  }
+
+  @Post(':id/duplicate')
+  async duplicateStrategy(@Param('id') id: string) {
+    if (!this.prisma.isAvailable) return { error: 'DB unavailable' };
+    const original = await this.prisma.strategy.findUnique({ where: { id } });
+    if (!original) return { error: 'Not found' };
+    const dup = await this.prisma.strategy.create({
+      data: {
+        name: `${original.name} (copy)`,
+        description: original.description,
+        config: original.config as any,
+        active: true,
+      },
+    });
+    return { success: true, id: dup.id, name: dup.name };
+  }
+
+  @Post('seed')
+  async seedBuiltInStrategies() {
+    const fs = await import('fs');
+    const path = await import('path');
+    const filePath = path.join(__dirname, '..', 'data', 'built-in-strategies.seed.json');
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const strategies = JSON.parse(raw);
+    const results = [];
+    for (const s of strategies) {
+      if (!this.prisma.isAvailable) break;
+      try {
+        const existing = await this.prisma.strategy.findFirst({ where: { name: s.strategyName } });
+        if (existing) { results.push({ name: s.strategyName, status: 'skipped' }); continue; }
+        await this.prisma.strategy.create({
+          data: {
+            name: s.strategyName,
+            description: s.description,
+            config: Object.fromEntries(s.directives.map((d: any) => [d.id, d.weight])) as any,
+            active: true,
+          },
+        });
+        results.push({ name: s.strategyName, status: 'created' });
+      } catch (e) { results.push({ name: s.strategyName, status: 'error', error: (e as Error).message }); }
+    }
+    return { seeded: results.length, results };
   }
 }

@@ -25,6 +25,8 @@ import { SystemModule } from './modules/system/system.module';
 import { BacktestModule } from './modules/backtest/backtest.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ExportModule } from './modules/export/export.module';
+import { AlertsModule } from './modules/alerts/alerts.module';
+import { CacheModule } from './modules/cache/cache.module';
 import { RateLimiterMiddleware } from './common/middleware/rate-limiter.middleware';
 import { MetricsMiddleware } from './common/middleware/metrics.middleware';
 
@@ -58,7 +60,9 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     SystemModule,
     BacktestModule,
     NotificationsModule,
+    AlertsModule,
     ExportModule,
+    CacheModule,
   ],
   controllers: [AppController],
   providers: [AppService],

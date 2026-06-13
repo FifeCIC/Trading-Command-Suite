@@ -15,9 +15,139 @@
   margin: 0 0 0.25rem;
 }
 
-.sb-header p {
-  margin: 0;
-  color: var(--ink-soft);
+/* ---- Metadata form ---- */
+
+.sb-meta-form {
+  background: #1a1d2e;
+  border: 1px solid #2d3040;
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+
+.sb-meta-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sb-meta-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sb-meta-row span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sb-input {
+  padding: 8px 12px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: #0f1117;
+  color: #e2e8f0;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.sb-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.sb-textarea {
+  resize: vertical;
+  min-height: 40px;
+}
+
+.sb-meta-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sb-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sb-btn-save {
+  background: #2563eb;
+  color: #fff;
+}
+
+.sb-btn-save:hover { background: #1d4ed8; }
+.sb-btn-save:disabled { opacity: 0.5; cursor: default; }
+
+.sb-btn-reset {
+  background: #374151;
+  color: #d1d5db;
+}
+
+.sb-btn-reset:hover { background: #4b5563; }
+
+.sb-saved-msg {
+  color: #4ade80;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* ---- Saved strategies ---- */
+
+.sb-saved-list {
+  margin-bottom: 16px;
+}
+
+.sb-saved-list summary {
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 4px 0;
+}
+
+.sb-saved-grid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.sb-saved-card {
+  background: #1a1d2e;
+  border: 1px solid #2d3040;
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  text-align: left;
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  min-width: 180px;
+  max-width: 260px;
+}
+
+.sb-saved-card:hover {
+  border-color: #3b82f6;
+}
+
+.sb-saved-card strong {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.sb-saved-meta {
+  color: #64748b;
+  font-size: 0.7rem;
 }
 
 .sb-layout {

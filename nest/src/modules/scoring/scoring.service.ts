@@ -86,8 +86,21 @@ export class ScoringService {
     private readonly notificationService: NotificationService,
   ) {}
 
-  async rankAll(_strategyId?: string, limit = 20): Promise<RankedResult> {
+  async rankAll(strategyId?: string, limit = 20): Promise<RankedResult> {
     const modeInfo = this.modeService.getModeInfo();
+
+    // Load strategy weights from DB if strategyId provided, else use defaults
+    let weights = { ...STRATEGY_WEIGHTS };
+    let strategyName = 'Conviction Dip Accumulation';
+    if (strategyId && this.prisma.isAvailable) {
+      try {
+        const strategy = await this.prisma.strategy.findUnique({ where: { id: strategyId } });
+        if (strategy?.config && typeof strategy.config === 'object' && 'weights' in (strategy.config as any)) {
+          weights = (strategy.config as any).weights as Record<string, number>;
+          strategyName = strategy.name;
+        }
+      } catch { /* use defaults */ }
+    }
     const base = {
       mode: modeInfo.mode,
       services: {
@@ -96,7 +109,7 @@ export class ScoringService {
         redis: modeInfo.redis,
       },
       strategy: {
-        name: 'Conviction Dip Accumulation',
+        name: strategyName,
         entryThreshold: ENTRY_THRESHOLD,
         watchThreshold: WATCH_THRESHOLD,
       },
@@ -130,7 +143,7 @@ export class ScoringService {
       };
 
       for (const [id, result] of results) {
-        const weight = STRATEGY_WEIGHTS[id] ?? 0;
+        const weight = weights[id] ?? 0;
         const directive = this.directivesService.get(id);
         const priority = directive?.priority ?? 50;
         const signalClass = result.signalClass ?? 'neutral';

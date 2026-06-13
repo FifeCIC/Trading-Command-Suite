@@ -16,6 +16,7 @@ export class DirectivesController {
       id: d.id,
       name: d.name,
       description: d.description ?? '',
+      category: (d as any).category ?? 'Uncategorized',
       priority: d.priority ?? 50,
     }));
   }

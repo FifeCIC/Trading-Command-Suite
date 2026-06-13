@@ -1,3 +1,4 @@
+import { useUiStore } from '../stores/useUiStore';
 import './settings.css'
 
 function SettingRow({ label, children, hint }) {
@@ -13,6 +14,9 @@ function SettingRow({ label, children, hint }) {
 }
 
 export default function SettingsPage() {
+  const themeMode = useUiStore((state) => state.themeMode);
+  const setThemeMode = useUiStore((state) => state.setThemeMode);
+  const themePack = useUiStore((state) => state.themePack);
   return (
     <div className="settings-page">
       <header className="settings-header">
@@ -48,11 +52,26 @@ export default function SettingsPage() {
 
       <section className="settings-section">
         <h2>Theme</h2>
-        <SettingRow label="Mode" hint="Light or dark mode.">
-          <code>dark</code>
+        <SettingRow label="Mode" hint="Toggle between light and dark appearance.">
+          <div className="inline-actions">
+            <button
+              type="button"
+              className={themeMode === 'light' ? 'cta' : ''}
+              onClick={() => setThemeMode('light')}
+            >
+              ☀ Light
+            </button>
+            <button
+              type="button"
+              className={themeMode === 'dark' ? 'cta' : ''}
+              onClick={() => setThemeMode('dark')}
+            >
+              🌙 Dark
+            </button>
+          </div>
         </SettingRow>
         <SettingRow label="Pack" hint="Active theme pack ID.">
-          <code>default</code>
+          <code>{themePack}</code>
         </SettingRow>
       </section>
 

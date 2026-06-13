@@ -47,6 +47,25 @@ import { NewsSentimentPositiveDirective } from './implementations/news-sentiment
 import { EarningsProximityDirective } from './implementations/earnings-proximity.directive';
 import { VixRegimeDirective } from './implementations/vix-regime.directive';
 
+// MT5 ported indicators (Q156 — 17 directives)
+import { WilliamsRDirective } from './implementations/mt5-indicators.directives';
+import { AwesomeOscillatorDirective } from './implementations/mt5-indicators.directives';
+import { ForceIndexDirective } from './implementations/mt5-indicators.directives';
+import { ChaikinMoneyFlowDirective } from './implementations/mt5-indicators.directives';
+import { DonchianBreakoutDirective } from './implementations/mt5-indicators.directives';
+import { KeltnerChannelDirective } from './implementations/mt5-indicators.directives';
+import { SuperTrendDirective } from './implementations/mt5-indicators.directives';
+import { ParabolicSARDirective } from './implementations/mt5-indicators.directives';
+import { ADXDICrossoverDirective } from './implementations/mt5-indicators.directives';
+import { BollingerPctBDirective } from './implementations/mt5-indicators.directives';
+import { ATRTrailingStopDirective } from './implementations/mt5-indicators.directives';
+import { MomentumROCDirective } from './implementations/mt5-indicators.directives';
+import { DeMarkerDirective } from './implementations/mt5-indicators.directives';
+import { AccumulationDistDirective } from './implementations/mt5-indicators.directives';
+import { BullsBearsPowerDirective } from './implementations/mt5-indicators.directives';
+import { EaseOfMovementDirective } from './implementations/mt5-indicators.directives';
+import { IchimokuCloudDirective } from './implementations/mt5-indicators.directives';
+
 // Stubs (placeholder — PHP math at TradePress, awaiting NestJS port)
 import {
   // Trend
@@ -147,6 +166,24 @@ import {
     PinBarPatternDirective,
     // Implemented — Macro
     VixRegimeDirective,
+    // MT5 Ported Indicators (Q156) — 17 new directives
+    WilliamsRDirective,
+    AwesomeOscillatorDirective,
+    ForceIndexDirective,
+    ChaikinMoneyFlowDirective,
+    DonchianBreakoutDirective,
+    KeltnerChannelDirective,
+    SuperTrendDirective,
+    ParabolicSARDirective,
+    ADXDICrossoverDirective,
+    BollingerPctBDirective,
+    ATRTrailingStopDirective,
+    MomentumROCDirective,
+    DeMarkerDirective,
+    AccumulationDistDirective,
+    BullsBearsPowerDirective,
+    EaseOfMovementDirective,
+    IchimokuCloudDirective,
     // Stubs — Macro
     GoldMacroCorrelationDirective,
     CadUsdOilCorrelationDirective,

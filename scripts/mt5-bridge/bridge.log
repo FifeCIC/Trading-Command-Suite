@@ -138,3 +138,20 @@
 2026-06-12 16:33:24,400 [INFO] Quote for EURUSD: bid=1.15814, ask=1.15815
 2026-06-12 16:33:29,401 [INFO] Quote for EURUSD: bid=1.15819, ask=1.15819
 2026-06-12 16:33:29,412 [INFO] Quote for EURUSD: bid=1.15819, ask=1.15819
+2026-06-13 00:58:22,988 [INFO] MetaTrader5 package loaded successfully
+2026-06-13 00:58:22,993 [INFO] Starting MT5 Bridge on port 5000...
+2026-06-13 00:58:22,993 [INFO] MT5 package available: True
+2026-06-13 00:58:22,993 [INFO] Flask server starting — MT5 will connect on first API request
+2026-06-13 01:00:16,196 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-13 01:00:18,691 [INFO] MT5 connected: balance=1000.0, server=MetaQuotes-Demo
+2026-06-13 15:46:14,670 [INFO] MT5 connection lost — reconnecting...
+2026-06-13 15:46:14,691 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-13 15:46:19,356 [INFO] MT5 connected: balance=1000.0, server=MetaQuotes-Demo
+2026-06-13 16:46:24,100 [INFO] MT5 connection lost — reconnecting...
+2026-06-13 16:46:24,102 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-13 16:46:26,161 [INFO] MT5 connected: balance=1000.0, server=MetaQuotes-Demo
+2026-06-13 16:46:26,341 [INFO] Fetched 100 candles for EURUSD (H1)
+2026-06-13 17:28:44,061 [INFO] MetaTrader5 package loaded successfully
+2026-06-13 17:28:44,066 [INFO] Starting MT5 Bridge on port 5000...
+2026-06-13 17:28:44,066 [INFO] MT5 package available: True
+2026-06-13 17:28:44,066 [INFO] Flask server starting — MT5 will connect on first API request

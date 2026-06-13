@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Trading212Adapter, Trading212Position, Trading212AccountCash } from '../providers/adapters/trading212.adapter';
+import { ScoringService } from '../scoring/scoring.service';
 
 export interface PortfolioSummary {
   totalValue: number;
@@ -35,9 +36,12 @@ export interface PortfolioResponse {
 export class PortfolioService {
   private readonly logger = new Logger(PortfolioService.name);
 
-  constructor(private readonly t212: Trading212Adapter) {}
+  constructor(
+    private readonly t212: Trading212Adapter,
+    private readonly scoringService: ScoringService,
+  ) {}
 
-  async getPortfolio(): Promise<PortfolioResponse> {
+  async getPortfolio(source = 'trading212'): Promise<PortfolioResponse> {
     const isMock = this.t212.mode === 'none';
 
     // Fetch positions and account in parallel
@@ -94,6 +98,47 @@ export class PortfolioService {
     );
 
     return { summary, positions, account };
+  }
+
+  /**
+   * Get scoring data for each portfolio holding.
+   * Returns last known score and signal strength per symbol.
+   * Integrates with ScoringService for real directive-based scores.
+   */
+  async getPortfolioScores(): Promise<Array<{
+    symbol: string; ticker: string; score: number | null; signal: string; strength: string;
+  }>> {
+    const { positions } = await this.getPortfolio();
+    if (positions.length === 0) return [];
+
+    // Fetch real scores from scoring service
+    let scoreMap = new Map<string, number>();
+    try {
+      const ranked = await this.scoringService.rankAll(undefined, 200);
+      if (ranked?.ranked) {
+        for (const entry of ranked.ranked) {
+          scoreMap.set(entry.ticker, entry.score);
+        }
+      }
+    } catch (err) {
+      this.logger.warn(`Could not fetch portfolio scores: ${(err as Error).message}`);
+    }
+
+    return positions.map((p) => {
+      // Try exact ticker match first, then stripped symbol
+      const score = scoreMap.get(p.ticker) ?? scoreMap.get(p.symbol) ?? null;
+      return {
+        symbol: p.symbol,
+        ticker: p.ticker,
+        score,
+        signal: score !== null
+          ? (score >= 65 ? 'buy' : score <= 40 ? 'sell' : 'hold')
+          : 'no_data',
+        strength: score !== null
+          ? (score >= 80 ? 'strong' : score >= 65 ? 'moderate' : 'weak')
+          : 'none',
+      };
+    });
   }
 
   /** Strip Trading212 ticker suffix: AAPL_US_EQ → AAPL */

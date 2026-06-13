@@ -20,12 +20,8 @@ export const NAV_TREE = {
     label: 'Trading',
     views: [
       { id: 'trading-strategies', label: 'Trading Strategies' },
-      { id: 'sees-live-stack', label: 'SEES Live Stack' },
       { id: 'mt5-status', label: 'MT5 Bridge Status' },
       { id: 'mt5-trading', label: 'MT5 Trading' },
-      { id: 'signals-workbench', label: 'SEES Diagnostics' },
-
-      { id: 'strategy-builder', label: 'Strategy Builder' },
       { id: 'calculators', label: 'Calculators' },
       { id: 'portfolio-overview', label: 'Portfolio Overview' },
       { id: 'trade-history', label: 'Trade History' },
@@ -37,19 +33,25 @@ export const NAV_TREE = {
   scoring: {
     label: 'Scoring',
     views: [
+      // ── Directives ──
       { id: 'directives-manager', label: 'Directives' },
       { id: 'scoring-overview', label: 'Overview' },
       { id: 'configure-directives', label: 'Configure Directives' },
       { id: 'directives-status', label: 'Directive Status' },
+      // ── SEES — Scoring Engine ──
       { id: 'algorithm-lab', label: 'Algorithm Lab' },
+      { id: 'sees-live-stack', label: 'SEES Live Stack' },
+      { id: 'sees-arena', label: 'SEES Arena' },
+      { id: 'signals-workbench', label: 'SEES Diagnostics' },
+      // ── Strategies ──
+      { id: 'strategy-builder', label: 'Strategy Builder' },
       { id: 'strategies', label: 'Strategy Overview' },
       { id: 'create-scoring-strategies', label: 'Create Strategies' },
       { id: 'manage-scoring-strategies', label: 'Manage Strategies' },
       { id: 'view-scoring-strategies', label: 'View Strategies' },
+      // ── History ──
       { id: 'scoring-runs', label: 'Scoring Runs' },
       { id: 'scoring-activity-logs', label: 'Scoring Activity Logs' },
-      { id: 'strategy-templates', label: 'Strategy Templates' },
-      { id: 'scoring-developer-mode', label: 'Developer Mode' },
     ],
   },
   research: {
@@ -90,7 +92,7 @@ export const NAV_TREE = {
       { id: 'imports-history', label: 'Imports History' },
       { id: 'api-activity', label: 'API Activity' },
       { id: 'api-endpoints', label: 'API Endpoints' },
-      { id: 'transient-caches', label: 'Transient Caches' },
+      { id: 'transient-caches', label: 'Cache Monitor' },
       { id: 'create-source', label: 'Create Source' },
       { id: 'provider-health', label: 'Provider Health' },
       { id: 'api-keys', label: 'API Keys' },

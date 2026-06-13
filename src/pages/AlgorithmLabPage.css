@@ -1,0 +1,379 @@
+/* ── Algorithm Lab ────────────────────────────────────────── */
+
+.al-page {
+  padding: 1.25rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* ── Header ───────────────────────────────────────────────── */
+
+.al-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.al-header-left h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.4rem;
+  color: var(--ink, #f1f5f9);
+}
+
+.al-subtitle {
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.al-pause-btn {
+  padding: 0.5rem 1.25rem;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.al-pause-btn:hover { background: #b91c1c; }
+
+.al-resume-btn {
+  background: #16a34a;
+}
+
+.al-resume-btn:hover { background: #15803d; }
+
+/* ── Empty State ──────────────────────────────────────────── */
+
+.al-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.al-empty h2 {
+  color: var(--ink-soft, #94a3b8);
+  margin: 0 0 0.5rem;
+}
+
+.al-empty p {
+  color: var(--ink-soft, #64748b);
+  margin: 0 0 1rem;
+}
+
+.al-cta-btn {
+  padding: 0.6rem 1.5rem;
+  background: #0ea5a6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.al-cta-btn:hover { background: #0d9488; }
+
+/* ── Strategy Selector ────────────────────────────────────── */
+
+.al-strategy-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem;
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
+  border-radius: 10px;
+}
+
+.al-scroll-btn {
+  background: transparent;
+  border: 1px solid var(--line, #334155);
+  border-radius: 6px;
+  color: var(--ink, #f1f5f9);
+  font-size: 1rem;
+  cursor: pointer;
+  min-height: 36px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.al-scroll-btn:hover { background: rgba(255,255,255,0.08); }
+
+.al-strategy-name {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.al-pause-badge {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: #16a34a;
+  color: #fff;
+}
+
+.al-pause-badge.al-paused {
+  background: #dc2626;
+}
+
+/* ── Pipeline ─────────────────────────────────────────────── */
+
+.al-pipeline-section {
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
+  border-radius: 10px;
+}
+
+.al-pipeline {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 1rem;
+}
+
+.al-pipe-wrapper {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.al-pipe-node {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.75rem 0.5rem;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  min-width: 0;
+}
+
+.al-pipe-node:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: #0ea5a6;
+}
+
+.al-node-active {
+  border-color: #0ea5a6;
+  background: rgba(14, 165, 166, 0.1);
+  box-shadow: 0 0 12px rgba(14, 165, 166, 0.3);
+}
+
+.al-node-done {
+  border-color: #22c55e;
+}
+
+.al-node-icon {
+  font-size: 1.3rem;
+}
+
+.al-node-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink, #f1f5f9);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.al-node-detail {
+  font-size: 0.68rem;
+  color: var(--ink-soft, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.al-pipe-connector {
+  width: 20px;
+  height: 2px;
+  background: var(--line, #334155);
+  flex-shrink: 0;
+}
+
+/* ── Progress Info ────────────────────────────────────────── */
+
+.al-progress-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(14, 165, 166, 0.08);
+  border: 1px solid rgba(14, 165, 166, 0.2);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.al-progress-symbol {
+  font-weight: 600;
+  color: var(--ink, #f1f5f9);
+}
+
+.al-progress-dirs {
+  color: var(--ink-soft, #94a3b8);
+}
+
+/* ── Stage Detail ─────────────────────────────────────────── */
+
+.al-stage-detail {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(14, 165, 166, 0.06);
+  border: 1px solid rgba(14, 165, 166, 0.2);
+  border-radius: 8px;
+}
+
+.al-stage-detail h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.95rem;
+  color: var(--ink, #f1f5f9);
+}
+
+.al-stage-detail p {
+  margin: 0.2rem 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft, #94a3b8);
+}
+
+.al-stage-status {
+  font-size: 0.8rem;
+  color: var(--ink-soft, #64748b);
+}
+
+/* ── Decision Log ─────────────────────────────────────────── */
+
+.al-log-section {
+  border: 1px solid var(--line, #334155);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--panel, #1e293b);
+}
+
+.al-log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.75rem;
+  background: rgba(0,0,0,0.15);
+  border-bottom: 1px solid var(--line, #334155);
+}
+
+.al-log-header h2 {
+  margin: 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ink-soft, #94a3b8);
+}
+
+.al-autoscroll-label {
+  font-size: 0.78rem;
+  color: var(--ink-soft, #94a3b8);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.al-log {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.8rem;
+}
+
+.al-log::-webkit-scrollbar { width: 4px; }
+.al-log::-webkit-scrollbar-track { background: var(--line, #334155); }
+.al-log::-webkit-scrollbar-thumb { background: #64748b; border-radius: 2px; }
+
+.al-log-entry {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.2rem 0.3rem;
+  border-radius: 3px;
+  line-height: 1.5;
+}
+
+.al-log-time {
+  color: #64748b;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  min-width: 65px;
+}
+
+.al-log-msg {
+  flex: 1;
+  word-break: break-word;
+}
+
+.al-log-buy .al-log-msg { color: #22c55e; }
+.al-log-sell .al-log-msg { color: #ef4444; }
+.al-log-hold .al-log-msg { color: #94a3b8; }
+.al-log-info .al-log-msg { color: #e2e8f0; }
+.al-log-err .al-log-msg { color: #f87171; }
+
+.al-log-empty {
+  color: var(--ink-soft, #64748b);
+  text-align: center;
+  padding: 1rem;
+}
+
+/* ── Mobile ───────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .al-page {
+    padding: 0.75rem;
+  }
+
+  .al-header {
+    flex-direction: column;
+  }
+
+  .al-pipeline {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 0.25rem;
+  }
+
+  .al-pipe-node {
+    min-width: 80px;
+    padding: 0.5rem 0.3rem;
+  }
+
+  .al-pipe-connector {
+    width: 10px;
+  }
+
+  .al-progress-info {
+    flex-direction: column;
+    gap: 0.3rem;
+    align-items: flex-start;
+  }
+
+  .al-log {
+    max-height: 240px;
+  }
+}

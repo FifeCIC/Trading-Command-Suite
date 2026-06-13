@@ -29,7 +29,6 @@ export default function BacktestPage() {
 
   return (
     <div className="bt-page">
-      <h1>Backtest Engine</h1>
       <p className="bt-sub">Run the Conviction Dip Accumulation strategy against historical data and measure entry signal outcomes.</p>
 
       <div className="bt-form">

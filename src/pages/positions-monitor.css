@@ -1,0 +1,140 @@
+/* Positions Monitor (CFD + Options) */
+
+.pm-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 16px;
+  color: #e2e8f0;
+}
+
+.pm-header h1 {
+  margin: 0 0 4px;
+  font-size: 1.4rem;
+}
+
+/* Tabs */
+.pm-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 16px 0;
+  border-bottom: 1px solid #2d3040;
+}
+
+.pm-tab {
+  padding: 8px 18px;
+  border: none;
+  background: none;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.pm-tab:hover { color: #94a3b8; }
+.pm-tab.pm-active {
+  color: #e2e8f0;
+  border-bottom-color: #3b82f6;
+}
+
+/* Position cards */
+.pm-positions {
+  display: grid;
+  gap: 12px;
+}
+
+.pm-pos-card {
+  background: #1a1d2e;
+  border: 1px solid #2d3040;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.pm-option { border-left: 3px solid #8b5cf6; }
+
+.pm-pos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.pm-pos-header strong {
+  font-size: 1rem;
+}
+
+.pm-pos-pnl {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.pm-profit { color: #4ade80; }
+.pm-loss { color: #f87171; }
+
+.pm-pos-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.pm-pos-details div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pm-pos-details span:first-child {
+  font-size: 0.65rem;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.pm-pos-details span:last-child {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.pm-buy { color: #4ade80; }
+.pm-sell { color: #f87171; }
+
+.pm-warning {
+  padding: 6px 10px;
+  background: #451a03;
+  border: 1px solid #78350f;
+  border-radius: 6px;
+  color: #fbbf24;
+  font-size: 0.75rem;
+  margin-bottom: 10px;
+}
+
+/* Risk bar */
+.pm-risk-bar {
+  position: relative;
+  height: 20px;
+  background: #111318;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pm-risk-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s;
+}
+
+.pm-risk-label {
+  position: absolute;
+  top: 2px;
+  left: 8px;
+  font-size: 0.65rem;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.pm-empty {
+  text-align: center;
+  padding: 40px;
+  color: #475569;
+  font-size: 0.9rem;
+}

@@ -13,6 +13,7 @@ import { PaginationInterceptor } from '../../common/interceptors/pagination.inte
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { ScoringService } from './scoring.service';
 import { ScoreHistoryService } from './score-history.service';
+import { StrategyCompetitionService } from './strategy-competition.service';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
 
 @ApiTags('scoring')
@@ -21,6 +22,7 @@ export class ScoringController {
   constructor(
     private readonly scoringService: ScoringService,
     private readonly scoreHistoryService: ScoreHistoryService,
+    private readonly competitionService: StrategyCompetitionService,
   ) {}
 
   @Get('ranked')
@@ -96,5 +98,19 @@ export class ScoringController {
   @ApiOkResponse({ description: 'Latest score snapshot' })
   getLatest(@Param('symbolId') symbolId: string) {
     return this.scoreHistoryService.getLatest(symbolId);
+  }
+
+  // ── Strategy Competition (Q157) ──
+
+  @Post('compete')
+  @ApiOperation({ summary: 'Run strategy competition — find best next move across all strategies' })
+  async compete(@Body() body: { symbols?: string[]; strategies?: string[]; limit?: number }) {
+    return this.competitionService.compete([], body);
+  }
+
+  @Get('compete/status')
+  @ApiOperation({ summary: 'Get competition status' })
+  getCompetitionStatus() {
+    return this.competitionService.getStatus();
   }
 }

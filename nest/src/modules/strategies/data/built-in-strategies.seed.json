@@ -1,0 +1,152 @@
+[
+  {
+    "strategyId": "forex-mean-reversion",
+    "strategyName": "Forex Mean Reversion",
+    "description": "Captures oversold bounces and mean reversion on major forex pairs. Uses RSI extremes with MACD confirmation.",
+    "symbols": ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD", "USDCAD"],
+    "directives": [
+      { "id": "rsi-oversold", "weight": 30 },
+      { "id": "macd-crossover", "weight": 25 },
+      { "id": "bollinger-pct-b", "weight": 20 },
+      { "id": "rsi-overbought", "weight": 15 },
+      { "id": "atr-dip", "weight": 10 }
+    ],
+    "timeframes": ["1h", "4h"],
+    "preferredProvider": "mt5",
+    "category": "forex",
+    "riskLevel": "medium",
+    "timeHorizon": "day",
+    "builtIn": true
+  },
+  {
+    "strategyId": "cfd-momentum-breakout",
+    "strategyName": "CFD Momentum Breakout",
+    "description": "Trades breakouts on index CFDs with volume confirmation and ADX trend strength.",
+    "symbols": ["GER40", "UK100", "US30", "SPX500", "NAS100"],
+    "directives": [
+      { "id": "volume-surge", "weight": 25 },
+      { "id": "adx", "weight": 25 },
+      { "id": "momentum-roc", "weight": 20 },
+      { "id": "donchian-breakout", "weight": 15 },
+      { "id": "bollinger-pct-b", "weight": 15 }
+    ],
+    "timeframes": ["1h", "1d"],
+    "preferredProvider": "mt5",
+    "category": "indices",
+    "riskLevel": "high",
+    "timeHorizon": "swing",
+    "builtIn": true
+  },
+  {
+    "strategyId": "vix-regime",
+    "strategyName": "VIX Regime Strategy",
+    "description": "Uses VIX levels to determine market regime. Defensive below 20, aggressive above 25. Fades VIX spikes.",
+    "symbols": ["VIX", "SPY"],
+    "directives": [
+      { "id": "vix-regime", "weight": 40 },
+      { "id": "rsi-oversold", "weight": 25 },
+      { "id": "bollinger-pct-b", "weight": 20 },
+      { "id": "volume-surge", "weight": 15 }
+    ],
+    "timeframes": ["1d"],
+    "preferredProvider": "yahoo",
+    "category": "indices",
+    "riskLevel": "medium",
+    "timeHorizon": "day",
+    "builtIn": true
+  },
+  {
+    "strategyId": "gold-macro",
+    "strategyName": "Gold Macro Correlation",
+    "description": "Trades gold (XAUUSD) based on macro correlations — dollar strength, real yields, risk sentiment.",
+    "symbols": ["XAUUSD", "XAGUSD"],
+    "directives": [
+      { "id": "adx", "weight": 35 },
+      { "id": "rsi-oversold", "weight": 25 },
+      { "id": "atr-dip", "weight": 20 },
+      { "id": "ema-structure", "weight": 20 }
+    ],
+    "timeframes": ["4h", "1d"],
+    "preferredProvider": "mt5",
+    "category": "commodities",
+    "riskLevel": "medium",
+    "timeHorizon": "swing",
+    "builtIn": true
+  },
+  {
+    "strategyId": "tech-titan-momentum",
+    "strategyName": "Tech Titan Momentum",
+    "description": "Momentum-based strategy for mega-cap tech stocks. Uses volume confirmation and EMA structure.",
+    "symbols": ["NVDA", "MSFT", "AAPL", "META", "AMD"],
+    "directives": [
+      { "id": "momentum-roc", "weight": 30 },
+      { "id": "volume-confirmation", "weight": 25 },
+      { "id": "ema-structure", "weight": 20 },
+      { "id": "macd-crossover", "weight": 15 },
+      { "id": "adx", "weight": 10 }
+    ],
+    "timeframes": ["1d"],
+    "preferredProvider": "yahoo",
+    "category": "stocks",
+    "riskLevel": "high",
+    "timeHorizon": "swing",
+    "builtIn": true
+  },
+  {
+    "strategyId": "crypto-scalper",
+    "strategyName": "Crypto Scalper",
+    "description": "High-frequency signals on BTC and ETH using sentiment, volume surges, and RSI extremes.",
+    "symbols": ["BTCUSD", "ETHUSD"],
+    "directives": [
+      { "id": "volume-surge", "weight": 30 },
+      { "id": "rsi-oversold", "weight": 25 },
+      { "id": "macd-crossover", "weight": 20 },
+      { "id": "rsi-overbought", "weight": 15 },
+      { "id": "atr-dip", "weight": 10 }
+    ],
+    "timeframes": ["1h"],
+    "preferredProvider": "yahoo",
+    "category": "crypto",
+    "riskLevel": "high",
+    "timeHorizon": "scalp",
+    "builtIn": true
+  },
+  {
+    "strategyId": "etf-slow-growth",
+    "strategyName": "ETF Slow Growth",
+    "description": "Long-only ETF strategy focusing on steady growth, relative strength, and weekly rhythm patterns.",
+    "symbols": ["SPY", "QQQ", "IWM", "ARKX"],
+    "directives": [
+      { "id": "ema-structure", "weight": 30 },
+      { "id": "rsi-oversold", "weight": 25 },
+      { "id": "macd-crossover", "weight": 20 },
+      { "id": "volume-confirmation", "weight": 15 },
+      { "id": "atr-dip", "weight": 10 }
+    ],
+    "timeframes": ["1d", "1wk"],
+    "preferredProvider": "yahoo",
+    "category": "etf",
+    "riskLevel": "low",
+    "timeHorizon": "position",
+    "builtIn": true
+  },
+  {
+    "strategyId": "free-tier-conviction",
+    "strategyName": "Free-Tier Conviction Accumulation",
+    "description": "The 'always works' fallback strategy. Uses only free data sources (Yahoo, Finnhub, Polygon). No API keys required. Conservative, high-conviction entries only.",
+    "symbols": ["AAPL", "NVDA", "TSLA", "MSFT", "SPY"],
+    "directives": [
+      { "id": "rsi-oversold", "weight": 24 },
+      { "id": "macd-crossover", "weight": 22 },
+      { "id": "ema-structure", "weight": 20 },
+      { "id": "atr-dip", "weight": 18 },
+      { "id": "volume-confirmation", "weight": 16 }
+    ],
+    "timeframes": ["1d"],
+    "preferredProvider": "yahoo",
+    "category": "multi",
+    "riskLevel": "medium",
+    "timeHorizon": "swing",
+    "builtIn": true
+  }
+]

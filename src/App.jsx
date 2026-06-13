@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { analytics, trackAppView, trackSupportClick } from './analytics';
@@ -12,6 +12,7 @@ import { FEATURE_FLAGS } from './core/features/flags';
 import { withDevTag } from './dev-runtime/tags';
 import { getPerformanceSnapshot, startPerformanceMonitoring } from './performance/monitor';
 import ArchitectureFrameworkPage from './pages/ArchitectureFrameworkPage';
+import HomeDashboard from './pages/HomeDashboard';
 import BacktestPage from './pages/BacktestPage';
 import MultiStrategyComparisonPage from './pages/MultiStrategyComparisonPage';
 import ScenarioAnalysisPage from './pages/ScenarioAnalysisPage';
@@ -37,7 +38,12 @@ import PlatformComparisonsPage from './pages/PlatformComparisonsPage';
 import PluginTabSkeletonPage from './pages/PluginTabSkeletonPage';
 import ProviderHealthPage from './pages/ProviderHealthPage';
 import RiskControlsPage from './pages/RiskControlsPage';
+import HomeDashboardPage from './pages/HomeDashboardPage';
+import CacheMonitorPage from './pages/CacheMonitorPage';
 import SeesLiveStackMockPage from './pages/SeesLiveStackMockPage';
+import SeesArenaPage from './pages/SeesArenaPage';
+import AlgorithmLabPage from './pages/AlgorithmLabPage';
+import AlertCenterPage from './pages/AlertCenterPage';
 import SetupWizardPage from './pages/SetupWizardPage';
 import SignalsWorkbenchPage from './pages/SignalsWorkbenchPage';
 import SettingsPage from './pages/SettingsPage';
@@ -71,6 +77,19 @@ const THEME_CARDS = [
 
 function BadgePill({ label, status = 'neutral' }) {
   return <span className={`badge-pill badge-${status}`}>{label}</span>;
+}
+
+function AccordionBlock({ title, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className={`acc-block ${open ? 'acc-open' : ''}`}>
+      <button type="button" className="acc-toggle" onClick={() => setOpen(!open)}>
+        <span className="acc-arrow">{open ? '▾' : '▸'}</span>
+        <span className="muted">{title}</span>
+      </button>
+      {open && <div className="acc-content">{children}</div>}
+    </div>
+  );
 }
 
 function ContentCard({ title, children }) {
@@ -226,39 +245,7 @@ function AppShell() {
 
   function renderMainContent() {
     if (secondaryView === 'overview') {
-      return (
-        <>
-          <section className="intro-panel">
-            <h2>Trading Command Suite</h2>
-            <p>
-              Unified command interface for SEES market analysis and MT5 trading operations with built-in
-              developer tooling, analytics, and runtime policy controls.
-            </p>
-            <div className="intro-badges">
-              <BadgePill label="Theme Registry" status="ok" />
-              <BadgePill label="Fail-Closed Policy" status="warn" />
-              <BadgePill label="Web Vitals" status="ok" />
-              <BadgePill label="Dev Runtime Tags" status="ok" />
-            </div>
-          </section>
-          <div className="content-grid">
-            <ContentCard title="What It Offers">
-              <ul>
-                <li>Pluggable theme packs and adapters for scalable UI systems.</li>
-                <li>Security-by-default startup policy with allowlist enforcement.</li>
-                <li>Built-in analytics foundation for centralized intranet reporting.</li>
-              </ul>
-            </ContentCard>
-            <ContentCard title="Who It Is For">
-              <ul>
-                <li>Teams moving from concept to production-grade prototypes quickly.</li>
-                <li>Organizations needing observable, governed front-end platforms.</li>
-                <li>Developers who want reusable app shells with polished demos.</li>
-              </ul>
-            </ContentCard>
-          </div>
-        </>
-      );
+      return <HomeDashboardPage />;
     }
 
     if (secondaryView === 'demos') {
@@ -375,6 +362,10 @@ function AppShell() {
       return <SeesLiveStackMockPage />;
     }
 
+    if (secondaryView === 'sees-arena') {
+      return <SeesArenaPage />;
+    }
+
     if (secondaryView === 'backtest') {
       return <BacktestPage />;
     }
@@ -447,6 +438,10 @@ function AppShell() {
       return <DirectivesConfigPage />;
     }
 
+    if (secondaryView === 'algorithm-lab') {
+      return <AlgorithmLabPage />;
+    }
+
     if (secondaryView === 'scoring-overview') {
       return <ScoringOverviewPage />;
     }
@@ -461,6 +456,10 @@ function AppShell() {
 
     if (secondaryView === 'data-status') {
       return <DataStatusPage />;
+    }
+
+    if (secondaryView === 'transient-caches') {
+      return <CacheMonitorPage />;
     }
 
     if (secondaryView === 'theme-packs') {
@@ -521,6 +520,10 @@ function AppShell() {
 
     if (secondaryView === 'execution-queue') {
       return <ExecutionQueuePage />;
+    }
+
+    if (secondaryView === 'alert-center') {
+      return <AlertCenterPage />;
     }
 
     if (PLUGIN_TAB_SKELETONS[secondaryView]) {
@@ -669,14 +672,6 @@ function AppShell() {
             <BadgePill label={isDbOnline ? 'DB Ready' : 'DB Offline'} status={isDbOnline ? 'ok' : 'warn'} />
             <BadgePill label="Omni Layout" status="neutral" />
             <HealthStatusBar />
-            <button
-              type="button"
-              className="topbar-theme-toggle"
-              onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
-              title={`Switch to ${themeMode === 'dark' ? 'light' : 'dark'} mode`}
-            >
-              {themeMode === 'dark' ? '☀' : '🌙'}
-            </button>
           </div>
 
           <div className="topbar-title-block">
@@ -741,31 +736,27 @@ function AppShell() {
           ))}
         </div>
 
-        {FEATURE_FLAGS.devRuntime && (
-          <div className="rail-block">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <p className="muted" style={{ margin: 0 }}>Dev Runtime</p>
-              <button
-                type="button"
-                className={devOverlayOpen ? 'cta' : ''}
-                onClick={() => {
-                  toggleDevOverlay();
-                  pushActivity('RUNTIME', 'Toggled dev overlay');
-                }}
-                style={{ padding: '0.4rem 0.7rem', fontSize: '0.85rem' }}
-              >
-                {devOverlayOpen ? 'Hide' : 'Show'}
-              </button>
-            </div>
+        <AccordionBlock title="Dev Runtime" defaultOpen={false}>
+          <div style={{ padding: '0.5rem 0' }}>
+            <button
+              type="button"
+              className={devOverlayOpen ? 'cta' : ''}
+              onClick={() => {
+                toggleDevOverlay();
+                pushActivity('RUNTIME', 'Toggled dev overlay');
+              }}
+              style={{ padding: '0.4rem 0.7rem', fontSize: '0.85rem', width: '100%' }}
+            >
+              {devOverlayOpen ? 'Hide' : 'Show'} Dev Overlay
+            </button>
             <DevOverlay />
           </div>
-        )}
+        </AccordionBlock>
 
         {primaryArea === 'settings' && (
           <>
-            <div className="rail-block">
-              <p className="muted">Mode</p>
-              <div className="inline-actions">
+            <AccordionBlock title="Theme Mode" defaultOpen={false}>
+              <div className="inline-actions" style={{ padding: '0.5rem 0' }}>
                 <button type="button" className={themeMode === 'light' ? 'cta' : ''} onClick={() => setThemeMode('light')}>
                   Light
                 </button>
@@ -773,11 +764,10 @@ function AppShell() {
                   Dark
                 </button>
               </div>
-            </div>
+            </AccordionBlock>
 
-            <div className="rail-block">
-              <p className="muted">Background</p>
-              <div className="inline-actions">
+            <AccordionBlock title="Background" defaultOpen={false}>
+              <div className="inline-actions" style={{ padding: '0.5rem 0' }}>
                 <button
                   type="button"
                   className={backgroundTone === 'aura' ? 'cta' : ''}
@@ -809,7 +799,7 @@ function AppShell() {
                   Pure Black
                 </button>
               </div>
-            </div>
+            </AccordionBlock>
 
             <div className="rail-block">
               <p className="muted">Theme Pack</p>
@@ -869,39 +859,16 @@ function AppShell() {
 
       <aside className="right-rail" aria-label="Admin and status">
         <h2>Admin + Status</h2>
-        <div className="rail-block">
-          <p className="muted">Theme Mode</p>
-          <div className="inline-actions">
-            <button type="button" className={themeMode === 'light' ? 'cta' : ''} onClick={() => setThemeMode('light')}>
-              Light
-            </button>
-            <button type="button" className={themeMode === 'dark' ? 'cta' : ''} onClick={() => setThemeMode('dark')}>
-              Dark
-            </button>
-          </div>
-          <p className="muted" style={{ marginTop: 6 }}>Pack: <strong>{themePack}</strong></p>
-          <button
-            type="button"
-            className="cta"
-            style={{ marginTop: 4 }}
-            onClick={() => navigate('/settings/theme-packs')}
-          >
-            Open Theme Page
-          </button>
-        </div>
-
-        <div className="rail-block">
-          <p className="muted">Server</p>
+        <AccordionBlock title="Server" defaultOpen={true}>
           {healthQuery.isLoading && <p>Checking...</p>}
           {healthQuery.error && <p className="error">Offline</p>}
           {healthQuery.data && <p className="ok">Online: {healthQuery.data.version || 'unknown'}</p>}
           <p className="muted">Adapters: {availableAdapters.length}</p>
           <p className="muted">Analytics queue: {analyticsSnapshot.queueLength}</p>
           <p className="muted">Perf samples: {performanceSnapshot.samples}</p>
-        </div>
+        </AccordionBlock>
 
-        <div className="rail-block">
-          <p className="muted">Actions</p>
+        <AccordionBlock title="Actions">
           {FEATURE_FLAGS.devRuntime && (
             <button
               type="button"
@@ -915,7 +882,7 @@ function AppShell() {
             </button>
           )}
           <button type="button" onClick={onDownloadRuntimeReport}>Export Report</button>
-        </div>
+        </AccordionBlock>
       </aside>
 
       <footer className="app-footer">
@@ -1003,8 +970,8 @@ export default function App() {
           <Route path="/research/symbol/:symbolId" element={<AppShell />} />
           <Route path="/:area/:view" element={<AppShell />} />
           <Route path="/:area" element={<AppShell />} />
-          <Route path="/" element={<Navigate to="/trading/sees-live-stack" replace />} />
-          <Route path="*" element={<Navigate to="/trading/sees-live-stack" replace />} />
+          <Route path="/" element={<HomeDashboard />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ErrorBoundary>
     </BrowserRouter>

@@ -7,7 +7,6 @@ export default function SignalsWorkbenchPage() {
     <FeatureSkeletonPage
       title="Signals Workbench"
       subtitle="Live signal stack with directive breakdown, confidence, and path-to-execution preview."
-      domain="Trading / Decision Layer"
       rollout={SKELETON_ROLLOUT.signalsWorkbench}
       handoff={SKELETON_HANDOFF.signalsWorkbench}
       milestones={[

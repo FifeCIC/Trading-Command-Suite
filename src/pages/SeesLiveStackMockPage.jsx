@@ -22,6 +22,10 @@ export default function SeesLiveStackMockPage() {
   const [lastUpdated, setLastUpdated] = useState(new Date())
   const [isAutoSorting, setIsAutoSorting] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [showAllDirectives, setShowAllDirectives] = useState(false)
+
+  // Strategy-weighted directive IDs (weights > 0)
+  const STRATEGY_DIRECTIVE_IDS = ['rsi-oversold', 'macd-crossover', 'ema-structure', 'atr-dip', 'volume-confirmation']
 
   const apiQuery = useQuery({
     queryKey: ['scoring-ranked', tick],
@@ -189,16 +193,33 @@ export default function SeesLiveStackMockPage() {
       </section>
 
       <section className="sees-directives-grid" aria-label="SEES directives">
-        {rankingState.directives.map((directive) => (
-          <article className="sees-directive-card" key={directive.id}>
-            <p className="sees-panel-label">Directive</p>
-            <h3>{directive.label}</h3>
-            <p className="sees-directive-indicator">{directive.indicator}</p>
-            <p className="sees-directive-weight">Weight {(directive.weight * 100).toFixed(0)}%</p>
-            <p className="sees-directive-description">{directive.description}</p>
-          </article>
-        ))}
+        <div className="sees-directives-header">
+          <h3>Strategy Directives ({showAllDirectives ? rankingState.directives.length : Math.min(5, rankingState.directives.length)} showing)</h3>
+          <button type="button" className="btn btn-sm" onClick={() => setShowAllDirectives(!showAllDirectives)}>
+            {showAllDirectives ? 'Show Strategy Only (5)' : `Show All (${rankingState.directives.length})`}
+          </button>
+        </div>
+        {displayDirectives.map((directive) => (
+            <article className={`sees-directive-card ${(directive.weight || 0) > 0 ? 'sees-weighted' : 'sees-unweighted'}`} key={directive.id}>
+              <p className="sees-panel-label">Directive</p>
+              <h3>{directive.label}</h3>
+              <p className="sees-directive-indicator">{directive.indicator}</p>
+              <p className="sees-directive-weight">Weight {(directive.weight * 100).toFixed(0)}%{(directive.weight || 0) > 0 ? ' ★ active' : ' (inactive)'}</p>
+              <p className="sees-directive-description">{directive.description}</p>
+            </article>
+          ))}
       </section>
+
+      {/* What does this mean? — collapsible explanation */}
+      <details className="sees-explanation">
+        <summary>📖 What does this mean?</summary>
+        <div className="sees-explanation-body">
+          <p><strong>Score</strong> — The aggregate score (0–100) from the 5 strategy-weighted directives. <em>Score ≥ 60 = entry signal, ≥ 40 = watch, &lt; 40 = defensive.</em></p>
+          <p><strong>5 of 71 directives</strong> are active in this strategy (RSI, MACD, EMA, ATR, Volume). The other 66 exist in the library but have weight=0.</p>
+          <p><strong>Data Source</strong> — <span style={{ color: '#4ade80' }}>Live</span> = real market data from provider. <span style={{ color: '#fbbf24' }}>Free API</span> = delayed data (15-min). <span style={{ color: '#64748b' }}>Mock</span> = simulation mode.</p>
+          <p><strong>Confidence</strong> (0–1) — How strongly the directives agree. High confidence = most directives point the same direction.</p>
+        </div>
+      </details>
 
       <section className="sees-controls">
         <button type="button" className="btn btn-primary" onClick={mutateSymbols}>Refresh Data</button>

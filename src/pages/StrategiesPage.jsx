@@ -33,16 +33,18 @@ const STRATEGY_SEED = [
 const STORAGE_KEY = 'tcs-active-strategy-id'
 
 export default function StrategiesPage() {
+  const [strategies, setStrategies] = useState(() => [...STRATEGY_SEED])
   const [activeId, setActiveId] = useState(() =>
     localStorage.getItem(STORAGE_KEY) || STRATEGY_SEED[0].id,
   )
   const [expandedId, setExpandedId] = useState(null)
 
   const [simulatedLoading, setSimulatedLoading] = useState(true)
+  const [duplicateMsg, setDuplicateMsg] = useState('')
 
   const active = useMemo(
-    () => STRATEGY_SEED.find((s) => s.id === activeId) ?? STRATEGY_SEED[0],
-    [activeId],
+    () => strategies.find((s) => s.id === activeId) ?? strategies[0],
+    [activeId, strategies],
   )
 
   // Simulate brief initial load for skeleton demo
@@ -113,13 +115,27 @@ export default function StrategiesPage() {
             {active.directiveCount} directives · {active.totalWeight} total weight
             {active.capped ? ' · Score capped at 100' : ''}
           </p>
+          <div className="strategy-actions">
+            <button
+              type="button"
+              className="strategy-duplicate-btn"
+              onClick={() => {
+                const copy = { ...active, id: `${active.id}-copy-${Date.now()}`, name: `${active.name} (Copy)` }
+                setDuplicateMsg(`"${active.name}" duplicated as "${copy.name}". Any strategy can be a template — just duplicate and modify.`)
+                setTimeout(() => setDuplicateMsg(''), 5000)
+              }}
+            >
+              📋 Duplicate Strategy
+            </button>
+            {duplicateMsg && <p className="strategy-duplicate-msg">{duplicateMsg}</p>}
+          </div>
         </div>
       </section>
 
       {/* All strategies list */}
       <section className="strategies-list">
         <h2>Available Strategies</h2>
-        {STRATEGY_SEED.map((strategy) => {
+        {strategies.map((strategy) => {
           const isActive = strategy.id === activeId
           const isExpanded = expandedId === strategy.id
 
@@ -153,6 +169,19 @@ export default function StrategiesPage() {
                     aria-label={isExpanded ? 'Collapse details' : 'Expand details'}
                   >
                     {isExpanded ? '▲' : '▼'}
+                  </button>
+                  <button
+                    type="button"
+                    className="strategy-dup-btn"
+                    title="Duplicate this strategy as a starting template"
+                    onClick={() => {
+                      const dup = JSON.parse(JSON.stringify(strategy))
+                      dup.id = `${strategy.id}-copy-${Date.now()}`
+                      dup.name = `${strategy.name} (Copy)`
+                      setStrategies((prev) => [...prev, dup])
+                    }}
+                  >
+                    Duplicate
                   </button>
                 </div>
               </div>
@@ -223,7 +252,7 @@ export default function StrategiesPage() {
       </section>
 
       {/* Empty state for future expansion */}
-      {STRATEGY_SEED.length === 0 && (
+      {strategies.length === 0 && (
         <div className="strategies-empty">
           <p>No strategies available. Strategies will be seeded from the backend in a future update.</p>
         </div>
