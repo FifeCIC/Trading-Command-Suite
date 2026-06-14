@@ -1,0 +1,74 @@
+[
+  {
+    "triggerId": "strong-trend-detected",
+    "name": "Strong Trend Detected",
+    "condition": "hurst > 0.65 AND market_structure_bos.signalClass == regime",
+    "action": "mute_category",
+    "targetCategory": "mean-reversion",
+    "duration": 0,
+    "reason": "Mean-reversion directives produce false signals in strong trends"
+  },
+  {
+    "triggerId": "high-volatility-regime",
+    "name": "High Volatility Regime",
+    "condition": "market_entropy > 0.7 AND atr_ratio > 1.5",
+    "action": "boost_category",
+    "targetCategory": "volatility",
+    "duration": 0,
+    "reason": "Volatility directives are most effective in volatile conditions"
+  },
+  {
+    "triggerId": "deep-compression-zone",
+    "name": "Deep Compression Zone",
+    "condition": "range_contraction > 70 AND compression_state == 'compressing'",
+    "action": "boost_category",
+    "targetCategory": "volatility",
+    "duration": 0,
+    "reason": "Compression precedes expansion — volatility directives should be ready"
+  },
+  {
+    "triggerId": "ranging-market",
+    "name": "Ranging Market Detected",
+    "condition": "market_entropy > 0.55 AND hurst < 0.5",
+    "action": "mute_category",
+    "targetCategory": "trend",
+    "duration": 0,
+    "reason": "Trend directives generate whipsaw signals in ranging markets"
+  },
+  {
+    "triggerId": "asian-session-low-vol",
+    "name": "Asian Session — Low Volume",
+    "condition": "session == 'Asian' AND session_quality < 0.4",
+    "action": "mute_category",
+    "targetCategory": "volume",
+    "duration": 0,
+    "reason": "Volume-based directives unreliable in low-liquidity Asian session"
+  },
+  {
+    "triggerId": "london-us-overlap",
+    "name": "London/US Overlap Boost",
+    "condition": "session == 'London/US' AND volatility == 'normal'",
+    "action": "boost_category",
+    "targetCategory": "trend",
+    "duration": 0,
+    "reason": "Maximum liquidity — trend signals most reliable during overlap"
+  },
+  {
+    "triggerId": "bearish-structure-break",
+    "name": "Bearish Structure Break",
+    "condition": "structure_bias == 'bearish' AND market_structure_bos.score < 30",
+    "action": "mute_category",
+    "targetCategory": "trend",
+    "duration": 0,
+    "reason": "Bearish structure — mute bullish trend directives"
+  },
+  {
+    "triggerId": "bullish-structure-break",
+    "name": "Bullish Structure Break",
+    "condition": "structure_bias == 'bullish' AND market_structure_bos.score > 60",
+    "action": "boost_category",
+    "targetCategory": "trend",
+    "duration": 0,
+    "reason": "Bullish structure confirmed — boost trend directives"
+  }
+]

@@ -155,3 +155,5 @@
 2026-06-13 17:28:44,066 [INFO] Starting MT5 Bridge on port 5000...
 2026-06-13 17:28:44,066 [INFO] MT5 package available: True
 2026-06-13 17:28:44,066 [INFO] Flask server starting — MT5 will connect on first API request
+2026-06-14 00:41:05,406 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-14 00:41:05,432 [INFO] MT5 connected: balance=1000.0, server=MetaQuotes-Demo

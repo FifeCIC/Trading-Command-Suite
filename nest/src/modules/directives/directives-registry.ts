@@ -47,6 +47,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Bullish when RSI(14) < 30 and curling upward. Scores mean reversion with confirmation.',
     phpSource: 'includes/scoring-system/directives/rsi-oversold.php',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'ranging', volatilityLevel:'normal', instrumentTypes:['any'], minTimeframe:'1h', category:'mean-reversion' },
   },
   {
     id: 'macd-crossover',
@@ -58,6 +59,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Bullish when MACD line crosses above signal line with improving histogram.',
     phpSource: 'includes/scoring-system/directives/macd-bullish-crossover.php',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'trending', volatilityLevel:'normal', instrumentTypes:['any'], minTimeframe:'1h', category:'trend' },
   },
   {
     id: 'ema-structure',
@@ -69,6 +71,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Bullish when price holds above key EMAs (9/21/50) with proper stacking.',
     phpSource: 'includes/scoring-system/directives/ema.php',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'trending', volatilityLevel:'any', instrumentTypes:['forex','stocks','indices'], minTimeframe:'1h', category:'trend' },
   },
   {
     id: 'atr-dip',
@@ -79,6 +82,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     complexity: 'medium',
     description: 'Scores pullbacks where price dips within ATR bands without breaking structure.',
     inputs: ['priceSeries', 'atr'],
+  suitability: { regimeType:'ranging', volatilityLevel:'normal', instrumentTypes:['any'], minTimeframe:'4h', category:'mean-reversion' },
   },
   {
     id: 'volume-confirmation',
@@ -90,6 +94,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Confirms price moves with above-average volume. Filters low-conviction signals.',
     phpSource: 'includes/scoring-system/directives/volume-surge.php',
     inputs: ['priceSeries', 'volume'],
+  suitability: { regimeType:'trending', volatilityLevel:'any', instrumentTypes:['stocks','forex'], minTimeframe:'1h', category:'volume' },
   },
 
   // =========================================================================
@@ -107,6 +112,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: '%K/%D crossover in oversold (<20) region with upward curl. Identifies momentum shifts in ranging markets.',
     phpSource: 'includes/scoring-system/directives/stochastic.php',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'ranging', volatilityLevel:'normal', instrumentTypes:['any'], minTimeframe:'1h', category:'mean-reversion' },
   },
   {
     id: 'cci',
@@ -118,6 +124,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'CCI crossing above -100 from oversold territory signals mean reversion opportunity.',
     phpSource: 'includes/scoring-system/directives/cci.php',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'ranging', volatilityLevel:'normal', instrumentTypes:['any'], minTimeframe:'1h', category:'mean-reversion' },
   },
   {
     id: 'mfi',
@@ -129,6 +136,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Volume-weighted RSI. MFI < 20 with upward cross = accumulation signal.',
     phpSource: 'includes/scoring-system/directives/mfi.php',
     inputs: ['priceSeries', 'volume'],
+  suitability: { regimeType:'any', volatilityLevel:'any', instrumentTypes:['any'], minTimeframe:'1h', category:'volume' },
   },
   {
     id: 'adx',
@@ -140,6 +148,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'ADX > 25 confirms trend strength. +DI > -DI for bullish bias. Scores trend conviction.',
     phpSource: 'includes/scoring-system/directives/adx.php',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'trending', volatilityLevel:'any', instrumentTypes:['any'], minTimeframe:'4h', category:'trend' },
   },
   {
     id: 'rsi-overbought',
@@ -151,6 +160,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'RSI > 70 with downward curl = bearish short-term signal. Scores negatively for longs.',
     phpSource: 'includes/scoring-system/directives/rsi-overbought.php',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'ranging', volatilityLevel:'normal', instrumentTypes:['any'], minTimeframe:'1h', category:'mean-reversion' },
   },
   {
     id: 'momentum-continuation-combo',
@@ -186,6 +196,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Fast MA crossing above slow MA. Golden cross (50>200) and shorter-term crosses.',
     phpSource: 'includes/scoring-system/directives/ma-crossover.php',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'trending', volatilityLevel:'any', instrumentTypes:['any'], minTimeframe:'1h', category:'trend' },
   },
   {
     id: 'price-above-sma-50',
@@ -234,6 +245,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'OBV trend divergence from price. Rising OBV with flat price = accumulation. Scores volume-price confirmation.',
     phpSource: 'includes/scoring-system/directives/obv.php',
     inputs: ['priceSeries', 'volume'],
+  suitability: { regimeType:'trending', volatilityLevel:'any', instrumentTypes:['any'], minTimeframe:'1h', category:'volume' },
   },
   {
     id: 'volume-surge',
@@ -245,6 +257,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Volume > 2x average with price up = institutional interest. Scores surge conviction.',
     phpSource: 'includes/scoring-system/directives/volume-surge.php',
     inputs: ['priceSeries', 'volume'],
+  suitability: { regimeType:'any', volatilityLevel:'high', instrumentTypes:['any'], minTimeframe:'1h', category:'volume' },
   },
   {
     id: 'volume-rhythm',
@@ -256,6 +269,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Day-of-week volume patterns. Identifies institutional trading rhythms and volume anomalies.',
     phpSource: 'includes/scoring-system/directives/volume-rhythm.php',
     inputs: ['priceSeries', 'volume'],
+  suitability: { regimeType:'any', volatilityLevel:'any', instrumentTypes:['stocks'], minTimeframe:'1d', category:'volume' },
   },
 
   // --- Candlestick Patterns ---
@@ -269,6 +283,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Doji at support = indecision → potential reversal. Scores body/wick ratio and location.',
     phpSource: 'includes/scoring-system/directives/doji-pattern.php',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'any', volatilityLevel:'normal', instrumentTypes:['any'], minTimeframe:'1h', category:'pattern' },
   },
   {
     id: 'hammer-pattern',
@@ -280,6 +295,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Hammer at downtrend low = bullish reversal. Scores lower wick ratio and confirmation.',
     phpSource: 'includes/scoring-system/directives/hammer-pattern.php',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'any', volatilityLevel:'normal', instrumentTypes:['any'], minTimeframe:'1h', category:'pattern' },
   },
   {
     id: 'engulfing-pattern',
@@ -291,6 +307,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Bullish engulfing = strong reversal signal. Scores body ratio and trend context.',
     phpSource: 'includes/scoring-system/directives/engulfing-pattern.php',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'any', volatilityLevel:'normal', instrumentTypes:['any'], minTimeframe:'1h', category:'pattern' },
   },
   // =========================================================================
   // MT5 PORTED — Candlestick patterns from MetaQuotes Free Robots
@@ -304,6 +321,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     complexity: 'medium',
     description: 'MT5-sourced 2-candle engulfing with RSI(37) confirmation. Pattern detected=30, confirmed=85.',
     inputs: ['priceSeries', 'rsi'],
+  suitability: { regimeType:'any', volatilityLevel:'normal', instrumentTypes:['forex'], minTimeframe:'1h', category:'pattern' },
     docSource: 'MT5 Experts/Free Robots/BullishBearish Engulfing RSI.mq5',
   },
   {
@@ -315,6 +333,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     complexity: 'medium',
     description: 'MT5-sourced harami reversal with RSI(37) confirmation. Inner body <40% of outer body.',
     inputs: ['priceSeries', 'rsi'],
+  suitability: { regimeType:'any', volatilityLevel:'normal', instrumentTypes:['forex'], minTimeframe:'1h', category:'pattern' },
     docSource: 'MT5 Free Robots — harami pattern library',
   },
   {
@@ -326,6 +345,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     complexity: 'high',
     description: '3-candle morning/evening star with RSI(37) confirmation. Gaps required for full score.',
     inputs: ['priceSeries', 'rsi'],
+  suitability: { regimeType:'any', volatilityLevel:'normal', instrumentTypes:['forex'], minTimeframe:'1h', category:'pattern' },
     docSource: 'MT5 Free Robots — star pattern library',
   },
   {
@@ -337,6 +357,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     complexity: 'medium',
     description: 'Hammer (bullish) and shooting star (bearish) with RSI(37) confirmation. Wick 2x body required.',
     inputs: ['priceSeries', 'rsi'],
+  suitability: { regimeType:'any', volatilityLevel:'normal', instrumentTypes:['forex'], minTimeframe:'1h', category:'pattern' },
     docSource: 'MT5 Free Robots — hammer pattern library',
   },
   {
@@ -360,6 +381,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Three consecutive strong bullish candles = trend establishment. Scores consistency and volume.',
     phpSource: 'includes/scoring-system/directives/three-soldiers-pattern.php',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'trending', volatilityLevel:'normal', instrumentTypes:['any'], minTimeframe:'1h', category:'pattern' },
   },
 
   // --- Macro/Regime ---
@@ -374,6 +396,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     phpSource: 'includes/scoring-system/directives/vix-regime.php',
     docSource: 'docs/systems/VIX-REGIME-DIRECTIVE.md',
     inputs: ['vixData', 'spyData'],
+  suitability: { regimeType:'any', volatilityLevel:'any', instrumentTypes:['indices'], minTimeframe:'1d', category:'macro' },
     requiresProvider: 'Finnhub or FMP (premium); SPY proxy (free)',
     scope: 'SPY, QQQ, IWM, DIA, broad ETFs',
   },
@@ -582,6 +605,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Distance to next earnings date. Scores pre-earnings positioning and post-earnings drift windows.',
     phpSource: 'includes/scoring-system/directives/earnings-proximity.php',
     inputs: ['earningsCalendar'],
+  suitability: { regimeType:'any', volatilityLevel:'any', instrumentTypes:['stocks'], minTimeframe:'1d', category:'macro' },
   },
   {
     id: 'news-sentiment-positive',
@@ -618,6 +642,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Raw price action analysis: higher highs/lows, market structure, support/resistance tests.',
     phpSource: 'includes/scoring-system/directives/price-action.php',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'ranging', volatilityLevel:'any', instrumentTypes:['any'], minTimeframe:'1h', category:'mean-reversion' },
   },
 
   // --- Risk / Support-Resistance ---
@@ -677,6 +702,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'General Bollinger Bands analysis: price relative to bands, bandwidth, %B indicator.',
     phpSource: 'includes/scoring-system/directives/bollinger-bands.php',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'any', volatilityLevel:'normal', instrumentTypes:['any'], minTimeframe:'1h', category:'volatility' },
   },
   // --- VWAP ---
   {
@@ -689,6 +715,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Price relative to VWAP. Above VWAP = bullish intraday sentiment. Scores deviation and hold duration.',
     phpSource: 'includes/scoring-system/directives/vwap.php',
     inputs: ['priceSeries', 'volume'],
+  suitability: { regimeType:'any', volatilityLevel:'any', instrumentTypes:['stocks'], minTimeframe:'1h', category:'volume' },
   },
   // --- Weekly Rhythm (basic variant) ---
   {
@@ -905,6 +932,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Williams %R below -80 = oversold bounce. Above -20 = overbought. Derived from MT5 Williams %R indicator.',
     docSource: 'MT5 Indicators/Williams %R',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'ranging', volatilityLevel:'normal', instrumentTypes:['any'], minTimeframe:'1h', category:'mean-reversion' },
   },
   {
     id: 'awesome-oscillator',
@@ -916,6 +944,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: '5-SMA(mid) minus 34-SMA(mid). Green bars above zero and rising = bullish. MT5 Awesome Oscillator.',
     docSource: 'MT5 Indicators/Awesome Oscillator',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'any', volatilityLevel:'any', instrumentTypes:['any'], minTimeframe:'4h', category:'microstructure' },
   },
   {
     id: 'force-index',
@@ -927,6 +956,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Volume × price change, EMA-smoothed. Positive and rising = strong buying pressure. MT5 Force Index.',
     docSource: 'MT5 Indicators/Force Index',
     inputs: ['priceSeries', 'volume'],
+  suitability: { regimeType:'trending', volatilityLevel:'any', instrumentTypes:['any'], minTimeframe:'1h', category:'volume' },
   },
   {
     id: 'chaikin-mf',
@@ -938,6 +968,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Volume-weighted accumulation/distribution over 21 periods. CMF > 0.1 = accumulation. MT5 Chaikin Money Flow.',
     docSource: 'MT5 Indicators/Chaikin Money Flow',
     inputs: ['priceSeries', 'volume'],
+  suitability: { regimeType:'any', volatilityLevel:'any', instrumentTypes:['stocks'], minTimeframe:'1d', category:'volume' },
   },
   {
     id: 'donchian-breakout',
@@ -949,6 +980,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Price breaking above 20-period high = bullish breakout. MT5 Donchian Channel.',
     docSource: 'MT5 Indicators/Donchian Channel',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'trending', volatilityLevel:'normal', instrumentTypes:['any'], minTimeframe:'1h', category:'trend' },
   },
   {
     id: 'keltner-channel',
@@ -960,6 +992,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'EMA(20) ± 2×ATR(10). Band squeeze signals impending expansion. MT5 Keltner Channel.',
     docSource: 'MT5 Indicators/Keltner Channel',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'ranging', volatilityLevel:'normal', instrumentTypes:['any'], minTimeframe:'1h', category:'mean-reversion' },
   },
   {
     id: 'supertrend',
@@ -971,6 +1004,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'ATR(10)×3 trailing stop. Price above = uptrend. MT5 SuperTrend.',
     docSource: 'MT5 Indicators/SuperTrend',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'trending', volatilityLevel:'any', instrumentTypes:['any'], minTimeframe:'4h', category:'trend' },
   },
   {
     id: 'parabolic-sar',
@@ -982,6 +1016,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Price above PSAR = uptrend. AF 0.02 step 0.02 max 0.2. MT5 Parabolic SAR.',
     docSource: 'MT5 Indicators/Parabolic SAR',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'trending', volatilityLevel:'any', instrumentTypes:['any'], minTimeframe:'1h', category:'trend' },
   },
   {
     id: 'adx-di-crossover',
@@ -1015,6 +1050,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Price above 3×ATR trailing stop = strong trend. Pullbacks to stop = entries. MT5 ATR Trailing Stop.',
     docSource: 'MT5 Indicators/ATR Trailing Stop',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'any', volatilityLevel:'high', instrumentTypes:['any'], minTimeframe:'1h', category:'volatility' },
   },
   {
     id: 'momentum-roc',
@@ -1026,6 +1062,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'ROC(12) crossing above zero = bullish momentum shift. MT5 Momentum/ROC.',
     docSource: 'MT5 Indicators/Momentum',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'trending', volatilityLevel:'normal', instrumentTypes:['any'], minTimeframe:'1h', category:'microstructure' },
   },
   {
     id: 'demarker',
@@ -1037,6 +1074,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'DeMax/DeMin ratio over 14 periods. < 0.3 = oversold, > 0.7 = overbought. MT5 DeMarker.',
     docSource: 'MT5 Indicators/DeMarker',
     inputs: ['priceSeries'],
+  suitability: { regimeType:'ranging', volatilityLevel:'normal', instrumentTypes:['any'], minTimeframe:'1h', category:'mean-reversion' },
   },
   {
     id: 'accumulation-dist',
@@ -1048,6 +1086,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'A/D line divergence from price. Rising A/D + flat price = accumulation. MT5 A/D indicator.',
     docSource: 'MT5 Indicators/Accumulation Distribution',
     inputs: ['priceSeries', 'volume'],
+  suitability: { regimeType:'any', volatilityLevel:'any', instrumentTypes:['any'], minTimeframe:'1h', category:'volume' },
   },
   {
     id: 'bulls-bears-power',
@@ -1070,6 +1109,7 @@ export const DIRECTIVES_REGISTRY: DirectiveRegistryEntry[] = [
     description: 'Price change per unit of volume. Positive and rising = easy upward movement. MT5 Ease of Movement.',
     docSource: 'MT5 Indicators/Ease of Movement',
     inputs: ['priceSeries', 'volume'],
+  suitability: { regimeType:'trending', volatilityLevel:'normal', instrumentTypes:['stocks'], minTimeframe:'1h', category:'volume' },
   },
   {
     id: 'ichimoku-cloud',
