@@ -21,6 +21,7 @@ import { ModeService } from '../../config/mode.service';
 import { DirectivesService } from '../directives/directives.service';
 import { ScoreHistoryService } from './score-history.service';
 import { NotificationService } from '../notifications/notifications.service';
+import { CalibrationService } from '../calibration/calibration.service';
 import {
   DirectiveInput,
   MarketBar,
@@ -84,6 +85,7 @@ export class ScoringService {
     private readonly directivesService: DirectivesService,
     private readonly scoreHistoryService: ScoreHistoryService,
     private readonly notificationService: NotificationService,
+    private readonly calibrationService: CalibrationService,
   ) {}
 
   async rankAll(strategyId?: string, limit = 20): Promise<RankedResult> {
@@ -136,6 +138,9 @@ export class ScoringService {
       const input: DirectiveInput = { symbol: symbol.ticker, bars };
       const results = this.directivesService.runAll(input);
 
+      // Apply symbol-specific calibrations before building breakdown
+      const { adjustedScores, applied: calibrationsApplied } = this.calibrationService.applyCalibrations(symbol.ticker, results);
+
       // Phase 1: Build breakdown with signalClass and priority
       const breakdown: DirectiveBreakdown[] = [];
       const signalGroups: { bullish: number; bearish: number; neutral: number } = {
@@ -147,6 +152,7 @@ export class ScoringService {
         const directive = this.directivesService.get(id);
         const priority = directive?.priority ?? 50;
         const signalClass = result.signalClass ?? 'neutral';
+        const calibratedScore = adjustedScores.get(id) ?? result.score;
 
         // Track weighted signal votes
         if (signalClass === 'bullish') signalGroups.bullish += weight;
@@ -156,7 +162,7 @@ export class ScoringService {
         breakdown.push({
           directiveId: id,
           name: directive?.name ?? id,
-          score: result.score,
+          score: calibratedScore,
           weight,
           contribution: 0, // computed in phase 2
           confidence: result.confidence,

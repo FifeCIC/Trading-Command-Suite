@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../database/database.module';
 import { DirectivesModule } from '../directives/directives.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { CalibrationModule } from '../calibration/calibration.module';
 import { AlgorithmLabController } from './algorithm-lab.controller';
 import { ArenaController } from './arena.controller';
 import { ScoringController } from './scoring.controller';
@@ -12,7 +13,7 @@ import { AveragingScorer } from './averaging-scorer';
 import { StrategyCompetitionService } from './strategy-competition.service';
 
 @Module({
-  imports: [DatabaseModule, DirectivesModule, NotificationsModule],
+  imports: [DatabaseModule, DirectivesModule, NotificationsModule, CalibrationModule],
   controllers: [ScoringController, ArenaController, AlgorithmLabController],
   providers: [ScoringService, ScoreHistoryService, ScoringSchedulerService, AveragingScorer, StrategyCompetitionService],
   exports: [ScoringService, ScoreHistoryService, AveragingScorer, StrategyCompetitionService],

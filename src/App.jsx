@@ -53,6 +53,7 @@ import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
 import SymbolDetailPage from './pages/SymbolDetailPage';
 import SystemStatusPage from './pages/SystemStatusPage';
 import SystemLogPage from './pages/SystemLogPage';
+import TrainingCandlePatternsPage from './pages/TrainingCandlePatternsPage';
 import ThemePage from './pages/ThemePage';
 import TradingPlatformsPage from './pages/TradingPlatformsPage';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
@@ -524,6 +525,10 @@ function AppShell() {
 
     if (secondaryView === 'alert-center') {
       return <AlertCenterPage />;
+    }
+
+    if (secondaryView === 'candle-patterns') {
+      return <TrainingCandlePatternsPage />;
     }
 
     if (PLUGIN_TAB_SKELETONS[secondaryView]) {

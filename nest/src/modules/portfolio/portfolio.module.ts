@@ -4,11 +4,13 @@ import { ScoringModule } from '../scoring/scoring.module';
 import { Trading212Adapter } from '../providers/adapters/trading212.adapter';
 import { PortfolioService } from './portfolio.service';
 import { PortfolioController } from './portfolio.controller';
+import { Trading212ImportService } from './trading212-import.service';
+import { Trading212PortfolioController } from './trading212-portfolio.controller';
 
 @Module({
   imports: [ProvidersModule, ScoringModule],
-  controllers: [PortfolioController],
-  providers: [PortfolioService, Trading212Adapter],
+  controllers: [PortfolioController, Trading212PortfolioController],
+  providers: [PortfolioService, Trading212Adapter, Trading212ImportService],
   exports: [PortfolioService],
 })
 export class PortfolioModule {}

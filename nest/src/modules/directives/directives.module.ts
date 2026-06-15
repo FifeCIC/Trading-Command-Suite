@@ -46,6 +46,12 @@ import { ConfluenceReversalComboDirective } from './implementations/confluence-r
 import { NewsSentimentPositiveDirective } from './implementations/news-sentiment.directive';
 import { EarningsProximityDirective } from './implementations/earnings-proximity.directive';
 import { VixRegimeDirective } from './implementations/vix-regime.directive';
+import { VolatilityEnvelopeDirective } from './implementations/volatility-envelope.directive';
+import { MomentumExhaustionDirective } from './implementations/momentum-exhaustion.directive';
+import { TargetAchievedDirective } from './implementations/target-achieved.directive';
+import { RegimeShiftExitDirective } from './implementations/regime-shift-exit.directive';
+import { TimeStopDirective } from './implementations/time-stop.directive';
+import { SessionOpenEffectDirective } from './implementations/session-open-effect.directive';
 
 // MT5 ported indicators (Q156 — 17 directives)
 import { WilliamsRDirective } from './implementations/mt5-indicators.directives';
@@ -236,6 +242,14 @@ import {
     Sp500RegimeDirective,
     VixStrategyDirective,
     WeeklyRhythmStrategyDirective,
+    // Q232 — Volatility Envelope
+    VolatilityEnvelopeDirective,
+    // Q238 — Exit Signals
+    MomentumExhaustionDirective,
+    TargetAchievedDirective,
+    RegimeShiftExitDirective,
+    TimeStopDirective,
+    SessionOpenEffectDirective,
   ],
   exports: [DirectivesService],
 })
@@ -336,6 +350,12 @@ export class DirectivesModule implements OnModuleInit {
     private readonly sp500Regime: Sp500RegimeDirective,
     private readonly vixStrat: VixStrategyDirective,
     private readonly weeklyRhythmStrat: WeeklyRhythmStrategyDirective,
+    private readonly volEnvelope: VolatilityEnvelopeDirective,
+    private readonly momentumExhaust: MomentumExhaustionDirective,
+    private readonly targetAchieved: TargetAchievedDirective,
+    private readonly regimeShiftExit: RegimeShiftExitDirective,
+    private readonly timeStop: TimeStopDirective,
+    private readonly sessionOpenEffect: SessionOpenEffectDirective,
   ) {}
 
   onModuleInit() {
@@ -433,5 +453,12 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.sp500Regime);
     this.directivesService.register(this.vixStrat);
     this.directivesService.register(this.weeklyRhythmStrat);
+    this.directivesService.register(this.volEnvelope);
+    // Q238 — Exit Signals
+    this.directivesService.register(this.momentumExhaust);
+    this.directivesService.register(this.targetAchieved);
+    this.directivesService.register(this.regimeShiftExit);
+    this.directivesService.register(this.timeStop);
+    this.directivesService.register(this.sessionOpenEffect);
   }
 }

@@ -179,6 +179,12 @@ export const NAV_TREE = {
       { id: 'audit-log', label: 'Audit Log' },
     ],
   },
+  training: {
+    label: 'Training',
+    views: [
+      { id: 'candle-patterns', label: '🕯️ Candle Patterns' },
+    ],
+  },
   testing: {
     label: 'Testing',
     views: [
