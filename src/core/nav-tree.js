@@ -20,15 +20,18 @@ export const NAV_TREE = {
     label: 'Trading',
     views: [
       { id: 'trading-strategies', label: 'Trading Strategies' },
-      { id: 'mt5-status', label: 'MT5 Bridge Status' },
-      { id: 'mt5-trading', label: 'MT5 Trading' },
-      { id: 'mt5-demo-trading', label: 'MT5 Demo Trading' },
+      { id: 'mt5-trading', label: 'MT5 Manual Trading' },
       { id: 'calculators', label: 'Calculators' },
       { id: 'portfolio-overview', label: 'Portfolio Overview' },
       { id: 'trade-history', label: 'Trade History' },
-      { id: 'manual-trading', label: 'Manual Trading' },
       { id: 'positions-monitor', label: 'Positions Monitor' },
       { id: 'trade-journal', label: 'Trade Journal' },
+    ],
+  },
+  status: {
+    label: 'Status',
+    views: [
+      { id: 'mt5-status', label: 'MT5 Bridge Status' },
     ],
   },
   scoring: {
