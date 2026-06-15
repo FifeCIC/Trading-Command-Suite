@@ -323,7 +323,7 @@ body {
 
 h1 {
   margin: 0;
-  font-size: clamp(1.25rem, 2.5vw, 1.65rem);
+  font-size: clamp(1.15rem, 2vw, 1.5rem);
 }
 
 h1,
@@ -333,8 +333,6 @@ h2 {
 
 p {
   margin: 0.5rem 0;
-  font-size: 0.92rem;
-}
   color: var(--ink-soft);
 }
 
