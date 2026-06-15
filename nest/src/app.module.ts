@@ -29,6 +29,7 @@ import { AlertsModule } from './modules/alerts/alerts.module';
 import { CacheModule } from './modules/cache/cache.module';
 import { TrainingModule } from './modules/training/training.module';
 import { CalibrationModule } from './modules/calibration/calibration.module';
+import { TradingModule } from './modules/trading/trading.module';
 import { RateLimiterMiddleware } from './common/middleware/rate-limiter.middleware';
 import { MetricsMiddleware } from './common/middleware/metrics.middleware';
 
@@ -67,6 +68,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     CacheModule,
     TrainingModule,
     CalibrationModule,
+    TradingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

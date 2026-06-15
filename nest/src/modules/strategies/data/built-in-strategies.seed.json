@@ -148,5 +148,176 @@
     "riskLevel": "medium",
     "timeHorizon": "swing",
     "builtIn": true
+  },
+  {
+    "strategyId": "ai-titans",
+    "strategyName": "AI Titans",
+    "description": "Mega-cap AI infrastructure and platform stocks. Momentum-driven with earnings awareness.",
+    "symbols": ["NVDA", "MSFT", "AMD", "AVGO", "SMCI", "PLTR"],
+    "directives": [
+      { "id": "momentum-roc", "weight": 30 },
+      { "id": "volume-confirmation", "weight": 25 },
+      { "id": "ema-structure", "weight": 20 },
+      { "id": "earnings-proximity", "weight": 15 },
+      { "id": "news-sentiment", "weight": 10 }
+    ],
+    "timeframes": ["1d"],
+    "preferredProvider": "yahoo",
+    "category": "stocks",
+    "riskLevel": "high",
+    "timeHorizon": "swing",
+    "builtIn": true
+  },
+  {
+    "strategyId": "magnificent-7",
+    "strategyName": "Magnificent 7",
+    "description": "The standard mega-cap tech basket — AAPL, MSFT, GOOGL, AMZN, NVDA, META, TSLA.",
+    "symbols": ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA"],
+    "directives": [
+      { "id": "ema-structure", "weight": 28 },
+      { "id": "momentum-roc", "weight": 25 },
+      { "id": "volume-confirmation", "weight": 22 },
+      { "id": "news-sentiment", "weight": 15 },
+      { "id": "rsi-oversold", "weight": 10 }
+    ],
+    "timeframes": ["1d"],
+    "preferredProvider": "yahoo",
+    "category": "stocks",
+    "riskLevel": "medium",
+    "timeHorizon": "swing",
+    "builtIn": true
+  },
+  {
+    "strategyId": "european-defence",
+    "strategyName": "European Defence",
+    "description": "NATO spending cycle — defence contractors benefiting from increased European military budgets.",
+    "symbols": ["RHM.DE", "SAAB", "BAE.L", "THALES.PA"],
+    "directives": [
+      { "id": "ema-structure", "weight": 30 },
+      { "id": "momentum-roc", "weight": 25 },
+      { "id": "news-sentiment", "weight": 25 },
+      { "id": "adx", "weight": 20 }
+    ],
+    "timeframes": ["1d"],
+    "preferredProvider": "yahoo",
+    "category": "stocks",
+    "riskLevel": "medium",
+    "timeHorizon": "position",
+    "builtIn": true
+  },
+  {
+    "strategyId": "gold-complex",
+    "strategyName": "Gold Complex",
+    "description": "Gold spot + gold miners. Macro-driven with USD correlation awareness.",
+    "symbols": ["XAUUSD", "GDX", "NEM", "GOLD"],
+    "directives": [
+      { "id": "adx", "weight": 35 },
+      { "id": "rsi-oversold", "weight": 25 },
+      { "id": "news-sentiment", "weight": 20 },
+      { "id": "ema-structure", "weight": 20 }
+    ],
+    "timeframes": ["4h", "1d"],
+    "preferredProvider": "mt5",
+    "category": "commodities",
+    "riskLevel": "medium",
+    "timeHorizon": "swing",
+    "builtIn": true
+  },
+  {
+    "strategyId": "crypto-majors",
+    "strategyName": "Crypto Majors",
+    "description": "Top 4 by market cap — BTC, ETH, SOL, XRP. 24/7 volatility with session awareness.",
+    "symbols": ["BTCUSD", "ETHUSD", "SOLUSD", "XRPUSD"],
+    "directives": [
+      { "id": "volume-surge", "weight": 30 },
+      { "id": "rsi-oversold", "weight": 25 },
+      { "id": "session-open-effect", "weight": 20 },
+      { "id": "market-entropy", "weight": 15 },
+      { "id": "liquidity-sweep", "weight": 10 }
+    ],
+    "timeframes": ["1h"],
+    "preferredProvider": "yahoo",
+    "category": "crypto",
+    "riskLevel": "high",
+    "timeHorizon": "swing",
+    "builtIn": true
+  },
+  {
+    "strategyId": "meme-coins",
+    "strategyName": "Meme Coins",
+    "description": "High-vol social-driven coins. News sentiment and volume surge are primary drivers.",
+    "symbols": ["DOGEUSD", "SHIBUSD"],
+    "directives": [
+      { "id": "news-sentiment", "weight": 35 },
+      { "id": "volume-surge", "weight": 30 },
+      { "id": "panic-exhaustion", "weight": 20 },
+      { "id": "liquidity-sweep", "weight": 15 }
+    ],
+    "timeframes": ["15m", "1h"],
+    "preferredProvider": "yahoo",
+    "category": "crypto",
+    "riskLevel": "high",
+    "timeHorizon": "scalp",
+    "builtIn": true
+  },
+  {
+    "strategyId": "dollar-basket",
+    "strategyName": "Dollar Basket",
+    "description": "All major forex pairs against USD. Session timing is critical for forex.",
+    "symbols": ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD", "USDCAD"],
+    "directives": [
+      { "id": "session-timing-filter", "weight": 25 },
+      { "id": "ema-structure", "weight": 22 },
+      { "id": "session-open-effect", "weight": 20 },
+      { "id": "rsi-oversold", "weight": 18 },
+      { "id": "atr-dip", "weight": 15 }
+    ],
+    "timeframes": ["1h", "4h"],
+    "preferredProvider": "mt5",
+    "category": "forex",
+    "riskLevel": "medium",
+    "timeHorizon": "day",
+    "builtIn": true
+  },
+  {
+    "strategyId": "high-vol-all",
+    "strategyName": "High Volatility All",
+    "description": "Most volatile instruments across markets for speed trading opportunities. Session-aware.",
+    "symbols": ["BTCUSD", "ETHUSD", "DOGEUSD", "XAUUSD", "TECH100", "SPX500", "UK100"],
+    "directives": [
+      { "id": "volatility-envelope", "weight": 25 },
+      { "id": "volume-surge", "weight": 25 },
+      { "id": "session-open-effect", "weight": 20 },
+      { "id": "liquidity-sweep", "weight": 15 },
+      { "id": "panic-exhaustion", "weight": 15 }
+    ],
+    "timeframes": ["5m", "15m"],
+    "preferredProvider": "mt5",
+    "category": "multi",
+    "riskLevel": "high",
+    "timeHorizon": "scalp",
+    "builtIn": true
+  },
+  {
+    "strategyId": "kitchen-sink",
+    "strategyName": "Kitchen Sink",
+    "description": "Everything across all markets. SEES doing what it was designed for — find the single best opportunity anywhere.",
+    "symbols": ["BTCUSD", "ETHUSD", "DOGEUSD", "XAUUSD", "EURUSD", "GBPUSD", "USDJPY", "SPX500", "NAS100", "UK100", "TECH100", "NVDA", "TSLA", "AAPL"],
+    "directives": [
+      { "id": "volume-surge", "weight": 15 },
+      { "id": "rsi-oversold", "weight": 14 },
+      { "id": "session-open-effect", "weight": 13 },
+      { "id": "volatility-envelope", "weight": 12 },
+      { "id": "momentum-roc", "weight": 12 },
+      { "id": "session-timing-filter", "weight": 12 },
+      { "id": "news-sentiment", "weight": 11 },
+      { "id": "market-entropy", "weight": 11 }
+    ],
+    "timeframes": ["1h"],
+    "preferredProvider": "mt5",
+    "category": "multi",
+    "riskLevel": "high",
+    "timeHorizon": "swing",
+    "builtIn": true
   }
 ]

@@ -54,6 +54,7 @@ import SymbolDetailPage from './pages/SymbolDetailPage';
 import SystemStatusPage from './pages/SystemStatusPage';
 import SystemLogPage from './pages/SystemLogPage';
 import TrainingCandlePatternsPage from './pages/TrainingCandlePatternsPage';
+import Mt5DemoTradingPage from './pages/Mt5DemoTradingPage';
 import ThemePage from './pages/ThemePage';
 import TradingPlatformsPage from './pages/TradingPlatformsPage';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
@@ -529,6 +530,10 @@ function AppShell() {
 
     if (secondaryView === 'candle-patterns') {
       return <TrainingCandlePatternsPage />;
+    }
+
+    if (secondaryView === 'mt5-demo-trading') {
+      return <Mt5DemoTradingPage />;
     }
 
     if (PLUGIN_TAB_SKELETONS[secondaryView]) {
