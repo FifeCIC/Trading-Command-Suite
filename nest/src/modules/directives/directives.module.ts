@@ -251,7 +251,18 @@ import {
     TimeStopDirective,
     SessionOpenEffectDirective,
   ],
-  exports: [DirectivesService],
+  exports: [
+    DirectivesService,
+    // Q228 — Pattern Detector Service needs these
+    DojiPatternDirective,
+    EngulfingPatternDirective,
+    HammerPatternDirective,
+    ThreeSoldiersPatternDirective,
+    Mt5EngulfingDirective,
+    Mt5HaramiDirective,
+    Mt5StarDojiDirective,
+    Mt5HammerDirective,
+  ],
 })
 export class DirectivesModule implements OnModuleInit {
   constructor(

@@ -22,6 +22,7 @@ export const NAV_TREE = {
       { id: 'trading-strategies', label: 'Trading Strategies' },
       { id: 'mt5-status', label: 'MT5 Bridge Status' },
       { id: 'mt5-trading', label: 'MT5 Trading' },
+      { id: 'mt5-demo-trading', label: 'MT5 Demo Trading' },
       { id: 'calculators', label: 'Calculators' },
       { id: 'portfolio-overview', label: 'Portfolio Overview' },
       { id: 'trade-history', label: 'Trade History' },

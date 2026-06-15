@@ -199,7 +199,7 @@ export default function SeesLiveStackMockPage() {
             {showAllDirectives ? 'Show Strategy Only (5)' : `Show All (${rankingState.directives.length})`}
           </button>
         </div>
-        {displayDirectives.map((directive) => (
+        {(showAllDirectives ? rankingState.directives : rankingState.directives.slice(0, 5)).map((directive) => (
             <article className={`sees-directive-card ${(directive.weight || 0) > 0 ? 'sees-weighted' : 'sees-unweighted'}`} key={directive.id}>
               <p className="sees-panel-label">Directive</p>
               <h3>{directive.label}</h3>
