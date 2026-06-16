@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import './ServerControlsPage.css';
 
-const TASK_API = 'http://localhost/intranet/api-tasks.php';
+const TASK_API = '/intranet/api-tasks.php';
 const TRADING_TASKS = ['tradercore:react', 'tradercore:api:3201', 'tradercore:mt5-bridge'];
 const POLL_MS = 5000;
 

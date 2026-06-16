@@ -2,7 +2,7 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { PatternDetectorService } from './pattern-detector.service';
 import { MarketBar } from '../directives/interfaces/directive.interface';
 
-@Controller('api/training')
+@Controller('training')
 export class TrainingController {
   constructor(private readonly patternDetector: PatternDetectorService) {}
 

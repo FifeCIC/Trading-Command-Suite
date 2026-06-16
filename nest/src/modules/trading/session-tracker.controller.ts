@@ -1,7 +1,7 @@
 import { Controller, Get, Post } from '@nestjs/common';
 import { SessionTrackerService } from './session-tracker.service';
 
-@Controller('api/trading/sessions')
+@Controller('trading/sessions')
 export class SessionTrackerController {
   constructor(private readonly sessionTracker: SessionTrackerService) {}
 

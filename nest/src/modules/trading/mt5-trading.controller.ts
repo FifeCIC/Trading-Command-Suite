@@ -5,7 +5,7 @@ class OrderDto { symbol!: string; type!: 'BUY'|'SELL'; volume!: number; sl?: num
 class PartialDto { volume!: number; }
 class ModifyDto { sl?: number; tp?: number; }
 
-@Controller('api/trading/mt5')
+@Controller('trading/mt5')
 export class Mt5TradingController {
   constructor(private readonly mt5: Mt5TradingService) {}
 

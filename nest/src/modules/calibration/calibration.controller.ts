@@ -11,7 +11,7 @@ class UpsertCalibrationDto {
   volatilityAdjustment?: number | null;
 }
 
-@Controller('api/calibrations')
+@Controller('calibrations')
 export class CalibrationController {
   constructor(private readonly calibrationService: CalibrationService) {}
 

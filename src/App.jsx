@@ -203,7 +203,7 @@ function AppShell() {
 
       pushActivity('AUTOSTART', 'Attempting to start API server...');
       try {
-        await fetch('http://localhost/intranet/api-tasks.php?action=start&task=tradercore:api:3201', {
+        await fetch('/intranet/api-tasks.php?action=start&task=tradercore:api:3201', {
           method: 'POST',
           signal: AbortSignal.timeout(10000),
         });

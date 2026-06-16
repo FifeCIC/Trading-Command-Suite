@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Param, Query, Logger } from '@nestjs/common';
 import { SignalsService } from './signals.service';
 
-@Controller('api/signals')
+@Controller('signals')
 export class SignalsController {
   private readonly logger = new Logger(SignalsController.name);
 

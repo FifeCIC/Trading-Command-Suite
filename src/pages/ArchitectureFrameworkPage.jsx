@@ -44,6 +44,7 @@ import './architecture-framework.css'
 const LIVE_REFRESH_INTERVAL_MS = 30_000
 const EMPTY_OBJ = {}
 const DRIFT_STORAGE_KEY = 'architecture-drift-verification'
+const COLLAPSED_STORAGE_KEY = 'architecture-collapsed-sections'
 const STALE_DAYS = 7
 const WARN_DAYS = 3
 
@@ -222,7 +223,14 @@ function StatusChip({ label, tone = 'neutral' }) {
 
 export default function ArchitectureFrameworkPage() {
   const [query, setQuery] = useState('')
-  const [collapsedSections, setCollapsedSections] = useState([])
+  const [collapsedSections, setCollapsedSections] = useState(() => {
+    try {
+      const raw = localStorage.getItem(COLLAPSED_STORAGE_KEY)
+      return raw ? JSON.parse(raw) : []
+    } catch {
+      return []
+    }
+  })
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true)
   const [viewMode, setViewMode] = useState('framework')
   const [dodChecked, setDodChecked] = useState(() => new Set())
@@ -284,7 +292,7 @@ export default function ArchitectureFrameworkPage() {
 
   const calibrationsQuery = useQuery({
     queryKey: ['architecture', 'calibrations'],
-    queryFn: () => apiGet('/api/api/calibrations'),
+    queryFn: () => apiGet('/api/calibrations'),
     refetchInterval: autoRefreshEnabled ? LIVE_REFRESH_INTERVAL_MS : false,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
@@ -339,19 +347,28 @@ export default function ArchitectureFrameworkPage() {
 
   const visibleIds = useMemo(() => new Set(visibleSections.map((section) => section.id)), [visibleSections])
 
+  function persistCollapsed(ids) {
+    try { localStorage.setItem(COLLAPSED_STORAGE_KEY, JSON.stringify(ids)) } catch { /* ignore */ }
+  }
+
   function toggleSection(sectionId) {
-    setCollapsedSections((current) =>
-      current.includes(sectionId)
+    setCollapsedSections((current) => {
+      const next = current.includes(sectionId)
         ? current.filter((item) => item !== sectionId)
-        : [...current, sectionId],
-    )
+        : [...current, sectionId]
+      persistCollapsed(next)
+      return next
+    })
   }
 
   function collapseAll() {
-    setCollapsedSections(SECTION_META.map((section) => section.id))
+    const all = SECTION_META.map((section) => section.id)
+    persistCollapsed(all)
+    setCollapsedSections(all)
   }
 
   function expandAll() {
+    persistCollapsed([])
     setCollapsedSections([])
   }
 
@@ -371,8 +388,8 @@ export default function ArchitectureFrameworkPage() {
         <div>
           <p className="eyebrow">Trading Command Suite</p>
           <div className="architecture-view-toggle">
-            <button type="button" className={viewMode === 'framework' ? 'active' : ''} onClick={() => setViewMode('framework')}>Framework</button>
-            <button type="button" className={viewMode === 'roadmap' ? 'active' : ''} onClick={() => setViewMode('roadmap')}>Roadmap</button>
+            <button type="button" className={viewMode === 'framework' ? 'active' : ''} onClick={() => setViewMode('framework')} aria-label="Switch to framework view">Framework</button>
+            <button type="button" className={viewMode === 'roadmap' ? 'active' : ''} onClick={() => setViewMode('roadmap')} aria-label="Switch to roadmap view">Roadmap</button>
           </div>
         </div>
         <div className="architecture-status-card">
@@ -460,18 +477,23 @@ export default function ArchitectureFrameworkPage() {
             {providerHealthQuery.isFetching ? '⟳ refreshing' : `✓ ${formatDateTime(latestProviderCheck)}`}
           </span>
         </div>
-        <label className="architecture-search">
-          <span>Filter Sections</span>
+        <div className="architecture-search">
+          <label htmlFor="arch-section-search">
+            <span className="architecture-sr-only">Filter Sections</span>
+            <span aria-hidden="true">Filter Sections</span>
+          </label>
           <input
+            id="arch-section-search"
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search workflow, contracts, owners, queues..."
+            aria-label="Filter architecture sections by keyword"
           />
-        </label>
+        </div>
         <div className="architecture-actions">
-          <button type="button" onClick={expandAll}>Expand All</button>
-          <button type="button" onClick={collapseAll}>Collapse All</button>
+          <button type="button" onClick={expandAll} aria-label="Expand all sections">Expand All</button>
+          <button type="button" onClick={collapseAll} aria-label="Collapse all sections">Collapse All</button>
         </div>
       </section>
 
@@ -488,7 +510,7 @@ export default function ArchitectureFrameworkPage() {
               return staleSectionCount > 0 ? (
                 <>
                   <span className="architecture-chip architecture-chip-warn">{staleSectionCount} section{staleSectionCount > 1 ? 's' : ''} need review</span>
-                  <button type="button" onClick={() => markAllVerified(SECTION_META.map((s) => `section:${s.id}`))}>
+                  <button type="button" onClick={() => markAllVerified(SECTION_META.map((s) => `section:${s.id}`))} aria-label="Mark all sections as verified">
                     Mark Sections Verified
                   </button>
                 </>
@@ -555,21 +577,22 @@ export default function ArchitectureFrameworkPage() {
             <article className="architecture-card">
               <h3>Live Runtime Snapshot</h3>
               <p className="architecture-live-note">
-                Quick metrics from <strong>/api/providers/health</strong>, <strong>/api/imports/runs</strong>, <strong>/api/health</strong>, <strong>/api/alerts/count</strong>, and <strong>/api/api/calibrations</strong>.
+                Quick metrics from <strong>/api/providers/health</strong>, <strong>/api/imports/runs</strong>, <strong>/api/health</strong>, <strong>/api/alerts/count</strong>, and <strong>/api/calibrations</strong>.
               </p>
               <div className="architecture-actions">
-                <button type="button" onClick={refreshLiveStatus}>Refresh Live Status</button>
+                <button type="button" onClick={refreshLiveStatus} aria-label="Refresh all live status indicators">Refresh Live Status</button>
                 <button
                   type="button"
                   onClick={() => setAutoRefreshEnabled((current) => !current)}
+                  aria-label={autoRefreshEnabled ? 'Disable auto refresh' : 'Enable auto refresh'}
                 >
                   Auto Refresh: {autoRefreshEnabled ? 'On (30s)' : 'Off'}
                 </button>
               </div>
               {systemMode && (
                 <article className="architecture-status-mini-card architecture-mode-notice">
-                  <h4>System Mode</h4>
-                  <div className="architecture-mode-badge">
+                  <h4 id="system-mode-heading">System Mode</h4>
+                  <div aria-labelledby="system-mode-heading">
                     <StatusChip 
                       label={systemMode === 'fallback' ? 'Fallback Mode' : 'Full Mode'} 
                       tone={systemMode === 'fallback' ? 'warn' : 'ok'}
@@ -736,7 +759,7 @@ export default function ArchitectureFrameworkPage() {
                       <td>{i + 1}</td>
                       <td>{item.name}</td>
                       <td>
-                        <span className="architecture-mode-badge" style={item.status === 'done' ? { background: '#00ff4120', color: '#00a63e' } : item.status === 'partial' ? { background: '#ffaa0020', color: '#9a6400' } : { background: '#8882', color: '#888' }}>
+                        <span className={`architecture-mode-badge architecture-badge-${item.status === 'done' ? 'ok' : item.status === 'partial' ? 'warn' : 'neutral'}`}>
                           {item.status}
                         </span>
                       </td>
@@ -1083,8 +1106,8 @@ export default function ArchitectureFrameworkPage() {
                 </thead>
                 <tbody>
                   {CURRENT_ROUTE_CONTRACTS.map((row) => {
-                    const statusClass = row.status === 'active' ? 'architecture-mode-badge' : row.status === 'migration' ? 'architecture-mode-badge' : 'architecture-mode-badge'
-                    const statusStyle = row.status === 'active' ? { background: '#00ff4120', color: '#00a63e' } : row.status === 'migration' ? { background: '#ffaa0020', color: '#9a6400' } : { background: '#8882', color: '#888' }
+                    const statusClass = `architecture-mode-badge architecture-badge-${row.status === 'active' ? 'ok' : row.status === 'migration' ? 'warn' : 'neutral'}`
+                    const statusStyle = {}
                     const routeKey = `route:${row.route}`
                     const verifiedDate = getVerifiedDate(routeKey)
                     const vTone = verificationTone(verifiedDate)
@@ -1120,7 +1143,7 @@ export default function ArchitectureFrameworkPage() {
               </table>
             </div>
             <div className="architecture-actions" style={{ marginTop: 8 }}>
-              <button type="button" onClick={() => markAllVerified(CURRENT_ROUTE_CONTRACTS.map((r) => `route:${r.route}`))}>
+              <button type="button" onClick={() => markAllVerified(CURRENT_ROUTE_CONTRACTS.map((r) => `route:${r.route}`))} aria-label="Mark all route contracts as verified">
                 Mark All Verified
               </button>
             </div>

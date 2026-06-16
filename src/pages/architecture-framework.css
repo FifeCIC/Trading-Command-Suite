@@ -1,3 +1,68 @@
+/* ── CSS Custom Properties ──────────────────────────────────────── */
+.architecture-framework-theme {
+  --arch-bg: #fcfdff;
+  --arch-bg-warm: #eef4ff;
+  --arch-bg-card: #f9fbff;
+  --arch-bg-planned: #f3f6fa;
+  --arch-bg-chip-ok: #eaf9ef;
+  --arch-bg-chip-warn: #fff7e8;
+  --arch-bg-chip-error: #ffeff0;
+  --arch-bg-chip-info: #ebf4ff;
+  --arch-bg-chip-neutral: #eef2f8;
+  --arch-bg-input: #fff;
+  --arch-bg-table-head: #edf3ff;
+  --arch-bg-verify-hover: #00ff4120;
+  --arch-bg-mode-notice: linear-gradient(160deg, #fffbf3 0%, #fff7e8 100%);
+
+  --arch-border: #d5dde8;
+  --arch-border-strong: #b3bfd3;
+  --arch-border-input: #b8c5d8;
+  --arch-border-mini-card: #cfdaeb;
+  --arch-border-table: #d8e0ea;
+  --arch-border-mode-notice: #f2cf8f;
+  --arch-border-chip-ok: #9fddb0;
+  --arch-border-chip-warn: #f2cf8f;
+  --arch-border-chip-error: #efb2b8;
+  --arch-border-chip-info: #b5cff3;
+  --arch-border-chip-neutral: #c9d5e6;
+  --arch-border-schema-section: #e5ebf3;
+
+  --arch-text-primary: #152749;
+  --arch-text-secondary: #213157;
+  --arch-text-muted: #445171;
+  --arch-text-soft: #344866;
+  --arch-text-dim: #6a7898;
+  --arch-text-faint: #6a7a94;
+  --arch-text-warning: #6a4e11;
+  --arch-text-on-dark: #fff;
+  --arch-text-eyebrow: #785e3f;
+  --arch-text-chip-ok: #146c2e;
+  --arch-text-chip-warn: #8a5a11;
+  --arch-text-chip-error: #8a1f2a;
+  --arch-text-chip-info: #194d95;
+  --arch-text-chip-neutral: #344866;
+  --arch-text-verify: #1f315a;
+  --arch-text-verify-hover: #00a63e;
+  --arch-text-mode-fallback: #b07800;
+  --arch-text-mode-full: #007a1f;
+  --arch-text-mode-unknown: #666;
+  --arch-text-table-head: #18305f;
+  --arch-text-schema-title: #18305f;
+  --arch-text-schema-planned: #4a5a74;
+  --arch-text-schema-planned-ul: #556680;
+  --arch-text-schema-desc: #445171;
+
+  --arch-shadow: 0 12px 30px rgba(17, 35, 73, 0.08);
+  --arch-shadow-schema: 0 4px 12px rgba(17, 35, 73, 0.06);
+  --arch-bg-live-status: rgba(0, 0, 0, 0.04);
+
+  --arch-radius-sm: 4px;
+  --arch-radius-md: 8px;
+  --arch-radius-lg: 12px;
+  --arch-radius-xl: 16px;
+  --arch-radius-full: 999px;
+}
+
 .architecture-page {
   max-width: 1120px;
   margin: 0 auto;
@@ -20,9 +85,9 @@
   padding: 0.5rem 1rem;
   margin-bottom: 0.75rem;
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--arch-bg-live-status);
   font-size: 0.8rem;
-  color: #445171;
+  color: var(--arch-text-muted);
 }
 
 .architecture-mode-badge {
@@ -35,18 +100,18 @@
 }
 
 .architecture-mode-badge.mode-fallback {
-  background: #ffaa0020;
-  color: #b07800;
+  background: var(--arch-bg-chip-warn);
+  color: var(--arch-text-mode-fallback);
 }
 
 .architecture-mode-badge.mode-full {
-  background: #00ff4120;
-  color: #007a1f;
+  background: var(--arch-bg-chip-ok);
+  color: var(--arch-text-mode-full);
 }
 
 .architecture-mode-badge.mode-unknown {
-  background: #ccc;
-  color: #666;
+  background: var(--arch-bg-chip-neutral);
+  color: var(--arch-text-mode-unknown);
 }
 
 .architecture-status-item {
@@ -62,10 +127,10 @@
 .architecture-card,
 .architecture-status-card,
 .architecture-section {
-  border-radius: 16px;
-  border: 1px solid #d5dde8;
-  background: linear-gradient(160deg, #fcfdff 0%, #eef4ff 100%);
-  box-shadow: 0 12px 30px rgba(17, 35, 73, 0.08);
+  border-radius: var(--arch-radius-xl);
+  border: 1px solid var(--arch-border);
+  background: linear-gradient(160deg, var(--arch-bg) 0%, var(--arch-bg-warm) 100%);
+  box-shadow: var(--arch-shadow);
 }
 
 .architecture-controls-bar,
@@ -86,7 +151,7 @@
   letter-spacing: 0.12em;
   font-weight: 700;
   font-size: 12px;
-  color: #785e3f;
+  color: var(--arch-text-eyebrow);
   margin: 0;
 }
 
@@ -94,12 +159,12 @@
   margin: 4px 0 8px;
   font-size: 34px;
   letter-spacing: -0.02em;
-  color: #16213a;
+  color: var(--arch-text-primary);
 }
 
 .architecture-subcopy {
   margin: 0;
-  color: #445171;
+  color: var(--arch-text-muted);
   max-width: 70ch;
 }
 
@@ -113,23 +178,23 @@
 
 .architecture-view-toggle button {
   padding: 0.35rem 0.9rem;
-  border: 1px solid #d5dde8;
-  border-radius: 8px;
-  background: #fff;
-  color: #445171;
+  border: 1px solid var(--arch-border);
+  border-radius: var(--arch-radius-md);
+  background: var(--arch-bg-input);
+  color: var(--arch-text-muted);
   font-size: 0.8rem;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
 
 .architecture-view-toggle button.active {
-  background: #16213a;
-  color: #fff;
-  border-color: #16213a;
+  background: var(--arch-text-primary);
+  color: var(--arch-text-on-dark);
+  border-color: var(--arch-text-primary);
 }
 
 .architecture-view-toggle button:hover:not(.active) {
-  border-color: #785e3f;
+  border-color: var(--arch-text-eyebrow);
 }
 
 .architecture-status-card,
@@ -140,7 +205,7 @@
 .architecture-status-card p,
 .architecture-card p,
 .architecture-card li {
-  color: #213157;
+  color: var(--arch-text-secondary);
 }
 
 .architecture-status-card p {
@@ -174,7 +239,7 @@
 .architecture-index-shell h2,
 .architecture-card h2 {
   margin: 0 0 8px;
-  color: #152749;
+  color: var(--arch-text-primary);
 }
 
 .architecture-status-card p:last-child {
@@ -183,20 +248,20 @@
 
 .architecture-card h3 {
   margin-bottom: 12px;
-  color: #152749;
+  color: var(--arch-text-primary);
 }
 
 .architecture-status-mini-card {
-  border: 1px solid #cfdaeb;
-  border-radius: 12px;
-  background: #f6f9ff;
+  border: 1px solid var(--arch-border-mini-card);
+  border-radius: var(--arch-radius-lg);
+  background: var(--arch-bg-card);
   padding: 12px;
 }
 
 .architecture-mode-notice {
   grid-column: 1 / -1;
-  border-color: #f2cf8f;
-  background: linear-gradient(160deg, #fffbf3 0%, #fff7e8 100%);
+  border-color: var(--arch-border-mode-notice);
+  background: var(--arch-bg-mode-notice);
 }
 
 .architecture-mode-badge {
@@ -206,18 +271,18 @@
 .architecture-mode-help {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #f2cf8f;
+  border-top: 1px solid var(--arch-border-mode-notice);
 }
 
 .architecture-mode-help p {
   margin: 0 0 8px;
-  color: #6a4e11;
+  color: var(--arch-text-warning);
 }
 
 .architecture-mode-help ul {
   margin: 8px 0;
   padding-left: 20px;
-  color: #6a4e11;
+  color: var(--arch-text-warning);
 }
 
 /* --- Definition of Done checkboxes --- */
@@ -266,16 +331,16 @@
 }
 
 .architecture-mode-help code {
-  background: #fff;
+  background: var(--arch-bg-input);
   padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid #f2cf8f;
+  border-radius: var(--arch-radius-sm);
+  border: 1px solid var(--arch-border-mode-notice);
   font-size: 12px;
 }
 
 .architecture-status-mini-card h4 {
   margin: 0 0 8px;
-  color: #18305f;
+  color: var(--arch-text-table-head);
 }
 
 .architecture-live-list {
@@ -289,7 +354,7 @@
 
 .architecture-live-note {
   margin: 0 0 10px;
-  color: #445171;
+  color: var(--arch-text-muted);
 }
 
 .architecture-chip {
@@ -304,48 +369,48 @@
 }
 
 .architecture-chip-ok {
-  background: #eaf9ef;
-  color: #146c2e;
-  border-color: #9fddb0;
+  background: var(--arch-bg-chip-ok);
+  color: var(--arch-text-chip-ok);
+  border-color: var(--arch-border-chip-ok);
 }
 
 .architecture-chip-warn {
-  background: #fff7e8;
-  color: #8a5a11;
-  border-color: #f2cf8f;
+  background: var(--arch-bg-chip-warn);
+  color: var(--arch-text-chip-warn);
+  border-color: var(--arch-border-chip-warn);
 }
 
 .architecture-chip-error {
-  background: #ffeff0;
-  color: #8a1f2a;
-  border-color: #efb2b8;
+  background: var(--arch-bg-chip-error);
+  color: var(--arch-text-chip-error);
+  border-color: var(--arch-border-chip-error);
 }
 
 .architecture-chip-info {
-  background: #ebf4ff;
-  color: #194d95;
-  border-color: #b5cff3;
+  background: var(--arch-bg-chip-info);
+  color: var(--arch-text-chip-info);
+  border-color: var(--arch-border-chip-info);
 }
 
 .architecture-chip-neutral {
-  background: #eef2f8;
-  color: #344866;
-  border-color: #c9d5e6;
+  background: var(--arch-bg-chip-neutral);
+  color: var(--arch-text-chip-neutral);
+  border-color: var(--arch-border-chip-neutral);
 }
 
 .architecture-section-header p,
 .architecture-index-shell p {
   margin: 4px 0 0;
-  color: #445171;
+  color: var(--arch-text-muted);
 }
 
 .architecture-toggle,
 .architecture-actions button,
 .architecture-index-chip {
-  border: 1px solid #b3bfd3;
+  border: 1px solid var(--arch-border-strong);
   border-radius: 10px;
-  background: #f8fbff;
-  color: #1f315a;
+  background: var(--arch-bg-card);
+  color: var(--arch-text-verify);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -364,7 +429,7 @@
 .architecture-toggle:hover,
 .architecture-actions button:hover,
 .architecture-index-chip:hover {
-  background: #eef5ff;
+  background: var(--arch-bg-warm);
 }
 
 .architecture-search {
@@ -378,17 +443,17 @@
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #6a7898;
+  color: var(--arch-text-dim);
   font-weight: 700;
 }
 
 .architecture-search input {
-  border: 1px solid #b8c5d8;
-  border-radius: 12px;
+  border: 1px solid var(--arch-border-input);
+  border-radius: var(--arch-radius-lg);
   padding: 10px 12px;
   font-size: 14px;
-  color: #1f315a;
-  background: #fff;
+  color: var(--arch-text-verify);
+  background: var(--arch-bg-input);
 }
 
 .architecture-controls-bar {
@@ -421,16 +486,16 @@
 
 .architecture-table th,
 .architecture-table td {
-  border: 1px solid #d8e0ea;
+  border: 1px solid var(--arch-border-table);
   padding: 10px 12px;
   text-align: left;
   vertical-align: top;
-  color: #213157;
+  color: var(--arch-text-secondary);
 }
 
 .architecture-table th {
-  background: #edf3ff;
-  color: #18305f;
+  background: var(--arch-bg-table-head);
+  color: var(--arch-text-table-head);
 }
 
 .architecture-grid {
@@ -443,7 +508,7 @@
 .architecture-card h2 {
   margin-top: 0;
   margin-bottom: 12px;
-  color: #152749;
+  color: var(--arch-text-primary);
 }
 
 .architecture-card ul,
@@ -488,29 +553,29 @@
 }
 
 .architecture-schema-card {
-  border: 1px solid #d5dde8;
-  border-radius: 12px;
-  background: #f9fbff;
+  border: 1px solid var(--arch-border);
+  border-radius: var(--arch-radius-lg);
+  background: var(--arch-bg-card);
   padding: 14px;
-  box-shadow: 0 4px 12px rgba(17, 35, 73, 0.06);
+  box-shadow: var(--arch-shadow-schema);
 }
 
 .architecture-schema-card-planned {
-  border-color: #c9d5e6;
-  background: #f3f6fa;
+  border-color: var(--arch-border-chip-neutral);
+  background: var(--arch-bg-planned);
   opacity: 0.85;
 }
 
 .architecture-schema-card h4 {
   margin: 0 0 6px;
-  color: #152749;
+  color: var(--arch-text-primary);
   font-size: 16px;
   font-weight: 700;
 }
 
 .architecture-schema-desc {
   margin: 0 0 12px;
-  color: #445171;
+  color: var(--arch-text-schema-desc);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -518,7 +583,7 @@
 .architecture-schema-section {
   margin-top: 12px;
   padding-top: 10px;
-  border-top: 1px solid #e5ebf3;
+  border-top: 1px solid var(--arch-border-schema-section);
 }
 
 .architecture-schema-section:first-of-type {
@@ -528,7 +593,7 @@
 .architecture-schema-section strong {
   display: block;
   margin-bottom: 6px;
-  color: #18305f;
+  color: var(--arch-text-schema-title);
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -539,7 +604,7 @@
   margin: 0;
   padding-left: 16px;
   font-size: 13px;
-  color: #344866;
+  color: var(--arch-text-soft);
 }
 
 .architecture-schema-section li {
@@ -548,11 +613,28 @@
 }
 
 .architecture-schema-card-planned .architecture-schema-section strong {
-  color: #4a5a74;
+  color: var(--arch-text-schema-planned);
 }
 
 .architecture-schema-card-planned .architecture-schema-section ul {
-  color: #556680;
+  color: var(--arch-text-schema-planned-ul);
+}
+
+/* --- Status Badge Tones (replaces inline styles) --- */
+
+.architecture-mode-badge.architecture-badge-ok {
+  background: #00ff4120;
+  color: #00a63e;
+}
+
+.architecture-mode-badge.architecture-badge-warn {
+  background: #ffaa0020;
+  color: #9a6400;
+}
+
+.architecture-mode-badge.architecture-badge-neutral {
+  background: #8882;
+  color: #888;
 }
 
 /* --- Drift Detection / Verification --- */
@@ -578,10 +660,10 @@
 }
 
 .architecture-verify-btn {
-  border: 1px solid #b3bfd3;
+  border: 1px solid var(--arch-border-strong);
   border-radius: 6px;
-  background: #f8fbff;
-  color: #1f315a;
+  background: var(--arch-bg-card);
+  color: var(--arch-text-verify);
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -590,13 +672,61 @@
 }
 
 .architecture-verify-btn:hover {
-  background: #00ff4120;
-  border-color: #00a63e;
-  color: #00a63e;
+  background: var(--arch-bg-verify-hover);
+  border-color: var(--arch-text-verify-hover);
+  color: var(--arch-text-verify-hover);
+}
+
+/* --- Screen Reader Only --- */
+.architecture-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- Focus & Keyboard Accessibility --- */
+
+.architecture-toggle:focus-visible,
+.architecture-actions button:focus-visible,
+.architecture-index-chip:focus-visible,
+.architecture-view-toggle button:focus-visible,
+.architecture-verify-btn:focus-visible,
+.architecture-search input:focus-visible {
+  outline: 2px solid #4a90d9;
+  outline-offset: 2px;
+}
+
+.architecture-toggle:focus:not(:focus-visible),
+.architecture-actions button:focus:not(:focus-visible),
+.architecture-index-chip:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* --- Loading Pulse --- */
+@keyframes arch-load-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.architecture-loading-pulse {
+  animation: arch-load-pulse 1.5s ease-in-out infinite;
+}
+
+/* --- Reduced Motion --- */
+@media (prefers-reduced-motion: reduce) {
+  .architecture-view-toggle button {
+    transition: none;
+  }
 }
 
 .architecture-verify-date {
   font-size: 10px;
-  color: #6a7a94;
+  color: var(--arch-text-faint);
   margin-left: 2px;
 }

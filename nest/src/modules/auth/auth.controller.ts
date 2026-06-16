@@ -27,7 +27,7 @@ export function setAuthServiceRef(service: AuthService): void {
 
 // ── Controller ──────────────────────────────────────────────
 
-@Controller('api/auth')
+@Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
