@@ -1,0 +1,226 @@
+/* Server Controls Page */
+
+.sc-page {
+  max-width: 960px;
+}
+
+.sc-header {
+  margin-bottom: 1.5rem;
+}
+
+.sc-header h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.4rem;
+  color: var(--text);
+}
+
+.sc-loading,
+.sc-error {
+  padding: 2rem;
+  text-align: center;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+
+.sc-error {
+  color: var(--riskHigh, #ef4444);
+  border-color: var(--riskHigh, #ef4444);
+  margin-bottom: 1rem;
+}
+
+.sc-retry-btn {
+  display: block;
+  margin: 0 auto;
+  padding: 0.5rem 1.25rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+/* Grid */
+.sc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+/* Card */
+.sc-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.sc-card--live {
+  border-color: var(--riskNormal, #22c55e);
+}
+
+.sc-card--issue {
+  border-color: var(--riskHigh, #ef4444);
+}
+
+.sc-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--bgElev, rgba(255,255,255,0.03));
+  border-bottom: 1px solid var(--border);
+}
+
+.sc-card-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.sc-card-icon {
+  font-size: 1.1rem;
+}
+
+.sc-card-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Status dot */
+.sc-status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.sc-dot-inner {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sc-online {
+  color: var(--riskNormal, #22c55e);
+}
+
+.sc-online .sc-dot-inner {
+  background: var(--riskNormal, #22c55e);
+  box-shadow: 0 0 6px var(--riskNormal, #22c55e);
+}
+
+.sc-offline {
+  color: var(--textDim, #6b7280);
+}
+
+.sc-offline .sc-dot-inner {
+  background: var(--textDim, #6b7280);
+}
+
+/* Meta */
+.sc-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.8rem;
+  color: var(--textDim, #6b7280);
+}
+
+.sc-listener-info {
+  color: var(--textFaint, #4b5563);
+}
+
+/* Issue */
+.sc-issue {
+  padding: 0.5rem 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: var(--riskHigh, #ef4444);
+}
+
+/* Log */
+.sc-log {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--bgElev, rgba(0,0,0,0.2));
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: var(--textDim, #6b7280);
+  max-height: 120px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Actions */
+.sc-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.sc-btn {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  background: var(--bgElev, rgba(255,255,255,0.05));
+  color: var(--text);
+}
+
+.sc-btn:hover:not(:disabled) {
+  background: var(--bgElev2, rgba(255,255,255,0.1));
+}
+
+.sc-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sc-btn--start {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: var(--riskNormal, #22c55e);
+}
+
+.sc-btn--start:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.25);
+}
+
+.sc-btn--stop {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: var(--riskHigh, #ef4444);
+}
+
+.sc-btn--stop:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.sc-btn--open {
+  background: rgba(91, 141, 239, 0.12);
+  border-color: rgba(91, 141, 239, 0.25);
+  color: var(--accentSoft, #7aa8f0);
+}
+
+.sc-btn--open:hover:not(:disabled) {
+  background: rgba(91, 141, 239, 0.2);
+}
+
+/* Footnote */
+.sc-footnote {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 0.78rem;
+}

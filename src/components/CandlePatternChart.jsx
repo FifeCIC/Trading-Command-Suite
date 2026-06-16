@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { createChart } from 'lightweight-charts';
+import { createChart, CandlestickSeries } from 'lightweight-charts';
 import './CandlePatternChart.css';
 
 const PATTERN_COLORS = {
@@ -74,13 +74,13 @@ export default function CandlePatternChart({ bars, patterns, onPatternClick, hig
     // Candlestick series
     const candleData = bars.map(bar => ({
       time: Math.floor(bar.timestamp / 1000),
-      open: bar.open,
-      high: bar.high,
-      low: bar.low,
-      close: bar.close,
+      open: Number(bar.open),
+      high: Number(bar.high),
+      low: Number(bar.low),
+      close: Number(bar.close),
     }));
 
-    const candleSeries = chart.addCandlestickSeries({
+    const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: '#22c55e',
       downColor: '#ef4444',
       borderUpColor: '#22c55e',

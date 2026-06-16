@@ -19,6 +19,7 @@ export const NAV_TREE = {
   trading: {
     label: 'Trading',
     views: [
+      { id: 'server-controls', label: '⚡ Server Controls' },
       { id: 'trading-strategies', label: 'Trading Strategies' },
       { id: 'mt5-status', label: 'MT5 Bridge Status' },
       { id: 'mt5-trading', label: 'MT5 Trading' },
@@ -44,12 +45,9 @@ export const NAV_TREE = {
       { id: 'sees-live-stack', label: 'SEES Live Stack' },
       { id: 'sees-arena', label: 'SEES Arena' },
       { id: 'signals-workbench', label: 'SEES Diagnostics' },
-      // ── Strategies ──
-      { id: 'strategy-builder', label: 'Strategy Builder' },
-      { id: 'strategies', label: 'Strategy Overview' },
-      { id: 'create-scoring-strategies', label: 'Create Strategies' },
-      { id: 'manage-scoring-strategies', label: 'Manage Strategies' },
-      { id: 'view-scoring-strategies', label: 'View Strategies' },
+      // ── Protocols ──
+      { id: 'protocol-overview', label: 'Protocol Overview' },
+      { id: 'create-protocols', label: 'Create Protocols' },
       // ── History ──
       { id: 'scoring-runs', label: 'Scoring Runs' },
       { id: 'scoring-activity-logs', label: 'Scoring Activity Logs' },
@@ -127,7 +125,6 @@ export const NAV_TREE = {
       { id: 'architecture-framework', label: 'Architecture' },
       { id: 'algorithm-debugger', label: 'Algorithm Debugger' },
       { id: 'diagrams', label: 'Diagrams' },
-      { id: 'explore-tasks', label: 'Explore Tasks' },
       { id: 'duplicate-checker', label: 'Duplicate Checker' },
       { id: 'create-task', label: 'Create Task' },
       { id: 'dev-ai', label: 'AI' },

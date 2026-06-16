@@ -3,6 +3,7 @@ export const STATUS_SNAPSHOT = [
   'Use the workflow, matrix, intake, discovery, and contract sections before editing.',
   'Real contracts should live here, not only planning notes.',
   'Open decisions stay visible on the same surface as the rules.',
+  'Drift detection is built in — section index and contract register show verification badges. Mark items as verified as you review them.',
 ]
 
 export const ARCHITECTURE_INDEX = [
@@ -20,6 +21,10 @@ export const ARCHITECTURE_INDEX = [
   { name: 'Current contract register', status: 'done' },
   { name: 'Queue/provider contract', status: 'done' },
   { name: 'Scoring/strategy contract', status: 'done' },
+  { name: 'Calibration system', status: 'new' },
+  { name: 'Activation gate and conditions', status: 'new' },
+  { name: 'Exit signal system', status: 'new' },
+  { name: 'Alert center architecture', status: 'new' },
   { name: 'AI guardrails', status: 'done' },
   { name: 'Verification governance', status: 'done' },
   { name: 'Definition of done', status: 'done' },
@@ -32,10 +37,17 @@ export const DOMAINS = [
   'Market data import and freshness',
   'Provider integration and health',
   'Directive execution',
+  'Calibration and weight overrides',
+  'Condition detection and activation gate',
   'Strategy aggregation',
   'Scoring and ranking',
+  'Exit signal system',
   'Signals and decision support',
+  'Alert center and notifications',
+  'Training and pattern detection',
   'SEES presentation layer',
+  'Algorithm lab and pipeline visualization',
+  'Portfolio and trading execution',
   'Operational governance and verification',
 ]
 
@@ -44,9 +56,12 @@ export const SYSTEM_SPINE = [
   'Freshness checked',
   'Import triggered if stale or missing',
   'Market data stored',
-  'Directives executed',
+  'Condition detection runs (entropy, Hurst, session, BOS, range)',
+  'Activation gate evaluates suitability vs conditions (active/reduced/muted/boosted)',
+  'Directives executed (entry + exit), calibration overrides applied',
   'Strategy aggregates directive outputs',
   'Score and breakdown stored',
+  'Exit urgency evaluated alongside entry score',
   'SEES ranks symbols',
   'User inspects rationale and timeframe fit',
 ]
@@ -56,7 +71,23 @@ export const CURRENT_SLICE = [
   'Freshness check endpoint is implemented',
   'Import queue trigger and processor are implemented',
   'Provider health endpoint is implemented',
-  'SEES mock page is already available in the shell',
+  '50+ scoring directives live (MQL5-absorbed, custom, exit signals)',
+  'Calibration system with 16 seeded symbol/directive overrides',
+  'Exit signal system — 4 exit directives (momentum-exhaustion, target-achieved, regime-shift-exit, time-stop)',
+  'Condition detection + activation gate system (ConditionVector → active/reduced/muted/boosted)',
+  'Directive suitability registry — 40+ directives tagged by regime, volatility, instrument, timeframe',
+  'Alert center — 8 alert types, live polling, severity levels, snooze/dismiss/acknowledge',
+  'Algorithm Lab — real-time pipeline visualization (FETCH → SCORE → RANK → FILTER → SIGNAL)',
+  'Training area — candle pattern detection with TradingView charts',
+  'MT5 adapter + Python bridge (Flask on port 5000)',
+  'Trading212 portfolio import with live portfolio data',
+  'Automated daily trading scheduler (Mon-Fri 9AM cron)',
+  'Keyboard speed trading — B/S/C keys, size presets, Shift 2x',
+  'Backtest engine + lightweight chart with RSI/MACD/EMA overlays',
+  'SEES Live Stack — filters to 5 strategy-weighted directives, real data source indicators',
+  'Strategy creation + duplication — any strategy can be a template',
+  'Portfolio view — holdings, P&L, manual trading with real Trading212 data',
+  'Nav reorganization — SEES, Strategy Builder moved to Scoring area with section dividers',
 ]
 
 export const DECISION_WORKFLOW = [
@@ -304,7 +335,7 @@ export const CONTRACT_CARDS = [
   },
 ]
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-06-10'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-06-16'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -362,6 +393,190 @@ export const CURRENT_ROUTE_CONTRACTS = [
     owner: 'Scoring controller',
     contract: 'Returns ranked symbols with directive breakdown, confidence, signal classification.',
     status: 'migration',
+  },
+  {
+    route: 'GET /api/scoring/algorithm-lab/state',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Algorithm lab controller',
+    contract: 'Returns pipeline state with real scoring data for all/one strategy.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/scoring/algorithm-lab/pause/:strategyId',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'Algorithm lab controller',
+    contract: 'Pauses pipeline display updates for the given strategy.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/scoring/algorithm-lab/resume/:strategyId',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'Algorithm lab controller',
+    contract: 'Resumes pipeline display updates for the given strategy.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/calibrations',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Calibration controller',
+    contract: 'Returns all symbol calibrations with weight multipliers, decay modifiers, volatility adjustments.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/calibrations/:symbol',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Calibration controller',
+    contract: 'Returns calibrations for a specific symbol.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/calibrations',
+    method: 'POST',
+    permission: 'Admin access',
+    owner: 'Calibration controller',
+    contract: 'Creates or updates a symbol calibration override.',
+    status: 'active',
+  },
+  {
+    route: 'DELETE /api/calibrations/:id',
+    method: 'DELETE',
+    permission: 'Admin access',
+    owner: 'Calibration controller',
+    contract: 'Removes a calibration override.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/calibrations/reload',
+    method: 'POST',
+    permission: 'Admin access',
+    owner: 'Calibration controller',
+    contract: 'Reloads all calibrations from the database into cache.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/alerts/active',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Alerts controller',
+    contract: 'Returns currently active alerts with severity levels.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/alerts/history',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Alerts controller',
+    contract: 'Returns alert history with optional limit parameter.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/alerts/count',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Alerts controller',
+    contract: 'Returns active/critical counts for badge display.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/alerts/:id/acknowledge',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'Alerts controller',
+    contract: 'Marks an alert as acknowledged/seen.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/alerts/:id/dismiss',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'Alerts controller',
+    contract: 'Removes an alert from the active list.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/alerts/:id/snooze',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'Alerts controller',
+    contract: 'Snoozes an alert for 15 minutes.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/alerts/config',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Alerts controller',
+    contract: 'Returns alert type configuration with enable/disable state.',
+    status: 'active',
+  },
+  {
+    route: 'PUT /api/alerts/config/:id',
+    method: 'PUT',
+    permission: 'Admin access',
+    owner: 'Alerts controller',
+    contract: 'Toggles an alert type on or off.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/training/candle-patterns',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Training controller',
+    contract: 'Returns detected candle patterns for a symbol using 8 pattern directives.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/training/candle-patterns/history',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Training controller',
+    contract: 'Returns historical pattern detections with date range.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/training/pattern-accuracy/:patternId',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Training controller',
+    contract: 'Returns accuracy statistics for a specific pattern.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/portfolio/trading212/validate',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Portfolio controller',
+    contract: 'Validates Trading212 connection using stored credentials.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/portfolio/trading212/import',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'Portfolio controller',
+    contract: 'Imports live portfolio from Trading212 with position and P&L data.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/strategies/:id/duplicate',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'Strategies controller',
+    contract: 'Duplicates a strategy with (Copy) suffix for use as a template.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/backtest/chart-data',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Backtest controller',
+    contract: 'Returns chart-ready OHLCV with RSI/MACD/EMA overlays for symbol+timeframe.',
+    status: 'active',
   },
 ]
 
@@ -532,6 +747,182 @@ export const SCORING_STRATEGY_CARDS = [
   },
 ]
 
+// ── Phase 2: New Subsystems ──────────────────────────────────────────
+
+export const CALIBRATION_SYSTEM = [
+  {
+    title: 'Purpose',
+    summary: 'Symbol-specific weight overrides that adjust directive scores before aggregation.',
+    items: [
+      'Calibrations let the system learn which directives matter most for specific symbols.',
+      'Stored in SymbolCalibration table — loaded into memory cache on startup.',
+      'Applied after directive.calculate() but before weighted aggregation in scoring pipeline.',
+      '16 calibrations seeded covering DOGEUSD, XAUUSD, NVDA, BTCUSD, EURUSD, TECH100.',
+    ],
+  },
+  {
+    title: 'Calibration Fields',
+    summary: 'Each calibration record carries weight, decay, and volatility adjustments.',
+    items: [
+      'weightMultiplier — scales the directive score (e.g., 3.0 = triple weight for news-sentiment on DOGEUSD).',
+      'decayModifier — reduces score impact over time for time-sensitive directives.',
+      'volatilityAdjustment — amplifies or dampens scores in volatile regimes.',
+      'reason — human-readable justification for the override.',
+      'Composite: adjustedScore = rawScore × weightMultiplier × (1 + volatilityAdjustment).',
+    ],
+  },
+  {
+    title: 'API Contracts',
+    summary: 'REST endpoints for calibration management.',
+    items: [
+      'GET /api/calibrations — all calibrations with full details.',
+      'GET /api/calibrations/:symbol — filter to one symbol.',
+      'POST /api/calibrations — create or update a calibration override.',
+      'DELETE /api/calibrations/:id — remove an override.',
+      'POST /api/calibrations/reload — refresh cache from database.',
+    ],
+  },
+  {
+    title: 'Scoring Pipeline Integration',
+    summary: 'Calibrations sit between directive calculation and weighted aggregation.',
+    items: [
+      '1. Each directive calculates raw score from stored market data.',
+      '2. CalibrationService.applyCalibrations(symbol, results) applies matching overrides.',
+      '3. Adjusted scores flow into weighted aggregation, dominance/suppression, confluence.',
+      '4. Calibrated scores stored alongside raw scores for audit trail.',
+    ],
+  },
+]
+
+export const ACTIVATION_GATE_SYSTEM = [
+  {
+    title: 'Purpose',
+    summary: 'Pre-scoring condition detection that adjusts how directives fire based on market regime.',
+    items: [
+      'ConditionDetectorService runs before scoring and produces a ConditionVector.',
+      'ConditionVector captures: entropy level, Hurst exponent, session type, break-of-structure status, range state.',
+      'ActivationGateService evaluates directive suitability metadata against the ConditionVector.',
+      'Result: each directive is classified as active, reduced, muted, or boosted with a weight multiplier.',
+    ],
+  },
+  {
+    title: 'Trigger System',
+    summary: '8 built-in triggers that fire based on detected market conditions.',
+    items: [
+      'strong-trend — high entropy + trending Hurst + BOS confirmed → boost trend-following directives.',
+      'high-vol — volatility envelope above p85 → boost volatility directives, reduce mean-reversion.',
+      'compression — range contraction + low entropy → boost breakout directives.',
+      'ranging — low entropy + no BOS → boost mean-reversion, reduce trend-following.',
+      'asian-session — low volume Asian hours → reduce all directives, muted scoring.',
+      'london-us-overlap — peak liquidity window → boost volume-based directives.',
+      'bearish-structure — lower highs + lower lows + BOS → boost bearish directives.',
+      'bullish-structure — higher highs + higher lows + BOS → boost bullish directives.',
+    ],
+  },
+  {
+    title: 'Directive Suitability Registry',
+    summary: '40+ directives tagged with regime, volatility, instrument, and timeframe metadata.',
+    items: [
+      'regimeType: trending / ranging / any — determines which market regime the directive suits.',
+      'volatilityLevel: low / normal / high / any — volatility band where the directive performs best.',
+      'instrumentTypes: forex / stocks / crypto / indices / commodities — which asset classes.',
+      'minTimeframe: 5m / 15m / 1h / 4h / 1d — minimum bar duration for meaningful output.',
+      'category: trend / mean-reversion / volatility / volume / pattern / microstructure / macro / risk / session.',
+    ],
+  },
+  {
+    title: 'Gate Output States',
+    summary: 'How the activation gate classifies each directive before scoring.',
+    items: [
+      'active — full weight, no modification (suitability matches conditions).',
+      'boosted — weight multiplied by boost factor (strong condition alignment).',
+      'reduced — weight reduced by dampening factor (partial condition mismatch).',
+      'muted — weight set to zero (condition mismatch, directive not applicable).',
+    ],
+  },
+]
+
+export const EXIT_SIGNAL_SYSTEM = [
+  {
+    title: 'Purpose',
+    summary: 'Four exit-focused directives that run alongside entry scores to determine when to close positions.',
+    items: [
+      'Exit directives evaluate stored market data against exit criteria.',
+      'Exit urgency scores feed into the same scoring pipeline alongside entry scores.',
+      'Designed to wire into SEES exit urgency column (Phase 2 integration).',
+      'Each exit directive has its own priority level (P50-P80) and scoring scale.',
+    ],
+  },
+  {
+    title: 'Exit Directives',
+    summary: 'Four directives covering momentum, target, regime, and time-based exits.',
+    items: [
+      'momentum-exhaustion (P65) — RSI > 70 + declining volume → high exit urgency.',
+      'target-achieved (P60) — Price at ATR-based target (1.5× ATR from swing) → binary exit signal.',
+      'regime-shift-exit (P80) — Entropy spike detection → market breakdown → urgent exit.',
+      'time-stop (P50) — Momentum decay over position age → time-based exit urgency.',
+    ],
+  },
+  {
+    title: 'Scoring Integration',
+    summary: 'Exit directives use the same indicator utilities and pipeline as entry directives.',
+    items: [
+      'All use existing indicator utils (RSI, ATR, entropy).',
+      'Registered in directives.module.ts alongside entry directives.',
+      'Exit urgency scores are stored with the same ScoringRun/DirectiveRun model.',
+      'UI should show exit urgency as a separate column alongside total score.',
+    ],
+  },
+]
+
+export const ALERT_CENTER_ARCHITECTURE = [
+  {
+    title: 'Purpose',
+    summary: 'Centralized alert and notification system with severity levels, lifecycle management, and live polling.',
+    items: [
+      '8 pre-configured alert types covering MT5 bridge, API rate limits, data staleness, signals, backend health, database, strategy errors, and stop-loss.',
+      '3 seeded active alerts for demonstration — periodic simulated alerts every 30s.',
+      'In-memory state management with acknowledge/dismiss/snooze lifecycle.',
+      '10s frontend polling for real-time updates from /api/alerts/active.',
+    ],
+  },
+  {
+    title: 'Alert Lifecycle',
+    summary: 'Each alert progresses through states from creation to resolution.',
+    items: [
+      'active → alert is firing and visible in the Alert Center and could trigger push notifications.',
+      'acknowledged → operator has seen the alert but it remains active until resolved.',
+      'snoozed → alert is hidden for 15 minutes, then returns to active if not resolved.',
+      'dismissed → alert is removed from active list (logged in history).',
+      'History entries are timestamped and color-coded by severity for audit trail.',
+    ],
+  },
+  {
+    title: 'Severity Levels',
+    summary: 'Four-tier severity system with color coding and urgency semantics.',
+    items: [
+      '🔴 critical — immediate action required (e.g., MT5 bridge offline, stop-loss triggered).',
+      '🟠 high — needs attention soon (e.g., rate limit approaching, data staleness).',
+      '🟡 warning — advisory (e.g., signal quality degradation, strategy error).',
+      '🔵 info — informational (e.g., daily run completed, import finished).',
+    ],
+  },
+  {
+    title: 'API Contracts',
+    summary: 'Seven REST endpoints for alert management.',
+    items: [
+      'GET /api/alerts/active — currently active alerts.',
+      'GET /api/alerts/history?limit=N — historical alert log.',
+      'GET /api/alerts/count — active/critical counts for badge display.',
+      'POST /api/alerts/:id/acknowledge — mark as seen.',
+      'POST /api/alerts/:id/dismiss — remove from active.',
+      'POST /api/alerts/:id/snooze — snooze for 15 minutes.',
+      'GET /api/alerts/config — alert type enable/disable configuration.',
+      'PUT /api/alerts/config/:id — toggle alert type on/off.',
+    ],
+  },
+]
+
 export const MAINTENANCE_WORKFLOW = [
   {
     title: 'Before You Build',
@@ -666,6 +1057,12 @@ export const KNOWN_GAPS = [
   'Automated architecture inventory is still a future decision.',
   'Browser-level verification path is not automated yet.',
   'This page should later reflect live contracts and system state.',
+  'MT5 Python bridge status is not polled on this page — bridge health is separate from NestJS provider health.',
+  'Contract register contains endpoints but not queue action or storage contracts — those are still documented only in code.',
+  'Directive count on this page (71) drifts as new directives are added — needs an auto-detected count.',
+  'Scoring pipeline integration with calibration only tested for 16 seeded calibrations, not bulk.',
+  'Exit signal system not yet wired into SEES exit urgency column (Phase 2).',
+  'No automated drift detection comparing documented contracts against actual route registrations.',
 ]
 
 export const REVISION_LOG = [
@@ -674,6 +1071,15 @@ export const REVISION_LOG = [
   'Contracts: added concrete route, bridge, queue, UI, and scoring contract categories.',
   'Governance: added guardrails, verification, definition of done, and gaps.',
   'Database Schema: added comprehensive entity-relationship diagram for AI guidance.',
+  '2026-06-16: CURRENT_SLICE refreshed — 50+ directives, calibration, exit signals, activation gate, alerts, MT5 bridge, Trading212, algorithm lab, training, backtest, scheduler, keyboard trading.',
+  '2026-06-16: Contract Register updated — 30+ new endpoints added (calibrations, alerts, training, portfolio, algorithm-lab, backtest, strategies).',
+  '2026-06-16: Roadmap rebuilt — 8 domains reflecting actual sprint progress through Q241.',
+  '2026-06-16: Known Gaps expanded with MT5 bridge, drift detection, auto-count gaps.',
+  '2026-06-16: Phase 2 — 4 new subsystem sections added: Calibration System, Activation Gate & Conditions, Exit Signal System, Alert Center Architecture.',
+  '2026-06-16: Architecture Index expanded from 20→24 sections. Architecture Tree domains updated with calibration, activation gate, exit signals, alerts, training, algorithm lab, portfolio.',
+  '2026-06-16: SYSTEM_SPINE updated with condition detection, activation gate, calibration, and exit signal steps.',
+  '2026-06-16: Phase 3 — Live status widgets added: System Health (uptime/DB latency/queue), Alert Center Status (active/critical counts), Calibration Status (total), Alerts/Calibrations/Uptime chips in control bar.',
+  '2026-06-16: Phase 4 — Drift detection system added: per-section and per-contract verification state (localStorage), stale badges in section index (stale/review/✓), Verified column in contract register with Mark Verified buttons, control bar drift summary chip, Mark All Verified buttons.',
 ]
 
 // Database Schema for AI Guidance
@@ -725,6 +1131,20 @@ export const DATABASE_SCHEMA = {
         '← Symbol (many-to-one)',
         '← Strategy (many-to-one)',
       ],
+    },
+    {
+      table: 'SymbolCalibration',
+      description: 'Symbol/directive weight overrides',
+      fields: ['id (PK)', 'symbol (unique with directiveId)', 'directiveId', 'weightMultiplier', 'reason', 'decayModifier', 'volatilityAdjustment', 'createdAt', 'updatedAt'],
+      relationships: [],
+      status: 'implemented',
+    },
+    {
+      table: 'FaqEntry',
+      description: 'FAQ search index',
+      fields: ['id (PK)', 'question', 'answer', 'category', 'tags', 'order', 'createdAt', 'updatedAt'],
+      relationships: [],
+      status: 'implemented',
     },
   ],
   marketDataEntities: [
@@ -883,6 +1303,8 @@ export const DATABASE_SCHEMA = {
     'Signal links Symbol + Strategy - actionable trading signals',
     'MarketBar stores OHLCV data - linked to Symbol for price history',
     'ImportRun tracks data imports - linked to Symbol for freshness tracking',
+    'SymbolCalibration overrides directive weights per symbol - linked to Symbol + Directive',
+    'FaqEntry provides searchable knowledge base - standalone table',
     'Planned: SymbolMeta/Fundamentals/Technical extend Symbol with additional data',
     'Planned: StrategyMeta/Performance extend Strategy with parameters and tracking',
     'Planned: Order/Position/Trade tables for order management and trade tracking',
@@ -890,6 +1312,7 @@ export const DATABASE_SCHEMA = {
   dataFlow: [
     '1. Symbol created → 2. ImportRun queued → 3. MarketBar data stored',
     '4. Strategy + Directives defined → 5. Score calculated using MarketBar data',
+    '5b. SymbolCalibration applied to directive scores before aggregation (weight multipliers)',
     '6. Signal generated based on Score → 7. Order created from Signal (planned)',
     'ProviderHealth tracked independently - monitors data source availability',
     'Meta tables store extended attributes without modifying core schema',
@@ -898,7 +1321,7 @@ export const DATABASE_SCHEMA = {
 
 export const SECTION_META = [
   { id: 'status', title: 'Status Snapshot', terms: [...STATUS_SNAPSHOT, ...CURRENT_SLICE] },
-  { id: 'index', title: 'Architecture Index — 20-Section Parity', terms: [...ARCHITECTURE_INDEX.map(item => item.name), 'parity', '20-section'] },
+  { id: 'index', title: 'Architecture Index — 24-Section Parity', terms: [...ARCHITECTURE_INDEX.map(item => item.name), 'parity', '24-section'] },
   { id: 'tree', title: 'Architecture Tree', terms: [...DOMAINS, ...SYSTEM_SPINE] },
   { id: 'schema', title: 'Database Schema', terms: ['database', 'schema', 'entity', 'relationship', 'table', 'foreign key', 'symbol', 'strategy', 'score', 'signal', 'market', 'import', 'directive'] },
   { id: 'workflow', title: 'Decision Workflow', terms: DECISION_WORKFLOW.flatMap((item) => [item.title, item.summary, ...item.items]) },
@@ -911,6 +1334,10 @@ export const SECTION_META = [
   { id: 'register', title: 'Current Contract Register', terms: [...CURRENT_ROUTE_CONTRACTS.flatMap((item) => Object.values(item)), ...CURRENT_FLOW_CONTRACTS.flatMap((item) => [item.title, ...item.facts])] },
   { id: 'queue', title: 'Queue And Provider Contract', terms: [...DATA_STATES.flat(), ...QUEUE_PROVIDER_CARDS.flatMap((item) => [item.title, item.summary, ...item.items])] },
   { id: 'scoring', title: 'Scoring And Strategy Contract', terms: SCORING_STRATEGY_CARDS.flatMap((item) => [item.title, item.summary, ...item.items]) },
+  { id: 'calibration', title: 'Calibration System', terms: CALIBRATION_SYSTEM.flatMap((item) => [item.title, item.summary, ...item.items]) },
+  { id: 'activation-gate', title: 'Activation Gate And Conditions', terms: ACTIVATION_GATE_SYSTEM.flatMap((item) => [item.title, item.summary, ...item.items]) },
+  { id: 'exit-signals', title: 'Exit Signal System', terms: EXIT_SIGNAL_SYSTEM.flatMap((item) => [item.title, item.summary, ...item.items]) },
+  { id: 'alerts', title: 'Alert Center Architecture', terms: ALERT_CENTER_ARCHITECTURE.flatMap((item) => [item.title, item.summary, ...item.items]) },
   { id: 'governance', title: 'Governance And Guardrails', terms: [...MAINTENANCE_WORKFLOW.flatMap((item) => [item.title, item.summary, ...item.items]), ...AI_GUARDRAILS.flatMap((item) => [item.title, item.summary, ...item.items]), ...VERIFICATION_GOVERNANCE.flatMap((item) => [item.title, item.summary, ...item.items]), ...DEFINITION_OF_DONE, ...HANDOFF_CHECKLIST] },
   { id: 'gaps', title: 'Known Gaps And Revision Log', terms: [...KNOWN_GAPS, ...REVISION_LOG] },
   { id: 'roadmap', title: 'Roadmap', terms: ['roadmap', 'issue', 'github', 'sprint', 'p0', 'p1', 'p2', 'task', 'status', 'priority'] },
@@ -918,50 +1345,91 @@ export const SECTION_META = [
 
 export const ROADMAP_ITEMS = [
   {
-    domain: 'Market data import and freshness',
+    domain: 'Scoring Directive Engine',
     items: [
-      { issue: 'Task 1', label: 'Data Model Baseline & Migrations', status: 'done', gh: null },
-      { issue: 'Task 2', label: 'Data Freshness Service', status: 'done', gh: null },
+      { issue: 'Q207', label: 'MQL5 Directives Batch 1 — 12 directives (market-entropy, hurst-memory, BOS, liquidity-sweep, FVG, etc.)', status: 'done', gh: null },
+      { issue: 'Q205', label: 'MQL5 Article Absorption 2 — Falling-Risk Pyramid, Price Time Gaps', status: 'done', gh: null },
+      { issue: 'Q226', label: 'Directive Suitability Registry — 40+ directives tagged with regime, volatility, instrument, timeframe', status: 'done', gh: null },
+      { issue: 'Q225', label: 'Condition Detector + Activation Gate — pre-scoring condition vector with active/reduced/muted/boosted', status: 'done', gh: null },
+      { issue: 'Q231', label: 'Symbol Calibration System — 16 seeded calibrations with weight multipliers', status: 'done', gh: null },
+      { issue: 'Q232', label: 'Volatility Envelope Directive — range percentiles, anomalous detection', status: 'done', gh: null },
+      { issue: 'Q238', label: 'Exit Signal System — 4 exit directives (momentum-exhaustion, target-achieved, regime-shift-exit, time-stop)', status: 'done', gh: null },
+      { issue: 'Q227', label: 'Trigger System — 8 built-in triggers (strong trend, high vol, compression, ranging, etc.)', status: 'done', gh: null },
     ],
   },
   {
     domain: 'Provider integration and health',
     items: [
-      { issue: 'Task 3', label: 'Provider Adapter Contract & Stubs', status: 'active', gh: null },
-      { issue: 'Page', label: 'Trading Platforms UI (sources → Trading Platforms)', status: 'done', gh: null },
-      { issue: 'Task 8', label: 'API Management Health Panel', status: 'queued', gh: null },
+      { issue: 'Q139', label: 'MT5 Adapter + Python Flask Bridge on port 5000', status: 'done', gh: null },
+      { issue: 'Q230', label: 'Trading212 Live Portfolio Import with Basic Auth', status: 'done', gh: null },
+      { issue: 'Q144-Q148', label: 'Provider adapters: Yahoo Finance, Polygon.io, Finnhub, Twelve Data, FMP', status: 'done', gh: null },
     ],
   },
   {
-    domain: 'Directive execution',
+    domain: 'Trading execution',
     items: [
-      { issue: 'Task 4', label: 'Five-Directive Scoring Engine', status: 'queued', gh: null },
+      { issue: 'Q229', label: 'MT5 Demo Trading — placeOrder, closePosition, closeAll, getPositions, getAccount', status: 'done', gh: null },
+      { issue: 'Q241', label: 'Keyboard Speed Trading — B/S/C keys, size presets 1-5, Shift 2x, arrow scroll/zoom', status: 'done', gh: null },
+      { issue: 'Q203', label: 'MT5 Paper Trading via bridge on demo account', status: 'blocked', gh: null },
     ],
   },
   {
-    domain: 'Strategy aggregation',
+    domain: 'Alerting and monitoring',
     items: [
-      { issue: 'Task 5', label: 'Strategy Aggregator with Breakdown', status: 'queued', gh: null },
+      { issue: 'Q185', label: 'Alert Center — 8 alert types, severity levels, live polling, snooze/dismiss/acknowledge', status: 'done', gh: null },
+      { issue: 'Q142', label: 'Smart Health Indicator Bar — fallback mode detection, live status chips', status: 'done', gh: null },
+      { issue: 'Q149', label: 'Notifications system (email, Windows toast, Telegram, Discord)', status: 'done', gh: null },
     ],
   },
   {
-    domain: 'Scoring and ranking',
+    domain: 'Algorithm Lab and training',
     items: [
-      { issue: 'Task 6', label: 'SEES Ranking API Endpoint', status: 'queued', gh: null },
-      { issue: 'Task 7', label: 'SEES UI Reorder Panel', status: 'queued', gh: null },
+      { issue: 'Q170', label: 'Algorithm Lab — pipeline visualization (FETCH → SCORE → RANK → FILTER → SIGNAL)', status: 'done', gh: null },
+      { issue: 'Q228', label: 'Candle Pattern Training Area — 8 pattern directives, TradingView charts, backtest explorer', status: 'done', gh: null },
+      { issue: 'Q143', label: 'Backtest Chart — TradingView lightweight charts with RSI/MACD/EMA overlays', status: 'done', gh: null },
     ],
   },
   {
-    domain: 'SEES presentation layer',
+    domain: 'Automation and scheduling',
     items: [
+      { issue: 'Q135', label: 'Automated Daily Trading Scheduler — Mon-Fri 9AM cron with pre-flight checks', status: 'done', gh: null },
+      { issue: 'Q137', label: 'Execution Gates — 5 gate layers from WP plugin', status: 'done', gh: null },
+      { issue: 'Q136', label: 'Risk Management — SL, TP, position sizing, drawdown limits', status: 'done', gh: null },
+    ],
+  },
+  {
+    domain: 'Strategy and portfolio',
+    items: [
+      { issue: 'Q171', label: 'Strategy Creation Spree — 20+ strategies with projections', status: 'done', gh: null },
+      { issue: 'Q173', label: 'Strategy Templates replaced with Duplicate Strategy', status: 'done', gh: null },
+      { issue: 'Q197', label: 'Built-In Strategies — 8 purpose-specific (Forex, CFD, VIX, Gold, etc.)', status: 'done', gh: null },
+      { issue: 'Q161', label: 'Portfolio view with real Trading212 data', status: 'done', gh: null },
+      { issue: 'Q133', label: 'Trading strategy with scoring + allocation + automation', status: 'done', gh: null },
+    ],
+  },
+  {
+    domain: 'UI and navigation',
+    items: [
+      { issue: 'Q199', label: 'Nav cleanup — SEES + Strategy Builder moved to Scoring area with dividers', status: 'done', gh: null },
+      { issue: 'Q177-Q195', label: 'Pages: ScoringActivityLog, TradeJournal, AdvancedResearch, Watchlists, AlertCenter, Focus, DirectiveCapabilities, OpsArea, PerformanceLab', status: 'done', gh: null },
+      { issue: 'Q196', label: 'SEES Live Stack fix — show 5 strategy directives, data source indicators', status: 'done', gh: null },
+      { issue: 'Q209', label: 'Directives page — show all 71 directives, fix accordion, improved design', status: 'done', gh: null },
+    ],
+  },
+  {
+    domain: 'Backend infrastructure',
+    items: [
+      { issue: 'Q141', label: 'Backend startup reliability fix', status: 'done', gh: null },
+      { issue: 'Q214', label: 'Score Storage — persist ALL directive scores per run (ScoringRun + DirectiveRun models)', status: 'done', gh: null },
+      { issue: 'Q152', label: 'Auth module — JWT + API keys skeleton', status: 'done', gh: null },
+    ],
+  },
+  {
+    domain: 'Planned / next',
+    items: [
+      { issue: 'Q218', label: 'GitHub Issues Batch 1 — Chart, Pullback, VIX, WebSocket, PHP Porting, Log Viewer, Docs', status: 'planned', gh: null },
       { issue: 'GH #1', label: 'Multi-Strategy Dashboard', status: 'planned', gh: 'https://github.com/FifeCIC/trading-command-suite/issues/1' },
       { issue: 'GH #2', label: 'TradingView Chart Integration', status: 'planned', gh: 'https://github.com/FifeCIC/trading-command-suite/issues/2' },
-      { issue: 'GH #3', label: 'Pullback Scoring Indicator', status: 'planned', gh: 'https://github.com/FifeCIC/trading-command-suite/issues/3' },
-    ],
-  },
-  {
-    domain: 'Signals and decision support',
-    items: [
       { issue: 'GH #4', label: 'VIX News Sentiment Engine', status: 'planned', gh: 'https://github.com/FifeCIC/trading-command-suite/issues/4' },
     ],
   },

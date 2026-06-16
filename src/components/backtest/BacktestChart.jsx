@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { createChart, ColorType } from 'lightweight-charts';
+import { createChart, CandlestickSeries, ColorType } from 'lightweight-charts';
 import './BacktestChart.css';
 
 function timeToDate(time) {
@@ -127,7 +127,7 @@ export default function BacktestChart({ data, symbol, loading, showSignalsOnly =
     chartRef.current = chart;
 
     // Main candlestick pane
-    const candleSeries = chart.addCandlestickSeries({
+    const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: '#22c55e',
       downColor: '#ef4444',
       borderUpColor: '#22c55e',

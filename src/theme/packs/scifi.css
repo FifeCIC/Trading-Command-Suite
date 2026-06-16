@@ -1,0 +1,139 @@
+/* Sci-Fi theme — dark navy space aesthetic */
+
+/* --- Body background --- */
+[data-theme-pack='scifi'] body {
+  background:
+    radial-gradient(circle at 12% 14%, rgba(0, 217, 255, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 84% 0%, rgba(179, 0, 255, 0.10) 0%, transparent 38%),
+    linear-gradient(170deg, var(--bg) 0%, var(--bg-elev, var(--panel)) 100%);
+}
+
+/* --- Stars / Grid / Glow --- */
+[data-theme-pack='scifi'] .sci-stars {
+  opacity: 0.45;
+  animation: starsDrift 26s linear infinite;
+}
+
+[data-theme-pack='scifi'] .sci-grid {
+  opacity: 0.5;
+  mask-image: radial-gradient(circle at 50% 30%, black 25%, transparent 80%);
+}
+
+[data-theme-pack='scifi'] .sci-glow {
+  opacity: 1;
+  background:
+    radial-gradient(circle at 8% 14%, rgba(0, 217, 255, 0.12), transparent 36%),
+    radial-gradient(circle at 88% 82%, rgba(179, 0, 255, 0.14), transparent 38%);
+  animation: glowPulse 8s ease-in-out infinite;
+}
+
+/* --- Panel surfaces with cyan tint --- */
+[data-theme-pack='scifi'] .topbar,
+[data-theme-pack='scifi'] .left-rail,
+[data-theme-pack='scifi'] .main-stage,
+[data-theme-pack='scifi'] .right-rail,
+[data-theme-pack='scifi'] .content-card,
+[data-theme-pack='scifi'] .intro-panel,
+[data-theme-pack='scifi'] .demo-panel,
+[data-theme-pack='scifi'] .floating-panel {
+  backdrop-filter: blur(2px);
+  background: color-mix(in srgb, var(--panel) 88%, #081a2b 12%);
+  border-color: rgba(0, 217, 255, 0.32);
+}
+
+/* --- Corner brackets --- */
+[data-theme-pack='scifi'] .topbar::before,
+[data-theme-pack='scifi'] .left-rail::before,
+[data-theme-pack='scifi'] .main-stage::before,
+[data-theme-pack='scifi'] .right-rail::before,
+[data-theme-pack='scifi'] .content-card::before,
+[data-theme-pack='scifi'] .intro-panel::before,
+[data-theme-pack='scifi'] .demo-panel::before,
+[data-theme-pack='scifi'] .floating-panel::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 12px;
+  height: 12px;
+  border-top: 1px solid rgba(0, 217, 255, 0.7);
+  border-right: 1px solid rgba(0, 217, 255, 0.7);
+  pointer-events: none;
+}
+
+[data-theme-pack='scifi'] .topbar::after,
+[data-theme-pack='scifi'] .left-rail::after,
+[data-theme-pack='scifi'] .main-stage::after,
+[data-theme-pack='scifi'] .right-rail::after,
+[data-theme-pack='scifi'] .content-card::after,
+[data-theme-pack='scifi'] .intro-panel::after,
+[data-theme-pack='scifi'] .demo-panel::after,
+[data-theme-pack='scifi'] .floating-panel::after {
+  content: '';
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  width: 12px;
+  height: 12px;
+  border-bottom: 1px solid rgba(0, 217, 255, 0.7);
+  border-left: 1px solid rgba(0, 217, 255, 0.7);
+  pointer-events: none;
+}
+
+/* --- Eyebrow accent --- */
+[data-theme-pack='scifi'] .eyebrow {
+  color: var(--accent);
+  text-shadow: 0 0 10px rgba(0, 217, 255, 0.45);
+}
+
+/* --- Heading glow --- */
+[data-theme-pack='scifi'] h1,
+[data-theme-pack='scifi'] h2,
+[data-theme-pack='scifi'] h3 {
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #c8eeff;
+  text-shadow: 0 0 10px rgba(0, 217, 255, 0.25);
+}
+
+/* --- Footer panel --- */
+[data-theme-pack='scifi'] .footer-panel {
+  backdrop-filter: blur(2px);
+  background: color-mix(in srgb, var(--panel) 88%, #081a2b 12%);
+  border-color: rgba(0, 217, 255, 0.32);
+}
+
+[data-theme-pack='scifi'] .footer-panel::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 12px;
+  height: 12px;
+  border-top: 1px solid rgba(0, 217, 255, 0.7);
+  border-right: 1px solid rgba(0, 217, 255, 0.7);
+  pointer-events: none;
+}
+
+[data-theme-pack='scifi'] .footer-panel::after {
+  content: '';
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  width: 12px;
+  height: 12px;
+  border-bottom: 1px solid rgba(0, 217, 255, 0.7);
+  border-left: 1px solid rgba(0, 217, 255, 0.7);
+  pointer-events: none;
+}
+
+/* --- Support link buttons --- */
+[data-theme-pack='scifi'] .support-link-button {
+  background: rgba(6, 20, 36, 0.7);
+  border-color: rgba(0, 217, 255, 0.35);
+  color: #c8eeff;
+}
+
+[data-theme-pack='scifi'] .support-link-button:hover {
+  box-shadow: 0 0 14px rgba(0, 217, 255, 0.2);
+}

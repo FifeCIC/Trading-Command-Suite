@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import CandlePatternChart from '../components/CandlePatternChart';
 import PatternDetailPanel from '../components/PatternDetailPanel';
+import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './TrainingCandlePatternsPage.css';
 
 const TIMEFRAMES = ['M5', 'M15', 'M30', 'H1', 'H4', 'D1'];
@@ -113,11 +114,7 @@ export default function TrainingCandlePatternsPage() {
 
       {/* Chart Area */}
       <div className="chart-area">
-        {error && (
-          <div className="error-banner">
-            ⚠️ API not available — showing sample data. Start NestJS backend.
-          </div>
-        )}
+        {error && <ApiOfflineBanner serviceName="NestJS Backend" port={3201} />}
 
         <div className="chart-wrapper">
           <CandlePatternChart

@@ -160,7 +160,7 @@ export default function SeesLiveStackMockPage() {
         <article className="sees-summary-card sees-summary-card--wide">
           <header className="sees-panel-header">
             <div>
-              <p className="sees-panel-label">Strategy</p>
+              <p className="sees-panel-label">Protocol</p>
               <h2>{rankingState.strategy.name}</h2>
             </div>
             <div className={`mode-badge ${hasRealBreakdown ? 'mode-full' : 'mode-local-direct-route'}`}>{rankingState.mode}</div>
@@ -170,19 +170,14 @@ export default function SeesLiveStackMockPage() {
             <span>Entry {rankingState.strategy.entryThreshold}</span>
             <span>Watch {rankingState.strategy.watchThreshold}</span>
             <span>Defense {rankingState.strategy.defenseThreshold}</span>
+            <span>{rankingState.directives.length} directives</span>
           </div>
         </article>
 
         <article className="sees-summary-card">
           <p className="sees-panel-label">Market Tilt</p>
-          <strong className="sees-summary-value">
-            {rankingState.marketAverageChange != null
-              ? `${rankingState.marketAverageChange > 0 ? '+' : ''}${rankingState.marketAverageChange}%`
-              : '—'}
-          </strong>
-          <p className="sees-summary-note">
-            {dataSource === 'api' ? 'Not computed in API mode.' : 'Average change across the sample set.'}
-          </p>
+          <strong className="sees-summary-value">—</strong>
+          <p className="sees-summary-note">Available with real market data</p>
         </article>
 
         <article className="sees-summary-card">
@@ -190,24 +185,6 @@ export default function SeesLiveStackMockPage() {
           <strong className="sees-summary-value">{rankedSymbols.length}</strong>
           <p className="sees-summary-note">Ranked from highest score to lowest.</p>
         </article>
-      </section>
-
-      <section className="sees-directives-grid" aria-label="SEES directives">
-        <div className="sees-directives-header">
-          <h3>Strategy Directives ({showAllDirectives ? rankingState.directives.length : Math.min(5, rankingState.directives.length)} showing)</h3>
-          <button type="button" className="btn btn-sm" onClick={() => setShowAllDirectives(!showAllDirectives)}>
-            {showAllDirectives ? 'Show Strategy Only (5)' : `Show All (${rankingState.directives.length})`}
-          </button>
-        </div>
-        {(showAllDirectives ? rankingState.directives : rankingState.directives.slice(0, 5)).map((directive) => (
-            <article className={`sees-directive-card ${(directive.weight || 0) > 0 ? 'sees-weighted' : 'sees-unweighted'}`} key={directive.id}>
-              <p className="sees-panel-label">Directive</p>
-              <h3>{directive.label}</h3>
-              <p className="sees-directive-indicator">{directive.indicator}</p>
-              <p className="sees-directive-weight">Weight {(directive.weight * 100).toFixed(0)}%{(directive.weight || 0) > 0 ? ' ★ active' : ' (inactive)'}</p>
-              <p className="sees-directive-description">{directive.description}</p>
-            </article>
-          ))}
       </section>
 
       {/* What does this mean? — collapsible explanation */}

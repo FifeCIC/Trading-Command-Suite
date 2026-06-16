@@ -65,7 +65,7 @@ export function useThemeRuntime({ mode, packId = 'core', adapterIds } = {}) {
 
     Object.entries(cssVars).forEach(([key, value]) => {
       if (isSafeCssVariableName(key) && (typeof value === 'string' || typeof value === 'number')) {
-        root.style.setProperty(key, String(value));
+        root.style.setProperty(key, String(value), 'important');
       }
     });
 

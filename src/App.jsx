@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { analytics, trackAppView, trackSupportClick } from './analytics';
@@ -45,6 +45,7 @@ import SeesArenaPage from './pages/SeesArenaPage';
 import AlgorithmLabPage from './pages/AlgorithmLabPage';
 import AlertCenterPage from './pages/AlertCenterPage';
 import SetupWizardPage from './pages/SetupWizardPage';
+import ServerControlsPage from './pages/ServerControlsPage';
 import SignalsWorkbenchPage from './pages/SignalsWorkbenchPage';
 import SettingsPage from './pages/SettingsPage';
 import StrategiesPage from './pages/StrategiesPage';
@@ -58,9 +59,12 @@ import Mt5DemoTradingPage from './pages/Mt5DemoTradingPage';
 import ThemePage from './pages/ThemePage';
 import TradingPlatformsPage from './pages/TradingPlatformsPage';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
+import ApiOfflineBanner from './components/ApiOfflineBanner';
 import { useNetworkStatus } from './utils/networkStatus';
 import { useUiStore } from './stores/useUiStore';
 import { useThemeRuntime } from './theme/useThemeRuntime';
+import './theme/packs/ai-original.css';
+import './theme/packs/scifi.css';
 import { featureFlags } from './utils/featureFlags';
 import { NAV_TREE, PRIMARY_PAGES, QUICK_MENU, getNavStructure } from './core/nav-tree';
 import { PLUGIN_TAB_SKELETONS } from './pages/plugin-tab-skeletons';
@@ -68,6 +72,7 @@ import { PLUGIN_TAB_SKELETONS } from './pages/plugin-tab-skeletons';
 const NAV_STRUCTURE = getNavStructure();
 
 const THEME_CARDS = [
+  { id: 'ai-original', name: 'AI Original', description: 'Dark navy, blue accent — doomchart inspired.', colors: ['#0a0e17', '#5b8def', '#e6ecf7'] },
   { id: 'core', name: 'Core', description: 'Clean, neutral palette.', colors: ['#f4f7fb', '#0ea5a6', '#0f172a'] },
   { id: 'oceanic', name: 'Oceanic', description: 'Deep blue with teal.', colors: ['#0f1b2e', '#00d9ff', '#d6e8ff'] },
   { id: 'scifi', name: 'Sci-Fi', description: 'Dark navy, cyan neon.', colors: ['#0a1428', '#00d9ff', '#c1d0e0'] },
@@ -123,7 +128,6 @@ function AppShell() {
   const setThemePack = useUiStore((state) => state.setThemePack);
   const backgroundTone = useUiStore((state) => state.backgroundTone);
   const setBackgroundTone = useUiStore((state) => state.setBackgroundTone);
-  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { adapters, meta } = useThemeRuntime({ mode: themeMode, packId: themePack });
   const availablePacks = Array.isArray(meta?.availablePacks) ? meta.availablePacks : [];
@@ -158,6 +162,8 @@ function AppShell() {
     setActivityLog((prev) => [item, ...prev].slice(0, 24));
   }
 
+  const autoStartAttempted = useRef(false);
+
   useEffect(() => {
     trackAppView();
     startPerformanceMonitoring();
@@ -173,6 +179,43 @@ function AppShell() {
     };
   }, []);
 
+  // Auto-start the NestJS API if it's not running on app launch
+  useEffect(() => {
+    if (autoStartAttempted.current) return;
+
+    const attemptAutoStart = async () => {
+      // Wait for initial health check to settle
+      await new Promise((r) => setTimeout(r, 3000));
+
+      if (autoStartAttempted.current) return;
+      autoStartAttempted.current = true;
+
+      // Check if API is already reachable
+      try {
+        const res = await fetch('http://localhost:3201/api/version', { signal: AbortSignal.timeout(3000) });
+        if (res.ok) {
+          pushActivity('AUTOSTART', 'API already running');
+          return;
+        }
+      } catch {
+        // API not reachable — try to start it
+      }
+
+      pushActivity('AUTOSTART', 'Attempting to start API server...');
+      try {
+        await fetch('http://localhost/intranet/api-tasks.php?action=start&task=tradercore:api:3201', {
+          method: 'POST',
+          signal: AbortSignal.timeout(10000),
+        });
+        pushActivity('AUTOSTART', 'Start command sent');
+      } catch {
+        pushActivity('AUTOSTART', 'Could not reach task runner');
+      }
+    };
+
+    attemptAutoStart();
+  }, []);
+
   useEffect(() => {
     const views = NAV_STRUCTURE[primaryArea] || [];
     const hasCurrentView = views.some((item) => item.id === secondaryView);
@@ -184,10 +227,6 @@ function AppShell() {
     }
     pushActivity('NAV', `Primary changed to ${primaryArea}`);
   }, [primaryArea, secondaryView, navigate]);
-
-  useEffect(() => {
-    setHeaderMenuOpen(false);
-  }, [primaryArea, secondaryView]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-bg-tone', backgroundTone);
@@ -360,6 +399,10 @@ function AppShell() {
       );
     }
 
+    if (secondaryView === 'server-controls') {
+      return <ServerControlsPage />;
+    }
+
     if (secondaryView === 'sees-live-stack') {
       return <SeesLiveStackMockPage />;
     }
@@ -504,7 +547,7 @@ function AppShell() {
       return <EventsCalendarPage />;
     }
 
-    if (secondaryView === 'strategies') {
+    if (secondaryView === 'protocol-overview') {
       return <StrategiesPage />;
     }
 
@@ -512,7 +555,7 @@ function AppShell() {
       return <SignalsWorkbenchPage />;
     }
 
-    if (secondaryView === 'strategy-builder') {
+    if (secondaryView === 'create-protocols') {
       return <StrategyBuilderPage />;
     }
 
@@ -678,7 +721,11 @@ function AppShell() {
               <span className="hamburger-line" />
               <span className="hamburger-line" />
             </button>
-            <BadgePill label={isApiOnline ? 'API Online' : 'API Offline'} status={isApiOnline ? 'ok' : 'warn'} />
+            {isApiOnline ? (
+              <BadgePill label="API Online" status="ok" />
+            ) : (
+              <ApiOfflineBanner compact />
+            )}
             <BadgePill label={isDbOnline ? 'DB Ready' : 'DB Offline'} status={isDbOnline ? 'ok' : 'warn'} />
             <BadgePill label="Omni Layout" status="neutral" />
             <HealthStatusBar />
@@ -687,23 +734,21 @@ function AppShell() {
           <div className="topbar-title-block">
             <p className="eyebrow">Trading Command Suite</p>
             <h1>{(NAV_STRUCTURE[primaryArea] || []).find((v) => v.id === secondaryView)?.label || secondaryView}</h1>
+            <nav className="quick-menu-row" aria-label="Quick navigation">
+              {QUICK_MENU.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={primaryArea === item.id ? 'nav-active' : ''}
+                  onClick={() => onPrimarySelect(item.id)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
           </div>
 
           <GlobalSearch />
-
-          <div className="topbar-menu-wrap">
-            <button type="button" onClick={() => setHeaderMenuOpen((open) => !open)}>
-              Quick Menu
-            </button>
-            {headerMenuOpen && (
-              <div className="topbar-menu-dropdown">
-                <p className="muted">Primary Pages</p>
-                {QUICK_MENU.map((item) => (
-                  <button key={item.id} type="button" onClick={() => onPrimarySelect(item.id)}>{item.label}</button>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
 
       </header>

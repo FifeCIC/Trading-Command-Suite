@@ -1,0 +1,126 @@
+/* --- Full banner (default) --- */
+.api-offline-banner {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 18px 22px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 209, 102, 0.35);
+  background: linear-gradient(135deg, rgba(255, 209, 102, 0.08) 0%, rgba(255, 140, 66, 0.06) 100%);
+  color: var(--ink, #e6ecf7);
+}
+
+.api-offline-banner-icon {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.api-offline-banner-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.api-offline-banner-title {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--risk-elevated, #ffd166);
+}
+
+.api-offline-banner-text {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--text-dim, var(--ink-soft, #8b9bb8));
+  line-height: 1.5;
+}
+
+.api-offline-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.api-offline-banner-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 9px;
+  background: var(--accent, #5b8def);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid var(--accent, #5b8def);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.api-offline-banner-btn:hover {
+  background: #4f7fe0;
+  color: #fff;
+}
+
+.api-offline-banner-hint {
+  font-size: 12px;
+  color: var(--text-faint, var(--ink-soft, #5b6b80));
+}
+
+.api-offline-banner-hint strong {
+  color: var(--text-dim, var(--ink-soft, #8b9bb8));
+}
+
+.api-offline-banner-cmd {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-faint, #5b6b80);
+  font-family: var(--font-mono, 'SFMono-Regular', monospace);
+}
+
+.api-offline-banner-cmd code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--text-dim, #8b9bb8);
+}
+
+/* --- Compact pill variant --- */
+.api-offline-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 209, 102, 0.3);
+  background: rgba(255, 209, 102, 0.08);
+  font-size: 12px;
+  font-family: var(--font-mono, 'SFMono-Regular', monospace);
+  white-space: nowrap;
+}
+
+.api-offline-pill-icon {
+  font-size: 13px;
+}
+
+.api-offline-pill-text {
+  color: var(--risk-elevated, #ffd166);
+  font-weight: 600;
+}
+
+.api-offline-pill-link {
+  color: var(--accent, #5b8def);
+  text-decoration: none;
+  font-weight: 600;
+  margin-left: 2px;
+}
+
+.api-offline-pill-link:hover {
+  text-decoration: underline;
+}

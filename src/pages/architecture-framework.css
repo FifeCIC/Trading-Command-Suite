@@ -554,3 +554,49 @@
 .architecture-schema-card-planned .architecture-schema-section ul {
   color: #556680;
 }
+
+/* --- Drift Detection / Verification --- */
+
+.architecture-index-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.architecture-index-header h2 {
+  margin: 0;
+}
+
+.architecture-verify-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.architecture-verify-btn {
+  border: 1px solid #b3bfd3;
+  border-radius: 6px;
+  background: #f8fbff;
+  color: #1f315a;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1.2;
+}
+
+.architecture-verify-btn:hover {
+  background: #00ff4120;
+  border-color: #00a63e;
+  color: #00a63e;
+}
+
+.architecture-verify-date {
+  font-size: 10px;
+  color: #6a7a94;
+  margin-left: 2px;
+}

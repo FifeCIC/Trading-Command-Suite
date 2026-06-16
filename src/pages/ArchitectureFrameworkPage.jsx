@@ -2,9 +2,13 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
 import LoadingSkeleton from '../components/LoadingSkeleton'
+import ApiOfflineBanner from '../components/ApiOfflineBanner'
 import {
+  ACTIVATION_GATE_SYSTEM,
   AI_GUARDRAILS,
+  ALERT_CENTER_ARCHITECTURE,
   ARCHITECTURE_INDEX,
+  CALIBRATION_SYSTEM,
   CONTRACTS,
   CONTRACT_CARDS,
   CONTRACT_REGISTER_LAST_UPDATED,
@@ -17,6 +21,7 @@ import {
   DEFINITION_OF_DONE,
   DISCOVERY_COMMANDS,
   DOMAINS,
+  EXIT_SIGNAL_SYSTEM,
   FEATURE_MATRIX,
   HANDOFF_CHECKLIST,
   INTAKE_TEMPLATE,
@@ -38,6 +43,48 @@ import './architecture-framework.css'
 
 const LIVE_REFRESH_INTERVAL_MS = 30_000
 const EMPTY_OBJ = {}
+const DRIFT_STORAGE_KEY = 'architecture-drift-verification'
+const STALE_DAYS = 7
+const WARN_DAYS = 3
+
+function getVerificationState() {
+  try {
+    const raw = localStorage.getItem(DRIFT_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function setVerificationState(state) {
+  try {
+    localStorage.setItem(DRIFT_STORAGE_KEY, JSON.stringify(state))
+  } catch {
+    // localStorage unavailable
+  }
+}
+
+function daysSince(dateStr) {
+  if (!dateStr) return Infinity
+  const then = Date.parse(dateStr)
+  if (Number.isNaN(then)) return Infinity
+  return (Date.now() - then) / (1000 * 60 * 60 * 24)
+}
+
+function verificationTone(dateStr) {
+  const days = daysSince(dateStr)
+  if (days > STALE_DAYS) return 'error'
+  if (days > WARN_DAYS) return 'warn'
+  return 'ok'
+}
+
+function verificationLabel(dateStr) {
+  const days = daysSince(dateStr)
+  if (days > STALE_DAYS) return 'Stale'
+  if (days > WARN_DAYS) return 'Review'
+  return 'Verified'
+}
+
 function normalize(value) {
   return String(value).toLowerCase()
 }
@@ -179,6 +226,29 @@ export default function ArchitectureFrameworkPage() {
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true)
   const [viewMode, setViewMode] = useState('framework')
   const [dodChecked, setDodChecked] = useState(() => new Set())
+  const [verificationState, setVerificationState_] = useState(() => getVerificationState())
+
+  function updateVerification(itemKey, dateStr) {
+    setVerificationState_((prev) => {
+      const next = { ...prev, [itemKey]: dateStr || new Date().toISOString().slice(0, 10) }
+      setVerificationState(next)
+      return next
+    })
+  }
+
+  function markAllVerified(items) {
+    const today = new Date().toISOString().slice(0, 10)
+    setVerificationState_((prev) => {
+      const next = { ...prev }
+      items.forEach((key) => { next[key] = today })
+      setVerificationState(next)
+      return next
+    })
+  }
+
+  function getVerifiedDate(itemKey) {
+    return verificationState[itemKey] || null
+  }
 
   const providerHealthQuery = useQuery({
     queryKey: ['architecture', 'provider-health'],
@@ -196,11 +266,38 @@ export default function ArchitectureFrameworkPage() {
     refetchOnWindowFocus: true,
   })
 
+  const systemHealthQuery = useQuery({
+    queryKey: ['architecture', 'system-health'],
+    queryFn: () => apiGet('/api/health'),
+    refetchInterval: autoRefreshEnabled ? LIVE_REFRESH_INTERVAL_MS : false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+  })
+
+  const alertsCountQuery = useQuery({
+    queryKey: ['architecture', 'alerts-count'],
+    queryFn: () => apiGet('/api/alerts/count'),
+    refetchInterval: autoRefreshEnabled ? LIVE_REFRESH_INTERVAL_MS : false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+  })
+
+  const calibrationsQuery = useQuery({
+    queryKey: ['architecture', 'calibrations'],
+    queryFn: () => apiGet('/api/api/calibrations'),
+    refetchInterval: autoRefreshEnabled ? LIVE_REFRESH_INTERVAL_MS : false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+  })
+
   const providerHealthData = providerHealthQuery.data ?? EMPTY_OBJ
   const importRunsData = importRunsQuery.data ?? EMPTY_OBJ
+  const systemHealthData = systemHealthQuery.data ?? EMPTY_OBJ
+  const alertsCountData = alertsCountQuery.data ?? EMPTY_OBJ
+  const calibrationsData = calibrationsQuery.data ?? EMPTY_OBJ
   
-  const systemMode = providerHealthData.mode || importRunsData.mode || null
-  const systemServices = providerHealthData.services || importRunsData.services || {}
+  const systemMode = providerHealthData.mode || importRunsData.mode || systemHealthData.mode || null
+  const systemServices = providerHealthData.services || importRunsData.services || systemHealthData.subsystems || {}
   
   const providerHealth = useMemo(() => {
     return Array.isArray(providerHealthData.providers) ? providerHealthData.providers : Array.isArray(providerHealthData) ? providerHealthData : []
@@ -208,6 +305,9 @@ export default function ArchitectureFrameworkPage() {
   const recentImportRuns = useMemo(() => {
     return Array.isArray(importRunsData.runs) ? importRunsData.runs : Array.isArray(importRunsData) ? importRunsData : []
   }, [importRunsData])
+  const calibrationsList = useMemo(() => {
+    return Array.isArray(calibrationsData) ? calibrationsData : []
+  }, [calibrationsData])
 
   const providerStatusCounts = useMemo(
     () => countBy(providerHealth, (item) => item.status || 'unknown'),
@@ -256,7 +356,13 @@ export default function ArchitectureFrameworkPage() {
   }
 
   function refreshLiveStatus() {
-    void Promise.all([providerHealthQuery.refetch(), importRunsQuery.refetch()])
+    void Promise.all([
+      providerHealthQuery.refetch(),
+      importRunsQuery.refetch(),
+      systemHealthQuery.refetch(),
+      alertsCountQuery.refetch(),
+      calibrationsQuery.refetch(),
+    ])
   }
 
   return (
@@ -324,7 +430,31 @@ export default function ArchitectureFrameworkPage() {
             Redis: <StatusChip label={systemServices.redis ? 'connected' : 'off'} tone={systemServices.redis ? 'ok' : 'neutral'} />
           </span>
           <span className="architecture-status-item">
-            Symbols: {providerHealth.length > 0 ? providerHealth.length : '—'}
+            Alerts:{' '}
+            <StatusChip
+              label={alertsCountQuery.isLoading ? '…' : `${alertsCountData.active ?? '?'}`}
+              tone={alertsCountData.critical > 0 ? 'error' : alertsCountData.active > 0 ? 'warn' : 'ok'}
+            />
+          </span>
+          <span className="architecture-status-item">
+            Calibrations: {calibrationsList.length > 0 ? calibrationsList.length : '—'}
+          </span>
+          <span className="architecture-status-item">
+            Uptime: {systemHealthData.uptime ? `${Math.floor(systemHealthData.uptime / 60)}m` : '—'}
+          </span>
+          <span className="architecture-status-item">
+            {(() => {
+              const staleCount = CURRENT_ROUTE_CONTRACTS.filter((r) => {
+                const v = getVerifiedDate(`route:${r.route}`)
+                return !v || daysSince(v) > STALE_DAYS
+              }).length
+              const total = CURRENT_ROUTE_CONTRACTS.length
+              return staleCount > 0 ? (
+                <StatusChip label={`${staleCount}/${total} stale`} tone="warn" />
+              ) : (
+                <StatusChip label={`${total} verified`} tone="ok" />
+              )
+            })()}
           </span>
           <span className="architecture-status-item">
             {providerHealthQuery.isFetching ? '⟳ refreshing' : `✓ ${formatDateTime(latestProviderCheck)}`}
@@ -346,9 +476,34 @@ export default function ArchitectureFrameworkPage() {
       </section>
 
       <section className="architecture-index-shell">
-        <h2>Architecture Index</h2>
+        <div className="architecture-index-header">
+          <h2>Architecture Index</h2>
+          <div className="architecture-actions" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            {(() => {
+              const staleSectionCount = SECTION_META.filter((s) => {
+                const v = getVerifiedDate(`section:${s.id}`)
+                return !v || daysSince(v) > STALE_DAYS
+              }).length
+              const total = SECTION_META.length
+              return staleSectionCount > 0 ? (
+                <>
+                  <span className="architecture-chip architecture-chip-warn">{staleSectionCount} section{staleSectionCount > 1 ? 's' : ''} need review</span>
+                  <button type="button" onClick={() => markAllVerified(SECTION_META.map((s) => `section:${s.id}`))}>
+                    Mark Sections Verified
+                  </button>
+                </>
+              ) : (
+                <span className="architecture-chip architecture-chip-ok">All {total} sections verified</span>
+              )
+            })()}
+          </div>
+        </div>
         <div className="architecture-index-grid">
-          {visibleSections.map((section) => (
+          {visibleSections.map((section) => {
+            const secKey = `section:${section.id}`
+            const verifiedDate = getVerifiedDate(secKey)
+            const vTone = verificationTone(verifiedDate)
+            return (
             <button
               key={section.id}
               type="button"
@@ -356,8 +511,19 @@ export default function ArchitectureFrameworkPage() {
               onClick={() => scrollToSection(section.id)}
             >
               {section.title}
+              {vTone !== 'ok' && (
+                <span className={`architecture-chip architecture-chip-${vTone}`} style={{ marginLeft: 6, fontSize: 9 }}>
+                  {vTone === 'error' ? 'stale' : 'review'}
+                </span>
+              )}
+              {vTone === 'ok' && verifiedDate && (
+                <span className="architecture-chip architecture-chip-ok" style={{ marginLeft: 6, fontSize: 9 }}>
+                  ✓
+                </span>
+              )}
             </button>
-          ))}
+            )
+          })}
         </div>
       </section>
 
@@ -389,7 +555,7 @@ export default function ArchitectureFrameworkPage() {
             <article className="architecture-card">
               <h3>Live Runtime Snapshot</h3>
               <p className="architecture-live-note">
-                Quick metrics from <strong>/api/providers/health</strong> and <strong>/api/imports/runs</strong>.
+                Quick metrics from <strong>/api/providers/health</strong>, <strong>/api/imports/runs</strong>, <strong>/api/health</strong>, <strong>/api/alerts/count</strong>, and <strong>/api/api/calibrations</strong>.
               </p>
               <div className="architecture-actions">
                 <button type="button" onClick={refreshLiveStatus}>Refresh Live Status</button>
@@ -453,7 +619,7 @@ export default function ArchitectureFrameworkPage() {
                 <article className="architecture-status-mini-card">
                   <h4>Provider Health Mix</h4>
                   {providerHealthQuery.isLoading && <LoadingSkeleton variant="text" lines={4} />}
-                  {providerHealthQuery.error && <p>Provider health is not reachable from this shell yet.</p>}
+                  {providerHealthQuery.error && <ApiOfflineBanner compact />}
                   {!providerHealthQuery.isLoading && !providerHealthQuery.error && (
                     <ul className="architecture-live-list">
                       <li>Providers tracked: {providerHealth.length}</li>
@@ -467,13 +633,82 @@ export default function ArchitectureFrameworkPage() {
                 <article className="architecture-status-mini-card">
                   <h4>Import Pipeline Pulse</h4>
                   {importRunsQuery.isLoading && <LoadingSkeleton variant="text" lines={4} />}
-                  {importRunsQuery.error && <p>Recent import runs are not reachable from this shell yet.</p>}
+                  {importRunsQuery.error && <ApiOfflineBanner compact />}
                   {!importRunsQuery.isLoading && !importRunsQuery.error && (
                     <ul className="architecture-live-list">
                       <li>Recent runs loaded: {recentImportRuns.length}</li>
                       <li>Completed: {importRunStatusCounts.completed || 0}</li>
                       <li>Running/queued: {(importRunStatusCounts.running || 0) + (importRunStatusCounts.queued || 0)}</li>
                       <li>Failed: {importRunStatusCounts.failed || 0}</li>
+                    </ul>
+                  )}
+                </article>
+
+                <article className="architecture-status-mini-card">
+                  <h4>System Health</h4>
+                  {systemHealthQuery.isLoading && <LoadingSkeleton variant="text" lines={4} />}
+                  {systemHealthQuery.error && <ApiOfflineBanner compact />}
+                  {!systemHealthQuery.isLoading && !systemHealthQuery.error && (
+                    <ul className="architecture-live-list">
+                      <li>
+                        Status:{' '}
+                        <StatusChip
+                          label={systemHealthData.status || 'unknown'}
+                          tone={systemHealthData.status === 'ok' ? 'ok' : systemHealthData.status === 'degraded' ? 'warn' : 'error'}
+                        />
+                      </li>
+                      <li>Uptime: {systemHealthData.uptime ? `${Math.floor(systemHealthData.uptime / 60)}m ${Math.floor(systemHealthData.uptime % 60)}s` : '—'}</li>
+                      <li>DB latency: {systemHealthData.subsystems?.database?.latency != null ? `${systemHealthData.subsystems.database.latency}ms` : '—'}</li>
+                      <li>Queue: {systemHealthData.subsystems?.queue?.status || '—'}</li>
+                    </ul>
+                  )}
+                </article>
+
+                <article className="architecture-status-mini-card">
+                  <h4>Alert Center Status</h4>
+                  {alertsCountQuery.isLoading && <LoadingSkeleton variant="text" lines={3} />}
+                  {alertsCountQuery.error && <ApiOfflineBanner compact />}
+                  {!alertsCountQuery.isLoading && !alertsCountQuery.error && (
+                    <ul className="architecture-live-list">
+                      <li>
+                        Active alerts:{' '}
+                        <StatusChip
+                          label={String(alertsCountData.active ?? 0)}
+                          tone={alertsCountData.critical > 0 ? 'error' : alertsCountData.active > 0 ? 'warn' : 'ok'}
+                        />
+                      </li>
+                      <li>
+                        Critical:{' '}
+                        <StatusChip
+                          label={String(alertsCountData.critical ?? 0)}
+                          tone={alertsCountData.critical > 0 ? 'error' : 'ok'}
+                        />
+                      </li>
+                      <li>
+                        Alert API:{' '}
+                        <StatusChip
+                          label={alertsCountQuery.isError ? 'offline' : 'online'}
+                          tone={queryConnectivityTone(alertsCountQuery)}
+                        />
+                      </li>
+                    </ul>
+                  )}
+                </article>
+
+                <article className="architecture-status-mini-card">
+                  <h4>Calibration Status</h4>
+                  {calibrationsQuery.isLoading && <LoadingSkeleton variant="text" lines={3} />}
+                  {calibrationsQuery.error && <ApiOfflineBanner compact />}
+                  {!calibrationsQuery.isLoading && !calibrationsQuery.error && (
+                    <ul className="architecture-live-list">
+                      <li>Total calibrations: {calibrationsList.length}</li>
+                      <li>
+                        Calibration API:{' '}
+                        <StatusChip
+                          label={calibrationsQuery.isError ? 'offline' : 'online'}
+                          tone={queryConnectivityTone(calibrationsQuery)}
+                        />
+                      </li>
                     </ul>
                   )}
                 </article>
@@ -486,8 +721,8 @@ export default function ArchitectureFrameworkPage() {
       {visibleIds.has('index') && (
         <SectionBlock
           id="index"
-          title="Architecture Index — 20-Section Parity"
-          summary="Table of contents showing all 20 architecture sections and their implementation status."
+          title="Architecture Index — 24-Section Parity"
+          summary="Table of contents showing all 24 architecture sections and their implementation status."
           collapsed={collapsedSections.includes('index')}
           onToggle={toggleSection}
         >
@@ -510,7 +745,7 @@ export default function ArchitectureFrameworkPage() {
                 </tbody>
               </table>
             </div>
-            <p className="hint" style={{ marginTop: 12 }}>All 20 sections implemented. 20/20 done.</p>
+            <p className="hint" style={{ marginTop: 12 }}>24 sections documented. 20 established + 4 new subsystem deep-dives.</p>
           </div>
         </SectionBlock>
       )}
@@ -843,12 +1078,17 @@ export default function ArchitectureFrameworkPage() {
                     <th>Owner</th>
                     <th>Status</th>
                     <th>Contract</th>
+                    <th>Verified</th>
                   </tr>
                 </thead>
                 <tbody>
                   {CURRENT_ROUTE_CONTRACTS.map((row) => {
                     const statusClass = row.status === 'active' ? 'architecture-mode-badge' : row.status === 'migration' ? 'architecture-mode-badge' : 'architecture-mode-badge'
                     const statusStyle = row.status === 'active' ? { background: '#00ff4120', color: '#00a63e' } : row.status === 'migration' ? { background: '#ffaa0020', color: '#9a6400' } : { background: '#8882', color: '#888' }
+                    const routeKey = `route:${row.route}`
+                    const verifiedDate = getVerifiedDate(routeKey)
+                    const vTone = verificationTone(verifiedDate)
+                    const vLabel = verificationLabel(verifiedDate)
                     return (
                     <tr key={row.route}>
                       <td>{row.route}</td>
@@ -857,18 +1097,39 @@ export default function ArchitectureFrameworkPage() {
                       <td>{row.owner}</td>
                       <td><span className={statusClass} style={statusStyle}>{row.status || 'active'}</span></td>
                       <td>{row.contract}</td>
+                      <td>
+                        <span className="architecture-verify-cell">
+                          <StatusChip label={vLabel} tone={vTone} />
+                          {vTone !== 'ok' && (
+                            <button
+                              type="button"
+                              className="architecture-verify-btn"
+                              onClick={() => updateVerification(routeKey)}
+                              title="Mark as verified"
+                            >
+                              ✓
+                            </button>
+                          )}
+                          {verifiedDate && <span className="architecture-verify-date">{verifiedDate}</span>}
+                        </span>
+                      </td>
                     </tr>
                     )
                   })}
                 </tbody>
               </table>
             </div>
+            <div className="architecture-actions" style={{ marginTop: 8 }}>
+              <button type="button" onClick={() => markAllVerified(CURRENT_ROUTE_CONTRACTS.map((r) => `route:${r.route}`))}>
+                Mark All Verified
+              </button>
+            </div>
             <p className="hint" style={{ marginTop: 12 }}>Last updated: {CONTRACT_REGISTER_LAST_UPDATED}. Update this register when routes, payloads, read paths, or response shapes change.</p>
           </div>
           <div className="architecture-card architecture-card-full">
             <h3>Live Provider Health Register</h3>
             {providerHealthQuery.isLoading && <LoadingSkeleton variant="table" rows={4} cols={2} />}
-            {providerHealthQuery.error && <p>Live provider health is not available from the current API base URL.</p>}
+            {providerHealthQuery.error && <ApiOfflineBanner compact />}
             {!providerHealthQuery.isLoading && !providerHealthQuery.error && providerHealth.length === 0 && (
               <p>No provider health entries have been recorded yet.</p>
             )}
@@ -904,7 +1165,7 @@ export default function ArchitectureFrameworkPage() {
           <div className="architecture-card architecture-card-full">
             <h3>Recent Import Runs</h3>
             {importRunsQuery.isLoading && <LoadingSkeleton variant="table" rows={4} cols={3} />}
-            {importRunsQuery.error && <p>Recent import runs are not reachable from the current API base URL.</p>}
+            {importRunsQuery.error && <ApiOfflineBanner compact />}
             {!importRunsQuery.isLoading && !importRunsQuery.error && recentImportRuns.length === 0 && (
               <p>No import runs have been recorded yet.</p>
             )}
@@ -994,6 +1255,54 @@ export default function ArchitectureFrameworkPage() {
           onToggle={toggleSection}
         >
           <CardGrid cards={SCORING_STRATEGY_CARDS} />
+        </SectionBlock>
+      )}
+
+      {visibleIds.has('calibration') && (
+        <SectionBlock
+          id="calibration"
+          title="Calibration System"
+          summary="Symbol-specific weight overrides that adjust directive scores before aggregation in the scoring pipeline."
+          collapsed={collapsedSections.includes('calibration')}
+          onToggle={toggleSection}
+        >
+          <CardGrid cards={CALIBRATION_SYSTEM} />
+        </SectionBlock>
+      )}
+
+      {visibleIds.has('activation-gate') && (
+        <SectionBlock
+          id="activation-gate"
+          title="Activation Gate And Conditions"
+          summary="Pre-scoring condition detection and directive suitability evaluation that adjusts how directives fire based on market regime."
+          collapsed={collapsedSections.includes('activation-gate')}
+          onToggle={toggleSection}
+        >
+          <CardGrid cards={ACTIVATION_GATE_SYSTEM} />
+        </SectionBlock>
+      )}
+
+      {visibleIds.has('exit-signals') && (
+        <SectionBlock
+          id="exit-signals"
+          title="Exit Signal System"
+          summary="Four exit-focused directives that evaluate stored market data to determine when to close positions."
+          collapsed={collapsedSections.includes('exit-signals')}
+          onToggle={toggleSection}
+        >
+          <CardGrid cards={EXIT_SIGNAL_SYSTEM} />
+        </SectionBlock>
+      )}
+
+      {visibleIds.has('alerts') && (
+        <SectionBlock
+          id="alerts"
+          title="Alert Center Architecture"
+          summary="Centralized alert and notification system with severity levels, lifecycle management, and live polling."
+          collapsed={collapsedSections.includes('alerts')}
+          onToggle={toggleSection}
+        >
+          <CardGrid cards={ALERT_CENTER_ARCHITECTURE} />
         </SectionBlock>
       )}
 
