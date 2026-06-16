@@ -81,7 +81,7 @@ export default function DirectivesConfigPage() {
     return (
       <div className="dc-page">
         <header className="dc-header">
-          <h1>Configure Directives</h1>
+          <h2>Configure Directives</h2>
         </header>
         <LoadingSkeleton variant="card" count={5} />
       </div>

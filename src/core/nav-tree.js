@@ -30,6 +30,7 @@ export const NAV_TREE = {
       { id: 'manual-trading', label: 'Manual Trading' },
       { id: 'positions-monitor', label: 'Positions Monitor' },
       { id: 'trade-journal', label: 'Trade Journal' },
+      { id: 'mt5-connection-manager', label: '🔌 MT5 Accounts' },
     ],
   },
   scoring: {
@@ -76,6 +77,7 @@ export const NAV_TREE = {
       { id: 'recently-analysed-symbols', label: 'Recently Analysed Symbols' },
       { id: 'support-resistance', label: 'Support & Resistance' },
       { id: 'volatility-analysis', label: 'Volatility Analysis' },
+      { id: 'chart-comparison', label: '📊 Chart Comparison' },
     ],
   },
   data: {

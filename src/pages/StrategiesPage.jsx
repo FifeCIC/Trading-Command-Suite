@@ -63,8 +63,7 @@ export default function StrategiesPage() {
     return (
       <main className="strategies-page">
         <header className="strategies-header">
-          <p className="eyebrow">Scoring Strategies</p>
-          <h1>Strategy Management</h1>
+          <h2>Strategy Management</h2>
         </header>
         <LoadingSkeleton variant="card" count={1} />
         <LoadingSkeleton variant="card" count={2} className="ls-spacer-top" />
@@ -75,7 +74,6 @@ export default function StrategiesPage() {
   return (
     <main className="strategies-page">
       <header className="strategies-header">
-        <p className="eyebrow">Scoring Strategies</p>
         <h1>Strategy Management</h1>
         <p className="strategies-subtitle">
           View available scoring strategies, inspect directive weights and

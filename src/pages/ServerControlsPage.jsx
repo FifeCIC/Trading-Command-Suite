@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import './ServerControlsPage.css';
 
-const TASK_API = '/intranet/api-tasks.php';
-const TRADING_TASKS = ['tradercore:react', 'tradercore:api:3201', 'tradercore:mt5-bridge'];
+const TASK_API = '/api/processes';
 const POLL_MS = 5000;
 
 function StatusDot({ running }) {
@@ -23,17 +22,15 @@ export default function ServerControlsPage() {
 
   const fetchTasks = useCallback(async () => {
     try {
-      const res = await fetch(`${TASK_API}?action=list`, { cache: 'no-store' });
+      const res = await fetch(TASK_API, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (!mountedRef.current) return;
-      const filtered = (Array.isArray(data) ? data : data.tasks || [])
-        .filter((t) => TRADING_TASKS.includes(t.id));
-      setTasks(filtered);
+      setTasks(data.tasks || []);
       setError(null);
     } catch (err) {
       if (!mountedRef.current) return;
-      setError('Could not reach the task runner API. Ensure WAMP is running.');
+      setError('Could not reach the NestJS process manager. Ensure the API server is running.');
     } finally {
       if (mountedRef.current) setLoading(false);
     }
@@ -52,18 +49,17 @@ export default function ServerControlsPage() {
   const doAction = useCallback(async (taskId, action) => {
     setActionState((prev) => ({ ...prev, [taskId]: action }));
     try {
-      const res = await fetch(`${TASK_API}?action=${action}&task=${encodeURIComponent(taskId)}`, {
+      const res = await fetch(`${TASK_API}/${encodeURIComponent(taskId)}/${action}`, {
         method: 'POST',
         cache: 'no-store',
       });
-      const data = await res.json();
       // Poll until status stabilizes
       if (action === 'start') {
         let attempts = 0;
         const poll = setInterval(async () => {
           attempts++;
           try {
-            const sRes = await fetch(`${TASK_API}?action=status&task=${encodeURIComponent(taskId)}`, { cache: 'no-store' });
+            const sRes = await fetch(`${TASK_API}/${encodeURIComponent(taskId)}`, { cache: 'no-store' });
             const sData = await sRes.json();
             if (sData.running || attempts > 15) {
               clearInterval(poll);
@@ -140,7 +136,7 @@ export default function ServerControlsPage() {
 
                 <div className="sc-card-meta">
                   {task.port && <span>Port: {task.port}</span>}
-                  {task.savedPid > 0 && <span>PID: {task.savedPid}</span>}
+                  {task.pid && <span>PID: {task.pid}</span>}
                   {task.listenerPid > 0 && (
                     <span className="sc-listener-info">
                       Listener: {task.listenerPid}
@@ -199,7 +195,7 @@ export default function ServerControlsPage() {
       </div>
 
       <p className="sc-footnote muted">
-        Services are started via the Intranet task runner. Status refreshes every {POLL_MS / 1000}s.
+        Services are managed by the NestJS process manager. Status refreshes every {POLL_MS / 1000}s.
       </p>
     </div>
   );

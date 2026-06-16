@@ -403,7 +403,7 @@ export default function ArchitectureFrameworkPage() {
         <section className="architecture-section" id="roadmap">
           <h2>Roadmap — Sorted by Architecture Domain</h2>
           <p className="architecture-subcopy">
-            Tasks and GitHub Issues mapped to the domains they implement. Status is updated from SPRINT.md.
+            Tasks and GitHub Issues mapped to the domains they implement. Status compiled from agent-update records (prompts-based workflow). SPRINT.md is archived.
           </p>
 
           <div className="architecture-grid architecture-grid-wide">

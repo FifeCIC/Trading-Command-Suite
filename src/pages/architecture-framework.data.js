@@ -1080,6 +1080,9 @@ export const REVISION_LOG = [
   '2026-06-16: SYSTEM_SPINE updated with condition detection, activation gate, calibration, and exit signal steps.',
   '2026-06-16: Phase 3 — Live status widgets added: System Health (uptime/DB latency/queue), Alert Center Status (active/critical counts), Calibration Status (total), Alerts/Calibrations/Uptime chips in control bar.',
   '2026-06-16: Phase 4 — Drift detection system added: per-section and per-contract verification state (localStorage), stale badges in section index (stale/review/✓), Verified column in contract register with Mark Verified buttons, control bar drift summary chip, Mark All Verified buttons.',
+  '2026-06-16: CSS refactored to 40+ custom properties — all hardcoded colors centralized. a11y: focus-visible, aria-labels, sr-only, reduced-motion added.',
+  '2026-06-16: Fixed 8 NestJS controllers with redundant @Controller(\"api/...\") paths (global prefix already adds /api). Rebuilt skill file .github/skills/update-architecture-framework/SKILL.md for architecture page maintenance.',
+  '2026-06-16: Q235 (Multi-Screen Dashboard) and Q242 (HOTAS Gamepad Prototype) moved to .github/issues/ as GitHub-ready issues with dependency chain.',
 ]
 
 // Database Schema for AI Guidance

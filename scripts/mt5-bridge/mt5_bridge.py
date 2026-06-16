@@ -732,6 +732,351 @@ def get_history():
         return jsonify({'error': str(e)}), 500
 
 
+# ─── Extended Trading Endpoints (Q237) ─────────────────────
+
+@app.route('/order/modify', methods=['POST'])
+def modify_order():
+    """Modify SL/TP of an existing position."""
+    err = ensure_mt5()
+    if err:
+        return err
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Request body required'}), 400
+
+    ticket = data.get('ticket')
+    sl = data.get('sl')
+    tp = data.get('tp')
+
+    if not ticket:
+        return jsonify({'error': 'ticket required'}), 400
+
+    positions = mt5.positions_get(ticket=int(ticket))
+    if positions is None or len(positions) == 0:
+        return jsonify({'error': f'Position {ticket} not found'}), 404
+
+    position = positions[0]
+    modify_request = {
+        'action': mt5.TRADE_ACTION_SLTP,
+        'position': int(ticket),
+        'symbol': position.symbol,
+        'sl': float(sl) if sl is not None else float(position.sl) if position.sl else 0,
+        'tp': float(tp) if tp is not None else float(position.tp) if position.tp else 0,
+    }
+
+    result = mt5.order_send(modify_request)
+    if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
+        error = mt5.last_error() if result is None else result.comment
+        return jsonify({'success': False, 'error': str(error)}), 400
+
+    return jsonify({
+        'success': True,
+        'ticket': ticket,
+        'sl': modify_request['sl'],
+        'tp': modify_request['tp'],
+        'message': 'SL/TP updated',
+    })
+
+
+@app.route('/close/partial/<int:ticket>', methods=['POST'])
+def close_partial(ticket):
+    """Close a partial volume of an open position."""
+    err = ensure_mt5()
+    if err:
+        return err
+
+    data = request.get_json() or {}
+    volume = float(data.get('volume', 0.01))
+
+    positions = mt5.positions_get(ticket=ticket)
+    if positions is None or len(positions) == 0:
+        return jsonify({'error': f'Position {ticket} not found'}), 404
+
+    position = positions[0]
+    if volume >= float(position.volume):
+        return jsonify({'error': f'Volume exceeds position size ({position.volume})'}), 400
+
+    symbol = position.symbol
+    is_buy = position.type == 0
+    tick = mt5.symbol_info_tick(symbol)
+    if tick is None:
+        return jsonify({'error': f'Cannot get quote for {symbol}'}), 400
+
+    close_price = tick.bid if is_buy else tick.ask
+    close_request = {
+        'action': mt5.TRADE_ACTION_DEAL,
+        'symbol': symbol,
+        'volume': volume,
+        'type': mt5.ORDER_TYPE_SELL if is_buy else mt5.ORDER_TYPE_BUY,
+        'position': ticket,
+        'price': close_price,
+        'deviation': 20,
+        'magic': 234000,
+        'comment': 'Partial close TCS',
+        'type_time': mt5.ORDER_TIME_GTC,
+        'type_filling': mt5.ORDER_FILLING_IOC,
+    }
+
+    result = mt5.order_send(close_request)
+    if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
+        error = mt5.last_error() if result is None else result.comment
+        return jsonify({'success': False, 'error': str(error)}), 400
+
+    remaining = float(position.volume) - volume
+    return jsonify({
+        'success': True,
+        'ticket': ticket,
+        'closed': volume,
+        'remaining': remaining,
+        'closePrice': close_price,
+    })
+
+
+@app.route('/symbol/<name>/info', methods=['GET'])
+def symbol_info(name):
+    """Get detailed symbol information (contract size, margin, swaps)."""
+    err = ensure_mt5()
+    if err:
+        return err
+
+    symbol = name.strip().upper()
+    info = mt5.symbol_info(symbol)
+    if info is None:
+        mt5.symbol_select(symbol, True)
+        info = mt5.symbol_info(symbol)
+    if info is None:
+        return jsonify({'error': f'Symbol {symbol} not available'}), 404
+
+    return jsonify({
+        'name': info.name,
+        'description': info.description,
+        'path': info.path,
+        'digits': info.digits,
+        'tradeMode': info.trade_mode,
+        'contractSize': info.trade_contract_size,
+        'volumeMin': info.volume_min,
+        'volumeMax': info.volume_max,
+        'volumeStep': info.volume_step,
+        'point': info.point,
+        'spread': info.spread,
+        'tickSize': info.trade_tick_size,
+        'tickValue': info.trade_tick_value,
+        'marginInitial': info.margin_initial,
+        'marginMaintenance': info.margin_maintenance,
+        'swapLong': info.swap_long,
+        'swapShort': info.swap_short,
+        'swapMode': info.swap_mode,
+        'currencyBase': info.currency_base,
+        'currencyProfit': info.currency_profit,
+        'currencyMargin': info.currency_margin,
+    })
+
+
+@app.route('/terminal/info', methods=['GET'])
+def terminal_info():
+    """Get MT5 terminal build info and connection status."""
+    if not mt5_available:
+        return jsonify({'connected': False, 'error': 'MT5 package not installed'}), 503
+
+    connected = mt5_initialized or initialize_mt5()
+    terminal = mt5.terminal_info() if connected else None
+
+    return jsonify({
+        'connected': connected,
+        'build': terminal.build if terminal else None,
+        'name': terminal.name if terminal else None,
+        'path': terminal.path if terminal else None,
+        'communityConnected': terminal.community_connection if terminal else False,
+        'dataPath': terminal.data_path if terminal else None,
+        'commondir': terminal.commondir if terminal else None,
+        'tradeAllowed': terminal.trade_allowed if terminal else None,
+        'tradeAPI': terminal.tradeapi_disabled if terminal else None,
+        'connectedAt': last_connection_attempt.isoformat() if last_connection_attempt else None,
+    })
+
+
+@app.route('/accounts/add', methods=['POST'])
+def add_account():
+    """Add a new MT5 account configuration (in-memory for session)."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Request body required'}), 400
+
+    login = str(data.get('login', '')).strip()
+    password = data.get('password', '')
+    server = data.get('server', '')
+    label = data.get('label', '')
+
+    if not login or not password:
+        return jsonify({'error': 'login and password required'}), 400
+
+    # Find next available account number
+    for i in range(1, 100):
+        if not os.environ.get(f'MT5_ACCOUNT_{i}'):
+            os.environ[f'MT5_ACCOUNT_{i}'] = login
+            os.environ[f'MT5_PASSWORD_{i}'] = password
+            os.environ[f'MT5_SERVER_{i}'] = server
+            break
+
+    return jsonify({
+        'success': True,
+        'login': login,
+        'server': server,
+        'label': label,
+        'message': 'Account added (session only — persists until bridge restart)',
+    })
+
+
+@app.route('/accounts/test', methods=['POST'])
+def test_account():
+    """Test connection for an account before adding."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Request body required'}), 400
+
+    login = data.get('login', '')
+    password = data.get('password', '')
+    server = data.get('server', '')
+
+    if not login or not password:
+        return jsonify({'error': 'login and password required'}), 400
+
+    try:
+        login_int = int(login) if str(login).isdigit() else login
+    except ValueError:
+        return jsonify({'error': f'Invalid login: {login}'}), 400
+
+    # Shutdown current connection temporarily
+    global mt5_initialized
+    was_initialized = mt5_initialized
+    if mt5_initialized:
+        mt5.shutdown()
+        mt5_initialized = False
+
+    initialized = mt5.initialize(login=login_int, password=str(password), server=str(server))
+
+    if initialized:
+        info = mt5.account_info()
+        mt5.shutdown()
+        mt5_initialized = False
+
+        # Reconnect original
+        if was_initialized:
+            initialize_mt5()
+
+        return jsonify({
+            'success': True,
+            'login': str(info.login) if info else login,
+            'server': info.server if info else server,
+            'balance': float(info.balance) if info else None,
+            'currency': info.currency if info else None,
+        })
+
+    error = mt5.last_error()
+    # Reconnect original
+    if was_initialized:
+        initialize_mt5()
+
+    return jsonify({
+        'success': False,
+        'error': str(error),
+    }), 400
+
+
+@app.route('/calendar', methods=['GET'])
+def economic_calendar():
+    """Get economic calendar events from MT5."""
+    err = ensure_mt5()
+    if err:
+        return err
+
+    country = request.args.get('country', '')
+    currency = request.args.get('currency', '').upper()
+
+    try:
+        # MT5 calendar — from_date to to_date
+        from_date = datetime.now()
+        to_date = from_date + timedelta(days=7)
+        events = mt5.calendar_get(from_date, to_date)
+
+        result = []
+        if events is not None:
+            for e in events[:50]:  # Limit to 50
+                event_time = datetime.fromtimestamp(e.time) if e.time else None
+                result.append({
+                    'id': e.id,
+                    'name': e.name,
+                    'country': e.country,
+                    'currency': e.currency,
+                    'importance': e.importance,
+                    'time': event_time.isoformat() if event_time else None,
+                    'actual': e.actual_value if hasattr(e, 'actual_value') else None,
+                    'forecast': e.forecast_value if hasattr(e, 'forecast_value') else None,
+                    'previous': e.previous_value if hasattr(e, 'previous_value') else None,
+                })
+
+            # Filter by currency if requested
+            if currency:
+                result = [e for e in result if e.get('currency', '').upper() == currency]
+
+        return jsonify({
+            'events': result,
+            'count': len(result),
+            'from': from_date.isoformat(),
+            'to': to_date.isoformat(),
+        })
+    except Exception as ex:
+        logger.error(f'Calendar error: {ex}')
+        return jsonify({'error': str(ex), 'events': [], 'count': 0})
+
+
+@app.route('/history/deals', methods=['GET'])
+def deal_history():
+    """Get deal history with date filtering."""
+    err = ensure_mt5()
+    if err:
+        return err
+
+    days = request.args.get('days', 30, type=int)
+    symbol = request.args.get('symbol', '').upper()
+    from_date = datetime.now() - timedelta(days=days)
+    to_date = datetime.now() + timedelta(days=1)
+
+    try:
+        deals = mt5.history_deals_get(from_date, to_date)
+        result = []
+        if deals is not None:
+            for d in deals:
+                if symbol and d.symbol.upper() != symbol:
+                    continue
+                result.append({
+                    'ticket': d.ticket,
+                    'order': d.order,
+                    'position': d.position_id if hasattr(d, 'position_id') else None,
+                    'symbol': d.symbol,
+                    'type': 'buy' if d.type == 0 else 'sell',
+                    'entry': d.entry,
+                    'volume': float(d.volume),
+                    'price': float(d.price),
+                    'profit': float(d.profit),
+                    'commission': float(d.commission),
+                    'swap': float(d.swap),
+                    'time': datetime.fromtimestamp(d.time).isoformat(),
+                    'comment': d.comment,
+                })
+
+        return jsonify({
+            'deals': result,
+            'count': len(result),
+            'from': from_date.isoformat(),
+            'to': to_date.isoformat(),
+        })
+    except Exception as ex:
+        logger.error(f'Deal history error: {ex}')
+        return jsonify({'error': str(ex)}), 500
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('BRIDGE_PORT', 5000))
     logger.info(f'Starting MT5 Bridge on port {port}...')

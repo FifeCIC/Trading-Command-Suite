@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiGet } from '../core/api/client';
 import { NAV_TREE } from '../core/nav-tree';
@@ -22,6 +23,8 @@ const SETUP_STEPS = [
 
 export default function HomeDashboard() {
   const navigate = useNavigate();
+  const [restarting, setRestarting] = useState(false);
+  const [restartMsg, setRestartMsg] = useState(null);
 
   const healthQuery = useQuery({
     queryKey: ['home-health'],
@@ -33,6 +36,51 @@ export default function HomeDashboard() {
   const isApiOnline = Boolean(healthQuery.data?.version);
   const statusDot = isApiOnline ? '🟢' : healthQuery.isLoading ? '⏳' : '🔴';
   const statusLabel = isApiOnline ? `API Online (v${version})` : healthQuery.isLoading ? 'Checking…' : 'API Offline';
+
+  const handleRestartBackend = useCallback(async () => {
+    setRestarting(true);
+    setRestartMsg('Sending start command...');
+    try {
+      const res = await fetch('/intranet/api-tasks.php?action=start&task=tradercore:api:3201', {
+        method: 'POST',
+        signal: AbortSignal.timeout(15000),
+      });
+      if (res.ok) {
+        setRestartMsg('Start command sent. Waiting for NestJS to come online...');
+        // Poll until API responds
+        let attempts = 0;
+        const poll = setInterval(async () => {
+          attempts++;
+          try {
+            const health = await apiGet('/api/version');
+            if (health?.version) {
+              clearInterval(poll);
+              setRestartMsg('Backend is online! Refreshing...');
+              setRestarting(false);
+              healthQuery.refetch();
+              setTimeout(() => setRestartMsg(null), 3000);
+            } else if (attempts > 20) {
+              clearInterval(poll);
+              setRestartMsg('Backend did not respond after 40s. Check the terminal for errors.');
+              setRestarting(false);
+            }
+          } catch {
+            if (attempts > 20) {
+              clearInterval(poll);
+              setRestartMsg('Backend did not respond after 40s. Check the terminal for errors.');
+              setRestarting(false);
+            }
+          }
+        }, 2000);
+      } else {
+        setRestartMsg('Failed to send start command. Is WAMP running?');
+        setRestarting(false);
+      }
+    } catch (err) {
+      setRestartMsg(`Failed: ${err.message || 'Could not reach task runner'}`);
+      setRestarting(false);
+    }
+  }, [healthQuery]);
 
   const areas = Object.entries(NAV_TREE).map(([id, area]) => ({
     id,
@@ -51,8 +99,11 @@ export default function HomeDashboard() {
       {/* ── Header ── */}
       <header className="nd-header">
         <div className="nd-header-left">
-          <h1 className="nd-title">Navigation Dashboard</h1>
-          <p className="nd-subtitle">Trading Command Suite — algorithmic analysis & portfolio management</p>
+          <img src="/tcs-logo.png" alt="Trading Command Suite" className="nd-logo" />
+          <div>
+            <h1 className="nd-title">Navigation Dashboard</h1>
+            <p className="nd-subtitle">Trading Command Suite — algorithmic analysis & portfolio management</p>
+          </div>
         </div>
         <div className="nd-header-right">
           <div className="nd-status-badge" title={statusLabel}>
@@ -151,10 +202,31 @@ export default function HomeDashboard() {
         <section className="nd-section nd-setup" style={{ marginTop: '1.5rem', borderColor: 'rgba(239,68,68,0.3)' }}>
           <h2>⚠️ Backend Not Connected</h2>
           <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
-            The NestJS API server isn't running. Start it with:
-            <code style={{ display: 'block', marginTop: '0.5rem', padding: '0.5rem', background: '#0f172a', borderRadius: '4px', fontSize: '0.85rem' }}>
-              npm --prefix c:/wamp64/www/trading-command-suite/nest run start:dev
-            </code>
+            The NestJS API server isn't running.
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+            <button
+              onClick={handleRestartBackend}
+              disabled={restarting}
+              style={{
+                padding: '0.5rem 1.25rem',
+                background: restarting ? '#334155' : '#dc2626',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: restarting ? 'not-allowed' : 'pointer',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+              }}
+            >
+              {restarting ? '⏳ Starting...' : '🔁 Restart Backend'}
+            </button>
+            {restartMsg && (
+              <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{restartMsg}</span>
+            )}
+          </div>
+          <p style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+            Or run manually: <code style={{ padding: '0.15rem 0.4rem', background: '#0f172a', borderRadius: '3px', fontSize: '0.8rem' }}>npm --prefix c:/wamp64/www/trading-command-suite/nest run start:dev</code>
           </p>
         </section>
       )}

@@ -41,7 +41,6 @@ export default function DirectivesStatusPage() {
     <main className="directives-status-page">
       <header className="ds-page-header">
         <div>
-          <p className="ds-eyebrow">Scoring / Directives</p>
           <h1>Directive Development Status</h1>
           <p className="ds-subtitle">Coverage and implementation maturity for the 5 MVP directives.</p>
         </div>

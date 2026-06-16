@@ -55,7 +55,7 @@ export default function ScoringOverviewPage() {
     return (
       <div className="so-page">
         <header className="so-page-header">
-          <h1>Scoring Overview</h1>
+          <h2>Scoring Overview</h2>
         </header>
         <LoadingSkeleton variant="card" count={4} />
         <LoadingSkeleton variant="chart" count={8} className="ls-spacer-top" />
@@ -69,7 +69,7 @@ export default function ScoringOverviewPage() {
     return (
       <div className="so-page">
         <header className="so-page-header">
-          <h1>Scoring Overview</h1>
+          <h2>Scoring Overview</h2>
         </header>
         <div className="so-error-card">
           <p className="so-error-msg">Could not reach the scoring pipeline.</p>

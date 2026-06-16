@@ -35,7 +35,7 @@ export default function DataStatusPage() {
   if (loading) return (
     <div className="trading-platforms-page">
       <header className="tp-page-header">
-        <h1>Data Status</h1>
+        <h2>Data Status</h2>
       </header>
       <LoadingSkeleton variant="card" count={4} />
       <LoadingSkeleton variant="table" rows={6} cols={4} className="ls-spacer-top" />

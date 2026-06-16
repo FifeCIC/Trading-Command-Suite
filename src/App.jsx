@@ -46,6 +46,8 @@ import AlgorithmLabPage from './pages/AlgorithmLabPage';
 import AlertCenterPage from './pages/AlertCenterPage';
 import SetupWizardPage from './pages/SetupWizardPage';
 import ServerControlsPage from './pages/ServerControlsPage';
+import ChartComparisonPage from './pages/ChartComparisonPage';
+import Mt5ConnectionManagerPage from './pages/Mt5ConnectionManagerPage';
 import SignalsWorkbenchPage from './pages/SignalsWorkbenchPage';
 import SettingsPage from './pages/SettingsPage';
 import StrategiesPage from './pages/StrategiesPage';
@@ -203,7 +205,7 @@ function AppShell() {
 
       pushActivity('AUTOSTART', 'Attempting to start API server...');
       try {
-        await fetch('/intranet/api-tasks.php?action=start&task=tradercore:api:3201', {
+        await fetch('/api/processes/tradercore%3Aapi%3A3201/start', {
           method: 'POST',
           signal: AbortSignal.timeout(10000),
         });
@@ -577,6 +579,14 @@ function AppShell() {
 
     if (secondaryView === 'mt5-demo-trading') {
       return <Mt5DemoTradingPage />;
+    }
+
+    if (secondaryView === 'chart-comparison') {
+      return <ChartComparisonPage />;
+    }
+
+    if (secondaryView === 'mt5-connection-manager') {
+      return <Mt5ConnectionManagerPage />;
     }
 
     if (PLUGIN_TAB_SKELETONS[secondaryView]) {

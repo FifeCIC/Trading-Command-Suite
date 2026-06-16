@@ -9,13 +9,17 @@ export default defineConfig({
         target: 'http://localhost',
         changeOrigin: true,
       },
+      '/api': {
+        target: 'http://localhost:3201',
+        changeOrigin: true,
+      },
     },
   },
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'pwa-192x192.svg', 'pwa-512x512.svg'],
+      includeAssets: ['favicon.svg', 'pwa-192x192.svg', 'pwa-512x512.svg', 'tcs-icon.PNG', 'tcs-logo.png'],
       manifest: {
         name: 'Trading Command Suite',
         short_name: 'TradeCS',
@@ -33,27 +37,27 @@ export default defineConfig({
         prefer_related_applications: false,
         icons: [
           {
-            src: 'pwa-192x192.svg',
+            src: 'tcs-icon.PNG',
             sizes: '192x192',
-            type: 'image/svg+xml',
+            type: 'image/png',
             purpose: 'any maskable'
           },
           {
-            src: 'pwa-512x512.svg',
+            src: 'tcs-icon.PNG',
             sizes: '512x512',
-            type: 'image/svg+xml',
+            type: 'image/png',
             purpose: 'any maskable'
           },
           {
-            src: 'pwa-192x192.svg',
+            src: 'tcs-icon.PNG',
             sizes: '192x192',
-            type: 'image/svg+xml',
+            type: 'image/png',
             purpose: 'maskable'
           },
           {
-            src: 'pwa-512x512.svg',
+            src: 'tcs-icon.PNG',
             sizes: '512x512',
-            type: 'image/svg+xml',
+            type: 'image/png',
             purpose: 'maskable'
           }
         ]

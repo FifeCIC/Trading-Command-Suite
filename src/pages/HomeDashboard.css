@@ -34,6 +34,18 @@
   font-size: 0.95rem;
 }
 
+.nd-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nd-logo {
+  height: 48px;
+  width: auto;
+  flex-shrink: 0;
+}
+
 .nd-status-badge {
   display: flex;
   align-items: center;

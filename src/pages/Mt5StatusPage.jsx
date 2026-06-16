@@ -205,7 +205,7 @@ export default function Mt5StatusPage() {
   if (isInitialLoading) {
     return (
       <div className="mt5-page">
-        <header className="mt5-header"><h1>MT5 Bridge Status</h1></header>
+        <header className="mt5-header"><h2>MT5 Bridge Status</h2></header>
         <LoadingSkeleton variant="card" count={4} />
       </div>
     )

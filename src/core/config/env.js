@@ -12,7 +12,7 @@ const FlushIntervalSchema = z.preprocess(
 );
 
 const EnvSchema = z.object({
-  VITE_API_BASE_URL: z.string().url().default('http://localhost:3201'),
+  VITE_API_BASE_URL: z.string().url().default('http://localhost:5173'),
   VITE_ENABLE_DEV_RUNTIME: z.enum(['true', 'false']).default('true'),
   VITE_ENABLE_AWS_BEDROCK: z.enum(['true', 'false']).default('false'),
   VITE_ANALYTICS_ENABLED: z.enum(['true', 'false']).default('true'),

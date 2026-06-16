@@ -24,7 +24,7 @@ export default function ProviderHealthPage() {
   if (healthQuery.isLoading) return (
     <div className="trading-platforms-page">
       <header className="tp-page-header">
-        <h1>Provider Health</h1>
+        <h2>Provider Health</h2>
       </header>
       <LoadingSkeleton variant="card" count={3} />
       <LoadingSkeleton variant="table" rows={6} cols={3} className="ls-spacer-top" />
