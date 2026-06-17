@@ -9,6 +9,8 @@ export class KeltnerChannelDirective implements IDirective {
   readonly name = 'Keltner Channel';
   readonly description = 'EMA(20) ± 2×ATR(10). Price at lower band = oversold. Break above upper = momentum. MT5 Keltner.';
   readonly priority = 68;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const highs = input.bars.map((b) => b.high);

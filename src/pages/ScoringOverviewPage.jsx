@@ -88,6 +88,9 @@ export default function ScoringOverviewPage() {
   const avgScore = totalScored > 0
     ? scores.reduce((a, b) => a + b, 0) / totalScored
     : 0;
+  const avgNormScore = totalScored > 0
+    ? ranked.reduce((a, r) => a + (r.normalizedScore ?? 0), 0) / totalScored
+    : 0;
   const avgConfidence = totalScored > 0
     ? ranked.reduce((a, r) => a + (r.confidence ?? 0), 0) / totalScored
     : 0;
@@ -99,10 +102,11 @@ export default function ScoringOverviewPage() {
     if (freshnessBins[key] !== undefined) freshnessBins[key]++;
   }
 
-  // Score distribution
+  // Score distribution — use normalized scores (% of max)
+  const normScores = ranked.map(r => r.normalizedScore ?? 0);
   const bucketCounts = SCORE_BUCKETS.map(b => ({
     ...b,
-    count: scores.filter(s => inBucket(b, s)).length,
+    count: normScores.filter(s => inBucket(b, s)).length,
   }));
   const maxBucket = Math.max(1, ...bucketCounts.map(b => b.count));
 
@@ -119,9 +123,9 @@ export default function ScoringOverviewPage() {
   return (
     <div className="so-page">
       <header className="so-page-header">
-        <h1>Scoring Overview</h1>
+        <h1>All Directives</h1>
         <p className="so-subtitle">
-          Pipeline mode: <strong>{mode}</strong>
+          Default protocol: <strong>Conviction Dip Accumulation</strong> — runs every registered directive
           {services.database === false && <span className="so-chip-warn">DB offline</span>}
           {services.queue === false && <span className="so-chip-warn">Queue offline</span>}
         </p>
@@ -135,14 +139,14 @@ export default function ScoringOverviewPage() {
           <p className="so-card-note">{totalScored === 0 ? 'No active symbols' : `out of ${totalScored} active`}</p>
         </div>
         <div className="so-summary-card">
-          <p className="so-card-label">Average Score</p>
+          <p className="so-card-label">Avg Raw Score</p>
           <span className="so-card-value">{avgScore.toFixed(1)}</span>
-          <p className="so-card-note">Entry threshold: {strategy.entryThreshold ?? 60}</p>
+          <p className="so-card-note">Unbounded sum of directive scores</p>
         </div>
         <div className="so-summary-card">
-          <p className="so-card-label">Avg Confidence</p>
-          <span className="so-card-value">{(avgConfidence * 100).toFixed(0)}%</span>
-          <p className="so-card-note">Watch threshold: {strategy.watchThreshold ?? 40}</p>
+          <p className="so-card-label">Avg % of Max</p>
+          <span className="so-card-value">{avgNormScore.toFixed(0)}%</span>
+          <p className="so-card-note">Protocol max: {strategy.maxPossibleScore ?? '—'}</p>
         </div>
         <div className="so-summary-card">
           <p className="so-card-label">Pipeline Mode</p>
@@ -208,25 +212,33 @@ export default function ScoringOverviewPage() {
         </section>
       </div>
 
-      {/* ---- Strategy card ---- */}
+      {/* ---- Protocol card ---- */}
       <section className="so-panel so-strategy-panel">
-        <h2>Active Strategy</h2>
+        <h2>Active Protocol</h2>
         <div className="so-strategy-detail">
           <div className="so-strategy-row">
             <span className="so-strategy-key">Name</span>
             <span className="so-strategy-val">{strategy.name || 'Not configured'}</span>
           </div>
           <div className="so-strategy-row">
+            <span className="so-strategy-key">Max Possible Score</span>
+            <span className="so-strategy-val so-max-score">{strategy.maxPossibleScore ?? '—'}</span>
+          </div>
+          <div className="so-strategy-row">
+            <span className="so-strategy-key">Directives</span>
+            <span className="so-strategy-val">{strategy.directiveCount ?? '—'} registered (sum of maxScores = protocol max)</span>
+          </div>
+          <div className="so-strategy-row">
             <span className="so-strategy-key">Entry Threshold</span>
-            <span className="so-strategy-val">{strategy.entryThreshold ?? '—'}</span>
+            <span className="so-strategy-val">{strategy.entryThreshold ?? '—'}% of max possible</span>
           </div>
           <div className="so-strategy-row">
             <span className="so-strategy-key">Watch Threshold</span>
-            <span className="so-strategy-val">{strategy.watchThreshold ?? '—'}</span>
+            <span className="so-strategy-val">{strategy.watchThreshold ?? '—'}% of max possible</span>
           </div>
           <div className="so-strategy-row">
-            <span className="so-strategy-key">Aggregation</span>
-            <span className="so-strategy-val">Weighted average (Conviction Dip Accumulation)</span>
+            <span className="so-strategy-key">Scoring Model</span>
+            <span className="so-strategy-val">Sum of directive scores ÷ protocol max. Each directive's maxScore determines its natural influence.</span>
           </div>
         </div>
       </section>
@@ -250,7 +262,7 @@ export default function ScoringOverviewPage() {
                   <th>#</th>
                   <th>Ticker</th>
                   <th>Score</th>
-                  <th>Confidence</th>
+                  <th title="Percentage of protocol max possible score">% Max</th>
                   <th>Signal</th>
                   <th>Freshness</th>
                 </tr>
@@ -261,7 +273,7 @@ export default function ScoringOverviewPage() {
                     <td className="so-num">{i + 1}</td>
                     <td><strong>{item.ticker}</strong></td>
                     <td className="so-num">{(item.score ?? 0).toFixed(1)}</td>
-                    <td className="so-num">{((item.confidence ?? 0) * 100).toFixed(0)}%</td>
+                    <td className="so-num">{((item.normalizedScore ?? 0)).toFixed(0)}%</td>
                     <td><span className={`so-signal-chip so-signal--${item.signal ?? 'unknown'}`}>{item.signal ?? 'unknown'}</span></td>
                     <td><span className={`so-freshness-chip ${FRESHNESS_COLORS[item.freshness] ?? ''}`}>{item.freshness ?? 'unknown'}</span></td>
                   </tr>

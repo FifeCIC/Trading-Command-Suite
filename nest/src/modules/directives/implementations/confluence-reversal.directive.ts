@@ -24,6 +24,8 @@ export class ConfluenceReversalComboDirective implements IDirective {
   readonly name = 'Confluence Reversal Combo';
   readonly description = 'Composite: RSI oversold + reversal candle + near support.';
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

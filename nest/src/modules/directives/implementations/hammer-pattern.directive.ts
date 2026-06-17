@@ -34,6 +34,8 @@ export class HammerPatternDirective implements IDirective {
     'Detects hammer-style reversal candles — small body with long lower wick rejecting lower prices.';
 
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

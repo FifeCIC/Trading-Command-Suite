@@ -19,16 +19,24 @@ import ScenarioAnalysisPage from './pages/ScenarioAnalysisPage';
 import FaqPage from './pages/FaqPage';
 import PortfolioPage from './pages/PortfolioPage';
 import Mt5TradingPage from './pages/Mt5TradingPage';
+import UnifiedTradingPage from './pages/UnifiedTradingPage';
+import TradeHistoryPage from './pages/TradeHistoryPage';
+import TradeJournalPage from './pages/TradeJournalPage';
 import ReportsPage from './pages/ReportsPage';
 import ActiveSymbolsPage from './pages/ActiveSymbolsPage';
+import AddSymbolPage from './pages/AddSymbolPage';
+import ApiActivityPage from './pages/ApiActivityPage';
 import ApiEndpointsPage from './pages/ApiEndpointsPage';
 import DatabaseTablesPage from './pages/DatabaseTablesPage';
 import DataAreaLandingPage from './pages/DataAreaLandingPage';
+import DiagramsPage from './pages/DiagramsPage';
 import DataStatusPage from './pages/DataStatusPage';
+import DataElementsPage from './pages/DataElementsPage';
 import DirectivesManagerPage from './pages/DirectivesManagerPage';
 import DirectivesStatusPage from './pages/DirectivesStatusPage';
 import DirectivesConfigPage from './pages/DirectivesConfigPage';
 import ScoringOverviewPage from './pages/ScoringOverviewPage';
+import ScoringRunsPage from './pages/ScoringRunsPage';
 import EventsCalendarPage from './pages/EventsCalendarPage';
 import ExecutionQueuePage from './pages/ExecutionQueuePage';
 import ImportJobsPage from './pages/ImportJobsPage';
@@ -36,7 +44,7 @@ import Mt5StatusPage from './pages/Mt5StatusPage';
 import NewsIntelPage from './pages/NewsIntelPage';
 import PlatformComparisonsPage from './pages/PlatformComparisonsPage';
 import PluginTabSkeletonPage from './pages/PluginTabSkeletonPage';
-import ProviderHealthPage from './pages/ProviderHealthPage';
+import TradingStrategiesPage from './pages/TradingStrategiesPage';
 import RiskControlsPage from './pages/RiskControlsPage';
 import HomeDashboardPage from './pages/HomeDashboardPage';
 import CacheMonitorPage from './pages/CacheMonitorPage';
@@ -44,22 +52,45 @@ import SeesLiveStackMockPage from './pages/SeesLiveStackMockPage';
 import SeesArenaPage from './pages/SeesArenaPage';
 import AlgorithmLabPage from './pages/AlgorithmLabPage';
 import AlertCenterPage from './pages/AlertCenterPage';
+import AutomationDashboardPage from './pages/AutomationDashboardPage';
+import AutomationRulesPage from './pages/AutomationRulesPage';
 import SetupWizardPage from './pages/SetupWizardPage';
 import ServerControlsPage from './pages/ServerControlsPage';
 import ChartComparisonPage from './pages/ChartComparisonPage';
+import AnalyseSymbolPage from './pages/AnalyseSymbolPage';
 import Mt5ConnectionManagerPage from './pages/Mt5ConnectionManagerPage';
+import AccountsDashboardPage from './pages/AccountsDashboardPage';
+import OrderTestingPage from './pages/OrderTestingPage';
+import PredictiveSeesPage from './pages/PredictiveSeesPage';
+import FluffDetectorPage from './pages/FluffDetectorPage';
+import TradingTimelinePage from './pages/TradingTimelinePage';
 import SignalsWorkbenchPage from './pages/SignalsWorkbenchPage';
 import SettingsPage from './pages/SettingsPage';
 import StrategiesPage from './pages/StrategiesPage';
+import ProtocolsOverviewPage from './pages/ProtocolsOverviewPage';
 import StrategyBuilderPage from './pages/StrategyBuilderPage';
 import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
 import SymbolDetailPage from './pages/SymbolDetailPage';
+import SnapshotLibraryPage from './pages/SnapshotLibraryPage';
+import CalculatorsPage from './pages/CalculatorsPage';
 import SystemStatusPage from './pages/SystemStatusPage';
 import SystemLogPage from './pages/SystemLogPage';
 import TrainingCandlePatternsPage from './pages/TrainingCandlePatternsPage';
+import CandlePatternsGuidePage from './pages/CandlePatternsGuidePage';
 import Mt5DemoTradingPage from './pages/Mt5DemoTradingPage';
 import ThemePage from './pages/ThemePage';
-import TradingPlatformsPage from './pages/TradingPlatformsPage';
+import ThemeLabPage from './pages/ThemeLabPage';
+import ComponentLabPage from './pages/ComponentLabPage';
+import SupportResistancePage from './pages/SupportResistancePage';
+import VolatilityAnalysisPage from './pages/VolatilityAnalysisPage';
+import TechnicalIndicatorsPage from './pages/TechnicalIndicatorsPage';
+import PatternScannerPage from './pages/PatternScannerPage';
+import MacroMonitorPage from './pages/MacroMonitorPage';
+import EarningsCalendarPage from './pages/EarningsCalendarPage';
+import PriceForecastPage from './pages/PriceForecastPage';
+import SectorRotationPage from './pages/SectorRotationPage';
+import MarketCorrelationsPage from './pages/MarketCorrelationsPage';
+import SourcesPage from './pages/SourcesPage';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
 import ApiOfflineBanner from './components/ApiOfflineBanner';
 import { useNetworkStatus } from './utils/networkStatus';
@@ -130,6 +161,7 @@ function AppShell() {
   const setThemePack = useUiStore((state) => state.setThemePack);
   const backgroundTone = useUiStore((state) => state.backgroundTone);
   const setBackgroundTone = useUiStore((state) => state.setBackgroundTone);
+  const showNavIcons = useUiStore((state) => state.showNavIcons);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { adapters, meta } = useThemeRuntime({ mode: themeMode, packId: themePack });
   const availablePacks = Array.isArray(meta?.availablePacks) ? meta.availablePacks : [];
@@ -145,6 +177,15 @@ function AppShell() {
     queryKey: ['health'],
     queryFn: () => apiGet('/api/version')
   });
+
+  const apiActivitySummaryQuery = useQuery({
+    queryKey: ['api-activity-summary-nav'],
+    queryFn: () => apiGet('/api/api-activity/summary'),
+    refetchInterval: 15_000,
+    enabled: primaryArea === 'data',
+  });
+
+  const hasApiErrors = (apiActivitySummaryQuery.data?.errorCount ?? 0) > 0;
 
   const readiness = !healthQuery.data?.version
     ? { level: 'warn', summary: 'API?' }
@@ -330,75 +371,12 @@ function AppShell() {
       );
     }
 
-    if (secondaryView === 'theme-lab') {
-      return (
-        <section className="demo-panel">
-          <h2>Theme Lab</h2>
-          <p>Switch packs and modes from the right rail to test adapter behavior.</p>
-          <div className="content-grid">
-            <ContentCard title="Current Theme Context">
-              <p>Pack: {themePack}</p>
-              <p>Mode: {themeMode}</p>
-              <p>Available packs: {availablePacks.join(', ') || 'none'}</p>
-            </ContentCard>
-            <ContentCard title="Adapter Output Preview">
-              <pre>{JSON.stringify(adapters.vanilla || {}, null, 2)}</pre>
-            </ContentCard>
-          </div>
-        </section>
-      );
-    }
-
     if (secondaryView === 'component-lab') {
-      return (
-        <div className="content-grid">
-          <ContentCard title="Action Buttons">
-            <div className="inline-actions">
-              <button type="button" className="cta">Primary Action</button>
-              <button type="button">Secondary Action</button>
-            </div>
-          </ContentCard>
-          <ContentCard title="Information Card">
-            <p>Use this style to showcase features, outcomes, and release notes.</p>
-          </ContentCard>
-          <ContentCard title="Alert State">
-            <p className="error">Sample alert styling for diagnostics and policy warnings.</p>
-          </ContentCard>
-        </div>
-      );
+      return <ComponentLabPage />;
     }
 
-    if (secondaryView === 'runtime') {
-      return (
-        <section className="demo-panel">
-          <h2>Developer Runtime</h2>
-          <p>Tag-aware runtime is active. Open the overlay for element metadata inspection.</p>
-          <div className="inline-actions">
-            <button
-              type="button"
-              className="cta"
-              onClick={() => {
-                toggleDevOverlay();
-                pushActivity('RUNTIME', 'Toggled dev overlay');
-              }}
-            >
-              Toggle Dev Runtime Overlay
-            </button>
-          </div>
-          {diagnostics.length > 0 && (
-            <div className="theme-diagnostics">
-              <h3>Latest Diagnostics</h3>
-              <ul>
-                {diagnostics.slice(-6).map((item, index) => (
-                  <li key={`${item.code || 'diag'}-${index}`}>
-                    <strong>{item.level || 'info'}</strong> {item.code ? `[${item.code}]` : ''} {item.message}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
-      );
+    if (secondaryView === 'theme-lab') {
+      return <ThemeLabPage />;
     }
 
     if (secondaryView === 'server-controls') {
@@ -429,12 +407,20 @@ function AppShell() {
       return <PortfolioPage />;
     }
 
+    if (secondaryView === 'trade-history') {
+      return <TradeHistoryPage />;
+    }
+
+    if (secondaryView === 'trade-journal') {
+      return <TradeJournalPage />;
+    }
+
     if (secondaryView === 'reports') {
       return <ReportsPage />;
     }
 
-    if (secondaryView === 'mt5-trading') {
-      return <Mt5TradingPage />;
+    if (secondaryView === 'diagrams') {
+      return <DiagramsPage />;
     }
 
     if (secondaryView === 'architecture-framework') {
@@ -461,6 +447,12 @@ function AppShell() {
       return <SettingsPage />;
     }
 
+    if (secondaryView === 'calculators') {
+      return <CalculatorsPage />;
+    }
+    if (secondaryView === 'snapshots') {
+      return <SnapshotLibraryPage />;
+    }
     if (secondaryView === 'symbols-browser') {
       return <SymbolsBrowserPage />;
     }
@@ -471,6 +463,10 @@ function AppShell() {
 
     if (secondaryView === 'active-symbols') {
       return <ActiveSymbolsPage />;
+    }
+
+    if (secondaryView === 'add-symbol') {
+      return <AddSymbolPage />;
     }
 
     if (secondaryView === 'directives-manager') {
@@ -505,6 +501,10 @@ function AppShell() {
       return <DataStatusPage />;
     }
 
+    if (secondaryView === 'data-elements') {
+      return <DataElementsPage />;
+    }
+
     if (secondaryView === 'transient-caches') {
       return <CacheMonitorPage />;
     }
@@ -521,12 +521,12 @@ function AppShell() {
       return <Mt5StatusPage />;
     }
 
-    if (secondaryView === 'mt5-trading') {
-      return <Mt5TradingPage />;
+    if (secondaryView === 'sources') {
+      return <SourcesPage />;
     }
 
-    if (secondaryView === 'trading-platforms') {
-      return <TradingPlatformsPage />;
+    if (secondaryView === 'api-activity') {
+      return <ApiActivityPage />;
     }
 
     if (secondaryView === 'api-endpoints') {
@@ -534,7 +534,7 @@ function AppShell() {
     }
 
     if (secondaryView === 'provider-health') {
-      return <ProviderHealthPage />;
+      return <SourcesPage />;
     }
 
     if (secondaryView === 'platform-comparisons') {
@@ -549,8 +549,12 @@ function AppShell() {
       return <EventsCalendarPage />;
     }
 
+    if (secondaryView === 'scoring-runs') {
+      return <ScoringRunsPage />;
+    }
+
     if (secondaryView === 'protocol-overview') {
-      return <StrategiesPage />;
+      return <ProtocolsOverviewPage />;
     }
 
     if (secondaryView === 'signals-workbench') {
@@ -565,6 +569,14 @@ function AppShell() {
       return <RiskControlsPage />;
     }
 
+    if (secondaryView === 'automation-dashboard') {
+      return <AutomationDashboardPage />;
+    }
+
+    if (secondaryView === 'automation-rules') {
+      return <AutomationRulesPage />;
+    }
+
     if (secondaryView === 'execution-queue') {
       return <ExecutionQueuePage />;
     }
@@ -577,18 +589,77 @@ function AppShell() {
       return <TrainingCandlePatternsPage />;
     }
 
+    if (secondaryView === 'candle-patterns-guide') {
+      return <CandlePatternsGuidePage />;
+    }
+
     if (secondaryView === 'mt5-demo-trading') {
-      return <Mt5DemoTradingPage />;
+      return <UnifiedTradingPage />;
+    }
+
+    if (secondaryView === 'support-resistance') {
+      return <SupportResistancePage />;
+    }
+
+    if (secondaryView === 'volatility-analysis') {
+      return <VolatilityAnalysisPage />;
+    }
+
+    if (secondaryView === 'technical-indicators') {
+      return <TechnicalIndicatorsPage />;
+    }
+
+    if (secondaryView === 'pattern-scanner') {
+      return <PatternScannerPage />;
+    }
+
+    if (secondaryView === 'macro-monitor') {
+      return <MacroMonitorPage />;
+    }
+
+    if (secondaryView === 'earnings-calendar') {
+      return <EarningsCalendarPage />;
+    }
+
+    if (secondaryView === 'price-forecast') {
+      return <PriceForecastPage />;
+    }
+
+    if (secondaryView === 'sector-rotation') {
+      return <SectorRotationPage />;
+    }
+
+    if (secondaryView === 'market-correlations') {
+      return <MarketCorrelationsPage />;
     }
 
     if (secondaryView === 'chart-comparison') {
       return <ChartComparisonPage />;
     }
 
+    if (secondaryView === 'analyse-symbol') {
+      return <AnalyseSymbolPage />;
+    }
+
     if (secondaryView === 'mt5-connection-manager') {
       return <Mt5ConnectionManagerPage />;
     }
 
+    if (secondaryView === 'accounts-dashboard') {
+      return <AccountsDashboardPage />;
+    }
+
+    if (secondaryView === 'order-testing') {
+      return <OrderTestingPage />;
+    }
+
+    if (secondaryView === 'timeline') {
+      return <TradingTimelinePage />;
+    }
+
+    if (secondaryView === 'trading-strategies') {
+      return <TradingStrategiesPage />;
+    }
     if (PLUGIN_TAB_SKELETONS[secondaryView]) {
       return <PluginTabSkeletonPage tabId={secondaryView} />;
     }
@@ -796,27 +867,31 @@ function AppShell() {
                 setMobileNavOpen(false);
               }}
             >
-              {item.label}
+              <span className="rail-link-label">{item.label}</span>
+              {showNavIcons && item.icon && (
+                <span className="rail-link-icon">{item.icon}</span>
+              )}
+              {item.id === 'api-activity' && hasApiErrors && (
+                <span className="rail-status-dot rail-status-dot--error" aria-label="API errors present" />
+              )}
             </button>
           ))}
         </div>
 
-        <AccordionBlock title="Dev Runtime" defaultOpen={false}>
-          <div style={{ padding: '0.5rem 0' }}>
-            <button
-              type="button"
-              className={devOverlayOpen ? 'cta' : ''}
-              onClick={() => {
-                toggleDevOverlay();
-                pushActivity('RUNTIME', 'Toggled dev overlay');
-              }}
-              style={{ padding: '0.4rem 0.7rem', fontSize: '0.85rem', width: '100%' }}
-            >
-              {devOverlayOpen ? 'Hide' : 'Show'} Dev Overlay
-            </button>
-            <DevOverlay />
-          </div>
-        </AccordionBlock>
+        <div className="rail-block">
+          <button
+            type="button"
+            className={devOverlayOpen ? 'cta' : ''}
+            onClick={() => {
+              toggleDevOverlay();
+              pushActivity('RUNTIME', 'Toggled dev overlay');
+            }}
+            style={{ padding: '0.4rem 0.7rem', fontSize: '0.82rem', width: '100%' }}
+          >
+            {devOverlayOpen ? 'Hide' : 'Show'} Dev Overlay
+          </button>
+          <DevOverlay />
+        </div>
 
         {primaryArea === 'settings' && (
           <>
@@ -933,21 +1008,12 @@ function AppShell() {
           <p className="muted">Perf samples: {performanceSnapshot.samples}</p>
         </AccordionBlock>
 
-        <AccordionBlock title="Actions">
-          {FEATURE_FLAGS.devRuntime && (
-            <button
-              type="button"
-              className="cta"
-              onClick={() => {
-                toggleDevOverlay();
-                pushActivity('RUNTIME', 'Overlay toggled from right rail');
-              }}
-            >
-              Toggle Dev Overlay
-            </button>
-          )}
-          <button type="button" onClick={onDownloadRuntimeReport}>Export Report</button>
-        </AccordionBlock>
+        <div className="rail-block">
+          <p className="muted">Actions</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <button type="button" onClick={onDownloadRuntimeReport} style={{ padding: '0.4rem 0.6rem', fontSize: '0.82rem' }}>Export Report</button>
+          </div>
+        </div>
       </aside>
 
       <footer className="app-footer">

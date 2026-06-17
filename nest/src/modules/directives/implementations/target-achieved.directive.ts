@@ -18,6 +18,8 @@ export class TargetAchievedDirective implements IDirective {
   readonly name = 'Target Achieved';
   readonly description = 'Checks if price has reached ATR-based or swing-based profit targets.';
   readonly priority = 60;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -68,7 +70,7 @@ export class TargetAchievedDirective implements IDirective {
     }
 
     return {
-      score: Math.min(100, Math.round(score)),
+      score: Math.round(score),
       confidence: score > 50 ? 0.7 : 0.3,
       reason,
       signalClass,

@@ -19,6 +19,8 @@ export class Mt5EngulfingCciDirective implements IDirective {
   readonly name = 'MT5 Engulfing + CCI(37)';
   readonly description = 'MT5-sourced engulfing pattern with CCI(37) confirmation. Pattern detected=30, confirmed=85.';
   readonly priority = 70;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

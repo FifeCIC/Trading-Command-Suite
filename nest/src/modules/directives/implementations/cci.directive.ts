@@ -26,6 +26,8 @@ export class CciDirective implements IDirective {
   readonly description = 'Measures price vs statistical mean. CCI < -100 = oversold bounce. CCI > 100 = overbought.';
 
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const highs = input.bars.map(b => b.high);

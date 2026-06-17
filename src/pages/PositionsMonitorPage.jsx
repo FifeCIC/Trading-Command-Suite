@@ -71,22 +71,37 @@ function OptionPosition({ pos }) {
 
 export default function PositionsMonitorPage() {
   const [tab, setTab] = useState('cfd');
+  const [source, setSource] = useState('mt5');
 
-  // Mock data for CFD positions
-  const mockCFD = [
-    { symbol: 'EURUSD', direction: 'BUY', volume: '0.10', leverage: 30, margin: 333, pnl: 12.50, daysHeld: 3, sl: 1.0850, tp: 1.0950, overnightFee: 0.80, riskPct: 5.2 },
-    { symbol: 'NVDA', direction: 'SELL', volume: '10', leverage: 5, margin: 900, pnl: -24.30, daysHeld: 9, sl: 870, tp: 810, overnightFee: 2.10, riskPct: 8.7 },
-  ];
+  // Real MT5 positions
+  const mt5Query = useQuery({
+    queryKey: ['mt5-positions'],
+    queryFn: () => fetch('/api/providers/mt5/positions').then((r) => r.json()).catch(() => ({ positions: [] })),
+    staleTime: 10000,
+    refetchInterval: 30000,
+  });
 
-  const mockOptions = [
-    { symbol: 'AAPL', type: 'call', strike: 200, expiry: '2026-06-20', daysToExpiry: 7, currentPrice: 198.32, intrinsicValue: 0, timeValue: 3.45, delta: 0.45, theta: -0.12, multiplier: 100, pnl: 45.00, riskPct: 3.1 },
-    { symbol: 'SPY', type: 'put', strike: 590, expiry: '2026-06-15', daysToExpiry: 2, currentPrice: 595.20, intrinsicValue: 0, timeValue: 1.20, delta: -0.35, theta: -0.25, multiplier: 100, pnl: -12.00, riskPct: 1.8 },
-  ];
+  const mt5Positions = mt5Query.data?.positions || [];
+  const cfdPositions = source === 'mt5' ? mt5Positions.map((p) => ({
+    symbol: p.symbol,
+    direction: p.type === 'buy' ? 'BUY' : 'SELL',
+    volume: String(p.volume),
+    leverage: '—',
+    margin: '—',
+    pnl: p.profit || 0,
+    daysHeld: p.openTime ? Math.floor((Date.now() - new Date(p.openTime).getTime()) / 86400000) : 0,
+    sl: p.sl,
+    tp: p.tp,
+    overnightFee: p.swap || 0,
+    riskPct: '—',
+    ticket: p.ticket,
+  })) : [];
 
   return (
     <div className="pm-page">
       <header className="pm-header">
         <h1>Positions Monitor</h1>
+        <p>Trading212 CFD API not available (404). Using MT5 positions.</p>
       </header>
 
       <div className="pm-tabs">
@@ -96,15 +111,15 @@ export default function PositionsMonitorPage() {
 
       {tab === 'cfd' && (
         <div className="pm-positions">
-          {mockCFD.length === 0 && <div className="pm-empty">No open CFD positions</div>}
-          {mockCFD.map((p, i) => <CFDPosition key={i} pos={p} />)}
+          {mt5Query.isLoading && <div className="pm-empty">Loading MT5 positions...</div>}
+          {cfdPositions.length === 0 && !mt5Query.isLoading && <div className="pm-empty">No open positions from MT5</div>}
+          {cfdPositions.map((p, i) => <CFDPosition key={p.ticket || i} pos={p} />)}
         </div>
       )}
 
       {tab === 'options' && (
         <div className="pm-positions">
-          {mockOptions.length === 0 && <div className="pm-empty">No open options contracts</div>}
-          {mockOptions.map((p, i) => <OptionPosition key={i} pos={p} />)}
+          <div className="pm-empty">Options monitoring not yet available. Requires broker API access.</div>
         </div>
       )}
     </div>

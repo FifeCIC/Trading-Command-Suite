@@ -29,6 +29,8 @@ export class VolumeBoundaryDirective implements IDirective {
   readonly description =
     'Smoothed volume interpretation. Detects climax, drought, and expansion patterns.';
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

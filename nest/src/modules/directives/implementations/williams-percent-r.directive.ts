@@ -20,6 +20,8 @@ export class WilliamsPercentRDirective implements IDirective {
   readonly name = 'Williams %R Reversion';
   readonly description = 'Williams %R oscillator. Bullish when %R < -80 (oversold) with upward curl.';
   readonly priority = 65;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { high, low, close } = this.extractOHLC(input);

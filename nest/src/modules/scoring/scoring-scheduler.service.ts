@@ -22,6 +22,9 @@ export class ScoringSchedulerService implements OnModuleInit {
   private readonly logger = new Logger(ScoringSchedulerService.name);
   private isRunning = false;
   private timerHandle: ReturnType<typeof setTimeout> | null = null;
+  private currentIntervalMs: number | null = null;
+  private nextRunTime: number | null = null;
+  private lastRunResult: { symbolsScored: number; durationMs: number; completedAt: string } | null = null;
 
   constructor(
     private readonly configService: ConfigService,
@@ -64,6 +67,8 @@ export class ScoringSchedulerService implements OnModuleInit {
    * in one run don't prevent subsequent runs.
    */
   private scheduleNext(delayMs: number): void {
+    this.currentIntervalMs = delayMs;
+    this.nextRunTime = Date.now() + delayMs;
     this.timerHandle = setTimeout(async () => {
       await this.executeRun();
       this.scheduleNext(delayMs);
@@ -96,11 +101,13 @@ export class ScoringSchedulerService implements OnModuleInit {
       const symbolCount = result.ranked?.length ?? 0;
 
       const elapsed = Date.now() - startTime;
+      this.lastRunResult = { symbolsScored: symbolCount, durationMs: elapsed, completedAt: new Date().toISOString() };
       this.logger.log(
         `Scoring run completed — ${symbolCount} symbols scored in ${elapsed}ms`,
       );
     } catch (error) {
       const elapsed = Date.now() - startTime;
+      this.lastRunResult = null;
       this.logger.error(
         `Scoring run failed after ${elapsed}ms: ${String(error)}`,
         error instanceof Error ? error.stack : undefined,
@@ -108,5 +115,23 @@ export class ScoringSchedulerService implements OnModuleInit {
     } finally {
       this.isRunning = false;
     }
+  }
+
+  /** Public status for the Protocols API */
+  getStatus(): {
+    enabled: boolean;
+    intervalMs: number | null;
+    nextRunIn: number | null;
+    isRunning: boolean;
+    lastRun: { symbolsScored: number; durationMs: number; completedAt: string } | null;
+  } {
+    const nextRunIn = this.nextRunTime ? Math.max(0, this.nextRunTime - Date.now()) : null;
+    return {
+      enabled: this.currentIntervalMs !== null,
+      intervalMs: this.currentIntervalMs,
+      nextRunIn,
+      isRunning: this.isRunning,
+      lastRun: this.lastRunResult,
+    };
   }
 }

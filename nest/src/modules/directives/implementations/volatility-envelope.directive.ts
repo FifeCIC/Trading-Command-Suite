@@ -38,6 +38,8 @@ export class VolatilityEnvelopeDirective implements IDirective {
   readonly description =
     'Percentile-based range bands. Shows whether current volatility is normal, unusual, or extreme.';
   readonly priority = 55;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -105,7 +107,7 @@ export class VolatilityEnvelopeDirective implements IDirective {
     }
 
     const result: any = {
-      score: Math.min(100, Math.round(score)),
+      score: Math.round(score),
       confidence: isAnomalous ? 0.85 : currentPercentile >= 85 ? 0.7 : 0.5,
       reason,
       signalClass: 'neutral',

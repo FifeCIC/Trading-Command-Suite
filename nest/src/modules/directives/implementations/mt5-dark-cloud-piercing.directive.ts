@@ -20,6 +20,8 @@ export class Mt5DarkCloudPiercingDirective implements IDirective {
   readonly name = 'MT5 Dark Cloud / Piercing Line';
   readonly description = 'Dark Cloud Cover (bearish reversal) and Piercing Line (bullish reversal) with CCI(37) confirmation.';
   readonly priority = 65;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

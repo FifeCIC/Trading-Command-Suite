@@ -199,25 +199,10 @@ export const PLUGIN_TAB_SKELETONS = {
     subtitle: 'Source creation flow for new providers and import adapters.',
     domain: 'Data / Sources',
   },
-  'provider-health': {
-    title: 'Provider Health',
-    subtitle: 'Provider availability, credentials state, and latency diagnostics.',
-    domain: 'Data / Providers',
-  },
   'api-keys': {
     title: 'API Keys',
     subtitle: 'Credential inventory and provider key lifecycle controls.',
     domain: 'Data / Security',
-  },
-  'sources-list': {
-    title: 'Sources List',
-    subtitle: 'Legacy source list and diagnostics for migration review.',
-    domain: 'Data / Sources',
-  },
-  'api-errors': {
-    title: 'API Errors',
-    subtitle: 'Provider and endpoint error stream with triage context.',
-    domain: 'Data / Diagnostics',
   },
   'active-symbols': {
     title: 'Active Symbols',
@@ -378,11 +363,6 @@ export const PLUGIN_TAB_SKELETONS = {
     title: 'Trading Platform Switches',
     subtitle: 'Platform switch controls with safety checks and migration traces.',
     domain: 'Trading Platforms / Operations',
-  },
-  'wizard-sees-readiness': {
-    title: 'SEES Readiness Wizard',
-    subtitle: 'Checklist-driven readiness flow for data, directives, and strategy dependencies.',
-    domain: 'Wizard / SEES',
   },
   'audit-log': {
     title: 'Audit Log',

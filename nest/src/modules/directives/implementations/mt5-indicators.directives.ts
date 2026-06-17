@@ -52,6 +52,9 @@ export class WilliamsRDirective implements IDirective {
   readonly description =
     'Williams %R below -80 = oversold bounce. Above -20 = overbought. Derived from MT5 Williams %R indicator.';
   readonly priority = 45;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
+
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -103,6 +106,9 @@ export class AwesomeOscillatorDirective implements IDirective {
   readonly description =
     '5-period SMA of midpoints minus 34-period SMA. Green bars and rising = bullish momentum. Derived from MT5 Awesome Oscillator.';
   readonly priority = 40;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
+
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -163,6 +169,9 @@ export class ForceIndexDirective implements IDirective {
   readonly description =
     'Volume × price change, smoothed. Positive and rising = strong buying pressure. Derived from MT5 Force Index.';
   readonly priority = 45;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
+
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -218,6 +227,9 @@ export class ChaikinMoneyFlowDirective implements IDirective {
   readonly description =
     'Volume-weighted accumulation/distribution over 21 periods. CMF > 0.1 = accumulation. Derived from MT5 Chaikin Money Flow.';
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
+
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -284,6 +296,9 @@ export class DonchianBreakoutDirective implements IDirective {
   readonly description =
     'Price breaking above 20-period high = bullish breakout. Derived from MT5 Donchian Channel.';
   readonly priority = 55;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
+
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -337,6 +352,9 @@ export class KeltnerChannelDirective implements IDirective {
   readonly description =
     'EMA(20) ± 2×ATR(10). Price near upper band = bullish, band squeeze = impending expansion. Derived from MT5 Keltner Channel.';
   readonly priority = 45;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
+
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -398,6 +416,9 @@ export class SuperTrendDirective implements IDirective {
   readonly description =
     'ATR(10) × 3 multiplier trailing stop. Green (price above) = uptrend. Red = downtrend. Derived from MT5 SuperTrend.';
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
+
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -445,6 +466,9 @@ export class ParabolicSARDirective implements IDirective {
   readonly description =
     'Price above PSAR = uptrend, below = downtrend. Acceleration factor 0.02, max 0.2. Derived from MT5 Parabolic SAR.';
   readonly priority = 48;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
+
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -529,6 +553,9 @@ export class ADXDICrossoverDirective implements IDirective {
   readonly description =
     '+DI crossing above -DI with ADX > 20 = trend change to bullish. Derived from MT5 ADX crossover strategies.';
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
+
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -581,6 +608,9 @@ export class BollingerPctBDirective implements IDirective {
   readonly description =
     '%B = (price - lower) / (upper - lower). %B > 0.8 = near upper band, %B < 0.2 = near lower band. Derived from MT5 Bollinger %B.';
   readonly priority = 42;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
+
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -628,6 +658,9 @@ export class ATRTrailingStopDirective implements IDirective {
   readonly description =
     'Price above 3×ATR trailing stop = strong trend. Pullback to stop = potential entry. Derived from MT5 ATR Trailing Stop.';
   readonly priority = 48;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
+
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -676,6 +709,9 @@ export class MomentumROCDirective implements IDirective {
   readonly description =
     'ROC(12) crossing above zero = bullish momentum shift. ROC rising with high value = accelerating trend. Derived from MT5 Momentum/ROC.';
   readonly priority = 45;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
+
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -730,6 +766,9 @@ export class DeMarkerDirective implements IDirective {
   readonly description =
     'DeMax/DeMin ratio over 14 periods. > 0.7 = overbought, < 0.3 = oversold. Derived from MT5 DeMarker indicator.';
   readonly priority = 42;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
+
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -779,6 +818,9 @@ export class AccumulationDistDirective implements IDirective {
   readonly description =
     'A/D line divergence from price. Rising A/D + flat price = accumulation. Derived from MT5 A/D indicator.';
   readonly priority = 45;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
+
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -837,6 +879,9 @@ export class BullsBearsPowerDirective implements IDirective {
   readonly description =
     "Elder's Bulls Power (High - EMA13) and Bears Power (Low - EMA13). Bulls > 0 and rising = bullish. Derived from MT5 Bulls/Bears Power.";
   readonly priority = 45;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
+
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -884,6 +929,9 @@ export class EaseOfMovementDirective implements IDirective {
   readonly description =
     'Price change per unit of volume. Positive and rising = easy upward movement. Derived from MT5 Ease of Movement.';
   readonly priority = 40;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
+
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -936,6 +984,9 @@ export class IchimokuCloudDirective implements IDirective {
   readonly description =
     'Price above cloud = bullish, below = bearish, inside = neutral. Cloud color and thickness indicate support/resistance. Derived from MT5 Ichimoku.';
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
+
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

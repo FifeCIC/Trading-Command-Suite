@@ -1,0 +1,197 @@
+/* ── Volatility Analysis ──────────────────────────────────── */
+
+.va-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  color: var(--ink, #e2e8f0);
+}
+
+.va-header h1 {
+  margin: 0 0 0.3rem;
+  font-size: 1.4rem;
+}
+
+.va-subtitle {
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.88rem;
+  margin: 0 0 1rem;
+}
+
+/* ── Controls ─────────────────────────────────────────────── */
+.va-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  align-items: flex-end;
+}
+
+.va-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.va-field label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft, #94a3b8);
+}
+
+.va-field select {
+  background: var(--panel, #141a2e);
+  color: var(--ink, #e2e8f0);
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 6px;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.82rem;
+}
+
+.va-tf-tabs {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.va-tf-tab {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 6px;
+  color: var(--ink-soft, #94a3b8);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.va-tf-tab:hover {
+  border-color: var(--accent, #0ea5a6);
+  color: var(--ink, #e2e8f0);
+}
+
+.va-tf-active {
+  background: rgba(14, 165, 166, 0.15);
+  border-color: var(--accent, #0ea5a6);
+  color: var(--accent, #0ea5a6);
+}
+
+/* ── Sections ─────────────────────────────────────────────── */
+.va-section {
+  margin-bottom: 1.75rem;
+}
+
+.va-section h2 {
+  font-size: 1rem;
+  margin: 0 0 0.6rem;
+}
+
+/* ── Metrics grid ─────────────────────────────────────────── */
+.va-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.65rem;
+}
+
+.va-metric-card {
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--line, #1e2a45);
+  background: rgba(0,0,0,0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.va-metric-card.va-high {
+  border-left: 3px solid #ef4444;
+}
+
+.va-metric-card.va-mid {
+  border-left: 3px solid #f59e0b;
+}
+
+.va-metric-card.va-low {
+  border-left: 3px solid #22c55e;
+}
+
+.va-metric-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft, #94a3b8);
+}
+
+.va-metric-value {
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.va-high .va-metric-value { color: #ef4444; }
+.va-mid .va-metric-value { color: #f59e0b; }
+.va-low .va-metric-value { color: #22c55e; }
+
+.va-metric-hint {
+  font-size: 0.68rem;
+  color: var(--ink-soft, #94a3b8);
+}
+
+/* ── Chart ────────────────────────────────────────────────── */
+.va-chart-wrap {
+  background: var(--panel, #141a2e);
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.va-chart {
+  width: 100%;
+  height: 300px;
+  display: block;
+}
+
+/* ── Table ────────────────────────────────────────────────── */
+.va-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 8px;
+}
+
+.va-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.va-table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--line, #1e2a45);
+  background: rgba(0,0,0,0.15);
+}
+
+.va-table td {
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.va-table tbody tr:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.va-right { text-align: right; }
+
+.va-mono {
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 600px) {
+  .va-chart { height: 220px; }
+}

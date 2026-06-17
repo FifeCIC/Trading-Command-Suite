@@ -32,3 +32,44 @@
 .sd-table th { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 2px solid var(--line); font-size: 0.72rem; text-transform: uppercase; color: var(--ink-soft); }
 .sd-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--line); font-size: 0.82rem; }
 .sd-reason { color: var(--ink-soft); font-size: 0.78rem; max-width: 300px; }
+
+/* ── Trade & Portfolio ── */
+.sd-card--trade { margin-top: 1rem; }
+.sd-positive { color: #22c55e; }
+.sd-negative { color: #ef4444; }
+.sd-position { margin-bottom: 1rem; }
+.sd-pos-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.sd-pos-label { font-size: 0.8rem; color: var(--ink-soft); }
+.sd-pos-shares { font-size: 1rem; font-weight: 700; color: var(--ink); }
+.sd-pos-details { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem; }
+.sd-pos-details div { display: flex; flex-direction: column; gap: 0.15rem; }
+.sd-pos-details span { font-size: 0.72rem; color: var(--ink-soft); }
+.sd-pos-details strong { font-size: 0.95rem; }
+
+.sd-trade-accounts h3 { font-size: 0.85rem; color: var(--ink); margin: 1rem 0 0.5rem; }
+.sd-account-actions { display: flex; flex-direction: column; gap: 0.5rem; }
+.sd-account-group { display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0; border-bottom: 1px solid var(--line); }
+.sd-account-label { font-size: 0.82rem; font-weight: 600; color: var(--ink); min-width: 120px; }
+.sd-trade-btns { display: flex; gap: 0.4rem; }
+.sd-btn { padding: 0.35rem 0.9rem; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 0.78rem; cursor: pointer; transition: all 0.15s; }
+.sd-btn:hover:not(:disabled) { opacity: 0.85; }
+.sd-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.sd-btn-buy { background: #065f46; border-color: #059669; color: #6ee7b7; }
+.sd-btn-sell { background: #7f1d1d; border-color: #dc2626; color: #fca5a5; }
+
+.sd-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.sd-modal { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1.5rem; max-width: 400px; width: 90%; }
+.sd-modal h3 { margin: 0 0 0.5rem; }
+.sd-modal p { font-size: 0.85rem; color: var(--ink-soft); }
+.sd-modal-warning { background: #7c2d1233; border: 1px solid #9a3412; border-radius: 6px; padding: 0.5rem; font-size: 0.78rem !important; color: #fbbf24 !important; margin: 0.75rem 0; }
+.sd-modal-actions { margin-top: 1rem; display: flex; justify-content: flex-end; }
+
+/* ── News ── */
+.sd-news-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.sd-news-item { padding: 0.5rem 0; border-bottom: 1px solid var(--line); }
+.sd-news-item.sd-news-fluff { background: #7f1d1d08; padding: 0.5rem; border-radius: 6px; }
+.sd-news-header { display: flex; justify-content: space-between; margin-bottom: 0.2rem; }
+.sd-news-source { font-size: 0.72rem; color: var(--ink-soft); font-weight: 600; }
+.sd-news-sentiment { font-size: 0.72rem; font-weight: 600; }
+.sd-news-headline { margin: 0.15rem 0; font-size: 0.85rem; color: var(--ink); }
+.sd-fluff-tag { font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 4px; background: #7f1d1d44; color: #fca5a5; }

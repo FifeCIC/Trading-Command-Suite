@@ -35,6 +35,26 @@ const PLATFORMS = [
     capabilities: ['quotes', 'candles', 'account', 'orders', 'positions'],
     endpoint: 'https://live.trading212.com',
   },
+  {
+    id: 'fred',
+    name: 'FRED (Federal Reserve)',
+    description: 'US macro economic data — GDP, CPI, Fed rate, employment, PCE. Free API key.',
+    website: 'https://fred.stlouisfed.org',
+    docs: 'https://fred.stlouisfed.org/docs/api/fred/',
+    envKey: 'FRED_API_KEY',
+    capabilities: ['fundamentals'],
+    endpoint: 'https://api.stlouisfed.org/fred',
+  },
+  {
+    id: 'ecb',
+    name: 'ECB (European Central Bank)',
+    description: 'Eurozone macro data — ECB rate, inflation, GDP. No API key required.',
+    website: 'https://data.ecb.europa.eu',
+    docs: 'https://data.ecb.europa.eu/help/',
+    envKey: '', // No key needed
+    capabilities: ['fundamentals'],
+    endpoint: 'https://data-api.ecb.europa.eu/service',
+  },
 ]
 
 function ConfigTable({ platform }) {
@@ -61,7 +81,7 @@ function ConfigTable({ platform }) {
   )
 }
 
-export default function TradingPlatformsPage() {
+export default function SourcesPage() {
   const [activePlatform, setActivePlatform] = useState('alpaca')
 
   const version = useQuery({

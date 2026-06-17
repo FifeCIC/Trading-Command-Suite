@@ -8,6 +8,7 @@ export const useUiStore = create(
       themeMode: 'dark',
       themePack: 'scifi',
       backgroundTone: 'aura',
+      showNavIcons: true,
       toggleDevOverlay: () => set((state) => ({ devOverlayOpen: !state.devOverlayOpen })),
       closeDevOverlay: () => set({ devOverlayOpen: false }),
       setThemeMode: (mode) => set({ themeMode: mode === 'dark' ? 'dark' : 'light' }),
@@ -20,6 +21,7 @@ export const useUiStore = create(
         const safeTone = allowed.includes(tone) ? tone : 'aura';
         set({ backgroundTone: safeTone });
       },
+      setShowNavIcons: (show) => set({ showNavIcons: !!show }),
     }),
     {
       name: 'tradingcs-theme',
@@ -27,6 +29,7 @@ export const useUiStore = create(
         themeMode: state.themeMode,
         themePack: state.themePack,
         backgroundTone: state.backgroundTone,
+        showNavIcons: state.showNavIcons,
       }),
     },
   ),

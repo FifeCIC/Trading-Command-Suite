@@ -27,6 +27,8 @@ export class RsiOverboughtDirective implements IDirective {
     'Scores overbought symbols where RSI > 70 and starting to curl down. Anti-long signal.';
 
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

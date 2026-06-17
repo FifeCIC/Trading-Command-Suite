@@ -1,0 +1,204 @@
+/* Analyse Symbol — analyse-symbol.css */
+
+.as-page { max-width: 900px; }
+
+.as-search-label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--ink-soft, #94a3b8);
+  margin-bottom: 0.25rem;
+}
+
+.as-search-input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg, #0f172a);
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  color: var(--ink, #e2e8f0);
+  font-size: 1rem;
+}
+
+.as-searching {
+  font-size: 0.75rem;
+  color: var(--ink-soft, #64748b);
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.as-current-hint {
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--ink-soft, #94a3b8);
+}
+
+.as-link {
+  background: none;
+  border: none;
+  color: #0ea5a6;
+  cursor: pointer;
+  font-size: 0.82rem;
+  text-decoration: underline;
+  padding: 0;
+}
+
+/* Snapshot */
+.as-snapshot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.5rem;
+}
+
+.as-snap-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.as-snap-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft, #64748b);
+}
+
+.as-snap-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink, #e2e8f0);
+}
+
+.as-ok { color: #22c55e; }
+.as-warn { color: #f59e0b; }
+
+/* Scoring */
+.as-score-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.as-score-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.as-score-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--ink, #e2e8f0);
+}
+
+.as-score-max {
+  font-size: 0.9rem;
+  color: var(--ink-soft, #94a3b8);
+}
+
+.as-signal {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.as-signal--entry, .as-signal--bullish { background: rgba(34,197,94,0.12); color: #22c55e; }
+.as-signal--watch, .as-signal--neutral { background: rgba(251,191,36,0.12); color: #fbbf24; }
+.as-signal--defensive, .as-signal--bearish { background: rgba(239,68,68,0.12); color: #ef4444; }
+
+.as-confidence {
+  font-size: 0.85rem;
+  color: var(--ink-soft, #94a3b8);
+}
+
+/* Breakdown */
+.as-breakdown { margin-top: 0.5rem; }
+
+.as-breakdown h3 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft, #64748b);
+  margin: 0 0 0.5rem;
+}
+
+.as-dir-row {
+  display: grid;
+  grid-template-columns: 1fr 70px 60px 60px 50px;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.25rem 0;
+  font-size: 0.8rem;
+  border-bottom: 1px solid rgba(51,65,85,0.3);
+}
+
+.as-dir-name { font-weight: 500; }
+
+.as-dir-sig {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  text-align: center;
+}
+
+.as-dir-sig--bullish { background: rgba(34,197,94,0.1); color: #22c55e; }
+.as-dir-sig--bearish { background: rgba(239,68,68,0.1); color: #ef4444; }
+.as-dir-sig--neutral { background: rgba(148,163,184,0.1); color: #94a3b8; }
+
+.as-dir-score { text-align: right; font-weight: 600; }
+.as-dir-max { text-align: right; color: var(--ink-soft, #64748b); font-size: 0.72rem; }
+.as-dir-conf { text-align: right; color: var(--ink-soft, #64748b); font-size: 0.72rem; }
+
+/* AI placeholder */
+.as-ai-placeholder {
+  border-left: 3px solid #0ea5a6;
+}
+
+.as-ai-placeholder h2 {
+  margin-top: 0;
+}
+
+.as-ai-teaser {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--ink-soft, #64748b);
+}
+
+/* Actions */
+.as-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.as-action-btn {
+  padding: 0.5rem 1rem;
+  background: rgba(14,165,166,0.1);
+  border: 1px solid rgba(14,165,166,0.3);
+  border-radius: 8px;
+  color: #0ea5a6;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: background 0.15s;
+}
+
+.as-action-btn:hover { background: rgba(14,165,166,0.2); }
+
+.as-no-data {
+  color: var(--ink-soft, #94a3b8);
+  text-align: center;
+  padding: 1rem;
+}

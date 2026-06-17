@@ -4,6 +4,10 @@ export const STATUS_SNAPSHOT = [
   'Real contracts should live here, not only planning notes.',
   'Open decisions stay visible on the same surface as the rules.',
   'Drift detection is built in — section index and contract register show verification badges. Mark items as verified as you review them.',
+  '2026-06-17: Scoring model updated — directive maxScore replaces STRATEGY_WEIGHTS. Protocol max = sum of directive maxScores. No 100-cap.',
+  '2026-06-17: New directive: fx-timing (FX Timing, v0.1.0 placeholder). New page: AnalyseSymbolPage (symbol selector + scoring breakdown + AI placeholder).',
+  '2026-06-17: Nav-tree consolidated — platforms/ops/wizard → Status area. Builder trimmed 19→6. Testing area deleted.',
+  '2026-06-17: New pages: ProtocolsOverview, AddSymbol, DataElements. Algorithm Lab → Algorithm Log (real data). Training reorganized.',
 ]
 
 export const ARCHITECTURE_INDEX = [
@@ -335,7 +339,7 @@ export const CONTRACT_CARDS = [
   },
 ]
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-06-16'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-06-17'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -417,6 +421,30 @@ export const CURRENT_ROUTE_CONTRACTS = [
     owner: 'Algorithm lab controller',
     contract: 'Resumes pipeline display updates for the given strategy.',
     status: 'active',
+  },
+  {
+    route: 'GET /api/scoring/algorithm-lab/runs',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Algorithm log controller',
+    contract: 'Triggers a real scoring run via ScoringService.rankAll() and records per-symbol scores. Returns run history.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/scoring/protocols',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Protocols controller',
+    contract: 'Lists all scoring protocols with directive counts, maxPossibleScore, scheduler status, and recent activity feed.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/fx/rate/:pair',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'FX controller (Q289 — planned)',
+    contract: 'Returns real-time FX rate for a currency pair (e.g. USD/GBP). Requires FX data provider integration.',
+    status: 'planned',
   },
   {
     route: 'GET /api/calibrations',
@@ -693,20 +721,20 @@ export const SCORING_STRATEGY_CARDS = [
   },
   {
     title: 'Directive Output Contract',
-    summary: 'Scores must be interpreted through directive or strategy metadata, not global assumptions.',
+    summary: 'Each directive declares its own maxScore — scores flow from directive ranges, not a fixed 0–100.',
     items: [
-      'Output must state score value, max score or scale, confidence or evidence, and failure or insufficient-data reason.',
-      'Tests and UI must not assume every score is a hard-coded 0-100 percentage.',
-      'If a directive produces components, store enough evidence for diagnostics and explanation.',
+      'Output must state score value, maxScore, confidence, signalClass, and failure or insufficient-data reason.',
+      'Directive maxScores replace old-style strategy weights — a directive with maxScore=180 naturally dominates one with maxScore=90.',
+      'Protocol maxPossibleScore = sum of all directive maxScores. No artificial 100-cap — scores are unbounded within directive ranges.',
     ],
   },
   {
-    title: 'Strategy Contract',
-    summary: 'Strategies combine directive outputs through explicit weights, thresholds, and eligibility rules.',
+    title: 'Strategy (Protocol) Contract',
+    summary: 'Protocols combine directive scores through explicit maxScore-based aggregation — the range IS the weight.',
     items: [
-      'Document enabled directives, weights, thresholds, symbol universe, required data, and score aggregation method.',
-      'Validate strategy configuration before execution and surface missing directive or data requirements clearly.',
-      'Do not silently skip required directives without recording evidence and UI state.',
+      'Each directive declares maxScore (scoring range). Protocol maxPossibleScore = sum of all directive maxScores.',
+      'Normalized score = (totalScore / maxPossibleScore) × 100. Entry/Watch thresholds are % of protocol max.',
+      'Protocol and directive versions tracked via version field + ProtocolVersion model for change detection and audit.',
     ],
   },
   {
@@ -1063,6 +1091,8 @@ export const KNOWN_GAPS = [
   'Scoring pipeline integration with calibration only tested for 16 seeded calibrations, not bulk.',
   'Exit signal system not yet wired into SEES exit urgency column (Phase 2).',
   'No automated drift detection comparing documented contracts against actual route registrations.',
+  'FX Timing directive (fx-timing) is a placeholder — requires FX data infrastructure (Q289) before producing real scores.',
+  'Analyse Symbol page (Q274) has AI analysis placeholder — requires API provider config before multi-AI comparison works.',
 ]
 
 export const REVISION_LOG = [
@@ -1082,6 +1112,20 @@ export const REVISION_LOG = [
   '2026-06-16: Phase 4 — Drift detection system added: per-section and per-contract verification state (localStorage), stale badges in section index (stale/review/✓), Verified column in contract register with Mark Verified buttons, control bar drift summary chip, Mark All Verified buttons.',
   '2026-06-16: CSS refactored to 40+ custom properties — all hardcoded colors centralized. a11y: focus-visible, aria-labels, sr-only, reduced-motion added.',
   '2026-06-16: Fixed 8 NestJS controllers with redundant @Controller(\"api/...\") paths (global prefix already adds /api). Rebuilt skill file .github/skills/update-architecture-framework/SKILL.md for architecture page maintenance.',
+  '2026-06-17: Q263 — Nav-tree consolidation: platforms, ops, wizard areas merged into unified Status area (14 views). Testing area deleted. Builder trimmed from 19→6 views.',
+  '2026-06-17: Q259 — Algorithm Lab replaced with Algorithm Log: all setInterval/simulation removed, real ScoringService data, PROTOTYPE badge, multi-pipeline architecture documented.',
+  '2026-06-17: Q260 — Theme Exploration: default Carbon theme applied, system font stack, CSS variables. Q267 — Theme Packs page styling, color previews, apply/install flow.',
+  '2026-06-17: Q264 — Builder cleanup: 13 pages deleted (WordPress-era placeholders). Q268 — Platform Comparisons full-width table with sticky headers and horizontal scroll.',
+  '2026-06-17: Directive interface updated: maxScore field added (replaces STRATEGY_WEIGHTS). Each directive declares its own scoring range. Protocol max = sum of directive maxScores.',
+  '2026-06-17: Scoring model changed: weighted average → sum of directive scores ÷ protocol max. No artificial 100-cap. version field added to IDirective + ProtocolVersion model in Prisma.',
+  '2026-06-17: New pages: ProtocolsOverviewPage (activity dashboard + scheduler status), AddSymbolPage (search autocomplete + duplicate check), DataElementsPage (6 elements with status).',
+  '2026-06-17: Training renamed: candle-patterns → Pattern Detection. New candle-patterns-guide for educational content. Data area: trading-platforms → sources slug.',
+  '2026-06-17: Q273 — Data API monitoring consolidated: ApiActivityLog added, API Activity owns errors/latency, endpoint catalog has In Use status, cache policy kept for complex joins/provider responses with future queue warming.',
+  '2026-06-17: Q279 — FX Timing directive created (fx-timing, v0.1.0). Placeholder until Q289 FX data infrastructure built. useFxRate hook + convertToGbp/formatGbp helpers added.',
+  '2026-06-17: Q274 — Analyse Symbol page created with symbol selector, data snapshot, real scoring breakdown, AI placeholder, and action buttons. useCurrentSymbolStore (Zustand) added.',
+  '2026-06-17: Q289 — FX Data Infrastructure prompt created (FxRate model, fx.service, fx.controller, provider integration). Prerequisite for Q279 Phase 2-5.',
+  '2026-06-17: Q272 — Data Elements page created with 6 elements (RSI, MACD, EMA, ATR, Volume, Budget Gate), status badges, and coverage counts. manual-import deleted from nav.',
+  '2026-06-17: Q273 — Deleted provider-health, sources-list, api-errors pages. ProviderHealthPage import and route removed from App.jsx.',
   '2026-06-16: Q235 (Multi-Screen Dashboard) and Q242 (HOTAS Gamepad Prototype) moved to .github/issues/ as GitHub-ready issues with dependency chain.',
 ]
 
@@ -1176,6 +1220,13 @@ export const DATABASE_SCHEMA = {
       relationships: [],
       indexes: ['status + checkedAt'],
     },
+    {
+      table: 'ApiActivityLog',
+      description: 'API request telemetry for activity feed, error dot, endpoint usage, and latency charts',
+      fields: ['id (PK)', 'timestamp', 'endpoint', 'method', 'provider', 'statusCode', 'durationMs', 'responseSize'],
+      relationships: [],
+      indexes: ['timestamp', 'provider + timestamp', 'statusCode + timestamp', 'method + endpoint'],
+    },
   ],
   plannedMetaTables: [
     {
@@ -1216,7 +1267,7 @@ export const DATABASE_SCHEMA = {
     },
     {
       table: 'CacheMeta',
-      description: 'Cache metadata for invalidation',
+      description: 'Cache metadata for intelligent invalidation and future queue-based warming',
       fields: ['id (PK)', 'cacheKey (unique)', 'cacheGroup', 'dataType', 'symbolId (FK)', 'expiresAt', 'invalidationTriggers', 'createdAt'],
       relationships: [],
     },

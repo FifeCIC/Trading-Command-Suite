@@ -32,6 +32,8 @@ export class MaCrossoverDirective implements IDirective {
     'Detects fast EMA crossing above/below slow EMA. Scores crossover freshness and separation.';
 
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

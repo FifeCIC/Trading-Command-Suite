@@ -1,37 +1,14 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
 import { apiGet } from '../core/api/client';
 
 // ── Available data sources ──────────────────────────────────
 const PLATFORMS = [
-  { id: 'all', label: 'Merged' },
   { id: 'trading212', label: 'Trading212' },
   { id: 'mt5', label: 'MT5' },
   { id: 'alpaca', label: 'Alpaca' },
+  { id: 'all', label: 'All Platforms' },
 ];
-
-// ── Mock fallback when API is unavailable or Trading212 not configured ──
-const MOCK_PORTFOLIO = {
-  summary: {
-    totalValue: 75000,
-    cash: 25000,
-    totalCost: 46375,
-    totalPnl: 4083.65,
-    pnlPct: 8.81,
-    positionCount: 5,
-    provider: 'Trading212',
-    mode: 'mock',
-  },
-  positions: [
-    { symbol: 'AAPL', ticker: 'AAPL_US_EQ', shares: 50, avgCost: 175.50, currentPrice: 198.32, value: 9916, pnl: 1141, pnlPct: 13.0, allocation: 0.198, initialFillDate: '2025-03-01T09:30:00Z' },
-    { symbol: 'NVDA', ticker: 'NVDA_US_EQ', shares: 30, avgCost: 420.00, currentPrice: 485.25, value: 14557.5, pnl: 1957.5, pnlPct: 15.5, allocation: 0.291, initialFillDate: '2025-02-15T09:30:00Z' },
-    { symbol: 'TSLA', ticker: 'TSLA_US_EQ', shares: 40, avgCost: 260.00, currentPrice: 227.91, value: 9116.4, pnl: -1283.6, pnlPct: -12.3, allocation: 0.182, initialFillDate: '2025-04-10T09:30:00Z' },
-    { symbol: 'MSFT', ticker: 'MSFT_US_EQ', shares: 25, avgCost: 380.00, currentPrice: 462.75, value: 11568.75, pnl: 2068.75, pnlPct: 21.8, allocation: 0.231, initialFillDate: '2025-01-20T09:30:00Z' },
-    { symbol: 'SPY', ticker: 'SPY_US_EQ', shares: 10, avgCost: 510.00, currentPrice: 530.00, value: 5300, pnl: 200, pnlPct: 3.92, allocation: 0.098, initialFillDate: '2025-05-05T09:30:00Z' },
-  ],
-  account: { blocked: 0, free: 25000, invested: 46375, pieCash: 0, ppl: 4083.65, result: 4083.65, total: 71375 },
-};
 
 // ── Allocation Bar ──────────────────────────────────────────
 function AllocationBar({ positions, total }) {
@@ -50,41 +27,66 @@ function AllocationBar({ positions, total }) {
   );
 }
 
-// ── Mode Badge ──────────────────────────────────────────────
-function ModeBadge({ mode }) {
-  const map = {
-    live: { label: '🔴 LIVE', className: 'pf-mode-live' },
-    demo: { label: '🟡 DEMO', className: 'pf-mode-demo' },
-    mock: { label: '⚪ MOCK DATA', className: 'pf-mode-mock' },
+// ── Unavailable Notice ──────────────────────────────────────
+function UnavailableNotice({ reason, source, onRefresh }) {
+  const notices = {
+    no_key: {
+      title: 'Trading212 API Key Required',
+      body: 'Set TRADING212_API_KEY and TRADING212_API_SECRET in your .env file to connect your Trading212 account.',
+      help: 'See SETUP.md for API key configuration instructions.',
+    },
+    no_connection: {
+      title: 'Cannot Reach Trading212',
+      body: 'The API returned an error or could not be reached. Check your internet connection and API key.',
+    },
+    no_positions: {
+      title: 'No Open Positions',
+      body: source === 'trading212'
+        ? 'Your Trading212 account has no open positions.'
+        : source === 'mt5'
+          ? 'MT5 integration is pending. Switch to Trading212 for live portfolio data.'
+          : 'No positions available from the selected source.',
+    },
+    not_implemented: {
+      title: `${source === 'mt5' ? 'MT5' : source === 'alpaca' ? 'Alpaca' : 'This source'} Not Yet Available`,
+      body: `Portfolio data from ${source === 'mt5' ? 'MT5' : source === 'alpaca' ? 'Alpaca' : 'this source'} is not yet implemented. Switch to Trading212 for live data.`,
+    },
   };
-  const m = map[mode] || map.mock;
-  return <span className={`pf-mode-badge ${m.className}`}>{m.label}</span>;
+
+  const n = notices[reason] || notices.no_connection;
+
+  return (
+    <div className="pf-unavailable">
+      <h2>{n.title}</h2>
+      <p>{n.body}</p>
+      {n.help && <p className="pf-hint">{n.help}</p>}
+      {onRefresh && (
+        <button className="pf-refresh-btn" onClick={onRefresh} style={{ marginTop: '0.5rem' }}>
+          ↻ Retry
+        </button>
+      )}
+    </div>
+  );
 }
 
 // ── Main Page ───────────────────────────────────────────────
 export default function PortfolioPage() {
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newSymbol, setNewSymbol] = useState('');
-  const [newShares, setNewShares] = useState('');
-  const [newCost, setNewCost] = useState('');
   const [source, setSource] = useState('trading212');
 
-  // Real API call — falls back to mock data on error
   const portfolioQuery = useQuery({
     queryKey: ['portfolio', source],
     queryFn: async () => {
-      try {
-        const url = source === 'all' ? '/api/portfolio/holdings?source=all' : `/api/portfolio?source=${source}`;
-        const data = await apiGet(url);
-        if (data?.summary?.mode !== 'mock') return data;
-      } catch { /* fall through to mock */ }
-      return MOCK_PORTFOLIO;
+      if (source === 'mt5' || source === 'alpaca') {
+        return { unavailable: 'not_implemented' };
+      }
+      const url = source === 'all' ? '/api/portfolio/holdings?source=all' : `/api/portfolio?source=${source}`;
+      const data = await apiGet(url);
+      return data || { unavailable: 'no_connection' };
     },
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    refetchInterval: 300_000,
   });
 
-  // Scores query
   const scoresQuery = useQuery({
     queryKey: ['portfolio-scores'],
     queryFn: () => apiGet('/api/portfolio/scores').then((d) => d?.scores || []).catch(() => []),
@@ -92,29 +94,84 @@ export default function PortfolioPage() {
     refetchInterval: 120_000,
   });
 
-  const data = portfolioQuery.data || MOCK_PORTFOLIO;
-  const { summary, positions, account } = data;
-  const totalValue = summary.totalValue;
-  const cash = summary.cash;
-  const totalPnl = summary.totalPnl;
-  const pnlPct = summary.pnlPct;
+  const data = portfolioQuery.data;
+  const unavailable = data?.unavailable;
+  const hasData = !unavailable && data?.positions?.length > 0;
+  const summary = data?.summary;
+  const positions = data?.positions || [];
+  const account = data?.account;
+  const error = data?.error;
 
-  function addPosition() {
-    if (!newSymbol || !newShares || !newCost) return;
-    setNewSymbol(''); setNewShares(''); setNewCost(''); setShowAddForm(false);
+  // Still loading
+  if (portfolioQuery.isLoading) {
+    return (
+      <div className="pf-page">
+        <h1>Portfolio</h1>
+        <p className="pf-hint">Loading portfolio data…</p>
+      </div>
+    );
   }
+
+  // API returned an error
+  if (error && !hasData) {
+    return (
+      <div className="pf-page">
+        <div className="pf-header">
+          <h1>Portfolio</h1>
+        </div>
+        <UnavailableNotice reason="no_connection" source={source} onRefresh={() => portfolioQuery.refetch()} />
+      </div>
+    );
+  }
+
+  // Source not implemented / no key / no connection / no positions
+  if (!hasData) {
+    const reason = unavailable || (positions.length === 0 ? 'no_positions' : 'no_connection');
+    return (
+      <div className="pf-page">
+        <div className="pf-header">
+          <div>
+            <h1>Portfolio</h1>
+          </div>
+          <div className="pf-header-actions">
+            <select className="pf-source-select" value={source} onChange={(e) => setSource(e.target.value)}>
+              {PLATFORMS.map((p) => (
+                <option key={p.id} value={p.id}>{p.label}</option>
+              ))}
+            </select>
+            <button className="pf-refresh-btn" onClick={() => portfolioQuery.refetch()} disabled={portfolioQuery.isFetching}>
+              {portfolioQuery.isFetching ? '⟳' : '↻'} Refresh
+            </button>
+          </div>
+        </div>
+        <UnavailableNotice reason={reason} source={source} onRefresh={() => portfolioQuery.refetch()} />
+      </div>
+    );
+  }
+
+  // ── Live data display ────────────────────────────────────
+  const totalValue = summary?.totalValue || 0;
+  const cash = summary?.cash || 0;
+  const totalPnl = summary?.totalPnl || 0;
+  const pnlPct = summary?.pnlPct || 0;
 
   return (
     <div className="pf-page">
       <div className="pf-header">
-        <h1>Portfolio</h1>
-        <select className="pf-source-select" value={source} onChange={(e) => setSource(e.target.value)}>
-          <option value="trading212">Trading 212</option>
-          <option value="mt5">MT5</option>
-          <option value="alpaca">Alpaca</option>
-          <option value="all">All Platforms</option>
-        </select>
-        <ModeBadge mode={summary.mode} />
+        <div>
+          <h1>Portfolio</h1>
+          {summary?.lastRefreshed && <span className="pf-refreshed">Updated: {new Date(summary.lastRefreshed).toLocaleTimeString()}</span>}
+        </div>
+        <div className="pf-header-actions">
+          <select className="pf-source-select" value={source} onChange={(e) => setSource(e.target.value)}>
+            {PLATFORMS.map((p) => (
+              <option key={p.id} value={p.id}>{p.label}</option>
+            ))}
+          </select>
+          <button className="pf-refresh-btn" onClick={() => portfolioQuery.refetch()} disabled={portfolioQuery.isFetching}>
+            {portfolioQuery.isFetching ? '⟳' : '↻'} Refresh
+          </button>
+        </div>
       </div>
 
       {portfolioQuery.isFetching && !portfolioQuery.isLoading && (
@@ -126,7 +183,7 @@ export default function PortfolioPage() {
         <div className="pf-sum-card"><div className="pf-sum-val">${cash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div><div>Cash</div></div>
         <div className="pf-sum-card"><div className={`pf-sum-val ${totalPnl >= 0 ? 'pf-green' : 'pf-red'}`}>{totalPnl >= 0 ? '+' : ''}{totalPnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div><div>Total P&amp;L</div></div>
         <div className="pf-sum-card"><div className={`pf-sum-val ${pnlPct >= 0 ? 'pf-green' : 'pf-red'}`}>{pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(1)}%</div><div>Return</div></div>
-        <div className="pf-sum-card"><div className="pf-sum-val">{summary.positionCount}</div><div>Positions</div></div>
+        <div className="pf-sum-card"><div className="pf-sum-val">{summary?.positionCount || positions.length}</div><div>Positions</div></div>
       </div>
 
       {positions.length > 0 && (
@@ -144,32 +201,28 @@ export default function PortfolioPage() {
 
       <div className="pf-section">
         <h2>Positions</h2>
-        {positions.length === 0 ? (
-          <p className="pf-hint">No open positions. Connect your Trading212 account to see your portfolio here.</p>
-        ) : (
-          <table className="pf-table">
-            <thead>
-              <tr><th>Symbol</th><th>Shares</th><th>Avg Cost</th><th>Price</th><th>Value</th><th>P&amp;L</th><th>%</th><th>Signal</th><th></th></tr>
-            </thead>
-            <tbody>
-              {positions.map((p) => {
-                const s = (scoresQuery.data || []).find((sc) => sc.symbol === p.symbol);
-                return (
-                <tr key={p.symbol}>
-                  <td><strong>{p.symbol}</strong></td>
-                  <td>{p.shares.toLocaleString()}</td>
-                  <td>${p.avgCost.toFixed(2)}</td>
-                  <td>${p.currentPrice.toFixed(2)}</td>
-                  <td>${p.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  <td className={p.pnl >= 0 ? 'pf-green' : 'pf-red'}>{p.pnl >= 0 ? '+' : ''}{p.pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  <td className={p.pnlPct >= 0 ? 'pf-green' : 'pf-red'}>{p.pnlPct >= 0 ? '+' : ''}{p.pnlPct.toFixed(1)}%</td>
-                  <td>{s ? <span className={`pf-sig pf-sig-${s.signal}`}>{s.signal.toUpperCase()}</span> : '—'}</td>
-                  <td><a href="/trading/mt5-trading" className="pf-action-btn" title="Trade this symbol">↗</a></td>
-                </tr>
-              )})}
-            </tbody>
-          </table>
-        )}
+        <table className="pf-table">
+          <thead>
+            <tr><th>Symbol</th><th>Shares</th><th>Avg Cost</th><th>Price</th><th>Value</th><th>P&amp;L</th><th>%</th><th>Signal</th><th></th></tr>
+          </thead>
+          <tbody>
+            {positions.map((p) => {
+              const s = (scoresQuery.data || []).find((sc) => sc.symbol === p.symbol);
+              return (
+              <tr key={p.symbol}>
+                <td><strong>{p.symbol}</strong></td>
+                <td>{p.shares?.toLocaleString() || p.quantity?.toLocaleString() || '—'}</td>
+                <td>${(p.avgCost || 0).toFixed(2)}</td>
+                <td>${(p.currentPrice || 0).toFixed(2)}</td>
+                <td>${(p.value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td className={(p.pnl || 0) >= 0 ? 'pf-green' : 'pf-red'}>{(p.pnl || 0) >= 0 ? '+' : ''}${Math.abs(p.pnl || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td className={(p.pnlPct || 0) >= 0 ? 'pf-green' : 'pf-red'}>{(p.pnlPct || 0) >= 0 ? '+' : ''}{(p.pnlPct || 0).toFixed(1)}%</td>
+                <td>{s ? <span className={`pf-sig pf-sig-${s.signal}`}>{s.signal.toUpperCase()}</span> : '—'}</td>
+                <td><a href="/trading/mt5-trading" className="pf-action-btn" title="Trade this symbol">↗</a></td>
+              </tr>
+            )})}
+          </tbody>
+        </table>
       </div>
 
       <div className="pf-section">
@@ -183,28 +236,6 @@ export default function PortfolioPage() {
         ))}
         {positions.filter((p) => p.currentPrice < p.avgCost).length === 0 && (
           <p className="pf-hint">No positions below entry. No averaging suggestions.</p>
-        )}
-      </div>
-
-      <div className="pf-section">
-        <button
-          type="button"
-          onClick={() => setShowAddForm(!showAddForm)}
-          disabled={summary.mode === 'live' || summary.mode === 'demo'}
-          title={summary.mode !== 'mock' ? 'Positions are managed directly in Trading212' : 'Add a mock position'}
-        >
-          {showAddForm ? 'Cancel' : '+ Add Position'}
-        </button>
-        {summary.mode !== 'mock' && (
-          <span className="pf-hint" style={{ marginLeft: '0.75rem' }}>Managed in Trading212</span>
-        )}
-        {showAddForm && (
-          <div className="pf-add-form">
-            <input placeholder="Symbol" value={newSymbol} onChange={(e) => setNewSymbol(e.target.value)} />
-            <input placeholder="Shares" type="number" value={newShares} onChange={(e) => setNewShares(e.target.value)} />
-            <input placeholder="Avg Cost" type="number" value={newCost} onChange={(e) => setNewCost(e.target.value)} />
-            <button type="button" onClick={addPosition}>Add</button>
-          </div>
         )}
       </div>
 

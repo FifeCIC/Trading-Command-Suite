@@ -28,8 +28,15 @@ import { ExportModule } from './modules/export/export.module';
 import { AlertsModule } from './modules/alerts/alerts.module';
 import { CacheModule } from './modules/cache/cache.module';
 import { TrainingModule } from './modules/training/training.module';
+import { NewsModule } from './modules/news/news.module';
+import { SnapshotsModule } from './modules/snapshots/snapshots.module';
+import { TimelineModule } from './modules/timeline/timeline.module';
+import { JournalModule } from './modules/journal/journal.module';
 import { CalibrationModule } from './modules/calibration/calibration.module';
+import { IndicatorsModule } from './modules/indicators/indicators.module';
+import { MacroModule } from './modules/macro/macro.module';
 import { TradingModule } from './modules/trading/trading.module';
+import { ApiActivityModule } from './modules/api-activity/api-activity.module';
 import { RateLimiterMiddleware } from './common/middleware/rate-limiter.middleware';
 import { MetricsMiddleware } from './common/middleware/metrics.middleware';
 
@@ -67,8 +74,15 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     ExportModule,
     CacheModule,
     TrainingModule,
+    NewsModule,
+    SnapshotsModule,
+    TimelineModule,
+    JournalModule,
     CalibrationModule,
+    IndicatorsModule,
+    MacroModule,
     TradingModule,
+    ApiActivityModule,
   ],
   controllers: [AppController],
   providers: [AppService],

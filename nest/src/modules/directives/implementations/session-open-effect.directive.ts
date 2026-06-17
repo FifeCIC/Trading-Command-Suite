@@ -46,6 +46,8 @@ export class SessionOpenEffectDirective implements IDirective {
   readonly description =
     'Predicts directional bias around major session opens. US open at 13:30 UTC is the most impactful for crypto.';
   readonly priority = 72;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

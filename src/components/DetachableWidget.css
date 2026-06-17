@@ -1,0 +1,246 @@
+/* ── DetachableWidget ────────────────────────────────────────
+ * A resizable, detachable panel shell used in dashboards
+ * and the Component Lab. Consumes theme CSS variables. ───── */
+
+/* ── Inline widget ───────────────────────────────────────── */
+.dw-widget {
+  background: var(--panel, #141a2e);
+  border: 1px solid var(--line, #1e2a45);
+  border-left: 3px solid var(--accent, #0ea5a6);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.2s, border-color 0.2s;
+  height: fit-content;
+}
+
+.dw-widget:hover {
+  border-color: var(--accent, #0ea5a6);
+  box-shadow: 0 0 12px rgba(14, 165, 166, 0.08);
+}
+
+.dw-widget.dw-minimized {
+  border-left-color: var(--line, #1e2a45);
+}
+
+/* ── Title bar ───────────────────────────────────────────── */
+.dw-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: rgba(0, 0, 0, 0.18);
+  border-bottom: 1px solid var(--line, #1e2a45);
+  user-select: none;
+  gap: 0.4rem;
+  min-height: 38px;
+}
+
+.dw-titlebar.dw-draggable {
+  cursor: grab;
+}
+
+.dw-titlebar.dw-draggable:active {
+  cursor: grabbing;
+}
+
+.dw-floating-titlebar {
+  cursor: move;
+}
+
+.dw-titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.dw-titlebar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.dw-grip {
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.85rem;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.dw-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink, #e2e8f0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dw-subtitle {
+  font-size: 0.7rem;
+  color: var(--ink-soft, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dw-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--accent, #0ea5a6);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.dw-status {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dw-status-on {
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+}
+
+.dw-status-off {
+  background: #64748b;
+}
+
+/* ── Icon buttons ────────────────────────────────────────── */
+.dw-btn-icon {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+
+.dw-btn-icon:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink, #e2e8f0);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dw-btn-close:hover {
+  background: rgba(239, 68, 68, 0.18);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* ── Body ────────────────────────────────────────────────── */
+.dw-body {
+  padding: 0.75rem;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.dw-floating-body {
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+}
+
+/* ── Footer ──────────────────────────────────────────────── */
+.dw-footer {
+  padding: 0.4rem 0.75rem;
+  border-top: 1px solid var(--line, #1e2a45);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  background: rgba(0, 0, 0, 0.1);
+  font-size: 0.72rem;
+  color: var(--ink-soft, #94a3b8);
+}
+
+/* ── Floating overlay ────────────────────────────────────── */
+.dw-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.dw-floating {
+  position: absolute;
+  background: var(--panel, #141a2e);
+  border: 1px solid var(--accent, #0ea5a6);
+  border-radius: 10px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: dw-pop-in 0.18s ease-out;
+}
+
+@keyframes dw-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Resize handle ───────────────────────────────────────── */
+.dw-resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  background: linear-gradient(
+    135deg,
+    transparent 40%,
+    var(--ink-soft, #94a3b8) 40%,
+    var(--ink-soft, #94a3b8) 50%,
+    transparent 50%
+  );
+  opacity: 0.3;
+  transition: opacity 0.15s;
+}
+
+.dw-resize-handle:hover {
+  opacity: 0.7;
+}
+
+/* ── Widget grid ─────────────────────────────────────────── */
+.dw-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.dw-grid.dw-grid-dense {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.65rem;
+}
+
+@media (max-width: 700px) {
+  .dw-grid {
+    grid-template-columns: 1fr;
+  }
+}

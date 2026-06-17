@@ -12,6 +12,8 @@ export class DeMarkerDirective implements IDirective {
   readonly name = 'DeMarker';
   readonly description = 'DeMarker < 0.3 signals oversold accumulation. > 0.7 signals overbought distribution. Derived from MT5 DeMarker.';
   readonly priority = 70;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

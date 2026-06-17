@@ -1,0 +1,170 @@
+/* Accounts Dashboard — accounts-dashboard.css */
+
+.ad-page { max-width: 1000px; }
+
+.ad-refresh-btn {
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.6rem;
+  background: rgba(14,165,166,0.1);
+  border: 1px solid rgba(14,165,166,0.3);
+  border-radius: 6px;
+  color: #0ea5a6;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.ad-errors {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.ad-error-tag {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.3);
+  border-radius: 4px;
+  color: #f59e0b;
+}
+
+.ad-loading, .ad-error {
+  text-align: center;
+  padding: 2rem;
+  color: var(--ink-soft, #94a3b8);
+}
+
+/* Grid */
+.ad-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.65rem;
+}
+
+/* Account Card */
+.ad-card {
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ad-card--live { border-left: 3px solid #22c55e; }
+.ad-card--isa { border-left: 3px solid #0ea5a6; }
+.ad-card--demo { border-left: 3px solid #64748b; opacity: 0.85; }
+
+.ad-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ad-provider {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft, #64748b);
+  padding: 0.1rem 0.4rem;
+  background: rgba(255,255,255,0.05);
+  border-radius: 3px;
+}
+
+.ad-status-dot { font-size: 0.65rem; }
+
+.ad-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.ad-card-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink, #e2e8f0);
+}
+
+.ad-card-balance {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--ink, #e2e8f0);
+}
+
+.ad-card-currency {
+  font-size: 0.68rem;
+  color: var(--ink-soft, #64748b);
+}
+
+.ad-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ad-card-type {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #22c55e;
+  padding: 0.1rem 0.4rem;
+  background: rgba(34,197,94,0.08);
+  border-radius: 3px;
+}
+
+.ad-card-server, .ad-card-positions {
+  font-size: 0.65rem;
+  color: var(--ink-soft, #64748b);
+}
+
+/* Toggle */
+.ad-toggle-btn {
+  width: 100%;
+  padding: 0.4rem 0.75rem;
+  background: transparent;
+  border: none;
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ad-toggle-btn:hover { color: var(--ink, #e2e8f0); }
+
+/* Totals */
+.ad-totals { margin-top: 1rem; }
+
+.ad-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(51,65,85,0.3);
+}
+
+.ad-total-label { font-size: 0.85rem; color: var(--ink-soft, #94a3b8); }
+
+.ad-total-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ink, #e2e8f0);
+}
+
+.ad-total-all { font-size: 1.3rem; color: #0ea5a6; }
+
+.ad-since-last {
+  font-size: 0.72rem;
+  color: var(--ink-soft, #64748b);
+  margin-top: 0.5rem;
+}
+
+.ad-empty {
+  color: var(--ink-soft, #64748b);
+  font-size: 0.85rem;
+  padding: 0.5rem 0;
+}

@@ -24,6 +24,8 @@ export class RsiOversoldDirective implements IDirective {
   readonly description =
     'Scores oversold symbols where RSI is below threshold and starting to curl up.';
   readonly priority = 85;
+  readonly maxScore = 120;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map((b) => b.close);
@@ -71,7 +73,7 @@ export class RsiOversoldDirective implements IDirective {
       : 0.4 + depthFactor * 0.2;
 
     return {
-      score: Math.min(100, Math.round(rawScore)),
+      score: Math.round(rawScore),
       confidence: Number(confidence.toFixed(2)),
       reason: `RSI(14) = ${currentRsi.toFixed(1)}, ${curling ? 'curling up' : 'still declining'}. Depth factor: ${(depthFactor * 100).toFixed(0)}%.`,
       signalClass: 'bullish',

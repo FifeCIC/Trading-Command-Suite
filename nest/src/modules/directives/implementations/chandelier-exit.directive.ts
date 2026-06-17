@@ -9,6 +9,8 @@ export class ChandelierExitDirective implements IDirective {
   readonly name = 'Chandelier Exit';
   readonly description = 'Long exit: highest high(22) - 3×ATR(22). Price below exit = trend weakening. MT5 Chandelier Exit.';
   readonly priority = 64;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const highs = input.bars.map((b) => b.high);

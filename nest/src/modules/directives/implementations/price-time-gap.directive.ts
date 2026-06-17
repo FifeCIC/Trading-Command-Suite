@@ -44,6 +44,8 @@ export class PriceTimeGapDirective implements IDirective {
   readonly description =
     'Identifies fast-moving price zones with little trading activity. Detects institutional footprints and gap-based signals.';
   readonly priority = 75;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

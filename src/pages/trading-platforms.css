@@ -1,5 +1,5 @@
 .trading-platforms-page {
-  max-width: 1000px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 1.5rem;
   color: var(--ink);
@@ -334,4 +334,167 @@
   .tp-field-cell {
     min-width: 140px;
   }
+}
+
+/* ── Full-Width Platform Comparisons (Q268) ────────────────── */
+
+.pc-page {
+  max-width: none;
+  padding: 1rem 1.5rem;
+}
+
+.pc-section {
+  margin-bottom: 1.25rem;
+}
+
+.pc-scroll-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+}
+
+.pc-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.pc-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.pc-table th,
+.pc-table td {
+  padding: 0.45rem 0.55rem;
+  border-bottom: 1px solid var(--line, #334155);
+  white-space: nowrap;
+  text-align: center;
+}
+
+.pc-table thead th {
+  background: var(--panel, #1e293b);
+  color: var(--ink-soft, #94a3b8);
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pc-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.pc-table tbody tr:hover {
+  background: rgba(14, 165, 166, 0.06);
+}
+
+/* Sticky first column */
+.pc-sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--panel, #1e293b);
+  text-align: left !important;
+  font-weight: 600;
+  min-width: 200px;
+  max-width: 260px;
+}
+
+.pc-table thead .pc-sticky-col {
+  z-index: 3;
+  background: var(--panel, #1e293b);
+}
+
+.pc-table tbody .pc-sticky-col {
+  background: var(--bg, #0f172a);
+}
+
+.pc-table tbody tr:nth-child(even) .pc-sticky-col {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.pc-provider-head {
+  color: var(--accent, #0ea5a6) !important;
+  min-width: 100px;
+}
+
+/* Color-coded cells */
+.pc-cell--ok {
+  background: rgba(34, 197, 94, 0.06);
+}
+
+.pc-cell--warn {
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.pc-cell--neutral {
+  background: rgba(251, 191, 36, 0.06);
+}
+
+@media (max-width: 768px) {
+  .pc-page {
+    padding: 0.75rem;
+  }
+
+  .pc-sticky-col {
+    min-width: 140px;
+  }
+
+  .pc-table {
+    font-size: 0.76rem;
+  }
+}
+
+/* ── Add Symbol Autocomplete ──────────────────────────────── */
+
+.as-autocomplete {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  margin-top: 2px;
+  max-height: 260px;
+  overflow-y: auto;
+  list-style: none;
+  padding: 0;
+}
+
+.as-autocomplete li {
+  border-bottom: 1px solid var(--line, #334155);
+}
+
+.as-autocomplete li:last-child {
+  border-bottom: none;
+}
+
+.as-autocomplete button {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border: none;
+  color: var(--ink, #e2e8f0);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.as-autocomplete button:hover {
+  background: rgba(14, 165, 166, 0.1);
+}
+
+.as-autocomplete small {
+  color: var(--ink-soft, #64748b);
+  font-size: 0.72rem;
 }

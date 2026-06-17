@@ -28,6 +28,8 @@ export class SigmaScoreDirective implements IDirective {
   readonly description =
     'Z-score of log returns. ±2σ = significant, ±3σ = extreme. Mean-reversion at extremes.';
   readonly priority = 60;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -124,7 +126,7 @@ export class SigmaScoreDirective implements IDirective {
     }
 
     return {
-      score: Math.min(100, Math.round(score)),
+      score: Math.round(score),
       confidence: Number(Math.min(0.9, 0.3 + (absZ / 3) * 0.6).toFixed(2)),
       reason,
       signalClass,

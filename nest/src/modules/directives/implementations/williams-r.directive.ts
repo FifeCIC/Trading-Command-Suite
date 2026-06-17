@@ -14,6 +14,8 @@ export class WilliamsRDirective implements IDirective {
   readonly name = 'Williams %R Oversold';
   readonly description = 'Williams %R < -80 signals oversold reversion. > -20 signals overbought. Derived from MT5 Williams Percent Range.';
   readonly priority = 75;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { highs, lows, closes } = this.extractSeries(input);
@@ -33,7 +35,7 @@ export class WilliamsRDirective implements IDirective {
       const curling = current > prev ? 0.3 : 0;
       const score = 55 + depth * 30 + curling * 15;
       return {
-        score: Math.min(100, Math.round(score)),
+        score: Math.round(score),
         confidence: Math.min(0.9, 0.55 + depth * 0.3 + curling * 0.1),
         reason: `%R=${current.toFixed(1)} — oversold${curling ? ', curling up' : ''}`,
         signalClass: 'bullish',

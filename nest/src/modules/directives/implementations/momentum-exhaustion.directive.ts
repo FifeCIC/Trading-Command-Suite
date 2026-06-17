@@ -18,6 +18,8 @@ export class MomentumExhaustionDirective implements IDirective {
   readonly name = 'Momentum Exhaustion';
   readonly description = 'Detects fading momentum — RSI overbought + declining volume. Exit urgency signal.';
   readonly priority = 65;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -61,7 +63,7 @@ export class MomentumExhaustionDirective implements IDirective {
     }
 
     return {
-      score: Math.min(100, Math.round(score)),
+      score: Math.round(score),
       confidence: score > 50 ? Number(Math.min(0.8, 0.4 + (score / 100)).toFixed(2)) : 0.3,
       reason,
       signalClass,

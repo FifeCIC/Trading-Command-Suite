@@ -12,6 +12,8 @@ export class BullsPowerDirective implements IDirective {
   readonly name = 'Bulls Power (Elder)';
   readonly description = 'High - EMA(13). Positive values signal bullish pressure. Derived from MT5 Bulls Power.';
   readonly priority = 65;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const highs = input.bars.map((b) => b.high);

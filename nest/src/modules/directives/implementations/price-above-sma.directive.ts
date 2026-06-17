@@ -31,6 +31,8 @@ export class PriceAboveSmaDirective implements IDirective {
     'Scores price position relative to 50-period SMA. Above = bullish trend. Below = bearish.';
 
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

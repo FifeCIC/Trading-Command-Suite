@@ -9,6 +9,8 @@ export class SuperTrendDirective implements IDirective {
   readonly name = 'SuperTrend';
   readonly description = 'ATR(10) × 3.0 multiplier. Price above SuperTrend = uptrend, below = downtrend. MT5 SuperTrend.';
   readonly priority = 72;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const highs = input.bars.map((b) => b.high);

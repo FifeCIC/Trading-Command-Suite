@@ -26,6 +26,8 @@ export class LiquiditySweepDirective implements IDirective {
   readonly description =
     'Detects stop hunts via wick-ratio thresholds and engulfing confirmation.';
   readonly priority = 68;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -76,7 +78,7 @@ export class LiquiditySweepDirective implements IDirective {
     }
 
     return {
-      score: Math.min(100, Math.round(score)),
+      score: Math.round(score),
       confidence: Number(Math.min(0.85, 0.3 + sweeps.length * 0.15).toFixed(2)),
       reason,
       signalClass,

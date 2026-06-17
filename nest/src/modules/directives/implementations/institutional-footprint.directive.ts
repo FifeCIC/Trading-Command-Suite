@@ -32,6 +32,8 @@ export class InstitutionalFootprintDirective implements IDirective {
   readonly description =
     'Detects institutional-level volume and price activity patterns. Simplified footprint-only version of price-time-gap.';
   readonly priority = 70;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -122,7 +124,7 @@ export class InstitutionalFootprintDirective implements IDirective {
       directionSum > 0 ? 'bullish' : directionSum < 0 ? 'bearish' : 'neutral';
 
     return {
-      score: Math.min(100, Math.round(score)),
+      score: Math.round(score),
       confidence: Number(confidence.toFixed(2)),
       reason,
       signalClass,

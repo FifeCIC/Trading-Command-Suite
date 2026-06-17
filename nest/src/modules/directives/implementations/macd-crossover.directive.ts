@@ -25,6 +25,8 @@ export class MacdCrossoverDirective implements IDirective {
   readonly description =
     'Scores symbols where MACD line crosses above the signal line.';
   readonly priority = 80;
+  readonly maxScore = 110;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map((b) => b.close);
@@ -65,7 +67,7 @@ export class MacdCrossoverDirective implements IDirective {
       );
       const score = 70 + strength * 30;
       return {
-        score: Math.min(100, Math.round(score)),
+        score: Math.round(score),
         confidence: Math.min(0.95, 0.7 + strength * 0.2),
         reason: `Fresh bullish crossover. Histogram: ${previousHist.toFixed(3)} → ${currentHist.toFixed(3)}.`,
         signalClass: 'bullish',

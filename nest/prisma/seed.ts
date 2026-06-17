@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { PrismaClient } from '@prisma/client';
 import { seedFaq } from './seed-faq';
+import { STRATEGY_SEEDS } from '../src/modules/strategies/strategy-seeds';
 
 const prisma = new PrismaClient();
 
@@ -63,6 +64,64 @@ async function main() {
     calCount++;
   }
   console.log(`  ✓ ${calCount} symbol calibrations seeded.`);
+
+  // Seed strategies from strategy-seeds.ts
+  console.log('\nSeeding strategies…');
+  let stratCount = 0;
+  for (const seed of STRATEGY_SEEDS) {
+    const existing = await prisma.strategy.findFirst({
+      where: { name: seed.name },
+    });
+
+    let strategy;
+    if (existing) {
+      strategy = await prisma.strategy.update({
+        where: { id: existing.id },
+        data: {
+          description: seed.description,
+          config: { entryThreshold: 60, watchThreshold: 40, scope: seed.scope },
+        },
+      });
+    } else {
+      strategy = await prisma.strategy.create({
+        data: {
+          name: seed.name,
+          description: seed.description,
+          version: '1.0.0',
+          config: { entryThreshold: 60, watchThreshold: 40, scope: seed.scope },
+          active: true,
+        },
+      });
+    }
+
+    // Seed directives for this strategy
+    for (const directiveId of seed.directiveIds) {
+      const existing = await prisma.directive.findFirst({
+        where: { strategyId: strategy.id, type: directiveId },
+      });
+      if (existing) {
+        await prisma.directive.update({
+          where: { id: existing.id },
+          data: { active: true },
+        });
+      } else {
+        await prisma.directive.create({
+          data: {
+            strategyId: strategy.id,
+            name: directiveId,
+            type: directiveId,
+            weight: 1.0,
+            config: {},
+            active: true,
+          },
+        });
+      }
+    }
+
+    stratCount++;
+    console.log(`  ✓ ${seed.name} (${seed.directiveIds.length} directives)`);
+  }
+  console.log(`  ✓ ${stratCount} strategies seeded.`);
 }
 
 main()

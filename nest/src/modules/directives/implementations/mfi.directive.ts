@@ -31,6 +31,8 @@ export class MfiDirective implements IDirective {
     'Volume-weighted RSI. MFI < 20 = oversold accumulation. MFI > 80 = overbought distribution.';
 
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const highs = input.bars.map(b => b.high);

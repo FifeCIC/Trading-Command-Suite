@@ -19,6 +19,8 @@ export class BollingerPercentBDirective implements IDirective {
   readonly name = 'Bollinger %B';
   readonly description = '%B > 0.8 = overbought (bearish). %B < 0.2 = oversold (bullish). Scores reversal probability at extremes.';
   readonly priority = 60;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

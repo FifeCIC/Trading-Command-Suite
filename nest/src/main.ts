@@ -1,10 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
+import type { NextFunction, Request, Response } from 'express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { QueueConfigService } from './config/queue-config.service';
 import { LoggingValidationPipe } from './common/pipes/validation.pipe';
 import { PrismaService } from './database/prisma.service';
+import { ApiActivityService } from './modules/api-activity/api-activity.service';
 
 const logger = new Logger('Bootstrap');
 
@@ -22,6 +24,41 @@ async function bootstrap() {
 
   // ─── Create app ─────────────────────────────────────────
   const app = await NestFactory.create(AppModule);
+  const apiActivity = app.get(ApiActivityService);
+
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const startedAt = Date.now();
+    const originalWrite = res.write.bind(res);
+    const originalEnd = res.end.bind(res);
+    let responseSize = 0;
+
+    res.write = (chunk: any, ...args: any[]) => {
+      if (chunk) responseSize += Buffer.byteLength(chunk as Buffer | string);
+      return originalWrite(chunk, ...args as [any]);
+    };
+
+    res.end = (chunk: any, ...args: any[]) => {
+      if (chunk) responseSize += Buffer.byteLength(chunk as Buffer | string);
+      return originalEnd(chunk, ...args as [any]);
+    };
+
+    res.on('finish', () => {
+      const endpoint = req.originalUrl.split('?')[0];
+      if (!endpoint.startsWith('/api') || endpoint.startsWith('/api/api-activity')) {
+        return;
+      }
+
+      void apiActivity.record({
+        endpoint: endpoint.replace(/^\/api/, '') || '/',
+        method: req.method,
+        statusCode: res.statusCode,
+        durationMs: Date.now() - startedAt,
+        responseSize,
+      });
+    });
+
+    next();
+  });
 
   app.enableCors({
     origin: [

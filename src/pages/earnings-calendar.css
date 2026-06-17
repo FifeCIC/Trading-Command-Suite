@@ -1,0 +1,63 @@
+/* ── Earnings Calendar ─────────────────────────────────────── */
+
+.ec-page { max-width: 1000px; margin: 0 auto; padding: 1.5rem; color: var(--ink, #e2e8f0); }
+.ec-header h1 { margin: 0 0 0.3rem; font-size: 1.4rem; }
+.ec-subtitle { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; margin: 0 0 1rem; }
+
+/* ── Filters ──────────────────────────────────────────────── */
+.ec-filters { margin-bottom: 1rem; }
+.ec-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.ec-field label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft, #94a3b8); }
+.ec-chip-tabs { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.ec-chip {
+  padding: 0.3rem 0.65rem; font-size: 0.74rem;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--line, #1e2a45);
+  border-radius: 6px; color: var(--ink-soft, #94a3b8); cursor: pointer; transition: all 0.15s;
+}
+.ec-chip:hover { border-color: var(--accent, #0ea5a6); color: var(--ink, #e2e8f0); }
+.ec-chip-active { background: rgba(14,165,166,0.15); border-color: var(--accent, #0ea5a6); color: var(--accent, #0ea5a6); }
+
+/* ── Week sections ────────────────────────────────────────── */
+.ec-week { margin-bottom: 1.5rem; }
+.ec-week-label { font-size: 0.95rem; margin: 0 0 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+.ec-count { font-size: 0.7rem; font-weight: 500; background: rgba(255,255,255,0.06); padding: 0.15rem 0.5rem; border-radius: 999px; color: var(--ink-soft, #94a3b8); }
+
+/* ── Table ────────────────────────────────────────────────── */
+.ec-table-wrap { overflow-x: auto; border: 1px solid var(--line, #1e2a45); border-radius: 8px; }
+.ec-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.ec-table th {
+  text-align: left; font-weight: 500; color: var(--ink-soft, #94a3b8);
+  font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line, #1e2a45);
+  background: rgba(0,0,0,0.12);
+}
+.ec-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.ec-table tbody tr { cursor: pointer; transition: background 0.15s; }
+.ec-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+.ec-row-expanded { background: rgba(14,165,166,0.06) !important; }
+.ec-sym { font-weight: 700; color: var(--accent, #0ea5a6); }
+.ec-right { text-align: right; }
+.ec-mono { font-family: 'SF Mono', 'Fira Code', Consolas, monospace; font-size: 0.76rem; }
+.ec-muted { color: var(--ink-soft, #94a3b8); font-size: 0.72rem; }
+
+.ec-time-badge {
+  font-size: 0.62rem; font-weight: 600; padding: 0.1rem 0.4rem; border-radius: 999px;
+}
+.ec-time-pm { background: rgba(14,165,166,0.15); color: var(--accent, #0ea5a6); }
+.ec-time-am { background: rgba(245,158,11,0.15); color: #f59e0b; }
+
+/* ── Surprise history ────────────────────────────────────── */
+.ec-expanded {
+  padding: 0.6rem 0.75rem; margin-top: 0.4rem;
+  background: rgba(0,0,0,0.1); border: 1px solid var(--line, #1e2a45); border-radius: 8px;
+}
+.ec-surprise-label { font-size: 0.7rem; color: var(--ink-soft, #94a3b8); display: block; margin-bottom: 0.35rem; }
+.ec-surprise-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.ec-surprise-chip {
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.7rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 6px;
+}
+.ec-surp-pos { background: rgba(34,197,94,0.15); color: #22c55e; }
+.ec-surp-neg { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+@media (max-width: 600px) { .ec-table { font-size: 0.72rem; } .ec-table th, .ec-table td { padding: 0.3rem 0.4rem; } }

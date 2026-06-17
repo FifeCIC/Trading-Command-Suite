@@ -24,6 +24,8 @@ export class AtrDipDirective implements IDirective {
   readonly description =
     'Scores pullback quality using ATR-normalized distance from recent high.';
   readonly priority = 70;
+  readonly maxScore = 95;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
@@ -96,7 +98,7 @@ export class AtrDipDirective implements IDirective {
     const confidence = dipInAtrs >= 0.5 && dipInAtrs <= 2.5 ? 0.7 : 0.35;
 
     return {
-      score: Math.min(100, Math.max(0, Math.round(score))),
+      score: Math.max(0, Math.round(score)),
       confidence,
       reason,
       signalClass,

@@ -1,0 +1,18 @@
+.snp-page { max-width: 960px; margin: 0 auto; padding: 16px 8px 24px; }
+.snp-header h1 { margin: 0 0 4px; }
+.snp-header p { margin: 0; color: var(--ink-soft); font-size: 0.88rem; }
+.snp-capture-bar { display: flex; gap: 8px; margin: 16px 0; }
+.snp-capture-bar input { flex: 1; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); }
+.snp-btn { padding: 8px 16px; border: none; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; }
+.snp-btn:disabled { opacity: 0.5; }
+.snp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.snp-card { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 12px; }
+.snp-card-header { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+.snp-chip { padding: 2px 8px; border-radius: 4px; background: color-mix(in srgb, var(--accent) 15%, transparent); font-size: 11px; font-weight: 600; }
+.snp-star { font-size: 14px; }
+.snp-notes { margin: 0 0 8px; font-size: 13px; color: var(--ink-soft); }
+.snp-meta { font-size: 11px; color: var(--ink-soft); margin-bottom: 8px; }
+.snp-actions { display: flex; gap: 6px; }
+.snp-btn-sm { padding: 4px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); font-size: 12px; cursor: pointer; }
+.snp-btn-del { color: #ef4444; border-color: rgba(239,68,68,0.3); }
+.snp-empty { grid-column: 1/-1; text-align: center; padding: 32px; color: var(--ink-soft); }

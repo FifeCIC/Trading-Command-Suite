@@ -25,9 +25,9 @@ const DATA_CARDS = [
   },
   {
     id: 'providers',
-    label: 'Data Providers',
+    label: 'Sources',
     description: 'Monitor provider health, credentials, and latency',
-    link: '/data/provider-health',
+    link: '/data/sources',
     apiKey: 'providers',
     apiPath: '/api/providers/health',
   },
@@ -186,10 +186,10 @@ export default function DataAreaLandingPage() {
           </div>
         </article>
 
-        {/* Data Providers */}
-        <article className="dal-card" onClick={() => navigate('/data/provider-health')}>
+        {/* Sources */}
+        <article className="dal-card" onClick={() => navigate('/data/sources')}>
           <div className="dal-card-header">
-            <h2>Data Providers</h2>
+            <h2>Sources</h2>
             <span className="dal-link-hint">→</span>
           </div>
           <p className="dal-desc">Monitor provider health, credentials, and latency</p>
@@ -293,6 +293,41 @@ export default function DataAreaLandingPage() {
           </div>
           <div className="dal-card-footer">
             <span className="dal-neutral">Static page — no API call</span>
+          </div>
+        </article>
+        {/* API Activity */}
+        <article className="dal-card" onClick={() => navigate('/data/api-activity')}>
+          <div className="dal-card-header">
+            <h2>API Activity</h2>
+            <span className="dal-link-hint">→</span>
+          </div>
+          <p className="dal-desc">Monitor API request volume, latency, and error rates</p>
+          <div className="dal-stats">
+            <div className="dal-stat">
+              <span className="dal-stat-value">—</span>
+              <span className="dal-stat-label">Requests</span>
+            </div>
+          </div>
+          <div className="dal-card-footer">
+            <span className="dal-neutral">Real-time API telemetry</span>
+          </div>
+        </article>
+
+        {/* Cache Monitor */}
+        <article className="dal-card" onClick={() => navigate('/data/transient-caches')}>
+          <div className="dal-card-header">
+            <h2>Cache Monitor</h2>
+            <span className="dal-link-hint">→</span>
+          </div>
+          <p className="dal-desc">Inspect transient caches, hit rates, and TTL expirations</p>
+          <div className="dal-stats">
+            <div className="dal-stat">
+              <span className="dal-stat-value">—</span>
+              <span className="dal-stat-label">Entries</span>
+            </div>
+          </div>
+          <div className="dal-card-footer">
+            <span className="dal-neutral">Cache inspection & management</span>
           </div>
         </article>
       </section>

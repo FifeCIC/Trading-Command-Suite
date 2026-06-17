@@ -31,6 +31,8 @@ export class ThreeSoldiersPatternDirective implements IDirective {
     'Detects three consecutive bullish candles with higher closes — strong trend establishment.';
 
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

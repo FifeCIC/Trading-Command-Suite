@@ -17,6 +17,8 @@ export class AccumulationDistributionDirective implements IDirective {
   readonly name = 'Accumulation/Distribution';
   readonly description = 'A/D line divergence from price. Rising A/D with flat price = accumulation. Scores divergence quality.';
   readonly priority = 60;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

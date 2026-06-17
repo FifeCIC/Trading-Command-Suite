@@ -15,7 +15,7 @@
  * - Confluence bonus: when multiple high-priority directives agree, score is amplified.
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ModeService } from '../../config/mode.service';
 import { DirectivesService } from '../directives/directives.service';
@@ -27,14 +27,13 @@ import {
   MarketBar,
 } from '../directives/interfaces/directive.interface';
 
-/** Canonical directive weights from docs/CANONICAL-DIRECTIVE-REFERENCE.md */
-const STRATEGY_WEIGHTS: Record<string, number> = {
-  'rsi-oversold': 24,
-  'macd-crossover': 22,
-  'ema-structure': 20,
-  'atr-dip': 18,
-  'volume-confirmation': 16,
-};
+/**
+ * Directive maxScores replace old-style strategy weights.
+ * Each directive declares its own scoring range (maxScore).
+ * The protocol's total maximum = sum of all directive maxScores.
+ * A directive with maxScore=180 naturally carries ~2× the influence of one with maxScore=90.
+ * No artificial cap at 100 — scores flow from directive ranges.
+ */
 
 const ENTRY_THRESHOLD = 60;
 const WATCH_THRESHOLD = 40;
@@ -43,7 +42,7 @@ export interface DirectiveBreakdown {
   directiveId: string;
   name: string;
   score: number;
-  weight: number;
+  maxScore: number;
   contribution: number;
   confidence: number;
   reason: string;
@@ -70,13 +69,13 @@ export interface RankedSymbol {
 export interface RankedResult {
   mode: string;
   services: { database: boolean; queue: boolean; redis: boolean };
-  strategy: { name: string; entryThreshold: number; watchThreshold: number };
+  strategy: { name: string; entryThreshold: number; watchThreshold: number; maxPossibleScore: number; directiveCount: number };
   summary: { symbolsWithData: number; symbolsWithoutData: number; totalSymbols: number };
   ranked: RankedSymbol[];
 }
 
 @Injectable()
-export class ScoringService {
+export class ScoringService implements OnModuleInit {
   private readonly logger = new Logger(ScoringService.name);
 
   constructor(
@@ -88,21 +87,43 @@ export class ScoringService {
     private readonly calibrationService: CalibrationService,
   ) {}
 
+  /** On startup, detect directive version changes and log warnings. */
+  async onModuleInit(): Promise<void> {
+    const directives = this.directivesService.list();
+    const versionMap = new Map<string, string>();
+    for (const d of directives) {
+      versionMap.set(d.id, d.version ?? '1.0.0');
+    }
+
+    this.logger.log(
+      `Loaded ${directives.length} directives. Version snapshot: ` +
+      `${directives.length} directives across ${new Set(versionMap.values()).size} distinct versions.`,
+    );
+
+    // Log each directive with its version for audit trail
+    for (const d of directives) {
+      this.logger.debug(`  ${d.id} v${d.version ?? '1.0.0'} (maxScore=${d.maxScore})`);
+    }
+  }
+
   async rankAll(strategyId?: string, limit = 20): Promise<RankedResult> {
     const modeInfo = this.modeService.getModeInfo();
 
-    // Load strategy weights from DB if strategyId provided, else use defaults
-    let weights = { ...STRATEGY_WEIGHTS };
+    // Strategy weights are now derived from each directive's maxScore.
+    // No separate weight multipliers — the directive's scoring range IS its weight.
     let strategyName = 'Conviction Dip Accumulation';
     if (strategyId && this.prisma.isAvailable) {
       try {
         const strategy = await this.prisma.strategy.findUnique({ where: { id: strategyId } });
-        if (strategy?.config && typeof strategy.config === 'object' && 'weights' in (strategy.config as any)) {
-          weights = (strategy.config as any).weights as Record<string, number>;
-          strategyName = strategy.name;
-        }
+        if (strategy) strategyName = strategy.name;
       } catch { /* use defaults */ }
     }
+
+    // Compute protocol max from all registered directives
+    const allDirectives = this.directivesService.list();
+    const protocolMaxScore = allDirectives.reduce((sum, d) => sum + d.maxScore, 0);
+    const protocolDirectiveCount = allDirectives.length;
+
     const base = {
       mode: modeInfo.mode,
       services: {
@@ -114,6 +135,8 @@ export class ScoringService {
         name: strategyName,
         entryThreshold: ENTRY_THRESHOLD,
         watchThreshold: WATCH_THRESHOLD,
+        maxPossibleScore: protocolMaxScore,
+        directiveCount: protocolDirectiveCount,
       },
     };
 
@@ -148,22 +171,22 @@ export class ScoringService {
       };
 
       for (const [id, result] of results) {
-        const weight = weights[id] ?? 0;
         const directive = this.directivesService.get(id);
+        const maxScore = directive?.maxScore ?? 100;
         const priority = directive?.priority ?? 50;
         const signalClass = result.signalClass ?? 'neutral';
         const calibratedScore = adjustedScores.get(id) ?? result.score;
 
-        // Track weighted signal votes
-        if (signalClass === 'bullish') signalGroups.bullish += weight;
-        else if (signalClass === 'bearish') signalGroups.bearish += weight;
-        else signalGroups.neutral += weight;
+        // maxScore serves as the vote weight for signal dominance
+        if (signalClass === 'bullish') signalGroups.bullish += maxScore;
+        else if (signalClass === 'bearish') signalGroups.bearish += maxScore;
+        else signalGroups.neutral += maxScore;
 
         breakdown.push({
           directiveId: id,
           name: directive?.name ?? id,
           score: calibratedScore,
-          weight,
+          maxScore,
           contribution: 0, // computed in phase 2
           confidence: result.confidence,
           reason: result.reason,
@@ -202,7 +225,7 @@ export class ScoringService {
 
       // Rule B: Weighted signal voting — if one side outweighs the other by
       // a significant margin (2:1), suppress the minority
-      const totalWeight = breakdown.reduce((s, d) => s + d.weight, 0);
+      const totalWeight = breakdown.reduce((s, d) => s + d.maxScore, 0);
       const bullRatio = totalWeight > 0 ? signalGroups.bullish / totalWeight : 0;
       const bearRatio = totalWeight > 0 ? signalGroups.bearish / totalWeight : 0;
 
@@ -222,7 +245,10 @@ export class ScoringService {
         }
       }
 
-      // Phase 3: Compute weighted score with suppression + normalization
+      // Phase 3: Sum raw scores — no weight multipliers, no 100-cap.
+      // Each directive contributes its score directly. maxScore determines
+      // natural influence: a directive with maxScore=180 can contribute
+      // up to 180 points while one with maxScore=90 contributes up to 90.
       let totalScore = 0;
       let totalConfidence = 0;
       let weightSum = 0;
@@ -232,33 +258,34 @@ export class ScoringService {
 
       for (const d of breakdown) {
         const effectiveScore = suppressedIds.has(d.directiveId) ? 0 : d.score;
-        const contribution = (effectiveScore * d.weight) / 100;
-        d.contribution = Number(contribution.toFixed(1));
-        totalScore += contribution;
-        totalConfidence += d.confidence * d.weight;
-        weightSum += d.weight;
+        // Score IS contribution — no weight multiplier needed
+        d.contribution = Number(effectiveScore.toFixed(1));
+        totalScore += effectiveScore;
+        totalConfidence += d.confidence * d.maxScore;
+        weightSum += d.maxScore;
 
-        // Track normalization: only directives that produced a result count toward max
         if (d.score > 0 || d.confidence > 0) {
-          maxPossibleScore += d.weight;
+          maxPossibleScore += d.maxScore;
           activeDirectives++;
         }
       }
 
       // Rule C: Confluence bonus — if multiple high-priority directives agree
-      // and the dominant signal class is clear, add a small bonus
+      // and the dominant signal class is clear, add a bonus proportional to protocol scale
       const highPriorityAgreeing = (highPriorityBullish.length > 0 && bullRatio > bearRatio)
         || (highPriorityBearish.length > 0 && bearRatio > bullRatio);
 
       let confluenceBonus = 0;
       if (highPriorityAgreeing && highPriorityBullish.length + highPriorityBearish.length >= 2) {
-        confluenceBonus = 5; // +5 bonus for confluence
+        // Scale bonus relative to protocol max (was hardcoded +5 when max was 100)
+        confluenceBonus = Math.round(maxPossibleScore * 0.05);
       }
 
       const avgConfidence = weightSum > 0 ? totalConfidence / weightSum : 0;
-      const finalScore = Math.min(100, Math.max(0, totalScore + confluenceBonus));
+      // Raw total — unbounded, flows from directive score ranges
+      const finalScore = Math.max(0, totalScore + confluenceBonus);
 
-      // Normalized score: percentage of achievable maximum
+      // Normalized score: percentage of achievable maximum for THIS symbol
       const normScore = maxPossibleScore > 0
         ? Math.min(100, Math.max(0, (finalScore / maxPossibleScore) * 100))
         : 0;
@@ -415,7 +442,7 @@ export class ScoringService {
           entryThreshold: 60,
           watchThreshold: 40,
           defenseThreshold: 25,
-          weights: STRATEGY_WEIGHTS,
+          weights: {}, // Directive maxScores now define weighting — no longer stored in strategy config
         },
         active: true,
       },

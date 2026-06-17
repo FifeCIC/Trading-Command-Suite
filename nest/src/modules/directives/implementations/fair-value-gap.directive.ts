@@ -37,6 +37,8 @@ export class FairValueGapDirective implements IDirective {
   readonly description =
     '3-candlestick imbalance detection. Identifies unfilled price zones that act as magnets.';
   readonly priority = 65;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
   readonly suitability = { regimeType:'any',volatilityLevel:'high',instrumentTypes:['any'],minTimeframe:'15m',category:'microstructure' };
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -105,7 +107,7 @@ export class FairValueGapDirective implements IDirective {
     }
 
     return {
-      score: Math.min(100, Math.round(score)),
+      score: Math.round(score),
       confidence: Number(Math.min(0.8, 0.3 + unmitigatedGaps.length * 0.1).toFixed(2)),
       reason,
       signalClass,

@@ -1,57 +1,94 @@
 import { useState } from 'react';
-
-const MOCK_TRADES = [
-  { id: 't1', date: '2026-06-13', symbol: 'EURUSD', direction: 'BUY', entry: 1.0850, exit: 1.0920, qty: 0.10, pnl: 70.00, notes: 'RSI oversold bounce — mean reversion play' },
-  { id: 't2', date: '2026-06-13', symbol: 'NVDA', direction: 'BUY', entry: 870, exit: 885, qty: 5, pnl: 75.00, notes: 'Breakout above Donchian channel' },
-  { id: 't3', date: '2026-06-12', symbol: 'BTC-USD', direction: 'SELL', entry: 67200, exit: 66800, qty: 0.01, pnl: 4.00, notes: 'Short scalp — RSI overbought on 15m' },
-  { id: 't4', date: '2026-06-12', symbol: 'TSLA', direction: 'BUY', entry: 245, exit: 238, qty: 10, pnl: -70.00, notes: 'Dip buy failed — stopped out at -2.8%' },
-  { id: 't5', date: '2026-06-11', symbol: 'GBPUSD', direction: 'SELL', entry: 1.2710, exit: 1.2680, qty: 0.10, pnl: 30.00, notes: 'London breakout fade' },
-];
+import { useQuery } from '@tanstack/react-query';
+import './TradeJournalPage.css';
 
 export default function TradeJournalPage() {
-  const [trades] = useState(MOCK_TRADES);
-  const totalPnl = trades.reduce((s, t) => s + t.pnl, 0);
-  const wins = trades.filter(t => t.pnl > 0).length;
+  const [analyzing, setAnalyzing] = useState(null);
+  const [editingNote, setEditingNote] = useState(null);
+
+  const entriesQuery = useQuery({
+    queryKey: ['journal-entries'],
+    queryFn: () => fetch('/api/journal/entries').then((r) => r.json()),
+    staleTime: 30000,
+  });
+  const statsQuery = useQuery({
+    queryKey: ['journal-stats'],
+    queryFn: () => fetch('/api/journal/stats').then((r) => r.json()),
+    staleTime: 60000,
+  });
+
+  const entries = entriesQuery.data || [];
+  const stats = statsQuery.data || {};
+
+  const handleAnalyze = async (id) => {
+    setAnalyzing(id);
+    await fetch(`/api/journal/entries/${id}/analyze`, { method: 'POST' });
+    entriesQuery.refetch();
+    setAnalyzing(null);
+  };
+
+  const handleAddNote = async (id, notes) => {
+    await fetch(`/api/journal/entries/${id}/note`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes }) });
+    setEditingNote(null);
+    entriesQuery.refetch();
+  };
 
   return (
-    <div style={{ maxWidth: 1000, margin: '0 auto', padding: 20, color: '#e2e8f0' }}>
-      <header style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div><h1>Trade Journal</h1><p style={{ color: '#64748b' }}>Manual trade log and performance review</p></div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 24, fontWeight: 700, color: totalPnl >= 0 ? '#4ade80' : '#f87171' }}>{totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)}</div>
-          <div style={{ fontSize: 12, color: '#64748b' }}>{trades.length} trades · {wins} wins</div>
-        </div>
+    <div className="tj-page">
+      <header className="tj-header">
+        <h2>Trade Journal</h2>
+        <p>Review your trades, add notes, and get AI-powered insights.</p>
+        <p className="tj-privacy">AI analysis runs locally with pattern-matching rules.</p>
       </header>
-
-      <div style={{ background: '#1a1d2e', border: '1px solid #2d3040', borderRadius: 10, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #2d3040', color: '#64748b', fontSize: 11 }}>
-              <th style={{ padding: '10px 14px', textAlign: 'left' }}>Date</th>
-              <th style={{ padding: '10px 14px', textAlign: 'left' }}>Symbol</th>
-              <th style={{ padding: '10px 14px', textAlign: 'left' }}>Dir</th>
-              <th style={{ padding: '10px 14px', textAlign: 'right' }}>Entry</th>
-              <th style={{ padding: '10px 14px', textAlign: 'right' }}>Exit</th>
-              <th style={{ padding: '10px 14px', textAlign: 'right' }}>Qty</th>
-              <th style={{ padding: '10px 14px', textAlign: 'right' }}>P&L</th>
-              <th style={{ padding: '10px 14px', textAlign: 'left' }}>Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {trades.map(t => (
-              <tr key={t.id} style={{ borderBottom: '1px solid #111318' }}>
-                <td style={{ padding: '10px 14px' }}>{t.date}</td>
-                <td style={{ padding: '10px 14px', fontWeight: 600 }}>{t.symbol}</td>
-                <td style={{ padding: '10px 14px', color: t.direction === 'BUY' ? '#4ade80' : '#f87171' }}>{t.direction}</td>
-                <td style={{ padding: '10px 14px', textAlign: 'right' }}>{t.entry}</td>
-                <td style={{ padding: '10px 14px', textAlign: 'right' }}>{t.exit}</td>
-                <td style={{ padding: '10px 14px', textAlign: 'right' }}>{t.qty}</td>
-                <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 600, color: t.pnl >= 0 ? '#4ade80' : '#f87171' }}>{t.pnl >= 0 ? '+' : ''}{t.pnl.toFixed(2)}</td>
-                <td style={{ padding: '10px 14px', color: '#94a3b8', fontSize: 12, maxWidth: 250 }}>{t.notes}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {stats.totalTrades > 0 && (
+        <div className="tj-stats">
+          <div className="tj-stat-card"><span className="tj-stat-num">{stats.totalTrades}</span><span>Total</span></div>
+          <div className="tj-stat-card"><span className="tj-stat-num">{stats.winRate}</span><span>Win Rate</span></div>
+          <div className="tj-stat-card"><span className={`tj-stat-num ${stats.totalPnl >= 0 ? 'tj-green' : 'tj-red'}`}>{stats.totalPnl >= 0 ? '+' : ''}£{Math.abs(stats.totalPnl || 0).toFixed(2)}</span><span>Total P&amp;L</span></div>
+          <div className="tj-stat-card"><span className="tj-stat-num tj-green">+£{stats.avgWinPnl}</span><span>Avg Win</span></div>
+          <div className="tj-stat-card"><span className="tj-stat-num tj-red">-£{Math.abs(stats.avgLossPnl)}</span><span>Avg Loss</span></div>
+        </div>
+      )}
+      {stats.topStrength && (
+        <div className="tj-ai-summary">
+          <h3>AI Insights</h3>
+          <p><strong>Strength:</strong> {stats.topStrength}</p>
+          <p><strong>Weakness:</strong> {stats.topWeakness}</p>
+          <p><strong>Best day:</strong> {stats.bestDay} | <strong>Worst:</strong> {stats.worstDay}</p>
+        </div>
+      )}
+      <div className="tj-entries">
+        {entriesQuery.isLoading && <p>Loading journal...</p>}
+        {entries.map((entry) => (
+          <div key={entry.id} className={`tj-card ${entry.pnl >= 0 ? 'tj-win' : 'tj-loss'}`}>
+            <div className="tj-card-header">
+              <span className="tj-symbol">{entry.symbol}</span>
+              <span className={`tj-type ${entry.type === 'buy' ? 'tj-buy' : 'tj-sell'}`}>{entry.type?.toUpperCase()}</span>
+              <span className={`tj-pnl ${entry.pnl >= 0 ? 'tj-green' : 'tj-red'}`}>{entry.pnl >= 0 ? '+' : ''}£{Math.abs(entry.pnl).toFixed(2)}</span>
+            </div>
+            <div className="tj-card-body">
+              <div className="tj-details">
+                <span>Vol: {entry.volume}</span><span>Entry: £{entry.entryPrice}</span>
+                {entry.exitPrice && <span>Exit: £{entry.exitPrice}</span>}
+                <span>Held: {entry.holdDuration || '--'}</span>
+                <span>{new Date(entry.date).toLocaleDateString()}</span>
+              </div>
+              {entry.tags && <div className="tj-tags">{entry.tags.map((tag) => <span key={tag} className="tj-tag">{tag}</span>)}</div>}
+              {entry.notes && <p className="tj-note">{entry.notes}</p>}
+              {editingNote === entry.id ? (
+                <div className="tj-note-edit"><textarea id={`note-${entry.id}`} defaultValue={entry.notes} rows={2} /><button onClick={() => handleAddNote(entry.id, document.getElementById(`note-${entry.id}`).value)}>Save</button><button onClick={() => setEditingNote(null)}>Cancel</button></div>
+              ) : (
+                <button className="tj-btn-sm" onClick={() => setEditingNote(entry.id)}>+ Add Note</button>
+              )}
+            </div>
+            <div className="tj-card-footer">
+              <button className="tj-btn-ai" onClick={() => handleAnalyze(entry.id)} disabled={analyzing === entry.id}>
+                {analyzing === entry.id ? 'Analyzing...' : 'AI Review'}
+              </button>
+              {entry.aiAnalysis && <div className="tj-analysis"><pre>{entry.aiAnalysis}</pre></div>}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

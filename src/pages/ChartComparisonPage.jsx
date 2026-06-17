@@ -1,32 +1,3 @@
-import { useState, useRef, useMemo } from 'react';
-import UPlotChart from '../components/charts/UPlotChart';
-import './ChartComparisonPage.css';
-
-// ── Mock data generator (replaced with real data when API available) ──
-function generateMockCandles(count = 120) {
-  const candles = [];
-  let price = 100 + Math.random() * 50;
-  const now = Math.floor(Date.now() / 1000);
-  for (let i = count - 1; i >= 0; i--) {
-    const change = (Math.random() - 0.48) * 3;
-    const open = price;
-    const close = price + change;
-    const high = Math.max(open, close) + Math.random() * 2;
-    const low = Math.min(open, close) - Math.random() * 2;
-    const volume = Math.floor(Math.random() * 1000000 + 200000);
-    candles.push({
-      time: now - i * 3600, // hourly
-      open: +open.toFixed(2),
-      high: +high.toFixed(2),
-      low: +low.toFixed(2),
-      close: +close.toFixed(2),
-      volume,
-    });
-    price = close;
-  }
-  return candles;
-}
-
 const TIMEFRAMES = [
   { value: '1h', label: '1 Hour' },
   { value: '4h', label: '4 Hours' },
@@ -51,7 +22,7 @@ export default function ChartComparisonPage() {
   const uplotRef = useRef(null);
   const [renderTime, setRenderTime] = useState({ uplot: 0 });
 
-  const candles = useMemo(() => generateMockCandles(timeframe === '1d' ? 90 : 120), [symbol, timeframe]);
+  const candles = useMemo(() => [], [symbol, timeframe]);
 
   const toggleIndicator = (id) => {
     setActiveIndicators((prev) => {
@@ -107,6 +78,12 @@ export default function ChartComparisonPage() {
         <h2>Chart Library Comparison</h2>
         <p>Side-by-side: TradingView Lightweight Charts vs. uPlot. Same data, same symbol.</p>
       </header>
+
+      <div className="pf-unavailable">
+        <h2>Chart Data Provider Required</h2>
+        <p>Charts require a configured market data provider (e.g. Alpha Vantage or Trading212).</p>
+        <p className="pf-hint">Set ALPHA_VANTAGE_API_KEY or TRADING212_API_KEY in your .env file to enable live charts.</p>
+      </div>
 
       <div className="cc-controls">
         <label htmlFor="cc-symbol">Symbol</label>

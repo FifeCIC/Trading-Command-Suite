@@ -1,148 +1,261 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import './AlgorithmLabPage.css';
 
-const STAGES = [
-  { id: 'fetch', label: 'Fetch Data', icon: '📡' },
-  { id: 'score', label: 'Score Directives', icon: '📊' },
-  { id: 'rank', label: 'Rank Symbols', icon: '🏆' },
-  { id: 'filter', label: 'Filter Noise', icon: '🔍' },
-  { id: 'signal', label: 'Signal Out', icon: '📢' },
-];
+// ── API ────────────────────────────────────────────────────
 
-const STRATEGIES = ['Forex Mean Reversion', 'Tech Breakout', 'Conviction Dip Accumulation', 'Crypto Scalp'];
+const API = '/api/scoring/algorithm-lab';
 
-function randomStage() {
-  return ['done', 'active', 'queued', 'waiting'][Math.floor(Math.random() * 4)];
+async function fetchRuns() {
+  const res = await fetch(`${API}/runs`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
 }
 
-function randomLogEntry() {
-  const symbols = ['EURUSD', 'GBPUSD', 'NVDA', 'AAPL', 'TSLA', 'BTC-USD', 'ETH-USD', 'SPY'];
-  const sym = symbols[Math.floor(Math.random() * symbols.length)];
-  const score = Math.floor(Math.random() * 70) + 30;
-  const signal = score >= 70 ? 'BUY' : score <= 45 ? 'SELL' : 'HOLD';
-  const actions = ['scored', 'FETCH complete', 'directive run', 'ranked', 'filtered'];
-  const action = actions[Math.floor(Math.random() * actions.length)];
-  const now = new Date();
-  const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-  return `${time}  ${sym} ${action}: score ${score} → ${signal}`;
+async function fetchState() {
+  const res = await fetch(`${API}/state`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
 }
+
+// ── Component ──────────────────────────────────────────────
 
 export default function AlgorithmLabPage() {
-  const [strategyIdx, setStrategyIdx] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [stages, setStages] = useState(STAGES.map((s) => ({ ...s, status: 'waiting' })));
-  const [logs, setLogs] = useState(Array.from({ length: 8 }, randomLogEntry));
-  const [procSymbol, setProcSymbol] = useState('EURUSD');
-  const [procDir, setProcDir] = useState('rsi-oversold');
-  const [procScore, setProcScore] = useState(67);
-  const [procDone, setProcDone] = useState(6);
-  const logRef = useRef(null);
-  const [autoScroll, setAutoScroll] = useState(true);
+  const [runs, setRuns] = useState([]);
+  const [procedures, setProcedures] = useState([]);
+  const [pipelineStages, setPipelineStages] = useState([]);
+  const [lastRun, setLastRun] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [expandedRun, setExpandedRun] = useState(null);
+  const [showConcept, setShowConcept] = useState(false);
 
-  // Simulate pipeline progression
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [runsData, stateData] = await Promise.all([fetchRuns(), fetchState()]);
+      setRuns(runsData.runs ?? []);
+      setProcedures(runsData.procedures ?? stateData.procedures ?? []);
+      setPipelineStages(stateData.pipelineStages ?? []);
+      setLastRun(stateData.lastRun ?? null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    if (paused) return;
-    const interval = setInterval(() => {
-      setStages((prev) => {
-        const cur = prev.findIndex((s) => s.status === 'active' || s.status === 'queued');
-        const next = prev.map((s, i) => {
-          if (i < cur) return { ...s, status: 'done' };
-          if (i === cur) return { ...s, status: 'active' };
-          if (i === cur + 1) return { ...s, status: 'queued' };
-          return { ...s, status: 'waiting' };
-        });
-        // Cycle back
-        if (cur >= prev.length - 1) {
-          return prev.map((s) => ({ ...s, status: 'waiting' }));
-        }
-        return next.length ? next : prev.map((s) => ({ ...s, status: prev[0].status === 'done' ? 'waiting' : s.status }));
-      });
+    loadData();
+  }, [loadData]);
 
-      setProcScore((s) => Math.min(100, Math.max(20, s + (Math.random() - 0.5) * 15)));
-      setProcDone((d) => (d + 1) % 19);
-      setLogs((l) => [randomLogEntry(), ...l].slice(0, 50));
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [paused]);
+  const toggleRun = (runId) => {
+    setExpandedRun((prev) => (prev === runId ? null : runId));
+  };
 
-  // Re-run when strategy changes
-  useEffect(() => {
-    setStages(STAGES.map((s) => ({ ...s, status: 'waiting' })));
-    setLogs(Array.from({ length: 6 }, randomLogEntry));
-    setProcSymbol(['EURUSD','NVDA','AAPL','BTC-USD'][strategyIdx]);
-    setProcDir(['rsi-oversold','macd-crossover','ema-structure','atr-dip'][strategyIdx]);
-    setProcDone(0);
-  }, [strategyIdx]);
+  const formatTime = (iso) => {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch {
+      return iso;
+    }
+  };
 
-  // Auto-scroll log
-  useEffect(() => {
-    if (autoScroll && logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
-  }, [logs, autoScroll]);
+  const signalClass = (signal) => {
+    if (signal === 'bullish') return 'al-sig-bull';
+    if (signal === 'bearish') return 'al-sig-bear';
+    return 'al-sig-neutral';
+  };
 
-  const statusIcon = { done: '✅', active: '⚡', queued: '⏳', waiting: '⬜' };
-  const currentStage = stages.find((s) => s.status === 'active');
+  const signalEmoji = (signal) => {
+    if (signal === 'bullish') return '🟢';
+    if (signal === 'bearish') return '🔴';
+    return '⚪';
+  };
+
+  // ── Render ───────────────────────────────────────────────
 
   return (
     <div className="al-page">
+      {/* Header */}
       <div className="al-header">
-        <h1>Algorithm Lab</h1>
-        <button type="button" className={paused ? 'al-resume' : 'al-pause'} onClick={() => setPaused(!paused)}>
-          {paused ? '▶ RESUME' : '⏸ PAUSE'}
+        <div className="al-header-left">
+          <h1>
+            Algorithm Log
+            <span className="al-prototype-badge">PROTOTYPE</span>
+          </h1>
+          <p className="al-subtitle">
+            Monitor real scoring pipeline runs. Results are from the live ScoringService.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="al-refresh-btn"
+          onClick={loadData}
+          disabled={loading}
+        >
+          {loading ? '⏳ Running...' : '🔄 Run Scoring'}
         </button>
       </div>
 
-      {/* Strategy scroller */}
-      <div className="al-strat-nav">
-        <button type="button" onClick={() => setStrategyIdx((i) => (i - 1 + STRATEGIES.length) % STRATEGIES.length)}>◄</button>
-        <strong>{STRATEGIES[strategyIdx]}</strong>
-        <button type="button" onClick={() => setStrategyIdx((i) => (i + 1) % STRATEGIES.length)}>►</button>
-      </div>
-
-      {/* Pipeline visualization */}
-      <div className="al-pipeline">
-        <div className="al-pipe-nodes">
-          {stages.map((s, i) => (
-            <div key={s.id} className={`al-node al-node-${s.status}`}>
-              <div className="al-node-icon">{statusIcon[s.status]}</div>
-              <div className="al-node-label">{s.label}</div>
-              {i < stages.length - 1 && <div className="al-node-arrow">→</div>}
-            </div>
-          ))}
-        </div>
-        {currentStage && (
-          <div className="al-current">
-            <span>Current: <strong>{currentStage.label}</strong></span>
-            <span>Processing: <strong>{procSymbol}</strong> — {procDir} (score: {Math.round(procScore)})</span>
-            <span>{procDone} of 18 directives complete</span>
+      {/* Concept explainer */}
+      <div className="al-concept-section">
+        <button
+          type="button"
+          className="al-concept-toggle"
+          onClick={() => setShowConcept(!showConcept)}
+        >
+          {showConcept ? '▾' : '▸'} How the Algorithm Works
+        </button>
+        {showConcept && (
+          <div className="al-concept-body">
+            <p>
+              The <strong>&ldquo;algorithm&rdquo;</strong> in Trading Command Suite is{' '}
+              <em>not</em> a single monolithic algorithm. It&rsquo;s a{' '}
+              <strong>pipeline</strong>:
+            </p>
+            <ol>
+              <li>
+                <strong>Directives</strong> evaluate data — each directive is a focused
+                rule that scores one aspect of a symbol (RSI overbought, MA crossover,
+                volume spike, etc.)
+              </li>
+              <li>
+                <strong>Strategy weights</strong> aggregate directive scores into a
+                composite per-symbol score — you control which directives matter and
+                how much.
+              </li>
+              <li>
+                <strong>SEES</strong> (Scoring Engine) ranks all symbols by their
+                aggregate scores and produces BUY / SELL / HOLD signals.
+              </li>
+            </ol>
+            <p>
+              Multiple <strong>scoring procedures</strong> can run independently on
+              different symbol groups — they are separate pipelines, not one algorithm.
+              This page shows the log of procedure runs below.
+            </p>
           </div>
         )}
       </div>
 
-      {/* Decision log */}
-      <div className="al-log-header">
-        <h2>Decision Log</h2>
-        <label className="al-autoscroll">
-          <input type="checkbox" checked={autoScroll} onChange={(e) => setAutoScroll(e.target.checked)} /> Auto-scroll
-        </label>
-      </div>
-      <div
-        className="al-log"
-        ref={logRef}
-        onScroll={() => {
-          if (logRef.current) {
-            const { scrollTop, scrollHeight, clientHeight } = logRef.current;
-            setAutoScroll(scrollHeight - scrollTop - clientHeight < 20);
-          }
-        }}
-      >
-        {logs.map((entry, i) => {
-          const isBuy = entry.includes('BUY');
-          const isSell = entry.includes('SELL');
-          return (
-            <div key={i} className={`al-log-entry ${isBuy ? 'al-buy' : isSell ? 'al-sell' : ''}`}>
-              {entry}
+      {/* Pipeline stages diagram */}
+      {pipelineStages.length > 0 && (
+        <div className="al-pipeline-section">
+          <h3 className="al-section-title">Pipeline Stages</h3>
+          <div className="al-pipeline">
+            <div className="al-pipe-wrapper">
+              {pipelineStages.map((stage, i) => (
+                <div key={stage.id} className="al-pipe-node">
+                  <div className="al-node-icon">
+                    {i === 0 ? '📡' : i === 1 ? '📊' : i === 2 ? '🏆' : i === 3 ? '🔍' : '📢'}
+                  </div>
+                  <div className="al-node-label">{stage.label}</div>
+                  <div className="al-node-desc">{stage.description}</div>
+                </div>
+              ))}
             </div>
-          );
-        })}
+          </div>
+        </div>
+      )}
+
+      {/* Procedures list */}
+      {procedures.length > 0 && (
+        <div className="al-procedures-section">
+          <h3 className="al-section-title">Scoring Procedures</h3>
+          <div className="al-procedures-grid">
+            {procedures.map((proc) => (
+              <div key={proc.id} className="al-procedure-card">
+                <strong>{proc.label}</strong>
+                <span>{proc.description}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Error state */}
+      {error && (
+        <div className="al-error">
+          <p>⚠️ Failed to load scoring data: {error}</p>
+          <button type="button" className="al-cta-btn" onClick={loadData}>
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Run log */}
+      <div className="al-log-section">
+        <div className="al-log-header">
+          <h2>Activity Log {lastRun ? `(${runs.length} runs)` : ''}</h2>
+        </div>
+
+        {loading && runs.length === 0 && (
+          <div className="al-log-empty">Loading scoring runs...</div>
+        )}
+
+        {!loading && runs.length === 0 && !error && (
+          <div className="al-empty">
+            <h2>No scoring runs yet</h2>
+            <p>Click &ldquo;Run Scoring&rdquo; to execute a fresh pipeline run and see results here.</p>
+            <button type="button" className="al-cta-btn" onClick={loadData}>
+              🔄 Run First Scoring
+            </button>
+          </div>
+        )}
+
+        {runs.map((run) => (
+          <div key={run.id} className="al-run-entry">
+            <button
+              type="button"
+              className={`al-run-summary ${run.status === 'failed' ? 'al-run-failed' : ''}`}
+              onClick={() => toggleRun(run.id)}
+            >
+              <span className="al-run-time">{formatTime(run.timestamp)}</span>
+              <span className="al-run-proc">{run.procedure}</span>
+              <span className="al-run-count">
+                {run.symbolsScored} symbols
+              </span>
+              <span className="al-run-duration">{run.durationMs}ms</span>
+              <span className={`al-run-status al-status-${run.status}`}>
+                {run.status === 'completed' ? '✅' : '❌'}
+              </span>
+              <span className="al-run-expand">
+                {expandedRun === run.id ? '▾' : '▸'}
+              </span>
+            </button>
+
+            {expandedRun === run.id && run.symbols.length > 0 && (
+              <div className="al-run-detail">
+                <div className="al-run-detail-header">
+                  <span>Symbol</span>
+                  <span>Score</span>
+                  <span>Signal</span>
+                  <span>Directives</span>
+                </div>
+                {run.symbols
+                  .sort((a, b) => b.score - a.score)
+                  .map((sym) => (
+                    <div key={sym.ticker} className="al-run-symbol">
+                      <span className="al-sym-ticker">{sym.ticker}</span>
+                      <span className="al-sym-score">{sym.score}</span>
+                      <span className={`al-sym-signal ${signalClass(sym.signal)}`}>
+                        {signalEmoji(sym.signal)} {sym.signal.toUpperCase()}
+                      </span>
+                      <span className="al-sym-dirs">{sym.directiveCount} dirs</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+
+            {expandedRun === run.id && run.status === 'failed' && (
+              <div className="al-run-detail">
+                <p className="al-run-fail-msg">This run failed. Check server logs for details.</p>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

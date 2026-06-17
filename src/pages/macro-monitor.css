@@ -1,0 +1,264 @@
+/* ── Macro Monitor ─────────────────────────────────────────── */
+
+.mm-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  color: var(--ink, #e2e8f0);
+}
+
+.mm-header h1 {
+  margin: 0 0 0.3rem;
+  font-size: 1.4rem;
+}
+
+.mm-subtitle {
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.88rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+}
+
+/* ── Category tabs ────────────────────────────────────────── */
+.mm-cat-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.mm-cat-tab {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.74rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 6px;
+  color: var(--ink-soft, #94a3b8);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mm-cat-tab:hover {
+  border-color: var(--accent, #0ea5a6);
+  color: var(--ink, #e2e8f0);
+}
+
+.mm-cat-active {
+  background: rgba(14,165,166,0.15);
+  border-color: var(--accent, #0ea5a6);
+  color: var(--accent, #0ea5a6);
+}
+
+/* ── Risk bar ─────────────────────────────────────────────── */
+.mm-risk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  background: rgba(0,0,0,0.15);
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 8px;
+  margin-bottom: 1.25rem;
+}
+
+.mm-risk-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 100px;
+}
+
+.mm-risk-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft, #94a3b8);
+}
+
+.mm-risk-value {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.mm-risk-on { color: #22c55e; }
+
+/* ── Section ──────────────────────────────────────────────── */
+.mm-section {
+  margin-bottom: 1.5rem;
+}
+
+/* ── Card grid ────────────────────────────────────────────── */
+.mm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+
+.mm-card {
+  background: var(--panel, #141a2e);
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 10px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.mm-card:hover {
+  border-color: var(--accent, #0ea5a6);
+  box-shadow: 0 0 12px rgba(14,165,166,0.06);
+}
+
+.mm-card.mm-expanded {
+  grid-column: 1 / -1;
+  border-color: var(--accent, #0ea5a6);
+}
+
+/* ── Card header ──────────────────────────────────────────── */
+.mm-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.mm-card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.mm-ind-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.mm-ind-category {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft, #94a3b8);
+}
+
+.mm-impact-badge {
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.mm-impact-high   { background: rgba(239,68,68,0.18); color: #ef4444; }
+.mm-impact-medium { background: rgba(245,158,11,0.18); color: #f59e0b; }
+.mm-impact-low    { background: rgba(100,116,139,0.18); color: #94a3b8; }
+
+/* ── Values ───────────────────────────────────────────────── */
+.mm-values {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.mm-current {
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.mm-current small {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--ink-soft, #94a3b8);
+  margin-left: 0.15rem;
+}
+
+.mm-change {
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.mm-up   { color: #22c55e; }
+.mm-down { color: #ef4444; }
+.mm-flat { color: var(--ink-soft, #94a3b8); }
+
+/* ── Sparkline ────────────────────────────────────────────── */
+.mm-sparkline {
+  width: 100%;
+  height: 50px;
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+/* ── Card footer ──────────────────────────────────────────── */
+.mm-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mm-source, .mm-next {
+  font-size: 0.62rem;
+  color: var(--ink-soft, #94a3b8);
+}
+
+.mm-next {
+  font-weight: 500;
+  color: var(--accent, #0ea5a6);
+}
+
+/* ── Expanded body ────────────────────────────────────────── */
+.mm-expanded-body {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--line, #1e2a45);
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+}
+
+.mm-expanded-chart {
+  background: rgba(0,0,0,0.15);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mm-large-chart {
+  width: 100%;
+  height: 180px;
+  display: block;
+}
+
+.mm-expanded-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.mm-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.mm-meta-row span {
+  font-size: 0.7rem;
+  color: var(--ink-soft, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.mm-meta-row strong {
+  font-size: 0.78rem;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+}
+
+@media (max-width: 700px) {
+  .mm-grid { grid-template-columns: 1fr; }
+  .mm-expanded-body { grid-template-columns: 1fr; }
+}

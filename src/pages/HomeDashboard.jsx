@@ -9,7 +9,7 @@ const AREA_ICONS = {
   trading: '📈', scoring: '🎯', research: '🔬', data: '🗄️',
   watchlists: '👁️', automation: '⚙️', platforms: '🔌',
   focus: '🎯', training: '🕯️', testing: '🧪',
-  settings: '⚙️', wizard: '🧙', ops: '🛡️',
+  status: '📡', settings: '⚙️', wizard: '🧙', ops: '🛡️',
 };
 
 const SETUP_STEPS = [

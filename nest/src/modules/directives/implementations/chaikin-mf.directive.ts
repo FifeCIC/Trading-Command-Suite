@@ -8,6 +8,8 @@ export class ChaikinMfDirective implements IDirective {
   readonly name = 'Chaikin Money Flow';
   readonly description = 'Volume-weighted AD over 21 bars. CMF > 0.05 = accumulation. CMF < -0.05 = distribution. MT5 CMF.';
   readonly priority = 72;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

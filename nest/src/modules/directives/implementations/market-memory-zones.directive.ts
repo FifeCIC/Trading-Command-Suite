@@ -35,6 +35,8 @@ export class MarketMemoryZonesDirective implements IDirective {
   readonly description =
     'Identifies unfilled-order zones from impulsive moves, structure shifts, and liquidity events.';
   readonly priority = 62;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -90,7 +92,7 @@ export class MarketMemoryZonesDirective implements IDirective {
     }
 
     return {
-      score: Math.min(100, Math.round(score)),
+      score: Math.round(score),
       confidence: Number(Math.min(0.8, 0.2 + zones.length * 0.05).toFixed(2)),
       reason,
       signalClass,

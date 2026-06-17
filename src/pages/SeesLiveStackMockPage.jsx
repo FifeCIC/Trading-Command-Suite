@@ -6,15 +6,6 @@ import { exportCsv } from '../utils/exportCsv'
 import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts'
 import './sees-live-stack.css'
 
-const INITIAL_SYMBOLS = [
-  { symbol: 'AAPL', name: 'Apple Inc.', industry: 'Consumer Electronics', basePrice: 198.32, baseBias: 0.22, baseQuality: 80.5 },
-  { symbol: 'MSFT', name: 'Microsoft Corp.', industry: 'Software Infrastructure', basePrice: 462.75, baseBias: 0.34, baseQuality: 84.3 },
-  { symbol: 'NVDA', name: 'NVIDIA Corp.', industry: 'Semiconductors', basePrice: 129.14, baseBias: 0.68, baseQuality: 88.7 },
-  { symbol: 'TSLA', name: 'Tesla Inc.', industry: 'Auto Manufacturers', basePrice: 227.91, baseBias: -0.28, baseQuality: 69.4 },
-  { symbol: 'META', name: 'Meta Platforms', industry: 'Internet Content', basePrice: 513.48, baseBias: 0.16, baseQuality: 77.1 },
-  { symbol: 'AMD', name: 'Advanced Micro Devices', industry: 'Semiconductors', basePrice: 176.23, baseBias: -0.14, baseQuality: 74.5 },
-]
-
 const AUTO_INTERVAL_MS = 4000
 
 export default function SeesLiveStackMockPage() {
@@ -38,7 +29,7 @@ export default function SeesLiveStackMockPage() {
   const apiRanked = apiQuery.data?.ranked ?? []
   const useApi = apiRanked.length > 0 && apiRanked.some((r) => r.score > 0)
 
-  const localRanking = useMemo(() => buildSeesRanking(INITIAL_SYMBOLS, tick), [tick])
+  const localRanking = useMemo(() => null, [tick])
 
   // Derive display state: prefer API data when available.
   // API now returns breakdown[] per symbol with real directive scores.
@@ -99,6 +90,22 @@ export default function SeesLiveStackMockPage() {
   }, [useApi, apiRanked, apiQuery.data?.mode, apiQuery.data?.strategy, localRanking.strategy, localRanking.directives])
 
   const rankingState = apiRankingState ?? localRanking
+  if (!rankingState) {
+    return (
+      <main className="sees-page">
+        <section className="sees-header">
+          <div className="sees-title-wrap">
+            <h1>SEES Live Stack</h1>
+          </div>
+        </section>
+        <div className="pf-unavailable">
+          <h2>SEES Scoring Not Available</h2>
+          <p>The scoring pipeline requires a running backend with configured data providers.</p>
+          <p className="pf-hint">Start the NestJS API server (port 3201) and ensure market data providers are configured.</p>
+        </div>
+      </main>
+    );
+  }
   const rankedSymbols = rankingState.ranked
   const dataSource = useApi ? 'api' : 'local-direct-route'
   const hasRealBreakdown = useApi && apiRanked.some((r) => Array.isArray(r.breakdown) && r.breakdown.length > 0)

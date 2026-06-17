@@ -1,88 +1,72 @@
-import { useMemo, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { apiGet, apiPost, apiPatch } from '../core/api/client'
-import { exportCsv } from '../utils/exportCsv'
-import './trading-platforms.css'
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiGet, apiPatch } from '../core/api/client';
+import { exportCsv } from '../utils/exportCsv';
+import './trading-platforms.css';
 
-const SYMBOL_TYPES = ['stock', 'crypto', 'forex']
+const SYMBOL_TYPES = ['stock', 'crypto', 'forex'];
 
 export default function ActiveSymbolsPage() {
-  const queryClient = useQueryClient()
-  const [showAdd, setShowAdd] = useState(false)
-  const [filterActive, setFilterActive] = useState('all')
-  const [filterType, setFilterType] = useState('all')
-  const [search, setSearch] = useState('')
-  const [sortKey, setSortKey] = useState('ticker')
-  const [sortDir, setSortDir] = useState('asc')
-  const [form, setForm] = useState({ ticker: '', name: '', exchange: '', type: 'stock' })
-  const [adding, setAdding] = useState(false)
-  const [error, setError] = useState(null)
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [filterActive, setFilterActive] = useState('all');
+  const [filterType, setFilterType] = useState('all');
+  const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState('ticker');
+  const [sortDir, setSortDir] = useState('asc');
+  const [error, setError] = useState(null);
 
   const symbols = useQuery({
     queryKey: ['active-symbols'],
     queryFn: () => apiGet('/api/symbols'),
     refetchInterval: 30_000,
-  })
+  });
 
-  const syms = Array.isArray(symbols.data?.symbols) ? symbols.data.symbols : []
-  const mode = symbols.data?.mode ?? '...'
+  const syms = Array.isArray(symbols.data?.symbols) ? symbols.data.symbols : [];
+  const mode = symbols.data?.mode ?? '...';
 
   const filtered = useMemo(() => {
-    let list = [...syms]
-
-    if (filterActive === 'active') list = list.filter((s) => s.active !== false)
-    if (filterActive === 'inactive') list = list.filter((s) => s.active === false)
-    if (filterType !== 'all') list = list.filter((s) => s.type === filterType)
+    let list = [...syms];
+    if (filterActive === 'active') list = list.filter((s) => s.active !== false);
+    if (filterActive === 'inactive') list = list.filter((s) => s.active === false);
+    if (filterType !== 'all') list = list.filter((s) => s.type === filterType);
     if (search) {
-      const q = search.toLowerCase()
-      list = list.filter((s) => s.ticker.toLowerCase().includes(q) || s.name.toLowerCase().includes(q))
+      const q = search.toLowerCase();
+      list = list.filter((s) => s.ticker.toLowerCase().includes(q) || s.name.toLowerCase().includes(q));
     }
-
     list.sort((a, b) => {
-      const aVal = (a[sortKey] ?? '').toString().toLowerCase()
-      const bVal = (b[sortKey] ?? '').toString().toLowerCase()
-      return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
-    })
+      const aVal = (a[sortKey] ?? '').toString().toLowerCase();
+      const bVal = (b[sortKey] ?? '').toString().toLowerCase();
+      return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    });
+    return list;
+  }, [syms, filterActive, filterType, search, sortKey, sortDir]);
 
-    return list
-  }, [syms, filterActive, filterType, search, sortKey, sortDir])
-
-  const activeCount = syms.filter((s) => s.active !== false).length
-  const inactiveCount = syms.filter((s) => s.active === false).length
-
-  function toggleSort(key) {
-    if (sortKey === key) { setSortDir((d) => (d === 'asc' ? 'desc' : 'asc')) }
-    else { setSortKey(key); setSortDir('asc') }
-  }
-  function sortIcon(key) { return sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕' }
+  const activeCount = syms.filter((s) => s.active !== false).length;
+  const inactiveCount = syms.length - activeCount;
 
   async function toggleActive(sym) {
+    setError(null);
     try {
-      await apiPatch(`/api/symbols/${sym.id}`, { active: !(sym.active !== false) })
-      queryClient.invalidateQueries({ queryKey: ['active-symbols'] })
+      await apiPatch(`/api/symbols/${sym.id}`, { active: !(sym.active !== false) });
+      queryClient.invalidateQueries({ queryKey: ['active-symbols'] });
     } catch (e) {
-      setError(`Failed to update ${sym.ticker}: ${e.message}`)
+      setError(`Failed to update ${sym.ticker}: ${e.message}`);
     }
   }
 
-  async function addSymbol(e) {
-    e.preventDefault()
-    if (!form.ticker || !form.name || !form.exchange) {
-      setError('Ticker, name, and exchange are required.')
-      return
+  function toggleSort(key) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
     }
-    setAdding(true)
-    setError(null)
-    try {
-      await apiPost('/api/symbols', form)
-      setForm({ ticker: '', name: '', exchange: '', type: 'stock' })
-      setShowAdd(false)
-      queryClient.invalidateQueries({ queryKey: ['active-symbols'] })
-    } catch (e) {
-      setError(`Failed to add symbol: ${e.message}`)
-    } finally {
-      setAdding(false)
-    }
+  }
+
+  function sortIcon(key) {
+    return sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
   }
 
   return (
@@ -102,7 +86,7 @@ export default function ActiveSymbolsPage() {
       )}
 
       <section className="tp-card tp-controls-card">
-        <h3>Filters & Actions</h3>
+        <h3>Filters &amp; Actions</h3>
         <div className="tp-controls-grid" style={{ alignItems: 'end' }}>
           <label className="tp-control">
             <span>Status</span>
@@ -121,66 +105,25 @@ export default function ActiveSymbolsPage() {
           </label>
           <label className="tp-control">
             <span>Search</span>
-            <input type="text" placeholder="Ticker or name..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filter..." />
           </label>
-          <button type="button" className="btn btn-primary" onClick={() => setShowAdd(!showAdd)}>
-            {showAdd ? 'Cancel' : '+ Add Symbol'}
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => navigate('/watchlists/add-symbol')}
+            style={{ padding: '8px 20px', fontWeight: 600 }}
+          >
+            ➕ Add Symbol
           </button>
           <button
             type="button"
             className="btn"
-            onClick={() => {
-              const columns = [
-                { key: 'ticker', label: 'Ticker' },
-                { key: 'name', label: 'Name' },
-                { key: 'exchange', label: 'Exchange' },
-                { key: 'type', label: 'Type' },
-                {
-                  key: 'active',
-                  label: 'Active',
-                  format: (v) => (v !== false ? 'Yes' : 'No'),
-                },
-              ]
-              const comments = [
-                `Total symbols: ${syms.length}`,
-                `Mode: ${mode}`,
-              ]
-              exportCsv(filtered, columns, 'active-symbols.csv', { comments })
-            }}
+            onClick={() => exportCsv(filtered, ['ticker', 'name', 'exchange', 'type'], 'active-symbols.csv')}
           >
             Export CSV
           </button>
         </div>
       </section>
-
-      {showAdd && (
-        <section className="tp-card">
-          <h3>Add New Symbol</h3>
-          <form onSubmit={addSymbol} className="tp-controls-grid" style={{ alignItems: 'end' }}>
-            <label className="tp-control">
-              <span>Ticker *</span>
-              <input type="text" value={form.ticker} onChange={(e) => setForm({ ...form, ticker: e.target.value.toUpperCase() })} placeholder="AAPL" maxLength={20} />
-            </label>
-            <label className="tp-control">
-              <span>Name *</span>
-              <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Apple Inc." maxLength={200} />
-            </label>
-            <label className="tp-control">
-              <span>Exchange *</span>
-              <input type="text" value={form.exchange} onChange={(e) => setForm({ ...form, exchange: e.target.value })} placeholder="NASDAQ" maxLength={50} />
-            </label>
-            <label className="tp-control">
-              <span>Type</span>
-              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-                {SYMBOL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </label>
-            <button type="submit" className="btn btn-primary" disabled={adding}>
-              {adding ? 'Adding...' : 'Add Symbol'}
-            </button>
-          </form>
-        </section>
-      )}
 
       <section className="tp-card tp-comparison-card">
         <h3>Symbols ({filtered.length})</h3>
@@ -198,7 +141,7 @@ export default function ActiveSymbolsPage() {
             </thead>
             <tbody>
               {filtered.map((sym) => {
-                const isActive = sym.active !== false
+                const isActive = sym.active !== false;
                 return (
                   <tr key={sym.id}>
                     <td><strong>{sym.ticker}</strong></td>
@@ -221,12 +164,12 @@ export default function ActiveSymbolsPage() {
                       </button>
                     </td>
                   </tr>
-                )
+                );
               })}
             </tbody>
           </table>
         </div>
       </section>
     </div>
-  )
+  );
 }

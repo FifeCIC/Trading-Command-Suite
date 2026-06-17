@@ -1,0 +1,106 @@
+/* Order Testing — order-test.css */
+
+.ot-page { max-width: 1000px; }
+
+.ot-account-select {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ot-account-btn {
+  padding: 0.3rem 0.75rem;
+  background: transparent;
+  border: 1px solid var(--line, #334155);
+  border-radius: 6px;
+  color: var(--ink, #e2e8f0);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.ot-account-btn--active {
+  background: rgba(14,165,166,0.15);
+  border-color: #0ea5a6;
+  color: #0ea5a6;
+}
+
+.ot-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.ot-table th {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 2px solid var(--line, #334155);
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.ot-table td {
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid var(--line, #334155);
+  vertical-align: top;
+}
+
+.ot-row--ok { background: rgba(34,197,94,0.03); }
+.ot-row--fail { background: rgba(239,68,68,0.03); }
+
+.ot-method {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.ot-method--GET { background: rgba(34,197,94,0.12); color: #22c55e; }
+.ot-method--POST { background: rgba(14,165,166,0.12); color: #0ea5a6; }
+.ot-method--DELETE { background: rgba(239,68,68,0.12); color: #ef4444; }
+
+.ot-path {
+  font-family: 'Consolas', monospace;
+  font-size: 0.75rem;
+  color: var(--ink-soft, #94a3b8);
+}
+
+.ot-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.ot-badge--ok { background: rgba(34,197,94,0.1); color: #22c55e; }
+.ot-badge--fail { background: rgba(239,68,68,0.1); color: #ef4444; }
+.ot-badge--idle { background: rgba(148,163,184,0.1); color: #94a3b8; }
+
+.ot-detail {
+  margin-bottom: 0.5rem;
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+}
+
+.ot-detail summary {
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--ink, #e2e8f0);
+}
+
+.ot-pre {
+  margin: 0;
+  padding: 0.5rem 0.6rem;
+  background: rgba(0,0,0,0.2);
+  font-size: 0.72rem;
+  font-family: 'Consolas', monospace;
+  color: var(--ink-soft, #94a3b8);
+  max-height: 300px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

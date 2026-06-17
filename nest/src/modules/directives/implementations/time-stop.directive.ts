@@ -14,6 +14,8 @@ export class TimeStopDirective implements IDirective {
   readonly name = 'Time Stop';
   readonly description = 'Position age exit signal. Longer hold = higher exit urgency.';
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     // Time stop is contextual — needs position open time which isn't in bars
@@ -45,7 +47,7 @@ export class TimeStopDirective implements IDirective {
     }
 
     return {
-      score: Math.min(100, Math.round(score)),
+      score: Math.round(score),
       confidence: 0.4,
       reason,
       signalClass: 'neutral',

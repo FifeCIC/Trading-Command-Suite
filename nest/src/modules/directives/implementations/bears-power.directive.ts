@@ -9,6 +9,8 @@ export class BearsPowerDirective implements IDirective {
   readonly name = 'Bears Power (Elder)';
   readonly description = 'Low - EMA(13). Negative values signal bearish pressure. Derived from MT5 Bears Power.';
   readonly priority = 65;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const lows = input.bars.map((b) => b.low);

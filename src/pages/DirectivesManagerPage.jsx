@@ -101,8 +101,13 @@ export default function DirectivesManagerPage() {
                           type="button"
                           className="directive-primary"
                           onClick={() => {
-                            selectDirective(item.id)
-                            toggleRow(item.id)
+                            if (selected?.id === item.id) {
+                              // Clicking already-selected row: toggle expand/collapse
+                              toggleRow(item.id);
+                            } else {
+                              // Clicking new row: select it (which auto-expands)
+                              selectDirective(item.id);
+                            }
                           }}
                           aria-expanded={expanded}
                         >

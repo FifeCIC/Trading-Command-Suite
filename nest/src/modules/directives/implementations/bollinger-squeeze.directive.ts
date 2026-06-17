@@ -23,6 +23,8 @@ export class BollingerBandSqueezeDirective implements IDirective {
   readonly name = 'Bollinger Band Squeeze';
   readonly description = 'Detects bandwidth at multi-period low — signals imminent volatility expansion.';
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

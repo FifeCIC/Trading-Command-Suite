@@ -1,0 +1,314 @@
+/* ── Pattern Scanner ───────────────────────────────────────── */
+
+.ps-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  color: var(--ink, #e2e8f0);
+}
+
+.ps-header h1 {
+  margin: 0 0 0.3rem;
+  font-size: 1.4rem;
+}
+
+.ps-subtitle {
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.88rem;
+  margin: 0 0 1rem;
+}
+
+.ps-subtitle strong { color: var(--accent, #0ea5a6); }
+
+/* ── Controls ─────────────────────────────────────────────── */
+.ps-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  align-items: flex-end;
+}
+
+.ps-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.ps-field label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft, #94a3b8);
+}
+
+.ps-field select {
+  background: var(--panel, #141a2e);
+  color: var(--ink, #e2e8f0);
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 6px;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.82rem;
+}
+
+.ps-type-tabs {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.ps-type-tab {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 6px;
+  color: var(--ink-soft, #94a3b8);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ps-type-tab:hover {
+  border-color: var(--accent, #0ea5a6);
+  color: var(--ink, #e2e8f0);
+}
+
+.ps-type-active {
+  background: rgba(14, 165, 166, 0.15);
+  border-color: var(--accent, #0ea5a6);
+  color: var(--accent, #0ea5a6);
+}
+
+/* ── Sections ─────────────────────────────────────────────── */
+.ps-section {
+  margin-bottom: 2rem;
+}
+
+.ps-section h2 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ps-hint {
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.8rem;
+  margin: 0 0 0.75rem;
+}
+
+.ps-count {
+  font-size: 0.7rem;
+  font-weight: 500;
+  background: rgba(255,255,255,0.06);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  color: var(--ink-soft, #94a3b8);
+}
+
+/* ── Chart pattern grid ───────────────────────────────────── */
+.ps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+
+.ps-card {
+  background: var(--panel, #141a2e);
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 10px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.ps-card:hover {
+  border-color: var(--accent, #0ea5a6);
+  box-shadow: 0 0 12px rgba(14,165,166,0.06);
+}
+
+.ps-card.ps-expanded {
+  grid-column: 1 / -1;
+  border-color: var(--accent, #0ea5a6);
+}
+
+/* ── Card top ─────────────────────────────────────────────── */
+.ps-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.ps-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.ps-type-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.ps-bullish { background: rgba(34,197,94,0.18); color: #22c55e; }
+.ps-bearish { background: rgba(239,68,68,0.18); color: #ef4444; }
+.ps-neutral  { background: rgba(245,158,11,0.18); color: #f59e0b; }
+
+.ps-type-sm { font-size: 0.58rem; padding: 0.08rem 0.35rem; }
+
+.ps-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ps-confidence {
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.ps-conf-high { color: #22c55e; }
+.ps-conf-mid  { color: #f59e0b; }
+.ps-conf-low  { color: #ef4444; }
+
+/* ── Sparkline ────────────────────────────────────────────── */
+.ps-sparkline {
+  width: 100%;
+  height: 55px;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+/* ── Card meta ────────────────────────────────────────────── */
+.ps-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ps-category-chip {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  color: var(--ink-soft, #94a3b8);
+}
+
+.ps-reliability, .ps-bar-loc {
+  font-size: 0.65rem;
+  color: var(--ink-soft, #94a3b8);
+}
+
+/* ── Expanded body ────────────────────────────────────────── */
+.ps-expanded-body {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--line, #1e2a45);
+}
+
+.ps-desc {
+  font-size: 0.78rem;
+  color: var(--ink-soft, #94a3b8);
+  margin: 0 0 0.5rem;
+  line-height: 1.5;
+}
+
+.ps-expanded-chart {
+  background: rgba(0,0,0,0.15);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ps-large-chart {
+  width: 100%;
+  height: 180px;
+  display: block;
+}
+
+/* ── Candlestick grid ─────────────────────────────────────── */
+.ps-candle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.5rem;
+}
+
+.ps-candle-card {
+  background: rgba(0,0,0,0.12);
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 8px;
+  padding: 0.5rem;
+  transition: border-color 0.2s;
+}
+
+.ps-candle-card.ps-detected {
+  border-color: rgba(14,165,166,0.3);
+  background: rgba(14,165,166,0.05);
+}
+
+.ps-candle-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
+}
+
+.ps-candle-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ps-dot-dim { opacity: 0.3; }
+
+.ps-candle-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ps-candle-spark {
+  width: 100%;
+  height: 35px;
+  display: block;
+}
+
+.ps-candle-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.2rem;
+}
+
+.ps-detected-tag {
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 0.08rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(34,197,94,0.2);
+  color: #22c55e;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 600px) {
+  .ps-grid { grid-template-columns: 1fr; }
+  .ps-candle-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+}

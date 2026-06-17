@@ -1,0 +1,241 @@
+/* ── Technical Indicators ──────────────────────────────────── */
+
+.ti-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  color: var(--ink, #e2e8f0);
+}
+
+.ti-header h1 {
+  margin: 0 0 0.3rem;
+  font-size: 1.4rem;
+}
+
+.ti-subtitle {
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.88rem;
+  margin: 0 0 1rem;
+}
+
+.ti-subtitle strong {
+  color: var(--accent, #0ea5a6);
+}
+
+/* ── Controls ─────────────────────────────────────────────── */
+.ti-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  align-items: flex-end;
+}
+
+.ti-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.ti-field label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft, #94a3b8);
+}
+
+.ti-field select {
+  background: var(--panel, #141a2e);
+  color: var(--ink, #e2e8f0);
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 6px;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.82rem;
+}
+
+.ti-cat-tabs {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.ti-cat-tab {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.72rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 6px;
+  color: var(--ink-soft, #94a3b8);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: capitalize;
+}
+
+.ti-cat-tab:hover {
+  border-color: var(--accent, #0ea5a6);
+  color: var(--ink, #e2e8f0);
+}
+
+.ti-cat-active {
+  background: rgba(14, 165, 166, 0.15);
+  border-color: var(--accent, #0ea5a6);
+  color: var(--accent, #0ea5a6);
+}
+
+/* ── Section ──────────────────────────────────────────────── */
+.ti-section {
+  margin-bottom: 2rem;
+}
+
+/* ── Card grid ────────────────────────────────────────────── */
+.ti-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+
+.ti-card {
+  background: var(--panel, #141a2e);
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 10px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+
+.ti-card:hover {
+  border-color: var(--accent, #0ea5a6);
+  box-shadow: 0 0 12px rgba(14, 165, 166, 0.07);
+  transform: translateY(-1px);
+}
+
+.ti-card.ti-expanded {
+  grid-column: 1 / -1;
+  border-color: var(--accent, #0ea5a6);
+  box-shadow: 0 0 18px rgba(14, 165, 166, 0.12);
+}
+
+/* ── Card header ──────────────────────────────────────────── */
+.ti-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.ti-card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.ti-ind-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.ti-ind-full {
+  font-size: 0.68rem;
+  color: var(--ink-soft, #94a3b8);
+}
+
+.ti-signal-dot {
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.ti-buy { color: #22c55e; }
+.ti-sell { color: #ef4444; }
+.ti-neutral { color: #64748b; }
+
+/* ── Sparkline ────────────────────────────────────────────── */
+.ti-sparkline {
+  width: 100%;
+  height: 60px;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+/* ── Card footer ──────────────────────────────────────────── */
+.ti-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ti-category-chip {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  color: var(--ink-soft, #94a3b8);
+}
+
+.ti-value {
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent, #0ea5a6);
+}
+
+.ti-period {
+  font-size: 0.65rem;
+  color: var(--ink-soft, #94a3b8);
+  margin-left: auto;
+}
+
+/* ── Expanded body ────────────────────────────────────────── */
+.ti-expanded-body {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line, #1e2a45);
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+}
+
+.ti-expanded-chart {
+  background: rgba(0,0,0,0.15);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ti-large-chart {
+  width: 100%;
+  height: 200px;
+  display: block;
+}
+
+.ti-expanded-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ti-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.ti-meta-row span {
+  font-size: 0.72rem;
+  color: var(--ink-soft, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.ti-meta-row strong {
+  font-size: 0.8rem;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+}
+
+@media (max-width: 700px) {
+  .ti-grid { grid-template-columns: 1fr; }
+  .ti-expanded-body { grid-template-columns: 1fr; }
+}

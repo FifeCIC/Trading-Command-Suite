@@ -27,6 +27,8 @@ export class MarketEntropyDirective implements IDirective {
   readonly description =
     'Shannon entropy of price distribution. Low entropy = trending, high = chaotic.';
   readonly priority = 65;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -83,7 +85,7 @@ export class MarketEntropyDirective implements IDirective {
     }
 
     return {
-      score: Math.min(100, Math.round(score)),
+      score: Math.round(score),
       confidence: Number((0.5 + Math.abs(entropyDelta)).toFixed(2)),
       reason,
       signalClass,

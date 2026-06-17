@@ -27,6 +27,8 @@ export class RangeContractionDirective implements IDirective {
   readonly description =
     'Detects compression zones. Maturity grading for coiled-spring breakout signals.';
   readonly priority = 58;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -92,7 +94,7 @@ export class RangeContractionDirective implements IDirective {
     const signalClass = trendBias;
 
     return {
-      score: Math.min(100, Math.round(score)),
+      score: Math.round(score),
       confidence: Number(Math.min(0.8, 0.3 + maturity * 0.5).toFixed(2)),
       reason: `Range contracted to ${(contractionRatio * 100).toFixed(0)}% of max. ${consecutiveContractions} bars compressing. Maturity: ${(maturity * 100).toFixed(0)}%. ${trendBias === 'bullish' ? 'Upward' : 'Downward'} breakout bias.`,
       signalClass,

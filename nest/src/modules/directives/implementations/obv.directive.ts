@@ -28,6 +28,8 @@ export class ObvDirective implements IDirective {
     'Cumulative volume indicator. OBV confirming price = accumulation. OBV diverging = potential reversal.';
 
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

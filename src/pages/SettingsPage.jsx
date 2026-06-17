@@ -17,6 +17,8 @@ export default function SettingsPage() {
   const themeMode = useUiStore((state) => state.themeMode);
   const setThemeMode = useUiStore((state) => state.setThemeMode);
   const themePack = useUiStore((state) => state.themePack);
+  const showNavIcons = useUiStore((state) => state.showNavIcons);
+  const setShowNavIcons = useUiStore((state) => state.setShowNavIcons);
   return (
     <div className="settings-page">
       <header className="settings-header">
@@ -72,6 +74,73 @@ export default function SettingsPage() {
         </SettingRow>
         <SettingRow label="Pack" hint="Active theme pack ID.">
           <code>{themePack}</code>
+        </SettingRow>
+        <SettingRow label="Navigation Icons" hint="Show category icons on the right side of sidebar menu items.">
+          <div className="inline-actions">
+            <button
+              type="button"
+              className={showNavIcons ? 'cta' : ''}
+              onClick={() => setShowNavIcons(true)}
+            >
+              ◉ Show
+            </button>
+            <button
+              type="button"
+              className={!showNavIcons ? 'cta' : ''}
+              onClick={() => setShowNavIcons(false)}
+            >
+              ✕ Hide
+            </button>
+          </div>
+        </SettingRow>
+      </section>
+
+      <section className="settings-section">
+        <h2>Data Retention</h2>
+        <SettingRow label="Analytics Queue Purge" hint="How often local analytics events are purged (hours).">
+          <code>24</code>
+        </SettingRow>
+        <SettingRow label="Cache TTL" hint="Default cache time-to-live for API responses (seconds).">
+          <code>30</code>
+        </SettingRow>
+        <SettingRow label="Log Retention" hint="Number of days to keep activity and audit logs.">
+          <code>90</code>
+        </SettingRow>
+      </section>
+
+      <section className="settings-section">
+        <h2>Display</h2>
+        <SettingRow label="Default Timeframe" hint="Default chart timeframe (1h, 4h, 1d, 1w).">
+          <code>1h</code>
+        </SettingRow>
+        <SettingRow label="Decimal Places" hint="Number of decimal places for price display.">
+          <code>2</code>
+        </SettingRow>
+        <SettingRow label="Compact Mode" hint="Reduce padding and font sizes for higher information density.">
+          <code>off</code>
+        </SettingRow>
+      </section>
+
+      <section className="settings-section">
+        <h2>Performance</h2>
+        <SettingRow label="Polling Interval" hint="Default polling interval for live data panels (seconds).">
+          <code>30</code>
+        </SettingRow>
+        <SettingRow label="Chart Animation" hint="Enable animations on chart components.">
+          <code>on</code>
+        </SettingRow>
+      </section>
+
+      <section className="settings-section">
+        <h2>Security</h2>
+        <SettingRow label="CORS Origin" hint="Allowed cross-origin request origin.">
+          <code>http://localhost:5173</code>
+        </SettingRow>
+        <SettingRow label="Localhost Only" hint="Restrict API to localhost connections.">
+          <code>off</code>
+        </SettingRow>
+        <SettingRow label="API Key Rotation" hint="Days until API key expiry warning.">
+          <code>90</code>
         </SettingRow>
       </section>
 

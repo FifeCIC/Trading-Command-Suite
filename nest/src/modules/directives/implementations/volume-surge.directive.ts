@@ -25,6 +25,8 @@ export class VolumeSurgeDirective implements IDirective {
   readonly description = 'Detects extreme volume spikes (>3x average). Surge on up day = accumulation, on down day = capitulation.';
 
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const volumes = input.bars.map(b => b.volume);

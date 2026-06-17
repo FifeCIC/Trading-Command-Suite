@@ -22,6 +22,8 @@ export class Mt5HaramiDirective implements IDirective {
   readonly name = 'MT5 Harami Pattern (with RSI confirmation)';
   readonly description = 'MT5-sourced harami reversal pattern with RSI(37) confirmation.';
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

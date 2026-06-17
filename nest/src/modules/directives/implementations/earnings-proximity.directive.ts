@@ -20,6 +20,8 @@ export class EarningsProximityDirective implements IDirective {
   readonly name = 'Earnings Proximity';
   readonly description = 'Scores based on distance to earnings. Pre-earnings = uncertainty, post-earnings = volatility.';
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     // Check for earnings date on the input symbol data

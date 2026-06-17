@@ -39,8 +39,8 @@ export default function CacheMonitorPage() {
     <div className="cm-page">
       <h1>Cache Monitor</h1>
       <p className="cm-subtitle">
-        In-memory server cache for provider API responses. Reduces external calls and rate limit pressure.
-        Client-side caching (TanStack Query) is separate.
+        Intelligent in-memory cache for expensive provider and multi-table responses. Keep short-lived
+        entries visible, prune stale data, and avoid caching simple database reads that are already cheap.
       </p>
 
       <div className="cm-summary">
@@ -48,6 +48,11 @@ export default function CacheMonitorPage() {
         <div className="cm-stat"><strong>{stats?.totalHits ?? '—'}</strong><span>Hits</span></div>
         <div className="cm-stat"><strong>{stats?.totalMisses ?? '—'}</strong><span>Misses</span></div>
         <div className="cm-stat"><strong>{stats?.hitRate ?? '—'}%</strong><span>Hit Rate</span></div>
+      </div>
+
+      <div className="cm-policy">
+        <strong>Policy:</strong> cache complex joins, provider responses, and repeated requests within short windows.
+        Expiry should follow the most volatile value in the response; low-activity cache warming can be added by queue workers.
       </div>
 
       <div className="cm-actions">

@@ -1,0 +1,28 @@
+.th-page { padding: 1.5rem; color: #d1d5db; max-width: 1100px; }
+.th-header { margin-bottom: 1rem; }
+.th-header h2 { margin: 0 0 0.25rem; color: #f1f5f9; font-size: 1.3rem; }
+.th-header p { margin: 0; color: #94a3b8; font-size: 0.85rem; }
+.th-controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
+.th-filter-group { display: flex; flex-direction: column; gap: 0.3rem; }
+.th-filter-group label { font-size: 0.75rem; color: #94a3b8; }
+.th-btn-group { display: flex; gap: 0.25rem; }
+.th-btn { padding: 0.3rem 0.75rem; border-radius: 6px; border: 1px solid #2d3040; background: #0f172a; color: #94a3b8; font-size: 0.78rem; cursor: pointer; }
+.th-btn.active { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+.th-export-btn { padding: 0.4rem 0.9rem; border-radius: 6px; border: 1px solid #2d3040; background: #0f172a; color: #94a3b8; font-size: 0.8rem; cursor: pointer; }
+.th-export-btn:disabled { opacity: 0.3; cursor: default; }
+.th-summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem; margin-bottom: 1.5rem; }
+.th-sum-card { padding: 0.6rem; border: 1px solid #1e2030; border-radius: 8px; background: #0d1117; display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
+.th-sum-num { font-size: 1.1rem; font-weight: 700; color: #e2e8f0; }
+.th-sum-card span:last-child { font-size: 0.7rem; color: #64748b; }
+.th-green { color: #22c55e !important; }
+.th-red { color: #ef4444 !important; }
+.th-muted { color: #64748b; }
+.th-loading { font-size: 0.85rem; color: #94a3b8; }
+.th-table-wrap { overflow-x: auto; }
+.th-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.th-table th { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid #1e293b; color: #94a3b8; font-size: 0.72rem; text-transform: uppercase; white-space: nowrap; }
+.th-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid #1e2030; }
+.th-time { font-size: 0.75rem; color: #94a3b8; white-space: nowrap; }
+.th-symbol { font-weight: 600; color: #e2e8f0; }
+.th-buy { color: #22c55e; font-weight: 600; }
+.th-sell { color: #ef4444; font-weight: 600; }

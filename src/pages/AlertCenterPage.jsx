@@ -1,24 +1,30 @@
 import { useState } from 'react';
-
-const MOCK_ALERTS = [
-  { id: 'a1', time: '14:32', type: 'signal', title: 'EURUSD Entry Signal', detail: 'Score 87 — RSI oversold bounce confirmed', read: false },
-  { id: 'a2', time: '14:15', type: 'drawdown', title: 'Portfolio Drawdown 8.2%', detail: 'Approaching 10% warning threshold', read: false },
-  { id: 'a3', time: '13:58', type: 'daily', title: 'Daily Limit: Alpaca 193/200', detail: '7 calls remaining this minute', read: true },
-  { id: 'a4', time: '13:42', type: 'backtest', title: 'NVDA Backtest Complete', detail: '5yr, 68% win rate, +24% annual', read: true },
-  { id: 'a5', time: '12:30', type: 'system', title: 'MT5 Bridge Reconnected', detail: 'ICMarkets-Demo, account 12345', read: true },
-];
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '../core/api/client';
 
 const TYPE_COLORS = { signal: '#4ade80', drawdown: '#f87171', daily: '#fbbf24', backtest: '#60a5fa', system: '#94a3b8' };
 
 export default function AlertCenterPage() {
-  const [alerts, setAlerts] = useState(MOCK_ALERTS);
   const [filter, setFilter] = useState('all');
+  const [readIds, setReadIds] = useState(new Set());
 
-  const filtered = filter === 'all' ? alerts : alerts.filter(a => a.type === filter);
-  const unread = alerts.filter(a => !a.read).length;
+  const alertsQuery = useQuery({
+    queryKey: ['alerts'],
+    queryFn: () => apiGet('/api/alerts/active').catch(() => []),
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+  });
 
-  const markRead = (id) => setAlerts(prev => prev.map(a => a.id === id ? { ...a, read: true } : a));
-  const markAllRead = () => setAlerts(prev => prev.map(a => ({ ...a, read: true })));
+  const alerts = (alertsQuery.data || []).map((a) => ({
+    ...a,
+    read: readIds.has(a.id),
+  }));
+
+  const filtered = filter === 'all' ? alerts : alerts.filter((a) => a.type === filter);
+  const unread = alerts.filter((a) => !a.read).length;
+
+  const markRead = (id) => setReadIds((prev) => new Set([...prev, id]));
+  const markAllRead = () => setReadIds(new Set(alerts.map((a) => a.id)));
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: 20, color: '#e2e8f0' }}>

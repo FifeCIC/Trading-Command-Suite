@@ -21,6 +21,8 @@ export class Mt5StarDojiDirective implements IDirective {
   readonly name = 'MT5 Morning/Evening Star (with RSI confirmation)';
   readonly description = 'MT5-sourced 3-candle reversal pattern (morning/evening star) with RSI(37) confirmation.';
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars, symbol } = input;

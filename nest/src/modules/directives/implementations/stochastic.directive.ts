@@ -31,6 +31,8 @@ export class StochasticDirective implements IDirective {
     'Momentum oscillator. %K < 20 with crossover = oversold bounce. %K > 80 = overbought.';
 
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const highs = input.bars.map(b => b.high);

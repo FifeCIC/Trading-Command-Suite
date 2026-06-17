@@ -1,0 +1,60 @@
+.tl-page { padding: 1.5rem; color: #d1d5db; max-width: 1200px; }
+.tl-header { margin-bottom: 1rem; }
+.tl-header h2 { margin: 0 0 0.25rem; color: #f1f5f9; font-size: 1.3rem; }
+.tl-header p { margin: 0; color: #94a3b8; font-size: 0.85rem; }
+.tl-controls { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+.tl-view-btns { display: flex; gap: 0.25rem; }
+.tl-view-btn { padding: 0.3rem 0.75rem; border-radius: 6px; border: 1px solid #2d3040; background: #0f172a; color: #94a3b8; font-size: 0.78rem; cursor: pointer; }
+.tl-view-btn.active { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+.tl-today-btn { padding: 0.3rem 0.75rem; border-radius: 6px; border: 1px solid #3b82f6; background: transparent; color: #60a5fa; font-size: 0.78rem; cursor: pointer; }
+.tl-star-toggle { font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; gap: 0.3rem; margin-left: auto; }
+.tl-day-nav { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1rem; font-size: 0.9rem; color: #e2e8f0; }
+.tl-day-nav button { padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid #2d3040; background: #0f172a; color: #94a3b8; cursor: pointer; }
+.tl-day-nav button:disabled { opacity: 0.3; cursor: default; }
+.tl-day-nav span { font-weight: 600; }
+
+.tl-grid--day { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+.tl-grid--2-day { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.tl-grid--week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; }
+.tl-day-col { border: 1px solid #1e2030; border-radius: 10px; background: #0d1117; padding: 0.75rem; min-height: 200px; }
+.tl-day-col.tl-today { border-color: #3b82f6; }
+.tl-day-header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+.tl-day-name { font-weight: 600; color: #e2e8f0; font-size: 0.85rem; }
+.tl-day-date { font-size: 0.72rem; color: #64748b; }
+.tl-events h4, .tl-priority h4 { font-size: 0.75rem; text-transform: uppercase; color: #64748b; margin: 0 0 0.5rem; }
+.tl-muted { font-size: 0.78rem; color: #64748b; }
+
+.tl-event { display: flex; gap: 0.4rem; align-items: flex-start; padding: 0.35rem 0; border-bottom: 1px solid #1e2030; font-size: 0.78rem; cursor: default; }
+.tl-event--high { border-left: 2px solid #ef4444; padding-left: 0.4rem; }
+.tl-event--medium { border-left: 2px solid #f59e0b; padding-left: 0.4rem; }
+.tl-event-time { color: #64748b; font-size: 0.7rem; min-width: 40px; }
+.tl-event-icon { font-size: 0.85rem; }
+.tl-event-content { display: flex; flex-direction: column; gap: 0.1rem; flex: 1; }
+.tl-event-title { color: #d1d5db; font-weight: 500; }
+.tl-event-prediction { color: #93c5fd; font-size: 0.7rem; }
+.tl-event-symbol { color: #60a5fa; font-size: 0.7rem; font-weight: 600; }
+
+.tl-symbol-row { display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0; font-size: 0.78rem; }
+.tl-symbol-name { font-weight: 600; color: #e2e8f0; min-width: 60px; }
+.tl-bar { flex: 1; height: 5px; border-radius: 3px; background: #1e293b; display: inline-block; }
+.tl-bar-fill { height: 100%; border-radius: 3px; display: block; }
+.tl-symbol-score { color: #94a3b8; font-family: monospace; min-width: 24px; text-align: right; }
+.tl-symbol-dir { font-size: 0.72rem; min-width: 36px; }
+.tl-dir-up { color: #22c55e; }
+.tl-dir-down { color: #ef4444; }
+.tl-dir-stable { color: #94a3b8; }
+
+.tl-month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.35rem; }
+.tl-month-day { border: 1px solid #1e2030; border-radius: 8px; padding: 0.5rem; text-align: center; min-height: 60px; cursor: pointer; transition: border-color 0.15s; }
+.tl-month-day:hover { border-color: #3b82f6; }
+.tl-month-day.has-events { background: #1e203044; }
+.tl-month-day.has-high { border-color: #f59e0b; }
+.tl-month-num { display: block; font-size: 1.1rem; font-weight: 700; color: #e2e8f0; }
+.tl-month-dow { font-size: 0.65rem; color: #64748b; }
+.tl-month-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #3b82f6; margin-top: 3px; }
+.tl-month-dot.high { background: #ef4444; }
+
+.tl-tooltip { position: fixed; bottom: 1rem; right: 1rem; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 0.75rem; font-size: 0.8rem; max-width: 300px; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+.tl-tooltip strong { color: #e2e8f0; }
+.tl-tooltip p { margin: 0.2rem 0; color: #94a3b8; }
+.tl-tooltip-pred { color: #93c5fd !important; }

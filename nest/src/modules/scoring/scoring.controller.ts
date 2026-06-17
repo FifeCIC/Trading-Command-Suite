@@ -14,6 +14,7 @@ import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { ScoringService } from './scoring.service';
 import { ScoreHistoryService } from './score-history.service';
 import { StrategyCompetitionService } from './strategy-competition.service';
+import { PredictiveScoringService } from './predictive-scoring.service';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
 
 @ApiTags('scoring')
@@ -23,6 +24,7 @@ export class ScoringController {
     private readonly scoringService: ScoringService,
     private readonly scoreHistoryService: ScoreHistoryService,
     private readonly competitionService: StrategyCompetitionService,
+    private readonly predictiveService: PredictiveScoringService,
   ) {}
 
   @Get('ranked')
@@ -102,6 +104,14 @@ export class ScoringController {
 
   // ── Strategy Competition (Q157) ──
 
+  @Get('runs')
+  @ApiOperation({ summary: 'Get scoring runs grouped by time window' })
+  getRuns(@Query('limit') limit?: string) {
+    const parsedLimit = Number(limit ?? 30);
+    const safeLimit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 100) : 30;
+    return this.scoreHistoryService.getRuns(safeLimit);
+  }
+
   @Post('compete')
   @ApiOperation({ summary: 'Run strategy competition — find best next move across all strategies' })
   async compete(@Body() body: { symbols?: string[]; strategies?: string[]; limit?: number }) {
@@ -112,5 +122,20 @@ export class ScoringController {
   @ApiOperation({ summary: 'Get competition status' })
   getCompetitionStatus() {
     return this.competitionService.getStatus();
+  }
+
+  @Get('predictive')
+  getPredictive(
+    @Query('symbols') symbols?: string,
+    @Query('horizon') horizon?: string,
+  ) {
+    const symbolList = symbols ? symbols.split(',').map((s) => s.trim().toUpperCase()) : undefined;
+    const horizonDays = parseInt(horizon || '7', 10);
+    const predictions = this.predictiveService.getPredictions(symbolList, horizonDays);
+    return {
+      predictions,
+      generatedAt: new Date().toISOString(),
+      disclaimer: 'PROTOTYPE — Predictive scores are experimental. Based on scheduled events only.',
+    };
   }
 }

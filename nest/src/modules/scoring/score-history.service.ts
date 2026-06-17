@@ -133,4 +133,55 @@ export class ScoreHistoryService {
       timestamp: row.timestamp,
     };
   }
+
+  /**
+   * Get scoring runs grouped by time window (60-second buckets).
+   * Each "run" is a group of scores within the same minute.
+   */
+  async getRuns(limit = 30): Promise<{
+    runs: Array<{
+      id: string;
+      timestamp: string;
+      strategyId: string;
+      symbolsScored: number;
+      scores: Array<{ ticker: string; value: number; confidence: number }>;
+    }>;
+  }> {
+    if (!this.prisma.isAvailable) {
+      return { runs: [] };
+    }
+
+    const scores = await this.prisma.score.findMany({
+      orderBy: { timestamp: 'desc' },
+      take: 500,
+      include: { symbol: { select: { ticker: true } } },
+    });
+
+    // Group by minute-window (truncate seconds)
+    const groups = new Map<string, typeof scores>();
+    for (const s of scores) {
+      const ts = new Date(s.timestamp);
+      ts.setSeconds(0, 0);
+      const key = ts.toISOString();
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(s);
+    }
+
+    const runs = Array.from(groups.entries())
+      .slice(0, limit)
+      .map(([timestamp, entries]) => ({
+        id: `run-${new Date(timestamp).getTime()}`,
+        timestamp,
+        strategyId: entries[0]?.strategyId || 'unknown',
+        symbolsScored: entries.length,
+        scores: entries.map((e) => ({
+          ticker: (e as any).symbol?.ticker || e.symbolId,
+          value: e.value,
+          confidence: 0,
+        })),
+      }))
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    return { runs };
+  }
 }

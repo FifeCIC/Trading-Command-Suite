@@ -8,7 +8,6 @@
  */
 
 import { useState, useEffect, useMemo } from 'react'
-import LoadingSkeleton from '../components/LoadingSkeleton'
 import { DIRECTIVE_SEED } from './directives-manager.seed'
 import './directives-config.css'
 
@@ -31,20 +30,13 @@ const CANONICAL_WEIGHTS = Object.fromEntries(
 )
 
 export default function DirectivesConfigPage() {
-  const [simulatedLoading, setSimulatedLoading] = useState(true)
   const [config, setConfig] = useState(() => {
     const saved = loadConfig()
     if (saved) return saved
-    // Initialize with canonical values
     return Object.fromEntries(
       DIRECTIVE_SEED.map((d) => [d.id, { enabled: true, weight: d.baseWeight }]),
     )
   })
-
-  useEffect(() => {
-    const timer = setTimeout(() => setSimulatedLoading(false), 400)
-    return () => clearTimeout(timer)
-  }, [])
 
   // Persist to localStorage on every change
   useEffect(() => {
@@ -76,17 +68,6 @@ export default function DirectivesConfigPage() {
     )
   }
 
-  // ---- Loading state ----
-  if (simulatedLoading) {
-    return (
-      <div className="dc-page">
-        <header className="dc-header">
-          <h2>Configure Directives</h2>
-        </header>
-        <LoadingSkeleton variant="card" count={5} />
-      </div>
-    )
-  }
 
   return (
     <div className="dc-page">

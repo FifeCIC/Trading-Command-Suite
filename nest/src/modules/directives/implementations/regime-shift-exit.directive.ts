@@ -17,6 +17,8 @@ export class RegimeShiftExitDirective implements IDirective {
   readonly name = 'Regime Shift Exit';
   readonly description = 'Detects market structure breakdown via entropy spike. Urgent exit signal.';
   readonly priority = 80;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -48,7 +50,7 @@ export class RegimeShiftExitDirective implements IDirective {
     }
 
     return {
-      score: Math.min(100, Math.round(score)),
+      score: Math.round(score),
       confidence: score > 50 ? Number(Math.min(0.85, 0.4 + (score / 150)).toFixed(2)) : 0.3,
       reason,
       signalClass: 'neutral',

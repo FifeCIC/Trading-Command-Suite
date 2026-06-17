@@ -36,6 +36,8 @@ export class SessionTimingFilterDirective implements IDirective {
   readonly description =
     'Session-based quality multiplier. US/London sessions have highest quality. Proven filter.';
   readonly priority = 70;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

@@ -86,17 +86,31 @@
   text-transform: uppercase;
   color: var(--ink-soft);
   border-bottom: 1px solid var(--line);
-  padding: 0.58rem 0.62rem;
+  padding: 0.58rem 0.75rem;
+  background: rgba(0, 0, 0, 0.18);
 }
 
 .directives-table td {
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent 30%);
-  padding: 0.52rem 0.62rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 0.52rem 0.75rem;
   vertical-align: top;
 }
 
+.directive-row {
+  transition: background 0.2s ease;
+}
+
+.directive-row:nth-child(odd) {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.directive-row:hover {
+  background: rgba(0, 217, 255, 0.06);
+}
+
 .directive-row.is-selected {
-  background: color-mix(in srgb, var(--accent) 10%, transparent 90%);
+  background: rgba(0, 217, 255, 0.1);
+  border-left: 2px solid var(--accent, #0ea5a6);
 }
 
 .directive-primary {
@@ -157,7 +171,8 @@
 }
 
 .directive-expand td {
-  background: color-mix(in srgb, var(--panel) 85%, var(--bg) 15%);
+  background: rgba(0, 0, 0, 0.22);
+  border-bottom: 1px solid rgba(0, 217, 255, 0.1);
 }
 
 .directive-expand-grid {
@@ -196,6 +211,39 @@
   gap: 0.65rem;
   overflow-wrap: break-word;
   word-break: break-word;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .directives-layout {
+    grid-template-columns: 1fr;
+  }
+  .directive-detail-rail {
+    position: static;
+  }
+  .directive-expand-grid {
+    grid-template-columns: 1fr;
+  }
+  .directives-table-wrap {
+    overflow-x: auto;
+  }
+}
+.directive-chevron { font-size: 0.8rem; transition: transform 0.15s; display: inline-block; }
+
+/* Dark theme card styling */
+.directives-table-wrap { background: #0d1117; border-color: #1e2030; }
+.directives-table td { border-color: #1e2030; color: #d1d5db; }
+.directives-table thead th { background: #0a0e14; color: #94a3b8; }
+.directives-toolbar { background: #0d1117; border-color: #1e2030; }
+.directive-detail-rail { background: #0d1117; border-color: #1e2030; }
+.directive-chip.tone-ok { background: #064e3b22; }
+.directive-chip.tone-warn { background: #78350f22; }
+.directive-chip.tone-neutral { background: #1e3a5f22; }
+
+/* Responsive */
+@media (max-width: 800px) {
+  .directives-layout { grid-template-columns: 1fr; }
+  .directive-expand-grid { grid-template-columns: 1fr; }
 }
 
 .directive-detail-header {

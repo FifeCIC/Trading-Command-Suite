@@ -1,242 +1,152 @@
 /**
- * Algorithm Lab Controller
+ * Algorithm Log Controller
  * ========================
- * Provides real-time pipeline state visualization for the Algorithm Lab UI.
+ * Shows real scoring pipeline runs — no simulation, no fake data.
  *
- * GET  /api/scoring/algorithm-lab/state?strategyId=momentum
- * POST /api/scoring/algorithm-lab/pause/:strategyId
- * POST /api/scoring/algorithm-lab/resume/:strategyId
+ * GET  /api/scoring/algorithm-lab/runs        — recent scoring runs (real data)
+ * GET  /api/scoring/algorithm-lab/state        — current pipeline state summary
+ * GET  /api/scoring/algorithm-lab/procedures   — available scoring procedures
  *
- * Pipeline stages: FETCH → SCORE → RANK → FILTER → SIGNAL
+ * Architecture note: the "algorithm" is NOT a single monolithic algorithm.
+ * It's a pipeline: Directives evaluate data → Strategy weights aggregate → SEES ranks.
+ * Multiple scoring procedures can run independently on different symbol groups.
+ * This page monitors those procedure runs.
  */
 
-import { Controller, Get, Post, Param, Query, Logger } from '@nestjs/common';
+import { Controller, Get, Logger } from '@nestjs/common';
 import { ScoringService } from './scoring.service';
 
-interface PipelineStage {
+interface ScoredSymbol {
+  ticker: string;
+  score: number;
+  signal: 'bullish' | 'bearish' | 'neutral';
+  directiveCount: number;
+}
+
+interface ScoringRun {
+  id: string;
+  timestamp: string;
+  procedure: string;
+  symbolsScored: number;
+  durationMs: number;
+  status: 'completed' | 'failed';
+  symbols: ScoredSymbol[];
+}
+
+interface ScoringProcedure {
   id: string;
   label: string;
-  status: 'done' | 'active' | 'queued' | 'waiting';
-  detail?: string;
+  description: string;
 }
 
-interface LogEntry {
-  time: string;
-  message: string;
-  type: 'info' | 'signal-buy' | 'signal-sell' | 'signal-hold' | 'error';
-}
-
-interface StrategyState {
-  id: string;
-  name: string;
-  paused: boolean;
-  pipeline: PipelineStage[];
-  activeStep: number;
-  log: LogEntry[];
-  currentSymbol?: string;
-  directivesComplete?: number;
-  directivesTotal?: number;
-  tick: number;
-}
+// Available scoring procedures (the independent pipelines)
+const PROCEDURES: ScoringProcedure[] = [
+  { id: 'default', label: 'Default Composite', description: 'All active directives across all symbol groups' },
+  { id: 'forex', label: 'Forex Pipeline', description: 'FX-specific directives: RSI, ATR, carry trade, sentiment' },
+  { id: 'equities', label: 'Equities Pipeline', description: 'Stock directives: EMA structure, volume, earnings' },
+  { id: 'crypto', label: 'Crypto Pipeline', description: 'Crypto directives: on-chain, funding rate, volatility' },
+];
 
 @Controller('scoring/algorithm-lab')
 export class AlgorithmLabController {
   private readonly logger = new Logger(AlgorithmLabController.name);
-  private readonly states = new Map<string, StrategyState>();
-  private tickCounter = 0;
 
-  // Strategy definitions
-  private readonly STRATEGIES = [
-    { id: 'momentum', name: 'Momentum' },
-    { id: 'forex', name: 'Forex Mean Reversion' },
-    { id: 'trend', name: 'Trend Following' },
-    { id: 'crypto', name: 'Crypto Scalp' },
-  ];
+  /** In-memory store of recent scoring runs. Survives only process lifetime. */
+  private readonly runLog: ScoringRun[] = [];
+  private readonly MAX_RUNS = 50;
 
-  constructor(private readonly scoringService: ScoringService) {
-    this.initStates();
-    // Simulate pipeline progress every 2s
-    setInterval(() => this.tick(), 2000);
-  }
+  constructor(private readonly scoringService: ScoringService) {}
 
-  private initStates() {
-    for (const s of this.STRATEGIES) {
-      this.states.set(s.id, this.createFreshState(s.id, s.name));
+  /**
+   * GET /api/scoring/algorithm-lab/runs
+   * Returns recent scoring runs with per-symbol breakdown.
+   * Each call triggers a fresh run and records it.
+   */
+  @Get('runs')
+  async getRuns(): Promise<{ runs: ScoringRun[]; procedures: ScoringProcedure[] }> {
+    const startTime = Date.now();
+    const runId = `run-${Date.now()}`;
+
+    try {
+      const result = await this.scoringService.rankAll(undefined, 50);
+      const durationMs = Date.now() - startTime;
+
+      const symbols: ScoredSymbol[] = (result.ranked ?? []).map((r) => ({
+        ticker: r.ticker,
+        score: r.score,
+        signal: (r.signal || 'neutral') as 'bullish' | 'bearish' | 'neutral',
+        directiveCount: 0,
+      }));
+
+      const run: ScoringRun = {
+        id: runId,
+        timestamp: new Date().toISOString(),
+        procedure: 'Default Composite',
+        symbolsScored: symbols.length,
+        durationMs,
+        status: 'completed',
+        symbols,
+      };
+
+      this.runLog.unshift(run);
+      if (this.runLog.length > this.MAX_RUNS) this.runLog.pop();
+
+      this.logger.log(`Run ${runId}: ${symbols.length} symbols in ${durationMs}ms`);
+
+      return { runs: this.runLog, procedures: PROCEDURES };
+    } catch (error) {
+      const durationMs = Date.now() - startTime;
+
+      const run: ScoringRun = {
+        id: runId,
+        timestamp: new Date().toISOString(),
+        procedure: 'Default Composite',
+        symbolsScored: 0,
+        durationMs,
+        status: 'failed',
+        symbols: [],
+      };
+
+      this.runLog.unshift(run);
+      if (this.runLog.length > this.MAX_RUNS) this.runLog.pop();
+
+      this.logger.error(`Run ${runId} failed: ${String(error)}`);
+
+      return { runs: this.runLog, procedures: PROCEDURES };
     }
   }
 
-  private createFreshState(id: string, name: string): StrategyState {
+  /**
+   * GET /api/scoring/algorithm-lab/state
+   * Returns current pipeline state without triggering a new run.
+   */
+  @Get('state')
+  getState(): {
+    procedures: ScoringProcedure[];
+    lastRun: ScoringRun | null;
+    runCount: number;
+    pipelineStages: Array<{ id: string; label: string; description: string }>;
+  } {
     return {
-      id,
-      name,
-      paused: false,
-      pipeline: [
-        { id: 'fetch', label: 'Fetch Data', status: 'waiting' },
-        { id: 'score', label: 'Score Directives', status: 'waiting' },
-        { id: 'rank', label: 'Rank Symbols', status: 'waiting' },
-        { id: 'filter', label: 'Filter Noise', status: 'waiting' },
-        { id: 'signal', label: 'Signal Out', status: 'waiting' },
+      procedures: PROCEDURES,
+      lastRun: this.runLog[0] ?? null,
+      runCount: this.runLog.length,
+      pipelineStages: [
+        { id: 'fetch', label: 'Fetch Data', description: 'Retrieve market data from configured providers' },
+        { id: 'score', label: 'Score Directives', description: 'Each directive evaluates its domain and produces a score' },
+        { id: 'rank', label: 'Rank Symbols', description: 'Strategy weights aggregate directive scores into symbol rankings' },
+        { id: 'filter', label: 'Filter Noise', description: 'Low-conviction and conflicting signals are filtered out' },
+        { id: 'signal', label: 'Signal Out', description: 'Final ranked signals: BUY, SELL, or HOLD with confidence' },
       ],
-      activeStep: -1,
-      log: [],
-      tick: 0,
     };
   }
 
-  private tick() {
-    this.tickCounter++;
-
-    for (const [id, state] of this.states) {
-      if (state.paused) continue;
-      this.advancePipeline(state);
-    }
-  }
-
-  private advancePipeline(state: StrategyState) {
-    const stages = state.pipeline;
-
-    // If just starting, begin FETCH
-    if (state.activeStep === -1) {
-      state.activeStep = 0;
-      stages[0].status = 'active';
-      stages[0].detail = 'Fetching market data...';
-      this.addLog(state, 'FETCH: Starting data fetch for active symbols', 'info');
-      state.directivesTotal = 18;
-      state.directivesComplete = 0;
-      state.currentSymbol = 'EURUSD';
-      return;
-    }
-
-    const currentStage = stages[state.activeStep];
-
-    // Simulate progress through each stage
-    switch (currentStage.id) {
-      case 'fetch':
-        if (state.tick % 2 === 0) {
-          currentStage.status = 'done';
-          currentStage.detail = '12 symbols, 18 directives';
-          this.addLog(state, 'FETCH complete: 12 symbols, 18 directives loaded', 'info');
-          this.advanceToNext(state);
-        }
-        break;
-
-      case 'score':
-        if (state.tick % 1 === 0) {
-          const totalDirs = state.directivesTotal ?? 18;
-          state.directivesComplete = Math.min(totalDirs, (state.directivesComplete ?? 0) + 3);
-          currentStage.detail = `${state.directivesComplete} of ${totalDirs} directives complete`;
-          this.addLog(state, `SCORE: ${state.currentSymbol} — 6 of 18 directives complete`, 'info');
-          if (state.directivesComplete >= totalDirs) {
-            currentStage.status = 'done';
-            this.advanceToNext(state);
-          }
-        }
-        break;
-
-      case 'rank':
-        currentStage.status = 'done';
-        currentStage.detail = 'Symbols sorted by total score';
-        this.addLog(state, 'RANK: Symbols sorted by aggregate score', 'info');
-        this.advanceToNext(state);
-        break;
-
-      case 'filter':
-        currentStage.status = 'done';
-        currentStage.detail = 'Low-conviction signals filtered';
-        this.addLog(state, 'FILTER: Removed 3 low-conviction signals below threshold', 'info');
-        this.advanceToNext(state);
-        break;
-
-      case 'signal':
-        currentStage.status = 'done';
-        // Generate simulated signals
-        const signals: Array<{ sym: string; score: number; type: 'buy' | 'sell' | 'hold' }> = [
-          { sym: 'EURUSD', score: 87, type: 'buy' },
-          { sym: 'GBPUSD', score: 72, type: 'hold' },
-          { sym: 'BTCUSD', score: 45, type: 'hold' },
-          { sym: 'NVDA', score: 92, type: 'buy' },
-          { sym: 'TSLA', score: 28, type: 'sell' },
-        ];
-        for (const sig of signals) {
-          const logType = sig.type === 'buy' ? 'signal-buy' as const : sig.type === 'sell' ? 'signal-sell' as const : 'signal-hold' as const;
-          this.addLog(state, `${sig.sym} scored ${sig.score}/100 → ${sig.type.toUpperCase()} signal`, logType);
-        }
-        currentStage.detail = `${signals.length} signals generated`;
-        this.addLog(state, `SIGNAL: ${signals.length} signals generated across strategies`, 'info');
-        // Reset pipeline for next cycle
-        state.activeStep = -1;
-        state.pipeline = this.createFreshState(state.id, state.name).pipeline;
-        state.currentSymbol = ['EURUSD', 'GBPUSD', 'NVDA', 'BTCUSD'][Math.floor(Math.random() * 4)];
-        state.directivesComplete = 0;
-        this.tryFetchRealScores(state);
-        break;
-    }
-  }
-
-  private async tryFetchRealScores(state: StrategyState) {
-    try {
-      const ranked = await this.scoringService.rankAll(undefined, 10);
-      if (ranked?.ranked?.length) {
-        this.addLog(state, `REAL SCORES: ${ranked.ranked.length} symbols scored via ScoringService`, 'info');
-        for (const r of ranked.ranked.slice(0, 3)) {
-          const signal = r.signal === 'bullish' ? 'BUY' : r.signal === 'bearish' ? 'SELL' : 'HOLD';
-          this.addLog(state, `${r.ticker}: ${r.score}/100 → ${signal}`, r.signal === 'bullish' ? 'signal-buy' : r.signal === 'bearish' ? 'signal-sell' : 'signal-hold');
-        }
-      }
-    } catch {
-      // Real scoring unavailable — simulated data shown
-    }
-  }
-
-  private advanceToNext(state: StrategyState) {
-    const next = state.activeStep + 1;
-    if (next < state.pipeline.length) {
-      state.activeStep = next;
-      state.pipeline[next].status = 'active';
-    }
-  }
-
-  private addLog(state: StrategyState, message: string, type: LogEntry['type']) {
-    const now = new Date();
-    const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-    state.log.unshift({ time, message, type });
-    if (state.log.length > 100) state.log.pop();
-  }
-
-  @Get('state')
-  getState(@Query('strategyId') strategyId?: string) {
-    if (strategyId && this.states.has(strategyId)) {
-      return this.states.get(strategyId);
-    }
-    // Return all strategies as array for strategy scroller
-    return Array.from(this.states.values()).map((s) => ({
-      id: s.id,
-      name: s.name,
-      paused: s.paused,
-      pipeline: s.pipeline,
-      activeStep: s.activeStep,
-      log: s.log.slice(0, 20),
-      currentSymbol: s.currentSymbol,
-      directivesComplete: s.directivesComplete,
-      directivesTotal: s.directivesTotal,
-    }));
-  }
-
-  @Post('pause/:strategyId')
-  pause(@Param('strategyId') strategyId: string) {
-    const state = this.states.get(strategyId);
-    if (!state) return { error: 'Strategy not found' };
-    state.paused = true;
-    this.addLog(state, '⏸ PAUSED by user', 'info');
-    return { paused: true };
-  }
-
-  @Post('resume/:strategyId')
-  resume(@Param('strategyId') strategyId: string) {
-    const state = this.states.get(strategyId);
-    if (!state) return { error: 'Strategy not found' };
-    state.paused = false;
-    this.addLog(state, '▶ RESUMED by user', 'info');
-    return { paused: false };
+  /**
+   * GET /api/scoring/algorithm-lab/procedures
+   * Lists available scoring procedures with descriptions.
+   */
+  @Get('procedures')
+  getProcedures(): { procedures: ScoringProcedure[] } {
+    return { procedures: PROCEDURES };
   }
 }

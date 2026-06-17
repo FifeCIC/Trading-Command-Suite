@@ -1,4 +1,4 @@
-import { Controller, Get, Post } from '@nestjs/common';
+import { Controller, Get, Post, Query } from '@nestjs/common';
 import { Trading212ImportService } from './trading212-import.service';
 
 @Controller('portfolio/trading212')
@@ -13,5 +13,12 @@ export class Trading212PortfolioController {
   @Post('import')
   importPortfolio() {
     return this.importService.importPortfolio();
+  }
+
+  @Get('history')
+  async getHistory(@Query('days') days?: string) {
+    const daysNum = days ? parseInt(days, 10) : undefined;
+    const result = await this.importService.getTradeHistory(daysNum);
+    return result;
   }
 }

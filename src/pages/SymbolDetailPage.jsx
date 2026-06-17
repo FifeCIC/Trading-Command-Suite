@@ -1,10 +1,12 @@
 import { useParams, Link } from 'react-router-dom';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import './symbol-detail.css';
 
 export default function SymbolDetailPage() {
   const { symbolId } = useParams();
+  const [tradeModal, setTradeModal] = useState(null);
 
   const symbolQuery = useQuery({
     queryKey: ['symbol', symbolId],
@@ -25,15 +27,46 @@ export default function SymbolDetailPage() {
     retry: 1,
   });
 
+  // Portfolio + Trade Data
+  const portfolioQuery = useQuery({
+    queryKey: ['portfolio-positions'],
+    queryFn: () => apiGet('/api/portfolio?source=trading212'),
+    retry: 1,
+    staleTime: 30000,
+  });
+
+  // News for this symbol
+  const newsQuery = useQuery({
+    queryKey: ['symbol-news', symbolId],
+    queryFn: () => fetch('/api/news/collect', { method: 'POST' }).then((r) => r.json()),
+    staleTime: 120000,
+  });
+
+  const isLoading = symbolQuery.isLoading;
+
   if (symbolQuery.isLoading) return <div className="sd-page"><p>Loading symbol data...</p></div>;
   if (symbolQuery.isError) return <div className="sd-page"><p className="sd-error">Failed to load symbol. Is the backend running?</p></div>;
 
   const sym = symbolQuery.data ?? {};
+  const ticker = sym.ticker || symbolId;
   const freshness = freshnessQuery.data ?? {};
   const scoring = scoringQuery.data ?? {};
   const history = Array.isArray(scoring.history) ? scoring.history : [];
   const breakdown = Array.isArray(scoring.breakdown) ? scoring.breakdown : [];
   const currentScore = scoring.totalScore ?? scoring.score ?? null;
+
+  // Portfolio positions matching this symbol
+  const portfolio = portfolioQuery.data || {};
+  const positions = Array.isArray(portfolio.positions) ? portfolio.positions : [];
+  const heldPosition = positions.find(
+    (p) => p.symbol === ticker || p.ticker === ticker || p.ticker?.startsWith(ticker + '_'),
+  );
+
+  // News articles mentioning or relevant to this symbol
+  const allArticles = newsQuery.data?.articles || [];
+  const symbolNews = allArticles.filter(
+    (a) => a.headline?.toUpperCase().includes(ticker.toUpperCase()),
+  ).slice(0, 5);
 
   const freshnessStatus = freshness.status || freshness.freshness || 'unknown';
   const freshnessTone = freshnessStatus === 'fresh' ? 'ok' : freshnessStatus === 'stale' ? 'warn' : 'neutral';
@@ -128,6 +161,109 @@ export default function SymbolDetailPage() {
           </table>
         </section>
       )}
+
+      {/* ── Portfolio Position & Trade Actions ── */}
+      <section className="sd-card sd-card--trade">
+        <h2>💼 Portfolio & Trade</h2>
+
+        {/* Held position */}
+        {heldPosition ? (
+          <div className="sd-position">
+            <div className="sd-pos-header">
+              <span className="sd-pos-label">You hold</span>
+              <span className="sd-pos-shares">{heldPosition.shares || heldPosition.quantity || '—'} shares</span>
+            </div>
+            <div className="sd-pos-details">
+              <div><span>Avg Cost</span><strong>£{heldPosition.avgCost?.toFixed(2) || heldPosition.averagePrice?.toFixed(2) || '—'}</strong></div>
+              <div><span>Current</span><strong>£{heldPosition.currentPrice?.toFixed(2) || '—'}</strong></div>
+              <div><span>P&L</span><strong className={heldPosition.pnl > 0 ? 'sd-positive' : 'sd-negative'}>
+                {heldPosition.pnl > 0 ? '+' : ''}£{heldPosition.pnl?.toFixed(2) || '—'}
+                {heldPosition.pnlPct != null && ` (${heldPosition.pnlPct > 0 ? '+' : ''}${heldPosition.pnlPct.toFixed(1)}%)`}
+              </strong></div>
+              <div><span>Allocation</span><strong>{heldPosition.allocation ? `${(heldPosition.allocation * 100).toFixed(1)}%` : '—'}</strong></div>
+            </div>
+          </div>
+        ) : (
+          <p className="sd-sub">You don't hold this symbol in any connected account.</p>
+        )}
+
+        {/* Trade buttons per account */}
+        <div className="sd-trade-accounts">
+          <h3>Trade Actions</h3>
+          <div className="sd-account-actions">
+            <div className="sd-account-group">
+              <span className="sd-account-label">T212 Investment</span>
+              <div className="sd-trade-btns">
+                <button className="sd-btn sd-btn-buy" onClick={() => setTradeModal({ account: 'T212 Investment', side: 'buy', ticker })}>
+                  Buy
+                </button>
+                <button className="sd-btn sd-btn-sell" disabled={!heldPosition} onClick={() => setTradeModal({ account: 'T212 Investment', side: 'sell', ticker })}>
+                  Sell
+                </button>
+              </div>
+            </div>
+            <div className="sd-account-group">
+              <span className="sd-account-label">T212 ISA</span>
+              <div className="sd-trade-btns">
+                <button className="sd-btn sd-btn-buy" onClick={() => setTradeModal({ account: 'T212 ISA', side: 'buy', ticker })}>
+                  Buy
+                </button>
+                <button className="sd-btn sd-btn-sell" disabled={!heldPosition} onClick={() => setTradeModal({ account: 'T212 ISA', side: 'sell', ticker })}>
+                  Sell
+                </button>
+              </div>
+            </div>
+            <div className="sd-account-group">
+              <span className="sd-account-label">MT5</span>
+              <div className="sd-trade-btns">
+                <button className="sd-btn sd-btn-buy" onClick={() => setTradeModal({ account: 'MT5', side: 'buy', ticker })}>
+                  Buy
+                </button>
+                <button className="sd-btn sd-btn-sell" disabled={!heldPosition} onClick={() => setTradeModal({ account: 'MT5', side: 'sell', ticker })}>
+                  Sell
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trade Modal */}
+      {tradeModal && (
+        <div className="sd-modal-overlay" onClick={() => setTradeModal(null)}>
+          <div className="sd-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>{tradeModal.side.toUpperCase()} {tradeModal.ticker}</h3>
+            <p>Account: <strong>{tradeModal.account}</strong></p>
+            <p className="sd-modal-warning">⚠️ Order execution is not yet live. This will be enabled in Q284 (First Live Trade).</p>
+            <div className="sd-modal-actions">
+              <button className="sd-btn" onClick={() => setTradeModal(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Recent News ── */}
+      <section className="sd-card">
+        <h2>📰 Recent News</h2>
+        {newsQuery.isLoading ? <p>Loading news...</p> : symbolNews.length === 0 ? (
+          <p className="sd-sub">No recent news articles found for {ticker}.</p>
+        ) : (
+          <div className="sd-news-list">
+            {symbolNews.map((a, i) => (
+              <div key={i} className={`sd-news-item ${a.fluffScore > 60 ? 'sd-news-fluff' : ''}`}>
+                <div className="sd-news-header">
+                  <span className="sd-news-source">{a.sourceName}</span>
+                  <span className="sd-news-sentiment" style={{ color: a.sentiment > 0 ? '#22c55e' : a.sentiment < 0 ? '#ef4444' : '#94a3b8' }}>
+                    {a.sentiment > 0 ? '↗' : a.sentiment < 0 ? '↘' : '→'} {a.sentiment > 0 ? '+' : ''}{a.sentiment}
+                  </span>
+                </div>
+                <p className="sd-news-headline">{a.headline}</p>
+                {a.fluffScore > 60 && <span className="sd-fluff-tag">⚠️ Low reliability source</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

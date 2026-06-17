@@ -24,6 +24,8 @@ export class BollingerBandsDirective implements IDirective {
   readonly description = 'Scores price position relative to Bollinger Bands (20,2). Near lower band = bullish, near upper = bearish.';
 
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

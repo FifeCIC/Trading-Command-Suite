@@ -8,6 +8,8 @@ export class AccumDistDirective implements IDirective {
   readonly name = 'Accumulation/Distribution';
   readonly description = 'A/D line trending up while price flat = accumulation. Divergence = reversal signal. MT5 A/D.';
   readonly priority = 68;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

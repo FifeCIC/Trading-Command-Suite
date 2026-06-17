@@ -32,6 +32,8 @@ export class Mt5EngulfingDirective implements IDirective {
   readonly name = 'MT5 Engulfing Pattern (with RSI confirmation)';
   readonly description = 'MT5-sourced engulfing pattern with RSI(37) confirmation. Proven 2-candle reversal logic from MetaQuotes Free Robots.';
   readonly priority = 55;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars, symbol } = input;

@@ -265,6 +265,11 @@
   font-weight: 600;
 }
 
+.so-max-score {
+  color: #0ea5a6;
+  font-size: 1rem;
+}
+
 /* ---- Table ---- */
 .so-table-wrap {
   border-radius: 10px;

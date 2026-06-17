@@ -23,6 +23,8 @@ export class VolumeRhythmDirective implements IDirective {
   readonly description = 'Day-of-week volume pattern analysis. Higher score when up-day volume exceeds down-day volume.';
 
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

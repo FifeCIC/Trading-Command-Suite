@@ -30,6 +30,8 @@ export class BudgetGateDirective implements IDirective {
   readonly description =
     'Gates new trade entries when the signal budget is near exhaustion. Prevents over-trading.';
   readonly priority = 90;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

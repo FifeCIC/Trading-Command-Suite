@@ -25,6 +25,8 @@ export class PatternDensitySrDirective implements IDirective {
   readonly description =
     'Aggregates repeated pattern detections into support/resistance zones via price bin density scoring.';
   readonly priority = 55;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -132,7 +134,7 @@ export class PatternDensitySrDirective implements IDirective {
     }
 
     return {
-      score: Math.min(100, Math.round(score)),
+      score: Math.round(score),
       confidence: Number(Math.min(0.75, 0.2 + Math.max(supportScore, resistanceScore)).toFixed(2)),
       reason,
       signalClass,

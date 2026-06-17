@@ -30,6 +30,8 @@ export class EngulfingPatternDirective implements IDirective {
     'Detects bullish/bearish engulfing reversal structures over two bars.';
 
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

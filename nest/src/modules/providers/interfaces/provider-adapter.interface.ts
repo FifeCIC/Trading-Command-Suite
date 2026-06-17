@@ -121,6 +121,13 @@ export interface IProviderAdapter {
    * Fetch aggregate sentiment for a symbol (optional — Finnhub-specific).
    */
   getSentiment?(symbol: string): Promise<SentimentData | null>;
+
+  /**
+   * Fetch earnings calendar events for a symbol or all tracked symbols.
+   * @param symbol  Optional — if omitted, returns all upcoming earnings.
+   * @param horizonMonths  How many months ahead to fetch (default 3).
+   */
+  getEarningsCalendar?(symbol?: string, horizonMonths?: number): Promise<EarningsEvent[]>;
 }
 
 /** A single news headline from a provider. */
@@ -139,5 +146,23 @@ export interface SentimentData {
   buzz: { articlesInLastWeek: number; buzzWordCount?: number };
   companyNewsScore: number;
   sectorAverageBullishPercent: number;
+  sectorAverageNewsScore: number;
+  bearishPercent: number;
+  bullishPercent: number;
+}
+
+/** An upcoming earnings event from a provider's calendar. */
+export interface EarningsEvent {
   symbol: string;
+  name?: string;
+  reportDate: string;
+  fiscalDateEnding?: string;
+  epsEstimate?: number | null;
+  epsActual?: number | null;
+  revenueEstimate?: number | null;
+  revenueActual?: number | null;
+  surprisePercent?: number | null;
+  timeOfDay?: 'Before Open' | 'After Close' | 'During' | null;
+  currency?: string;
+  source: string;
 }

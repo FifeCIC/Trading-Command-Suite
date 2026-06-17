@@ -1,0 +1,35 @@
+.tj-page { padding: 1.5rem; color: #d1d5db; max-width: 900px; }
+.tj-header { margin-bottom: 1rem; }
+.tj-header h2 { margin: 0 0 0.25rem; color: #f1f5f9; font-size: 1.3rem; }
+.tj-header p { margin: 0; color: #94a3b8; font-size: 0.85rem; }
+.tj-privacy { font-size: 0.72rem !important; color: #64748b !important; margin-top: 0.3rem !important; }
+.tj-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.5rem; margin-bottom: 1rem; }
+.tj-stat-card { padding: 0.5rem; border: 1px solid #1e2030; border-radius: 8px; background: #0d1117; text-align: center; }
+.tj-stat-num { display: block; font-size: 1.1rem; font-weight: 700; color: #e2e8f0; }
+.tj-stat-card span:last-child { font-size: 0.7rem; color: #64748b; }
+.tj-green { color: #22c55e !important; }
+.tj-red { color: #ef4444 !important; }
+.tj-ai-summary { padding: 0.75rem 1rem; border: 1px solid #3b82f644; border-radius: 8px; background: #1e3a5f22; margin-bottom: 1rem; font-size: 0.85rem; }
+.tj-ai-summary h3 { margin: 0 0 0.5rem; color: #93c5fd; font-size: 0.9rem; }
+.tj-ai-summary p { margin: 0.2rem 0; }
+.tj-entries { display: flex; flex-direction: column; gap: 0.75rem; }
+.tj-card { border: 1px solid #1e2030; border-radius: 10px; padding: 0.75rem; }
+.tj-card.tj-win { border-left: 3px solid #22c55e; }
+.tj-card.tj-loss { border-left: 3px solid #ef4444; }
+.tj-card-header { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.5rem; }
+.tj-symbol { font-weight: 700; font-size: 1rem; color: #e2e8f0; }
+.tj-type { font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; }
+.tj-buy { background: #064e3b44; color: #6ee7b7; }
+.tj-sell { background: #7f1d1d44; color: #fca5a5; }
+.tj-pnl { font-weight: 700; margin-left: auto; }
+.tj-details { display: flex; gap: 1rem; font-size: 0.78rem; color: #94a3b8; flex-wrap: wrap; }
+.tj-tags { display: flex; gap: 0.35rem; flex-wrap: wrap; margin: 0.4rem 0; }
+.tj-tag { font-size: 0.68rem; padding: 0.1rem 0.45rem; border-radius: 10px; background: #1e293b; color: #94a3b8; }
+.tj-note { font-size: 0.82rem; color: #d1d5db; font-style: italic; margin: 0.3rem 0; }
+.tj-note-edit { display: flex; gap: 0.5rem; align-items: flex-start; }
+.tj-note-edit textarea { flex: 1; padding: 0.4rem; border-radius: 6px; border: 1px solid #2d3040; background: #0f172a; color: #e2e8f0; font-size: 0.8rem; }
+.tj-note-edit button, .tj-btn-sm { padding: 0.25rem 0.6rem; border-radius: 4px; border: 1px solid #2d3040; background: #1e2030; color: #94a3b8; font-size: 0.72rem; cursor: pointer; }
+.tj-btn-ai { padding: 0.35rem 0.75rem; border-radius: 6px; border: 1px solid #3b82f6; background: #1e3a5f44; color: #93c5fd; font-size: 0.78rem; cursor: pointer; margin-top: 0.5rem; }
+.tj-btn-ai:disabled { opacity: 0.5; }
+.tj-analysis { margin-top: 0.5rem; padding: 0.5rem; background: #0f172a; border-radius: 6px; font-size: 0.78rem; line-height: 1.5; }
+.tj-analysis pre { margin: 0; white-space: pre-wrap; font-family: inherit; color: #d1d5db; }

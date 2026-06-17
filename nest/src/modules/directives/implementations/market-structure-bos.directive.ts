@@ -31,6 +31,8 @@ export class MarketStructureBosDirective implements IDirective {
   readonly description =
     'Detects BOS (Break of Structure) and CHOCH (Change of Character) via swing points.';
   readonly priority = 70;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -101,7 +103,7 @@ export class MarketStructureBosDirective implements IDirective {
     }
 
     return {
-      score: Math.min(100, Math.round(score)),
+      score: Math.round(score),
       confidence: Number(Math.min(0.85, 0.4 + (Math.abs(higherHighs - lowerHighs) + Math.abs(higherLows - lowerLows)) * 0.1).toFixed(2)),
       reason,
       signalClass,

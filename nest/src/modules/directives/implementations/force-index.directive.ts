@@ -9,6 +9,8 @@ export class ForceIndexDirective implements IDirective {
   readonly name = 'Force Index';
   readonly description = 'Volume × (close - prevClose), smoothed with EMA(13). Positive = buying pressure. MT5 Force Index.';
   readonly priority = 68;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map((b) => b.close);

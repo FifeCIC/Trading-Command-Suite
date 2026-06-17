@@ -25,6 +25,8 @@ export class MomentumContinuationComboDirective implements IDirective {
   readonly name = 'Momentum Continuation Combo';
   readonly description = 'Composite: trend alignment (EMA20) + momentum (MACD histogram) + volume confirmation.';
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -85,7 +87,7 @@ export class MomentumContinuationComboDirective implements IDirective {
 
     return {
       signalClass: 'bullish',
-      score: Math.min(100, Math.round(score)),
+      score: Math.round(score),
       confidence: 0.4 + conditionsMet * 0.15,
       reason: `${conditionsMet}/3 continuation signals: ${details.join(', ')}.`,
     };

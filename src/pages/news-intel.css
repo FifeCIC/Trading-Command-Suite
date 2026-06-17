@@ -1,0 +1,84 @@
+/* ── News Intel ────────────────────────────────────────────── */
+
+.ni-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  color: var(--ink, #e2e8f0);
+}
+
+.ni-header h1 { margin: 0 0 0.3rem; font-size: 1.4rem; }
+.ni-subtitle { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; margin: 0 0 1rem; }
+
+/* ── Filters ──────────────────────────────────────────────── */
+.ni-filters {
+  display: flex; flex-wrap: wrap; gap: 1rem;
+  margin-bottom: 1rem; align-items: flex-end;
+}
+.ni-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.ni-field label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft, #94a3b8); }
+.ni-field select {
+  background: var(--panel, #141a2e); color: var(--ink, #e2e8f0);
+  border: 1px solid var(--line, #1e2a45); border-radius: 6px; padding: 0.4rem 0.65rem; font-size: 0.82rem;
+}
+.ni-chip-tabs { display: flex; gap: 0.3rem; }
+.ni-chip {
+  padding: 0.3rem 0.65rem; font-size: 0.74rem;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--line, #1e2a45);
+  border-radius: 6px; color: var(--ink-soft, #94a3b8); cursor: pointer; transition: all 0.15s;
+}
+.ni-chip:hover { border-color: var(--accent, #0ea5a6); color: var(--ink, #e2e8f0); }
+.ni-chip-active { background: rgba(14,165,166,0.15); border-color: var(--accent, #0ea5a6); color: var(--accent, #0ea5a6); }
+
+/* ── Summary bar ──────────────────────────────────────────── */
+.ni-summary {
+  display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center;
+  padding: 0.45rem 0.75rem; margin-bottom: 1rem;
+  background: rgba(0,0,0,0.12); border: 1px solid var(--line, #1e2a45); border-radius: 8px;
+  font-size: 0.72rem;
+}
+.ni-summary-label { color: var(--ink-soft, #94a3b8); font-weight: 600; }
+.ni-summary-val { font-weight: 600; }
+.ni-sent-pos { color: #22c55e; } .ni-sent-neg { color: #ef4444; } .ni-sent-neu { color: #f59e0b; }
+.ni-summary-total { margin-left: auto; color: var(--ink-soft, #94a3b8); }
+
+/* ── Article feed ─────────────────────────────────────────── */
+.ni-feed { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.ni-article {
+  background: var(--panel, #141a2e); border: 1px solid var(--line, #1e2a45);
+  border-radius: 10px; padding: 0.75rem; cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.ni-article:hover { border-color: var(--accent, #0ea5a6); box-shadow: 0 0 10px rgba(14,165,166,0.05); }
+.ni-article.ni-expanded { border-color: var(--accent, #0ea5a6); }
+
+.ni-article-header {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 0.4rem; margin-bottom: 0.35rem;
+}
+.ni-article-meta { display: flex; align-items: center; gap: 0.4rem; font-size: 0.65rem; color: var(--ink-soft, #94a3b8); }
+.ni-sentiment-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.ni-sentiment-dot.ni-sent-positive { background: #22c55e; }
+.ni-sentiment-dot.ni-sent-negative { background: #ef4444; }
+.ni-sentiment-dot.ni-sent-neutral  { background: #f59e0b; }
+.ni-source { font-weight: 600; color: var(--ink, #e2e8f0); }
+.ni-impact-badge { font-size: 0.58rem; font-weight: 700; padding: 0.08rem 0.35rem; border-radius: 999px; text-transform: uppercase; }
+.ni-impact-high   { background: rgba(239,68,68,0.18); color: #ef4444; }
+.ni-impact-medium { background: rgba(245,158,11,0.18); color: #f59e0b; }
+.ni-impact-low    { background: rgba(100,116,139,0.18); color: #94a3b8; }
+
+.ni-symbol-tags { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+.ni-sym-tag {
+  font-size: 0.62rem; font-weight: 600; padding: 0.1rem 0.4rem;
+  border-radius: 999px; background: rgba(255,255,255,0.05); color: var(--ink-soft, #94a3b8);
+}
+.ni-sym-active { background: rgba(14,165,166,0.2); color: var(--accent, #0ea5a6); }
+
+.ni-headline { font-size: 0.85rem; font-weight: 600; margin: 0; line-height: 1.35; }
+
+.ni-expanded-body { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--line, #1e2a45); }
+.ni-snippet { font-size: 0.78rem; color: var(--ink-soft, #94a3b8); margin: 0 0 0.4rem; line-height: 1.5; }
+.ni-expanded-meta { display: flex; gap: 1rem; font-size: 0.7rem; color: var(--ink-soft, #94a3b8); }
+
+@media (max-width: 600px) { .ni-filters { flex-direction: column; } }

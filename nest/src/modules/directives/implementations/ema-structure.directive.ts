@@ -24,6 +24,8 @@ export class EmaStructureDirective implements IDirective {
   readonly description =
     'Scores symbols where price sits above EMA20 which sits above EMA50.';
   readonly priority = 75;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map((b) => b.close);
@@ -57,7 +59,7 @@ export class EmaStructureDirective implements IDirective {
       const score = 65 + sepFactor * 35;
       const confidence = Math.min(0.95, 0.7 + sepFactor * 0.2);
       return {
-        score: Math.min(100, Math.round(score)),
+        score: Math.round(score),
         confidence: Number(confidence.toFixed(2)),
         reason: `Full alignment: price (${currentPrice.toFixed(2)}) > EMA20 (${currentEma20.toFixed(2)}) > EMA50 (${currentEma50.toFixed(2)}).`,
         signalClass: 'bullish',

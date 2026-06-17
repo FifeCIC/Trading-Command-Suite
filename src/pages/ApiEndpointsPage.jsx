@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import endpointCatalog from '../data/endpoint-catalog.seed.json'
+import { apiGet } from '../core/api/client'
 import './trading-platforms.css'
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
@@ -13,6 +15,21 @@ function confidenceClass(level) {
   if (level === 'likely') return 'tp-chip--neutral'
   if (level === 'uncertain') return 'tp-chip--warn'
   return 'tp-chip--warn'
+}
+
+function inUseStatus(endpoint, usageMap) {
+  const usage = usageMap.get(`${endpoint.method} ${endpoint.path}`)
+  if (!usage) {
+    return { label: 'New', className: 'tp-chip--neutral', note: 'Registered, never called' }
+  }
+
+  const lastCalledAt = new Date(usage.lastCalledAt)
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+  if (lastCalledAt.getTime() >= sevenDaysAgo) {
+    return { label: 'Active', className: 'tp-chip--ok', note: `${usage.callCount} calls` }
+  }
+
+  return { label: 'Dormant', className: 'tp-chip--warn', note: `Last ${lastCalledAt.toLocaleDateString()}` }
 }
 
 const CATEGORY_LABELS = {
@@ -33,6 +50,17 @@ export default function ApiEndpointsPage() {
   const [search, setSearch] = useState('')
 
   const provider = endpointCatalog.providers[selectedProvider]
+  const usageQuery = useQuery({
+    queryKey: ['api-endpoint-usage', selectedProvider],
+    queryFn: () => apiGet(`/api/api-activity/endpoint-usage?provider=${encodeURIComponent(selectedProvider)}`),
+    refetchInterval: 30_000,
+  })
+  const usageMap = useMemo(() => {
+    const map = new Map()
+    const usage = Array.isArray(usageQuery.data?.usage) ? usageQuery.data.usage : []
+    usage.forEach((item) => map.set(`${item.method} ${item.endpoint}`, item))
+    return map
+  }, [usageQuery.data])
 
   const endpoints = useMemo(() => {
     if (!provider?.endpoints) return []
@@ -161,6 +189,7 @@ export default function ApiEndpointsPage() {
                     <th onClick={() => toggleSort('method')} style={{ cursor: 'pointer', width: 70 }}>Method{sortIcon('method')}</th>
                     <th onClick={() => toggleSort('path')} style={{ cursor: 'pointer' }}>Path{sortIcon('path')}</th>
                     <th onClick={() => toggleSort('category')} style={{ cursor: 'pointer', width: 100 }}>Category{sortIcon('category')}</th>
+                    <th style={{ width: 100 }}>In Use</th>
                     <th>Description</th>
                     <th onClick={() => toggleSort('confidence')} style={{ cursor: 'pointer', width: 90 }}>Confidence{sortIcon('confidence')}</th>
                     <th style={{ width: 110 }}>Rate Limit</th>
@@ -171,11 +200,15 @@ export default function ApiEndpointsPage() {
                   {endpoints.map((ep) => {
                     const rlCategory = rateLimitCategories[ep.rateLimitCategory]
                     const rlLabel = rlCategory?.label || ep.rateLimitCategory || '—'
+                    const useStatus = inUseStatus(ep, usageMap)
                     return (
                       <tr key={ep.id}>
                         <td><span className={`tp-chip ${ep.method === 'GET' ? 'tp-chip--ok' : ep.method === 'POST' ? 'tp-chip--neutral' : 'tp-chip--warn'}`}>{ep.method}</span></td>
                         <td><code>{ep.path}</code></td>
                         <td>{CATEGORY_LABELS[ep.category] || titleFromId(ep.category)}</td>
+                        <td>
+                          <span className={`tp-chip ${useStatus.className}`} title={useStatus.note}>{useStatus.label}</span>
+                        </td>
                         <td className="tp-cell-note">{ep.description || '—'}</td>
                         <td><span className={`tp-chip ${confidenceClass(ep.confidence)}`}>{ep.confidence}</span></td>
                         <td className="tp-cell-note" title={rlCategory?.notes || ''}>{rlLabel}</td>

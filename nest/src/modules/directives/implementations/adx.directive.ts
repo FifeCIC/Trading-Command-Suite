@@ -32,6 +32,8 @@ export class AdxDirective implements IDirective {
     'Measures trend strength. ADX > 25 = trending. +DI > -DI = bullish bias. Scores trend conviction.';
 
   readonly priority = 50;
+  readonly maxScore = 100;
+  readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
     const highs = input.bars.map(b => b.high);
