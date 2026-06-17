@@ -275,3 +275,247 @@ model MacroIndicator {
 
   @@index([category, date])
 }
+
+// ── Planned Tables (from Database Tables page) ──
+
+model SymbolTechnical {
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  symbolId   String   @db.VarChar(36)
+  timeframe  String   @db.VarChar(20)
+  indicator  String   @db.VarChar(50)
+  value      Float
+  computedAt DateTime @default(now())
+
+  @@index([symbolId, timeframe, indicator])
+}
+
+model DataSourcesMeta {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  name        String   @unique @db.VarChar(200)
+  type        String   @db.VarChar(50)
+  config      Json
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ApiCredentials {
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  provider   String   @db.VarChar(50)
+  label      String   @db.VarChar(100)
+  apiKey     String   @db.Text
+  apiSecret  String?  @db.Text
+  valid      Boolean  @default(false)
+  lastTested DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([provider, label])
+}
+
+model StrategyPerformance {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  strategyId  String   @db.VarChar(36)
+  winRate     Float    @default(0)
+  avgReturn   Float    @default(0)
+  sharpeRatio Float?
+  totalTrades Int      @default(0)
+  periodStart DateTime
+  periodEnd   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([strategyId, periodEnd])
+}
+
+model UserPreferences {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  userId    String   @db.VarChar(50)
+  key       String   @db.VarChar(100)
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+}
+
+model Watchlist {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  name      String   @db.VarChar(200)
+  symbols   Json
+  userId    String?  @db.VarChar(100)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CronMeta {
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  name       String   @unique @db.VarChar(200)
+  schedule   String   @db.VarChar(100)
+  lastRun    DateTime?
+  nextRun    DateTime?
+  status     String   @default("idle") @db.VarChar(50)
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model ProcessMeta {
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  name       String   @unique @db.VarChar(200)
+  pid        Int?
+  port       Int?
+  status     String   @default("stopped") @db.VarChar(50)
+  startedAt  DateTime?
+  stoppedAt  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model MarketSessions {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  session   String   @db.VarChar(50)
+  openTime  String   @db.VarChar(10)
+  closeTime String   @db.VarChar(10)
+  timezone  String   @db.VarChar(50)
+  active    Boolean  @default(true)
+}
+
+model Order {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  symbol      String   @db.VarChar(20)
+  type        String   @db.VarChar(50)
+  side        String   @db.VarChar(10)
+  quantity    Float
+  price       Float?
+  status      String   @default("pending") @db.VarChar(50)
+  provider    String   @db.VarChar(50)
+  providerId  String?  @db.VarChar(100)
+  accountId   String?  @db.VarChar(100)
+  filledAt    DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([symbol, createdAt])
+  @@index([status])
+}
+
+model Position {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  symbol      String   @db.VarChar(20)
+  quantity    Float
+  avgPrice    Float
+  currentPrice Float?
+  pnl         Float?
+  provider    String   @db.VarChar(50)
+  accountId   String?  @db.VarChar(100)
+  openedAt    DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([symbol])
+  @@index([provider, accountId])
+}
+
+model Trade {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  symbol      String   @db.VarChar(20)
+  side        String   @db.VarChar(10)
+  quantity    Float
+  entryPrice  Float
+  exitPrice   Float?
+  pnl         Float?
+  status      String   @default("open") @db.VarChar(50)
+  provider    String   @db.VarChar(50)
+  strategy    String?  @db.VarChar(200)
+  openedAt    DateTime @default(now())
+  closedAt    DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([symbol, openedAt])
+  @@index([status])
+}
+
+model ApiCalls {
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  endpoint   String   @db.VarChar(255)
+  method     String   @db.VarChar(10)
+  provider   String   @db.VarChar(50)
+  statusCode Int?
+  durationMs Int?
+  responseSize Int?
+  error      String?  @db.Text
+  timestamp  DateTime @default(now())
+
+  @@index([provider, timestamp])
+  @@index([timestamp])
+}
+
+model CacheMeta {
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  key        String   @unique @db.VarChar(200)
+  ttl        Int      @default(300)
+  hitCount   Int      @default(0)
+  missCount  Int      @default(0)
+  size       Int?
+  lastHit    DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model StrategyMeta {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  strategyId  String   @unique @db.VarChar(36)
+  category    String   @db.VarChar(50)
+  instrumentFocus Json
+  expectedReturn String? @db.VarChar(20)
+  maxDrawdown String?  @db.VarChar(20)
+  winRate     String?  @db.VarChar(20)
+  bestCondition String? @db.VarChar(50)
+  riskLevel   String   @db.VarChar(20)
+  timeHorizon String   @db.VarChar(20)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model WatchlistMeta {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  watchlistId String   @db.VarChar(36)
+  symbol      String   @db.VarChar(20)
+  addedAt     DateTime @default(now())
+  notes       String?  @db.Text
+
+  @@unique([watchlistId, symbol])
+  @@index([symbol])
+}
+
+model NewsMeta {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  symbol      String?  @db.VarChar(20)
+  headline    String   @db.Text
+  source      String   @db.VarChar(200)
+  url         String?  @db.VarChar(500)
+  sentiment   Float    @default(0)
+  fluffScore  Float    @default(0)
+  impact      String   @default("low") @db.VarChar(20)
+  publishedAt DateTime
+  ingestedAt  DateTime @default(now())
+
+  @@index([symbol, publishedAt])
+  @@index([publishedAt])
+}
+
+model OrderExecution {
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  orderId    String   @db.VarChar(36)
+  provider   String   @db.VarChar(50)
+  providerOrderId String? @db.VarChar(100)
+  action     String   @db.VarChar(50)
+  status     String   @db.VarChar(50)
+  filledQty  Float?
+  filledPrice Float?
+  fee        Float?
+  error      String?  @db.Text
+  executedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([orderId])
+  @@index([provider, executedAt])
+}

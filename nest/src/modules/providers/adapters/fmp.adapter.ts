@@ -149,4 +149,33 @@ export class FmpAdapter implements IProviderAdapter {
       return false;
     }
   }
+
+  // ── Price Targets ─────────────────────────────────────
+
+  async getPriceTarget(symbol: string): Promise<any | null> {
+    this.logger.log(`FMP: fetching price target for ${symbol}`);
+    const data = await this.fmpGet<any>(
+      `/price-target?symbol=${encodeURIComponent(symbol)}`,
+    );
+    if (!data || !data.symbol) return null;
+    return {
+      symbol: data.symbol,
+      source: 'fmp',
+      targetHigh: data.targetHigh ?? null,
+      targetLow: data.targetLow ?? null,
+      targetConsensus: data.targetConsensus ?? null,
+      targetMedian: data.targetMedian ?? null,
+      numberOfAnalysts: data.numberOfAnalysts ?? null,
+      lastUpdated: data.lastUpdated ? new Date(data.lastUpdated) : new Date(),
+    };
+  }
+
+  // ── Analyst Estimates ─────────────────────────────────
+
+  async getAnalystEstimates(symbol: string): Promise<any | null> {
+    this.logger.log(`FMP: fetching analyst estimates for ${symbol}`);
+    return this.fmpGet<any>(
+      `/analyst-estimates/${encodeURIComponent(symbol)}`,
+    );
+  }
 }

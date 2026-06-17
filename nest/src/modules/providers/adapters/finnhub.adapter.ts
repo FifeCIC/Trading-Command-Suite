@@ -12,6 +12,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import {
+  AnalystRecommendation,
   IProviderAdapter,
   MarketBar,
   ProviderProfile,
@@ -197,6 +198,28 @@ export class FinnhubAdapter implements IProviderAdapter {
       this.logger.error(`Finnhub healthCheck failed: ${(err as Error).message}`);
       return false;
     }
+  }
+
+  // ── Analyst Recommendations (free tier) ──────────────
+
+  async getRecommendations(symbol: string): Promise<AnalystRecommendation[]> {
+    this.logger.log(`Finnhub: fetching recommendations for ${symbol}`);
+    const data = await this.finnhubGet<any[]>(
+      `/stock/recommendation?symbol=${encodeURIComponent(symbol)}`,
+    );
+
+    if (!data || !Array.isArray(data)) return [];
+
+    return data.map((r: any) => ({
+      symbol: r.symbol || symbol,
+      period: r.period || '',
+      strongBuy: r.strongBuy ?? 0,
+      buy: r.buy ?? 0,
+      hold: r.hold ?? 0,
+      sell: r.sell ?? 0,
+      strongSell: r.strongSell ?? 0,
+      source: 'finnhub',
+    }));
   }
 
   // ── Helpers ──

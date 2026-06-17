@@ -262,7 +262,20 @@ button.nav-active {
 }
 
 .topbar-row-main {
-  grid-template-columns: 1fr minmax(280px, 2fr) 1fr;
+  grid-template-columns: auto 1fr auto;
+  gap: 1rem;
+}
+
+.topbar-logo-block {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.topbar-logo {
+  height: 36px;
+  width: auto;
+  display: block;
 }
 
 .topbar-title-block {

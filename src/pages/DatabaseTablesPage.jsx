@@ -17,38 +17,38 @@ const ALL_TABLES = [
   // Symbol Meta Tables (Planned)
   { name: 'SymbolMeta', prismaModel: null, description: 'Extended symbol metadata storage', status: 'planned' },
   { name: 'SymbolFundamentals', prismaModel: null, description: 'Fundamental data (PE, EPS, etc.)', status: 'planned' },
-  { name: 'SymbolTechnical', prismaModel: null, description: 'Technical indicators by timeframe', status: 'planned' },
+  { name: 'SymbolTechnical', prismaModel: 'SymbolTechnical', description: 'Technical indicators by timeframe', status: 'active' },
   
-  // API Management Tables (Planned)
-  { name: 'ApiCalls', prismaModel: null, description: 'API call tracking for rate limiting', status: 'planned' },
-  { name: 'DataSourcesMeta', prismaModel: null, description: 'Data source configurations', status: 'planned' },
-  { name: 'ApiCredentials', prismaModel: null, description: 'Encrypted API credentials storage', status: 'planned' },
+  // API Management Tables
+  { name: 'ApiCalls', prismaModel: 'ApiCalls', description: 'API call tracking for rate limiting', status: 'active' },
+  { name: 'DataSourcesMeta', prismaModel: 'DataSourcesMeta', description: 'Data source configurations', status: 'active' },
+  { name: 'ApiCredentials', prismaModel: 'ApiCredentials', description: 'Encrypted API credentials storage', status: 'active' },
   
-  // Cache Management (Planned)
-  { name: 'CacheMeta', prismaModel: null, description: 'Cache metadata for invalidation', status: 'planned' },
+  // Cache Management
+  { name: 'CacheMeta', prismaModel: 'CacheMeta', description: 'Cache metadata for invalidation', status: 'active' },
   
-  // Strategy Meta Tables (Planned)
-  { name: 'StrategyMeta', prismaModel: null, description: 'Strategy parameters and configs', status: 'planned' },
-  { name: 'StrategyPerformance', prismaModel: null, description: 'Strategy performance tracking', status: 'planned' },
+  // Strategy Meta Tables
+  { name: 'StrategyMeta', prismaModel: 'StrategyMeta', description: 'Strategy parameters and configs', status: 'active' },
+  { name: 'StrategyPerformance', prismaModel: 'StrategyPerformance', description: 'Strategy performance tracking', status: 'active' },
   
-  // User Activity Tables (Planned)
-  { name: 'UserPreferences', prismaModel: null, description: 'User trading preferences', status: 'planned' },
-  { name: 'Watchlist', prismaModel: null, description: 'User watchlists', status: 'planned' },
-  { name: 'WatchlistMeta', prismaModel: null, description: 'Watchlist metadata', status: 'planned' },
+  // User Activity Tables
+  { name: 'UserPreferences', prismaModel: 'UserPreferences', description: 'User trading preferences', status: 'active' },
+  { name: 'Watchlist', prismaModel: 'Watchlist', description: 'User watchlists', status: 'active' },
+  { name: 'WatchlistMeta', prismaModel: 'WatchlistMeta', description: 'Watchlist metadata', status: 'active' },
   
-  // Automation Tables (Planned)
-  { name: 'CronMeta', prismaModel: null, description: 'CRON job metadata and status', status: 'planned' },
-  { name: 'ProcessMeta', prismaModel: null, description: 'Background process metadata', status: 'planned' },
+  // Automation Tables
+  { name: 'CronMeta', prismaModel: 'CronMeta', description: 'CRON job metadata and status', status: 'active' },
+  { name: 'ProcessMeta', prismaModel: 'ProcessMeta', description: 'Background process metadata', status: 'active' },
   
-  // Market Context Tables (Planned)
-  { name: 'MarketSessions', prismaModel: null, description: 'Market session information', status: 'planned' },
-  { name: 'NewsMeta', prismaModel: null, description: 'News sentiment metadata', status: 'planned' },
+  // Market Context Tables
+  { name: 'MarketSessions', prismaModel: 'MarketSessions', description: 'Market session information (London/NY/Asia)', status: 'active' },
+  { name: 'NewsMeta', prismaModel: 'NewsMeta', description: 'News sentiment metadata', status: 'active' },
   
-  // Order Management (Planned)
-  { name: 'Order', prismaModel: null, description: 'Trading orders', status: 'planned' },
-  { name: 'OrderExecution', prismaModel: null, description: 'Order execution history', status: 'planned' },
-  { name: 'Position', prismaModel: null, description: 'Open trading positions', status: 'planned' },
-  { name: 'Trade', prismaModel: null, description: 'Completed trade records', status: 'planned' },
+  // Order Management
+  { name: 'Order', prismaModel: 'Order', description: 'Trading orders', status: 'active' },
+  { name: 'OrderExecution', prismaModel: 'OrderExecution', description: 'Order execution history', status: 'active' },
+  { name: 'Position', prismaModel: 'Position', description: 'Open trading positions', status: 'active' },
+  { name: 'Trade', prismaModel: 'Trade', description: 'Completed trade records', status: 'active' },
 ]
 
 export default function DatabaseTablesPage() {

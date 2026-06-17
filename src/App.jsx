@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate, Link } 
 import { useQuery } from '@tanstack/react-query';
 import { analytics, trackAppView, trackSupportClick } from './analytics';
 import Breadcrumbs from './components/Breadcrumbs';
-import GlobalSearch from './components/GlobalSearch';
 import DevOverlay from './components/DevOverlay';
 import ErrorBoundary from './components/ErrorBoundary';
 import HealthStatusBar from './components/HealthStatusBar';
@@ -790,6 +789,27 @@ function AppShell() {
 
       <header className="topbar topbar-omni">
         <div className="topbar-row topbar-row-main">
+          <div className="topbar-logo-block">
+            <img src="/tcs-logo.png" alt="Trading Command Suite" className="topbar-logo" />
+          </div>
+
+          <div className="topbar-title-block">
+            <p className="eyebrow">Trading Command Suite</p>
+            <h1>{(NAV_STRUCTURE[primaryArea] || []).find((v) => v.id === secondaryView)?.label || secondaryView}</h1>
+            <nav className="quick-menu-row" aria-label="Quick navigation">
+              {QUICK_MENU.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={primaryArea === item.id ? 'nav-active' : ''}
+                  onClick={() => onPrimarySelect(item.id)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
           <div className="topbar-status-cluster">
             <button
               type="button"
@@ -811,25 +831,6 @@ function AppShell() {
             <BadgePill label="Omni Layout" status="neutral" />
             <HealthStatusBar />
           </div>
-
-          <div className="topbar-title-block">
-            <p className="eyebrow">Trading Command Suite</p>
-            <h1>{(NAV_STRUCTURE[primaryArea] || []).find((v) => v.id === secondaryView)?.label || secondaryView}</h1>
-            <nav className="quick-menu-row" aria-label="Quick navigation">
-              {QUICK_MENU.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={primaryArea === item.id ? 'nav-active' : ''}
-                  onClick={() => onPrimarySelect(item.id)}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          <GlobalSearch />
         </div>
 
       </header>

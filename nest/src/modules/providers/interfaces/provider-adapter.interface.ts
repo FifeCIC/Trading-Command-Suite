@@ -128,6 +128,12 @@ export interface IProviderAdapter {
    * @param horizonMonths  How many months ahead to fetch (default 3).
    */
   getEarningsCalendar?(symbol?: string, horizonMonths?: number): Promise<EarningsEvent[]>;
+
+  /**
+   * Fetch analyst recommendation trends (optional — Finnhub free tier).
+   * Returns monthly consensus: strongBuy, buy, hold, sell, strongSell counts.
+   */
+  getRecommendations?(symbol: string): Promise<AnalystRecommendation[]>;
 }
 
 /** A single news headline from a provider. */
@@ -164,5 +170,17 @@ export interface EarningsEvent {
   surprisePercent?: number | null;
   timeOfDay?: 'Before Open' | 'After Close' | 'During' | null;
   currency?: string;
+  source: string;
+}
+
+/** Monthly analyst recommendation trends from a provider. */
+export interface AnalystRecommendation {
+  symbol: string;
+  period: string;
+  strongBuy: number;
+  buy: number;
+  hold: number;
+  sell: number;
+  strongSell: number;
   source: string;
 }
