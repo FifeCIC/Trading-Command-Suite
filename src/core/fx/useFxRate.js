@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { apiUrl } from '../api/client';
 
 const CACHE = new Map();
 const CACHE_TTL = 60_000; // 1 minute
@@ -32,14 +33,14 @@ export function useFxRate(pair) {
     let cancelled = false;
     setLoading(true);
 
-    fetch(`/api/fx/rate/${encodeURIComponent(pair)}`)
+    fetch(apiUrl(`/api/fx/rate/${encodeURIComponent(pair)}`))
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
       })
       .then((data) => {
         if (cancelled) return;
-        const val = data?.rate ?? null;
+        const val = data?.status === 'unavailable' || data?.status === 'invalid_pair' ? null : data?.rate ?? null;
         setRate(val);
         setLastUpdated(Date.now());
         setError(null);

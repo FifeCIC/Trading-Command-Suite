@@ -18,20 +18,23 @@ export default function AccountsDashboardPage() {
       const results = await Promise.allSettled([
         apiGet('/api/providers/mt5/accounts'),
         apiGet('/api/portfolio/summary'),
+        apiGet('/api/isa/dashboard'),
       ]);
 
       const mt5Raw = results[0].status === 'fulfilled' ? results[0].value : null;
       const t212Raw = results[1].status === 'fulfilled' ? results[1].value : null;
+      const isaRaw = results[2].status === 'fulfilled' ? results[2].value : null;
 
       const errors = [];
       if (results[0].status === 'rejected') errors.push('MT5 bridge offline');
       if (results[1].status === 'rejected') errors.push('Trading212 API offline');
+      if (results[2].status === 'rejected') errors.push('Stocks ISA API offline');
 
       const mt5Accounts = Array.isArray(mt5Raw?.accounts) ? mt5Raw.accounts : [];
       const mt5Data = Array.isArray(mt5Raw) ? mt5Raw : mt5Accounts;
       const t212Data = t212Raw ?? {};
 
-      setData({ mt5: mt5Data, t212: t212Data, errors });
+      setData({ mt5: mt5Data, t212: t212Data, isa: isaRaw, errors });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -59,6 +62,7 @@ export default function AccountsDashboardPage() {
             ts: Date.now(),
             mt5: data.mt5,
             t212: data.t212,
+            isa: data.isa,
           }));
         } catch { /* ignore */ }
       }
@@ -75,6 +79,9 @@ export default function AccountsDashboardPage() {
   // Trading212 data
   const t212Positions = Array.isArray(t212Summary.positions) ? t212Summary.positions : [];
   const t212Account = t212Summary.account ?? {};
+  const isa = data?.isa ?? {};
+  const isaSummary = isa.summary ?? {};
+  const isaAllowance = isa.allowance ?? {};
 
   // Net totals (approximate)
   const liveTotal = liveMT5.reduce((s, a) => s + (a.balance ?? a.equity ?? 0), 0)
@@ -173,15 +180,16 @@ export default function AccountsDashboardPage() {
               <div className="ad-card ad-card--isa">
                 <div className="ad-card-header">
                   <span className="ad-provider">T212</span>
-                  <span className="ad-status-dot">🟡</span>
+                  <span className="ad-status-dot">{isa.status === 'connected' ? '🟢' : '🟡'}</span>
                 </div>
                 <div className="ad-card-body">
                   <span className="ad-card-name">Stocks ISA</span>
-                  <span className="ad-card-balance">—</span>
+                  <span className="ad-card-balance">{formatCurrency(isaSummary.totalValueGbp, 'GBP')}</span>
+                  <span className="ad-card-currency">GBP only</span>
                 </div>
                 <div className="ad-card-footer">
                   <span className="ad-card-type">ISA (GBP)</span>
-                  <span className="ad-card-positions">ISA endpoint TBD</span>
+                  <span className="ad-card-positions">{isaSummary.positionCount ?? 0} positions</span>
                 </div>
               </div>
 
@@ -189,6 +197,39 @@ export default function AccountsDashboardPage() {
                 <p className="ad-empty">No live accounts connected. Start MT5 bridge or configure Trading212 credentials.</p>
               )}
             </div>
+          </section>
+
+          <section className="tp-card ad-isa-panel">
+            <div className="ad-isa-head">
+              <h2>Stocks ISA</h2>
+              <span className="ad-isa-status">{isa.status === 'connected' ? 'Connected' : 'API key needed'}</span>
+            </div>
+            <div className="ad-isa-metrics">
+              <div>
+                <span>Allowance remaining</span>
+                <strong>{formatCurrency(isaAllowance.remainingGbp, 'GBP')}</strong>
+              </div>
+              <div>
+                <span>Foreign-listed holdings</span>
+                <strong>{isa.fxImpact?.foreignPositionCount ?? 0}</strong>
+              </div>
+              <div>
+                <span>Best window today</span>
+                <strong>{isa.tradingWindow?.bestTimeToTradeToday || '—'}</strong>
+              </div>
+            </div>
+            {isa.fxImpact?.message && (
+              <p className="ad-isa-note">{isa.fxImpact.message}</p>
+            )}
+            {Array.isArray(isa.warnings) && isa.warnings.length > 0 && (
+              <div className="ad-isa-warnings">
+                {isa.warnings.map((warning) => (
+                  <span key={warning.type} className={`ad-isa-warning ad-isa-warning--${warning.severity}`}>
+                    {warning.message}
+                  </span>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Demo Accounts */}

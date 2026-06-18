@@ -50,6 +50,7 @@ import CacheMonitorPage from './pages/CacheMonitorPage';
 import SeesLiveStackMockPage from './pages/SeesLiveStackMockPage';
 import SeesArenaPage from './pages/SeesArenaPage';
 import AlgorithmLabPage from './pages/AlgorithmLabPage';
+import PerformanceLabPage from './pages/PerformanceLabPage';
 import AlertCenterPage from './pages/AlertCenterPage';
 import AutomationDashboardPage from './pages/AutomationDashboardPage';
 import AutomationRulesPage from './pages/AutomationRulesPage';
@@ -79,7 +80,14 @@ import CandlePatternsGuidePage from './pages/CandlePatternsGuidePage';
 import Mt5DemoTradingPage from './pages/Mt5DemoTradingPage';
 import ThemePage from './pages/ThemePage';
 import ThemeLabPage from './pages/ThemeLabPage';
+import ThemeLabMotion from './pages/ThemeLabMotion';
+import ThemeLabTransitions from './pages/ThemeLabTransitions';
+import ThemeLabContainer from './pages/ThemeLabContainer';
+import ThemeLabScroll from './pages/ThemeLabScroll';
+import ThemeLabPopover from './pages/ThemeLabPopover';
 import ComponentLabPage from './pages/ComponentLabPage';
+import FeatureLabPage from './pages/FeatureLabPage';
+import LabLandingPage from './pages/LabLandingPage';
 import SupportResistancePage from './pages/SupportResistancePage';
 import VolatilityAnalysisPage from './pages/VolatilityAnalysisPage';
 import TechnicalIndicatorsPage from './pages/TechnicalIndicatorsPage';
@@ -378,6 +386,26 @@ function AppShell() {
       return <ThemeLabPage />;
     }
 
+    if (secondaryView === 'theme-lab-motion') {
+      return <ThemeLabMotion />;
+    }
+
+    if (secondaryView === 'theme-lab-transitions') {
+      return <ThemeLabTransitions />;
+    }
+
+    if (secondaryView === 'theme-lab-container') {
+      return <ThemeLabContainer />;
+    }
+
+    if (secondaryView === 'theme-lab-scroll') {
+      return <ThemeLabScroll />;
+    }
+
+    if (secondaryView === 'theme-lab-popover') {
+      return <ThemeLabPopover />;
+    }
+
     if (secondaryView === 'server-controls') {
       return <ServerControlsPage />;
     }
@@ -594,6 +622,18 @@ function AppShell() {
 
     if (secondaryView === 'mt5-demo-trading') {
       return <UnifiedTradingPage />;
+    }
+
+    if (secondaryView === 'lab-landing') {
+      return <LabLandingPage />;
+    }
+
+    if (secondaryView === 'feature-lab') {
+      return <FeatureLabPage />;
+    }
+
+    if (secondaryView === 'performance-lab') {
+      return <PerformanceLabPage />;
     }
 
     if (secondaryView === 'support-resistance') {

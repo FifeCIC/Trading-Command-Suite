@@ -72,3 +72,12 @@ Add to nav-tree under Trading area:
 - `nest/src/modules/portfolio/trading212-portfolio.controller.ts` — add events endpoint
 - `src/pages/AccountsDashboardPage.jsx` — add events panel
 - `src/core/nav-tree.js` — add navigation entry
+
+## 🏗️ Post-Implementation: Update Architecture
+
+Using the `update-architecture-framework` skill, update `/builder/architecture-framework`:
+
+1. **STATUS_SNAPSHOT** — Add: `[DATE]: Portfolio Events cross-reference view — holdings matched with upcoming earnings, color-coded urgency, EPS estimates.`
+2. **CURRENT_ROUTE_CONTRACTS** — Add: `GET /api/portfolio/events?days=30`
+3. **SYSTEM_SPINE** — Add: `PortfolioService + EarningsService → PortfolioEventsEndpoint → {holdings × upcoming events}`
+4. **REVISION_LOG** — Add entry: `Portfolio events cross-reference — answers "what's coming up for my holdings?"`

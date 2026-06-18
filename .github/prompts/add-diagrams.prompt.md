@@ -139,3 +139,10 @@ flowchart TB
 3. Use `flowchart TB` (top-bottom) or `flowchart LR` (left-right) as appropriate
 4. Keep descriptions to one sentence
 5. Verify the Mermaid renders correctly by visiting `/builder/diagrams`
+
+## 🏗️ Post-Implementation: Update Architecture
+
+Using the `update-architecture-framework` skill, update `/builder/architecture-framework`:
+
+1. **STATUS_SNAPSHOT** — Add: `[DATE]: Three new system diagrams added — Provider Failover & Rate Limiting, Trading212 Portfolio Data Flow, Earnings Calendar Data Pipeline.`
+2. **REVISION_LOG** — Add entry: `Architecture diagrams — provider failover, portfolio flow, earnings pipeline`

@@ -129,3 +129,13 @@ ORDER BY e.reportDate ASC;
 - `nest/prisma/schema.prisma` — add EarningsEvent model
 - `nest/src/modules/earnings/` — new module (create)
 - `nest/src/modules/providers/adapters/alpha-vantage.adapter.ts` — already has getEarningsCalendar
+
+## 🏗️ Post-Implementation: Update Architecture
+
+Using the `update-architecture-framework` skill, update `/builder/architecture-framework`:
+
+1. **STATUS_SNAPSHOT** — Add: `[DATE]: Earnings data persistence — EarningsEvent table + import service. 1 API call stores all upcoming earnings. Portfolio cross-reference becomes SQL query.`
+2. **CURRENT_ROUTE_CONTRACTS** — Add: `POST /api/earnings/import`, `GET /api/earnings/calendar`, `GET /api/earnings/symbol/:symbol`
+3. **DATABASE_SCHEMA** — Add EarningsEvent model with unique constraint on (symbol, reportDate)
+4. **SYSTEM_SPINE** — Update earnings flow: `AV API → EarningsImportService → EarningsEvent (DB) → UI / Scoring`
+5. **REVISION_LOG** — Add entry: `Earnings data stored to DB — eliminates repeated API calls`

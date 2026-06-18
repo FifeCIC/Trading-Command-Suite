@@ -32,3 +32,15 @@ applyTo: "nest/src/modules/portfolio/**, nest/src/modules/providers/**, nest/src
 - Mock data is acceptable when `hasCredentials` is false
 - Log adapter status (mock vs live) at construction time
 - Rate limit tests should verify the factory skips tripped providers
+
+## 🏗️ Architecture Update Rule
+**After ANY feature implementation that affects trading subsystems**, update the Architecture Framework page (`/builder/architecture-framework`). Use the `update-architecture-framework` skill for guidance. At minimum:
+
+1. **STATUS_SNAPSHOT** — Add a dated bullet summarizing the change
+2. **CURRENT_ROUTE_CONTRACTS** — Add any new API endpoints with route, method, owner, contract
+3. **DATABASE_SCHEMA** — Add new Prisma models to coreEntities or marketDataEntities
+4. **SYSTEM_SPINE** — Add new data-flow pipeline steps
+5. **REVISION_LOG** — Add a dated entry summarizing the feature
+6. **KNOWN_GAPS** — Document any gaps discovered that remain open
+
+This applies to ALL development agents working on trading-related files. The architecture page is the implementation front door — keep it current.

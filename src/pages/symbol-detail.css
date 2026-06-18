@@ -64,6 +64,34 @@
 .sd-modal-warning { background: #7c2d1233; border: 1px solid #9a3412; border-radius: 6px; padding: 0.5rem; font-size: 0.78rem !important; color: #fbbf24 !important; margin: 0.75rem 0; }
 .sd-modal-actions { margin-top: 1rem; display: flex; justify-content: flex-end; }
 
+.sd-isa-warning {
+  background: rgba(14, 165, 166, 0.08);
+  border: 1px solid rgba(14, 165, 166, 0.35);
+  border-radius: 6px;
+  color: var(--ink);
+  margin: 0.75rem 0;
+  padding: 0.6rem;
+}
+
+.sd-isa-warning strong {
+  display: block;
+  font-size: 0.82rem;
+  margin-bottom: 0.3rem;
+}
+
+.sd-isa-warning p {
+  margin: 0;
+}
+
+.sd-isa-warning span {
+  color: #0ea5a6;
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-top: 0.45rem;
+  text-transform: uppercase;
+}
+
 /* ── News ── */
 .sd-news-list { display: flex; flex-direction: column; gap: 0.5rem; }
 .sd-news-item { padding: 0.5rem 0; border-bottom: 1px solid var(--line); }

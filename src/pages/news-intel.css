@@ -81,4 +81,52 @@
 .ni-snippet { font-size: 0.78rem; color: var(--ink-soft, #94a3b8); margin: 0 0 0.4rem; line-height: 1.5; }
 .ni-expanded-meta { display: flex; gap: 1rem; font-size: 0.7rem; color: var(--ink-soft, #94a3b8); }
 
-@media (max-width: 600px) { .ni-filters { flex-direction: column; } }
+.ni-header-top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  flex-wrap: wrap; gap: 0.75rem;
+}
+.ni-import-section {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem;
+}
+.ni-last-import {
+  font-size: 0.65rem; color: var(--ink-soft, #94a3b8);
+}
+.ni-import-btn {
+  padding: 0.4rem 0.85rem; font-size: 0.78rem; font-weight: 600;
+  background: var(--accent, #0ea5a6); color: #000;
+  border: none; border-radius: 6px; cursor: pointer; transition: opacity 0.15s;
+}
+.ni-import-btn:hover { opacity: 0.85; }
+.ni-import-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Category Tabs ── */
+.ni-category-tabs {
+  display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.75rem;
+}
+.ni-cat-tab {
+  padding: 0.3rem 0.7rem; font-size: 0.73rem; font-weight: 500;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--line, #1e2a45);
+  border-radius: 999px; color: var(--ink-soft, #94a3b8); cursor: pointer;
+  transition: all 0.15s;
+}
+.ni-cat-tab:hover { border-color: var(--accent, #0ea5a6); color: var(--ink, #e2e8f0); }
+.ni-cat-active {
+  background: rgba(14,165,166,0.15); border-color: var(--accent, #0ea5a6);
+  color: var(--accent, #0ea5a6);
+}
+
+/* ── Empty State ── */
+.ni-empty {
+  text-align: center; padding: 3rem 1rem; color: var(--ink-soft, #94a3b8);
+}
+.ni-empty p { margin: 0 0 1rem; font-size: 0.9rem; }
+
+/* ── Category & Reliability badges ── */
+.ni-cat-badge {
+  font-size: 0.58rem; font-weight: 600; padding: 0.08rem 0.4rem;
+  border-radius: 999px; background: rgba(99,102,241,0.15); color: #818cf8;
+  text-transform: capitalize;
+}
+.ni-reliability {
+  font-size: 0.58rem; color: var(--ink-soft, #94a3b8);
+}

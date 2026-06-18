@@ -290,3 +290,14 @@ FMP_API_KEY=
 - `nest/src/modules/directives/implementations/analyst-adjustments.directive.ts` — NEW: implement
 - `src/pages/PriceForecastPage.jsx` — convert from mock to real API
 - `nest/src/modules/portfolio/portfolio.service.ts` — add getPortfolioForecast
+
+## 🏗️ Post-Implementation: Update Architecture
+
+Using the `update-architecture-framework` skill, update `/builder/architecture-framework`:
+
+1. **STATUS_SNAPSHOT** — Add: `[DATE]: Multi-source analyst forecast system — Finnhub recommendations (free tier), FMP price targets (pending activation), ForecastMergeService with deviation scoring, AnalystAdjustmentsDirective implemented.`
+2. **CURRENT_ROUTE_CONTRACTS** — Add: `GET /api/forecast/:symbol`, `GET /api/portfolio/forecast`
+3. **DATABASE_SCHEMA** — Add PriceTarget model. Note AnalystRecommendation model for Finnhub data.
+4. **DOMAINS** — Add: `Analyst forecast aggregation and deviation scoring`
+5. **SYSTEM_SPINE** — Add: `Finnhub + FMP → ForecastMergeService → {consensusLow, consensusMedian, consensusHigh, deviationPercent} → AnalystAdjustmentsDirective`
+6. **REVISION_LOG** — Add entry: `Analyst forecast sources — Finnhub recommendations + FMP price targets + merge service + directive`

@@ -37,6 +37,8 @@ import { IndicatorsModule } from './modules/indicators/indicators.module';
 import { MacroModule } from './modules/macro/macro.module';
 import { TradingModule } from './modules/trading/trading.module';
 import { ApiActivityModule } from './modules/api-activity/api-activity.module';
+import { IsaModule } from './modules/isa/isa.module';
+import { FxModule } from './modules/fx/fx.module';
 import { RateLimiterMiddleware } from './common/middleware/rate-limiter.middleware';
 import { MetricsMiddleware } from './common/middleware/metrics.middleware';
 
@@ -83,6 +85,8 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     MacroModule,
     TradingModule,
     ApiActivityModule,
+    IsaModule,
+    FxModule,
   ],
   controllers: [AppController],
   providers: [AppService],

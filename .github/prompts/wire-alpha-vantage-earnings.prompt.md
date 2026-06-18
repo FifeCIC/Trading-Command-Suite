@@ -68,3 +68,12 @@ The user will provide `ALPHA_VANTAGE_API_KEY`. Free tier key from: https://www.a
 - `nest/src/modules/directives/implementations/earnings-proximity.directive.ts` — scoring directive
 - `src/pages/EarningsCalendarPage.jsx` — UI
 - `nest/.env.example` — env config
+
+## 🏗️ Post-Implementation: Update Architecture
+
+Using the `update-architecture-framework` skill, update `/builder/architecture-framework`:
+
+1. **STATUS_SNAPSHOT** — Add: `[DATE]: Alpha Vantage adapter converted from mock to real — GLOBAL_QUOTE, TIME_SERIES_DAILY, OVERVIEW, EARNINGS_CALENDAR (CSV parser). EarningsCalendarPage now has live data path.`
+2. **CURRENT_ROUTE_CONTRACTS** — Add: `GET /api/earnings/calendar?days=90`, `GET /api/earnings/symbol/:symbol`
+3. **SYSTEM_SPINE** — Add: `Alpha Vantage EARNINGS_CALENDAR (CSV) → adapter.getEarningsCalendar() → EarningsService → earnings-proximity directive`
+4. **REVISION_LOG** — Add entry: `Alpha Vantage adapter — real API calls + EARNINGS_CALENDAR with CSV parsing`

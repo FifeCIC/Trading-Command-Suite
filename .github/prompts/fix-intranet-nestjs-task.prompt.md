@@ -59,3 +59,11 @@ curl -X POST http://localhost/intranet/api-tasks.php \
 ## Related Files
 - `C:\wamp64\www\intranet\api-tasks.php` — task runner API
 - Intranet task configuration (may be in `data/` or `includes/`)
+
+## 🏗️ Post-Implementation: Update Architecture
+
+Using the `update-architecture-framework` skill, update `/builder/architecture-framework`:
+
+1. **STATUS_SNAPSHOT** — Add: `[DATE]: NestJS backend registered in Intranet task runner — start/stop/restart via controls page.`
+2. **SYSTEM_SPINE** — Add: `Intranet Task Runner → tradercore:api:3201 → NestJS start/stop/restart`
+3. **REVISION_LOG** — Add entry: `NestJS backend registered for Intranet lifecycle management`

@@ -100,17 +100,26 @@ Trading212 uses internal codes:
 | `build-portfolio-events-view` | Cross-reference holdings with earnings |
 | `fix-intranet-nestjs-task` | Register NestJS for start/stop via Intranet |
 | `add-diagrams` | Add provider failover + data flow diagrams |
+| `normalize-and-auto-refresh` | Fix schema redundancy + PriceRefreshService + page-open trigger |
+| `import-portfolio-to-positions` | Import Trading212 → Position table with FK |
+| `computed-portfolio-endpoint` | Single endpoint: positions + live prices + P&L + scores |
+| `populate-data-tables` | Fill EarningsEvent + AnalystRecommendation tables |
+| `add-analyst-forecast-sources` | Finnhub/FMP analyst data + ForecastMergeService |
+| `create-data-tables` | Prisma migration for all data storage tables |
+| `protocol-risk-gating` | Directive groups (Technical/Sentiment/Risk) with multiplicative gating |
+| `portfolio-session-tracking` | Session-over-session comparison + snapshot history |
+| `stock-investigation-system` | Persistent stock investigations — findings stored to DB |
 
 ## Session Pattern (EFFICIENCY RULES)
-**CRITICAL: Minimize token usage. Follow these rules strictly.**
+**This agent TRADES — it does NOT build. Create prompts for app changes.**
 
-1. **Session start**: Always run `trading-session-init` first — it loads everything in parallel
+1. **Session start**: Always run `trading-session-init` first — loads everything in parallel
 2. **Don't re-explore**: This skill IS the codebase knowledge. Trust it.
 3. **Cache API results**: Portfolio data valid 30 min. Don't re-fetch.
-4. **Use DataImportHandler**: Once built, ALL data queries go through it — never call Alpha Vantage directly
-5. **Query DB, not APIs**: After DataImportHandler imports earnings → query `EarningsEvent` table directly, 0 API calls
-6. **Rate limits**: Batch calls only. Single-symbol queries waste tokens AND rate limit slots.
-7. **Backend restart**: Use Intranet (once `fix-intranet-nestjs-task` is done). Never brute-force kill PIDs.
-8. **Data persistence**: Save session snapshots to `G:\My Drive\...\.agenticmemory\sessions\` for cross-session comparison
-9. **Discrepancies**: When app output differs from AI analysis, log to session notes — these feed prompts for app improvement
-10. **Check freshness first**: `GET /api/data-import/status/earnings` before fetching — if fresh, skip the API call entirely
+4. **Query DB, not APIs**: After data is imported → query tables directly, 0 API calls
+5. **Rate limits**: Batch calls only. Single-symbol queries waste tokens AND rate limit slots.
+6. **Backend restart**: Use Intranet (once `fix-intranet-nestjs-task` is done). Never brute-force kill PIDs.
+7. **Data persistence**: Save session snapshots to Google Drive for cross-session comparison
+8. **Discrepancies**: When app output differs from AI analysis, log to session notes — these feed prompts for app improvement
+9. **Check freshness first**: `GET /api/data-import/status/earnings` before fetching
+10. **📝 Gaps → Prompts**: When the app lacks a capability needed for trading analysis, do NOT build it inline. Instead, identify the gap clearly and reference the relevant prompt from the catalog below. If no prompt exists, create one. The trading agent surfaces needs — dev agents implement them.

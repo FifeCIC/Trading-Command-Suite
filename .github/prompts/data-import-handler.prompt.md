@@ -256,3 +256,13 @@ curl "http://localhost:3201/api/data-import/status/earnings"
 - `nest/src/common/cache/cache.service.ts` — already exists, use for import result caching
 - `nest/src/modules/providers/adapter-factory.ts` — already rate-limit-aware, use for provider selection
 - `nest/src/modules/providers/adapters/alpha-vantage.adapter.ts` — already has getEarningsCalendar
+
+## 🏗️ Post-Implementation: Update Architecture
+
+Using the `update-architecture-framework` skill, update `/builder/architecture-framework`:
+
+1. **STATUS_SNAPSHOT** — Add: `[DATE]: DataImportHandler — unified import orchestration across all data types with pagination, staleness config, and DataImportLog tracking.`
+2. **CURRENT_ROUTE_CONTRACTS** — Add: `POST /api/data-import/import/:dataType`, `GET /api/data-import/status/:dataType`, `GET /api/data-import/log/:dataType`
+3. **DATABASE_SCHEMA** — Add DataImportLog model to plannedMetaTables
+4. **SYSTEM_SPINE** — Add: `DataImportHandler.importIfStale() → FetchPaginated() → Provider Adapter → Type-Specific DB Table → DataImportLog`
+5. **REVISION_LOG** — Add entry: `DataImportHandler — paginated, staleness-aware data import for all types`

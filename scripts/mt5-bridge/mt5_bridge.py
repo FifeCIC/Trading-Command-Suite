@@ -114,7 +114,10 @@ def initialize_mt5():
         return False
 
     logger.info(f'Connecting to MT5: server={server}, account={account} (account #{active_num})')
-    initialized = mt5.initialize(login=login, password=password, server=server)
+    initialized = mt5.initialize(
+        path=r'C:\Program Files\MetaTrader 5\terminal64.exe',
+        login=login, password=password, server=server,
+    )
 
     if initialized:
         mt5_initialized = True

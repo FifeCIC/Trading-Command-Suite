@@ -1,3 +1,20 @@
+/* ── View Transitions API ─────────────────────────────────── */
+/* Crossfade between SPA page navigations */
+::view-transition-old(root) {
+  animation: 0.2s ease-out both fade-out;
+}
+::view-transition-new(root) {
+  animation: 0.25s ease-out 0.05s both fade-in;
+}
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 :root {
   --bg: #f4f7fb;
   --ink: #0f172a;
@@ -262,34 +279,36 @@ button.nav-active {
 }
 
 .topbar-row-main {
-  grid-template-columns: auto 1fr auto;
-  gap: 1rem;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.75rem;
 }
 
 .topbar-logo-block {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
 }
 
 .topbar-logo {
-  height: 36px;
+  height: 32px;
   width: auto;
   display: block;
 }
 
 .topbar-title-block {
   text-align: center;
+  min-width: 0;
 }
 
 .topbar-title-block h1 {
   margin-bottom: 0;
-  font-size: 1.35rem;
+  font-size: 1.2rem;
+  white-space: nowrap;
 }
 
 .topbar-status-cluster {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.4rem;
   flex-wrap: wrap;
 }

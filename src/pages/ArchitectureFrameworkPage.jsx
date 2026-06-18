@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
 import LoadingSkeleton from '../components/LoadingSkeleton'
@@ -40,6 +41,7 @@ import {
   VERIFICATION_GOVERNANCE,
 } from './architecture-framework.data'
 import './architecture-framework.css'
+import './architecture-framework-modern.css'
 
 const LIVE_REFRESH_INTERVAL_MS = 30_000
 const EMPTY_OBJ = {}
@@ -102,16 +104,39 @@ function matchesQuery(query, terms) {
 function SectionBlock({ id, title, summary, collapsed, onToggle, children }) {
   return (
     <section id={id} className="architecture-section">
-      <div className="architecture-section-header">
-        <div>
+      <button
+        type="button"
+        className="architecture-section-header"
+        onClick={() => onToggle(id)}
+        aria-expanded={!collapsed}
+      >
+        <div className="architecture-section-title">
+          <motion.span
+            className="architecture-chevron"
+            animate={{ rotate: collapsed ? 0 : 90 }}
+            transition={{ duration: 0.2 }}
+          >
+            ▸
+          </motion.span>
           <h2>{title}</h2>
-          {summary && <p>{summary}</p>}
+          {summary && <p className="architecture-summary-inline">{summary}</p>}
         </div>
-        <button type="button" className="architecture-toggle" onClick={() => onToggle(id)}>
-          {collapsed ? 'Expand' : 'Collapse'}
-        </button>
-      </div>
-      {!collapsed && children}
+        <span className="architecture-toggle-hint">{collapsed ? 'Show' : 'Hide'}</span>
+      </button>
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.div
+            key="content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="architecture-section-body">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   )
 }
@@ -384,6 +409,22 @@ export default function ArchitectureFrameworkPage() {
 
   return (
     <main className="architecture-page">
+      <div className="architecture-layout">
+      {/* ── Sticky TOC ──────────────────────────────────── */}
+      <nav className="architecture-toc" aria-label="Architecture sections">
+        <h3>On this page</h3>
+        <ul>
+          {visibleSections.map((s) => (
+            <li key={s.id}>
+              <a href={`#${s.id}`} onClick={(e) => { e.preventDefault(); scrollToSection(s.id); }}>
+                {s.title}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <div className="architecture-content">
       <section className="architecture-hero">
         <div>
           <p className="eyebrow">Trading Command Suite</p>
@@ -1409,6 +1450,8 @@ export default function ArchitectureFrameworkPage() {
       )}
       </>
       )}
+      </div>{/* .architecture-content */}
+      </div>{/* .architecture-layout */}
     </main>
   )
 }

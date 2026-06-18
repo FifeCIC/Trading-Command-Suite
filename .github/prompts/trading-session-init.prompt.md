@@ -75,3 +75,11 @@ Save session snapshot to localStorage key `tcs:session-{date}` for comparison ac
 - Portfolio import (POST /import) only needed if data is stale (>1 hour)
 - Cache earnings data in DB (see `store-earnings-calendar` prompt) so this step is instant
 - The `trading-agent` skill already has the API reference — use it
+
+## 🏗️ Post-Implementation: Update Architecture
+
+Using the `update-architecture-framework` skill, update `/builder/architecture-framework`:
+
+1. **STATUS_SNAPSHOT** — Add: `[DATE]: Trading session init flow — single invocation loads portfolio + scores + provider health + earnings cross-ref in parallel.`
+2. **SYSTEM_SPINE** — Add: `Session Init → [Portfolio API, Scoring API, Provider Health API, Earnings API] → Consolidated Dashboard`
+3. **REVISION_LOG** — Add entry: `Trading session init — parallel data loading for efficient trading sessions`

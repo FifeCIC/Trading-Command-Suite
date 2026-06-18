@@ -142,3 +142,11 @@ SELECT * FROM PriceTarget WHERE symbol = 'NVDA';
 SELECT dataType, status, recordsFetched, fetchedAt 
   FROM DataImportLog ORDER BY fetchedAt DESC LIMIT 10;
 ```
+
+## 🏗️ Post-Implementation: Update Architecture
+
+Using the `update-architecture-framework` skill, update `/builder/architecture-framework`:
+
+1. **STATUS_SNAPSHOT** — Add: `[DATE]: Data storage tables created — EarningsEvent, AnalystRecommendation, PriceTarget, DataImportLog.`
+2. **DATABASE_SCHEMA** — Add all four models to coreEntities/marketDataEntities with their indexes and unique constraints
+3. **REVISION_LOG** — Add entry: `Data storage schema — EarningsEvent, AnalystRecommendation, PriceTarget, DataImportLog tables`

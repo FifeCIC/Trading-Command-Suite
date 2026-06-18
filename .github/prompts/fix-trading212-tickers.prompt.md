@@ -72,3 +72,12 @@ Add a ticker mapping admin section to Settings or Admin that shows:
 - `nest/src/modules/portfolio/portfolio.service.ts` — `stripTicker()`
 - `nest/src/modules/portfolio/trading212-import.service.ts` — `importPortfolio()`
 - `nest/src/modules/providers/adapters/trading212.adapter.ts` — `getPositions()`
+
+## 🏗️ Post-Implementation: Update Architecture
+
+Using the `update-architecture-framework` skill, update `/builder/architecture-framework`:
+
+1. **STATUS_SNAPSHOT** — Add: `[DATE]: Trading212 ticker normalization — mapping table for instrument codes (3LNVl→3LNV, AIRp→AIR), suffix stripping rules.`
+2. **DATABASE_SCHEMA** — Note new `t212-ticker-map.ts` config (not a DB model — in-memory mapping)
+3. **SYSTEM_SPINE** — Add: `Trading212 ticker → normalizeT212Ticker() → clean symbol → cross-reference with Symbol table`
+4. **REVISION_LOG** — Add entry: `Trading212 ticker normalization with modifier character mapping`

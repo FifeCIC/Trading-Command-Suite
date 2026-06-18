@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Param, Query, Logger } from '@nestjs/common';
 import { NewsCollectorService } from './news-collector.service';
+import { NewsImportService } from './news-import.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 
 @Controller('news')
@@ -8,8 +9,11 @@ export class NewsController {
 
   constructor(
     private readonly newsService: NewsCollectorService,
+    private readonly importService: NewsImportService,
     private readonly adapterFactory: AdapterFactory,
   ) {}
+
+  // ── Sources & Patterns (Fluff Detector) ──
 
   @Get('sources')
   getSources() {
@@ -22,39 +26,121 @@ export class NewsController {
     return { collected: articles.length, articles };
   }
 
+  @Get('sources/:id/patterns')
+  getPatterns(@Param('id') id: string) {
+    const patterns = this.newsService.getSourcePatterns(id);
+    return { sourceId: id, patterns };
+  }
+
+  @Get('summary')
+  getSummary() {
+    return this.newsService.getWeeklySummary();
+  }
+
+  // ── News Feed (DB-first, live Finnhub fallback) ──
+
   @Get('feed')
   async getFeed(
     @Query('symbol') symbol?: string,
     @Query('source') source?: string,
     @Query('sentiment') sentiment?: string,
+    @Query('category') category?: string,
+    @Query('limit') limit?: string,
   ) {
+    // Try DB first
+    const dbArticles = await this.importService.getArticles({
+      symbol,
+      source,
+      sentiment,
+      category,
+      limit: limit ? parseInt(limit, 10) : 50,
+      days: 7,
+    });
+
+    if (dbArticles.length > 0) {
+      const articles = dbArticles.map((a) => ({
+        id: a.id,
+        title: a.headline,
+        source: (a.source as any)?.name || 'Unknown',
+        sourceReliability: (a.source as any)?.reliabilityScore || 5.0,
+        time: a.publishedAt?.toISOString(),
+        sentiment: this.mapSentiment(a.sentiment),
+        impact: a.impact,
+        symbol: a.symbol,
+        category: a.category,
+        snippet: a.summary || '',
+        url: a.url || '#',
+      }));
+      return { articles, live: true, source: 'db', count: articles.length };
+    }
+
+    // Fallback to live Finnhub
     try {
       const adapter = this.adapterFactory.create('finnhub');
       if (!adapter || typeof (adapter as any).getNews !== 'function') {
-        return { articles: [], fallback: true, reason: 'Finnhub adapter not available' };
+        return { articles: [], live: false, reason: 'Finnhub adapter not available' };
       }
 
-      const days = 7;
-      const rawArticles: any[] = await (adapter as any).getNews(symbol || 'AAPL', days) || [];
-
+      const rawArticles: any[] = await (adapter as any).getNews(symbol || 'AAPL', 7) || [];
       const articles = rawArticles.map((a: any) => ({
         id: String(a.id || Math.random()),
         title: a.headline || '',
         source: a.source || 'Finnhub',
-        time: a.datetime ? new Date(a.datetime).toLocaleString() : 'Unknown',
+        time: a.datetime ? new Date(a.datetime * 1000).toISOString() : new Date().toISOString(),
         sentiment: this.mapSentiment(a.sentiment),
-        symbols: a.related?.split(',')?.map((s: string) => s.trim()) || (symbol ? [symbol] : []),
+        symbol: symbol || 'AAPL',
+        category: 'general',
         impact: 'medium',
         snippet: a.summary || '',
         url: a.url || '#',
       }));
 
-      return { articles, live: true, source: 'finnhub' };
+      return { articles, live: true, source: 'finnhub', count: articles.length };
     } catch (err) {
       this.logger.warn(`News feed fetch failed: ${err}`);
-      return { articles: [], live: false, error: 'News API unavailable — using reference data' };
+      return { articles: [], live: false, error: 'No stored articles and live API unavailable' };
     }
   }
+
+  // ── Import ──
+
+  @Get('import/last')
+  async getLastImport() {
+    const run = await this.importService.getLastImportRun();
+    return { run };
+  }
+
+  @Post('import/run')
+  async triggerImport() {
+    this.logger.log('Manual news import triggered');
+    const run = await this.importService.runImport();
+    return { run, message: 'Import completed' };
+  }
+
+  // ── Categories ──
+
+  @Get('categories')
+  async getCategories() {
+    const categories = await this.importService.getCategories();
+    return { categories };
+  }
+
+  // ── Sentiment ──
+
+  @Get('sentiment-summary')
+  async getSentimentSummary(@Query('symbol') symbol?: string) {
+    return this.importService.getSentimentSummary(symbol);
+  }
+
+  // ── Tracked Symbols ──
+
+  @Get('tracked-symbols')
+  async getTrackedSymbols() {
+    const symbols = await this.importService.resolveTrackedSymbols();
+    return { symbols, count: symbols.length };
+  }
+
+  // ── Helpers ──
 
   private mapSentiment(val: any): string {
     if (val == null) return 'neutral';
@@ -65,16 +151,5 @@ export class NewsController {
     }
     if (val === 'positive' || val === 'negative' || val === 'neutral') return val;
     return 'neutral';
-  }
-
-  @Get('sources/:id/patterns')
-  getPatterns(@Param('id') id: string) {
-    const patterns = this.newsService.getSourcePatterns(id);
-    return { sourceId: id, patterns };
-  }
-
-  @Get('summary')
-  getSummary() {
-    return this.newsService.getWeeklySummary();
   }
 }

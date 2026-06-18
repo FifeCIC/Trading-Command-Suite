@@ -35,6 +35,17 @@ export default function SymbolDetailPage() {
     staleTime: 30000,
   });
 
+  const isaWarningQuery = useQuery({
+    queryKey: ['isa-fx-warning', tradeModal?.ticker, tradeModal?.side, tradeModal?.account],
+    queryFn: () => {
+      const exchange = symbolQuery.data?.exchange ? `&exchange=${encodeURIComponent(symbolQuery.data.exchange)}` : '';
+      return apiGet(`/api/isa/fx-warning?symbol=${encodeURIComponent(tradeModal.ticker)}&side=${tradeModal.side}${exchange}`);
+    },
+    enabled: Boolean(tradeModal?.account === 'T212 ISA' && tradeModal?.ticker && tradeModal?.side),
+    retry: 1,
+    staleTime: 30000,
+  });
+
   // News for this symbol
   const newsQuery = useQuery({
     queryKey: ['symbol-news', symbolId],
@@ -234,6 +245,21 @@ export default function SymbolDetailPage() {
           <div className="sd-modal" onClick={(e) => e.stopPropagation()}>
             <h3>{tradeModal.side.toUpperCase()} {tradeModal.ticker}</h3>
             <p>Account: <strong>{tradeModal.account}</strong></p>
+            {tradeModal.account === 'T212 ISA' && (
+              <div className="sd-isa-warning">
+                {isaWarningQuery.isLoading ? (
+                  <p>Checking ISA FX timing...</p>
+                ) : isaWarningQuery.data ? (
+                  <>
+                    <strong>{isaWarningQuery.data.title}</strong>
+                    <p>{isaWarningQuery.data.message}</p>
+                    <span>{isaWarningQuery.data.blocking ? 'Blocks trade' : 'Advisory only'}</span>
+                  </>
+                ) : (
+                  <p>ISA FX warning check is unavailable.</p>
+                )}
+              </div>
+            )}
             <p className="sd-modal-warning">⚠️ Order execution is not yet live. This will be enabled in Q284 (First Live Trade).</p>
             <div className="sd-modal-actions">
               <button className="sd-btn" onClick={() => setTradeModal(null)}>Close</button>

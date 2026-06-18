@@ -1,0 +1,68 @@
+export default function ThemeLabTransitions() {
+  return (
+    <div className="tl-page">
+      <header className="tl-header">
+        <h1>View Transitions API</h1>
+        <p className="tl-subtitle">
+          Native browser page-to-page crossfade. Enabled globally via <code>&lt;meta name="view-transition" content="same-origin" /&gt;</code>.
+          <br /><strong>Status: ✅ Accepted</strong> — active on every page. No JS needed.
+        </p>
+      </header>
+
+      <section className="tl-section">
+        <h2>How It Works</h2>
+        <div style={{ display: 'grid', gap: '0.75rem' }}>
+          <div className="tl-demo-card" style={{ padding: '1rem', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--line)', borderRadius: 10 }}>
+            <h3 style={{ fontSize: '0.85rem', marginBottom: '0.4rem' }}>Meta Tag</h3>
+            <pre style={{ fontSize: '0.7rem', color: 'var(--ink-soft)', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: 6, margin: 0 }}>
+{`<meta name="view-transition" content="same-origin" />`}
+            </pre>
+            <p style={{ fontSize: '0.75rem', color: 'var(--ink-soft)', marginTop: '0.4rem' }}>Added to <code>index.html</code>. This enables the View Transitions API for all same-origin navigations in the SPA.</p>
+          </div>
+
+          <div className="tl-demo-card" style={{ padding: '1rem', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--line)', borderRadius: 10 }}>
+            <h3 style={{ fontSize: '0.85rem', marginBottom: '0.4rem' }}>CSS Animation</h3>
+            <pre style={{ fontSize: '0.7rem', color: 'var(--ink-soft)', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: 6, margin: 0 }}>
+{`::view-transition-old(root) {
+  animation: 0.2s ease-out both fade-out;
+}
+::view-transition-new(root) {
+  animation: 0.25s ease-out 0.05s both fade-in;
+}`}
+            </pre>
+            <p style={{ fontSize: '0.75rem', color: 'var(--ink-soft)', marginTop: '0.4rem' }}>Defined in <code>index.css</code>. The old page fades out over 200ms, the new page fades in with a 50ms delay. Result: a smooth crossfade on every navigation.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="tl-section">
+        <h2>Test It</h2>
+        <p className="tl-subtitle">Click any sidebar item or quick-menu button. Notice the crossfade between pages. The effect is automatic — every route change triggers it.</p>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {['analysis/support-resistance', 'research/news-intel', 'trading/portfolio-overview', 'builder/theme-lab'].map((path) => (
+            <a key={path} href={`/${path}`} style={{ padding: '0.4rem 0.75rem', fontSize: '0.78rem', background: 'rgba(14,165,166,0.12)', border: '1px solid var(--accent)', borderRadius: 6, color: 'var(--accent)', textDecoration: 'none' }}>
+              /{path}
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section className="tl-section">
+        <h2>Browser Support</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.5rem' }}>
+          {[
+            { b: 'Chrome 111+', ok: true },
+            { b: 'Edge 111+', ok: true },
+            { b: 'Safari 18+', ok: true },
+            { b: 'Firefox', ok: false, note: 'In development' },
+          ].map((b) => (
+            <div key={b.b} style={{ padding: '0.5rem 0.65rem', background: 'rgba(0,0,0,0.1)', border: `1px solid ${b.ok ? '#22c55e44' : '#f59e0b44'}`, borderRadius: 8, fontSize: '0.78rem' }}>
+              <span style={{ color: b.ok ? '#22c55e' : '#f59e0b' }}>{b.ok ? '✅' : '⚠️'}</span> {b.b}
+              {b.note && <div style={{ fontSize: '0.68rem', color: 'var(--ink-soft)' }}>{b.note}</div>}
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}

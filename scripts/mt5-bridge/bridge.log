@@ -189,3 +189,34 @@
 2026-06-16 20:34:19,364 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
 2026-06-16 20:34:19,393 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
 2026-06-16 20:34:19,408 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-18 17:26:48,753 [INFO] MetaTrader5 package loaded successfully
+2026-06-18 17:26:48,759 [INFO] Starting MT5 Bridge on port 5000...
+2026-06-18 17:26:48,759 [INFO] MT5 package available: True
+2026-06-18 17:26:48,759 [INFO] Flask server starting — MT5 will connect on first API request
+2026-06-18 19:45:38,978 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-18 19:45:38,992 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-18 19:45:51,386 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-18 19:45:51,397 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-18 19:46:09,737 [INFO] Reconnecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-18 19:46:09,746 [ERROR] Reconnection failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-18 19:46:20,498 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-18 19:46:20,506 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-18 19:46:22,532 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-18 19:46:22,544 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-18 19:48:16,324 [INFO] Switching to account #1: 7240659 @ ICMarketsSC-MT5-2
+2026-06-18 19:48:18,360 [INFO] Switching to account #2: 52918025 @ ICMarketsSC-Demo
+2026-06-18 19:48:20,425 [INFO] Switching to account #3: 10003411072 @ MetaQuotes-Demo
+2026-06-18 19:48:22,446 [INFO] Switching to account #4: 82172510 @ MetaQuotes-Demo
+2026-06-18 19:48:24,465 [INFO] Switching to account #5: RyanBayne @ MetaQuotes-Demo
+2026-06-18 19:52:46,164 [INFO] MetaTrader5 package loaded successfully
+2026-06-18 19:52:46,170 [INFO] Starting MT5 Bridge on port 5000...
+2026-06-18 19:52:46,171 [INFO] MT5 package available: True
+2026-06-18 19:52:46,171 [INFO] Flask server starting — MT5 will connect on first API request
+2026-06-18 19:53:08,182 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-18 19:53:08,191 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-18 19:53:22,377 [INFO] MetaTrader5 package loaded successfully
+2026-06-18 19:53:22,385 [INFO] Starting MT5 Bridge on port 5000...
+2026-06-18 19:53:22,385 [INFO] MT5 package available: True
+2026-06-18 19:53:22,385 [INFO] Flask server starting — MT5 will connect on first API request
+2026-06-18 19:53:33,521 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-18 19:53:33,531 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')

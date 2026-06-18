@@ -1,5 +1,14 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './theme-lab.css';
+
+const LAB_SECTIONS = [
+  { id: 'theme-lab-motion', label: 'Motion', desc: 'Animation library examples — enter/exit, hover, layout, gestures', icon: '◆' },
+  { id: 'theme-lab-transitions', label: 'View Transitions', desc: 'Page-to-page crossfade via View Transitions API', icon: '⇢' },
+  { id: 'theme-lab-container', label: 'Container Queries', desc: 'Responsive components based on their own size, not viewport', icon: '⊡' },
+  { id: 'theme-lab-scroll', label: 'Scroll Animations', desc: 'Scroll-driven effects — parallax, reveal, header shrink', icon: '⇣' },
+  { id: 'theme-lab-popover', label: 'Popover API', desc: 'Native browser popovers — tooltips, menus, dialogs', icon: '◉' },
+];
 
 // ── Shade presets from the task spec ────────────────────────
 const SHADE_PRESETS = [
@@ -35,16 +44,39 @@ const TABLE_ROWS = [
 
 export default function ThemeLabPage() {
   const [activeBg, setActiveBg] = useState(null);
+  const navigate = useNavigate();
 
   return (
     <div className="tl-page">
       <header className="tl-header">
         <h1>Theme Lab</h1>
         <p className="tl-subtitle">
-          Sandbox for exploring dark mode panel shading, text contrast, and background variants.
-          Changes here are <strong>not applied globally</strong> — this is an experimentation area.
+          Sandbox for exploring UI technologies. <strong>Experimental features live here.</strong>
+          Changes are not applied globally — see <code>.github/instructions/ui-standards.instructions.md</code> for what's accepted vs experimental.
         </p>
       </header>
+
+      {/* ── Lab Sections Hub ─────────────────────────────── */}
+      <section className="tl-section">
+        <h2>Lab Sections</h2>
+        <div className="tl-lab-grid">
+          {LAB_SECTIONS.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className="tl-lab-card"
+              onClick={() => navigate(`/status/${s.id}`)}
+            >
+              <span className="tl-lab-icon">{s.icon}</span>
+              <div className="tl-lab-info">
+                <strong>{s.label}</strong>
+                <span>{s.desc}</span>
+              </div>
+              <span className="tl-lab-arrow">→</span>
+            </button>
+          ))}
+        </div>
+      </section>
 
       {/* ── Best Practices ─────────────────────────────────── */}
       <section className="tl-section">

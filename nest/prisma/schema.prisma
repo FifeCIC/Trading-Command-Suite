@@ -200,6 +200,7 @@ model NewsSource {
 
   articles     ArticleSample[]
   pubPatterns  PublishingPattern[]
+  newsArticles NewsArticle[]
 }
 
 model ArticleSample {
@@ -230,6 +231,41 @@ model PublishingPattern {
   source NewsSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
 
   @@unique([sourceId, dayOfWeek, hourOfDay])
+}
+
+model NewsArticle {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  symbol      String   @db.VarChar(20)
+  sourceId    String   @db.VarChar(36)
+  category    String   @default("general") @db.VarChar(50)
+  headline    String   @db.Text
+  url         String   @unique @db.VarChar(500)
+  summary     String?  @db.Text
+  sentiment   Float    @default(0)
+  impact      String   @default("medium") @db.VarChar(20)
+  publishedAt DateTime
+  importedAt  DateTime @default(now())
+
+  source NewsSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([symbol, publishedAt])
+  @@index([category, publishedAt])
+  @@index([publishedAt])
+}
+
+model NewsImportRun {
+  id           String   @id @default(uuid()) @db.VarChar(36)
+  status       String   @default("running") @db.VarChar(50)
+  symbolsCount Int      @default(0)
+  fetched      Int      @default(0)
+  newArticles  Int      @default(0)
+  duplicates   Int      @default(0)
+  errors       Int      @default(0)
+  errorLog     String?  @db.Text
+  startedAt    DateTime @default(now())
+  completedAt  DateTime?
+
+  @@index([startedAt])
 }
 
 model MarketSnapshot {
@@ -274,6 +310,17 @@ model MacroIndicator {
   createdAt DateTime @default(now())
 
   @@index([category, date])
+}
+
+model FxRate {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  pair      String   @db.VarChar(20)
+  rate      Float
+  timestamp DateTime @default(now())
+  provider  String   @db.VarChar(50)
+
+  @@index([pair, timestamp])
+  @@index([provider, timestamp])
 }
 
 // ── Planned Tables (from Database Tables page) ──
