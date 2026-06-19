@@ -18,6 +18,20 @@ export default function SeesLiveStackMockPage() {
   // Strategy-weighted directive IDs (weights > 0)
   const STRATEGY_DIRECTIVE_IDS = ['rsi-oversold', 'macd-crossover', 'ema-structure', 'atr-dip', 'volume-confirmation']
 
+  // Demo symbols for the local simulation engine
+  const SEES_SYMBOLS = [
+    { symbol: 'NVDA', ticker: 'NVDA', name: 'NVIDIA Corp', basePrice: 142, baseBias: 0.25, baseQuality: 78 },
+    { symbol: 'TSLA', ticker: 'TSLA', name: 'Tesla Inc', basePrice: 245, baseBias: -0.15, baseQuality: 62 },
+    { symbol: 'AAPL', ticker: 'AAPL', name: 'Apple Inc', basePrice: 198, baseBias: 0.10, baseQuality: 85 },
+    { symbol: 'BTCUSD', ticker: 'BTCUSD', name: 'Bitcoin', basePrice: 68500, baseBias: 0.35, baseQuality: 55 },
+    { symbol: 'MSFT', ticker: 'MSFT', name: 'Microsoft Corp', basePrice: 420, baseBias: 0.08, baseQuality: 80 },
+    { symbol: 'EURUSD', ticker: 'EURUSD', name: 'Euro / USD', basePrice: 1.085, baseBias: -0.05, baseQuality: 70 },
+    { symbol: 'AMD', ticker: 'AMD', name: 'AMD Inc', basePrice: 165, baseBias: 0.18, baseQuality: 68 },
+    { symbol: 'XAUUSD', ticker: 'XAUUSD', name: 'Gold Spot', basePrice: 2420, baseBias: 0.12, baseQuality: 72 },
+    { symbol: 'META', ticker: 'META', name: 'Meta Platforms', basePrice: 510, baseBias: 0.22, baseQuality: 74 },
+    { symbol: 'SPX500', ticker: 'SPX500', name: 'S&P 500', basePrice: 5480, baseBias: -0.02, baseQuality: 88 },
+  ]
+
   const apiQuery = useQuery({
     queryKey: ['scoring-ranked', tick],
     queryFn: () => fetchRankedSymbols(undefined, 20),
@@ -29,7 +43,7 @@ export default function SeesLiveStackMockPage() {
   const apiRanked = apiQuery.data?.ranked ?? []
   const useApi = apiRanked.length > 0 && apiRanked.some((r) => r.score > 0)
 
-  const localRanking = useMemo(() => null, [tick])
+  const localRanking = useMemo(() => buildSeesRanking(SEES_SYMBOLS, tick), [tick])
 
   // Derive display state: prefer API data when available.
   // API now returns breakdown[] per symbol with real directive scores.
@@ -38,12 +52,14 @@ export default function SeesLiveStackMockPage() {
 
     const mode = apiQuery.data?.mode ?? 'api'
     const apiStrategy = apiQuery.data?.strategy ?? {}
+    const localStrategy = localRanking?.strategy ?? {}
+    const localDirectives = localRanking?.directives ?? []
     const strategy = {
-      name: apiStrategy.name || localRanking.strategy.name,
+      name: apiStrategy.name || localStrategy.name || 'SEES Default',
       description: 'Real directive pipeline: 5 MVP directives with weighted aggregation.',
-      entryThreshold: apiStrategy.entryThreshold ?? localRanking.strategy.entryThreshold,
-      watchThreshold: apiStrategy.watchThreshold ?? localRanking.strategy.watchThreshold,
-      defenseThreshold: localRanking.strategy.defenseThreshold,
+      entryThreshold: apiStrategy.entryThreshold ?? localStrategy.entryThreshold ?? 60,
+      watchThreshold: apiStrategy.watchThreshold ?? localStrategy.watchThreshold ?? 40,
+      defenseThreshold: localStrategy.defenseThreshold ?? 20,
     }
 
     // Use real directive list from API breakdown, or fall back to simulation labels
@@ -54,7 +70,7 @@ export default function SeesLiveStackMockPage() {
             const sample = apiRanked.flatMap((r) => r.breakdown || []).find((b) => b.directiveId === id)
             return { id, label: sample?.name || id, indicator: 'API directive', weight: (sample?.weight || 20) / 100, description: 'Real directive from scoring pipeline.' }
           })
-      : localRanking.directives
+      : localDirectives
 
     const ranked = apiRanked.map((r) => {
       const breakdown = Array.isArray(r.breakdown) ? r.breakdown : []
@@ -87,7 +103,7 @@ export default function SeesLiveStackMockPage() {
     })
 
     return { strategy, directives, mode, ranked, marketAverageChange: null }
-  }, [useApi, apiRanked, apiQuery.data?.mode, apiQuery.data?.strategy, localRanking.strategy, localRanking.directives])
+  }, [useApi, apiRanked, apiQuery.data?.mode, apiQuery.data?.strategy, localRanking])
 
   const rankingState = apiRankingState ?? localRanking
   if (!rankingState) {

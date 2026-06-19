@@ -1,5 +1,5 @@
 ---
-description: "AI development team agent (Nova, Sage, Milo). Use when: building features, writing application code, fixing bugs, implementing UI components, creating APIs, styling with CSS, writing database queries, or executing sprint plans. Reads prompts from the documentation folder and implements them."
+description: "Trading Command Suite development agent. Use when: building features, writing application code, fixing bugs, implementing UI components, creating APIs, styling with CSS, writing database queries, or executing sprint plans. Reads prompts from the documentation folder and implements them."
 tools: [read, write, search, execute]
 user-invocable: true
 argument-hint: "Which prompt or feature to implement?"

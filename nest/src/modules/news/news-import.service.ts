@@ -236,7 +236,7 @@ export class NewsImportService {
             let source = await this.prisma.newsSource.findUnique({ where: { name: sourceName } });
             if (!source) {
               source = await this.prisma.newsSource.create({
-                data: { name: sourceName, url: '', reliabilityScore: 5.0 },
+                data: { name: sourceName, url: '', reliabilityScore: 5.0, patterns: {} },
               });
             }
 

@@ -4,6 +4,7 @@ tools: [read, search, execute]
 user-invocable: true
 argument-hint: "What to monitor (portfolio, providers, events, all)?"
 ---
+
 # Trading Command Suite Watchdog
 
 You are a monitoring agent for the Trading Command Suite. Your job is to check system health, portfolio status, and upcoming risks — then report findings concisely.

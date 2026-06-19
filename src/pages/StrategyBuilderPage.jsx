@@ -15,6 +15,7 @@ export default function StrategyBuilderPage() {
   const [goals, setGoals] = useState('')
   const [symbolFocus, setSymbolFocus] = useState('')
   const [savedMsg, setSavedMsg] = useState('')
+  const [metaOpen, setMetaOpen] = useState(true)
 
   // Fetch directives from live API
   const directivesQuery = useQuery({
@@ -98,8 +99,18 @@ export default function StrategyBuilderPage() {
         <h1>Strategy Builder</h1>
       </header>
 
+      {/* Collapsible metadata form toggle */}
+      <button
+        type="button"
+        className="sb-meta-toggle"
+        onClick={() => setMetaOpen((v) => !v)}
+      >
+        <span className={`sb-meta-toggle-arrow${metaOpen ? ' sb-meta-toggle-arrow--open' : ''}`}>▶</span>
+        Strategy Details {metaOpen ? '' : '(hidden)'}
+      </button>
+
       {/* Strategy metadata form */}
-      <div className="sb-meta-form">
+      <div className={`sb-meta-form${metaOpen ? '' : ' sb-meta-form--collapsed'}`}>
         <div className="sb-meta-row">
           <label>
             <span>Strategy Name</span>

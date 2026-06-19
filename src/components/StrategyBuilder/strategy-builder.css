@@ -1,28 +1,78 @@
 /* Strategy Builder — strategy-builder.css */
 
 .sb-page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1.25rem;
+  max-width: none;
+  margin: 0;
+  padding: 1rem 1.5rem;
   color: var(--ink);
+  height: calc(100vh - 130px); /* fill available viewport, account for header */
+  display: flex;
+  flex-direction: column;
 }
 
 .sb-header {
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
+  flex-shrink: 0;
 }
 
 .sb-header h1 {
   margin: 0 0 0.25rem;
+  font-size: 1.3rem;
 }
 
 /* ---- Metadata form ---- */
+
+.sb-meta-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 0;
+  margin-bottom: 4px;
+  flex-shrink: 0;
+}
+
+.sb-meta-toggle:hover {
+  color: #e2e8f0;
+}
+
+.sb-meta-toggle-arrow {
+  display: inline-block;
+  transition: transform 0.2s;
+  font-size: 0.7rem;
+}
+
+.sb-meta-toggle-arrow--open {
+  transform: rotate(90deg);
+}
 
 .sb-meta-form {
   background: #1a1d2e;
   border: 1px solid #2d3040;
   border-radius: 10px;
-  padding: 16px 18px;
-  margin-bottom: 16px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease, padding 0.25s ease, margin 0.25s ease, opacity 0.2s ease;
+}
+
+.sb-meta-form--collapsed {
+  max-height: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+  opacity: 0;
+  border-width: 0;
+  overflow: hidden;
 }
 
 .sb-meta-row {
@@ -152,9 +202,11 @@
 
 .sb-layout {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 300px 1fr;
   gap: 1rem;
-  min-height: 60vh;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* ---- Palette (left panel) ---- */
@@ -166,6 +218,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 0;
 }
 
 .sb-palette-header {
@@ -377,7 +430,8 @@
   flex-direction: column;
   gap: 0.75rem;
   transition: border-color 0.2s, background 0.2s;
-  min-height: 400px;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .sb-canvas--drag-over {

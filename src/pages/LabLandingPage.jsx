@@ -7,7 +7,7 @@ const LAB_SECTIONS = [
     label: 'Feature Lab',
     icon: '🔬',
     description: 'Visual demonstrations of trading automation concepts — trailing stops, partial take-profit, auto risk sizing.',
-    route: '/status/feature-lab',
+    route: '/builder/feature-lab',
     status: 'new',
   },
   {
@@ -15,7 +15,7 @@ const LAB_SECTIONS = [
     label: 'Theme Lab',
     icon: '🎨',
     description: 'Experimental CSS and animation features. Container queries, scroll-driven animations, Popover API, Motion One.',
-    route: '/status/theme-lab',
+    route: '/builder/theme-lab',
     subViews: [
       { id: 'theme-lab-motion', label: 'Motion', desc: 'Micro-interaction animations' },
       { id: 'theme-lab-transitions', label: 'View Transitions', desc: 'Page crossfade API' },
@@ -30,7 +30,7 @@ const LAB_SECTIONS = [
     label: 'Component Lab',
     icon: '🧩',
     description: 'Reusable UI component showcase and testing.',
-    route: '/status/component-lab',
+    route: '/builder/component-lab',
     status: 'active',
   },
   {
@@ -38,7 +38,7 @@ const LAB_SECTIONS = [
     label: 'Algorithm Lab',
     icon: '📐',
     description: 'Directive scoring logs, algorithm debugging, and calculation trace viewer.',
-    route: '/status/algorithm-lab',
+    route: '/builder/algorithm-lab',
     status: 'active',
   },
   {
@@ -46,7 +46,7 @@ const LAB_SECTIONS = [
     label: 'Backtest Engine',
     icon: '⬡',
     description: 'Historical strategy validation and performance analysis.',
-    route: '/status/backtest',
+    route: '/builder/backtest',
     status: 'active',
   },
   {
@@ -54,7 +54,7 @@ const LAB_SECTIONS = [
     label: 'Candle Pattern Training',
     icon: '🕯️',
     description: 'Interactive candle pattern detection, recognition training, and pattern guide.',
-    route: '/status/candle-patterns',
+    route: '/builder/candle-patterns',
     subViews: [
       { id: 'candle-patterns-guide', label: 'Pattern Guide', desc: 'Reference library of patterns' },
     ],
@@ -65,7 +65,7 @@ const LAB_SECTIONS = [
     label: 'Order Testing',
     icon: '🧪',
     description: 'Test order execution flows without real money.',
-    route: '/status/order-testing',
+    route: '/builder/order-testing',
     status: 'active',
   },
   {
@@ -73,7 +73,7 @@ const LAB_SECTIONS = [
     label: 'Protocol Performance',
     icon: '📊',
     description: 'Strategy protocol performance metrics and comparison.',
-    route: '/status/performance-lab',
+    route: '/builder/performance-lab',
     status: 'active',
   },
 ];
@@ -104,7 +104,7 @@ export default function LabLandingPage() {
             {section.subViews && section.subViews.length > 0 && (
               <div className="ll-sub-views">
                 {section.subViews.map((sv) => (
-                  <Link key={sv.id} to={`/status/${sv.id}`} className="ll-sub-link" title={sv.desc}>
+                  <Link key={sv.id} to={`/builder/${sv.id}`} className="ll-sub-link" title={sv.desc}>
                     {sv.label}
                   </Link>
                 ))}

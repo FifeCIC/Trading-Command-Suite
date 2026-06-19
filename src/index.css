@@ -141,6 +141,15 @@ body {
   background: var(--bg);
 }
 
+/* When right-rail is hidden, collapse the third grid column */
+.site-shell.right-rail-hidden {
+  grid-template-columns: 260px 1fr;
+  grid-template-areas:
+    'topbar topbar'
+    'left main'
+    'footer footer';
+}
+
 .site-shell.background-aura:not(.layout-omni) {
   background:
     radial-gradient(circle at 18% 12%, #e9f2ff 0%, var(--bg) 45%),

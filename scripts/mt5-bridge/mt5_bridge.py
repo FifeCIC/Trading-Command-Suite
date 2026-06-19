@@ -88,6 +88,9 @@ def list_accounts():
 def initialize_mt5():
     """Initialize connection to MT5 terminal."""
     global mt5_initialized, last_connection_attempt, connection_errors
+    # Always force fresh connection (Flask is not thread-safe for MT5 IPC)
+    mt5_initialized = False
+
 
     if not mt5_available:
         return False
@@ -96,7 +99,7 @@ def initialize_mt5():
         # Check if still connected
         if mt5.terminal_info() is not None:
             return True
-        logger.info('MT5 connection lost — reconnecting...')
+        logger.info('MT5 connection lost - reconnecting...')
         mt5_initialized = False
 
     last_connection_attempt = datetime.now()
@@ -104,7 +107,7 @@ def initialize_mt5():
     account, password, server, active_num = get_active_credentials()
 
     if not account or not password:
-        logger.warning(f'MT5 account #{active_num} not configured — check MT5_ACCOUNT_{active_num} in .env')
+        logger.warning(f'MT5 account #{active_num} not configured - check MT5_ACCOUNT_{active_num} in .env')
         return False
 
     try:
@@ -114,10 +117,22 @@ def initialize_mt5():
         return False
 
     logger.info(f'Connecting to MT5: server={server}, account={account} (account #{active_num})')
-    initialized = mt5.initialize(
-        path=r'C:\Program Files\MetaTrader 5\terminal64.exe',
-        login=login, password=password, server=server,
-    )
+    
+    # First try connecting to already-running terminal (no credentials needed)
+    initialized = mt5.initialize()
+    
+    if not initialized:
+        # Terminal not running - launch it with credentials and path
+        logger.info('Terminal not running - launching with credentials...')
+        initialized = mt5.initialize(
+            path=r'C:\Program Files\MetaTrader 5\terminal64.exe',
+            login=login, password=password, server=server,
+        )
+    else:
+        # Connected to running terminal - verify account matches config
+        acc_info = mt5.account_info()
+        if acc_info and str(acc_info.login) != account:
+            logger.info(f'Terminal logged in as {acc_info.login} (configured: {account}) - using terminal account')
 
     if initialized:
         mt5_initialized = True
@@ -134,16 +149,21 @@ def initialize_mt5():
         logger.error(f'MT5 initialization failed: {error}')
         return False
 
-
 def ensure_mt5():
-    """Ensure MT5 is connected, return error response if not."""
+    """Ensure MT5 is connected, return error response if not.
+    Always reconnects fresh because MT5 IPC is not thread-safe with Flask."""
+    global mt5_initialized
+    
     if not mt5_available:
-        return jsonify({'error': 'MetaTrader5 package not installed'}), 503
+        return jsonify({"error": "MetaTrader5 package not installed"}), 503
+    
+    # Force fresh connection - Flask request handlers can't use main thread IPC
+    mt5_initialized = False
     if not initialize_mt5():
         return jsonify({
-            'connected': False,
-            'error': 'MT5 terminal not running or credentials invalid',
-            'connectionErrors': connection_errors,
+            "connected": False,
+            "error": "MT5 terminal not running or credentials invalid",
+            "connectionErrors": connection_errors,
         }), 503
     return None
 
@@ -1088,4 +1108,11 @@ if __name__ == '__main__':
     logger.info(f'Flask server starting — MT5 will connect on first API request')
 
     # Start Flask first, MT5 connects lazily on first request
-    app.run(host='127.0.0.1', port=port, debug=False)
+    # Eagerly initialize MT5 before Flask starts serving
+    logger.info("Initializing MT5 connection before Flask...")
+    if initialize_mt5():
+        logger.info("MT5 connected successfully at startup")
+    else:
+        logger.warning("MT5 not available at startup - will retry on first request")
+    
+    app.run(host='127.0.0.1', port=port, debug=False, threaded=False, use_reloader=False)

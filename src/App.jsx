@@ -88,6 +88,7 @@ import ThemeLabPopover from './pages/ThemeLabPopover';
 import ComponentLabPage from './pages/ComponentLabPage';
 import FeatureLabPage from './pages/FeatureLabPage';
 import LabLandingPage from './pages/LabLandingPage';
+import LabPage from './pages/LabPage';
 import SupportResistancePage from './pages/SupportResistancePage';
 import VolatilityAnalysisPage from './pages/VolatilityAnalysisPage';
 import TechnicalIndicatorsPage from './pages/TechnicalIndicatorsPage';
@@ -158,7 +159,7 @@ function AppShell() {
   const [demoOutput, setDemoOutput] = useState('');
   const [activityLog, setActivityLog] = useState([]);
   const [ffState, setFfState] = useState(() => featureFlags.getFlags());
-  const [showFlagsPanel, setShowFlagsPanel] = useState(false);
+
 
   const toggleDevOverlay = useUiStore((state) => state.toggleDevOverlay);
   const devOverlayOpen = useUiStore((state) => state.devOverlayOpen);
@@ -628,6 +629,10 @@ function AppShell() {
       return <LabLandingPage />;
     }
 
+    if (secondaryView === 'lab') {
+      return <LabPage />;
+    }
+
     if (secondaryView === 'feature-lab') {
       return <FeatureLabPage />;
     }
@@ -807,7 +812,7 @@ function AppShell() {
   const isApiOnline = Boolean(healthQuery.data?.version);
   const isDbOnline = healthQuery.data?.services?.databaseConnected === true;
   return (
-    <div className={`site-shell layout-omni background-${backgroundTone}`} {...withDevTag('app.shell', { product: 'tradingcs' })}>
+    <div className={`site-shell layout-omni background-${backgroundTone}${devOverlayOpen ? '' : ' right-rail-hidden'}`} {...withDevTag('app.shell', { product: 'tradingcs' })}>
       {!isOnline && (
         <div className="network-status-bar offline">
           📡 Offline — showing cached data (last sync: {lastOnlineAt?.toLocaleTimeString() || 'never'})
@@ -931,7 +936,13 @@ function AppShell() {
           >
             {devOverlayOpen ? 'Hide' : 'Show'} Dev Overlay
           </button>
-          <DevOverlay />
+          <DevOverlay
+            healthQuery={healthQuery}
+            availableAdapters={availableAdapters}
+            analyticsSnapshot={analyticsSnapshot}
+            performanceSnapshot={performanceSnapshot}
+            onDownloadRuntimeReport={onDownloadRuntimeReport}
+          />
         </div>
 
         {primaryArea === 'settings' && (
@@ -1038,24 +1049,26 @@ function AppShell() {
         </ErrorBoundary>
       </main>
 
-      <aside className="right-rail" aria-label="Admin and status">
-        <h2>Admin + Status</h2>
-        <AccordionBlock title="Server" defaultOpen={true}>
-          {healthQuery.isLoading && <p>Checking...</p>}
-          {healthQuery.error && <p className="error">Offline</p>}
-          {healthQuery.data && <p className="ok">Online: {healthQuery.data.version || 'unknown'}</p>}
-          <p className="muted">Adapters: {availableAdapters.length}</p>
-          <p className="muted">Analytics queue: {analyticsSnapshot.queueLength}</p>
-          <p className="muted">Perf samples: {performanceSnapshot.samples}</p>
-        </AccordionBlock>
+      {devOverlayOpen && (
+        <aside className="right-rail" aria-label="Admin and status">
+          <h2>Admin + Status</h2>
+          <AccordionBlock title="Server" defaultOpen={true}>
+            {healthQuery.isLoading && <p>Checking...</p>}
+            {healthQuery.error && <p className="error">Offline</p>}
+            {healthQuery.data && <p className="ok">Online: {healthQuery.data.version || 'unknown'}</p>}
+            <p className="muted">Adapters: {availableAdapters.length}</p>
+            <p className="muted">Analytics queue: {analyticsSnapshot.queueLength}</p>
+            <p className="muted">Perf samples: {performanceSnapshot.samples}</p>
+          </AccordionBlock>
 
-        <div className="rail-block">
-          <p className="muted">Actions</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <button type="button" onClick={onDownloadRuntimeReport} style={{ padding: '0.4rem 0.6rem', fontSize: '0.82rem' }}>Export Report</button>
+          <div className="rail-block">
+            <p className="muted">Actions</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              <button type="button" onClick={onDownloadRuntimeReport} style={{ padding: '0.4rem 0.6rem', fontSize: '0.82rem' }}>Export Report</button>
+            </div>
           </div>
-        </div>
-      </aside>
+        </aside>
+      )}
 
       <footer className="app-footer">
         <section className="app-footer-nav" aria-label="Areas navigation">
@@ -1072,27 +1085,6 @@ function AppShell() {
               </button>
             ))}
           </div>
-        </section>
-
-        <section className="app-footer-ff">
-          <button type="button" className="ff-toggle" onClick={() => setShowFlagsPanel((v) => !v)}>
-            ⚙️ Flags
-          </button>
-          {showFlagsPanel && (
-            <div className="ff-panel">
-              {Object.entries(ffState).map(([name, enabled]) => (
-                <label key={name} className="ff-row">
-                  <input
-                    type="checkbox"
-                    checked={enabled}
-                    onChange={() => enabled ? featureFlags.disable(name) : featureFlags.enable(name)}
-                  />
-                  <span>{name}</span>
-                </label>
-              ))}
-              <button type="button" className="ff-reset" onClick={() => featureFlags.reset()}>Reset defaults</button>
-            </div>
-          )}
         </section>
 
         {devOverlayOpen && (
@@ -1126,6 +1118,23 @@ function AppShell() {
                   </p>
                 ))}
               </div>
+            </section>
+
+            <section className="footer-panel app-footer-ff">
+              <div className="floating-title">
+                <span>Feature Flags</span>
+              </div>
+              {Object.entries(ffState).map(([name, enabled]) => (
+                <label key={name} className="ff-row">
+                  <input
+                    type="checkbox"
+                    checked={enabled}
+                    onChange={() => enabled ? featureFlags.disable(name) : featureFlags.enable(name)}
+                  />
+                  <span>{name}</span>
+                </label>
+              ))}
+              <button type="button" className="ff-reset" onClick={() => featureFlags.reset()}>Reset defaults</button>
             </section>
           </div>
         )}
