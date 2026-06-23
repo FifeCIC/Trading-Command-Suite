@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
 import StarToggle from '../components/StarToggle'
@@ -89,13 +90,16 @@ export default function SymbolsBrowserPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((sym) => {
+              {filtered.map((sym, i) => {
                 const f = freshnessBySymbol[sym.id]
                 return (
-                  <tr
+                  <motion.tr
                     key={sym.id}
                     className={selectedId === sym.id ? 'row-selected' : ''}
                     onClick={() => setSelectedId(selectedId === sym.id ? null : sym.id)}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, delay: Math.min(i * 0.02, 0.3) }}
                   >
                     <td onClick={(e) => e.stopPropagation()}><StarToggle itemType="symbol" itemId={sym.id} size={16} /></td>
                     <td><strong>{sym.ticker}</strong></td>
@@ -107,15 +111,22 @@ export default function SymbolsBrowserPage() {
                         {f?.status ?? '...'}
                       </span>
                     </td>
-                  </tr>
+                  </motion.tr>
                 )
               })}
             </tbody>
           </table>
         </div>
 
+        <AnimatePresence>
         {selected && (
-          <aside className="symbol-detail">
+          <motion.aside
+            className="symbol-detail"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.2 }}
+          >
             <h2>{selected.ticker}</h2>
             <p className="symbol-name">{selected.name}</p>
 
@@ -187,8 +198,9 @@ export default function SymbolsBrowserPage() {
                 </div>
               </div>
             </div>
-          </aside>
+          </motion.aside>
         )}
+        </AnimatePresence>
       </section>
     </div>
   )

@@ -8,11 +8,13 @@ import {
   Post,
   Query,
   UseInterceptors,
+  Logger,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PaginationInterceptor } from '../../common/interceptors/pagination.interceptor';
 import { Symbol } from '@prisma/client';
 import { ModeService } from '../../config/mode.service';
+import { PrismaService } from '../../database/prisma.service';
 import { CreateSymbolDto } from './dto/create-symbol.dto';
 import { UpdateSymbolDto } from './dto/update-symbol.dto';
 import { SymbolsService } from './symbols.service';
@@ -23,7 +25,10 @@ export class SymbolsController {
   constructor(
     private readonly symbolsService: SymbolsService,
     private readonly modeService: ModeService,
+    private readonly prisma: PrismaService,
   ) {}
+
+  private readonly logger = new Logger(SymbolsController.name);
 
   private modeMeta() {
     const info = this.modeService.getModeInfo();
@@ -52,6 +57,29 @@ export class SymbolsController {
   async findAll() {
     const symbols = await this.symbolsService.findAll();
     return { ...this.modeMeta(), symbols };
+  }
+
+  @Get('with-bars')
+  async withBars() {
+    if (!this.prisma.isAvailable) return { ...this.modeMeta(), tickers: [] };
+
+    // Get distinct tickers that have at least one MarketBar
+    const rows = await this.prisma.marketBar.findMany({
+      distinct: ['symbolId'],
+      select: { symbolId: true },
+    });
+
+    const symbolIds = rows.map((r) => r.symbolId);
+
+    const symbols = await this.prisma.symbol.findMany({
+      where: { id: { in: symbolIds }, active: true },
+      select: { ticker: true },
+      orderBy: { ticker: 'asc' },
+    });
+
+    const tickers = symbols.map((s) => s.ticker);
+    this.logger.log(`with-bars: ${tickers.length} symbols have market data`);
+    return { ...this.modeMeta(), tickers };
   }
 
   @Get(':id')

@@ -48,6 +48,16 @@ const SYMBOL_PROTOCOL_MAP: Record<string, string> = {
   USOIL: 'oil-speed-v1',
   UKOIL: 'oil-speed-v1',
   NATGAS: 'oil-speed-v1',
+  // SPY / SPX
+  SPX500: 'spy-speed-v1',
+  SPY: 'spy-speed-v1',
+  US500: 'spy-speed-v1',
+  // QQQ / Nasdaq
+  TECH100: 'qqq-speed-v1',
+  US100: 'qqq-speed-v1',
+  QQQ: 'qqq-speed-v1',
+  // VIX
+  VIX: 'vix-spike-v1',
   // Forex Majors
   EURUSD: 'forex-session-v1',
   GBPUSD: 'forex-session-v1',
@@ -57,20 +67,23 @@ const SYMBOL_PROTOCOL_MAP: Record<string, string> = {
   USDCHF: 'forex-session-v1',
   NZDUSD: 'forex-session-v1',
   // Indices
-  VIX: 'vix-spike-v1',
-  SPX500: 'default',
-  TECH100: 'default',
-  GER40: 'default',
-  // Stocks (fallback — no dedicated speed protocol yet)
+  DJI30: 'dow-speed-v1',
+  US30: 'dow-speed-v1',
+  UK100: 'ftse-speed-v1',
+  CHINA50: 'china-speed-v1',
+  // Stocks
+  TSLA: 'tsla-speed-v1',
   NVDA: 'default',
-  TSLA: 'default',
+  // Meme / Crypto
+  DOGEUSD: 'doge-speed-v1',
 };
 
 /** Default Tier A/B speed trading symbols */
 const DEFAULT_SPEED_SYMBOLS = [
   'XAUUSD', 'BTCUSD', 'EURUSD', 'GBPUSD', 'USDJPY',
   'USOIL', 'ETHUSD', 'SPX500', 'TECH100', 'VIX',
-  'AUDUSD', 'NZDUSD', 'USDCAD', 'USDCHF', 'GER40',
+  'AUDUSD', 'NZDUSD', 'USDCAD', 'USDCHF',
+  'SPY', 'QQQ', 'TSLA', 'DOGEUSD', 'DJI30', 'UK100',
 ];
 
 @Injectable()

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import './positions-monitor.css';
@@ -7,15 +8,20 @@ function RiskBar({ pct, label }) {
   const color = pct > 20 ? '#ef4444' : pct > 10 ? '#f59e0b' : '#22c55e';
   return (
     <div className="pm-risk-bar">
-      <div className="pm-risk-fill" style={{ width: `${Math.min(pct, 100)}%`, background: color }} />
+      <motion.div className="pm-risk-fill" initial={{ width: 0 }} animate={{ width: `${Math.min(pct, 100)}%` }} transition={{ duration: 0.5, ease: 'easeOut' }} style={{ background: color }} />
       <span className="pm-risk-label">{label}: {pct.toFixed(1)}%</span>
     </div>
   );
 }
 
-function CFDPosition({ pos }) {
+function CFDPosition({ pos, index }) {
   return (
-    <div className="pm-pos-card">
+    <motion.div
+      className="pm-pos-card"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, delay: Math.min(index * 0.05, 0.4) }}
+    >
       <div className="pm-pos-header">
         <strong>{pos.symbol}</strong>
         <span className={`pm-pos-pnl ${pos.pnl >= 0 ? 'pm-profit' : 'pm-loss'}`}>
@@ -38,7 +44,7 @@ function CFDPosition({ pos }) {
         <div className="pm-warning">⚠ CFD held {pos.daysHeld} days — consider closing</div>
       )}
       <RiskBar pct={pos.riskPct || 5} label="Risk Exposure" />
-    </div>
+    </motion.div>
   );
 }
 
@@ -113,7 +119,7 @@ export default function PositionsMonitorPage() {
         <div className="pm-positions">
           {mt5Query.isLoading && <div className="pm-empty">Loading MT5 positions...</div>}
           {cfdPositions.length === 0 && !mt5Query.isLoading && <div className="pm-empty">No open positions from MT5</div>}
-          {cfdPositions.map((p, i) => <CFDPosition key={p.ticket || i} pos={p} />)}
+          {cfdPositions.map((p, i) => <CFDPosition key={p.ticket || i} pos={p} index={i} />)}
         </div>
       )}
 

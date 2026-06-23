@@ -45,6 +45,8 @@ cd ..
 
 ### Create the MySQL database and user
 
+Run in MySQL (via WAMP phpMyAdmin, MySQL Workbench, or CLI):
+
 ```sql
 CREATE DATABASE IF NOT EXISTS tradingcs
   CHARACTER SET utf8mb4
@@ -65,16 +67,41 @@ The connection string lives in `nest/.env`:
 DATABASE_URL="mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"
 ```
 
-### Push schema and seed
+### Push schema (creates all tables)
 
-```bash
-cd nest
-npx prisma db push
-npx prisma db seed
-cd ..
+```powershell
+$env:DATABASE_URL = "mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"
+npm --prefix C:\wamp64\www\trading-command-suite\nest run prisma db push
 ```
 
-This creates all tables and seeds 3 test symbols (AAPL, NVDA, TSLA).
+This creates all tables including:
+- `symbol`, `strategy`, `directive`, `score`, `signal` — core trading
+- `market_bar`, `import_run` — data pipeline
+- `backtest_run`, `backtest_trade` — permanent backtest storage
+- `provider_health`, `api_activity_log`, `api_trace` — monitoring
+- `correlation_pair`, `symbol_calibration` — analysis
+- `news_source`, `news_article`, `article_sample`, `publishing_pattern` — news pipeline
+- `faq_entry` — help system
+
+### Seed initial data
+
+```powershell
+$env:DATABASE_URL = "mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"
+npm --prefix C:\wamp64\www\trading-command-suite\nest run prisma db seed
+```
+
+This seeds:
+- 3 test symbols (AAPL, NVDA, TSLA)
+- 9 strategy templates
+- FAQ entries
+- 5-year historical data for NVDA, crypto, and forex pairs (if seed scripts present)
+
+### Regenerate Prisma client (after schema changes)
+
+```powershell
+$env:DATABASE_URL = "mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"
+npm --prefix C:\wamp64\www\trading-command-suite\nest run prisma generate
+```
 
 ---
 

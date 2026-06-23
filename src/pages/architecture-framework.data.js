@@ -23,6 +23,7 @@ export const STATUS_SNAPSHOT = [
   '2026-06-23: Protocols page overhaul — directive groups with maxScores displayed per protocol. Risk gate badges show multiplier range (e.g. Gate 30%–120%). Advisory metadata added (trading style, recommended timeframe, avg hold time, win rate target, ideal use). All 6 code protocols annotated.',
   '2026-06-23: Protocol rename + new scalp — btc-speed-v1 renamed "BTC Investment Monitor V1" (medium-term monitoring, NOT scalping). New btc-scalp-v1 "BTC Tick Scalp V1" created for sub-minute speed trading: 14 directives, heavy risk gating (0.5–1.3), 5s–30s timeframe, seconds-to-minutes holds, 65–75% win rate target.',
   '2026-06-23: New speed protocols — xau-speed-v1 (Gold Speed Scalp V1, 14 directives, 0.4–1.3 gate) and oil-speed-v1 (Oil Speed Scalp V1, 14 directives, 0.45–1.3 gate). Both designed for XTrend $1–$5 sub-minute trading. SpeedScanService + POST /api/speed/scan endpoint built — batch-scores all Tier A/B symbols against their best protocol, returns ranked results with top pick. Scanner panel added to SpeedTradingPage with real-time 5s polling, click-to-switch symbols.',
+  '2026-06-23: SPY/QQQ protocols — spy-speed-v1 (options-driven micro-structure, gamma pinning, 0DTE mechanics), spy-day-v1 (session structure, VWAP, power hour), qqq-speed-v1 (high-beta momentum, tech earnings boost), qqq-day-v1 (trend following, concentration risk awareness). Scanner maps SPX500/US500→spy-speed-v1, TECH100/US100→qqq-speed-v1.',
 ]
 
 export const ARCHITECTURE_INDEX = [
@@ -119,6 +120,7 @@ export const CURRENT_SLICE = [
   'Gold Speed Scalp V1 (xau-speed-v1) — 14 directives, gold-specific micro-structure scalping with macro sentiment context (DXY, real rates). ✅',
   'Oil Speed Scalp V1 (oil-speed-v1) — 14 directives, crude-specific scalping with supply/geopolitics context, NY session focused. ✅',
   'Speed Trading Scanner — POST /api/speed/scan batch-scores Tier A/B symbols. Best Opportunities panel on SpeedTradingPage with 5s polling, ranked display, click-to-switch. Diagram added to DiagramsPage. ⚠️ Needs market data seeding for full coverage.',
+  'SPY/QQQ Protocols — 4 new: spy-speed-v1 (gamma pinning, options-flow micro-structure), spy-day-v1 (opening range, VWAP, power hour), qqq-speed-v1 (higher beta momentum), qqq-day-v1 (tech trend following, earnings season awareness). All exploit options market mechanics without trading options. ✅',
   'Protocols page — lists code-registered + DB strategies with API usage examples ✅',
   'Strategy creation + duplication — any strategy can be a template',
   'Portfolio view — holdings, P&L, manual trading with real Trading212 data',
@@ -1164,6 +1166,7 @@ export const KNOWN_GAPS = [
 ]
 
 export const REVISION_LOG = [
+  '2026-06-24: BACKTEST PERSISTENCE — BacktestRun + BacktestTrade Prisma models added. BacktestService refactored from in-memory Map to MySQL storage. Results now survive restarts. Symbol.backtestRuns relation added. New endpoint: GET /backtest/protocol/:protocolId. SETUP.md updated with full DB installation procedure (push, seed, generate, table inventory).',
   '2026-06-23: COST OPTIMISATION — Bootstrap tiered (Quick/Standard/Architecture). 15 stale github-issues archived. Agent read order reduced from one-size-fits-all 2,600 lines to task-based: ~500 (Quick), ~1,500 (Standard), ~2,600 (Architecture). COST-OPTIMISATION.md created as permanent record for future projects. Principles: tier from day one, archive aggressively, one-line summaries, consolidate before proliferating.',
   '2026-06-23: TRADING212 SELL MECHANISM DOCUMENTED — agents have cycled 3+ times adding/removing sell code claiming "API doesn\'t allow selling." The truth: Trading212 adapter sends {ticker, quantity} WITHOUT a side field — the API auto-detects sell from existing position. Controller (trading212-portfolio.controller.ts:51) adds side:"sell" ONLY for internal routing. DO NOT send "side" to Trading212. DO NOT remove sell capability. KNOWN_GAPS entry added as permanent reference.',
   '2026-06-23: NestJS operations guide updated in ecosystem.instructions.md — removed Intranet dependency for server lifecycle. Stop command now uses direct PowerShell port-based process termination. Added explicit warning: "Do NOT use Intranet for this project." Server is self-contained with own Server Controls page.',

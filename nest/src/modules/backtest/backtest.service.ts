@@ -71,7 +71,6 @@ export interface BacktestResult {
 @Injectable()
 export class BacktestService {
   private readonly logger = new Logger(BacktestService.name);
-  private results = new Map<string, BacktestResult>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -245,23 +244,133 @@ export class BacktestService {
       },
     };
 
-    this.results.set(result.id, result);
-    this.logger.log(`Backtest ${symbol}: ${entrySignals.length} signals, winRate=${(winRate*100).toFixed(0)}%`);
-    return result;
-  }
+    // ── Persist to database ──────────────────────────────
+    let persistedRunId: string | null = null;
+    try {
+      const symbolRow = await this.prisma.symbol.findUnique({ where: { ticker: symbol.toUpperCase() } });
+      if (symbolRow) {
+        const run = await this.prisma.backtestRun.create({
+          data: {
+            symbolId: symbolRow.id,
+            protocolId: protocolId ?? 'default',
+            timeframe,
+            startDate: bars[windowSize].timestamp,
+            endDate: bars[bars.length - 1].timestamp,
+            totalDays: days,
+            totalTrades: trades.length,
+            winRate: Number(winRate.toFixed(4)),
+            totalPnl: Number(totalPnl.toFixed(4)),
+            profitFactor: Number((grossProfit / grossLoss).toFixed(4)),
+            sharpeRatio: Number(sharpeApproximation.toFixed(4)),
+            maxDrawdown: Number(maxDrawdown10d.toFixed(4)),
+            avgTradePnl: Number(avgTradePnl.toFixed(4)),
+          },
+        });
+        persistedRunId = run.id;
 
-  getResult(runId: string): BacktestResult | null {
-    return this.results.get(runId) || null;
-  }
-
-  getSummary(symbol: string): { symbol: string; runs: { id: string; date: string; signals: number; winRate: number }[] } {
-    const runs: { id: string; date: string; signals: number; winRate: number }[] = [];
-    for (const [, r] of this.results) {
-      if (r.symbol === symbol.toUpperCase()) {
-        runs.push({ id: r.id, date: r.period, signals: r.stats.totalSignals, winRate: r.stats.winRate });
+        // Persist individual trades
+        if (trades.length > 0) {
+          await this.prisma.backtestTrade.createMany({
+            data: trades.map((t) => ({
+              runId: run.id,
+              symbolId: symbolRow.id,
+              entryDate: new Date(t.entryDate),
+              entryPrice: t.entryPrice,
+              exitDate: new Date(t.exitDate),
+              exitPrice: t.exitPrice,
+              direction: t.direction,
+              pnl: t.pnl,
+              pnlPct: t.pnlPct,
+              exitReason: t.exitReason,
+              entryScore: t.score,
+              signal: t.signal,
+            })),
+          });
+        }
+        this.logger.log(`Backtest persisted: run=${run.id}, symbol=${symbol}, trades=${trades.length}`);
       }
+    } catch (err) {
+      this.logger.error(`Failed to persist backtest for ${symbol}: ${(err as Error).message}`);
     }
-    return { symbol, runs };
+
+    this.logger.log(`Backtest ${symbol}: ${entrySignals.length} signals, winRate=${(winRate*100).toFixed(0)}%`);
+    return { ...result, id: persistedRunId || result.id };
+  }
+
+  async getResult(runId: string): Promise<BacktestResult | null> {
+    const run = await this.prisma.backtestRun.findUnique({
+      where: { id: runId },
+      include: { trades: true, symbol: true },
+    });
+    if (!run) return null;
+    return this.formatRunResult(run);
+  }
+
+  async getSummary(symbol: string): Promise<{ symbol: string; runs: { id: string; date: string; signals: number; winRate: number }[] }> {
+    const symbolRow = await this.prisma.symbol.findUnique({ where: { ticker: symbol.toUpperCase() } });
+    if (!symbolRow) return { symbol, runs: [] };
+    const runs = await this.prisma.backtestRun.findMany({
+      where: { symbolId: symbolRow.id },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return {
+      symbol,
+      runs: runs.map((r) => ({
+        id: r.id,
+        date: `${r.startDate.toISOString().split('T')[0]} to ${r.endDate.toISOString().split('T')[0]}`,
+        signals: r.totalTrades,
+        winRate: r.winRate,
+      })),
+    };
+  }
+
+  async listProtocolRuns(protocolId: string, limit = 20) {
+    return this.prisma.backtestRun.findMany({
+      where: { protocolId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: { symbol: { select: { ticker: true } } },
+    });
+  }
+
+  private formatRunResult(run: any): BacktestResult {
+    return {
+      id: run.id,
+      symbol: run.symbol?.ticker || '',
+      protocolId: run.protocolId,
+      period: `${run.startDate.toISOString().split('T')[0]} to ${run.endDate.toISOString().split('T')[0]}`,
+      totalDays: run.totalDays,
+      timeframe: run.timeframe,
+      entrySignals: [],
+      trades: run.trades?.map((t: any) => ({
+        entryDate: t.entryDate.toISOString(),
+        entryPrice: Number(t.entryPrice),
+        exitDate: t.exitDate.toISOString(),
+        exitPrice: Number(t.exitPrice),
+        direction: t.direction,
+        pnl: Number(t.pnl),
+        pnlPct: Number(t.pnlPct),
+        exitReason: t.exitReason,
+        score: Number(t.entryScore),
+        signal: t.signal,
+        protocolId: run.protocolId,
+      })) || [],
+      stats: {
+        totalSignals: run.totalTrades,
+        winRate: run.winRate,
+        averageReturn10d: 0,
+        maxReturn10d: 0,
+        maxDrawdown10d: run.maxDrawdown,
+        profitFactor: run.profitFactor,
+        sharpeApproximation: run.sharpeRatio,
+        totalTrades: run.totalTrades,
+        tradeWinRate: run.winRate,
+        avgTradePnl: run.avgTradePnl,
+        totalPnl: run.totalPnl,
+        maxTradeDrawdown: run.maxDrawdown,
+      },
+    };
   }
 
   async getChartData(

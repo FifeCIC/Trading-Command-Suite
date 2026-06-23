@@ -181,6 +181,16 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 0.5rem;
+  container-type: inline-size;
+  container-name: nav-grid;
+}
+
+/* Container query: tighter layout when grid is narrow */
+@container nav-grid (max-width: 400px) {
+  .nd-nav-card { padding: 0.6rem 0.4rem; min-height: 64px; gap: 0.2rem; }
+  .nd-nav-icon { font-size: 1rem; }
+  .nd-nav-label { font-size: 0.72rem; }
+  .nd-nav-count { font-size: 0.6rem; }
 }
 
 .nd-nav-card {

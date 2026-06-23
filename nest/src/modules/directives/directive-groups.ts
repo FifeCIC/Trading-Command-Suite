@@ -361,6 +361,457 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     idealFor: 'XTrend oil speed trading during NY session (13:30–20:00 GMT). EIA report Wednesdays 14:30 GMT = massive volatility. Avoid Asian session — oil is thin and whippy.',
   },
 
+  // ── SPY: Speed Scalp V1 ──
+
+  'spy-speed-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'Options-Driven Micro-Structure',
+        description: 'Gamma pinning, round-number S/R, micro momentum — SPY is driven by options flow',
+        weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',       // 120 — Gamma acceleration in last hour
+          'bollinger-squeeze',    // 100 — Pre-breakout squeeze at strikes
+          'volume-confirmation',  // 100 — Options-driven volume spikes
+          'atr-expansion',        // 100 — Micro-ATR for stop placement
+          'rsi-oversold',         // 120 — Oversold at max pain level
+          'rsi-overbought',       // 100 — Overbought at gamma wall
+          'support-resistance',   // 100 — SPY $5/$10 strike clusters
+          'session-timing-filter',// 100 — US session only
+        ],
+        directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
+      },
+      {
+        id: 'sentiment', name: 'Market Context',
+        description: 'VIX, breadth, macro — SPY is the market',
+        weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',       // 100 — Econ data, Fed, earnings
+          'vix-regime',           // 100 — VIX/SPY inverse correlation
+        ],
+      },
+      {
+        id: 'risk', name: 'Session & Execution Risk',
+        description: 'SPY doesn\'t gap 5% — tighter risk gates than crypto',
+        weight: 0.35, isRiskGate: true, minMultiplier: 0.5, maxMultiplier: 1.25,
+        directiveIds: [
+          'volatility-regime',    // 100 — Extreme VIX kills scalps
+          'liquidity-check',      // 100 — SPY always liquid but check spread
+          'position-concentration',// 100 — Don't over-allocate indices
+          'session-open-effect',  // 100 — First 30min sets daily range
+        ],
+      },
+    ],
+    name: 'SPY Speed Scalp V1',
+    description: 'Sub-minute SPX500/SPY scalping protocol. Exploits options-driven micro-structure: gamma pinning at strikes, 0DTE max pain gravity, opening drive and power hour momentum. The most liquid instrument on Earth.',
+    tradingStyle: 'Tick Scalp',
+    recommendedTimeframe: '5s–30s',
+    avgHoldTime: 'Seconds to a few minutes',
+    winRateTarget: '65–75%',
+    idealFor: 'XTrend SPX500 speed trading during US session (14:30–21:00 GMT). Best during opening drive (first 30min) and power hour (last 60min) when gamma flows are strongest.',
+  },
+
+  // ── SPY: Day Trading V1 ──
+
+  'spy-day-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'Session Structure Technicals',
+        description: 'Opening range, VWAP, trend, power hour — SPY day trading is session structure',
+        weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'ema-structure',        // 100 — 9/21/50 EMA alignment for trend
+          'macd-crossover',       // 110 — Session trend changes
+          'bollinger-squeeze',    // 100 — Pre-breakout compression
+          'volume-confirmation',  // 100 — Institutional volume profile
+          'support-resistance',   // 100 — Key SPY levels ($500, $510, $520...)
+          'momentum-roc',         // 100 — Intraday momentum shifts
+          'rsi-oversold',         // 120 — VWAP bounce oversold
+          'rsi-overbought',       // 100 — Overbought at resistance
+        ],
+        directiveMaxScores: { 'macd-crossover': 110, 'rsi-oversold': 120 },
+      },
+      {
+        id: 'sentiment', name: 'Macro & Breadth',
+        description: 'VIX, market breadth, Fed posture',
+        weight: 0.30, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',       // 100 — Econ data dominates SPY
+          'vix-regime',           // 100 — VIX/SPY correlation
+          'analyst-consensus',    // 100 — Wall Street SPY targets
+        ],
+      },
+      {
+        id: 'risk', name: 'Position & Session Risk',
+        description: 'Day trade risk — session quality, position sizing, overnight avoidance',
+        weight: 0.30, isRiskGate: true, minMultiplier: 0.55, maxMultiplier: 1.2,
+        directiveIds: [
+          'volatility-regime',    // 100 — Don't day trade during VIX > 30
+          'session-timing-filter',// 100 — Only trade liquid US hours
+          'liquidity-check',      // 100 — SPY always liquid but check
+          'position-concentration',// 100 — Index allocation cap
+        ],
+      },
+    ],
+    name: 'SPY Day Trade V1',
+    description: 'SPX500/SPY day trading protocol for multi-hour holds. Uses session structure — opening range, VWAP gravity, lunch drift, power hour acceleration. Not for scalping — positions held minutes to hours.',
+    tradingStyle: 'Day Trade',
+    recommendedTimeframe: '5m–1h',
+    avgHoldTime: 'Minutes to hours',
+    winRateTarget: '55–65%',
+    idealFor: 'XTrend SPX500 day trading during full US session. Best entries: opening range break (first 30min), VWAP reversion mid-day, power hour trend (last 60min).',
+  },
+
+  // ── QQQ: Speed Scalp V1 ──
+
+  'qqq-speed-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'Tech Momentum Micro-Structure',
+        description: 'QQQ trends harder than SPY — higher beta needs stronger momentum detection',
+        weight: 0.45, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',       // 120 — Higher beta = stronger momentum signals
+          'bollinger-squeeze',    // 100 — Tech squeeze before earnings/macro
+          'volume-confirmation',  // 100 — NVDA/AAPL/MSFT volume dominance
+          'atr-expansion',        // 100 — Wider ATR for tech volatility
+          'rsi-oversold',         // 120 — Tech dip buying
+          'rsi-overbought',       // 100 — Tech overbought = trend continuation
+          'support-resistance',   // 100 — QQQ round numbers
+          'session-timing-filter',// 100 — US session only
+        ],
+        directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
+      },
+      {
+        id: 'sentiment', name: 'Tech Sentiment',
+        description: 'Tech earnings, rates sensitivity, risk appetite',
+        weight: 0.20, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',       // 100 — Tech earnings, AI news, rate decisions
+          'analyst-consensus',    // 100 — Tech analyst targets matter more
+        ],
+      },
+      {
+        id: 'risk', name: 'High Beta Risk',
+        description: 'QQQ moves 1.2x SPY — wider risk gate to allow for beta amplification',
+        weight: 0.35, isRiskGate: true, minMultiplier: 0.45, maxMultiplier: 1.3,
+        directiveIds: [
+          'volatility-regime',    // 100 — Tech vol ≠ market vol
+          'liquidity-check',      // 100 — QQQ always liquid but spreads widen in panic
+          'position-concentration',// 100 — Tech allocation cap
+          'session-open-effect',  // 100 — Tech opens with momentum
+        ],
+      },
+    ],
+    name: 'QQQ Speed Scalp V1',
+    description: 'Sub-minute TECH100/QQQ scalping protocol. Higher beta than SPY — wider risk gates, stronger momentum weighting. NVDA/AAPL/MSFT drive 30% of movement. Tech earnings season adds volatility premium.',
+    tradingStyle: 'Tick Scalp',
+    recommendedTimeframe: '5s–30s',
+    avgHoldTime: 'Seconds to a few minutes',
+    winRateTarget: '65–75%',
+    idealFor: 'XTrend TECH100 speed trading during US session. Best during tech earnings season and AI news cycles when QQQ vol is elevated.',
+  },
+
+  // ── QQQ: Day Trading V1 ──
+
+  'qqq-day-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'Tech Trend Technicals',
+        description: 'QQQ trends — trend following dominates mean reversion',
+        weight: 0.45, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'ema-structure',        // 100 — Tech trend structure
+          'macd-crossover',       // 110 — Trend changes on tech
+          'bollinger-squeeze',    // 100 — Squeeze before earnings/macro
+          'volume-confirmation',  // 100 — NVDA/AAPL/MSFT volume confirms
+          'momentum-roc',         // 100 — Tech momentum is everything
+          'support-resistance',   // 100 — QQQ key levels
+          'rsi-oversold',         // 120 — Tech dip = buy
+          'rsi-overbought',       // 100 — Tech OB = stay long
+        ],
+        directiveMaxScores: { 'macd-crossover': 110, 'rsi-oversold': 120 },
+      },
+      {
+        id: 'sentiment', name: 'Tech Fundamentals',
+        description: 'Earnings, AI, rates — tech lives and dies by sentiment',
+        weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',       // 100 — Tech news cycles
+          'analyst-consensus',    // 100 — Tech analyst targets
+          'earnings-proximity',   // 100 — Earnings season risk/reward
+        ],
+      },
+      {
+        id: 'risk', name: 'Tech Concentration Risk',
+        description: 'Top 3 stocks = 30% of QQQ — concentration risk is real',
+        weight: 0.30, isRiskGate: true, minMultiplier: 0.45, maxMultiplier: 1.3,
+        directiveIds: [
+          'volatility-regime',    // 100 — Tech vol spikes on earnings
+          'session-timing-filter',// 100 — US session only
+          'liquidity-check',      // 100 — Check spreads
+          'position-concentration',// 100 — Index allocation cap
+        ],
+      },
+    ],
+    name: 'QQQ Day Trade V1',
+    description: 'TECH100/QQQ day trading protocol. Trend-following bias — QQQ trends harder and mean-reverts less than SPY. Higher beta = bigger moves. Tech earnings season provides volatility catalysts.',
+    tradingStyle: 'Day Trade',
+    recommendedTimeframe: '5m–1h',
+    avgHoldTime: 'Minutes to hours',
+    winRateTarget: '55–65%',
+    idealFor: 'XTrend TECH100 day trading during US session. Follow the trend — QQQ trends last longer than SPY. Best during tech earnings (Jan/Apr/Jul/Oct) and AI news cycles.',
+  },
+
+  // ── US30: Dow Speed Scalp V1 ──
+
+  'dow-speed-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'Industrial Micro-Structure',
+        description: 'Dow is lower-beta, cyclicals-heavy — different rhythm than SPY/QQQ',
+        weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',       // 120 — Dow momentum (lower amplitude)
+          'bollinger-squeeze',    // 100 — Squeeze before sector rotation
+          'volume-confirmation',  // 100 — Volume confirms rotation
+          'atr-expansion',        // 100 — Lower ATR, tighter stops
+          'rsi-oversold',         // 120 — Value dip buying
+          'rsi-overbought',       // 100 — Overbought cyclicals
+          'support-resistance',   // 100 — DJI respects round thousands
+          'session-timing-filter',// 100 — US session only
+        ],
+        directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
+      },
+      {
+        id: 'sentiment', name: 'Cyclical Sentiment',
+        description: 'Dow is value/cyclicals — rates, inflation, employment',
+        weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',       // 100 — Econ data, Fed, employment
+          'analyst-consensus',    // 100 — Industrial analyst targets
+        ],
+      },
+      {
+        id: 'risk', name: 'Value Rotation Risk',
+        description: 'Lower beta = tighter risk gate. Dow doesn\'t gap like QQQ.',
+        weight: 0.35, isRiskGate: true, minMultiplier: 0.55, maxMultiplier: 1.2,
+        directiveIds: [
+          'volatility-regime',    // 100 — Dow vol is lower
+          'liquidity-check',      // 100 — Always liquid but check
+          'position-concentration',// 100 — Index allocation cap
+          'session-open-effect',  // 100 — NY open rotation
+        ],
+      },
+    ],
+    name: 'Dow Speed Scalp V1',
+    description: 'Sub-minute US30/DJI30 scalping protocol. Lower beta than SPY/QQQ — tighter risk gates, more emphasis on sector rotation and value/cyclical patterns. 30 industrial stocks, less tech-driven.',
+    tradingStyle: 'Tick Scalp',
+    recommendedTimeframe: '5s–30s',
+    avgHoldTime: 'Seconds to a few minutes',
+    winRateTarget: '65–75%',
+    idealFor: 'XTrend US30/DJI30 speed trading during US session. Less volatile than SPY — tighter stops, smaller profit targets. Best during sector rotation days.',
+  },
+
+  // ── UK100: FTSE Speed Scalp V1 ──
+
+  'ftse-speed-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'FTSE Micro-Structure',
+        description: 'FTSE is commodity-heavy (BP, Shell, miners) — different from US indices',
+        weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',       // 120 — FTSE momentum
+          'bollinger-squeeze',    // 100 — Squeeze before London open
+          'volume-confirmation',  // 100 — LSE volume profile
+          'atr-expansion',        // 100 — FTSE ATR (GBP-denominated)
+          'rsi-oversold',         // 120 — Commodity dip buying
+          'rsi-overbought',       // 100 — Overbought miners/energy
+          'support-resistance',   // 100 — FTSE round numbers
+          'session-timing-filter',// 100 — London session only
+        ],
+        directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
+      },
+      {
+        id: 'sentiment', name: 'UK Macro',
+        description: 'FTSE sensitive to GBP, commodities, UK econ data',
+        weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',       // 100 — UK econ data, BoE, commodity news
+          'analyst-consensus',    // 100 — FTSE analyst targets
+        ],
+      },
+      {
+        id: 'risk', name: 'Cross-Session Risk',
+        description: 'FTSE trades London hours — gap risk from US close, Asian open',
+        weight: 0.35, isRiskGate: true, minMultiplier: 0.5, maxMultiplier: 1.2,
+        directiveIds: [
+          'volatility-regime',    // 100 — FTSE vol during UK events
+          'liquidity-check',      // 100 — Check LSE spreads
+          'position-concentration',// 100 — Index allocation cap
+          'session-open-effect',  // 100 — London open (08:00 GMT)
+        ],
+      },
+    ],
+    name: 'FTSE Speed Scalp V1',
+    description: 'Sub-minute UK100/FTSE100 scalping protocol. Commodity-heavy index (BP, Shell, Rio Tinto, Glencore) — sensitive to commodity prices and GBP. London session only.',
+    tradingStyle: 'Tick Scalp',
+    recommendedTimeframe: '5s–30s',
+    avgHoldTime: 'Seconds to a few minutes',
+    winRateTarget: '65–75%',
+    idealFor: 'XTrend UK100 speed trading during London session (08:00–16:30 GMT). Best during UK econ data releases and commodity price moves.',
+  },
+
+  // ── TSLA: Single Stock Speed Scalp V1 ──
+
+  'tsla-speed-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'Tesla Micro-Structure',
+        description: 'TSLA is the most volatile large-cap — Elon tweets, earnings, delivery numbers',
+        weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',       // 120 — TSLA moves fast
+          'bollinger-squeeze',    // 100 — Squeeze before Elon/news
+          'volume-confirmation',  // 100 — TSLA volume is massive
+          'atr-expansion',        // 100 — TSLA ATR is huge for a stock
+          'rsi-oversold',         // 120 — TSLA dip = generational buy (usually)
+          'rsi-overbought',       // 100 — TSLA OB can keep running
+          'support-resistance',   // 100 — TSLA round numbers + fib levels
+          'session-timing-filter',// 100 — US session only
+        ],
+        directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
+      },
+      {
+        id: 'sentiment', name: 'Elon Factor',
+        description: 'TSLA sentiment is unique — Elon, deliveries, AI narrative',
+        weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',       // 100 — Elon tweets, delivery numbers, product launches
+          'social-buzz',          // 100 — TSLA social media activity is predictive
+        ],
+      },
+      {
+        id: 'risk', name: 'Single Stock Risk',
+        description: 'TSLA is NOT an index — idiosyncratic risk requires wider gates',
+        weight: 0.35, isRiskGate: true, minMultiplier: 0.4, maxMultiplier: 1.35,
+        directiveIds: [
+          'volatility-regime',    // 100 — TSLA vol can spike 2-3x normal
+          'liquidity-check',      // 100 — TSLA always liquid but spreads widen
+          'position-concentration',// 100 — Single stock risk — tighter allocation
+          'earnings-proximity',   // 100 — Earnings risk/reward
+        ],
+      },
+    ],
+    name: 'TSLA Speed Scalp V1',
+    description: 'Sub-minute Tesla (TSLA) single-stock scalping protocol. The most volatile mega-cap — Elon factor, delivery numbers, AI narrative. Much wider risk gates than index protocols.',
+    tradingStyle: 'Tick Scalp',
+    recommendedTimeframe: '5s–30s',
+    avgHoldTime: 'Seconds to a few minutes',
+    winRateTarget: '60–70%',
+    idealFor: 'XTrend TSLA speed trading during US session. Expect wider spreads than indices. Do NOT hold through earnings. Elon tweets can move the stock 5% in minutes.',
+  },
+
+  // ── DOGE: Meme Coin Speed Scalp V1 ──
+
+  'doge-speed-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'Meme Coin Micro-Structure',
+        description: 'DOGE is pure momentum — no fundamentals, all sentiment and flow',
+        weight: 0.45, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',       // 120 — DOGE momentum is everything
+          'bollinger-squeeze',    // 100 — Squeeze before Elon tweet / community event
+          'volume-confirmation',  // 100 — DOGE volume spikes on social
+          'atr-expansion',        // 100 — DOGE ATR is enormous
+          'rsi-oversold',         // 120 — Meme dip = buy (usually)
+          'rsi-overbought',       // 100 — DOGE OB = FOMO, can run further
+          'support-resistance',   // 100 — DOGE respects round cents
+          'session-timing-filter',// 100 — 24/7 but US peak is most active
+        ],
+        directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
+      },
+      {
+        id: 'sentiment', name: 'Meme Sentiment',
+        description: 'DOGE lives and dies by social media',
+        weight: 0.30, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'social-buzz',          // 100 — Social media drives DOGE
+          'crypto-fear-greed',    //  60 — Background crypto sentiment
+        ],
+        directiveMaxScores: { 'crypto-fear-greed': 60 },
+      },
+      {
+        id: 'risk', name: 'Meme Coin Risk',
+        description: 'DOGE can drop 20% in an hour — wide risk gates essential',
+        weight: 0.25, isRiskGate: true, minMultiplier: 0.35, maxMultiplier: 1.4,
+        directiveIds: [
+          'volatility-regime',    // 100 — DOGE vol is extreme
+          'liquidity-check',      // 100 — DOGE spreads can be wide
+          'position-concentration',// 100 — Meme coin = tiny allocation
+        ],
+      },
+    ],
+    name: 'DOGE Speed Scalp V1',
+    description: 'Sub-minute Dogecoin (DOGE) scalping protocol. Pure momentum and social sentiment — no fundamentals, no earnings, just flow. The widest risk gates of any protocol.',
+    tradingStyle: 'Tick Scalp',
+    recommendedTimeframe: '5s–30s',
+    avgHoldTime: 'Seconds — get in, get out',
+    winRateTarget: '55–65%',
+    idealFor: 'XTrend DOGE speed trading — absolute smallest position size ($1). Meme coins can drop 20% in minutes. Use tightest possible stops. Only trade during high social activity.',
+  },
+
+  // ── CHINA50: China Index Speed Scalp V1 ──
+
+  'china-speed-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'China A50 Micro-Structure',
+        description: 'CHINA50 is government-influenced — different from free markets',
+        weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',       // 120 — China momentum (policy-driven)
+          'bollinger-squeeze',    // 100 — Squeeze before policy announcements
+          'volume-confirmation',  // 100 — Volume on Shanghai/Shenzhen
+          'atr-expansion',        // 100 — CHINA50 ATR (policy events)
+          'rsi-oversold',         // 120 — China dips on regulatory fear
+          'rsi-overbought',       // 100 — China OB on stimulus
+          'support-resistance',   // 100 — Round numbers + government intervention levels
+          'session-timing-filter',// 100 — Asian session only
+        ],
+        directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
+      },
+      {
+        id: 'sentiment', name: 'Policy Sentiment',
+        description: 'China is policy-driven — PBoC, Politburo, regulatory announcements',
+        weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',       // 100 — PBoC, regulatory, trade war news
+          'analyst-consensus',    // 100 — China analyst targets
+        ],
+      },
+      {
+        id: 'risk', name: 'Policy & Session Risk',
+        description: 'Government intervention, circuit breakers, capital controls',
+        weight: 0.35, isRiskGate: true, minMultiplier: 0.35, maxMultiplier: 1.3,
+        directiveIds: [
+          'volatility-regime',    // 100 — China vol on policy events
+          'liquidity-check',      // 100 — CHINA50 spreads can be wide
+          'position-concentration',// 100 — Emerging market allocation
+        ],
+      },
+    ],
+    name: 'CHINA50 Speed Scalp V1',
+    description: 'Sub-minute CHINA50/A50 scalping protocol. Policy-driven index — PBoC decisions, Politburo statements, regulatory announcements dominate. Government intervention risk is real.',
+    tradingStyle: 'Tick Scalp',
+    recommendedTimeframe: '5s–30s',
+    avgHoldTime: 'Seconds to a few minutes',
+    winRateTarget: '60–70%',
+    idealFor: 'XTrend CHINA50 speed trading during Asian session (01:00–09:00 GMT). Government can halt trading or intervene at any time. Use extreme caution.',
+  },
+
   // ── VIX: Mean-Reversion Spike Protocol ──
 
   'vix-spike-v1': {

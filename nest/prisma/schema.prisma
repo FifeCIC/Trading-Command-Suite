@@ -26,6 +26,7 @@ model Symbol {
   signals    Signal[]
   marketBars MarketBar[]
   importRuns ImportRun[]
+  backtestRuns BacktestRun[]
 }
 
 model Strategy {
@@ -133,6 +134,56 @@ model ImportRun {
 
   @@index([symbolId, requestedAt])
   @@index([status, requestedAt])
+}
+
+// ── Backtest Persistence ──────────────────────────────────
+// Permanent storage for strategy backtesting results.
+// One BacktestRun per execution, many BacktestTrades per run.
+// Query by symbol + protocol to see historical performance.
+
+model BacktestRun {
+  id           String   @id @default(uuid()) @db.VarChar(36)
+  symbolId     String   @db.VarChar(36)
+  protocolId   String   @db.VarChar(100)
+  timeframe    String   @db.VarChar(10)
+  startDate    DateTime
+  endDate      DateTime
+  totalDays    Int
+  totalTrades  Int
+  winRate      Float
+  totalPnl     Float
+  profitFactor Float
+  sharpeRatio  Float
+  maxDrawdown  Float
+  avgTradePnl  Float
+  createdAt    DateTime @default(now())
+
+  symbol Symbol         @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+  trades BacktestTrade[]
+
+  @@index([symbolId, protocolId])
+  @@index([createdAt])
+}
+
+model BacktestTrade {
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  runId      String   @db.VarChar(36)
+  symbolId   String   @db.VarChar(36)
+  entryDate  DateTime
+  entryPrice Float
+  exitDate   DateTime
+  exitPrice  Float
+  direction  String   @db.VarChar(10)  // LONG | SHORT
+  pnl        Float
+  pnlPct     Float
+  exitReason String   @db.VarChar(20)  // TP | SL | EOD
+  entryScore Float
+  signal     String   @db.VarChar(20)
+
+  run    BacktestRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+  @@index([symbolId])
 }
 
 model ProviderHealth {

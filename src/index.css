@@ -903,6 +903,36 @@ button.nav-active {
   padding: 0.3rem 0 0.1rem;
 }
 
+/* ── Scroll-Driven Animation Utility ── */
+@supports (animation-timeline: view()) {
+  .reveal-on-scroll {
+    animation: reveal-in linear both;
+    animation-timeline: view();
+    animation-range: entry 10% cover 30%;
+  }
+  @keyframes reveal-in {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* ── Popover API Base Styles ── */
+[popover] {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  padding: 0.6rem 0.8rem;
+  font-size: 0.75rem;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  max-width: 280px;
+  line-height: 1.5;
+}
+[popover]::backdrop {
+  background: rgba(0,0,0,0.15);
+  backdrop-filter: blur(2px);
+}
+
 .star-toggle {
   background: none;
   border: 1px solid var(--line, #1e2a45);
@@ -1132,6 +1162,9 @@ button.nav-active {
 .pf-ds-no_data, .pf-ds-untracked { background: color-mix(in srgb, #6b7280 12%, transparent); color: var(--ink-soft); border: 1px solid color-mix(in srgb, #6b7280 20%, transparent); }
 .pf-action-btn { text-decoration: none; font-size: 0.85rem; color: var(--ink-soft); padding: 0 0.3rem; }
 .pf-action-btn:hover { color: var(--accent); }
+/* :has() — parent-state selectors */
+.pf-table tbody tr:has(.pf-green) { background: linear-gradient(90deg, rgba(34,197,94,0.04), transparent); }
+.pf-table tbody tr:has(.pf-red) { background: linear-gradient(90deg, rgba(239,68,68,0.04), transparent); }
 .pf-sell-btn {
   background: color-mix(in srgb, #ff4757 15%, transparent);
   color: #ff6b7a;

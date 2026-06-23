@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '../core/api/client';
 import { XTREND_SPEED_SYMBOLS, getSymbolCategory, SYMBOL_CATEGORIES } from '../data/xtrend-symbols';
 import './speed-trading.css';
 
@@ -23,7 +26,7 @@ const SHORTCUTS = [
 ];
 
 export default function SpeedTradingPage() {
-  const [symbol, setSymbol] = useState('EURUSD');
+  const [symbol, setSymbol] = useState('NVDA');
   const [symbolFilter, setSymbolFilter] = useState('');
   const [symbolCat, setSymbolCat] = useState('all');
   const [timeframe, setTf] = useState('1m');
@@ -37,6 +40,15 @@ export default function SpeedTradingPage() {
   const [actionLog, setActionLog] = useState([]);
   const lockTimer = useRef(null);
   const pageRef = useRef(null);
+
+  // ── Scorable symbols (only show symbols with market bars / protocol data) ──
+  const scorableQuery = useQuery({
+    queryKey: ['symbols', 'with-bars'],
+    queryFn: () => apiGet('/api/symbols/with-bars').catch(() => ({ tickers: [] })),
+    staleTime: 120_000,
+    select: (data) => new Set((data?.tickers ?? []).map((t) => t.toUpperCase())),
+  });
+  const scorable = scorableQuery.data ?? new Set();
 
   // ── Best Opportunities Scanner ──
   const [scanData, setScanData] = useState(null);
@@ -55,15 +67,19 @@ export default function SpeedTradingPage() {
   // ── Filtered symbols ──
   const filteredSymbols = useMemo(() => {
     let list = XTREND_SPEED_SYMBOLS;
+    // Only show symbols that have market data (can be scored by protocols)
+    if (scorable.size > 0) {
+      list = list.filter((s) => scorable.has(s.toUpperCase()));
+    }
     if (symbolCat !== 'all') {
-      list = list.filter(s => getSymbolCategory(s) === symbolCat);
+      list = list.filter((s) => getSymbolCategory(s) === symbolCat);
     }
     if (symbolFilter.trim()) {
       const q = symbolFilter.trim().toUpperCase();
-      list = list.filter(s => s.toUpperCase().includes(q));
+      list = list.filter((s) => s.toUpperCase().includes(q));
     }
     return list;
-  }, [symbolCat, symbolFilter]);
+  }, [symbolCat, symbolFilter, scorable]);
 
   // Ensure current symbol is in filtered list
   useEffect(() => {
@@ -219,11 +235,11 @@ export default function SpeedTradingPage() {
       {/* Lockout overlay */}
       {locked && (
         <div className="st-lockout">
-          <div className="st-lockout-box">
+          <motion.div className="st-lockout-box" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 20 }}>
             <h1>🔒 LOCKED</h1>
             <p>All trading disabled — emergency lockout active</p>
             <div className="st-countdown">{lockCountdown}s</div>
-          </div>
+          </motion.div>
         </div>
       )}
 
@@ -454,12 +470,21 @@ export default function SpeedTradingPage() {
       <div className="st-log">
         <div className="st-log-header">Action Log</div>
         <div className="st-log-entries">
+          <AnimatePresence initial={false}>
           {actionLog.map((entry) => (
-            <div key={entry.id} className="st-log-entry">
+            <motion.div
+              key={entry.id}
+              className="st-log-entry"
+              initial={{ opacity: 0, x: -10, height: 0 }}
+              animate={{ opacity: 1, x: 0, height: 'auto' }}
+              exit={{ opacity: 0, x: 10, height: 0 }}
+              transition={{ duration: 0.2 }}
+            >
               <span className="st-log-time">{entry.time}</span>
               <span className="st-log-msg">{entry.msg}</span>
-            </div>
+            </motion.div>
           ))}
+          </AnimatePresence>
         </div>
       </div>
 

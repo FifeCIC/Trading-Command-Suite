@@ -23,15 +23,20 @@ export class BacktestController {
   }
 
   @Get('results/:runId')
-  getResult(@Param('runId') runId: string) {
-    const result = this.backtestService.getResult(runId);
+  async getResult(@Param('runId') runId: string) {
+    const result = await this.backtestService.getResult(runId);
     if (!result) return { error: 'Run not found' };
     return result;
   }
 
   @Get('summary/:symbol')
-  getSummary(@Param('symbol') symbol: string) {
+  async getSummary(@Param('symbol') symbol: string) {
     return this.backtestService.getSummary(symbol);
+  }
+
+  @Get('protocol/:protocolId')
+  async listProtocolRuns(@Param('protocolId') protocolId: string, @Query('limit') limit?: string) {
+    return this.backtestService.listProtocolRuns(protocolId, limit ? parseInt(limit, 10) : 20);
   }
 
   @Get('chart-data')
