@@ -260,6 +260,107 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     idealFor: 'XTrend speed trading — $1 positions, sub-minute holds, high win rate. Requires tight spreads and liquid sessions. Do NOT use for position trading or multi-hour holds.',
   },
 
+  // ── XAU: Gold Speed Scalp V1 ──
+
+  'xau-speed-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'Micro-Structure Technicals',
+        description: 'Gold micro-moves: momentum, squeezes, volume spikes for sub-minute entries',
+        weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',       // 120 — Gold micro-velocity
+          'bollinger-squeeze',    // 100 — Squeeze before data releases
+          'volume-confirmation',  // 100 — Volume spike confirms gold move
+          'atr-expansion',        // 100 — Micro-ATR for gold tick sizing
+          'rsi-oversold',         // 120 — Gold oversold bounce
+          'rsi-overbought',       // 100 — Gold overbought reversion
+          'support-resistance',   // 100 — Gold round numbers ($2000, $2050...)
+          'session-timing-filter',// 100 — Only liquid gold sessions
+        ],
+        directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
+      },
+      {
+        id: 'sentiment', name: 'Sentiment & Macro Context',
+        description: 'Gold IS sentiment — DXY, real rates, fear gauge',
+        weight: 0.20, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',            // 100 — Gold reacts to every headline
+          'gold-macro-correlation',    // 100 — DXY/real rates context
+        ],
+      },
+      {
+        id: 'risk', name: 'Execution Risk',
+        description: 'Gold-specific: spread widening during news, weekend gaps, over-allocation',
+        weight: 0.40, isRiskGate: true, minMultiplier: 0.4, maxMultiplier: 1.3,
+        directiveIds: [
+          'volatility-regime',     // 100 — Extreme vol kills gold scalps
+          'liquidity-check',       // 100 — Gold spreads widen on news
+          'position-concentration',// 100 — Don't over-allocate gold
+          'crypto-weekend-effect', //  50 — Weekend gap risk (thin gold weekends)
+        ],
+        directiveMaxScores: { 'crypto-weekend-effect': 50 },
+      },
+    ],
+    name: 'Gold Speed Scalp V1',
+    description: 'Sub-minute gold (XAUUSD) scalping protocol. Gold is the ultimate fear gauge — volatile during CPI, FOMC, NFP, geopolitics. Tight spreads, massive liquidity. Reacts to USD strength and real rates.',
+    tradingStyle: 'Tick Scalp',
+    recommendedTimeframe: '5s–30s',
+    avgHoldTime: 'Seconds to a few minutes',
+    winRateTarget: '65–75%',
+    idealFor: 'XTrend gold speed trading during London/NY overlap (12:00–16:00 GMT). Avoid first 5min after major news — spreads widen dramatically.',
+  },
+
+  // ── OIL: WTI Speed Scalp V1 ──
+
+  'oil-speed-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'Micro-Structure Technicals',
+        description: 'Oil micro-moves: momentum, squeezes, volume for sub-minute entries',
+        weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',       // 120 — Oil micro-velocity
+          'bollinger-squeeze',    // 100 — Squeeze before EIA/OPEC events
+          'volume-confirmation',  // 100 — Volume spike confirms crude move
+          'atr-expansion',        // 100 — Micro-ATR for oil tick sizing
+          'rsi-oversold',         // 120 — Oil oversold bounce (mean reversion)
+          'rsi-overbought',       // 100 — Oil overbought reversion
+          'support-resistance',   // 100 — Oil key levels ($70, $75, $80, $85)
+          'session-timing-filter',// 100 — NY session only
+        ],
+        directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
+      },
+      {
+        id: 'sentiment', name: 'Sentiment & Fundamentals',
+        description: 'Oil drivers: OPEC, EIA, geopolitics, USD',
+        weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',            // 100 — OPEC, EIA, geopolitics dominate
+          'cad-usd-oil-correlation',   // 100 — Oil/CAD correlation confirmation
+        ],
+      },
+      {
+        id: 'risk', name: 'Execution Risk',
+        description: 'Oil-specific: geopolitical vol spikes, NY session liquidity windows',
+        weight: 0.35, isRiskGate: true, minMultiplier: 0.45, maxMultiplier: 1.3,
+        directiveIds: [
+          'volatility-regime',     // 100 — Oil vol spikes on geopolitics
+          'liquidity-check',       // 100 — Crude spreads matter for $1 scalps
+          'position-concentration',// 100 — Don't over-allocate energy
+          'session-open-effect',   // 100 — NY open crude moves
+        ],
+      },
+    ],
+    name: 'Oil Speed Scalp V1',
+    description: 'Sub-minute WTI crude (USOIL) scalping protocol. Extremely event-driven — EIA inventories, OPEC headlines, geopolitical supply shocks. Strong mean-reverting tendencies within daily ranges.',
+    tradingStyle: 'Tick Scalp',
+    recommendedTimeframe: '5s–30s',
+    avgHoldTime: 'Seconds to a few minutes',
+    winRateTarget: '65–75%',
+    idealFor: 'XTrend oil speed trading during NY session (13:30–20:00 GMT). EIA report Wednesdays 14:30 GMT = massive volatility. Avoid Asian session — oil is thin and whippy.',
+  },
+
   // ── VIX: Mean-Reversion Spike Protocol ──
 
   'vix-spike-v1': {

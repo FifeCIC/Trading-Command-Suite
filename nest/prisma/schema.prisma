@@ -789,3 +789,32 @@ model StrategyEvaluation {
   @@map("strategy_evaluation")
   @@index([strategyId, evaluatedAt])
 }
+
+model ProtocolRun {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(200)
+  protocolId   String   @db.VarChar(100)
+  symbols      Json
+  status       String   @default("pending") @db.VarChar(20)
+  results      Json?
+  errorMessage String?  @db.Text
+  runCount     Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastRunAt    DateTime?
+
+  @@index([protocolId])
+  @@index([status])
+}
+
+model SymbolProtocolAffinity {
+  symbol              String   @db.VarChar(20)
+  protocolId          String   @db.VarChar(100)
+  avgNormalizedScore  Float
+  runCount            Int      @default(1)
+  lastUpdated         DateTime @default(now())
+
+  @@id([symbol, protocolId])
+  @@index([symbol])
+  @@index([protocolId])
+}

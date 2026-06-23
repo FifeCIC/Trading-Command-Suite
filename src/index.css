@@ -1102,9 +1102,25 @@ button.nav-active {
 .pf-suggestion { padding: 0.5rem 0.75rem; margin-bottom: 0.4rem; background: color-mix(in srgb, #ffaa00 8%, transparent); border-radius: 6px; font-size: 0.8rem; }
 .pf-add-form { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
 .pf-add-form input { padding: 0.35rem 0.5rem; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); font-size: 0.82rem; width: 100px; }
-.pf-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
-.pf-header h1 { margin: 0; }
-.pf-source-select { padding: 0.3rem 0.5rem; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); color: var(--ink); font-size: 0.78rem; }
+.pf-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-bottom: 1rem; }
+.pf-header h1 { margin: 0; font-size: 1.3rem; }
+.pf-header-left { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.pf-header-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.pf-source-select { padding: 0.35rem 0.55rem; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); color: var(--ink); font-size: 0.78rem; font-family: inherit; }
+.pf-refresh-btn {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  transition: border-color 0.15s;
+}
+.pf-refresh-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--ink); }
+.pf-refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .pf-sig { font-size: 0.62rem; font-weight: 700; padding: 0.1rem 0.35rem; border-radius: 3px; }
 .pf-sig-buy { background: #1b3a1b; color: #3fb950; }
 .pf-sig-sell { background: #3a1b1b; color: #f85149; }

@@ -563,6 +563,52 @@ const DIAGRAMS = [
     Q --> T
     T --> U --> V --> W`,
   },
+  {
+    id: 'speed-scanner',
+    label: 'Speed Trading — Best Symbol Scanner',
+    desc: 'Real-time batch scanner: every 5s, all Tier A/B symbols are scored against their best protocol. Results ranked and displayed on Speed Trading page. Auto-Switch mode automatically changes the active symbol to the highest-scoring opportunity.',
+    code: `flowchart TB
+    subgraph Trigger["Scan Trigger"]
+        A[Every 5 seconds]
+        B[Manual refresh]
+    end
+    subgraph Symbols["Tier A/B Symbols"]
+        C[XAUUSD]
+        D[BTCUSD]
+        E[EURUSD]
+        F[GBPUSD]
+        G[USDJPY]
+        H[USOIL]
+        I[SPX500]
+        J[TECH100]
+        K[ETHUSD]
+        L[...more]
+    end
+    subgraph Scanner["SpeedScanService"]
+        M[Symbol→Protocol Map]
+        N[Batch Fetch Bars]
+        O[ProtocolGatingService.scoreWithGating]
+        P[Rank by Composite DESC]
+    end
+    subgraph Output["Scan Result"]
+        Q[🥇 XAUUSD 78 bullish]
+        R[🥈 BTCUSD 72 bullish]
+        S[🥉 EURUSD 55 neutral]
+        T[⛔ USOIL GATED]
+    end
+    subgraph UI["Speed Trading Page"]
+        U[Best Opportunities Panel]
+        V[Auto-Switch Toggle]
+        W[Switch active symbol]
+    end
+    A --> M
+    B --> M
+    C & D & E & F & G & H & I & J & K & L --> N
+    N --> O --> P
+    P --> Q & R & S & T
+    Q & R & S & T --> U
+    U --> V --> W`,
+  },
 ];
 
 export default function DiagramsPage() {

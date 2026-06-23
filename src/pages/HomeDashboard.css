@@ -60,6 +60,11 @@
 
 .nd-status-dot {
   font-size: 0.7rem;
+  animation: nd-status-pulse 2s ease-in-out infinite;
+}
+@keyframes nd-status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 /* ── Sections ─────────────────────────────────────────────── */

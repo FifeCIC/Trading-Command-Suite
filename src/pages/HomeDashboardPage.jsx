@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import { NAV_TREE } from '../core/nav-tree';
 import { useNavigate } from 'react-router-dom';
@@ -63,17 +64,28 @@ export default function HomeDashboardPage() {
           <span className="nd-progress-badge">{doneSteps}/{totalSteps} complete</span>
         </div>
         <div className="nd-progress-bar">
-          <div className="nd-progress-fill" style={{ width: `${progressPct}%` }} />
+          <motion.div
+            className="nd-progress-fill"
+            initial={{ width: 0 }}
+            animate={{ width: `${progressPct}%` }}
+            transition={{ duration: 0.7, ease: 'easeOut', delay: 0.2 }}
+          />
         </div>
         <div className="nd-setup-grid">
-          {SETUP_STEPS.map((step) => (
-            <div key={step.id} className={`nd-setup-card ${step.done ? 'is-done' : ''}`}>
+          {SETUP_STEPS.map((step, i) => (
+            <motion.div
+              key={step.id}
+              className={`nd-setup-card ${step.done ? 'is-done' : ''}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: 0.3 + i * 0.06 }}
+            >
               <span className="nd-setup-check">{step.done ? '✅' : '⬜'}</span>
               <div className="nd-setup-info">
                 <strong>{step.label}</strong>
                 <span>{step.desc}</span>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>
@@ -81,16 +93,21 @@ export default function HomeDashboardPage() {
       <section className="nd-section">
         <h2>📂 Navigation Areas</h2>
         <div className="nd-nav-grid">
-          {areas.map((area) => (
-            <button
+          {areas.map((area, i) => (
+            <motion.button
               key={area.id}
               className="nd-nav-card"
               onClick={() => navigate(`/${area.id}/${area.firstView}`)}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.2, delay: i * 0.04 }}
+              whileHover={{ scale: 1.03, y: -2 }}
+              whileTap={{ scale: 0.97 }}
             >
               <span className="nd-nav-icon">{area.icon}</span>
               <span className="nd-nav-label">{area.label}</span>
               <span className="nd-nav-count">{area.viewCount} views</span>
-            </button>
+            </motion.button>
           ))}
         </div>
       </section>

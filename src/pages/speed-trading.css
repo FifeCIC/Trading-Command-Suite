@@ -366,3 +366,141 @@
   from { opacity: 0; transform: translateX(-50%) translateY(10px); }
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
+
+/* ── Best Opportunities Scanner Panel ── */
+
+.st-scan-panel {
+  background: var(--panel, #0a0e17);
+  border-top: 1px solid var(--line, #1e293b);
+  flex-shrink: 0;
+  transition: max-height 0.2s;
+}
+
+.st-scan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.st-scan-header:hover { background: #11182740; }
+.st-scan-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+}
+.st-scan-badge {
+  display: inline-block;
+  margin-left: 6px;
+  background: #0ea5a620;
+  color: #0ea5a6;
+  padding: 0px 6px;
+  border-radius: 8px;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+.st-scan-toggle { color: #64748b; font-size: 0.8rem; }
+
+.st-scan-body {
+  padding: 0 12px 10px;
+}
+
+.st-scan-error {
+  color: #ef4444;
+  font-size: 0.7rem;
+  padding: 4px 0;
+}
+.st-scan-loading {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-style: italic;
+}
+.st-scan-empty {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-style: italic;
+  padding: 6px 0;
+}
+
+.st-scan-top-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.st-scan-card {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.72rem;
+  color: var(--ink, #e2e8f0);
+  transition: all 0.15s;
+  min-width: 0;
+}
+.st-scan-card:hover {
+  border-color: var(--accent, #0ea5a6);
+  background: #0ea5a610;
+}
+
+.st-scan-card.top-pick {
+  border-color: #f59e0b;
+  background: #f59e0b10;
+}
+.st-scan-card.active {
+  border-color: #0ea5a6;
+  background: #0ea5a620;
+}
+.st-scan-card.gated {
+  opacity: 0.6;
+}
+
+.st-scan-rank { font-size: 0.8rem; flex-shrink: 0; }
+.st-scan-symbol {
+  font-weight: 700;
+  font-size: 0.72rem;
+  white-space: nowrap;
+  min-width: 0;
+}
+.st-scan-score {
+  font-weight: 700;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.st-scan-score.strong { color: #22c55e; }
+.st-scan-score.neutral { color: #f59e0b; }
+.st-scan-score.weak { color: #ef4444; }
+
+.st-scan-signal {
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+.st-scan-signal.buy { background: #05966930; color: #22c55e; }
+.st-scan-signal.sell { background: #dc262630; color: #ef4444; }
+.st-scan-signal.hold { background: #64748b30; color: #94a3b8; }
+
+.st-scan-gated { font-size: 0.7rem; }
+
+.st-scan-top-label {
+  margin-top: 6px;
+  font-size: 0.65rem;
+  color: #64748b;
+}
+.st-scan-top-label strong { color: #f59e0b; }
+
+.st-scan-skipped {
+  margin-top: 4px;
+  font-size: 0.6rem;
+  color: #ef444490;
+}

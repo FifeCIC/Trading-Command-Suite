@@ -22,6 +22,7 @@ export const STATUS_SNAPSHOT = [
   '2026-06-23: Trade audit trail wired — TradeRecorderService injected into Mt5TradingService. Every order placed through TCS (manual/agent/strategy) recorded to Trade table with origin field (user|agent|strategy|system). OrderDto validation fixed with class-validator decorators. Bridge API mismatch resolved (order_type→type string, retcode→success). Trade history endpoint returns all attempts with origin attribution. End-to-end verified: EURUSD buy placed via TCS as agent, recorded in DB.',
   '2026-06-23: Protocols page overhaul — directive groups with maxScores displayed per protocol. Risk gate badges show multiplier range (e.g. Gate 30%–120%). Advisory metadata added (trading style, recommended timeframe, avg hold time, win rate target, ideal use). All 6 code protocols annotated.',
   '2026-06-23: Protocol rename + new scalp — btc-speed-v1 renamed "BTC Investment Monitor V1" (medium-term monitoring, NOT scalping). New btc-scalp-v1 "BTC Tick Scalp V1" created for sub-minute speed trading: 14 directives, heavy risk gating (0.5–1.3), 5s–30s timeframe, seconds-to-minutes holds, 65–75% win rate target.',
+  '2026-06-23: New speed protocols — xau-speed-v1 (Gold Speed Scalp V1, 14 directives, 0.4–1.3 gate) and oil-speed-v1 (Oil Speed Scalp V1, 14 directives, 0.45–1.3 gate). Both designed for XTrend $1–$5 sub-minute trading. SpeedScanService + POST /api/speed/scan endpoint built — batch-scores all Tier A/B symbols against their best protocol, returns ranked results with top pick. Scanner panel added to SpeedTradingPage with real-time 5s polling, click-to-switch symbols.',
 ]
 
 export const ARCHITECTURE_INDEX = [
@@ -115,6 +116,9 @@ export const CURRENT_SLICE = [
   'SEES Live Stack — filters to 5 strategy-weighted directives, real data source indicators',
   'Bitcoin Speed Protocol (btc-speed-v1→BTC Investment Monitor V1) — 16 directives, variable maxScore (40–200), halving cycle bonus, rarity percentile gauge. Renamed from "Speed Scalp" — this is a medium-term monitoring protocol, NOT for sub-minute scalping. ✅',
   'BTC Tick Scalp V1 (btc-scalp-v1) — 14 directives, true sub-minute scalping: 5s–30s candles, seconds-to-minutes holds, heavy risk gating (0.5–1.3), 65–75% win rate target. Designed for XTrend $1 speed trading. ✅',
+  'Gold Speed Scalp V1 (xau-speed-v1) — 14 directives, gold-specific micro-structure scalping with macro sentiment context (DXY, real rates). ✅',
+  'Oil Speed Scalp V1 (oil-speed-v1) — 14 directives, crude-specific scalping with supply/geopolitics context, NY session focused. ✅',
+  'Speed Trading Scanner — POST /api/speed/scan batch-scores Tier A/B symbols. Best Opportunities panel on SpeedTradingPage with 5s polling, ranked display, click-to-switch. Diagram added to DiagramsPage. ⚠️ Needs market data seeding for full coverage.',
   'Protocols page — lists code-registered + DB strategies with API usage examples ✅',
   'Strategy creation + duplication — any strategy can be a template',
   'Portfolio view — holdings, P&L, manual trading with real Trading212 data',
@@ -1160,6 +1164,7 @@ export const KNOWN_GAPS = [
 ]
 
 export const REVISION_LOG = [
+  '2026-06-23: COST OPTIMISATION — Bootstrap tiered (Quick/Standard/Architecture). 15 stale github-issues archived. Agent read order reduced from one-size-fits-all 2,600 lines to task-based: ~500 (Quick), ~1,500 (Standard), ~2,600 (Architecture). COST-OPTIMISATION.md created as permanent record for future projects. Principles: tier from day one, archive aggressively, one-line summaries, consolidate before proliferating.',
   '2026-06-23: TRADING212 SELL MECHANISM DOCUMENTED — agents have cycled 3+ times adding/removing sell code claiming "API doesn\'t allow selling." The truth: Trading212 adapter sends {ticker, quantity} WITHOUT a side field — the API auto-detects sell from existing position. Controller (trading212-portfolio.controller.ts:51) adds side:"sell" ONLY for internal routing. DO NOT send "side" to Trading212. DO NOT remove sell capability. KNOWN_GAPS entry added as permanent reference.',
   '2026-06-23: NestJS operations guide updated in ecosystem.instructions.md — removed Intranet dependency for server lifecycle. Stop command now uses direct PowerShell port-based process termination. Added explicit warning: "Do NOT use Intranet for this project." Server is self-contained with own Server Controls page.',
   '2026-06-23: UI Data Honesty rule added to AI_GUARDRAILS (new card: every value traceable to real source, no fake demo data), .agent-rules.md (new section), and DEVELOPMENT-POLICY.md (anti-pattern). Trading Strategies page fake In-Use/P&L documented in KNOWN_GAPS.',

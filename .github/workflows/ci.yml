@@ -37,5 +37,6 @@ jobs:
           cache: npm
           cache-dependency-path: nest/package-lock.json
       - run: npm ci
+      - run: npx prisma generate
       - run: npm run lint --if-present || true
       - run: npm run build

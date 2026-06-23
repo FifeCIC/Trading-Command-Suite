@@ -41,6 +41,10 @@ jobs:
         working-directory: ./nest
         run: npm ci
 
+      - name: Generate Prisma client
+        working-directory: ./nest
+        run: npx prisma generate
+
       - name: ESLint backend
         working-directory: ./nest
         run: npm run lint

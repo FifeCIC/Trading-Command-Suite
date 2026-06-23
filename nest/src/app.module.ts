@@ -42,6 +42,7 @@ import { IsaModule } from './modules/isa/isa.module';
 import { FxModule } from './modules/fx/fx.module';
 import { PlanModule } from './modules/plan/plan.module';
 import { StarsModule } from './modules/stars/stars.module';
+import { AutomationModule } from './modules/automation/automation.module';
 import { RateLimiterMiddleware } from './common/middleware/rate-limiter.middleware';
 import { MetricsMiddleware } from './common/middleware/metrics.middleware';
 
@@ -93,6 +94,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     FxModule,
     PlanModule,
     StarsModule,
+    AutomationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

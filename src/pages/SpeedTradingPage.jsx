@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { XTREND_SPEED_SYMBOLS, getSymbolCategory, SYMBOL_CATEGORIES } from '../data/xtrend-symbols';
 import './speed-trading.css';
 
-const SIZE_PRESETS = [100, 250, 500, 1000, 2500];
+const SIZE_PRESETS = [1, 5, 10];
 const TIMEFRAMES = ['1s', '5s', '15s', '30s', '1m'];
 const SHORTCUTS = [
   { key: 'B', action: 'Buy market' },
@@ -13,7 +13,7 @@ const SHORTCUTS = [
   { key: 'Shift+C', action: 'Close 50% of each' },
   { key: 'X', action: 'Close worst performer' },
   { key: 'Z', action: 'Reverse position' },
-  { key: '1–5', action: 'Size preset ($100–$2500)' },
+  { key: '1–3', action: 'Size preset ($1–$10)' },
   { key: '[ / ]', action: 'Decrease/increase size' },
   { key: 'Space', action: 'Pause data stream' },
   { key: 'Esc', action: 'Emergency lockout (30s)' },
@@ -37,6 +37,13 @@ export default function SpeedTradingPage() {
   const [actionLog, setActionLog] = useState([]);
   const lockTimer = useRef(null);
   const pageRef = useRef(null);
+
+  // ── Best Opportunities Scanner ──
+  const [scanData, setScanData] = useState(null);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanError, setScanError] = useState(null);
+  const [scanExpanded, setScanExpanded] = useState(true);
+  const scanTimer = useRef(null);
 
   const currentSize = SIZE_PRESETS[sizePreset];
   const tfIndex = TIMEFRAMES.indexOf(timeframe);
@@ -118,11 +125,9 @@ export default function SpeedTradingPage() {
           setSizePreset((p) => Math.max(0, p - 1));
           action = `Size preset → $${SIZE_PRESETS[Math.max(0, sizePreset - 1)]}`;
           break;
-        case key === '1': e.preventDefault(); setSizePreset(0); action = 'Size → $100'; break;
-        case key === '2': e.preventDefault(); setSizePreset(1); action = 'Size → $250'; break;
-        case key === '3': e.preventDefault(); setSizePreset(2); action = 'Size → $500'; break;
-        case key === '4': e.preventDefault(); setSizePreset(3); action = 'Size → $1000'; break;
-        case key === '5': e.preventDefault(); setSizePreset(4); action = 'Size → $2500'; break;
+        case key === '1': e.preventDefault(); setSizePreset(0); action = `Size → $${SIZE_PRESETS[0]}`; break;
+        case key === '2': e.preventDefault(); setSizePreset(1); action = `Size → $${SIZE_PRESETS[1]}`; break;
+        case key === '3': e.preventDefault(); setSizePreset(2); action = `Size → $${SIZE_PRESETS[2]}`; break;
         case key === ' ':
           e.preventDefault();
           setPaused((p) => !p);
@@ -182,6 +187,32 @@ export default function SpeedTradingPage() {
       addLog('🔓 Lockout expired — trading re-enabled');
     }
   }, [locked, lockCountdown, addLog]);
+
+  // ── Best Opportunities Scanner (polls every 5s) ──
+  useEffect(() => {
+    const doScan = async () => {
+      if (paused || locked) return;
+      try {
+        const res = await fetch('http://localhost:3201/api/speed/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timeframe: '1m' }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        setScanData(data);
+        setScanError(null);
+      } catch (e) {
+        setScanError(e.message);
+      }
+      setScanLoading(false);
+    };
+
+    setScanLoading(true);
+    doScan();
+    scanTimer.current = setInterval(doScan, 5000);
+    return () => clearInterval(scanTimer.current);
+  }, [paused, locked]);
 
   return (
     <div className="st-page" ref={pageRef}>
@@ -279,16 +310,35 @@ export default function SpeedTradingPage() {
           <div className="st-chart-placeholder">
             <div className="st-chart-header">
               <span>{symbol} · {timeframe}</span>
-              <span className="st-chart-price">——</span>
+              <span className="st-chart-price">
+                {scanData?.scan?.find(s => s.symbol === symbol)
+                  ? `${scanData.scan.find(s => s.symbol === symbol).signal} ${Math.round(scanData.scan.find(s => s.symbol === symbol).composite)}`
+                  : '——'}
+              </span>
             </div>
             <div className="st-chart-body">
-              <p>📊 Chart area — connect MT5 for live candlestick data</p>
-              <p className="st-chart-sub">Keyboard shortcuts active. Select symbol and timeframe above.</p>
+              {scanData?.scan?.find(s => s.symbol === symbol) ? (
+                <>
+                  <p>🎯 {symbol} scored {Math.round(scanData.scan.find(s => s.symbol === symbol).composite)} via {scanData.scan.find(s => s.symbol === symbol).protocol}</p>
+                  <p className="st-chart-sub">
+                    Risk multiplier: {Math.round((scanData.scan.find(s => s.symbol === symbol).riskMultiplier || 1) * 100)}% · 
+                    {scanData.scan.find(s => s.symbol === symbol).gated ? ' ⛔ GATED' : ' ✅ Active'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>📊 {symbol} — no score yet. Select symbol and use keyboard shortcuts.</p>
+                  <p className="st-chart-sub">Connect MT5 for live data. Scanner polls every 5s.</p>
+                </>
+              )}
             </div>
             <div className="st-session-markers">
               <span>🇺🇸 US Open 09:30</span>
               <span>🇪🇺 EU Open 08:00</span>
               <span>🇯🇵 JP Open 00:00</span>
+              {scanData?.scanMs != null && (
+                <span className="st-scan-age">Scan: {scanData.scanMs}ms</span>
+              )}
             </div>
           </div>
         </div>
@@ -341,6 +391,63 @@ export default function SpeedTradingPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── Best Opportunities Scanner ── */}
+      <div className={`st-scan-panel ${scanExpanded ? 'expanded' : 'collapsed'}`}>
+        <div className="st-scan-header" onClick={() => setScanExpanded(e => !e)}>
+          <span className="st-scan-title">
+            🎯 Best Opportunities
+            {scanData && <span className="st-scan-badge">{scanData.scan?.length || 0}</span>}
+          </span>
+          <span className="st-scan-toggle">{scanExpanded ? '▾' : '▸'}</span>
+        </div>
+        {scanExpanded && (
+          <div className="st-scan-body">
+            {scanError && (
+              <div className="st-scan-error">Scanner offline — {scanError}</div>
+            )}
+            {scanLoading && !scanData && (
+              <div className="st-scan-loading">Scanning…</div>
+            )}
+            {scanData && scanData.scan && scanData.scan.length > 0 ? (
+              <>
+                <div className="st-scan-top-row">
+                  {scanData.scan.slice(0, 5).map((item, i) => (
+                    <button
+                      key={item.symbol}
+                      className={`st-scan-card ${i === 0 ? 'top-pick' : ''} ${item.gated ? 'gated' : ''} ${item.symbol === symbol ? 'active' : ''}`}
+                      onClick={() => { setSymbol(item.symbol); addLog(`🎯 Switched to ${item.symbol} (${item.signal} ${item.composite})`); }}
+                      title={`${item.protocol} | Risk: ${Math.round(item.riskMultiplier * 100)}%`}
+                    >
+                      <div className="st-scan-rank">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}</div>
+                      <div className="st-scan-symbol">{item.symbol}</div>
+                      <div className={`st-scan-score ${item.composite >= 65 ? 'strong' : item.composite >= 50 ? 'neutral' : 'weak'}`}>
+                        {Math.round(item.composite)}
+                      </div>
+                      <div className={`st-scan-signal ${item.signal === 'BUY' ? 'buy' : item.signal === 'SELL' ? 'sell' : 'hold'}`}>
+                        {item.signal}
+                      </div>
+                      {item.gated && <div className="st-scan-gated">⛔</div>}
+                    </button>
+                  ))}
+                </div>
+                {scanData.topPick && (
+                  <div className="st-scan-top-label">
+                    Top pick: <strong>{scanData.topPick}</strong> via {scanData.scan[0]?.protocol} · {scanData.scanMs}ms scan
+                  </div>
+                )}
+                {scanData.skipped && scanData.skipped.length > 0 && (
+                  <div className="st-scan-skipped">
+                    ⚠ {scanData.skipped.length} skipped: {scanData.skipped.slice(0, 3).map(s => s.symbol).join(', ')}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="st-scan-empty">No symbols scored yet — running first scan…</div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Action Log ── */}
