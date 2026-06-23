@@ -166,6 +166,342 @@ const DIAGRAMS = [
     K -->|start/stop| G
     L -->|.agenticmemory| M[Prompts & Docs]`,
   },
+  {
+    id: 'activation-gate',
+    label: 'Activation Gate & Conditions',
+    desc: 'Pre-scoring condition detection: ConditionDetectorService produces a ConditionVector (entropy, Hurst, session, BOS, range). ActivationGateService evaluates directive suitability metadata (regime, volatility, instrument, timeframe) and classifies each directive as active/reduced/muted/boosted before scoring.',
+    code: `flowchart TB
+    subgraph Input["Market Data Input"]
+        A[Price Bars]
+        B[Volume Data]
+        C[Session Info]
+    end
+    subgraph Detection["Condition Detection"]
+        D[Entropy Calculator]
+        E[Hurst Exponent]
+        F[Session Classifier]
+        G[BOS Detector]
+        H[Range Analyzer]
+    end
+    subgraph Vector["Condition Vector"]
+        I[entropyLevel]
+        J[hurstValue]
+        K[sessionType]
+        L[breakOfStructure]
+        M[rangeState]
+    end
+    subgraph Gate["Activation Gate"]
+        N[Suitability Registry<br/>40+ directives]
+        O[Gate Evaluator]
+        P{Match?}
+        Q[active · boosted]
+        R[reduced · muted]
+    end
+    subgraph Triggers["8 Built-in Triggers"]
+        S[strong-trend]
+        T[high-vol]
+        U[compression]
+        V[ranging]
+        W[asian-session]
+        Z[london-us-overlap]
+        Y[bearish-structure]
+        X[bullish-structure]
+    end
+    A --> D
+    B --> D
+    C --> F
+    A --> E
+    A --> G
+    A --> H
+    D --> I
+    E --> J
+    F --> K
+    G --> L
+    H --> M
+    I --> O
+    J --> O
+    K --> O
+    L --> O
+    M --> O
+    N --> O
+    O --> P
+    P -->|match| Q
+    P -->|mismatch| R
+    Triggers --> O
+    Q --> SCORING[Directive Scoring]
+    R --> SCORING`,
+  },
+  {
+    id: 'exit-signals',
+    label: 'Exit Signal System',
+    desc: 'Four exit-focused directives run alongside entry scores: momentum-exhaustion (P65), target-achieved (P60), regime-shift-exit (P80), time-stop (P50). Exit urgency feeds into the scoring pipeline for position management.',
+    code: `flowchart TB
+    subgraph Market["Market Data"]
+        A[Price]
+        B[Volume]
+        C[ATR]
+        D[RSI]
+        E[Position Age]
+    end
+    subgraph ExitDirectives["Exit Directives"]
+        F[momentum-exhaustion<br/>P65]
+        G[target-achieved<br/>P60]
+        H[regime-shift-exit<br/>P80]
+        I[time-stop<br/>P50]
+    end
+    subgraph Logic["Exit Logic"]
+        J{RSI > 70?}
+        K{Volume ↓?}
+        L{Price at<br/>1.5x ATR?}
+        M{Entropy<br/>spike?}
+        N{Momentum<br/>decay?}
+    end
+    subgraph Output["Exit Output"]
+        O[Exit Urgency Score]
+        P[Signal Classification]
+        Q{Trigger?}
+        R[Close Position]
+        S[Hold + Monitor]
+    end
+    A --> J
+    B --> K
+    A --> L
+    C --> L
+    A --> M
+    D --> J
+    E --> N
+    J --> F
+    K --> F
+    L --> G
+    M --> H
+    N --> I
+    F --> O
+    G --> O
+    H --> O
+    I --> O
+    O --> Q
+    Q -->|urgency > threshold| R
+    Q -->|below threshold| S`,
+  },
+  {
+    id: 'alert-center',
+    label: 'Alert Center Architecture',
+    desc: 'Centralized alert system with 8 pre-configured alert types, 4 severity levels (critical/high/warning/info), lifecycle management (active→acknowledged→snoozed→dismissed), and 10s frontend polling.',
+    code: `flowchart LR
+    subgraph Sources["Alert Sources"]
+        A[MT5 Bridge]
+        B[API Rate Limits]
+        C[Data Staleness]
+        D[Signal Quality]
+        E[Backend Health]
+        F[Database]
+        G[Strategy Errors]
+        H[Stop-Loss]
+    end
+    subgraph Engine["Alert Engine"]
+        I[AlertService]
+        J[Severity Classifier]
+        K[Lifecycle Manager]
+    end
+    subgraph Severity["Severity Levels"]
+        L[🔴 critical]
+        M[🟠 high]
+        N[🟡 warning]
+        O[🔵 info]
+    end
+    subgraph Lifecycle["Lifecycle States"]
+        P[active]
+        Q[acknowledged]
+        R[snoozed<br/>15min]
+        S[dismissed]
+        T[(History Log)]
+    end
+    subgraph UI["Frontend"]
+        U[Alert Center Page]
+        V[Badge Counter]
+        W[10s Polling]
+    end
+    A --> I
+    B --> I
+    C --> I
+    D --> I
+    E --> I
+    F --> I
+    G --> I
+    H --> I
+    I --> J
+    J --> L
+    J --> M
+    J --> N
+    J --> O
+    I --> K
+    K --> P
+    P --> Q
+    P --> R
+    Q --> S
+    R --> P
+    P --> T
+    Q --> T
+    S --> T
+    I --> U
+    U --> V
+    W --> U`,
+  },
+  {
+    id: 'calibration',
+    label: 'Calibration Pipeline',
+    desc: 'Symbol-specific weight overrides applied between directive calculation and aggregation. 16 seeded calibrations (DOGEUSD, XAUUSD, NVDA, BTCUSD, EURUSD, TECH100) with weightMultiplier, decayModifier, and volatilityAdjustment.',
+    code: `flowchart TB
+    subgraph Input["Raw Directive Scores"]
+        A[news-sentiment]
+        B[rsi-oversold]
+        C[macd-crossover]
+        D[volume-confirmation]
+    end
+    subgraph Calibration["Calibration Service"]
+        E[(SymbolCalibration<br/>DB Table)]
+        F[Memory Cache<br/>startup load]
+        G[CalibrationService<br/>applyCalibrations]
+    end
+    subgraph Adjust["Adjustment Factors"]
+        H[weightMultiplier<br/>e.g. 3.0x for DOGE]
+        I[decayModifier<br/>time-based reduction]
+        J[volatilityAdjustment<br/>regime amplification]
+    end
+    subgraph Output["Adjusted Scores"]
+        K[adjustedScore =<br/>raw x weight x 1+vol]
+        L[(Audit Trail<br/>raw + adjusted)]
+        M[Weighted Aggregation]
+    end
+    A --> G
+    B --> G
+    C --> G
+    D --> G
+    E --> F
+    F --> G
+    G --> H
+    G --> I
+    G --> J
+    H --> K
+    I --> K
+    J --> K
+    K --> L
+    K --> M`,
+  },
+  {
+    id: 'scoring-gating',
+    label: 'Scoring with Protocol Gating',
+    desc: 'Multiplicative risk gating: Risk directives gate Technical + Sentiment scores multiplicatively (not additively). Protocol maxPossibleScore = sum of directive maxScores. No artificial 100-cap — scores are unbounded within directive ranges.',
+    code: `flowchart TB
+    subgraph Directives["Directive Categories"]
+        A[Technical<br/>10 directives]
+        B[Sentiment<br/>7 directives]
+        C[Risk<br/>6 directives]
+    end
+    subgraph Scoring["Per-Directive Scoring"]
+        D[calculate()]
+        E[maxScore declared]
+        F[confidence + signalClass]
+    end
+    subgraph Calibration["Calibration Overrides"]
+        G[Symbol weights]
+        H[Decay modifiers]
+        I[Volatility adjustments]
+    end
+    subgraph Gate["Protocol Risk Gating"]
+        J{Tech Score}
+        K{Sentiment Score}
+        L{Risk Gate}
+        M[Multiplicative<br/>Tech × Risk]
+        N[Multiplicative<br/>Sent × Risk]
+    end
+    subgraph Output["Final Output"]
+        O[totalScore =<br/>gatedTech + gatedSent]
+        P[maxPossibleScore]
+        Q[Normalized %]
+        R{Entry/Watch<br/>Threshold}
+    end
+    A --> J
+    B --> K
+    C --> L
+    J --> M
+    K --> N
+    L --> M
+    L --> N
+    M --> O
+    N --> O
+    D --> O
+    E --> P
+    G --> M
+    H --> M
+    I --> M
+    O --> Q
+    P --> Q
+    Q --> R`,
+  },
+  {
+    id: 'provider-adapters',
+    label: 'Provider Adapter Architecture',
+    desc: '10 providers integrated through a factory+adapter pattern: Alpaca, Finnhub, Yahoo Finance, Polygon, Twelve Data, FMP, Trading212, FRED, ECB, MT5 Bridge. Freshness checks, queue processing, normalization, and health monitoring per adapter.',
+    code: `flowchart TB
+    subgraph Providers["External Providers"]
+        A[Alpaca]
+        B[Finnhub]
+        C[Yahoo Finance]
+        D[Polygon]
+        E[Twelve Data]
+        F[FMP]
+        G[Trading212]
+        H[FRED]
+        I[ECB]
+        J[MT5 Bridge]
+    end
+    subgraph Factory["Provider Factory"]
+        K[ProviderRegistry]
+        L[Capability Matrix]
+        M[Credential Store]
+    end
+    subgraph Pipeline["Request Pipeline"]
+        N[Freshness Check]
+        O[Rate Limit Guard]
+        P[Queue Processor]
+        Q[Adapter Normalizer]
+        R[(Stored Data)]
+    end
+    subgraph Health["Health Monitoring"]
+        S[Health Checker]
+        T[(Health State)]
+        U[API /providers/health]
+    end
+    subgraph UI["Frontend"]
+        V[Provider Status Page]
+        W[API Activity Log]
+    end
+    A --> K
+    B --> K
+    C --> K
+    D --> K
+    E --> K
+    F --> K
+    G --> K
+    H --> K
+    I --> K
+    J --> K
+    K --> L
+    K --> M
+    K --> N
+    N -->|stale| O
+    N -->|fresh| R
+    O -->|ok| P
+    O -->|blocked| S
+    P --> Q
+    Q --> R
+    K --> S
+    S --> T
+    T --> U
+    U --> V
+    R --> W`,
+  },
 ];
 
 export default function DiagramsPage() {
@@ -178,11 +514,13 @@ export default function DiagramsPage() {
     if (!containerRef.current) return;
     const id = `mermaid-${diagram.id}`;
     const el = containerRef.current.querySelector(`#${id}`);
-    if (el && el.innerHTML === '') {
-      mermaid.render(`${id}-svg`, diagram.code).then(({ svg }) => {
-        el.innerHTML = svg;
-      });
-    }
+    if (!el) return;
+    // Always re-render on diagram switch (React key forces DOM remount so innerHTML is always fresh)
+    mermaid.render(`${id}-svg`, diagram.code).then(({ svg }) => {
+      el.innerHTML = svg;
+    }).catch(() => {
+      el.innerHTML = '<p style="color:var(--ink-soft);padding:1rem">Diagram rendering failed. Check Mermaid syntax.</p>';
+    });
   }, [active, diagram]);
 
   return (
@@ -190,7 +528,11 @@ export default function DiagramsPage() {
       <div className="pf-header">
         <div>
           <h1>System Diagrams</h1>
-          <p className="pf-hint" style={{ margin: '0.25rem 0 0' }}>Architecture and workflow diagrams for the Trading Command Suite.</p>
+          <p className="pf-hint" style={{ margin: '0.25rem 0 0' }}>Architecture and workflow diagrams for the Trading Command Suite. 11 diagrams covering all major subsystems.</p>
+          <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
+            <a href="/builder/architecture-framework" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '2px 8px', border: '1px solid var(--line)', borderRadius: 4 }}>⬡ Architecture Framework</a>
+            <a href="/status/capability-map" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '2px 8px', border: '1px solid var(--line)', borderRadius: 4 }}>🗺️ Capability Map</a>
+          </div>
         </div>
       </div>
 
@@ -228,7 +570,7 @@ export default function DiagramsPage() {
           overflowX: 'auto',
         }}
       >
-        <div id={`mermaid-${diagram.id}`} style={{ minHeight: '200px' }} />
+        <div key={diagram.id} id={`mermaid-${diagram.id}`} style={{ minHeight: '200px' }} />
       </div>
 
       {/* ── Description ─────────────────────────────────────── */}

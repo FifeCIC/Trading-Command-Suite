@@ -68,3 +68,22 @@
 }
 
 @media (max-width: 700px) { .pf-table { font-size: 0.72rem; } .pf-table th, .pf-table td { padding: 0.3rem 0.4rem; } }
+
+/* ── States ──────────────────────────────────────────────── */
+.pf-loading {
+  text-align: center; padding: 3rem 1rem; color: var(--ink-soft, #94a3b8);
+  font-size: 0.92rem;
+}
+.pf-error {
+  text-align: center; padding: 3rem 1rem; color: #ef4444;
+  background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px;
+  margin-top: 1rem;
+}
+.pf-error-detail { font-size: 0.78rem; color: var(--ink-soft, #94a3b8); margin-top: 0.3rem; }
+.pf-empty {
+  text-align: center; padding: 3rem 1rem; color: var(--ink-soft, #94a3b8);
+  border: 1px dashed var(--line, #1e2a45); border-radius: 8px;
+  margin-bottom: 1rem;
+}
+.pf-empty-hint { font-size: 0.78rem; margin-top: 0.3rem; }
+.pf-source { font-weight: 400; font-size: 0.72rem; opacity: 0.7; }

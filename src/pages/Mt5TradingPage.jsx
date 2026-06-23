@@ -2,8 +2,20 @@ import { useState, useEffect, useCallback } from 'react';
 import AccountSummary from '../components/mt5/AccountSummary';
 import PositionsTable from '../components/mt5/PositionsTable';
 import OrderForm from '../components/mt5/OrderForm';
+import './Mt5TradingPage.css';
+
+const PLATFORMS = [
+  { id: 'mt5', label: 'MT5', icon: '📊', available: true },
+  { id: 'trading212', label: 'Trading 212', icon: '📈', available: false },
+  { id: 'alpaca', label: 'Alpaca', icon: '🦙', available: false },
+];
 
 export default function Mt5TradingPage() {
+  // ── Mode & Platform ──
+  const [mode, setMode] = useState('demo'); // 'demo' | 'live'
+  const [platform, setPlatform] = useState('mt5');
+
+  // ── Data State ──
   const [account, setAccount] = useState(null);
   const [positions, setPositions] = useState([]);
   const [history, setHistory] = useState([]);
@@ -13,13 +25,38 @@ export default function Mt5TradingPage() {
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
 
+  // ── Accounts ──
+  const [accounts, setAccounts] = useState([]);
+  const [activeAccountNum, setActiveAccountNum] = useState(null);
+
+  // ── UI Tabs ──
+  const [activeTab, setActiveTab] = useState('positions');
+
+  // ── Live Safety ──
+  const [liveWarningAcknowledged, setLiveWarningAcknowledged] = useState(false);
+
+  // ── Fetch Accounts ──
+  const fetchAccounts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/providers/mt5/accounts');
+      const data = await res.json();
+      if (data.accounts?.length) {
+        setAccounts(data.accounts);
+      }
+    } catch { /* silent */ }
+  }, []);
+
+  // ── Main Data Fetch ──
   const fetchData = useCallback(async () => {
     try {
       const diagRes = await fetch('/api/providers/mt5/diagnostics');
       const diag = await diagRes.json();
       setConnected(diag.connected);
-      setAccount(diag.account ? { ...diag.account, balance: diag.balance, equity: diag.equity, server: diag.server } : null);
+      setAccount(diag.account
+        ? { ...diag.account, balance: diag.balance, equity: diag.equity, server: diag.server }
+        : null);
       if (diag.lastQuote) setQuote(diag.lastQuote);
+      if (diag.activeAccount) setActiveAccountNum(diag.activeAccount);
 
       if (diag.connected) {
         const [posRes, histRes] = await Promise.all([
@@ -28,24 +65,69 @@ export default function Mt5TradingPage() {
         ]);
         const posData = await posRes.json();
         const histData = await histRes.json();
-        setPositions(Array.isArray(posData.positions) ? posData.positions : posData);
-        setHistory(Array.isArray(histData.orders) ? histData.orders : histData);
+        setPositions(Array.isArray(posData.positions) ? posData.positions : posData || []);
+        setHistory(Array.isArray(histData.orders) ? histData.orders : histData || []);
       }
       setError('');
-    } catch (err) {
-      setError('MT5 bridge unreachable — start the Python bridge');
+    } catch {
+      setError('MT5 bridge unreachable — start the Python bridge from Server Controls');
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    fetchAccounts();
     fetchData();
     const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [fetchData, fetchAccounts]);
 
+  // ── Account Switching ──
+  async function handleSwitchAccount(accountNum) {
+    try {
+      const res = await fetch(`/api/providers/mt5/switch/${accountNum}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setMsg(`Switched to account #${accountNum}`);
+        setTimeout(() => setMsg(''), 4000);
+        setLoading(true);
+        setTimeout(fetchData, 2000); // Give bridge time to reconnect
+      } else {
+        setError(data.error || 'Account switch failed');
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  // ── Mode Toggle ──
+  function handleModeChange(newMode) {
+    if (newMode === 'live' && !liveWarningAcknowledged) {
+      const confirmed = window.confirm(
+        '⚠️ You are switching to LIVE trading mode.\n\n' +
+        'Real money will be used for all orders.\n' +
+        'Position size limits and confirmations are enabled.\n\n' +
+        'Are you sure you want to proceed?'
+      );
+      if (!confirmed) return;
+      setLiveWarningAcknowledged(true);
+    }
+    setMode(newMode);
+  }
+
+  // ── Place Order ──
   async function handlePlaceOrder(order) {
+    if (mode === 'live') {
+      const confirmed = window.confirm(
+        `⚠️ LIVE ORDER CONFIRMATION\n\n` +
+        `${order.type?.toUpperCase() || 'MARKET'} ${order.volume} ${order.symbol}\n` +
+        `SL: ${order.sl || 'none'} | TP: ${order.tp || 'none'}\n\n` +
+        `This will execute on your LIVE account. Proceed?`
+      );
+      if (!confirmed) return;
+    }
+
     try {
       const res = await fetch('/api/providers/mt5/order', {
         method: 'POST',
@@ -54,8 +136,8 @@ export default function Mt5TradingPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setMsg(`Order placed: ${order.volume} ${order.symbol}`);
-        setTimeout(() => setMsg(''), 4000);
+        setMsg(`✅ Order placed: ${order.volume} ${order.symbol} — Ticket #${data.ticket || '—'}`);
+        setTimeout(() => setMsg(''), 5000);
         fetchData();
       } else {
         setError(data.error || 'Order failed');
@@ -65,7 +147,12 @@ export default function Mt5TradingPage() {
     }
   }
 
+  // ── Close Position ──
   async function handleClosePosition(ticket) {
+    if (mode === 'live') {
+      const confirmed = window.confirm(`⚠️ Close live position #${ticket}?`);
+      if (!confirmed) return;
+    }
     try {
       const res = await fetch(`/api/providers/mt5/close/${ticket}`, { method: 'POST' });
       const data = await res.json();
@@ -81,58 +168,258 @@ export default function Mt5TradingPage() {
     }
   }
 
-  if (loading) return <div className="mt5-page"><p>Connecting to MT5…</p></div>;
+  // ── Close All ──
+  async function handleCloseAll() {
+    const count = positions.length;
+    const warning = mode === 'live'
+      ? `⚠️ LIVE ACCOUNT — Close ALL ${count} open position${count !== 1 ? 's' : ''}? This cannot be undone.`
+      : `Close ALL ${count} open position${count !== 1 ? 's' : ''}?`;
+
+    if (!window.confirm(warning)) return;
+
+    try {
+      const res = await fetch('/api/providers/mt5/close-all', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setMsg(`Closed ${data.closed || 'all'} positions`);
+        setTimeout(() => setMsg(''), 4000);
+        fetchData();
+      } else {
+        setError(data.error || 'Close all failed');
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  // ── Load History ──
+  async function loadHistory() {
+    try {
+      const res = await fetch('/api/providers/mt5/history');
+      const data = await res.json();
+      setHistory(Array.isArray(data.orders) ? data.orders : data || []);
+      setActiveTab('history');
+    } catch { /* silent */ }
+  }
+
+  // ── Computed ──
+  const totalPnl = positions.reduce((s, p) => s + (p.profit || 0), 0);
+  const activeAccountInfo = accounts.find(a => String(a.number) === String(activeAccountNum));
+
+  // ── Loading State ──
+  if (loading) {
+    return (
+      <div className="mt5u-page">
+        <div className="mt5u-loading">
+          <div className="mt5u-spinner" />
+          <p>Connecting to MT5…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="mt5-page">
-      <h1>MT5 Trading</h1>
+    <div className="mt5u-page">
+      {/* ── Header ── */}
+      <div className="mt5u-header">
+        <div className="mt5u-header-left">
+          <h1>MT5 Trading</h1>
+          {activeAccountInfo && (
+            <span className={`mt5u-account-badge ${mode === 'demo' ? 'mt5u-badge-demo' : 'mt5u-badge-live'}`}>
+              {mode === 'demo' ? '🟡' : '🟢'} {activeAccountInfo.login} @ {activeAccountInfo.server || '—'}
+            </span>
+          )}
+        </div>
 
-      {msg && <div className="mt5-msg">{msg}</div>}
-      {error && <div className="mt5-error">{error} <button type="button" onClick={() => setError('')}>✕</button></div>}
+        {/* Platform Selector */}
+        <div className="mt5u-platform-selector">
+          <span className="mt5u-platform-label">Execute on:</span>
+          {PLATFORMS.map((p) => (
+            <button
+              key={p.id}
+              className={`mt5u-platform-btn ${platform === p.id ? 'active' : ''}`}
+              disabled={!p.available}
+              onClick={() => p.available && setPlatform(p.id)}
+              title={p.available ? `Trade via ${p.label}` : `${p.label} — coming soon`}
+            >
+              {p.icon} {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      <AccountSummary account={account} connected={connected} />
+      {/* ── Mode Toggle ── */}
+      <div className="mt5u-mode-bar">
+        <div className="mt5u-mode-toggle">
+          <button
+            className={`mt5u-mode-btn ${mode === 'demo' ? 'active demo' : ''}`}
+            onClick={() => handleModeChange('demo')}
+          >
+            🟡 Demo
+          </button>
+          <button
+            className={`mt5u-mode-btn ${mode === 'live' ? 'active live' : ''}`}
+            onClick={() => handleModeChange('live')}
+          >
+            🔴 Live
+          </button>
+        </div>
 
-      <div className="mt5-panels">
-        <div className="mt5-panel mt5-panel-positions">
-          <div className="mt5-panel-header">
-            <h2>Open Positions</h2>
+        {/* Account Dropdown */}
+        {accounts.length > 0 && (
+          <div className="mt5u-account-selector">
+            <label>Account:</label>
+            <select
+              value={activeAccountNum || ''}
+              onChange={(e) => handleSwitchAccount(e.target.value)}
+            >
+              {accounts.map((a) => (
+                <option key={a.number} value={a.number}>
+                  {a.login} @ {a.server} {String(a.number) === String(activeAccountNum) ? '(active)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div className="mt5u-mode-warning">
+          {mode === 'demo' ? (
+            <span className="mt5u-badge mt5u-badge-demo">📝 Demo Mode — Paper Trading</span>
+          ) : (
+            <span className="mt5u-badge mt5u-badge-live">
+              ⚠️ LIVE TRADING — Real Money
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ── Messages ── */}
+      {msg && <div className="mt5u-msg mt5u-msg-success">{msg}</div>}
+      {error && (
+        <div className="mt5u-msg mt5u-msg-error">
+          {error}
+          <button type="button" onClick={() => setError('')}>✕</button>
+        </div>
+      )}
+
+      {/* ── Account Summary ── */}
+      {account && (
+        <div className="mt5u-account-bar">
+          <div className="mt5u-acct-card">
+            <span>Balance</span>
+            <strong>${account.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '—'}</strong>
+          </div>
+          <div className="mt5u-acct-card">
+            <span>Equity</span>
+            <strong>${account.equity?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '—'}</strong>
+          </div>
+          <div className="mt5u-acct-card">
+            <span>Margin</span>
+            <strong>${account.margin?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '—'}</strong>
+          </div>
+          <div className="mt5u-acct-card">
+            <span>Free Margin</span>
+            <strong>${account.freeMargin?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '—'}</strong>
+          </div>
+          <div className={`mt5u-acct-card ${totalPnl >= 0 ? 'positive' : 'negative'}`}>
+            <span>Unrealized P&amp;L</span>
+            <strong>{totalPnl >= 0 ? '+' : ''}${totalPnl.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+          </div>
+          <div className="mt5u-acct-card">
+            <span>Server</span>
+            <strong>{account.server || '—'}</strong>
+          </div>
+        </div>
+      )}
+
+      {!account && !connected && (
+        <div className="mt5u-offline">
+          ⚠️ MT5 Bridge offline — start <code>mt5_bridge.py</code> from Server Controls
+        </div>
+      )}
+
+      {/* ── Main Layout ── */}
+      <div className="mt5u-layout">
+        {/* Quick Trade Panel */}
+        <div className="mt5u-trade-panel">
+          <h3>Quick Trade</h3>
+          <OrderForm quote={quote} onPlaceOrder={handlePlaceOrder} />
+        </div>
+
+        {/* Positions Area */}
+        <div className="mt5u-positions-area">
+          <div className="mt5u-tabs">
+            <button
+              className={`mt5u-tab ${activeTab === 'positions' ? 'active' : ''}`}
+              onClick={() => setActiveTab('positions')}
+            >
+              Positions ({positions.length})
+            </button>
+            <button
+              className={`mt5u-tab ${activeTab === 'history' ? 'active' : ''}`}
+              onClick={loadHistory}
+            >
+              History
+            </button>
             {positions.length > 0 && (
-              <button type="button" className="mt5-close-all" onClick={() => positions.forEach((p) => handleClosePosition(p.ticket))}>
+              <button className="mt5u-close-all" onClick={handleCloseAll}>
                 Close All
               </button>
             )}
           </div>
-          <PositionsTable positions={positions} onClose={handleClosePosition} />
-        </div>
 
-        <div className="mt5-panel mt5-panel-order">
-          <h2>Place Order</h2>
-          <OrderForm quote={quote} onPlaceOrder={handlePlaceOrder} />
+          {/* Positions Table */}
+          {activeTab === 'positions' && (
+            <div className="mt5u-table-wrap">
+              <PositionsTable positions={positions} onClose={handleClosePosition} />
+            </div>
+          )}
+
+          {/* History Table */}
+          {activeTab === 'history' && (
+            <div className="mt5u-table-wrap">
+              {history.length === 0 ? (
+                <p className="mt5u-empty">No trade history available.</p>
+              ) : (
+                <table className="mt5u-table">
+                  <thead>
+                    <tr>
+                      <th>Ticket</th>
+                      <th>Symbol</th>
+                      <th>Type</th>
+                      <th>Volume</th>
+                      <th>Open</th>
+                      <th>Close</th>
+                      <th>P&amp;L</th>
+                      <th>Time</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {history.slice(0, 50).map((h, i) => (
+                      <tr key={i} className={(h.profit || 0) >= 0 ? 'mt5u-row-positive' : 'mt5u-row-negative'}>
+                        <td>{h.ticket || h.position || '—'}</td>
+                        <td><strong>{h.symbol}</strong></td>
+                        <td className={h.type === 0 || h.type === 'buy' ? 'mt5u-buy' : 'mt5u-sell'}>
+                          {h.type === 0 ? 'BUY' : h.type === 1 ? 'SELL' : (h.type || '—').toString().toUpperCase()}
+                        </td>
+                        <td>{h.volume?.toFixed?.(2) || h.volume || '—'}</td>
+                        <td>{h.price_open?.toFixed?.(5) || h.price?.toFixed?.(5) || '—'}</td>
+                        <td>{h.price_close?.toFixed?.(5) || '—'}</td>
+                        <td className={(h.profit || 0) >= 0 ? 'mt5u-profit' : 'mt5u-loss'}>
+                          ${h.profit?.toFixed?.(2) || '0.00'}
+                        </td>
+                        <td>{h.time ? new Date(typeof h.time === 'number' ? h.time * 1000 : h.time).toLocaleString() : '—'}</td>
+                        <td>{h.state || h.status || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
         </div>
       </div>
-
-      {history.length > 0 && (
-        <div className="mt5-panel mt5-panel-history">
-          <h2>Recent History</h2>
-          <table className="mt5-table">
-            <thead>
-              <tr><th>Time</th><th>Symbol</th><th>Type</th><th>Volume</th><th>Price</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              {history.slice(0, 20).map((h, i) => (
-                <tr key={h.ticket || i}>
-                  <td>{h.time ? new Date(h.time * 1000).toLocaleTimeString() : '—'}</td>
-                  <td><strong>{h.symbol}</strong></td>
-                  <td className={h.type === 0 ? 'mt5-green' : 'mt5-red'}>{h.type === 0 ? 'BUY' : 'SELL'}</td>
-                  <td>{h.volume?.toFixed(2)}</td>
-                  <td>{h.price?.toFixed(5)}</td>
-                  <td>{h.state || h.status || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   );
 }

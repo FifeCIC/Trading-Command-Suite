@@ -4,15 +4,19 @@
  * Areas map to footer/quick-menu primary items.
  * Each area's `views` array drives the left sidebar.
  *
- * Mapped from the WordPress Trader.CORE plugin page/tab structure:
- *   - trading   → Trading page (SEES tabs, strategies, portfolio)
- *   - scoring   → Scoring Directives page (directives, algorithm, strategies)
- *   - research  → Research page + Symbols + Analysis
- *   - data      → Data page (sources, tables, import, API activity)
- *   - automation→ Automation page (execution queue, CRON, data import)
- *   - builder   → Development page (architecture, theme, components, runtime)
- *   - ops       → Settings/Setup/Status operational views
- *   - settings  → Settings page (general, database, features)
+ * Current areas (12):
+ *   - trading    → Trading (SEES tabs, strategies, portfolio, MT5)
+ *   - scoring    → Scoring (directives, protocols, SEES diagnostics)
+ *   - research   → Research (symbols, snapshots, macro, news, events)
+ *   - analysis   → Analysis (S&R, volatility, indicators, patterns, charts)
+ *   - data       → Data (sources, tables, imports, API activity, caches)
+ *   - watchlists → Watchlists (active symbols, user lists)
+ *   - automation → Automation (execution queue, rules, alerts)
+ *   - builder    → Development (architecture, diagrams, assets, lab tools)
+ *   - training   → Training (candle patterns, order testing, MT5 demo)
+ *   - status     → Status (system health, platform, risk, security)
+ *   - lab        → Lab (sandbox, theme lab, motion lab, component lab)
+ *   - settings   → Settings (general, database, theme packs, preferences)
  */
 
 export const NAV_TREE = {
@@ -26,6 +30,7 @@ export const NAV_TREE = {
       { id: 'trade-history', label: 'Trade History', icon: '◈' },
       { id: 'positions-monitor', label: 'Positions Monitor', icon: '◈' },
       { id: 'trade-journal', label: 'Trade Journal', icon: '▤' },
+      { id: 'trading-plans', label: 'Trading Plans', icon: '📋' },
       { id: 'mt5-connection-manager', label: 'MT5 Accounts', icon: '🔌' },
       { id: 'accounts-dashboard', label: 'Accounts', icon: '💰' },
     ],
@@ -43,6 +48,7 @@ export const NAV_TREE = {
       { id: 'signals-workbench', label: 'SEES Diagnostics', icon: '◈' },
       { id: 'protocol-overview', label: 'Protocol Overview', icon: '◉' },
       { id: 'create-protocols', label: 'Create Protocols', icon: '⊞' },
+      { id: 'strategy-wizard', label: 'Strategy Wizard', icon: '🧙' },
       { id: 'scoring-runs', label: 'Scoring Runs', icon: '◈' },
       { id: 'scoring-activity-logs', label: 'Scoring Activity Logs', icon: '▤' },
     ],
@@ -118,22 +124,20 @@ export const NAV_TREE = {
       { id: 'diagrams', label: 'Diagrams', icon: '▦' },
       { id: 'assets', label: 'Assets', icon: '⊞' },
       { id: 'workflow-wizards', label: 'Workflow Wizards', icon: '⚙' },
-      // ── Lab & Development ──
-      { id: 'lab-landing', label: 'Lab Overview', icon: '🔬' },
-      { id: 'feature-lab', label: 'Feature Lab', icon: '🔬' },
-      { id: 'theme-lab', label: 'Theme Lab', icon: '🎨' },
-      { id: 'theme-lab-motion', label: 'Motion', icon: '◆' },
-      { id: 'theme-lab-transitions', label: 'View Transitions', icon: '⇢' },
+      // ── Lab (remaining) ──
       { id: 'theme-lab-container', label: 'Container Queries', icon: '⊡' },
-      { id: 'theme-lab-scroll', label: 'Scroll Animations', icon: '⇣' },
       { id: 'theme-lab-popover', label: 'Popover API', icon: '◉' },
-      { id: 'component-lab', label: 'Component Lab', icon: '🧩' },
       { id: 'algorithm-lab', label: 'Algorithm Log', icon: '📐' },
       { id: 'backtest', label: 'Backtest Engine', icon: '⬡' },
+      { id: 'performance-lab', label: 'Protocol Performance', icon: '📊' },
+    ],
+  },
+  training: {
+    label: 'Training',
+    views: [
       { id: 'candle-patterns', label: 'Pattern Detection', icon: '🕯️' },
       { id: 'candle-patterns-guide', label: 'Candle Patterns', icon: '◉' },
       { id: 'order-testing', label: 'Order Testing', icon: '🧪' },
-      { id: 'performance-lab', label: 'Protocol Performance', icon: '📊' },
       { id: 'mt5-demo-trading', label: 'MT5 Demo Trading', icon: '🎮' },
     ],
   },
@@ -155,12 +159,21 @@ export const NAV_TREE = {
       { id: 'analytics', label: 'Analytics', icon: '▦' },
       { id: 'audit-log', label: 'Audit Log', icon: '▤' },
       { id: 'setup', label: 'Setup Checklist', icon: '⊞' },
+      { id: 'capability-map', label: 'Capability Map', icon: '🗺️' },
     ],
   },
   lab: {
     label: 'Lab',
     views: [
       { id: 'lab', label: 'Lab Sandbox', icon: '🔬' },
+      { id: 'lab-landing', label: 'Lab Overview', icon: '🔬' },
+      { id: 'feature-lab', label: 'Feature Lab', icon: '🔬' },
+      { id: 'theme-lab', label: 'Theme Lab', icon: '🎨' },
+      { id: 'theme-lab-motion', label: 'Motion Lab', icon: '◆' },
+      { id: 'theme-lab-transitions', label: 'Transitions Lab', icon: '⇢' },
+      { id: 'theme-lab-scroll', label: 'Scroll Animations', icon: '⇣' },
+      { id: 'component-lab', label: 'Component Lab', icon: '🧩' },
+      { id: 'snapshot-replay', label: 'Snapshot Replay', icon: '⏮' },
     ],
   },
   settings: {

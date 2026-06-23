@@ -11,6 +11,7 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ProvidersService } from './providers.service';
 import { AdapterFactory } from './adapter-factory';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
+import { Trading212Adapter } from './adapters/trading212.adapter';
 
 @ApiTags('providers')
 @Controller('providers')
@@ -18,6 +19,7 @@ export class ProvidersController {
   constructor(
     private readonly providersService: ProvidersService,
     private readonly adapterFactory: AdapterFactory,
+    private readonly t212Adapter: Trading212Adapter,
   ) {}
 
   @Get('rate-limits')
@@ -30,6 +32,31 @@ export class ProvidersController {
     return {
       adapters: states,
       activeAdapter: activeId,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('rate-limits/detail')
+  getRateLimitDetail() {
+    const t212State = this.t212Adapter.getRateLimitState();
+    const lastCalls = Object.entries(t212State.lastCalls).map(([endpoint, state]) => ({
+      endpoint,
+      elapsedMs: state.elapsedMs,
+      intervalMs: state.intervalMs,
+      ready: state.elapsedMs >= state.intervalMs,
+      readyInMs: Math.max(0, state.intervalMs - state.elapsedMs),
+    }));
+    return {
+      provider: 'trading212',
+      mode: this.t212Adapter.mode,
+      circuitBreaker: {
+        tripped: t212State.tracker.tripped,
+        consecutive429s: t212State.tracker.consecutive429s,
+        remaining: t212State.tracker.remaining,
+        warning: t212State.tracker.warning,
+      },
+      endpoints: lastCalls,
+      refreshPolicy: 'manual-only',
       timestamp: new Date().toISOString(),
     };
   }

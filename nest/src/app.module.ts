@@ -29,6 +29,7 @@ import { AlertsModule } from './modules/alerts/alerts.module';
 import { CacheModule } from './modules/cache/cache.module';
 import { TrainingModule } from './modules/training/training.module';
 import { NewsModule } from './modules/news/news.module';
+import { ResearchModule } from './modules/research/research.module';
 import { SnapshotsModule } from './modules/snapshots/snapshots.module';
 import { TimelineModule } from './modules/timeline/timeline.module';
 import { JournalModule } from './modules/journal/journal.module';
@@ -39,6 +40,7 @@ import { TradingModule } from './modules/trading/trading.module';
 import { ApiActivityModule } from './modules/api-activity/api-activity.module';
 import { IsaModule } from './modules/isa/isa.module';
 import { FxModule } from './modules/fx/fx.module';
+import { PlanModule } from './modules/plan/plan.module';
 import { RateLimiterMiddleware } from './common/middleware/rate-limiter.middleware';
 import { MetricsMiddleware } from './common/middleware/metrics.middleware';
 
@@ -77,6 +79,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     CacheModule,
     TrainingModule,
     NewsModule,
+    ResearchModule,
     SnapshotsModule,
     TimelineModule,
     JournalModule,
@@ -87,6 +90,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     ApiActivityModule,
     IsaModule,
     FxModule,
+    PlanModule,
   ],
   controllers: [AppController],
   providers: [AppService],
@@ -98,6 +102,16 @@ export class AppModule implements NestModule {
       .forRoutes('*');
     consumer
       .apply(RateLimiterMiddleware)
-      .forRoutes('api/providers', 'api/webhooks');
+      .forRoutes(
+        // Trading212 portfolio + orders
+        'portfolio',
+        'portfolio/trading212',
+        // MT5 trading
+        'providers/mt5',
+        'trading/mt5',
+        // Provider health + tests
+        'providers',
+        'webhooks',
+      );
   }
 }

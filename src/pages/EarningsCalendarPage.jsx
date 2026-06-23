@@ -1,57 +1,105 @@
 import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchEarningsCalendar } from '../core/api/research.js';
 import './earnings-calendar.css';
 
-const EARNINGS = [
-  { sym: 'AAPL', name: 'Apple Inc.', date: '2026-07-25', time: 'After Close', epsEst: 1.52, epsAct: null, revEst: '89.2B', marketCap: '3.2T', sector: 'Technology', surpriseHist: [2.1, 3.8, -1.2, 4.5] },
-  { sym: 'NVDA', name: 'NVIDIA Corp.', date: '2026-08-15', time: 'After Close', epsEst: 0.68, epsAct: null, revEst: '35.1B', marketCap: '3.0T', sector: 'Technology', surpriseHist: [8.2, 12.5, 5.1, 9.8] },
-  { sym: 'MSFT', name: 'Microsoft Corp.', date: '2026-07-18', time: 'After Close', epsEst: 3.12, epsAct: null, revEst: '65.8B', marketCap: '3.1T', sector: 'Technology', surpriseHist: [1.8, 2.2, 0.9, 3.1] },
-  { sym: 'TSLA', name: 'Tesla Inc.', date: '2026-07-19', time: 'After Close', epsEst: 0.72, epsAct: null, revEst: '26.2B', marketCap: '580B', sector: 'Consumer', surpriseHist: [-5.2, 1.1, -2.8, 3.4] },
-  { sym: 'JPM', name: 'JPMorgan Chase', date: '2026-07-12', time: 'Before Open', epsEst: 4.32, epsAct: null, revEst: '42.1B', marketCap: '520B', sector: 'Financial', surpriseHist: [2.5, 1.8, 3.2, 0.9] },
-  { sym: 'AMD', name: 'Advanced Micro Devices', date: '2026-07-28', time: 'After Close', epsEst: 0.84, epsAct: null, revEst: '7.2B', marketCap: '280B', sector: 'Technology', surpriseHist: [1.2, -0.5, 2.8, 4.1] },
-  { sym: 'GS', name: 'Goldman Sachs', date: '2026-07-14', time: 'Before Open', epsEst: 8.95, epsAct: null, revEst: '12.8B', marketCap: '150B', sector: 'Financial', surpriseHist: [3.1, 5.2, 1.5, -0.8] },
-  { sym: 'NFLX', name: 'Netflix Inc.', date: '2026-07-17', time: 'After Close', epsEst: 4.85, epsAct: null, revEst: '9.9B', marketCap: '290B', sector: 'Communication', surpriseHist: [6.2, 2.8, 8.1, 4.5] },
-  { sym: 'BA', name: 'Boeing Co.', date: '2026-07-24', time: 'Before Open', epsEst: -0.45, epsAct: null, revEst: '18.1B', marketCap: '110B', sector: 'Industrial', surpriseHist: [-12.5, -8.2, -3.1, -1.8] },
-  { sym: 'XOM', name: 'Exxon Mobil', date: '2026-07-29', time: 'Before Open', epsEst: 2.15, epsAct: null, revEst: '92.4B', marketCap: '460B', sector: 'Energy', surpriseHist: [1.2, -0.8, 3.5, 2.1] },
-];
-
-const SECTORS = ['all', 'Technology', 'Financial', 'Consumer', 'Communication', 'Industrial', 'Energy'];
-
-// Group by month-week for calendar display
 function getWeekLabel(dateStr) {
   const d = new Date(dateStr);
-  const start = new Date('2026-07-01');
-  const diffDays = Math.floor((d - start) / (1000 * 60 * 60 * 24));
+  const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+  const diffDays = Math.floor((d - startOfMonth) / (1000 * 60 * 60 * 24));
   const weekNum = Math.floor(diffDays / 7) + 1;
-  return `Jul W${weekNum}`;
+  const monthName = d.toLocaleString('en-US', { month: 'short' });
+  return `${monthName} W${weekNum}`;
+}
+
+function formatRev(val) {
+  if (val == null) return '—';
+  if (val >= 1e9) return `${(val / 1e9).toFixed(1)}B`;
+  if (val >= 1e6) return `${(val / 1e6).toFixed(1)}M`;
+  return `${val}`;
 }
 
 export default function EarningsCalendarPage() {
   const [sectorFilter, setSectorFilter] = useState('all');
   const [expandedSym, setExpandedSym] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(3); // default 3 months
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['earnings-calendar', selectedMonth],
+    queryFn: () => fetchEarningsCalendar({ months: selectedMonth }),
+    staleTime: 15 * 60 * 1000, // 15 min — earnings calendar doesn't change rapidly
+  });
+
+  const events = data?.events ?? [];
+  const sectors = useMemo(() => {
+    const set = new Set();
+    events.forEach((e) => { if (e.sector) set.add(e.sector); });
+    return ['all', ...Array.from(set).sort()];
+  }, [events]);
 
   const grouped = useMemo(() => {
-    const filtered = sectorFilter === 'all' ? EARNINGS : EARNINGS.filter((e) => e.sector === sectorFilter);
+    const filtered = sectorFilter === 'all' ? events : events.filter((e) => e.sector === sectorFilter);
     const groups = {};
     filtered.forEach((e) => {
-      const wk = getWeekLabel(e.date);
+      const wk = getWeekLabel(e.reportDate);
       if (!groups[wk]) groups[wk] = [];
       groups[wk].push(e);
     });
     return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [sectorFilter]);
+  }, [events, sectorFilter]);
+
+  // ── Loading State ──
+  if (isLoading) {
+    return (
+      <div className="ec-page">
+        <header className="ec-header">
+          <h1>Earnings Calendar</h1>
+        </header>
+        <div className="ec-loading">Loading earnings data from Finnhub…</div>
+      </div>
+    );
+  }
+
+  // ── Error State ──
+  if (isError) {
+    return (
+      <div className="ec-page">
+        <header className="ec-header">
+          <h1>Earnings Calendar</h1>
+        </header>
+        <div className="ec-error">
+          <p>Failed to load earnings data.</p>
+          <p className="ec-error-detail">{error?.message || 'Unknown error'}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="ec-page">
       <header className="ec-header">
         <h1>Earnings Calendar</h1>
-        <p className="ec-subtitle">Upcoming earnings reports. Filter by sector. Click any row for historical surprise data.</p>
+        <p className="ec-subtitle">
+          {data?.count ?? 0} upcoming earnings reports from Finnhub.
+          <span className="ec-source"> Data refreshes every 15 min.</span>
+        </p>
       </header>
 
       <div className="ec-filters">
         <div className="ec-field">
+          <label>Horizon</label>
+          <div className="ec-chip-tabs">
+            {[1, 2, 3].map((m) => (
+              <button key={m} type="button" className={`ec-chip ${selectedMonth === m ? 'ec-chip-active' : ''}`} onClick={() => setSelectedMonth(m)}>
+                {m} month{m > 1 ? 's' : ''}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="ec-field">
           <label>Sector</label>
           <div className="ec-chip-tabs">
-            {SECTORS.map((s) => (
+            {sectors.map((s) => (
               <button key={s} type="button" className={`ec-chip ${sectorFilter === s ? 'ec-chip-active' : ''}`} onClick={() => setSectorFilter(s)}>
                 {s === 'all' ? 'All Sectors' : s}
               </button>
@@ -59,6 +107,14 @@ export default function EarningsCalendarPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Empty State ── */}
+      {grouped.length === 0 && (
+        <div className="ec-empty">
+          <p>No upcoming earnings found{data?.count > 0 ? ' for this filter' : ''}.</p>
+          <p className="ec-empty-hint">Try a longer horizon or remove the sector filter.</p>
+        </div>
+      )}
 
       {grouped.map(([week, reports]) => (
         <section key={week} className="ec-week">
@@ -69,42 +125,25 @@ export default function EarningsCalendarPage() {
                 <tr>
                   <th>Symbol</th><th>Company</th><th>Date</th><th>Time</th>
                   <th className="ec-right">EPS Est</th><th className="ec-right">Rev Est</th>
-                  <th className="ec-right">Market Cap</th>
                 </tr>
               </thead>
               <tbody>
-                {reports.map((r) => {
-                  const isExpanded = expandedSym === r.sym;
+                {reports.map((r, idx) => {
+                  const isExpanded = expandedSym === r.symbol;
                   return (
-                    <tr key={r.sym} className={`ec-row ${isExpanded ? 'ec-row-expanded' : ''}`} onClick={() => setExpandedSym(isExpanded ? null : r.sym)}>
-                      <td className="ec-sym">{r.sym}</td>
-                      <td>{r.name}</td>
-                      <td>{r.date}</td>
-                      <td><span className={`ec-time-badge ${r.time === 'After Close' ? 'ec-time-pm' : 'ec-time-am'}`}>{r.time}</span></td>
-                      <td className="ec-right ec-mono">${r.epsEst}</td>
-                      <td className="ec-right ec-mono">{r.revEst}</td>
-                      <td className="ec-right ec-muted">{r.marketCap}</td>
+                    <tr key={r.symbol + '-' + idx} className={`ec-row ${isExpanded ? 'ec-row-expanded' : ''}`} onClick={() => setExpandedSym(isExpanded ? null : r.symbol)}>
+                      <td className="ec-sym">{r.symbol}</td>
+                      <td>{r.name || r.companyName || r.symbol}</td>
+                      <td>{r.reportDate}</td>
+                      <td><span className={`ec-time-badge ${r.timeOfDay === 'After Close' ? 'ec-time-pm' : r.timeOfDay === 'Before Open' ? 'ec-time-am' : 'ec-time-na'}`}>{r.timeOfDay || 'Unknown'}</span></td>
+                      <td className="ec-right ec-mono">{r.epsEstimate != null ? `$${r.epsEstimate}` : '—'}</td>
+                      <td className="ec-right ec-mono">{formatRev(r.revenueEstimate)}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
-          {/* Expanded surprise history for clicked row */}
-          {reports.filter((r) => r.sym === expandedSym).map((r) => (
-            <div key={`exp-${r.sym}`} className="ec-expanded" onClick={(e) => e.stopPropagation()}>
-              <div className="ec-surprise-bar">
-                <span className="ec-surprise-label">Historical EPS Surprise (%):</span>
-                <div className="ec-surprise-chips">
-                  {r.surpriseHist.map((v, i) => (
-                    <span key={i} className={`ec-surprise-chip ${v >= 0 ? 'ec-surp-pos' : 'ec-surp-neg'}`}>
-                      Q{i+1}: {v >= 0 ? '+' : ''}{v}%
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
         </section>
       ))}
     </div>

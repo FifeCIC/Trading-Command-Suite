@@ -437,6 +437,10 @@ export default function ArchitectureFrameworkPage() {
           <p><strong>Priority:</strong> P0 foundation</p>
           <p><strong>Role:</strong> active decision reference</p>
           <p><strong>Mode:</strong> {viewMode === 'roadmap' ? 'roadmap overlay' : 'framework'}</p>
+          <div className="architecture-cross-nav" style={{ marginTop: 8, display: 'flex', gap: 6 }}>
+            <a href="/builder/diagrams" className="architecture-chip-link" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '2px 8px', border: '1px solid var(--line)', borderRadius: 4 }}>▦ Diagrams</a>
+            <a href="/status/capability-map" className="architecture-chip-link" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '2px 8px', border: '1px solid var(--line)', borderRadius: 4 }}>🗺️ Capability Map</a>
+          </div>
         </div>
       </section>
 

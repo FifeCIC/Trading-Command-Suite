@@ -79,7 +79,17 @@ async function main() {
         where: { id: existing.id },
         data: {
           description: seed.description,
-          config: { entryThreshold: 60, watchThreshold: 40, scope: seed.scope },
+          config: {
+            entryThreshold: 60,
+            watchThreshold: 40,
+            scope: seed.scope,
+            templateType: seed.templateType || null,
+            intendedTimeframe: seed.intendedTimeframe || null,
+            symbols: seed.symbols || seed.scope,
+            category: seed.category,
+            riskLevel: seed.riskLevel,
+            timeHorizon: seed.timeHorizon,
+          },
         },
       });
     } else {
@@ -88,7 +98,17 @@ async function main() {
           name: seed.name,
           description: seed.description,
           version: '1.0.0',
-          config: { entryThreshold: 60, watchThreshold: 40, scope: seed.scope },
+          config: {
+            entryThreshold: 60,
+            watchThreshold: 40,
+            scope: seed.scope,
+            templateType: seed.templateType || null,
+            intendedTimeframe: seed.intendedTimeframe || null,
+            symbols: seed.symbols || seed.scope,
+            category: seed.category,
+            riskLevel: seed.riskLevel,
+            timeHorizon: seed.timeHorizon,
+          },
           active: true,
         },
       });

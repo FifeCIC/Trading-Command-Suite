@@ -9,6 +9,21 @@ import { ImportJobsService } from './import-jobs.service';
 export class ImportJobsController {
   constructor(private readonly importJobsService: ImportJobsService) {}
 
+  @Post('refresh/:symbolId')
+  @ApiOperation({ summary: 'Direct real-data import for one symbol (bypasses queue, calls adapters)' })
+  @ApiOkResponse({ description: 'Real bars imported from best available provider' })
+  async refresh(
+    @Param('symbolId') symbolId: string,
+    @Query('timeframe') timeframe = '1d',
+    @Query('limit') limit = '100',
+  ) {
+    return this.importJobsService.importRealBars(
+      symbolId,
+      timeframe,
+      parseInt(limit, 10),
+    );
+  }
+
   @Post('trigger/:symbolId')
   @ApiOperation({ summary: 'Queue market data import for one symbol' })
   @ApiOkResponse({ description: 'Import queued successfully' })

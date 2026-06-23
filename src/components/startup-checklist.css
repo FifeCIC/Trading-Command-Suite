@@ -1,0 +1,136 @@
+/* ── Startup Checklist Banner ──────────────────────────────── */
+
+.sc-banner {
+  margin: 0 1.5rem 0.75rem;
+  background: var(--panel, #141a2e);
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 0.8rem;
+}
+
+.sc-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.sc-header:hover { background: rgba(255,255,255,0.02); }
+
+.sc-icon { font-size: 0.95rem; }
+.sc-title {
+  font-weight: 600;
+  color: var(--ink, #e2e8f0);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.sc-count { margin-left: auto; color: var(--ink-soft, #94a3b8); font-size: 0.72rem; }
+.sc-chevron {
+  font-size: 0.7rem;
+  color: var(--ink-soft, #94a3b8);
+  margin-left: 0.25rem;
+}
+
+.sc-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+}
+.sc-badge-warn {
+  background: rgba(239, 68, 68, 0.18);
+  color: #ef4444;
+}
+
+/* ── Body ── */
+.sc-body {
+  border-top: 1px solid var(--line, #1e2a45);
+  padding: 0.35rem 0;
+}
+
+.sc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.45rem 0.85rem;
+  transition: background 0.12s;
+}
+.sc-item:hover { background: rgba(255,255,255,0.015); }
+
+.sc-item-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.sc-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-top: 0.35rem;
+  flex-shrink: 0;
+}
+.sc-dot--error   { background: #ef4444; }
+.sc-dot--warning { background: #f59e0b; }
+.sc-dot--info    { background: #3b82f6; }
+
+.sc-item-label {
+  font-weight: 600;
+  color: var(--ink, #e2e8f0);
+  font-size: 0.78rem;
+}
+.sc-item--error .sc-item-label { color: #ef4444; }
+
+.sc-item-detail {
+  font-size: 0.7rem;
+  color: var(--ink-soft, #94a3b8);
+  margin-top: 0.1rem;
+  line-height: 1.35;
+}
+
+.sc-item-actions {
+  display: flex;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+.sc-btn-copy {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 5px;
+  color: var(--ink-soft, #94a3b8);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.12s;
+}
+.sc-btn-copy:hover {
+  border-color: var(--accent, #0ea5a6);
+  color: var(--ink, #e2e8f0);
+}
+
+.sc-btn-dismiss {
+  padding: 0.15rem 0.35rem;
+  font-size: 0.7rem;
+  background: none;
+  border: none;
+  color: var(--ink-soft, #94a3b8);
+  cursor: pointer;
+  border-radius: 4px;
+}
+.sc-btn-dismiss:hover { color: var(--ink, #e2e8f0); background: rgba(255,255,255,0.05); }
+
+@media (max-width: 600px) {
+  .sc-banner { margin: 0 0.75rem 0.5rem; }
+  .sc-item { flex-direction: column; align-items: flex-start; }
+  .sc-item-actions { align-self: flex-end; }
+}

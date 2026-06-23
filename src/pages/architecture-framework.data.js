@@ -4,10 +4,18 @@ export const STATUS_SNAPSHOT = [
   'Real contracts should live here, not only planning notes.',
   'Open decisions stay visible on the same surface as the rules.',
   'Drift detection is built in — section index and contract register show verification badges. Mark items as verified as you review them.',
+  'Agentic AI discoverability: /api/architecture/manifest endpoint provides machine-readable system map. Diagrams page has 11 Mermaid diagrams for all major subsystems. Capability Map tracks directive/provider/page coverage.',
+  'Cross-page navigation: Architecture Framework ↔ Diagrams ↔ Capability Map are linked via nav buttons in each page header for agent and developer traversal.',
+  '2026-06-23: Librarian audit — Diagrams page expanded from 5→11 diagrams (added Activation Gate, Exit Signals, Alert Center, Calibration, Scoring Gating, Provider Adapters). Rendering bug fixed (React key for DOM remount). Contract register date bumped. Cross-page navigation added. Architecture manifest endpoint planned.',
+  '2026-06-19: Q291 — Timeframe-aware directive config. IDirective extended with activeWindow (time-gated) + timeModifiers (time-adjusted). DirectivesService.runAll() evaluates gates pre-calculate, modifiers post-calculate. session-open-effect directive has reference config (Mon–Fri, 09:00–16:30 America/New_York). Uses Intl.DateTimeFormat for IANA timezone resolution — no external lib.',
+  '2026-06-19: Q289 — 9 strategy templates added to seed data (Kitchen Sink, High-Vol Scalper, VIX Regime, Bitcoin Specialist, Gold Hedge, Oil Trader, Forex Session, Tech Titans, Meme Stock). seed:strategies script added. Strategy config JSON extended with templateType, intendedTimeframe, symbols, category.',
+  '2026-06-19: Nav-tree restructured — Training area restored (candle patterns, order testing, MT5 demo). Lab area reorganized (Lab Sandbox, Lab Overview, Feature Lab, Theme Lab, Motion Lab, Transitions Lab, Scroll Animations, Component Lab). Development retains core + Container Queries, Popover API, Algorithm Log, Backtest, Protocol Performance. Right-rail hidden by default (Dev Overlay toggle). Admin+Status moved into DevOverlay component.',
+  '2026-06-18: Q287 — News Sentiment Data Pipeline. NewsArticle + NewsImportRun models added to Prisma. NewsImportService (Finnhub + dedup + category classification + cron every 6h). NewsIntelPage rebuilt with category tabs, import button, live data. StartupChecklist component added for dev action reminders.',
   '2026-06-17: Scoring model updated — directive maxScore replaces STRATEGY_WEIGHTS. Protocol max = sum of directive maxScores. No 100-cap.',
   '2026-06-17: New directive: fx-timing (FX Timing, v0.1.0 placeholder). New page: AnalyseSymbolPage (symbol selector + scoring breakdown + AI placeholder).',
   '2026-06-17: Nav-tree consolidated — platforms/ops/wizard → Status area. Builder trimmed 19→6. Testing area deleted.',
   '2026-06-17: New pages: ProtocolsOverview, AddSymbol, DataElements. Algorithm Lab → Algorithm Log (real data). Training reorganized.',
+  '2026-06-23: MT5 Bridge v2 — Flask replaced with http.server (mt5_bridge_v2.py). v1 archived. Single startup connection instead of per-request. Multi-account support. ⚠️ KNOWN_GAP: port 5000/5001 mismatch between bridge and NestJS .env.',
 ]
 
 export const ARCHITECTURE_INDEX = [
@@ -83,7 +91,7 @@ export const CURRENT_SLICE = [
   'Alert center — 8 alert types, live polling, severity levels, snooze/dismiss/acknowledge',
   'Algorithm Lab — real-time pipeline visualization (FETCH → SCORE → RANK → FILTER → SIGNAL)',
   'Training area — candle pattern detection with TradingView charts',
-  'MT5 adapter + Python bridge (Flask on port 5000)',
+  'MT5 adapter + Python bridge v2 (http.server, port 5000). Flask v1 archived to scripts/mt5-bridge/archived/. Multi-account support. ⚠️ NestJS .env expects port 5001 — mismatch needs resolution.',
   'Trading212 portfolio import with live portfolio data',
   'Automated daily trading scheduler (Mon-Fri 9AM cron)',
   'Keyboard speed trading — B/S/C keys, size presets, Shift 2x',
@@ -92,6 +100,8 @@ export const CURRENT_SLICE = [
   'Strategy creation + duplication — any strategy can be a template',
   'Portfolio view — holdings, P&L, manual trading with real Trading212 data',
   'Nav reorganization — SEES, Strategy Builder moved to Scoring area with section dividers',
+  'Protocol Risk Gating — multiplicative scoring: risk directives gate Technical + Sentiment (not additive)',
+  'Unified MT5 Trading page — merged Mt5TradingPage, UnifiedTradingPage, Mt5DemoTradingPage into one page with demo/live toggle, account switching dropdown, platform selector, and live-mode safety confirmations',
 ]
 
 export const DECISION_WORKFLOW = [
@@ -339,7 +349,7 @@ export const CONTRACT_CARDS = [
   },
 ]
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-06-17'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-06-23'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -436,6 +446,22 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated operator access',
     owner: 'Protocols controller',
     contract: 'Lists all scoring protocols with directive counts, maxPossibleScore, scheduler status, and recent activity feed.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/scoring/gated/:symbol',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Protocol gating controller',
+    contract: 'Returns multiplicatively-gated score for a single symbol. Risk directives gate Technical + Sentiment scores multiplicatively (not additively). Query: ?timeframe=1d&bars=100.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/scoring/gated/portfolio',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Protocol gating controller',
+    contract: 'Returns multiplicatively-gated scores for all portfolio positions. Same gating logic as single-symbol endpoint applied to every holding.',
     status: 'active',
   },
   {
@@ -1080,6 +1106,9 @@ export const HANDOFF_CHECKLIST = [
 ]
 
 export const KNOWN_GAPS = [
+  'MT5 Bridge port mismatch — v2 bridge on port 5000 (BRIDGE_PORT env), NestJS .env has MT5_BRIDGE_URL=http://localhost:5001. Bridge /health reports connected:false with 8900+ connection errors. Resolution: align ports to 5000 in .env or set BRIDGE_PORT=5001 when starting v2.',
+  'MT5 Bridge v2 health — bridge self-reports disconnected but NestJS adapter may have working data endpoints. Root cause investigation needed.',
+  'Agent coordination gap — Trading Agent rewrote MT5 bridge (Flask→http.server) without checking REVISION_LOG for recent MT5 work, resulting in duplicate effort. Coordination rules now in .agent-rules.md.',
   'Core versus extension boundary still needs final ownership rules in some areas.',
   'React endpoint schema standard should become explicit early.',
   'Automated architecture inventory is still a future decision.',
@@ -1096,6 +1125,15 @@ export const KNOWN_GAPS = [
 ]
 
 export const REVISION_LOG = [
+  '2026-06-23: MT5 Bridge v2 — Trading Agent migrated from Flask to http.server (mt5_bridge_v2.py, ~480 lines). v1 Flask bridge archived to scripts/mt5-bridge/archived/. v2 connects MT5 once at startup instead of per-request Flaks threading issue. KNOWN_GAP: port mismatch (v2 on 5000, NestJS .env expects 5001). Bridge /health reports connected:false with 8900+ connection errors — data endpoints may work independently of health check.',
+  '2026-06-23: Agent coordination rules added to .agent-rules.md — pre-work checks, CLAIM__ convention, completion verification, HANDOFF_CHECKLIST enforcement, conflict resolution. Session bootstrap order expanded (architecture manifest + structural pages now steps 3-4).',
+  '2026-06-23: Discussion docs audited — NEWS-DISSIPATION-CURVES marked IMPLEMENTED (Q287 banner), EXIT-SIGNALS stays in-progress (Q279), HOTAS-TRADING-INTERFACE stays deferred. 5 previously-implemented discussions documented as promoted/archived.',
+  '2026-06-23: Diagrams extracted to docs/diagrams/SYSTEM-DIAGRAMS.md — all 11 Mermaid diagrams now available to agents reading the documentation folder without parsing JSX.',
+  '2026-06-23: DOCUMENTATION-INDEX.md restructured — Agentic AI Discovery table added, Architecture Artifacts section added, discussion doc status table replaces flat list, endpoint count reconciled (14→17 modules).',
+  '2026-06-23: Librarian audit — Diagrams page expanded 5→11 (added Activation Gate, Exit Signals, Alert Center, Calibration, Scoring Gating, Provider Adapters). Rendering bug fixed (React key remount). Cross-page navigation added between Architecture Framework ↔ Diagrams ↔ Capability Map.',
+  '2026-06-23: Agentic AI discoverability — new GET /api/architecture/manifest endpoint in NestJS (machine-readable system map: 36 modules, providers, system spine, architecture index, nav-tree, UI cross-references). Registered in SystemModule.',
+  '2026-06-23: Capability Map wired to live API data (TanStack Query: /api/providers/health, /api/directives) with hardcoded fallbacks. Subtitle corrected from "auto-generated" to "compiled from". Live data indicator + loading/error states added.',
+  '2026-06-23: Contract register date bumped 2026-06-17→2026-06-23. STATUS_SNAPSHOT updated with audit entries.',
   'Front Door: added workflow, matrix, intake, and discovery concepts.',
   'System Boundaries: added context and ownership visibility.',
   'Contracts: added concrete route, bridge, queue, UI, and scoring contract categories.',
@@ -1116,6 +1154,8 @@ export const REVISION_LOG = [
   '2026-06-17: Q259 — Algorithm Lab replaced with Algorithm Log: all setInterval/simulation removed, real ScoringService data, PROTOTYPE badge, multi-pipeline architecture documented.',
   '2026-06-17: Q260 — Theme Exploration: default Carbon theme applied, system font stack, CSS variables. Q267 — Theme Packs page styling, color previews, apply/install flow.',
   '2026-06-17: Q264 — Builder cleanup: 13 pages deleted (WordPress-era placeholders). Q268 — Platform Comparisons full-width table with sticky headers and horizontal scroll.',
+  '2026-06-19: Protocol Risk Gating implemented — DirectiveGroup registry (Technical/Sentiment/Risk), ProtocolGatingService (multiplicative scoring with risk floor 0.3/ceiling 1.2), GET /api/scoring/gated/:symbol and /portfolio endpoints. Directives now gate instead of just add.',
+  '2026-06-19: Q300 — Unified MT5 Trading page: merged Mt5TradingPage, UnifiedTradingPage, and Mt5DemoTradingPage into single Mt5TradingPage.jsx with demo/live toggle, account switching dropdown, platform selector (MT5/T212/Alpaca), live-mode safety confirmations, and Close All with position count. Removed mt5-demo-trading from nav-tree Builder area. Dead imports cleaned from App.jsx.',
   '2026-06-17: Directive interface updated: maxScore field added (replaces STRATEGY_WEIGHTS). Each directive declares its own scoring range. Protocol max = sum of directive maxScores.',
   '2026-06-17: Scoring model changed: weighted average → sum of directive scores ÷ protocol max. No artificial 100-cap. version field added to IDirective + ProtocolVersion model in Prisma.',
   '2026-06-17: New pages: ProtocolsOverviewPage (activity dashboard + scheduler status), AddSymbolPage (search autocomplete + duplicate check), DataElementsPage (6 elements with status).',
@@ -1423,8 +1463,10 @@ export const ROADMAP_ITEMS = [
     domain: 'Trading execution',
     items: [
       { issue: 'Q229', label: 'MT5 Demo Trading — placeOrder, closePosition, closeAll, getPositions, getAccount', status: 'done', gh: null },
+      { issue: 'Q251', label: 'Unified Trading Page — merged MT5 Trading + MT5 Demo Trading into UnifiedTradingPage', status: 'done', gh: null },
+      { issue: 'Q300', label: 'Merge MT5 Trading Pages — final merge into single Mt5TradingPage with demo/live toggle, account switching, platform selector, safety confirmations', status: 'done', gh: null },
       { issue: 'Q241', label: 'Keyboard Speed Trading — B/S/C keys, size presets 1-5, Shift 2x, arrow scroll/zoom', status: 'done', gh: null },
-      { issue: 'Q203', label: 'MT5 Paper Trading via bridge on demo account', status: 'blocked', gh: null },
+      { issue: 'Q203', label: 'MT5 Paper Trading via bridge on demo account', status: 'done', gh: null },
     ],
   },
   {

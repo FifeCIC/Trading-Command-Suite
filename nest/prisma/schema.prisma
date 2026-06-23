@@ -323,7 +323,7 @@ model FxRate {
   @@index([provider, timestamp])
 }
 
-// ── Planned Tables (from Database Tables page) ──
+// ÔöÇÔöÇ Planned Tables (from Database Tables page) ÔöÇÔöÇ
 
 model SymbolTechnical {
   id         String   @id @default(uuid()) @db.VarChar(36)
@@ -565,4 +565,88 @@ model OrderExecution {
 
   @@index([orderId])
   @@index([provider, executedAt])
+}
+
+model TradingPlan {
+  id                String   @id @default(uuid()) @db.VarChar(36)
+  title             String   @db.VarChar(200)
+  type              String   @default("plan") @db.VarChar(50)
+  content           Json
+  notes             String?  @db.Text
+  status            String   @default("draft") @db.VarChar(20)
+  symbols           Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  portfolioSnapshot Json?
+
+  steps PlanStep[]
+
+  @@map("tradingplan")
+}
+
+model PlanStep {
+  id            String    @id @default(uuid()) @db.VarChar(36)
+  planId        String    @db.VarChar(36)
+  action        String    @db.VarChar(20)
+  symbol        String    @db.VarChar(20)
+  quantity      Float?
+  targetPrice   Float?
+  stopLoss      Float?
+  deadline      DateTime?
+  conditions    String?   @db.Text
+  status        String    @default("pending") @db.VarChar(20)
+  sortOrder     Int       @default(0)
+  executedAt    DateTime?
+  executedPrice Float?
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now())
+
+  plan TradingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@map("planstep")
+  @@index([planId])
+}
+
+model EarningsEvent {
+  id               String   @id @default(uuid()) @db.VarChar(36)
+  symbol           String   @db.VarChar(20)
+  name             String?  @db.VarChar(200)
+  reportDate       DateTime @map("report_date")
+  fiscalDateEnding DateTime? @map("fiscal_date_ending")
+  epsEstimate      Float?   @map("eps_estimate")
+  epsActual        Float?   @map("eps_actual")
+  revenueEstimate  Float?   @map("revenue_estimate")
+  revenueActual    Float?   @map("revenue_actual")
+  surprisePercent  Float?   @map("surprise_percent")
+  timeOfDay        String?  @map("time_of_day") @db.VarChar(20)
+  currency         String?  @db.VarChar(10)
+  source           String   @db.VarChar(30)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("earnings_event")
+  @@index([reportDate])
+  @@index([symbol, reportDate])
+  @@index([source, createdAt])
+}
+
+model AnalystTarget {
+  id            String   @id @default(uuid()) @db.VarChar(36)
+  symbol        String   @db.VarChar(20)
+  companyName   String?  @map("company_name") @db.VarChar(200)
+  currentPrice  Float    @default(0) @map("current_price")
+  avgTarget     Float    @default(0) @map("avg_target")
+  highTarget    Float    @default(0) @map("high_target")
+  lowTarget     Float    @default(0) @map("low_target")
+  consensus     String?  @db.VarChar(50)
+  analystCount  Int?     @map("analyst_count")
+  upside        Float?
+  source        String   @db.VarChar(30)
+  fetchedAt     DateTime @default(now()) @map("fetched_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("analyst_target")
+  @@index([symbol])
+  @@index([source, fetchedAt])
 }

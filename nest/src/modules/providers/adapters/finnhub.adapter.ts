@@ -13,6 +13,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
   AnalystRecommendation,
+  EarningsEvent,
   IProviderAdapter,
   MarketBar,
   ProviderProfile,
@@ -222,7 +223,86 @@ export class FinnhubAdapter implements IProviderAdapter {
     }));
   }
 
-  // ── Helpers ──
+  // ── Earnings Calendar ────────────────────────────────
+
+  async getEarningsCalendar(symbol?: string, horizonMonths = 3): Promise<EarningsEvent[]> {
+    const from = new Date().toISOString().split('T')[0];
+    const to = new Date(Date.now() + horizonMonths * 30 * 86400000).toISOString().split('T')[0];
+    this.logger.log(`Finnhub: fetching earnings calendar ${from} → ${to}${symbol ? ' for ' + symbol : ''}`);
+    const data = await this.finnhubGet<any>(
+      `/calendar/earnings?from=${from}&to=${to}`,
+    );
+    if (!data?.earningsCalendar) return [];
+    const events: EarningsEvent[] = data.earningsCalendar.map((e: any) => ({
+      symbol: e.symbol,
+      name: e.name || undefined,
+      reportDate: e.date,
+      epsEstimate: e.epsEstimate ?? null,
+      epsActual: e.epsActual ?? null,
+      revenueEstimate: e.revenueEstimate ?? null,
+      revenueActual: e.revenueActual ?? null,
+      timeOfDay: e.hour === 'bmo' ? 'Before Open' : e.hour === 'amc' ? 'After Close' : null,
+      source: 'finnhub',
+    } as EarningsEvent));
+    // Filter by symbol if provided (Finnhub returns all earnings)
+    const filtered = symbol
+      ? events.filter((e) => e.symbol?.toUpperCase() === symbol.toUpperCase())
+      : events;
+    return filtered.sort((a, b) => new Date(a.reportDate).getTime() - new Date(b.reportDate).getTime());
+  }
+
+  // ── Price Target ──────────────────────────────────────
+
+  async getPriceTarget(symbol: string): Promise<{
+    symbol: string;
+    companyName?: string;
+    currentPrice: number;
+    avgTarget: number;
+    highTarget: number;
+    lowTarget: number;
+    consensus: string;
+    analystCount?: number;
+    upside?: number;
+    source: string;
+  } | null> {
+    this.logger.log(`Finnhub: fetching price target for ${symbol}`);
+    const data = await this.finnhubGet<any>(
+      `/stock/price-target?symbol=${encodeURIComponent(symbol)}`,
+    );
+    if (!data || data.error) return null;
+
+    const currentPrice = data.lastUpdatedPrice || data.currentPrice || 0;
+    const avgTarget = data.targetMean || 0;
+    const upside = currentPrice > 0 ? ((avgTarget - currentPrice) / currentPrice) * 100 : null;
+
+    // Derive consensus from buy/hold/sell counts
+    let consensus = 'Hold';
+    if (data.numberOfAnalysts) {
+      const buyCount = (data.buy || 0) + (data.strongBuy || 0);
+      const sellCount = (data.sell || 0) + (data.strongSell || 0);
+      if (buyCount > sellCount * 2) consensus = 'Strong Buy';
+      else if (buyCount > sellCount) consensus = 'Buy';
+      else if (sellCount > buyCount * 2) consensus = 'Strong Sell';
+      else if (sellCount > buyCount) consensus = 'Sell';
+    }
+
+    return {
+      symbol: data.symbol || symbol,
+      companyName: data.companyName || null,
+      currentPrice,
+      avgTarget,
+      highTarget: data.targetHigh || 0,
+      lowTarget: data.targetLow || 0,
+      consensus,
+      analystCount: data.numberOfAnalysts || null,
+      upside: upside !== null ? Number(upside.toFixed(1)) : undefined,
+      source: 'finnhub',
+    };
+  }
+
+  getCapabilities(): string[] {
+    return ['quotes', 'candles', 'profiles', 'recommendations', 'earnings', 'price-targets'];
+  }
 
   private resolutionSeconds(res: string): number {
     const map: Record<string, number> = {

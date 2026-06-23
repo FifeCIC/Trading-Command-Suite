@@ -1,66 +1,113 @@
 import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
+import {
+  PROVIDER_RATE_LIMITS,
+  getEndpointInterval,
+  ProviderRateConfig,
+} from '../rate-limit/provider-rate-limits';
 
-interface RateLimitEntry {
-  count: number;
-  resetAt: number;
+/**
+ * Provider-aware rate limiter middleware.
+ *
+ * Throttles inbound requests per endpoint pattern based on the provider's
+ * documented rate limits. Prevents the frontend from triggering back-to-back
+ * API calls that would exhaust the provider's rate limit.
+ *
+ * Configured via PROVIDER_RATE_LIMITS in provider-rate-limits.ts.
+ */
+
+interface EndpointTracker {
+  lastCallTime: number;
+  intervalMs: number;
+  label: string;
 }
-
-const DEFAULT_LIMIT = 100;
-const DEFAULT_WINDOW_MS = 60_000;
 
 @Injectable()
 export class RateLimiterMiddleware implements NestMiddleware {
   private readonly logger = new Logger(RateLimiterMiddleware.name);
-  private readonly store = new Map<string, RateLimitEntry>();
-  private readonly limit = DEFAULT_LIMIT;
-  private readonly windowMs = DEFAULT_WINDOW_MS;
+  private readonly endpointTimers = new Map<string, EndpointTracker>();
+
+  /** Build a lookup map: route pattern → interval from config */
+  private readonly routeIntervalMap: Map<string, { intervalMs: number; label: string }>;
 
   constructor() {
-    // Clean up expired entries every 5 minutes
-    setInterval(() => this.cleanup(), 5 * 60_000);
+    this.routeIntervalMap = new Map();
+    for (const config of PROVIDER_RATE_LIMITS) {
+      for (const ep of config.endpoints) {
+        // Map each provider's route patterns to their tightest endpoint interval
+        const interval = Math.min(
+          ...config.endpoints.map((e) => e.minIntervalMs),
+        );
+        for (const pattern of config.routePatterns) {
+          const existing = this.routeIntervalMap.get(pattern);
+          if (!existing || interval < existing.intervalMs) {
+            this.routeIntervalMap.set(pattern, {
+              intervalMs: Math.max(interval, 1_000), // at least 1 second between calls
+              label: `${config.provider} routes`,
+            });
+          }
+        }
+      }
+    }
+
+    // Also map legacy routes
+    this.routeIntervalMap.set('/api/providers', { intervalMs: 2_000, label: 'provider health' });
+    this.routeIntervalMap.set('/api/webhooks', { intervalMs: 1_000, label: 'webhooks' });
+
+    this.logger.log(`Rate limiter configured with ${this.routeIntervalMap.size} route patterns`);
   }
 
   use(req: Request, res: Response, next: NextFunction) {
-    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    // Strip global prefix and query string for matching
+    const rawPath = req.originalUrl?.split('?')[0] || req.url || '/';
+    const path = rawPath.replace(/^\/api/, '') || '/';
     const now = Date.now();
 
-    let entry = this.store.get(ip);
-
-    if (!entry || now > entry.resetAt) {
-      entry = { count: 0, resetAt: now + this.windowMs };
-      this.store.set(ip, entry);
-    }
-
-    entry.count++;
-
-    const remaining = Math.max(0, this.limit - entry.count);
-    const resetSec = Math.ceil((entry.resetAt - now) / 1000);
-
-    // Set rate limit headers
-    res.setHeader('X-RateLimit-Limit', this.limit);
-    res.setHeader('X-RateLimit-Remaining', remaining);
-    res.setHeader('X-RateLimit-Reset', resetSec);
-
-    if (entry.count > this.limit) {
-      this.logger.warn(`Rate limit exceeded for IP ${ip} (${entry.count}/${this.limit})`);
-      res.status(429).json({
-        statusCode: 429,
-        message: 'Too Many Requests',
-        retryAfter: resetSec,
-      });
-      return;
-    }
-
-    next();
-  }
-
-  private cleanup() {
-    const now = Date.now();
-    for (const [ip, entry] of this.store) {
-      if (now > entry.resetAt) {
-        this.store.delete(ip);
+    // Find the matching route pattern
+    let matchInterval = 0;
+    let matchLabel = '';
+    for (const [pattern, info] of this.routeIntervalMap) {
+      if (path.startsWith(pattern)) {
+        matchInterval = info.intervalMs;
+        matchLabel = info.label;
+        break;
       }
     }
+
+    // No rate limit for unmatched routes — pass through
+    if (matchInterval === 0) {
+      return next();
+    }
+
+    // Check if we've called this endpoint too recently
+    const tracker = this.endpointTimers.get(path);
+    if (tracker) {
+      const elapsed = now - tracker.lastCallTime;
+      if (elapsed < tracker.intervalMs) {
+        const waitMs = tracker.intervalMs - elapsed;
+        this.logger.warn(
+          `Rate-limited ${path} (${matchLabel}): ${elapsed}ms since last call, ${waitMs}ms remaining`,
+        );
+        res.status(429).json({
+          statusCode: 429,
+          message: 'Too Many Requests — provider rate limit protection',
+          retryAfterMs: waitMs,
+          endpoint: path,
+        });
+        return;
+      }
+    }
+
+    // Update tracker
+    this.endpointTimers.set(path, {
+      lastCallTime: now,
+      intervalMs: matchInterval,
+      label: matchLabel,
+    });
+
+    // Set rate limit headers
+    res.setHeader('X-RateLimit-Interval-Ms', matchInterval);
+
+    next();
   }
 }

@@ -46,3 +46,13 @@ export async function apiPatch(path, body) {
   }
   return response.json();
 }
+
+export async function apiDelete(path) {
+  const response = await fetch(apiUrl(path), {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error(`Request failed with ${response.status}`);
+  }
+  return response.json();
+}

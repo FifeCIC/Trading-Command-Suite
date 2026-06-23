@@ -101,3 +101,31 @@
 .sd-news-sentiment { font-size: 0.72rem; font-weight: 600; }
 .sd-news-headline { margin: 0.15rem 0; font-size: 0.85rem; color: var(--ink); }
 .sd-fluff-tag { font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 4px; background: #7f1d1d44; color: #fca5a5; }
+
+/* ── Chart ── */
+.sd-chart-wrap { margin-bottom: 1rem; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: rgba(0,0,0,0.1); }
+.sd-tf-row { display: flex; gap: 0.25rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--line); }
+.sd-tf-btn { padding: 0.2rem 0.55rem; border: 1px solid var(--line); border-radius: 4px; background: none; color: var(--ink-soft); cursor: pointer; font-family: inherit; font-size: 0.7rem; font-weight: 600; }
+.sd-tf-btn.active { border-color: var(--accent); background: rgba(14,165,166,0.12); color: var(--accent); }
+.sd-tf-btn:hover { border-color: var(--accent); }
+
+/* ── Protocol Scores ── */
+.sd-protocols { display: flex; flex-direction: column; gap: 0.6rem; }
+.sd-protocol-card { padding: 0.65rem 0.75rem; border: 1px solid var(--line); border-radius: 8px; background: rgba(0,0,0,0.06); }
+.sd-protocol-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+.sd-protocol-header strong { font-size: 0.85rem; display: block; }
+.sd-protocol-type { font-size: 0.62rem; color: var(--ink-soft); }
+.sd-protocol-score { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+.sd-score-badge { font-size: 1.1rem; font-weight: 800; padding: 0.1rem 0.5rem; border-radius: 6px; }
+.sd-score-badge.entry { background: rgba(34,197,94,0.12); color: #22c55e; }
+.sd-score-badge.watch { background: rgba(245,158,11,0.12); color: #f59e0b; }
+.sd-score-badge.exit { background: rgba(239,68,68,0.12); color: #ef4444; }
+.sd-signal { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; padding: 0.1rem 0.35rem; border-radius: 999px; }
+.sd-signal.entry { background: rgba(34,197,94,0.15); color: #22c55e; }
+.sd-signal.watch { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.sd-signal.exit { background: rgba(239,68,68,0.15); color: #ef4444; }
+.sd-sparkline { display: flex; align-items: flex-end; gap: 2px; height: 30px; margin: 0.4rem 0; }
+.sd-spark-bar { flex: 1; background: var(--accent); border-radius: 1px; opacity: 0.5; min-height: 2px; }
+.sd-protocol-meta { display: flex; gap: 0.75rem; font-size: 0.65rem; color: var(--ink-soft); }
+.sd-protocol-meta .rising { color: #22c55e; }
+.sd-protocol-meta .falling { color: #ef4444; }

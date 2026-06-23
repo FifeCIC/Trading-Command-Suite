@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { Trading212Adapter, T212OrderResult } from '../providers/adapters/trading212.adapter';
 
 interface T212Position {
   ticker: string;
@@ -58,7 +59,10 @@ export interface TradeHistorySummary {
 export class Trading212ImportService {
   private readonly logger = new Logger(Trading212ImportService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly t212Adapter: Trading212Adapter,
+  ) {}
 
   private getAuthHeader(): string {
     const key = process.env.TRADING212_API_KEY || '';
@@ -267,6 +271,96 @@ export class Trading212ImportService {
       winningTrades: winning.length,
       losingTrades: losing.length,
     };
+  }
+
+  // ── Order Execution ───────────────────────────────────────
+
+  /**
+   * Validate pre-trade safety gates before placing an order.
+   * Returns null if all gates pass, or an error object if a gate fails.
+   */
+  async validatePreTrade(params: {
+    ticker: string;
+    quantity: number;
+    side: 'buy' | 'sell';
+  }): Promise<{ passed: boolean; gate: string; error?: string }> {
+    // Gate 1+2: API Health + Account balance (combined — same endpoint, avoid rate limit double-hit)
+    const account = await this.t212Adapter.getAccountCash();
+    if (!account) {
+      return { passed: false, gate: 'account', error: `Trading212 API (${this.t212Adapter.mode}) is not reachable or returned no account data. Check credentials and connectivity.` };
+    }
+
+    // Gate 3: Position verification (for sells)
+    if (params.side === 'sell') {
+      const positions = await this.t212Adapter.getPositions();
+      const ticker = params.ticker.includes('_') ? params.ticker : `${params.ticker.toUpperCase()}_US_EQ`;
+      const pos = positions.find((p) => p.ticker === ticker);
+      if (!pos) {
+        return { passed: false, gate: 'position', error: `No position found for ${params.ticker} in your ${this.t212Adapter.mode} account.` };
+      }
+      if (params.quantity > pos.quantity) {
+        return { passed: false, gate: 'quantity', error: `You only have ${pos.quantity} shares of ${params.ticker}. Cannot sell ${params.quantity}.` };
+      }
+    }
+
+    // Gate 4: Sufficient funds (for buys)
+    if (params.side === 'buy') {
+      // We don't have price here, but gate 1+2 already passed
+      if (account.free <= 0) {
+        return { passed: false, gate: 'funds', error: 'No free cash available for this purchase.' };
+      }
+    }
+
+    return { passed: true, gate: 'all' };
+  }
+
+  async placeOrder(params: {
+    ticker: string;
+    quantity: number;
+    side: 'buy' | 'sell';
+    accountType?: 'investment' | 'isa';
+    limitPrice?: number;
+  }): Promise<T212OrderResult & { preTrade?: { passed: boolean; gate: string; error?: string } }> {
+    // Run pre-trade safety gates
+    const preTrade = await this.validatePreTrade({
+      ticker: params.ticker,
+      quantity: params.quantity,
+      side: params.side,
+    });
+
+    if (!preTrade.passed) {
+      this.logger.warn(`Order blocked by gate "${preTrade.gate}": ${preTrade.error}`);
+      return { success: false, error: preTrade.error, preTrade };
+    }
+
+    this.logger.log(`Placing ${this.t212Adapter.mode} ${params.side} order: ${params.ticker} ×${params.quantity}${params.limitPrice ? ` @${params.limitPrice}` : ''}`);
+
+    if (params.limitPrice) {
+      return this.t212Adapter.placeLimitOrder({
+        ticker: params.ticker,
+        quantity: params.quantity,
+        side: params.side,
+        limitPrice: params.limitPrice,
+      });
+    }
+
+    return this.t212Adapter.placeMarketOrder({
+      ticker: params.ticker,
+      quantity: params.quantity,
+      side: params.side,
+    });
+  }
+
+  async getOpenOrders(): Promise<T212OrderResult[]> {
+    return this.t212Adapter.getOpenOrders();
+  }
+
+  async getOrderStatus(orderId: string): Promise<T212OrderResult> {
+    return this.t212Adapter.getOrder(orderId);
+  }
+
+  async cancelOrder(orderId: string): Promise<T212OrderResult> {
+    return this.t212Adapter.cancelOrder(orderId);
   }
 
 }

@@ -6,6 +6,7 @@ export default function ThemeLabScroll() {
         <p className="tl-subtitle">
           CSS animations tied to scroll position. Parallax, reveal-on-scroll, header shrink.
           <br /><strong>Status: 🧪 Experimental</strong> — Chrome/Edge only. Must degrade gracefully on Firefox/Safari.
+          <br /><span style={{ fontSize: '0.75rem', color: 'var(--ink-soft)' }}>Used in: Strategy Builder protocol cards, Architecture Framework section reveals.</span>
         </p>
       </header>
 

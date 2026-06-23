@@ -47,6 +47,32 @@ export interface DirectiveResult {
   reason: string;
   /** Directional bias. Defaults to 'neutral' when absent. */
   signalClass?: 'bullish' | 'bearish' | 'neutral';
+  /** True if the directive was suppressed by an active-window time gate. */
+  timeGated?: boolean;
+  /** Time modifiers that were applied to adjust the score. */
+  timeModifiersApplied?: { adjustment: number; reason: string }[];
+}
+
+export interface TimeWindow {
+  /** Start time in HH:mm format (e.g. "09:30"). */
+  start: string;
+  /** End time in HH:mm format (e.g. "16:00"). */
+  end: string;
+  /** IANA timezone string (e.g. "America/New_York"). Never a UTC offset. */
+  timezone: string;
+  /** Days of week this window applies: 0=Sun, 1=Mon, ..., 6=Sat. If omitted, all days. */
+  daysOfWeek?: number[];
+}
+
+export interface TimeModifier {
+  /** Start of the modifier window in HH:mm (e.g. "14:30"). */
+  after: string;
+  /** Optional end of the modifier window in HH:mm (e.g. "16:00"). If omitted, applies from 'after' onwards. */
+  before?: string;
+  /** Score adjustment — positive = bonus, negative = deduction. */
+  adjustment: number;
+  /** Human-readable reason for the adjustment (e.g. "Pre-US strategy — post-open decay"). */
+  reason: string;
 }
 
 export interface IDirective {
@@ -81,6 +107,19 @@ export interface IDirective {
    * Defaults to 50 when absent.
    */
   readonly priority?: number;
+
+  /**
+   * Optional active window — if set, the directive only scores within this time window.
+   * Outside the window, it returns score 0 (time-gated).
+   * Uses IANA timezone strings (e.g. "America/New_York"), never UTC offsets.
+   */
+  readonly activeWindow?: TimeWindow;
+
+  /**
+   * Optional time modifiers — adjust the directive's score based on time proximity.
+   * Applied AFTER calculate() — bonuses boost the score, deductions reduce it.
+   */
+  readonly timeModifiers?: TimeModifier[];
 
   /**
    * Evaluate the directive against the provided market data.

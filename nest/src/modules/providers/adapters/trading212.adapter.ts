@@ -5,6 +5,8 @@ import {
   ProviderProfile,
   ProviderQuote,
 } from '../interfaces/provider-adapter.interface';
+import { RateLimitTracker } from '../rate-limit-tracker';
+import { getEndpointInterval } from '../../../common/rate-limit/provider-rate-limits';
 
 /**
  * Trading212 API Adapter
@@ -57,6 +59,27 @@ export interface Trading212AccountCash {
   total: number;
 }
 
+export interface T212OrderRequest {
+  ticker: string;
+  quantity: number;
+  side: 'buy' | 'sell';
+}
+
+export interface T212LimitOrderRequest extends T212OrderRequest {
+  limitPrice: number;
+}
+
+export interface T212OrderResult {
+  success: boolean;
+  orderId?: string;
+  filledQuantity?: number;
+  filledPrice?: number;
+  status?: string;
+  error?: string;
+  errorCode?: string;
+  rawResponse?: unknown;
+}
+
 export type Trading212Mode = 'live' | 'demo' | 'none';
 
 @Injectable()
@@ -72,7 +95,13 @@ export class Trading212Adapter implements IProviderAdapter {
   // ── Credentials & endpoint (resolved at construction) ─────
 
   private readonly apiKey: string;
+  private readonly apiSecret: string;
   private readonly baseUrl: string;
+
+  // ── Rate limiting ─────────────────────────────────────────
+
+  private readonly rateTracker = new RateLimitTracker('trading212-main', 'trading212', 200);
+  private readonly endpointLastCall = new Map<string, number>();
 
   // ── Constructor ───────────────────────────────────────────
 
@@ -91,15 +120,18 @@ export class Trading212Adapter implements IProviderAdapter {
       this.mode = 'none';
     }
 
-    // Resolve the correct key for this mode
+    // Resolve the correct key + secret for this mode
     if (this.mode === 'live') {
       this.apiKey = process.env.TRADING212_LIVE_API_KEY || process.env.TRADING212_API_KEY || '';
+      this.apiSecret = process.env.TRADING212_LIVE_API_SECRET || process.env.TRADING212_API_SECRET || '';
       this.baseUrl = process.env.TRADING212_LIVE_BASE_URL || 'https://live.trading212.com/api/v0';
     } else if (this.mode === 'demo') {
       this.apiKey = process.env.TRADING212_DEMO_API_KEY || process.env.TRADING212_API_KEY || '';
+      this.apiSecret = process.env.TRADING212_DEMO_API_SECRET || process.env.TRADING212_API_SECRET || '';
       this.baseUrl = process.env.TRADING212_DEMO_BASE_URL || 'https://demo.trading212.com/api/v0';
     } else {
       this.apiKey = '';
+      this.apiSecret = '';
       this.baseUrl = process.env.TRADING212_DEMO_BASE_URL || 'https://demo.trading212.com/api/v0';
     }
 
@@ -117,7 +149,46 @@ export class Trading212Adapter implements IProviderAdapter {
   }
 
   private authHeaders(): Record<string, string> {
+    if (this.apiKey && this.apiSecret) {
+      return { Authorization: 'Basic ' + Buffer.from(`${this.apiKey}:${this.apiSecret}`).toString('base64') };
+    }
     return { Authorization: this.apiKey || '' };
+  }
+
+  /**
+   * Enforce per-endpoint rate limiting before making an outbound call.
+   * Uses the shared PROVIDER_RATE_LIMITS config for interval timing.
+   */
+  private async waitForRateLimit(endpointPath: string): Promise<void> {
+    const intervalMs = getEndpointInterval('trading212', endpointPath);
+    const lastCall = this.endpointLastCall.get(endpointPath) || 0;
+    const elapsed = Date.now() - lastCall;
+    if (elapsed < intervalMs) {
+      const waitMs = intervalMs - elapsed;
+      this.logger.debug(`T212 rate-limit wait: ${endpointPath} — ${waitMs}ms`);
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
+    this.endpointLastCall.set(endpointPath, Date.now());
+  }
+
+  /** Expose rate-limit state for monitoring endpoints. */
+  getRateLimitState(): {
+    tracker: ReturnType<RateLimitTracker['getState']>;
+    lastCalls: Record<string, { elapsedMs: number; intervalMs: number }>;
+  } {
+    const lastCalls: Record<string, { elapsedMs: number; intervalMs: number }> = {};
+    const now = Date.now();
+    for (const [endpoint, lastCall] of this.endpointLastCall) {
+      const intervalMs = getEndpointInterval('trading212', endpoint);
+      lastCalls[endpoint] = {
+        elapsedMs: now - lastCall,
+        intervalMs,
+      };
+    }
+    return {
+      tracker: this.rateTracker.getState(),
+      lastCalls,
+    };
   }
 
   // ── IProviderAdapter implementation ───────────────────────
@@ -125,6 +196,7 @@ export class Trading212Adapter implements IProviderAdapter {
   async getQuote(symbol: string): Promise<ProviderQuote | null> {
     if (!this.hasCredentials) return this.fallbackQuote(symbol);
     try {
+      await this.waitForRateLimit('quotes');
       const ticker = this.toT212Ticker(symbol);
       const res = await fetch(`${this.baseUrl}/equity/quotes/${ticker}`, {
         headers: this.authHeaders(),
@@ -155,6 +227,7 @@ export class Trading212Adapter implements IProviderAdapter {
   ): Promise<MarketBar[]> {
     if (!this.hasCredentials) return this.fallbackCandles(symbol, limit);
     try {
+      await this.waitForRateLimit('candles');
       const ticker = this.toT212Ticker(symbol);
       const payload = {
         candles: [
@@ -195,6 +268,7 @@ export class Trading212Adapter implements IProviderAdapter {
   async getProfile(symbol: string): Promise<ProviderProfile | null> {
     if (!this.hasCredentials) return this.fallbackProfile(symbol);
     try {
+      await this.waitForRateLimit('metadata/instruments');
       const ticker = this.toT212Ticker(symbol);
       const res = await fetch(
         `${this.baseUrl}/equity/metadata/instruments/${ticker}`,
@@ -223,6 +297,7 @@ export class Trading212Adapter implements IProviderAdapter {
       return false;
     }
     try {
+      await this.waitForRateLimit('account/cash');
       const res = await fetch(`${this.baseUrl}/equity/account/cash`, {
         headers: this.authHeaders(),
       });
@@ -243,6 +318,7 @@ export class Trading212Adapter implements IProviderAdapter {
       return [];
     }
     try {
+      await this.waitForRateLimit('portfolio');
       const res = await fetch(`${this.baseUrl}/equity/portfolio`, {
         headers: this.authHeaders(),
       });
@@ -265,10 +341,15 @@ export class Trading212Adapter implements IProviderAdapter {
       return null;
     }
     try {
+      await this.waitForRateLimit('account/cash');
       const res = await fetch(`${this.baseUrl}/equity/account/cash`, {
         headers: this.authHeaders(),
       });
-      if (!res.ok) return null;
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        this.logger.error(`Trading212 getAccountCash (${this.mode}): HTTP ${res.status} — ${body.substring(0, 200)}`);
+        return null;
+      }
       return await res.json();
     } catch (err) {
       this.logger.error(`Trading212 getAccountCash (${this.mode}) failed: ${(err as Error).message}`);
@@ -276,8 +357,161 @@ export class Trading212Adapter implements IProviderAdapter {
     }
   }
 
+  // ── Order Execution ──────────────────────────────────────
+
+  async placeMarketOrder(params: T212OrderRequest): Promise<T212OrderResult> {
+    if (!this.hasCredentials) {
+      return { success: false, error: 'No Trading212 credentials configured' };
+    }
+    try {
+      await this.waitForRateLimit('orders/market');
+      const ticker = this.toT212Ticker(params.ticker);
+      const res = await fetch(`${this.baseUrl}/equity/orders/market`, {
+        method: 'POST',
+        headers: { ...this.authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticker, quantity: params.quantity }),
+      });
+      const bodyText = await res.text();
+      let data: any;
+      try { data = JSON.parse(bodyText); } catch { data = bodyText; }
+
+      if (!res.ok) {
+        this.logger.error(`T212 placeMarketOrder (${this.mode}) ${params.side} ${params.ticker}: HTTP ${res.status} — ${bodyText.substring(0, 300)}`);
+        return {
+          success: false,
+          error: typeof data === 'string' ? data : (data?.detail || data?.title || `HTTP ${res.status}`),
+          errorCode: data?.code,
+          rawResponse: data,
+        };
+      }
+
+      this.logger.log(`T212 placeMarketOrder (${this.mode}) ${params.side} ${params.ticker} ×${params.quantity}: ${data?.id || 'filled'}`);
+      return {
+        success: true,
+        orderId: data?.id || data?.orderId,
+        filledQuantity: data?.filledQuantity || params.quantity,
+        filledPrice: data?.fillPrice || data?.price,
+        status: data?.status || 'filled',
+        rawResponse: data,
+      };
+    } catch (err) {
+      this.logger.error(`T212 placeMarketOrder (${this.mode}) failed: ${(err as Error).message}`);
+      return { success: false, error: (err as Error).message };
+    }
+  }
+
+  async placeLimitOrder(params: T212LimitOrderRequest): Promise<T212OrderResult> {
+    if (!this.hasCredentials) {
+      return { success: false, error: 'No Trading212 credentials configured' };
+    }
+    try {
+      await this.waitForRateLimit('orders/limit');
+      const ticker = this.toT212Ticker(params.ticker);
+      const res = await fetch(`${this.baseUrl}/equity/orders/limit`, {
+        method: 'POST',
+        headers: { ...this.authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticker, quantity: params.quantity, limitPrice: params.limitPrice }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        this.logger.error(`T212 placeLimitOrder (${this.mode}) ${params.side} ${params.ticker}: HTTP ${res.status}`);
+        return {
+          success: false,
+          error: data.message || data.code || `HTTP ${res.status}`,
+          errorCode: data.code,
+          rawResponse: data,
+        };
+      }
+      this.logger.log(`T212 placeLimitOrder (${this.mode}) ${params.side} ${params.ticker} ×${params.quantity} @${params.limitPrice}: ${data.id || 'placed'}`);
+      return {
+        success: true,
+        orderId: data.id || data.orderId,
+        filledQuantity: data.filledQuantity,
+        filledPrice: data.fillPrice || data.price,
+        status: data.status || 'pending',
+        rawResponse: data,
+      };
+    } catch (err) {
+      this.logger.error(`T212 placeLimitOrder (${this.mode}) failed: ${(err as Error).message}`);
+      return { success: false, error: (err as Error).message };
+    }
+  }
+
+  async cancelOrder(orderId: string): Promise<T212OrderResult> {
+    if (!this.hasCredentials) {
+      return { success: false, error: 'No Trading212 credentials configured' };
+    }
+    try {
+      await this.waitForRateLimit('orders');
+      const res = await fetch(`${this.baseUrl}/equity/orders/${orderId}`, {
+        method: 'DELETE',
+        headers: this.authHeaders(),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return {
+          success: false,
+          error: (data as any).message || `HTTP ${res.status}`,
+          rawResponse: data,
+        };
+      }
+      this.logger.log(`T212 cancelOrder (${this.mode}) ${orderId}: cancelled`);
+      return { success: true, orderId, status: 'cancelled' };
+    } catch (err) {
+      this.logger.error(`T212 cancelOrder (${this.mode}) failed: ${(err as Error).message}`);
+      return { success: false, error: (err as Error).message };
+    }
+  }
+
+  async getOrder(orderId: string): Promise<T212OrderResult> {
+    if (!this.hasCredentials) {
+      return { success: false, error: 'No Trading212 credentials configured' };
+    }
+    try {
+      await this.waitForRateLimit('orders');
+      const res = await fetch(`${this.baseUrl}/equity/orders/${orderId}`, {
+        headers: this.authHeaders(),
+      });
+      if (!res.ok) return { success: false, error: `HTTP ${res.status}` };
+      const data = await res.json();
+      return {
+        success: true,
+        orderId: data.id,
+        filledQuantity: data.filledQuantity || data.quantity,
+        filledPrice: data.fillPrice || data.limitPrice,
+        status: data.status,
+        rawResponse: data,
+      };
+    } catch (err) {
+      return { success: false, error: (err as Error).message };
+    }
+  }
+
+  async getOpenOrders(): Promise<T212OrderResult[]> {
+    if (!this.hasCredentials) return [];
+    try {
+      await this.waitForRateLimit('orders');
+      const res = await fetch(`${this.baseUrl}/equity/orders`, {
+        headers: this.authHeaders(),
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data.map((o: any) => ({
+        success: true,
+        orderId: o.id,
+        filledQuantity: o.filledQuantity || o.quantity,
+        filledPrice: o.fillPrice || o.limitPrice,
+        status: o.status,
+        rawResponse: o,
+      })) : [];
+    } catch (err) {
+      this.logger.error(`T212 getOpenOrders (${this.mode}) failed: ${(err as Error).message}`);
+      return [];
+    }
+  }
+
   getCapabilities(): string[] {
-    return ['quotes', 'candles', 'profiles', 'portfolio', 'account'];
+    return ['quotes', 'candles', 'profiles', 'portfolio', 'account', 'orders'];
   }
 
   // ── helpers ───────────────────────────────────────────────

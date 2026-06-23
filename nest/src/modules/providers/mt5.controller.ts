@@ -7,6 +7,7 @@ import { Mt5Adapter } from './adapters/mt5.adapter';
 @Controller('providers/mt5')
 export class Mt5Controller {
   private readonly logger = new Logger(Mt5Controller.name);
+  private readonly BRIDGE_URL = process.env.MT5_BRIDGE_URL || 'http://localhost:5000';
 
   constructor(private readonly adapterFactory: AdapterFactory) {}
 
@@ -32,7 +33,7 @@ export class Mt5Controller {
     let bridgeError = '';
     let healthData: any = null;
     try {
-      const res = await fetch('http://localhost:5000/health', { signal: AbortSignal.timeout(3000) });
+      const res = await fetch(`${this.BRIDGE_URL}/health`, { signal: AbortSignal.timeout(3000) });
       if (res.ok) {
         bridgeReachable = true;
         healthData = await res.json();
@@ -54,7 +55,7 @@ export class Mt5Controller {
     return {
       connected: healthOk,
       bridgeRunning: bridgeReachable,
-      bridgeError: bridgeReachable ? null : (bridgeError || 'Bridge not reachable on localhost:5000'),
+      bridgeError: bridgeReachable ? null : (bridgeError || `Bridge not reachable on ${this.BRIDGE_URL}`),
       bridgeHealth: healthData,
       adapterName: adapter.name,
       circuitBreakerTripped: (adapter as any).tripped === true,
@@ -110,7 +111,7 @@ export class Mt5Controller {
   @ApiOkResponse({ description: 'Refresh results with symbol status' })
   async refreshData() {
     try {
-      const res = await fetch('http://localhost:5000/refresh', {
+      const res = await fetch(`${this.BRIDGE_URL}/refresh`, {
         method: 'POST',
         signal: AbortSignal.timeout(15000),
       });
@@ -128,7 +129,7 @@ export class Mt5Controller {
   @ApiOkResponse({ description: 'Reconnection result' })
   async reconnect() {
     try {
-      const res = await fetch('http://localhost:5000/reconnect', {
+      const res = await fetch(`${this.BRIDGE_URL}/reconnect`, {
         method: 'POST',
         signal: AbortSignal.timeout(15000),
       });
@@ -146,7 +147,7 @@ export class Mt5Controller {
   @ApiOperation({ summary: 'List configured MT5 accounts' })
   async getAccounts() {
     try {
-      const res = await fetch('http://localhost:5000/accounts', { signal: AbortSignal.timeout(5000) });
+      const res = await fetch(`${this.BRIDGE_URL}/accounts`, { signal: AbortSignal.timeout(5000) });
       if (!res.ok) return { accounts: [], error: `Bridge returned HTTP ${res.status}` };
       return await res.json();
     } catch (err: any) {
@@ -158,7 +159,7 @@ export class Mt5Controller {
   @ApiOperation({ summary: 'Switch MT5 to a different account' })
   async switchAccount(@Param('accountNum') accountNum: string) {
     try {
-      const res = await fetch(`http://localhost:5000/switch/${accountNum}`, {
+      const res = await fetch(`${this.BRIDGE_URL}/switch/${accountNum}`, {
         method: 'POST',
         signal: AbortSignal.timeout(15000),
       });
@@ -177,7 +178,7 @@ export class Mt5Controller {
   @Get('positions')
   async getPositions() {
     try {
-      const res = await fetch('http://localhost:5000/positions', { signal: AbortSignal.timeout(10000) });
+      const res = await fetch(`${this.BRIDGE_URL}/positions`, { signal: AbortSignal.timeout(10000) });
       if (!res.ok) return { positions: [], error: `Bridge HTTP ${res.status}` };
       return await res.json();
     } catch (err: any) {
@@ -188,7 +189,7 @@ export class Mt5Controller {
   @Post('order')
   async placeOrder(@Body() body: { symbol: string; type: string; volume: number; price?: number; sl?: number; tp?: number }) {
     try {
-      const res = await fetch('http://localhost:5000/order', {
+      const res = await fetch(`${this.BRIDGE_URL}/order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -207,7 +208,7 @@ export class Mt5Controller {
   @Post('close/:ticket')
   async closePosition(@Param('ticket') ticket: string) {
     try {
-      const res = await fetch(`http://localhost:5000/close/${ticket}`, {
+      const res = await fetch(`${this.BRIDGE_URL}/close/${ticket}`, {
         method: 'POST',
         signal: AbortSignal.timeout(15000),
       });
@@ -224,7 +225,7 @@ export class Mt5Controller {
   @Get('history')
   async getHistory() {
     try {
-      const res = await fetch('http://localhost:5000/history', { signal: AbortSignal.timeout(10000) });
+      const res = await fetch(`${this.BRIDGE_URL}/history`, { signal: AbortSignal.timeout(10000) });
       if (!res.ok) return { orders: [], error: `Bridge HTTP ${res.status}` };
       return await res.json();
     } catch (err: any) {

@@ -65,7 +65,7 @@ export class ProvidersModule implements OnModuleInit {
     this.adapterFactory.register('mt5', Mt5Adapter, {
       name: 'MetaTrader 5',
       apiKeyEnv: 'MT5_ACCOUNT',
-      baseUrl: process.env.MT5_BRIDGE_URL || 'http://localhost:5000',
+      baseUrl: process.env.MT5_BRIDGE_URL || 'http://localhost:5001',
       capabilities: ['quotes', 'candles'],
       failoverPriority: 40,
     });

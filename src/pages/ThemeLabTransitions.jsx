@@ -2,7 +2,7 @@ export default function ThemeLabTransitions() {
   return (
     <div className="tl-page">
       <header className="tl-header">
-        <h1>View Transitions API</h1>
+        <h1>Transitions Lab</h1>
         <p className="tl-subtitle">
           Native browser page-to-page crossfade. Enabled globally via <code>&lt;meta name="view-transition" content="same-origin" /&gt;</code>.
           <br /><strong>Status: ✅ Accepted</strong> — active on every page. No JS needed.
@@ -36,10 +36,25 @@ export default function ThemeLabTransitions() {
       </section>
 
       <section className="tl-section">
+        <h2>Real-World Usage</h2>
+        <p className="tl-subtitle">The View Transitions API is enabled globally in the Trading Command Suite. Every page-to-page navigation — sidebar clicks, quick menu jumps, breadcrumb links — triggers a smooth 200ms crossfade automatically. No per-page code required.</p>
+        <div className="tl-demo-card" style={{ padding: '1rem', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--line)', borderRadius: 10 }}>
+          <h3 style={{ fontSize: '0.85rem', marginBottom: '0.4rem' }}>Where It's Active</h3>
+          <ul style={{ fontSize: '0.78rem', color: 'var(--ink-soft)', margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            <li>All 12 top-level areas (Trading → Settings)</li>
+            <li>100+ view-to-view navigations</li>
+            <li>Quick menu header jumps</li>
+            <li>Footer area links</li>
+            <li>External links open without transition (same-origin only)</li>
+          </ul>
+        </div>
+      </section>
+
+      <section className="tl-section">
         <h2>Test It</h2>
         <p className="tl-subtitle">Click any sidebar item or quick-menu button. Notice the crossfade between pages. The effect is automatic — every route change triggers it.</p>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {['analysis/support-resistance', 'research/news-intel', 'trading/portfolio-overview', 'builder/theme-lab'].map((path) => (
+          {['analysis/support-resistance', 'research/news-intel', 'trading/portfolio-overview', 'lab/theme-lab'].map((path) => (
             <a key={path} href={`/${path}`} style={{ padding: '0.4rem 0.75rem', fontSize: '0.78rem', background: 'rgba(14,165,166,0.12)', border: '1px solid var(--accent)', borderRadius: 6, color: 'var(--accent)', textDecoration: 'none' }}>
               /{path}
             </a>
@@ -54,7 +69,7 @@ export default function ThemeLabTransitions() {
             { b: 'Chrome 111+', ok: true },
             { b: 'Edge 111+', ok: true },
             { b: 'Safari 18+', ok: true },
-            { b: 'Firefox', ok: false, note: 'In development' },
+            { b: 'Firefox 130+', ok: true },
           ].map((b) => (
             <div key={b.b} style={{ padding: '0.5rem 0.65rem', background: 'rgba(0,0,0,0.1)', border: `1px solid ${b.ok ? '#22c55e44' : '#f59e0b44'}`, borderRadius: 8, fontSize: '0.78rem' }}>
               <span style={{ color: b.ok ? '#22c55e' : '#f59e0b' }}>{b.ok ? '✅' : '⚠️'}</span> {b.b}

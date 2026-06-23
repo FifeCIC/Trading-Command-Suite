@@ -49,6 +49,15 @@ export class SessionOpenEffectDirective implements IDirective {
   readonly maxScore = 100;
   readonly version = '1.0.0';
 
+  // ── Time-gate: only active during US market hours (Mon–Fri) ──
+  // Reference implementation for Q291 — timeframe-aware directive config.
+  readonly activeWindow = {
+    start: '09:00',
+    end: '16:30',
+    timezone: 'America/New_York',
+    daysOfWeek: [1, 2, 3, 4, 5],  // Mon–Fri
+  };
+
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
     if (bars.length < MIN_BARS) {

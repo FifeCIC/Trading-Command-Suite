@@ -5,7 +5,7 @@ export default function ThemeLabContainer() {
         <h1>Container Queries</h1>
         <p className="tl-subtitle">
           Components that respond to their <strong>own size</strong>, not the viewport. Ideal for DetachableWidgets.
-          <br /><strong>Status: 🧪 Experimental</strong> — test on target browsers before promoting.
+          <br /><strong>Status: ✅ Accepted</strong> — promoted 2026-06-22. Universally supported (Chrome 105+, Edge 105+, Safari 16+, Firefox 110+). Use with <code>@supports (container-type: inline-size)</code> fallback to viewport media queries for older browsers.
         </p>
       </header>
 
@@ -73,8 +73,47 @@ export default function ThemeLabContainer() {
 }
 @container widget-grid (min-width: 601px) {
   .widget-card { grid-template-columns: 1fr 1fr 1fr; font-size: 0.85rem; }
+}
+
+/* 3. Graceful fallback for older browsers */
+@supports not (container-type: inline-size) {
+  .widget-card { grid-template-columns: 1fr; }
+  @media (min-width: 601px) {
+    .widget-card { grid-template-columns: 1fr 1fr; }
+  }
 }`}
         </pre>
+      </section>
+
+      <section className="tl-section">
+        <h2>Promotion Notes</h2>
+        <div className="tl-demo-card" style={{ padding: '1rem', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--line)', borderRadius: 10 }}>
+          <h3 style={{ fontSize: '0.85rem', marginBottom: '0.4rem' }}>✅ Promoted 2026-06-22</h3>
+          <ul style={{ fontSize: '0.78rem', color: 'var(--ink-soft)', margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            <li>All target browsers support Container Queries natively (Chrome 105+, Edge 105+, Safari 16+, Firefox 110+)</li>
+            <li>Mobile Safari (iOS 16+) and Chrome Android fully supported</li>
+            <li><code>@supports (container-type: inline-size)</code> provides clean fallback to viewport MQs for older browsers</li>
+            <li>Recommended for: DetachableWidget layouts, dashboard card grids, responsive sidebar panels</li>
+          </ul>
+        </div>
+      </section>
+
+      <section className="tl-section">
+        <h2>Browser Support</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.5rem' }}>
+          {[
+            { b: 'Chrome 105+', ok: true },
+            { b: 'Edge 105+', ok: true },
+            { b: 'Safari 16+', ok: true },
+            { b: 'Firefox 110+', ok: true },
+            { b: 'iOS Safari 16+', ok: true },
+            { b: 'Chrome Android', ok: true },
+          ].map((b) => (
+            <div key={b.b} style={{ padding: '0.5rem 0.65rem', background: 'rgba(0,0,0,0.1)', border: `1px solid ${b.ok ? '#22c55e44' : '#f59e0b44'}`, borderRadius: 8, fontSize: '0.78rem' }}>
+              <span style={{ color: b.ok ? '#22c55e' : '#f59e0b' }}>{b.ok ? '✅' : '⚠️'}</span> {b.b}
+            </div>
+          ))}
+        </div>
       </section>
     </div>
   );

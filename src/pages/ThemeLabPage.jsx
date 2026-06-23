@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import './theme-lab.css';
 
 const LAB_SECTIONS = [
-  { id: 'theme-lab-motion', label: 'Motion', desc: 'Animation library examples — enter/exit, hover, layout, gestures', icon: '◆' },
-  { id: 'theme-lab-transitions', label: 'View Transitions', desc: 'Page-to-page crossfade via View Transitions API', icon: '⇢' },
-  { id: 'theme-lab-container', label: 'Container Queries', desc: 'Responsive components based on their own size, not viewport', icon: '⊡' },
+  { id: 'theme-lab-motion', label: 'Motion Lab', desc: 'Animation library examples — enter/exit, hover, layout, gestures', icon: '◆' },
+  { id: 'theme-lab-transitions', label: 'Transitions Lab', desc: 'Page-to-page crossfade via View Transitions API', icon: '⇢' },
   { id: 'theme-lab-scroll', label: 'Scroll Animations', desc: 'Scroll-driven effects — parallax, reveal, header shrink', icon: '⇣' },
-  { id: 'theme-lab-popover', label: 'Popover API', desc: 'Native browser popovers — tooltips, menus, dialogs', icon: '◉' },
+  { id: 'theme-lab-container', label: 'Container Queries', desc: 'Responsive components based on their own size, not viewport. In Development area.', icon: '⊡' },
+  { id: 'theme-lab-popover', label: 'Popover API', desc: 'Native browser popovers — tooltips, menus, dialogs. In Development area.', icon: '◉' },
 ];
 
 // ── Shade presets from the task spec ────────────────────────
@@ -65,7 +65,7 @@ export default function ThemeLabPage() {
               key={s.id}
               type="button"
               className="tl-lab-card"
-              onClick={() => navigate(`/status/${s.id}`)}
+              onClick={() => navigate(s.id === 'theme-lab-container' || s.id === 'theme-lab-popover' ? `/builder/${s.id}` : `/lab/${s.id}`)}
             >
               <span className="tl-lab-icon">{s.icon}</span>
               <div className="tl-lab-info">

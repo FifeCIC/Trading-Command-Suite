@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import OrderModal from '../components/OrderModal';
 
 // ── Available data sources ──────────────────────────────────
 const PLATFORMS = [
@@ -72,6 +73,17 @@ function UnavailableNotice({ reason, source, onRefresh }) {
 // ── Main Page ───────────────────────────────────────────────
 export default function PortfolioPage() {
   const [source, setSource] = useState('trading212');
+  const [sellPosition, setSellPosition] = useState(null);
+  const [adapterMode, setAdapterMode] = useState('demo');
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [refreshCooldown, setRefreshCooldown] = useState(0);
+
+  // Cooldown countdown timer
+  useEffect(() => {
+    if (refreshCooldown <= 0) return;
+    const t = setTimeout(() => setRefreshCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [refreshCooldown]);
 
   const portfolioQuery = useQuery({
     queryKey: ['portfolio', source],
@@ -81,10 +93,11 @@ export default function PortfolioPage() {
       }
       const url = source === 'all' ? '/api/portfolio/holdings?source=all' : `/api/portfolio?source=${source}`;
       const data = await apiGet(url);
+      setLastUpdated(new Date());
       return data || { unavailable: 'no_connection' };
     },
-    staleTime: 30_000,
-    refetchInterval: 300_000,
+    staleTime: Infinity,
+    refetchInterval: false,
   });
 
   const scoresQuery = useQuery({
@@ -101,6 +114,21 @@ export default function PortfolioPage() {
   const positions = data?.positions || [];
   const account = data?.account;
   const error = data?.error;
+
+  const timeSinceUpdate = lastUpdated
+    ? Math.round((Date.now() - lastUpdated.getTime()) / 1000)
+    : null;
+  const timeAgo = timeSinceUpdate === null ? 'never'
+    : timeSinceUpdate < 60 ? `${timeSinceUpdate}s ago`
+    : timeSinceUpdate < 3600 ? `${Math.round(timeSinceUpdate / 60)}m ago`
+    : `${Math.round(timeSinceUpdate / 3600)}h ago`;
+
+  const handleRefresh = () => {
+    if (refreshCooldown > 0) return;
+    portfolioQuery.refetch();
+    scoresQuery.refetch();
+    setRefreshCooldown(6); // 6s cooldown to respect rate limits
+  };
 
   // Still loading
   if (portfolioQuery.isLoading) {
@@ -160,7 +188,7 @@ export default function PortfolioPage() {
       <div className="pf-header">
         <div>
           <h1>Portfolio</h1>
-          {summary?.lastRefreshed && <span className="pf-refreshed">Updated: {new Date(summary.lastRefreshed).toLocaleTimeString()}</span>}
+          {summary?.lastRefreshed && <span className="pf-refreshed">Updated: {timeAgo}</span>}
         </div>
         <div className="pf-header-actions">
           <select className="pf-source-select" value={source} onChange={(e) => setSource(e.target.value)}>
@@ -168,8 +196,12 @@ export default function PortfolioPage() {
               <option key={p.id} value={p.id}>{p.label}</option>
             ))}
           </select>
-          <button className="pf-refresh-btn" onClick={() => portfolioQuery.refetch()} disabled={portfolioQuery.isFetching}>
-            {portfolioQuery.isFetching ? '⟳' : '↻'} Refresh
+          <button
+            className="pf-refresh-btn"
+            onClick={handleRefresh}
+            disabled={portfolioQuery.isFetching || refreshCooldown > 0}
+          >
+            {portfolioQuery.isFetching ? '⟳' : refreshCooldown > 0 ? `${refreshCooldown}s` : '↻'} Refresh
           </button>
         </div>
       </div>
@@ -203,11 +235,12 @@ export default function PortfolioPage() {
         <h2>Positions</h2>
         <table className="pf-table">
           <thead>
-            <tr><th>Symbol</th><th>Shares</th><th>Avg Cost</th><th>Price</th><th>Value</th><th>P&amp;L</th><th>%</th><th>Signal</th><th></th></tr>
+            <tr><th>Symbol</th><th>Shares</th><th>Avg Cost</th><th>Price</th><th>Value</th><th>P&amp;L</th><th>%</th><th>Data</th><th></th></tr>
           </thead>
           <tbody>
             {positions.map((p) => {
               const s = (scoresQuery.data || []).find((sc) => sc.symbol === p.symbol);
+              const dataStatus = s?.dataStatus || 'untracked';
               return (
               <tr key={p.symbol}>
                 <td><strong>{p.symbol}</strong></td>
@@ -217,26 +250,26 @@ export default function PortfolioPage() {
                 <td>${(p.value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td className={(p.pnl || 0) >= 0 ? 'pf-green' : 'pf-red'}>{(p.pnl || 0) >= 0 ? '+' : ''}${Math.abs(p.pnl || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td className={(p.pnlPct || 0) >= 0 ? 'pf-green' : 'pf-red'}>{(p.pnlPct || 0) >= 0 ? '+' : ''}{(p.pnlPct || 0).toFixed(1)}%</td>
-                <td>{s ? <span className={`pf-sig pf-sig-${s.signal}`}>{s.signal.toUpperCase()}</span> : '—'}</td>
-                <td><a href="/trading/mt5-trading" className="pf-action-btn" title="Trade this symbol">↗</a></td>
+                <td>
+                  <span className={`pf-data-status pf-ds-${dataStatus}`} title={dataStatus === 'live' ? 'Live market data flowing' : dataStatus === 'stale' ? 'Market data is stale' : 'No market data available'}>
+                    {dataStatus === 'live' ? 'Live' : dataStatus === 'stale' ? 'Stale' : 'No Data'}
+                  </span>
+                </td>
+                <td>
+                  <button
+                    className="pf-sell-btn"
+                    onClick={() => {
+                      setAdapterMode(summary?.mode === 'mock' ? 'demo' : (summary?.mode || 'demo'));
+                      setSellPosition(p);
+                    }}
+                  >
+                    Sell...
+                  </button>
+                </td>
               </tr>
             )})}
           </tbody>
         </table>
-      </div>
-
-      <div className="pf-section">
-        <h2>Trade Suggestions</h2>
-        <p className="pf-hint">Based on current scores and averaging policy.</p>
-        {positions.filter((p) => p.currentPrice < p.avgCost).map((p) => (
-          <div key={p.symbol} className="pf-suggestion">
-            <strong>{p.symbol}</strong> — {((1 - p.currentPrice / p.avgCost) * 100).toFixed(1)}% below entry.
-            Consider averaging if conviction remains high and support levels are near.
-          </div>
-        ))}
-        {positions.filter((p) => p.currentPrice < p.avgCost).length === 0 && (
-          <p className="pf-hint">No positions below entry. No averaging suggestions.</p>
-        )}
       </div>
 
       {account && (
@@ -248,7 +281,24 @@ export default function PortfolioPage() {
             <div><span>Blocked</span><strong>${account.blocked?.toLocaleString() ?? '—'}</strong></div>
             <div><span>Result</span><strong>${account.result?.toLocaleString() ?? '—'}</strong></div>
           </div>
+          <p className="pf-hint">Account details from Trading212.</p>
         </div>
+      )}
+
+      {/* ── Order Modal ────────────────────────────────── */}
+      {sellPosition && (
+        <OrderModal
+          position={sellPosition}
+          accountCash={summary?.cash || 0}
+          mode="sell"
+          adapterMode={adapterMode}
+          onClose={() => setSellPosition(null)}
+          onComplete={(result) => {
+            if (result?.success) {
+              portfolioQuery.refetch();
+            }
+          }}
+        />
       )}
     </div>
   );

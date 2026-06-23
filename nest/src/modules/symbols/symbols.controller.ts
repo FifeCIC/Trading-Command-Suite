@@ -80,4 +80,18 @@ export class SymbolsController {
     const symbol = await this.symbolsService.setActive(id, value);
     return { ...this.modeMeta(), symbol };
   }
+
+  @Get(':ticker/overview')
+  @ApiOperation({ summary: 'Get aggregated symbol overview (price, positions, freshness)' })
+  async getOverview(@Param('ticker') ticker: string) {
+    const overview = await this.symbolsService.getOverview(ticker);
+    return { ...this.modeMeta(), ...overview };
+  }
+
+  @Get(':ticker/protocols')
+  @ApiOperation({ summary: 'Get cross-protocol scores for a symbol' })
+  async getProtocols(@Param('ticker') ticker: string) {
+    const data = await this.symbolsService.getProtocols(ticker);
+    return { ...this.modeMeta(), ...data };
+  }
 }

@@ -29,7 +29,7 @@ export interface Mt5BridgeHealth {
   connectionErrors: number;
 }
 
-const BRIDGE_URL = process.env.MT5_BRIDGE_URL || 'http://localhost:5000';
+const BRIDGE_URL = process.env.MT5_BRIDGE_URL || 'http://localhost:5001';
 
 @Injectable()
 export class Mt5ConnectionManager {

@@ -127,3 +127,53 @@ Escalate to user immediately if:
 - #35 — Weekend Defense Workflow
 - #38 — Real Alert Triggers
 - #39 — Market Calendar Service (holidays, DST, early close)
+- #41 — IANA Timezone Migration (replace all hardcoded UTC offsets)
+
+## Design Boundaries — Agent Prompt vs Automated Gates
+
+This prompt is an **agent-facing knowledge document**. It does NOT implement any automated scoring, gating, or execution rules. It exists to give the trading agent (human or AI) the context needed to make informed decisions quickly.
+
+### What This Prompt IS
+- A decision framework for day-of-week context
+- Quick reference rules (Wednesday swap, Friday defense, Monday gap-fill)
+- Data-loading instructions for session-specific checks
+
+### What This Prompt IS NOT
+- A scoring directive (does not produce scores)
+- An execution gate (does not block trades)
+- A replacement for automated time-based gating
+
+### Automated Counterparts (Separate Layer)
+
+These systems handle the AUTOMATED side of the same concerns. They are in the NestJS scoring/execution pipeline, not the agent layer:
+
+| Automated System | File | What It Does |
+|-----------------|------|--------------|
+| `SessionTimingFilterDirective` | `nest/.../session-timing-filter.directive.ts` | Multiplies scores by session quality (0-1.0). Weekend → score 0. Fri/Mon → 0.7× |
+| `SessionOpenEffectDirective` | `nest/.../session-open-effect.directive.ts` | Directional bias ±30min around session opens. Monday gap-fill, Friday profit-taking |
+| `TradingGatesService` | `nest/.../trading-gates.service.ts` | Hard execution gate — blocks trades outside 09:30-16:00 ET (UTC-4, no DST) |
+| `BudgetGateDirective` | `nest/.../budget-gate.directive.ts` | Signal budget — gates new entries when volatile-bar budget exhausted |
+
+### Future Automated Counterpart (Designed, Not Built)
+
+| IANA Timezone Directive Gating | `.github/prompts/iana-timezone-directives.prompt.md` | IANA timezone-aware directive gating with `activeWindow` (TimeWindow with timezone string, daysOfWeek) and `timeModifiers` (score adjustments by time). Replaces all hardcoded UTC offsets. Tracked in issue #41. |
+
+### Non-Overlap Guarantee
+
+These two layers are **complementary by design**:
+
+```
+AGENT LAYER (this prompt)          AUTOMATED LAYER (NestJS)
+─────────────────────────          ───────────────────────
+"Friday PM → check swap"           SessionTimingFilter: Fri late = 0.7× score
+"Wednesday → triple swap risk"     TradingGatesService: blocks outside 09:30-16:00 ET
+"Monday → gap-fill probability"    SessionOpenEffect: gap-fill bias at Mon open
+"Market closed → no trading"       SessionTimingFilter: weekend → score 0
+```
+
+The agent prompt tells you **what to think about**. The automated gates **enforce the rules**. They can coexist because they operate at different layers. The prompt never overrides automated scores — it provides the context for interpreting them.
+
+### When Automated Gates Exist
+
+If a concern is already handled by an automated gate (e.g., `TradingGatesService` already blocks trades outside market hours), the prompt **delegates** to that gate rather than re-checking. The prompt only asks the agent to manually check what is NOT yet automated.
+

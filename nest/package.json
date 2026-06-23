@@ -8,7 +8,8 @@
   "prisma": {
     "seed": "ts-node prisma/seed.ts",
     "seed:market-data": "ts-node prisma/seed-market-data.ts",
-    "seed:faq": "ts-node prisma/seed-faq.ts"
+    "seed:faq": "ts-node prisma/seed-faq.ts",
+    "seed:strategies": "ts-node prisma/seed-strategies.ts"
   },
   "scripts": {
     "prebuild": "npx rimraf dist",

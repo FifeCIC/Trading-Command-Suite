@@ -71,6 +71,42 @@ const demos = [
       );
     },
   },
+  {
+    title: 'Real-World: Accordion Chevron',
+    code: '<motion.span animate={{ rotate: open ? 90 : 0 }} transition={{ duration: 0.2 }}>',
+    render: (key) => {
+      const [open, setOpen] = useState(false);
+      return (
+        <div key={key}>
+          <button onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', color: 'var(--ink)', cursor: 'pointer', fontSize: '0.82rem', padding: '0.4rem 0' }}>
+            <motion.span
+              animate={{ rotate: open ? 90 : 0 }}
+              transition={{ duration: 0.2 }}
+              style={{ display: 'inline-block', fontSize: '0.75rem' }}
+            >
+              ▸
+            </motion.span>
+            {open ? '▾' : '▸'} Section Title
+          </button>
+          <AnimatePresence>
+            {open && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                style={{ overflow: 'hidden', paddingLeft: '1.2rem' }}
+              >
+                <p style={{ margin: '0.4rem 0', fontSize: '0.78rem', color: 'var(--ink-soft)', padding: '0.5rem', background: 'var(--panel)', borderRadius: 6, border: '1px solid var(--line)' }}>
+                  This accordion pattern is used across the Architecture Framework page and Settings panels.
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      );
+    },
+  },
 ];
 
 export default function ThemeLabMotion() {
@@ -78,7 +114,7 @@ export default function ThemeLabMotion() {
   return (
     <div className="tl-page">
       <header className="tl-header">
-        <h1>Motion</h1>
+        <h1>Motion Lab</h1>
         <p className="tl-subtitle">
           <a href="https://motion.dev" target="_blank" rel="noreferrer">motion.dev</a> — 3.5KB animation library. Fade, slide, scale, stagger, AnimatePresence.
           <br /><strong>Status: ✅ Accepted</strong> for micro-interactions. Keep under 300ms, prefer GPU-friendly properties.

@@ -1,0 +1,129 @@
+/* ── Data Freshness Card (sidebar) ──────────────────────── */
+.df-card {
+  padding: 0.5rem 0.7rem;
+  margin: 0.4rem 0;
+  border-top: 1px solid var(--line, #1e2a45);
+  font-size: 0.7rem;
+}
+
+.df-title {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft, #94a3b8);
+  margin-bottom: 0.35rem;
+}
+
+.df-loading {
+  font-size: 0.68rem;
+  color: var(--ink-soft, #94a3b8);
+  font-style: italic;
+}
+
+.df-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.df-source {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  padding: 0.15rem 0.25rem;
+  border-radius: 4px;
+}
+
+.df-source:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.df-dot {
+  font-size: 0.5rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.df-dot-live { color: #22c55e; }
+.df-dot-off { color: var(--ink-soft, #94a3b8); }
+.df-dot-none { color: #f59e0b; }
+
+.df-summary-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  background: #22c55e;
+  flex-shrink: 0;
+}
+
+.df-summary-dot.df-dot-none { background: #f59e0b; }
+
+.df-source-label {
+  color: var(--ink, #e2e8f0);
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.df-source-detail {
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.6rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+/* ── Rate Limit Detail ─────────────────────────────────── */
+.df-rl-section {
+  margin-top: 0.5rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border-color, #2a2d3e);
+}
+
+.df-rl-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft, #94a3b8);
+  margin-bottom: 0.25rem;
+}
+
+.df-rl-endpoints {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.df-rl-ep {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.65rem;
+}
+
+.df-rl-dot {
+  font-size: 0.45rem;
+  flex-shrink: 0;
+}
+
+.df-rl-ep-label {
+  color: var(--text-primary, #ccc);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.df-rl-ep-time {
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.6rem;
+  flex-shrink: 0;
+}

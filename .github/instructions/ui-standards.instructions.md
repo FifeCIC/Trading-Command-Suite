@@ -16,6 +16,7 @@
 | **CSS Nesting** | Use sparingly for deep selectors. Native CSS nesting is supported. |
 | **CSS Animations / Transitions** | Keep under 300ms. Prefer `opacity` and `transform` for GPU acceleration. |
 | **SVG inline charts** | Simple visualizations. Keep under 100 nodes for performance. |
+| **Container Queries** | ✅ Accepted. Use for widget/dashboard layouts, DetachableWidget, sidebar panels. Apply `@container` with `container-type: inline-size`. Fallback: viewport media queries via `@supports not (container-type: inline-size)`. |
 | **`motion` (Motion One)** | Accepted. Use for micro-interactions only: hover states, enter/exit, list reorder. Avoid layout animations on data-heavy pages. |
 | **React Hooks** | `useState`, `useMemo`, `useCallback`, `useRef`, `useEffect` — standard. |
 | **Zustand stores** | Global state. `useUiStore` for theme/prefs, new stores for feature state. |
@@ -25,7 +26,6 @@
 
 | Technology | Lab page | Criteria for promotion |
 |---|---|---|
-| **Container Queries** | `/lab/theme-lab-container` | Verify no layout break on supported browsers. Fallback OK. |
 | **Scroll-Driven Animations** | `/lab/theme-lab-scroll` | Chrome/Edge only. Must degrade gracefully on Firefox/Safari. |
 | **Popover API** | `/lab/theme-lab-popover` | Must not break on unsupported browsers. Polyfill or fallback required. |
 | **Intensive Motion animations** | `/lab/theme-lab-motion` | Keep CPU budget under 5ms per frame. Test on mobile. |

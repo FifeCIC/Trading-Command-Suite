@@ -996,8 +996,24 @@ button.nav-active {
 .pf-sig-sell { background: #3a1b1b; color: #f85149; }
 .pf-sig-hold { background: #1b2a3a; color: #79c0ff; }
 .pf-sig-no_data { background: transparent; color: var(--ink-soft); }
+.pf-data-status { font-size: 0.75rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 3px; white-space: nowrap; }
+.pf-ds-live { background: color-mix(in srgb, #00a63e 15%, transparent); color: #3fb950; border: 1px solid color-mix(in srgb, #00a63e 30%, transparent); }
+.pf-ds-stale { background: color-mix(in srgb, #d97706 15%, transparent); color: #f0a030; border: 1px solid color-mix(in srgb, #d97706 30%, transparent); }
+.pf-ds-no_data, .pf-ds-untracked { background: color-mix(in srgb, #6b7280 12%, transparent); color: var(--ink-soft); border: 1px solid color-mix(in srgb, #6b7280 20%, transparent); }
 .pf-action-btn { text-decoration: none; font-size: 0.85rem; color: var(--ink-soft); padding: 0 0.3rem; }
 .pf-action-btn:hover { color: var(--accent); }
+.pf-sell-btn {
+  background: color-mix(in srgb, #ff4757 15%, transparent);
+  color: #ff6b7a;
+  border: 1px solid color-mix(in srgb, #ff4757 30%, transparent);
+  padding: 0.25rem 0.65rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+.pf-sell-btn:hover { background: color-mix(in srgb, #ff4757 25%, transparent); }
 .pf-mode-badge { font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 4px; letter-spacing: 0.05em; }
 .pf-mode-live { background: color-mix(in srgb, #dc2626 15%, transparent); color: #dc2626; border: 1px solid color-mix(in srgb, #dc2626 30%, transparent); }
 .pf-mode-demo { background: color-mix(in srgb, #d97706 15%, transparent); color: #d97706; border: 1px solid color-mix(in srgb, #d97706 30%, transparent); }

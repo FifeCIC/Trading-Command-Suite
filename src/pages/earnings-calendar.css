@@ -61,3 +61,24 @@
 .ec-surp-neg { background: rgba(239,68,68,0.15); color: #ef4444; }
 
 @media (max-width: 600px) { .ec-table { font-size: 0.72rem; } .ec-table th, .ec-table td { padding: 0.3rem 0.4rem; } }
+
+/* ── States ──────────────────────────────────────────────── */
+.ec-loading {
+  text-align: center; padding: 3rem 1rem; color: var(--ink-soft, #94a3b8);
+  font-size: 0.92rem;
+}
+.ec-error {
+  text-align: center; padding: 3rem 1rem; color: #ef4444;
+  background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px;
+  margin-top: 1rem;
+}
+.ec-error-detail { font-size: 0.78rem; color: var(--ink-soft, #94a3b8); margin-top: 0.3rem; }
+.ec-empty {
+  text-align: center; padding: 3rem 1rem; color: var(--ink-soft, #94a3b8);
+  border: 1px dashed var(--line, #1e2a45); border-radius: 8px;
+  margin-top: 1rem;
+}
+.ec-empty-hint { font-size: 0.78rem; margin-top: 0.3rem; }
+.ec-time-na { background: rgba(148,163,184,0.1); color: var(--ink-soft, #94a3b8); }
+.ec-source { font-weight: 400; font-size: 0.72rem; opacity: 0.7; }
+.ec-time-badge { font-size: 0.62rem; font-weight: 600; padding: 0.1rem 0.4rem; border-radius: 999px; }

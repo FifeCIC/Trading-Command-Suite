@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Trading212Adapter, Trading212Position, Trading212AccountCash } from '../providers/adapters/trading212.adapter';
 import { ScoringService } from '../scoring/scoring.service';
+import { PrismaService } from '../../database/prisma.service';
 
 export interface PortfolioSummary {
   totalValue: number;
@@ -39,6 +40,7 @@ export class PortfolioService {
   constructor(
     private readonly t212: Trading212Adapter,
     private readonly scoringService: ScoringService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async getPortfolio(source = 'trading212'): Promise<PortfolioResponse> {
@@ -69,6 +71,11 @@ export class PortfolioService {
         initialFillDate: p.initialFillDate,
       };
     });
+
+    // Auto-register portfolio symbols in the database so they get scored
+    if (positions.length > 0) {
+      await this.ensureSymbolsExist(positions);
+    }
 
     // Compute allocations
     const totalValue = positions.reduce((s, pos) => s + pos.value, 0);
@@ -106,18 +113,18 @@ export class PortfolioService {
    * Integrates with ScoringService for real directive-based scores.
    */
   async getPortfolioScores(): Promise<Array<{
-    symbol: string; ticker: string; score: number | null; signal: string; strength: string;
+    symbol: string; ticker: string; score: number | null; signal: string; strength: string; dataStatus: string;
   }>> {
     const { positions } = await this.getPortfolio();
     if (positions.length === 0) return [];
 
     // Fetch real scores from scoring service
-    let scoreMap = new Map<string, number>();
+    let scoreMap = new Map<string, { score: number; dataStatus: string }>();
     try {
       const ranked = await this.scoringService.rankAll(undefined, 200);
       if (ranked?.ranked) {
         for (const entry of ranked.ranked) {
-          scoreMap.set(entry.ticker, entry.score);
+          scoreMap.set(entry.ticker, { score: entry.score, dataStatus: entry.dataStatus });
         }
       }
     } catch (err) {
@@ -125,18 +132,26 @@ export class PortfolioService {
     }
 
     return positions.map((p) => {
-      // Try exact ticker match first, then stripped symbol
-      const score = scoreMap.get(p.ticker) ?? scoreMap.get(p.symbol) ?? null;
+      const scored = scoreMap.get(p.ticker) ?? scoreMap.get(p.symbol);
+      const score = scored?.score ?? null;
+      const dataStatus = scored?.dataStatus ?? 'untracked';
+
+      // If dataStatus is 'no_data', don't produce a misleading SELL signal
+      const effectiveSignal = dataStatus === 'no_data' || dataStatus === 'untracked'
+        ? 'no_data'
+        : score !== null
+          ? (score >= 65 ? 'buy' : score <= 40 ? 'sell' : 'hold')
+          : 'no_data';
+
       return {
         symbol: p.symbol,
         ticker: p.ticker,
         score,
-        signal: score !== null
-          ? (score >= 65 ? 'buy' : score <= 40 ? 'sell' : 'hold')
-          : 'no_data',
-        strength: score !== null
+        signal: effectiveSignal,
+        strength: score !== null && dataStatus !== 'no_data' && dataStatus !== 'untracked'
           ? (score >= 80 ? 'strong' : score >= 65 ? 'moderate' : 'weak')
           : 'none',
+        dataStatus,
       };
     });
   }
@@ -144,5 +159,38 @@ export class PortfolioService {
   /** Strip Trading212 ticker suffix: AAPL_US_EQ → AAPL */
   private stripTicker(ticker: string): string {
     return ticker.split('_')[0] || ticker;
+  }
+
+  /**
+   * Auto-register portfolio positions as tracked symbols in the database.
+   * Uses upsert to avoid duplicates — new symbols get added silently,
+   * existing symbols are left untouched.
+   */
+  private async ensureSymbolsExist(positions: PortfolioPosition[]): Promise<void> {
+    if (!this.prisma.isAvailable) return;
+
+    let added = 0;
+    for (const pos of positions) {
+      try {
+        const ticker = pos.symbol.toUpperCase();
+        await (this.prisma as any).symbol.upsert({
+          where: { ticker },
+          update: {}, // no-op — don't overwrite existing
+          create: {
+            ticker,
+            name: ticker,
+            exchange: 'Trading212',
+            type: 'stock',
+            active: true,
+          },
+        });
+        added++;
+      } catch (err) {
+        this.logger.debug(`Symbol upsert skipped for ${pos.symbol}: ${(err as Error).message}`);
+      }
+    }
+    if (added > 0) {
+      this.logger.log(`Auto-registered ${added} portfolio symbols`);
+    }
   }
 }

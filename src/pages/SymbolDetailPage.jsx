@@ -1,12 +1,15 @@
 import { useParams, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { createChart } from 'lightweight-charts';
 import { apiGet } from '../core/api/client';
 import './symbol-detail.css';
 
 export default function SymbolDetailPage() {
   const { symbolId } = useParams();
   const [tradeModal, setTradeModal] = useState(null);
+  const chartRef = useRef(null);
+  const chartInstance = useRef(null);
 
   const symbolQuery = useQuery({
     queryKey: ['symbol', symbolId],
@@ -25,6 +28,28 @@ export default function SymbolDetailPage() {
     queryFn: () => apiGet(`/api/scoring/history/${symbolId}`),
     enabled: Boolean(symbolId),
     retry: 1,
+  });
+
+  // Q297: Cross-protocol scores
+  const protocolsQuery = useQuery({
+    queryKey: ['symbol-protocols', symbolId],
+    queryFn: () => apiGet(`/api/symbols/${symbolId}/protocols`),
+    enabled: Boolean(symbolId),
+  });
+
+  // Q297: Symbol overview
+  const overviewQuery = useQuery({
+    queryKey: ['symbol-overview', symbolId],
+    queryFn: () => apiGet(`/api/symbols/${symbolId}/overview`),
+    enabled: Boolean(symbolId),
+  });
+
+  // Candles for chart
+  const [activeTf, setActiveTf] = useState('1H');
+  const candlesQuery = useQuery({
+    queryKey: ['symbol-candles', symbolId, activeTf],
+    queryFn: () => apiGet(`/api/market-data/candles/${symbolId}?timeframe=${activeTf}`),
+    enabled: Boolean(symbolId),
   });
 
   // Portfolio + Trade Data
@@ -82,6 +107,33 @@ export default function SymbolDetailPage() {
   const freshnessStatus = freshness.status || freshness.freshness || 'unknown';
   const freshnessTone = freshnessStatus === 'fresh' ? 'ok' : freshnessStatus === 'stale' ? 'warn' : 'neutral';
 
+  // ── Chart setup ──
+  const candles = candlesQuery.data?.bars || candlesQuery.data?.candles || [];
+  const overview = overviewQuery.data;
+  const protocols = protocolsQuery.data?.protocols || [];
+  const TIMEFRAMES = ['1M', '5M', '15M', '30M', '1H', '4H', '1D'];
+
+  useEffect(() => {
+    if (!chartRef.current || !candles.length) return;
+    if (chartInstance.current) { chartInstance.current.remove(); chartInstance.current = null; }
+
+    const chart = createChart(chartRef.current, {
+      width: chartRef.current.clientWidth, height: 360,
+      layout: { background: { color: 'transparent' }, textColor: '#94a3b8' },
+      grid: { vertLines: { color: 'rgba(255,255,255,0.04)' }, horzLines: { color: 'rgba(255,255,255,0.04)' } },
+      crosshair: { mode: 1 },
+      rightPriceScale: { borderColor: 'rgba(255,255,255,0.08)' },
+      timeScale: { borderColor: 'rgba(255,255,255,0.08)', timeVisible: true },
+    });
+    const series = chart.addCandlestickSeries({ upColor: '#22c55e', downColor: '#ef4444', borderUpColor: '#22c55e', borderDownColor: '#ef4444', wickUpColor: '#22c55e', wickDownColor: '#ef4444' });
+    series.setData(candles.map((c) => ({ time: c.time || c.timestamp || c.date, open: c.open, high: c.high, low: c.low, close: c.close })));
+    chart.timeScale().fitContent();
+    chartInstance.current = chart;
+    const h = () => { if (chartRef.current && chartInstance.current) chartInstance.current.applyOptions({ width: chartRef.current.clientWidth }); };
+    window.addEventListener('resize', h);
+    return () => { window.removeEventListener('resize', h); chart.remove(); chartInstance.current = null; };
+  }, [candles]);
+
   return (
     <div className="sd-page">
       <Link to="/research/symbols-browser" className="sd-back">← Back to Symbols</Link>
@@ -98,6 +150,37 @@ export default function SymbolDetailPage() {
           <span className={`sd-chip ${sym.active ? 'sd-chip--ok' : 'sd-chip--warn'}`}>{sym.active ? 'Active' : 'Inactive'}</span>
         </div>
       </header>
+
+      {/* ── Candlestick Chart ── */}
+      <div className="sd-chart-wrap">
+        <div className="sd-tf-row">
+          {TIMEFRAMES.map((tf) => (
+            <button key={tf} type="button" className={`sd-tf-btn ${tf === activeTf ? 'active' : ''}`} onClick={() => setActiveTf(tf)}>{tf}</button>
+          ))}
+        </div>
+        <div ref={chartRef} style={{ width: '100%' }} />
+      </div>
+
+      {/* ── Protocol Scores ── */}
+      {protocols.length > 0 && (
+        <section className="sd-card">
+          <h2>📊 Protocol Scores</h2>
+          <div className="sd-protocols">
+            {protocols.map((p) => (
+              <div key={p.id} className="sd-protocol-card">
+                <div className="sd-protocol-header">
+                  <div><strong>{p.name}</strong><span className="sd-protocol-type">{p.type} · {p.intendedTimeframe}</span></div>
+                  <div className="sd-protocol-score"><span className={`sd-score-badge ${p.signal}`}>{p.score}</span><span className={`sd-signal ${p.signal}`}>{p.signal}</span></div>
+                </div>
+                <div className="sd-sparkline">{p.sparkline?.map((v, i) => <div key={i} className="sd-spark-bar" style={{ height: `${Math.max(3, v * 0.4)}px` }} />)}</div>
+                <div className="sd-protocol-meta">
+                  <span>Confidence: {(p.confidence * 100).toFixed(0)}%</span><span>Trend: {p.trend}</span><span>Exit: {p.exitUrgency}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="sd-grid">
         {/* Freshness Card */}

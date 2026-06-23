@@ -6,6 +6,8 @@ import Breadcrumbs from './components/Breadcrumbs';
 import DevOverlay from './components/DevOverlay';
 import ErrorBoundary from './components/ErrorBoundary';
 import HealthStatusBar from './components/HealthStatusBar';
+import StartupChecklist from './components/StartupChecklist';
+import DataFreshnessCard from './components/DataFreshnessCard';
 import { apiGet } from './core/api/client';
 import { FEATURE_FLAGS } from './core/features/flags';
 import { withDevTag } from './dev-runtime/tags';
@@ -18,9 +20,9 @@ import ScenarioAnalysisPage from './pages/ScenarioAnalysisPage';
 import FaqPage from './pages/FaqPage';
 import PortfolioPage from './pages/PortfolioPage';
 import Mt5TradingPage from './pages/Mt5TradingPage';
-import UnifiedTradingPage from './pages/UnifiedTradingPage';
 import TradeHistoryPage from './pages/TradeHistoryPage';
 import TradeJournalPage from './pages/TradeJournalPage';
+import TradingPlansPage from './pages/TradingPlansPage';
 import ReportsPage from './pages/ReportsPage';
 import ActiveSymbolsPage from './pages/ActiveSymbolsPage';
 import AddSymbolPage from './pages/AddSymbolPage';
@@ -69,6 +71,7 @@ import SettingsPage from './pages/SettingsPage';
 import StrategiesPage from './pages/StrategiesPage';
 import ProtocolsOverviewPage from './pages/ProtocolsOverviewPage';
 import StrategyBuilderPage from './pages/StrategyBuilderPage';
+import StrategyWizardPage from './pages/StrategyWizardPage';
 import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
 import SymbolDetailPage from './pages/SymbolDetailPage';
 import SnapshotLibraryPage from './pages/SnapshotLibraryPage';
@@ -77,7 +80,6 @@ import SystemStatusPage from './pages/SystemStatusPage';
 import SystemLogPage from './pages/SystemLogPage';
 import TrainingCandlePatternsPage from './pages/TrainingCandlePatternsPage';
 import CandlePatternsGuidePage from './pages/CandlePatternsGuidePage';
-import Mt5DemoTradingPage from './pages/Mt5DemoTradingPage';
 import ThemePage from './pages/ThemePage';
 import ThemeLabPage from './pages/ThemeLabPage';
 import ThemeLabMotion from './pages/ThemeLabMotion';
@@ -89,6 +91,7 @@ import ComponentLabPage from './pages/ComponentLabPage';
 import FeatureLabPage from './pages/FeatureLabPage';
 import LabLandingPage from './pages/LabLandingPage';
 import LabPage from './pages/LabPage';
+import SnapshotReplayPage from './pages/SnapshotReplayPage';
 import SupportResistancePage from './pages/SupportResistancePage';
 import VolatilityAnalysisPage from './pages/VolatilityAnalysisPage';
 import TechnicalIndicatorsPage from './pages/TechnicalIndicatorsPage';
@@ -98,6 +101,7 @@ import EarningsCalendarPage from './pages/EarningsCalendarPage';
 import PriceForecastPage from './pages/PriceForecastPage';
 import SectorRotationPage from './pages/SectorRotationPage';
 import MarketCorrelationsPage from './pages/MarketCorrelationsPage';
+import CapabilityMapPage from './pages/CapabilityMapPage';
 import SourcesPage from './pages/SourcesPage';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
 import ApiOfflineBanner from './components/ApiOfflineBanner';
@@ -443,6 +447,10 @@ function AppShell() {
       return <TradeJournalPage />;
     }
 
+    if (secondaryView === 'trading-plans') {
+      return <TradingPlansPage />;
+    }
+
     if (secondaryView === 'reports') {
       return <ReportsPage />;
     }
@@ -467,6 +475,10 @@ function AppShell() {
       return <SetupWizardPage />;
     }
 
+    if (secondaryView === 'capability-map') {
+      return <CapabilityMapPage />;
+    }
+
     if (secondaryView === 'faq') {
       return <FaqPage />;
     }
@@ -480,6 +492,9 @@ function AppShell() {
     }
     if (secondaryView === 'snapshots') {
       return <SnapshotLibraryPage />;
+    }
+    if (secondaryView === 'snapshot-replay') {
+      return <SnapshotReplayPage />;
     }
     if (secondaryView === 'symbols-browser') {
       return <SymbolsBrowserPage />;
@@ -545,6 +560,10 @@ function AppShell() {
       return <ImportJobsPage />;
     }
 
+    if (secondaryView === 'mt5-trading') {
+      return <Mt5TradingPage />;
+    }
+
     if (secondaryView === 'mt5-status') {
       return <Mt5StatusPage />;
     }
@@ -593,6 +612,10 @@ function AppShell() {
       return <StrategyBuilderPage />;
     }
 
+    if (secondaryView === 'strategy-wizard') {
+      return <StrategyWizardPage />;
+    }
+
     if (secondaryView === 'risk-controls') {
       return <RiskControlsPage />;
     }
@@ -622,7 +645,7 @@ function AppShell() {
     }
 
     if (secondaryView === 'mt5-demo-trading') {
-      return <UnifiedTradingPage />;
+      return <Mt5TradingPage />;
     }
 
     if (secondaryView === 'lab-landing') {
@@ -924,6 +947,8 @@ function AppShell() {
           ))}
         </div>
 
+        <DataFreshnessCard />
+
         <div className="rail-block">
           <button
             type="button"
@@ -1044,6 +1069,7 @@ function AppShell() {
 
       <main className="main-stage" {...withDevTag('main.stage', { area: secondaryView })}>
         <Breadcrumbs />
+        <StartupChecklist />
         <ErrorBoundary message="Something went wrong rendering this view.">
           {renderMainContent()}
         </ErrorBoundary>

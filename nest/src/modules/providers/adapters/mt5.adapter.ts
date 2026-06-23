@@ -63,7 +63,7 @@ export class Mt5Adapter implements IProviderAdapter {
   private trippedAt: number | null = null;
 
   constructor() {
-    this.bridgeUrl = process.env.MT5_BRIDGE_URL || 'http://localhost:5000';
+    this.bridgeUrl = process.env.MT5_BRIDGE_URL || 'http://localhost:5001';
   }
 
   private get authHeaders(): Record<string, string> {

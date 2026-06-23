@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { apiGet, apiPost } from '../core/api/client'
 import LoadingSkeleton from '../components/LoadingSkeleton'
 import DirectivePalette from '../components/StrategyBuilder/DirectivePalette'
@@ -97,6 +98,7 @@ export default function StrategyBuilderPage() {
     <div className="sb-page">
       <header className="sb-header">
         <h1>Strategy Builder</h1>
+        <Link to="/scoring/strategy-wizard" style={{ fontSize: '0.8rem', color: 'var(--accent, #0ea5a6)' }}>🧙 Try the Strategy Wizard →</Link>
       </header>
 
       {/* Collapsible metadata form toggle */}
