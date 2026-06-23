@@ -7,11 +7,12 @@ import { PortfolioController } from './portfolio.controller';
 import { Trading212ImportService } from './trading212-import.service';
 import { Trading212PortfolioController } from './trading212-portfolio.controller';
 import { Trading212HistoryController } from './trading212-history.controller';
+import { CorrelationService } from './correlation.service';
 
 @Module({
   imports: [ProvidersModule, forwardRef(() => ScoringModule)],
   controllers: [PortfolioController, Trading212PortfolioController, Trading212HistoryController],
-  providers: [PortfolioService, Trading212Adapter, Trading212ImportService],
+  providers: [PortfolioService, Trading212Adapter, Trading212ImportService, CorrelationService],
   exports: [PortfolioService],
 })
 export class PortfolioModule {}

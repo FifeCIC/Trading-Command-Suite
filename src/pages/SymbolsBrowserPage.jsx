@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
+import StarToggle from '../components/StarToggle'
 import './symbols-browser.css'
 
 const SYMBOL_TYPES = ['stock', 'crypto', 'forex']
@@ -79,6 +80,7 @@ export default function SymbolsBrowserPage() {
           <table className="symbols-table">
             <thead>
               <tr>
+                <th style={{ width: 32 }}>⭐</th>
                 <th onClick={() => toggleSort('ticker')} style={{ cursor: 'pointer' }}>Ticker{sortIcon('ticker')}</th>
                 <th onClick={() => toggleSort('name')} style={{ cursor: 'pointer' }}>Name{sortIcon('name')}</th>
                 <th onClick={() => toggleSort('exchange')} style={{ cursor: 'pointer' }}>Exchange{sortIcon('exchange')}</th>
@@ -95,6 +97,7 @@ export default function SymbolsBrowserPage() {
                     className={selectedId === sym.id ? 'row-selected' : ''}
                     onClick={() => setSelectedId(selectedId === sym.id ? null : sym.id)}
                   >
+                    <td onClick={(e) => e.stopPropagation()}><StarToggle itemType="symbol" itemId={sym.id} size={16} /></td>
                     <td><strong>{sym.ticker}</strong></td>
                     <td>{sym.name}</td>
                     <td>{sym.exchange}</td>

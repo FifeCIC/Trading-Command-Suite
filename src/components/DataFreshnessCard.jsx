@@ -1,16 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 
-/**
- * DataFreshnessCard — sidebar card showing live status of all data sources.
- * Auto-refreshes every 30s. Compact enough for the left rail.
- */
-
-const SOURCE_ICONS = {
-  trading212: '📈',
-  mt5: '🔌',
-  'market-data': '📊',
-  scoring: '🧠',
+const SOURCES_MAP = {
+  trading212:  { icon: '📈', label: 'Trading212' },
+  mt5:         { icon: '🔌', label: 'MT5 Bridge' },
+  'market-data': { icon: '📊', label: 'Market Data' },
+  scoring:     { icon: '🧠', label: 'Scoring' },
 };
 
 export default function DataFreshnessCard() {
@@ -21,68 +16,44 @@ export default function DataFreshnessCard() {
     refetchInterval: 120_000,
   });
 
-  const rlQuery = useQuery({
-    queryKey: ['rate-limits-detail'],
-    queryFn: () => apiGet('/api/providers/rate-limits/detail').catch(() => null),
-    staleTime: 30_000,
-    refetchInterval: 60_000,
-  });
-
   if (isLoading || !data) {
     return (
-      <div className="df-card">
-        <div className="df-title">Data Sources</div>
-        <div className="df-loading">Checking…</div>
+      <div className="dfs">
+        <div className="dfs-head">
+          <span className="dfs-head-icon">📡</span>
+          <span className="dfs-head-title">Data Sources</span>
+        </div>
+        <div className="dfs-body"><span className="dfs-loading">Checking…</span></div>
       </div>
     );
   }
 
-  const { sources, summary } = data;
-  const rl = rlQuery.data;
-  const t212Endpoints = rl?.endpoints || [];
-  const breakerTripped = rl?.circuitBreaker?.tripped;
+  const { sources } = data;
+  const liveCount = sources.filter((s) => s.connected).length;
+  const allLive = liveCount === sources.length;
 
   return (
-    <div className="df-card">
-      <div className="df-title">
-        Data Sources
-        <span className={`df-summary-dot ${summary.hasLiveData ? 'df-dot-live' : 'df-dot-none'}`} />
+    <div className="dfs">
+      <div className="dfs-head">
+        <span className="dfs-head-icon">📡</span>
+        <span className="dfs-head-title">Data Sources</span>
+        <span className={`dfs-badge ${allLive ? 'dfs-badge--ok' : liveCount > 0 ? 'dfs-badge--warn' : 'dfs-badge--err'}`}>
+          {liveCount}/{sources.length}
+        </span>
       </div>
-
-      <div className="df-sources">
-        {sources.map((src) => (
-          <div key={src.id} className="df-source" title={src.detail || ''}>
-            <span className={`df-dot ${src.connected ? 'df-dot-live' : 'df-dot-off'}`}>
-              {src.connected ? '●' : '○'}
-            </span>
-            <span className="df-source-label">
-              {SOURCE_ICONS[src.id] || '📡'} {src.label}
-            </span>
-            <span className="df-source-detail">{src.detail}</span>
-          </div>
-        ))}
+      <div className="dfs-body">
+        {sources.map((src) => {
+          const m = SOURCES_MAP[src.id] || { icon: '📡', label: src.label };
+          return (
+            <div key={src.id} className="dfs-row" title={src.detail || ''}>
+              <span className={`dfs-dot ${src.connected ? 'on' : 'off'}`} />
+              <span className="dfs-row-icon">{m.icon}</span>
+              <span className="dfs-row-label">{m.label}</span>
+              <span className="dfs-row-detail">{src.connected ? src.detail || '' : 'offline'}</span>
+            </div>
+          );
+        })}
       </div>
-
-      {rl && (
-        <div className="df-rl-section">
-          <div className="df-rl-title">
-            Rate Limits {breakerTripped ? '🔴 TRIPPED' : '🟢 OK'}
-          </div>
-          <div className="df-rl-endpoints">
-            {t212Endpoints.slice(0, 4).map((ep) => (
-              <div key={ep.endpoint} className="df-rl-ep">
-                <span className={`df-rl-dot ${ep.ready ? 'df-dot-live' : 'df-dot-off'}`}>
-                  {ep.ready ? '●' : '○'}
-                </span>
-                <span className="df-rl-ep-label">{ep.endpoint}</span>
-                <span className="df-rl-ep-time">
-                  {ep.ready ? 'ready' : `${(ep.readyInMs / 1000).toFixed(1)}s`}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

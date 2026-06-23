@@ -1,0 +1,19 @@
+.sn-page { max-width: none; margin: 0; padding: 1.25rem 1.5rem; color: var(--ink); }
+.sn-header h1 { margin: 0 0 0.2rem; font-size: 1.3rem; }
+.sn-subtitle { color: var(--ink-soft); font-size: 0.82rem; margin: 0 0 0.75rem; }
+.sn-filters { display: flex; gap: 0.25rem; margin-bottom: 0.75rem; }
+.sn-filters button { padding: 0.3rem 0.7rem; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--ink-soft); cursor: pointer; font-family: inherit; font-size: 0.7rem; font-weight: 600; }
+.sn-filters button.active { border-color: var(--accent); color: var(--accent); background: rgba(14,165,166,0.08); }
+.sn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.6rem; }
+.sn-card { padding: 0.75rem; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); cursor: pointer; }
+.sn-card.bullish { border-color: rgba(34,197,94,0.3); }
+.sn-card.bullish:hover { box-shadow: 0 0 12px rgba(34,197,94,0.1); }
+.sn-card.bearish { border-color: rgba(239,68,68,0.3); }
+.sn-card.bearish:hover { box-shadow: 0 0 12px rgba(239,68,68,0.1); }
+.sn-card-header { display: flex; justify-content: space-between; font-size: 0.82rem; }
+.sn-source { font-size: 0.6rem; color: var(--ink-soft); }
+.sn-score-wrap { text-align: center; margin: 0.5rem 0; }
+.sn-score { font-size: 2rem; font-weight: 800; }
+.sn-card-footer { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--ink-soft); }
+.sn-card-footer .up { color: #22c55e; }
+.sn-card-footer .down { color: #ef4444; }

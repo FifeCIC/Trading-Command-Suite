@@ -22,6 +22,7 @@ import { DirectivesService } from '../directives/directives.service';
 import { ScoreHistoryService } from './score-history.service';
 import { NotificationService } from '../notifications/notifications.service';
 import { CalibrationService } from '../calibration/calibration.service';
+import { OutcomeTrackerService } from './outcome-tracker.service';
 import {
   DirectiveInput,
   MarketBar,
@@ -48,6 +49,10 @@ export interface DirectiveBreakdown {
   reason: string;
   signalClass: 'bullish' | 'bearish' | 'neutral';
   priority: number;
+  /** True if the directive was muted by an activation gate (Q301). */
+  gated?: boolean;
+  /** Reason from the activation gate if muted/adjusted. */
+  gatedReason?: string;
 }
 
 export interface RankedSymbol {
@@ -71,6 +76,19 @@ export interface RankedResult {
   services: { database: boolean; queue: boolean; redis: boolean };
   strategy: { name: string; entryThreshold: number; watchThreshold: number; maxPossibleScore: number; directiveCount: number };
   summary: { symbolsWithData: number; symbolsWithoutData: number; totalSymbols: number };
+  conditionVector?: {
+    regime: string;
+    volatility: string;
+    activeSession: string;
+    hurstExponent: number;
+    adx: number;
+    timestamp: string;
+  };
+  activationStats?: {
+    mutedCount: number;
+    activeCount: number;
+    mutedReasons: string[];
+  };
   ranked: RankedSymbol[];
 }
 
@@ -85,6 +103,7 @@ export class ScoringService implements OnModuleInit {
     private readonly scoreHistoryService: ScoreHistoryService,
     private readonly notificationService: NotificationService,
     private readonly calibrationService: CalibrationService,
+    private readonly outcomeTracker: OutcomeTrackerService,
   ) {}
 
   /** On startup, detect directive version changes and log warnings. */
@@ -192,6 +211,8 @@ export class ScoringService implements OnModuleInit {
           reason: result.reason,
           signalClass,
           priority,
+          gated: result.gated,
+          gatedReason: result.gatedReason,
         });
       }
 
@@ -329,6 +350,23 @@ export class ScoringService implements OnModuleInit {
         breakdown: hasData ? breakdown : [],
         timestamp: new Date().toISOString(),
       });
+
+      // Q304: Record directive outcomes for self-improving scoring
+      if (hasData) {
+        const now = new Date();
+        this.outcomeTracker.recordOutcomes(
+          breakdown.map((d) => ({
+            directiveId: d.directiveId,
+            symbol: symbol.ticker,
+            timeframe: 'M15', // default; directives can override
+            score: d.score,
+            signalClass: d.signalClass,
+            confidence: d.confidence,
+            predictedAt: now,
+            priceAtPredict: bars.length > 0 ? bars[bars.length - 1].close : 0,
+          })),
+        ).catch((err) => this.logger.warn(`Outcome recording failed for ${symbol.ticker}: ${err.message}`));
+      }
     }
 
     ranked.sort((a, b) => b.score - a.score);
@@ -358,7 +396,13 @@ export class ScoringService implements OnModuleInit {
       this.logger.warn(`Failed to persist score snapshots: ${String(err)}`);
     }
 
-    return { ...base, summary, ranked: ranked.slice(0, limit) };
+    return {
+      ...base,
+      summary,
+      conditionVector: this.buildConditionVectorResponse(),
+      activationStats: this.buildActivationStats(ranked),
+      ranked: ranked.slice(0, limit),
+    };
   }
 
   /**
@@ -543,5 +587,45 @@ export class ScoringService implements OnModuleInit {
       );
       return [];
     }
+  }
+
+  /** Build condition vector response from the last run's detector output. */
+  private buildConditionVectorResponse() {
+    const cv = this.directivesService.getLastConditionVector();
+    if (!cv) return undefined;
+    return {
+      regime: cv.regime,
+      strength: cv.regimeStrength,
+      components: cv.regimeComponents,
+      volatility: cv.volatility,
+      activeSession: cv.activeSession,
+      hurstExponent: cv.hurstExponent,
+      adx: cv.adx,
+      preEvent: cv.preEvent,
+      timestamp: cv.timestamp.toISOString(),
+    };
+  }
+
+  /** Aggregate activation gate stats across all ranked symbols. */
+  private buildActivationStats(ranked: RankedSymbol[]) {
+    let mutedCount = 0;
+    let activeCount = 0;
+    const mutedReasons: string[] = [];
+
+    for (const r of ranked) {
+      for (const d of r.breakdown) {
+        if (d.gated) {
+          mutedCount++;
+          const reason = d.gatedReason || d.reason;
+          if (reason && !mutedReasons.includes(reason)) {
+            mutedReasons.push(reason);
+          }
+        } else if (d.score > 0) {
+          activeCount++;
+        }
+      }
+    }
+
+    return { mutedCount, activeCount, mutedReasons };
   }
 }

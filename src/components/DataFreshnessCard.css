@@ -1,112 +1,83 @@
-/* ── Data Freshness Card (sidebar) ──────────────────────── */
-.df-card {
-  padding: 0.5rem 0.7rem;
-  margin: 0.4rem 0;
-  border-top: 1px solid var(--line, #1e2a45);
-  font-size: 0.7rem;
+/* ── Data Sources sidebar card ─────────────────────────── */
+.dfs {
+  margin: 0.5rem 0.5rem 0.75rem;
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 8px;
+  background: rgba(0,0,0,0.12);
+  overflow: hidden;
 }
 
-.df-title {
+.dfs-head {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: 0.66rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--ink-soft, #94a3b8);
-  margin-bottom: 0.35rem;
+  gap: 6px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line, #1e2a45);
+  background: rgba(255,255,255,0.015);
 }
 
-.df-loading {
-  font-size: 0.68rem;
+.dfs-head-icon { font-size: 0.75rem; line-height: 1; }
+.dfs-head-title {
+  flex: 1;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-soft, #94a3b8);
+}
+
+.dfs-badge {
+  font-size: 0.55rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 999px;
+  line-height: 1.4;
+}
+.dfs-badge--ok  { background: rgba(34,197,94,0.12); color: #22c55e; }
+.dfs-badge--warn{ background: rgba(245,158,11,0.12); color: #f59e0b; }
+.dfs-badge--err { background: rgba(239,68,68,0.12); color: #ef4444; }
+
+.dfs-body {
+  padding: 4px 8px 6px;
+}
+.dfs-loading {
+  font-size: 0.62rem;
   color: var(--ink-soft, #94a3b8);
   font-style: italic;
 }
 
-.df-sources {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.df-source {
+.dfs-row {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.68rem;
-  line-height: 1.35;
-  padding: 0.15rem 0.25rem;
+  gap: 6px;
+  padding: 4px 6px;
   border-radius: 4px;
 }
+.dfs-row:hover { background: rgba(255,255,255,0.025); }
 
-.df-source:hover {
-  background: rgba(255,255,255,0.03);
+.dfs-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
+.dfs-dot.on  { background: #22c55e; box-shadow: 0 0 3px rgba(34,197,94,0.5); }
+.dfs-dot.off { background: #475569; }
 
-.df-dot {
-  font-size: 0.5rem;
+.dfs-row-icon {
+  font-size: 0.62rem;
   flex-shrink: 0;
   line-height: 1;
 }
-
-.df-dot-live { color: #22c55e; }
-.df-dot-off { color: var(--ink-soft, #94a3b8); }
-.df-dot-none { color: #f59e0b; }
-
-.df-summary-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  display: inline-block;
-  background: #22c55e;
-  flex-shrink: 0;
-}
-
-.df-summary-dot.df-dot-none { background: #f59e0b; }
-
-.df-source-label {
+.dfs-row-label {
+  flex: 1;
+  font-size: 0.68rem;
   color: var(--ink, #e2e8f0);
-  flex-shrink: 0;
   font-weight: 500;
 }
-
-.df-source-detail {
+.dfs-row-detail {
+  font-size: 0.56rem;
   color: var(--ink-soft, #94a3b8);
-  font-size: 0.6rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  margin-left: auto;
-}
-
-/* ── Rate Limit Detail ─────────────────────────────────── */
-.df-rl-section {
-  margin-top: 0.5rem;
-  padding-top: 0.4rem;
-  border-top: 1px solid var(--border-color, #2a2d3e);
-}
-
-.df-rl-title {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--ink-soft, #94a3b8);
-  margin-bottom: 0.25rem;
-}
-
-.df-rl-endpoints {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.df-rl-ep {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.65rem;
 }
 
 .df-rl-dot {

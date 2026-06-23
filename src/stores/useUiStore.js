@@ -9,6 +9,7 @@ export const useUiStore = create(
       themePack: 'scifi',
       backgroundTone: 'aura',
       showNavIcons: true,
+      bookmarks: [],
       toggleDevOverlay: () => set((state) => ({ devOverlayOpen: !state.devOverlayOpen })),
       closeDevOverlay: () => set({ devOverlayOpen: false }),
       setThemeMode: (mode) => set({ themeMode: mode === 'dark' ? 'dark' : 'light' }),
@@ -22,6 +23,16 @@ export const useUiStore = create(
         set({ backgroundTone: safeTone });
       },
       setShowNavIcons: (show) => set({ showNavIcons: !!show }),
+      toggleBookmark: (area, view) => set((state) => {
+        const id = `${area}/${view}`;
+        const exists = state.bookmarks.find((b) => b.id === id);
+        if (exists) return { bookmarks: state.bookmarks.filter((b) => b.id !== id) };
+        return { bookmarks: [...state.bookmarks, { id, area, view }] };
+      }),
+      isBookmarked: (area, view) => {
+        const id = `${area}/${view}`;
+        return (state) => state.bookmarks.some((b) => b.id === id);
+      },
     }),
     {
       name: 'tradingcs-theme',
@@ -30,6 +41,7 @@ export const useUiStore = create(
         themePack: state.themePack,
         backgroundTone: state.backgroundTone,
         showNavIcons: state.showNavIcons,
+        bookmarks: state.bookmarks,
       }),
     },
   ),

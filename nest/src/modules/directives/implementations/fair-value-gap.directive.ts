@@ -39,7 +39,7 @@ export class FairValueGapDirective implements IDirective {
   readonly priority = 65;
   readonly maxScore = 100;
   readonly version = '1.0.0';
-  readonly suitability = { regimeType:'any',volatilityLevel:'high',instrumentTypes:['any'],minTimeframe:'15m',category:'microstructure' };
+  readonly suitability = { regimeType:'any' as const, volatilityLevel:'high' as const, instrumentTypes:['stocks','crypto','indices'] as const, minTimeframe:'M15', preferredSessions:['US','London'] as const };
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

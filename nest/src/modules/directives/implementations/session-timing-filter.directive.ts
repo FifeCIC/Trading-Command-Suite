@@ -126,7 +126,7 @@ export class SessionTimingFilterDirective implements IDirective {
     const adjustedScore = Math.round(score * dayAdjustment);
 
     return {
-      score: Math.min(100, adjustedScore),
+      score: Math.min(this.maxScore, adjustedScore),
       confidence: Number((0.7 * dayAdjustment).toFixed(2)),
       reason: `${bestSession.name} session active (${hour}:00 UTC). Quality: ${(bestSession.quality * 100).toFixed(0)}%. ${activeSessions.length > 1 ? 'Overlap period.' : ''}${dayAdjustment < 1 ? ' Day adjustment applied.' : ''}`,
       signalClass: 'neutral',

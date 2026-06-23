@@ -6,8 +6,6 @@ import Breadcrumbs from './components/Breadcrumbs';
 import DevOverlay from './components/DevOverlay';
 import ErrorBoundary from './components/ErrorBoundary';
 import HealthStatusBar from './components/HealthStatusBar';
-import StartupChecklist from './components/StartupChecklist';
-import DataFreshnessCard from './components/DataFreshnessCard';
 import { apiGet } from './core/api/client';
 import { FEATURE_FLAGS } from './core/features/flags';
 import { withDevTag } from './dev-runtime/tags';
@@ -23,6 +21,7 @@ import Mt5TradingPage from './pages/Mt5TradingPage';
 import TradeHistoryPage from './pages/TradeHistoryPage';
 import TradeJournalPage from './pages/TradeJournalPage';
 import TradingPlansPage from './pages/TradingPlansPage';
+import ProtocolsPage from './pages/ProtocolsPage';
 import ReportsPage from './pages/ReportsPage';
 import ActiveSymbolsPage from './pages/ActiveSymbolsPage';
 import AddSymbolPage from './pages/AddSymbolPage';
@@ -38,6 +37,7 @@ import DirectivesStatusPage from './pages/DirectivesStatusPage';
 import DirectivesConfigPage from './pages/DirectivesConfigPage';
 import ScoringOverviewPage from './pages/ScoringOverviewPage';
 import ScoringRunsPage from './pages/ScoringRunsPage';
+import ScoringActivityLogsPage from './pages/ScoringActivityLogsPage';
 import EventsCalendarPage from './pages/EventsCalendarPage';
 import ExecutionQueuePage from './pages/ExecutionQueuePage';
 import ImportJobsPage from './pages/ImportJobsPage';
@@ -50,6 +50,7 @@ import RiskControlsPage from './pages/RiskControlsPage';
 import HomeDashboardPage from './pages/HomeDashboardPage';
 import CacheMonitorPage from './pages/CacheMonitorPage';
 import SeesLiveStackMockPage from './pages/SeesLiveStackMockPage';
+import SeesAdvancedPage from './pages/SeesAdvancedPage';
 import SeesArenaPage from './pages/SeesArenaPage';
 import AlgorithmLabPage from './pages/AlgorithmLabPage';
 import PerformanceLabPage from './pages/PerformanceLabPage';
@@ -74,6 +75,7 @@ import StrategyBuilderPage from './pages/StrategyBuilderPage';
 import StrategyWizardPage from './pages/StrategyWizardPage';
 import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
 import SymbolDetailPage from './pages/SymbolDetailPage';
+import SpeedTradingPage from './pages/SpeedTradingPage';
 import SnapshotLibraryPage from './pages/SnapshotLibraryPage';
 import CalculatorsPage from './pages/CalculatorsPage';
 import SystemStatusPage from './pages/SystemStatusPage';
@@ -92,6 +94,7 @@ import FeatureLabPage from './pages/FeatureLabPage';
 import LabLandingPage from './pages/LabLandingPage';
 import LabPage from './pages/LabPage';
 import SnapshotReplayPage from './pages/SnapshotReplayPage';
+import SocialNetworksPage from './pages/SocialNetworksPage';
 import SupportResistancePage from './pages/SupportResistancePage';
 import VolatilityAnalysisPage from './pages/VolatilityAnalysisPage';
 import TechnicalIndicatorsPage from './pages/TechnicalIndicatorsPage';
@@ -174,6 +177,8 @@ function AppShell() {
   const backgroundTone = useUiStore((state) => state.backgroundTone);
   const setBackgroundTone = useUiStore((state) => state.setBackgroundTone);
   const showNavIcons = useUiStore((state) => state.showNavIcons);
+  const bookmarks = useUiStore((state) => state.bookmarks || []);
+  const toggleBookmark = useUiStore((state) => state.toggleBookmark);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { adapters, meta } = useThemeRuntime({ mode: themeMode, packId: themePack });
   const availablePacks = Array.isArray(meta?.availablePacks) ? meta.availablePacks : [];
@@ -423,6 +428,10 @@ function AppShell() {
       return <SeesArenaPage />;
     }
 
+    if (secondaryView === 'sees-advanced') {
+      return <SeesAdvancedPage />;
+    }
+
     if (secondaryView === 'backtest') {
       return <BacktestPage />;
     }
@@ -447,8 +456,16 @@ function AppShell() {
       return <TradeJournalPage />;
     }
 
+    if (secondaryView === 'speed-trading') {
+      return <SpeedTradingPage />;
+    }
+
     if (secondaryView === 'trading-plans') {
       return <TradingPlansPage />;
+    }
+
+    if (secondaryView === 'protocols') {
+      return <ProtocolsPage />;
     }
 
     if (secondaryView === 'reports') {
@@ -596,8 +613,16 @@ function AppShell() {
       return <EventsCalendarPage />;
     }
 
+    if (secondaryView === 'social-networks') {
+      return <SocialNetworksPage />;
+    }
+
     if (secondaryView === 'scoring-runs') {
       return <ScoringRunsPage />;
+    }
+
+    if (secondaryView === 'scoring-activity-logs') {
+      return <ScoringActivityLogsPage />;
     }
 
     if (secondaryView === 'protocol-overview') {
@@ -858,7 +883,9 @@ function AppShell() {
       <header className="topbar topbar-omni">
         <div className="topbar-row topbar-row-main">
           <div className="topbar-logo-block">
-            <img src="/tcs-logo.png" alt="Trading Command Suite" className="topbar-logo" />
+            <button type="button" className="topbar-logo-btn" onClick={() => navigate('/')} title="Home">
+              <img src="/tcs-logo.png" alt="Trading Command Suite" className="topbar-logo" />
+            </button>
           </div>
 
           <div className="topbar-title-block">
@@ -903,6 +930,27 @@ function AppShell() {
 
       </header>
 
+      {/* ── Bookmark Bar ── */}
+      {bookmarks.length > 0 && (
+        <nav className="bookmark-bar" aria-label="Bookmarked pages">
+          {bookmarks.slice(0, 12).map((bm) => {
+            const areaLabel = NAV_TREE[bm.area]?.label || bm.area;
+            const viewLabel = NAV_STRUCTURE[bm.area]?.find((v) => v.id === bm.view)?.label || bm.view;
+            return (
+              <button
+                key={bm.id}
+                type="button"
+                className={`bookmark-btn${primaryArea === bm.area && secondaryView === bm.view ? ' bookmark-active' : ''}`}
+                onClick={() => navigate(`/${bm.area}/${bm.view}`)}
+                title={`${areaLabel} › ${viewLabel}`}
+              >
+                ⭐ {viewLabel}
+              </button>
+            );
+          })}
+        </nav>
+      )}
+
       {mobileNavOpen && (
         <div
           className="mobile-nav-overlay"
@@ -946,8 +994,6 @@ function AppShell() {
             </button>
           ))}
         </div>
-
-        <DataFreshnessCard />
 
         <div className="rail-block">
           <button
@@ -1068,8 +1114,17 @@ function AppShell() {
       </aside>
 
       <main className="main-stage" {...withDevTag('main.stage', { area: secondaryView })}>
-        <Breadcrumbs />
-        <StartupChecklist />
+        <div className="main-top-row">
+          <Breadcrumbs />
+          <button
+            type="button"
+            className={`star-toggle${bookmarks.some((b) => b.id === `${primaryArea}/${secondaryView}`) ? ' starred' : ''}`}
+            onClick={() => toggleBookmark(primaryArea, secondaryView)}
+            title={bookmarks.some((b) => b.id === `${primaryArea}/${secondaryView}`) ? 'Remove bookmark' : 'Bookmark this page'}
+          >
+            {bookmarks.some((b) => b.id === `${primaryArea}/${secondaryView}`) ? '⭐' : '☆'}
+          </button>
+        </div>
         <ErrorBoundary message="Something went wrong rendering this view.">
           {renderMainContent()}
         </ErrorBoundary>
@@ -1097,68 +1152,73 @@ function AppShell() {
       )}
 
       <footer className="app-footer">
-        <section className="app-footer-nav" aria-label="Areas navigation">
-          <p className="muted">Areas</p>
-          <div className="app-footer-nav-links">
-            {PRIMARY_PAGES.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={primaryArea === item.id ? 'nav-active' : ''}
-                onClick={() => onPrimarySelect(item.id)}
-              >
-                {item.label}
-              </button>
-            ))}
+        <div className="footer-grid">
+          <div className="footer-col">
+            <h4>Trading Command Suite</h4>
+            <p className="footer-tagline">Algorithmic analysis & portfolio management platform.</p>
+            <p className="footer-credit">Created by <strong>Ryan Bayne</strong></p>
+            <p className="footer-version">v{healthQuery.data?.version || 'nest-0.1.0'}</p>
           </div>
-        </section>
-
+          <div className="footer-col">
+            <h4>Quick Links</h4>
+            <button type="button" onClick={() => navigate('/scoring/sees-live-stack')}>SEES Live Stack</button>
+            <button type="button" onClick={() => navigate('/scoring/create-protocols')}>Strategy Builder</button>
+            <button type="button" onClick={() => navigate('/research/news-intel')}>News Intel</button>
+            <button type="button" onClick={() => navigate('/trading/portfolio-overview')}>Portfolio</button>
+          </div>
+          <div className="footer-col">
+            <h4>Resources</h4>
+            <button type="button" onClick={() => navigate('/builder/architecture-framework')}>Architecture</button>
+            <button type="button" onClick={() => navigate('/status/capability-map')}>Capability Map</button>
+            <button type="button" onClick={() => navigate('/lab/theme-lab')}>Theme Lab</button>
+            <button type="button" onClick={() => navigate('/settings')}>Settings</button>
+          </div>
+          <div className="footer-col">
+            <h4>Status</h4>
+            <div className="footer-status-row">
+              <span className={`footer-dot ${isApiOnline ? 'on' : 'off'}`} />
+              <span>API: {isApiOnline ? 'Online' : 'Offline'}</span>
+            </div>
+            <div className="footer-status-row">
+              <span className={`footer-dot ${isDbOnline ? 'on' : 'off'}`} />
+              <span>DB: {isDbOnline ? 'Connected' : 'Offline'}</span>
+            </div>
+            <div className="footer-status-row">
+              <span className="footer-dot on" />
+              <span>Providers: {availableAdapters.length} active</span>
+            </div>
+          </div>
+        </div>
+        <div className="footer-bottom">
+          <span>© 2026 Ryan Bayne. All rights reserved.</span>
+          <span className="footer-bottom-links">
+            <button type="button" onClick={onDownloadRuntimeReport}>Export Report</button>
+            {devOverlayOpen ? (
+              <button type="button" onClick={toggleDevOverlay}>Hide Dev Overlay</button>
+            ) : (
+              <button type="button" onClick={toggleDevOverlay}>Dev Overlay</button>
+            )}
+          </span>
+        </div>
         {devOverlayOpen && (
           <div className="dev-footer">
-            <section
-              className="footer-panel footer-insights"
-              {...withDevTag('floating.insights', { kind: 'hidden-info' })}
-            >
-              <div className="floating-title">
-                <span>Hidden Info</span>
-                <BadgePill label={themePack} status="ok" />
-              </div>
+            <section className="footer-panel footer-insights" {...withDevTag('floating.insights', { kind: 'hidden-info' })}>
+              <div className="floating-title"><span>Hidden Info</span><BadgePill label={themePack} status="ok" /></div>
               <p>Policy: {policyMeta.policyEnforced ? 'enforced' : 'not enforced'}</p>
               <p>Fail-closed: {policyMeta.failClosed ? 'on' : 'off'}</p>
               <p>Vitals tracked: {Object.keys(performanceSnapshot.metrics).length}</p>
             </section>
-
-            <section
-              className="footer-panel footer-log"
-              {...withDevTag('floating.log', { kind: 'activity-log' })}
-            >
-              <div className="floating-title">
-                <span>Live Activity Log</span>
-                <BadgePill label={`${activityLog.length}`} status="neutral" />
-              </div>
+            <section className="footer-panel footer-log" {...withDevTag('floating.log', { kind: 'activity-log' })}>
+              <div className="floating-title"><span>Live Activity Log</span><BadgePill label={`${activityLog.length}`} status="neutral" /></div>
               <div className="log-scroll">
                 {activityLog.length === 0 && <p className="muted">Interact with the shell to populate log events.</p>}
-                {activityLog.map((item) => (
-                  <p key={item.id} className="log-line">
-                    {item.timestamp} [{item.type}] {item.details}
-                  </p>
-                ))}
+                {activityLog.map((item) => (<p key={item.id} className="log-line">{item.timestamp} [{item.type}] {item.details}</p>))}
               </div>
             </section>
-
             <section className="footer-panel app-footer-ff">
-              <div className="floating-title">
-                <span>Feature Flags</span>
-              </div>
+              <div className="floating-title"><span>Feature Flags</span></div>
               {Object.entries(ffState).map(([name, enabled]) => (
-                <label key={name} className="ff-row">
-                  <input
-                    type="checkbox"
-                    checked={enabled}
-                    onChange={() => enabled ? featureFlags.disable(name) : featureFlags.enable(name)}
-                  />
-                  <span>{name}</span>
-                </label>
+                <label key={name} className="ff-row"><input type="checkbox" checked={enabled} onChange={() => enabled ? featureFlags.disable(name) : featureFlags.enable(name)} /><span>{name}</span></label>
               ))}
               <button type="button" className="ff-reset" onClick={() => featureFlags.reset()}>Reset defaults</button>
             </section>

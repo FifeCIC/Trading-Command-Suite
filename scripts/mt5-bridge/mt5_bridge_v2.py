@@ -312,7 +312,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                            'sell': mt5.ORDER_TYPE_SELL, 'market_sell': mt5.ORDER_TYPE_SELL,
                            'buy_limit': mt5.ORDER_TYPE_BUY_LIMIT, 'sell_limit': mt5.ORDER_TYPE_SELL_LIMIT,
                            'buy_stop': mt5.ORDER_TYPE_BUY_STOP, 'sell_stop': mt5.ORDER_TYPE_SELL_STOP}.get(order_type)
-                if not mt5_type: return json_response(self, {'error': f'Unknown type: {order_type}'}, 400)
+                if mt5_type is None: return json_response(self, {'error': f'Unknown type: {order_type}'}, 400)
 
                 tick = mt5.symbol_info_tick(symbol)
                 if not tick: return json_response(self, {'error': f'No quote for {symbol}'}, 400)
@@ -322,7 +322,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 req = {'action': mt5.TRADE_ACTION_DEAL if is_market else mt5.TRADE_ACTION_PENDING,
                        'symbol': symbol, 'volume': volume, 'type': mt5_type, 'price': price,
                        'deviation': 20, 'magic': 234000, 'comment': comment,
-                       'type_time': mt5.ORDER_TIME_GTC, 'type_filling': mt5.ORDER_FILLING_IOC}
+                       'type_time': mt5.ORDER_TIME_GTC}
                 if sl: req['sl'] = float(sl)
                 if tp: req['tp'] = float(tp)
 
@@ -346,7 +346,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 req = {'action': mt5.TRADE_ACTION_DEAL, 'symbol': pos.symbol, 'volume': float(pos.volume),
                        'type': mt5.ORDER_TYPE_SELL if is_buy else mt5.ORDER_TYPE_BUY, 'position': ticket,
                        'price': close_price, 'deviation': 20, 'magic': 234000, 'comment': 'Close by TCS',
-                       'type_time': mt5.ORDER_TIME_GTC, 'type_filling': mt5.ORDER_FILLING_IOC}
+                       'type_time': mt5.ORDER_TIME_GTC}
                 result = mt5.order_send(req)
                 if not result or result.retcode != mt5.TRADE_RETCODE_DONE:
                     error = mt5.last_error() if not result else result.comment
@@ -387,7 +387,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 req = {'action': mt5.TRADE_ACTION_DEAL, 'symbol': pos.symbol, 'volume': vol,
                        'type': mt5.ORDER_TYPE_SELL if is_buy else mt5.ORDER_TYPE_BUY, 'position': ticket,
                        'price': cp, 'deviation': 20, 'magic': 234000, 'comment': 'Partial close',
-                       'type_time': mt5.ORDER_TIME_GTC, 'type_filling': mt5.ORDER_FILLING_IOC}
+                       'type_time': mt5.ORDER_TIME_GTC}
                 result = mt5.order_send(req)
                 if not result or result.retcode != mt5.TRADE_RETCODE_DONE:
                     error = mt5.last_error() if not result else result.comment

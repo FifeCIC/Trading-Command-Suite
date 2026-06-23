@@ -61,7 +61,7 @@ export class VolumeSurgeDirective implements IDirective {
       const score = Math.round(65 + magnitude * 30);
       return {
       signalClass: 'neutral',
-      score: Math.min(100, score),
+      score: Math.min(this.maxScore, score),
         confidence: 0.55 + magnitude * 0.3,
         reason: `Bullish volume surge: ${surgeRatio.toFixed(1)}x average on up day. Potential institutional accumulation.`,
       };

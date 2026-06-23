@@ -132,7 +132,7 @@ export class PriceTimeGapDirective implements IDirective {
     }
 
     return {
-      score: Math.min(100, score),
+      score: Math.min(this.maxScore, score),
       confidence: Number(Math.min(0.85, 0.4 + maxFootprint * 0.45).toFixed(2)),
       reason,
       signalClass,

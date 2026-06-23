@@ -33,3 +33,22 @@
 .sr-notes { margin-top: 0.75rem; padding: 0.6rem 0.75rem; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
 .sr-notes strong { font-size: 0.72rem; display: block; margin-bottom: 0.2rem; }
 .sr-notes p { font-size: 0.75rem; color: var(--ink-soft); margin: 0; }
+
+/* ── Protocol Overlay Panel ── */
+.sr-protocol-panel { margin-top: 0.75rem; padding: 0.65rem 0.8rem; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.sr-protocol-panel h3 { margin: 0 0 0.4rem; font-size: 0.75rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
+.sr-protocol-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.5rem; }
+.sr-protocol-stat { display: flex; flex-direction: column; gap: 0.15rem; }
+.sr-protocol-label { font-size: 0.58rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
+.sr-protocol-value { font-size: 1rem; font-weight: 800; color: var(--ink); }
+.sr-protocol-value.up { color: #22c55e; }
+.sr-protocol-value.down { color: #ef4444; }
+.sr-signal-badge { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 800; width: fit-content; }
+.sr-signal-badge.entry { background: rgba(34,197,94,0.12); color: #22c55e; }
+.sr-signal-badge.watch { background: rgba(245,158,11,0.12); color: #f59e0b; }
+.sr-signal-badge.exit { background: rgba(239,68,68,0.12); color: #ef4444; }
+.sr-signal-sparkline { display: flex; gap: 2px; height: 20px; align-items: flex-end; overflow-x: auto; }
+.sr-signal-tick { width: 4px; border-radius: 1px; min-height: 2px; flex-shrink: 0; }
+.sr-signal-tick.entry { background: #22c55e; height: 100%; }
+.sr-signal-tick.watch { background: #f59e0b; height: 50%; }
+.sr-signal-tick.exit { background: #ef4444; height: 100%; }

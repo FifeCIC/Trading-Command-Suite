@@ -37,7 +37,7 @@ function avg(values: number[]): number {
   return values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
 }
 
-function clamp(v: number, min = 0, max = 100): number {
+function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
 }
 
@@ -77,7 +77,7 @@ export class WilliamsRDirective implements IDirective {
 
     // Oversold bounce: %R < -80 and curling up
     if (current < -80 && current > prev) {
-      const score = clamp(Math.round(60 + Math.abs(current + 80) * 2));
+      const score = clamp(Math.round(60 + Math.abs(current + 80) * 2), 0, this.maxScore);
       return { score, confidence: 0.7, signalClass: 'bullish', reason: `Williams %R ${current.toFixed(1)} — oversold bounce` };
     }
 
@@ -198,7 +198,7 @@ export class ForceIndexDirective implements IDirective {
 
     // Strong buying: positive and rising
     if (current > 0 && current > prev) {
-      const score = clamp(Math.round(50 + Math.min(current / 100000, 30)));
+      const score = clamp(Math.round(50 + Math.min(current / 100000, 30)), 0, this.maxScore);
       return { score, confidence: 0.65, signalClass: 'bullish', reason: `Force Index +${current.toFixed(0)} — strong buying` };
     }
 
@@ -534,7 +534,7 @@ export class ParabolicSARDirective implements IDirective {
     // Uptrend continuing
     if (lastClose > lastSAR) {
       const dist = (lastClose - lastSAR) / lastClose;
-      const score = clamp(Math.round(50 + dist * 200));
+      const score = clamp(Math.round(50 + dist * 200), 0, this.maxScore);
       return { score, confidence: 0.6, signalClass: 'bullish', reason: `PSAR uptrend — ${(dist * 100).toFixed(1)}% above SAR` };
     }
 

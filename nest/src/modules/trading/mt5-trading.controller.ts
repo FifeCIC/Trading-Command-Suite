@@ -32,4 +32,7 @@ export class Mt5TradingController {
 
   @Post('close-all')
   closeAll() { return this.mt5.closeAll(); }
+
+  @Post('close-profitable')
+  closeProfitable() { return this.mt5.closeProfitable(); }
 }

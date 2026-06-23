@@ -39,7 +39,7 @@ export class ChaikinMoneyFlowDirective implements IDirective {
       const strength = Math.min(1, (cur - THRESHOLD) / 0.3);
       const score = Math.round(50 + strength * 40 + (strengthening ? 10 : 0));
       return {
-        score: Math.min(100, score),
+        score: Math.min(this.maxScore, score),
         confidence: 0.7 + strength * 0.2,
         reason: `CMF = ${cur.toFixed(3)} (> ${THRESHOLD}), strong accumulation. Volume-weighted buying pressure.`,
         signalClass: 'bullish',

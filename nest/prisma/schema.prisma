@@ -45,19 +45,24 @@ model Strategy {
 }
 
 model Directive {
-  id         String   @id @default(uuid()) @db.VarChar(36)
-  strategyId String   @db.VarChar(36)
-  name       String   @db.VarChar(200)
-  type       String   @db.VarChar(50)
+  id         String    @id @default(uuid()) @db.VarChar(36)
+  strategyId String?   @db.VarChar(36)
+  name       String    @db.VarChar(200)
+  type       String    @db.VarChar(50)
   weight     Float
   config     Json
-  active     Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  active     Boolean   @default(true)
+  parentId   String?   @db.VarChar(36)
+  isDefault  Boolean   @default(true)
+  forkReason String?   @db.VarChar(500)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  strategy Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  strategy Strategy? @relation(fields: [strategyId], references: [id], onDelete: SetNull)
 
   @@index([strategyId])
+  @@index([parentId])
+  @@index([isDefault])
 }
 
 model Score {
@@ -173,6 +178,40 @@ model FaqEntry {
   @@index([category])
 }
 
+model ApiTrace {
+  id           String   @id @default(uuid()) @db.VarChar(36)
+  cacheKey     String   @db.VarChar(64)
+  url          String   @db.VarChar(500)
+  method       String   @db.VarChar(10)
+  requestBody  String?  @db.Text
+  statusCode   Int      @default(0)
+  durationMs   Int      @default(0)
+  responseBody String?  @db.Text
+  preview      String?  @db.VarChar(1000)
+  error        String?  @db.Text
+  cached       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+
+  @@index([cacheKey, createdAt])
+  @@index([createdAt])
+  @@index([expiresAt])
+}
+
+model CorrelationPair {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  symbolA     String   @map("symbol_a") @db.VarChar(20)
+  symbolB     String   @map("symbol_b") @db.VarChar(20)
+  correlation Float
+  periodDays  Int      @default(90) @map("period_days")
+  computedAt  DateTime @default(now()) @map("computed_at")
+
+  @@map("correlation_pair")
+  @@unique([symbolA, symbolB, periodDays])
+  @@index([symbolA])
+  @@index([computedAt])
+}
+
 model SymbolCalibration {
   id                  String  @id @default(uuid()) @db.VarChar(36)
   symbol              String  @db.VarChar(20)
@@ -239,7 +278,7 @@ model NewsArticle {
   sourceId    String   @db.VarChar(36)
   category    String   @default("general") @db.VarChar(50)
   headline    String   @db.Text
-  url         String   @unique @db.VarChar(500)
+  url         String   @unique @db.VarChar(250)
   summary     String?  @db.Text
   sentiment   Float    @default(0)
   impact      String   @default("medium") @db.VarChar(20)
@@ -266,6 +305,30 @@ model NewsImportRun {
   completedAt  DateTime?
 
   @@index([startedAt])
+}
+
+model DirectiveOutcome {
+  id               String    @id @default(uuid()) @db.VarChar(36)
+  directiveId      String    @db.VarChar(100)
+  symbol           String    @db.VarChar(20)
+  strategyId       String?   @db.VarChar(36)
+  timeframe        String    @db.VarChar(10)
+  score            Float
+  signalClass      String    @db.VarChar(10)  // bullish | bearish | neutral
+  confidence       Float
+  predictedAt      DateTime
+  priceAtPredict   Float
+  priceT15m        Float?
+  priceT1h         Float?
+  priceT4h         Float?
+  priceT24h        Float?
+  directionCorrect Boolean?
+  outcomeComputedAt DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([directiveId, symbol, predictedAt])
+  @@index([predictedAt])
+  @@index([directionCorrect])
 }
 
 model MarketSnapshot {
@@ -365,6 +428,7 @@ model StrategyPerformance {
   strategyId  String   @db.VarChar(36)
   winRate     Float    @default(0)
   avgReturn   Float    @default(0)
+  totalPnl    Float    @default(0)
   sharpeRatio Float?
   totalTrades Int      @default(0)
   periodStart DateTime
@@ -649,4 +713,101 @@ model AnalystTarget {
   @@map("analyst_target")
   @@index([symbol])
   @@index([source, fetchedAt])
+}
+
+model ScoreSnapshot {
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  protocolId String   @db.VarChar(36)
+  symbol     String   @db.VarChar(20)
+  composite  Float
+  tradingSignal String @map("trading_signal") @db.VarChar(10)
+  rarityPct  Float?
+  snappedAt  DateTime @default(now())
+
+  @@map("score_snapshot")
+  @@index([protocolId, snappedAt])
+  @@index([symbol, snappedAt])
+}
+
+model UserStar {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  userId    String   @default("default") @db.VarChar(36)
+  itemType  String   @db.VarChar(20)
+  itemId    String   @db.VarChar(36)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, itemType, itemId])
+  @@index([userId, itemType])
+}
+
+model DirectiveOutcome {
+  id               String    @id @default(uuid()) @db.VarChar(36)
+  directiveId      String    @db.VarChar(100)
+  symbol           String    @db.VarChar(20)
+  strategyId       String?   @db.VarChar(36)
+  timeframe        String    @db.VarChar(10)
+  score            Float
+  signalClass      String    @db.VarChar(10)
+  confidence       Float
+  predictedAt      DateTime
+  priceAtPredict   Float
+  priceT15m        Float?
+  priceT1h         Float?
+  priceT4h         Float?
+  priceT24h        Float?
+  directionCorrect Boolean?
+  outcomeComputedAt DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([directiveId, symbol, predictedAt])
+  @@index([predictedAt])
+  @@index([directionCorrect])
+}
+
+model TradingStrategy {
+  id            String   @id @default(uuid()) @db.VarChar(36)
+  name          String   @db.VarChar(200)
+  description   String?  @db.Text
+  protocolId    String   @db.VarChar(36)
+  symbol        String   @db.VarChar(20)
+  timeframe     String   @db.VarChar(10)   @default("5m")
+  minComposite  Float    @default(65)
+  minRarityBand String?  @db.VarChar(20)
+  requireDirection String? @db.VarChar(10)
+  slPct         Float    @default(1.0)
+  tpPct         Float    @default(1.0)
+  baseSize      Float    @default(0.01)
+  useRaritySizing Boolean @default(true)
+  maxSize       Float?
+  maxPositions  Int      @default(1)
+  maxDailyLoss  Float?
+  cooldownMinutes Int    @default(5)
+  mode          String   @default("manual") @db.VarChar(20)
+  active        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  evaluations StrategyEvaluation[]
+
+  @@map("trading_strategy")
+}
+
+model StrategyEvaluation {
+  id            String   @id @default(uuid()) @db.VarChar(36)
+  strategyId    String   @db.VarChar(36)
+  symbol        String   @db.VarChar(20)
+  composite     Float
+  signal        String   @db.VarChar(10)
+  rarityBand    String?  @db.VarChar(20)
+  rarityPct     Float?
+  direction     String?  @db.VarChar(10)
+  traded        Boolean  @default(false)
+  tradeTicket   Int?
+  tradeResult   String?  @db.Text
+  evaluatedAt   DateTime @default(now())
+
+  strategy TradingStrategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  @@map("strategy_evaluation")
+  @@index([strategyId, evaluatedAt])
 }

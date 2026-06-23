@@ -41,6 +41,7 @@ import { ApiActivityModule } from './modules/api-activity/api-activity.module';
 import { IsaModule } from './modules/isa/isa.module';
 import { FxModule } from './modules/fx/fx.module';
 import { PlanModule } from './modules/plan/plan.module';
+import { StarsModule } from './modules/stars/stars.module';
 import { RateLimiterMiddleware } from './common/middleware/rate-limiter.middleware';
 import { MetricsMiddleware } from './common/middleware/metrics.middleware';
 
@@ -51,7 +52,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
       envFilePath: ['.env.local', '.env'],
     }),
     DevtoolsModule.register({
-      http: process.env.NODE_ENV !== 'production',
+      http: false, // Disabled — port 8000 conflicts with other services
     }),
     QueueModule.forRoot(),
     AuthModule,
@@ -91,6 +92,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     IsaModule,
     FxModule,
     PlanModule,
+    StarsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

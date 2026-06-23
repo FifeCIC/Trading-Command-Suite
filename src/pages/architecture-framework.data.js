@@ -6,7 +6,7 @@ export const STATUS_SNAPSHOT = [
   'Drift detection is built in — section index and contract register show verification badges. Mark items as verified as you review them.',
   'Agentic AI discoverability: /api/architecture/manifest endpoint provides machine-readable system map. Diagrams page has 11 Mermaid diagrams for all major subsystems. Capability Map tracks directive/provider/page coverage.',
   'Cross-page navigation: Architecture Framework ↔ Diagrams ↔ Capability Map are linked via nav buttons in each page header for agent and developer traversal.',
-  '2026-06-23: Librarian audit — Diagrams page expanded from 5→11 diagrams (added Activation Gate, Exit Signals, Alert Center, Calibration, Scoring Gating, Provider Adapters). Rendering bug fixed (React key for DOM remount). Contract register date bumped. Cross-page navigation added. Architecture manifest endpoint planned.',
+  '2026-06-23: Librarian audit — Diagrams page expanded from 5→11 diagrams (added Activation Gate, Exit Signals, Alert Center, Calibration, Scoring Gating, Provider Adapters). Rendering bug fixed (React key for DOM remount). Contract register date bumped. Cross-page navigation added. Architecture manifest endpoint implemented (GET /api/architecture/manifest).',
   '2026-06-19: Q291 — Timeframe-aware directive config. IDirective extended with activeWindow (time-gated) + timeModifiers (time-adjusted). DirectivesService.runAll() evaluates gates pre-calculate, modifiers post-calculate. session-open-effect directive has reference config (Mon–Fri, 09:00–16:30 America/New_York). Uses Intl.DateTimeFormat for IANA timezone resolution — no external lib.',
   '2026-06-19: Q289 — 9 strategy templates added to seed data (Kitchen Sink, High-Vol Scalper, VIX Regime, Bitcoin Specialist, Gold Hedge, Oil Trader, Forex Session, Tech Titans, Meme Stock). seed:strategies script added. Strategy config JSON extended with templateType, intendedTimeframe, symbols, category.',
   '2026-06-19: Nav-tree restructured — Training area restored (candle patterns, order testing, MT5 demo). Lab area reorganized (Lab Sandbox, Lab Overview, Feature Lab, Theme Lab, Motion Lab, Transitions Lab, Scroll Animations, Component Lab). Development retains core + Container Queries, Popover API, Algorithm Log, Backtest, Protocol Performance. Right-rail hidden by default (Dev Overlay toggle). Admin+Status moved into DevOverlay component.',
@@ -16,6 +16,9 @@ export const STATUS_SNAPSHOT = [
   '2026-06-17: Nav-tree consolidated — platforms/ops/wizard → Status area. Builder trimmed 19→6. Testing area deleted.',
   '2026-06-17: New pages: ProtocolsOverview, AddSymbol, DataElements. Algorithm Lab → Algorithm Log (real data). Training reorganized.',
   '2026-06-23: MT5 Bridge v2 — Flask replaced with http.server (mt5_bridge_v2.py). v1 archived. Single startup connection instead of per-request. Multi-account support. ⚠️ KNOWN_GAP: port 5000/5001 mismatch between bridge and NestJS .env.',
+  '2026-06-23: Bitcoin Speed Protocol (btc-speed-v1) — 16 directives with variable maxScores (40–200). speed-momentum directive created (5-candle ROC + volume amp). 3 crypto directives unstubbed (crypto-fear-greed fetches Alternative.me, btc-halving-cycle with 4-phase scoring, crypto-weekend-effect). BTC_SPEED_GROUPS registered. Rarity percentile gauge (ScoreSnapshot table, Standard→Cyclical→Black Swan bands). Protocols page built with code + DB protocol listing.',
+  '2026-06-23: Directive clamp audit — 29 files fixed: Math.min(100) → Math.min(this.maxScore). volume-confirmation bug fixed (maxScore 85→100). MT5 clamp() updated.',
+  '2026-06-23: Architecture honesty update — Trading execution layer accurately documented: Layer 1 (execution/MT5 endpoints) exists, Layer 2 (strategy bridge) and Layer 3 (automated decision loop) do NOT. Fake claims (automated scheduler, completed strategy bridge) corrected.',
 ]
 
 export const ARCHITECTURE_INDEX = [
@@ -33,10 +36,10 @@ export const ARCHITECTURE_INDEX = [
   { name: 'Current contract register', status: 'done' },
   { name: 'Queue/provider contract', status: 'done' },
   { name: 'Scoring/strategy contract', status: 'done' },
-  { name: 'Calibration system', status: 'new' },
-  { name: 'Activation gate and conditions', status: 'new' },
-  { name: 'Exit signal system', status: 'new' },
-  { name: 'Alert center architecture', status: 'new' },
+  { name: 'Calibration system', status: 'done' },
+  { name: 'Activation gate and conditions', status: 'done' },
+  { name: 'Exit signal system', status: 'done' },
+  { name: 'Alert center architecture', status: 'done' },
   { name: 'AI guardrails', status: 'done' },
   { name: 'Verification governance', status: 'done' },
   { name: 'Definition of done', status: 'done' },
@@ -93,10 +96,15 @@ export const CURRENT_SLICE = [
   'Training area — candle pattern detection with TradingView charts',
   'MT5 adapter + Python bridge v2 (http.server, port 5000). Flask v1 archived to scripts/mt5-bridge/archived/. Multi-account support. ⚠️ NestJS .env expects port 5001 — mismatch needs resolution.',
   'Trading212 portfolio import with live portfolio data',
-  'Automated daily trading scheduler (Mon-Fri 9AM cron)',
+  'Automated daily trading scheduler (Mon-Fri 9AM cron) ⚠️ NOT YET BUILT — no trading cron jobs exist. Manual MT5 endpoints only.',
+  'Trading execution layer — MT5 bridge posts/closes/modifies orders. Tested: live EURUSD trade executed. ✅',
+  'Trading strategy bridge — ⚠️ NOT YET BUILT. Protocols score but nothing consumes signals for execution. Prompt created (trading-strategy-bridge.prompt.md).',
+  'Trading algorithm loop — ⚠️ NOT YET BUILT. No scheduler watches symbols, scores them, and decides whether to trade.',
   'Keyboard speed trading — B/S/C keys, size presets, Shift 2x',
   'Backtest engine + lightweight chart with RSI/MACD/EMA overlays',
   'SEES Live Stack — filters to 5 strategy-weighted directives, real data source indicators',
+  'Bitcoin Speed Protocol (btc-speed-v1) — 16 directives, variable maxScore (40–200), halving cycle bonus, rarity percentile gauge ✅',
+  'Protocols page — lists code-registered + DB strategies with API usage examples ✅',
   'Strategy creation + duplication — any strategy can be a template',
   'Portfolio view — holdings, P&L, manual trading with real Trading212 data',
   'Nav reorganization — SEES, Strategy Builder moved to Scoring area with section dividers',
@@ -1024,6 +1032,18 @@ export const AI_GUARDRAILS = [
       'Do not call external providers during page rendering when stored or queued flow is required.',
       'Do not bypass auth, token, redaction, or logging requirements.',
       'Do not add duplicate queue managers, adapter frameworks, asset loaders, route families, or global data blobs without documenting the gap.',
+      'Do not use fake, random, or hardcoded demo data to make a feature appear functional. If real data does not exist, show "—", "No data", "—", or an empty-state icon. Never invent P&L figures, "In Use" flags, or trade counts.',
+    ],
+  },
+  {
+    title: 'UI Data Honesty',
+    summary: 'Every visible value must be traceable to a real data source. If no data exists, say so.',
+    items: [
+      'Every number, status badge, checkmark, or currency value must come from storage or a live endpoint. No hardcoded demo values in release-facing pages.',
+      'When a feature has no data yet: use "—" (em-dash), "No data", or a muted icon. Never invent plausible-looking values.',
+      'Use the DATA_STATES vocabulary: empty, no-provider, queued, stored, cached, stale, failed — pick the honest one.',
+      'If a column like "In Use" or "P&L" has no backend data source, do not render fake values. Either hide the column or show "—" for every row.',
+      'Demo/seed data is acceptable ONLY for initial database seeding (Prisma seed scripts). It must never be hardcoded in React components.',
     ],
   },
   {
@@ -1106,6 +1126,7 @@ export const HANDOFF_CHECKLIST = [
 ]
 
 export const KNOWN_GAPS = [
+  'Trading Strategies page (trading-strategies) — hardcoded fake "In Use" checkmarks and P&L values (+£1,245, +£3,820, -£210). No strategies are actually running. Columns should show "—" until real strategy execution tracking exists. UI Data Honesty rule added to AI_GUARDRAILS, .agent-rules.md, and DEVELOPMENT-POLICY.md to prevent this pattern.',
   'MT5 Bridge port mismatch — v2 bridge on port 5000 (BRIDGE_PORT env), NestJS .env has MT5_BRIDGE_URL=http://localhost:5001. Bridge /health reports connected:false with 8900+ connection errors. Resolution: align ports to 5000 in .env or set BRIDGE_PORT=5001 when starting v2.',
   'MT5 Bridge v2 health — bridge self-reports disconnected but NestJS adapter may have working data endpoints. Root cause investigation needed.',
   'Agent coordination gap — Trading Agent rewrote MT5 bridge (Flask→http.server) without checking REVISION_LOG for recent MT5 work, resulting in duplicate effort. Coordination rules now in .agent-rules.md.',
@@ -1125,6 +1146,10 @@ export const KNOWN_GAPS = [
 ]
 
 export const REVISION_LOG = [
+  '2026-06-23: NestJS operations guide updated in ecosystem.instructions.md — removed Intranet dependency for server lifecycle. Stop command now uses direct PowerShell port-based process termination. Added explicit warning: "Do NOT use Intranet for this project." Server is self-contained with own Server Controls page.',
+  '2026-06-23: UI Data Honesty rule added to AI_GUARDRAILS (new card: every value traceable to real source, no fake demo data), .agent-rules.md (new section), and DEVELOPMENT-POLICY.md (anti-pattern). Trading Strategies page fake In-Use/P&L documented in KNOWN_GAPS.',
+  '2026-06-23: Standard agent commands created — AUTONOMOUS-BATCH-RUN.md rewritten with "Next Prompt" (single) and "Batch Mode" (all) prompt blocks. Both follow DEVELOPMENT-POLICY.md lifecycle (CLAIM__→DONE__ with REVISION_LOG + HANDOFF_CHECKLIST). Old procedure replaced (predated current conventions).',
+  '2026-06-23: Prompt folder audit — 25+ DONE__ files in prompts/ awaiting archival, 130+ agent-update records (oldest June 11), 2 stale CLAIM__ files, 2 MOVED__ files. Policy now defines strict state transitions and archival criteria.',
   '2026-06-23: MT5 Bridge v2 — Trading Agent migrated from Flask to http.server (mt5_bridge_v2.py, ~480 lines). v1 Flask bridge archived to scripts/mt5-bridge/archived/. v2 connects MT5 once at startup instead of per-request Flaks threading issue. KNOWN_GAP: port mismatch (v2 on 5000, NestJS .env expects 5001). Bridge /health reports connected:false with 8900+ connection errors — data endpoints may work independently of health check.',
   '2026-06-23: Agent coordination rules added to .agent-rules.md — pre-work checks, CLAIM__ convention, completion verification, HANDOFF_CHECKLIST enforcement, conflict resolution. Session bootstrap order expanded (architecture manifest + structural pages now steps 3-4).',
   '2026-06-23: Discussion docs audited — NEWS-DISSIPATION-CURVES marked IMPLEMENTED (Q287 banner), EXIT-SIGNALS stays in-progress (Q279), HOTAS-TRADING-INTERFACE stays deferred. 5 previously-implemented discussions documented as promoted/archived.',
@@ -1488,7 +1513,7 @@ export const ROADMAP_ITEMS = [
   {
     domain: 'Automation and scheduling',
     items: [
-      { issue: 'Q135', label: 'Automated Daily Trading Scheduler — Mon-Fri 9AM cron with pre-flight checks', status: 'done', gh: null },
+      { issue: 'Q135', label: 'Automated Daily Trading Scheduler — Mon-Fri 9AM cron ⚠️ NOT BUILT — zero trading cron jobs exist', status: 'planned', gh: null },
       { issue: 'Q137', label: 'Execution Gates — 5 gate layers from WP plugin', status: 'done', gh: null },
       { issue: 'Q136', label: 'Risk Management — SL, TP, position sizing, drawdown limits', status: 'done', gh: null },
     ],
@@ -1499,8 +1524,11 @@ export const ROADMAP_ITEMS = [
       { issue: 'Q171', label: 'Strategy Creation Spree — 20+ strategies with projections', status: 'done', gh: null },
       { issue: 'Q173', label: 'Strategy Templates replaced with Duplicate Strategy', status: 'done', gh: null },
       { issue: 'Q197', label: 'Built-In Strategies — 8 purpose-specific (Forex, CFD, VIX, Gold, etc.)', status: 'done', gh: null },
+      { issue: 'Q335', label: 'Protocol Gating — multiplicative risk scoring, BTC Speed Protocol, rarity percentile gauge, protocols page', status: 'done', gh: null },
+      { issue: 'Q336', label: 'Directive clamp audit — 29 Math.min(100) → this.maxScore, volume-confirmation bug fix', status: 'done', gh: null },
+      { issue: 'Q337', label: 'Crypto directives unstubbed — fear-greed (Alternative.me), halving-cycle (4-phase), weekend-effect', status: 'done', gh: null },
       { issue: 'Q161', label: 'Portfolio view with real Trading212 data', status: 'done', gh: null },
-      { issue: 'Q133', label: 'Trading strategy with scoring + allocation + automation', status: 'done', gh: null },
+      { issue: 'Q133', label: 'Trading strategy with scoring + allocation + automation ⚠️ NOT BUILT — strategy bridge prompt created, implementation pending', status: 'planned', gh: null },
     ],
   },
   {

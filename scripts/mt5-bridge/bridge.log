@@ -18166,3 +18166,82 @@
 2026-06-23 01:50:43,663 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
 2026-06-23 01:50:43,970 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
 2026-06-23 01:50:43,978 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-23 01:57:09,518 [INFO] MetaTrader5 package loaded
+2026-06-23 01:57:09,518 [INFO] Connecting to MT5 at startup...
+2026-06-23 01:57:09,519 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-23 01:57:09,533 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1000.0
+2026-06-23 01:57:09,534 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-06-23 01:57:09,542 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-06-23 01:57:46,033 [INFO] MetaTrader5 package loaded
+2026-06-23 01:57:46,033 [INFO] Connecting to MT5 at startup...
+2026-06-23 01:57:46,033 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-23 01:57:46,048 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1000.0
+2026-06-23 01:57:46,048 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-06-23 01:57:46,056 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-06-23 01:58:10,817 [INFO] MetaTrader5 package loaded
+2026-06-23 01:58:10,818 [INFO] Connecting to MT5 at startup...
+2026-06-23 01:58:10,818 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-23 01:58:10,833 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1000.0
+2026-06-23 01:58:10,833 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-06-23 01:58:10,841 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-06-23 12:06:11,123 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:06:11,198 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:06:20,947 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:06:30,940 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:06:40,938 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:06:50,963 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:07:00,933 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:07:10,955 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:07:21,011 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:07:50,937 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:19:06,886 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:19:06,913 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:19:11,196 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:19:11,215 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:19:21,149 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:19:31,142 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:19:41,147 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:19:51,146 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:20:01,165 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:20:11,148 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:20:21,150 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:20:31,143 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:20:41,142 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:20:51,147 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:21:01,152 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:21:11,161 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:21:21,141 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:21:31,141 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:21:41,140 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:21:51,142 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:22:01,141 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:22:11,137 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:22:21,141 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:22:31,153 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:22:41,143 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:22:51,141 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:23:01,142 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:23:11,140 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:23:21,138 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:23:31,135 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:23:41,137 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:23:51,140 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:24:01,145 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:24:11,139 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:24:21,136 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:24:31,135 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:24:41,138 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:24:51,141 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:25:01,136 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:25:11,140 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:25:21,139 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:25:31,137 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:25:41,136 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:25:51,139 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:26:01,136 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:26:11,150 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:26:21,141 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:26:31,142 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:26:41,140 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:26:51,137 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-23 12:27:01,144 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'

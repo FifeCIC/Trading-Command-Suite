@@ -48,7 +48,7 @@ export class BollingerBandsDirective implements IDirective {
       const score = Math.round(60 + depth * 25 + (turning ? 10 : 0));
       return {
       signalClass: 'neutral',
-      score: Math.min(100, score),
+      score: Math.min(this.maxScore, score),
         confidence: 0.55 + depth * 0.25,
         reason: `Price near lower Bollinger Band (%B=${currentB.toFixed(2)}${turning ? ', turning up' : ''}). Bandwidth ${currentBW.toFixed(1)}%. Oversold bounce potential.`,
       };

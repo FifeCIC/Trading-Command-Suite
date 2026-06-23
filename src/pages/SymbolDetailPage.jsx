@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { createChart } from 'lightweight-charts';
 import { apiGet } from '../core/api/client';
+import StarToggle from '../components/StarToggle';
 import './symbol-detail.css';
 
 export default function SymbolDetailPage() {
@@ -139,9 +140,12 @@ export default function SymbolDetailPage() {
       <Link to="/research/symbols-browser" className="sd-back">← Back to Symbols</Link>
 
       <header className="sd-header">
-        <div>
-          <h1>{sym.ticker || symbolId}</h1>
-          <p>{sym.name || '—'}</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <StarToggle itemType="symbol" itemId={sym.id || symbolId} size={22} />
+          <div>
+            <h1>{sym.ticker || symbolId}</h1>
+            <p>{sym.name || '—'}</p>
+          </div>
         </div>
         <div className="sd-badges">
           <span className={`sd-chip sd-chip--${freshnessTone}`}>{freshnessStatus}</span>

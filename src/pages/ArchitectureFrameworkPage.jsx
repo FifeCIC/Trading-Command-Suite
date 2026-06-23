@@ -813,7 +813,7 @@ export default function ArchitectureFrameworkPage() {
                 </tbody>
               </table>
             </div>
-            <p className="hint" style={{ marginTop: 12 }}>24 sections documented. 20 established + 4 new subsystem deep-dives.</p>
+            <p className="hint" style={{ marginTop: 12 }}>24 sections documented. 20 established + 4 subsystem deep-dives (now built).</p>
           </div>
         </SectionBlock>
       )}

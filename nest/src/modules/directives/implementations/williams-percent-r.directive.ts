@@ -41,7 +41,7 @@ export class WilliamsPercentRDirective implements IDirective {
       const curlBonus = curlingUp ? 0.3 : 0;
       const score = Math.round(40 + depth * 35 + curlBonus * 25);
       return {
-        score: Math.min(100, score),
+        score: Math.min(this.maxScore, score),
         confidence: curlingUp ? 0.7 + depth * 0.2 : 0.4,
         reason: `Williams %R = ${current.toFixed(1)} (oversold < ${OVERSOLD}), ${curlingUp ? 'curling up' : 'declining'}.`,
         signalClass: 'bullish',
@@ -51,7 +51,7 @@ export class WilliamsPercentRDirective implements IDirective {
       const depth = Math.min(1, (current - OVERBOUGHT) / 20);
       const score = Math.round(30 + depth * 30);
       return {
-        score: Math.min(100, score),
+        score: Math.min(this.maxScore, score),
         confidence: 0.5,
         reason: `Williams %R = ${current.toFixed(1)} (overbought > ${OVERBOUGHT}).`,
         signalClass: 'bearish',

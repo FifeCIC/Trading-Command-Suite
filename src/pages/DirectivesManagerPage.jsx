@@ -41,6 +41,7 @@ export default function DirectivesManagerPage() {
       }
       return next
     })
+    selectDirective(id)
   }
 
   function selectDirective(id) {
@@ -95,28 +96,25 @@ export default function DirectivesManagerPage() {
 
                 return (
                   <Fragment key={item.id}>
-                    <tr className={`directive-row ${selectedRow ? 'is-selected' : ''}`}>
+                    <tr
+                      className={`directive-row ${selectedRow ? 'is-selected' : ''}`}
+                      onClick={() => {
+                        if (selected?.id === item.id) {
+                          toggleRow(item.id);
+                        } else {
+                          selectDirective(item.id);
+                        }
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <td>
-                        <button
-                          type="button"
-                          className="directive-primary"
-                          onClick={() => {
-                            if (selected?.id === item.id) {
-                              // Clicking already-selected row: toggle expand/collapse
-                              toggleRow(item.id);
-                            } else {
-                              // Clicking new row: select it (which auto-expands)
-                              selectDirective(item.id);
-                            }
-                          }}
-                          aria-expanded={expanded}
-                        >
+                        <span className="directive-primary">
                           <span className="directive-chevron" aria-hidden="true">{expanded ? '▾' : '▸'}</span>
                           <span>
                             <strong>{item.name}</strong>
                             <small>{item.code}</small>
                           </span>
-                        </button>
+                        </span>
                       </td>
                       <td>{item.category}</td>
                       <td><span className={`directive-chip tone-${statusTone}`}>{item.status}</span></td>

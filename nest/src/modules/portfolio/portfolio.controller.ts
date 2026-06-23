@@ -1,11 +1,15 @@
 import { Controller, Get, Query, Logger } from '@nestjs/common';
 import { PortfolioService, PortfolioResponse } from './portfolio.service';
+import { CorrelationService } from './correlation.service';
 
 @Controller('portfolio')
 export class PortfolioController {
   private readonly logger = new Logger(PortfolioController.name);
 
-  constructor(private readonly portfolioService: PortfolioService) {}
+  constructor(
+    private readonly portfolioService: PortfolioService,
+    private readonly correlationService: CorrelationService,
+  ) {}
 
   @Get()
   async getPortfolio(@Query('source') source?: string): Promise<PortfolioResponse> {
@@ -38,5 +42,16 @@ export class PortfolioController {
       credentials: data.summary.mode !== 'mock',
       mode: data.summary.mode,
     };
+  }
+
+  @Get('correlation')
+  async getCorrelation(@Query('symbols') symbols?: string) {
+    const symbolList = symbols ? symbols.split(',').map((s) => s.trim().toUpperCase()) : undefined;
+    return this.correlationService.getMatrix(symbolList);
+  }
+
+  @Get('exposure')
+  async getExposure() {
+    return this.correlationService.getExposure();
   }
 }

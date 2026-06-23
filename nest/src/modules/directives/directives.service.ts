@@ -12,18 +12,34 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../../database/prisma.service';
 import {
+  ConditionVector,
   DirectiveInput,
   DirectiveResult,
   IDirective,
+  SuitabilityProfile,
   TimeModifier,
   TimeWindow,
 } from './interfaces/directive.interface';
+import { ConditionDetectorService } from './condition-detector.service';
+import { getDirectiveSuitability } from './directive-suitability.registry';
+import { isScoringDemo } from '../../config/scoring-mode';
 
 @Injectable()
 export class DirectivesService {
   private readonly logger = new Logger(DirectivesService.name);
   private readonly registry = new Map<string, IDirective>();
+  private lastConditionVector: ConditionVector | null = null;
+
+  constructor(
+    private readonly conditionDetector: ConditionDetectorService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  getLastConditionVector(): ConditionVector | null {
+    return this.lastConditionVector;
+  }
 
   register(directive: IDirective): void {
     if (this.registry.has(directive.id)) {
@@ -45,9 +61,13 @@ export class DirectivesService {
     return Array.from(this.registry.values());
   }
 
-  /** Run all registered directives against the same input. */
+  /** Run all registered directives against the same input, with activation gates. */
   runAll(input: DirectiveInput): Map<string, DirectiveResult> {
     const results = new Map<string, DirectiveResult>();
+
+    // ── Step 1: Run condition detector ──
+    const cv = this.conditionDetector.detect(input);
+    this.lastConditionVector = cv;
 
     for (const [id, directive] of this.registry) {
       try {
@@ -66,8 +86,35 @@ export class DirectivesService {
           }
         }
 
+        // ── Activation Gate (Q301) — suitability check ──
+        const suitability = directive.suitability ?? getDirectiveSuitability(id);
+        const gateResult = this.evaluateGate(suitability, cv);
+
+        if (gateResult.muted) {
+          results.set(id, {
+            score: 0,
+            confidence: 0,
+            reason: `Muted — ${gateResult.reason}`,
+            signalClass: 'neutral',
+            gated: true,
+            gatedReason: gateResult.reason,
+          });
+          continue;
+        }
+
         // ── Run the directive ──
         let result = directive.calculate(input);
+
+        // ── Apply session/volatility weight adjustments ──
+        if (gateResult.weightMultiplier < 1.0) {
+          result = {
+            ...result,
+            score: Math.round(result.score * gateResult.weightMultiplier),
+            reason: result.reason
+              ? `${result.reason}. ${gateResult.reason}`
+              : gateResult.reason,
+          };
+        }
 
         // ── Apply time modifiers (timeModifiers) ──
         if (directive.timeModifiers && directive.timeModifiers.length > 0) {
@@ -98,6 +145,69 @@ export class DirectivesService {
     }
 
     return results;
+  }
+
+  /**
+   * Evaluate activation gate — checks suitability profile against the
+   * current ConditionVector. Returns whether to mute and/or adjust weight.
+   */
+  private evaluateGate(
+    s: SuitabilityProfile,
+    cv: ConditionVector,
+  ): { muted: boolean; reason: string; weightMultiplier: number } {
+    let weightMultiplier = 1.0;
+
+    // In demo mode: reduce weight on mismatch
+    // In live mode: MUTE — directive is unsuitable for current conditions
+    const demo = isScoringDemo();
+
+    // ── Regime mismatch → MUTE (or -30% in demo) ──
+    if (s.regimeType !== 'any' && s.regimeType !== cv.regime) {
+      if (demo) {
+        weightMultiplier -= 0.30;
+      } else {
+        return {
+          muted: true,
+          reason: `${s.regimeType} regime required, current regime is ${cv.regime}`,
+          weightMultiplier: 0,
+        };
+      }
+    }
+
+    // ── Volatility mismatch → -30% weight ──
+    if (s.volatilityLevel !== 'any' && s.volatilityLevel !== cv.volatility) {
+      weightMultiplier -= 0.30;
+    }
+
+    // ── Session mismatch → -50% weight ──
+    if (
+      s.preferredSessions.length > 0 &&
+      !s.preferredSessions.includes(cv.activeSession) &&
+      !s.preferredSessions.includes('off-hours') // don't penalize if off-hours is explicitly preferred
+    ) {
+      weightMultiplier -= 0.50;
+    }
+
+    if (weightMultiplier < 1.0) {
+      const parts: string[] = [];
+      if (s.volatilityLevel !== 'any' && s.volatilityLevel !== cv.volatility) {
+        parts.push(`volatility mismatch (${s.volatilityLevel} vs ${cv.volatility}, -30%)`);
+      }
+      if (
+        s.preferredSessions.length > 0 &&
+        !s.preferredSessions.includes(cv.activeSession) &&
+        !s.preferredSessions.includes('off-hours')
+      ) {
+        parts.push(`session mismatch (prefers ${s.preferredSessions.join('/')}, in ${cv.activeSession}, -50%)`);
+      }
+      return {
+        muted: false,
+        reason: `Weight adjusted: ${parts.join('; ')}`,
+        weightMultiplier,
+      };
+    }
+
+    return { muted: false, reason: '', weightMultiplier: 1.0 };
   }
 
   /**
@@ -189,5 +299,121 @@ export class DirectivesService {
     }
 
     return applied;
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  Fork Management (Q301b)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  /**
+   * Create a fork of an existing directive for a specific strategy.
+   * If a fork already exists for this directive+strategy, returns it.
+   * Otherwise copies the parent and applies overrides.
+   */
+  async forkDirective(
+    parentId: string,
+    strategyId: string,
+    overrides?: { weight?: number; config?: any; reason?: string },
+  ) {
+    if (!this.prisma.isAvailable) {
+      throw new Error('Database unavailable — cannot create fork.');
+    }
+
+    // Check if fork already exists
+    const existing = await this.prisma.directive.findFirst({
+      where: { parentId, strategyId, isDefault: false },
+    });
+    if (existing) return existing;
+
+    // Load parent
+    const parent = await this.prisma.directive.findUnique({
+      where: { id: parentId },
+    });
+    if (!parent) throw new Error(`Parent directive ${parentId} not found.`);
+
+    // Create fork
+    const fork = await this.prisma.directive.create({
+      data: {
+        name: overrides?.reason
+          ? `${parent.name} (${overrides.reason})`
+          : `${parent.name} (Custom)`,
+        type: parent.type,
+        weight: overrides?.weight ?? parent.weight,
+        config: overrides?.config ?? (parent.config as any),
+        active: parent.active,
+        strategyId,
+        parentId,
+        isDefault: false,
+        forkReason: overrides?.reason ?? null,
+      },
+    });
+
+    this.logger.log(
+      `Forked directive ${parentId} → ${fork.id} for strategy ${strategyId}`,
+    );
+    return fork;
+  }
+
+  /**
+   * Resolve the effective directive for a strategy.
+   * Returns the fork if one exists, otherwise the original.
+   */
+  async getEffectiveDirective(directiveId: string, strategyId: string) {
+    if (!this.prisma.isAvailable) return null;
+
+    // Look for a fork first
+    const fork = await this.prisma.directive.findFirst({
+      where: { parentId: directiveId, strategyId, isDefault: false },
+    });
+    if (fork) return fork;
+
+    // Fall back to original
+    return this.prisma.directive.findUnique({ where: { id: directiveId } });
+  }
+
+  /**
+   * Revert a fork: delete it so the strategy falls back to the parent.
+   */
+  async revertFork(forkId: string) {
+    if (!this.prisma.isAvailable) return;
+
+    const fork = await this.prisma.directive.findUnique({
+      where: { id: forkId },
+    });
+    if (!fork || fork.isDefault) {
+      throw new Error(`Directive ${forkId} is not a fork.`);
+    }
+
+    await this.prisma.directive.delete({ where: { id: forkId } });
+    this.logger.log(`Reverted fork ${forkId} → parent ${fork.parentId}`);
+    return { reverted: true, parentId: fork.parentId };
+  }
+
+  /**
+   * Get all forks with parent and strategy info.
+   */
+  async getForks() {
+    if (!this.prisma.isAvailable) return [];
+
+    const forks = await this.prisma.directive.findMany({
+      where: { isDefault: false },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Enrich with parent name
+    const enriched = [];
+    for (const f of forks) {
+      const parent = f.parentId
+        ? await this.prisma.directive.findUnique({
+            where: { id: f.parentId },
+            select: { name: true },
+          })
+        : null;
+      enriched.push({
+        ...f,
+        parentName: parent?.name ?? 'Unknown',
+      });
+    }
+    return enriched;
   }
 }

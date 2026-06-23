@@ -222,6 +222,78 @@ export class Mt5Controller {
     }
   }
 
+  @Post('close-all')
+  async closeAll() {
+    try {
+      // Fetch positions, then close each
+      const posRes = await fetch(`${this.BRIDGE_URL}/positions`, { signal: AbortSignal.timeout(10000) });
+      if (!posRes.ok) return { closed: 0, failed: 0, error: `Bridge HTTP ${posRes.status}` };
+      const positions = await posRes.json();
+      const allPositions = Array.isArray(positions) ? positions : (positions.positions || []);
+
+      let closed = 0;
+      let failed = 0;
+      for (const pos of allPositions) {
+        try {
+          const closeRes = await fetch(`${this.BRIDGE_URL}/close/${pos.ticket}`, {
+            method: 'POST',
+            signal: AbortSignal.timeout(15000),
+          });
+          closeRes.ok ? closed++ : failed++;
+        } catch {
+          failed++;
+        }
+      }
+      return { closed, failed, total: allPositions.length };
+    } catch (err: any) {
+      return { closed: 0, failed: 0, error: err.message || 'Bridge unreachable' };
+    }
+  }
+
+  @Post('close-profitable')
+  async closeProfitable() {
+    try {
+      const posRes = await fetch(`${this.BRIDGE_URL}/positions`, { signal: AbortSignal.timeout(10000) });
+      if (!posRes.ok) return { closed: 0, failed: 0, skipped: 0, totalPnl: 0, closedTickets: [], error: `Bridge HTTP ${posRes.status}` };
+      const positions = await posRes.json();
+      const allPositions = Array.isArray(positions) ? positions : (positions.positions || []);
+      const profitable = allPositions.filter((p: any) => p.profit > 0);
+
+      let closed = 0;
+      let failed = 0;
+      let totalPnl = 0;
+      const closedTickets: { ticket: number; symbol: string; profit: number }[] = [];
+
+      for (const pos of profitable) {
+        try {
+          const closeRes = await fetch(`${this.BRIDGE_URL}/close/${pos.ticket}`, {
+            method: 'POST',
+            signal: AbortSignal.timeout(15000),
+          });
+          if (closeRes.ok) {
+            closed++;
+            totalPnl += pos.profit;
+            closedTickets.push({ ticket: pos.ticket, symbol: pos.symbol, profit: pos.profit });
+          } else {
+            failed++;
+          }
+        } catch {
+          failed++;
+        }
+      }
+
+      return {
+        closed,
+        failed,
+        skipped: allPositions.length - profitable.length,
+        totalPnl: Math.round(totalPnl * 100) / 100,
+        closedTickets,
+      };
+    } catch (err: any) {
+      return { closed: 0, failed: 0, skipped: 0, totalPnl: 0, closedTickets: [], error: err.message || 'Bridge unreachable' };
+    }
+  }
+
   @Get('history')
   async getHistory() {
     try {

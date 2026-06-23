@@ -3,6 +3,7 @@ import { ProtocolGatingService, GatedScore } from './protocol-gating.service';
 import { PrismaService } from '../../database/prisma.service';
 import { MarketDataService } from '../market-data/market-data.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
+import { PROTOCOL_REGISTRY } from '../directives/directive-groups';
 
 @Controller('scoring/gated')
 export class ProtocolGatingController {
@@ -16,6 +17,65 @@ export class ProtocolGatingController {
   ) {}
 
   /**
+   * GET /api/scoring/gated/protocols
+   *
+   * Lists all available protocols from code registry + DB strategies.
+   */
+  @Get('protocols')
+  async listProtocols() {
+    const protocols: Array<{
+      id: string;
+      name: string;
+      description: string;
+      source: 'code' | 'database';
+      directiveCount: number;
+      maxScore: number;
+      active: boolean;
+    }> = [];
+
+    // Code-registered protocols (from directive-groups.ts)
+    for (const [id, proto] of Object.entries(PROTOCOL_REGISTRY)) {
+      const maxScore = proto.groups.reduce(
+        (sum, g) => sum + g.directiveIds.reduce(
+          (s, _did) => s + 100, 0,
+        ), 0,
+      );
+      protocols.push({
+        id,
+        name: proto.name,
+        description: proto.description,
+        source: 'code',
+        directiveCount: proto.groups.reduce((s, g) => s + g.directiveIds.length, 0),
+        maxScore,
+        active: true,
+      });
+    }
+
+    // DB strategies (from Strategy table)
+    try {
+      const dbStrategies = await this.prisma.strategy.findMany({
+        where: { active: true },
+        include: { directives: { where: { active: true }, select: { id: true, weight: true } } },
+      });
+      for (const s of dbStrategies) {
+        protocols.push({
+          id: s.id,
+          name: s.name,
+          description: s.description ?? '',
+          source: 'database',
+          directiveCount: s.directives.length,
+          maxScore: s.directives.reduce((sum, d) => sum + (d.weight * 100), 0),
+          active: s.active,
+        });
+      }
+    } catch {
+      // DB might not be available — skip
+    }
+
+    return { protocols, count: protocols.length };
+  }
+
+  /**
    * GET /api/scoring/gated/:symbol
    *
    * Returns a multiplicatively-gated score for a single symbol.
@@ -24,12 +84,14 @@ export class ProtocolGatingController {
    * Query params:
    *   ?timeframe=1d   (default: 1d)
    *   ?bars=100        (default: 100)
+   *   ?protocol=btc-speed-v1  (optional — selects protocol groups)
    */
   @Get(':symbol')
   async getGatedScore(
     @Param('symbol') symbol: string,
     @Query('timeframe') timeframe = '1d',
     @Query('bars') bars = '100',
+    @Query('protocol') protocol?: string,
   ): Promise<GatedScore> {
     const ticker = symbol.toUpperCase();
 
@@ -62,7 +124,7 @@ export class ProtocolGatingController {
       };
     }
 
-    return this.protocolGating.scoreWithGating(ticker, marketBars);
+    return this.protocolGating.scoreWithGating(ticker, marketBars, protocol);
   }
 
   /**

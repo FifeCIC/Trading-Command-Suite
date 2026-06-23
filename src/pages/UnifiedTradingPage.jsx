@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import AccountSummary from '../components/mt5/AccountSummary';
 import PositionsTable from '../components/mt5/PositionsTable';
 import OrderForm from '../components/mt5/OrderForm';
+import { takeAllProfits } from '../core/api/trading.js';
 import './UnifiedTradingPage.css';
 
 export default function UnifiedTradingPage() {
@@ -84,6 +85,38 @@ export default function UnifiedTradingPage() {
     }
   }
 
+  async function handleTakeProfits() {
+    const profitable = positions.filter((p) => p.profit > 0);
+    if (profitable.length === 0) {
+      setMsg('No positions in profit to close.');
+      setTimeout(() => setMsg(''), 4000);
+      return;
+    }
+
+    const totalPnl = profitable.reduce((s, p) => s + p.profit, 0);
+    const breakdown = profitable
+      .map((p) => `${p.symbol} #${p.ticket}: +${p.profit.toFixed(2)}`)
+      .join('\n');
+
+    if (!window.confirm(
+      `Take profit on ${profitable.length} position(s)?\n\n${breakdown}\n\nTotal P&L: +${totalPnl.toFixed(2)}`,
+    )) return;
+
+    try {
+      const res = await fetch('/api/providers/mt5/close-profitable', { method: 'POST' });
+      const data = await res.json();
+      if (data.closed > 0 || data.closedTickets?.length > 0) {
+        setMsg(`Took profit on ${data.closed} position(s). Realised: +${data.totalPnl?.toFixed(2) ?? '?'}`);
+        setTimeout(() => setMsg(''), 6000);
+        fetchData();
+      } else {
+        setError(data.error || 'Take profits failed');
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   async function handleCloseAll() {
     if (!window.confirm('Close ALL open positions?')) return;
     try {
@@ -155,7 +188,10 @@ export default function UnifiedTradingPage() {
         </button>
         <div className="utp-tab-actions">
           {positions.length > 0 && (
-            <button className="utp-btn utp-btn-danger" onClick={handleCloseAll}>Close All</button>
+            <>
+              <button className="utp-btn utp-btn-profit" onClick={handleTakeProfits}>💰 Take Profits</button>
+              <button className="utp-btn utp-btn-danger" onClick={handleCloseAll}>Close All</button>
+            </>
           )}
         </div>
       </div>

@@ -1,37 +1,38 @@
 .trading-strategies-page {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 16px 8px 24px;
+  max-width: none;
+  margin: 0;
+  padding: 1.5rem 2rem 2rem;
 }
 
 .ts-header {
-  margin-bottom: 16px;
+  margin-bottom: 1rem;
 }
 
 .ts-header h1 {
-  margin: 0 0 4px;
+  margin: 0 0 0.25rem;
+  font-size: 1.4rem;
 }
 
 .ts-subtitle {
   margin: 0;
   color: var(--ink-soft);
-  font-size: 0.88rem;
+  font-size: 0.92rem;
 }
 
 .ts-filter-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 1rem;
 }
 
 .ts-filter-btn {
-  padding: 6px 14px;
+  padding: 8px 18px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
@@ -79,9 +80,13 @@
   background: var(--panel);
   color: var(--ink);
   font-weight: 700;
-  font-size: 12px;
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.ts-table td {
+  font-size: 0.9rem;
 }
 
 .ts-table tbody tr:hover {
@@ -96,7 +101,7 @@
   display: inline-block;
   padding: 2px 8px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 700;
   border: 1px solid;
   text-transform: uppercase;
@@ -131,9 +136,15 @@
 }
 
 .ts-timeframes {
-  font-size: 13px;
+  font-size: 0.85rem;
   font-family: monospace;
 }
+
+.ts-symbols { font-size: 0.78rem; color: var(--ink-soft); max-width: 300px; word-break: break-word; }
+.ts-version { font-family: monospace; font-size: 0.75rem; color: var(--ink-soft); }
+.ts-col-search { display: block; margin-top: 4px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 4px; background: rgba(0,0,0,0.1); color: var(--ink); font-family: inherit; font-size: 0.65rem; width: 100%; box-sizing: border-box; }
+.ts-col-search:focus { outline: none; border-color: var(--accent); }
+.ts-col-search::placeholder { color: var(--ink-soft); opacity: 0.5; }
 
 .ts-empty {
   text-align: center;

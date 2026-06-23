@@ -145,6 +145,54 @@ export class StrategiesController {
     return { id: s.id, name: s.name, description: s.description, config: s.config };
   }
 
+  @Get(':id/directives')
+  async getStrategyDirectives(@Param('id') id: string) {
+    if (!this.prisma.isAvailable) return { directives: [] };
+
+    const strategy = await this.prisma.strategy.findUnique({
+      where: { id },
+    });
+    if (!strategy) return { error: 'Strategy not found' };
+
+    // Extract directive IDs from strategy config
+    const config = strategy.config as any;
+    const weights = config?.weights ?? {};
+    const directiveIds = Object.keys(weights);
+
+    // Resolve each directive: fork if exists, otherwise original
+    const resolved = await Promise.all(
+      directiveIds.map(async (directiveId) => {
+        // Look for a fork
+        const fork = await this.prisma.directive.findFirst({
+          where: { parentId: directiveId, strategyId: id, isDefault: false },
+        });
+        if (fork) {
+          return {
+            ...fork,
+            weight: weights[directiveId] ?? fork.weight,
+            isFork: true,
+          };
+        }
+        // Fall back to original
+        const original = await this.prisma.directive.findUnique({
+          where: { id: directiveId },
+        });
+        if (!original) return null;
+        return {
+          ...original,
+          weight: weights[directiveId] ?? original.weight,
+          isFork: false,
+        };
+      }),
+    );
+
+    return {
+      strategyId: id,
+      strategyName: strategy.name,
+      directives: resolved.filter(Boolean),
+    };
+  }
+
   @Post(':id/duplicate')
   async duplicateStrategy(@Param('id') id: string) {
     if (!this.prisma.isAvailable) return { error: 'DB unavailable' };

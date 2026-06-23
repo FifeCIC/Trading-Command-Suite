@@ -110,14 +110,8 @@ export default function CandlePatternChart({ bars, patterns, onPatternClick, hig
       }).filter(Boolean);
 
       if (markers.length > 0) {
-        const markerSeries = chart.addLineSeries({
-          color: 'transparent',
-          lastValueVisible: false,
-          priceLineVisible: false,
-        });
-        markerSeries.setData(markers.map(m => ({ time: m.time, value: 0 })));
-        markerSeries.setMarkers(markers);
-        markerSeriesRef.current = markerSeries;
+        // lightweight-charts v4: markers go directly on the candlestick series
+        candleSeriesRef.current.setMarkers(markers);
       }
     }
 

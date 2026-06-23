@@ -1,6 +1,7 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { DirectivesService } from './directives.service';
 import { DirectivesController } from './directives.controller';
+import { ConditionDetectorService } from './condition-detector.service';
 
 // Implemented (real math)
 import { RsiOversoldDirective } from './implementations/rsi-oversold.directive';
@@ -42,6 +43,7 @@ import { OverheadSupplyPressureDirective } from './implementations/overhead-supp
 import { PanicExhaustionAbsorptionDirective } from './implementations/panic-exhaustion.directive';
 import { PriceActionDirective } from './implementations/price-action.directive';
 import { MomentumContinuationComboDirective } from './implementations/momentum-continuation.directive';
+import { SpeedMomentumDirective } from './implementations/speed-momentum.directive';
 import { ConfluenceReversalComboDirective } from './implementations/confluence-reversal.directive';
 import { NewsSentimentPositiveDirective } from './implementations/news-sentiment.directive';
 import { EarningsProximityDirective } from './implementations/earnings-proximity.directive';
@@ -91,10 +93,7 @@ import {
   SpyOptionsExpiryDirective,
   SpyMonthEndRebalancingDirective,
   SpyQqqRelativeStrengthDirective,
-  // Crypto
-  CryptoFearGreedDirective,
-  BtcHalvingCycleDirective,
-  CryptoWeekendEffectDirective,
+  // Crypto — now real implementations (see crypto-*.directive.ts)
   // Equity-Specific
   NvdaEarningsMomentumDirective,
   TslaSentimentAmplifierDirective,
@@ -126,10 +125,19 @@ import {
   WeeklyRhythmStrategyDirective,
 } from './implementations/placeholder-directives.stub';
 
+// Crypto (real implementations — unstubbed 2026-06-23)
+import { CryptoFearGreedDirective } from './implementations/crypto-fear-greed.directive';
+import { BtcHalvingCycleDirective } from './implementations/btc-halving-cycle.directive';
+import { CryptoWeekendEffectDirective } from './implementations/crypto-weekend-effect.directive';
+import { MarketRegimeDirective } from './implementations/market-regime.directive';
+import { PositionSizeKellyDirective } from './implementations/position-size-kelly.directive';
+import { PositionSizeConfidenceDirective } from './implementations/position-size-confidence.directive';
+
 @Module({
   controllers: [DirectivesController],
   providers: [
     DirectivesService,
+    ConditionDetectorService,
     // Implemented
     RsiOversoldDirective,
     MacdCrossoverDirective,
@@ -142,6 +150,8 @@ import {
     StochasticDirective,
     RsiOverboughtDirective,
     MomentumContinuationComboDirective,
+    // Implemented — Speed / Scalp
+    SpeedMomentumDirective,
     // Implemented — Trend
     PriceAboveSmaDirective,
     MaCrossoverDirective,
@@ -205,6 +215,9 @@ import {
     CryptoFearGreedDirective,
     BtcHalvingCycleDirective,
     CryptoWeekendEffectDirective,
+    MarketRegimeDirective,
+    PositionSizeKellyDirective,
+    PositionSizeConfidenceDirective,
     // Stubs — Equity-Specific
     NvdaEarningsMomentumDirective,
     TslaSentimentAmplifierDirective,
@@ -279,6 +292,8 @@ export class DirectivesModule implements OnModuleInit {
     private readonly stochastic: StochasticDirective,
     private readonly rsiOverbought: RsiOverboughtDirective,
     private readonly momentumCont: MomentumContinuationComboDirective,
+    // Implemented — Speed / Scalp
+    private readonly speedMomentum: SpeedMomentumDirective,
     // Implemented — Trend
     private readonly priceAboveSma: PriceAboveSmaDirective,
     private readonly maCrossover: MaCrossoverDirective,
@@ -324,6 +339,9 @@ export class DirectivesModule implements OnModuleInit {
     private readonly cryptoFear: CryptoFearGreedDirective,
     private readonly btcHalving: BtcHalvingCycleDirective,
     private readonly cryptoWeekend: CryptoWeekendEffectDirective,
+    private readonly marketRegime: MarketRegimeDirective,
+    private readonly positionSizeKelly: PositionSizeKellyDirective,
+    private readonly positionSizeConfidence: PositionSizeConfidenceDirective,
     // Stubs — Equity-Specific
     private readonly nvdaEarnings: NvdaEarningsMomentumDirective,
     private readonly tslaSentiment: TslaSentimentAmplifierDirective,
@@ -382,6 +400,8 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.stochastic);
     this.directivesService.register(this.rsiOverbought);
     this.directivesService.register(this.momentumCont);
+    // Implemented — Speed / Scalp
+    this.directivesService.register(this.speedMomentum);
     // Implemented — Trend
     this.directivesService.register(this.priceAboveSma);
     this.directivesService.register(this.maCrossover);
@@ -427,6 +447,9 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.cryptoFear);
     this.directivesService.register(this.btcHalving);
     this.directivesService.register(this.cryptoWeekend);
+    this.directivesService.register(this.marketRegime);
+    this.directivesService.register(this.positionSizeKelly);
+    this.directivesService.register(this.positionSizeConfidence);
     // Stubs — Equity-Specific
     this.directivesService.register(this.nvdaEarnings);
     this.directivesService.register(this.tslaSentiment);

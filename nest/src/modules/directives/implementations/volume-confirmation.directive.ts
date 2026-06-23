@@ -23,7 +23,7 @@ export class VolumeConfirmationDirective implements IDirective {
   readonly description =
     'Scores symbols where recent volume exceeds the average.';
   readonly priority = 60;
-  readonly maxScore = 85;
+  readonly maxScore = 100; // Raised from 85 — the bonus structure in calculate() can reach 100
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -77,7 +77,7 @@ export class VolumeConfirmationDirective implements IDirective {
       ratio >= 1.3 ? Math.min(0.85, 0.5 + (ratio - 1) * 0.3) : 0.4;
 
     return {
-      score: Math.max(0, Math.round(score)),
+      score: Math.max(0, Math.min(this.maxScore, Math.round(score))),
       confidence: Number(confidence.toFixed(2)),
       reason,
       signalClass: ratio >= 1.3 ? 'bullish' : ratio < 0.8 ? 'bearish' : 'neutral',

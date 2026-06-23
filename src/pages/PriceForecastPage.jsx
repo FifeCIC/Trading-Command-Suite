@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchAnalystTargets } from '../core/api/research.js';
 import './price-forecast.css';
@@ -173,6 +174,17 @@ export default function PriceForecastPage() {
                 <span>Upside to target: {upsideVal >= 0 ? '+' : ''}{upsideVal}%</span>
                 <span>{f.analystCount ?? 0} analysts covering</span>
               </div>
+              <motion.div className="pf-directive-preview" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                <strong>analyst-consensus Directive</strong>
+                <div className="pf-dir-score-row">
+                  <span>Consensus: {f.consensus || 'Hold'}</span>
+                  <span>Score: <strong>{f.consensus === 'Strong Buy' ? 95 : f.consensus === 'Buy' ? 78 : f.consensus === 'Hold' ? 50 : f.consensus === 'Sell' ? 25 : 10}</strong></span>
+                </div>
+                <div className="ps-confidence-bar" style={{ marginTop: 4 }}>
+                  <motion.div className="ps-confidence-fill" initial={{ width: 0 }} animate={{ width: `${f.consensus === 'Strong Buy' ? 95 : f.consensus === 'Buy' ? 78 : f.consensus === 'Hold' ? 50 : 25}%` }}
+                    transition={{ duration: 0.5 }} style={{ background: f.consensus === 'Strong Buy' || f.consensus === 'Buy' ? '#22c55e' : f.consensus === 'Hold' ? '#f59e0b' : '#ef4444' }} />
+                </div>
+              </motion.div>
             </div>
           </div>
         );

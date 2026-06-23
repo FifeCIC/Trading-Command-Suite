@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import StarToggle from '../components/StarToggle';
 
 const MOCK_WATCHLISTS = [
   { id: 'w1', name: 'Tech Giants', symbols: ['AAPL', 'NVDA', 'MSFT', 'GOOGL', 'META'], type: 'stocks' },
@@ -23,7 +24,8 @@ export default function WatchlistsPage() {
           <div key={w.id} style={{ background: '#1a1d2e', border: '1px solid #2d3040', borderRadius: 10, overflow: 'hidden' }}>
             <div onClick={() => setExpanded(expanded === w.id ? null : w.id)}
               style={{ padding: '12px 16px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <StarToggle itemType="watchlist" itemId={w.id} size={16} />
                 <strong>{w.name}</strong>
                 <span style={{ marginLeft: 8, fontSize: 11, padding: '2px 8px', borderRadius: 4, background: '#1e293b', color: '#60a5fa' }}>{w.type}</span>
               </div>

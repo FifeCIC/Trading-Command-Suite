@@ -363,5 +363,66 @@ export class Trading212ImportService {
     return this.t212Adapter.cancelOrder(orderId);
   }
 
+  /** Sell all positions that are currently in profit. */
+  async sellAllProfitable(): Promise<{
+    sold: number;
+    failed: number;
+    skipped: number;
+    totalPnl: number;
+    soldTickers: { ticker: string; quantity: number; ppl: number }[];
+  }> {
+    const positions = await this.t212Adapter.getPositions();
+    const profitable = positions.filter((p) => p.ppl > 0);
+    const unprofitable = positions.length - profitable.length;
+
+    let sold = 0;
+    let failed = 0;
+    let totalPnl = 0;
+    const soldTickers: { ticker: string; quantity: number; ppl: number }[] = [];
+
+    for (const pos of profitable) {
+      const maxSell = pos.maxSell ?? pos.quantity;
+      if (maxSell <= 0) {
+        failed++;
+        continue;
+      }
+
+      // Trading212 requires quantity precision — round to 2 decimal places
+      const quantity = Math.floor(maxSell * 100) / 100;
+      if (quantity <= 0) {
+        failed++;
+        this.logger.warn(`Sell skipped for ${pos.ticker}: quantity ${maxSell} rounds to 0`);
+        continue;
+      }
+
+      try {
+        const result = await this.t212Adapter.placeMarketOrder({
+          ticker: pos.ticker,
+          quantity,
+          side: 'sell',
+        });
+
+        if (result?.success) {
+          sold++;
+          totalPnl += pos.ppl;
+          soldTickers.push({ ticker: pos.ticker, quantity, ppl: pos.ppl });
+          this.logger.log(`T212 sold ${quantity}×${pos.ticker} @ ${result?.filledPrice || 'market'}`);
+        } else {
+          failed++;
+          this.logger.warn(`Sell rejected for ${pos.ticker}: ${result?.error || 'unknown'}`);
+        }
+      } catch (err) {
+        failed++;
+        this.logger.error(`Sell failed for ${pos.ticker}: ${(err as Error).message}`);
+      }
+    }
+
+    this.logger.log(
+      `sellAllProfitable: ${sold} sold, ${failed} failed, ${unprofitable} skipped, P&L=${totalPnl.toFixed(2)}`,
+    );
+
+    return { sold, failed, skipped: unprofitable, totalPnl, soldTickers };
+  }
+
 }
 

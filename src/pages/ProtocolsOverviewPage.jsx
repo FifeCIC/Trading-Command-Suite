@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import StarToggle from '../components/StarToggle';
 import './protocols-overview.css';
 
 const API = '/api/scoring/protocols';
@@ -144,6 +145,7 @@ export default function ProtocolsOverviewPage() {
                   className="po-card-header"
                   onClick={() => setExpandedProtocol(expandedProtocol === proto.id ? null : proto.id)}
                 >
+                  <StarToggle itemType="protocol" itemId={proto.id} size={16} />
                   <span className="po-card-status">{statusIcon(proto.status)}</span>
                   <span className="po-card-name">{proto.name}</span>
                   <span className="po-card-dirs">{proto.directiveCount} directives</span>

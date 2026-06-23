@@ -60,4 +60,10 @@ export class Trading212PortfolioController {
   async cancelOrder(@Param('id') id: string) {
     return this.importService.cancelOrder(id);
   }
+
+  @Post('close-profitable')
+  async closeProfitable() {
+    this.logger.log('SELL ALL PROFITABLE requested');
+    return this.importService.sellAllProfitable();
+  }
 }

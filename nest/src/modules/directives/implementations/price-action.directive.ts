@@ -59,7 +59,7 @@ export class PriceActionDirective implements IDirective {
 
     return {
       signalClass,
-      score: Math.min(100, score),
+      score: Math.min(this.maxScore, score),
       confidence: 0.3 + aboveCount * 0.15,
       reason: `${aboveCount}/${MA_PERIODS.length} MAs above price. ${details.join(', ')}.`,
     };

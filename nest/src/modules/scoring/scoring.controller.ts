@@ -15,6 +15,7 @@ import { ScoringService } from './scoring.service';
 import { ScoreHistoryService } from './score-history.service';
 import { StrategyCompetitionService } from './strategy-competition.service';
 import { PredictiveScoringService } from './predictive-scoring.service';
+import { OutcomeTrackerService } from './outcome-tracker.service';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
 
 @ApiTags('scoring')
@@ -25,6 +26,7 @@ export class ScoringController {
     private readonly scoreHistoryService: ScoreHistoryService,
     private readonly competitionService: StrategyCompetitionService,
     private readonly predictiveService: PredictiveScoringService,
+    private readonly outcomeTracker: OutcomeTrackerService,
   ) {}
 
   @Get('ranked')
@@ -100,6 +102,24 @@ export class ScoringController {
   @ApiOkResponse({ description: 'Latest score snapshot' })
   getLatest(@Param('symbolId') symbolId: string) {
     return this.scoreHistoryService.getLatest(symbolId);
+  }
+
+  // ── Q304: Self-Improving Scoring — Accuracy ──
+
+  @Get('accuracy')
+  @ApiOperation({ summary: 'Get directive prediction accuracy' })
+  getAccuracy(
+    @Query('directiveId') directiveId?: string,
+    @Query('symbol') symbol?: string,
+    @Query('timeframe') timeframe?: string,
+    @Query('days') days?: string,
+  ) {
+    return this.outcomeTracker.getAccuracy({
+      directiveId,
+      symbol,
+      timeframe,
+      days: days ? Number(days) : 30,
+    });
   }
 
   // ── Strategy Competition (Q157) ──

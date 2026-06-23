@@ -41,7 +41,7 @@ export class BollingerPercentBDirective implements IDirective {
       const squeezeBonus = squeezing ? 15 : 0;
       const score = Math.round(45 + depth * 30 + squeezeBonus);
       return {
-        score: Math.min(100, score),
+        score: Math.min(this.maxScore, score),
         confidence: curB < prevB ? 0.45 : 0.7,
         reason: `%B = ${curB.toFixed(3)} (< 0.2 oversold). ${squeezing ? 'Bands squeezing — breakout imminent. ' : ''}Reversal potential.`,
         signalClass: 'bullish',
@@ -51,7 +51,7 @@ export class BollingerPercentBDirective implements IDirective {
       const depth = Math.min(1, (curB - 0.8) / 0.2);
       const score = Math.round(40 + depth * 25);
       return {
-        score: Math.min(100, score),
+        score: Math.min(this.maxScore, score),
         confidence: 0.55,
         reason: `%B = ${curB.toFixed(3)} (> 0.8 overbought). Pullback risk.`,
         signalClass: 'bearish',

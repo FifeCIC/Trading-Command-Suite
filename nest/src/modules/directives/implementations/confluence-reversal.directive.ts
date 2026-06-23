@@ -117,7 +117,7 @@ export class ConfluenceReversalComboDirective implements IDirective {
 
     return {
       signalClass: 'bullish',
-      score: Math.min(100, score + bonus),
+      score: Math.min(this.maxScore, score + bonus),
       confidence: 0.5 + signalCount * 0.15,
       reason: `${signalCount}/3 reversal signals: ${parts.join(' + ')}.${bonus > 0 ? ' Full confluence!' : ''}`,
     };

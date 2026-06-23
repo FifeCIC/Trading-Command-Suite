@@ -189,6 +189,45 @@ export default function SnapshotReplayPage() {
         )}
       </div>
 
+      {/* ── Protocol Overlay Panel ── */}
+      <div className="sr-protocol-panel">
+        <h3>Protocol: Default Protocol</h3>
+        <div className="sr-protocol-grid">
+          <div className="sr-protocol-stat">
+            <span className="sr-protocol-label">Signal</span>
+            <motion.span
+              key={currentSignal.signal + currentIdx}
+              initial={{ scale: 1.3 }}
+              animate={{ scale: 1 }}
+              className={`sr-signal-badge ${currentSignal.signal}`}
+            >
+              {currentSignal.signal.toUpperCase()}
+            </motion.span>
+          </div>
+          <div className="sr-protocol-stat">
+            <span className="sr-protocol-label">Avg Score</span>
+            <span className="sr-protocol-value">{currentSignal.avgScore}</span>
+          </div>
+          <div className="sr-protocol-stat">
+            <span className="sr-protocol-label">Hypothetical P&amp;L</span>
+            <span className={`sr-protocol-value ${currentSignal.runningPnl >= 0 ? 'up' : 'down'}`}>
+              {currentSignal.runningPnl >= 0 ? '+' : ''}{currentSignal.runningPnl}%
+            </span>
+          </div>
+        </div>
+
+        {/* Signal history sparkline */}
+        <div className="sr-signal-sparkline">
+          {protocolSignals.slice(0, currentIdx + 1).map((s, i) => (
+            <div
+              key={i}
+              className={`sr-signal-tick ${s.signal}`}
+              title={`Candle ${i + 1}: ${s.signal} (${s.avgScore})`}
+            />
+          ))}
+        </div>
+      </div>
+
       {/* Notes */}
       {snapshot.notes && (
         <div className="sr-notes">

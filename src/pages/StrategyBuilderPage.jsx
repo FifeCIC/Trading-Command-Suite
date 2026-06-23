@@ -3,6 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { apiGet, apiPost } from '../core/api/client'
 import LoadingSkeleton from '../components/LoadingSkeleton'
+import StarToggle from '../components/StarToggle'
 import DirectivePalette from '../components/StrategyBuilder/DirectivePalette'
 import StrategyCanvas from '../components/StrategyBuilder/StrategyCanvas'
 import '../components/StrategyBuilder/strategy-builder.css'
@@ -195,7 +196,10 @@ export default function StrategyBuilderPage() {
                   setWeights(w)
                 }}
               >
-                <strong>{s.name}</strong>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <StarToggle itemType="strategy" itemId={s.id} size={16} />
+                  <strong>{s.name}</strong>
+                </div>
                 <span className="sb-saved-meta">
                   {s.directives?.length || 0} directives
                   {s.symbolFocus?.length ? ` · ${s.symbolFocus.slice(0,3).join(', ')}` : ''}

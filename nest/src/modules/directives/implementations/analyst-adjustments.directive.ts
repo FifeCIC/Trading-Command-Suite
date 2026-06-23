@@ -105,7 +105,7 @@ export class AnalystAdjustmentsDirective implements IDirective {
 
     return {
       signalClass,
-      score: Math.max(0, Math.min(100, score)),
+        score: Math.max(0, Math.min(this.maxScore, score)),
       confidence: total >= 20 ? 0.7 : total >= 10 ? 0.5 : 0.3,
       reason: reasons.join('. ') || 'Analyst consensus evaluated',
     };

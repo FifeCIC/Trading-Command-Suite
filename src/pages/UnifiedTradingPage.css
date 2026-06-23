@@ -23,6 +23,8 @@
 .utp-tab-actions { margin-left: auto; }
 .utp-btn { padding: 0.35rem 0.75rem; border-radius: 6px; border: 1px solid #2d3040; background: #1e2030; color: #d1d5db; font-size: 0.78rem; cursor: pointer; }
 .utp-btn-danger { background: #7f1d1d; border-color: #991b1b; color: #fca5a5; }
+.utp-btn-profit { background: #14532d; border-color: #166534; color: #86efac; }
+.utp-btn-profit:hover { background: #166534; }
 .utp-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
 .utp-table th { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid #1e293b; color: #94a3b8; font-size: 0.72rem; text-transform: uppercase; }
 .utp-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid #1e2030; }

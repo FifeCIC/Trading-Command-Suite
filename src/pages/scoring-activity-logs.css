@@ -1,0 +1,47 @@
+.sal-page { max-width: none; margin: 0; padding: 1.25rem 1.5rem; color: var(--ink); }
+.sal-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+.sal-header h1 { margin: 0 0 0.2rem; font-size: 1.25rem; }
+.sal-subtitle { color: var(--ink-soft); font-size: 0.78rem; margin: 0; }
+.sal-controls { display: flex; gap: 0.5rem; align-items: center; }
+.sal-filters { display: flex; gap: 0.2rem; }
+.sal-filters button { padding: 0.25rem 0.6rem; border: 1px solid var(--line); border-radius: 5px; background: transparent; color: var(--ink-soft); cursor: pointer; font-family: inherit; font-size: 0.68rem; font-weight: 600; }
+.sal-filters button.active { border-color: var(--accent); color: var(--accent); background: rgba(14,165,166,0.08); }
+.sal-sort { padding: 0.25rem 0.5rem; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); color: var(--ink); font-family: inherit; font-size: 0.68rem; }
+
+.sal-table-wrap { overflow-x: auto; margin-top: 0.75rem; }
+.sal-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+.sal-table th { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--line); color: var(--ink-soft); font-weight: 600; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.sal-row { cursor: pointer; transition: background 0.15s; }
+.sal-row:hover { background: rgba(14,165,166,0.04); }
+.sal-row td { padding: 0.45rem 0.5rem; border-bottom: 1px solid rgba(128,128,128,0.08); }
+.sal-row.expanded td { background: rgba(14,165,166,0.06); }
+.sal-symbol { font-weight: 700; }
+.sal-time { color: var(--ink-soft); font-size: 0.68rem; }
+.sal-dir { font-size: 0.6rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px; }
+.sal-dir.long { background: rgba(34,197,94,0.12); color: #22c55e; }
+.sal-dir.short { background: rgba(239,68,68,0.12); color: #ef4444; }
+.sal-total { font-weight: 700; font-size: 0.85rem; }
+.sal-chevron { color: var(--ink-soft); font-size: 0.65rem; }
+
+.sal-spark { vertical-align: middle; }
+
+.sal-detail { overflow: hidden; margin: 0 0 0.75rem; padding: 0 0.5rem; }
+.sal-detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.sal-detail-header h2 { margin: 0; font-size: 0.9rem; }
+.sal-detail-score { font-weight: 700; font-size: 0.85rem; color: var(--accent); }
+.sal-detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.5rem; }
+.sal-dir-card { padding: 0.5rem 0.6rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.sal-dir-header { display: flex; justify-content: space-between; font-size: 0.68rem; font-weight: 600; }
+.sal-dir-weight { color: var(--ink-soft); }
+.sal-dir-bar-wrap { height: 6px; border-radius: 3px; background: var(--line); margin: 0.35rem 0; overflow: hidden; }
+.sal-dir-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.sal-dir-bar.high { background: #22c55e; }
+.sal-dir-bar.mid { background: #eab308; }
+.sal-dir-bar.low { background: #ef4444; }
+.sal-dir-footer { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--ink-soft); }
+.sal-dir-score { font-weight: 700; color: var(--ink); }
+
+.sal-detail-formula { margin-top: 0.6rem; padding: 0.5rem 0.6rem; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); font-size: 0.68rem; font-family: 'SF Mono', 'JetBrains Mono', 'Consolas', monospace; color: var(--ink-soft); line-height: 1.6; }
+.sal-formula-label { color: var(--ink-soft); }
+.sal-formula-term { color: var(--accent); }
+.sal-formula-eq { color: var(--ink); font-weight: 700; }

@@ -136,4 +136,39 @@ export class Mt5TradingService {
     }
     return { closed, failed };
   }
+
+  /** Close only positions that are currently in profit. */
+  async closeProfitable(): Promise<{
+    closed: number;
+    failed: number;
+    skipped: number;
+    totalPnl: number;
+    closedTickets: { ticket: number; symbol: string; profit: number }[];
+  }> {
+    const positions = await this.getPositions();
+    const profitable = positions.filter((p) => p.profit > 0);
+    const unprofitable = positions.length - profitable.length;
+
+    let closed = 0;
+    let failed = 0;
+    let totalPnl = 0;
+    const closedTickets: { ticket: number; symbol: string; profit: number }[] = [];
+
+    for (const pos of profitable) {
+      const result = await this.closePosition(pos.ticket);
+      if (result.success) {
+        closed++;
+        totalPnl += pos.profit;
+        closedTickets.push({ ticket: pos.ticket, symbol: pos.symbol, profit: pos.profit });
+      } else {
+        failed++;
+      }
+    }
+
+    this.logger.log(
+      `closeProfitable: ${closed} closed, ${failed} failed, ${unprofitable} skipped, P&L=${totalPnl.toFixed(2)}`,
+    );
+
+    return { closed, failed, skipped: unprofitable, totalPnl, closedTickets };
+  }
 }

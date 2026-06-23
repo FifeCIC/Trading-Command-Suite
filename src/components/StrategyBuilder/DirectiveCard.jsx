@@ -3,6 +3,8 @@
  * =============
  * Draggable card showing directive info. Used in both palette and canvas.
  * When in palette: draggable. When in canvas: has remove button + weight slider.
+ *
+ * Q301b: Supports forkStatus for default vs customised badge display.
  */
 
 import './strategy-builder.css'
@@ -28,6 +30,7 @@ export default function DirectiveCard({
   onRemove,
   isInCanvas = false,
   onDragStart,
+  forkStatus, // { isFork: boolean, forkId?: string, onRevert?: () => void }
 }) {
   const catColor = getCategoryColor(directive.category)
 
@@ -41,7 +44,14 @@ export default function DirectiveCard({
     >
       <div className="sb-card-header" style={{ borderLeftColor: catColor }}>
         <div className="sb-card-info">
-          <span className="sb-card-name">{directive.name}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="sb-card-name">{directive.name}</span>
+            {forkStatus && (
+              <span className={`sb-fork-badge sb-fork-badge--${forkStatus.isFork ? 'fork' : 'default'}`}>
+                {forkStatus.isFork ? '⚙ Customised' : '🟢 Default'}
+              </span>
+            )}
+          </div>
           <code className="sb-card-id">{directive.id}</code>
         </div>
         <span className="sb-card-category" style={{ backgroundColor: catColor + '20', color: catColor }}>
@@ -68,14 +78,26 @@ export default function DirectiveCard({
               className="sb-slider"
             />
           </div>
-          <button
-            type="button"
-            className="sb-remove-btn"
-            onClick={() => onRemove?.(directive.id)}
-            title="Remove from strategy"
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            {forkStatus?.isFork && forkStatus.onRevert && (
+              <button
+                type="button"
+                className="sb-revert-btn"
+                onClick={() => forkStatus.onRevert(directive.id)}
+                title="Revert to default — removes this fork"
+              >
+                ↺ Reset
+              </button>
+            )}
+            <button
+              type="button"
+              className="sb-remove-btn"
+              onClick={() => onRemove?.(directive.id)}
+              title="Remove from strategy"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
     </div>

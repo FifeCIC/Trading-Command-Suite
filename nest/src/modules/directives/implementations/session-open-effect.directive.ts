@@ -49,6 +49,14 @@ export class SessionOpenEffectDirective implements IDirective {
   readonly maxScore = 100;
   readonly version = '1.0.0';
 
+  readonly suitability = {
+    regimeType: 'any' as const,
+    volatilityLevel: 'any' as const,
+    instrumentTypes: ['stocks', 'crypto', 'forex', 'indices'] as const,
+    minTimeframe: 'M5',
+    preferredSessions: ['US', 'London'] as const,
+  };
+
   // ── Time-gate: only active during US market hours (Mon–Fri) ──
   // Reference implementation for Q291 — timeframe-aware directive config.
   readonly activeWindow = {
@@ -184,7 +192,7 @@ export class SessionOpenEffectDirective implements IDirective {
       : Math.round(confidence * 30);
 
     return {
-      score: Math.min(100, score),
+      score: Math.min(this.maxScore, score),
       confidence: Number(confidence.toFixed(2)),
       reason,
       signalClass: predictedDirection,

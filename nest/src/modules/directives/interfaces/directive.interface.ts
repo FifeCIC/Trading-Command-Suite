@@ -49,6 +49,10 @@ export interface DirectiveResult {
   signalClass?: 'bullish' | 'bearish' | 'neutral';
   /** True if the directive was suppressed by an active-window time gate. */
   timeGated?: boolean;
+  /** True if the directive was muted by an activation gate (Q301). */
+  gated?: boolean;
+  /** Reason why the activation gate muted/adjusted this directive. */
+  gatedReason?: string;
   /** Time modifiers that were applied to adjust the score. */
   timeModifiersApplied?: { adjustment: number; reason: string }[];
 }
@@ -73,6 +77,48 @@ export interface TimeModifier {
   adjustment: number;
   /** Human-readable reason for the adjustment (e.g. "Pre-US strategy — post-open decay"). */
   reason: string;
+}
+
+// ── Activation Gates (Q301) ──
+
+export type RegimeType = 'trending' | 'ranging' | 'chaotic' | 'any';
+export type VolatilityLevel = 'low' | 'normal' | 'high' | 'any';
+export type InstrumentType = 'forex' | 'stocks' | 'crypto' | 'indices' | 'commodities';
+export type TradingSession = 'US' | 'London' | 'Asian' | 'off-hours';
+
+/** Static suitability tags attached to each directive by design. */
+export interface SuitabilityProfile {
+  /** Which market regime this directive is designed for. */
+  regimeType: RegimeType;
+  /** Volatility level this directive is calibrated for. */
+  volatilityLevel: VolatilityLevel;
+  /** Instrument types this directive applies to. */
+  readonly instrumentTypes: readonly InstrumentType[];
+  /** Minimum timeframe required (e.g. "M5", "M15", "H1"). */
+  minTimeframe: string;
+  /** Trading sessions where this directive is most effective. */
+  readonly preferredSessions: readonly TradingSession[];
+}
+
+/** Runtime condition snapshot produced by the ConditionDetector before scoring. */
+export interface ConditionVector {
+  regime: 'trending' | 'ranging' | 'chaotic';
+  /** Ensemble strength 0–1. >0.65 = strong trending, <0.35 = chaotic. */
+  regimeStrength: number;
+  /** Component breakdown of the ensemble score. */
+  regimeComponents: {
+    hurst: number;
+    adx: number;
+    volatilityPercentile: number;
+  };
+  hurstExponent: number;
+  volatility: 'low' | 'normal' | 'high';
+  activeSession: TradingSession;
+  adx: number;
+  atrPercentile: number;
+  /** True if within 30min of a major economic event (FOMC, NFP, CPI). */
+  preEvent: boolean;
+  timestamp: Date;
 }
 
 export interface IDirective {
@@ -120,6 +166,14 @@ export interface IDirective {
    * Applied AFTER calculate() — bonuses boost the score, deductions reduce it.
    */
   readonly timeModifiers?: TimeModifier[];
+
+  /**
+   * Optional suitability profile — activation gates (Q301).
+   * When set, the directive is checked against the current ConditionVector before scoring.
+   * Regime/volatility mismatches mute the directive (score=0).
+   * Session mismatches reduce weight by 50%.
+   */
+  readonly suitability?: SuitabilityProfile;
 
   /**
    * Evaluate the directive against the provided market data.

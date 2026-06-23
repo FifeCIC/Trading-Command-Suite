@@ -534,3 +534,42 @@
   padding: 1.5rem;
   font-size: 0.85rem;
 }
+
+/* ---- Fork badges (Q301b) ---- */
+
+.sb-fork-badge {
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.sb-fork-badge--default {
+  background: #065f4620;
+  color: #10b981;
+}
+
+.sb-fork-badge--fork {
+  background: #92400e20;
+  color: #f59e0b;
+}
+
+.sb-revert-btn {
+  background: none;
+  border: 1px solid #92400e40;
+  border-radius: 4px;
+  color: #f59e0b;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-family: inherit;
+  font-weight: 600;
+  padding: 2px 8px;
+  transition: background 0.15s;
+}
+
+.sb-revert-btn:hover {
+  background: #92400e20;
+}

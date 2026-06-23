@@ -59,6 +59,9 @@ export default function TradeJournalPage() {
       )}
       <div className="tj-entries">
         {entriesQuery.isLoading && <p>Loading journal...</p>}
+        {!entriesQuery.isLoading && entries.length === 0 && (
+          <div className="tj-empty"><p>No trade journal entries yet. Connect a trading account or add entries manually.</p></div>
+        )}
         {entries.map((entry) => (
           <div key={entry.id} className={`tj-card ${entry.pnl >= 0 ? 'tj-win' : 'tj-loss'}`}>
             <div className="tj-card-header">

@@ -366,10 +366,11 @@ export class Trading212Adapter implements IProviderAdapter {
     try {
       await this.waitForRateLimit('orders/market');
       const ticker = this.toT212Ticker(params.ticker);
+      const bodyData: any = { instrumentCode: ticker, quantity: params.quantity, side: params.side.toUpperCase() };
       const res = await fetch(`${this.baseUrl}/equity/orders/market`, {
         method: 'POST',
         headers: { ...this.authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker, quantity: params.quantity }),
+        body: JSON.stringify(bodyData),
       });
       const bodyText = await res.text();
       let data: any;
