@@ -67,19 +67,14 @@ export default function SpeedTradingPage() {
     setActionLog((prev) => [{ id: Date.now(), msg, time: new Date().toLocaleTimeString() }, ...prev].slice(0, 30));
   }, []);
 
-  // ── Filtered symbols ──
+  // ── Filtered symbols: all DB symbols, sorted alphabetically ──
   const filteredSymbols = useMemo(() => {
-    // Start with XTREND list, then add DB symbols not already present
-    const dbTickers = [...scorable];
-    const xtrendSet = new Set(XTREND_SPEED_SYMBOLS.map((s) => s.toUpperCase()));
-    const extraFromDb = dbTickers.filter((t) => !xtrendSet.has(t));
+    // Build list from DB symbols
+    const dbSorted = [...scorable].sort();
 
-    let list = [...XTREND_SPEED_SYMBOLS, ...extraFromDb];
+    if (dbSorted.length === 0) return XTREND_SPEED_SYMBOLS; // fallback
 
-    // Only show symbols that exist in the database
-    if (scorable.size > 0) {
-      list = list.filter((s) => scorable.has(s.toUpperCase()));
-    }
+    let list = dbSorted;
     if (symbolCat !== 'all') {
       list = list.filter((s) => getSymbolCategory(s) === symbolCat);
     }
