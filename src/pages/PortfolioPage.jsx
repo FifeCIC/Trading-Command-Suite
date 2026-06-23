@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import OrderModal from '../components/OrderModal';
 
 // ── Available data sources ──────────────────────────────────
-const PLATFORMS = [
-  { id: 'trading212', label: 'Trading212' },
+const PLATFORMS_DEMO_LIVE = [
+  { id: 'trading212-demo', label: 'T212 Demo', provider: 'trading212', mode: 'demo' },
+  { id: 'trading212-live', label: 'T212 Live', provider: 'trading212', mode: 'live' },
   { id: 'mt5', label: 'MT5' },
   { id: 'alpaca', label: 'Alpaca' },
   { id: 'all', label: 'All Platforms' },
@@ -19,9 +21,17 @@ function AllocationBar({ positions, total }) {
       {positions.map((p, i) => {
         const pct = total > 0 ? (p.value / total * 100) : 0;
         return (
-          <div key={p.symbol} className="pf-alloc-seg" style={{ flex: p.allocation, background: colors[i % colors.length] }} title={`${p.symbol}: ${pct.toFixed(1)}%`}>
+          <motion.div
+            key={p.symbol}
+            className="pf-alloc-seg"
+            initial={{ flex: 0 }}
+            animate={{ flex: p.allocation }}
+            transition={{ duration: 0.5, delay: i * 0.06, ease: 'easeOut' }}
+            style={{ background: colors[i % colors.length] }}
+            title={`${p.symbol}: ${pct.toFixed(1)}%`}
+          >
             {pct > 8 && <span>{p.symbol}</span>}
-          </div>
+          </motion.div>
         );
       })}
     </div>
@@ -72,11 +82,24 @@ function UnavailableNotice({ reason, source, onRefresh }) {
 
 // ── Main Page ───────────────────────────────────────────────
 export default function PortfolioPage() {
-  const [source, setSource] = useState('trading212');
+  const [source, setSource] = useState('trading212-demo');
   const [sellPosition, setSellPosition] = useState(null);
   const [adapterMode, setAdapterMode] = useState('demo');
   const [lastUpdated, setLastUpdated] = useState(null);
   const [refreshCooldown, setRefreshCooldown] = useState(0);
+  const [t212Mode, setT212Mode] = useState(null);
+
+  // Fetch T212 mode on mount
+  useEffect(() => {
+    apiGet('/api/portfolio/trading212/mode')
+      .then(d => setT212Mode(d))
+      .catch(() => setT212Mode({ current: 'unknown' }));
+  }, []);
+
+  // Resolve current platform config
+  const currentPlatform = PLATFORMS_DEMO_LIVE.find(p => p.id === source) || {};
+  const isT212 = currentPlatform.provider === 'trading212';
+  const currentT212Mode = isT212 ? currentPlatform.mode : null;
 
   // Cooldown countdown timer
   useEffect(() => {
@@ -91,7 +114,7 @@ export default function PortfolioPage() {
       if (source === 'mt5' || source === 'alpaca') {
         return { unavailable: 'not_implemented' };
       }
-      const url = source === 'all' ? '/api/portfolio/holdings?source=all' : `/api/portfolio?source=${source}`;
+      const url = source === 'all' ? '/api/portfolio/holdings?source=all' : `/api/portfolio?source=${currentPlatform.provider || source}${currentPlatform.mode ? '&mode=' + currentPlatform.mode : ''}`;
       const data = await apiGet(url);
       setLastUpdated(new Date());
       return data || { unavailable: 'no_connection' };
@@ -109,6 +132,11 @@ export default function PortfolioPage() {
 
   const data = portfolioQuery.data;
   const unavailable = data?.unavailable;
+
+  // Detect mode mismatch between selection and actual adapter
+  const actualMode = data?.summary?.mode;
+  const modeMismatch = isT212 && actualMode && currentT212Mode && actualMode !== currentT212Mode;
+
   const hasData = !unavailable && data?.positions?.length > 0;
   const summary = data?.summary;
   const positions = data?.positions || [];
@@ -163,7 +191,7 @@ export default function PortfolioPage() {
           </div>
           <div className="pf-header-actions">
             <select className="pf-source-select" value={source} onChange={(e) => setSource(e.target.value)}>
-              {PLATFORMS.map((p) => (
+              {PLATFORMS_DEMO_LIVE.map((p) => (
                 <option key={p.id} value={p.id}>{p.label}</option>
               ))}
             </select>
@@ -188,11 +216,16 @@ export default function PortfolioPage() {
       <div className="pf-header">
         <div>
           <h1>Portfolio</h1>
+          {isT212 && (
+            <span className={`pf-mode-badge pf-mode-${currentT212Mode}`}>
+              {currentT212Mode === 'demo' ? '🟡 DEMO' : '🟢 LIVE'}
+            </span>
+          )}
           {summary?.lastRefreshed && <span className="pf-refreshed">Updated: {timeAgo}</span>}
         </div>
         <div className="pf-header-actions">
           <select className="pf-source-select" value={source} onChange={(e) => setSource(e.target.value)}>
-            {PLATFORMS.map((p) => (
+            {PLATFORMS_DEMO_LIVE.map((p) => (
               <option key={p.id} value={p.id}>{p.label}</option>
             ))}
           </select>
@@ -205,6 +238,13 @@ export default function PortfolioPage() {
           </button>
         </div>
       </div>
+
+      {modeMismatch && (
+        <div className="pf-mode-mismatch">
+          ⚠️ You selected <strong>{currentT212Mode === 'live' ? 'T212 Live' : 'T212 Demo'}</strong>, but the backend is running in <strong>{actualMode}</strong> mode.
+          Set <code>TRADING212_MODE={currentT212Mode}</code> in <code>nest/.env</code> and restart the NestJS server to switch.
+        </div>
+      )}
 
       {portfolioQuery.isFetching && !portfolioQuery.isLoading && (
         <div className="pf-refresh-indicator">⟳ Refreshing…</div>
@@ -238,11 +278,16 @@ export default function PortfolioPage() {
             <tr><th>Symbol</th><th>Shares</th><th>Avg Cost</th><th>Price</th><th>Value</th><th>P&amp;L</th><th>%</th><th>Data</th><th></th></tr>
           </thead>
           <tbody>
-            {positions.map((p) => {
+            {positions.map((p, i) => {
               const s = (scoresQuery.data || []).find((sc) => sc.symbol === p.symbol);
               const dataStatus = s?.dataStatus || 'untracked';
               return (
-              <tr key={p.symbol}>
+              <motion.tr
+                key={p.symbol}
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.25, delay: i * 0.04 }}
+              >
                 <td><strong>{p.symbol}</strong></td>
                 <td>{p.shares?.toLocaleString() || p.quantity?.toLocaleString() || '—'}</td>
                 <td>${(p.avgCost || 0).toFixed(2)}</td>
@@ -266,7 +311,7 @@ export default function PortfolioPage() {
                     Sell...
                   </button>
                 </td>
-              </tr>
+              </motion.tr>
             )})}
           </tbody>
         </table>

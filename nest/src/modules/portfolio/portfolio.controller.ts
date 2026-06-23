@@ -12,8 +12,8 @@ export class PortfolioController {
   ) {}
 
   @Get()
-  async getPortfolio(@Query('source') source?: string): Promise<PortfolioResponse> {
-    return this.portfolioService.getPortfolio(source || 'trading212');
+  async getPortfolio(@Query('source') source?: string, @Query('mode') mode?: string): Promise<PortfolioResponse> {
+    return this.portfolioService.getPortfolio(source || 'trading212', mode);
   }
 
   @Get('holdings')

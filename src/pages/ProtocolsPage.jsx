@@ -97,6 +97,42 @@ export default function ProtocolsPage() {
 
             <p className="protocols-description">{selectedProto.description}</p>
 
+            {/* ── Trading Style Advisory ── */}
+            {(selectedProto.tradingStyle || selectedProto.recommendedTimeframe || selectedProto.avgHoldTime) && (
+              <div className="protocols-advisory">
+                <h3>Trading Style</h3>
+                <div className="protocols-advisory-grid">
+                  {selectedProto.tradingStyle && (
+                    <div className="protocols-advisory-item">
+                      <div className="protocols-advisory-value">{selectedProto.tradingStyle}</div>
+                      <div className="protocols-advisory-label">Style</div>
+                    </div>
+                  )}
+                  {selectedProto.recommendedTimeframe && (
+                    <div className="protocols-advisory-item">
+                      <div className="protocols-advisory-value">{selectedProto.recommendedTimeframe}</div>
+                      <div className="protocols-advisory-label">Timeframe</div>
+                    </div>
+                  )}
+                  {selectedProto.avgHoldTime && (
+                    <div className="protocols-advisory-item">
+                      <div className="protocols-advisory-value">{selectedProto.avgHoldTime}</div>
+                      <div className="protocols-advisory-label">Avg Hold</div>
+                    </div>
+                  )}
+                  {selectedProto.winRateTarget && (
+                    <div className="protocols-advisory-item">
+                      <div className="protocols-advisory-value">{selectedProto.winRateTarget}</div>
+                      <div className="protocols-advisory-label">Target Win Rate</div>
+                    </div>
+                  )}
+                </div>
+                {selectedProto.idealFor && (
+                  <p className="protocols-advisory-ideal">{selectedProto.idealFor}</p>
+                )}
+              </div>
+            )}
+
             <div className="protocols-stats">
               <div className="protocols-stat">
                 <div className="protocols-stat-value">{selectedProto.directiveCount}</div>
@@ -114,6 +150,36 @@ export default function ProtocolsPage() {
               </div>
             </div>
 
+            {/* ── Directive Groups ── */}
+            {selectedProto.groups && selectedProto.groups.length > 0 && (
+              <div className="protocols-groups">
+                <h3>Directive Groups</h3>
+                {selectedProto.groups.map(group => (
+                  <div key={group.id} className={`protocols-group-card ${group.isRiskGate ? 'risk-gate' : ''}`}>
+                    <div className="protocols-group-header">
+                      <span className="protocols-group-name">{group.name}</span>
+                      <span className="protocols-group-weight">Weight: {(group.weight * 100).toFixed(0)}%</span>
+                      {group.isRiskGate && (
+                        <span className="protocols-risk-badge" title={`Multiplicative gate: ${Math.round(group.minMultiplier * 100)}%–${Math.round(group.maxMultiplier * 100)}% of signal survives`}>
+                          ⚠ Gate {Math.round(group.minMultiplier * 100)}%–{Math.round(group.maxMultiplier * 100)}%
+                        </span>
+                      )}
+                    </div>
+                    <ul className="protocols-directive-list">
+                      {group.directives.map(d => (
+                        <li key={d.id} className={`protocols-directive ${d.maxScore !== 100 ? 'variable-max' : ''}`}>
+                          <code className="protocols-directive-id">{d.id}</code>
+                          <span className="protocols-directive-max">
+                            {d.maxScore !== 100 ? `Max ${d.maxScore}` : '100'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="protocols-id-section">
               <h3>Protocol ID</h3>
               <code className="protocols-id">{selectedProto.id}</code>
@@ -130,7 +196,7 @@ POST /api/backtest/run  {"symbol":"BTC-USD","protocolId":"${selectedProto.id}","
             </div>
           </>
         ) : (
-          <div className="protocols-no-selection">Select a protocol to view details</div>
+          <div className="protocols-empty-detail">Select a protocol to view details</div>
         )}
       </div>
     </div>

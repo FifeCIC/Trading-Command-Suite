@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { XTREND_SPEED_SYMBOLS, getSymbolCategory, SYMBOL_CATEGORIES } from '../data/xtrend-symbols';
 import './speed-trading.css';
 
 const SIZE_PRESETS = [100, 250, 500, 1000, 2500];
@@ -22,7 +23,9 @@ const SHORTCUTS = [
 ];
 
 export default function SpeedTradingPage() {
-  const [symbol, setSymbol] = useState('NVDA');
+  const [symbol, setSymbol] = useState('EURUSD');
+  const [symbolFilter, setSymbolFilter] = useState('');
+  const [symbolCat, setSymbolCat] = useState('all');
   const [timeframe, setTf] = useState('1m');
   const [sizePreset, setSizePreset] = useState(2); // index into SIZE_PRESETS
   const [paused, setPaused] = useState(false);
@@ -41,6 +44,26 @@ export default function SpeedTradingPage() {
   const addLog = useCallback((msg) => {
     setActionLog((prev) => [{ id: Date.now(), msg, time: new Date().toLocaleTimeString() }, ...prev].slice(0, 30));
   }, []);
+
+  // ── Filtered symbols ──
+  const filteredSymbols = useMemo(() => {
+    let list = XTREND_SPEED_SYMBOLS;
+    if (symbolCat !== 'all') {
+      list = list.filter(s => getSymbolCategory(s) === symbolCat);
+    }
+    if (symbolFilter.trim()) {
+      const q = symbolFilter.trim().toUpperCase();
+      list = list.filter(s => s.toUpperCase().includes(q));
+    }
+    return list;
+  }, [symbolCat, symbolFilter]);
+
+  // Ensure current symbol is in filtered list
+  useEffect(() => {
+    if (!filteredSymbols.includes(symbol) && filteredSymbols.length > 0) {
+      setSymbol(filteredSymbols[0]);
+    }
+  }, [filteredSymbols, symbol]);
 
   // ── Keyboard handler ──
   const handleKeyDown = useCallback(
@@ -124,7 +147,10 @@ export default function SpeedTradingPage() {
           break;
         case key === 'Tab':
           e.preventDefault();
-          setSymbol((s) => (s === 'NVDA' ? 'TSLA' : s === 'TSLA' ? 'AAPL' : s === 'AAPL' ? 'BTCUSD' : 'NVDA'));
+          setSymbol((s) => {
+            const idx = filteredSymbols.indexOf(s);
+            return filteredSymbols[(idx + 1) % filteredSymbols.length];
+          });
           break;
         default:
           break;
@@ -184,11 +210,32 @@ export default function SpeedTradingPage() {
       <header className="st-controls">
         <div className="st-controls-left">
           <label>
-            Symbol:
+            <span className="st-label">Symbol:</span>
             <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="st-select">
-              <option>NVDA</option><option>TSLA</option><option>AAPL</option><option>BTCUSD</option><option>EURUSD</option>
+              <optgroup label="── Categories ──">
+                <option value="">Search/filter below…</option>
+              </optgroup>
+              {filteredSymbols.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
             </select>
           </label>
+          <input
+            type="search"
+            className="st-symbol-search"
+            placeholder="Filter symbols…"
+            value={symbolFilter}
+            onChange={e => setSymbolFilter(e.target.value)}
+          />
+          <div className="st-cat-row">
+            <button className={`st-cat-btn ${symbolCat === 'all' ? 'active' : ''}`} onClick={() => setSymbolCat('all')}>All</button>
+            {Object.entries(SYMBOL_CATEGORIES).map(([id, cat]) => (
+              <button key={id} className={`st-cat-btn ${symbolCat === id ? 'active' : ''}`} onClick={() => setSymbolCat(id)} title={cat.label}>
+                {cat.icon}
+              </button>
+            ))}
+          </div>
+          <span className="st-symbol-count">{filteredSymbols.length} symbols</span>
           <div className="st-tf-row">
             <span className="st-label">TF:</span>
             {TIMEFRAMES.map((tf) => (

@@ -502,6 +502,67 @@ const DIAGRAMS = [
     U --> V
     R --> W`,
   },
+  {
+    id: 'automation-orchestration',
+    label: 'Automation & Protocol Orchestration',
+    desc: 'Planned multi-protocol automation system. Protocol Scheduler dispatches scoring runs through a rate-limit-aware cache that deduplicates Finnhub/T212 API calls. ProtocolRunner executes parallel pipelines, results stream to a dashboard (stack view / grid view). SEES ranks all symbols scored across protocols.',
+    code: `flowchart TB
+    subgraph Scheduler["Protocol Scheduler"]
+        A[Cron / Manual Trigger]
+        B[Symbol Batcher]
+        C[Rate-Limit Guard]
+    end
+    subgraph Cache["Rate-Limit-Aware Cache"]
+        D[(Symbol Data Cache<br/>TTL: 60s)]
+        E[Finnhub Throttle<br/>60 calls/min]
+        F[T212 Throttle<br/>per-symbol dedup]
+    end
+    subgraph Runner["Multi-Protocol Runner"]
+        G[Protocol A<br/>Momentum/Short-Term]
+        H[Protocol B<br/>Mean Reversion]
+        I[Protocol C<br/>Swing/Long-Term]
+        J[Protocol N...]
+    end
+    subgraph Scoring["Parallel Scoring"]
+        K[Directive Execution]
+        L[Condition Detection]
+        M[Activation Gate]
+        N[Calibration Overrides]
+    end
+    subgraph SEES["SEES Ranker"]
+        O[Composite Score<br/>per protocol]
+        P[Cross-Protocol Ranking]
+        Q[Top Symbols Sorted]
+    end
+    subgraph Dashboard["Automation Dashboard"]
+        R[Stack View<br/>running protocols]
+        S[Grid View<br/>symbol scores]
+        T[Execution Queue<br/>queue/complete/failed]
+    end
+    subgraph Actions["Decision Layer"]
+        U[Alerts & Notifications]
+        V[Trade Execution<br/>MT5 / T212]
+        W[Position Monitor]
+    end
+
+    A --> B --> C --> D
+    D --> E
+    D --> F
+    D --> G
+    D --> H
+    D --> I
+    D --> J
+    G --> K
+    H --> K
+    I --> K
+    J --> K
+    K --> L --> M --> N --> O
+    O --> P --> Q
+    Q --> R
+    Q --> S
+    Q --> T
+    T --> U --> V --> W`,
+  },
 ];
 
 export default function DiagramsPage() {

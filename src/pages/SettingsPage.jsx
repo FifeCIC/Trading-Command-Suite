@@ -19,6 +19,9 @@ export default function SettingsPage() {
   const themePack = useUiStore((state) => state.themePack);
   const showNavIcons = useUiStore((state) => state.showNavIcons);
   const setShowNavIcons = useUiStore((state) => state.setShowNavIcons);
+  const qaChecks = useUiStore((state) => state.qaChecks || {});
+  const resetQaChecks = useUiStore((state) => state.resetQaChecks);
+  const qaCount = Object.keys(qaChecks).length;
   return (
     <div className="settings-page">
       <header className="settings-header">
@@ -92,6 +95,21 @@ export default function SettingsPage() {
               ✕ Hide
             </button>
           </div>
+        </SettingRow>
+      </section>
+
+      <section className="settings-section">
+        <h2>QA Testing</h2>
+        <SettingRow label="QA Checks" hint={`${qaCount} page${qaCount !== 1 ? 's' : ''} marked as QA tested on the Capability Map.`}>
+          <button
+            type="button"
+            className="cta"
+            onClick={() => { if (qaCount === 0 || window.confirm(`Reset ${qaCount} QA check${qaCount !== 1 ? 's' : ''}?`)) resetQaChecks(); }}
+            disabled={qaCount === 0}
+            style={qaCount === 0 ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+          >
+            ↺ Reset QA Checks
+          </button>
         </SettingRow>
       </section>
 

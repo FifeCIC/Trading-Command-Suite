@@ -40,9 +40,7 @@ export default function Mt5TradingPage() {
     try {
       const res = await fetch('/api/providers/mt5/accounts');
       const data = await res.json();
-      if (data.accounts?.length) {
-        setAccounts(data.accounts);
-      }
+      setAccounts(Array.isArray(data.accounts) ? data.accounts : []);
     } catch { /* silent */ }
   }, []);
 
@@ -67,6 +65,9 @@ export default function Mt5TradingPage() {
         const histData = await histRes.json();
         setPositions(Array.isArray(posData.positions) ? posData.positions : posData || []);
         setHistory(Array.isArray(histData.orders) ? histData.orders : histData || []);
+      } else {
+        setPositions([]);
+        setHistory([]);
       }
       setError('');
     } catch {
@@ -76,12 +77,18 @@ export default function Mt5TradingPage() {
     }
   }, []);
 
-  useEffect(() => {
+  // ── Refresh All ──
+  const refreshAll = useCallback(() => {
+    setLoading(true);
     fetchAccounts();
     fetchData();
-    const interval = setInterval(fetchData, 10000);
+  }, [fetchAccounts, fetchData]);
+
+  useEffect(() => {
+    refreshAll();
+    const interval = setInterval(refreshAll, 10000);
     return () => clearInterval(interval);
-  }, [fetchData, fetchAccounts]);
+  }, [refreshAll]);
 
   // ── Account Switching ──
   async function handleSwitchAccount(accountNum) {
@@ -92,9 +99,31 @@ export default function Mt5TradingPage() {
         setMsg(`Switched to account #${accountNum}`);
         setTimeout(() => setMsg(''), 4000);
         setLoading(true);
-        setTimeout(fetchData, 2000); // Give bridge time to reconnect
+        setTimeout(refreshAll, 2000); // Give bridge time to reconnect
       } else {
         setError(data.error || 'Account switch failed');
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  // ── Remove Account ──
+  async function handleRemoveAccount(accountNum) {
+    if (!window.confirm(`Remove account #${accountNum} from the bridge?`)) return;
+    try {
+      const res = await fetch('/api/providers/mt5/accounts/remove', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number: accountNum }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMsg(`Removed account ${data.removed}`);
+        setTimeout(() => setMsg(''), 4000);
+        fetchAccounts();
+      } else {
+        setError(data.error || 'Remove failed');
       }
     } catch (err) {
       setError(err.message);
@@ -279,6 +308,17 @@ export default function Mt5TradingPage() {
                 </option>
               ))}
             </select>
+            {accounts.map((a) => (
+              <button
+                key={`rm-${a.number}`}
+                type="button"
+                className="mt5u-remove-btn"
+                onClick={() => handleRemoveAccount(a.number)}
+                title={`Remove ${a.login}`}
+              >
+                ✕
+              </button>
+            ))}
           </div>
         )}
 

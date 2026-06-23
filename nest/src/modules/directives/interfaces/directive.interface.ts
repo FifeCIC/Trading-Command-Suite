@@ -179,6 +179,7 @@ export interface IDirective {
    * Evaluate the directive against the provided market data.
    * Must NOT throw — return a neutral/low-confidence result on error.
    * Score should be in range 0 to this.maxScore.
+   * Async directives may fetch external data (Finnhub, etc).
    */
-  calculate(input: DirectiveInput): DirectiveResult;
+  calculate(input: DirectiveInput): DirectiveResult | Promise<DirectiveResult>;
 }

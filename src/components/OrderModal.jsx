@@ -135,13 +135,24 @@ export default function OrderModal({ position, accountCash, mode = 'sell', onClo
               <div className="om-qty-row">
                 <input
                   type="number"
-                  min={1}
+                  step="any"
+                  min={0.0001}
                   max={mode === 'sell' ? shares : 999999}
                   value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    if (mode === 'sell') setQuantity(Math.max(0.0001, Math.min(v, shares)));
+                    else setQuantity(Math.max(0.0001, v));
+                  }}
                 />
                 {mode === 'sell' && (
-                  <button className="om-link-btn" onClick={() => setQuantity(shares)}>Sell All ({shares})</button>
+                  <button
+                    className="om-link-btn"
+                    disabled={quantity === shares}
+                    onClick={() => setQuantity(shares)}
+                  >
+                    Sell All ({shares})
+                  </button>
                 )}
               </div>
             </div>

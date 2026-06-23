@@ -61,8 +61,8 @@ export class DirectivesService {
     return Array.from(this.registry.values());
   }
 
-  /** Run all registered directives against the same input, with activation gates. */
-  runAll(input: DirectiveInput): Map<string, DirectiveResult> {
+  /** Run all registered directives against the same input, with activation gates. Supports async directives. */
+  async runAll(input: DirectiveInput): Promise<Map<string, DirectiveResult>> {
     const results = new Map<string, DirectiveResult>();
 
     // ── Step 1: Run condition detector ──
@@ -102,8 +102,8 @@ export class DirectivesService {
           continue;
         }
 
-        // ── Run the directive ──
-        let result = directive.calculate(input);
+        // ── Run the directive (supports async for Finnhub-backed directives) ──
+        let result = await directive.calculate(input);
 
         // ── Apply session/volatility weight adjustments ──
         if (gateResult.weightMultiplier < 1.0) {

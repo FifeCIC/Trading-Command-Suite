@@ -227,3 +227,33 @@
   flex-direction: column;
   gap: 0.15rem;
 }
+
+/* ── QA Checkboxes ── */
+.cm-qa-note {
+  font-size: 0.7rem;
+  color: var(--ink-soft, #94a3b8);
+  margin: 0 0 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(14,165,166,0.06);
+  border: 1px solid var(--line, #1e2a45);
+}
+.cm-qa-note a { color: var(--accent, #0ea5a6); }
+
+.cm-qa-th { width: 40px; text-align: center; }
+.cm-qa-td { text-align: center; }
+
+.cm-qa-checkbox {
+  background: none;
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 4px;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.15s, border-color 0.15s;
+}
+.cm-qa-checkbox:hover { border-color: var(--accent, #0ea5a6); background: rgba(14,165,166,0.06); }
+.cm-qa-checked-box { border-color: #22c55e; background: rgba(34,197,94,0.08); }
+
+tr.cm-qa-checked td:first-child { color: var(--ink-soft, #94a3b8); }

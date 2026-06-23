@@ -178,7 +178,7 @@ export class ScoringService implements OnModuleInit {
     for (const symbol of symbols) {
       const bars = await this.loadBars(symbol.id);
       const input: DirectiveInput = { symbol: symbol.ticker, bars };
-      const results = this.directivesService.runAll(input);
+      const results = await this.directivesService.runAll(input);
 
       // Apply symbol-specific calibrations before building breakdown
       const { adjustedScores, applied: calibrationsApplied } = this.calibrationService.applyCalibrations(symbol.ticker, results);

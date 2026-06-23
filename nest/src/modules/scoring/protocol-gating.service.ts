@@ -121,7 +121,7 @@ export class ProtocolGatingService {
       : DIRECTIVE_GROUPS;
 
     // 1. Run ALL directives
-    const allResults = this.directivesService.runAll(input);
+    const allResults = await this.directivesService.runAll(input);
 
     // 2. Group results with maxScore from directive registry
     const groups = new Map<string, { results: DirectiveResult[]; config: DirectiveGroup; maxScores: Map<string, number> }>();

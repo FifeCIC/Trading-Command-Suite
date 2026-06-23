@@ -10,6 +10,7 @@ export const useUiStore = create(
       backgroundTone: 'aura',
       showNavIcons: true,
       bookmarks: [],
+      qaChecks: {},
       toggleDevOverlay: () => set((state) => ({ devOverlayOpen: !state.devOverlayOpen })),
       closeDevOverlay: () => set({ devOverlayOpen: false }),
       setThemeMode: (mode) => set({ themeMode: mode === 'dark' ? 'dark' : 'light' }),
@@ -29,6 +30,12 @@ export const useUiStore = create(
         if (exists) return { bookmarks: state.bookmarks.filter((b) => b.id !== id) };
         return { bookmarks: [...state.bookmarks, { id, area, view }] };
       }),
+      toggleQaCheck: (pageId) => set((state) => {
+        const next = { ...state.qaChecks };
+        if (next[pageId]) { delete next[pageId]; } else { next[pageId] = Date.now(); }
+        return { qaChecks: next };
+      }),
+      resetQaChecks: () => set({ qaChecks: {} }),
       isBookmarked: (area, view) => {
         const id = `${area}/${view}`;
         return (state) => state.bookmarks.some((b) => b.id === id);
@@ -42,6 +49,7 @@ export const useUiStore = create(
         backgroundTone: state.backgroundTone,
         showNavIcons: state.showNavIcons,
         bookmarks: state.bookmarks,
+        qaChecks: state.qaChecks,
       }),
     },
   ),

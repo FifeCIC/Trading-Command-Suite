@@ -1,121 +1,295 @@
-import { useState, useMemo } from 'react'
-import './trading-strategies.css'
+import { useState, useEffect, useMemo } from 'react';
+import './trading-strategies.css';
 
-const STRATEGIES = [
-  { name: 'Forex Mean Reversion', category: 'forex', symbols: 'EURUSD, GBPUSD, USDJPY, AUDUSD, USDCAD, NZDUSD', timeframes: '1h, 4h', risk: 'medium', version: '2.1.0' },
-  { name: 'CFD Momentum Breakout', category: 'indices', symbols: 'SPX500, NAS100, US30, GER40, UK100', timeframes: '1h, 1d', risk: 'high', version: '1.5.0' },
-  { name: 'VIX Regime Strategy', category: 'indices', symbols: 'VIX, SPX500', timeframes: '1d', risk: 'medium', version: '1.0.0' },
-  { name: 'Gold Macro Correlation', category: 'commodities', symbols: 'XAUUSD, XAGUSD', timeframes: '4h, 1d', risk: 'medium', version: '1.2.0' },
-  { name: 'Tech Titan Momentum', category: 'stocks', symbols: 'NVDA, AAPL, MSFT, AMD, META', timeframes: '1d', risk: 'high', version: '2.0.0' },
-  { name: 'Crypto Scalper', category: 'crypto', symbols: 'BTCUSD, ETHUSD', timeframes: '1h', risk: 'high', version: '1.1.0' },
-  { name: 'ETF Slow Growth', category: 'etf', symbols: 'SPY, QQQ, IWM, DIA', timeframes: '1d, 1wk', risk: 'low', version: '1.0.0' },
-  { name: 'Free-Tier Conviction Accumulation', category: 'multi', symbols: 'SPY, QQQ, NVDA, AAPL, BTCUSD', timeframes: '1d', risk: 'medium', version: '1.3.0' },
-  { name: 'AI Titans', category: 'stocks', symbols: 'NVDA, MSFT, GOOGL, META, AMD, AVGO', timeframes: '1d', risk: 'high', version: '1.8.0' },
-  { name: 'Magnificent 7', category: 'stocks', symbols: 'AAPL, MSFT, NVDA, GOOGL, AMZN, META, TSLA', timeframes: '1d', risk: 'high', version: '1.6.0' },
-  { name: 'European Defence', category: 'stocks', symbols: 'RHI.DE, SAF.PA, BA.L, AV.L, TKA.DE', timeframes: '1d', risk: 'medium', version: '1.0.0' },
-  { name: 'Gold Complex', category: 'commodities', symbols: 'XAUUSD, XAGUSD, GDX, GLD', timeframes: '4h, 1d', risk: 'medium', version: '1.0.0' },
-  { name: 'Crypto Majors', category: 'crypto', symbols: 'BTCUSD, ETHUSD, SOLUSD, XRPUSD', timeframes: '1h, 4h', risk: 'high', version: '1.4.0' },
-  { name: 'Meme Coins', category: 'crypto', symbols: 'DOGEUSD, SHIBUSD, PEPEUSD, BONKUSD, WIFUSD', timeframes: '1h', risk: 'high', version: '0.9.0' },
-  { name: 'Dollar Basket', category: 'forex', symbols: 'EURUSD, GBPUSD, USDJPY, AUDUSD, USDCAD, USDCHF', timeframes: '4h, 1d', risk: 'low', version: '1.0.0' },
-  { name: 'High Volatility All', category: 'multi', symbols: 'TSLA, NVDA, BTCUSD, MSTR, SMCI, PLTR, COIN, MARA, RIOT, RKLB', timeframes: '1h, 4h, 1d', risk: 'high', version: '1.0.0' },
-  { name: 'Kitchen Sink', category: 'multi', symbols: '15 symbols across all markets', timeframes: '1h, 4h, 1d, 1wk', risk: 'high', version: '2.2.0' },
-]
+const TRADING = 'http://localhost:3201/api/trading/strategies';
 
-const CATEGORIES = [
-  { id: 'all', label: 'All' },
-  { id: 'stocks', label: 'Stocks' },
-  { id: 'forex', label: 'Forex' },
-  { id: 'crypto', label: 'Crypto' },
-  { id: 'indices', label: 'Indices' },
-  { id: 'commodities', label: 'Commodities' },
-  { id: 'multi', label: 'Multi' },
-  { id: 'etf', label: 'ETF' },
-]
+const MOCK_STRATEGIES = [
+  { id: 'mock-1', symbol: 'NVDA', name: 'Dip Accumulator', protocolId: 'conviction-dip', timeframe: '1D', minComposite: 65, slPct: 3, tpPct: 8, baseSize: 10, mode: 'live', active: true, lastEvaluatedAt: new Date().toISOString(), lastSignal: 'entry', lastComposite: 72.3, evaluationCount: 45 },
+  { id: 'mock-2', symbol: 'BTCUSD', name: 'Speed Scalper', protocolId: 'btc-speed-v1', timeframe: '1M', minComposite: 80, slPct: 0.5, tpPct: 1.2, baseSize: 0.01, mode: 'demo', active: true, lastEvaluatedAt: new Date().toISOString(), lastSignal: 'watch', lastComposite: 88.1, evaluationCount: 230 },
+  { id: 'mock-3', symbol: 'TSLA', name: 'Momo Break', protocolId: 'momentum-breakout', timeframe: '4H', minComposite: 70, slPct: 4, tpPct: 10, baseSize: 25, mode: 'live', active: false, lastEvaluatedAt: null, lastSignal: null, lastComposite: null, evaluationCount: 0 },
+  { id: 'mock-4', symbol: 'EURUSD', name: 'Swing Reverter', protocolId: 'mean-reversion-swing', timeframe: '1H', minComposite: 60, slPct: 1.5, tpPct: 3, baseSize: 1000, mode: 'demo', active: true, lastEvaluatedAt: new Date().toISOString(), lastSignal: 'defensive', lastComposite: 54.2, evaluationCount: 67 },
+  { id: 'mock-5', symbol: 'AAPL', name: 'Earnings Play', protocolId: 'earnings-whisper', timeframe: '1D', minComposite: 75, slPct: 2, tpPct: 5, baseSize: 50, mode: 'live', active: true, lastEvaluatedAt: new Date().toISOString(), lastSignal: 'entry', lastComposite: 79.8, evaluationCount: 12 },
+];
 
-const CATEGORY_COLORS = {
-  forex: '#3b82f6',
-  indices: '#8b5cf6',
-  commodities: '#f59e0b',
-  stocks: '#22c55e',
-  crypto: '#ef4444',
-  multi: '#ec4899',
-  etf: '#06b6d4',
+// ── Strategy intelligence maps ──
+const PROTOCOL_INTEL = {
+  'btc-speed-v1': {
+    label: 'BTC Speed v1',
+    description: 'High-frequency scalping protocol for BTC/USD. Designed for rapid entry/exit within 15-minute windows.',
+    requiredAccounts: ['MT5 Bridge', 'Trading212'],
+    minimumDataSource: 'MT5 (tick-level or M1 bars)',
+    apiIntensity: 'intensive',
+    canFallback: false,
+    preTradeChecks: ['MT5 connected', 'Spread < 0.05%', 'Min 2 recent M1 bars'],
+  },
+  'conviction-dip': {
+    label: 'Conviction Dip Accumulation',
+    description: 'Accumulates positions during dips in high-conviction symbols using scaled entries.',
+    requiredAccounts: ['Alpaca', 'Trading212'],
+    minimumDataSource: 'Alpaca (1H bars) or Trading212',
+    apiIntensity: 'moderate',
+    canFallback: true,
+    preTradeChecks: ['Portfolio balance > 0', 'Symbol in watchlist', 'Min 50 1H bars'],
+  },
+  'momentum-breakout': {
+    label: 'Momentum Breakout',
+    description: 'Enter on confirmed momentum breakouts above resistance with volume confirmation.',
+    requiredAccounts: ['Alpaca', 'MT5 Bridge'],
+    minimumDataSource: 'Alpaca (1D bars) or MT5',  
+    apiIntensity: 'moderate',
+    canFallback: true,
+    preTradeChecks: ['Alpaca or MT5 connected', 'Min 50 1D bars', 'Volume > 1M avg'],
+  },
+  'mean-reversion-swing': {
+    label: 'Mean Reversion Swing',
+    description: 'Swing trade off overextended RSI and Bollinger Band extremes.',
+    requiredAccounts: ['Alpaca'],
+    minimumDataSource: 'Alpaca (1H bars)',
+    apiIntensity: 'low',
+    canFallback: true,
+    preTradeChecks: ['Alpaca connected', 'Min 100 1H bars'],
+  },
+  'earnings-whisper': {
+    label: 'Earnings Whisper',
+    description: 'Pre-earnings positioning based on whisper numbers and analyst revisions.',
+    requiredAccounts: ['Trading212'],
+    minimumDataSource: 'Trading212 or Finnhub',
+    apiIntensity: 'low',
+    canFallback: true,
+    preTradeChecks: ['Earnings date within 7 days', 'Analyst consensus available'],
+  },
+};
+
+const INTENSITY_COLORS = {
+  intensive: '#ef4444',
+  moderate: '#f59e0b', 
+  low: '#22c55e',
+};
+
+const INTENSITY_LABELS = {
+  intensive: 'Intensive — needs MT5 or real-time feed. 15-min max cycle.',
+  moderate: 'Moderate — hourly/daily bars sufficient. Free-tier viable.',
+  low: 'Low — daily bars OK. Minimum API calls.',
+};
+
+function inferIntelligence(strategy) {
+  const proto = PROTOCOL_INTEL[strategy.protocolId];
+  if (proto) return proto;
+  // Fallback: derive from timeframe
+  const tf = (strategy.timeframe || '').toLowerCase();
+  const isShort = tf.includes('m') || tf === '1h';
+  return {
+    label: strategy.protocolId || 'Unknown',
+    description: 'Custom protocol — review requirements manually.',
+    requiredAccounts: isShort ? ['MT5 Bridge'] : ['Alpaca', 'Trading212'],
+    minimumDataSource: isShort ? 'MT5 (real-time)' : 'Alpaca (1D bars)',
+    apiIntensity: isShort ? 'intensive' : 'moderate',
+    canFallback: !isShort,
+    preTradeChecks: isShort
+      ? ['MT5 connected', 'Spread < 0.1%']
+      : ['Provider connected', 'Min 50 bars'],
+  };
 }
 
-const RISK_TONES = { low: 'ok', medium: 'warn', high: 'error' }
-
 export default function TradingStrategiesPage() {
-  const [filter, setFilter] = useState('all')
-  const [nameSearch, setNameSearch] = useState('')
-  const [symbolSearch, setSymbolSearch] = useState('')
+  const [trading, setTrading] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
 
-  const filtered = useMemo(() => {
-    let list = filter === 'all' ? STRATEGIES : STRATEGIES.filter((s) => s.category === filter)
-    if (nameSearch.trim()) {
-      const q = nameSearch.trim().toLowerCase()
-      list = list.filter((s) => s.name.toLowerCase().includes(q))
-    }
-    if (symbolSearch.trim()) {
-      const q = symbolSearch.trim().toUpperCase()
-      list = list.filter((s) => s.symbols.toUpperCase().includes(q))
-    }
-    return list
-  }, [filter, nameSearch, symbolSearch])
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetch(TRADING)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        if (cancelled) return;
+        const arr = Array.isArray(data) ? data : [];
+        setTrading(arr.length > 0 ? arr : MOCK_STRATEGIES);
+        setLoading(false);
+      })
+      .catch(e => {
+        if (cancelled) return;
+        setTrading(MOCK_STRATEGIES);
+        setError(e.message);
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const selected = useMemo(() => {
+    if (!selectedId) return null;
+    return trading.find(s => s.id === selectedId) || null;
+  }, [selectedId, trading]);
+
+  const intel = selected ? inferIntelligence(selected) : null;
+
+  const handleToggle = (id) => {
+    fetch(`${TRADING}/${id}/toggle`, { method: 'POST' })
+      .then(r => r.json())
+      .then(updated => {
+        setTrading(prev => prev.map(s => s.id === id ? { ...s, active: updated.active } : s));
+      })
+      .catch(() => {});
+  };
+
+  if (loading) return <main className="trading-strategies-page"><p className="ts-empty">Loading…</p></main>;
+
+  const showError = error && trading.every(s => s.id?.startsWith?.('mock-'));
 
   return (
     <main className="trading-strategies-page">
       <header className="ts-header">
         <h1>Trading Strategies</h1>
-        <p className="ts-subtitle">{STRATEGIES.length} built-in strategies across 7 categories. P&amp;L and live status will populate when strategies are executed.</p>
+        <p className="ts-subtitle">
+          {trading.length} strategies — connects protocols to symbols with bracket orders.&nbsp;
+          {showError && <span style={{color:'#f59e0b',fontSize:'0.75rem'}}>(Mock data — API offline)</span>}
+          <a href="/?view=scoring&secondaryView=protocols" style={{color:'var(--accent,#8b5cf6)',marginLeft:8}}>
+            View Scoring Protocols →
+          </a>
+        </p>
       </header>
 
-      <div className="ts-filter-bar">
-        {CATEGORIES.map((cat) => (
-          <button key={cat.id} type="button"
-            className={`ts-filter-btn${filter === cat.id ? ' ts-filter-btn--active' : ''}`}
-            style={filter === cat.id && cat.id !== 'all' ? { background: CATEGORY_COLORS[cat.id], borderColor: CATEGORY_COLORS[cat.id], color: '#fff' } : {}}
-            onClick={() => setFilter(cat.id)}>{cat.label}</button>
-        ))}
-      </div>
+      {trading.length === 0 ? (
+        <p className="ts-empty">No trading strategies configured. Create one via the API or DB.</p>
+      ) : (
+        <div className="ts-split">
+          {/* ── Table ── */}
+          <div className="ts-table-pane">
+            <table className="ts-table">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Name</th>
+                  <th>TF</th>
+                  <th>SL / TP</th>
+                  <th>Mode</th>
+                  <th>Active</th>
+                </tr>
+              </thead>
+              <tbody>
+                {trading.map(s => (
+                  <tr
+                    key={s.id}
+                    className={`ts-row${selectedId === s.id ? ' ts-row--selected' : ''}`}
+                    onClick={() => setSelectedId(selectedId === s.id ? null : s.id)}
+                  >
+                    <td className="ts-name">{s.symbol}</td>
+                    <td className="ts-name-col">{s.name}</td>
+                    <td>{s.timeframe}</td>
+                    <td>{s.slPct ?? '—'}% / {s.tpPct ?? '—'}%</td>
+                    <td>{s.mode}</td>
+                    <td onClick={e => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className={`ts-chip ${s.active ? 'ts-chip-ok' : 'ts-chip-warn'}`}
+                        onClick={() => handleToggle(s.id)}
+                      >
+                        {s.active ? 'ON' : 'OFF'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-      <div className="ts-count">{filtered.length} strategy{filtered.length !== 1 ? 'ies' : 'y'}</div>
+          {/* ── Sidebar ── */}
+          <aside className="ts-sidebar">
+            {!selected ? (
+              <div className="ts-sidebar-empty">
+                <p>Click a strategy row to see details, protocol info, and requirements.</p>
+              </div>
+            ) : (
+              <div className="ts-sidebar-detail">
+                <h2>{selected.symbol} — {selected.name}</h2>
 
-      <div className="ts-table-wrap">
-        <table className="ts-table">
-          <thead>
-            <tr>
-              <th>
-                Strategy Name
-                <input type="search" placeholder="Filter names..." value={nameSearch} onChange={(e) => setNameSearch(e.target.value)}
-                  className="ts-col-search" />
-              </th>
-              <th>Category</th>
-              <th>
-                Symbols
-                <input type="search" placeholder="Filter symbols..." value={symbolSearch} onChange={(e) => setSymbolSearch(e.target.value)}
-                  className="ts-col-search" />
-              </th>
-              <th>Timeframes</th>
-              <th>Risk</th>
-              <th>Version</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((s) => (
-              <tr key={s.name}>
-                <td className="ts-name">{s.name}</td>
-                <td><span className="ts-cat-badge" style={{ background: `${CATEGORY_COLORS[s.category]}20`, color: CATEGORY_COLORS[s.category], borderColor: CATEGORY_COLORS[s.category] }}>{s.category}</span></td>
-                <td className="ts-symbols">{typeof s.symbols === 'number' ? s.symbols : s.symbols}</td>
-                <td className="ts-timeframes">{s.timeframes}</td>
-                <td><span className={`ts-chip ts-chip-${RISK_TONES[s.risk]}`}>{s.risk}</span></td>
-                <td className="ts-version">v{s.version}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                {/* Protocol */}
+                <section className="ts-detail-section">
+                  <h3>Protocol</h3>
+                  <div className="ts-detail-card">
+                    <strong>{intel?.label}</strong>
+                    <p>{intel?.description}</p>
+                  </div>
+                </section>
 
-      {filtered.length === 0 && <p className="ts-empty">No strategies match the current filters.</p>}
+                {/* Data Requirements */}
+                <section className="ts-detail-section">
+                  <h3>Data Requirements</h3>
+                  <div className="ts-detail-card">
+                    <div className="ts-requirement-row">
+                      <span className="ts-req-label">Minimum source</span>
+                      <span className="ts-req-value">{intel?.minimumDataSource}</span>
+                    </div>
+                    <div className="ts-requirement-row">
+                      <span className="ts-req-label">API intensity</span>
+                      <span className="ts-intensity-badge" style={{ background: INTENSITY_COLORS[intel?.apiIntensity] + '20', color: INTENSITY_COLORS[intel?.apiIntensity], borderColor: INTENSITY_COLORS[intel?.apiIntensity] }}>
+                        {intel?.apiIntensity}
+                      </span>
+                    </div>
+                    <p className="ts-intensity-desc">{INTENSITY_LABELS[intel?.apiIntensity]}</p>
+                  </div>
+                </section>
+
+                {/* Required Accounts */}
+                <section className="ts-detail-section">
+                  <h3>Required Accounts</h3>
+                  <div className="ts-detail-card">
+                    {intel?.requiredAccounts?.map(acct => (
+                      <div key={acct} className="ts-account-chip">{acct}</div>
+                    ))}
+                    {!intel?.canFallback && (
+                      <p className="ts-no-fallback">⚠️ No fallback — this strategy cannot run without its primary data source.</p>
+                    )}
+                    {intel?.canFallback && (
+                      <p className="ts-has-fallback">✅ Fallback available — can run on reduced data.</p>
+                    )}
+                  </div>
+                </section>
+
+                {/* Pre-Trade Checks */}
+                <section className="ts-detail-section">
+                  <h3>Pre-Trade Checks</h3>
+                  <div className="ts-detail-card">
+                    <ul className="ts-checklist">
+                      {intel?.preTradeChecks?.map((check, i) => (
+                        <li key={i}>{check}</li>
+                      ))}
+                    </ul>
+                    <p className="ts-disable-note">
+                      Strategy will auto-disable if required checks fail or no positions exist.
+                    </p>
+                  </div>
+                </section>
+
+                {/* Trade Config */}
+                <section className="ts-detail-section">
+                  <h3>Trade Configuration</h3>
+                  <div className="ts-detail-card ts-status-grid">
+                    <div><span className="ts-req-label">Min Score</span><span className="ts-req-value">{selected.minComposite ?? '—'}</span></div>
+                    <div><span className="ts-req-label">Position Size</span><span className="ts-req-value">{selected.baseSize ?? '—'}</span></div>
+                    <div><span className="ts-req-label">Stop Loss</span><span className="ts-req-value">{selected.slPct ?? '—'}%</span></div>
+                    <div><span className="ts-req-label">Take Profit</span><span className="ts-req-value">{selected.tpPct ?? '—'}%</span></div>
+                  </div>
+                </section>
+
+                {/* Status */}
+                <section className="ts-detail-section">
+                  <h3>Status</h3>
+                  <div className="ts-detail-card ts-status-grid">
+                    <div><span className="ts-req-label">Mode</span><span>{selected.mode}</span></div>
+                    <div><span className="ts-req-label">Active</span><span className={`ts-chip ${selected.active ? 'ts-chip-ok' : 'ts-chip-warn'}`}>{selected.active ? 'ON' : 'OFF'}</span></div>
+                    <div><span className="ts-req-label">Last Eval</span><span>{selected.lastEvaluatedAt ? new Date(selected.lastEvaluatedAt).toLocaleString() : 'Never'}</span></div>
+                    <div><span className="ts-req-label">Last Signal</span><span>{selected.lastSignal ?? '—'}</span></div>
+                    <div><span className="ts-req-label">Eval Count</span><span>{selected.evaluationCount ?? 0}</span></div>
+                    <div><span className="ts-req-label">Composite</span><span>{selected.lastComposite?.toFixed(1) ?? '—'}</span></div>
+                  </div>
+                </section>
+              </div>
+            )}
+          </aside>
+        </div>
+      )}
     </main>
-  )
+  );
 }

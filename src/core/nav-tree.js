@@ -116,6 +116,7 @@ export const NAV_TREE = {
     views: [
       { id: 'automation-dashboard', label: 'Dashboard', icon: '◉' },
       { id: 'execution-queue', label: 'Execution Queue', icon: '⇢' },
+      { id: 'strategies-compare', label: 'Strategy Comparison', icon: '⇆' },
       { id: 'automation-rules', label: 'Automation Rules', icon: '⚙' },
       { id: 'alert-center', label: 'Alert Center', icon: '◈' },
     ],

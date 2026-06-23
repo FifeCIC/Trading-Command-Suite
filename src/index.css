@@ -136,8 +136,8 @@ body {
 }
 
 .site-shell.layout-omni {
-  padding: 0;
-  gap: 0;
+  padding: 10px;
+  gap: 5px;
   background: var(--bg);
 }
 
@@ -233,7 +233,7 @@ body {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-soft);
-  font-size: 0.75rem;
+  font-size: 0.82rem;
 }
 
 h1 {
@@ -307,7 +307,7 @@ button.nav-active {
 .topbar-logo-btn:hover { opacity: 0.85; }
 
 .topbar-logo {
-  height: 32px;
+  height: 44px;
   width: auto;
   display: block;
 }
@@ -319,7 +319,7 @@ button.nav-active {
 
 .topbar-title-block h1 {
   margin-bottom: 0;
-  font-size: 1.2rem;
+  font-size: 1.5rem;
   white-space: nowrap;
 }
 
@@ -663,8 +663,8 @@ button.nav-active {
 .badge-pill {
   display: inline-block;
   border-radius: 999px;
-  padding: 0.22rem 0.5rem;
-  font-size: 0.72rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.78rem;
   border: 1px solid var(--line);
 }
 
@@ -887,31 +887,13 @@ button.nav-active {
 }
 .footer-bottom-links button:hover { color: var(--accent, #0ea5a6); }
 
-/* ── Bookmark Bar ── */
-.bookmark-bar {
-  display: flex;
-  gap: 0.3rem;
-  padding: 0.4rem 1rem;
-  background: var(--panel, #141a2e);
-  border-bottom: 1px solid var(--line, #1e2a45);
-  overflow-x: auto;
-  flex-wrap: wrap;
+/* ── Rail Bookmarks (sidebar) ── */
+.rail-bookmarks {
+  padding: 0.35rem 0 0;
+  border-top: 1px solid var(--line, #1e2a45);
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
 }
-
-.bookmark-btn {
-  padding: 0.25rem 0.6rem;
-  border: 1px solid var(--line, #1e2a45);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--ink-soft, #94a3b8);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.7rem;
-  white-space: nowrap;
-}
-
-.bookmark-btn:hover { border-color: var(--accent, #0ea5a6); color: var(--ink, #e2e8f0); }
-.bookmark-active { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.08); }
 
 /* ── Star Toggle ── */
 .main-top-row {
@@ -1150,6 +1132,26 @@ button.nav-active {
 .pf-mode-live { background: color-mix(in srgb, #dc2626 15%, transparent); color: #dc2626; border: 1px solid color-mix(in srgb, #dc2626 30%, transparent); }
 .pf-mode-demo { background: color-mix(in srgb, #d97706 15%, transparent); color: #d97706; border: 1px solid color-mix(in srgb, #d97706 30%, transparent); }
 .pf-mode-mock { background: color-mix(in srgb, #9ca3af 15%, transparent); color: #8b8f96; border: 1px solid color-mix(in srgb, #9ca3af 30%, transparent); }
+
+.pf-mode-mismatch {
+  margin: 0.5rem 0 1rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  background: rgba(245,158,11,0.08);
+  color: #f59e0b;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.pf-mode-mismatch strong { color: #fbbf24; }
+.pf-mode-mismatch code { background: rgba(245,158,11,0.12); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.7rem; }
+
+/* Portfolio data status pulse */
+.pf-ds-live { animation: pf-ds-pulse 2s ease-in-out infinite; }
+@keyframes pf-ds-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
 .pf-refresh-indicator { font-size: 0.7rem; color: var(--ink-soft); margin-bottom: 0.5rem; }
 .pf-account-detail { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem 1rem; }
 .pf-account-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; }

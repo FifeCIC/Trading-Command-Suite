@@ -1,9 +1,18 @@
 import { Controller, Get, Post, Delete, Body, Param } from '@nestjs/common';
+import { IsString, IsIn, IsNumber, IsOptional, Min } from 'class-validator';
 import { Mt5TradingService } from './mt5-trading.service';
 
-class OrderDto { symbol!: string; type!: 'BUY'|'SELL'; volume!: number; sl?: number; tp?: number; comment?: string; }
-class PartialDto { volume!: number; }
-class ModifyDto { sl?: number; tp?: number; }
+class OrderDto {
+  @IsString() symbol!: string;
+  @IsIn(['BUY', 'SELL']) type!: 'BUY'|'SELL';
+  @IsNumber() @Min(0.001) volume!: number;
+  @IsOptional() @IsNumber() sl?: number;
+  @IsOptional() @IsNumber() tp?: number;
+  @IsOptional() @IsString() comment?: string;
+  @IsOptional() @IsIn(['user', 'agent', 'strategy', 'system']) origin?: string;
+}
+class PartialDto { @IsNumber() @Min(0.001) volume!: number; }
+class ModifyDto { @IsOptional() @IsNumber() sl?: number; @IsOptional() @IsNumber() tp?: number; }
 
 @Controller('trading/mt5')
 export class Mt5TradingController {

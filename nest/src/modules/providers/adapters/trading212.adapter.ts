@@ -358,6 +358,12 @@ export class Trading212Adapter implements IProviderAdapter {
   }
 
   // ── Order Execution ──────────────────────────────────────
+  //
+  // IMPORTANT: Trading212 API does NOT accept a "side" field.
+  // Sell orders: the API auto-detects sell intent from existing position.
+  // The controller adds side:"sell" for internal routing only.
+  // This adapter sends {ticker, quantity} — NO side parameter.
+  // DO NOT add "side" to the API payload. DO NOT remove sell capability.
 
   async placeMarketOrder(params: T212OrderRequest): Promise<T212OrderResult> {
     if (!this.hasCredentials) {
@@ -366,11 +372,10 @@ export class Trading212Adapter implements IProviderAdapter {
     try {
       await this.waitForRateLimit('orders/market');
       const ticker = this.toT212Ticker(params.ticker);
-      const bodyData: any = { instrumentCode: ticker, quantity: params.quantity, side: params.side.toUpperCase() };
       const res = await fetch(`${this.baseUrl}/equity/orders/market`, {
         method: 'POST',
         headers: { ...this.authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodyData),
+        body: JSON.stringify({ ticker, quantity: params.quantity }),
       });
       const bodyText = await res.text();
       let data: any;
@@ -411,7 +416,7 @@ export class Trading212Adapter implements IProviderAdapter {
       const res = await fetch(`${this.baseUrl}/equity/orders/limit`, {
         method: 'POST',
         headers: { ...this.authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker, quantity: params.quantity, limitPrice: params.limitPrice }),
+        body: JSON.stringify({ ticker, quantity: Math.round(params.quantity * 100) / 100, limitPrice: params.limitPrice }),
       });
       const data = await res.json();
       if (!res.ok) {

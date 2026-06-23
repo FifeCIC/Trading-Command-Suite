@@ -73,17 +73,41 @@ export default function TradeHistoryPage() {
   const historyQuery = useQuery({
     queryKey: ['trade-history', source, dateRange],
     queryFn: async () => {
-      if (source === 'trading212') {
-        const days = dateRange === 'all' ? undefined : parseInt(dateRange, 10);
-        const url = `/api/portfolio/trading212/history${days ? `?days=${days}` : ''}`;
-        const data = await apiGet(url);
-        return data;
-      }
-      // MT5 and "All" — return empty for now, MT5 integration pending
+      const days = dateRange === 'all' ? undefined : parseInt(dateRange, 10);
+      const params = new URLSearchParams();
+      if (source !== 'all') params.set('provider', source);
+      if (days) params.set('days', String(days));
+      params.set('limit', '200');
+
+      const data = await apiGet(`/api/trading/trade-history?${params.toString()}`);
+      // Transform DB model to page format
+      const trades = (data?.trades || []).map(t => ({
+        date: t.openedAt,
+        symbol: t.symbol,
+        type: t.side?.toUpperCase() || 'UNKNOWN',
+        quantity: t.quantity,
+        entryPrice: t.entryPrice || 0,
+        exitPrice: t.exitPrice || undefined,
+        pnl: t.pnl || 0,
+        source: t.provider,
+        status: t.status,
+        id: t.id,
+      }));
+
+      const closedTrades = trades.filter(t => t.status === 'closed' && t.pnl !== 0);
+      const winningTrades = closedTrades.filter(t => t.pnl > 0);
       return {
         success: true,
-        trades: [],
-        summary: { totalTrades: 0, winRate: 0, totalPnl: 0, bestTrade: 0, worstTrade: 0, winningTrades: 0, losingTrades: 0 },
+        trades,
+        summary: {
+          totalTrades: data?.summary?.total || trades.length,
+          winRate: closedTrades.length > 0 ? Math.round((winningTrades.length / closedTrades.length) * 100) : 0,
+          totalPnl: data?.summary?.totalPnl || 0,
+          bestTrade: Math.max(...closedTrades.map(t => t.pnl), 0),
+          worstTrade: Math.min(...closedTrades.map(t => t.pnl), 0),
+          winningTrades: winningTrades.length,
+          losingTrades: closedTrades.length - winningTrades.length,
+        },
       };
     },
     staleTime: 30_000,

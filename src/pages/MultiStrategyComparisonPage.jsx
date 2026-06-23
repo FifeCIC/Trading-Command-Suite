@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import './multi-strategy-comparison.css';
 
 const DISPLAY_MODES = ['compact', 'expanded', 'minimal'];
 

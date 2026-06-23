@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { NAV_TREE } from '../core/nav-tree';
 import { PAGE_DATA_STATUS, getPageDataSummary } from '../core/page-data-status';
+import { useUiStore } from '../stores/useUiStore';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './capability-map.css';
@@ -151,6 +152,11 @@ function CollapsibleSection({ id, title, summary, defaultOpen = true, children }
 
 // ── Main Page ──
 export default function CapabilityMapPage() {
+  // ── QA tracking ──
+  const qaChecks = useUiStore((state) => state.qaChecks || {});
+  const toggleQaCheck = useUiStore((state) => state.toggleQaCheck);
+  const qaCount = Object.keys(qaChecks).length;
+
   // ── Live queries ──
   const providerHealthQuery = useQuery({
     queryKey: ['capability-map', 'provider-health'],
@@ -319,7 +325,8 @@ export default function CapabilityMapPage() {
       </CollapsibleSection>
 
       {/* ── Page Data Status ── */}
-      <CollapsibleSection id="pages" title="Page Data Status" summary={`${pageStats.live} live · ${pageStats.partial} partial · ${pageStats.mock} mock`}>
+      <CollapsibleSection id="pages" title="Page Data Status" summary={`${pageStats.live} live · ${pageStats.partial} partial · ${pageStats.mock} mock · ${qaCount} QA checked`}>
+        <p className="cm-qa-note">✅ QA checkmarks are saved automatically. To reset all checkboxes, visit <a href="/settings/settings">Settings → General</a> and click <strong>Reset QA Checks</strong>.</p>
         <div className="cm-table-wrap">
           <table className="cm-table">
             <thead>
@@ -328,18 +335,30 @@ export default function CapabilityMapPage() {
                 <th>Area</th>
                 <th>Status</th>
                 <th>Source</th>
+                <th className="cm-qa-th">QA</th>
               </tr>
             </thead>
             <tbody>
               {Object.entries(NAV_TREE).flatMap(([areaKey, area]) =>
                 area.views.map((view) => {
                   const meta = PAGE_DATA_STATUS[view.id];
+                  const checked = !!qaChecks[view.id];
                   return (
-                    <tr key={view.id}>
+                    <tr key={view.id} className={checked ? 'cm-qa-checked' : ''}>
                       <td>{view.label}</td>
                       <td style={{ color: 'var(--ink-soft, #94a3b8)', fontSize: 12 }}>{area.label}</td>
                       <td>{meta ? <StatusBadge status={meta.status} /> : <StatusBadge status="planned" />}</td>
                       <td style={{ fontSize: 11, color: 'var(--ink-soft, #94a3b8)' }}>{meta?.source || meta?.note || meta?.planned || '—'}</td>
+                      <td className="cm-qa-td">
+                        <button
+                          type="button"
+                          className={`cm-qa-checkbox${checked ? ' cm-qa-checked-box' : ''}`}
+                          onClick={() => toggleQaCheck(view.id)}
+                          title={checked ? `QA checked ${new Date(qaChecks[view.id]).toLocaleString()}` : 'Mark QA complete'}
+                        >
+                          {checked ? '✅' : '☐'}
+                        </button>
+                      </td>
                     </tr>
                   );
                 })

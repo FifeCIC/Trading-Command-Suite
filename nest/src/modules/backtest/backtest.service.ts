@@ -376,7 +376,7 @@ export class BacktestService {
     groups: DirectiveGroup[],
   ): Promise<{ composite: number; signal: string }> {
     const input: DirectiveInput = { symbol, bars };
-    const allResults = this.directivesService.runAll(input);
+    const allResults = await this.directivesService.runAll(input);
 
     let technicalScore = 50;
     let sentimentScore = 50;

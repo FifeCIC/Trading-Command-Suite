@@ -47,19 +47,22 @@ export class TradingStrategyService {
       },
     });
 
-    return strategies.map((s) => ({
-      id: s.id,
-      name: s.name,
-      protocolId: s.protocolId,
-      symbol: s.symbol,
-      timeframe: s.timeframe,
-      mode: s.mode,
-      active: s.active,
-      lastEvaluatedAt: s.evaluations[0]?.evaluatedAt?.toISOString() ?? null,
-      lastSignal: s.evaluations[0]?.signal ?? null,
-      lastComposite: s.evaluations[0]?.composite ?? null,
-      evaluationCount: 0, // Count via separate query for perf
-    }));
+    return strategies.map((s) => {
+      const lastEval = s.evaluations?.[0];
+      return {
+        id: s.id,
+        name: s.name,
+        protocolId: s.protocolId,
+        symbol: s.symbol,
+        timeframe: s.timeframe,
+        mode: s.mode,
+        active: s.active,
+        lastEvaluatedAt: lastEval?.evaluatedAt ? new Date(lastEval.evaluatedAt).toISOString() : null,
+        lastSignal: lastEval?.signal ?? null,
+        lastComposite: lastEval?.composite ?? null,
+        evaluationCount: s.evaluations?.length ?? 0,
+      };
+    });
   }
 
   async findOne(id: string) {
@@ -357,7 +360,7 @@ export class TradingStrategyService {
     groups: any[],
   ): Promise<{ composite: number; signal: string; rarity: any | null }> {
     const input: DirectiveInput = { symbol, bars };
-    const allResults = this.directivesService.runAll(input);
+    const allResults = await this.directivesService.runAll(input);
 
     let technicalScore = 50;
     let sentimentScore = 50;

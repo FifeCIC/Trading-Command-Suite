@@ -446,6 +446,19 @@ class BridgeHandler(BaseHTTPRequestHandler):
                         break
                 return json_response(self, {'success': True, 'login': login, 'server': server})
 
+            # /accounts/remove
+            if path == '/accounts/remove':
+                number = int(body.get('number', 0))
+                if not number or number < 1:
+                    return json_response(self, {'error': 'Account number required'}, 400)
+                login = os.environ.pop(f'MT5_ACCOUNT_{number}', None)
+                os.environ.pop(f'MT5_PASSWORD_{number}', None)
+                os.environ.pop(f'MT5_SERVER_{number}', None)
+                if login:
+                    logger.info(f'Removed account #{number} ({login})')
+                    return json_response(self, {'success': True, 'removed': login, 'number': number})
+                return json_response(self, {'error': f'Account #{number} not found'}, 404)
+
             # /accounts/test
             if path == '/accounts/test':
                 login = body.get('login',''); password = body.get('password',''); server = body.get('server','')

@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Trading212Adapter, T212OrderResult } from '../providers/adapters/trading212.adapter';
+import { TradeRecorderService } from '../trading/trade-recorder.service';
+import { SystemLogService } from '../system/log.service';
 
 interface T212Position {
   ticker: string;
@@ -62,6 +64,8 @@ export class Trading212ImportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly t212Adapter: Trading212Adapter,
+    private readonly tradeRecorder: TradeRecorderService,
+    private readonly syslog: SystemLogService,
   ) {}
 
   private getAuthHeader(): string {
@@ -335,20 +339,35 @@ export class Trading212ImportService {
 
     this.logger.log(`Placing ${this.t212Adapter.mode} ${params.side} order: ${params.ticker} ×${params.quantity}${params.limitPrice ? ` @${params.limitPrice}` : ''}`);
 
+    let result: T212OrderResult;
     if (params.limitPrice) {
-      return this.t212Adapter.placeLimitOrder({
+      result = await this.t212Adapter.placeLimitOrder({
         ticker: params.ticker,
         quantity: params.quantity,
         side: params.side,
         limitPrice: params.limitPrice,
       });
+    } else {
+      result = await this.t212Adapter.placeMarketOrder({
+        ticker: params.ticker,
+        quantity: params.quantity,
+        side: params.side,
+      });
     }
 
-    return this.t212Adapter.placeMarketOrder({
-      ticker: params.ticker,
-      quantity: params.quantity,
+    // Record to DB audit trail
+    this.tradeRecorder.record({
+      symbol: params.ticker,
       side: params.side,
+      quantity: params.quantity,
+      exitPrice: result?.filledPrice,
+      pnl: undefined, // unknown for buys
+      provider: 'trading212',
+      status: result?.success ? 'open' : 'rejected',
     });
+    this.syslog.order('T212', `${params.side} ${params.quantity}×${params.ticker} → ${result?.success ? 'OK' : 'FAILED: ' + (result?.error || 'unknown')}`);
+
+    return result;
   }
 
   async getOpenOrders(): Promise<T212OrderResult[]> {
@@ -387,8 +406,8 @@ export class Trading212ImportService {
         continue;
       }
 
-      // Trading212 requires quantity precision — round to 2 decimal places
-      const quantity = Math.floor(maxSell * 100) / 100;
+      // Trading212 requires quantity precision — exactly 2 decimal places
+      const quantity = Math.round(maxSell * 100) / 100;
       if (quantity <= 0) {
         failed++;
         this.logger.warn(`Sell skipped for ${pos.ticker}: quantity ${maxSell} rounds to 0`);
@@ -407,13 +426,34 @@ export class Trading212ImportService {
           totalPnl += pos.ppl;
           soldTickers.push({ ticker: pos.ticker, quantity, ppl: pos.ppl });
           this.logger.log(`T212 sold ${quantity}×${pos.ticker} @ ${result?.filledPrice || 'market'}`);
+          // Record to DB audit trail
+          this.tradeRecorder.record({
+            symbol: pos.ticker,
+            side: 'sell',
+            quantity,
+            entryPrice: pos.averagePrice,
+            exitPrice: result?.filledPrice,
+            pnl: pos.ppl,
+            provider: 'trading212',
+            status: 'closed',
+          });
         } else {
           failed++;
           this.logger.warn(`Sell rejected for ${pos.ticker}: ${result?.error || 'unknown'}`);
+          this.syslog.error('T212', `Sell rejected: ${pos.ticker} ×${quantity} — ${result?.error || 'unknown'}`);
+          // Record rejected attempt
+          this.tradeRecorder.record({
+            symbol: pos.ticker,
+            side: 'sell',
+            quantity,
+            provider: 'trading212',
+            status: 'rejected',
+          });
         }
       } catch (err) {
         failed++;
         this.logger.error(`Sell failed for ${pos.ticker}: ${(err as Error).message}`);
+        this.syslog.error('T212', `Sell exception: ${pos.ticker} — ${(err as Error).message}`);
       }
     }
 

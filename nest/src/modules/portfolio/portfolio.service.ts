@@ -43,8 +43,13 @@ export class PortfolioService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async getPortfolio(source = 'trading212'): Promise<PortfolioResponse> {
+  async getPortfolio(source = 'trading212', requestedMode?: string): Promise<PortfolioResponse> {
     const isMock = this.t212.mode === 'none';
+
+    // Log mismatch if frontend requested a different mode than adapter is using
+    if (requestedMode && requestedMode !== this.t212.mode && this.t212.mode !== 'none') {
+      this.logger.warn(`Frontend requested mode=${requestedMode} but adapter is mode=${this.t212.mode} — using adapter mode`);
+    }
 
     // Fetch positions and account in parallel
     const [rawPositions, account] = await Promise.all([

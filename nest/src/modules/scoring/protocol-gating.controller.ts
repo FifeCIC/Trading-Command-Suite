@@ -31,15 +31,41 @@ export class ProtocolGatingController {
       directiveCount: number;
       maxScore: number;
       active: boolean;
+      groups?: Array<{
+        id: string;
+        name: string;
+        isRiskGate: boolean;
+        weight: number;
+        directives: Array<{ id: string; maxScore: number }>;
+      }>;
+      tradingStyle?: string;
+      recommendedTimeframe?: string;
+      avgHoldTime?: string;
+      winRateTarget?: string;
+      idealFor?: string;
     }> = [];
 
     // Code-registered protocols (from directive-groups.ts)
     for (const [id, proto] of Object.entries(PROTOCOL_REGISTRY)) {
+      const groups = proto.groups.map((g) => ({
+        id: g.id,
+        name: g.name,
+        isRiskGate: g.isRiskGate,
+        weight: g.weight,
+        minMultiplier: g.isRiskGate ? g.minMultiplier : undefined,
+        maxMultiplier: g.isRiskGate ? g.maxMultiplier : undefined,
+        directives: g.directiveIds.map((did) => ({
+          id: did,
+          maxScore: (g as any).directiveMaxScores?.[did] ?? 100,
+        })),
+      }));
+
       const maxScore = proto.groups.reduce(
         (sum, g) => sum + g.directiveIds.reduce(
-          (s, _did) => s + 100, 0,
+          (s, did) => s + ((g as any).directiveMaxScores?.[did] ?? 100), 0,
         ), 0,
       );
+
       protocols.push({
         id,
         name: proto.name,
@@ -48,6 +74,12 @@ export class ProtocolGatingController {
         directiveCount: proto.groups.reduce((s, g) => s + g.directiveIds.length, 0),
         maxScore,
         active: true,
+        groups,
+        tradingStyle: (proto as any).tradingStyle,
+        recommendedTimeframe: (proto as any).recommendedTimeframe,
+        avgHoldTime: (proto as any).avgHoldTime,
+        winRateTarget: (proto as any).winRateTarget,
+        idealFor: (proto as any).idealFor,
       });
     }
 

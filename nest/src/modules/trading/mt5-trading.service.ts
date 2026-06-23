@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { TradeRecorderService } from './trade-recorder.service';
 
 const BRIDGE_URL = process.env.MT5_BRIDGE_URL || 'http://localhost:5001';
 
@@ -31,6 +32,8 @@ export class Mt5TradingService {
   private readonly logger = new Logger(Mt5TradingService.name);
   private bridgeUrl = BRIDGE_URL;
 
+  constructor(private readonly tradeRecorder: TradeRecorderService) {}
+
   async getAccount(): Promise<Mt5Account | null> {
     try {
       const res = await fetch(`${this.bridgeUrl}/account`);
@@ -54,11 +57,15 @@ export class Mt5TradingService {
     sl?: number;
     tp?: number;
     comment?: string;
-  }): Promise<{ success: boolean; ticket?: number; error?: string }> {
+    origin?: string;
+  }): Promise<{ success: boolean; ticket?: number; price?: number; error?: string }> {
+    const side = params.type === 'BUY' ? 'buy' : 'sell';
+    const origin = (params.origin || 'user') as 'user' | 'agent' | 'strategy' | 'system';
+
     try {
       const body: any = {
         symbol: params.symbol,
-        order_type: params.type === 'BUY' ? 0 : 1,
+        type: params.type.toLowerCase(),
         volume: params.volume,
       };
       if (params.sl) body.sl = params.sl;
@@ -71,12 +78,44 @@ export class Mt5TradingService {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (data.retcode === 10009) {
-        return { success: true, ticket: data.order };
+      if (data.success) {
+        // Record successful trade
+        this.tradeRecorder.record({
+          symbol: params.symbol,
+          side,
+          quantity: params.volume,
+          entryPrice: data.price,
+          provider: 'mt5',
+          status: 'open',
+          origin,
+          strategy: params.comment || undefined,
+        });
+        return { success: true, ticket: data.ticket, price: data.price };
       }
-      return { success: false, error: data.comment || `Retcode ${data.retcode}` };
+      // Record rejected attempt
+      this.tradeRecorder.record({
+        symbol: params.symbol,
+        side,
+        quantity: params.volume,
+        provider: 'mt5',
+        status: 'rejected',
+        origin,
+        strategy: params.comment || undefined,
+      });
+      return { success: false, error: data.error || `HTTP ${res.status}` };
     } catch (err) {
-      return { success: false, error: (err as Error).message };
+      const errorMsg = (err as Error).message;
+      // Record failed attempt
+      this.tradeRecorder.record({
+        symbol: params.symbol,
+        side,
+        quantity: params.volume,
+        provider: 'mt5',
+        status: 'rejected',
+        origin,
+        strategy: params.comment || undefined,
+      });
+      return { success: false, error: errorMsg };
     }
   }
 

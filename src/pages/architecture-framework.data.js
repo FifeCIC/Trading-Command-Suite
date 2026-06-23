@@ -19,6 +19,9 @@ export const STATUS_SNAPSHOT = [
   '2026-06-23: Bitcoin Speed Protocol (btc-speed-v1) — 16 directives with variable maxScores (40–200). speed-momentum directive created (5-candle ROC + volume amp). 3 crypto directives unstubbed (crypto-fear-greed fetches Alternative.me, btc-halving-cycle with 4-phase scoring, crypto-weekend-effect). BTC_SPEED_GROUPS registered. Rarity percentile gauge (ScoreSnapshot table, Standard→Cyclical→Black Swan bands). Protocols page built with code + DB protocol listing.',
   '2026-06-23: Directive clamp audit — 29 files fixed: Math.min(100) → Math.min(this.maxScore). volume-confirmation bug fixed (maxScore 85→100). MT5 clamp() updated.',
   '2026-06-23: Architecture honesty update — Trading execution layer accurately documented: Layer 1 (execution/MT5 endpoints) exists, Layer 2 (strategy bridge) and Layer 3 (automated decision loop) do NOT. Fake claims (automated scheduler, completed strategy bridge) corrected.',
+  '2026-06-23: Trade audit trail wired — TradeRecorderService injected into Mt5TradingService. Every order placed through TCS (manual/agent/strategy) recorded to Trade table with origin field (user|agent|strategy|system). OrderDto validation fixed with class-validator decorators. Bridge API mismatch resolved (order_type→type string, retcode→success). Trade history endpoint returns all attempts with origin attribution. End-to-end verified: EURUSD buy placed via TCS as agent, recorded in DB.',
+  '2026-06-23: Protocols page overhaul — directive groups with maxScores displayed per protocol. Risk gate badges show multiplier range (e.g. Gate 30%–120%). Advisory metadata added (trading style, recommended timeframe, avg hold time, win rate target, ideal use). All 6 code protocols annotated.',
+  '2026-06-23: Protocol rename + new scalp — btc-speed-v1 renamed "BTC Investment Monitor V1" (medium-term monitoring, NOT scalping). New btc-scalp-v1 "BTC Tick Scalp V1" created for sub-minute speed trading: 14 directives, heavy risk gating (0.5–1.3), 5s–30s timeframe, seconds-to-minutes holds, 65–75% win rate target.',
 ]
 
 export const ARCHITECTURE_INDEX = [
@@ -64,6 +67,7 @@ export const DOMAINS = [
   'Algorithm lab and pipeline visualization',
   'Portfolio and trading execution',
   'Operational governance and verification',
+  'Automation and multi-protocol orchestration',
 ]
 
 export const SYSTEM_SPINE = [
@@ -79,6 +83,12 @@ export const SYSTEM_SPINE = [
   'Exit urgency evaluated alongside entry score',
   'SEES ranks symbols',
   'User inspects rationale and timeframe fit',
+  '── Automation Loop (planned) ──',
+  'Protocol scheduler dispatches scoring runs',
+  'Rate-limit-aware cache deduplicates API calls',
+  'Multi-protocol runner executes parallel pipelines',
+  'Results streamed to dashboard (stack view / grid view)',
+  'Execution queue manages hot-add/remove of protocols',
 ]
 
 export const CURRENT_SLICE = [
@@ -96,14 +106,15 @@ export const CURRENT_SLICE = [
   'Training area — candle pattern detection with TradingView charts',
   'MT5 adapter + Python bridge v2 (http.server, port 5000). Flask v1 archived to scripts/mt5-bridge/archived/. Multi-account support. ⚠️ NestJS .env expects port 5001 — mismatch needs resolution.',
   'Trading212 portfolio import with live portfolio data',
-  'Automated daily trading scheduler (Mon-Fri 9AM cron) ⚠️ NOT YET BUILT — no trading cron jobs exist. Manual MT5 endpoints only.',
-  'Trading execution layer — MT5 bridge posts/closes/modifies orders. Tested: live EURUSD trade executed. ✅',
-  'Trading strategy bridge — ⚠️ NOT YET BUILT. Protocols score but nothing consumes signals for execution. Prompt created (trading-strategy-bridge.prompt.md).',
+  'Automated daily trading scheduler (Mon-Fri 9AM cron) ⚠️ NOT YET BUILT — no trading cron jobs exist. Agent-originated trades supported via origin field in order pipeline ✅.',
+  'Trading execution layer — MT5 bridge posts/closes/modifies orders. ✅ TradeRecorderService wired — all orders (manual/agent/strategy) logged with origin attribution.',
+  'Trading strategy bridge — TradingStrategyService exists with evaluate/execute, seeded BTC strategy. ⚠️ Partially built — needs real data import + scheduled evaluation.',
   'Trading algorithm loop — ⚠️ NOT YET BUILT. No scheduler watches symbols, scores them, and decides whether to trade.',
   'Keyboard speed trading — B/S/C keys, size presets, Shift 2x',
   'Backtest engine + lightweight chart with RSI/MACD/EMA overlays',
   'SEES Live Stack — filters to 5 strategy-weighted directives, real data source indicators',
-  'Bitcoin Speed Protocol (btc-speed-v1) — 16 directives, variable maxScore (40–200), halving cycle bonus, rarity percentile gauge ✅',
+  'Bitcoin Speed Protocol (btc-speed-v1→BTC Investment Monitor V1) — 16 directives, variable maxScore (40–200), halving cycle bonus, rarity percentile gauge. Renamed from "Speed Scalp" — this is a medium-term monitoring protocol, NOT for sub-minute scalping. ✅',
+  'BTC Tick Scalp V1 (btc-scalp-v1) — 14 directives, true sub-minute scalping: 5s–30s candles, seconds-to-minutes holds, heavy risk gating (0.5–1.3), 65–75% win rate target. Designed for XTrend $1 speed trading. ✅',
   'Protocols page — lists code-registered + DB strategies with API usage examples ✅',
   'Strategy creation + duplication — any strategy can be a template',
   'Portfolio view — holdings, P&L, manual trading with real Trading212 data',
@@ -1126,6 +1137,8 @@ export const HANDOFF_CHECKLIST = [
 ]
 
 export const KNOWN_GAPS = [
+  'TRADING212 SELL — agents repeatedly claim "API doesn\'t allow selling" and remove/re-add sell code. THIS IS WRONG. Verified flow: controller adds side:"sell" internally → importService places order → adapter sends {ticker, quantity} to Trading212 WITHOUT a side field. Trading212 auto-detects sell from existing position (signed quantity or position context). Do NOT send "side" to the Trading212 API. Do NOT remove sell capability. User confirmed buy AND sell work on demo.',
+  'Trading212 account labels — AccountsDashboardPage shows "Investment" without Demo/Live label. Should show "Trading212 Demo" or "Trading212 Live" based on t212Account.mode.',
   'Trading Strategies page (trading-strategies) — hardcoded fake "In Use" checkmarks and P&L values (+£1,245, +£3,820, -£210). No strategies are actually running. Columns should show "—" until real strategy execution tracking exists. UI Data Honesty rule added to AI_GUARDRAILS, .agent-rules.md, and DEVELOPMENT-POLICY.md to prevent this pattern.',
   'MT5 Bridge port mismatch — v2 bridge on port 5000 (BRIDGE_PORT env), NestJS .env has MT5_BRIDGE_URL=http://localhost:5001. Bridge /health reports connected:false with 8900+ connection errors. Resolution: align ports to 5000 in .env or set BRIDGE_PORT=5001 when starting v2.',
   'MT5 Bridge v2 health — bridge self-reports disconnected but NestJS adapter may have working data endpoints. Root cause investigation needed.',
@@ -1143,9 +1156,11 @@ export const KNOWN_GAPS = [
   'No automated drift detection comparing documented contracts against actual route registrations.',
   'FX Timing directive (fx-timing) is a placeholder — requires FX data infrastructure (Q289) before producing real scores.',
   'Analyse Symbol page (Q274) has AI analysis placeholder — requires API provider config before multi-AI comparison works.',
+  'Automation rate-limiting risk — without the Symbol Data Cache (Q503), parallel protocol runs would make 3x duplicate Finnhub/T212 calls per symbol in a 10-second window. Rate limits: Finnhub 60/min, T212 demo unknown, Alpha Vantage 5/min. Cache must be operational before multi-protocol execution goes live.',
 ]
 
 export const REVISION_LOG = [
+  '2026-06-23: TRADING212 SELL MECHANISM DOCUMENTED — agents have cycled 3+ times adding/removing sell code claiming "API doesn\'t allow selling." The truth: Trading212 adapter sends {ticker, quantity} WITHOUT a side field — the API auto-detects sell from existing position. Controller (trading212-portfolio.controller.ts:51) adds side:"sell" ONLY for internal routing. DO NOT send "side" to Trading212. DO NOT remove sell capability. KNOWN_GAPS entry added as permanent reference.',
   '2026-06-23: NestJS operations guide updated in ecosystem.instructions.md — removed Intranet dependency for server lifecycle. Stop command now uses direct PowerShell port-based process termination. Added explicit warning: "Do NOT use Intranet for this project." Server is self-contained with own Server Controls page.',
   '2026-06-23: UI Data Honesty rule added to AI_GUARDRAILS (new card: every value traceable to real source, no fake demo data), .agent-rules.md (new section), and DEVELOPMENT-POLICY.md (anti-pattern). Trading Strategies page fake In-Use/P&L documented in KNOWN_GAPS.',
   '2026-06-23: Standard agent commands created — AUTONOMOUS-BATCH-RUN.md rewritten with "Next Prompt" (single) and "Batch Mode" (all) prompt blocks. Both follow DEVELOPMENT-POLICY.md lifecycle (CLAIM__→DONE__ with REVISION_LOG + HANDOFF_CHECKLIST). Old procedure replaced (predated current conventions).',
@@ -1154,6 +1169,7 @@ export const REVISION_LOG = [
   '2026-06-23: Agent coordination rules added to .agent-rules.md — pre-work checks, CLAIM__ convention, completion verification, HANDOFF_CHECKLIST enforcement, conflict resolution. Session bootstrap order expanded (architecture manifest + structural pages now steps 3-4).',
   '2026-06-23: Discussion docs audited — NEWS-DISSIPATION-CURVES marked IMPLEMENTED (Q287 banner), EXIT-SIGNALS stays in-progress (Q279), HOTAS-TRADING-INTERFACE stays deferred. 5 previously-implemented discussions documented as promoted/archived.',
   '2026-06-23: Diagrams extracted to docs/diagrams/SYSTEM-DIAGRAMS.md — all 11 Mermaid diagrams now available to agents reading the documentation folder without parsing JSX.',
+  '2026-06-23: Automation architecture designed — multi-protocol orchestration layer planned with ProtocolRunner backend, rate-limit-aware data cache (deduplicate Finnhub/T212 calls across protocols), execution queue system. Diagrams page updated with Automation Architecture diagram. Prompts generated: Q501 (Automation Dashboard UI), Q502 (ProtocolRunner backend), Q503 (Symbol Data Cache), Q504 (Execution Queue), Q505 (SEES Multi-Protocol Integration). Existing systems targeted for revision: symbol data caching, API call deduplication, protocol-to-symbol mapping.',
   '2026-06-23: DOCUMENTATION-INDEX.md restructured — Agentic AI Discovery table added, Architecture Artifacts section added, discussion doc status table replaces flat list, endpoint count reconciled (14→17 modules).',
   '2026-06-23: Librarian audit — Diagrams page expanded 5→11 (added Activation Gate, Exit Signals, Alert Center, Calibration, Scoring Gating, Provider Adapters). Rendering bug fixed (React key remount). Cross-page navigation added between Architecture Framework ↔ Diagrams ↔ Capability Map.',
   '2026-06-23: Agentic AI discoverability — new GET /api/architecture/manifest endpoint in NestJS (machine-readable system map: 36 modules, providers, system spine, architecture index, nav-tree, UI cross-references). Registered in SystemModule.',

@@ -300,8 +300,124 @@ export class FinnhubAdapter implements IProviderAdapter {
     };
   }
 
+  // ── Social Sentiment ──────────────────────────────────
+
+  async getSocialSentiment(symbol: string): Promise<{
+    symbol: string;
+    redditMentions: number;
+    redditSentiment: number; // -1 to 1
+    twitterMentions: number;
+    twitterSentiment: number;
+    totalMentions: number;
+    avgSentiment: number;
+    source: string;
+  } | null> {
+    this.logger.debug(`Finnhub: fetching social sentiment for ${symbol}`);
+    const data = await this.finnhubGet<any>(
+      `/stock/social-sentiment?symbol=${encodeURIComponent(symbol)}`,
+    );
+    if (!data || data.error) return null;
+
+    const reddit = data.reddit || {};
+    const twitter = data.twitter || {};
+    const redditMentions = reddit.mention || 0;
+    const twitterMentions = twitter.mention || 0;
+    const totalMentions = redditMentions + twitterMentions;
+
+    const redditSentiment = this.parseSentimentScore(reddit);
+    const twitterSentiment = this.parseSentimentScore(twitter);
+    const avgSentiment = totalMentions > 0
+      ? (redditSentiment * redditMentions + twitterSentiment * twitterMentions) / totalMentions
+      : 0;
+
+    return {
+      symbol: data.symbol || symbol,
+      redditMentions,
+      redditSentiment: Math.round(redditSentiment * 100) / 100,
+      twitterMentions,
+      twitterSentiment: Math.round(twitterSentiment * 100) / 100,
+      totalMentions,
+      avgSentiment: Math.round(avgSentiment * 100) / 100,
+      source: 'finnhub',
+    };
+  }
+
+  // ── Insider Transactions ───────────────────────────────
+
+  async getInsiderTransactions(symbol: string): Promise<Array<{
+    name: string;
+    share: number;
+    change: number;
+    transactionDate: string;
+    transactionCode: string; // P=Purchase, S=Sell
+    filingDate: string;
+    currency: string;
+  }> | null> {
+    this.logger.debug(`Finnhub: fetching insider transactions for ${symbol}`);
+    const data = await this.finnhubGet<any>(
+      `/stock/insider-transactions?symbol=${encodeURIComponent(symbol)}`,
+    );
+    if (!data?.data || !Array.isArray(data.data)) return null;
+
+    return data.data.slice(0, 20).map((t: any) => ({
+      name: t.name || 'Unknown',
+      share: t.share || 0,
+      change: t.change || 0,
+      transactionDate: t.transactionDate || '',
+      transactionCode: t.transactionCode || '',
+      filingDate: t.filingDate || '',
+      currency: t.currency || 'USD',
+    }));
+  }
+
+  // ── Company Metrics ────────────────────────────────────
+
+  async getCompanyMetrics(symbol: string): Promise<{
+    symbol: string;
+    sharesOutstanding: number; // in millions
+    shareChange3m: number; // % change over 3 months
+    shareChange12m: number; // % change over 12 months
+    marketCap: number;
+    source: string;
+  } | null> {
+    this.logger.debug(`Finnhub: fetching company metrics for ${symbol}`);
+    const data = await this.finnhubGet<any>(
+      `/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all`,
+    );
+    if (!data?.metric) return null;
+
+    const m = data.metric;
+
+    // Shares outstanding — try quarterly fields
+    const sharesNow = m.shareOutstanding || m.sharesOutstanding || null;
+
+    return {
+      symbol: data.symbol || symbol,
+      sharesOutstanding: sharesNow ? Number((sharesNow / 1_000_000).toFixed(2)) : 0,
+      shareChange3m: m.shareChange3m || 0,
+      shareChange12m: m.shareChange12m || 0,
+      marketCap: m.marketCapitalization
+        ? Number((m.marketCapitalization / 1_000_000).toFixed(2))
+        : 0,
+      source: 'finnhub',
+    };
+  }
+
+  // ── Helpers ────────────────────────────────────────────
+
+  private parseSentimentScore(source: any): number {
+    if (!source) return 0;
+    // Finnhub returns bullish/bearish counts
+    const bullish = source.bullishPercent || source.positiveMention || 0;
+    const bearish = source.bearishPercent || source.negativeMention || 0;
+    const total = bullish + bearish;
+    if (total === 0) return 0;
+    // Scale: purely bullish = 1, purely bearish = -1, neutral = 0
+    return (bullish - bearish) / total;
+  }
+
   getCapabilities(): string[] {
-    return ['quotes', 'candles', 'profiles', 'recommendations', 'earnings', 'price-targets'];
+    return ['quotes', 'candles', 'profiles', 'recommendations', 'earnings', 'price-targets', 'social-sentiment', 'insider-transactions', 'company-metrics'];
   }
 
   private resolutionSeconds(res: string): number {

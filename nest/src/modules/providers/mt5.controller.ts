@@ -155,6 +155,22 @@ export class Mt5Controller {
     }
   }
 
+  @Post('accounts/remove')
+  @ApiOperation({ summary: 'Remove an MT5 account from the bridge config' })
+  async removeAccount(@Body() body: { number: number }) {
+    try {
+      const res = await fetch(`${this.BRIDGE_URL}/accounts/remove`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number: body.number }),
+        signal: AbortSignal.timeout(5000),
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Bridge unreachable' };
+    }
+  }
+
   @Post('switch/:accountNum')
   @ApiOperation({ summary: 'Switch MT5 to a different account' })
   async switchAccount(@Param('accountNum') accountNum: string) {

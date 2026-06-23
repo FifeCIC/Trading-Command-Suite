@@ -33,3 +33,25 @@
 .pf-btn-cancel { padding: 0.4rem 0.8rem; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); cursor: pointer; }
 .pf-btn-save { padding: 0.4rem 0.8rem; border: none; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer; }
 @media (max-width: 600px) { .pf-summary { grid-template-columns: repeat(2, 1fr); } .pf-alloc-row { grid-template-columns: 40px 1fr 40px; } }
+
+/* ── T212 Mode Badge ─────────────────────────────────── */
+.pf-mode-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+.pf-mode-demo {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+.pf-mode-live {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #10b981;
+}

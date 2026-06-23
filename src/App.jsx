@@ -43,6 +43,7 @@ import ExecutionQueuePage from './pages/ExecutionQueuePage';
 import ImportJobsPage from './pages/ImportJobsPage';
 import Mt5StatusPage from './pages/Mt5StatusPage';
 import NewsIntelPage from './pages/NewsIntelPage';
+import ResearchOverviewPage from './pages/ResearchOverviewPage';
 import PlatformComparisonsPage from './pages/PlatformComparisonsPage';
 import PluginTabSkeletonPage from './pages/PluginTabSkeletonPage';
 import TradingStrategiesPage from './pages/TradingStrategiesPage';
@@ -347,6 +348,10 @@ function AppShell() {
   function renderMainContent() {
     if (secondaryView === 'overview') {
       return <HomeDashboardPage />;
+    }
+
+    if (secondaryView === 'research-overview') {
+      return <ResearchOverviewPage />;
     }
 
     if (secondaryView === 'demos') {
@@ -930,27 +935,6 @@ function AppShell() {
 
       </header>
 
-      {/* ── Bookmark Bar ── */}
-      {bookmarks.length > 0 && (
-        <nav className="bookmark-bar" aria-label="Bookmarked pages">
-          {bookmarks.slice(0, 12).map((bm) => {
-            const areaLabel = NAV_TREE[bm.area]?.label || bm.area;
-            const viewLabel = NAV_STRUCTURE[bm.area]?.find((v) => v.id === bm.view)?.label || bm.view;
-            return (
-              <button
-                key={bm.id}
-                type="button"
-                className={`bookmark-btn${primaryArea === bm.area && secondaryView === bm.view ? ' bookmark-active' : ''}`}
-                onClick={() => navigate(`/${bm.area}/${bm.view}`)}
-                title={`${areaLabel} › ${viewLabel}`}
-              >
-                ⭐ {viewLabel}
-              </button>
-            );
-          })}
-        </nav>
-      )}
-
       {mobileNavOpen && (
         <div
           className="mobile-nav-overlay"
@@ -994,6 +978,35 @@ function AppShell() {
             </button>
           ))}
         </div>
+
+        {/* ── Bookmarks Section ── */}
+        {bookmarks.length > 0 && (
+          <div className="rail-bookmarks">
+            <div className="left-rail-header">
+              <h2>Bookmarks ⭐</h2>
+            </div>
+            <div className="rail-links">
+            {bookmarks.slice(0, 12).map((bm) => {
+              const areaLabel = NAV_TREE[bm.area]?.label || bm.area;
+              const viewLabel = NAV_STRUCTURE[bm.area]?.find((v) => v.id === bm.view)?.label || bm.view;
+              return (
+                <button
+                  key={bm.id}
+                  type="button"
+                  className={primaryArea === bm.area && secondaryView === bm.view ? 'nav-active' : ''}
+                  onClick={() => {
+                    navigate(`/${bm.area}/${bm.view}`);
+                    setMobileNavOpen(false);
+                  }}
+                  title={`${areaLabel} › ${viewLabel}`}
+                >
+                  <span className="rail-link-label">{viewLabel}</span>
+                </button>
+              );
+            })}
+            </div>
+          </div>
+        )}
 
         <div className="rail-block">
           <button

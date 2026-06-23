@@ -174,24 +174,24 @@
 
 .nd-nav-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem;
 }
 
 .nd-nav-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.3rem;
   background: #1e293b;
   border: 1px solid #334155;
-  border-top: 3px solid #3b82f6;
+  border-top: 2px solid #3b82f6;
   border-radius: 10px;
-  padding: 1.25rem 0.75rem;
+  padding: 0.85rem 0.6rem;
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
   text-align: center;
-  min-height: 110px;
+  min-height: 80px;
   font-family: inherit;
   font-size: inherit;
   color: inherit;
@@ -208,17 +208,17 @@
 }
 
 .nd-nav-icon {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
 }
 
 .nd-nav-label {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   color: #f1f5f9;
 }
 
 .nd-nav-count {
-  font-size: 0.72rem;
+  font-size: 0.65rem;
   color: #64748b;
 }
 

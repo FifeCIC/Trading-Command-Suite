@@ -32,7 +32,7 @@ import { FmpAdapter } from './adapters/fmp.adapter';
     TwelveDataAdapter,
     FmpAdapter,
   ],
-  exports: [ProvidersService, AdapterFactory],
+  exports: [ProvidersService, AdapterFactory, FinnhubAdapter],
 })
 export class ProvidersModule implements OnModuleInit {
   constructor(private readonly adapterFactory: AdapterFactory) {}

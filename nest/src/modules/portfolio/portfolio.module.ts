@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { ProvidersModule } from '../providers/providers.module';
 import { ScoringModule } from '../scoring/scoring.module';
+import { TradingModule } from '../trading/trading.module';
 import { Trading212Adapter } from '../providers/adapters/trading212.adapter';
 import { PortfolioService } from './portfolio.service';
 import { PortfolioController } from './portfolio.controller';
@@ -10,7 +11,7 @@ import { Trading212HistoryController } from './trading212-history.controller';
 import { CorrelationService } from './correlation.service';
 
 @Module({
-  imports: [ProvidersModule, forwardRef(() => ScoringModule)],
+  imports: [ProvidersModule, forwardRef(() => ScoringModule), forwardRef(() => TradingModule)],
   controllers: [PortfolioController, Trading212PortfolioController, Trading212HistoryController],
   providers: [PortfolioService, Trading212Adapter, Trading212ImportService, CorrelationService],
   exports: [PortfolioService],

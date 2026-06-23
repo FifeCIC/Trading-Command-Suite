@@ -2,6 +2,7 @@ import { Module, OnModuleInit } from '@nestjs/common';
 import { DirectivesService } from './directives.service';
 import { DirectivesController } from './directives.controller';
 import { ConditionDetectorService } from './condition-detector.service';
+import { ProvidersModule } from '../providers/providers.module';
 
 // Implemented (real math)
 import { RsiOversoldDirective } from './implementations/rsi-oversold.directive';
@@ -54,6 +55,12 @@ import { TargetAchievedDirective } from './implementations/target-achieved.direc
 import { RegimeShiftExitDirective } from './implementations/regime-shift-exit.directive';
 import { TimeStopDirective } from './implementations/time-stop.directive';
 import { SessionOpenEffectDirective } from './implementations/session-open-effect.directive';
+import { BudgetGateDirective } from './implementations/budget-gate.directive';
+import { LiquidityCheckDirective } from './implementations/liquidity-check.directive';
+import { EarningsMomentumDirective } from './implementations/earnings-momentum.directive';
+import { SocialBuzzDirective } from './implementations/social-buzz.directive';
+import { InsiderActivityDirective } from './implementations/insider-activity.directive';
+import { DilutionImpactDirective } from './implementations/dilution-impact.directive';
 
 // MT5 ported indicators (Q156 — 17 directives)
 import { WilliamsRDirective } from './implementations/mt5-indicators.directives';
@@ -134,6 +141,7 @@ import { PositionSizeKellyDirective } from './implementations/position-size-kell
 import { PositionSizeConfidenceDirective } from './implementations/position-size-confidence.directive';
 
 @Module({
+  imports: [ProvidersModule],
   controllers: [DirectivesController],
   providers: [
     DirectivesService,
@@ -263,6 +271,14 @@ import { PositionSizeConfidenceDirective } from './implementations/position-size
     RegimeShiftExitDirective,
     TimeStopDirective,
     SessionOpenEffectDirective,
+    // Q304 — Risk Gates (implemented 2026-06-23)
+    BudgetGateDirective,
+    LiquidityCheckDirective,
+    // Q304 — Fundamental / Sentiment (Finnhub free tier)
+    EarningsMomentumDirective,
+    SocialBuzzDirective,
+    InsiderActivityDirective,
+    DilutionImpactDirective,
   ],
   exports: [
     DirectivesService,
@@ -385,6 +401,13 @@ export class DirectivesModule implements OnModuleInit {
     private readonly regimeShiftExit: RegimeShiftExitDirective,
     private readonly timeStop: TimeStopDirective,
     private readonly sessionOpenEffect: SessionOpenEffectDirective,
+    private readonly budgetGate: BudgetGateDirective,
+    private readonly liquidityCheck: LiquidityCheckDirective,
+    // Q304 — Fundamental / Sentiment (Finnhub)
+    private readonly earningsMomentum: EarningsMomentumDirective,
+    private readonly socialBuzz: SocialBuzzDirective,
+    private readonly insiderActivity: InsiderActivityDirective,
+    private readonly dilutionImpact: DilutionImpactDirective,
   ) {}
 
   onModuleInit() {
@@ -494,5 +517,13 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.regimeShiftExit);
     this.directivesService.register(this.timeStop);
     this.directivesService.register(this.sessionOpenEffect);
+    // Q304 — Risk Gates
+    this.directivesService.register(this.budgetGate);
+    this.directivesService.register(this.liquidityCheck);
+    // Q304 — Fundamental / Sentiment
+    this.directivesService.register(this.earningsMomentum);
+    this.directivesService.register(this.socialBuzz);
+    this.directivesService.register(this.insiderActivity);
+    this.directivesService.register(this.dilutionImpact);
   }
 }
