@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { XTREND_SPEED_SYMBOLS, getSymbolCategory, SYMBOL_CATEGORIES } from '../data/xtrend-symbols';
+import { SPEED_PROTOCOL_SYMBOLS, getProtocolsForSymbol } from '../data/speed-protocols';
 import './speed-trading.css';
 
 const SIZE_PRESETS = [1, 5, 10];
@@ -41,17 +42,14 @@ export default function SpeedTradingPage() {
   const lockTimer = useRef(null);
   const pageRef = useRef(null);
 
-  // ── Scorable symbols (filter to symbols registered in the database) ──
-  const scorableQuery = useQuery({
+  // ── DB symbol check (for active/inactive status) ──
+  const dbQuery = useQuery({
     queryKey: ['symbols'],
     queryFn: () => apiGet('/api/symbols').catch(() => ({ symbols: [] })),
     staleTime: 120_000,
-    select: (data) => {
-      const tickers = (data?.symbols ?? []).map((s) => s.ticker.toUpperCase());
-      return new Set(tickers);
-    },
+    select: (data) => new Set((data?.symbols ?? []).map((s) => s.ticker.toUpperCase())),
   });
-  const scorable = scorableQuery.data ?? new Set();
+  const dbSymbols = dbQuery.data ?? new Set();
 
   // ── Best Opportunities Scanner ──
   const [scanData, setScanData] = useState(null);
@@ -67,14 +65,11 @@ export default function SpeedTradingPage() {
     setActionLog((prev) => [{ id: Date.now(), msg, time: new Date().toLocaleTimeString() }, ...prev].slice(0, 30));
   }, []);
 
-  // ── Filtered symbols: all DB symbols, sorted alphabetically ──
+  // ── Filtered symbols: protocol symbols only ──
   const filteredSymbols = useMemo(() => {
-    // Build list from DB symbols
-    const dbSorted = [...scorable].sort();
+    // Master list = protocol-defined symbols (BTCUSD, XAUUSD, SPX500, etc.)
+    let list = SPEED_PROTOCOL_SYMBOLS;
 
-    if (dbSorted.length === 0) return XTREND_SPEED_SYMBOLS; // fallback
-
-    let list = dbSorted;
     if (symbolCat !== 'all') {
       list = list.filter((s) => getSymbolCategory(s) === symbolCat);
     }
@@ -83,7 +78,7 @@ export default function SpeedTradingPage() {
       list = list.filter((s) => s.toUpperCase().includes(q));
     }
     return list;
-  }, [symbolCat, symbolFilter, scorable]);
+  }, [symbolCat, symbolFilter]);
 
   // Ensure current symbol is in filtered list
   useEffect(() => {
