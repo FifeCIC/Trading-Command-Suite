@@ -41,12 +41,15 @@ export default function SpeedTradingPage() {
   const lockTimer = useRef(null);
   const pageRef = useRef(null);
 
-  // ── Scorable symbols (only show symbols with market bars / protocol data) ──
+  // ── Scorable symbols (filter to symbols registered in the database) ──
   const scorableQuery = useQuery({
-    queryKey: ['symbols', 'with-bars'],
-    queryFn: () => apiGet('/api/symbols/with-bars').catch(() => ({ tickers: [] })),
+    queryKey: ['symbols'],
+    queryFn: () => apiGet('/api/symbols').catch(() => ({ symbols: [] })),
     staleTime: 120_000,
-    select: (data) => new Set((data?.tickers ?? []).map((t) => t.toUpperCase())),
+    select: (data) => {
+      const tickers = (data?.symbols ?? []).map((s) => s.ticker.toUpperCase());
+      return new Set(tickers);
+    },
   });
   const scorable = scorableQuery.data ?? new Set();
 
@@ -66,8 +69,14 @@ export default function SpeedTradingPage() {
 
   // ── Filtered symbols ──
   const filteredSymbols = useMemo(() => {
-    let list = XTREND_SPEED_SYMBOLS;
-    // Only show symbols that have market data (can be scored by protocols)
+    // Start with XTREND list, then add DB symbols not already present
+    const dbTickers = [...scorable];
+    const xtrendSet = new Set(XTREND_SPEED_SYMBOLS.map((s) => s.toUpperCase()));
+    const extraFromDb = dbTickers.filter((t) => !xtrendSet.has(t));
+
+    let list = [...XTREND_SPEED_SYMBOLS, ...extraFromDb];
+
+    // Only show symbols that exist in the database
     if (scorable.size > 0) {
       list = list.filter((s) => scorable.has(s.toUpperCase()));
     }
