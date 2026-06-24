@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { XTREND_SPEED_SYMBOLS, getSymbolCategory, SYMBOL_CATEGORIES } from '../data/xtrend-symbols';
 import { SPEED_PROTOCOL_SYMBOLS, getProtocolsForSymbol } from '../data/speed-protocols';
+import SpeedChart from '../components/SpeedChart';
 import './speed-trading.css';
 
 const SIZE_PRESETS = [1, 5, 10];
@@ -27,7 +28,7 @@ const SHORTCUTS = [
 ];
 
 export default function SpeedTradingPage() {
-  const [symbol, setSymbol] = useState('NVDA');
+  const [symbol, setSymbol] = useState('EURUSD');
   const [symbolFilter, setSymbolFilter] = useState('');
   const [symbolCat, setSymbolCat] = useState('all');
   const [timeframe, setTf] = useState('1m');
@@ -56,7 +57,36 @@ export default function SpeedTradingPage() {
   const [scanLoading, setScanLoading] = useState(false);
   const [scanError, setScanError] = useState(null);
   const [scanExpanded, setScanExpanded] = useState(true);
+  const [chartMode, setChartMode] = useState('candles'); // 'candles' | 'line' | 'minimal'
+  const [chartSettingsOpen, setChartSettingsOpen] = useState(false);
+  const [chartSettings, setChartSettings] = useState({
+    showVolume: true, showEMA9: true, showEMA21: true, showEMA50: false,
+    gridStyle: 1, upColor: '#22c55e', downColor: '#ef4444',
+  });
   const scanTimer = useRef(null);
+
+  // ── Protocol directive panel ──
+  const [protocolDetail, setProtocolDetail] = useState(null);
+  const protocolsForSymbol = useMemo(() => getProtocolsForSymbol(symbol), [symbol]);
+  const activeProtocol = protocolsForSymbol[0]; // Tick Scalp style preferred over Day Trade/Monitor
+
+  // Fetch protocol details when symbol or protocol changes
+  useEffect(() => {
+    if (!activeProtocol) { setProtocolDetail(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('http://localhost:3201/api/scoring/gated/protocols');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const proto = (data.protocols || []).find(p => p.id === activeProtocol.id);
+        if (!cancelled) setProtocolDetail(proto || null);
+      } catch {
+        if (!cancelled) setProtocolDetail(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [symbol, activeProtocol?.id]);
 
   const currentSize = SIZE_PRESETS[sizePreset];
   const tfIndex = TIMEFRAMES.indexOf(timeframe);
@@ -211,7 +241,7 @@ export default function SpeedTradingPage() {
         const res = await fetch('http://localhost:3201/api/speed/scan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ timeframe: '1m' }),
+          body: JSON.stringify({ timeframe: timeframe }),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -247,10 +277,12 @@ export default function SpeedTradingPage() {
         <div className="st-pause-banner">⏸ DATA STREAM PAUSED — no new orders accepted</div>
       )}
 
-      {/* MT5 warning */}
-      <div className="st-fallback-banner">
-        ⚠ MT5 second-level data not available — using 1m minimum. Speed trade on 1m candles.
-      </div>
+      {/* MT5 sub-minute warning — only when relevant */}
+      {(timeframe === '1s' || timeframe === '5s' || timeframe === '15s' || timeframe === '30s') && (
+        <div className="st-fallback-banner">
+          ⚠ MT5 minimum is 1m candles — displaying {timeframe} chart using 1m data.
+        </div>
+      )}
 
       {/* ── Speed Controls ── */}
       <header className="st-controls">
@@ -314,48 +346,61 @@ export default function SpeedTradingPage() {
           </button>
         </div>
         <div className="st-controls-right">
+          <div className="st-chart-toggle">
+            <button className={`st-chart-mode-btn ${chartMode === 'candles' ? 'active' : ''}`} onClick={() => setChartMode('candles')} title="Candlestick chart">🕯</button>
+            <button className={`st-chart-mode-btn ${chartMode === 'line' ? 'active' : ''}`} onClick={() => setChartMode('line')} title="Line chart">📈</button>
+            <button className={`st-chart-mode-btn ${chartMode === 'minimal' ? 'active' : ''}`} onClick={() => setChartMode('minimal')} title="Minimal (no chart)">◻</button>
+          </div>
+          <button className="st-meta-btn" onClick={() => setChartSettingsOpen(o => !o)} title="Chart settings">⚙</button>
           <button className="st-meta-btn" onClick={() => setOverlayOpen((o) => !o)} title="Shortcuts (F1)">⌨</button>
         </div>
       </header>
 
       {/* ── Main Layout ── */}
       <div className="st-main">
+        {/* ── Protocol Directives Panel ── */}
+        <div className="st-directives">
+          {protocolDetail ? (
+            <>
+              <div className="st-dir-header">
+                <div className="st-dir-protocol-name">{protocolDetail.name}</div>
+                <div className="st-dir-protocol-style">{protocolDetail.tradingStyle || activeProtocol?.style}</div>
+                {protocolDetail.groups && (
+                  <div className="st-dir-risk-info">
+                    Risk gate: {protocolDetail.groups.filter(g => g.isRiskGate).map(g => `${Math.round(g.minMultiplier * 100)}–${Math.round(g.maxMultiplier * 100)}%`).join(', ')}
+                  </div>
+                )}
+              </div>
+              <div className="st-dir-groups">
+                {protocolDetail.groups && protocolDetail.groups.map(group => (
+                  <div key={group.id} className={`st-dir-group ${group.isRiskGate ? 'risk' : ''}`}>
+                    <div className="st-dir-group-name">
+                      {group.name}
+                      {group.isRiskGate && <span className="st-dir-gate-tag">GATE</span>}
+                    </div>
+                    <div className="st-dir-group-weight">{Math.round(group.weight * 100)}% weight</div>
+                    <ul className="st-dir-list">
+                      {group.directives.map(d => (
+                        <li key={d.id} className={`st-dir-item ${d.maxScore !== 100 ? 'variable' : ''}`}>
+                          <code className="st-dir-id">{d.id}</code>
+                          {d.maxScore !== 100 && <span className="st-dir-max">{d.maxScore}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="st-dir-empty">
+              <p>Select a symbol to see its protocol directives</p>
+            </div>
+          )}
+        </div>
+
         {/* Chart area */}
         <div className="st-chart">
-          <div className="st-chart-placeholder">
-            <div className="st-chart-header">
-              <span>{symbol} · {timeframe}</span>
-              <span className="st-chart-price">
-                {scanData?.scan?.find(s => s.symbol === symbol)
-                  ? `${scanData.scan.find(s => s.symbol === symbol).signal} ${Math.round(scanData.scan.find(s => s.symbol === symbol).composite)}`
-                  : '——'}
-              </span>
-            </div>
-            <div className="st-chart-body">
-              {scanData?.scan?.find(s => s.symbol === symbol) ? (
-                <>
-                  <p>🎯 {symbol} scored {Math.round(scanData.scan.find(s => s.symbol === symbol).composite)} via {scanData.scan.find(s => s.symbol === symbol).protocol}</p>
-                  <p className="st-chart-sub">
-                    Risk multiplier: {Math.round((scanData.scan.find(s => s.symbol === symbol).riskMultiplier || 1) * 100)}% · 
-                    {scanData.scan.find(s => s.symbol === symbol).gated ? ' ⛔ GATED' : ' ✅ Active'}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p>📊 {symbol} — no score yet. Select symbol and use keyboard shortcuts.</p>
-                  <p className="st-chart-sub">Connect MT5 for live data. Scanner polls every 5s.</p>
-                </>
-              )}
-            </div>
-            <div className="st-session-markers">
-              <span>🇺🇸 US Open 09:30</span>
-              <span>🇪🇺 EU Open 08:00</span>
-              <span>🇯🇵 JP Open 00:00</span>
-              {scanData?.scanMs != null && (
-                <span className="st-scan-age">Scan: {scanData.scanMs}ms</span>
-              )}
-            </div>
-          </div>
+          <SpeedChart symbol={symbol} timeframe={timeframe} chartMode={chartMode} scanScore={scanData} chartSettings={chartSettings} />
         </div>
 
         {/* Order Panel */}
@@ -504,6 +549,51 @@ export default function SpeedTradingPage() {
               </tbody>
             </table>
             <button className="st-close-overlay" onClick={() => setOverlayOpen(false)}>Close (F1)</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Chart Settings Modal ── */}
+      {chartSettingsOpen && (
+        <div className="st-overlay" onClick={() => setChartSettingsOpen(false)}>
+          <div className="st-overlay-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 340 }}>
+            <h2 style={{ marginBottom: 12 }}>⚙ Chart Settings</h2>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: '0.78rem' }}>
+              {/* Indicators */}
+              <div style={{ fontWeight: 700, color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Indicators</div>
+              <label className="st-chart-setting"><span>Volume histogram</span><input type="checkbox" checked={chartSettings.showVolume} onChange={e => setChartSettings(s => ({ ...s, showVolume: e.target.checked }))} /></label>
+              <label className="st-chart-setting"><span>EMA 9</span><input type="checkbox" checked={chartSettings.showEMA9} onChange={e => setChartSettings(s => ({ ...s, showEMA9: e.target.checked }))} /></label>
+              <label className="st-chart-setting"><span>EMA 21</span><input type="checkbox" checked={chartSettings.showEMA21} onChange={e => setChartSettings(s => ({ ...s, showEMA21: e.target.checked }))} /></label>
+              <label className="st-chart-setting"><span>EMA 50</span><input type="checkbox" checked={chartSettings.showEMA50} onChange={e => setChartSettings(s => ({ ...s, showEMA50: e.target.checked }))} /></label>
+
+              {/* Appearance */}
+              <div style={{ fontWeight: 700, color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 4 }}>Appearance</div>
+              <div className="st-chart-setting">
+                <span>Grid lines</span>
+                <select value={chartSettings.gridStyle} onChange={e => setChartSettings(s => ({ ...s, gridStyle: Number(e.target.value) }))}>
+                  <option value={0}>Off</option>
+                  <option value={1}>Dotted</option>
+                  <option value={2}>Solid</option>
+                </select>
+              </div>
+
+              {/* Colors */}
+              <div style={{ fontWeight: 700, color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 4 }}>Colors</div>
+              <div className="st-chart-setting">
+                <span>Bull candle</span>
+                <input type="color" value={chartSettings.upColor} onChange={e => setChartSettings(s => ({ ...s, upColor: e.target.value }))} style={{ width: 32, height: 22, border: 'none', borderRadius: 4, cursor: 'pointer' }} />
+              </div>
+              <div className="st-chart-setting">
+                <span>Bear candle</span>
+                <input type="color" value={chartSettings.downColor} onChange={e => setChartSettings(s => ({ ...s, downColor: e.target.value }))} style={{ width: 32, height: 22, border: 'none', borderRadius: 4, cursor: 'pointer' }} />
+              </div>
+            </div>
+
+            <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
+              <button className="st-btn" onClick={() => { setChartSettings({ showVolume: true, showEMA9: true, showEMA21: true, showEMA50: false, gridStyle: 1, upColor: '#22c55e', downColor: '#ef4444' }); }}>Reset defaults</button>
+              <button className="st-btn" onClick={() => setChartSettingsOpen(false)}>Close</button>
+            </div>
           </div>
         </div>
       )}

@@ -20957,3 +20957,6 @@
 2026-06-23 23:44:59,899 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
 2026-06-23 23:44:59,906 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
 2026-06-23 23:44:59,924 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-24 01:14:19,759 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-24 01:14:19,862 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-24 01:14:19,871 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine

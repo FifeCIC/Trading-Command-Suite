@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query } from '@nestjs/common';
 import { IsString, IsIn, IsNumber, IsOptional, Min } from 'class-validator';
 import { Mt5TradingService } from './mt5-trading.service';
 
@@ -26,6 +26,17 @@ export class Mt5TradingController {
 
   @Get('history')
   getHistory() { return this.mt5.getHistory(); }
+
+  @Get('candles')
+  async getCandles(
+    @Query('symbol') symbol: string,
+    @Query('timeframe') timeframe = '1m',
+    @Query('limit') limit = '100',
+  ) {
+    const url = `${(this.mt5 as any).bridgeUrl}/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}&limit=${limit}`;
+    const res = await fetch(url);
+    return res.json();
+  }
 
   @Post('order')
   placeOrder(@Body() body: OrderDto) { return this.mt5.placeOrder(body); }

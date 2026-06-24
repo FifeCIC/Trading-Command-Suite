@@ -37,9 +37,11 @@ export interface ScanResult {
 
 /** Map symbols to their best speed trading protocol */
 const SYMBOL_PROTOCOL_MAP: Record<string, string> = {
-  // Crypto
+  // Crypto (both XTrend and DB naming)
   BTCUSD: 'btc-scalp-v1',
+  'BTC-USD': 'btc-scalp-v1',
   ETHUSD: 'btc-scalp-v1',
+  'ETH-USD': 'btc-scalp-v1',
   SOLUSD: 'btc-scalp-v1',
   // Gold & Metals
   XAUUSD: 'xau-speed-v1',
@@ -80,7 +82,7 @@ const SYMBOL_PROTOCOL_MAP: Record<string, string> = {
 
 /** Default Tier A/B speed trading symbols */
 const DEFAULT_SPEED_SYMBOLS = [
-  'XAUUSD', 'BTCUSD', 'EURUSD', 'GBPUSD', 'USDJPY',
+  'XAUUSD', 'BTCUSD', 'BTC-USD', 'EURUSD', 'GBPUSD', 'USDJPY',
   'USOIL', 'ETHUSD', 'SPX500', 'TECH100', 'VIX',
   'AUDUSD', 'NZDUSD', 'USDCAD', 'USDCHF',
   'SPY', 'QQQ', 'TSLA', 'DOGEUSD', 'DJI30', 'UK100',
@@ -123,9 +125,13 @@ export class SpeedScanService {
           return { symbol, skipped: true, reason: 'No market data configured' };
         }
 
-        const marketBars = await this.marketData.getBars(symId, timeframe, bars);
+        // Try requested timeframe first, fall back to 1d if insufficient bars
+        let marketBars = await this.marketData.getBars(symId, timeframe, bars);
+        if ((!marketBars || marketBars.length < 5) && timeframe !== '1d') {
+          marketBars = await this.marketData.getBars(symId, '1d', bars);
+        }
         if (!marketBars || marketBars.length < 5) {
-          return { symbol, skipped: true, reason: 'Insufficient bars' };
+          return { symbol, skipped: true, reason: `Insufficient bars (${timeframe}/1d)` };
         }
 
         const protocol = SYMBOL_PROTOCOL_MAP[symbol] || 'default';
