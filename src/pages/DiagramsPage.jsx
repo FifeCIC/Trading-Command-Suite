@@ -609,6 +609,60 @@ const DIAGRAMS = [
     Q & R & S & T --> U
     U --> V --> W`,
   },
+  {
+    id: 'protocol-calendar',
+    label: 'Protocol Calendar — Seasonal Prioritization',
+    desc: 'Calendar-driven protocol prioritization: each protocol has seasonal affinity weights. SEES boosts protocols that historically perform well in the current month/season, and deprioritizes those that underperform. Powers the Speed Trading auto-switch intelligence.',
+    code: `flowchart LR
+    subgraph Input["Calendar Check"]
+        A[Today: June 24]
+        B[Current month: June]
+        C[Current season: Summer]
+    end
+    subgraph Affinity["Protocol Seasonal Affinity"]
+        D[btc-scalp-v1: 0%]
+        E[spy-day-v1: +15% — summer chop, earnings lull]
+        F[pandemic-v1: 0%]
+        G[oil-speed-v1: +10% — hurricane season]
+        H[leverage-v2 short: +5% — summer weakness]
+        I[momentum-stock-v1: -10% — summer doldrums]
+    end
+    subgraph Result["SEES Prioritization"]
+        J[spy-day-v1]
+        K[oil-speed-v1]
+        L[leverage-v2 short]
+    end
+    A & B & C --> D & E & F & G & H & I
+    D & E & F & G & H & I --> J & K & L`,
+  },
+  {
+    id: 'seasonality-heatmap',
+    label: 'Seasonality Heatmap — Hour x Day Win Rates',
+    desc: 'Heatmap showing historical bullish/bearish bias for each hour of each day. Computed from MT5 data. Dark green = 70%+ bullish. Red = 70%+ bearish. The active hour is highlighted. Feeds into session-timing-filter directive.',
+    code: `flowchart LR
+    subgraph Data["Historical Data"]
+        A[MT5 1m candles]
+        B[20,000+ bars per symbol]
+    end
+    subgraph Compute["Seasonality Engine"]
+        C[Group by hour x day]
+        D[Calculate win rate]
+        E[Apply confidence threshold]
+    end
+    subgraph Output["Heatmap 7x24 Grid"]
+        F[Mon 00: green]
+        G[Tue 14: red]
+        H[Thu 21: green — 68%]
+        I[Sat 03: no data]
+    end
+    subgraph Integration["Directive Feed"]
+        J[session-timing-filter]
+        K[Chart background zones]
+    end
+    A --> C --> D --> E
+    E --> F & G & H & I
+    H --> J --> K`,
+  },
 ];
 
 export default function DiagramsPage() {

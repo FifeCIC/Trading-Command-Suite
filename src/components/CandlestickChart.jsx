@@ -84,14 +84,19 @@ export default function CandlestickChart({
         vertLines: { color: 'rgba(128,128,128,0.06)' },
         horzLines: { color: 'rgba(128,128,128,0.06)' },
       },
-      crosshair: { mode: 0 },
+      crosshair: {
+        mode: 1,
+        vertLine: { color: 'rgba(255,255,255,0.12)', style: 2, width: 1, labelBackgroundColor: '#1e293b' },
+        horzLine: { color: 'rgba(255,255,255,0.12)', style: 2, width: 1, labelBackgroundColor: '#1e293b' },
+      },
       rightPriceScale: { borderColor: 'rgba(128,128,128,0.15)' },
       timeScale: {
         borderColor: 'rgba(128,128,128,0.15)',
         timeVisible: true,
         secondsVisible: true,
-        barSpacing: 12,
+        barSpacing: 10,
       },
+      handleScroll: { vertTouchDrag: false },
     });
 
     const series = chart.addSeries(CandlestickSeries, CHART_COLORS);

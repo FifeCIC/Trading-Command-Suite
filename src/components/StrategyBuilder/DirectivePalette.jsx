@@ -13,6 +13,7 @@ const CATEGORY_ORDER = ['Momentum', 'Trend', 'Volatility', 'Participation', 'Pat
 
 export default function DirectivePalette({ directives, onDragStart }) {
   const [search, setSearch] = useState('')
+  const [bottomIds, setBottomIds] = useState(new Set())
 
   const filtered = directives.filter((d) => {
     if (!search.trim()) return true
@@ -30,6 +31,19 @@ export default function DirectivePalette({ directives, onDragStart }) {
     const cat = d.category || 'Uncategorized'
     if (!grouped[cat]) grouped[cat] = []
     grouped[cat].push(d)
+  }
+
+  // Sort each category: bottom-pinned items last
+  for (const cat of Object.keys(grouped)) {
+    grouped[cat].sort((a, b) => {
+      const aBot = bottomIds.has(a.id) ? 1 : 0
+      const bBot = bottomIds.has(b.id) ? 1 : 0
+      return aBot - bBot
+    })
+  }
+
+  function sendToBottom(id) {
+    setBottomIds((prev) => new Set([...prev, id]))
   }
 
   return (
@@ -57,6 +71,8 @@ export default function DirectivePalette({ directives, onDragStart }) {
                   key={d.id}
                   directive={d}
                   onDragStart={onDragStart}
+                  isBottomed={bottomIds.has(d.id)}
+                  onSendToBottom={() => sendToBottom(d.id)}
                 />
               ))}
             </div>
@@ -73,6 +89,8 @@ export default function DirectivePalette({ directives, onDragStart }) {
                   key={d.id}
                   directive={d}
                   onDragStart={onDragStart}
+                  isBottomed={bottomIds.has(d.id)}
+                  onSendToBottom={() => sendToBottom(d.id)}
                 />
               ))}
             </div>

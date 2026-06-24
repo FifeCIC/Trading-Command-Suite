@@ -2,21 +2,30 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import './scoring-activity-logs.css';
 
-const MOCK_RUNS = Array.from({ length: 12 }, (_, i) => ({
-  id: `run-${i + 1}`,
-  symbol: ['NVDA', 'TSLA', 'AAPL', 'META', 'AMD', 'MSFT'][i % 6],
-  timestamp: new Date(Date.now() - i * 3600000 * 3).toISOString(),
-  totalScore: Math.round((50 + Math.random() * 50) * 10) / 10,
-  directives: [
+const MOCK_RUNS = Array.from({ length: 12 }, (_, i) => {
+  const directiveScores = [
     { name: 'Trend Alignment', score: Math.round((50 + Math.random() * 50) * 10) / 10, weight: 0.25 },
     { name: 'Momentum', score: Math.round((40 + Math.random() * 60) * 10) / 10, weight: 0.2 },
     { name: 'Volatility Check', score: Math.round((30 + Math.random() * 70) * 10) / 10, weight: 0.15 },
     { name: 'Volume Confirmation', score: Math.round((45 + Math.random() * 55) * 10) / 10, weight: 0.15 },
     { name: 'Support/Resistance', score: Math.round((35 + Math.random() * 65) * 10) / 10, weight: 0.15 },
     { name: 'Sentiment Overlay', score: Math.round((20 + Math.random() * 80) * 10) / 10, weight: 0.1 },
-  ],
-  direction: Math.random() > 0.5 ? 'LONG' : 'SHORT',
-}));
+  ];
+  const maxPossible = directiveScores.reduce((sum, d) => sum + d.weight * 100, 0);
+  const totalScore = directiveScores.reduce((sum, d) => sum + d.weight * d.score, 0);
+  const pctOfMax = Math.round((totalScore / maxPossible) * 100);
+
+  return {
+    id: `run-${i + 1}`,
+    symbol: ['NVDA', 'TSLA', 'AAPL', 'META', 'AMD', 'MSFT'][i % 6],
+    timestamp: new Date(Date.now() - i * 3600000 * 3).toISOString(),
+    totalScore: Math.round(totalScore * 10) / 10,
+    pctOfMax,
+    maxPossible: Math.round(maxPossible * 10) / 10,
+    directives: directiveScores,
+    direction: Math.random() > 0.5 ? 'LONG' : 'SHORT',
+  };
+});
 
 function generateSparkline() {
   return Array.from({ length: 20 }, () => Math.round((30 + Math.random() * 70) * 10) / 10);
@@ -57,6 +66,10 @@ export default function ScoringActivityLogsPage() {
         </div>
       </div>
 
+      <div className="sal-demo-banner">
+        ⚠ Demo data — not connected to live scoring pipeline yet
+      </div>
+
       <div className="sal-table-wrap">
         <table className="sal-table">
           <thead>
@@ -64,7 +77,8 @@ export default function ScoringActivityLogsPage() {
               <th>Symbol</th>
               <th>Time</th>
               <th>Dir</th>
-              <th>Total</th>
+              <th>Score</th>
+              <th>% of Max</th>
               <th>Score Trend</th>
               <th></th>
             </tr>
@@ -88,7 +102,12 @@ export default function ScoringActivityLogsPage() {
                       {run.direction}
                     </span>
                   </td>
-                  <td className="sal-total">{run.totalScore}</td>
+                  <td className="sal-total">{run.totalScore}<small className="sal-max-hint">/{run.maxPossible}</small></td>
+                  <td>
+                    <span className={`sal-pct-chip ${run.pctOfMax >= 70 ? 'sal-pct-high' : run.pctOfMax >= 50 ? 'sal-pct-mid' : 'sal-pct-low'}`}>
+                      {run.pctOfMax}%
+                    </span>
+                  </td>
                   <td className="sal-spark-cell">
                     <Sparkline points={generateSparkline()} />
                   </td>

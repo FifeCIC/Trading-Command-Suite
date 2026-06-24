@@ -35,11 +35,9 @@ import DiagramsPage from './pages/DiagramsPage';
 import DataStatusPage from './pages/DataStatusPage';
 import DataElementsPage from './pages/DataElementsPage';
 import DirectivesManagerPage from './pages/DirectivesManagerPage';
-import DirectivesStatusPage from './pages/DirectivesStatusPage';
-import DirectivesConfigPage from './pages/DirectivesConfigPage';
-import ScoringOverviewPage from './pages/ScoringOverviewPage';
 import ScoringRunsPage from './pages/ScoringRunsPage';
 import ScoringActivityLogsPage from './pages/ScoringActivityLogsPage';
+import ScoringOverviewPage from './pages/ScoringOverviewPage';
 import EventsCalendarPage from './pages/EventsCalendarPage';
 import ExecutionQueuePage from './pages/ExecutionQueuePage';
 import ImportJobsPage from './pages/ImportJobsPage';
@@ -52,10 +50,8 @@ import TradingStrategiesPage from './pages/TradingStrategiesPage';
 import RiskControlsPage from './pages/RiskControlsPage';
 import HomeDashboardPage from './pages/HomeDashboardPage';
 import CacheMonitorPage from './pages/CacheMonitorPage';
-import SeesLiveStackMockPage from './pages/SeesLiveStackMockPage';
-import SeesAdvancedPage from './pages/SeesAdvancedPage';
-import SeesStrategyLandingPage from './pages/SeesStrategyLandingPage';
 import LiveOrderingStackPage from './pages/LiveOrderingStackPage';
+import SeesAdvancedPage from './pages/SeesAdvancedPage';
 import SeesArenaPage from './pages/SeesArenaPage';
 import AlgorithmLabPage from './pages/AlgorithmLabPage';
 import PerformanceLabPage from './pages/PerformanceLabPage';
@@ -69,13 +65,11 @@ import AnalyseSymbolPage from './pages/AnalyseSymbolPage';
 import Mt5ConnectionManagerPage from './pages/Mt5ConnectionManagerPage';
 import AccountsDashboardPage from './pages/AccountsDashboardPage';
 import OrderTestingPage from './pages/OrderTestingPage';
-import PredictiveSeesPage from './pages/PredictiveSeesPage';
 import FluffDetectorPage from './pages/FluffDetectorPage';
 import TradingTimelinePage from './pages/TradingTimelinePage';
 import SignalsWorkbenchPage from './pages/SignalsWorkbenchPage';
 import SettingsPage from './pages/SettingsPage';
 import StrategiesPage from './pages/StrategiesPage';
-import ProtocolsOverviewPage from './pages/ProtocolsOverviewPage';
 import StrategyBuilderPage from './pages/StrategyBuilderPage';
 import StrategyWizardPage from './pages/StrategyWizardPage';
 import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
@@ -170,7 +164,7 @@ function AppShell() {
   const navigate = useNavigate();
   
   const primaryArea = symbolId ? 'research' : (area || 'trading');
-  const secondaryView = symbolId ? 'symbol-detail' : (view || 'sees-live-stack');
+  const secondaryView = symbolId ? 'symbol-detail' : (view || 'directives-manager');
   const [demoPrompt, setDemoPrompt] = useState('Generate a responsive planning concept for eco garden week.');
   const [demoOutput, setDemoOutput] = useState('');
   const [activityLog, setActivityLog] = useState([]);
@@ -524,14 +518,6 @@ function AppShell() {
       return <ServerControlsPage />;
     }
 
-    if (secondaryView === 'sees-live-stack') {
-      return <SeesLiveStackMockPage />;
-    }
-
-    if (secondaryView === 'sees-strategy') {
-      return <SeesStrategyLandingPage />;
-    }
-
     if (secondaryView === 'live-ordering-stack') {
       return <LiveOrderingStackPage />;
     }
@@ -542,6 +528,10 @@ function AppShell() {
 
     if (secondaryView === 'sees-advanced') {
       return <SeesAdvancedPage />;
+    }
+
+    if (secondaryView === 'signals-workbench') {
+      return <SignalsWorkbenchPage />;
     }
 
     if (secondaryView === 'backtest') {
@@ -645,14 +635,6 @@ function AppShell() {
       return <DirectivesManagerPage />;
     }
 
-    if (secondaryView === 'directives-status') {
-      return <DirectivesStatusPage />;
-    }
-
-    if (secondaryView === 'configure-directives') {
-      return <DirectivesConfigPage />;
-    }
-
     if (secondaryView === 'algorithm-lab') {
       return <AlgorithmLabPage />;
     }
@@ -739,10 +721,6 @@ function AppShell() {
 
     if (secondaryView === 'scoring-activity-logs') {
       return <ScoringActivityLogsPage />;
-    }
-
-    if (secondaryView === 'protocol-overview') {
-      return <ProtocolsOverviewPage />;
     }
 
     if (secondaryView === 'signals-workbench') {
@@ -1281,7 +1259,7 @@ function AppShell() {
           </div>
           <div className="footer-col">
             <h4>Quick Links</h4>
-            <button type="button" onClick={() => navigate('/scoring/sees-live-stack')}>SEES Live Stack</button>
+            <button type="button" onClick={() => navigate('/scoring/live-ordering-stack')}>SEES Live Stack</button>
             <button type="button" onClick={() => navigate('/scoring/create-protocols')}>Strategy Builder</button>
             <button type="button" onClick={() => navigate('/research/news-intel')}>News Intel</button>
             <button type="button" onClick={() => navigate('/trading/portfolio-overview')}>Portfolio</button>

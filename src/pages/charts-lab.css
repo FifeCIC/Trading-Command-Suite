@@ -44,6 +44,48 @@
 }
 .clab-control-group input[type=range] { width: 80px; accent-color: var(--accent, #0ea5a6); }
 
+/* Indicator toggles */
+.clab-indicator-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 1rem;
+  background: #0d1117;
+  border-bottom: 1px solid #1e293b;
+  flex-wrap: wrap;
+}
+.clab-indicator-label {
+  font-size: 0.6rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 0.3rem;
+}
+.clab-indicator-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.clab-indicator-btn:hover { border-color: #64748b; color: #e2e8f0; }
+.clab-indicator-btn.active {
+  background: rgba(59,130,246,0.08);
+  font-weight: 600;
+}
+.clab-indicator-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 /* Live quote */
 .clab-quote {
   display: flex; align-items: center; gap: 0.5rem;
@@ -86,3 +128,4 @@
 .clab-notes h4 { margin: 0 0 0.3rem; font-size: 0.78rem; color: #cbd5e1; }
 .clab-notes ol { margin: 0; padding-left: 1.2rem; }
 .clab-notes li { margin-bottom: 0.15rem; }
+.clab-done { color: #22c55e; font-weight: 700; margin-right: 0.3rem; }

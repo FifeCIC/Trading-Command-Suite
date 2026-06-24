@@ -23,6 +23,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { SPEED_PROTOCOL_SYMBOLS } from '../data/speed-protocols';
 import CandlestickChart from '../components/CandlestickChart';
+import CanvasCandlestickChart from '../components/CanvasCandlestickChart';
 import './charts-lab.css';
 
 const TIMEFRAMES = ['1s', '5s', '15s', '1m', '5m'];
@@ -32,11 +33,20 @@ const ENGINES = [
   { id: 'uplot', label: 'uPlot', desc: '45KB, 150k+ pts at 60fps' },
 ];
 
+const INDICATOR_PRESETS = [
+  { type: 'ema', period: 9, color: '#f59e0b', label: 'EMA 9' },
+  { type: 'ema', period: 21, color: '#3b82f6', label: 'EMA 21' },
+  { type: 'ema', period: 50, color: '#a78bfa', label: 'EMA 50' },
+  { type: 'sma', period: 20, color: '#ec4899', label: 'SMA 20' },
+  { type: 'sma', period: 200, color: '#ef4444', label: 'SMA 200' },
+];
+
 export default function ChartsLabPage() {
   const [symbol, setSymbol] = useState('BTCUSD');
   const [timeframe, setTf] = useState('5s');
   const [engine, setEngine] = useState('lightweight');
   const [bars, setBars] = useState(60);
+  const [activeIndicators, setActiveIndicators] = useState(new Set(['ema-9', 'ema-21']));
   const chartContainerRef = useRef(null);
 
   // ── Tick accumulator for synthetic candles ──
@@ -143,6 +153,33 @@ export default function ChartsLabPage() {
         </div>
       </div>
 
+      {/* ── Indicator Toggles ── */}
+      <div className="clab-indicator-row">
+        <span className="clab-indicator-label">Indicators:</span>
+        {INDICATOR_PRESETS.map((ind) => {
+          const key = `${ind.type}-${ind.period}`;
+          const active = activeIndicators.has(key);
+          return (
+            <button
+              key={key}
+              className={`clab-indicator-btn ${active ? 'active' : ''}`}
+              style={active ? { borderColor: ind.color, color: ind.color } : {}}
+              onClick={() => {
+                setActiveIndicators((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(key)) next.delete(key);
+                  else next.add(key);
+                  return next;
+                });
+              }}
+            >
+              <span className="clab-indicator-dot" style={{ background: ind.color }} />
+              {ind.label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* ── Live Quote Display ── */}
       <div className="clab-quote">
         <span className="clab-quote-symbol">{symbol}</span>
@@ -161,12 +198,29 @@ export default function ChartsLabPage() {
       {/* ── Chart Area ── */}
       <div className="clab-chart-area">
         <div ref={chartContainerRef} className="clab-chart-container" />
-        <CandlestickChart
-          containerRef={chartContainerRef}
-          ticks={ticks}
-          intervalMs={tfMs[timeframe] ?? 5000}
-          maxBars={bars}
-        />
+        {engine === 'lightweight' && (
+          <CandlestickChart
+            containerRef={chartContainerRef}
+            ticks={ticks}
+            intervalMs={tfMs[timeframe] ?? 5000}
+            maxBars={bars}
+          />
+        )}
+        {engine === 'canvas' && (
+          <CanvasCandlestickChart
+            containerRef={chartContainerRef}
+            ticks={ticks}
+            intervalMs={tfMs[timeframe] ?? 5000}
+            maxBars={bars}
+            indicators={INDICATOR_PRESETS.filter((ind) => activeIndicators.has(`${ind.type}-${ind.period}`))}
+          />
+        )}
+        {engine === 'uplot' && (
+          <div className="clab-placeholder">
+            <h3>uPlot Engine</h3>
+            <p>Coming soon — 150k+ datapoint performance testing</p>
+          </div>
+        )}
 
         <div className="clab-data-info">
           {tickCount > 0 ? `${tickCount} ticks · ${ticks.length > 0 ? Math.ceil((ticks[ticks.length-1].time - ticks[0].time) / 1000) : 0}s of data` : 'Waiting for MT5 quotes…'}
@@ -178,14 +232,14 @@ export default function ChartsLabPage() {
       <div className="clab-notes">
         <h4>Development Roadmap</h4>
         <ol>
-          <li>Canvas 2D candlestick renderer with proper wick/body geometry</li>
-          <li>Synthetic sub-minute candles from quote polling (bucket bid/ask into OHLC)</li>
-          <li>Web Worker for EMA/SMA/RSI calculation off main thread</li>
+          <li><span className="clab-done">✓</span> Canvas 2D candlestick renderer with proper wick/body geometry + volume bars</li>
+          <li><span className="clab-done">✓</span> Synthetic sub-minute candles from quote polling (bucket bid/ask into OHLC)</li>
+          <li><span className="clab-done">✓</span> EMA/SMA/RSI indicators + indicator selector controls</li>
           <li>uPlot integration for 150k+ datapoint performance tests</li>
           <li>Multi-timeframe overlay (1m candles with 5s synthetic overlay)</li>
-          <li>Zoom/pan/scroll with wheel + drag</li>
-          <li>Crosshair cursor with OHLC tooltip</li>
-          <li>Volume profile + time-price-opportunity zones</li>
+          <li><span className="clab-done">✓</span> Zoom/pan with wheel + drag (Canvas engine)</li>
+          <li><span className="clab-done">✓</span> Crosshair cursor with OHLC + indicator tooltip (both engines)</li>
+          <li><span className="clab-done">✓</span> Volume bars (Canvas engine)</li>
           <li>WebSocket streaming (replace HTTP polling for quotes)</li>
         </ol>
       </div>

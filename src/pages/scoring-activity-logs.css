@@ -21,6 +21,12 @@
 .sal-dir.long { background: rgba(34,197,94,0.12); color: #22c55e; }
 .sal-dir.short { background: rgba(239,68,68,0.12); color: #ef4444; }
 .sal-total { font-weight: 700; font-size: 0.85rem; }
+.sal-max-hint { font-weight: 400; font-size: 0.6rem; color: var(--ink-soft); margin-left: 2px; }
+.sal-pct-chip { font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px; }
+.sal-pct-high { background: rgba(34,197,94,0.12); color: #22c55e; }
+.sal-pct-mid { background: rgba(234,179,8,0.12); color: #eab308; }
+.sal-pct-low { background: rgba(239,68,68,0.12); color: #ef4444; }
+.sal-demo-banner { padding: 0.45rem 0.8rem; border: 1px solid rgba(234,179,8,0.3); border-radius: 6px; background: rgba(234,179,8,0.06); color: #eab308; font-size: 0.72rem; margin-bottom: 0.75rem; }
 .sal-chevron { color: var(--ink-soft); font-size: 0.65rem; }
 
 .sal-spark { vertical-align: middle; }

@@ -345,6 +345,31 @@
   letter-spacing: 0.04em;
 }
 
+.sb-send-bottom {
+  background: transparent;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.6rem;
+  padding: 1px 4px;
+  line-height: 1;
+  transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.sb-send-bottom:hover {
+  color: #e2e8f0;
+  border-color: #3b82f6;
+}
+
+.sb-send-bottom--done {
+  color: #4ade80;
+  border-color: #4ade80;
+  cursor: default;
+  opacity: 0.5;
+}
+
 .sb-card-desc {
   font-size: 0.76rem;
   color: var(--ink-soft, #334155);

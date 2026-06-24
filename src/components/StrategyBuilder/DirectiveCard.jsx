@@ -31,6 +31,8 @@ export default function DirectiveCard({
   isInCanvas = false,
   onDragStart,
   forkStatus, // { isFork: boolean, forkId?: string, onRevert?: () => void }
+  isBottomed = false,
+  onSendToBottom,
 }) {
   const catColor = getCategoryColor(directive.category)
 
@@ -57,6 +59,17 @@ export default function DirectiveCard({
         <span className="sb-card-category" style={{ backgroundColor: catColor + '20', color: catColor }}>
           {directive.category}
         </span>
+        {!isInCanvas && (
+          <button
+            type="button"
+            className={`sb-send-bottom ${isBottomed ? 'sb-send-bottom--done' : ''}`}
+            onClick={(e) => { e.stopPropagation(); onSendToBottom?.(); }}
+            title={isBottomed ? 'Sent to bottom' : 'Send to bottom'}
+            disabled={isBottomed}
+          >
+            {isBottomed ? '⏬' : '⬇'}
+          </button>
+        )}
       </div>
 
       {directive.description && (
