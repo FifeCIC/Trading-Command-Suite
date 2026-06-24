@@ -177,6 +177,7 @@ export const NAV_TREE = {
       { id: 'theme-lab-transitions', label: 'Transitions Lab', icon: '⇢' },
       { id: 'theme-lab-scroll', label: 'Scroll Animations', icon: '⇣' },
       { id: 'component-lab', label: 'Component Lab', icon: '🧩' },
+      { id: 'charts-lab', label: 'Charts Lab', icon: '📊' },
       { id: 'snapshot-replay', label: 'Snapshot Replay', icon: '⏮' },
     ],
   },

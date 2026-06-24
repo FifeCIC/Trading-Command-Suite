@@ -91,6 +91,7 @@ import ThemeLabContainer from './pages/ThemeLabContainer';
 import ThemeLabScroll from './pages/ThemeLabScroll';
 import ThemeLabPopover from './pages/ThemeLabPopover';
 import ComponentLabPage from './pages/ComponentLabPage';
+import ChartsLabPage from './pages/ChartsLabPage';
 import FeatureLabPage from './pages/FeatureLabPage';
 import LabLandingPage from './pages/LabLandingPage';
 import LabPage from './pages/LabPage';
@@ -398,6 +399,10 @@ function AppShell() {
 
     if (secondaryView === 'component-lab') {
       return <ComponentLabPage />;
+    }
+
+    if (secondaryView === 'charts-lab') {
+      return <ChartsLabPage />;
     }
 
     if (secondaryView === 'theme-lab') {
