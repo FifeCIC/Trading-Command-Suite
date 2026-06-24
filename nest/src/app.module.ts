@@ -43,6 +43,7 @@ import { FxModule } from './modules/fx/fx.module';
 import { PlanModule } from './modules/plan/plan.module';
 import { StarsModule } from './modules/stars/stars.module';
 import { AutomationModule } from './modules/automation/automation.module';
+import { WatchlistsModule } from './modules/watchlists/watchlists.module';
 import { RateLimiterMiddleware } from './common/middleware/rate-limiter.middleware';
 import { MetricsMiddleware } from './common/middleware/metrics.middleware';
 
@@ -95,6 +96,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     PlanModule,
     StarsModule,
     AutomationModule,
+    WatchlistsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

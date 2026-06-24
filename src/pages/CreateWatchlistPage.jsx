@@ -1,0 +1,100 @@
+/**
+ * Create Watchlist Page
+ * =====================
+ * Manually create/edit watchlists, manage symbols, save as repo file.
+ */
+
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiGet, apiPost } from '../core/api/client';
+import WATCHLIST_SYMBOLS from '../data/watchlist-symbols.seed';
+import './watchlists.css';
+
+export default function CreateWatchlistPage() {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState('');
+  const [symbols, setSymbols] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  const saveMutation = useMutation({
+    mutationFn: (body) => apiPost('/api/watchlists', body),
+    onSuccess: () => {
+      setSaved(true);
+      queryClient.invalidateQueries({ queryKey: ['watchlists'] });
+    },
+  });
+
+  const handleSave = () => {
+    if (!name.trim() || !symbols.trim()) return;
+    const list = symbols
+      .split(/[\n,]+/)
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean);
+
+    const entries = list.map((ticker) => {
+      const known = WATCHLIST_SYMBOLS.find((s) => s.ticker.toUpperCase() === ticker);
+      return known || { ticker, exchange: 'Trading212', type: 'stock' };
+    });
+
+    saveMutation.mutate({
+      id: name.trim().replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase(),
+      label: name.trim(),
+      symbols: entries,
+    });
+  };
+
+  return (
+    <div className="wl-page">
+      <header className="wl-header">
+        <h2>Create Watchlist</h2>
+        <p className="wl-subtitle">Manually build a watchlist — symbols stored as repo file</p>
+      </header>
+
+      <div className="wl-card">
+        <div className="wl-field">
+          <label>Watchlist Name</label>
+          <input
+            type="text"
+            placeholder="e.g. euros-tech, pounds-finance"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="wl-input"
+          />
+        </div>
+
+        <div className="wl-field">
+          <label>Symbols (comma or newline separated)</label>
+          <textarea
+            placeholder="NVDA, AAPL, TSLA, 8XP, GAW&#10;MSFT&#10;AMZN"
+            value={symbols}
+            onChange={(e) => setSymbols(e.target.value)}
+            rows={8}
+            className="wl-textarea"
+          />
+          <span className="wl-hint">{symbols.split(/[\n,]+/).filter(Boolean).length} symbols entered</span>
+        </div>
+
+        <button
+          className="wl-btn"
+          onClick={handleSave}
+          disabled={saveMutation.isPending || !name.trim() || !symbols.trim()}
+        >
+          {saveMutation.isPending ? 'Saving…' : saved ? '✓ Saved' : 'Save Watchlist'}
+        </button>
+        {saveMutation.error && <p className="wl-error">{saveMutation.error.message}</p>}
+      </div>
+
+      {/* ── Reference: known symbols ── */}
+      <div className="wl-card">
+        <h3>Known Symbols (from seed)</h3>
+        <div className="wl-symbol-chips">
+          {WATCHLIST_SYMBOLS.map((s) => (
+            <span key={s.ticker} className="wl-chip wl-chip-seed" title={s.name}>
+              {s.ticker}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

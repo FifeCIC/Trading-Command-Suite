@@ -92,6 +92,8 @@ import ThemeLabScroll from './pages/ThemeLabScroll';
 import ThemeLabPopover from './pages/ThemeLabPopover';
 import ComponentLabPage from './pages/ComponentLabPage';
 import ChartsLabPage from './pages/ChartsLabPage';
+import UserWatchlistsPage from './pages/UserWatchlistsPage';
+import CreateWatchlistPage from './pages/CreateWatchlistPage';
 import FeatureLabPage from './pages/FeatureLabPage';
 import LabLandingPage from './pages/LabLandingPage';
 import LabPage from './pages/LabPage';
@@ -403,6 +405,14 @@ function AppShell() {
 
     if (secondaryView === 'charts-lab') {
       return <ChartsLabPage />;
+    }
+
+    if (secondaryView === 'user-watchlists') {
+      return <UserWatchlistsPage />;
+    }
+
+    if (secondaryView === 'create-watchlist') {
+      return <CreateWatchlistPage />;
     }
 
     if (secondaryView === 'theme-lab') {
