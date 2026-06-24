@@ -56,6 +56,30 @@ export default function SpeedTradingPage() {
   });
   const dbSymbols = dbQuery.data ?? new Set();
 
+  // ── Live quote polling ─────────────────────────────
+  const tfToMs = { '1s': 1000, '5s': 5000, '15s': 15000, '1m': 60000, '5m': 300000 };
+  const quoteQuery = useQuery({
+    queryKey: ['speed-quote', symbol],
+    queryFn: () => apiGet(`/api/speed/quote/${symbol}`).catch(() => null),
+    refetchInterval: tfToMs[timeframe] ?? 1000,
+    staleTime: 500,
+    enabled: !!symbol,
+  });
+  const quote = quoteQuery.data;
+
+  // ── Tick history (last 20 mid prices for sparkline) ──
+  const [tickHistory, setTickHistory] = useState([]);
+  const prevMid = useRef(null);
+  useEffect(() => {
+    if (quote?.mid != null) {
+      setTickHistory((prev) => {
+        const next = [...prev, { mid: quote.mid, t: Date.now() }];
+        return next.slice(-30);
+      });
+      prevMid.current = quote.mid;
+    }
+  }, [quote?.mid]);
+
   // Persist selected symbol across page refreshes
   useEffect(() => {
     try { localStorage.setItem('st-symbol', symbol); } catch {}
@@ -405,6 +429,37 @@ export default function SpeedTradingPage() {
               <p>Select a symbol to see its protocol directives</p>
             </div>
           )}
+        </div>
+
+        {/* ── Live Price Ticker ── */}
+        <div className="st-price-strip">
+          <span className="st-price-symbol">{symbol}</span>
+          <span className={`st-price-mid ${quote?.mid != null && prevMid.current != null && quote.mid > prevMid.current ? 'up' : quote?.mid != null && prevMid.current != null && quote.mid < prevMid.current ? 'down' : ''}`}>
+            {quote?.mid != null ? quote.mid.toFixed(5) : '—'}
+          </span>
+          <span className="st-price-bid">{quote?.bid != null ? quote.bid.toFixed(5) : '—'}</span>
+          <span className="st-price-ask">{quote?.ask != null ? quote.ask.toFixed(5) : '—'}</span>
+          {quote?.spread != null && <span className="st-price-spread">{quote.spread.toFixed(5)}</span>}
+          {/* Mini sparkline from tick history */}
+          <svg className="st-sparkline" viewBox="0 0 100 20" preserveAspectRatio="none">
+            <polyline
+              fill="none"
+              stroke="var(--accent)"
+              strokeWidth="1.5"
+              points={(() => {
+                if (tickHistory.length < 2) return '';
+                const mids = tickHistory.map(t => t.mid);
+                const min = Math.min(...mids);
+                const max = Math.max(...mids);
+                const range = max - min || 1;
+                return tickHistory.map((t, i) => {
+                  const x = (i / (tickHistory.length - 1)) * 100;
+                  const y = 20 - ((t.mid - min) / range) * 18;
+                  return `${x},${y}`;
+                }).join(' ');
+              })()}
+            />
+          </svg>
         </div>
 
         {/* Chart area */}

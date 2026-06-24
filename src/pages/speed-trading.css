@@ -296,6 +296,30 @@
 }
 
 /* Chart */
+/* ── Live Price Strip ────────────────────────────── */
+.st-price-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.6rem;
+  background: #0f1419;
+  border-bottom: 1px solid #1e293b;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  overflow: hidden;
+}
+.st-price-symbol { color: #94a3b8; font-weight: 700; min-width: 60px; }
+.st-price-mid { color: #e2e8f0; font-weight: 700; font-size: 0.9rem; min-width: 70px; transition: color 0.3s; }
+.st-price-mid.up { color: #22c55e; }
+.st-price-mid.down { color: #ef4444; }
+.st-price-bid { color: #ef4444; font-size: 0.72rem; }
+.st-price-bid::before { content: 'B '; color: #475569; font-size: 0.6rem; }
+.st-price-ask { color: #22c55e; font-size: 0.72rem; }
+.st-price-ask::before { content: 'A '; color: #475569; font-size: 0.6rem; }
+.st-price-spread { color: #475569; font-size: 0.65rem; }
+.st-price-spread::before { content: 'Δ '; }
+.st-sparkline { width: 80px; height: 18px; flex-shrink: 0; }
+
 .st-chart {
   flex: 5;
   display: flex;
