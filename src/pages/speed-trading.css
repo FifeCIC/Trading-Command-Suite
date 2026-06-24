@@ -296,17 +296,23 @@
 }
 
 /* Chart */
-/* ── Live Price Strip ────────────────────────────── */
+/* ── Live Price Strip (floating overlay, doesn't squeeze chart) ── */
 .st-price-strip {
+  position: absolute;
+  top: 92px;
+  left: 220px;
+  right: 200px;
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.2rem 0.6rem;
-  background: #0f1419;
+  padding: 0.15rem 0.5rem;
+  background: rgba(15,20,25,0.85);
+  backdrop-filter: blur(6px);
   border-bottom: 1px solid #1e293b;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.8rem;
-  overflow: hidden;
+  font-size: 0.78rem;
+  pointer-events: none;
 }
 .st-price-symbol { color: #94a3b8; font-weight: 700; min-width: 60px; }
 .st-price-mid { color: #e2e8f0; font-weight: 700; font-size: 0.9rem; min-width: 70px; transition: color 0.3s; }
