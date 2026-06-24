@@ -49,6 +49,10 @@ const WATCHLIST_SYMBOLS = [
   { ticker: 'HOOD', name: 'Robinhood Markets', exchange: 'NASDAQ', type: 'stock' },
   { ticker: 'RKLB', name: 'Rocket Lab USA', exchange: 'NASDAQ', type: 'stock' },
 
+  // ── EU / UK Stocks ───────────────────────────────────
+  { ticker: '8XP', name: 'XPeng Inc', exchange: 'Trading212', type: 'stock' },
+  { ticker: 'GAW', name: 'Games Workshop Group', exchange: 'LSE', type: 'stock' },
+
   // ── ETFs ──────────────────────────────────────────────
   { ticker: 'SPY', name: 'SPDR S&P 500 ETF', exchange: 'NYSE', type: 'etf' },
   { ticker: 'QQQ', name: 'Invesco QQQ Trust', exchange: 'NASDAQ', type: 'etf' },
