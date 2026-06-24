@@ -8,7 +8,8 @@ import SpeedChart from '../components/SpeedChart';
 import './speed-trading.css';
 
 const SIZE_PRESETS = [1, 5, 10];
-const TIMEFRAMES = ['tick', '1m', '5m', '15m', '1h'];
+// tick = poll MT5 quote (bid/ask) at that interval; 1m+ = MT5 candles
+const TIMEFRAMES = ['1s', '5s', '15s', '1m', '5m'];
 const SHORTCUTS = [
   { key: 'B', action: 'Buy market' },
   { key: 'S', action: 'Sell market' },
@@ -23,9 +24,9 @@ const SHORTCUTS = [
   { key: 'Space', action: 'Pause data stream' },
   { key: 'Esc', action: 'Emergency lockout (30s)' },
   { key: 'F1', action: 'Toggle shortcut overlay' },
-  { key: '`', action: 'Cycle timeframe (tick→1m→5m→15m→1h)' },
+  { key: '`', action: 'Cycle timeframe' },
   { key: 'Tab', action: 'Cycle symbol' },
-  { key: '?', action: 'Data: tick=quote poll, 1m+=MT5 candles' },
+  { key: '?', action: '1s–15s = quote poll; 1m–5m = MT5 candles' },
 ];
 
 export default function SpeedTradingPage() {
@@ -34,7 +35,7 @@ export default function SpeedTradingPage() {
   });
   const [symbolFilter, setSymbolFilter] = useState('');
   const [symbolCat, setSymbolCat] = useState('all');
-  const [timeframe, setTf] = useState('tick');
+  const [timeframe, setTf] = useState('1s');
   const [sizePreset, setSizePreset] = useState(2); // index into SIZE_PRESETS
   const [paused, setPaused] = useState(false);
   const [locked, setLocked] = useState(false);
