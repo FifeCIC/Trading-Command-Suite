@@ -49,4 +49,29 @@ export class BacktestController {
   ) {
     return this.backtestService.getChartData(symbol, timeframe || '1d', from, to);
   }
+
+  @Post('optimize')
+  @ApiOperation({ summary: 'Grid search — optimize SL/TP parameters across a range' })
+  async optimize(@Body() body: {
+    symbol: string;
+    days?: number;
+    protocolId?: string;
+    slRange?: { min: number; max: number; step: number };
+    tpRange?: { min: number; max: number; step: number };
+  }) {
+    return this.backtestService.optimize(body);
+  }
+
+  @Post('walk-forward')
+  @ApiOperation({ summary: 'Walk-forward — optimize on train period, validate on test period' })
+  async walkForward(@Body() body: {
+    symbol: string;
+    trainDays?: number;
+    testDays?: number;
+    protocolId?: string;
+    slRange?: { min: number; max: number; step: number };
+    tpRange?: { min: number; max: number; step: number };
+  }) {
+    return this.backtestService.walkForward(body);
+  }
 }

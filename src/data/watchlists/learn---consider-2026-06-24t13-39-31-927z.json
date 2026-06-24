@@ -1,0 +1,80 @@
+{
+  "id": "learn---consider-2026-06-24t13-39-31-927z",
+  "label": "Learn-&-Consider-2026-06-24T13-39-31.927Z",
+  "symbols": [
+    {
+      "ticker": "SLICE",
+      "name": "Name",
+      "exchange": "Invested value",
+      "type": "Value"
+    },
+    {
+      "ticker": "JBL",
+      "name": "Jabil",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "MRVL",
+      "name": "Marvell Technology",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "FMNB",
+      "name": "Leonardo",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "IFX",
+      "name": "Infineon Technologies",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "RKLB",
+      "name": "Rocket Lab Corporation",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "NVTS",
+      "name": "Navitas Semiconductor",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "LSEG",
+      "name": "London Stock Exchange Group",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "PL",
+      "name": "Planet Labs",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "FJET",
+      "name": "Starfighters Space",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "RDW",
+      "name": "Redwire",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "TOTAL",
+      "name": "Learn & Consider",
+      "exchange": "0",
+      "type": "0"
+    }
+  ],
+  "importedAt": "2026-06-24T13:59:58.730Z",
+  "source": "Trading212 CSV"
+}

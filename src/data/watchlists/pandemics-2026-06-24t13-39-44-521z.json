@@ -1,0 +1,44 @@
+{
+  "id": "pandemics-2026-06-24t13-39-44-521z",
+  "label": "Pandemics-2026-06-24T13-39-44.521Z",
+  "symbols": [
+    {
+      "ticker": "SLICE",
+      "name": "Name",
+      "exchange": "Invested value",
+      "type": "Value"
+    },
+    {
+      "ticker": "MRK",
+      "name": "Merck",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "CODX",
+      "name": "Co-Diagnostics",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "SNGX",
+      "name": "Soligenix",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "MRK",
+      "name": "Merck & Co",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "TOTAL",
+      "name": "Pandemics",
+      "exchange": "0",
+      "type": "0"
+    }
+  ],
+  "importedAt": "2026-06-24T13:59:28.930Z",
+  "source": "Trading212 CSV"
+}

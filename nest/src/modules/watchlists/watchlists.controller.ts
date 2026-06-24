@@ -1,16 +1,13 @@
 /**
  * Watchlists Controller
  * =====================
- * CSV import and watchlist management.
- *
- * POST /api/watchlists/import-csv — parse Trading212 CSV, return symbols
- * GET  /api/watchlists — list stored watchlists from repo
- * POST /api/watchlists — create/update a watchlist
+ * Database-backed watchlist management (Prisma). Formerly file-based.
+ * Existing JSON files migrated on first DB access if needed.
  */
 
-import { Controller, Get, Post, Body, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 const WATCHLISTS_DIR = join(__dirname, '..', '..', '..', '..', '..', 'src', 'data', 'watchlists');
@@ -22,26 +19,47 @@ interface WatchlistEntry {
   type?: string;
 }
 
-interface WatchlistFile {
-  id: string;
-  label: string;
-  symbols: WatchlistEntry[];
-  importedAt?: string;
-  source?: string;
-}
-
 @Controller('watchlists')
 export class WatchlistsController {
   private readonly logger = new Logger(WatchlistsController.name);
+  private migrated = false;
 
-  constructor(private readonly prisma: PrismaService) {
-    // Ensure watchlists directory exists
-    if (!existsSync(WATCHLISTS_DIR)) {
-      mkdirSync(WATCHLISTS_DIR, { recursive: true });
+  constructor(private readonly prisma: PrismaService) {}
+
+  /** Lazily migrate any JSON files into the database (one-time) */
+  private async migrateFilesIfNeeded() {
+    if (this.migrated) return;
+    this.migrated = true;
+
+    if (!existsSync(WATCHLISTS_DIR)) return;
+    const files = readdirSync(WATCHLISTS_DIR).filter(f => f.endsWith('.json'));
+    if (files.length === 0) return;
+
+    const existing = await this.prisma.watchlist.count();
+    if (existing > 0) return; // DB already has watchlists
+
+    this.logger.log(`Migrating ${files.length} JSON watchlist files to database…`);
+    for (const f of files) {
+      try {
+        const raw = readFileSync(join(WATCHLISTS_DIR, f), 'utf-8');
+        const data = JSON.parse(raw);
+        await this.prisma.watchlist.create({
+          data: {
+            id: data.id || f.replace('.json', ''),
+            name: data.label || f,
+            symbols: data.symbols || [],
+            source: data.source || 'Trading212 CSV',
+            importedAt: data.importedAt ? new Date(data.importedAt) : new Date(),
+          },
+        });
+        this.logger.log(`  ✓ Migrated: ${data.label || f}`);
+      } catch (err) {
+        this.logger.warn(`  ✗ Skipped ${f}: ${err.message}`);
+      }
     }
   }
 
-  /** POST /api/watchlists/import-csv — parse Trading212 CSV export */
+  /** POST /api/watchlists/import-csv — parse Trading212 CSV, save to DB */
   @Post('import-csv')
   async importCsv(@Body() body: { csv: string; listName?: string }) {
     if (!body.csv?.trim()) return { error: 'No CSV data provided', symbols: [] };
@@ -51,15 +69,10 @@ export class WatchlistsController {
     let skipped = 0;
 
     for (const line of lines) {
-      // Skip headers and empty lines
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith('Ticker') || trimmed.startsWith('Name,') || trimmed.startsWith('Instrument')) continue;
 
-      // Try different CSV formats:
-      // Format A: "Ticker,Name,Exchange,Type,..." (comma-separated)
-      // Format B: "Ticker" (single column)
       const cols = trimmed.split(',');
-
       const ticker = cols[0]?.trim()?.replace(/"/g, '');
       if (!ticker || ticker.length > 20) { skipped++; continue; }
 
@@ -70,66 +83,115 @@ export class WatchlistsController {
       symbols.push({ ticker: ticker.toUpperCase(), name, exchange, type });
     }
 
-    // Save as repo file if listName provided
+    // Save to database
+    let saved = false;
+    let watchlistId: string | null = null;
     if (body.listName?.trim() && symbols.length > 0) {
-      const safeName = body.listName.trim().replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase();
-      const filePath = join(WATCHLISTS_DIR, `${safeName}.json`);
-      const data: WatchlistFile = {
-        id: safeName,
-        label: body.listName.trim(),
-        symbols,
-        importedAt: new Date().toISOString(),
-        source: 'Trading212 CSV',
-      };
-      writeFileSync(filePath, JSON.stringify(data, null, 2));
-      this.logger.log(`Saved watchlist: ${safeName} (${symbols.length} symbols)`);
+      const safeId = body.listName.trim().replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase() + '-' + Date.now();
+      try {
+        const wl = await this.prisma.watchlist.create({
+          data: {
+            id: safeId,
+            name: body.listName.trim(),
+            symbols: symbols as any,
+            source: 'Trading212 CSV',
+            importedAt: new Date(),
+          },
+        });
+        watchlistId = wl.id;
+        saved = true;
+        this.logger.log(`Imported to DB: ${wl.name} (${symbols.length} symbols)`);
+      } catch (err) {
+        this.logger.error(`Failed to save watchlist: ${err.message}`);
+      }
     }
 
     return {
       count: symbols.length,
       skipped,
-      symbols: symbols.slice(0, 50), // preview first 50
+      symbols: symbols.slice(0, 50),
       total: symbols.length,
-      saved: !!body.listName?.trim(),
+      saved,
+      watchlistId,
     };
   }
 
-  /** GET /api/watchlists — list all stored watchlists */
+  /** GET /api/watchlists — list from database */
   @Get()
-  listWatchlists() {
-    if (!existsSync(WATCHLISTS_DIR)) return [];
-
-    const files = readdirSync(WATCHLISTS_DIR).filter((f) => f.endsWith('.json'));
-    return files.map((f) => {
-      try {
-        const raw = readFileSync(join(WATCHLISTS_DIR, f), 'utf-8');
-        const data: WatchlistFile = JSON.parse(raw);
-        return {
-          id: data.id,
-          label: data.label,
-          symbolCount: data.symbols?.length ?? 0,
-          importedAt: data.importedAt,
-          source: data.source,
-        };
-      } catch {
-        return { id: f.replace('.json', ''), label: f, error: 'Failed to parse' };
-      }
+  async listWatchlists() {
+    await this.migrateFilesIfNeeded();
+    const wls = await this.prisma.watchlist.findMany({
+      orderBy: { updatedAt: 'desc' },
     });
+    return wls.map(wl => ({
+      id: wl.id,
+      label: wl.name,
+      symbolCount: Array.isArray(wl.symbols) ? wl.symbols.length : 0,
+      importedAt: wl.importedAt?.toISOString() ?? wl.createdAt.toISOString(),
+      source: wl.source || 'manual',
+      protocolId: wl.protocolId,
+    }));
   }
 
-  /** POST /api/watchlists — save/update a watchlist */
-  @Post()
-  saveWatchlist(@Body() body: WatchlistFile) {
-    if (!body.id || !body.symbols?.length) return { error: 'id and symbols are required' };
-
-    const filePath = join(WATCHLISTS_DIR, `${body.id}.json`);
-    const data: WatchlistFile = {
-      ...body,
-      importedAt: body.importedAt || new Date().toISOString(),
+  /** GET /api/watchlists/:id — full watchlist with symbols */
+  @Get(':id')
+  async getWatchlist(@Param('id') id: string) {
+    await this.migrateFilesIfNeeded();
+    const wl = await this.prisma.watchlist.findUnique({ where: { id } });
+    if (!wl) throw new NotFoundException(`Watchlist ${id} not found`);
+    return {
+      id: wl.id,
+      label: wl.name,
+      symbols: wl.symbols,
+      source: wl.source,
+      protocolId: wl.protocolId,
+      importedAt: wl.importedAt?.toISOString(),
     };
-    writeFileSync(filePath, JSON.stringify(data, null, 2));
-    this.logger.log(`Saved watchlist: ${body.id} (${body.symbols.length} symbols)`);
+  }
 
-    return { saved: true, id: body.id, symbolCount: body.symbols.length };
+  /** PATCH /api/watchlists/:id — update protocol or name */
+  @Post(':id')
+  async updateWatchlist(
+    @Param('id') id: string,
+    @Body() body: { name?: string; protocolId?: string },
+  ) {
+    await this.migrateFilesIfNeeded();
+    const wl = await this.prisma.watchlist.findUnique({ where: { id } });
+    if (!wl) throw new NotFoundException(`Watchlist ${id} not found`);
+
+    const updated = await this.prisma.watchlist.update({
+      where: { id },
+      data: {
+        ...(body.name !== undefined && { name: body.name }),
+        ...(body.protocolId !== undefined && { protocolId: body.protocolId }),
+      },
+    });
+    return { updated: true, id: updated.id, protocolId: updated.protocolId };
+  }
+
+  /** POST /api/watchlists — create a new watchlist manually */
+  @Post()
+  async saveWatchlist(@Body() body: { name: string; symbols: WatchlistEntry[]; source?: string }) {
+    if (!body.name || !body.symbols?.length) return { error: 'name and symbols are required' };
+
+    const id = body.name.replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase();
+    const wl = await this.prisma.watchlist.upsert({
+      where: { id },
+      create: {
+        id,
+        name: body.name,
+        symbols: body.symbols as any,
+        source: body.source || 'manual',
+        importedAt: new Date(),
+      },
+      update: {
+        name: body.name,
+        symbols: body.symbols as any,
+        source: body.source || 'manual',
+      },
+    });
+
+    this.logger.log(`Saved watchlist: ${wl.name} (${body.symbols.length} symbols)`);
+    return { saved: true, id: wl.id, symbolCount: body.symbols.length };
   }
 }

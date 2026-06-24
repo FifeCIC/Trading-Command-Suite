@@ -500,12 +500,15 @@ model UserPreferences {
 }
 
 model Watchlist {
-  id        String   @id @default(uuid()) @db.VarChar(36)
-  name      String   @db.VarChar(200)
-  symbols   Json
-  userId    String?  @db.VarChar(100)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  name        String   @db.VarChar(200)
+  symbols     Json
+  source      String?  @db.VarChar(100)
+  protocolId  String?  @db.VarChar(100)
+  userId      String?  @db.VarChar(100)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  importedAt  DateTime?
 }
 
 model CronMeta {

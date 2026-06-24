@@ -1,0 +1,314 @@
+{
+  "id": "watchlist-2-2026-06-24t13-39-48-016z",
+  "label": "Watchlist-2-2026-06-24T13-39-48.016Z",
+  "symbols": [
+    {
+      "ticker": "SLICE",
+      "name": "Name",
+      "exchange": "Invested value",
+      "type": "Value"
+    },
+    {
+      "ticker": "GDX",
+      "name": "General Dynamics",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "BENF",
+      "name": "Beneficient",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "QQ",
+      "name": "QinetiQ",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "NOC",
+      "name": "Northrop Grumman",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "STLD",
+      "name": "Steel Dynamics",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "PLSR",
+      "name": "Pulsar Helium",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "AMZN",
+      "name": "Amazon",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "NBIS",
+      "name": "Nebius Group NV",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "TSLA",
+      "name": "Tesla",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "BABA",
+      "name": "Alibaba",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "QBTS",
+      "name": "D-Wave Quantum",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "ADSK",
+      "name": "Autodesk",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "IBO",
+      "name": "Impact BioMedical",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "VUZI",
+      "name": "Vuzix",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "CRNC",
+      "name": "Cerence",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "EL",
+      "name": "EssilorLuxottica",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "FDX",
+      "name": "FedEx",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "TALO",
+      "name": "Talos Energy",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "WMT",
+      "name": "Walmart",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "EH",
+      "name": "EHang",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "RZLV",
+      "name": "Rezolve AI",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "IONQ",
+      "name": "IonQ",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "QUBT",
+      "name": "Quantum Computing",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "GOOGL",
+      "name": "Alphabet (Class A)",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "VUAG",
+      "name": "Vanguard S&P 500 (Acc)",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "QCOM",
+      "name": "Qualcomm",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "USAU",
+      "name": "US Gold",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "ACHR",
+      "name": "Archer Aviation",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "BAB",
+      "name": "Babcock International",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "AIR",
+      "name": "Airbus",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "BRK.B",
+      "name": "Berkshire Hathaway (Class B)",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "BLK",
+      "name": "BlackRock",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "AM",
+      "name": "Dassault Aviation",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "VTOL",
+      "name": "Bristow Group",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "639",
+      "name": "Spotify Technology",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "NFLX",
+      "name": "Netflix",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "TWLO",
+      "name": "Twilio",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "DOCU",
+      "name": "DocuSign",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "UNH",
+      "name": "UnitedHealth",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "TTD",
+      "name": "Trade Desk",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "RHM",
+      "name": "Rheinmetall",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "NVNI",
+      "name": "Nvni Group",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "EEE",
+      "name": "Empire Metals",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "DFNS",
+      "name": "T3 Defense",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "UBER",
+      "name": "Uber Technologies",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "TEVA",
+      "name": "Teva Pharmaceutical Industries",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "DAGB",
+      "name": "VanEck Crypto and Blockchain Innovators (Acc)",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "SOUN",
+      "name": "SoundHound AI",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "ALP",
+      "name": "Alpha Compute",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "TOTAL",
+      "name": "Watchlist 2",
+      "exchange": "0",
+      "type": "0"
+    }
+  ],
+  "importedAt": "2026-06-24T13:59:13.183Z",
+  "source": "Trading212 CSV"
+}

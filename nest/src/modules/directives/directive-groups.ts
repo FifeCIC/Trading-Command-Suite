@@ -812,6 +812,58 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     idealFor: 'XTrend CHINA50 speed trading during Asian session (01:00–09:00 GMT). Government can halt trading or intervene at any time. Use extreme caution.',
   },
 
+  // ── Momentum Stocks: Group Protocol V1 ──
+
+  'momentum-stock-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'Momentum Technicals',
+        description: 'Momentum stocks trend harder — stronger trend following, less mean reversion',
+        weight: 0.35, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',       // 120 — Momentum stocks accelerate
+          'ema-structure',        // 100 — Multi-timeframe trend alignment
+          'macd-crossover',       // 110 — Trend change signals
+          'volume-confirmation',  // 100 — Institutional flow confirmation
+          'bollinger-squeeze',    // 100 — Squeeze before breakouts
+          'rsi-oversold',         // 120 — Dip-buying momentum (oversold = opportunity)
+          'support-resistance',   // 100 — Key levels matter for hot stocks
+          'momentum-roc',         // 100 — Rate of change confirms trend strength
+        ],
+        directiveMaxScores: { 'speed-momentum': 120, 'macd-crossover': 110, 'rsi-oversold': 120 },
+      },
+      {
+        id: 'sentiment', name: 'Sentiment & Expectations',
+        description: 'Momentum stocks live and die by analyst targets, news flow, and earnings surprises',
+        weight: 0.35, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',       // 100 — News drives momentum stocks
+          'analyst-consensus',    // 100 — Upgrades/downgrades move these stocks
+          'social-buzz',          // 100 — Reddit/Twitter/StockTwits activity
+          'earnings-proximity',   // 100 — Earnings are make-or-break events
+        ],
+      },
+      {
+        id: 'risk', name: 'High-Momentum Risk',
+        description: 'These stocks can drop 40% in a month — wider risk gates than steady stocks',
+        weight: 0.30, isRiskGate: true, minMultiplier: 0.40, maxMultiplier: 1.30,
+        directiveIds: [
+          'volatility-regime',    // 100 — Momentum vol is high, set expectations
+          'liquidity-check',      // 100 — Tight spreads essential for entry
+          'position-concentration',// 100 — Don't over-allocate single momentum names
+          'earnings-momentum',    // 100 — Post-earnings drift is real
+        ],
+      },
+    ],
+    name: 'Momentum Stocks V1',
+    description: 'Group protocol for stocks with 100%+ annual gains and continued high expectations. Trend-following bias — winners keep winning until they don\'t. Higher sentiment weight than index protocols — these stocks are driven by narrative.',
+    tradingStyle: 'Day Trade / Swing',
+    recommendedTimeframe: '5m–1d',
+    avgHoldTime: 'Hours to days',
+    winRateTarget: '55–65%',
+    idealFor: 'High-momentum stocks: NVDA, MSTR, PLTR, AVGO, COIN, MARA, RIOT, HOOD, RKLB, ASTS, SOFI. Score the wishlist, trade the top 1-2 signals. Never hold through earnings without confirmation.',
+  },
+
   // ── VIX: Mean-Reversion Spike Protocol ──
 
   'vix-spike-v1': {

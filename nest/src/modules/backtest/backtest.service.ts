@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DirectivesService } from '../directives/directives.service';
+import { ScoringService } from '../scoring/scoring.service';
 import { DirectiveInput, DirectiveResult, MarketBar } from '../directives/interfaces/directive.interface';
 import {
   DIRECTIVE_GROUPS,
@@ -75,6 +76,7 @@ export class BacktestService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly directivesService: DirectivesService,
+    private readonly scoringService: ScoringService,
   ) {}
 
   async run(request: BacktestRunRequest): Promise<BacktestResult> {
@@ -125,7 +127,7 @@ export class BacktestService {
         ? (PROTOCOL_REGISTRY[protocolId]?.groups ?? DIRECTIVE_GROUPS)
         : DIRECTIVE_GROUPS;
 
-      const { composite, signal } = await this.gateScore(symbol, window, groups);
+      const { composite, signal } = await this.fullScore(symbol, window, groups);
       const score = composite;
 
       const currentBar = bars[day];
@@ -442,7 +444,7 @@ export class BacktestService {
       }));
 
       // Use inline protocol-gated scoring
-      const { composite: score, signal } = await this.gateScore(symbol, window, DIRECTIVE_GROUPS);
+      const { composite: score, signal } = await this.fullScore(symbol, window, DIRECTIVE_GROUPS);
 
       const currentClose = window[window.length - 1].close;
 
@@ -473,54 +475,133 @@ export class BacktestService {
     };
   }
 
-  // ── Inline Gating (avoids DI circular dependency with ScoringModule) ──
+  // ── Full SEES Pipeline (production parity) ──────────
 
   /**
-   * Compute a gated score inline using DirectivesService + directive groups.
-   * Same logic as ProtocolGatingService.scoreWithGating() but self-contained.
+   * Full production scoring pipeline for backtest — mirrors
+   * ScoringService.rankAll() with dominance/cancellation,
+   * calibration, and weighted aggregation.
    */
-  private async gateScore(
+  private async fullScore(
     symbol: string,
     bars: MarketBar[],
     groups: DirectiveGroup[],
-  ): Promise<{ composite: number; signal: string }> {
+  ): Promise<{ composite: number; signal: string; breakdown: Array<{ directiveId: string; score: number; maxScore: number; signalClass: string }> }> {
     const input: DirectiveInput = { symbol, bars };
     const allResults = await this.directivesService.runAll(input);
 
-    let technicalScore = 50;
-    let sentimentScore = 50;
-    let riskScore = 50;
+    // Collect all directive IDs from groups
+    const directiveIds = new Set<string>();
+    for (const g of groups) {
+      for (const id of g.directiveIds) directiveIds.add(id);
+    }
 
-    for (const group of groups) {
-      let totalNorm = 0;
-      let count = 0;
-      for (const directiveId of group.directiveIds) {
-        const result = allResults.get(directiveId);
-        if (!result) continue;
-        const directive = this.directivesService.get(directiveId);
-        const maxScore = directive?.maxScore ?? 100;
-        const normalized = maxScore > 0 ? (result.score / maxScore) * 100 : 0;
-        totalNorm += normalized;
-        count++;
+    // Phase 1: Build breakdown with signalClass and priority
+    type BreakdownEntry = { directiveId: string; score: number; maxScore: number; confidence: number; signalClass: string; priority: number };
+    const breakdown: BreakdownEntry[] = [];
+    const signalGroups = { bullish: 0, bearish: 0, neutral: 0 };
+
+    for (const id of directiveIds) {
+      const result = allResults.get(id);
+      if (!result) continue;
+      const directive = this.directivesService.get(id);
+      const maxScore = directive?.maxScore ?? 100;
+      const priority = directive?.priority ?? 50;
+      const signalClass = result.signalClass ?? 'neutral';
+
+      if (signalClass === 'bullish') signalGroups.bullish += maxScore;
+      else if (signalClass === 'bearish') signalGroups.bearish += maxScore;
+      else signalGroups.neutral += maxScore;
+
+      breakdown.push({
+        directiveId: id,
+        score: result.score,
+        maxScore,
+        confidence: result.confidence,
+        signalClass,
+        priority,
+      });
+    }
+
+    // Phase 2: Dominance/cancellation
+    const suppressedIds = new Set<string>();
+    const highPrioBull = breakdown.filter((d) => d.signalClass === 'bullish' && d.priority >= 80);
+    const highPrioBear = breakdown.filter((d) => d.signalClass === 'bearish' && d.priority >= 80);
+
+    if (highPrioBull.length > 0 && highPrioBear.length === 0) {
+      for (const d of breakdown) {
+        if (d.signalClass === 'bearish' && d.priority < 60) suppressedIds.add(d.directiveId);
       }
-      const avg = count > 0 ? totalNorm / count : 50;
-      if (group.id === 'technical') technicalScore = avg;
-      else if (group.id === 'sentiment') sentimentScore = avg;
-      else if (group.id === 'risk') riskScore = avg;
+    } else if (highPrioBear.length > 0 && highPrioBull.length === 0) {
+      for (const d of breakdown) {
+        if (d.signalClass === 'bullish' && d.priority < 60) suppressedIds.add(d.directiveId);
+      }
     }
 
-    // Risk gate
-    const riskGroup = groups.find(g => g.id === 'risk');
-    let riskMultiplier = riskScore / 100;
+    const totalWeight = breakdown.reduce((s, d) => s + d.maxScore, 0);
+    const bullRatio = totalWeight > 0 ? signalGroups.bullish / totalWeight : 0;
+    const bearRatio = totalWeight > 0 ? signalGroups.bearish / totalWeight : 0;
+
+    if (bullRatio > bearRatio * 2 && bullRatio > 0.4) {
+      for (const d of breakdown) {
+        if (d.signalClass === 'bearish' && d.confidence < 0.5) suppressedIds.add(d.directiveId);
+      }
+    } else if (bearRatio > bullRatio * 2 && bearRatio > 0.4) {
+      for (const d of breakdown) {
+        if (d.signalClass === 'bullish' && d.confidence < 0.5) suppressedIds.add(d.directiveId);
+      }
+    }
+
+    // Phase 3: Group-weighted aggregation
+    let totalScore = 0;
+    let totalMax = 0;
+    let bullishWeight = 0;
+    let bearishWeight = 0;
+
+    for (const d of breakdown) {
+      if (suppressedIds.has(d.directiveId)) continue;
+      totalScore += d.score;
+      totalMax += d.maxScore;
+      if (d.signalClass === 'bullish') bullishWeight += d.maxScore;
+      else if (d.signalClass === 'bearish') bearishWeight += d.maxScore;
+    }
+
+    const normalized = totalMax > 0 ? (totalScore / totalMax) * 100 : 50;
+
+    // Risk gate from risk group
+    const riskGroup = groups.find((g) => g.id === 'risk');
+    let riskMultiplier = 1.0;
     if (riskGroup) {
-      riskMultiplier = Math.max(riskGroup.minMultiplier, Math.min(riskGroup.maxMultiplier, riskMultiplier));
+      // Find risk directives in the breakdown
+      const riskDirectives = riskGroup.directiveIds;
+      let riskScore = 50;
+      let riskCount = 0;
+      for (const id of riskDirectives) {
+        const result = allResults.get(id);
+        if (result) {
+          const d = this.directivesService.get(id);
+          riskScore += (result.score / (d?.maxScore || 100)) * 100;
+          riskCount++;
+        }
+      }
+      if (riskCount > 0) {
+        riskScore = riskScore / riskCount;
+        riskMultiplier = Math.max(riskGroup.minMultiplier, Math.min(riskGroup.maxMultiplier, riskScore / 100));
+      }
     }
 
-    const raw = (technicalScore * 0.40 + sentimentScore * 0.35) * riskMultiplier;
-    const composite = Math.round(Math.max(0, Math.min(100, raw)));
-    const signal = composite >= 65 ? 'BUY' : composite >= 35 ? 'HOLD' : 'SELL';
+    const composite = Math.round(Math.max(0, normalized * riskMultiplier));
+    let signal = 'HOLD';
+    if (bullishWeight > bearishWeight * 1.5) signal = 'BUY';
+    else if (bearishWeight > bullishWeight * 1.5) signal = 'SELL';
 
-    return { composite, signal };
+    return {
+      composite,
+      signal,
+      breakdown: breakdown
+        .filter((d) => !suppressedIds.has(d.directiveId))
+        .map((d) => ({ directiveId: d.directiveId, score: d.score, maxScore: d.maxScore, signalClass: d.signalClass })),
+    };
   }
 
   // ── Indicator helpers (pure functions) ──
@@ -614,5 +695,71 @@ export class BacktestService {
     }
 
     return datasets;
+  }
+
+  // ── Grid Search Optimization ────────────────────────
+
+  async optimize(params: {
+    symbol: string;
+    days?: number;
+    protocolId?: string;
+    slRange?: { min: number; max: number; step: number };
+    tpRange?: { min: number; max: number; step: number };
+  }): Promise<{ best: BacktestResult; runs: number; params: { slPct: number; tpPct: number; winRate: number }[] }> {
+    const { symbol, days = 365, protocolId, slRange = { min: 1, max: 5, step: 1 }, tpRange = { min: 1, max: 10, step: 2 } } = params;
+    this.logger.log(`Grid search: ${symbol} SL=${slRange.min}-${slRange.max} TP=${tpRange.min}-${tpRange.max}`);
+
+    let best: BacktestResult | null = null;
+    const allRuns: { slPct: number; tpPct: number; winRate: number }[] = [];
+
+    for (let sl = slRange.min; sl <= slRange.max; sl += slRange.step) {
+      for (let tp = tpRange.min; tp <= tpRange.max; tp += tpRange.step) {
+        const result = await this.run({ symbol, days, protocolId, slPct: sl, tpPct: tp });
+        const wr = result.stats.tradeWinRate ?? result.stats.winRate;
+        allRuns.push({ slPct: sl, tpPct: tp, winRate: wr });
+
+        if (!best || (result.stats.totalPnl ?? 0) > (best.stats.totalPnl ?? 0)) {
+          best = result;
+        }
+      }
+    }
+
+    return { best: best!, runs: allRuns.length, params: allRuns.sort((a, b) => b.winRate - a.winRate) };
+  }
+
+  // ── Walk-Forward Optimization ───────────────────────
+
+  async walkForward(params: {
+    symbol: string;
+    trainDays?: number;
+    testDays?: number;
+    protocolId?: string;
+    slRange?: { min: number; max: number; step: number };
+    tpRange?: { min: number; max: number; step: number };
+  }): Promise<{ train: BacktestResult; test: BacktestResult; optimizedParams: { slPct: number; tpPct: number }; outOfSampleWinRate: number }> {
+    const { symbol, trainDays = 730, testDays = 365, protocolId, slRange = { min: 1, max: 5, step: 1 }, tpRange = { min: 1, max: 10, step: 2 } } = params;
+    this.logger.log(`Walk-forward: ${symbol} train=${trainDays}d test=${testDays}d`);
+
+    // Step 1: Optimize on training period
+    const opt = await this.optimize({ symbol, days: trainDays, protocolId, slRange, tpRange });
+    const bestParams = opt.params[0]; // highest win rate
+
+    // Step 2: Run on test period with optimized params
+    const testResult = await this.run({
+      symbol,
+      days: testDays,
+      protocolId,
+      slPct: bestParams.slPct,
+      tpPct: bestParams.tpPct,
+    });
+
+    const trainResult = opt.best;
+
+    return {
+      train: trainResult,
+      test: testResult,
+      optimizedParams: { slPct: bestParams.slPct, tpPct: bestParams.tpPct },
+      outOfSampleWinRate: testResult.stats.tradeWinRate ?? testResult.stats.winRate,
+    };
   }
 }

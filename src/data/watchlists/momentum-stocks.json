@@ -1,0 +1,56 @@
+{
+  "id": "momentum-stocks",
+  "label": "Momentum Stocks",
+  "symbols": [
+    {
+      "ticker": "NVDA",
+      "name": "NVIDIA Corp"
+    },
+    {
+      "ticker": "MSTR",
+      "name": "MicroStrategy"
+    },
+    {
+      "ticker": "PLTR",
+      "name": "Palantir Technologies"
+    },
+    {
+      "ticker": "TSLA",
+      "name": "Tesla Inc"
+    },
+    {
+      "ticker": "AVGO",
+      "name": "Broadcom Inc"
+    },
+    {
+      "ticker": "COIN",
+      "name": "Coinbase Global"
+    },
+    {
+      "ticker": "MARA",
+      "name": "Marathon Digital"
+    },
+    {
+      "ticker": "RIOT",
+      "name": "Riot Platforms"
+    },
+    {
+      "ticker": "HOOD",
+      "name": "Robinhood Markets"
+    },
+    {
+      "ticker": "RKLB",
+      "name": "Rocket Lab USA"
+    },
+    {
+      "ticker": "ASTS",
+      "name": "AST SpaceMobile"
+    },
+    {
+      "ticker": "SOFI",
+      "name": "SoFi Technologies"
+    }
+  ],
+  "source": "manual",
+  "importedAt": "2026-06-24T14:00:13.796Z"
+}

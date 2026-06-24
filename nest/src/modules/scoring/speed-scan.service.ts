@@ -75,7 +75,17 @@ const SYMBOL_PROTOCOL_MAP: Record<string, string> = {
   CHINA50: 'china-speed-v1',
   // Stocks
   TSLA: 'tsla-speed-v1',
-  NVDA: 'default',
+  NVDA: 'momentum-stock-v1',
+  MSTR: 'momentum-stock-v1',
+  PLTR: 'momentum-stock-v1',
+  AVGO: 'momentum-stock-v1',
+  COIN: 'momentum-stock-v1',
+  MARA: 'momentum-stock-v1',
+  RIOT: 'momentum-stock-v1',
+  HOOD: 'momentum-stock-v1',
+  RKLB: 'momentum-stock-v1',
+  ASTS: 'momentum-stock-v1',
+  SOFI: 'momentum-stock-v1',
   // Meme / Crypto
   DOGEUSD: 'doge-speed-v1',
 };

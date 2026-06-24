@@ -1166,6 +1166,7 @@ export const KNOWN_GAPS = [
 ]
 
 export const REVISION_LOG = [
+  '2026-06-24: Watchlist architecture audited — 3 storage locations found (filesystem JSON, Watchlist DB table, WatchlistMeta DB table). Controller uses filesystem only. DB tables are orphaned. Architecture Framework field descriptions fixed to match actual schema. WatchlistsPage.jsx uses hardcoded MOCK data (violates UI Data Honesty). GitHub issue #TBD filed for seed-based watchlist setup.',
   '2026-06-24: BACKTEST PERSISTENCE — BacktestRun + BacktestTrade Prisma models added. BacktestService refactored from in-memory Map to MySQL storage. Results now survive restarts. Symbol.backtestRuns relation added. New endpoint: GET /backtest/protocol/:protocolId. SETUP.md updated with full DB installation procedure (push, seed, generate, table inventory).',
   '2026-06-23: COST OPTIMISATION — Bootstrap tiered (Quick/Standard/Architecture). 15 stale github-issues archived. Agent read order reduced from one-size-fits-all 2,600 lines to task-based: ~500 (Quick), ~1,500 (Standard), ~2,600 (Architecture). COST-OPTIMISATION.md created as permanent record for future projects. Principles: tier from day one, archive aggressively, one-line summaries, consolidate before proliferating.',
   '2026-06-23: TRADING212 SELL MECHANISM DOCUMENTED — agents have cycled 3+ times adding/removing sell code claiming "API doesn\'t allow selling." The truth: Trading212 adapter sends {ticker, quantity} WITHOUT a side field — the API auto-detects sell from existing position. Controller (trading212-portfolio.controller.ts:51) adds side:"sell" ONLY for internal routing. DO NOT send "side" to Trading212. DO NOT remove sell capability. KNOWN_GAPS entry added as permanent reference.',
@@ -1380,15 +1381,15 @@ export const DATABASE_SCHEMA = {
     },
     {
       table: 'Watchlist',
-      description: 'User watchlists',
-      fields: ['id (PK)', 'userId (FK)', 'name', 'symbolIds (JSON array)', 'createdAt', 'updatedAt'],
+      description: 'User watchlists (name + JSON symbol array). ⚠️ Currently stored as JSON files in src/data/watchlists/ — DB table exists but is not used by controller. Plan: seed watchlists as part of setup, then work from DB only.',
+      fields: ['id (PK)', 'name', 'symbols (JSON array of tickers)', 'userId', 'createdAt', 'updatedAt'],
       relationships: [],
     },
     {
       table: 'WatchlistMeta',
-      description: 'Watchlist metadata',
-      fields: ['id (PK)', 'watchlistId (FK)', 'metaKey', 'metaValue', 'updatedAt'],
-      relationships: ['← Watchlist (many-to-one)'],
+      description: 'Per-symbol watchlist entries (normalised). ⚠️ Not used by controller — controller reads/writes filesystem JSON.',
+      fields: ['id (PK)', 'watchlistId', 'symbol (ticker)', 'addedAt', 'notes'],
+      relationships: ['watchlistId → Watchlist.id'],
     },
     {
       table: 'CronMeta',

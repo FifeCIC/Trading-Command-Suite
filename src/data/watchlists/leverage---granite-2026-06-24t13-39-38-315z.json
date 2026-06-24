@@ -1,0 +1,86 @@
+{
+  "id": "leverage---granite-2026-06-24t13-39-38-315z",
+  "label": "Leverage-&-Granite-2026-06-24T13-39-38.315Z",
+  "symbols": [
+    {
+      "ticker": "SLICE",
+      "name": "Name",
+      "exchange": "Invested value",
+      "type": "Value"
+    },
+    {
+      "ticker": "3BA",
+      "name": "Leverage Shares 3x Boeing",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "3BBE",
+      "name": "Leverage Shares 3x Alibaba",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "3BAB",
+      "name": "Leverage Shares 3x Alibaba",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "TSM3",
+      "name": "Leverage Shares 3x Long Taiwan Semiconductor TSM",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "PLT3",
+      "name": "Leverage Shares 3x Palantir",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "3AMZ",
+      "name": "Leverage Shares 3x Amazon",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "PAL3",
+      "name": "GraniteShares 3x Long Palantir",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "NVD3",
+      "name": "Leverage Shares 3x NVIDIA",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "3LPA",
+      "name": "GraniteShares 3x Long Palantir",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "KWE3",
+      "name": "Leverage Shares 3x Long China Tech",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "3CHI",
+      "name": "Leverage Shares 3x Long China",
+      "exchange": "0",
+      "type": "0"
+    },
+    {
+      "ticker": "TOTAL",
+      "name": "Leverage & Granite",
+      "exchange": "0",
+      "type": "0"
+    }
+  ],
+  "importedAt": "2026-06-24T13:59:39.164Z",
+  "source": "Trading212 CSV"
+}
