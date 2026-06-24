@@ -87,7 +87,7 @@ export default function ActiveSymbolsPage() {
 
       <section className="tp-card tp-controls-card">
         <h3>Filters &amp; Actions</h3>
-        <div className="tp-controls-grid" style={{ alignItems: 'end' }}>
+        <div className="tp-controls-grid">
           <label className="tp-control">
             <span>Status</span>
             <select value={filterActive} onChange={(e) => setFilterActive(e.target.value)}>
@@ -111,7 +111,7 @@ export default function ActiveSymbolsPage() {
             type="button"
             className="btn btn-primary"
             onClick={() => navigate('/watchlists/add-symbol')}
-            style={{ padding: '8px 20px', fontWeight: 600 }}
+            style={{ padding: '6px 14px', fontWeight: 600, fontSize: '0.82rem' }}
           >
             ➕ Add Symbol
           </button>

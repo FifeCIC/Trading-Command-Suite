@@ -41,6 +41,8 @@ export class FinnhubAdapter implements IProviderAdapter {
   private readonly apiKey = process.env.FINNHUB_API_KEY || '';
   private callCount = 0;
   private minuteStart = Date.now();
+  private disabled = false;                // 🔒 set true when credentials are bad — skip all subsequent calls
+  private disabledReason = '';
 
   private get token(): string {
     return this.apiKey;
@@ -48,7 +50,12 @@ export class FinnhubAdapter implements IProviderAdapter {
 
   private checkCredentials(): void {
     if (!this.apiKey) {
+      this.disabled = true;
+      this.disabledReason = 'No FINNHUB_API_KEY in .env';
       throw new Error('Finnhub credentials not configured — set FINNHUB_API_KEY in .env');
+    }
+    if (this.disabled) {
+      throw new Error(`Finnhub disabled: ${this.disabledReason}`);
     }
   }
 
@@ -88,7 +95,9 @@ export class FinnhubAdapter implements IProviderAdapter {
       }
 
       if (res.status === 401 || res.status === 403) {
-        throw new Error('Finnhub API key invalid');
+        this.disabled = true;
+        this.disabledReason = 'Finnhub API key invalid (401/403)';
+        throw new Error('Finnhub API key invalid — all Finnhub calls disabled for this process');
       }
 
       if (!res.ok) return null;

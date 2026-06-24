@@ -5,7 +5,8 @@ import { analytics, trackAppView, trackSupportClick } from './analytics';
 import Breadcrumbs from './components/Breadcrumbs';
 import DevOverlay from './components/DevOverlay';
 import ErrorBoundary from './components/ErrorBoundary';
-import HealthStatusBar from './components/HealthStatusBar';
+import TickerBar from './components/TickerBar';
+
 import { apiGet } from './core/api/client';
 import { FEATURE_FLAGS } from './core/features/flags';
 import { withDevTag } from './dev-runtime/tags';
@@ -28,6 +29,7 @@ import AddSymbolPage from './pages/AddSymbolPage';
 import ApiActivityPage from './pages/ApiActivityPage';
 import ApiEndpointsPage from './pages/ApiEndpointsPage';
 import DatabaseTablesPage from './pages/DatabaseTablesPage';
+import BacktestDataPage from './pages/BacktestDataPage';
 import DataAreaLandingPage from './pages/DataAreaLandingPage';
 import DiagramsPage from './pages/DiagramsPage';
 import DataStatusPage from './pages/DataStatusPage';
@@ -52,6 +54,8 @@ import HomeDashboardPage from './pages/HomeDashboardPage';
 import CacheMonitorPage from './pages/CacheMonitorPage';
 import SeesLiveStackMockPage from './pages/SeesLiveStackMockPage';
 import SeesAdvancedPage from './pages/SeesAdvancedPage';
+import SeesStrategyLandingPage from './pages/SeesStrategyLandingPage';
+import LiveOrderingStackPage from './pages/LiveOrderingStackPage';
 import SeesArenaPage from './pages/SeesArenaPage';
 import AlgorithmLabPage from './pages/AlgorithmLabPage';
 import PerformanceLabPage from './pages/PerformanceLabPage';
@@ -111,9 +115,10 @@ import MarketCorrelationsPage from './pages/MarketCorrelationsPage';
 import CapabilityMapPage from './pages/CapabilityMapPage';
 import SourcesPage from './pages/SourcesPage';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
-import ApiOfflineBanner from './components/ApiOfflineBanner';
+
 import { useNetworkStatus } from './utils/networkStatus';
 import { useUiStore } from './stores/useUiStore';
+import { useTickerStore } from './stores/useTickerStore';
 import { useThemeRuntime } from './theme/useThemeRuntime';
 import './theme/packs/ai-original.css';
 import './theme/packs/scifi.css';
@@ -227,6 +232,19 @@ function AppShell() {
       details
     };
     setActivityLog((prev) => [item, ...prev].slice(0, 24));
+
+    // Mirror select events to the header ticker
+    const tickerMap = {
+      SEES_RUN: { msg: `SEES scoring run: ${details}`, src: 'sees' },
+      SEES_SIGNAL: { msg: `Entry signal: ${details}`, src: 'sees' },
+      TRADE: { msg: `Trade: ${details}`, src: 'trading' },
+      ALERT: { msg: details, src: 'alert' },
+      RISK: { msg: `Risk: ${details}`, src: 'alert' },
+    };
+    const mapped = tickerMap[type];
+    if (mapped) {
+      useTickerStore.getState().push(mapped.msg, mapped.src);
+    }
   }
 
   const autoStartAttempted = useRef(false);
@@ -301,6 +319,69 @@ function AppShell() {
 
   useEffect(() => {
     return featureFlags.subscribe(setFfState);
+  }, []);
+
+  // ── Background ticker feed — polls scoring activity & alerts ──
+  useEffect(() => {
+    let lastSeenScoreEvent = '';
+    let lastSeenAlertId = '';
+
+    const poll = async () => {
+      try {
+        // SEES scoring protocol activity
+        const sp = await fetch('/api/scoring/protocols', { signal: AbortSignal.timeout(5000) });
+        if (sp.ok) {
+          const data = await sp.json();
+          const acts = data?.recentActivity || [];
+          if (acts.length > 0) {
+            const latest = acts[0];
+            const key = `${latest.timestamp}-${latest.event}-${latest.protocolId}`;
+            if (key !== lastSeenScoreEvent) {
+              lastSeenScoreEvent = key;
+              const label = latest.protocolName || latest.protocolId;
+              if (latest.event === 'completed') {
+                useTickerStore.getState().push(
+                  `SEES: ${label} scored ${latest.symbolsScored ?? '?'} symbols (${latest.durationMs ? (latest.durationMs / 1000).toFixed(1) + 's' : 'done'})`,
+                  'sees'
+                );
+              } else if (latest.event === 'failed') {
+                useTickerStore.getState().push(`SEES: ${label} failed — ${latest.error || 'unknown error'}`, 'sees');
+              } else if (latest.event === 'started') {
+                useTickerStore.getState().push(`SEES: ${label} started`, 'sees');
+              }
+            }
+          }
+        }
+      } catch { /* silent */ }
+
+      try {
+        // Alerts
+        const ar = await fetch('/api/alerts/active', { signal: AbortSignal.timeout(5000) });
+        if (ar.ok) {
+          const alerts = await ar.json();
+          const active = Array.isArray(alerts) ? alerts : (alerts?.alerts || []);
+          if (active.length > 0) {
+            const latest = active[0];
+            if (latest.id !== lastSeenAlertId) {
+              lastSeenAlertId = latest.id;
+              useTickerStore.getState().push(
+                `${latest.severity === 'critical' ? '⚠ ' : ''}${latest.title || latest.message}`,
+                'alert'
+              );
+            }
+          }
+        }
+      } catch { /* silent */ }
+    };
+
+    // Initial poll after a short delay (let health check settle)
+    const initTimer = setTimeout(poll, 6000);
+    const interval = setInterval(poll, 15_000);
+
+    return () => {
+      clearTimeout(initTimer);
+      clearInterval(interval);
+    };
   }, []);
 
   function onSupportClick(surface) {
@@ -447,6 +528,14 @@ function AppShell() {
       return <SeesLiveStackMockPage />;
     }
 
+    if (secondaryView === 'sees-strategy') {
+      return <SeesStrategyLandingPage />;
+    }
+
+    if (secondaryView === 'live-ordering-stack') {
+      return <LiveOrderingStackPage />;
+    }
+
     if (secondaryView === 'sees-arena') {
       return <SeesArenaPage />;
     }
@@ -578,6 +667,10 @@ function AppShell() {
 
     if (secondaryView === 'database-tables') {
       return <DatabaseTablesPage />;
+    }
+
+    if (secondaryView === 'backtest-data') {
+      return <BacktestDataPage />;
     }
 
     if (secondaryView === 'data-status') {
@@ -905,28 +998,19 @@ function AppShell() {
 
       <header className="topbar topbar-omni">
         <div className="topbar-row topbar-row-main">
-          <div className="topbar-logo-block">
-            <button type="button" className="topbar-logo-btn" onClick={() => navigate('/')} title="Home">
-              <img src="/tcs-logo.png" alt="Trading Command Suite" className="topbar-logo" />
-            </button>
-          </div>
-
-          <div className="topbar-title-block">
-            <p className="eyebrow">Trading Command Suite</p>
-            <h1>{(NAV_STRUCTURE[primaryArea] || []).find((v) => v.id === secondaryView)?.label || secondaryView}</h1>
-            <nav className="quick-menu-row" aria-label="Quick navigation">
-              {QUICK_MENU.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={primaryArea === item.id ? 'nav-active' : ''}
-                  onClick={() => onPrimarySelect(item.id)}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </nav>
-          </div>
+          <TickerBar />
+          <nav className="topbar-area-nav" aria-label="Main navigation">
+            {QUICK_MENU.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={primaryArea === item.id ? 'nav-active' : ''}
+                onClick={() => onPrimarySelect(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
 
           <div className="topbar-status-cluster">
             <button
@@ -940,14 +1024,10 @@ function AppShell() {
               <span className="hamburger-line" />
               <span className="hamburger-line" />
             </button>
-            {isApiOnline ? (
-              <BadgePill label="API Online" status="ok" />
-            ) : (
-              <ApiOfflineBanner compact />
-            )}
-            <BadgePill label={isDbOnline ? 'DB Ready' : 'DB Offline'} status={isDbOnline ? 'ok' : 'warn'} />
-            <BadgePill label="Omni Layout" status="neutral" />
-            <HealthStatusBar />
+            <a href="/status/status" className="topbar-status-summary" title="System Status">
+              <span className={`topbar-status-dot ${isApiOnline ? 'online' : isDbOnline ? 'warn' : 'offline'}`} />
+              <span>{isApiOnline ? 'Online' : isDbOnline ? 'Degraded' : 'Offline'}</span>
+            </a>
           </div>
         </div>
 
@@ -1192,7 +1272,8 @@ function AppShell() {
 
       <footer className="app-footer">
         <div className="footer-grid">
-          <div className="footer-col">
+          <div className="footer-col footer-col-brand">
+            <img src="/tcs-logo.png" alt="Trading Command Suite" className="footer-logo" />
             <h4>Trading Command Suite</h4>
             <p className="footer-tagline">Algorithmic analysis & portfolio management platform.</p>
             <p className="footer-credit">Created by <strong>Ryan Bayne</strong></p>

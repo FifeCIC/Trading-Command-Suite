@@ -20960,3 +20960,55 @@
 2026-06-24 01:14:19,759 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
 2026-06-24 01:14:19,862 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
 2026-06-24 01:14:19,871 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-24 16:48:43,732 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-24 16:50:23,629 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-24 16:58:36,520 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-24 16:58:36,536 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-24 16:58:36,559 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-24 16:58:36,571 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-24 16:58:46,595 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-24 16:58:46,619 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-24 16:58:46,645 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-24 16:58:46,666 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-24 16:58:51,768 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-24 16:58:51,782 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-24 16:58:51,802 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-24 16:58:51,818 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-24 16:58:56,660 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-24 16:58:56,678 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-24 16:59:01,807 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-24 16:59:01,824 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-24 16:59:01,850 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-24 16:59:01,867 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-24 16:59:11,842 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-24 16:59:11,854 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-24 16:59:11,884 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-24 16:59:11,895 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-24 16:59:21,870 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-24 16:59:21,883 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-24 16:59:21,916 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-24 16:59:21,928 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-24 19:00:25,344 [INFO] Connecting to MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-24 19:00:25,363 [ERROR] MT5 initialization failed: (-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')
+2026-06-24 20:10:05,819 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:10:15,747 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:10:25,751 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:10:35,742 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:10:45,735 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:10:55,751 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:11:05,733 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:11:15,734 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:11:25,747 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:11:35,729 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:11:45,734 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:11:55,741 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:12:05,740 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:12:15,742 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:12:25,741 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:12:35,730 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:12:45,732 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:12:55,740 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:13:05,729 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:13:15,733 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:13:25,739 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-24 20:13:35,730 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'

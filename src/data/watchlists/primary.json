@@ -1,0 +1,578 @@
+{
+  "id": "primary",
+  "label": "Primary",
+  "description": "All of my interested stocks.",
+  "symbols": [
+    {
+      "ticker": "639",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "ACHR",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "ADSK",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "AIR",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "ALP",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "AM",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "AMAT",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "AMRQ",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "AMZN",
+      "name": "Amazon.com",
+      "exchange": "NASDAQ",
+      "type": "stock"
+    },
+    {
+      "ticker": "ARM",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "AROC",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "ASML",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "ASTS",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "AVGO",
+      "name": "Broadcom Inc",
+      "exchange": "NASDAQ",
+      "type": "stock"
+    },
+    {
+      "ticker": "B",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "BA",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "BAB",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "BABA",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "BAESY",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "BENF",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "BLK",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "BRK.B",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "CODX",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "CRNC",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "CRWD",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "CRWV",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "DAGB",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "DFNS",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "DOCU",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "DUOL",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "EEE",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "EH",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "EL",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "ETN",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "EVAX",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "EVTL",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "FDX",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "FJET",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "FMNB",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "GDX",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "GEV",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "GOOGL",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "GS2C",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "HOOD",
+      "name": "Robinhood Markets",
+      "exchange": "NASDAQ",
+      "type": "stock"
+    },
+    {
+      "ticker": "HOVR",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "IBO",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "IFX",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "INTC",
+      "name": "Intel Corp",
+      "exchange": "NASDAQ",
+      "type": "stock"
+    },
+    {
+      "ticker": "IONQ",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "JBL",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "JEDI",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "JOBY",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "JPM",
+      "name": "JPMorgan Chase",
+      "exchange": "NYSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "KRKNF",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "LMT",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "LSEG",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "LUNR",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "METC",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "MP",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "MRVL",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "MSTR",
+      "name": "MicroStrategy",
+      "exchange": "NASDAQ",
+      "type": "stock"
+    },
+    {
+      "ticker": "MU",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "NBIS",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "NCYT",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "NFLX",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "NOC",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "NVAX",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "NVDA",
+      "name": "NVIDIA Corp",
+      "exchange": "NASDAQ",
+      "type": "stock"
+    },
+    {
+      "ticker": "NVNI",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "NVTS",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "NWG",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "PDD",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "PL",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "PLSR",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "PLTR",
+      "name": "Palantir Technologies",
+      "exchange": "NYSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "POWL",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "QBTS",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "QCOM",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "QQ",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "QUBT",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "R3NK",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "RBLX",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "RDW",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "RHM",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "RKLB",
+      "name": "Rocket Lab USA",
+      "exchange": "NASDAQ",
+      "type": "stock"
+    },
+    {
+      "ticker": "RZLV",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "SGBX",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "SMCI",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "SOFI",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "SOUN",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "SPAI",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "SPCE",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "STLD",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "TALO",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "TEVA",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "TSLA",
+      "name": "Tesla Inc",
+      "exchange": "NASDAQ",
+      "type": "stock"
+    },
+    {
+      "ticker": "TSM",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "TTD",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "TWLO",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "UBER",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "UNH",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "UPB",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "URND",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "USAU",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "VIST",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "VTOL",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "VUAG",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "VUZI",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "WDC",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "WMT",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "XIACY",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "XPEV",
+      "exchange": "Unknown",
+      "type": "stock"
+    }
+  ],
+  "source": "manual"
+}

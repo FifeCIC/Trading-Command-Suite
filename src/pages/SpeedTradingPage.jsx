@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { XTREND_SPEED_SYMBOLS, getSymbolCategory, SYMBOL_CATEGORIES } from '../data/xtrend-symbols';
-import { SPEED_PROTOCOL_SYMBOLS, getProtocolsForSymbol } from '../data/speed-protocols';
+import { getProtocolsForSymbol } from '../data/speed-protocols';
 import SpeedChart from '../components/SpeedChart';
 import './speed-trading.css';
 
@@ -47,14 +47,57 @@ export default function SpeedTradingPage() {
   const lockTimer = useRef(null);
   const pageRef = useRef(null);
 
-  // ── DB symbol check (for active/inactive status) ──
-  const dbQuery = useQuery({
-    queryKey: ['symbols'],
-    queryFn: () => apiGet('/api/symbols').catch(() => ({ symbols: [] })),
+  // ── Speed-trading symbols from DB (tagged with "speed-trading") ──
+  const speedSymbolsQuery = useQuery({
+    queryKey: ['speed-trading-symbols'],
+    queryFn: () => apiGet('/api/symbols?tag=speed-trading').catch(() => ({ symbols: [] })),
     staleTime: 120_000,
-    select: (data) => new Set((data?.symbols ?? []).map((s) => s.ticker.toUpperCase())),
+    select: (data) => {
+      const syms = data?.symbols ?? [];
+      return syms.map((s) => s.ticker.toUpperCase());
+    },
   });
-  const dbSymbols = dbQuery.data ?? new Set();
+  const speedTradingSymbols = speedSymbolsQuery.data ?? [];
+
+  // ── Tick Recorder state ────────────────────────────
+  const [isRecording, setIsRecording] = useState(false);
+  const [recBarCount, setRecBarCount] = useState(0);
+  const recordingRef = useRef(false);
+
+  // Poll active recordings to sync UI state
+  const activeRecQuery = useQuery({
+    queryKey: ['speed-recording-active'],
+    queryFn: () => apiGet('/api/speed/record/active').catch(() => ({ recordings: [] })),
+    refetchInterval: 3000,
+    staleTime: 2000,
+  });
+  const activeRecordings = activeRecQuery.data?.recordings ?? [];
+
+  // Sync isRecording with actual backend state
+  useEffect(() => {
+    const active = activeRecordings.find((r) => r.ticker === symbol.toUpperCase());
+    if (active) {
+      setIsRecording(true);
+      setRecBarCount(active.barCount);
+      recordingRef.current = true;
+    } else {
+      setIsRecording(false);
+      setRecBarCount(0);
+      recordingRef.current = false;
+    }
+  }, [activeRecordings, symbol]);
+
+  const toggleRecording = async () => {
+    const endpoint = isRecording ? '/api/speed/record/stop' : '/api/speed/record/start';
+    try {
+      await fetch(`http://localhost:3201${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol }),
+      });
+      activeRecQuery.refetch();
+    } catch { /* silent */ }
+  };
 
   // ── Live quote polling ─────────────────────────────
   const tfToMs = { '1s': 1000, '5s': 5000, '15s': 15000, '1m': 60000, '5m': 300000 };
@@ -128,10 +171,9 @@ export default function SpeedTradingPage() {
     setActionLog((prev) => [{ id: Date.now(), msg, time: new Date().toLocaleTimeString() }, ...prev].slice(0, 30));
   }, []);
 
-  // ── Filtered symbols: protocol symbols only ──
+  // ── Filtered symbols: from DB tag "speed-trading" ──
   const filteredSymbols = useMemo(() => {
-    // Master list = protocol-defined symbols (BTCUSD, XAUUSD, SPX500, etc.)
-    let list = SPEED_PROTOCOL_SYMBOLS;
+    let list = speedTradingSymbols.length > 0 ? speedTradingSymbols : [];
 
     if (symbolCat !== 'all') {
       list = list.filter((s) => getSymbolCategory(s) === symbolCat);
@@ -141,7 +183,7 @@ export default function SpeedTradingPage() {
       list = list.filter((s) => s.toUpperCase().includes(q));
     }
     return list;
-  }, [symbolCat, symbolFilter]);
+  }, [speedTradingSymbols, symbolCat, symbolFilter]);
 
   // Ensure current symbol is in filtered list
   useEffect(() => {
@@ -345,6 +387,14 @@ export default function SpeedTradingPage() {
                 {cat.icon}
               </button>
             ))}
+            {/* Recording toggle */}
+            <button
+              className={`st-cat-btn st-rec-btn ${isRecording ? 'recording' : ''}`}
+              onClick={toggleRecording}
+              title={isRecording ? `Recording ${recBarCount} 5s bars — click to stop` : 'Start recording 5s candles'}
+            >
+              {isRecording ? '⏺' : '⏺'} {isRecording ? recBarCount : 'Rec'}
+            </button>
           </div>
           <span className="st-symbol-count">{filteredSymbols.length} symbols</span>
           <div className="st-tf-row">

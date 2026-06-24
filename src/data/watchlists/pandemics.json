@@ -1,0 +1,22 @@
+{
+  "id": "pandemics",
+  "label": "Pandemics",
+  "description": "Pandemic and health crises aware watchlist — news-driven with potential for official data source integration.",
+  "symbols": [
+    {"ticker": "BAH", "name": "Booz Allen Hamilton", "exchange": "NYSE", "type": "stock"},
+    {"ticker": "BNTX", "name": "BioNTech SE", "exchange": "NASDAQ", "type": "stock"},
+    {"ticker": "CODX", "name": "Co-Diagnostics", "exchange": "NASDAQ", "type": "stock"},
+    {"ticker": "CVS", "name": "CVS Health", "exchange": "NYSE", "type": "stock"},
+    {"ticker": "DHR", "name": "Danaher Corp", "exchange": "NYSE", "type": "stock"},
+    {"ticker": "EBS", "name": "Emergent BioSolutions", "exchange": "NYSE", "type": "stock"},
+    {"ticker": "ECL", "name": "Ecolab Inc", "exchange": "NYSE", "type": "stock"},
+    {"ticker": "HOLX", "name": "Hologic Inc", "exchange": "NASDAQ", "type": "stock"},
+    {"ticker": "MRNA", "name": "Moderna Inc", "exchange": "NASDAQ", "type": "stock"},
+    {"ticker": "MRK", "name": "Merck & Co", "exchange": "NYSE", "type": "stock"},
+    {"ticker": "PFE", "name": "Pfizer Inc", "exchange": "NYSE", "type": "stock"},
+    {"ticker": "SNGX", "name": "Soligenix Inc", "exchange": "NASDAQ", "type": "stock"},
+    {"ticker": "TDOC", "name": "Teladoc Health", "exchange": "NYSE", "type": "stock"},
+    {"ticker": "UNH", "name": "UnitedHealth Group", "exchange": "NYSE", "type": "stock"}
+  ],
+  "source": "manual"
+}

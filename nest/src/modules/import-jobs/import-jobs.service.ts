@@ -28,6 +28,9 @@ export class ImportJobsService {
     const symbol = await this.prisma.symbol.findUnique({ where: { id: symbolId } });
     if (!symbol) throw new NotFoundException(`Symbol ${symbolId} not found`);
 
+    // Resolve provider-specific aliases (e.g. mt5 → "BIXI" for BTCUSD)
+    const aliases = (symbol.aliases as Record<string, string>) ?? {};
+
     this.logger.log(`Importing real bars for ${symbol.ticker} (${timeframe})...`);
 
     // Try providers in priority order: MT5 → Alpha Vantage → Trading212 → Yahoo
@@ -47,11 +50,14 @@ export class ImportJobsService {
           continue;
         }
 
-        this.logger.log(`Fetching ${limit} ${timeframe} bars for ${symbol.ticker} from ${providerId}...`);
-        const bars = await adapter.getCandles(symbol.ticker, timeframe, limit);
+        // Use alias for this provider if defined, otherwise primary ticker
+        const tickerToUse = aliases[providerId] || symbol.ticker;
+
+        this.logger.log(`Fetching ${limit} ${timeframe} bars for ${tickerToUse} from ${providerId}...`);
+        const bars = await adapter.getCandles(tickerToUse, timeframe, limit);
 
         if (!bars || bars.length === 0) {
-          this.logger.debug(`${providerId} returned no bars for ${symbol.ticker}`);
+          this.logger.debug(`${providerId} returned no bars for ${tickerToUse}`);
           continue;
         }
 
@@ -128,6 +134,68 @@ export class ImportJobsService {
     // No provider succeeded
     this.logger.error(`All providers failed for ${symbol.ticker}. No data imported.`);
     return { symbol: symbol.ticker, provider: 'none', barsImported: 0, source: 'failed' };
+  }
+
+  // ── Batch Import ───────────────────────────────────
+
+  private batchState: { running: boolean; total: number; done: number; currentSymbol: string; results: Array<{ ticker: string; bars: number; provider: string }>; errors: string[] } = {
+    running: false, total: 0, done: 0, currentSymbol: '', results: [], errors: [],
+  };
+
+  /**
+   * Batch import daily bars for a list of tickers.
+   * Auto-registers symbols if they don't exist yet.
+   * Uses Yahoo Finance as primary source (free, no API key needed).
+   */
+  async batchImport(tickers: string[], timeframe = '1d', limit = 365): Promise<{ started: boolean; message: string }> {
+    if (this.batchState.running) {
+      return { started: false, message: 'Batch already in progress. Check /api/imports/batch/status' };
+    }
+
+    this.batchState = { running: true, total: tickers.length, done: 0, currentSymbol: '', results: [], errors: [] };
+    this.logger.log(`Batch import: ${tickers.length} symbols, ${timeframe}, limit=${limit}`);
+
+    // Run async in background
+    this.runBatchImport(tickers, timeframe, limit);
+
+    return { started: true, message: `Importing ${tickers.length} symbols in background` };
+  }
+
+  getBatchStatus() {
+    return this.batchState;
+  }
+
+  private async runBatchImport(tickers: string[], timeframe: string, limit: number): Promise<void> {
+    for (const ticker of tickers) {
+      this.batchState.currentSymbol = ticker;
+      try {
+        // Ensure symbol exists in DB
+        let sym = await this.prisma.symbol.findFirst({ where: { ticker: ticker.toUpperCase() } });
+        if (!sym) {
+          sym = await this.prisma.symbol.create({
+            data: { ticker: ticker.toUpperCase(), name: ticker, exchange: 'Yahoo', type: 'stock', active: true },
+          });
+          this.logger.log(`Auto-registered symbol: ${ticker}`);
+        }
+
+        const result = await this.importRealBars(sym.id, timeframe, limit);
+        this.batchState.results.push({ ticker, bars: result.barsImported, provider: result.provider });
+        if (result.source === 'failed') {
+          this.batchState.errors.push(`${ticker}: all providers failed`);
+        }
+      } catch (err: any) {
+        this.batchState.errors.push(`${ticker}: ${err.message}`);
+      }
+      this.batchState.done++;
+
+      // Small delay between symbols to avoid rate limiting
+      if (this.batchState.done < tickers.length) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+
+    this.batchState.running = false;
+    this.logger.log(`Batch complete: ${this.batchState.results.length} symbols, ${this.batchState.errors.length} errors`);
   }
 
   async enqueueImport(

@@ -82,7 +82,7 @@ export default function DirectivesStatusPage() {
                   <td><code>{d.id}</code></td>
                   <td><CategoryChip category={d.category || 'Uncategorized'} /></td>
                   <td className="ds-num">{d.priority ?? '—'}</td>
-                  <td className="ds-num">{d.protocolCount ?? Math.floor(Math.random() * 8)}</td>
+                  <td className="ds-num">{d.protocolCount ?? '—'}</td>
                 </tr>
               ))}
             </tbody>

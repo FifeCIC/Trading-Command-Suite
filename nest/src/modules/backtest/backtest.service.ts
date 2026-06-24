@@ -697,6 +697,103 @@ export class BacktestService {
     return datasets;
   }
 
+  // ── Data Inventory ──────────────────────────────────
+
+  async getDataInventory(): Promise<{
+    summary: { totalSymbols: number; symbolsWithBars: number; totalBars: number; totalBacktestRuns: number };
+    symbols: Array<{
+      ticker: string;
+      type: string;
+      active: boolean;
+      barCount: number;
+      dateFrom: string | null;
+      dateTo: string | null;
+      provider: string | null;
+      timeframes: string[];
+      backtestRuns: number;
+      lastBacktest: string | null;
+    }>;
+  }> {
+    const symbols = await this.prisma.symbol.findMany({
+      select: { id: true, ticker: true, type: true, active: true },
+      orderBy: { ticker: 'asc' },
+    });
+
+    const inventory = [];
+
+    for (const sym of symbols) {
+      // Bar stats
+      const barCount = await this.prisma.marketBar.count({ where: { symbolId: sym.id } });
+
+      let dateFrom: string | null = null;
+      let dateTo: string | null = null;
+      let provider: string | null = null;
+      let timeframes: string[] = [];
+
+      if (barCount > 0) {
+        const first = await this.prisma.marketBar.findFirst({
+          where: { symbolId: sym.id },
+          orderBy: { timestamp: 'asc' },
+          select: { timestamp: true, provider: true },
+        });
+        const last = await this.prisma.marketBar.findFirst({
+          where: { symbolId: sym.id },
+          orderBy: { timestamp: 'desc' },
+          select: { timestamp: true },
+        });
+        const tfRows = await this.prisma.marketBar.findMany({
+          where: { symbolId: sym.id },
+          distinct: ['timeframe'],
+          select: { timeframe: true },
+        });
+
+        dateFrom = first ? first.timestamp.toISOString().slice(0, 10) : null;
+        dateTo = last ? last.timestamp.toISOString().slice(0, 10) : null;
+        provider = first?.provider || null;
+        timeframes = tfRows.map((r) => r.timeframe);
+      }
+
+      // Backtest runs
+      const btRuns = await this.prisma.backtestRun.count({ where: { symbolId: sym.id } });
+      let lastBacktest: string | null = null;
+      if (btRuns > 0) {
+        const last = await this.prisma.backtestRun.findFirst({
+          where: { symbolId: sym.id },
+          orderBy: { createdAt: 'desc' },
+          select: { createdAt: true },
+        });
+        lastBacktest = last ? last.createdAt.toISOString().slice(0, 16) : null;
+      }
+
+      inventory.push({
+        ticker: sym.ticker,
+        type: sym.type || 'stock',
+        active: sym.active,
+        barCount,
+        dateFrom,
+        dateTo,
+        provider,
+        timeframes,
+        backtestRuns: btRuns,
+        lastBacktest,
+      });
+    }
+
+    const symbolsWithBars = inventory.filter((s) => s.barCount > 0).length;
+    const totalBars = inventory.reduce((sum, s) => sum + s.barCount, 0);
+    const totalBT = inventory.reduce((sum, s) => sum + s.backtestRuns, 0);
+
+    return {
+      summary: {
+        totalSymbols: symbols.length,
+        symbolsWithBars,
+        totalBars,
+        totalBacktestRuns: totalBT,
+      },
+      symbols: inventory,
+    };
+  }
+
   // ── Grid Search Optimization ────────────────────────
 
   async optimize(params: {

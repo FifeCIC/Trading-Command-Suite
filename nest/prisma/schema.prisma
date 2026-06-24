@@ -18,6 +18,8 @@ model Symbol {
   name      String   @db.VarChar(200)
   exchange  String   @db.VarChar(50)
   type      String   @db.VarChar(50)
+  tags      Json     @default("[]")
+  aliases   Json     @default("{}")
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -27,6 +29,7 @@ model Symbol {
   marketBars MarketBar[]
   importRuns ImportRun[]
   backtestRuns BacktestRun[]
+  recordingSessions TickRecordingSession[]
 }
 
 model Strategy {
@@ -100,22 +103,25 @@ model Signal {
 }
 
 model MarketBar {
-  id         String   @id @default(uuid()) @db.VarChar(36)
-  symbolId   String   @db.VarChar(36)
-  provider   String   @db.VarChar(50)
-  timeframe  String   @db.VarChar(20)
-  timestamp  DateTime
-  open       Float
-  high       Float
-  low        Float
-  close      Float
-  volume     Float
-  importedAt DateTime @default(now())
+  id                  String   @id @default(uuid()) @db.VarChar(36)
+  symbolId            String   @db.VarChar(36)
+  provider            String   @db.VarChar(50)
+  timeframe           String   @db.VarChar(20)
+  timestamp           DateTime
+  open                Float
+  high                Float
+  low                 Float
+  close               Float
+  volume              Float
+  recordingSessionId  String?  @db.VarChar(36)
+  importedAt          DateTime @default(now())
 
-  symbol Symbol @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+  symbol            Symbol              @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+  recordingSession  TickRecordingSession? @relation(fields: [recordingSessionId], references: [id])
 
   @@index([symbolId, timeframe, timestamp])
   @@index([provider, importedAt])
+  @@index([recordingSessionId])
 }
 
 model ImportRun {
@@ -134,6 +140,27 @@ model ImportRun {
 
   @@index([symbolId, requestedAt])
   @@index([status, requestedAt])
+}
+
+// ── Tick Recording Sessions ───────────────────────────────
+// Manages live quote recording sessions for sub-minute data.
+
+model TickRecordingSession {
+  id         String    @id @default(uuid()) @db.VarChar(36)
+  symbolId   String    @db.VarChar(36)
+  symbol     Symbol    @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+  timeframe  String    @default("5s") @db.VarChar(20)
+  status     String    @default("recording") @db.VarChar(20) // recording | paused | completed
+  startedAt  DateTime  @default(now())
+  endedAt    DateTime?
+  barCount   Int       @default(0)
+  gapCount   Int       @default(0)
+  lastBarAt  DateTime?
+
+  bars       MarketBar[]
+
+  @@index([symbolId, startedAt])
+  @@index([status])
 }
 
 // ── Backtest Persistence ──────────────────────────────────

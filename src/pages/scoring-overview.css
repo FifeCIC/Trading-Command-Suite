@@ -427,6 +427,101 @@
     grid-template-columns: 1fr;
     gap: 0.15rem;
   }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Live Ordering Stack
+   ═══════════════════════════════════════════════════════ */
+
+.los-selectors {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.los-select-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+.los-select {
+  background: var(--panel, #1e293b);
+  color: var(--ink, #e2e8f0);
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  font-family: inherit;
+  font-size: 0.82rem;
+  min-width: 200px;
+  cursor: pointer;
+}
+.los-select:focus { border-color: var(--accent, #0ea5a6); outline: none; }
+.los-auto-btn {
+  background: var(--panel, #1e293b);
+  color: var(--ink-soft, #94a3b8);
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.los-auto-btn.active { background: #16a34a; color: #fff; border-color: #16a34a; }
+.los-stack-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+.los-stack-header h2 { margin: 0; }
+.los-live-badge {
+  font-size: 0.6rem; background: #16a34a; color: #fff;
+  padding: 2px 8px; border-radius: 10px; font-weight: 700;
+  letter-spacing: 0.08em; animation: los-pulse 1.5s ease-in-out infinite;
+}
+.los-paused-badge {
+  font-size: 0.6rem; background: #64748b; color: #fff;
+  padding: 2px 8px; border-radius: 10px; font-weight: 700;
+  letter-spacing: 0.08em;
+}
+@keyframes los-pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+.los-refreshing {
+  text-align: center; font-size: 0.68rem; color: var(--ink-soft);
+  margin: 0.5rem 0 0; animation: los-pulse .8s ease-in-out infinite;
+}
+.los-stack-table-wrap { border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+.los-stack-table { width: 100%; border-collapse: collapse; }
+.los-stack-table th {
+  text-align: left; font-size: 0.7rem; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--ink-soft);
+  border-bottom: 1px solid var(--line); padding: 0.5rem 0.55rem;
+  background: color-mix(in srgb, var(--panel) 96%, var(--bg) 4%);
+}
+.los-stack-table td {
+  padding: 0.5rem 0.55rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent 50%);
+  font-size: 0.82rem;
+}
+.los-row-top td { background: rgba(14,165,166,0.04); }
+.los-rank { width: 30px; font-weight: 700; color: var(--ink-soft); text-align: center; }
+.los-ticker { font-weight: 700; font-family: monospace; font-size: 0.85rem !important; }
+.los-score { min-width: 140px; }
+.los-score-bar-wrap {
+  display: inline-block; width: 80px; height: 8px;
+  background: rgba(255,255,255,0.06); border-radius: 4px;
+  overflow: hidden; margin-right: 8px; vertical-align: middle;
+}
+.los-score-bar { height: 100%; border-radius: 4px; transition: width .4s ease; min-width: 2px; }
+.los-score-val { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 0.85rem; }
+.los-norm { font-variant-numeric: tabular-nums; font-weight: 600; }
+.los-signal-chip {
+  display: inline-block; border-radius: 999px; padding: 2px 10px;
+  font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+}
+.los-protocol { font-size: 0.72rem; color: var(--ink-soft); font-family: monospace; }
 
   .so-strategy-key {
     text-align: left;

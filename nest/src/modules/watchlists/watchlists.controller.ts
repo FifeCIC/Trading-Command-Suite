@@ -53,7 +53,7 @@ export class WatchlistsController {
           },
         });
         this.logger.log(`  ✓ Migrated: ${data.label || f}`);
-      } catch (err) {
+      } catch (err: any) {
         this.logger.warn(`  ✗ Skipped ${f}: ${err.message}`);
       }
     }
@@ -101,7 +101,7 @@ export class WatchlistsController {
         watchlistId = wl.id;
         saved = true;
         this.logger.log(`Imported to DB: ${wl.name} (${symbols.length} symbols)`);
-      } catch (err) {
+      } catch (err: any) {
         this.logger.error(`Failed to save watchlist: ${err.message}`);
       }
     }
@@ -175,21 +175,22 @@ export class WatchlistsController {
     if (!body.name || !body.symbols?.length) return { error: 'name and symbols are required' };
 
     const id = body.name.replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase();
-    const wl = await this.prisma.watchlist.upsert({
-      where: { id },
-      create: {
-        id,
-        name: body.name,
-        symbols: body.symbols as any,
-        source: body.source || 'manual',
-        importedAt: new Date(),
-      },
-      update: {
-        name: body.name,
-        symbols: body.symbols as any,
-        source: body.source || 'manual',
-      },
-    });
+    const existing = await this.prisma.watchlist.findUnique({ where: { id } });
+
+    const wl = existing
+      ? await this.prisma.watchlist.update({
+          where: { id },
+          data: { name: body.name, symbols: body.symbols as any, source: body.source || 'manual' },
+        })
+      : await this.prisma.watchlist.create({
+          data: {
+            id,
+            name: body.name,
+            symbols: body.symbols as any,
+            source: body.source || 'manual',
+            importedAt: new Date(),
+          },
+        });
 
     this.logger.log(`Saved watchlist: ${wl.name} (${body.symbols.length} symbols)`);
     return { saved: true, id: wl.id, symbolCount: body.symbols.length };

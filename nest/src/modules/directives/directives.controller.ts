@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Delete, Param, Query, Body } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { DirectivesService } from './directives.service';
+import { PROTOCOL_REGISTRY } from './directive-groups';
 
 @ApiTags('directives')
 @Controller('directives')
@@ -12,12 +13,28 @@ export class DirectivesController {
   @ApiOkResponse({ description: 'Array of directive definitions' })
   list() {
     const directives = this.directivesService.list();
+
+    // Compute protocolCount: how many protocols include each directive
+    const protocolCounts = new Map<string, number>();
+    for (const proto of Object.values(PROTOCOL_REGISTRY)) {
+      const seen = new Set<string>();
+      for (const group of proto.groups) {
+        for (const did of group.directiveIds) {
+          if (!seen.has(did)) { seen.add(did); }
+        }
+      }
+      for (const did of seen) {
+        protocolCounts.set(did, (protocolCounts.get(did) ?? 0) + 1);
+      }
+    }
+
     return directives.map((d) => ({
       id: d.id,
       name: d.name,
       description: d.description ?? '',
       category: (d as any).category ?? 'Uncategorized',
       priority: d.priority ?? 50,
+      protocolCount: protocolCounts.get(d.id) ?? 0,
     }));
   }
 

@@ -4,8 +4,10 @@
  * Maps each speed trading protocol to its target symbol(s),
  * trading style, and risk gate range.
  *
- * This defines which symbols appear in the Speed Trading
- * dropdown — only symbols with a protocol are shown.
+ * ‼️ The master symbol list is now DB-driven:
+ *    Symbols tagged "speed-trading" in the DB → GET /api/symbols?tag=speed-trading
+ *    This file defines protocol logic (style, risk gates) only.
+ *    SPEED_PROTOCOL_SYMBOLS is a static fallback when the API is unavailable.
  */
 
 export const SPEED_PROTOCOLS = [

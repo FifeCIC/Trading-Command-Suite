@@ -86,9 +86,37 @@ const SYMBOL_PROTOCOL_MAP: Record<string, string> = {
   RKLB: 'momentum-stock-v1',
   ASTS: 'momentum-stock-v1',
   SOFI: 'momentum-stock-v1',
+  // Pandemic / Health Crisis
+  PFE: 'pandemic-v1',
+  MRNA: 'pandemic-v1',
+  BNTX: 'pandemic-v1',
+  MRK: 'pandemic-v1',
+  HOLX: 'pandemic-v1',
+  DHR: 'pandemic-v1',
+  CVS: 'pandemic-v1',
+  UNH: 'pandemic-v1',
+  ECL: 'pandemic-v1',
+  BAH: 'pandemic-v1',
+  EBS: 'pandemic-v1',
+  TDOC: 'pandemic-v1',
+  CODX: 'pandemic-v1',
+  SNGX: 'pandemic-v1',
   // Meme / Crypto
   DOGEUSD: 'doge-speed-v1',
 };
+
+/**
+ * Resolve protocol for a symbol.
+ * Checks static map first, then pattern-matches leverage products (3xxx prefix or known short ETFs).
+ */
+function getProtocolForSymbol(symbol: string): string {
+  if (SYMBOL_PROTOCOL_MAP[symbol]) return SYMBOL_PROTOCOL_MAP[symbol];
+  if (/^3[A-Z]{2,3}$/.test(symbol) || /^[A-Z]{2,3}3$/.test(symbol) ||
+      ['TECS','SQQQ','SPXS','SOXS','FNGD','YANG','SRTY'].includes(symbol)) {
+    return 'leverage-v2';
+  }
+  return 'default';
+}
 
 /** Default Tier A/B speed trading symbols */
 const DEFAULT_SPEED_SYMBOLS = [
@@ -144,7 +172,7 @@ export class SpeedScanService {
           return { symbol, skipped: true, reason: `Insufficient bars (${timeframe}/1d)` };
         }
 
-        const protocol = SYMBOL_PROTOCOL_MAP[symbol] || 'default';
+        const protocol = getProtocolForSymbol(symbol);
         const score = await this.protocolGating.scoreWithGating(
           symbol,
           marketBars as any,

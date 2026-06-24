@@ -26,6 +26,8 @@ export class SymbolsService {
       name: dto.name,
       exchange: dto.exchange,
       type: dto.type,
+      tags: dto.tags ?? [],
+      aliases: dto.aliases ?? {},
       active: true,
     };
 
@@ -48,6 +50,18 @@ export class SymbolsService {
       );
       return [];
     }
+  }
+
+  /** Find symbols that have a specific tag in their JSON tags array. */
+  async findByTag(tag: string): Promise<Symbol[]> {
+    if (!this.prisma.isAvailable) return [];
+
+    // MySQL JSON_CONTAINS: check if tags array contains the given tag string
+    const symbols = await this.prisma.$queryRawUnsafe<Symbol[]>(
+      `SELECT * FROM Symbol WHERE JSON_CONTAINS(tags, ?) ORDER BY ticker ASC`,
+      JSON.stringify(tag),
+    );
+    return symbols;
   }
 
   async findOne(id: string): Promise<Symbol> {
@@ -79,6 +93,8 @@ export class SymbolsService {
       ...(dto.name ? { name: dto.name } : {}),
       ...(dto.exchange ? { exchange: dto.exchange } : {}),
       ...(dto.type ? { type: dto.type } : {}),
+      ...(dto.tags !== undefined ? { tags: dto.tags } : {}),
+      ...(dto.aliases !== undefined ? { aliases: dto.aliases } : {}),
     };
 
     return this.prisma.symbol.update({

@@ -544,3 +544,47 @@
 .sees-score-badge.high { background: rgba(34,197,94,0.12); color: #22c55e; }
 .sees-score-badge.mid { background: rgba(245,158,11,0.12); color: #f59e0b; }
 .sees-score-badge.low { background: rgba(239,68,68,0.12); color: #ef4444; }
+
+/* Percentage bar */
+.sees-pct-bar-wrap { position: relative; height: 18px; background: #1e293b; border-radius: 4px; overflow: hidden; min-width: 80px; }
+.sees-pct-bar { height: 100%; border-radius: 4px; transition: width 0.5s; }
+.sees-pct-bar.high { background: #22c55e; }
+.sees-pct-bar.mid { background: #f59e0b; }
+.sees-pct-bar.low { background: #ef4444; }
+.sees-pct-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+
+/* Signal badges */
+.sees-signal { font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; }
+.sees-signal.buy { background: rgba(34,197,94,0.15); color: #22c55e; }
+.sees-signal.sell { background: rgba(239,68,68,0.15); color: #ef4444; }
+.sees-signal.hold { background: rgba(148,163,184,0.12); color: #94a3b8; }
+
+/* Score cell */
+.sees-score-cell { text-align: center; }
+
+/* Loading / Empty / Error */
+.sees-loading { text-align: center; color: #94a3b8; padding: 2rem; font-style: italic; }
+.sees-empty { text-align: center; color: #64748b; padding: 2rem; }
+.sees-error { background: rgba(239,68,68,0.1); color: #ef4444; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.8rem; }
+
+/* Dark theme overrides for SEES page */
+.sees-page { color: #e2e8f0; }
+.sees-page h1 { color: #e2e8f0; }
+.sees-subtitle { color: #94a3b8; font-size: 0.8rem; margin: 0.25rem 0 1rem; }
+.sees-controls { background: #131620; border-color: #1e293b; }
+.sees-table-wrap { background: #0f1117; border: 1px solid #1e293b; border-radius: 10px; overflow: auto; }
+.sees-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.sees-table th { text-align: left; padding: 8px 12px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; border-bottom: 1px solid #1e293b; background: #0a0e17; }
+.sees-table td { padding: 6px 12px; border-bottom: 1px solid #1e293b30; }
+.sees-table tr:hover td { background: #1a1f2e40; }
+.sees-table tr.sees-top td { background: #f59e0b08; }
+.sees-rank { font-weight: 700; color: #94a3b8; width: 40px; }
+.sees-sym { font-weight: 700; font-family: monospace; font-size: 0.9rem; color: #e2e8f0; }
+.sees-protocol-select {
+  background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px; padding: 6px 10px; font-family: inherit; font-size: 0.8rem; min-width: 200px;
+}
+.sees-auto-btn, .sees-refresh-btn {
+  background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 6px; padding: 6px 12px; font-family: inherit; font-size: 0.8rem; cursor: pointer; font-weight: 600;
+}
+.sees-auto-btn.active { background: #0ea5a6; color: #fff; border-color: #0ea5a6; }
+.sees-auto-btn:hover, .sees-refresh-btn:hover { border-color: #0ea5a6; color: #e2e8f0; }

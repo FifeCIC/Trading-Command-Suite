@@ -61,12 +61,14 @@ async function bootstrap() {
   });
 
   app.enableCors({
-    origin: [
-      'http://localhost:5188',
-      'http://127.0.0.1:5188',
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-    ],
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Allow any localhost port (Vite may use 5173-5179), plus production port
+      if (!origin || /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     credentials: false,
   });

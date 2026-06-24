@@ -1,0 +1,338 @@
+{
+  "id": "leverage-long",
+  "label": "Leverage Long",
+  "description": "Comprehensive 3x long leverage shares. Indices, sectors, commodities, thematics, and single stocks. Amplifies gains in trending markets. High risk \u2014 position size must account for 3x amplification.",
+  "symbols": [
+    {
+      "ticker": "3AMZ",
+      "name": "Leverage Shares 3x Amazon",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3BA",
+      "name": "Leverage Shares 3x Boeing",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3BAB",
+      "name": "Leverage Shares 3x Alibaba",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3BAN",
+      "name": "Leverage Shares 3x Banks",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3BBE",
+      "name": "Leverage Shares 3x Alibaba",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3CHI",
+      "name": "Leverage Shares 3x China",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3COP",
+      "name": "Leverage Shares 3x Copper",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3FIN",
+      "name": "Leverage Shares 3x Financials",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3GLD",
+      "name": "Leverage Shares 3x Gold",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LAI",
+      "name": "Leverage Shares 3x AI & Big Data",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LBR",
+      "name": "Leverage Shares 3x Brazil",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LBT",
+      "name": "Leverage Shares 3x Blockchain",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LCH",
+      "name": "Leverage Shares 3x China A50",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LCL",
+      "name": "Leverage Shares 3x Cloud Computing",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LCY",
+      "name": "Leverage Shares 3x Cybersecurity",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LDA",
+      "name": "Leverage Shares 3x DAX 40",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LEN",
+      "name": "Leverage Shares 3x Energy",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LEU",
+      "name": "Leverage Shares 3x Euro STOXX 50",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LEV",
+      "name": "Leverage Shares 3x Electric Vehicles",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LGE",
+      "name": "Leverage Shares 3x Genomics",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LHE",
+      "name": "Leverage Shares 3x Healthcare",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LIN",
+      "name": "Leverage Shares 3x India 50",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LJP",
+      "name": "Leverage Shares 3x Nikkei 225",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LME",
+      "name": "Leverage Shares 3x Metaverse",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LMI",
+      "name": "Leverage Shares 3x Mining",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LNA",
+      "name": "Leverage Shares 3x NASDAQ 100",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LON",
+      "name": "Leverage Shares 3x FTSE 100",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LPA",
+      "name": "Leverage Shares 3x Palantir",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LRE",
+      "name": "Leverage Shares 3x Real Estate",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LRO",
+      "name": "Leverage Shares 3x Robotics",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LSE",
+      "name": "Leverage Shares 3x Semiconductors",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LTE",
+      "name": "Leverage Shares 3x Technology",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LUS",
+      "name": "Leverage Shares 3x SP 500",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3LUT",
+      "name": "Leverage Shares 3x Utilities",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3NGS",
+      "name": "Leverage Shares 3x Natural Gas",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3OIL",
+      "name": "Leverage Shares 3x Oil",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3SIL",
+      "name": "Leverage Shares 3x Silver",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "AAP3",
+      "name": "Leverage Shares 3x Apple",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "AMD3",
+      "name": "Leverage Shares 3x AMD",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "ARM3",
+      "name": "Leverage Shares 3x ARM Holdings",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "BP3",
+      "name": "Leverage Shares 3x BP",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "COI3",
+      "name": "Leverage Shares 3x Coinbase",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "GOO3",
+      "name": "Leverage Shares 3x Alphabet",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "INT3",
+      "name": "Leverage Shares 3x Intel",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "JPM3",
+      "name": "Leverage Shares 3x JPMorgan",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "KWE3",
+      "name": "Leverage Shares 3x KWEB",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "MET3",
+      "name": "Leverage Shares 3x Meta",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "MSF3",
+      "name": "Leverage Shares 3x Microsoft",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "NVD3",
+      "name": "Leverage Shares 3x NVIDIA",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "PAL3",
+      "name": "Leverage Shares 3x Palantir",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "PLT3",
+      "name": "Leverage Shares 3x Palantir",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "SHE3",
+      "name": "Leverage Shares 3x Shell",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "TES3",
+      "name": "Leverage Shares 3x Tesla",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "TSM3",
+      "name": "Leverage Shares 3x TSMC",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "UBE3",
+      "name": "Leverage Shares 3x Uber",
+      "exchange": "LSE",
+      "type": "stock"
+    }
+  ],
+  "source": "manual"
+}

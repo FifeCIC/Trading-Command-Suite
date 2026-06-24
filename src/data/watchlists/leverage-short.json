@@ -1,0 +1,152 @@
+{
+  "id": "leverage-short",
+  "label": "Leverage Short",
+  "description": "Comprehensive -3x short/inverse leverage shares. Indices, sectors, commodities. Amplifies gains in corrections and bear markets. Higher decay than long \u2014 never hold overnight.",
+  "symbols": [
+    {
+      "ticker": "3GOS",
+      "name": "Leverage Shares -3x Gold",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3OIS",
+      "name": "Leverage Shares -3x Oil",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3SBA",
+      "name": "Leverage Shares -3x Banks",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3SBR",
+      "name": "Leverage Shares -3x Brazil",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3SCH",
+      "name": "Leverage Shares -3x China A50",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3SDA",
+      "name": "Leverage Shares -3x DAX 40",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3SEN",
+      "name": "Leverage Shares -3x Energy",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3SEU",
+      "name": "Leverage Shares -3x Euro STOXX 50",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3SFI",
+      "name": "Leverage Shares -3x Financials",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3SHE",
+      "name": "Leverage Shares -3x Healthcare",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3SIS",
+      "name": "Leverage Shares -3x Silver",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3SJP",
+      "name": "Leverage Shares -3x Nikkei 225",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3SNA",
+      "name": "Leverage Shares -3x NASDAQ 100",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3SRE",
+      "name": "Leverage Shares -3x Real Estate",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3SSE",
+      "name": "Leverage Shares -3x Semiconductors",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3STE",
+      "name": "Leverage Shares -3x Technology",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "3SUS",
+      "name": "Leverage Shares -3x SP 500",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "FNGD",
+      "name": "MicroSectors -3x FANG+",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "SOXS",
+      "name": "Direxion -3x Semiconductors",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "SPXS",
+      "name": "Direxion -3x SP 500",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "SQQQ",
+      "name": "ProShares -3x QQQ",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "SRTY",
+      "name": "ProShares -3x Russell 2000",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "TECS",
+      "name": "Direxion -3x Technology",
+      "exchange": "LSE",
+      "type": "stock"
+    },
+    {
+      "ticker": "YANG",
+      "name": "Direxion -3x China",
+      "exchange": "LSE",
+      "type": "stock"
+    }
+  ],
+  "source": "manual"
+}

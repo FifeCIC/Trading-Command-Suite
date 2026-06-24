@@ -3,10 +3,12 @@
  *
  * POST /api/speed/scan
  */
-import { Controller, Post, Get, Param, Body, Logger } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, Logger, NotFoundException } from '@nestjs/common';
 import { IsOptional, IsArray, IsString } from 'class-validator';
 import { SpeedScanService } from './speed-scan.service';
 import { Mt5Adapter } from '../providers/adapters/mt5.adapter';
+import { TickRecorderService } from './tick-recorder.service';
+import { PrismaService } from '../../database/prisma.service';
 
 class ScanRequestDto {
   @IsOptional() @IsArray() @IsString({ each: true }) symbols?: string[];
@@ -20,6 +22,8 @@ export class SpeedScanController {
   constructor(
     private readonly speedScan: SpeedScanService,
     private readonly mt5: Mt5Adapter,
+    private readonly recorder: TickRecorderService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Post('scan')
@@ -49,5 +53,41 @@ export class SpeedScanController {
       this.logger.warn(`Quote failed for ${symbol}: ${err.message}`);
       return { symbol: symbol.toUpperCase(), bid: null, ask: null, mid: null, error: err.message };
     }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  Tick Recorder — 5S candle capture
+  // ═══════════════════════════════════════════════════════
+
+  @Post('record/start')
+  async startRecording(@Body() body: { symbol: string }) {
+    const symbol = await this.prisma.symbol.findFirst({
+      where: { ticker: body.symbol.toUpperCase() },
+    });
+    if (!symbol) throw new NotFoundException(`Symbol ${body.symbol} not found`);
+    return this.recorder.startRecording(symbol.id, symbol.ticker);
+  }
+
+  @Post('record/stop')
+  async stopRecording(@Body() body: { symbol: string }) {
+    const symbol = await this.prisma.symbol.findFirst({
+      where: { ticker: body.symbol.toUpperCase() },
+    });
+    if (!symbol) throw new NotFoundException(`Symbol ${body.symbol} not found`);
+    return this.recorder.stopRecording(symbol.id) ?? { error: 'No active recording' };
+  }
+
+  @Get('record/active')
+  getActiveRecordings() {
+    return { recordings: this.recorder.getActiveRecordings() };
+  }
+
+  @Get('record/sessions/:symbol')
+  async getSessions(@Param('symbol') symbol: string) {
+    const sym = await this.prisma.symbol.findFirst({
+      where: { ticker: symbol.toUpperCase() },
+    });
+    if (!sym) throw new NotFoundException(`Symbol ${symbol} not found`);
+    return { sessions: await this.recorder.getSessions(sym.id) };
   }
 }

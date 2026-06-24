@@ -1,6 +1,33 @@
 import { Fragment, useMemo, useState } from 'react'
-import { DIRECTIVE_IMPORT_SCHEMA, DIRECTIVE_SEED } from './directives-manager.seed'
+import { useQuery } from '@tanstack/react-query'
+import { apiGet } from '../core/api/client'
+import LoadingSkeleton from '../components/LoadingSkeleton'
 import './directives-manager.css'
+
+/** Map API directive shape into the manager's expected fields. */
+function hydrateFromApi(raw) {
+  return {
+    id: raw.id,
+    code: raw.id,
+    name: raw.name,
+    category: raw.category ?? 'Uncategorized',
+    status: 'active',
+    complexity: 'Medium',
+    baseWeight: raw.priority ?? 50,
+    boostEnabled: false,
+    multiplierEnabled: false,
+    testCoverage: 0,
+    formula: raw.description ?? '',
+    inputs: [],
+    tests: [],
+    owner: 'System',
+    summary: raw.description ?? '',
+    description: raw.description ?? '',
+    lastReview: '—',
+    outputs: [],
+    riskNotes: '',
+  }
+}
 
 function toneForStatus(status) {
   if (status === 'active') return 'ok'
@@ -11,24 +38,46 @@ function toneForStatus(status) {
 
 export default function DirectivesManagerPage() {
   const [query, setQuery] = useState('')
-  const [selectedId, setSelectedId] = useState(DIRECTIVE_SEED[0]?.id ?? null)
-  const [expandedRows, setExpandedRows] = useState(() => new Set([DIRECTIVE_SEED[0]?.id]))
+  const [selectedId, setSelectedId] = useState(null)
+  const [expandedRows, setExpandedRows] = useState(() => new Set())
+
+  const directivesQuery = useQuery({
+    queryKey: ['directives'],
+    queryFn: () => apiGet('/api/directives'),
+    staleTime: 30_000,
+  })
+
+  const loaded = directivesQuery.data ?? []
+  const allDirectives = useMemo(() => loaded.map(hydrateFromApi), [loaded])
+  const seeded = allDirectives.length > 0
+
+  const filterable = useMemo(() => {
+    if (allDirectives.length === 0) return []
+    return allDirectives
+  }, [allDirectives])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return DIRECTIVE_SEED
+    if (!q) return filterable
 
-    return DIRECTIVE_SEED.filter((item) => {
-      return [item.code, item.name, item.category, item.owner, item.summary]
+    return filterable.filter((item) => {
+      return [item.code, item.name, item.category, item.summary]
         .join(' ')
         .toLowerCase()
         .includes(q)
     })
-  }, [query])
+  }, [filterable, query])
 
   const selected = useMemo(() => {
     const first = filtered[0] ?? null
     return filtered.find((item) => item.id === selectedId) ?? first
+  }, [filtered, selectedId])
+
+  // Set initial selectedId once data loads
+  useMemo(() => {
+    if (!selectedId && filtered.length > 0) {
+      setSelectedId(filtered[0].id)
+    }
   }, [filtered, selectedId])
 
   function toggleRow(id) {
@@ -53,6 +102,49 @@ export default function DirectivesManagerPage() {
     })
   }
 
+  // Loading state
+  if (directivesQuery.isLoading) {
+    return (
+      <main className="directives-page">
+        <section className="directives-toolbar">
+          <div className="directives-toolbar-row">
+            <label htmlFor="directive-search">Search</label>
+            <input id="directive-search" type="search" placeholder="Loading directives…" disabled />
+          </div>
+          <div className="directives-toolbar-stats" role="status">
+            <span>Loading…</span>
+          </div>
+        </section>
+        <LoadingSkeleton variant="table" rows={12} cols={6} />
+      </main>
+    )
+  }
+
+  // Error state
+  if (directivesQuery.isError) {
+    return (
+      <main className="directives-page">
+        <section className="directives-toolbar">
+          <div className="directives-toolbar-row">
+            <label htmlFor="directive-search">Search</label>
+            <input id="directive-search" type="search" placeholder="Search directives…" disabled />
+          </div>
+          <div className="directives-toolbar-stats" role="status">
+            <span>Failed to load directives. Is the API running?</span>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
+  if (!seeded) {
+    return (
+      <main className="directives-page">
+        <p>No directives registered.</p>
+      </main>
+    )
+  }
+
   return (
     <main className="directives-page">
       <section className="directives-toolbar">
@@ -61,17 +153,15 @@ export default function DirectivesManagerPage() {
           <input
             id="directive-search"
             type="search"
-            placeholder="Search by code, name, category, owner"
+            placeholder="Search by code, name, category"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
         <div className="directives-toolbar-stats" role="status" aria-live="polite">
-          <span><strong>{DIRECTIVE_SEED.length}</strong> total</span>
+          <span><strong>{allDirectives.length}</strong> total</span>
           <span className="directives-stat-dot stat-active" />
-          <span><strong>{DIRECTIVE_SEED.filter((item) => item.status === 'active').length}</strong> active</span>
-          <span className="directives-stat-dot stat-draft" />
-          <span><strong>{DIRECTIVE_SEED.filter((item) => item.status === 'draft').length}</strong> draft</span>
+          <span><strong>{allDirectives.filter((item) => item.status === 'active').length}</strong> active</span>
         </div>
       </section>
 
@@ -237,8 +327,8 @@ export default function DirectivesManagerPage() {
                   </ul>
                   <h4>Risk Notes</h4>
                   <p>{selected.riskNotes}</p>
-                  <h4>Import / Config</h4>
-                  <pre className="directive-json-pre">{JSON.stringify(DIRECTIVE_IMPORT_SCHEMA, null, 2)}</pre>
+                  <h4>Raw API Data</h4>
+                  <pre className="directive-json-pre">{JSON.stringify(selected, null, 2)}</pre>
                 </div>
               </details>
             </>

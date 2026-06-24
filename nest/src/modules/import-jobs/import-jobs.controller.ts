@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, Query, UseInterceptors } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PaginationInterceptor } from '../../common/interceptors/pagination.interceptor';
 import { TriggerImportDto } from './dto/trigger-import.dto';
@@ -50,5 +50,18 @@ export class ImportJobsController {
       : 20;
 
     return this.importJobsService.listRecent(safeLimit);
+  }
+
+  @Post('batch')
+  @ApiOperation({ summary: 'Batch import daily bars for multiple tickers' })
+  async batchImport(@Body() body: { tickers: string[]; timeframe?: string; limit?: number }) {
+    if (!body.tickers?.length) return { error: 'tickers array is required' };
+    return this.importJobsService.batchImport(body.tickers, body.timeframe || '1d', body.limit || 365);
+  }
+
+  @Get('batch/status')
+  @ApiOperation({ summary: 'Check batch import progress' })
+  getBatchStatus() {
+    return this.importJobsService.getBatchStatus();
   }
 }

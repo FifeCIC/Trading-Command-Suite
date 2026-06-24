@@ -864,6 +864,107 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     idealFor: 'High-momentum stocks: NVDA, MSTR, PLTR, AVGO, COIN, MARA, RIOT, HOOD, RKLB, ASTS, SOFI. Score the wishlist, trade the top 1-2 signals. Never hold through earnings without confirmation.',
   },
 
+  // ── Pandemic/Health Crisis: Group Protocol V1 ──
+
+  'pandemic-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'Event-Driven Technicals',
+        description: 'Health crisis stocks move on headlines — momentum with catalyst awareness',
+        weight: 0.35, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',       // 120 — Outbreak news = instant momentum
+          'volume-confirmation',  // 100 — Volume spike confirms headline move
+          'bollinger-squeeze',    // 100 — Squeeze before trial results / WHO announcements
+          'rsi-oversold',         // 120 — Overreaction dip-buying on negative headlines
+          'rsi-overbought',       // 100 — Overbought on panic = reversion opportunity
+          'support-resistance',   // 100 — Bio/pharma respects key levels
+          'atr-expansion',        // 100 — Biotech ATR explodes on news
+        ],
+        directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
+      },
+      {
+        id: 'sentiment', name: 'News & Crisis Sentiment',
+        description: 'Pandemic stocks ARE sentiment — WHO, CDC, government contracts drive everything',
+        weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',       // 100 — WHO/CDC headlines, trial results, gov contracts
+          'social-buzz',          // 100 — Social media panic/fear tracking
+          'analyst-consensus',    // 100 — Biotech analyst upgrades on pipeline news
+        ],
+      },
+      {
+        id: 'risk', name: 'Biotech Event Risk',
+        description: 'Biotech can gap 50% on trial failure — wide gates essential',
+        weight: 0.25, isRiskGate: true, minMultiplier: 0.35, maxMultiplier: 1.4,
+        directiveIds: [
+          'volatility-regime',    // 100 — Biotech vol is extreme during outbreaks
+          'liquidity-check',      // 100 — Small-cap bio spreads widen dramatically
+          'position-concentration',// 100 — Never over-allocate single biotech names
+        ],
+      },
+    ],
+    name: 'Pandemic & Health Crisis V1',
+    description: 'Group protocol for pandemic/health-crisis stocks. Highest sentiment weight (40%) of any protocol — these stocks move on headlines, not technicals. Biotech gapping risk requires widest risk gate (0.35–1.40). Covers vaccines, diagnostics, supply chain, bio-defense.',
+    tradingStyle: 'Event-Driven / Swing',
+    recommendedTimeframe: '5m–1d',
+    avgHoldTime: 'Hours to days (event-dependent)',
+    winRateTarget: '50–60%',
+    idealFor: 'Pandemic watchlist stocks: PFE, MRNA, BNTX, MRK, HOLX, DHR, CVS, UNH, ECL, BAH, EBS, TDOC, CODX, SNGX. Best during outbreak news cycles, WHO declarations, BARDA contracts, and trial result announcements.',
+  },
+
+  // ── Leverage Shares: Bidirectional Protocol V2 ──
+
+  'leverage-v2': {
+    groups: [
+      {
+        id: 'technical', name: 'Amplified Technicals',
+        description: '9 directives across 79 symbols — indices, sectors, commodities, thematics, stocks. 3x leverage amplifies every move.',
+        weight: 0.30, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',       // 120 — 3x amplifies momentum 3x
+          'volume-confirmation',  // 100 — Volume confirms leverage flow
+          'bollinger-squeeze',    // 100 — Squeeze = breakout imminent (3x magnitude)
+          'rsi-oversold',         // 120 — Oversold leverage = violent bounce
+          'rsi-overbought',       // 100 — Overbought leverage = sharp reversion
+          'support-resistance',   // 100 — Key levels matter 3x more
+          'atr-expansion',        // 100 — ATR is 3x the underlying
+          'ema-structure',        // 100 — Trend alignment across timeframes
+          'session-timing-filter',// 100 — Only trade liquid sessions (LSE hours)
+        ],
+        directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
+      },
+      {
+        id: 'sentiment', name: 'Market Direction & Rotation',
+        description: 'With 79 diverse symbols, correlation patterns reveal macro tides vs sector rotations',
+        weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',       // 100 — Macro news drives indices + sectors
+          'analyst-consensus',    // 100 — Sector/stock analyst direction
+          'correlation-drag',     // 100 — When all leverage moves together = cleaner signal
+        ],
+      },
+      {
+        id: 'risk', name: '3x Amplified Risk (79-symbol universe)',
+        description: '79 symbols across 5 categories. 3x leverage = 3x drawdowns. Wider pool = wider gate for signal diversity.',
+        weight: 0.45, isRiskGate: true, minMultiplier: 0.25, maxMultiplier: 1.40,
+        directiveIds: [
+          'volatility-regime',    // 100 — VIX/fear context for 3x exposure
+          'liquidity-check',      // 100 — LSE leverage spreads can gap
+          'position-concentration',// 100 — 3x = tiny position = tight cap
+          'budget-gate',          // 100 — Never over-allocate leverage capital
+        ],
+      },
+    ],
+    name: 'Leverage Shares V2',
+    description: 'Bidirectional leverage protocol for 79 symbols: 55 long (3x) + 24 short (-3x). Covers indices, sectors, commodities, thematics, and single stocks. Correlation-drag detects macro tides vs sector rotation. 45% risk weight with budget gate prevents leverage over-allocation. Designed for a ~100 symbol universe.',
+    tradingStyle: 'Day Trade / Scalp',
+    recommendedTimeframe: '1m–15m',
+    avgHoldTime: 'Minutes to hours (NOT overnight)',
+    winRateTarget: '50–60%',
+    idealFor: '79 Leverage Shares across 5 categories. Never hold overnight — compounding decay erodes 3x value. Position size = 1/3 of normal due to amplification. SEES scans all 79 to find the single best leverage opportunity at any moment.',
+  },
+
   // ── VIX: Mean-Reversion Spike Protocol ──
 
   'vix-spike-v1': {

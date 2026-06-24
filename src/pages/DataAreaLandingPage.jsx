@@ -40,6 +40,14 @@ const DATA_CARDS = [
     apiPath: '/api/imports/runs',
   },
   {
+    id: 'backtest',
+    label: 'Backtest Data',
+    description: 'Market bar inventory — counts, date ranges, providers, and backtest run stats',
+    link: '/data/backtest-data',
+    apiKey: 'inventory',
+    apiPath: '/api/backtest/data-inventory',
+  },
+  {
     id: 'scoring',
     label: 'Scoring Pipeline',
     description: 'Ranked symbols, directive scores, and strategy thresholds',
@@ -90,6 +98,12 @@ export default function DataAreaLandingPage() {
     refetchInterval: REFETCH_MS,
     retry: 1,
   })
+  const inventory = useQuery({
+    queryKey: ['dal-inventory'],
+    queryFn: () => apiGet('/api/backtest/data-inventory'),
+    refetchInterval: REFETCH_MS,
+    retry: 1,
+  })
 
   const syms = Array.isArray(symbols.data?.symbols) ? symbols.data.symbols : []
   const activeSyms = syms.filter((s) => s.active !== false).length
@@ -113,6 +127,12 @@ export default function DataAreaLandingPage() {
 
   const scoredRanks = Array.isArray(scoring.data?.ranked) ? scoring.data.ranked : []
   const scoringTime = scoring.data?.timestamp ?? null
+
+  const invSummary = inventory.data?.summary ?? {}
+  const invWithBars = invSummary.symbolsWithBars ?? '—'
+  const invTotalBars = invSummary.totalBars ?? '—'
+  const invBtRuns = invSummary.totalBacktestRuns ?? '—'
+  const invTotal = invSummary.totalSymbols ?? '—'
 
   const loading =
     symbols.isLoading || freshness.isLoading || providers.isLoading
@@ -274,6 +294,35 @@ export default function DataAreaLandingPage() {
             )}
             {!scoring.isError && !scoringTime && (
               <span className="dal-neutral">No scoring data</span>
+            )}
+          </div>
+        </article>
+
+        {/* Backtest Data */}
+        <article className="dal-card" onClick={() => navigate('/data/backtest-data')}>
+          <div className="dal-card-header">
+            <h2>Backtest Data</h2>
+            <span className="dal-link-hint">→</span>
+          </div>
+          <p className="dal-desc">Market bar inventory — counts, date ranges, providers</p>
+          <div className="dal-stats">
+            <div className="dal-stat">
+              <span className="dal-stat-value success">{invWithBars}</span>
+              <span className="dal-stat-label">With Bars</span>
+            </div>
+            <div className="dal-stat">
+              <span className="dal-stat-value">{typeof invTotalBars === 'number' ? invTotalBars.toLocaleString() : invTotalBars}</span>
+              <span className="dal-stat-label">Total Bars</span>
+            </div>
+            <div className="dal-stat">
+              <span className="dal-stat-value accent">{invBtRuns}</span>
+              <span className="dal-stat-label">BT Runs</span>
+            </div>
+          </div>
+          <div className="dal-card-footer">
+            {inventory.isError && <span className="dal-error">API offline</span>}
+            {!inventory.isError && (
+              <span className="dal-ok">{invWithBars}/{invTotal} symbols have market data</span>
             )}
           </div>
         </article>

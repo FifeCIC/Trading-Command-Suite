@@ -1,7 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsIn, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
-const SYMBOL_TYPES = ['stock', 'crypto', 'forex'] as const;
+const SYMBOL_TYPES = ['stock', 'crypto', 'forex', 'index', 'commodity', 'etf'] as const;
 
 export class CreateSymbolDto {
   @ApiProperty({ example: 'AAPL' })
@@ -26,4 +26,12 @@ export class CreateSymbolDto {
   @IsString()
   @IsIn(SYMBOL_TYPES)
   type!: (typeof SYMBOL_TYPES)[number];
+
+  @ApiPropertyOptional({ description: 'JSON array of tags', example: '["speed-trading","xtrend"]' })
+  @IsOptional()
+  tags?: any;
+
+  @ApiPropertyOptional({ description: 'Provider-specific ticker aliases', example: '{"mt5":"BIXI","yahoo":"BTC-USD"}' })
+  @IsOptional()
+  aliases?: any;
 }

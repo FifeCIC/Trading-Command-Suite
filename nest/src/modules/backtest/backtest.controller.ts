@@ -74,4 +74,10 @@ export class BacktestController {
   }) {
     return this.backtestService.walkForward(body);
   }
+
+  @Get('data-inventory')
+  @ApiOperation({ summary: 'Comprehensive market bar inventory — all symbols with bar counts, date ranges, providers, and backtest run stats' })
+  async dataInventory() {
+    return this.backtestService.getDataInventory();
+  }
 }

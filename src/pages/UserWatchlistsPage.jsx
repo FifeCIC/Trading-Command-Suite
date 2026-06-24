@@ -1,7 +1,9 @@
 /**
  * User Watchlists Page
  * ====================
- * Two-column layout: accordion list on left, symbols + protocol in right panel.
+ * Two-column layout: accordion list on left, symbols in right panel.
+ * Protocol assignment has been removed — protocols will reference watchlists
+ * (many-to-many), not the other way around.
  */
 
 import { useState } from 'react';
@@ -19,24 +21,14 @@ function cleanLabel(label) {
     .trim();
 }
 
-const PROTOCOLS = [
-  { id: 'none', label: 'No protocol' },
-  { id: 'conviction-dip', label: 'Conviction Dip Accumulation' },
-  { id: 'momentum-breakout', label: 'Momentum Breakout' },
-  { id: 'mean-reversion-swing', label: 'Mean Reversion Swing' },
-  { id: 'btc-speed-v1', label: 'BTC Speed Scalp' },
-  { id: 'earnings-whisper', label: 'Earnings Whisper' },
-  { id: 'trend-following', label: 'Trend Following' },
-];
-
 export default function UserWatchlistsPage() {
   const [selectedId, setSelectedId] = useState(null);
-  const [protocolMap, setProtocolMap] = useState({});
 
-  const { data: watchlists, isLoading } = useQuery({
+  const { data: watchlists, isLoading, error } = useQuery({
     queryKey: ['watchlists'],
-    queryFn: () => apiGet('/api/watchlists').catch(() => []),
+    queryFn: () => apiGet('/api/watchlists'),
     staleTime: 30_000,
+    retry: 1,
   });
 
   const { data: detail } = useQuery({
@@ -55,15 +47,8 @@ export default function UserWatchlistsPage() {
 
   const selectedWl = watchlists?.find(w => w.id === selectedId);
   const symbols = detail?.symbols ?? [];
-  const currentProtocol = protocolMap[selectedId] || 'none';
 
   const handleSelect = (id) => setSelectedId(prev => prev === id ? null : id);
-
-  const setProtocol = (id, proto) => {
-    setProtocolMap(prev => ({ ...prev, [id]: proto }));
-    // Persist to database
-    apiPost(`/api/watchlists/${id}`, { protocolId: proto === 'none' ? null : proto }).catch(() => {});
-  };
 
   const totalSymbols = watchlists?.reduce((s, w) => s + (w.symbolCount || 0), 0) || 0;
 
@@ -82,14 +67,21 @@ export default function UserWatchlistsPage() {
 
       {isLoading && <p className="wl-loading">Loading…</p>}
 
-      {!isLoading && (!watchlists || watchlists.length === 0) && (
+      {error && (
+        <div className="wl-error">
+          <p>Failed to load watchlists: {error.message}</p>
+          <p className="wl-hint">Check that the API server is running on port 3201.</p>
+        </div>
+      )}
+
+      {!isLoading && !error && (!watchlists || watchlists.length === 0) && (
         <div className="wl-empty-state">
           <p>No watchlists saved yet.</p>
           <a href="/watchlists/create-watchlist" className="wl-create-link">Create your first watchlist →</a>
         </div>
       )}
 
-      {!isLoading && watchlists?.length > 0 && (
+      {!isLoading && !error && watchlists?.length > 0 && (
         <div className="wl-split">
           {/* ── Left: Accordion List ── */}
           <div className="wl-list-pane">
@@ -125,19 +117,6 @@ export default function UserWatchlistsPage() {
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <label className="wl-proto-label">
-                        Protocol:
-                        <select
-                          className="wl-proto-select"
-                          value={currentProtocol}
-                          onChange={e => setProtocol(wl.id, e.target.value)}
-                          onClick={e => e.stopPropagation()}
-                        >
-                          {PROTOCOLS.map(p => (
-                            <option key={p.id} value={p.id}>{p.label}</option>
-                          ))}
-                        </select>
-                      </label>
                       {wl.importedAt && (
                         <span className="wl-list-date">
                           Imported {new Date(wl.importedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -159,11 +138,6 @@ export default function UserWatchlistsPage() {
             ) : (
               <div className="wl-detail-content">
                 <h3>{cleanLabel(selectedWl.label)}</h3>
-                {currentProtocol !== 'none' && (
-                  <div className="wl-proto-badge">
-                    🔗 {PROTOCOLS.find(p => p.id === currentProtocol)?.label}
-                  </div>
-                )}
                 <div className="wl-symbols-count">{symbols.length} symbols</div>
                 <div className="wl-symbols-grid">
                   {symbols.map(s => (
