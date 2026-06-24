@@ -63,7 +63,9 @@
   flex: 1; position: relative; min-height: 400px;
   background: #0a0d12; margin: 0.5rem; border-radius: 8px;
   border: 1px solid #1e293b; overflow: hidden;
+  display: flex; flex-direction: column;
 }
+.clab-chart-container { flex: 1; min-height: 0; }
 .clab-canvas { width: 100%; height: 100%; display: block; }
 .clab-placeholder {
   position: absolute; inset: 0; display: flex; flex-direction: column;

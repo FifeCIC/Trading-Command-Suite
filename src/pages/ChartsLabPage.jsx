@@ -22,6 +22,7 @@ import { useState, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { SPEED_PROTOCOL_SYMBOLS } from '../data/speed-protocols';
+import CandlestickChart from '../components/CandlestickChart';
 import './charts-lab.css';
 
 const TIMEFRAMES = ['1s', '5s', '15s', '1m', '5m'];
@@ -32,11 +33,15 @@ const ENGINES = [
 ];
 
 export default function ChartsLabPage() {
-  const [symbol, setSymbol] = useState('XAUUSD');
-  const [timeframe, setTf] = useState('1s');
-  const [engine, setEngine] = useState('canvas');
-  const [bars, setBars] = useState(20);
-  const canvasRef = useRef(null);
+  const [symbol, setSymbol] = useState('BTCUSD');
+  const [timeframe, setTf] = useState('5s');
+  const [engine, setEngine] = useState('lightweight');
+  const [bars, setBars] = useState(60);
+  const chartContainerRef = useRef(null);
+
+  // ── Tick accumulator for synthetic candles ──
+  const [ticks, setTicks] = useState([]);
+  const tickCountRef = useRef(0);
 
   // ── Live quotes ────────────────────────────────────
   const tfMs = { '1s': 1000, '5s': 5000, '15s': 15000, '1m': 60000, '5m': 300000 };
@@ -60,6 +65,24 @@ export default function ChartsLabPage() {
 
   const quote = quoteQuery.data;
   const candles = candlesQuery.data?.bars ?? [];
+
+  // Accumulate ticks into our synthetic candle engine
+  const prevQuoteRef = useRef(null);
+  if (quote && quote !== prevQuoteRef.current) {
+    prevQuoteRef.current = quote;
+    const now = Date.now();
+    const mid = (quote.bid + quote.ask) / 2;
+    if (mid > 0) {
+      tickCountRef.current++;
+      setTicks(prev => {
+        const next = [...prev, { time: now, bid: quote.bid, ask: quote.ask, mid }];
+        // Keep last 300 ticks (~25 min at 5s polling)
+        return next.slice(-300);
+      });
+    }
+  }
+
+  const tickCount = tickCountRef.current;
 
   // ── Synthetic OHLC from quote polling (for 1s/5s/15s) ──
   // Each poll snapshots bid/ask into a synthetic bar bucket
@@ -135,24 +158,20 @@ export default function ChartsLabPage() {
         )}
       </div>
 
-      {/* ── Chart Canvas ── */}
+      {/* ── Chart Area ── */}
       <div className="clab-chart-area">
-        <canvas ref={canvasRef} className="clab-canvas" />
+        <div ref={chartContainerRef} className="clab-chart-container" />
+        <CandlestickChart
+          containerRef={chartContainerRef}
+          ticks={ticks}
+          intervalMs={tfMs[timeframe] ?? 5000}
+          maxBars={bars}
+        />
 
-        {engine !== 'canvas' && (
-          <div className="clab-placeholder">
-            <h3>{ENGINES.find(e => e.id === engine)?.label} — Coming Soon</h3>
-            <p>Currently building the Canvas 2D engine. Other renderers will be integrated next.</p>
-          </div>
-        )}
-
-        {candles.length > 0 && (
-          <div className="clab-data-info">
-            {candles.length} candles loaded ·{' '}
-            {candles[0]?.timestamp ? new Date(candles[0].timestamp).toLocaleString() : '—'} →{' '}
-            {candles[candles.length-1]?.timestamp ? new Date(candles[candles.length-1].timestamp).toLocaleString() : '—'}
-          </div>
-        )}
+        <div className="clab-data-info">
+          {tickCount > 0 ? `${tickCount} ticks · ${ticks.length > 0 ? Math.ceil((ticks[ticks.length-1].time - ticks[0].time) / 1000) : 0}s of data` : 'Waiting for MT5 quotes…'}
+          {candles.length > 0 && ` · ${candles.length} MT5 candles loaded`}
+        </div>
       </div>
 
       {/* ── Notes ── */}

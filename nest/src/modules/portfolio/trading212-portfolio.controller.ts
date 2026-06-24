@@ -81,4 +81,19 @@ export class Trading212PortfolioController {
     this.logger.log('SELL ALL PROFITABLE requested');
     return this.importService.sellAllProfitable();
   }
+
+  /** GET /api/portfolio/trading212/export-watchlist — returns current positions in seed format */
+  @Get('export-watchlist')
+  async exportWatchlist() {
+    const positions = await this.t212Adapter.getPositions();
+    const lines = positions.map((p) => {
+      return `  { ticker: '${p.ticker.toUpperCase()}', name: '${p.ticker}', exchange: 'Trading212', type: 'stock' },`;
+    });
+    return {
+      source: `Trading212 ${this.t212Adapter.mode} portfolio`,
+      count: positions.length,
+      exportedAt: new Date().toISOString(),
+      seedEntries: lines,
+    };
+  }
 }
