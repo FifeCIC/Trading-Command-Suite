@@ -150,6 +150,36 @@ body {
     'footer footer';
 }
 
+/* Left rail collapsed — icon-only sidebar */
+.site-shell.left-rail-collapsed {
+  grid-template-columns: 48px 1fr;
+}
+.site-shell.left-rail-collapsed.right-rail-hidden {
+  grid-template-columns: 48px 1fr;
+}
+.left-rail-collapsed .left-rail { width: 48px; min-width: 48px; }
+.left-rail-collapsed .left-rail h2,
+.left-rail-collapsed .rail-link-label,
+.left-rail-collapsed .rail-link-icon,
+.left-rail-collapsed .left-rail-header .mobile-nav-close,
+.left-rail-collapsed .rail-block button span,
+.left-rail-collapsed .rail-bookmarks { display: none; }
+.left-rail-collapsed .rail-links { gap: 0.25rem; }
+.left-rail-collapsed .rail-links button { justify-content: center; padding: 0.45rem 0.3rem; }
+.left-rail-collapsed .rail-links button.nav-active { background: var(--accent); }
+
+.rail-collapse-toggle {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.35rem;
+  line-height: 1;
+}
+.rail-collapse-toggle:hover { border-color: var(--accent); color: var(--ink); }
+
 .site-shell.background-aura:not(.layout-omni) {
   background:
     radial-gradient(circle at 18% 12%, #e9f2ff 0%, var(--bg) 45%),

@@ -4,6 +4,7 @@ import { DirectivesModule } from '../directives/directives.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { CalibrationModule } from '../calibration/calibration.module';
 import { MarketDataModule } from '../market-data/market-data.module';
+import { ProvidersModule } from '../providers/providers.module';
 import { PortfolioModule } from '../portfolio/portfolio.module';
 import { AlgorithmLabController } from './algorithm-lab.controller';
 import { ArenaController } from './arena.controller';
@@ -22,7 +23,7 @@ import { SpeedScanService } from './speed-scan.service';
 import { SpeedScanController } from './speed-scan.controller';
 
 @Module({
-  imports: [DatabaseModule, DirectivesModule, NotificationsModule, CalibrationModule, MarketDataModule, forwardRef(() => PortfolioModule)],
+  imports: [DatabaseModule, DirectivesModule, NotificationsModule, CalibrationModule, MarketDataModule, ProvidersModule, forwardRef(() => PortfolioModule)],
   controllers: [ScoringController, ArenaController, AlgorithmLabController, ProtocolsController, ProtocolGatingController, SpeedScanController],
   providers: [ScoringService, ScoreHistoryService, ScoringSchedulerService, AveragingScorer, StrategyCompetitionService, PredictiveScoringService, ProtocolGatingService, OutcomeTrackerService, SpeedScanService],
   exports: [ScoringService, ScoreHistoryService, AveragingScorer, StrategyCompetitionService, PredictiveScoringService, ProtocolGatingService, OutcomeTrackerService, SpeedScanService],

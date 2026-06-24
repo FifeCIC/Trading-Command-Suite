@@ -180,6 +180,9 @@ function AppShell() {
   const showNavIcons = useUiStore((state) => state.showNavIcons);
   const bookmarks = useUiStore((state) => state.bookmarks || []);
   const toggleBookmark = useUiStore((state) => state.toggleBookmark);
+
+  // ── Sidebar collapse ──
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { adapters, meta } = useThemeRuntime({ mode: themeMode, packId: themePack });
   const availablePacks = Array.isArray(meta?.availablePacks) ? meta.availablePacks : [];
@@ -865,7 +868,7 @@ function AppShell() {
   const isApiOnline = Boolean(healthQuery.data?.version);
   const isDbOnline = healthQuery.data?.services?.databaseConnected === true;
   return (
-    <div className={`site-shell layout-omni background-${backgroundTone}${devOverlayOpen ? '' : ' right-rail-hidden'}`} {...withDevTag('app.shell', { product: 'tradingcs' })}>
+    <div className={`site-shell layout-omni background-${backgroundTone}${devOverlayOpen ? '' : ' right-rail-hidden'}${leftCollapsed ? ' left-rail-collapsed' : ''}`} {...withDevTag('app.shell', { product: 'tradingcs' })}>
       {!isOnline && (
         <div className="network-status-bar offline">
           📡 Offline — showing cached data (last sync: {lastOnlineAt?.toLocaleTimeString() || 'never'})
@@ -945,6 +948,14 @@ function AppShell() {
       <aside className={`left-rail${mobileNavOpen ? ' left-rail--open' : ''}`} aria-label="Section navigation">
         <div className="left-rail-header">
           <h2>{NAV_TREE[primaryArea]?.label || primaryArea}</h2>
+          <button
+            type="button"
+            className="rail-collapse-toggle"
+            onClick={() => setLeftCollapsed(v => !v)}
+            title={leftCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {leftCollapsed ? '▸' : '◂'}
+          </button>
           <button
             type="button"
             className="mobile-nav-close"
