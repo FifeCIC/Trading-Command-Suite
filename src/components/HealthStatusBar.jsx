@@ -122,13 +122,11 @@ export default function HealthStatusBar() {
         const mt5 = await apiGet('/api/providers/mt5/diagnostics');
         newServices[3] = {
           name: 'MT5',
-          status: mt5?.connected ? STATUS.ONLINE : mt5?.bridgeRunning ? STATUS.DEGRADED : STATUS.OFFLINE,
+          status: mt5?.connected ? STATUS.ONLINE : STATUS.DEGRADED,
           latency: null,
           reason: mt5?.connected
             ? (mt5.account ? `${mt5.account} @ ${mt5.server || ''}`.trim() : 'Connected')
-            : mt5?.bridgeRunning
-              ? 'Bridge running, MT5 not logged in'
-              : mt5?.bridgeError || 'Bridge unreachable',
+            : mt5?.bridgeError || 'Bridge not running (optional)',
         };
       } catch {
         newServices[3] = {
@@ -160,13 +158,13 @@ export default function HealthStatusBar() {
           reason: ver?.services?.databaseConnected ? null : 'DB not connected',
         };
         newServices[2] = { name: 'Alpaca', status: STATUS.UNKNOWN, latency: null, reason: null };
-        newServices[3] = { name: 'MT5', status: STATUS.OFFLINE, latency: null, reason: 'API degraded — cannot check bridge' };
+        newServices[3] = { name: 'MT5', status: STATUS.DEGRADED, latency: null, reason: 'API degraded — cannot check bridge' };
         allOnline = newServices[0].status === STATUS.ONLINE;
       } catch {
         newServices[0] = { name: 'API', status: STATUS.OFFLINE, latency: null, reason: 'Connection refused' };
         newServices[1] = { name: 'DB', status: STATUS.UNKNOWN, latency: null, reason: null };
         newServices[2] = { name: 'Alpaca', status: STATUS.UNKNOWN, latency: null, reason: null };
-        newServices[3] = { name: 'MT5', status: STATUS.OFFLINE, latency: null, reason: 'API unreachable — cannot check bridge' };
+        newServices[3] = { name: 'MT5', status: STATUS.DEGRADED, latency: null, reason: 'API unreachable — cannot check bridge' };
         allOnline = false;
       }
     }

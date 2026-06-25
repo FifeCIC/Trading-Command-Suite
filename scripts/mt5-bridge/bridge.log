@@ -21012,3 +21012,44 @@
 2026-06-24 20:13:15,733 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
 2026-06-24 20:13:25,739 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
 2026-06-24 20:13:35,730 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-25 15:08:27,863 [INFO] MetaTrader5 package loaded
+2026-06-25 15:08:27,864 [INFO] Connecting to MT5 at startup...
+2026-06-25 15:08:27,864 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-25 15:08:27,884 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1000.03
+2026-06-25 15:08:27,884 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-06-25 15:08:27,916 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-06-25 20:29:04,385 [INFO] MetaTrader5 package loaded
+2026-06-25 20:29:04,386 [INFO] Connecting to MT5 at startup...
+2026-06-25 20:29:04,386 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-25 20:29:04,402 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1000.03
+2026-06-25 20:29:04,403 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-06-25 20:29:04,430 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-06-25 20:31:00,745 [INFO] MetaTrader5 package loaded
+2026-06-25 20:31:00,745 [INFO] Connecting to MT5 at startup...
+2026-06-25 20:31:00,745 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-25 20:31:00,763 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1000.03
+2026-06-25 20:31:00,764 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-06-25 20:31:00,773 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-06-25 20:31:13,390 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:32:13,390 [ERROR] Error handling /accounts: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:33:15,711 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:33:35,710 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:33:55,709 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:33:55,715 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:34:55,711 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:35:15,713 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:35:35,715 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:36:35,719 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:36:55,720 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:37:51,376 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:38:02,655 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-25 20:38:02,670 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1000.03
+2026-06-25 20:38:11,378 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:38:11,384 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:38:29,889 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:38:49,896 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:39:09,896 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:39:09,901 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:39:29,895 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:40:08,104 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:40:33,154 [ERROR] Error handling /accounts: [WinError 10053] An established connection was aborted by the software in your host machine

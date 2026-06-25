@@ -21,12 +21,14 @@ import { ProtocolGatingService } from './protocol-gating.service';
 import { OutcomeTrackerService } from './outcome-tracker.service';
 import { SpeedScanService } from './speed-scan.service';
 import { SpeedScanController } from './speed-scan.controller';
+import { SeasonalityService } from './seasonality.service';
+import { SeasonalityController } from './seasonality.controller';
 import { TickRecorderService } from './tick-recorder.service';
 
 @Module({
   imports: [DatabaseModule, DirectivesModule, NotificationsModule, CalibrationModule, MarketDataModule, ProvidersModule, forwardRef(() => PortfolioModule)],
-  controllers: [ScoringController, ArenaController, AlgorithmLabController, ProtocolsController, ProtocolGatingController, SpeedScanController],
-  providers: [ScoringService, ScoreHistoryService, ScoringSchedulerService, AveragingScorer, StrategyCompetitionService, PredictiveScoringService, ProtocolGatingService, OutcomeTrackerService, SpeedScanService, TickRecorderService],
-  exports: [ScoringService, ScoreHistoryService, AveragingScorer, StrategyCompetitionService, PredictiveScoringService, ProtocolGatingService, OutcomeTrackerService, SpeedScanService, TickRecorderService],
+  controllers: [ScoringController, ArenaController, AlgorithmLabController, ProtocolsController, ProtocolGatingController, SpeedScanController, SeasonalityController],
+  providers: [ScoringService, ScoreHistoryService, ScoringSchedulerService, AveragingScorer, StrategyCompetitionService, PredictiveScoringService, ProtocolGatingService, OutcomeTrackerService, SpeedScanService, SeasonalityService, TickRecorderService],
+  exports: [ScoringService, ScoreHistoryService, AveragingScorer, StrategyCompetitionService, PredictiveScoringService, ProtocolGatingService, OutcomeTrackerService, SpeedScanService, SeasonalityService, TickRecorderService],
 })
 export class ScoringModule {}

@@ -9,8 +9,9 @@
  */
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '../core/api/client';
+import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import RarityGauge from '../components/RarityGauge';
 import './scoring-overview.css';
 
 const REFRESH_MS = 15_000;
@@ -74,19 +75,17 @@ export default function LiveOrderingStackPage() {
   });
   const watchlistSymbols = symbolsQuery.data?.symbols ?? [];
 
-  // ── Scored results ──
+  // ── Scored results via gated pipeline (includes rarity) ──
   const scoreQuery = useQuery({
     queryKey: ['los-scored', watchlistId, protocolId],
     queryFn: async () => {
       if (!watchlistId || !protocolId) return [];
       const tickers = watchlistSymbols.map(s => s.ticker).filter(Boolean);
       if (tickers.length === 0) return [];
-      // Score via protocol gating — passes tickers through the selected protocol
-      const res = await apiGet('/api/scoring/ranked').catch(() => ({ ranked: [] }));
-      const allRanked = res.ranked ?? [];
-      // Filter to only symbols in our watchlist
-      const tickerSet = new Set(tickers.map(t => t.toUpperCase()));
-      return allRanked.filter(r => tickerSet.has((r.symbol ?? '').toUpperCase()));
+      return apiPost('/api/scoring/gated/batch', {
+        tickers,
+        protocolId,
+      }).catch(() => []);
     },
     refetchInterval: autoRefresh ? REFRESH_MS : false,
     enabled: !!watchlistId && !!protocolId && watchlistSymbols.length > 0,
@@ -98,12 +97,14 @@ export default function LiveOrderingStackPage() {
     const withData = watchlistSymbols.length;
     const scoredCount = scored.length;
     const avgComposite = scoredCount > 0
-      ? scored.reduce((s, r) => s + (r.score ?? 0), 0) / scoredCount
+      ? scored.reduce((s, r) => s + (r.composite ?? 0), 0) / scoredCount
       : 0;
-    const entryCount = scored.filter(r => (r.signal ?? '').toLowerCase() === 'entry').length;
-    const exitCount = scored.filter(r => (r.signal ?? '').toLowerCase() === 'exit').length;
+    const buyCount = scored.filter(r => r.signal === 'BUY').length;
+    const sellCount = scored.filter(r => r.signal === 'SELL').length;
+    const holdCount = scored.filter(r => r.signal === 'HOLD').length;
     const topSignal = scored[0]?.signal ?? '—';
-    return { withData, scoredCount, avgComposite, entryCount, exitCount, topSignal };
+    const rareCount = scored.filter(r => r.rarity?.band === 'cyclical' || r.rarity?.band === 'exceptional').length;
+    return { withData, scoredCount, avgComposite, buyCount, sellCount, holdCount, topSignal, rareCount };
   }, [scored, watchlistSymbols]);
 
   // ── Selected labels ──
@@ -173,18 +174,20 @@ export default function LiveOrderingStackPage() {
         <div className="so-summary-card">
           <p className="so-card-label">Signal Split</p>
           <span className="so-card-value">
-            <span style={{ color: SIGNAL_COLORS.entry }}>{stats.entryCount}</span>
+            <span style={{ color: '#22c55e' }}>{stats.buyCount}</span>
             {' / '}
-            <span style={{ color: SIGNAL_COLORS.exit }}>{stats.exitCount}</span>
+            <span style={{ color: '#f59e0b' }}>{stats.holdCount}</span>
+            {' / '}
+            <span style={{ color: '#ef4444' }}>{stats.sellCount}</span>
           </span>
-          <p className="so-card-note">entry / exit signals</p>
+          <p className="so-card-note">buy / hold / sell signals</p>
         </div>
         <div className="so-summary-card">
-          <p className="so-card-label">Top Signal</p>
-          <span className="so-card-value" style={{ color: SIGNAL_COLORS[stats.topSignal] ?? '#94a3b8', textTransform: 'uppercase' }}>
-            {stats.topSignal}
+          <p className="so-card-label">Rare Opportunities</p>
+          <span className="so-card-value" style={{ color: stats.rareCount > 0 ? '#f59e0b' : '#64748b' }}>
+            {stats.rareCount}
           </span>
-          <p className="so-card-note">{scored[0]?.symbol ?? '—'} · {scored[0]?.protocol ?? ''}</p>
+          <p className="so-card-note">cyclical / exceptional alignments</p>
         </div>
       </div>
 
@@ -210,10 +213,9 @@ export default function LiveOrderingStackPage() {
                   <th>#</th>
                   <th>Symbol</th>
                   <th>Score</th>
-                  <th>% of Max</th>
                   <th>Signal</th>
-                  <th>Freshness</th>
-                  <th>Protocol</th>
+                  <th>Rarity</th>
+                  <th>Risk</th>
                 </tr>
               </thead>
               <tbody>
@@ -226,29 +228,25 @@ export default function LiveOrderingStackPage() {
                         <div
                           className="los-score-bar"
                           style={{
-                            width: `${Math.min(100, ((r.score ?? 0) / Math.max(1, ...scored.map(x => x.score ?? 0))) * 100)}%`,
-                            background: (r.signal ?? '').toLowerCase() === 'entry' ? '#22c55e' :
-                                        (r.signal ?? '').toLowerCase() === 'exit' ? '#ef4444' : '#64748b',
+                            width: `${Math.min(100, (r.composite ?? 0))}%`,
+                            background: r.signal === 'BUY' ? '#22c55e' : r.signal === 'SELL' ? '#ef4444' : '#f59e0b',
                           }}
                         />
                       </div>
-                      <span className="los-score-val">{(r.score ?? 0).toFixed(1)}</span>
+                      <span className="los-score-val">{(r.composite ?? 0).toFixed(1)}</span>
                     </td>
-                    <td className="los-norm">{((r.normalizedScore ?? 0)).toFixed(0)}%</td>
                     <td>
                       <span className="los-signal-chip" style={{
-                        background: SIGNAL_COLORS[(r.signal ?? '').toLowerCase()] ?? SIGNAL_COLORS.unknown,
+                        background: r.signal === 'BUY' ? '#22c55e' : r.signal === 'SELL' ? '#ef4444' : '#f59e0b',
                         color: '#fff',
                       }}>
                         {r.signal ?? '—'}
                       </span>
                     </td>
-                    <td>
-                      <span className={`so-freshness-card ${FRESHNESS_COLORS[r.freshness] ?? ''}`} style={{ display: 'inline-block', padding: '2px 8px', fontSize: '0.7rem', borderRadius: 4 }}>
-                        {r.freshness ?? '—'}
-                      </span>
+                    <td><RarityGauge rarity={r.rarity} compact /></td>
+                    <td className="los-norm">
+                      {r.riskMultiplier != null ? `${(r.riskMultiplier * 100).toFixed(0)}%` : '—'}
                     </td>
-                    <td className="los-protocol">{r.protocol ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>

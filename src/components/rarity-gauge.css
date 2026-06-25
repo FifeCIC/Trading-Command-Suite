@@ -1,0 +1,162 @@
+/* ── Rarity Gauge ── */
+
+.rg-card {
+  border: 1px solid;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  font-size: 0.82rem;
+  transition: border-color 0.3s;
+}
+
+/* Placeholder (not enough data) */
+.rg-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  color: #64748b;
+  padding: 0.4rem 0;
+}
+.rg-placeholder-icon { font-size: 0.85rem; }
+
+/* Compact inline variant */
+.rg-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--rg-bar, #22c55e) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--rg-bar, #22c55e) 25%, transparent);
+}
+.rg-compact-emoji { font-size: 0.75rem; }
+.rg-compact-label { font-weight: 600; color: var(--ink, #e2e8f0); }
+.rg-compact-pct { color: #94a3b8; font-variant-numeric: tabular-nums; }
+
+/* Header */
+.rg-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.rg-emoji { font-size: 1rem; }
+.rg-label { font-weight: 700; font-size: 0.88rem; }
+.rg-percentile {
+  margin-left: auto;
+  font-weight: 700;
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
+}
+.rg-percentile small {
+  font-size: 0.6rem;
+  font-weight: 400;
+  color: #94a3b8;
+  margin-left: 1px;
+}
+
+/* Bar */
+.rg-bar-track {
+  position: relative;
+  height: 10px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 5px;
+  margin: 0.6rem 0 0.5rem;
+  overflow: visible;
+}
+.rg-bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.5s ease;
+  min-width: 2px;
+}
+.rg-bar-marker {
+  position: absolute;
+  top: -3px;
+  width: 3px;
+  height: 16px;
+  background: #fff;
+  border-radius: 2px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 4px rgba(255,255,255,0.3);
+}
+
+/* Threshold markers */
+.rg-threshold {
+  position: absolute;
+  top: -1px;
+  transform: translateX(-50%);
+  font-size: 0.52rem;
+  color: #64748b;
+}
+.rg-threshold::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  height: 8px;
+  background: #64748b;
+  opacity: 0.4;
+}
+.rg-threshold span {
+  position: relative;
+  top: 10px;
+  display: block;
+  text-align: center;
+}
+
+/* Description */
+.rg-desc {
+  margin: 0.3rem 0 0.5rem;
+  font-size: 0.76rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+/* Footer */
+.rg-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.rg-size { font-size: 0.78rem; }
+.rg-info-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 0.72rem;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.rg-info-btn:hover { color: var(--ink, #e2e8f0); background: rgba(255,255,255,0.04); }
+
+/* Explainer */
+.rg-explainer {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  font-size: 0.74rem;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+.rg-explainer p { margin: 0 0 0.4rem; }
+.rg-bands-table { display: grid; gap: 3px; margin-top: 0.4rem; }
+.rg-band-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  padding: 2px 0;
+}
+.rg-band-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}

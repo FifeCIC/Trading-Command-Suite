@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Logger, Query } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Logger, Query } from '@nestjs/common';
 import { ProtocolGatingService, GatedScore } from './protocol-gating.service';
 import { PrismaService } from '../../database/prisma.service';
 import { MarketDataService } from '../market-data/market-data.service';
@@ -185,5 +185,30 @@ export class ProtocolGatingController {
     );
 
     return this.protocolGating.scorePortfolio(holdings);
+  }
+
+  /**
+   * POST /api/scoring/gated/batch
+   *
+   * Score a list of tickers through the gated scoring pipeline (with rarity).
+   * Body: { tickers: string[], protocolId?: string }
+   */
+  @Post('batch')
+  async getBatchGated(@Body() body: { tickers: string[]; protocolId?: string }): Promise<GatedScore[]> {
+    if (!body.tickers?.length) return [];
+
+    const holdings = await Promise.all(
+      body.tickers.map(async (ticker) => {
+        const sym = await this.prisma.symbol.findFirst({
+          where: { ticker: ticker.toUpperCase() },
+        });
+        const bars = sym
+          ? await this.marketData.getBars(sym.id, '1d', 100)
+          : [];
+        return { symbol: ticker.toUpperCase(), bars: bars || [] };
+      }),
+    );
+
+    return this.protocolGating.scorePortfolio(holdings, body.protocolId);
   }
 }

@@ -5,6 +5,7 @@ import { apiGet } from '../core/api/client';
 import { XTREND_SPEED_SYMBOLS, getSymbolCategory, SYMBOL_CATEGORIES } from '../data/xtrend-symbols';
 import { getProtocolsForSymbol } from '../data/speed-protocols';
 import SpeedChart from '../components/SpeedChart';
+import SeasonalityHeatmap from '../components/SeasonalityHeatmap';
 import './speed-trading.css';
 
 const SIZE_PRESETS = [1, 5, 10];
@@ -623,6 +624,9 @@ export default function SpeedTradingPage() {
           </div>
         )}
       </div>
+
+      {/* ── Seasonality Heatmap ── */}
+      <SeasonalityHeatmap symbol={symbol} />
 
       {/* ── Action Log ── */}
       <div className="st-log">

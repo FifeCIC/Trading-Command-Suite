@@ -145,8 +145,6 @@ export const NAV_TREE = {
     views: [
       // ── System Health ──
       { id: 'status', label: 'System Status', icon: '◉' },
-      { id: 'server-controls', label: 'Server Controls', icon: '⚡' },
-      { id: 'mt5-status', label: 'MT5 Bridge Status', icon: '◈' },
       // ── Platform ──
       { id: 'platform-api-management', label: 'API Management', icon: '⚙' },
       { id: 'platform-comparisons', label: 'API Comparisons', icon: '▤' },

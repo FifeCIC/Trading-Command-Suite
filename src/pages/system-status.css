@@ -1,7 +1,7 @@
 .system-status-page {
-  max-width: 960px;
+  max-width: none;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
+  padding: 1.5rem 2rem;
   color: var(--ink);
 }
 
@@ -216,4 +216,72 @@
   justify-content: space-between;
   font-size: 0.75rem;
   color: var(--ink-soft);
+}
+
+/* ── Sections (MT5, Server Controls) ──────────────────── */
+
+.status-section {
+  margin-top: 2rem;
+}
+.status-section h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.75rem;
+  color: var(--ink);
+}
+.status-grid--mt5 {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+.status-grid--servers {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+/* ── Action buttons ──────────────────────────────────── */
+
+.status-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ss-btn {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.ss-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ss-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.ss-btn--stop:hover:not(:disabled) {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+.ss-btn--open {
+  color: var(--accent);
+}
+
+/* ── Startup commands block ── */
+.ss-commands {
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  font-family: 'Consolas', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  margin-top: 8px;
+  user-select: all;
 }

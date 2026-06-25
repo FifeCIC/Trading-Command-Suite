@@ -953,6 +953,23 @@ function AppShell() {
 
   const isApiOnline = Boolean(healthQuery.data?.version);
   const isDbOnline = healthQuery.data?.services?.databaseConnected === true;
+
+  // ── MT5 bridge status (lightweight poll) ─────────────
+  const mt5Query = useQuery({
+    queryKey: ['mt5-diag-header'],
+    queryFn: () => apiGet('/api/providers/mt5/diagnostics').catch(() => null),
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+    retry: 1,
+  });
+  const isMt5Online = mt5Query.data?.connected === true || mt5Query.data?.status === 'online';
+
+  const statusLevel = isApiOnline
+    ? (isDbOnline && isMt5Online ? 'online' : 'warn')
+    : 'offline';
+  const statusLabel = isApiOnline
+    ? (isDbOnline && isMt5Online ? 'Online' : 'Degraded')
+    : 'Offline';
   return (
     <div className={`site-shell layout-omni background-${backgroundTone}${devOverlayOpen ? '' : ' right-rail-hidden'}${leftCollapsed ? ' left-rail-collapsed' : ''}`} {...withDevTag('app.shell', { product: 'tradingcs' })}>
       {!isOnline && (
@@ -1002,9 +1019,9 @@ function AppShell() {
               <span className="hamburger-line" />
               <span className="hamburger-line" />
             </button>
-            <a href="/status/status" className="topbar-status-summary" title="System Status">
-              <span className={`topbar-status-dot ${isApiOnline ? 'online' : isDbOnline ? 'warn' : 'offline'}`} />
-              <span>{isApiOnline ? 'Online' : isDbOnline ? 'Degraded' : 'Offline'}</span>
+            <a href="/status/status" className="topbar-status-summary" title={`API: ${isApiOnline ? '✓' : '✗'} | DB: ${isDbOnline ? '✓' : '✗'} | MT5: ${isMt5Online ? '✓' : '✗'}`}>
+              <span className={`topbar-status-dot ${statusLevel}`} />
+              <span>{statusLabel}</span>
             </a>
           </div>
         </div>
