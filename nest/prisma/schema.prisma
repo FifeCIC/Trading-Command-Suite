@@ -533,6 +533,8 @@ model Watchlist {
   source      String?  @db.VarChar(100)
   protocolId  String?  @db.VarChar(100)
   userId      String?  @db.VarChar(100)
+  kind        String   @default("user") @db.VarChar(20)
+  isDefault   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   importedAt  DateTime?

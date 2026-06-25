@@ -7,6 +7,7 @@
 
 import { Controller, Get, Post, Param, Body, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { Trading212Adapter } from '../providers/adapters/trading212.adapter';
 import { readFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
@@ -24,7 +25,10 @@ export class WatchlistsController {
   private readonly logger = new Logger(WatchlistsController.name);
   private migrated = false;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly t212: Trading212Adapter,
+  ) {}
 
   /** Lazily migrate any JSON files into the database (one-time) */
   private async migrateFilesIfNeeded() {
@@ -130,6 +134,8 @@ export class WatchlistsController {
       importedAt: wl.importedAt?.toISOString() ?? wl.createdAt.toISOString(),
       source: wl.source || 'manual',
       protocolId: wl.protocolId,
+      kind: wl.kind || 'user',
+      isDefault: wl.isDefault === true,
     }));
   }
 
@@ -145,8 +151,26 @@ export class WatchlistsController {
       symbols: wl.symbols,
       source: wl.source,
       protocolId: wl.protocolId,
+      isDefault: wl.isDefault === true,
       importedAt: wl.importedAt?.toISOString(),
     };
+  }
+
+  /** POST /api/watchlists/:id/set-default — make this the default watchlist */
+  @Post(':id/set-default')
+  async setDefault(@Param('id') id: string) {
+    await this.migrateFilesIfNeeded();
+    // Unset any existing default
+    await this.prisma.watchlist.updateMany({
+      where: { isDefault: true },
+      data: { isDefault: false },
+    });
+    // Set the new default
+    const wl = await this.prisma.watchlist.update({
+      where: { id },
+      data: { isDefault: true },
+    });
+    return { default: true, id: wl.id, label: wl.name };
   }
 
   /** PATCH /api/watchlists/:id — update protocol or name */
@@ -194,5 +218,35 @@ export class WatchlistsController {
 
     this.logger.log(`Saved watchlist: ${wl.name} (${body.symbols.length} symbols)`);
     return { saved: true, id: wl.id, symbolCount: body.symbols.length };
+  }
+
+  /** POST /api/watchlists/trading212-portfolio/sync — sync T212 positions into the watchlist */
+  @Post('trading212-portfolio/sync')
+  async syncTrading212Portfolio() {
+    try {
+      const positions = await this.t212.getPositions();
+      const symbols = positions.map((p) => ({
+        ticker: p.ticker.toUpperCase(),
+        name: p.ticker,
+        exchange: 'Trading212',
+        type: 'stock',
+      }));
+
+      await this.prisma.watchlist.update({
+        where: { id: 'trading212-portfolio' },
+        data: {
+          symbols: symbols as any,
+          source: 'trading212',
+          kind: 'built-in',
+          importedAt: new Date(),
+        },
+      });
+
+      this.logger.log(`Synced Trading212 Portfolio: ${symbols.length} positions`);
+      return { synced: true, symbolCount: symbols.length, syncedAt: new Date().toISOString() };
+    } catch (err: any) {
+      this.logger.error(`Failed to sync T212 portfolio: ${err.message}`);
+      return { synced: false, error: err.message };
+    }
   }
 }

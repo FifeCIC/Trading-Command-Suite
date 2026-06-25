@@ -4,11 +4,6 @@
   "description": "All of my interested stocks.",
   "symbols": [
     {
-      "ticker": "639",
-      "exchange": "Unknown",
-      "type": "stock"
-    },
-    {
       "ticker": "ACHR",
       "exchange": "Unknown",
       "type": "stock"
@@ -35,11 +30,6 @@
     },
     {
       "ticker": "AMAT",
-      "exchange": "Unknown",
-      "type": "stock"
-    },
-    {
-      "ticker": "AMRQ",
       "exchange": "Unknown",
       "type": "stock"
     },
@@ -111,11 +101,6 @@
       "type": "stock"
     },
     {
-      "ticker": "BRK.B",
-      "exchange": "Unknown",
-      "type": "stock"
-    },
-    {
       "ticker": "CODX",
       "exchange": "Unknown",
       "type": "stock"
@@ -132,11 +117,6 @@
     },
     {
       "ticker": "CRWV",
-      "exchange": "Unknown",
-      "type": "stock"
-    },
-    {
-      "ticker": "DAGB",
       "exchange": "Unknown",
       "type": "stock"
     },
@@ -216,11 +196,6 @@
       "type": "stock"
     },
     {
-      "ticker": "GS2C",
-      "exchange": "Unknown",
-      "type": "stock"
-    },
-    {
       "ticker": "HOOD",
       "name": "Robinhood Markets",
       "exchange": "NASDAQ",
@@ -233,11 +208,6 @@
     },
     {
       "ticker": "IBO",
-      "exchange": "Unknown",
-      "type": "stock"
-    },
-    {
-      "ticker": "IFX",
       "exchange": "Unknown",
       "type": "stock"
     },
@@ -284,11 +254,6 @@
       "type": "stock"
     },
     {
-      "ticker": "LSEG",
-      "exchange": "Unknown",
-      "type": "stock"
-    },
-    {
       "ticker": "LUNR",
       "exchange": "Unknown",
       "type": "stock"
@@ -321,11 +286,6 @@
     },
     {
       "ticker": "NBIS",
-      "exchange": "Unknown",
-      "type": "stock"
-    },
-    {
-      "ticker": "NCYT",
       "exchange": "Unknown",
       "type": "stock"
     },
@@ -376,11 +336,6 @@
       "type": "stock"
     },
     {
-      "ticker": "PLSR",
-      "exchange": "Unknown",
-      "type": "stock"
-    },
-    {
       "ticker": "PLTR",
       "name": "Palantir Technologies",
       "exchange": "NYSE",
@@ -402,17 +357,7 @@
       "type": "stock"
     },
     {
-      "ticker": "QQ",
-      "exchange": "Unknown",
-      "type": "stock"
-    },
-    {
       "ticker": "QUBT",
-      "exchange": "Unknown",
-      "type": "stock"
-    },
-    {
-      "ticker": "R3NK",
       "exchange": "Unknown",
       "type": "stock"
     },
@@ -427,11 +372,6 @@
       "type": "stock"
     },
     {
-      "ticker": "RHM",
-      "exchange": "Unknown",
-      "type": "stock"
-    },
-    {
       "ticker": "RKLB",
       "name": "Rocket Lab USA",
       "exchange": "NASDAQ",
@@ -439,11 +379,6 @@
     },
     {
       "ticker": "RZLV",
-      "exchange": "Unknown",
-      "type": "stock"
-    },
-    {
-      "ticker": "SGBX",
       "exchange": "Unknown",
       "type": "stock"
     },
@@ -524,11 +459,6 @@
       "type": "stock"
     },
     {
-      "ticker": "URND",
-      "exchange": "Unknown",
-      "type": "stock"
-    },
-    {
       "ticker": "USAU",
       "exchange": "Unknown",
       "type": "stock"
@@ -540,11 +470,6 @@
     },
     {
       "ticker": "VTOL",
-      "exchange": "Unknown",
-      "type": "stock"
-    },
-    {
-      "ticker": "VUAG",
       "exchange": "Unknown",
       "type": "stock"
     },

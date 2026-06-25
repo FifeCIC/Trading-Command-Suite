@@ -6,10 +6,10 @@
  * (many-to-many), not the other way around.
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '../core/api/client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiGet, apiPost } from '../core/api/client';
 import './watchlists.css';
 
 /** Clean watchlist label: strip timestamp suffixes */
@@ -23,6 +23,9 @@ function cleanLabel(label) {
 
 export default function UserWatchlistsPage() {
   const [selectedId, setSelectedId] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState(null);
+  const queryClient = useQueryClient();
 
   const { data: watchlists, isLoading, error } = useQuery({
     queryKey: ['watchlists'],
@@ -48,9 +51,96 @@ export default function UserWatchlistsPage() {
   const selectedWl = watchlists?.find(w => w.id === selectedId);
   const symbols = detail?.symbols ?? [];
 
+  // Auto-select the default watchlist on first load
+  useEffect(() => {
+    if (!selectedId && watchlists?.length > 0) {
+      const defaultWl = watchlists.find(w => w.isDefault) ?? watchlists[0];
+      setSelectedId(defaultWl.id);
+    }
+  }, [watchlists, selectedId]);
+
+  // Sync Trading212 Portfolio when selected (once per mount)
+  const syncAttempted = useRef(false);
+
+  function doSync() {
+    setSyncing(true);
+    apiPost('/api/watchlists/trading212-portfolio/sync', {}).then(() => {
+      setLastSync(new Date().toLocaleTimeString());
+      queryClient.invalidateQueries({ queryKey: ['watchlists'] });
+      queryClient.invalidateQueries({ queryKey: ['watchlist-symbols', 'trading212-portfolio'] });
+      setSyncing(false);
+    }).catch(() => setSyncing(false));
+  }
+
+  useEffect(() => {
+    if (selectedId === 'trading212-portfolio' && !syncAttempted.current) {
+      syncAttempted.current = true;
+      setSyncing(true);
+      apiPost('/api/watchlists/trading212-portfolio/sync', {}).then(() => {
+        setLastSync(new Date().toLocaleTimeString());
+        queryClient.invalidateQueries({ queryKey: ['watchlists'] });
+        queryClient.invalidateQueries({ queryKey: ['watchlist-symbols', selectedId] });
+        setSyncing(false);
+      }).catch(() => setSyncing(false));
+    }
+  }, [selectedId, queryClient]);
+
   const handleSelect = (id) => setSelectedId(prev => prev === id ? null : id);
 
   const totalSymbols = watchlists?.reduce((s, w) => s + (w.symbolCount || 0), 0) || 0;
+
+  function renderWatchlistItem(wl, i) {
+    return (
+      <motion.div
+        key={wl.id}
+        className={`wl-list-item${selectedId === wl.id ? ' wl-selected' : ''}`}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2, delay: i * 0.04 }}
+      >
+        <div className="wl-list-header" onClick={() => handleSelect(wl.id)}>
+          <div className="wl-list-main">
+            <span className="wl-list-name">
+              {wl.isDefault && <span className="wl-default-star" title="Default watchlist">★ </span>}
+              {cleanLabel(wl.label)}
+            </span>
+            <span className="wl-list-count">{wl.symbolCount} symbols</span>
+          </div>
+          <div className="wl-list-meta">
+            {wl.source && (
+              <span className="wl-list-source">
+                {wl.source.includes('CSV') ? '📄 CSV' : wl.source === 'manual' ? '✏️ Manual' : wl.kind === 'built-in' ? '🔗 Built-in' : wl.source}
+              </span>
+            )}
+            <span className="wl-chevron">{selectedId === wl.id ? '▴' : '▾'}</span>
+          </div>
+        </div>
+
+        <AnimatePresence>
+          {selectedId === wl.id && (
+            <motion.div
+              className="wl-list-detail"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              {wl.importedAt && (
+                <span className="wl-list-date">
+                  Imported {new Date(wl.importedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+              )}
+              {wl.kind === 'built-in' && (
+                <span className="wl-list-date" style={{ marginLeft: 8, color: 'var(--accent)' }}>
+                  {syncing && selectedId === wl.id ? 'Syncing…' : 'Auto-synced'}
+                </span>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    );
+  }
 
   return (
     <div className="wl-page">
@@ -85,48 +175,18 @@ export default function UserWatchlistsPage() {
         <div className="wl-split">
           {/* ── Left: Accordion List ── */}
           <div className="wl-list-pane">
-            {watchlists.map((wl, i) => (
-              <motion.div
-                key={wl.id}
-                className={`wl-list-item${selectedId === wl.id ? ' wl-selected' : ''}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: i * 0.04 }}
-              >
-                <div className="wl-list-header" onClick={() => handleSelect(wl.id)}>
-                  <div className="wl-list-main">
-                    <span className="wl-list-name">{cleanLabel(wl.label)}</span>
-                    <span className="wl-list-count">{wl.symbolCount} symbols</span>
-                  </div>
-                  <div className="wl-list-meta">
-                    {wl.source && (
-                      <span className="wl-list-source">
-                        {wl.source.includes('CSV') ? '📄 CSV' : wl.source === 'manual' ? '✏️ Manual' : wl.source}
-                      </span>
-                    )}
-                    <span className="wl-chevron">{selectedId === wl.id ? '▴' : '▾'}</span>
-                  </div>
-                </div>
-
-                <AnimatePresence>
-                  {selectedId === wl.id && (
-                    <motion.div
-                      className="wl-list-detail"
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {wl.importedAt && (
-                        <span className="wl-list-date">
-                          Imported {new Date(wl.importedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </span>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            ))}
+            {/* Built-in Watchlists */}
+            {watchlists.some(w => w.kind === 'built-in') && (
+              <div className="wl-group">
+                <div className="wl-group-label">Built-in Watchlists</div>
+                {watchlists.filter(w => w.kind === 'built-in').map((wl, i) => renderWatchlistItem(wl, i))}
+              </div>
+            )}
+            {/* User Watchlists */}
+            <div className="wl-group">
+              <div className="wl-group-label">User Watchlists</div>
+              {watchlists.filter(w => w.kind !== 'built-in').map((wl, i) => renderWatchlistItem(wl, i))}
+            </div>
           </div>
 
           {/* ── Right: Symbols Panel ── */}
@@ -138,7 +198,21 @@ export default function UserWatchlistsPage() {
             ) : (
               <div className="wl-detail-content">
                 <h3>{cleanLabel(selectedWl.label)}</h3>
-                <div className="wl-symbols-count">{symbols.length} symbols</div>
+                <div className="wl-symbols-count">
+                  {symbols.length} symbols
+                  {selectedId === 'trading212-portfolio' && (
+                    <span style={{ marginLeft: 12 }}>
+                      <button
+                        className="wl-sync-btn"
+                        disabled={syncing}
+                        onClick={doSync}
+                      >
+                        {syncing ? '⟳ Syncing…' : '⟳ Sync Now'}
+                      </button>
+                      {lastSync && <span className="wl-sync-time">Last: {lastSync}</span>}
+                    </span>
+                  )}
+                </div>
                 <div className="wl-symbols-grid">
                   {symbols.map(s => (
                     <a

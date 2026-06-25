@@ -21053,3 +21053,7 @@
 2026-06-25 20:39:29,895 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
 2026-06-25 20:40:08,104 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
 2026-06-25 20:40:33,154 [ERROR] Error handling /accounts: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:41:27,481 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:41:47,485 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:41:47,491 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-25 20:42:07,483 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine

@@ -77,6 +77,17 @@
   align-items: start;
 }
 .wl-list-pane { min-width: 0; }
+.wl-group { margin-bottom: 0.75rem; }
+.wl-group-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  padding: 0.3rem 0.5rem 0.4rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.25rem;
+}
 .wl-detail-pane {
   position: sticky; top: 10px;
   border: 1px solid var(--line, #1e293b);
@@ -102,6 +113,21 @@
 .wl-list-main { display: flex; gap: 0.6rem; align-items: baseline; }
 .wl-list-meta { display: flex; gap: 0.6rem; align-items: center; }
 .wl-list-name { font-weight: 700; color: var(--ink, #e2e8f0); }
+.wl-default-star { color: #f59e0b; font-size: 0.85rem; }
+.wl-sync-btn {
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.7rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.wl-sync-btn:hover:not(:disabled) { background: var(--accent); color: #fff; }
+.wl-sync-btn:disabled { opacity: 0.5; cursor: default; }
+.wl-sync-time { font-size: 0.65rem; color: var(--ink-soft); margin-left: 8px; }
 .wl-list-count { color: var(--ink-soft, #94a3b8); font-size: 0.75rem; white-space: nowrap; }
 .wl-list-source { color: #64748b; font-size: 0.7rem; }
 .wl-chevron { color: var(--ink-soft); font-size: 0.7rem; }

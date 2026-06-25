@@ -1,0 +1,83 @@
+{
+  "id": "none-mt5",
+  "label": "None MT5",
+  "description": "Symbols with no MT5 market data. Track separately until alternative sources available.",
+  "symbols": [
+    {
+      "ticker": "639",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "AMRQ",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "BRK.B",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "DAGB",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "GS2C",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "IFX",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "LSEG",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "NCYT",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "PLSR",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "QQ",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "R3NK",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "RHM",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "SGBX",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "URND",
+      "exchange": "Unknown",
+      "type": "stock"
+    },
+    {
+      "ticker": "VUAG",
+      "exchange": "Unknown",
+      "type": "stock"
+    }
+  ],
+  "source": "manual"
+}
