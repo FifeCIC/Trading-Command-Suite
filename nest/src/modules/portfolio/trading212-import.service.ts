@@ -289,7 +289,7 @@ export class Trading212ImportService {
     side: 'buy' | 'sell';
   }): Promise<{ passed: boolean; gate: string; error?: string }> {
     // Gate 1+2: API Health + Account balance (combined — same endpoint, avoid rate limit double-hit)
-    const account = await this.t212Adapter.getAccountCash();
+    const account = await this.t212Adapter.getAccount();
     if (!account) {
       return { passed: false, gate: 'account', error: `Trading212 API (${this.t212Adapter.mode}) is not reachable or returned no account data. Check credentials and connectivity.` };
     }
@@ -310,7 +310,7 @@ export class Trading212ImportService {
     // Gate 4: Sufficient funds (for buys)
     if (params.side === 'buy') {
       // We don't have price here, but gate 1+2 already passed
-      if (account.free <= 0) {
+      if (account.marginFree <= 0) {
         return { passed: false, gate: 'funds', error: 'No free cash available for this purchase.' };
       }
     }
@@ -391,7 +391,7 @@ export class Trading212ImportService {
     soldTickers: { ticker: string; quantity: number; ppl: number }[];
   }> {
     const positions = await this.t212Adapter.getPositions();
-    const profitable = positions.filter((p) => p.ppl > 0);
+    const profitable = positions.filter((p) => p.unrealizedPnl > 0);
     const unprofitable = positions.length - profitable.length;
 
     let sold = 0;
@@ -400,7 +400,7 @@ export class Trading212ImportService {
     const soldTickers: { ticker: string; quantity: number; ppl: number }[] = [];
 
     for (const pos of profitable) {
-      const maxSell = pos.maxSell ?? pos.quantity;
+      const maxSell = pos.quantity;
       if (maxSell <= 0) {
         failed++;
         continue;
@@ -423,17 +423,17 @@ export class Trading212ImportService {
 
         if (result?.success) {
           sold++;
-          totalPnl += pos.ppl;
-          soldTickers.push({ ticker: pos.ticker, quantity, ppl: pos.ppl });
+          totalPnl += pos.unrealizedPnl;
+          soldTickers.push({ ticker: pos.ticker, quantity, ppl: pos.unrealizedPnl });
           this.logger.log(`T212 sold ${quantity}×${pos.ticker} @ ${result?.filledPrice || 'market'}`);
           // Record to DB audit trail
           this.tradeRecorder.record({
             symbol: pos.ticker,
             side: 'sell',
             quantity,
-            entryPrice: pos.averagePrice,
+            entryPrice: pos.avgCost,
             exitPrice: result?.filledPrice,
-            pnl: pos.ppl,
+            pnl: pos.unrealizedPnl,
             provider: 'trading212',
             status: 'closed',
           });

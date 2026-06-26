@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
   IProviderAdapter,
+  BrokerAccount,
+  BrokerOrderRequest,
+  BrokerOrderResult,
+  BrokerPosition,
   MarketBar,
   ProviderProfile,
   ProviderQuote,
@@ -86,6 +90,7 @@ export type Trading212Mode = 'live' | 'demo' | 'none';
 export class Trading212Adapter implements IProviderAdapter {
   readonly name = 'Trading212';
   readonly id = 'trading212';
+  readonly supportsBrokerage = true;
   private readonly logger = new Logger(Trading212Adapter.name);
 
   // ── Mode ──────────────────────────────────────────────────
@@ -312,7 +317,8 @@ export class Trading212Adapter implements IProviderAdapter {
 
   // ── Trading212-specific: Portfolio ────────────────────────
 
-  async getPositions(): Promise<Trading212Position[]> {
+  /** @deprecated Use getPositions() which returns BrokerPosition[] */
+  async getRawPositions(): Promise<Trading212Position[]> {
     if (!this.hasCredentials) {
       this.logger.warn(`Trading212 getPositions (${this.mode}): no credentials`);
       return [];
@@ -335,7 +341,7 @@ export class Trading212Adapter implements IProviderAdapter {
     }
   }
 
-  async getAccountCash(): Promise<Trading212AccountCash | null> {
+  async getRawAccountCash(): Promise<Trading212AccountCash | null> {
     if (!this.hasCredentials) {
       this.logger.warn(`Trading212 getAccountCash (${this.mode}): no credentials`);
       return null;
@@ -541,6 +547,71 @@ export class Trading212Adapter implements IProviderAdapter {
       '1M': 'ONE_MONTH',
     };
     return map[timeframe] || 'ONE_DAY';
+  }
+
+  // ── IProviderAdapter Brokerage Methods ────────────────────
+
+  /**
+   * Fetch normalized positions (IProviderAdapter interface).
+   */
+  async getPositions(): Promise<BrokerPosition[]> {
+    const raw = await this.getRawPositions();
+    return raw.map((p) => ({
+      brokerId: this.id,
+      brokerName: this.name,
+      symbol: this.stripTicker(p.ticker),
+      ticker: p.ticker,
+      quantity: p.quantity,
+      avgCost: p.averagePrice,
+      currentPrice: p.currentPrice,
+      marketValue: p.currentPrice * p.quantity,
+      unrealizedPnl: p.ppl ?? (p.currentPrice - p.averagePrice) * p.quantity,
+      unrealizedPnlPct: p.averagePrice > 0 ? ((p.currentPrice - p.averagePrice) / p.averagePrice) * 100 : 0,
+      currency: 'GBP',
+      openedAt: p.initialFillDate || new Date().toISOString(),
+    }));
+  }
+
+  /**
+   * Fetch normalized account (IProviderAdapter interface).
+   */
+  async getAccount(): Promise<BrokerAccount | null> {
+    const cash = await this.getRawAccountCash();
+    if (!cash) return null;
+    return {
+      brokerId: this.id,
+      brokerName: this.name,
+      balance: cash.total,
+      equity: cash.total,
+      margin: cash.blocked ?? 0,
+      marginFree: cash.free,
+      marginLevel: cash.total > 0 ? (cash.free / cash.total) * 100 : null,
+      currency: 'GBP',
+      mode: this.mode === 'demo' ? 'demo' : this.mode === 'live' ? 'live' : 'mock',
+      connected: this.hasCredentials,
+    };
+  }
+
+  /**
+   * Place order via IProviderAdapter interface.
+   */
+  async placeOrder(params: BrokerOrderRequest): Promise<BrokerOrderResult> {
+    const result = await this.placeMarketOrder({
+      ticker: this.toT212Ticker(params.symbol),
+      quantity: params.quantity,
+      side: params.side === 'BUY' ? 'buy' : 'sell',
+    });
+    return {
+      success: result.success,
+      ticket: result.orderId ?? undefined,
+      price: result.filledPrice ?? undefined,
+      error: result.error,
+    };
+  }
+
+  /** Strip Trading212 ticker suffix: AAPL_US_EQ → AAPL */
+  private stripTicker(ticker: string): string {
+    return ticker.replace(/_.*$/, '');
   }
 
   // ── fallback: mock data when no credentials ───────────────

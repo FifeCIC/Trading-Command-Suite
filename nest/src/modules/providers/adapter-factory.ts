@@ -211,6 +211,30 @@ export class AdapterFactory {
   }
 
   /**
+   * Get all adapter instances that support brokerage operations
+   * (portfolio queries, order execution).
+   * Used by the automation loop to iterate over connected brokers.
+   */
+  getBrokerageAdapters(): IProviderAdapter[] {
+    const brokers: IProviderAdapter[] = [];
+    for (const [id, instance] of this.instances) {
+      if (instance.supportsBrokerage) {
+        brokers.push(instance);
+      }
+    }
+    // Also check registered-but-not-yet-created adapters with 'trades' capability
+    for (const [id, reg] of this.registry) {
+      if (!this.instances.has(id) && reg.config.capabilities.includes('trades')) {
+        const instance = this.create(id);
+        if (instance?.supportsBrokerage) {
+          brokers.push(instance);
+        }
+      }
+    }
+    return brokers;
+  }
+
+  /**
    * Check if a provider has credentials configured.
    */
   hasCredentials(id: string): boolean {

@@ -57,16 +57,16 @@ const DIRECTIVE_CATEGORIES = [
 
 // ── Provider status ──
 const PROVIDERS = [
-  { name: 'Alpaca', quotes: true, candles: true, news: false, fundamentals: false, health: 'live' },
-  { name: 'Finnhub', quotes: true, candles: true, news: true, fundamentals: true, health: 'live' },
-  { name: 'Yahoo Finance', quotes: true, candles: true, news: false, fundamentals: false, health: 'live' },
-  { name: 'Polygon', quotes: true, candles: true, news: false, fundamentals: false, health: 'live' },
-  { name: 'Twelve Data', quotes: true, candles: true, news: false, fundamentals: false, health: 'live' },
-  { name: 'FMP', quotes: true, candles: true, news: false, fundamentals: false, health: 'live' },
-  { name: 'Trading212', quotes: true, candles: false, news: false, fundamentals: false, health: 'live' },
-  { name: 'FRED', quotes: false, candles: false, news: false, fundamentals: true, health: 'live' },
-  { name: 'ECB', quotes: false, candles: false, news: false, fundamentals: true, health: 'live' },
-  { name: 'MT5 Bridge', quotes: true, candles: true, news: false, fundamentals: false, health: 'degraded' },
+  { name: 'Alpaca', quotes: true, candles: true, news: false, fundamentals: false, portfolio: false, orders: false, health: 'live' },
+  { name: 'Finnhub', quotes: true, candles: true, news: true, fundamentals: true, portfolio: false, orders: false, health: 'live' },
+  { name: 'Yahoo Finance', quotes: true, candles: true, news: false, fundamentals: false, portfolio: false, orders: false, health: 'live' },
+  { name: 'Polygon', quotes: true, candles: true, news: false, fundamentals: false, portfolio: false, orders: false, health: 'live' },
+  { name: 'Twelve Data', quotes: true, candles: true, news: false, fundamentals: false, portfolio: false, orders: false, health: 'live' },
+  { name: 'FMP', quotes: true, candles: true, news: false, fundamentals: false, portfolio: false, orders: false, health: 'live' },
+  { name: 'Trading212', quotes: true, candles: true, news: false, fundamentals: false, portfolio: true, orders: true, health: 'live' },
+  { name: 'FRED', quotes: false, candles: false, news: false, fundamentals: true, portfolio: false, orders: false, health: 'live' },
+  { name: 'ECB', quotes: false, candles: false, news: false, fundamentals: true, portfolio: false, orders: false, health: 'live' },
+  { name: 'MT5 Bridge', quotes: true, candles: true, news: false, fundamentals: false, portfolio: true, orders: true, health: 'degraded' },
 ];
 
 // ── Discussion coverage ──
@@ -75,6 +75,8 @@ const DISCUSSIONS = [
   { name: 'Predictive SEES', status: 'implemented' },
   { name: 'Exit Signals', status: 'in-progress', note: 'Q279 claimed' },
   { name: 'Speed/Day Trading', status: 'discussed', note: 'Q289–Q293 generated' },
+  { name: 'Automation Loop & Timeline', status: 'designed', note: '5 prompts, 2026-06-26' },
+  { name: 'Unified Broker Interface', status: 'designed', note: 'IBrokerPortfolio extension' },
   { name: 'HOTAS Trading Interface', status: 'deferred' },
   { name: 'Session Open Effect', status: 'not-started' },
   { name: 'Single Symbol View', status: 'not-started' },
@@ -101,6 +103,7 @@ const API_MODULES = [
   { name: 'Training', count: 3, endpoints: ['GET /training/candle-patterns', 'GET /training/candle-patterns/history', 'GET /training/pattern-accuracy/:id'] },
   { name: 'Backtest', count: 1, endpoints: ['GET /backtest/chart-data'] },
   { name: 'Architecture', count: 1, endpoints: ['GET /api/architecture/manifest'] },
+  { name: 'Automation', count: 9, endpoints: ['GET /api/automation/status', 'POST /api/automation/toggle', 'POST /api/automation/run-now', 'POST /api/automation/emergency-stop', 'GET /api/automation/timeline', 'GET /api/automation/timeline/symbol/:symbol', 'GET /api/automation/portfolio-scores', 'POST /api/automation/confirm-action', 'POST /api/automation/reject-action'] },
   { name: 'System', count: 4, endpoints: ['GET /api/version', 'GET /api/health', 'GET /api/api-activity/summary', 'GET /api/system/logs'] },
 ];
 
@@ -115,6 +118,7 @@ function StatusBadge({ status }) {
     'in-progress': { label: 'Active', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
     discussed: { label: 'Discussed', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
     deferred: { label: 'Deferred', color: '#94a3b8', bg: 'rgba(148,163,184,0.08)' },
+    designed: { label: 'Designed', color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
     'not-started': { label: '—', color: '#64748b', bg: 'rgba(100,116,139,0.06)' },
     degraded: { label: 'Degraded', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
   };
@@ -286,7 +290,7 @@ export default function CapabilityMapPage() {
 
       {/* ── Provider Status ── */}
       <CollapsibleSection id="providers" title="Provider Status" summary={providerHealthQuery.isLoading ? 'Loading…' : `${providerData.live}/${providerData.total} ${providerData.isLive ? 'healthy' : 'live'}`}>
-        {providerHealthQuery.isLoading && <LoadingSkeleton variant="table" rows={6} cols={6} />}
+        {providerHealthQuery.isLoading && <LoadingSkeleton variant="table" rows={6} cols={8} />}
         {providerHealthQuery.isError && <ApiOfflineBanner compact />}
         {!providerHealthQuery.isLoading && (
         <div className="cm-table-wrap">
@@ -297,7 +301,9 @@ export default function CapabilityMapPage() {
                 <th>Quotes</th>
                 <th>Candles</th>
                 <th>News</th>
-                <th>Fundamentals</th>
+                <th>Fund.</th>
+                <th>Portfolio</th>
+                <th>Orders</th>
                 <th>Health</th>
               </tr>
             </thead>
@@ -308,6 +314,8 @@ export default function CapabilityMapPage() {
                 const hasCandles = providerData.isLive ? (p.candles !== false) : p.candles;
                 const hasNews = providerData.isLive ? (p.news === true) : p.news;
                 const hasFundamentals = providerData.isLive ? (p.fundamentals === true) : p.fundamentals;
+                const hasPortfolio = providerData.isLive ? (p.portfolio === true) : p.portfolio;
+                const hasOrders = providerData.isLive ? (p.orders === true) : p.orders;
                 return (
                 <tr key={p.name || p.provider}>
                   <td><strong>{p.name || p.provider}</strong></td>
@@ -315,6 +323,8 @@ export default function CapabilityMapPage() {
                   <td>{hasCandles ? '✅' : '—'}</td>
                   <td>{hasNews ? '✅' : '—'}</td>
                   <td>{hasFundamentals ? '✅' : '—'}</td>
+                  <td>{hasPortfolio ? '📊' : '—'}</td>
+                  <td>{hasOrders ? '📤' : '—'}</td>
                   <td><StatusBadge status={status} /></td>
                 </tr>
                 );

@@ -199,4 +199,50 @@ export class AutomationController {
   async getSymbolAffinity(@Param('symbol') symbol: string) {
     return this.ranking.getAffinity(symbol);
   }
+
+  // ── Dashboard status endpoint ────────────────────────
+
+  /**
+   * GET /api/automation/status
+   * Returns full automation dashboard state: brokers, strategies, timeline.
+   */
+  @Get('status')
+  async getStatus() {
+    const brokerStates: any[] = [];
+    const activeStrategies: any[] = [];
+
+    // Active strategies from DB
+    if (this.prisma.isAvailable) {
+      try {
+        const strategies = await (this.prisma as any).tradingStrategy.findMany({
+          where: { active: true },
+          include: { evaluations: { orderBy: { evaluatedAt: 'desc' }, take: 1 } },
+        });
+        for (const s of strategies) {
+          activeStrategies.push({
+            id: s.id,
+            name: s.name,
+            protocolId: s.protocolId,
+            symbol: s.symbol,
+            brokerId: s.brokerId ?? 'mt5',
+            mode: s.mode ?? 'manual',
+            active: s.active,
+            lastEvaluatedAt: s.evaluations?.[0]?.evaluatedAt ?? null,
+            lastSignal: s.evaluations?.[0]?.signal ?? null,
+            lastComposite: s.evaluations?.[0]?.composite ?? null,
+          });
+        }
+      } catch { /* strategies table may not have brokerId yet */ }
+    }
+
+    return {
+      loopEnabled: false, // not yet built
+      brokerStates,
+      activeStrategies,
+      pendingActions: [],
+      activeTimelineEvents: [],
+      lastTickAt: null,
+      nextTickAt: null,
+    };
+  }
 }

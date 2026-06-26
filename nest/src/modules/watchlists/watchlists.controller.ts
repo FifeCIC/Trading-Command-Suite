@@ -227,7 +227,7 @@ export class WatchlistsController {
       const positions = await this.t212.getPositions();
       const symbols = positions.map((p) => ({
         ticker: p.ticker.toUpperCase(),
-        name: p.ticker,
+        name: p.symbol,
         exchange: 'Trading212',
         type: 'stock',
       }));

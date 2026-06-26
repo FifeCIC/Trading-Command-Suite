@@ -134,6 +134,83 @@ export interface IProviderAdapter {
    * Returns monthly consensus: strongBuy, buy, hold, sell, strongSell counts.
    */
   getRecommendations?(symbol: string): Promise<AnalystRecommendation[]>;
+
+  // ─── Optional: Broker Portfolio & Execution ─────────────────
+  //
+  // These methods are implemented by brokers that support portfolio
+  // management and order execution (Trading212, MT5, Alpaca).
+  // Pure data providers (Finnhub, Yahoo, Polygon) do NOT implement these.
+  // The automation loop queries AdapterFactory.getBrokerageAdapters()
+  // to find which adapters support brokerage operations.
+
+  /** Whether this adapter supports brokerage (portfolio + orders). */
+  readonly supportsBrokerage?: boolean;
+
+  /**
+   * Fetch open positions for this broker.
+   * Returns normalized BrokerPosition[] across all broker-specific formats.
+   */
+  getPositions?(): Promise<BrokerPosition[]>;
+
+  /**
+   * Fetch account summary (balance, equity, margin).
+   */
+  getAccount?(): Promise<BrokerAccount | null>;
+
+  /**
+   * Place a market order on this broker.
+   */
+  placeOrder?(params: BrokerOrderRequest): Promise<BrokerOrderResult>;
+}
+
+// ─── Broker Portfolio & Execution Types ─────────────────────
+
+/** Normalized position across all brokers. */
+export interface BrokerPosition {
+  brokerId: string;
+  brokerName: string;
+  symbol: string;
+  ticker: string;
+  quantity: number;
+  avgCost: number;
+  currentPrice: number;
+  marketValue: number;
+  unrealizedPnl: number;
+  unrealizedPnlPct: number;
+  currency: string;
+  openedAt: string;
+}
+
+/** Normalized account summary across all brokers. */
+export interface BrokerAccount {
+  brokerId: string;
+  brokerName: string;
+  balance: number;
+  equity: number;
+  margin: number;
+  marginFree: number;
+  marginLevel: number | null;
+  currency: string;
+  mode: 'live' | 'demo' | 'paper' | 'mock';
+  connected: boolean;
+}
+
+/** Standardized order request for any broker. */
+export interface BrokerOrderRequest {
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  quantity: number;
+  sl?: number;
+  tp?: number;
+  comment?: string;
+}
+
+/** Standardized order result from any broker. */
+export interface BrokerOrderResult {
+  success: boolean;
+  ticket?: string | number;
+  price?: number;
+  error?: string;
 }
 
 /** A single news headline from a provider. */

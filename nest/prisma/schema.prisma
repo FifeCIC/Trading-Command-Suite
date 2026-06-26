@@ -901,3 +901,56 @@ model SymbolProtocolAffinity {
   @@index([symbol])
   @@index([protocolId])
 }
+
+model TimelineEvent {
+  id              String   @id @default(uuid())
+  type            String   @db.VarChar(50)
+  scope           String   @default("global") @db.VarChar(20)
+  brokerId        String?  @db.VarChar(50)
+  symbol          String?  @db.VarChar(20)
+  session         String?  @db.VarChar(20)
+  protocolId      String?  @db.VarChar(100)
+
+  action          String   @default("info") @db.VarChar(20)
+  riskMultiplier  Float?
+  thresholdAdjust Int?
+
+  label           String   @db.VarChar(255)
+  description     String?  @db.Text
+  icon            String?  @db.VarChar(10)
+  color           String?  @db.VarChar(10)
+
+  startsAt        DateTime
+  endsAt          DateTime?
+  durationMin     Int?
+
+  source          String   @default("system") @db.VarChar(20)
+  metadata        Json?
+
+  createdAt       DateTime @default(now())
+
+  @@index([startsAt])
+  @@index([symbol])
+  @@index([scope, startsAt])
+}
+
+model AutomationConfig {
+  id                    String   @id @default(uuid())
+  brokerId              String   @unique @db.VarChar(50)
+  enabled               Boolean  @default(false)
+  tradingEnabled        Boolean  @default(false)
+  scoreIntervalMs       Int      @default(300000)
+  tradeThreshold        Int      @default(65)
+  requireConfirmation   Boolean  @default(true)
+
+  pauseOnHighImpactEvents Boolean @default(true)
+  earningsGateHours        Int     @default(48)
+  useSeasonalityData       Boolean @default(true)
+  boostSessionWindows      Boolean @default(true)
+
+  maxDailyTrades        Int      @default(10)
+  maxConcurrentPos      Int      @default(3)
+  maxLossPerTrade       Float    @default(50.0)
+
+  updatedAt             DateTime @updatedAt
+}

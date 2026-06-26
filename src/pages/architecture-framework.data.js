@@ -6,6 +6,7 @@ export const STATUS_SNAPSHOT = [
   'Drift detection is built in — section index and contract register show verification badges. Mark items as verified as you review them.',
   'Agentic AI discoverability: /api/architecture/manifest endpoint provides machine-readable system map. Diagrams page has 11 Mermaid diagrams for all major subsystems. Capability Map tracks directive/provider/page coverage.',
   'Cross-page navigation: Architecture Framework ↔ Diagrams ↔ Capability Map are linked via nav buttons in each page header for agent and developer traversal.',
+  '2026-06-26: Automation Architecture v1 designed — 5 prompts created (unified-broker-interface, automation-loop, automation-dashboard, automation-parameters, automation-timeline). Core principle: broker-agnostic. The automation loop iterates over ALL connected brokers via AdapterFactory, never hardcoding Trading212 or MT5. Timeline system acts as decision modifier — loop consults timeline BEFORE scoring (FOMC→reduce risk, earnings→block symbol, session open→boost protocols, seasonality→adjust thresholds). Architecture Framework and Capability Map updated with new automation module.',
   '2026-06-23: Librarian audit — Diagrams page expanded from 5→11 diagrams (added Activation Gate, Exit Signals, Alert Center, Calibration, Scoring Gating, Provider Adapters). Rendering bug fixed (React key for DOM remount). Contract register date bumped. Cross-page navigation added. Architecture manifest endpoint implemented (GET /api/architecture/manifest).',
   '2026-06-19: Q291 — Timeframe-aware directive config. IDirective extended with activeWindow (time-gated) + timeModifiers (time-adjusted). DirectivesService.runAll() evaluates gates pre-calculate, modifiers post-calculate. session-open-effect directive has reference config (Mon–Fri, 09:00–16:30 America/New_York). Uses Intl.DateTimeFormat for IANA timezone resolution — no external lib.',
   '2026-06-19: Q289 — 9 strategy templates added to seed data (Kitchen Sink, High-Vol Scalper, VIX Regime, Bitcoin Specialist, Gold Hedge, Oil Trader, Forex Session, Tech Titans, Meme Stock). seed:strategies script added. Strategy config JSON extended with templateType, intendedTimeframe, symbols, category.',
@@ -49,6 +50,7 @@ export const ARCHITECTURE_INDEX = [
   { name: 'Verification governance', status: 'done' },
   { name: 'Definition of done', status: 'done' },
   { name: 'Handoff checklist', status: 'done' },
+  { name: 'Automation architecture', status: 'designed' },
   { name: 'Known gaps', status: 'done' },
   { name: 'Revision log', status: 'done' },
 ]
@@ -85,12 +87,15 @@ export const SYSTEM_SPINE = [
   'Exit urgency evaluated alongside entry score',
   'SEES ranks symbols',
   'User inspects rationale and timeframe fit',
-  '── Automation Loop (planned) ──',
-  'Protocol scheduler dispatches scoring runs',
-  'Rate-limit-aware cache deduplicates API calls',
-  'Multi-protocol runner executes parallel pipelines',
-  'Results streamed to dashboard (stack view / grid view)',
-  'Execution queue manages hot-add/remove of protocols',
+  '── Automation Loop (designed, building) ──',
+  'Timeline checked for active events (FOMC, earnings, sessions, seasonality)',
+  'Global risk multiplier computed from timeline events',
+  'All broker portfolios fetched via AdapterFactory.getBrokerageAdapters()',
+  'Every position scored with timeline-adjusted risk multiplier',
+  'Active strategies evaluated against scored positions',
+  'Dispatch: manual→log, semi-auto→queue, auto→execute (with safeties)',
+  'Execution via unified IBrokerPortfolio.placeOrder() across any broker',
+  'All decisions recorded to LoopTick table for full audit trail',
 ]
 
 export const CURRENT_SLICE = [
@@ -127,6 +132,10 @@ export const CURRENT_SLICE = [
   'Nav reorganization — SEES, Strategy Builder moved to Scoring area with section dividers',
   'Protocol Risk Gating — multiplicative scoring: risk directives gate Technical + Sentiment (not additive)',
   'Unified MT5 Trading page — merged Mt5TradingPage, UnifiedTradingPage, Mt5DemoTradingPage into one page with demo/live toggle, account switching dropdown, platform selector, and live-mode safety confirmations',
+  'Unified Broker Interface (designed) — IProviderAdapter extended with optional IBrokerPortfolio (getPositions, getAccount, placeOrder). AdapterFactory.getBrokerageAdapters() for broker-agnostic portfolio queries. Trading212Adapter + Mt5Adapter + future AlpacaAdapter all implement same surface.',
+  'Automation Loop (designed) — broker-agnostic setInterval tick: 1) check Timeline for active events, 2) fetch ALL brokers\' portfolios, 3) score every position, 4) evaluate active strategies, 5) dispatch (manual/semi-auto/auto), 6) execute via IBrokerPortfolio.placeOrder. Safety: max 1 trade/tick, min 60s between trades, emergency stop.',
+  'Automation Dashboard (designed) — multi-broker cockpit at /trading/automation. Panels: Broker Bar, Live Timeline, Active Strategies, Portfolio Scores (tabbed by broker), Why Panel (directive breakdown + timeline context), Decision Log, Trade History. Master pause/run-now/emergency-stop controls.',
+  'Automation Timeline (designed) — TimelineService consulted by loop on every tick. Event types: economic (FOMC/NFP/CPI), earnings (Finnhub/Polygon), session windows (London/NY/Tokyo/Sydney), seasonality (hour×day win rates from SeasonalityService), protocol activation windows. Events can block/gate/boost/reduce. Visual timeline component on dashboard.',
 ]
 
 export const DECISION_WORKFLOW = [
@@ -374,7 +383,7 @@ export const CONTRACT_CARDS = [
   },
 ]
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-06-23'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-06-26'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -536,6 +545,78 @@ export const CURRENT_ROUTE_CONTRACTS = [
     owner: 'Calibration controller',
     contract: 'Reloads all calibrations from the database into cache.',
     status: 'active',
+  },
+  {
+    route: 'GET /api/automation/status',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Automation controller',
+    contract: 'Returns full automation state: loop status, broker states, active strategies, pending actions, timeline events.',
+    status: 'designed',
+  },
+  {
+    route: 'POST /api/automation/toggle',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'Automation controller',
+    contract: 'Pause/resume automation loop, individual brokers, or individual strategies. Body: { target, enabled }.',
+    status: 'designed',
+  },
+  {
+    route: 'POST /api/automation/run-now',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'Automation controller',
+    contract: 'Triggers immediate scoring + evaluation tick outside the normal interval.',
+    status: 'designed',
+  },
+  {
+    route: 'POST /api/automation/emergency-stop',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'Automation controller',
+    contract: 'Kills loop timer, sets all strategies inactive, attempts to close all positions on all brokers.',
+    status: 'designed',
+  },
+  {
+    route: 'GET /api/automation/timeline',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Timeline controller',
+    contract: 'Returns full timeline: past events (2h), current active events, upcoming events (24h).',
+    status: 'designed',
+  },
+  {
+    route: 'GET /api/automation/timeline/symbol/:symbol',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Timeline controller',
+    contract: 'Returns timeline events relevant to a specific symbol (earnings, seasonality, sessions).',
+    status: 'designed',
+  },
+  {
+    route: 'GET /api/automation/portfolio-scores',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Automation controller',
+    contract: 'Returns scored positions across all or selected brokers with timeline-adjusted composites.',
+    status: 'designed',
+  },
+  {
+    route: 'POST /api/automation/confirm-action',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'Automation controller',
+    contract: 'Approves a queued semi-auto trade for execution. Body: { actionId }.',
+    status: 'designed',
+  },
+  {
+    route: 'POST /api/automation/reject-action',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'Automation controller',
+    contract: 'Rejects a queued semi-auto trade. Body: { actionId }.',
+    status: 'designed',
   },
   {
     route: 'GET /api/alerts/active',
@@ -1163,9 +1244,11 @@ export const KNOWN_GAPS = [
   'FX Timing directive (fx-timing) is a placeholder — requires FX data infrastructure (Q289) before producing real scores.',
   'Analyse Symbol page (Q274) has AI analysis placeholder — requires API provider config before multi-AI comparison works.',
   'Automation rate-limiting risk — without the Symbol Data Cache (Q503), parallel protocol runs would make 3x duplicate Finnhub/T212 calls per symbol in a 10-second window. Rate limits: Finnhub 60/min, T212 demo unknown, Alpha Vantage 5/min. Cache must be operational before multi-protocol execution goes live.',
+  'Unified broker interface not yet implemented — PortfolioService hardcodes Trading212Adapter. TradingStrategyService.execute() hardcodes Mt5TradingService. No broker can be queried for positions/account/orders through the shared IProviderAdapter interface. The 5 automation prompts define the target state but implementation has not started.',
 ]
 
 export const REVISION_LOG = [
+  '2026-06-26: Automation Architecture designed — 5 prompts: unified-broker-interface (IProviderAdapter extended with IBrokerPortfolio), automation-loop (broker-agnostic tick engine with timeline awareness), automation-dashboard (multi-broker cockpit with LiveTimeline/WhyPanel/DecisionLog), automation-parameters (protocol↔broker mapping + timeline-aware safety defaults), automation-timeline (TimelineService as decision modifier — FOMC/earnings/sessions/seasonality). IBrokerPortfolio interface: getPositions, getAccount, placeOrder. AdapterFactory extended with getBrokerageAdapters(). PortfolioService → broker-agnostic via AdapterFactory. TradingStrategyService.execute() → routes through adapter instead of hardcoded MT5. 9 new automation REST endpoints designed. 3 new DB models: TimelineEvent, AutomationConfig, LoopTick. TradingStrategy extended with brokerId, cooldownMinutes, maxPositions, timeline-awareness fields.',
   '2026-06-24: Watchlist direction change — protocol dropdown removed from UserWatchlistsPage. PROTOCOLS constant, protocolMap state, setProtocol, and apiPost import all removed. Direction flipped: protocols will reference watchlists (many-to-many), not vice versa. Pies concept: WATCHLIST-PIES.md created — percentage-allocated trading baskets with protocols and strategies. Watchlist combined stats planned (per-symbol P&L aggregation).',
   '2026-06-24: Directive registry audit — 83 directives registered in backend (directives.module.ts) but only ~15 shown on Configure Directives page (reads directives-manager.seed.js, not /api/directives). 5+ separate directive data locations identified across backend and frontend. Seed file is a tiny subset of actual registry.',
   '2026-06-24: Watchlist architecture audited — 3 storage locations found (filesystem JSON, Watchlist DB table, WatchlistMeta DB table). Controller uses filesystem only. DB tables are orphaned. Architecture Framework field descriptions fixed to match actual schema. WatchlistsPage.jsx uses hardcoded MOCK data. GitHub issue created for seed-based watchlist setup.',
@@ -1380,6 +1463,44 @@ export const DATABASE_SCHEMA = {
       description: 'User trading preferences',
       fields: ['id (PK)', 'userId (FK)', 'preferenceKey', 'preferenceValue', 'preferenceType', 'updatedAt'],
       relationships: [],
+    },
+    {
+      table: 'TradingStrategy',
+      description: 'Trading strategy definitions with broker binding',
+      fields: ['id (PK)', 'name', 'protocolId', 'symbol', 'brokerId (new)', 'timeframe', 'mode (manual/semi-auto/auto)', 'active', 'minComposite', 'slPct', 'tpPct', 'baseSize', 'maxSize', 'cooldownMinutes (new)', 'maxPositions (new)', 'maxDailyTrades (new)', 'pauseOnEvents (new)', 'earningsGateHours (new)', 'useSeasonality (new)', 'createdAt', 'updatedAt'],
+      relationships: [
+        '→ StrategyEvaluation (one-to-many)',
+      ],
+    },
+    {
+      table: 'StrategyEvaluation',
+      description: 'Per-tick strategy evaluation records',
+      fields: ['id (PK)', 'strategyId (FK)', 'symbol', 'composite', 'signal', 'rarityBand', 'rarityPct', 'direction', 'traded', 'tradeTicket', 'tradeResult', 'evaluatedAt'],
+      relationships: [
+        '← TradingStrategy (many-to-one)',
+      ],
+    },
+    {
+      table: 'TimelineEvent',
+      description: 'Automation timeline events — economic, earnings, sessions, seasonality, system',
+      fields: ['id (PK)', 'type', 'scope (global/broker/symbol/session/protocol)', 'brokerId', 'symbol', 'session', 'protocolId', 'action (block/gate/boost/reduce/info)', 'riskMultiplier', 'thresholdAdjust', 'label', 'description', 'startsAt', 'endsAt', 'source', 'metadata (JSON)', 'createdAt'],
+      relationships: [],
+      indexes: ['startsAt', 'symbol', 'scope + startsAt'],
+      status: 'designed',
+    },
+    {
+      table: 'AutomationConfig',
+      description: 'Per-broker automation configuration',
+      fields: ['id (PK)', 'brokerId', 'enabled', 'tradingEnabled', 'scoreIntervalMs', 'tradeThreshold', 'requireConfirmation', 'pauseOnHighImpactEvents', 'earningsGateHours', 'useSeasonalityData', 'boostSessionWindows', 'maxDailyTrades', 'maxConcurrentPos', 'maxLossPerTrade', 'updatedAt'],
+      relationships: [],
+      status: 'designed',
+    },
+    {
+      table: 'LoopTick',
+      description: 'Automation loop tick audit records',
+      fields: ['id (PK)', 'tickNumber', 'startedAt', 'durationMs', 'brokersChecked (JSON)', 'positionsScored', 'strategiesEvaluated', 'tradesExecuted', 'decisions (JSON)', 'activeEvents (JSON)', 'globalRiskMultiplier'],
+      relationships: [],
+      status: 'designed',
     },
     {
       table: 'Watchlist',
