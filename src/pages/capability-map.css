@@ -1,9 +1,9 @@
 /* Capability Map — capability-map.css */
 
 .cm-page {
-  max-width: 1100px;
+  max-width: none;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 1.5rem 2rem;
   color: var(--ink, #e2e8f0);
 }
 
@@ -48,6 +48,66 @@
 .cm-summary-label {
   display: block;
   font-size: 0.72rem;
+  color: var(--ink-soft, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.2rem;
+}
+
+/* ── Controls ── */
+.cm-controls {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.cm-search {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 0.82rem;
+  min-width: 220px;
+  font-family: inherit;
+}
+.cm-search:focus { outline: none; border-color: var(--accent); }
+.cm-filter-chips { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.cm-filter-chip {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.cm-filter-chip:hover { border-color: var(--accent); color: var(--ink); }
+.cm-filter-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ── Category chip ── */
+.cm-cat-chip {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(139,92,246,0.15);
+  color: #a78bfa;
+}
+
+/* ── Footer ── */
+.cm-footer {
+  margin-top: 1rem;
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  text-align: center;
+}
   color: var(--ink-soft, #94a3b8);
   margin-top: 2px;
   text-transform: uppercase;

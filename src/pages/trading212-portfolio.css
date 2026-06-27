@@ -1,0 +1,350 @@
+/* ═══════════════════════════════════════════════════════════
+   Trading212 Portfolio Page
+   ═══════════════════════════════════════════════════════════ */
+
+.t212-page {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  color: var(--text);
+}
+
+/* ── Header ──────────────────────────────────────────── */
+
+.t212-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.t212-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.t212-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ── Buttons ──────────────────────────────────────────── */
+
+.t212-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.t212-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+}
+
+.t212-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.t212-btn--import {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── Import result toast ──────────────────────────────── */
+
+.t212-import-result {
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 0.82rem;
+}
+
+.t212-import-result.success {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.t212-import-result.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* ── Summary Cards ────────────────────────────────────── */
+
+.t212-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.t212-summary-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.t212-summary-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.t212-summary-value.bullish { color: #10b981; }
+.t212-summary-value.bearish { color: #ef4444; }
+.t212-summary-value.rare { color: #f59e0b; }
+
+.t212-summary-label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Signal split bar */
+.t212-signal-split {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.t212-split-buy { background: #10b981; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; color: #fff; font-weight: 600; min-width: 0; }
+.t212-split-hold { background: #475569; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; color: #cbd5e1; font-weight: 600; min-width: 0; }
+.t212-split-sell { background: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; color: #fff; font-weight: 600; min-width: 0; }
+
+/* ── Table ────────────────────────────────────────────── */
+
+.t212-table-wrap {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.t212-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.t212-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.t212-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.t212-row:last-child td {
+  border-bottom: none;
+}
+
+.t212-row:hover {
+  background: var(--bg-hover);
+}
+
+.t212-row.row-buy {
+  background: rgba(16, 185, 129, 0.03);
+}
+
+.t212-row.row-sell {
+  background: rgba(239, 68, 68, 0.03);
+}
+
+/* ── Cells ────────────────────────────────────────────── */
+
+.t212-cell-rank {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  width: 32px;
+}
+
+.t212-cell-symbol {
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.t212-ticker {
+  font-variant-numeric: tabular-nums;
+}
+
+.t212-cell-num {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.t212-cell-num.positive { color: #10b981; }
+.t212-cell-num.negative { color: #ef4444; }
+
+/* Score bar */
+.t212-cell-score {
+  min-width: 80px;
+}
+
+.t212-score-bar-wrap {
+  position: relative;
+  height: 20px;
+  background: var(--bg-surface);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.t212-score-bar {
+  height: 100%;
+  border-radius: 4px;
+  background: #475569;
+  transition: width 0.3s;
+}
+
+.t212-score-bar.strong { background: linear-gradient(90deg, #10b981, #34d399); }
+.t212-score-bar.weak { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+.t212-score-val {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+
+/* Signal chip */
+.t212-signal-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.t212-signal-chip.buy {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.t212-signal-chip.sell {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.t212-signal-chip.hold {
+  background: rgba(100, 116, 139, 0.15);
+  color: #94a3b8;
+}
+
+/* Trend dots */
+.t212-cell-trend {
+  min-width: 60px;
+}
+
+.t212-trend-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.t212-trend-dot {
+  display: flex;
+  align-items: center;
+}
+
+.t212-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* Risk badge */
+.t212-risk-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+}
+
+.t212-risk-badge.boost { color: #10b981; background: rgba(16,185,129,0.1); }
+.t212-risk-badge.penalty { color: #ef4444; background: rgba(239,68,68,0.1); }
+
+/* NA placeholder */
+.t212-na {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+/* ── Empty state ──────────────────────────────────────── */
+
+.t212-empty {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.t212-empty-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.t212-empty h2 {
+  font-size: 1.2rem;
+  color: var(--text-strong);
+  margin: 0 0 8px;
+}
+
+.t212-empty p {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* ── Loading / Error ──────────────────────────────────── */
+
+.t212-loading {
+  padding: 40px;
+}
+
+.t212-error {
+  padding: 20px;
+  text-align: center;
+  color: #ef4444;
+  font-size: 0.85rem;
+  background: rgba(239, 68, 68, 0.08);
+  border-radius: 10px;
+}

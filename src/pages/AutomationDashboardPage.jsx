@@ -1,20 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '../core/api/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './automation-dashboard.css';
-
-function BrokerBadge({ brokerId, connected }) {
-  const color = connected ? '#22c55e' : '#ef4444';
-  return (
-    <span className="ad-broker-badge" style={{ color, borderColor: color }}>
-      <span className="ad-broker-dot" style={{ background: color }} />
-      {brokerId}
-    </span>
-  );
-}
 
 export default function AutomationDashboardPage() {
   const [selectedSymbol, setSelectedSymbol] = useState(null);
@@ -46,6 +36,18 @@ export default function AutomationDashboardPage() {
     refetchOnWindowFocus: true,
   });
 
+  const queryClient = useQueryClient();
+
+  const toggleMutation = useMutation({
+    mutationFn: (body) => apiPost('/api/automation/toggle', body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation', 'status'] }),
+  });
+
+  const configMutation = useMutation({
+    mutationFn: (body) => apiPost('/api/automation/config', body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation', 'status'] }),
+  });
+
   const apiOnline = !statusQuery.isError;
   const scores = portfolioScoresQuery.data?.scores ?? [];
   const strategies = statusQuery.data?.activeStrategies ?? [];
@@ -67,16 +69,13 @@ export default function AutomationDashboardPage() {
 
       {!apiOnline && <ApiOfflineBanner />}
 
-      {/* ── Broker Bar ── */}
+      {/* ── Broker Config ── */}
       <motion.div className="ad-broker-bar" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         {providerQuery.isLoading ? (
           <LoadingSkeleton variant="text" lines={1} />
         ) : (
           <div className="ad-broker-list">
-            <BrokerBadge brokerId="MT5" connected={false} />
-            <BrokerBadge brokerId="Trading212" connected />
-            <BrokerBadge brokerId="Alpaca" connected={false} />
-            <span className="ad-broker-note">MT5 & Alpaca: no API keys configured</span>
+            <span className="ad-broker-note">Broker connection status available on <a href="/status/status" style={{color:'#60a5fa'}}>System Status</a> page</span>
           </div>
         )}
       </motion.div>
@@ -143,8 +142,70 @@ export default function AutomationDashboardPage() {
         </div>
 
         <div className="ad-col">
-          {/* Timeline */}
+          {/* Config Panel */}
           <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+            <h2 className="ad-panel-title">⚙ Broker Config</h2>
+            {statusQuery.isLoading ? <LoadingSkeleton variant="text" lines={3} /> : (
+              <div className="ad-config-list">
+                {Object.entries(statusQuery.data?.brokerStates || {}).map(([brokerId, bs]) => (
+                  <div key={brokerId} className="ad-config-row">
+                    <div className="ad-config-header">
+                      <span className="ad-config-broker">{brokerId}</span>
+                      <label className="ad-toggle">
+                        <input
+                          type="checkbox"
+                          checked={bs.enabled}
+                          onChange={() => toggleMutation.mutate({ target: brokerId, enabled: !bs.enabled })}
+                        />
+                        <span className="ad-toggle-slider" />
+                      </label>
+                    </div>
+                    {bs.enabled && (
+                      <div className="ad-config-fields">
+                        <label className="ad-config-field">
+                          <span>Trading</span>
+                          <label className="ad-toggle sm">
+                            <input
+                              type="checkbox"
+                              checked={bs.tradingEnabled}
+                              onChange={() => configMutation.mutate({ brokerId, tradingEnabled: !bs.tradingEnabled })}
+                            />
+                            <span className="ad-toggle-slider" />
+                          </label>
+                        </label>
+                        <label className="ad-config-field">
+                          <span>Threshold</span>
+                          <input
+                            type="number" min={40} max={95}
+                            value={bs.tradeThreshold}
+                            onChange={(e) => configMutation.mutate({ brokerId, tradeThreshold: parseInt(e.target.value) || 65 })}
+                            className="ad-config-input"
+                          />
+                        </label>
+                        <label className="ad-config-field">
+                          <span>Confirm</span>
+                          <label className="ad-toggle sm">
+                            <input
+                              type="checkbox"
+                              checked={bs.requireConfirmation}
+                              onChange={() => configMutation.mutate({ brokerId, requireConfirmation: !bs.requireConfirmation })}
+                            />
+                            <span className="ad-toggle-slider" />
+                          </label>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {Object.keys(statusQuery.data?.brokerStates || {}).length === 0 && (
+                  <p className="ad-empty">No brokers configured. Start the loop to initialize broker states.</p>
+                )}
+              </div>
+            )}
+          </motion.section>
+
+          {/* Timeline */}
+          <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
             <h2 className="ad-panel-title">⏱ Timeline {timelineEvents.length > 0 && <span style={{ fontSize: '0.7rem', color: 'var(--ink-soft)', fontWeight: 400 }}>({timelineEvents.length} events)</span>}</h2>
             {timelineQuery.isLoading && <LoadingSkeleton variant="text" lines={4} />}
             {timelineQuery.isError && (

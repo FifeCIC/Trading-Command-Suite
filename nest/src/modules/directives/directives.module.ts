@@ -45,6 +45,8 @@ import { PanicExhaustionAbsorptionDirective } from './implementations/panic-exha
 import { PriceActionDirective } from './implementations/price-action.directive';
 import { MomentumContinuationComboDirective } from './implementations/momentum-continuation.directive';
 import { SpeedMomentumDirective } from './implementations/speed-momentum.directive';
+import { MultiTimeframeTrendDirective } from './implementations/multi-timeframe-trend.directive';
+import { MicroSrLevelsDirective } from './implementations/micro-sr-levels.directive';
 import { ConfluenceReversalComboDirective } from './implementations/confluence-reversal.directive';
 import { NewsSentimentPositiveDirective } from './implementations/news-sentiment.directive';
 import { EarningsProximityDirective } from './implementations/earnings-proximity.directive';
@@ -61,6 +63,7 @@ import { EarningsMomentumDirective } from './implementations/earnings-momentum.d
 import { SocialBuzzDirective } from './implementations/social-buzz.directive';
 import { InsiderActivityDirective } from './implementations/insider-activity.directive';
 import { DilutionImpactDirective } from './implementations/dilution-impact.directive';
+import { RolloverRiskDirective } from './implementations/rollover-risk.directive';
 
 // MT5 ported indicators (Q156 — 17 directives)
 import { WilliamsRDirective } from './implementations/mt5-indicators.directives';
@@ -160,6 +163,8 @@ import { PositionSizeConfidenceDirective } from './implementations/position-size
     MomentumContinuationComboDirective,
     // Implemented — Speed / Scalp
     SpeedMomentumDirective,
+    MultiTimeframeTrendDirective,
+    MicroSrLevelsDirective,
     // Implemented — Trend
     PriceAboveSmaDirective,
     MaCrossoverDirective,
@@ -279,6 +284,7 @@ import { PositionSizeConfidenceDirective } from './implementations/position-size
     SocialBuzzDirective,
     InsiderActivityDirective,
     DilutionImpactDirective,
+    RolloverRiskDirective,
   ],
   exports: [
     DirectivesService,
@@ -310,6 +316,8 @@ export class DirectivesModule implements OnModuleInit {
     private readonly momentumCont: MomentumContinuationComboDirective,
     // Implemented — Speed / Scalp
     private readonly speedMomentum: SpeedMomentumDirective,
+    private readonly multiTfTrend: MultiTimeframeTrendDirective,
+    private readonly microSr: MicroSrLevelsDirective,
     // Implemented — Trend
     private readonly priceAboveSma: PriceAboveSmaDirective,
     private readonly maCrossover: MaCrossoverDirective,
@@ -408,6 +416,7 @@ export class DirectivesModule implements OnModuleInit {
     private readonly socialBuzz: SocialBuzzDirective,
     private readonly insiderActivity: InsiderActivityDirective,
     private readonly dilutionImpact: DilutionImpactDirective,
+    private readonly rolloverRisk: RolloverRiskDirective,
   ) {}
 
   onModuleInit() {
@@ -425,6 +434,8 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.momentumCont);
     // Implemented — Speed / Scalp
     this.directivesService.register(this.speedMomentum);
+    this.directivesService.register(this.multiTfTrend);
+    this.directivesService.register(this.microSr);
     // Implemented — Trend
     this.directivesService.register(this.priceAboveSma);
     this.directivesService.register(this.maCrossover);
@@ -525,5 +536,6 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.socialBuzz);
     this.directivesService.register(this.insiderActivity);
     this.directivesService.register(this.dilutionImpact);
+    this.directivesService.register(this.rolloverRisk);
   }
 }

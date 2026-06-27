@@ -110,3 +110,36 @@
 /* Why Panel */
 .ad-why-panel { }
 .ad-why-symbol { font-size: 1rem; font-weight: 700; margin: 0 0 0.5rem; }
+
+/* Config Panel */
+.ad-config-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.ad-config-row {
+  background: color-mix(in srgb, var(--panel) 92%, var(--bg));
+  border: 1px solid var(--line); border-radius: 8px; padding: 0.6rem 0.75rem;
+}
+.ad-config-header { display: flex; justify-content: space-between; align-items: center; }
+.ad-config-broker { font-weight: 700; font-size: 0.85rem; text-transform: capitalize; }
+.ad-config-fields { display: flex; gap: 1rem; margin-top: 0.5rem; flex-wrap: wrap; }
+.ad-config-field {
+  display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--ink-soft);
+}
+.ad-config-input {
+  width: 52px; padding: 2px 4px; border: 1px solid var(--line); border-radius: 4px;
+  background: var(--bg); color: var(--ink); font-size: 0.75rem; text-align: center;
+}
+
+/* Toggle switch */
+.ad-toggle { position: relative; display: inline-block; width: 36px; height: 20px; cursor: pointer; }
+.ad-toggle.sm { width: 28px; height: 16px; }
+.ad-toggle input { opacity: 0; width: 0; height: 0; }
+.ad-toggle-slider {
+  position: absolute; inset: 0; background: #64748b; border-radius: 20px; transition: 0.2s;
+}
+.ad-toggle-slider::before {
+  content: ''; position: absolute; height: 14px; width: 14px; left: 3px; bottom: 3px;
+  background: white; border-radius: 50%; transition: 0.2s;
+}
+.ad-toggle.sm .ad-toggle-slider::before { height: 10px; width: 10px; left: 2px; bottom: 3px; }
+.ad-toggle input:checked + .ad-toggle-slider { background: #22c55e; }
+.ad-toggle input:checked + .ad-toggle-slider::before { transform: translateX(16px); }
+.ad-toggle.sm input:checked + .ad-toggle-slider::before { transform: translateX(12px); }

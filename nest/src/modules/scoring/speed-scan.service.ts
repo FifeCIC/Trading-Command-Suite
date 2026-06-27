@@ -65,13 +65,20 @@ const SYMBOL_PROTOCOL_MAP: Record<string, string> = {
   GBPUSD: 'forex-session-v1',
   USDJPY: 'forex-session-v1',
   AUDUSD: 'forex-session-v1',
-  USDCAD: 'forex-session-v1',
   USDCHF: 'forex-session-v1',
   NZDUSD: 'forex-session-v1',
+  // CAD Sniper — all 5 CAD crosses
+  USDCAD: 'cad-sniper-v1',
+  EURCAD: 'cad-sniper-v1',
+  GBPCAD: 'cad-sniper-v1',
+  AUDCAD: 'cad-sniper-v1',
+  NZDCAD: 'cad-sniper-v1',
   // Indices
   DJI30: 'dow-speed-v1',
   US30: 'dow-speed-v1',
   UK100: 'ftse-speed-v1',
+  JPN225: 'nikkei-speed-v1',
+  EUSTX50: 'euro-stoxx-v1',
   CHINA50: 'china-speed-v1',
   // Stocks
   TSLA: 'tsla-speed-v1',
@@ -123,7 +130,7 @@ const DEFAULT_SPEED_SYMBOLS = [
   'XAUUSD', 'BTCUSD', 'BTC-USD', 'EURUSD', 'GBPUSD', 'USDJPY',
   'USOIL', 'ETHUSD', 'SPX500', 'TECH100', 'VIX',
   'AUDUSD', 'NZDUSD', 'USDCAD', 'USDCHF',
-  'SPY', 'QQQ', 'TSLA', 'DOGEUSD', 'DJI30', 'UK100',
+  'SPY', 'QQQ', 'TSLA', 'DOGEUSD', 'DJI30', 'UK100', 'JPN225', 'EUSTX50',
 ];
 
 @Injectable()
@@ -172,11 +179,19 @@ export class SpeedScanService {
           return { symbol, skipped: true, reason: `Insufficient bars (${timeframe}/1d)` };
         }
 
+        // Load higher timeframe bars for multi-timeframe directives
+        const [dayBars, hourBars, min15Bars] = await Promise.all([
+          this.marketData.getBars(symId, '1d', 30).catch(() => null),
+          this.marketData.getBars(symId, '1h', 30).catch(() => null),
+          this.marketData.getBars(symId, '15m', 30).catch(() => null),
+        ]);
+
         const protocol = getProtocolForSymbol(symbol);
         const score = await this.protocolGating.scoreWithGating(
           symbol,
           marketBars as any,
           protocol,
+          { dayBars: dayBars ?? undefined, hourBars: hourBars ?? undefined, min15Bars: min15Bars ?? undefined },
         );
 
         return {

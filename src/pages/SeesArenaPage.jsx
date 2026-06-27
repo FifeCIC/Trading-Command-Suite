@@ -2,47 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { useSearchParams } from 'react-router-dom';
-
-// ── Mock strategy/stack data ───────────────────────────────
-const MOCK_ARENA = {
-  stacks: [
-    { strategy: 'Forex Momentum', id: 'forex-momentum', color: '#00a63e', winRate: 0.62, symbols: [
-      { symbol: 'EURUSD', score: 92, signal: 'buy', prevScore: 88 },
-      { symbol: 'GBPUSD', score: 85, signal: 'buy', prevScore: 82 },
-      { symbol: 'USDJPY', score: 78, signal: 'buy', prevScore: 80 },
-      { symbol: 'AUDUSD', score: 71, signal: 'hold', prevScore: 69 },
-      { symbol: 'USDCAD', score: 65, signal: 'sell', prevScore: 70 },
-    ]},
-    { strategy: 'Tech Breakout', id: 'tech-breakout', color: '#0ea5a6', winRate: 0.58, symbols: [
-      { symbol: 'NVDA', score: 88, signal: 'buy', prevScore: 90 },
-      { symbol: 'MSFT', score: 72, signal: 'buy', prevScore: 68 },
-      { symbol: 'AAPL', score: 68, signal: 'hold', prevScore: 65 },
-      { symbol: 'GOOGL', score: 62, signal: 'hold', prevScore: 60 },
-      { symbol: 'META', score: 55, signal: 'sell', prevScore: 58 },
-    ]},
-    { strategy: 'Crypto Scalp', id: 'crypto-scalp', color: '#8f7dff', winRate: 0.45, symbols: [
-      { symbol: 'BTC-USD', score: 75, signal: 'sell', prevScore: 80 },
-      { symbol: 'ETH-USD', score: 70, signal: 'sell', prevScore: 72 },
-      { symbol: 'SOL-USD', score: 62, signal: 'hold', prevScore: 60 },
-      { symbol: 'DOGE-USD', score: 48, signal: 'sell', prevScore: 52 },
-      { symbol: 'XRP-USD', score: 40, signal: 'sell', prevScore: 38 },
-    ]},
-    { strategy: 'Mean Reversion', id: 'mean-reversion', color: '#ffb347', winRate: 0.55, symbols: [
-      { symbol: 'EURUSD', score: 81, signal: 'buy', prevScore: 78 },
-      { symbol: 'GBPUSD', score: 79, signal: 'buy', prevScore: 76 },
-      { symbol: 'SPY', score: 73, signal: 'buy', prevScore: 70 },
-      { symbol: 'QQQ', score: 66, signal: 'hold', prevScore: 64 },
-      { symbol: 'IWM', score: 58, signal: 'sell', prevScore: 60 },
-    ]},
-  ],
-  unifiedRanking: [
-    { rank: 1, symbol: 'EURUSD', score: 92, strategy: 'Forex Momentum', signal: 'buy' },
-    { rank: 2, symbol: 'NVDA', score: 88, strategy: 'Tech Breakout', signal: 'buy' },
-    { rank: 3, symbol: 'GBPUSD', score: 85, strategy: 'Forex Momentum', signal: 'buy' },
-    { rank: 4, symbol: 'EURUSD', score: 81, strategy: 'Mean Reversion', signal: 'buy' },
-    { rank: 5, symbol: 'USDJPY', score: 78, strategy: 'Forex Momentum', signal: 'buy' },
-  ],
-};
+import UnavailablePlaceholder from '../components/UnavailablePlaceholder';
 
 const TYPE_OPTIONS = ['All', 'CFD', 'Forex', 'Stocks', 'Crypto', 'Indices'];
 const STATUS_OPTIONS = ['All', 'Active', 'Draft'];
@@ -84,14 +44,29 @@ export default function SeesArenaPage() {
       try {
         const data = await apiGet(`/api/scoring/arena?type=${typeFilter.toLowerCase()}&status=${statusFilter.toLowerCase()}`);
         if (data?.stacks) return data;
-      } catch {}
-      return MOCK_ARENA;
+        return null;
+      } catch {
+        return null;
+      }
     },
     staleTime: 10_000,
     refetchInterval: 15_000,
   });
 
-  const data = arenaQuery.data || MOCK_ARENA;
+  const data = arenaQuery.data;
+
+  if (!data && !arenaQuery.isLoading) {
+
+  if (!data && !arenaQuery.isLoading) {
+    return (
+      <UnavailablePlaceholder
+        title="SEES Arena"
+        message="The arena scoring endpoint returned no data. The scoring pipeline may need to run first, or the arena endpoint may not be fully implemented."
+        action="View Live Ordering Stack"
+        actionUrl="/scoring/live-ordering-stack"
+      />
+    );
+  }
 
   // Update URL when filters change
   useEffect(() => {
@@ -165,4 +140,5 @@ export default function SeesArenaPage() {
       </div>
     </div>
   );
+}
 }

@@ -85,7 +85,7 @@ export class PortfolioService {
     // Summary
     const totalCost = positions.reduce((s, pos) => s + pos.shares * pos.avgCost, 0);
     const totalPnl = positions.reduce((s, pos) => s + pos.pnl, 0);
-    const cash = brokerAccount?.balance ? brokerAccount.balance - brokerAccount.margin : 0;
+    const cash = brokerAccount?.balance ?? 0;
     const pnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
 
     const summary: PortfolioSummary = {

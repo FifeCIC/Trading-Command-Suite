@@ -581,8 +581,8 @@ export class Trading212Adapter implements IProviderAdapter {
     return {
       brokerId: this.id,
       brokerName: this.name,
-      balance: cash.total,
-      equity: cash.total,
+      balance: cash.free,       // Free/available cash — NOT cash.total (which includes blocked)
+      equity: cash.total,       // Total cash including blocked (margin collateral)
       margin: cash.blocked ?? 0,
       marginFree: cash.free,
       marginLevel: cash.total > 0 ? (cash.free / cash.total) * 100 : null,

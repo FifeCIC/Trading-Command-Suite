@@ -21,6 +21,9 @@ export const PAGE_DATA_STATUS = {
   'trade-journal': { status: 'mock', note: 'Local state only' },
   'mt5-connection-manager': { status: 'live', source: 'MT5 Bridge' },
   'accounts-dashboard': { status: 'partial', source: 'Trading212 placeholder' },
+  'speed-trading': { status: 'live', source: 'MT5 Bridge + speed-scan' },
+  'btc-speed': { status: 'mock', note: 'Awaiting crypto-enabled MT5 broker' },
+  'trading212-portfolio': { status: 'live', source: 'Trading212 API + gated scoring' },
 
   // ── Scoring ──
   'directives-manager': { status: 'live', source: 'DB + Directive Registry' },

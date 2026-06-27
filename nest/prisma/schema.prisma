@@ -831,6 +831,7 @@ model TradingStrategy {
   description   String?  @db.Text
   protocolId    String   @db.VarChar(36)
   symbol        String   @db.VarChar(20)
+  brokerId      String   @default("mt5") @db.VarChar(50)
   timeframe     String   @db.VarChar(10)   @default("5m")
   minComposite  Float    @default(65)
   minRarityBand String?  @db.VarChar(20)

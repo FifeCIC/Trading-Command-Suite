@@ -112,8 +112,17 @@ export class ProtocolGatingService {
     symbol: string,
     bars: import('../directives/interfaces/directive.interface').MarketBar[],
     protocolId?: string,
+    higherTfBars?: {
+      dayBars?: import('../directives/interfaces/directive.interface').MarketBar[];
+      hourBars?: import('../directives/interfaces/directive.interface').MarketBar[];
+      min15Bars?: import('../directives/interfaces/directive.interface').MarketBar[];
+    },
   ): Promise<GatedScore> {
-    const input: DirectiveInput = { symbol, bars };
+    const input: DirectiveInput = {
+      symbol,
+      bars,
+      ...(higherTfBars ?? {}),
+    };
 
     // Select protocol groups
     const activeGroups = protocolId

@@ -1,0 +1,221 @@
+/* ═══════════════════════════════════════════════════════════
+   Speed Decision Panel
+   Compact dashboard for multi-timeframe trend + S/R at a glance.
+   ═══════════════════════════════════════════════════════════ */
+
+.sdp-panel {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-family: 'Inter', system-ui, sans-serif;
+  min-width: 220px;
+}
+
+.sdp-panel--compact {
+  padding: 10px 12px;
+  min-width: 180px;
+}
+
+.sdp-panel--error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.sdp-error-icon {
+  font-size: 1.1rem;
+}
+
+/* ── Header ──────────────────────────────────────────── */
+
+.sdp-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.sdp-symbol {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #e2e8f0;
+  letter-spacing: 0.3px;
+}
+
+.sdp-price {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  font-variant-numeric: tabular-nums;
+}
+
+.sdp-composite {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sdp-composite--buy {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.sdp-composite--sell {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.sdp-composite--hold {
+  background: rgba(100, 116, 139, 0.15);
+  color: #94a3b8;
+}
+
+/* ── Sections ────────────────────────────────────────── */
+
+.sdp-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.sdp-section-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  min-width: 36px;
+}
+
+/* ── Trend Dots ──────────────────────────────────────── */
+
+.sdp-trend-dots {
+  display: flex;
+  gap: 10px;
+}
+
+.sdp-trend-dot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.sdp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.sdp-dot-label {
+  font-weight: 500;
+  font-size: 0.7rem;
+}
+
+/* ── S/R Levels ──────────────────────────────────────── */
+
+.sdp-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.sdp-level-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.sdp-level--support {
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.sdp-level--resistance {
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.sdp-level-label {
+  font-weight: 600;
+  color: #94a3b8;
+  min-width: 12px;
+}
+
+.sdp-level-price {
+  color: #cbd5e1;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.sdp-level-dist {
+  margin-left: auto;
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+
+/* ── Bias ─────────────────────────────────────────────── */
+
+.sdp-bias {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #334155;
+  justify-content: center;
+  gap: 6px;
+}
+
+.sdp-bias-icon {
+  font-size: 0.9rem;
+}
+
+.sdp-bias-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.sdp-bias--buy {
+  color: #10b981;
+}
+
+.sdp-bias--sell {
+  color: #ef4444;
+}
+
+.sdp-bias--hold {
+  color: #94a3b8;
+}
+
+/* ── Detail row ──────────────────────────────────────── */
+
+.sdp-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #1e293b;
+  font-size: 0.68rem;
+  color: #64748b;
+}
+
+.sdp-rarity {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.sdp-risk {
+  font-variant-numeric: tabular-nums;
+}

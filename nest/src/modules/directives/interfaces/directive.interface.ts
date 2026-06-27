@@ -36,6 +36,10 @@ export interface MarketBar {
 export interface DirectiveInput {
   symbol: string;
   bars: MarketBar[]; // Price candles ordered oldest → newest
+  /** Higher-timeframe bars for multi-timeframe directives. Optional — most directives ignore these. */
+  dayBars?: MarketBar[];
+  hourBars?: MarketBar[];
+  min15Bars?: MarketBar[];
 }
 
 export interface DirectiveResult {

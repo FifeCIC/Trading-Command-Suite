@@ -110,8 +110,10 @@ export default function CandlePatternChart({ bars, patterns, onPatternClick, hig
       }).filter(Boolean);
 
       if (markers.length > 0) {
-        // lightweight-charts v4: markers go directly on the candlestick series
-        candleSeriesRef.current.setMarkers(markers);
+        // lightweight-charts v5: setMarkers removed; wrap safely
+        if (typeof candleSeriesRef.current.setMarkers === 'function') {
+          candleSeriesRef.current.setMarkers(markers);
+        }
       }
     }
 

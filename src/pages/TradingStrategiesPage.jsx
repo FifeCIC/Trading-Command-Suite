@@ -3,14 +3,6 @@ import './trading-strategies.css';
 
 const TRADING = 'http://localhost:3201/api/trading/strategies';
 
-const MOCK_STRATEGIES = [
-  { id: 'mock-1', symbol: 'NVDA', name: 'Dip Accumulator', protocolId: 'conviction-dip', timeframe: '1D', minComposite: 65, slPct: 3, tpPct: 8, baseSize: 10, mode: 'live', active: true, lastEvaluatedAt: new Date().toISOString(), lastSignal: 'entry', lastComposite: 72.3, evaluationCount: 45 },
-  { id: 'mock-2', symbol: 'BTCUSD', name: 'Speed Scalper', protocolId: 'btc-speed-v1', timeframe: '1M', minComposite: 80, slPct: 0.5, tpPct: 1.2, baseSize: 0.01, mode: 'demo', active: true, lastEvaluatedAt: new Date().toISOString(), lastSignal: 'watch', lastComposite: 88.1, evaluationCount: 230 },
-  { id: 'mock-3', symbol: 'TSLA', name: 'Momo Break', protocolId: 'momentum-breakout', timeframe: '4H', minComposite: 70, slPct: 4, tpPct: 10, baseSize: 25, mode: 'live', active: false, lastEvaluatedAt: null, lastSignal: null, lastComposite: null, evaluationCount: 0 },
-  { id: 'mock-4', symbol: 'EURUSD', name: 'Swing Reverter', protocolId: 'mean-reversion-swing', timeframe: '1H', minComposite: 60, slPct: 1.5, tpPct: 3, baseSize: 1000, mode: 'demo', active: true, lastEvaluatedAt: new Date().toISOString(), lastSignal: 'defensive', lastComposite: 54.2, evaluationCount: 67 },
-  { id: 'mock-5', symbol: 'AAPL', name: 'Earnings Play', protocolId: 'earnings-whisper', timeframe: '1D', minComposite: 75, slPct: 2, tpPct: 5, baseSize: 50, mode: 'live', active: true, lastEvaluatedAt: new Date().toISOString(), lastSignal: 'entry', lastComposite: 79.8, evaluationCount: 12 },
-];
-
 // ── Strategy intelligence maps ──
 const PROTOCOL_INTEL = {
   'btc-speed-v1': {
@@ -104,13 +96,12 @@ export default function TradingStrategiesPage() {
       .then(r => r.ok ? r.json() : [])
       .then(data => {
         if (cancelled) return;
-        const arr = Array.isArray(data) ? data : [];
-        setTrading(arr.length > 0 ? arr : MOCK_STRATEGIES);
+        setTrading(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch(e => {
         if (cancelled) return;
-        setTrading(MOCK_STRATEGIES);
+        setTrading([]);
         setError(e.message);
         setLoading(false);
       });

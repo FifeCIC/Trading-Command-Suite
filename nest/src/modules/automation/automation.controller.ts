@@ -3,6 +3,7 @@ import { SymbolDataCacheService } from './symbol-data-cache.service';
 import { ProtocolRunnerService } from './protocol-runner.service';
 import { ExecutionQueueService } from './execution-queue.service';
 import { MultiProtocolRankingService } from './multi-protocol-ranking.service';
+import { AutomationLoopService } from './automation-loop.service';
 import { PrismaService } from '../../database/prisma.service';
 import type { CacheStats, CacheDebugEntry } from './symbol-data-cache.service';
 import type { ProtocolRunConfig, RunResult } from './protocol-runner.service';
@@ -16,6 +17,7 @@ export class AutomationController {
     private readonly runner: ProtocolRunnerService,
     private readonly queue: ExecutionQueueService,
     private readonly ranking: MultiProtocolRankingService,
+    private readonly loop: AutomationLoopService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -208,10 +210,9 @@ export class AutomationController {
    */
   @Get('status')
   async getStatus() {
-    const brokerStates: any[] = [];
-    const activeStrategies: any[] = [];
+    const loopState = this.loop.getState();
 
-    // Active strategies from DB
+    const activeStrategies: any[] = [];
     if (this.prisma.isAvailable) {
       try {
         const strategies = await (this.prisma as any).tradingStrategy.findMany({
@@ -236,13 +237,147 @@ export class AutomationController {
     }
 
     return {
-      loopEnabled: false, // not yet built
-      brokerStates,
+      loopEnabled: loopState.loopEnabled,
+      tickIntervalMs: loopState.tickIntervalMs,
+      tickCount: loopState.tickCount,
+      lastTickAt: loopState.lastTickAt,
+      nextTickAt: loopState.nextTickAt,
+      lastTickMs: loopState.lastTickMs,
+      globalRiskMultiplier: loopState.globalRiskMultiplier,
+      brokerStates: loopState.brokerStates,
       activeStrategies,
-      pendingActions: [],
-      activeTimelineEvents: [],
-      lastTickAt: null,
-      nextTickAt: null,
+      pendingActions: loopState.pendingActions,
+      activeTimelineEvents: loopState.activeTimelineEvents.slice(0, 20),
     };
+  }
+
+  // ── Loop Control ─────────────────────────────────────
+
+  /** POST /api/automation/start — start the automation loop */
+  @Post('start')
+  startLoop() {
+    return this.loop.start();
+  }
+
+  /** POST /api/automation/stop — stop the automation loop */
+  @Post('stop')
+  stopLoop() {
+    return this.loop.stop();
+  }
+
+  /** POST /api/automation/interval — change tick interval */
+  @Post('interval')
+  setInterval(@Body() body: { ms: number }) {
+    this.loop.setIntervalMs(body.ms);
+    return { intervalMs: this.loop.state.tickIntervalMs };
+  }
+
+  /** POST /api/automation/run-now — trigger immediate tick */
+  @Post('run-now')
+  async runNow() {
+    const decisions = await this.loop.tick();
+    return { run: true, decisions };
+  }
+
+  /** POST /api/automation/emergency-stop */
+  @Post('emergency-stop')
+  emergencyStop() {
+    return this.loop.emergencyStop();
+  }
+
+  /** POST /api/automation/confirm-action — approve queued trade */
+  @Post('confirm-action')
+  confirmAction(@Body() body: { actionId: string }) {
+    return this.loop.confirmAction(body.actionId);
+  }
+
+  /** POST /api/automation/reject-action — reject queued trade */
+  @Post('reject-action')
+  rejectAction(@Body() body: { actionId: string }) {
+    return this.loop.rejectAction(body.actionId);
+  }
+
+  /** POST /api/automation/toggle — pause/resume loop or broker */
+  @Post('toggle')
+  toggle(@Body() body: { target?: string; enabled?: boolean }) {
+    const target = body.target || 'loop';
+    if (target === 'loop') {
+      if (body.enabled ?? !this.loop.state.loopEnabled) {
+        return this.loop.start();
+      } else {
+        return this.loop.stop();
+      }
+    }
+    // Per-broker toggle
+    if (this.loop.state.brokerStates[target]) {
+      this.loop.state.brokerStates[target].enabled = body.enabled ?? !this.loop.state.brokerStates[target].enabled;
+      return { brokerId: target, enabled: this.loop.state.brokerStates[target].enabled };
+    }
+    return { error: `Unknown target: ${target}` };
+  }
+
+  /** POST /api/automation/config — update broker config */
+  @Post('config')
+  updateConfig(@Body() body: { brokerId: string; tradingEnabled?: boolean; tradeThreshold?: number; requireConfirmation?: boolean; scoreIntervalMs?: number }) {
+    const bs = this.loop.state.brokerStates[body.brokerId];
+    if (!bs) return { error: `Unknown broker: ${body.brokerId}` };
+    if (body.tradingEnabled !== undefined) bs.tradingEnabled = body.tradingEnabled;
+    if (body.tradeThreshold !== undefined) bs.tradeThreshold = body.tradeThreshold;
+    if (body.requireConfirmation !== undefined) bs.requireConfirmation = body.requireConfirmation;
+    if (body.scoreIntervalMs !== undefined) {
+      bs.scoreIntervalMs = body.scoreIntervalMs;
+    }
+    return { brokerId: body.brokerId, config: bs };
+  }
+
+  // ── Scoring Strategies ───────────────────────────────
+
+  /** GET /api/automation/scoring-strategies */
+  @Get('scoring-strategies')
+  getScoringStrategies() {
+    return this.loop.scoringStrategies;
+  }
+
+  /** POST /api/automation/scoring-strategies */
+  @Post('scoring-strategies')
+  addScoringStrategy(@Body() body: {
+    name: string; protocolId: string; watchlistName: string;
+    brokerId: string; mode?: string; tradeThreshold?: number;
+    baseSize?: number; slPct?: number; tpPct?: number;
+  }) {
+    const id = `ss-${Date.now()}`;
+    const strat = {
+      id,
+      name: body.name,
+      protocolId: body.protocolId,
+      watchlistName: body.watchlistName,
+      brokerId: body.brokerId || 'mt5',
+      mode: (body.mode as any) || 'manual',
+      tradeThreshold: body.tradeThreshold ?? 60,
+      baseSize: body.baseSize ?? 0.01,
+      slPct: body.slPct ?? 1.0,
+      tpPct: body.tpPct ?? 1.5,
+      enabled: true,
+      tradingEnabled: false,
+    };
+    this.loop.scoringStrategies.push(strat);
+    return strat;
+  }
+
+  /** DELETE /api/automation/scoring-strategies/:id */
+  @Delete('scoring-strategies/:id')
+  removeScoringStrategy(@Param('id') id: string) {
+    this.loop.scoringStrategies = this.loop.scoringStrategies.filter(s => s.id !== id);
+    return { removed: id };
+  }
+
+  /** POST /api/automation/scoring-strategies/:id/toggle */
+  @Post('scoring-strategies/:id/toggle')
+  toggleScoringStrategy(@Param('id') id: string, @Body() body: { enabled?: boolean; tradingEnabled?: boolean }) {
+    const s = this.loop.scoringStrategies.find(s => s.id === id);
+    if (!s) return { error: 'Not found' };
+    if (body.enabled !== undefined) s.enabled = body.enabled;
+    if (body.tradingEnabled !== undefined) s.tradingEnabled = body.tradingEnabled;
+    return s;
   }
 }

@@ -148,7 +148,9 @@ export default function BacktestChart({ data, symbol, loading, showSignalsOnly =
         text: s.label,
         size: 2,
       }));
-      candleSeries.setMarkers(markers);
+      if (typeof candleSeries.setMarkers === 'function') {
+        candleSeries.setMarkers(markers);
+      }
     }
 
     // Crosshair subscription

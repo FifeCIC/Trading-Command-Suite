@@ -18,6 +18,7 @@ import MultiStrategyComparisonPage from './pages/MultiStrategyComparisonPage';
 import ScenarioAnalysisPage from './pages/ScenarioAnalysisPage';
 import FaqPage from './pages/FaqPage';
 import PortfolioPage from './pages/PortfolioPage';
+import Trading212PortfolioPage from './pages/Trading212PortfolioPage';
 import Mt5TradingPage from './pages/Mt5TradingPage';
 import TradeHistoryPage from './pages/TradeHistoryPage';
 import TradeJournalPage from './pages/TradeJournalPage';
@@ -75,6 +76,8 @@ import StrategyWizardPage from './pages/StrategyWizardPage';
 import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
 import SymbolDetailPage from './pages/SymbolDetailPage';
 import SpeedTradingPage from './pages/SpeedTradingPage';
+import BtcSpeedTradingPage from './pages/BtcSpeedTradingPage';
+import GoldSpeedTradingPage from './pages/GoldSpeedTradingPage';
 import SnapshotLibraryPage from './pages/SnapshotLibraryPage';
 import CalculatorsPage from './pages/CalculatorsPage';
 import SystemStatusPage from './pages/SystemStatusPage';
@@ -560,6 +563,18 @@ function AppShell() {
 
     if (secondaryView === 'speed-trading') {
       return <SpeedTradingPage />;
+    }
+
+    if (secondaryView === 'btc-speed') {
+      return <BtcSpeedTradingPage />;
+    }
+
+    if (secondaryView === 'gold-speed') {
+      return <GoldSpeedTradingPage />;
+    }
+
+    if (secondaryView === 'trading212-portfolio') {
+      return <Trading212PortfolioPage />;
     }
 
     if (secondaryView === 'trading-plans') {

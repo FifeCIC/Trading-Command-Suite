@@ -6,6 +6,7 @@ import { XTREND_SPEED_SYMBOLS, getSymbolCategory, SYMBOL_CATEGORIES } from '../d
 import { getProtocolsForSymbol } from '../data/speed-protocols';
 import SpeedChart from '../components/SpeedChart';
 import SeasonalityHeatmap from '../components/SeasonalityHeatmap';
+import SpeedDecisionPanel from '../components/SpeedDecisionPanel';
 import './speed-trading.css';
 
 const SIZE_PRESETS = [1, 5, 10];
@@ -512,6 +513,9 @@ export default function SpeedTradingPage() {
             />
           </svg>
         </div>
+
+        {/* ── Speed Decision Panel ── */}
+        <SpeedDecisionPanel symbol={symbol} compact />
 
         {/* Chart area */}
         <div className="st-chart">

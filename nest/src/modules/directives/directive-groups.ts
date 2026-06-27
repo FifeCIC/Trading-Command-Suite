@@ -75,6 +75,7 @@ export const DIRECTIVE_GROUPS: DirectiveGroup[] = [
       'volatility-regime',
       'liquidity-check',
       'budget-gate',
+      'rollover-risk',
     ],
   },
 ];
@@ -130,6 +131,8 @@ export const BTC_SPEED_GROUPS: DirectiveGroup[] = [
       'atr-expansion',        // 100 — Vol opportunity
       'rsi-oversold',         // 120 — Oversold bounce
       'support-resistance',   // 100 — Round numbers
+      'multi-timeframe-trend',// 120 — 1D/1H/15M alignment
+      'micro-sr-levels',      // 100 — Micro S/R levels
       'rsi-overbought',       // 100 — Overbought reversion
       'session-timing-filter',// 100 — Session quality
     ],
@@ -223,6 +226,8 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
           'rsi-oversold',         // 120 — Tick-level oversold bounce
           'rsi-overbought',       // 100 — Tick-level overbought reversion
           'support-resistance',   // 100 — Micro S/R (round numbers, prior wicks)
+          'multi-timeframe-trend',// 120 — 1D/1H/15M trend alignment
+          'micro-sr-levels',      // 100 — Session S/R, VWAP, round numbers
           'atr-expansion',        // 100 — Micro ATR for stop placement
           'session-timing-filter',// 100 — Only trade liquid sessions
         ],
@@ -1059,6 +1064,110 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     idealFor: 'Gold EFTs, XAUUSD CFD positions, macro-driven gold exposure. Best when DXY is weak and real rates are falling.',
   },
 
+  // ── JPN225: Nikkei Speed Scalp V1 ──
+
+  'nikkei-speed-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'Nikkei Micro-Structure',
+        description: 'JPN225 follows Nikkei 225 futures — yen sensitivity is key. Active Tokyo session only.',
+        weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',       // 120 — Nikkei futures momentum
+          'bollinger-squeeze',    // 100 — Squeeze before Tokyo open
+          'volume-confirmation',  // 100 — TSE volume profile
+          'atr-expansion',        // 100 — JPY-denominated ATR
+          'rsi-oversold',         // 120 — BOJ dip buying pattern
+          'rsi-overbought',       // 100 — Overbought exporters
+          'support-resistance',   // 100 — Nikkei fib levels
+          'session-timing-filter',// 100 — Tokyo session only
+        ],
+        directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
+      },
+      {
+        id: 'sentiment', name: 'Japan Macro',
+        description: 'JPN225 sensitive to USDJPY, BOJ policy, Asian risk appetite',
+        weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',       // 100 — BOJ, Japan econ data, Asia risk
+          'analyst-consensus',    // 100 — Nikkei analyst targets
+        ],
+      },
+      {
+        id: 'risk', name: 'Asian Session Risk',
+        description: 'JPN225 trades Tokyo hours — thin before open, gap risk from US close',
+        weight: 0.35, isRiskGate: true, minMultiplier: 0.4, maxMultiplier: 1.2,
+        directiveIds: [
+          'volatility-regime',    // 100 — Nikkei vol during BOJ/Asia events
+          'liquidity-check',      // 100 — Check TSE spreads
+          'position-concentration',// 100 — Index allocation cap
+          'session-open-effect',  // 100 — Tokyo open (00:00 UTC)
+          'rollover-risk',        // 100 — Gap risk around rollover
+        ],
+      },
+    ],
+    name: 'Nikkei Speed Scalp V1',
+    description: 'Sub-minute JPN225/Nikkei225 scalping protocol. Yen-sensitive index (exporters, tech, auto). Tokyo session only (00:00–06:00 UTC). BOJ policy and USDJPY moves are primary drivers.',
+    tradingStyle: 'Tick Scalp',
+    recommendedTimeframe: '5s–30s',
+    avgHoldTime: 'Seconds to a few minutes',
+    winRateTarget: '60–70%',
+    idealFor: 'XTrend JPN225 speed trading during Tokyo session. Best during BOJ announcements, Japan econ data, and USDJPY volatility.',
+  },
+
+  // ── EUSTX50: Euro Stoxx Speed Scalp V1 ──
+
+  'euro-stoxx-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'Euro Stoxx Micro-Structure',
+        description: 'EUSTX50 is the Eurozone blue-chip index — banks, luxury, industrials. Frankfurt/Paris session.',
+        weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',       // 120 — Euro Stoxx momentum
+          'bollinger-squeeze',    // 100 — Squeeze before European open
+          'volume-confirmation',  // 100 — Euronext/Xetra volume
+          'atr-expansion',        // 100 — EUR-denominated ATR
+          'rsi-oversold',         // 120 — ECB dip buying pattern
+          'rsi-overbought',       // 100 — Overbought luxury/industrial
+          'support-resistance',   // 100 — Euro Stoxx round numbers
+          'session-timing-filter',// 100 — European session only
+        ],
+        directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
+      },
+      {
+        id: 'sentiment', name: 'Eurozone Macro',
+        description: 'EUSTX50 sensitive to EUR, ECB policy, EU political risk',
+        weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',       // 100 — ECB, EU econ data, political risk
+          'analyst-consensus',    // 100 — Euro Stoxx analyst targets
+        ],
+      },
+      {
+        id: 'risk', name: 'European Session Risk',
+        description: 'EUSTX50 trades European hours — gap risk from US close, Asian open',
+        weight: 0.35, isRiskGate: true, minMultiplier: 0.45, maxMultiplier: 1.2,
+        directiveIds: [
+          'volatility-regime',    // 100 — EStoxx vol during ECB/EU events
+          'liquidity-check',      // 100 — Check Eurex spreads
+          'position-concentration',// 100 — Index allocation cap
+          'session-open-effect',  // 100 — European open (07:00 UTC)
+          'rollover-risk',        // 100 — Gap risk around rollover
+        ],
+      },
+    ],
+    name: 'Euro Stoxx Speed Scalp V1',
+    description: 'Sub-minute EUSTX50/EuroStoxx50 scalping protocol. Eurozone blue-chip index (SAP, LVMH, ASML, Siemens, TotalEnergies). Frankfurt/Paris session (07:00–16:30 UTC). ECB policy and EUR moves are primary drivers.',
+    tradingStyle: 'Tick Scalp',
+    recommendedTimeframe: '5s–30s',
+    avgHoldTime: 'Seconds to a few minutes',
+    winRateTarget: '60–70%',
+    idealFor: 'XTrend EUSTX50 speed trading during European session. Best during ECB announcements, EU econ data, and EUR volatility.',
+  },
+
+  // ── Default fallback ──
+
   // ── OIL: Supply/Demand & Geopolitics Protocol ──
 
   'oil-supply-v1': {
@@ -1153,5 +1262,55 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Minutes to hours',
     winRateTarget: '60–70%',
     idealFor: 'Forex pairs during London/NY session overlap. Mean-reverting within daily ranges, trend-following on session breaks.',
+  },
+
+  // ── CAD Sniper V1 ──
+
+  'cad-sniper-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'CAD Technical Structure',
+        description: 'CAD pairs trend strongly with oil — momentum, EMA structure, multi-TF alignment, micro S/R',
+        weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',         // 120 — Core velocity on CAD pairs
+          'multi-timeframe-trend',  // 120 — D/4H/1H alignment for trend bias
+          'micro-sr-levels',        // 100 — Key S/R on CAD crosses
+          'ema-structure',          // 100 — 9/21/50 EMA alignment
+          'bollinger-squeeze',      // 100 — Pre-oil-news compression
+          'volume-confirmation',    // 100 — Volume confirms CAD moves
+          'support-resistance',     // 100 — Key levels (USDCAD: 1.30, 1.35, 1.40)
+          'session-timing-filter',  // 100 — US/Canada session only
+        ],
+        directiveMaxScores: { 'speed-momentum': 120, 'multi-timeframe-trend': 120 },
+      },
+      {
+        id: 'sentiment', name: 'CAD Macro Drivers',
+        description: 'Oil correlation is the primary CAD driver — WTI up means CAD up. BOC decisions, GDP, employment.',
+        weight: 0.20, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'cad-usd-oil-correlation', // 100 — WTI/CAD correlation
+          'news-sentiment',          // 100 — BOC rate decisions, Canada GDP, OPEC
+        ],
+      },
+      {
+        id: 'risk', name: 'CAD Risk Gates',
+        description: 'BOC events, oil shock, cross-pair correlation drag',
+        weight: 0.40, isRiskGate: true, minMultiplier: 0.4, maxMultiplier: 1.25,
+        directiveIds: [
+          'volatility-regime',     // 100 — Kill during BOC/oil shock volatility
+          'liquidity-check',       // 100 — Cross CAD pairs can have wide spreads
+          'position-concentration',// 100 — Don't over-allocate across multiple CAD pairs
+          'correlation-drag',      // 100 — Multiple CAD positions = amplified oil risk
+        ],
+      },
+    ],
+    name: 'CAD Sniper V1',
+    description: 'CAD-focused protocol for all 5 CAD crosses: USDCAD, EURCAD, GBPCAD, AUDCAD, NZDCAD. CAD is the commodity currency — oil correlation drives sustained trends ideal for speed scalping.',
+    tradingStyle: 'Trend / Scalp',
+    recommendedTimeframe: '5s–15m',
+    avgHoldTime: 'Seconds to minutes',
+    winRateTarget: '60–70%',
+    idealFor: 'US/Canada session (14:30–21:00 GMT). Best during oil inventory releases (Wed 15:30 GMT) and BOC rate decisions. Avoid Canadian holidays when liquidity drops.',
   },
 };

@@ -68,6 +68,50 @@ const DIAGRAMS = [
     end`,
   },
   {
+    id: 'sees-automation',
+    label: 'SEES Automation Lifecycle + User Journey',
+    desc: 'The full system flow wrapped in the automation loop, showing which page the user visits at each step. Distinguishes SEES Strategies (Watchlist+Protocol) from Trading Strategies (execution instances). See docs/architecture/SEES-AUTOMATION-LIFECYCLE.md.',
+    code: `flowchart TB
+    subgraph SETUP["1. SETUP"]
+        A1["Configure Providers"] --> A2["Import Market Data"]
+        A2 --> A3["Create Watchlists"]
+        A3 --> A4["Build Protocols"]
+        A4 --> A5["SEES Strategy = Watchlist + Protocol"]
+    end
+    subgraph AUTOMATION["2. AUTOMATION LOOP"]
+        B1["Start Loop"] --> B2["Enable MT5 Broker"]
+        B2 --> B3["Trading Strategy = Protocol + Symbol + Entry Rules"]
+        B3 --> B4["Tick: discover active strategies, score symbols, evaluate entries"]
+    end
+    subgraph SCORING["3. SEES SCORING"]
+        C1["MT5 / Yahoo / DB"] --> C2["89 Directives"]
+        C2 --> C3["Protocol Gating"]
+        C3 --> C4["Composite Score: BUY / HOLD / SELL"]
+    end
+    subgraph DECISION["4. DECISION"]
+        D1{"Score >= Threshold?"} -->|No| D2["Watch"]
+        D1 -->|Yes| D3{"Risk Gate?"}
+        D3 -->|Blocked| D4["Rejected"]
+        D3 -->|Passed| D5{"Mode?"}
+        D5 -->|manual| D6["Alert"]
+        D5 -->|semi-auto| D7["Suggest"]
+        D5 -->|auto| D8["Auto-execute"]
+    end
+    subgraph EXECUTION["5. EXECUTION"]
+        E1["MT5 Bridge"] --> E2["Order Placed"]
+    end
+    subgraph MONITOR["6. MONITOR"]
+        F1["Position Tracker"] --> F2["P/L Updates"]
+    end
+    A5 --> B3
+    B4 --> C1
+    C4 --> D1
+    D7 --> E1
+    D8 --> E1
+    E2 --> F1
+    F2 -.->|Adjust| B3`,
+  },
+  {
     id: 'data-arch',
     label: 'Data Architecture',
     desc: 'End-to-end data flow: external APIs → import → transformation → scoring → trading → analytics, with cache and queue layers.',

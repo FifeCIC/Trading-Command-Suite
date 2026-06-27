@@ -23,6 +23,7 @@ export const SPEED_PROTOCOLS = [
   { id: 'tsla-speed-v1',    symbols: ['TSLA'],                 style: 'Tick Scalp',  riskMin: 0.40, riskMax: 1.35 },
   { id: 'doge-speed-v1',    symbols: ['DOGEUSD'],              style: 'Tick Scalp',  riskMin: 0.35, riskMax: 1.40 },
   { id: 'china-speed-v1',   symbols: ['CHINA50'],              style: 'Tick Scalp',  riskMin: 0.35, riskMax: 1.30 },
+  { id: 'cad-sniper-v1',    symbols: ['USDCAD','EURCAD','GBPCAD','AUDCAD','NZDCAD'], style: 'Trend/Scalp', riskMin: 0.40, riskMax: 1.25 },
   { id: 'forex-session-v1', symbols: ['EURUSD','GBPUSD','USDJPY','AUDUSD','USDCAD','USDCHF','NZDUSD'], style: 'Session', riskMin: 0.30, riskMax: 1.20 },
   { id: 'vix-spike-v1',     symbols: ['VIX'],                  style: 'Mean Rev',    riskMin: 0.30, riskMax: 1.20 },
   { id: 'btc-speed-v1',     symbols: ['BTCUSD'],               style: 'Monitor',     riskMin: 0.30, riskMax: 1.20 },

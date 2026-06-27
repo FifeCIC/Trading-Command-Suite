@@ -31,6 +31,9 @@ export const NAV_TREE = {
       { id: 'positions-monitor', label: 'Positions Monitor', icon: '◈' },
       { id: 'trade-journal', label: 'Trade Journal', icon: '▤' },
       { id: 'speed-trading', label: 'Speed Trading', icon: '⚡' },
+      { id: 'gold-speed', label: 'Gold Speed', icon: '🥇' },
+      // { id: 'btc-speed', label: 'Bitcoin Speed', icon: '₿' },  // MOCK — awaiting crypto-enabled MT5 broker
+      { id: 'trading212-portfolio', label: 'Trading212 Portfolio', icon: '📈' },
       { id: 'trading-plans', label: 'Trading Plans', icon: '📋' },
       { id: 'mt5-connection-manager', label: 'MT5 Accounts', icon: '🔌' },
       { id: 'accounts-dashboard', label: 'Accounts', icon: '💰' },

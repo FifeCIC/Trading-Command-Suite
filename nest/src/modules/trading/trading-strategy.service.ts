@@ -81,6 +81,7 @@ export class TradingStrategyService {
     name: string;
     protocolId: string;
     symbol: string;
+    brokerId?: string;
     timeframe?: string;
     minComposite?: number;
     slPct?: number;
@@ -93,6 +94,7 @@ export class TradingStrategyService {
         name: data.name,
         protocolId: data.protocolId,
         symbol: data.symbol.toUpperCase(),
+        brokerId: data.brokerId ?? 'mt5',
         timeframe: data.timeframe ?? '5m',
         minComposite: data.minComposite ?? 65,
         slPct: data.slPct ?? 1.0,

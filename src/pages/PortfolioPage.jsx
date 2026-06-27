@@ -13,18 +13,7 @@ const PLATFORMS_DEMO_LIVE = [
   { id: 'all', label: 'All Platforms' },
 ];
 
-// ── Mock Portfolio Data (shown when API has no positions) ──
-const MOCK_PORTFOLIO = {
-  summary: { totalValue: 2393.45, cash: 412.18, totalCost: 2177.31, totalPnl: 216.14, pnlPct: 9.93, positionCount: 5, provider: 'Trading212', mode: 'demo' },
-  positions: [
-    { symbol: 'NVDA', ticker: 'NVDA', shares: 8, avgCost: 132.45, currentPrice: 199.99, value: 1599.92, pnl: 540.32, pnlPct: 51.0, allocation: 0.668 },
-    { symbol: 'AAPL', ticker: 'AAPL', shares: 5, avgCost: 178.20, currentPrice: 294.30, value: 1471.50, pnl: 580.50, pnlPct: 65.2, allocation: 0.614 },
-    { symbol: 'TSLA', ticker: 'TSLA', shares: 3, avgCost: 245.10, currentPrice: 381.44, value: 1144.32, pnl: 409.02, pnlPct: 55.6, allocation: 0.478 },
-    { symbol: 'MSFT', ticker: 'MSFT', shares: 2, avgCost: 360.00, currentPrice: 373.91, value: 747.82, pnl: 27.82, pnlPct: 3.86, allocation: 0.312 },
-    { symbol: 'AMD', ticker: 'AMD', shares: 10, avgCost: 110.50, currentPrice: 92.15, value: 921.50, pnl: -183.50, pnlPct: -16.6, allocation: 0.385 },
-  ],
-  account: { free: 412.18, total: 2393.45 },
-};
+import UnavailablePlaceholder from '../components/UnavailablePlaceholder';
 
 // ── Allocation Bar ──────────────────────────────────────────
 function AllocationBar({ positions, total }) {
@@ -150,13 +139,13 @@ export default function PortfolioPage() {
   const actualMode = data?.summary?.mode;
   const modeMismatch = isT212 && actualMode && currentT212Mode && actualMode !== currentT212Mode;
 
-  // Use mock data when API returns empty positions (so UI is always visible)
-  const useMock = !unavailable && (!data?.positions || data.positions.length === 0) && (actualMode === 'mock' || actualMode === 'demo');
-  const effectiveData = useMock ? MOCK_PORTFOLIO : data;
+  // Show real data or nothing — never mock
+  const effectiveData = data;
   const positions = effectiveData?.positions || [];
   const summary = effectiveData?.summary;
   const account = effectiveData?.account;
   const hasData = !unavailable && positions.length > 0;
+  const noApiKey = !unavailable && (!data?.positions || data.positions.length === 0) && (actualMode === 'mock' || actualMode === 'none');
   const error = data?.error;
 
   const timeSinceUpdate = lastUpdated

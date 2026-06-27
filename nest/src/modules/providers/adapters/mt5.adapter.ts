@@ -17,6 +17,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
   IProviderAdapter,
+  BrokerAccount,
+  BrokerOrderRequest,
+  BrokerOrderResult,
+  BrokerPosition,
   MarketBar,
   ProviderProfile,
   ProviderQuote,
@@ -56,6 +60,7 @@ interface BridgeHealthResponse {
 export class Mt5Adapter implements IProviderAdapter {
   readonly name = 'MT5';
   readonly id = 'mt5';
+  readonly supportsBrokerage = true;
   private readonly logger = new Logger(Mt5Adapter.name);
   private readonly bridgeUrl: string;
   consecutiveErrors = 0;
@@ -161,5 +166,108 @@ export class Mt5Adapter implements IProviderAdapter {
     this.trippedAt = null;
     this.consecutiveErrors = 0;
     this.logger.log('MT5 circuit breaker manually reset');
+  }
+
+  // ── Brokerage Methods (IProviderAdapter) ─────────────────
+
+  async getPositions(): Promise<BrokerPosition[]> {
+    const data = await this.bridgeGet<{ positions: any[]; count: number }>('/positions');
+    if (!data?.positions) return [];
+
+    return data.positions.map((p: any) => ({
+      brokerId: this.id!,
+      brokerName: this.name,
+      symbol: p.symbol,
+      ticker: p.symbol,
+      quantity: p.volume,
+      avgCost: p.priceOpen,
+      currentPrice: p.priceCurrent,
+      marketValue: p.priceCurrent * p.volume,
+      unrealizedPnl: p.profit,
+      unrealizedPnlPct: p.priceOpen > 0 ? ((p.priceCurrent - p.priceOpen) / p.priceOpen) * 100 : 0,
+      currency: 'GBP',
+      openedAt: p.openTime || new Date().toISOString(),
+    }));
+  }
+
+  async getAccount(): Promise<BrokerAccount | null> {
+    const data = await this.bridgeGet<any>('/account');
+    if (!data) return null;
+
+    return {
+      brokerId: this.id!,
+      brokerName: this.name,
+      balance: data.balance,
+      equity: data.equity,
+      margin: data.margin,
+      marginFree: data.marginFree,
+      marginLevel: data.marginLevel ?? null,
+      currency: data.currency || 'GBP',
+      mode: 'demo',
+      connected: true,
+    };
+  }
+
+  async placeOrder(params: BrokerOrderRequest): Promise<BrokerOrderResult> {
+    const body = {
+      symbol: params.symbol,
+      type: params.side === 'BUY' ? 'buy' : 'sell',
+      volume: params.quantity,
+      sl: params.sl ?? null,
+      tp: params.tp ?? null,
+      comment: params.comment ?? 'TCS auto',
+    };
+
+    this.logger.log(`MT5 order: ${body.type} ${body.symbol} ×${body.volume}`);
+    const data = await this.bridgePost<any>('/order', body);
+
+    if (!data) {
+      return { success: false, error: 'Bridge unreachable' };
+    }
+
+    return {
+      success: data.success === true,
+      ticket: data.ticket ?? undefined,
+      price: data.price ?? undefined,
+      error: data.error ?? undefined,
+    };
+  }
+
+  private async bridgePost<T>(path: string, body: unknown): Promise<T | null> {
+    if (this.tripped) {
+      const cooldownMs = 120_000;
+      if (this.trippedAt && Date.now() - this.trippedAt >= cooldownMs) {
+        this.tripped = false;
+        this.consecutiveErrors = 0;
+      } else {
+        return null;
+      }
+    }
+
+    try {
+      const res = await fetch(`${this.bridgeUrl}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) {
+        this.consecutiveErrors++;
+        if (this.consecutiveErrors >= 5) {
+          this.tripped = true;
+          this.trippedAt = Date.now();
+        }
+        return null;
+      }
+      this.consecutiveErrors = 0;
+      return (await res.json()) as T;
+    } catch (err) {
+      this.consecutiveErrors++;
+      if (this.consecutiveErrors >= 5) {
+        this.tripped = true;
+        this.trippedAt = Date.now();
+      }
+      return null;
+    }
   }
 }
