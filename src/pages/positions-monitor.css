@@ -37,6 +37,44 @@
   border-bottom-color: #3b82f6;
 }
 
+/* Source filter */
+.pm-source-filter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: #64748b;
+}
+.pm-source-filter span { margin-right: 4px; }
+.pm-source-chip {
+  padding: 3px 10px;
+  border: 1px solid #2d3040;
+  border-radius: 4px;
+  background: none;
+  color: #64748b;
+  font-size: 0.7rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.pm-source-chip:hover { border-color: #3b82f6; color: #94a3b8; }
+.pm-source-chip.pm-active {
+  background: rgba(59,130,246,0.15);
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+/* Source badge on cards */
+.pm-pos-source {
+  font-size: 0.6rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(139,92,246,0.12);
+  color: #a78bfa;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
 /* Position cards */
 .pm-positions {
   display: grid;

@@ -21083,3 +21083,48 @@
 2026-06-27 01:33:55,088 [ERROR] Error handling /accounts: [WinError 10053] An established connection was aborted by the software in your host machine
 2026-06-27 01:38:43,652 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
 2026-06-27 01:38:43,703 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1005.27
+2026-06-28 00:04:59,254 [INFO] MetaTrader5 package loaded
+2026-06-28 00:04:59,256 [INFO] Connecting to MT5 at startup...
+2026-06-28 00:04:59,256 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-06-28 00:04:59,276 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1005.27
+2026-06-28 00:04:59,276 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-06-28 00:04:59,315 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-06-28 00:05:51,531 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:05:51,541 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:06:01,374 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:06:11,369 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:06:21,367 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:06:31,368 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:06:41,367 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:06:51,364 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:07:01,367 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:07:11,366 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:07:21,370 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:07:31,366 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:07:41,363 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:07:51,365 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:08:01,366 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:08:11,370 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:08:21,365 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:08:31,366 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:08:41,374 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:08:51,370 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:09:01,372 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:09:11,362 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:21:46,996 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:21:47,023 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:22:08,369 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:22:08,402 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:43:13,924 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-28 00:45:57,228 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-28 00:49:33,046 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:49:33,077 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-06-28 00:49:54,642 [ERROR] Error handling /accounts: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-28 00:49:54,648 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-28 00:49:54,655 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-28 00:49:54,659 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-28 00:49:54,664 [ERROR] Error handling /accounts: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-28 00:50:24,636 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-28 00:51:40,766 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-28 00:51:40,770 [ERROR] Error handling /accounts: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-06-28 00:51:40,776 [ERROR] Error handling /accounts: [WinError 10053] An established connection was aborted by the software in your host machine

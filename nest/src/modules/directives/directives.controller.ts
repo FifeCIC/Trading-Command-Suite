@@ -14,6 +14,18 @@ export class DirectivesController {
   list() {
     const directives = this.directivesService.list();
 
+    // Build a category map from all protocol groups
+    const directiveCategory = new Map<string, string>();
+    for (const proto of Object.values(PROTOCOL_REGISTRY)) {
+      for (const group of proto.groups) {
+        for (const did of group.directiveIds) {
+          if (!directiveCategory.has(did)) {
+            directiveCategory.set(did, group.name);
+          }
+        }
+      }
+    }
+
     // Compute protocolCount: how many protocols include each directive
     const protocolCounts = new Map<string, number>();
     for (const proto of Object.values(PROTOCOL_REGISTRY)) {
@@ -32,7 +44,7 @@ export class DirectivesController {
       id: d.id,
       name: d.name,
       description: d.description ?? '',
-      category: (d as any).category ?? 'Uncategorized',
+      category: directiveCategory.get(d.id) ?? 'Other',
       priority: d.priority ?? 50,
       protocolCount: protocolCounts.get(d.id) ?? 0,
     }));

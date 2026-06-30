@@ -25,8 +25,28 @@
 .protocols-count {
   font-size: 0.8rem;
   color: var(--text-muted, #64748b);
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
+
+.protocols-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 0.75rem;
+}
+.protocols-filter-chip {
+  padding: 3px 10px;
+  border: 1px solid var(--border, #334155);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted, #64748b);
+  font-size: 0.68rem;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.protocols-filter-chip:hover { border-color: var(--accent, #0ea5a6); color: var(--ink, #e2e8f0); }
+.protocols-filter-chip.active { background: var(--accent, #0ea5a6); color: #fff; border-color: var(--accent, #0ea5a6); }
 
 .protocols-empty {
   color: var(--text-muted, #64748b);

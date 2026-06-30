@@ -11,6 +11,7 @@ export default function ProtocolsPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [error, setError] = useState(null);
+  const [styleFilter, setStyleFilter] = useState('All');
 
   useEffect(() => { fetchProtocols(); }, []);
 
@@ -33,6 +34,10 @@ export default function ProtocolsPage() {
   };
 
   const selectedProto = protocols.find(p => p.id === selected?.id) || protocols[0];
+
+  // Derive unique styles from protocol data
+  const styles = ['All', ...new Set(protocols.map(p => p.tradingStyle).filter(Boolean))];
+  const filteredProtocols = styleFilter === 'All' ? protocols : protocols.filter(p => p.tradingStyle === styleFilter);
 
   if (loading) {
     return (
@@ -58,12 +63,22 @@ export default function ProtocolsPage() {
     <div className="protocols-page">
       <div className="protocols-sidebar">
         <h2>Protocols</h2>
-        <div className="protocols-count">{protocols.length} protocol{protocols.length !== 1 ? 's' : ''}</div>
-        {protocols.length === 0 ? (
-          <div className="protocols-empty">No protocols found.</div>
+        <div className="protocols-count">{filteredProtocols.length} of {protocols.length} protocol{protocols.length !== 1 ? 's' : ''}</div>
+        {/* Trading style filters */}
+        <div className="protocols-filters">
+          {styles.map(s => (
+            <button
+              key={s}
+              className={`protocols-filter-chip ${styleFilter === s ? 'active' : ''}`}
+              onClick={() => setStyleFilter(s)}
+            >{s}</button>
+          ))}
+        </div>
+        {filteredProtocols.length === 0 ? (
+          <div className="protocols-empty">No protocols match this filter.</div>
         ) : (
           <ul className="protocols-list">
-            {protocols.map(p => (
+            {filteredProtocols.map(p => (
               <li
                 key={p.id}
                 className={`protocols-item ${selectedProto?.id === p.id ? 'active' : ''}`}

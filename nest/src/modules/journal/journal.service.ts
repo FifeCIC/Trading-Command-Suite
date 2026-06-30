@@ -33,15 +33,9 @@ export class JournalService {
   private readonly logger = new Logger(JournalService.name);
   private entries: TradeJournalEntry[] = [];
 
-  // Seed some journal entries for demo
+  // Start empty — entries come from the database via the trade journal UI
   constructor() {
-    this.entries = [
-      { id: '1', symbol: 'NVDA', type: 'buy', volume: 10, entryPrice: 485, exitPrice: 510, pnl: 250, date: '2026-06-14T14:30:00Z', holdDuration: '2h 15m', notes: 'Entered on dip after FOMC. Good entry timing.', tags: ['good entry', 'momentum'] },
-      { id: '2', symbol: 'TSLA', type: 'sell', volume: 20, entryPrice: 228, exitPrice: 222, pnl: -120, date: '2026-06-13T10:00:00Z', holdDuration: '45m', notes: 'Exited too early — stock recovered 3% after.', tags: ['exited too early', 'fear'] },
-      { id: '3', symbol: 'AAPL', type: 'buy', volume: 15, entryPrice: 196, exitPrice: 202, pnl: 90, date: '2026-06-12T09:15:00Z', holdDuration: '1d 3h', notes: 'Held overnight through earnings.', tags: ['good hold', 'earnings'] },
-      { id: '4', symbol: 'EURUSD', type: 'buy', volume: 0.1, entryPrice: 1.0850, exitPrice: 1.0880, pnl: 30, date: '2026-06-11T08:00:00Z', holdDuration: '4h', notes: 'London session breakout.', tags: ['session trade', 'breakout'] },
-      { id: '5', symbol: 'NVDA', type: 'sell', volume: 5, entryPrice: 500, exitPrice: 495, pnl: -25, date: '2026-06-10T15:30:00Z', holdDuration: '30m', notes: 'Panic sold on news headline. Recovered within hours.', tags: ['panic', 'exited too early'] },
-    ];
+    this.entries = [];
   }
 
   getEntries(): TradeJournalEntry[] {

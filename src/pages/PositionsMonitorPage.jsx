@@ -24,6 +24,7 @@ function CFDPosition({ pos, index }) {
     >
       <div className="pm-pos-header">
         <strong>{pos.symbol}</strong>
+        <span className="pm-pos-source">{pos.source}</span>
         <span className={`pm-pos-pnl ${pos.pnl >= 0 ? 'pm-profit' : 'pm-loss'}`}>
           {pos.pnl >= 0 ? '+' : ''}{pos.pnl?.toFixed(2)}
         </span>
@@ -77,9 +78,9 @@ function OptionPosition({ pos }) {
 
 export default function PositionsMonitorPage() {
   const [tab, setTab] = useState('cfd');
-  const [source, setSource] = useState('mt5');
+  const [sourceFilter, setSourceFilter] = useState('all');
 
-  // Real MT5 positions
+  // MT5 positions
   const mt5Query = useQuery({
     queryKey: ['mt5-positions'],
     queryFn: () => fetch('/api/providers/mt5/positions').then((r) => r.json()).catch(() => ({ positions: [] })),
@@ -87,8 +88,15 @@ export default function PositionsMonitorPage() {
     refetchInterval: 30000,
   });
 
-  const mt5Positions = mt5Query.data?.positions || [];
-  const cfdPositions = source === 'mt5' ? mt5Positions.map((p) => ({
+  // Trading212 portfolio
+  const t212Query = useQuery({
+    queryKey: ['t212-portfolio-positions'],
+    queryFn: () => apiGet('/api/portfolio?source=trading212').catch(() => ({ positions: [] })),
+    staleTime: 15000,
+    refetchInterval: 60000,
+  });
+
+  const mt5Positions = (mt5Query.data?.positions || []).map((p) => ({
     symbol: p.symbol,
     direction: p.type === 'buy' ? 'BUY' : 'SELL',
     volume: String(p.volume),
@@ -99,26 +107,56 @@ export default function PositionsMonitorPage() {
     sl: p.sl,
     tp: p.tp,
     overnightFee: p.swap || 0,
-    riskPct: '—',
+    riskPct: 0,
     ticket: p.ticket,
-  })) : [];
+    source: 'MT5',
+  }));
+
+  const t212Positions = (t212Query.data?.positions || []).map((p) => ({
+    symbol: p.ticker || p.symbol,
+    direction: 'BUY',
+    volume: String(p.shares || p.quantity || '—'),
+    leverage: '—',
+    margin: '—',
+    pnl: p.pnl || 0,
+    daysHeld: p.initialFillDate ? Math.floor((Date.now() - new Date(p.initialFillDate).getTime()) / 86400000) : 0,
+    sl: '—',
+    tp: '—',
+    overnightFee: 0,
+    riskPct: (p.allocation || 0) * 100,
+    ticket: p.ticker || p.symbol,
+    source: 'Trading212',
+    currentPrice: p.currentPrice,
+    avgCost: p.avgCost,
+  }));
+
+  const allPositions = [...mt5Positions, ...t212Positions];
+  const cfdPositions = sourceFilter === 'all'
+    ? allPositions
+    : allPositions.filter((p) => p.source.toLowerCase() === sourceFilter.toLowerCase());
 
   return (
     <div className="pm-page">
       <header className="pm-header">
         <h1>Positions Monitor</h1>
-        <p>Trading212 CFD API not available (404). Using MT5 positions.</p>
+        <p>Combined view of all open positions across brokers.</p>
       </header>
 
       <div className="pm-tabs">
-        <button className={`pm-tab ${tab === 'cfd' ? 'pm-active' : ''}`} onClick={() => setTab('cfd')}>CFD Monitor</button>
-        <button className={`pm-tab ${tab === 'options' ? 'pm-active' : ''}`} onClick={() => setTab('options')}>Options Monitor</button>
+        <button className={`pm-tab ${tab === 'cfd' ? 'pm-active' : ''}`} onClick={() => setTab('cfd')}>Positions</button>
+        <button className={`pm-tab ${tab === 'options' ? 'pm-active' : ''}`} onClick={() => setTab('options')}>Options</button>
+        <div className="pm-source-filter">
+          <span>Source:</span>
+          {['all', 'MT5', 'Trading212'].map((s) => (
+            <button key={s} className={`pm-source-chip ${sourceFilter === s ? 'pm-active' : ''}`} onClick={() => setSourceFilter(s)}>{s}</button>
+          ))}
+        </div>
       </div>
 
       {tab === 'cfd' && (
         <div className="pm-positions">
-          {mt5Query.isLoading && <div className="pm-empty">Loading MT5 positions...</div>}
-          {cfdPositions.length === 0 && !mt5Query.isLoading && <div className="pm-empty">No open positions from MT5</div>}
+          {(mt5Query.isLoading || t212Query.isLoading) && <div className="pm-empty">Loading positions...</div>}
+          {cfdPositions.length === 0 && !mt5Query.isLoading && !t212Query.isLoading && <div className="pm-empty">No open positions. Connect MT5 or Trading212 to see your holdings.</div>}
           {cfdPositions.map((p, i) => <CFDPosition key={p.ticket || i} pos={p} index={i} />)}
         </div>
       )}

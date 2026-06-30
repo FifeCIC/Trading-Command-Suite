@@ -63,10 +63,8 @@ import SetupWizardPage from './pages/SetupWizardPage';
 import ServerControlsPage from './pages/ServerControlsPage';
 import ChartComparisonPage from './pages/ChartComparisonPage';
 import AnalyseSymbolPage from './pages/AnalyseSymbolPage';
-import Mt5ConnectionManagerPage from './pages/Mt5ConnectionManagerPage';
 import AccountsDashboardPage from './pages/AccountsDashboardPage';
 import OrderTestingPage from './pages/OrderTestingPage';
-import FluffDetectorPage from './pages/FluffDetectorPage';
 import TradingTimelinePage from './pages/TradingTimelinePage';
 import SignalsWorkbenchPage from './pages/SignalsWorkbenchPage';
 import SettingsPage from './pages/SettingsPage';
@@ -840,10 +838,6 @@ function AppShell() {
 
     if (secondaryView === 'analyse-symbol') {
       return <AnalyseSymbolPage />;
-    }
-
-    if (secondaryView === 'mt5-connection-manager') {
-      return <Mt5ConnectionManagerPage />;
     }
 
     if (secondaryView === 'accounts-dashboard') {

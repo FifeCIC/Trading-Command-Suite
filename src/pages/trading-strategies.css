@@ -210,19 +210,20 @@
 .ts-table th,
 .ts-table td {
   border: 1px solid var(--line);
-  padding: 8px 10px;
+  padding: 6px 7px;
   text-align: left;
   vertical-align: middle;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 .ts-table th {
   background: var(--panel);
   color: var(--ink);
   font-weight: 700;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
 }
 
 .ts-row { cursor: pointer; transition: background 0.12s; }
@@ -231,7 +232,7 @@
 
 .ts-name { font-weight: 600; }
 
-.ts-name-col { width: 110px; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ts-name-col { width: auto; min-width: 160px; max-width: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .ts-chip {
   display: inline-block;
