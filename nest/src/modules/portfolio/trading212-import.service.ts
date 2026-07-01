@@ -3,6 +3,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { Trading212Adapter, T212OrderResult } from '../providers/adapters/trading212.adapter';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
 import { SystemLogService } from '../system/log.service';
+import { cleanT212Ticker } from '../providers/t212-ticker-map';
 
 interface T212Position {
   ticker: string;
@@ -136,8 +137,8 @@ export class Trading212ImportService {
       const imported: Array<{ ticker: string; quantity: number; ppl: number; currentPrice: number }> = [];
 
       for (const pos of positions) {
-        // Clean ticker: strip Trading212 suffixes like _US_EQ, _EQ
-        const cleanTicker = pos.ticker.replace(/_US_EQ$/, '').replace(/_EQ$/, '');
+        // Clean ticker: use shared normalizer (handles 3LNVl_EQ→3LNV, AIRp_EQ→AIR, etc.)
+        const cleanTicker = cleanT212Ticker(pos.ticker);
 
         // Ensure symbol exists in our DB
         try {
@@ -225,7 +226,7 @@ export class Trading212ImportService {
 
       const trades: TradeHistoryItem[] = filledOrders.map((o) => ({
         date: o.dateCreated,
-        symbol: o.ticker.replace(/_US_EQ$/, '').replace(/_EQ$/, ''),
+        symbol: cleanT212Ticker(o.ticker),
         type: o.type,
         quantity: o.quantity,
         entryPrice: o.type === 'BUY' ? o.filledPrice : 0,

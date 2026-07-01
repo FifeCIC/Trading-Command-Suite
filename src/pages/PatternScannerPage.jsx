@@ -2,37 +2,44 @@ import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
-import { detectPatterns, generateMockCandles } from '../core/patterns/pattern-detector';
+import { detectPatterns } from '../core/patterns/pattern-detector';
 import './pattern-scanner.css';
 
 const TIMEFRAMES = ['1M', '5M', '15M', '1H', '4H', '1D'];
-const SYMBOLS = ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMD', 'BTCUSD', 'EURUSD', 'XAUUSD', 'SPY', 'MSTR'];
+const DEFAULT_SYMBOLS = ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'BTCUSD', 'EURUSD', 'XAUUSD', 'SPY', 'MSTR'];
 
 export default function PatternScannerPage() {
-  const [symbol, setSymbol] = useState('AAPL');
+  const [symbol, setSymbol] = useState('SPY');
+  const [symbols, setSymbols] = useState(DEFAULT_SYMBOLS);
   const [timeframe, setTimeframe] = useState('1H');
   const [filterType, setFilterType] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
-  const [useRealData, setUseRealData] = useState(true);
+
+  useEffect(() => {
+    apiGet('/api/watchlists').then((data) => {
+      const lists = Array.isArray(data?.watchlists) ? data.watchlists : [];
+      const defaultList = lists.find((l) => l.isDefault) || lists[0];
+      const wlSymbols = Array.isArray(defaultList?.symbols)
+        ? defaultList.symbols.map((s) => (typeof s === 'string' ? s : s.ticker).toUpperCase())
+        : [];
+      if (wlSymbols.length > 0) setSymbols(wlSymbols);
+    }).catch(() => {});
+  }, []);
 
   const candlesQuery = useQuery({
     queryKey: ['candles', symbol, timeframe],
     queryFn: () => apiGet(`/api/market-data/candles/${symbol}?timeframe=${timeframe}`),
-    enabled: useRealData,
     retry: 1,
     staleTime: 60_000,
   });
 
   const rawCandles = candlesQuery.data?.bars || candlesQuery.data?.candles || [];
-
-  const candles = useMemo(() => {
-    if (useRealData && rawCandles.length > 0) return rawCandles;
-    return generateMockCandles(100);
-  }, [useRealData, rawCandles, symbol]);
+  const hasRealData = rawCandles.length > 0;
 
   const detections = useMemo(() => {
-    return detectPatterns(candles);
-  }, [candles]);
+    if (!hasRealData) return [];
+    return detectPatterns(rawCandles);
+  }, [rawCandles, hasRealData]);
 
   const filtered = filterType === 'all' ? detections : detections.filter((d) => d.type === filterType);
 
@@ -56,7 +63,7 @@ export default function PatternScannerPage() {
       {/* Controls */}
       <div className="ps-controls">
         <div className="ps-symbol-pills">
-          {SYMBOLS.map((s) => (
+          {symbols.map((s) => (
             <button key={s} type="button" className={`ps-sym-pill ${symbol === s ? 'active' : ''}`} onClick={() => setSymbol(s)}>
               {s}
             </button>
@@ -71,6 +78,16 @@ export default function PatternScannerPage() {
         </div>
       </div>
 
+      {candlesQuery.isLoading && (
+        <p className="ps-empty">Loading candle data for {symbol}…</p>
+      )}
+
+      {!candlesQuery.isLoading && !hasRealData && (
+        <p className="ps-empty">No OHLCV data available for {symbol} on {timeframe}. Try another symbol or import market data first.</p>
+      )}
+
+      {hasRealData && (
+      <>
       {/* Stats bar */}
       <motion.div className="ps-stats" initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}>
         <span className="ps-stat"><strong>{stats.total}</strong> patterns</span>
@@ -110,7 +127,7 @@ export default function PatternScannerPage() {
               </div>
               {/* Mini candle viz */}
               <div className="ps-mini-candle">
-                <CandleStub candle={candles[p.index]} prevCandle={candles[p.index - 1]} />
+                <CandleStub candle={rawCandles[p.index]} prevCandle={rawCandles[p.index - 1]} />
               </div>
               <div className="ps-card-footer">
                 <span className="ps-card-bar">{p.bar}</span>
@@ -127,10 +144,10 @@ export default function PatternScannerPage() {
                 {expandedId === `${p.pattern}-${p.index}` && (
                   <motion.div className="ps-expand" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
                     <div className="ps-expand-grid">
-                      <div><strong>Open</strong> {candles[p.index].open}</div>
-                      <div><strong>High</strong> {candles[p.index].high}</div>
-                      <div><strong>Low</strong> {candles[p.index].low}</div>
-                      <div><strong>Close</strong> {candles[p.index].close}</div>
+                      <div><strong>Open</strong> {rawCandles[p.index].open}</div>
+                      <div><strong>High</strong> {rawCandles[p.index].high}</div>
+                      <div><strong>Low</strong> {rawCandles[p.index].low}</div>
+                      <div><strong>Close</strong> {rawCandles[p.index].close}</div>
                     </div>
                   </motion.div>
                 )}
@@ -139,6 +156,8 @@ export default function PatternScannerPage() {
           ))}
         </AnimatePresence>
       </div>
+      </>
+      )}
     </div>
   );
 }

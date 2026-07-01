@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -19,10 +19,24 @@ const INDICATORS = [
   { id: 'ichimoku', name: 'Ichimoku', fullName: 'Ichimoku Cloud', category: 'Trend', defaultPeriod: '9/26/52' },
 ];
 
+const DEFAULT_SYMBOLS = ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'SPY', 'XAUUSD', 'EURUSD', 'BTCUSD'];
+
 export default function TechnicalIndicatorsPage() {
-  const [symbol, setSymbol] = useState('AAPL');
+  const [symbol, setSymbol] = useState('SPY');
+  const [symbols, setSymbols] = useState(DEFAULT_SYMBOLS);
   const [expandedInd, setExpandedInd] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
+
+  useEffect(() => {
+    apiGet('/api/watchlists').then((data) => {
+      const lists = Array.isArray(data?.watchlists) ? data.watchlists : [];
+      const defaultList = lists.find((l) => l.isDefault) || lists[0];
+      const wlSymbols = Array.isArray(defaultList?.symbols)
+        ? defaultList.symbols.map((s) => (typeof s === 'string' ? s : s.ticker).toUpperCase())
+        : [];
+      if (wlSymbols.length > 0) setSymbols(wlSymbols);
+    }).catch(() => {});
+  }, []);
 
   // Fetch each indicator's current value from the real API
   const indicatorQueries = useQueries({
@@ -41,11 +55,11 @@ export default function TechnicalIndicatorsPage() {
     return INDICATORS.map((ind, i) => {
       const query = indicatorQueries[i];
       const data = query?.data;
+      const cv = data?.currentValue ?? null;
       return {
         ...ind,
-        sparkline: Array.from({ length: 50 }, (_, j) => 50 + Math.sin(j * 0.3 + i) * 20 + (Math.random() - 0.5) * 10),
-        currentValue: data?.currentValue ?? null,
-        signal: data?.currentValue != null ? (data.currentValue > 70 ? 'sell' : data.currentValue < 30 ? 'buy' : 'neutral') : null,
+        currentValue: cv,
+        signal: cv != null ? (cv > 70 ? 'sell' : cv < 30 ? 'buy' : 'neutral') : null,
       };
     });
   }, [indicatorQueries]);
@@ -70,7 +84,7 @@ export default function TechnicalIndicatorsPage() {
         <div className="ti-field">
           <label>Symbol</label>
           <select value={symbol} onChange={(e) => setSymbol(e.target.value)}>
-            {['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMD', 'SPY'].map((s) => (
+            {symbols.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
@@ -103,7 +117,6 @@ export default function TechnicalIndicatorsPage() {
         <div className="ti-grid">
           {filtered.map((ind) => {
             const isExpanded = expandedInd === ind.id;
-            const linePoints = ind.sparkline.map((p, i) => `${(i / (ind.sparkline.length - 1)) * 100},${100 - p}`).join(' ');
             const signalCls = ind.signal === 'buy' ? 'ti-buy' : ind.signal === 'sell' ? 'ti-sell' : 'ti-neutral';
 
             return (
@@ -122,54 +135,35 @@ export default function TechnicalIndicatorsPage() {
                   </span>
                 </div>
 
-                {/* Mini sparkline */}
-                <svg viewBox="0 0 100 100" className="ti-sparkline" preserveAspectRatio="none">
-                  <polyline
-                    fill="none"
-                    stroke="var(--accent, #0ea5a6)"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    points={linePoints}
-                  />
-                </svg>
+                {/* Value gauge */}
+                {ind.currentValue != null ? (
+                  <div className="ti-value-bar-wrap">
+                    <div className="ti-value-bar" style={{ width: `${Math.min(100, Math.max(0, ind.currentValue))}%` }} />
+                    <span className="ti-value-bar-label">{ind.currentValue}</span>
+                  </div>
+                ) : (
+                  <div className="ti-value-bar-wrap">
+                    <div className="ti-value-bar ti-value-bar--empty" />
+                    <span className="ti-value-bar-label ti-value-bar-label--muted">No data</span>
+                  </div>
+                )}
 
                 <div className="ti-card-footer">
                   <span className="ti-category-chip">{ind.category}</span>
-                  <span className="ti-value">{ind.currentValue != null ? ind.currentValue : (ind.id === 'obv' || ind.id === 'ichimoku' || ind.id === 'sto' || ind.id === 'bb' ? 'API' : '—')}</span>
                   <span className="ti-period">Period: {ind.defaultPeriod}</span>
                 </div>
 
                 {/* Expanded detail */}
                 {isExpanded && (
                   <div className="ti-expanded-body" onClick={(e) => e.stopPropagation()}>
-                    <div className="ti-expanded-chart">
-                      <svg viewBox="0 0 100 100" className="ti-large-chart" preserveAspectRatio="none">
-                        <defs>
-                          <linearGradient id={`tiGrad-${ind.id}`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="var(--accent, #0ea5a6)" stopOpacity="0.22" />
-                            <stop offset="100%" stopColor="var(--accent, #0ea5a6)" stopOpacity="0" />
-                          </linearGradient>
-                        </defs>
-                        <polygon fill={`url(#tiGrad-${ind.id})`} points={`0,100 ${linePoints} 100,100`} />
-                        <polyline
-                          fill="none"
-                          stroke="var(--accent, #0ea5a6)"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          points={linePoints}
-                        />
-                      </svg>
-                    </div>
                     <div className="ti-expanded-meta">
                       <div className="ti-meta-row">
-                        <span>Current</span>
+                        <span>Current Value</span>
                         <strong>{ind.currentValue != null ? ind.currentValue : 'N/A'}</strong>
                       </div>
                       <div className="ti-meta-row">
                         <span>Signal</span>
-                        <strong className={signalCls}>{ind.signal.toUpperCase()}</strong>
+                        <strong className={signalCls}>{ind.signal?.toUpperCase() || 'N/A'}</strong>
                       </div>
                       <div className="ti-meta-row">
                         <span>Default Period</span>

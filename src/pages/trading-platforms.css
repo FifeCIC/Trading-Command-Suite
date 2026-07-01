@@ -603,3 +603,27 @@
   color: var(--ink-soft, #64748b);
   font-size: 0.72rem;
 }
+
+/* ── Backtest priority rows ─────────────────────────────── */
+
+.bt-priority-row {
+  background: color-mix(in srgb, var(--accent, #0ea5a6) 4%, var(--panel, #1a1a2e));
+}
+
+.bt-priority-row:hover {
+  background: color-mix(in srgb, var(--accent, #0ea5a6) 8%, var(--panel, #1a1a2e)) !important;
+}
+
+.bt-priority-sep td {
+  padding: 0.35rem 0.7rem !important;
+  background: var(--panel, #1a1a2e);
+  border-bottom: 2px solid var(--line, #334155) !important;
+}
+
+.bt-sep-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft, #64748b);
+}

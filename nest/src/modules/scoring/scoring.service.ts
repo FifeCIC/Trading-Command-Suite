@@ -23,6 +23,7 @@ import { ScoreHistoryService } from './score-history.service';
 import { NotificationService } from '../notifications/notifications.service';
 import { CalibrationService } from '../calibration/calibration.service';
 import { OutcomeTrackerService } from './outcome-tracker.service';
+import { SeasonalAffinityService } from './seasonal-affinity.service';
 import {
   DirectiveInput,
   MarketBar,
@@ -104,6 +105,7 @@ export class ScoringService implements OnModuleInit {
     private readonly notificationService: NotificationService,
     private readonly calibrationService: CalibrationService,
     private readonly outcomeTracker: OutcomeTrackerService,
+    private readonly seasonalAffinity: SeasonalAffinityService,
   ) {}
 
   /** On startup, detect directive version changes and log warnings. */
@@ -306,9 +308,14 @@ export class ScoringService implements OnModuleInit {
       // Raw total — unbounded, flows from directive score ranges
       const finalScore = Math.max(0, totalScore + confluenceBonus);
 
+      // Apply seasonal affinity modifier (protocol-calendar)
+      // Uses the 'default' protocol for general portfolio scoring
+      const seasonalMultiplier = this.seasonalAffinity.getMultiplier('default');
+      const seasonAdjustedScore = finalScore * seasonalMultiplier;
+
       // Normalized score: percentage of achievable maximum for THIS symbol
       const normScore = maxPossibleScore > 0
-        ? Math.min(100, Math.max(0, (finalScore / maxPossibleScore) * 100))
+        ? Math.min(100, Math.max(0, (seasonAdjustedScore / maxPossibleScore) * 100))
         : 0;
 
       // Determine data status and signal (rebase on normalizedScore)
@@ -338,7 +345,7 @@ export class ScoringService implements OnModuleInit {
       ranked.push({
         symbolId: symbol.id,
         ticker: symbol.ticker,
-        score: hasData ? Number(finalScore.toFixed(1)) : 0,
+        score: hasData ? Number(seasonAdjustedScore.toFixed(1)) : 0,
         normalizedScore: hasData ? Number(normScore.toFixed(1)) : 0,
         maxPossibleScore: hasData ? maxPossibleScore : 0,
         totalDirectives,

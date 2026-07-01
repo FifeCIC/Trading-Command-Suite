@@ -19,6 +19,7 @@ import ScenarioAnalysisPage from './pages/ScenarioAnalysisPage';
 import FaqPage from './pages/FaqPage';
 import PortfolioPage from './pages/PortfolioPage';
 import Trading212PortfolioPage from './pages/Trading212PortfolioPage';
+import PortfolioEventsPage from './pages/PortfolioEventsPage';
 import Mt5TradingPage from './pages/Mt5TradingPage';
 import TradeHistoryPage from './pages/TradeHistoryPage';
 import TradeJournalPage from './pages/TradeJournalPage';
@@ -35,6 +36,7 @@ import DataAreaLandingPage from './pages/DataAreaLandingPage';
 import DiagramsPage from './pages/DiagramsPage';
 import DataStatusPage from './pages/DataStatusPage';
 import DataElementsPage from './pages/DataElementsPage';
+import DecoderPage from './pages/DecoderPage';
 import DirectivesManagerPage from './pages/DirectivesManagerPage';
 import ScoringRunsPage from './pages/ScoringRunsPage';
 import ScoringActivityLogsPage from './pages/ScoringActivityLogsPage';
@@ -77,6 +79,8 @@ import SpeedTradingPage from './pages/SpeedTradingPage';
 import BtcSpeedTradingPage from './pages/BtcSpeedTradingPage';
 import GoldSpeedTradingPage from './pages/GoldSpeedTradingPage';
 import SnapshotLibraryPage from './pages/SnapshotLibraryPage';
+import ExitSignalsPage from './pages/ExitSignalsPage';
+import StockInvestigationPage from './pages/StockInvestigationPage';
 import CalculatorsPage from './pages/CalculatorsPage';
 import SystemStatusPage from './pages/SystemStatusPage';
 import SystemLogPage from './pages/SystemLogPage';
@@ -535,6 +539,10 @@ function AppShell() {
       return <SignalsWorkbenchPage />;
     }
 
+    if (secondaryView === 'exit-signals') {
+      return <ExitSignalsPage />;
+    }
+
     if (secondaryView === 'backtest') {
       return <BacktestPage />;
     }
@@ -573,6 +581,14 @@ function AppShell() {
 
     if (secondaryView === 'trading212-portfolio') {
       return <Trading212PortfolioPage />;
+    }
+
+    if (secondaryView === 'stock-investigation') {
+      return <StockInvestigationPage />;
+    }
+
+    if (secondaryView === 'portfolio-events') {
+      return <PortfolioEventsPage />;
     }
 
     if (secondaryView === 'trading-plans') {
@@ -674,6 +690,10 @@ function AppShell() {
 
     if (secondaryView === 'data-elements') {
       return <DataElementsPage />;
+    }
+
+    if (secondaryView === 'decoder') {
+      return <DecoderPage />;
     }
 
     if (secondaryView === 'transient-caches') {

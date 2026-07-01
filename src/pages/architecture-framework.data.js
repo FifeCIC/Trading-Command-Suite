@@ -25,6 +25,7 @@ export const STATUS_SNAPSHOT = [
   '2026-06-23: Protocol rename + new scalp — btc-speed-v1 renamed "BTC Investment Monitor V1" (medium-term monitoring, NOT scalping). New btc-scalp-v1 "BTC Tick Scalp V1" created for sub-minute speed trading: 14 directives, heavy risk gating (0.5–1.3), 5s–30s timeframe, seconds-to-minutes holds, 65–75% win rate target.',
   '2026-06-23: New speed protocols — xau-speed-v1 (Gold Speed Scalp V1, 14 directives, 0.4–1.3 gate) and oil-speed-v1 (Oil Speed Scalp V1, 14 directives, 0.45–1.3 gate). Both designed for XTrend $1–$5 sub-minute trading. SpeedScanService + POST /api/speed/scan endpoint built — batch-scores all Tier A/B symbols against their best protocol, returns ranked results with top pick. Scanner panel added to SpeedTradingPage with real-time 5s polling, click-to-switch symbols.',
   '2026-06-23: SPY/QQQ protocols — spy-speed-v1 (options-driven micro-structure, gamma pinning, 0DTE mechanics), spy-day-v1 (session structure, VWAP, power hour), qqq-speed-v1 (high-beta momentum, tech earnings boost), qqq-day-v1 (trend following, concentration risk awareness). Scanner maps SPX500/US500→spy-speed-v1, TECH100/US100→qqq-speed-v1.',
+  '2026-07-01: Major agent session — 7 tasks completed. EarningsModule created (EarningsService + EarningsController at /api/earnings with DataImportLog recording). Diagrams expanded 16→19 (provider-failover, t212-portfolio-flow, earnings-pipeline). 11 seasonality scoring directives created (santa-claus-rally through election-cycle). DataImportLog model added + UserStar fix. PortfolioSnapshot + PortfolioSnapshotPosition models added. Intranet task command fixed. Prisma schema now 30+ models.',
 ]
 
 export const ARCHITECTURE_INDEX = [
@@ -383,9 +384,41 @@ export const CONTRACT_CARDS = [
   },
 ]
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-06-26'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-01'
 
 export const CURRENT_ROUTE_CONTRACTS = [
+  {
+    route: 'POST /earnings/import',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'EarningsController',
+    contract: 'Triggers Alpha Vantage EARNINGS_CALENDAR import (1 API call→bulk DB upsert). Logs to DataImportLog. Query param: horizon (months, default 3).',
+    status: 'active',
+  },
+  {
+    route: 'GET /earnings/calendar',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'EarningsController',
+    contract: 'Reads upcoming earnings from DB (zero API calls). Query param: days (default 90). Returns EarningsEvent[] ordered by reportDate.',
+    status: 'active',
+  },
+  {
+    route: 'GET /earnings/symbol/:symbol',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'EarningsController',
+    contract: 'Returns next earnings event for a specific symbol (DB read, no API call).',
+    status: 'active',
+  },
+  {
+    route: 'GET /earnings/status',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'EarningsController',
+    contract: 'Returns { stale: boolean, message } — checks if earnings data is older than 7 days.',
+    status: 'active',
+  },
   {
     route: 'POST /providers/local-bridge/ingest',
     method: 'POST',
@@ -1248,7 +1281,7 @@ export const KNOWN_GAPS = [
 ]
 
 export const REVISION_LOG = [
-  '2026-06-26: Automation Architecture designed — 5 prompts: unified-broker-interface (IProviderAdapter extended with IBrokerPortfolio), automation-loop (broker-agnostic tick engine with timeline awareness), automation-dashboard (multi-broker cockpit with LiveTimeline/WhyPanel/DecisionLog), automation-parameters (protocol↔broker mapping + timeline-aware safety defaults), automation-timeline (TimelineService as decision modifier — FOMC/earnings/sessions/seasonality). IBrokerPortfolio interface: getPositions, getAccount, placeOrder. AdapterFactory extended with getBrokerageAdapters(). PortfolioService → broker-agnostic via AdapterFactory. TradingStrategyService.execute() → routes through adapter instead of hardcoded MT5. 9 new automation REST endpoints designed. 3 new DB models: TimelineEvent, AutomationConfig, LoopTick. TradingStrategy extended with brokerId, cooldownMinutes, maxPositions, timeline-awareness fields.',
+  '2026-07-01: Agent session — 7 tasks completed. EarningsModule (service + controller: POST /import, GET /calendar, GET /symbol/:symbol, GET /status) with DataImportLog audit trail. Diagrams 16→19 (+provider-failover, +t212-portfolio-flow, +earnings-pipeline). 11 seasonality directives (santa-claus-rally through election-cycle, all registered in module + suitability registry). DataImportLog model added + incomplete UserStar model fixed. PortfolioSnapshot + PortfolioSnapshotPosition models added for session-over-session tracking. Intranet task command simplified (removed unnecessary set PORT + start:dev).',
   '2026-06-24: Watchlist direction change — protocol dropdown removed from UserWatchlistsPage. PROTOCOLS constant, protocolMap state, setProtocol, and apiPost import all removed. Direction flipped: protocols will reference watchlists (many-to-many), not vice versa. Pies concept: WATCHLIST-PIES.md created — percentage-allocated trading baskets with protocols and strategies. Watchlist combined stats planned (per-symbol P&L aggregation).',
   '2026-06-24: Directive registry audit — 83 directives registered in backend (directives.module.ts) but only ~15 shown on Configure Directives page (reads directives-manager.seed.js, not /api/directives). 5+ separate directive data locations identified across backend and frontend. Seed file is a tiny subset of actual registry.',
   '2026-06-24: Watchlist architecture audited — 3 storage locations found (filesystem JSON, Watchlist DB table, WatchlistMeta DB table). Controller uses filesystem only. DB tables are orphaned. Architecture Framework field descriptions fixed to match actual schema. WatchlistsPage.jsx uses hardcoded MOCK data. GitHub issue created for seed-based watchlist setup.',
@@ -1572,15 +1605,24 @@ export const DATABASE_SCHEMA = {
     'ImportRun tracks data imports - linked to Symbol for freshness tracking',
     'SymbolCalibration overrides directive weights per symbol - linked to Symbol + Directive',
     'FaqEntry provides searchable knowledge base - standalone table',
+    'DataImportLog tracks every data import — dataType, source, status, record counts, timing, errors, rate limits. Unified audit trail for earnings, dividends, market data.',
+    'PortfolioSnapshot stores historical portfolio state with position-level detail for session-over-session comparison (session/daily/weekly snapshots).',
+    'PortfolioSnapshotPosition stores per-position data within snapshots (symbol, quantity, avgPrice, currentPrice, value, pnl, pnlPct, allocation) — CASCADE from PortfolioSnapshot.',
+    'EarningsEvent stores upcoming earnings dates and estimates from Alpha Vantage with symbol+reportDate lookup.',
+    'AnalystTarget stores analyst price targets (high/low/avg/consensus) from Finnhub and FMP per symbol.',
+    'ScoreSnapshot stores composite scores with rarity percentiles per protocol for percentile-based rarity bands.',
+    'UserStar enables users to favourite/star items across the app (userId + itemType + itemId unique constraint).',
     'Planned: SymbolMeta/Fundamentals/Technical extend Symbol with additional data',
     'Planned: StrategyMeta/Performance extend Strategy with parameters and tracking',
-    'Planned: Order/Position/Trade tables for order management and trade tracking',
   ],
   dataFlow: [
     '1. Symbol created → 2. ImportRun queued → 3. MarketBar data stored',
     '4. Strategy + Directives defined → 5. Score calculated using MarketBar data',
     '5b. SymbolCalibration applied to directive scores before aggregation (weight multipliers)',
+    '5c. DataImportLog records every data import with full audit trail (records, timing, errors, rate limits)',
     '6. Signal generated based on Score → 7. Order created from Signal (planned)',
+    '7b. PortfolioSnapshot captures portfolio state at session/daily/weekly intervals',
+    '8. EarningsService imports Alpha Vantage EARNINGS_CALENDAR → EarningsEvent table (1 API call → bulk DB)',
     'ProviderHealth tracked independently - monitors data source availability',
     'Meta tables store extended attributes without modifying core schema',
   ],

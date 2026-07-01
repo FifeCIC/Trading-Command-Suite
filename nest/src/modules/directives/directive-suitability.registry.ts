@@ -548,6 +548,58 @@ export const DIRECTIVE_SUITABILITY: Record<string, SuitabilityProfile> = {
     instrumentTypes: ['stocks', 'crypto'],
     minTimeframe: 'H1', preferredSessions: ['US', 'London'],
   },
+
+  // ── Seasonality: Calendar-Based ──
+  'santa-claus-rally': {
+    regimeType: 'any', volatilityLevel: 'any',
+    instrumentTypes: ['stocks', 'indices'],
+    minTimeframe: 'D1', preferredSessions: ['US'],
+  },
+  'january-effect': {
+    regimeType: 'any', volatilityLevel: 'any',
+    instrumentTypes: ['stocks', 'indices'],
+    minTimeframe: 'D1', preferredSessions: ['US'],
+  },
+  'sell-in-may': {
+    regimeType: 'any', volatilityLevel: 'any',
+    instrumentTypes: ['stocks', 'indices'],
+    minTimeframe: 'D1', preferredSessions: ['US', 'London'],
+  },
+  'september-slump': {
+    regimeType: 'any', volatilityLevel: 'any',
+    instrumentTypes: ['stocks', 'indices'],
+    minTimeframe: 'D1', preferredSessions: ['US'],
+  },
+  'october-relief': {
+    regimeType: 'any', volatilityLevel: 'any',
+    instrumentTypes: ['stocks', 'indices'],
+    minTimeframe: 'D1', preferredSessions: ['US'],
+  },
+  'friday-drift': {
+    regimeType: 'any', volatilityLevel: 'any',
+    instrumentTypes: ['stocks', 'indices', 'forex'],
+    minTimeframe: 'D1', preferredSessions: ['US', 'London'],
+  },
+  'turnaround-tuesday': {
+    regimeType: 'any', volatilityLevel: 'any',
+    instrumentTypes: ['stocks', 'indices'],
+    minTimeframe: 'D1', preferredSessions: ['US'],
+  },
+  'opex-gamma': {
+    regimeType: 'any', volatilityLevel: 'any',
+    instrumentTypes: ['stocks', 'indices'],
+    minTimeframe: 'D1', preferredSessions: ['US'],
+  },
+  'triple-witching': {
+    regimeType: 'any', volatilityLevel: 'any',
+    instrumentTypes: ['stocks', 'indices'],
+    minTimeframe: 'D1', preferredSessions: ['US'],
+  },
+  'election-cycle': {
+    regimeType: 'any', volatilityLevel: 'any',
+    instrumentTypes: ['stocks', 'indices'],
+    minTimeframe: 'D1', preferredSessions: ['US'],
+  },
 };
 
 /** Default suitability for directives not in the registry. */

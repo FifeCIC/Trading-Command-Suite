@@ -38,6 +38,7 @@ export interface LoopState {
   pendingActions: PendingAction[];
   activeTimelineEvents: any[];
   globalRiskMultiplier: number;
+  recentDecisions: TickDecision[];
 }
 
 export interface BrokerLoopState {
@@ -128,6 +129,7 @@ export class AutomationLoopService {
     pendingActions: [],
     activeTimelineEvents: [],
     globalRiskMultiplier: 1.0,
+    recentDecisions: [],
   };
 
   /** Scoring strategies: protocol + watchlist pairings */
@@ -251,9 +253,9 @@ export class AutomationLoopService {
       }
 
       // 3. Score all symbols via ScoringService.rankAll()
+      let scoreMap = new Map<string, any>();
       try {
         const ranked = await this.scoringService.rankAll(undefined, allSymbols.length + 10);
-        const scoreMap = new Map<string, any>();
         if (ranked?.ranked) {
           for (const entry of ranked.ranked) {
             scoreMap.set(entry.ticker, entry);
@@ -363,9 +365,9 @@ export class AutomationLoopService {
         }
       }
 
-      // 4. Evaluate active strategies
+      // 4. Evaluate active strategies (pass scoreMap for fallback when no position)
       for (const strategyId of this.state.activeStrategyIds) {
-        const strategyDecision = await this.evaluateStrategy(strategyId, allPositions);
+        const strategyDecision = await this.evaluateStrategy(strategyId, allPositions, scoreMap);
         if (strategyDecision) decisions.push(strategyDecision);
       }
 
@@ -375,11 +377,15 @@ export class AutomationLoopService {
 
     this.state.lastTickMs = Date.now() - tickStart;
     this.state.nextTickAt = new Date(Date.now() + this.state.tickIntervalMs).toISOString();
+
+    // Store recent decisions (keep last 50)
+    this.state.recentDecisions = [...decisions, ...this.state.recentDecisions].slice(0, 50);
+
     this.logger.log(`Tick #${this.state.tickCount} completed in ${this.state.lastTickMs}ms — ${decisions.length} decisions`);
     return decisions;
   }
 
-  private async evaluateStrategy(strategyId: string, positions: any[]): Promise<TickDecision | null> {
+  private async evaluateStrategy(strategyId: string, positions: any[], scoreMap: Map<string, any>): Promise<TickDecision | null> {
     try {
       const strategy = await this.strategyService.findOne(strategyId);
       if (!strategy || !strategy.active) return null;
@@ -396,15 +402,70 @@ export class AutomationLoopService {
         };
       }
 
-      // Find scored position
+      // Find scored position first, fall back to scoreMap
       const pos = positions.find(p =>
         p.symbol === strategy.symbol && p.brokerId === (strategy.brokerId || 'mt5')
       );
+      const lookupScore = scoreMap.get(strategy.symbol);
+      
       if (!pos || pos.composite === null) {
+        // No position — use scoreMap as fallback
+        if (lookupScore && lookupScore.score !== null && lookupScore.score !== undefined) {
+          const adjScore = lookupScore.score * this.state.globalRiskMultiplier;
+          const brokerState = this.state.brokerStates[strategy.brokerId || 'mt5'];
+          const threshold = brokerState?.tradeThreshold ?? 65;
+          const passed = adjScore >= threshold;
+          
+          // Attempt full evaluation for DB persistence (fire-and-forget, don't block)
+          try {
+            const evalResult = await this.strategyService.evaluate(strategyId);
+            if (evalResult.evaluated) {
+              return {
+                timestamp: new Date().toISOString(),
+                strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
+                decision: evalResult.passed ? 'SCORED' : 'SKIP',
+                reason: evalResult.passed
+                  ? `Evaluate passed: ${evalResult.composite}`
+                  : `Evaluate: ${evalResult.reason || 'conditions not met'}`,
+                composite: evalResult.composite ?? lookupScore.score, signal: evalResult.signal,
+              };
+            }
+          } catch (err) {
+            this.logger.debug(`Full evaluate failed for ${strategy.symbol}, using rankAll score: ${(err as Error).message}`);
+          }
+          
+          return {
+            timestamp: new Date().toISOString(),
+            strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
+            decision: passed ? 'SCORED' : 'SKIP',
+            reason: passed
+              ? `Strategy composite: ${lookupScore.score} (from rankAll)`
+              : `Score ${lookupScore.score} × risk ${this.state.globalRiskMultiplier.toFixed(2)} = ${adjScore.toFixed(1)} < threshold ${threshold}`,
+            composite: lookupScore.score,
+            signal: lookupScore.signal,
+          };
+        }
+        // No scoreMap entry — try full evaluate anyway (data may have arrived)
+        try {
+          const evalResult = await this.strategyService.evaluate(strategyId);
+          if (evalResult.evaluated) {
+            return {
+              timestamp: new Date().toISOString(),
+              strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
+              decision: evalResult.passed ? 'SCORED' : 'SKIP',
+              reason: evalResult.passed
+                ? `Evaluate passed: ${evalResult.composite}`
+                : `Evaluate: ${evalResult.reason || 'conditions not met'}`,
+                composite: evalResult.composite ?? 0, signal: evalResult.signal ?? 'neutral',
+            };
+          }
+        } catch (err) {
+          // Symbol not in DB or no bars — expected for newly added strategies
+        }
         return {
           timestamp: new Date().toISOString(),
           strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'SKIP', reason: 'No scored position found',
+          decision: 'SKIP', reason: 'No score available',
           composite: 0,
         };
       }

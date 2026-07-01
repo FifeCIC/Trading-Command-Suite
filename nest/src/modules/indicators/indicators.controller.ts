@@ -14,7 +14,16 @@ export class IndicatorsController {
     @Query('tf') tf = 'H1',
   ) {
     const bars = await this.indicatorsService.getBars(symbol.toUpperCase(), tf);
-    return this.indicatorsService.computeSupportResistance(bars, symbol.toUpperCase(), tf);
+    const levels = this.indicatorsService.computeSupportResistance(bars, symbol.toUpperCase(), tf);
+    // Include last 200 bars for chart rendering
+    const chartBars = bars.slice(-200).map((b) => ({
+      time: b.timestamp instanceof Date ? b.timestamp.toISOString().split('T')[0] : String(b.timestamp).split('T')[0],
+      open: b.open,
+      high: b.high,
+      low: b.low,
+      close: b.close,
+    }));
+    return { ...levels, bars: chartBars };
   }
 
   @Get(':symbol/volatility')
@@ -24,7 +33,16 @@ export class IndicatorsController {
     @Query('tf') tf = 'H1',
   ) {
     const bars = await this.indicatorsService.getBars(symbol.toUpperCase(), tf);
-    return this.indicatorsService.computeVolatility(bars, symbol.toUpperCase(), tf);
+    const metrics = this.indicatorsService.computeVolatility(bars, symbol.toUpperCase(), tf);
+    // Include last 200 bars for chart rendering
+    const chartBars = bars.slice(-200).map((b) => ({
+      time: b.timestamp instanceof Date ? b.timestamp.toISOString().split('T')[0] : String(b.timestamp).split('T')[0],
+      open: b.open,
+      high: b.high,
+      low: b.low,
+      close: b.close,
+    }));
+    return { ...metrics, bars: chartBars };
   }
 
   @Get(':symbol/:indicator')

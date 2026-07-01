@@ -1,9 +1,9 @@
 /* ─── Data Area Landing Page ─────────────────────────────── */
 
 .dal-page {
-  max-width: 960px;
+  max-width: none;
   margin: 0 auto;
-  padding: 1.5rem 1rem 3rem;
+  padding: 1.5rem 1.5rem 3rem;
 }
 
 .dal-header {
@@ -156,4 +156,64 @@
 
 .dal-error {
   color: #dc2626;
+}
+
+/* ─── Recent Changes Section ────────────────────────────── */
+
+.dal-recent-section {
+  margin-top: 2rem;
+  border-top: 1px solid var(--border, #e2e8f0);
+  padding-top: 1.5rem;
+}
+
+.dal-recent-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.dal-recent-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.dal-refresh-btn {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text, #1e293b);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.dal-refresh-btn:hover {
+  background: var(--accent, #0ea5a6);
+  color: #fff;
+  border-color: var(--accent, #0ea5a6);
+}
+
+.dal-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dal-recent-meta {
+  font-size: 0.72rem;
+  color: var(--text-muted, #64748b);
+}
+
+.dal-recent-table {
+  font-size: 0.78rem;
+}
+
+.dal-recent-table th {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }

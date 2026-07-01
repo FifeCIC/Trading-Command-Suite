@@ -48,10 +48,35 @@ export default function AutomationDashboardPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation', 'status'] }),
   });
 
+  const startMutation = useMutation({
+    mutationFn: () => apiPost('/api/automation/start'),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation', 'status'] }),
+  });
+
+  const stopMutation = useMutation({
+    mutationFn: () => apiPost('/api/automation/stop'),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation', 'status'] }),
+  });
+
+  const runNowMutation = useMutation({
+    mutationFn: () => apiPost('/api/automation/run-now'),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation', 'status'] }),
+  });
+
   const apiOnline = !statusQuery.isError;
   const scores = portfolioScoresQuery.data?.scores ?? [];
   const strategies = statusQuery.data?.activeStrategies ?? [];
   const timelineEvents = timelineQuery.data?.events ?? [];
+  const loopState = statusQuery.data ?? {};
+  const brokerStates = statusQuery.data?.brokerStates ?? {};
+  const recentDecisions = statusQuery.data?.recentDecisions ?? [];
+  const loopRunning = loopState.loopEnabled;
+  const isBusy = startMutation.isPending || stopMutation.isPending || runNowMutation.isPending;
+
+  const formatTime = (iso) => {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
 
   return (
     <div className="ad-page">
@@ -61,11 +86,45 @@ export default function AutomationDashboardPage() {
           <p className="ad-subtitle">Multi-broker command center — scores, strategies, and trade decisions</p>
         </div>
         <div className="ad-header-actions">
-          <button className="ad-btn ad-btn-pause" disabled title="Loop not yet running">⏸ Pause All</button>
-          <button className="ad-btn ad-btn-run" disabled title="Loop not yet running">⚡ Run Now</button>
+          {loopRunning ? (
+            <button className="ad-btn ad-btn-pause" onClick={() => stopMutation.mutate()} disabled={isBusy}>
+              {stopMutation.isPending ? '⏳' : '⏸'} Stop Loop
+            </button>
+          ) : (
+            <button className="ad-btn ad-btn-start" onClick={() => startMutation.mutate()} disabled={isBusy}>
+              {startMutation.isPending ? '⏳' : '▶'} Start Loop
+            </button>
+          )}
+          <button className="ad-btn ad-btn-run" onClick={() => runNowMutation.mutate()} disabled={isBusy || !loopRunning}>
+            {runNowMutation.isPending ? '⏳' : '⚡'} Run Now
+          </button>
           <a href="/builder/architecture-framework" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '4px 10px', border: '1px solid var(--line)', borderRadius: 4, alignSelf: 'center' }}>⬡ Architecture</a>
         </div>
       </motion.header>
+
+      {/* ── Loop Status Bar ── */}
+      <motion.div className="ad-loop-bar" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+        <span className={`ad-loop-dot ${loopRunning ? 'ad-loop-running' : 'ad-loop-stopped'}`} />
+        <span className="ad-loop-label">{loopRunning ? 'Loop Active' : 'Loop Stopped'}</span>
+        {loopRunning && (
+          <>
+            <span className="ad-loop-sep">·</span>
+            <span>Tick #{loopState.tickCount || 0}</span>
+            <span className="ad-loop-sep">·</span>
+            <span>Interval: {Math.round((loopState.tickIntervalMs || 300000) / 1000)}s</span>
+            <span className="ad-loop-sep">·</span>
+            <span>Last: {formatTime(loopState.lastTickAt)}</span>
+            <span className="ad-loop-sep">·</span>
+            <span>Next: {formatTime(loopState.nextTickAt)}</span>
+            {loopState.lastTickMs > 0 && (
+              <>
+                <span className="ad-loop-sep">·</span>
+                <span>Duration: {loopState.lastTickMs}ms</span>
+              </>
+            )}
+          </>
+        )}
+      </motion.div>
 
       {!apiOnline && <ApiOfflineBanner />}
 
@@ -75,7 +134,15 @@ export default function AutomationDashboardPage() {
           <LoadingSkeleton variant="text" lines={1} />
         ) : (
           <div className="ad-broker-list">
-            <span className="ad-broker-note">Broker connection status available on <a href="/status/status" style={{color:'#60a5fa'}}>System Status</a> page</span>
+            {Object.keys(brokerStates).length > 0 ? (
+              Object.entries(brokerStates).map(([id, bs]) => (
+                <span key={id} className={`ad-broker-chip ${bs.enabled ? 'ad-broker-on' : 'ad-broker-off'}`}>
+                  {id} {bs.enabled ? '🟢' : '⚫'} {bs.tradingEnabled ? '🔴LIVE' : ''}
+                </span>
+              ))
+            ) : (
+              <span className="ad-broker-note">Start the loop to initialize broker states</span>
+            )}
           </div>
         )}
       </motion.div>
@@ -147,7 +214,7 @@ export default function AutomationDashboardPage() {
             <h2 className="ad-panel-title">⚙ Broker Config</h2>
             {statusQuery.isLoading ? <LoadingSkeleton variant="text" lines={3} /> : (
               <div className="ad-config-list">
-                {Object.entries(statusQuery.data?.brokerStates || {}).map(([brokerId, bs]) => (
+                {Object.entries(brokerStates).map(([brokerId, bs]) => (
                   <div key={brokerId} className="ad-config-row">
                     <div className="ad-config-header">
                       <span className="ad-config-broker">{brokerId}</span>
@@ -197,7 +264,7 @@ export default function AutomationDashboardPage() {
                     )}
                   </div>
                 ))}
-                {Object.keys(statusQuery.data?.brokerStates || {}).length === 0 && (
+                {Object.keys(brokerStates).length === 0 && (
                   <p className="ad-empty">No brokers configured. Start the loop to initialize broker states.</p>
                 )}
               </div>
@@ -255,10 +322,24 @@ export default function AutomationDashboardPage() {
             )}
           </motion.section>
 
-          {/* Decision Log placeholder */}
+          {/* Decision Log */}
           <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-            <h2 className="ad-panel-title">📋 Decision Log</h2>
-            <p className="ad-empty">Automation decisions will appear here when the loop is active and trading.</p>
+            <h2 className="ad-panel-title">📋 Decision Log {recentDecisions.length > 0 && <span style={{ fontSize: '0.7rem', color: 'var(--ink-soft)', fontWeight: 400 }}>({recentDecisions.length})</span>}</h2>
+            {recentDecisions.length === 0 ? (
+              <p className="ad-empty">No decisions yet. Start the loop and click Run Now to trigger a tick.</p>
+            ) : (
+              <div className="ad-decision-list">
+                {recentDecisions.slice(0, 15).map((d, i) => (
+                  <div key={i} className={`ad-decision-row ad-decision-${d.decision?.toLowerCase()}`}>
+                    <span className="ad-decision-symbol">{d.symbol}</span>
+                    <span className="ad-decision-tag">{d.decision}</span>
+                    <span className="ad-decision-composite">{d.composite > 0 ? d.composite : ''}</span>
+                    <span className="ad-decision-reason" title={d.reason}>{d.reason}</span>
+                    <span className="ad-decision-time">{formatTime(d.timestamp)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </motion.section>
         </div>
       </div>

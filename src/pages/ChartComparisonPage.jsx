@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
-import { createChart } from 'lightweight-charts';
+import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts';
 import './chart-comparison.css';
 
 const SYMBOLS = ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMD', 'SPY'];
@@ -71,7 +71,7 @@ export default function ChartComparisonPage() {
       timeScale: { borderColor: 'rgba(128,128,128,0.15)', timeVisible: true },
     });
 
-    const candleSeries = chart.addCandlestickSeries({
+    const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: '#22c55e',
       downColor: '#ef4444',
       borderUpColor: '#22c55e',
@@ -83,7 +83,7 @@ export default function ChartComparisonPage() {
 
     // Protocol marker line
     const midPrice = bars[Math.floor(bars.length / 2)]?.close || 100;
-    chart.addLineSeries({
+    chart.addSeries(LineSeries, {
       color: protocolColor,
       lineWidth: 1,
       lineStyle: 2,

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { apiGet } from '../core/api/client'
@@ -136,6 +137,16 @@ export default function DataAreaLandingPage() {
 
   const loading =
     symbols.isLoading || freshness.isLoading || providers.isLoading
+
+  // Recent changes — manual refresh + 10s auto
+  const [recentRefreshKey, setRecentRefreshKey] = useState(0)
+  const recentActivity = useQuery({
+    queryKey: ['dal-recent-activity', recentRefreshKey],
+    queryFn: () => apiGet('/api/api-activity?limit=25'),
+    refetchInterval: 10_000,
+    retry: 1,
+  })
+  const recentRecords = Array.isArray(recentActivity.data?.records) ? recentActivity.data.records : []
 
   return (
     <main className="dal-page">
@@ -379,6 +390,64 @@ export default function DataAreaLandingPage() {
             <span className="dal-neutral">Cache inspection & management</span>
           </div>
         </article>
+      </section>
+
+      {/* Recent Changes */}
+      <section className="dal-recent-section">
+        <div className="dal-recent-header">
+          <h2>Recent Changes</h2>
+          <button
+            type="button"
+            className="dal-refresh-btn"
+            onClick={() => setRecentRefreshKey((k) => k + 1)}
+            disabled={recentActivity.isFetching}
+          >
+            {recentActivity.isFetching ? '⟳ Refreshing…' : '⟳ Refresh'}
+          </button>
+          <span className="dal-recent-meta">
+            Auto-refreshes every 10s · {recentRecords.length} records
+          </span>
+        </div>
+        {recentActivity.isLoading && (
+          <LoadingSkeleton variant="table" rows={4} cols={5} />
+        )}
+        {!recentActivity.isLoading && recentRecords.length === 0 && (
+          <p className="dal-neutral" style={{ padding: '1rem 0' }}>No recent activity recorded yet.</p>
+        )}
+        {recentRecords.length > 0 && (
+          <div className="tp-table-wrap" style={{ overflowX: 'auto' }}>
+            <table className="tp-table dal-recent-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 100 }}>Time</th>
+                  <th style={{ width: 70 }}>Method</th>
+                  <th>Endpoint</th>
+                  <th style={{ width: 110 }}>Provider</th>
+                  <th style={{ width: 70 }}>Status</th>
+                  <th style={{ width: 80 }}>Latency</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentRecords.map((r, i) => (
+                  <tr key={r.id || i}>
+                    <td className="tp-mono" style={{ fontSize: 11 }}>
+                      {r.timestamp ? new Date(r.timestamp).toLocaleTimeString() : '—'}
+                    </td>
+                    <td><span className="tp-chip tp-chip--neutral" style={{ fontSize: 10 }}>{r.method}</span></td>
+                    <td><code style={{ fontSize: 11 }}>{r.endpoint}</code></td>
+                    <td><span className="tp-chip tp-chip--info" style={{ fontSize: 10 }}>{r.provider || 'internal'}</span></td>
+                    <td>
+                      <span className={`tp-chip ${r.statusCode >= 400 ? 'tp-chip--warn' : 'tp-chip--ok'}`} style={{ fontSize: 10 }}>
+                        {r.statusCode}
+                      </span>
+                    </td>
+                    <td className="tp-mono" style={{ fontSize: 11 }}>{r.durationMs}ms</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </main>
   )

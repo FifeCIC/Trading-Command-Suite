@@ -111,7 +111,10 @@ export default function ScoringRunsPage() {
                             minute: '2-digit',
                           })}
                         </td>
-                        <td>{run.strategyId}</td>
+                        <td>
+                          <span className="sruns-strat-name">{run.strategyName || 'Unknown'}</span>
+                          <span className="sruns-strat-id">{run.strategyId?.slice(0, 8)}</span>
+                        </td>
                         <td>{run.symbolsScored}</td>
                         <td>
                           <span style={{ color: 'var(--accent)' }}>{expanded ? '▾' : '▸'}</span>

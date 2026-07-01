@@ -1,0 +1,24 @@
+.pe-page { max-width: none; margin: 0; padding: 1.25rem 1.5rem; color: var(--ink); }
+.pe-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.pe-header h1 { margin: 0 0 0.2rem; font-size: 1.25rem; }
+.pe-subtitle { color: var(--ink-soft); font-size: 0.78rem; margin: 0; }
+.pe-next { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-size: 0.78rem; }
+.pe-next-label { color: var(--ink-soft); font-size: 0.65rem; text-transform: uppercase; }
+.pe-next-symbol { font-weight: 700; }
+.pe-next-days { color: var(--accent); font-weight: 700; }
+.pe-next-date { color: var(--ink-soft); font-size: 0.7rem; }
+.pe-empty { text-align: center; padding: 3rem 1rem; color: var(--ink-soft); }
+.pe-hint { font-size: 0.8rem; margin-top: 0.5rem; }
+.pe-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.pe-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem; }
+.pe-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
+.pe-symbol { font-weight: 700; font-size: 0.85rem; }
+.pe-position { font-size: 0.7rem; color: var(--ink-soft); }
+.pe-events { display: flex; flex-direction: column; gap: 0.2rem; }
+.pe-event { display: flex; align-items: center; gap: 0.5rem; font-size: 0.73rem; padding: 0.2rem 0; border-top: 1px solid rgba(128,128,128,0.08); }
+.pe-event-type { font-size: 0.6rem; font-weight: 600; padding: 1px 6px; border-radius: 3px; background: rgba(14,165,166,0.12); color: var(--accent); text-transform: uppercase; }
+.pe-event-date { font-weight: 600; }
+.pe-event-days { color: var(--accent); font-weight: 700; margin-left: auto; }
+.pe-event-eps { color: var(--ink-soft); font-size: 0.68rem; }
+.pe-event-time { color: var(--ink-soft); font-size: 0.65rem; }
+.pe-nodata { margin-top: 1rem; padding: 0.5rem; font-size: 0.68rem; color: var(--ink-soft); }

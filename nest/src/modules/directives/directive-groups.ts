@@ -188,8 +188,20 @@ for (const group of BTC_SPEED_GROUPS) {
   }
 }
 
+export interface DateRangeOverride {
+  start: { month: number; day: number };
+  end: { month: number; day: number };
+  weight: number;
+  label: string;
+}
+
+export interface SeasonalAffinity {
+  monthly: Record<number, number>;
+  dateRanges?: DateRangeOverride[];
+}
+
 /** Protocol registry — lookup table for protocol selection */
-export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name: string; description: string; tradingStyle?: string; recommendedTimeframe?: string; avgHoldTime?: string; winRateTarget?: string; idealFor?: string }> = {
+export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name: string; description: string; tradingStyle?: string; recommendedTimeframe?: string; avgHoldTime?: string; winRateTarget?: string; idealFor?: string; seasonalAffinity?: SeasonalAffinity }> = {
   default: {
     groups: DIRECTIVE_GROUPS,
     name: 'SEES Default',
@@ -199,6 +211,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Days to weeks',
     winRateTarget: '55–65%',
     idealFor: 'Equity portfolios, multi-day holds, balanced risk/reward',
+    seasonalAffinity: { monthly: {} },
   },
   'btc-speed-v1': {
     groups: BTC_SPEED_GROUPS,
@@ -209,6 +222,10 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Hours to days',
     winRateTarget: '55–65%',
     idealFor: 'Bitcoin ETF entry timing, spot accumulation zones, swing trades around halving cycle phases. Best when halving cycle is in Rally or Mid-Cycle phase.',
+    seasonalAffinity: {
+      monthly: { 0: 0.05, 1: -0.05, 2: 0.10, 3: 0.10, 4: 0.05, 5: -0.05, 6: 0.00, 7: 0.05, 8: -0.05, 9: 0.00, 10: 0.15, 11: 0.20 },
+      dateRanges: [{ start: {month:3,day:15}, end: {month:5,day:15}, weight: 0.10, label: 'Pre-halving rally window' }],
+    },
   },
 
   // ── BTC Tick Scalp V1 ──
@@ -263,6 +280,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Seconds to a few minutes',
     winRateTarget: '65–75%',
     idealFor: 'XTrend speed trading — $1 positions, sub-minute holds, high win rate. Requires tight spreads and liquid sessions. Do NOT use for position trading or multi-hour holds.',
+    seasonalAffinity: { monthly: { 0: 0.05, 1: -0.05, 2: 0.10, 3: 0.10, 4: 0.05, 5: -0.05, 6: 0.00, 7: 0.05, 8: -0.05, 9: 0.00, 10: 0.15, 11: 0.20 } },
   },
 
   // ── XAU: Gold Speed Scalp V1 ──
@@ -314,6 +332,10 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Seconds to a few minutes',
     winRateTarget: '65–75%',
     idealFor: 'XTrend gold speed trading during London/NY overlap (12:00–16:00 GMT). Avoid first 5min after major news — spreads widen dramatically.',
+    seasonalAffinity: {
+      monthly: { 0: 0.15, 1: 0.10, 2: 0.00, 3: 0.00, 4: -0.10, 5: -0.10, 6: -0.05, 7: -0.05, 8: 0.15, 9: 0.10, 10: 0.05, 11: 0.15 },
+      dateRanges: [{ start: {month:7,day:15}, end: {month:9,day:15}, weight: 0.10, label: 'Gold seasonal strength Aug–Sep' }],
+    },
   },
 
   // ── OIL: WTI Speed Scalp V1 ──
@@ -364,6 +386,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Seconds to a few minutes',
     winRateTarget: '65–75%',
     idealFor: 'XTrend oil speed trading during NY session (13:30–20:00 GMT). EIA report Wednesdays 14:30 GMT = massive volatility. Avoid Asian session — oil is thin and whippy.',
+    seasonalAffinity: { monthly: { 0: -0.05, 1: 0.00, 2: 0.10, 3: 0.10, 4: 0.05, 5: 0.15, 6: 0.15, 7: 0.10, 8: 0.10, 9: 0.00, 10: -0.10, 11: -0.10 }, dateRanges: [{ start: {month:5,day:1}, end: {month:8,day:31}, weight: 0.10, label: 'Summer driving season' }] },
   },
 
   // ── SPY: Speed Scalp V1 ──
@@ -414,6 +437,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Seconds to a few minutes',
     winRateTarget: '65–75%',
     idealFor: 'XTrend SPX500 speed trading during US session (14:30–21:00 GMT). Best during opening drive (first 30min) and power hour (last 60min) when gamma flows are strongest.',
+    seasonalAffinity: { monthly: { 0: 0.10, 1: 0.05, 2: 0.00, 3: 0.10, 4: -0.05, 5: -0.10, 6: -0.10, 7: -0.05, 8: -0.15, 9: 0.05, 10: 0.10, 11: 0.15 }, dateRanges: [{ start: {month:11,day:24}, end: {month:0,day:2}, weight: 0.20, label: 'Santa Claus Rally' }] },
   },
 
   // ── SPY: Day Trading V1 ──
@@ -465,6 +489,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Minutes to hours',
     winRateTarget: '55–65%',
     idealFor: 'XTrend SPX500 day trading during full US session. Best entries: opening range break (first 30min), VWAP reversion mid-day, power hour trend (last 60min).',
+    seasonalAffinity: { monthly: { 0: 0.10, 1: 0.05, 2: 0.00, 3: 0.10, 4: -0.05, 5: -0.10, 6: -0.10, 7: -0.05, 8: -0.15, 9: 0.05, 10: 0.10, 11: 0.15 }, dateRanges: [{ start: {month:11,day:24}, end: {month:0,day:2}, weight: 0.20, label: 'Santa Claus Rally' }, { start: {month:2,day:15}, end: {month:2,day:21}, weight: -0.10, label: 'Triple Witching' }] },
   },
 
   // ── QQQ: Speed Scalp V1 ──
@@ -515,6 +540,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Seconds to a few minutes',
     winRateTarget: '65–75%',
     idealFor: 'XTrend TECH100 speed trading during US session. Best during tech earnings season and AI news cycles when QQQ vol is elevated.',
+    seasonalAffinity: { monthly: { 0: 0.15, 1: 0.10, 2: 0.00, 3: 0.10, 4: -0.05, 5: -0.05, 6: -0.05, 7: -0.05, 8: -0.10, 9: 0.10, 10: 0.15, 11: 0.15 }, dateRanges: [{ start: {month:0,day:15}, end: {month:1,day:15}, weight: 0.10, label: 'Tech earnings season Q4' }, { start: {month:6,day:15}, end: {month:7,day:31}, weight: 0.10, label: 'Tech earnings season Q2' }] },
   },
 
   // ── QQQ: Day Trading V1 ──
@@ -566,6 +592,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Minutes to hours',
     winRateTarget: '55–65%',
     idealFor: 'XTrend TECH100 day trading during US session. Follow the trend — QQQ trends last longer than SPY. Best during tech earnings (Jan/Apr/Jul/Oct) and AI news cycles.',
+    seasonalAffinity: { monthly: { 0: 0.15, 1: 0.10, 2: 0.00, 3: 0.10, 4: -0.05, 5: -0.05, 6: -0.05, 7: 0.05, 8: -0.10, 9: 0.10, 10: 0.15, 11: 0.15 }, dateRanges: [{ start: {month:6,day:15}, end: {month:7,day:31}, weight: 0.15, label: 'Tech earnings season summer' }] },
   },
 
   // ── US30: Dow Speed Scalp V1 ──
@@ -616,6 +643,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Seconds to a few minutes',
     winRateTarget: '65–75%',
     idealFor: 'XTrend US30/DJI30 speed trading during US session. Less volatile than SPY — tighter stops, smaller profit targets. Best during sector rotation days.',
+    seasonalAffinity: { monthly: { 0: 0.10, 1: 0.05, 2: 0.00, 3: 0.10, 4: -0.05, 5: -0.10, 6: -0.10, 7: -0.05, 8: -0.15, 9: 0.05, 10: 0.10, 11: 0.15 } },
   },
 
   // ── UK100: FTSE Speed Scalp V1 ──
@@ -666,6 +694,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Seconds to a few minutes',
     winRateTarget: '65–75%',
     idealFor: 'XTrend UK100 speed trading during London session (08:00–16:30 GMT). Best during UK econ data releases and commodity price moves.',
+    seasonalAffinity: { monthly: { 0: 0.10, 1: 0.05, 2: 0.00, 3: 0.10, 4: -0.05, 5: -0.05, 6: -0.05, 7: -0.05, 8: -0.10, 9: 0.00, 10: 0.05, 11: 0.10 } },
   },
 
   // ── TSLA: Single Stock Speed Scalp V1 ──
@@ -716,6 +745,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Seconds to a few minutes',
     winRateTarget: '60–70%',
     idealFor: 'XTrend TSLA speed trading during US session. Expect wider spreads than indices. Do NOT hold through earnings. Elon tweets can move the stock 5% in minutes.',
+    seasonalAffinity: { monthly: { 0: 0.15, 1: 0.10, 2: 0.00, 3: 0.10, 4: -0.05, 5: -0.05, 6: -0.05, 7: 0.05, 8: -0.10, 9: 0.10, 10: 0.15, 11: 0.15 } },
   },
 
   // ── DOGE: Meme Coin Speed Scalp V1 ──
@@ -766,6 +796,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Seconds — get in, get out',
     winRateTarget: '55–65%',
     idealFor: 'XTrend DOGE speed trading — absolute smallest position size ($1). Meme coins can drop 20% in minutes. Use tightest possible stops. Only trade during high social activity.',
+    seasonalAffinity: { monthly: { 0: 0.05, 1: -0.05, 2: 0.10, 3: 0.10, 4: 0.05, 5: -0.05, 6: 0.00, 7: 0.05, 8: -0.05, 9: 0.00, 10: 0.15, 11: 0.20 } },
   },
 
   // ── CHINA50: China Index Speed Scalp V1 ──
@@ -815,6 +846,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Seconds to a few minutes',
     winRateTarget: '60–70%',
     idealFor: 'XTrend CHINA50 speed trading during Asian session (01:00–09:00 GMT). Government can halt trading or intervene at any time. Use extreme caution.',
+    seasonalAffinity: { monthly: { 0: 0.05, 1: -0.10, 2: 0.10, 3: 0.00, 4: -0.05, 5: -0.05, 6: 0.00, 7: 0.00, 8: -0.05, 9: 0.10, 10: 0.05, 11: 0.00 }, dateRanges: [{ start: {month:0,day:20}, end: {month:1,day:15}, weight: -0.10, label: 'Chinese New Year — thin liquidity' }] },
   },
 
   // ── Momentum Stocks: Group Protocol V1 ──
@@ -867,6 +899,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Hours to days',
     winRateTarget: '55–65%',
     idealFor: 'High-momentum stocks: NVDA, MSTR, PLTR, AVGO, COIN, MARA, RIOT, HOOD, RKLB, ASTS, SOFI. Score the wishlist, trade the top 1-2 signals. Never hold through earnings without confirmation.',
+    seasonalAffinity: { monthly: { 0: 0.10, 1: 0.05, 2: 0.00, 3: 0.10, 4: -0.05, 5: -0.10, 6: -0.10, 7: -0.05, 8: -0.15, 9: 0.05, 10: 0.10, 11: 0.15 } },
   },
 
   // ── Pandemic/Health Crisis: Group Protocol V1 ──
@@ -916,6 +949,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Hours to days (event-dependent)',
     winRateTarget: '50–60%',
     idealFor: 'Pandemic watchlist stocks: PFE, MRNA, BNTX, MRK, HOLX, DHR, CVS, UNH, ECL, BAH, EBS, TDOC, CODX, SNGX. Best during outbreak news cycles, WHO declarations, BARDA contracts, and trial result announcements.',
+    seasonalAffinity: { monthly: { 0: 0.15, 1: 0.10, 2: 0.00, 3: -0.05, 4: -0.05, 5: -0.10, 6: -0.10, 7: -0.10, 8: -0.05, 9: 0.00, 10: 0.05, 11: 0.10 }, dateRanges: [{ start: {month:9,day:1}, end: {month:2,day:28}, weight: 0.15, label: 'Flu season — healthcare demand surge' }] },
   },
 
   // ── Leverage Shares: Bidirectional Protocol V2 ──
@@ -968,6 +1002,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Minutes to hours (NOT overnight)',
     winRateTarget: '50–60%',
     idealFor: '79 Leverage Shares across 5 categories. Never hold overnight — compounding decay erodes 3x value. Position size = 1/3 of normal due to amplification. SEES scans all 79 to find the single best leverage opportunity at any moment.',
+    seasonalAffinity: { monthly: { 0: 0.10, 1: 0.05, 2: 0.00, 3: 0.10, 4: -0.05, 5: -0.10, 6: -0.10, 7: -0.05, 8: -0.15, 9: 0.05, 10: 0.10, 11: 0.15 } },
   },
 
   // ── VIX: Mean-Reversion Spike Protocol ──
@@ -1014,6 +1049,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Minutes to 1 hour',
     winRateTarget: '65–75%',
     idealFor: 'VIX spike reversals. Best during US market hours when VIX options are most liquid. Not for trend-following — pure mean reversion.',
+    seasonalAffinity: { monthly: { 0: 0.00, 1: -0.05, 2: 0.10, 3: 0.05, 4: 0.00, 5: 0.00, 6: -0.05, 7: -0.05, 8: 0.15, 9: 0.10, 10: -0.05, 11: -0.05 }, dateRanges: [{ start: {month:8,day:1}, end: {month:9,day:30}, weight: 0.15, label: 'Sep/Oct volatility season' }] },
   },
 
   // ── GOLD: Safe Haven & Macro Protocol ──
@@ -1062,6 +1098,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Days to weeks',
     winRateTarget: '55–65%',
     idealFor: 'Gold EFTs, XAUUSD CFD positions, macro-driven gold exposure. Best when DXY is weak and real rates are falling.',
+    seasonalAffinity: { monthly: { 0: 0.15, 1: 0.10, 2: 0.00, 3: 0.00, 4: -0.10, 5: -0.10, 6: -0.05, 7: -0.05, 8: 0.15, 9: 0.10, 10: 0.05, 11: 0.15 } },
   },
 
   // ── JPN225: Nikkei Speed Scalp V1 ──
@@ -1113,6 +1150,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Seconds to a few minutes',
     winRateTarget: '60–70%',
     idealFor: 'XTrend JPN225 speed trading during Tokyo session. Best during BOJ announcements, Japan econ data, and USDJPY volatility.',
+    seasonalAffinity: { monthly: { 0: 0.05, 1: 0.00, 2: 0.10, 3: 0.10, 4: -0.05, 5: 0.00, 6: 0.00, 7: 0.00, 8: -0.10, 9: 0.05, 10: 0.10, 11: 0.10 }, dateRanges: [{ start: {month:2,day:25}, end: {month:3,day:10}, weight: 0.10, label: 'Japanese fiscal year-end window dressing' }] },
   },
 
   // ── EUSTX50: Euro Stoxx Speed Scalp V1 ──
@@ -1164,6 +1202,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Seconds to a few minutes',
     winRateTarget: '60–70%',
     idealFor: 'XTrend EUSTX50 speed trading during European session. Best during ECB announcements, EU econ data, and EUR volatility.',
+    seasonalAffinity: { monthly: { 0: 0.05, 1: 0.00, 2: 0.05, 3: 0.10, 4: -0.05, 5: -0.05, 6: -0.05, 7: -0.05, 8: -0.10, 9: 0.05, 10: 0.05, 11: 0.10 } },
   },
 
   // ── Default fallback ──
@@ -1213,6 +1252,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Hours to days',
     winRateTarget: '55–65%',
     idealFor: 'Oil CFD/ETF trades around OPEC meetings, EIA reports, and geopolitical supply events.',
+    seasonalAffinity: { monthly: { 0: -0.05, 1: 0.00, 2: 0.10, 3: 0.10, 4: 0.05, 5: 0.15, 6: 0.15, 7: 0.10, 8: 0.10, 9: 0.00, 10: -0.10, 11: -0.10 } },
   },
 
   // ── FOREX: Session-Based Mean Reversion Protocol ──
@@ -1262,6 +1302,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Minutes to hours',
     winRateTarget: '60–70%',
     idealFor: 'Forex pairs during London/NY session overlap. Mean-reverting within daily ranges, trend-following on session breaks.',
+    seasonalAffinity: { monthly: {} },
   },
 
   // ── CAD Sniper V1 ──
@@ -1312,5 +1353,6 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Seconds to minutes',
     winRateTarget: '60–70%',
     idealFor: 'US/Canada session (14:30–21:00 GMT). Best during oil inventory releases (Wed 15:30 GMT) and BOC rate decisions. Avoid Canadian holidays when liquidity drops.',
+    seasonalAffinity: { monthly: {} },
   },
 };

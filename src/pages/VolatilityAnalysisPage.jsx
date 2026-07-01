@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './volatility-analysis.css';
@@ -11,9 +12,103 @@ const TIMEFRAMES = [
   { id: 'D1', label: '1 day' },
 ];
 
+const DEFAULT_SYMBOLS = ['SPY', 'QQQ', 'AAPL', 'NVDA', 'TSLA', 'XAUUSD', 'EURUSD', 'BTCUSD', 'USOIL'];
+
+function VaChart({ metrics, bars }) {
+  const containerRef = useRef(null);
+  const chartRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current || !bars?.length) return;
+
+    const chart = createChart(containerRef.current, {
+      height: 400,
+      layout: {
+        background: { color: 'transparent' },
+        textColor: 'var(--ink-soft, #94a3b8)',
+        fontSize: 11,
+      },
+      grid: {
+        vertLines: { color: 'rgba(148,163,184,0.08)' },
+        horzLines: { color: 'rgba(148,163,184,0.08)' },
+      },
+      crosshair: { mode: 0 },
+      timeScale: { borderColor: 'rgba(148,163,184,0.12)' },
+      rightPriceScale: { borderColor: 'rgba(148,163,184,0.12)' },
+    });
+
+    chartRef.current = chart;
+
+    const candleSeries = chart.addSeries(CandlestickSeries, {
+      upColor: '#22c55e',
+      downColor: '#ef4444',
+      borderUpColor: '#22c55e',
+      borderDownColor: '#ef4444',
+      wickUpColor: '#22c55e',
+      wickDownColor: '#ef4444',
+    });
+    candleSeries.setData(bars);
+
+    // Bollinger Bands overlay if bbWidth available
+    if (metrics?.bbWidth != null && bars.length >= 20) {
+      const closes = bars.map((b) => b.close);
+      const sma20 = closes.slice(-20).reduce((a, v) => a + v, 0) / 20;
+      const std20 = Math.sqrt(closes.slice(-20).reduce((a, v) => a + (v - sma20) ** 2, 0) / 20);
+
+      // Middle band
+      const midSeries = chart.addSeries(LineSeries, {
+        color: '#f59e0b',
+        lineWidth: 1,
+        priceLineVisible: false,
+        lastValueVisible: false,
+      });
+      midSeries.setData(bars.map((b) => ({ time: b.time, value: sma20 })));
+
+      // Upper band
+      const upperSeries = chart.addSeries(LineSeries, {
+        color: '#ef444466',
+        lineWidth: 1,
+        priceLineVisible: false,
+        lastValueVisible: false,
+      });
+      upperSeries.setData(bars.map((b) => ({ time: b.time, value: sma20 + 2 * std20 })));
+
+      // Lower band
+      const lowerSeries = chart.addSeries(LineSeries, {
+        color: '#22c55e66',
+        lineWidth: 1,
+        priceLineVisible: false,
+        lastValueVisible: false,
+      });
+      lowerSeries.setData(bars.map((b) => ({ time: b.time, value: sma20 - 2 * std20 })));
+    }
+
+    chart.timeScale().fitContent();
+
+    return () => {
+      chart.remove();
+      chartRef.current = null;
+    };
+  }, [bars, metrics]);
+
+  return <div ref={containerRef} className="va-chart-container" />;
+}
+
 export default function VolatilityAnalysisPage() {
-  const [symbol, setSymbol] = useState('AAPL');
+  const [symbol, setSymbol] = useState('SPY');
   const [timeframe, setTimeframe] = useState('H1');
+  const [symbols, setSymbols] = useState(DEFAULT_SYMBOLS);
+
+  useEffect(() => {
+    apiGet('/api/watchlists').then((data) => {
+      const lists = Array.isArray(data?.watchlists) ? data.watchlists : [];
+      const defaultList = lists.find((l) => l.isDefault) || lists[0];
+      const wlSymbols = Array.isArray(defaultList?.symbols)
+        ? defaultList.symbols.map((s) => (typeof s === 'string' ? s : s.ticker).toUpperCase())
+        : [];
+      if (wlSymbols.length > 0) setSymbols(wlSymbols);
+    }).catch(() => {});
+  }, []);
 
   const { data: metrics, isLoading, isError } = useQuery({
     queryKey: ['indicators', symbol, timeframe, 'volatility'],
@@ -25,27 +120,6 @@ export default function VolatilityAnalysisPage() {
   const volLevel = hasData ? Number(metrics.volPercentile) : 0;
   const volLabel = volLevel > 70 ? 'High' : volLevel > 35 ? 'Moderate' : 'Low';
   const volCls = volLevel > 70 ? 'va-high' : volLevel > 35 ? 'va-mid' : 'va-low';
-
-  // Chart: use real bollinger width to draw bands around a centered value
-  const { priceLine, upperLine, lowerLine, bandFill } = useMemo(() => {
-    if (!hasData) return { priceLine: '', upperLine: '', lowerLine: '', bandFill: '' };
-    const center = 100;
-    const width = metrics.bbWidth ? metrics.bbWidth * 0.3 : 10;
-    const prices = Array.from({ length: 80 }, (_, i) => center + (Math.sin(i * 0.3) * width * 0.4) + ((Math.random() - 0.5) * width * 0.3));
-    const upper = prices.map((p) => p + width / 2);
-    const lower = prices.map((p) => p - width / 2);
-    const yMin = Math.min(...lower) * 0.99;
-    const yMax = Math.max(...upper) * 1.01;
-    const range = yMax - yMin;
-    const toY = (v) => 100 - ((v - yMin) / range) * 100;
-    const n = prices.length - 1;
-    return {
-      priceLine: prices.map((p, i) => `${(i / n) * 100},${toY(p)}`).join(' '),
-      upperLine: upper.map((p, i) => `${(i / n) * 100},${toY(p)}`).join(' '),
-      lowerLine: lower.map((p, i) => `${(i / n) * 100},${toY(p)}`).join(' '),
-      bandFill: [...upper.map((p, i) => `${(i / n) * 100},${toY(p)}`), ...lower.slice().reverse().map((p, i) => `${((n - i) / n) * 100},${toY(p)}`)].join(' '),
-    };
-  }, [hasData, metrics?.bbWidth]);
 
   return (
     <div className="va-page">
@@ -61,7 +135,7 @@ export default function VolatilityAnalysisPage() {
         <div className="va-field">
           <label>Symbol</label>
           <select value={symbol} onChange={(e) => setSymbol(e.target.value)}>
-            {['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMD', 'SPY'].map((s) => (
+            {symbols.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
@@ -99,53 +173,33 @@ export default function VolatilityAnalysisPage() {
       <section className="va-section">
         <h2>Key Metrics — {symbol}</h2>
         <div className="va-metrics-grid">
+          <div className={`va-metric-card ${volCls}`}>
+            <span className="va-metric-label">Volatility Regime</span>
+            <span className="va-metric-value">{volLabel}</span>
+            <span className="va-metric-sub">{volLevel}th percentile</span>
+          </div>
           <div className="va-metric-card">
-            <span className="va-metric-label">ATR</span>
-            <span className="va-metric-value">{metrics.atr != null ? metrics.atr : '—'}</span>
-            <span className="va-metric-hint">Average True Range</span>
+            <span className="va-metric-label">ATR (14)</span>
+            <span className="va-metric-value">{metrics.atr}</span>
+            <span className="va-metric-sub">Average True Range</span>
           </div>
           <div className="va-metric-card">
             <span className="va-metric-label">Bollinger Width</span>
-            <span className="va-metric-value">{metrics.bollingerWidth != null ? metrics.bollingerWidth : '—'}</span>
-            <span className="va-metric-hint">Band spread</span>
+            <span className="va-metric-value">{metrics.bbWidth}</span>
+            <span className="va-metric-sub">20-period, 2σ bands</span>
           </div>
           <div className="va-metric-card">
             <span className="va-metric-label">Historical Vol</span>
-            <span className="va-metric-value">{metrics.historicalVol != null ? `${metrics.historicalVol}%` : '—'}</span>
-            <span className="va-metric-hint">Std dev of returns</span>
-          </div>
-          <div className={`va-metric-card ${volCls}`}>
-            <span className="va-metric-label">Vol Percentile</span>
-            <span className="va-metric-value">{hasData ? `${metrics.volPercentile}%` : '—'}</span>
-            <span className="va-metric-hint">{hasData ? `${volLabel} vs 1yr range` : 'Insufficient data'}</span>
+            <span className="va-metric-value">{metrics.histVol != null ? `${metrics.histVol}%` : '—'}</span>
+            <span className="va-metric-sub">Annualised (252d)</span>
           </div>
         </div>
       </section>
 
-      {/* Bollinger Bands chart */}
+      {/* Chart with Bollinger Bands */}
       <section className="va-section">
-        <h2>Bollinger Bands — {symbol} ({timeframe})</h2>
-        <div className="va-chart-wrap">
-          <svg viewBox="0 0 100 100" className="va-chart" preserveAspectRatio="none">
-            {/* Band fill */}
-            <polygon fill="rgba(14, 165, 166, 0.06)" points={bandFill} />
-            {/* Upper band */}
-            <polyline fill="none" stroke="rgba(245, 158, 11, 0.4)" strokeWidth="0.4" strokeDasharray="2 3" points={upperLine} />
-            {/* Lower band */}
-            <polyline fill="none" stroke="rgba(245, 158, 11, 0.4)" strokeWidth="0.4" strokeDasharray="2 3" points={lowerLine} />
-            {/* SMA */}
-            <polyline fill="none" stroke="#f59e0b" strokeWidth="0.6" strokeDasharray="2 2" points={smaLine} />
-            {/* Price */}
-            <polyline fill="none" stroke="var(--accent, #0ea5a6)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" points={priceLine} />
-            {/* Legend */}
-            <line x1="3" y1="6" x2="9" y2="6" stroke="var(--accent, #0ea5a6)" strokeWidth="1.3" />
-            <text x="10" y="8" fill="var(--accent, #0ea5a6)" fontSize="3" fontWeight="600">Price</text>
-            <line x1="22" y1="6" x2="28" y2="6" stroke="#f59e0b" strokeWidth="0.6" strokeDasharray="2 2" />
-            <text x="29" y="8" fill="#f59e0b" fontSize="3">SMA</text>
-            <line x1="39" y1="6" x2="45" y2="6" stroke="rgba(245,158,11,0.4)" strokeWidth="0.4" strokeDasharray="2 3" />
-            <text x="46" y="8" fill="rgba(245,158,11,0.6)" fontSize="3">Bands</text>
-          </svg>
-        </div>
+        <h2>Price & Bollinger Bands — {symbol} ({TIMEFRAMES.find((t) => t.id === timeframe)?.label})</h2>
+        <VaChart metrics={metrics} bars={metrics.bars} />
       </section>
       </>
       )}

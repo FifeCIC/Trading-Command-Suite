@@ -72,15 +72,25 @@ export default function DatabaseTablesPage() {
     queryFn: () => apiGet('/api/imports/runs?limit=100'),
   })
 
+  // Table stats (last insert timestamps)
+  const tableStats = useQuery({
+    queryKey: ['db-table-stats'],
+    queryFn: () => apiGet('/api/database/table-stats').catch(() => ({})),
+    retry: 1,
+    staleTime: 30_000,
+  })
+
   const v = version.data ?? {}
   const svc = v.services ?? {}
   const dbConnected = svc.databaseConnected === true
+  const prismaVersion = v.prismaVersion ?? '5.22.0'
   const s = symbols.data ?? {}
   const syms = Array.isArray(s.symbols) ? s.symbols : []
   const p = providers.data ?? {}
   const provs = Array.isArray(p.providers) ? p.providers : []
   const i = imports.data ?? {}
   const runs = Array.isArray(i.runs) ? i.runs : []
+  const tStats = tableStats.data?.tables ?? {}
 
   function rowCount(modelName) {
     switch (modelName) {
@@ -105,6 +115,16 @@ export default function DatabaseTablesPage() {
     return <span className={`db-chip db-chip--${labels[status] || 'neutral'}`}>{chipLabels[status] || status}</span>
   }
 
+  function lastInsert(prismaModel) {
+    const stat = tStats[prismaModel]
+    if (!stat?.lastInsert) return '—'
+    return new Date(stat.lastInsert).toLocaleString()
+  }
+
+  function phpMyAdminLink(tableName) {
+    return `http://localhost/phpmyadmin/index.php?route=/table/sql&db=tradingcs&table=${tableName}`
+  }
+
   return (
     <div className="database-tables-page">
       <header className="db-page-header">
@@ -123,6 +143,9 @@ export default function DatabaseTablesPage() {
             <th>Description</th>
             <th>Status</th>
             <th>Rows</th>
+            <th>Version</th>
+            <th>Last Insert</th>
+            <th style={{ width: 50 }}>View</th>
           </tr>
         </thead>
         <tbody>
@@ -132,13 +155,23 @@ export default function DatabaseTablesPage() {
               <td>{t.description}</td>
               <td>{statusChip(tableStatus(t.prismaModel, t))}</td>
               <td className="num">{t.status === 'planned' ? '—' : rowCount(t.prismaModel)}</td>
+              <td className="num" style={{ fontSize: 11 }}>{t.status === 'active' ? `Prisma ${prismaVersion}` : '—'}</td>
+              <td className="num" style={{ fontSize: 11 }}>{t.status === 'active' && t.prismaModel ? lastInsert(t.prismaModel) : '—'}</td>
+              <td>
+                {t.status === 'active' && (
+                  <a href={phpMyAdminLink(t.name)} target="_blank" rel="noreferrer" className="tp-chip tp-chip--info" style={{ fontSize: 10, textDecoration: 'none' }} title="Open in phpMyAdmin">
+                    🔗
+                  </a>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
 
       <footer className="page-footer">
-        <p>Engine: MySQL 9.1 (WAMP) · Database: tradingcs · ORM: Prisma 5.22.0</p>
+        <p>Engine: MySQL 9.1 (WAMP) · Database: tradingcs · ORM: Prisma {prismaVersion}</p>
+        <p>Tables are managed via Prisma schema (<code>nest/prisma/schema.prisma</code>). Migrations are applied with <code>npx prisma db push</code>.</p>
         {!dbConnected && (
           <p className="db-hint">Database not connected. Check DATABASE_URL in nest/.env and that MySQL is running.</p>
         )}

@@ -50,3 +50,72 @@
 @media (max-width: 760px) {
   .ro-summary-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* ── Dashboard Grid ── */
+.ro-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.ro-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1rem;
+}
+.ro-card-span { grid-column: 1 / -1; }
+.ro-card-title { margin: 0 0 0.75rem; font-size: 0.9rem; font-weight: 700; }
+.ro-empty { color: var(--ink-soft); font-size: 0.8rem; margin: 0; }
+.ro-clock { font-size: 0.7rem; color: var(--ink-soft); white-space: nowrap; }
+
+/* ── Top Signals ── */
+.ro-signals { display: flex; flex-direction: column; gap: 0.4rem; }
+.ro-signal-row {
+  display: grid; grid-template-columns: 28px 70px 1fr 50px 60px;
+  align-items: center; gap: 0.5rem; font-size: 0.8rem;
+}
+.ro-signal-rank { font-size: 0.65rem; color: var(--ink-soft); }
+.ro-signal-symbol { font-weight: 700; }
+.ro-signal-bar-wrap { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.ro-signal-bar { height: 100%; border-radius: 3px; background: var(--accent); }
+.ro-signal-score { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.ro-signal-tag {
+  font-size: 0.65rem; padding: 1px 5px; border-radius: 3px; font-weight: 600; text-align: center;
+}
+.ro-signal-tag.bullish, .ro-signal-tag.buy { background: rgba(34,197,94,0.12); color: #22c55e; }
+.ro-signal-tag.bearish, .ro-signal-tag.sell { background: rgba(239,68,68,0.12); color: #ef4444; }
+.ro-signal-tag.neutral, .ro-signal-tag.defensive { background: rgba(148,163,184,0.12); color: #94a3b8; }
+
+/* ── Decisions ── */
+.ro-decision-list { display: flex; flex-direction: column; gap: 3px; max-height: 220px; overflow-y: auto; }
+.ro-decision-row {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.4rem;
+  border-radius: 4px; font-size: 0.73rem; border-left: 3px solid transparent;
+}
+.ro-decision-scored { border-left-color: #22c55e; }
+.ro-decision-symbol { font-weight: 700; min-width: 55px; }
+.ro-decision-composite { font-weight: 700; color: var(--accent); min-width: 35px; }
+.ro-decision-reason { font-size: 0.65rem; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Events ── */
+.ro-events { display: flex; flex-direction: column; gap: 0.4rem; }
+.ro-event-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; }
+.ro-event-icon { font-size: 1rem; }
+.ro-event-time { display: block; font-size: 0.65rem; color: var(--ink-soft); }
+
+/* ── Status ── */
+.ro-status { display: flex; flex-direction: column; gap: 0.3rem; }
+.ro-status-row { display: flex; justify-content: space-between; font-size: 0.78rem; }
+.ro-status-badge.ro-on { background: rgba(34,197,94,0.12); color: #22c55e; padding: 1px 8px; border-radius: 4px; font-weight: 600; font-size: 0.7rem; }
+.ro-status-badge.ro-off { background: rgba(107,114,128,0.12); color: #6b7280; padding: 1px 8px; border-radius: 4px; font-weight: 600; font-size: 0.7rem; }
+
+/* ── Hero Score ── */
+.ro-hero-score { text-align: center; padding: 1rem 0; }
+.ro-hero-symbol { display: block; font-size: 1.2rem; font-weight: 700; color: var(--ink-soft); margin-bottom: 0.25rem; }
+.ro-hero-value { display: block; font-size: 3rem; font-weight: 900; color: var(--accent); line-height: 1; }
+.ro-hero-signal { display: block; font-size: 0.75rem; color: var(--ink-soft); margin-top: 0.25rem; }
+
+@media (max-width: 760px) {
+  .ro-grid { grid-template-columns: 1fr; }
+  .ro-signal-row { grid-template-columns: 24px 60px 1fr 40px 50px; font-size: 0.72rem; }
+}

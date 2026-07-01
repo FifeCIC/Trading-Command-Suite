@@ -1,0 +1,308 @@
+/* ─── Decoder Page ──────────────────────────────────────── */
+
+.decoder-page {
+  max-width: none;
+  padding: 1.5rem 1.5rem 3rem;
+  color: var(--ink, #e2e8f0);
+}
+
+.decoder-header {
+  margin-bottom: 1.25rem;
+}
+
+.decoder-header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.decoder-header p {
+  margin: 0;
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.85rem;
+}
+
+/* ─── Layout ────────────────────────────────────────────── */
+
+.decoder-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .decoder-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Input Section ─────────────────────────────────────── */
+
+.decoder-input-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.decoder-format-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.decoder-format-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.65rem;
+  background: var(--accent, #0ea5a6);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.decoder-format-desc {
+  font-size: 0.75rem;
+  color: var(--ink-soft, #94a3b8);
+}
+
+.decoder-textarea {
+  width: 100%;
+  min-height: 260px;
+  padding: 0.75rem;
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  background: var(--panel, #1a1a2e);
+  color: var(--ink, #e2e8f0);
+  font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.decoder-textarea:focus {
+  outline: none;
+  border-color: var(--accent, #0ea5a6);
+  box-shadow: 0 0 0 2px rgba(14, 165, 166, 0.15);
+}
+
+.decoder-textarea::placeholder {
+  color: var(--ink-soft, #64748b);
+  font-family: inherit;
+}
+
+/* ─── Actions ───────────────────────────────────────────── */
+
+.decoder-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.decoder-btn {
+  padding: 0.5rem 1.25rem;
+  border: 1px solid var(--line, #334155);
+  border-radius: 6px;
+  background: var(--panel, #1a1a2e);
+  color: var(--ink, #e2e8f0);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.decoder-btn:hover:not(:disabled) {
+  border-color: var(--accent, #0ea5a6);
+}
+
+.decoder-btn--primary {
+  background: var(--accent, #0ea5a6);
+  color: #fff;
+  border-color: var(--accent, #0ea5a6);
+}
+
+.decoder-btn--primary:hover:not(:disabled) {
+  background: #0d9495;
+}
+
+.decoder-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.decoder-ai-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--ink-soft, #94a3b8);
+  cursor: pointer;
+}
+
+.decoder-ai-badge {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+  background: var(--panel, #1a1a2e);
+  border: 1px solid var(--line, #334155);
+  border-radius: 4px;
+  color: var(--ink-soft, #94a3b8);
+}
+
+.decoder-ai-placeholder {
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--accent, #0ea5a6) 6%, var(--panel, #1a1a2e));
+  border: 1px dashed var(--accent, #0ea5a6);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: var(--ink-soft, #94a3b8);
+}
+
+.decoder-ai-placeholder p {
+  margin: 0 0 0.4rem;
+}
+
+.decoder-ai-placeholder ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.decoder-ai-placeholder li {
+  margin-bottom: 0.2rem;
+}
+
+/* ─── Results Section ───────────────────────────────────── */
+
+.decoder-results-section {
+  min-height: 100px;
+}
+
+.decoder-results-section h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.decoder-hint {
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.82rem;
+}
+
+.decoder-empty {
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.82rem;
+  padding: 1rem;
+  text-align: center;
+  border: 1px dashed var(--line, #334155);
+  border-radius: 8px;
+}
+
+/* ─── Earnings Whisper Results ───────────────────────────── */
+
+.decoder-results {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.decoder-company-card {
+  background: var(--panel, #1a1a2e);
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.decoder-company-card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent, #0ea5a6);
+}
+
+.decoder-fields-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.decoder-fields-table td {
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--line, #334155) 50%, transparent);
+  vertical-align: top;
+}
+
+.decoder-field-label {
+  width: 140px;
+  color: var(--ink-soft, #94a3b8);
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.decoder-field-value {
+  color: var(--ink, #e2e8f0);
+}
+
+.decoder-tag {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  margin: 0.1rem 0.2rem;
+  background: color-mix(in srgb, var(--accent, #0ea5a6) 12%, transparent);
+  border-radius: 3px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent, #0ea5a6);
+}
+
+/* ─── Generic Stats ─────────────────────────────────────── */
+
+.decoder-generic-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 0.5rem;
+}
+
+.decoder-stat {
+  background: var(--panel, #1a1a2e);
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.decoder-stat-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink, #e2e8f0);
+}
+
+.decoder-stat-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft, #94a3b8);
+  margin-top: 0.15rem;
+}
+
+/* ─── JSON / Raw Preview ────────────────────────────────── */
+
+.decoder-json-preview,
+.decoder-raw {
+  background: var(--panel, #1a1a2e);
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  color: var(--ink, #e2e8f0);
+}

@@ -149,12 +149,46 @@
 .ti-sell { color: #ef4444; }
 .ti-neutral { color: #64748b; }
 
-/* ── Sparkline ────────────────────────────────────────────── */
+/* ── Value Bar ────────────────────────────────────────────── */
 .ti-sparkline {
+  display: none; /* old SVG sparklines — replaced by value bar */
+}
+
+.ti-value-bar-wrap {
   width: 100%;
-  height: 60px;
-  display: block;
-  margin-bottom: 0.4rem;
+  height: 8px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 4px;
+  margin: 0.5rem 0 0.3rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.ti-value-bar {
+  height: 100%;
+  background: var(--accent, #0ea5a6);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  min-width: 2px;
+}
+
+.ti-value-bar--empty {
+  width: 100% !important;
+  background: rgba(255,255,255,0.03);
+}
+
+.ti-value-bar-label {
+  position: absolute;
+  right: 0;
+  top: -1.1rem;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent, #0ea5a6);
+}
+
+.ti-value-bar-label--muted {
+  color: var(--ink-soft, #64748b);
 }
 
 /* ── Card footer ──────────────────────────────────────────── */

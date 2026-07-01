@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
 import LoadingSkeleton from '../components/LoadingSkeleton'
 import './trading-platforms.css'
+import './sources-accordion.css'
 
 const PLATFORMS = [
   {
@@ -57,32 +58,99 @@ const PLATFORMS = [
   },
 ]
 
-function ConfigTable({ platform }) {
+function AccordionRow({ platform, health, expanded, onToggle }) {
+  const credOk = health?.credentialsConfigured
+  const healthy = health?.status === 'healthy'
+  const statusLabel = !health ? 'Unknown'
+    : health.status === 'healthy' ? 'Healthy'
+    : health.status === 'missing-credentials' ? 'No Credentials'
+    : health.status || 'Unknown'
+
   return (
-    <table className="tp-config-table">
-      <tbody>
-        <tr><td className="label">Provider ID</td><td><code>{platform.id}</code></td></tr>
-        <tr><td className="label">Environment Key</td><td><code>{platform.envKey}</code></td></tr>
-        <tr><td className="label">Endpoint</td><td><code>{platform.endpoint}</code></td></tr>
-        <tr><td className="label">Documentation</td><td><a href={platform.docs} target="_blank" rel="noreferrer">{platform.docs}</a></td></tr>
-        <tr><td className="label">Website</td><td><a href={platform.website} target="_blank" rel="noreferrer">{platform.website}</a></td></tr>
-        <tr>
-          <td className="label">Capabilities</td>
-          <td>
-            <div className="tp-chips">
-              {platform.capabilities.map((c) => (
-                <span key={c} className="tp-chip tp-chip--ok">{c}</span>
-              ))}
+    <div className={`sa-row ${expanded ? 'sa-row--open' : ''}`}>
+      <button
+        type="button"
+        className="sa-row-header"
+        onClick={onToggle}
+        aria-expanded={expanded}
+      >
+        <span className="sa-caret">{expanded ? '▾' : '▸'}</span>
+        <span className="sa-name">{platform.name}</span>
+        <span className="sa-id"><code>{platform.id}</code></span>
+        <span className={`tp-chip tp-chip--${credOk ? 'ok' : 'warn'}`}>
+          {credOk ? 'Credentials OK' : 'No Credentials'}
+        </span>
+        <span className={`tp-chip tp-chip--${healthy ? 'ok' : health ? 'warn' : 'neutral'}`}>
+          {statusLabel}
+        </span>
+        <span className="sa-latency">
+          {health?.latencyMs != null ? `${health.latencyMs}ms` : '—'}
+        </span>
+      </button>
+      {expanded && (
+        <div className="sa-row-body">
+          <div className="sa-grid">
+            {/* Configuration */}
+            <div className="sa-card">
+              <h4>Configuration</h4>
+              <table className="tp-config-table">
+                <tbody>
+                  <tr><td className="label">Provider ID</td><td><code>{platform.id}</code></td></tr>
+                  <tr><td className="label">Environment Key</td><td><code>{platform.envKey || '(none)'}</code></td></tr>
+                  <tr><td className="label">Endpoint</td><td><code>{platform.endpoint}</code></td></tr>
+                  <tr><td className="label">Documentation</td><td><a href={platform.docs} target="_blank" rel="noreferrer">{platform.docs}</a></td></tr>
+                  <tr><td className="label">Website</td><td><a href={platform.website} target="_blank" rel="noreferrer">{platform.website}</a></td></tr>
+                  <tr>
+                    <td className="label">Capabilities</td>
+                    <td>
+                      <div className="tp-chips">
+                        {platform.capabilities.map((c) => (
+                          <span key={c} className="tp-chip tp-chip--ok">{c}</span>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+
+            {/* Health */}
+            <div className="sa-card">
+              <h4>Health Status</h4>
+              {health ? (
+                <table className="tp-config-table">
+                  <tbody>
+                    <tr><td className="label">Status</td><td><span className={`tp-chip tp-chip--${health.status === 'healthy' ? 'ok' : health.status === 'missing-credentials' ? 'warn' : 'neutral'}`}>{health.status}</span></td></tr>
+                    <tr><td className="label">Message</td><td>{health.message || '—'}</td></tr>
+                    <tr><td className="label">Last Checked</td><td>{health.checkedAt ? new Date(health.checkedAt).toLocaleString() : 'Never'}</td></tr>
+                    <tr><td className="label">Latency</td><td>{health.latencyMs != null ? `${health.latencyMs} ms` : '—'}</td></tr>
+                  </tbody>
+                </table>
+              ) : (
+                <p className="tp-hint">No health data available.</p>
+              )}
+            </div>
+
+            {/* Adapter */}
+            <div className="sa-card">
+              <h4>Adapter Status</h4>
+              <table className="tp-config-table">
+                <tbody>
+                  <tr><td className="label">Adapter</td><td><code>{platform.id}.adapter.ts</code></td></tr>
+                  <tr><td className="label">Status</td><td><span className="tp-chip tp-chip--warn">PLACEHOLDER</span></td></tr>
+                  <tr><td className="label">Task</td><td><a href="#/architecture-framework">Task 3 — Provider Adapters</a></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
 export default function SourcesPage() {
-  const [activePlatform, setActivePlatform] = useState('alpaca')
+  const [expandedId, setExpandedId] = useState(null)
 
   const version = useQuery({
     queryKey: ['tp-version'],
@@ -102,35 +170,19 @@ export default function SourcesPage() {
   const isLoading = version.isLoading || providers.isLoading
   const hasError = version.isError || providers.isError
 
-  const activeInfo = PLATFORMS.find((pl) => pl.id === activePlatform)
-  const activeHealth = provs.find((pr) => pr.provider === activePlatform)
-
   return (
-    <div className="trading-platforms-page">
+    <div className="trading-platforms-page sources-accordion-page">
       <header className="tp-page-header">
+        <h1>Sources</h1>
         <p>
           API providers, credentials, and endpoint configuration.
           {svc.databaseConnected ? ' Connected to database.' : ' Database offline.'}
         </p>
       </header>
 
-      <nav className="tp-tabs">
-        {PLATFORMS.map((pl) => (
-          <button
-            key={pl.id}
-            type="button"
-            className={`tp-tab ${activePlatform === pl.id ? 'active' : ''}`}
-            onClick={() => setActivePlatform(pl.id)}
-          >
-            {pl.name}
-          </button>
-        ))}
-      </nav>
-
       {isLoading && (
         <div style={{ marginBottom: '1rem' }}>
-          <LoadingSkeleton variant="card" count={3} />
-          <LoadingSkeleton variant="table" rows={4} cols={3} className="ls-spacer-top" />
+          <LoadingSkeleton variant="card" count={5} />
         </div>
       )}
 
@@ -141,51 +193,30 @@ export default function SourcesPage() {
         </section>
       )}
 
-      {activeInfo && (
-        <section className="tp-content">
-          <div className="tp-platform-header">
-            <h2>{activeInfo.name}</h2>
-            <p>{activeInfo.description}</p>
-            <span className={`tp-chip tp-chip--${activeHealth?.credentialsConfigured ? 'ok' : 'warn'}`}>
-              {activeHealth?.credentialsConfigured ? 'Credentials Configured' : 'No Credentials'}
-            </span>
-          </div>
+      {/* Accordion list — table-row style header, then rows */}
+      <div className="sa-table-header">
+        <span className="sa-th-caret"></span>
+        <span className="sa-th-name">Name</span>
+        <span className="sa-th-id">ID</span>
+        <span className="sa-th-cred">Credentials</span>
+        <span className="sa-th-status">Status</span>
+        <span className="sa-th-latency">Latency</span>
+      </div>
 
-          <div className="tp-grid">
-            <div className="tp-card">
-              <h3>Configuration</h3>
-              <ConfigTable platform={activeInfo} />
-            </div>
-
-            <div className="tp-card">
-              <h3>Health Status</h3>
-              {activeHealth ? (
-                <table className="tp-config-table">
-                  <tbody>
-                    <tr><td className="label">Status</td><td><span className={`tp-chip tp-chip--${activeHealth.status === 'healthy' ? 'ok' : activeHealth.status === 'missing-credentials' ? 'warn' : 'neutral'}`}>{activeHealth.status}</span></td></tr>
-                    <tr><td className="label">Message</td><td>{activeHealth.message || '—'}</td></tr>
-                    <tr><td className="label">Last Checked</td><td>{activeHealth.checkedAt ? new Date(activeHealth.checkedAt).toLocaleString() : 'Never'}</td></tr>
-                    <tr><td className="label">Latency</td><td>{activeHealth.latencyMs != null ? `${activeHealth.latencyMs} ms` : '—'}</td></tr>
-                  </tbody>
-                </table>
-              ) : (
-                <p className="tp-hint">No health data available. Run a provider health check.</p>
-              )}
-            </div>
-
-            <div className="tp-card">
-              <h3>Adapter Status</h3>
-              <table className="tp-config-table">
-                <tbody>
-                  <tr><td className="label">Adapter</td><td><code>{activeInfo.id}.adapter.ts</code></td></tr>
-                  <tr><td className="label">Status</td><td><span className="tp-chip tp-chip--warn">PLACEHOLDER</span></td></tr>
-                  <tr><td className="label">Task</td><td><a href="#/architecture-framework" onClick={() => {}}>Task 3 — Provider Adapters</a></td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-      )}
+      <div className="sa-list">
+        {PLATFORMS.map((platform) => {
+          const health = provs.find((pr) => pr.provider === platform.id)
+          return (
+            <AccordionRow
+              key={platform.id}
+              platform={platform}
+              health={health}
+              expanded={expandedId === platform.id}
+              onToggle={() => setExpandedId(expandedId === platform.id ? null : platform.id)}
+            />
+          )
+        })}
+      </div>
     </div>
   )
 }

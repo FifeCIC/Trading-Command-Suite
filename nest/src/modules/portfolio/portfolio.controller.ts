@@ -1,6 +1,7 @@
 import { Controller, Get, Query, Logger } from '@nestjs/common';
 import { PortfolioService, PortfolioResponse } from './portfolio.service';
 import { CorrelationService } from './correlation.service';
+import { EarningsService } from '../earnings/earnings.service';
 
 @Controller('portfolio')
 export class PortfolioController {
@@ -9,6 +10,7 @@ export class PortfolioController {
   constructor(
     private readonly portfolioService: PortfolioService,
     private readonly correlationService: CorrelationService,
+    private readonly earningsService: EarningsService,
   ) {}
 
   @Get()
@@ -53,5 +55,61 @@ export class PortfolioController {
   @Get('exposure')
   async getExposure() {
     return this.correlationService.getExposure();
+  }
+
+  @Get('events')
+  async getEvents(@Query('days') days?: string) {
+    const lookaheadDays = days ? parseInt(days, 10) : 30;
+    const portfolio = await this.portfolioService.getPortfolio('all');
+    const positions = portfolio.positions ?? [];
+    const symbols = positions.map((p: any) => p.symbol).filter(Boolean);
+
+    const upcoming: any[] = [];
+    const noData: string[] = [];
+
+    for (const symbol of symbols) {
+      try {
+        const earningsData = await this.earningsService.getForSymbol(symbol);
+        if (earningsData) {
+          const earningsList = Array.isArray(earningsData) ? earningsData : [earningsData];
+          const futureEarnings = earningsList.filter((e: any) => {
+            const d = new Date(e.date || e.reportDate);
+            const now = new Date();
+            const diffDays = (d.getTime() - now.getTime()) / 86400000;
+            return diffDays >= 0 && diffDays <= lookaheadDays;
+          });
+          if (futureEarnings.length > 0) {
+            const pos = positions.find((p: any) => p.symbol === symbol);
+            upcoming.push({
+              symbol,
+              position: pos ? { shares: pos.shares, value: pos.value, allocation: pos.allocation } : null,
+              events: futureEarnings.map((e: any) => ({
+                type: 'earnings',
+                date: e.date || e.reportDate,
+                time: e.time || e.reportTime || null,
+                epsEstimate: e.epsEstimate || e.consensusEPS || null,
+                revenueEstimate: e.revenueEstimate || null,
+                daysUntil: Math.round(((new Date(e.date || e.reportDate)).getTime() - Date.now()) / 86400000),
+              })),
+            });
+          }
+        } else {
+          noData.push(symbol);
+        }
+      } catch {
+        noData.push(symbol);
+      }
+    }
+
+    upcoming.sort((a, b) => (a.events[0]?.daysUntil ?? 999) - (b.events[0]?.daysUntil ?? 999));
+
+    const nextEarnings = upcoming.length > 0 ? { symbol: upcoming[0].symbol, date: upcoming[0].events[0].date, daysUntil: upcoming[0].events[0].daysUntil } : null;
+
+    return {
+      holdings: symbols.length,
+      upcomingEvents: upcoming,
+      nextEarnings,
+      noData: [...new Set(noData)],
+    };
   }
 }

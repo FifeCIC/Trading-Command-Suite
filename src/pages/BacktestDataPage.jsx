@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -10,10 +10,27 @@ const STATUS_COLORS = {
   none: 'tp-chip--warn',
 };
 
+// Priority symbols for trading — grouped at top
+const PRIORITY_TICKERS = new Set([
+  'SPY', 'SPX500', 'UK100', 'US30', 'USDJPY',
+  'XAUUSD', 'USOIL', 'VIX', 'BTC-USD', 'BTCUSD',
+  'QQQ', 'TECH100', 'DOGEUSD', 'COIN',
+]);
+
+// MT5-recordable asset types (forex, indices, commodities, crypto — not individual stocks)
+const MT5_RECORDABLE_TYPES = new Set(['forex', 'index', 'commodity', 'crypto']);
+
 function BarStatus({ count }) {
   const status = count >= 200 ? 'ok' : count > 0 ? 'partial' : 'none';
   const label = count >= 200 ? `${count} bars` : count > 0 ? `${count} bars` : 'No data';
   return <span className={`tp-chip ${STATUS_COLORS[status]}`}>{label}</span>;
+}
+
+function Mt5Badge({ symbol }) {
+  const type = (symbol.type || '').toLowerCase();
+  const canRecord = MT5_RECORDABLE_TYPES.has(type);
+  if (!canRecord) return <span className="tp-chip tp-chip--neutral" style={{ fontSize: 9, opacity: 0.5 }} title="Not available via MT5 (stock/ETF)">—</span>;
+  return <span className="tp-chip tp-chip--ok" style={{ fontSize: 9 }} title="Recordable via MT5 bridge">MT5</span>;
 }
 
 export default function BacktestDataPage() {
@@ -63,7 +80,12 @@ export default function BacktestDataPage() {
     if (filter === 'no-data') list = list.filter((s) => s.barCount === 0);
     if (filter === 'bt-run') list = list.filter((s) => s.backtestRuns > 0);
 
+    // Sort: priority symbols first, then by selected sort key
     list.sort((a, b) => {
+      const aPri = PRIORITY_TICKERS.has(a.ticker) ? 0 : 1;
+      const bPri = PRIORITY_TICKERS.has(b.ticker) ? 0 : 1;
+      if (aPri !== bPri) return aPri - bPri;
+
       const aVal = a[sortKey] ?? '';
       const bVal = b[sortKey] ?? '';
       const cmp = typeof aVal === 'number'
@@ -146,6 +168,10 @@ export default function BacktestDataPage() {
       </div>
 
       {/* Table */}
+      <p className="tp-hint" style={{ marginBottom: 8 }}>
+        <strong>BT Runs</strong> = separate backtest sessions recorded per symbol. Each run captures a snapshot of bars at that time.
+        <strong> Rec</strong> = start/stop 5-second candle recording for live bar collection.
+      </p>
       <div className="tp-table-wrap" style={{ overflowX: 'auto' }}>
         <table className="tp-table">
           <thead>
@@ -157,38 +183,56 @@ export default function BacktestDataPage() {
               <th onClick={() => toggleSort('dateTo')} style={{ cursor: 'pointer' }}>To{sortArrow('dateTo')}</th>
               <th onClick={() => toggleSort('provider')} style={{ cursor: 'pointer' }}>Provider{sortArrow('provider')}</th>
               <th>Timeframes</th>
+              <th style={{ width: 40 }} title="MT5 bridge recording support">MT5</th>
               <th onClick={() => toggleSort('backtestRuns')} style={{ cursor: 'pointer' }}>BT Runs{sortArrow('backtestRuns')}</th>
               <th onClick={() => toggleSort('lastBacktest')} style={{ cursor: 'pointer' }}>Last BT{sortArrow('lastBacktest')}</th>
-              <th style={{ width: 50 }}>Rec</th>
+              <th style={{ width: 55 }} title="Record 5s candles / Stop recording">Rec</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((s) => (
-              <tr key={s.ticker}>
-                <td className="tp-mono">{s.ticker}</td>
-                <td>{s.type}</td>
-                <td><BarStatus count={s.barCount} /></td>
-                <td className="tp-mono">{s.dateFrom || '—'}</td>
-                <td className="tp-mono">{s.dateTo || '—'}</td>
-                <td><span className="tp-chip tp-chip--neutral">{s.provider || '—'}</span></td>
-                <td>{s.timeframes?.join(', ') || '—'}</td>
-                <td style={{ textAlign: 'center' }}>{s.backtestRuns || '—'}</td>
-                <td className="tp-mono" style={{ fontSize: 11 }}>{s.lastBacktest || '—'}</td>
-                <td>
-                  {recordingTickers.has(s.ticker) ? (
-                    <button className="tp-chip tp-chip--warn" style={{ cursor: 'pointer', padding: '2px 6px', fontSize: 10 }} onClick={() => toggleRecording(s.ticker)} title={`Recording ${recordings.find(r => r.ticker === s.ticker)?.barCount ?? 0} 5s bars — click to stop`}>
-                      ⏺ {recordings.find(r => r.ticker === s.ticker)?.barCount ?? 0}
-                    </button>
-                  ) : (
-                    <button className="tp-chip tp-chip--neutral" style={{ cursor: 'pointer', padding: '2px 6px', fontSize: 10, opacity: 0.6 }} onClick={() => toggleRecording(s.ticker)} title="Record 5s candles">
-                      ⏺
-                    </button>
+            {filtered.map((s, idx) => {
+              const isPriority = PRIORITY_TICKERS.has(s.ticker);
+              const isFirstRegular = !isPriority && (idx === 0 || PRIORITY_TICKERS.has(filtered[idx - 1]?.ticker));
+              return (
+                <React.Fragment key={s.ticker}>
+                  {isFirstRegular && (
+                    <tr className="bt-priority-sep">
+                      <td colSpan={11}>
+                        <span className="bt-sep-label">All Symbols</span>
+                      </td>
+                    </tr>
                   )}
-                </td>
-              </tr>
-            ))}
+                  <tr className={isPriority ? 'bt-priority-row' : ''}>
+                    <td className="tp-mono">
+                      {isPriority && <span style={{ color: 'var(--accent, #0ea5a6)', marginRight: 4 }}>★</span>}
+                      {s.ticker}
+                    </td>
+                    <td>{s.type}</td>
+                    <td><BarStatus count={s.barCount} /></td>
+                    <td className="tp-mono">{s.dateFrom || '—'}</td>
+                    <td className="tp-mono">{s.dateTo || '—'}</td>
+                    <td><span className="tp-chip tp-chip--neutral">{s.provider || '—'}</span></td>
+                    <td>{s.timeframes?.join(', ') || '—'}</td>
+                    <td style={{ textAlign: 'center' }}><Mt5Badge symbol={s} /></td>
+                    <td style={{ textAlign: 'center' }}>{s.backtestRuns || '—'}</td>
+                    <td className="tp-mono" style={{ fontSize: 11 }}>{s.lastBacktest || '—'}</td>
+                    <td>
+                      {recordingTickers.has(s.ticker) ? (
+                        <button className="tp-chip tp-chip--warn" style={{ cursor: 'pointer', padding: '2px 6px', fontSize: 10 }} onClick={() => toggleRecording(s.ticker)} title={`⏺ Recording ${recordings.find(r => r.ticker === s.ticker)?.barCount ?? 0} 5s bars — click to stop`}>
+                          ⏺ {recordings.find(r => r.ticker === s.ticker)?.barCount ?? 0}
+                        </button>
+                      ) : (
+                        <button className="tp-chip tp-chip--neutral" style={{ cursor: 'pointer', padding: '2px 6px', fontSize: 10, opacity: 0.6 }} onClick={() => toggleRecording(s.ticker)} title="Start recording 5s candles">
+                          ⏺
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                </React.Fragment>
+              );
+            })}
             {filtered.length === 0 && (
-              <tr><td colSpan={10} style={{ textAlign: 'center', padding: 24, color: 'var(--tcs-text-muted)' }}>No symbols match this filter.</td></tr>
+              <tr><td colSpan={11} style={{ textAlign: 'center', padding: 24, color: 'var(--tcs-text-muted)' }}>No symbols match this filter.</td></tr>
             )}
           </tbody>
         </table>

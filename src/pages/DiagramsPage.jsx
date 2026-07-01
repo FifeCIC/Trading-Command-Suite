@@ -707,6 +707,123 @@ const DIAGRAMS = [
     E --> F & G & H & I
     H --> J --> K`,
   },
+  {
+    id: 'provider-failover',
+    label: 'Provider Failover & Rate Limiting',
+    desc: 'AdapterFactory rate-limit-aware provider selection, failover chain, and circuit breaker logic across all 9 registered providers.',
+    code: `flowchart TB
+    subgraph Request["Incoming Data Request"]
+        A[getActive preferredId?]
+    end
+    subgraph Selection["Rate-Limit-Aware Selection"]
+        B{Preferred provider available?}
+        B -->|Yes| C[Use preferred]
+        B -->|No| D[Scan all active instances]
+        D --> E{Rate limit remaining?}
+        E -->|Tripped / <5 calls| F[Skip provider]
+        E -->|OK| G[Add to candidates]
+        G --> H[Sort by remaining calls DESC]
+        H --> I[Pick highest headroom]
+    end
+    subgraph Failover["Failover Chain by Priority"]
+        J[1. Alpaca pri=10]
+        K[2. Alpha Vantage pri=20]
+        L[3. Trading212 pri=30]
+        M[4. MT5 pri=40]
+        N[5. Polygon pri=45]
+        O[6. Finnhub pri=50]
+        P[7. FMP pri=50]
+        Q[8. Twelve Data pri=55]
+        R[9. Yahoo Finance pri=60]
+    end
+    subgraph Outcome["Result"]
+        S[Return best adapter]
+        T[Log provider switch]
+    end
+    A --> B
+    I --> S --> T
+    F --> J
+    J --> K --> L --> M --> N --> O --> P --> Q --> R
+    R -->|Last resort| S`,
+  },
+  {
+    id: 't212-portfolio-flow',
+    label: 'Trading212 Portfolio Data Flow',
+    desc: 'How portfolio data flows from Trading212 API through import, normalization, storage, scoring, to the React UI.',
+    code: `flowchart LR
+    subgraph External["External API"]
+        A[Trading212<br/>live.trading212.com]
+    end
+    subgraph Import["Import Layer"]
+        B[PortfolioController<br/>POST /import]
+        C[Trading212ImportService]
+        D[PortfolioService<br/>getPortfolio]
+    end
+    subgraph Transform["Transform"]
+        E[Ticker Clean<br/>strip _US_EQ, _EQ]
+        F[Position Normalize<br/>value, P&L, allocation]
+        G[Symbol DB Upsert]
+    end
+    subgraph Scoring["Scoring Pipeline"]
+        H[ScoringService.rankAll]
+        I[getPortfolioScores]
+        J[Score Map by Ticker]
+    end
+    subgraph UI["React Frontend"]
+        K[AccountsDashboardPage]
+        L[Portfolio Summary]
+        M[Position Table]
+        N[Score Signals]
+    end
+    A -->|equity/portfolio| B
+    A -->|equity/account/cash| B
+    B --> C --> D
+    D --> E --> F
+    D --> G
+    F --> I --> H --> J
+    D --> K
+    I --> K
+    K --> L
+    K --> M
+    K --> N`,
+  },
+  {
+    id: 'earnings-pipeline',
+    label: 'Earnings Calendar Data Pipeline',
+    desc: 'How earnings data flows from Alpha Vantage, Finnhub, and FMP through adapters into the Earnings table, feeding the earnings-proximity directive and UI.',
+    code: `flowchart TB
+    subgraph Sources["Data Sources"]
+        A[Alpha Vantage<br/>EARNINGS_CALENDAR]
+        B[Finnhub<br/>/calendar/earnings]
+        C[FMP<br/>/earning_calendar]
+    end
+    subgraph Adapters["Provider Adapters"]
+        D[AlphaVantageAdapter<br/>getEarningsCalendar]
+        E[FinnhubAdapter<br/>getEarningsCalendar]
+        F[FmpAdapter<br/>getEarningsCalendar]
+    end
+    subgraph Pipeline["Processing"]
+        G[EarningsService<br/>normalize & deduplicate]
+        H[(Earnings Table)]
+        I[EarningsProximityDirective<br/>calculate score]
+    end
+    subgraph Output["Consumption"]
+        J[EarningsCalendarPage<br/>filtered UI]
+        K[Portfolio Cross-Reference<br/>holdings + next earnings]
+        L[SEES Scoring<br/>earnings-proximity score]
+    end
+    A --> D
+    B --> E
+    C --> F
+    D --> G
+    E --> G
+    F --> G
+    G --> H
+    H --> I
+    I --> L
+    H --> J
+    H --> K`,
+  },
 ];
 
 export default function DiagramsPage() {
@@ -733,7 +850,7 @@ export default function DiagramsPage() {
       <div className="pf-header">
         <div>
           <h1>System Diagrams</h1>
-          <p className="pf-hint" style={{ margin: '0.25rem 0 0' }}>Architecture and workflow diagrams for the Trading Command Suite. 11 diagrams covering all major subsystems.</p>
+          <p className="pf-hint" style={{ margin: '0.25rem 0 0' }}>Architecture and workflow diagrams for the Trading Command Suite. 19 diagrams covering all major subsystems.</p>
           <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
             <a href="/builder/architecture-framework" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '2px 8px', border: '1px solid var(--line)', borderRadius: 4 }}>⬡ Architecture Framework</a>
             <a href="/status/capability-map" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '2px 8px', border: '1px solid var(--line)', borderRadius: 4 }}>🗺️ Capability Map</a>

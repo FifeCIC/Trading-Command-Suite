@@ -825,6 +825,66 @@ model UserStar {
   @@index([userId, itemType])
 }
 
+// ─── Unified Import Tracking ──────────────────────────────
+
+model DataImportLog {
+  id             Int      @id @default(autoincrement())
+  dataType       String   @db.VarChar(50)
+  source         String   @db.VarChar(50)
+  status         String   @db.VarChar(20)
+  dateRangeStart DateTime?
+  dateRangeEnd   DateTime?
+  recordsFetched Int      @default(0)
+  recordsStored  Int      @default(0)
+  recordsSkipped Int      @default(0)
+  errorMessage   String?  @db.Text
+  rateLimitHits  Int      @default(0)
+  durationMs     Int?
+  fetchedAt      DateTime @default(now())
+
+  @@map("data_import_log")
+  @@index([dataType])
+  @@index([dataType, status, fetchedAt])
+}
+
+// ─── Portfolio Session Tracking ──────────────────────────
+
+model PortfolioSnapshot {
+  id              String   @id @default(uuid()) @db.VarChar(36)
+  snapshotType    String   @db.VarChar(20)  // 'session', 'daily', 'weekly'
+  totalValue      Float
+  totalCost       Float
+  totalPnl        Float
+  totalPnlPct     Float
+  positionCount   Int
+  cash            Float?
+  providerSummary Json
+  takenAt         DateTime @default(now())
+
+  positions       PortfolioSnapshotPosition[]
+
+  @@map("portfolio_snapshot")
+  @@index([snapshotType, takenAt])
+}
+
+model PortfolioSnapshotPosition {
+  id           String   @id @default(uuid()) @db.VarChar(36)
+  snapshotId   String   @db.VarChar(36)
+  symbol       String   @db.VarChar(20)
+  quantity     Float
+  avgPrice     Float
+  currentPrice Float
+  value        Float
+  pnl          Float
+  pnlPct       Float
+  allocation   Float
+
+  snapshot     PortfolioSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@map("portfolio_snapshot_position")
+  @@index([snapshotId, symbol])
+}
+
 model TradingStrategy {
   id            String   @id @default(uuid()) @db.VarChar(36)
   name          String   @db.VarChar(200)
@@ -954,4 +1014,26 @@ model AutomationConfig {
   maxLossPerTrade       Float    @default(50.0)
 
   updatedAt             DateTime @updatedAt
+}
+
+model StockInvestigation {
+  id               String   @id @default(uuid()) @db.VarChar(36)
+  symbol           String   @db.VarChar(20)
+  trigger          String   @db.VarChar(100)
+  priceAtTime      Float
+  priceChangePct   Float?
+  analystConsensus String?  @db.VarChar(100)
+  keyFindings      Json
+  summary          String   @db.Text
+  actionItems      Json
+  newsCount        Int      @default(0)
+  sources          Json
+  status           String   @default("open") @db.VarChar(20)
+  followedUpAt     DateTime?
+  outcome          String?  @db.Text
+  investigatedAt   DateTime @default(now())
+
+  @@index([symbol, investigatedAt])
+  @@index([status])
+  @@map("stock_investigation")
 }

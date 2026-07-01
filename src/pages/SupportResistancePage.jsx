@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './support-resistance.css';
@@ -11,9 +12,146 @@ const TIMEFRAMES = [
   { id: 'D1', label: 'D1 Weekly', desc: 'Weeks/months' },
 ];
 
+const DEFAULT_SYMBOLS = ['SPY', 'QQQ', 'AAPL', 'NVDA', 'TSLA', 'MSFT', 'XAUUSD', 'EURUSD', 'BTCUSD'];
+
+function SrChart({ levels, bars }) {
+  const containerRef = useRef(null);
+  const chartRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const chart = createChart(containerRef.current, {
+      height: 400,
+      layout: {
+        background: { color: 'transparent' },
+        textColor: 'var(--ink-soft, #94a3b8)',
+        fontSize: 11,
+      },
+      grid: {
+        vertLines: { color: 'rgba(148,163,184,0.08)' },
+        horzLines: { color: 'rgba(148,163,184,0.08)' },
+      },
+      crosshair: { mode: 0 },
+      timeScale: { borderColor: 'rgba(148,163,184,0.12)' },
+      rightPriceScale: { borderColor: 'rgba(148,163,184,0.12)' },
+    });
+
+    chartRef.current = chart;
+
+    if (bars && bars.length > 0) {
+      const candleSeries = chart.addSeries(CandlestickSeries, {
+        upColor: '#22c55e',
+        downColor: '#ef4444',
+        borderUpColor: '#22c55e',
+        borderDownColor: '#ef4444',
+        wickUpColor: '#22c55e',
+        wickDownColor: '#ef4444',
+      });
+      candleSeries.setData(bars);
+
+      // Add S/R horizontal lines as price lines on the candle series
+      if (levels?.pivot) {
+        // R3, R2, R1 as resistance lines
+        const resistLines = [
+          { price: levels.r3, label: 'R3', color: '#ef4444' },
+          { price: levels.r2, label: 'R2', color: '#ef4444' },
+          { price: levels.r1, label: 'R1', color: '#ef4444' },
+        ];
+        for (const rl of resistLines) {
+          if (rl.price) {
+            candleSeries.createPriceLine({
+              price: rl.price,
+              color: rl.color,
+              lineWidth: 1,
+              lineStyle: 2,
+              axisLabelVisible: true,
+              title: rl.label,
+            });
+          }
+        }
+
+        // Pivot
+        candleSeries.createPriceLine({
+          price: levels.pivot,
+          color: '#f59e0b',
+          lineWidth: 2,
+          lineStyle: 0,
+          axisLabelVisible: true,
+          title: 'P',
+        });
+
+        // S1, S2, S3 as support lines
+        const supportLines = [
+          { price: levels.s1, label: 'S1', color: '#22c55e' },
+          { price: levels.s2, label: 'S2', color: '#22c55e' },
+          { price: levels.s3, label: 'S3', color: '#22c55e' },
+        ];
+        for (const sl of supportLines) {
+          if (sl.price) {
+            candleSeries.createPriceLine({
+              price: sl.price,
+              color: sl.color,
+              lineWidth: 1,
+              lineStyle: 2,
+              axisLabelVisible: true,
+              title: sl.label,
+            });
+          }
+        }
+      }
+
+      // MAs as line series
+      if (levels?.ma20 != null) {
+        const ma20Series = chart.addSeries(LineSeries, {
+          color: '#3b82f6',
+          lineWidth: 1,
+          priceLineVisible: false,
+          lastValueVisible: false,
+        });
+        const ma20Data = bars.map((b) => ({ time: b.time, value: levels.ma20 }));
+        ma20Series.setData(ma20Data);
+      }
+
+      if (levels?.ma50 != null) {
+        const ma50Series = chart.addSeries(LineSeries, {
+          color: '#f59e0b',
+          lineWidth: 1,
+          priceLineVisible: false,
+          lastValueVisible: false,
+        });
+        const ma50Data = bars.map((b) => ({ time: b.time, value: levels.ma50 }));
+        ma50Series.setData(ma50Data);
+      }
+
+      chart.timeScale().fitContent();
+    }
+
+    return () => {
+      chart.remove();
+      chartRef.current = null;
+    };
+  }, [bars, levels]);
+
+  return <div ref={containerRef} className="sr-chart-container" />;
+}
+
 export default function SupportResistancePage() {
-  const [symbol, setSymbol] = useState('AAPL');
+  const [symbol, setSymbol] = useState('SPY');
   const [timeframe, setTimeframe] = useState('H1');
+  const [symbols, setSymbols] = useState(DEFAULT_SYMBOLS);
+
+  // Fetch watchlist symbols for the selector
+  useEffect(() => {
+    apiGet('/api/watchlists').then((data) => {
+      const lists = Array.isArray(data?.watchlists) ? data.watchlists : [];
+      const defaultList = lists.find((l) => l.isDefault) || lists[0];
+      const wlSymbols = Array.isArray(defaultList?.symbols)
+        ? defaultList.symbols.map((s) => (typeof s === 'string' ? s : s.ticker).toUpperCase())
+        : [];
+      if (wlSymbols.length > 0) setSymbols(wlSymbols);
+    }).catch(() => {});
+  }, []);
 
   const { data: levels, isLoading, isError } = useQuery({
     queryKey: ['indicators', symbol, timeframe, 'support-resistance'],
@@ -22,18 +160,6 @@ export default function SupportResistancePage() {
   });
 
   const activeTF = TIMEFRAMES.find((t) => t.id === timeframe);
-
-  // Derived chart data from real levels
-  const chartPoints = useMemo(() => {
-    if (!levels?.pivot) return [];
-    const pts = [];
-    let v = levels.pivot;
-    for (let i = 0; i < 60; i++) {
-      v += (Math.random() - 0.48) * ((levels.r1 || v * 1.01) - (levels.s1 || v * 0.99)) * 0.06;
-      pts.push(+v.toFixed(2));
-    }
-    return pts;
-  }, [levels]);
 
   const levelLines = levels?.pivot ? [
     { price: levels.r3, label: 'R3', cls: 'sr-resist' },
@@ -44,12 +170,6 @@ export default function SupportResistancePage() {
     { price: levels.s2, label: 'S2', cls: 'sr-support' },
     { price: levels.s3, label: 'S3', cls: 'sr-support' },
   ] : [];
-
-  const yMin = chartPoints.length > 0 ? Math.min(...chartPoints) * 0.998 : 0;
-  const yMax = chartPoints.length > 0 ? Math.max(...chartPoints) * 1.002 : 100;
-  const yRange = yMax - yMin || 1;
-  const toY = (price) => 100 - ((price - yMin) / yRange) * 100;
-  const polylinePts = chartPoints.map((p, i) => `${(i / (chartPoints.length - 1)) * 100},${toY(p)}`).join(' ');
 
   return (
     <div className="sr-page">
@@ -65,7 +185,7 @@ export default function SupportResistancePage() {
         <div className="sr-field">
           <label>Symbol</label>
           <select value={symbol} onChange={(e) => setSymbol(e.target.value)}>
-            {['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMD', 'SPY'].map((s) => (
+            {symbols.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
@@ -104,57 +224,13 @@ export default function SupportResistancePage() {
 
       {!isLoading && !isError && levels?.pivot && (
       <>
-      {/* Chart with S/R lines */}
+      {/* Candle chart with S/R lines */}
       <section className="sr-section">
         <h2>
-          {symbol} — {activeTF?.label}
+          {symbol} — {activeTF?.label} {levels.currentPrice != null && <span className="sr-price-chip">{levels.currentPrice}</span>}
           <span className="sr-badge">{activeTF?.desc}</span>
         </h2>
-
-        <div className="sr-chart-wrap">
-          <svg viewBox="0 0 100 100" className="sr-chart" preserveAspectRatio="none">
-            {/* Price line */}
-            <polyline
-              fill="none"
-              stroke="var(--accent, #0ea5a6)"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              points={polylinePts}
-            />
-            {/* Gradient fill */}
-            <defs>
-              <linearGradient id="srGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--accent, #0ea5a6)" stopOpacity="0.18" />
-                <stop offset="100%" stopColor="var(--accent, #0ea5a6)" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <polygon fill="url(#srGrad)" points={`0,${toY(yMin)} ${polylinePts} 100,${toY(yMin)}`} />
-
-            {/* S/R Horizontal lines */}
-            {levelLines.map((ll) => {
-              const yPct = toY(ll.price);
-              return (
-                <g key={ll.label}>
-                  <line
-                    x1="0" y1={yPct} x2="100" y2={yPct}
-                    stroke={ll.cls === 'sr-resist' ? '#ef4444' : ll.cls === 'sr-support' ? '#22c55e' : '#f59e0b'}
-                    strokeWidth="0.5"
-                    strokeDasharray={ll.cls === 'sr-pivot' ? 'none' : '2 3'}
-                    opacity="0.7"
-                  />
-                  <rect
-                    x="0" y={yPct - 2.5} width="14" height="5" rx="1"
-                    fill={ll.cls === 'sr-resist' ? '#ef4444' : ll.cls === 'sr-support' ? '#22c55e' : '#f59e0b'}
-                  />
-                  <text x="1" y={yPct - 1.5} fill="#fff" fontSize="3.5" fontWeight="600">
-                    {ll.label}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-        </div>
+        <SrChart levels={levels} bars={levels.bars} />
       </section>
 
       {/* Level detail cards */}

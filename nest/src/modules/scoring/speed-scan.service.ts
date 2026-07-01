@@ -10,6 +10,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ProtocolGatingService } from './protocol-gating.service';
 import { MarketDataService } from '../market-data/market-data.service';
 import { PrismaService } from '../../database/prisma.service';
+import { SeasonalAffinityService } from './seasonal-affinity.service';
 
 export interface SymbolScore {
   symbol: string;
@@ -141,6 +142,7 @@ export class SpeedScanService {
     private readonly protocolGating: ProtocolGatingService,
     private readonly marketData: MarketDataService,
     private readonly prisma: PrismaService,
+    private readonly seasonalAffinity: SeasonalAffinityService,
   ) {}
 
   /**
@@ -194,10 +196,14 @@ export class SpeedScanService {
           { dayBars: dayBars ?? undefined, hourBars: hourBars ?? undefined, min15Bars: min15Bars ?? undefined },
         );
 
+        // Apply seasonal affinity from protocol-calendar
+        const seasonalMultiplier = this.seasonalAffinity.getMultiplier(protocol);
+        const seasonAdjustedComposite = score.composite * seasonalMultiplier;
+
         return {
           symbol,
           protocol,
-          composite: score.composite,
+          composite: Number(seasonAdjustedComposite.toFixed(1)),
           signal: score.signal,
           gated: score.gatingActive && score.composite < 50,
           riskMultiplier: score.riskMultiplier,

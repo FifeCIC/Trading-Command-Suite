@@ -40,9 +40,11 @@ import { TradingModule } from './modules/trading/trading.module';
 import { ApiActivityModule } from './modules/api-activity/api-activity.module';
 import { IsaModule } from './modules/isa/isa.module';
 import { FxModule } from './modules/fx/fx.module';
+import { EarningsModule } from './modules/earnings/earnings.module';
 import { PlanModule } from './modules/plan/plan.module';
 import { StarsModule } from './modules/stars/stars.module';
 import { AutomationModule } from './modules/automation/automation.module';
+import { AIModule } from './modules/ai/ai.module';
 import { WatchlistsModule } from './modules/watchlists/watchlists.module';
 import { RateLimiterMiddleware } from './common/middleware/rate-limiter.middleware';
 import { MetricsMiddleware } from './common/middleware/metrics.middleware';
@@ -93,9 +95,11 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     ApiActivityModule,
     IsaModule,
     FxModule,
+    EarningsModule,
     PlanModule,
     StarsModule,
     AutomationModule,
+    AIModule,
     WatchlistsModule,
   ],
   controllers: [AppController],

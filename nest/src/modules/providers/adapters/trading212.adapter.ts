@@ -11,6 +11,7 @@ import {
 } from '../interfaces/provider-adapter.interface';
 import { RateLimitTracker } from '../rate-limit-tracker';
 import { getEndpointInterval } from '../../../common/rate-limit/provider-rate-limits';
+import { cleanT212Ticker } from '../t212-ticker-map';
 
 /**
  * Trading212 API Adapter
@@ -609,9 +610,9 @@ export class Trading212Adapter implements IProviderAdapter {
     };
   }
 
-  /** Strip Trading212 ticker suffix: AAPL_US_EQ → AAPL */
+  /** Strip Trading212 ticker suffix using the shared normalizer: 3LNVl_EQ → 3LNV, AIRp_EQ → AIR */
   private stripTicker(ticker: string): string {
-    return ticker.replace(/_.*$/, '');
+    return cleanT212Ticker(ticker);
   }
 
   // ── fallback: mock data when no credentials ───────────────

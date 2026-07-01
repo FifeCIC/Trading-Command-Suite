@@ -248,6 +248,7 @@ export class AutomationController {
       activeStrategies,
       pendingActions: loopState.pendingActions,
       activeTimelineEvents: loopState.activeTimelineEvents.slice(0, 20),
+      recentDecisions: (loopState.recentDecisions || []).slice(0, 20),
     };
   }
 

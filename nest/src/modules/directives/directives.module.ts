@@ -143,6 +143,19 @@ import { MarketRegimeDirective } from './implementations/market-regime.directive
 import { PositionSizeKellyDirective } from './implementations/position-size-kelly.directive';
 import { PositionSizeConfidenceDirective } from './implementations/position-size-confidence.directive';
 
+// Seasonality (real implementations — 2026-07-01)
+import { SantaClausRallyDirective } from './implementations/santa-claus-rally.directive';
+import { JanuaryEffectDirective } from './implementations/january-effect.directive';
+import { SellInMayDirective } from './implementations/sell-in-may.directive';
+import { SeptemberSlumpDirective } from './implementations/september-slump.directive';
+import { OctoberReliefDirective } from './implementations/october-relief.directive';
+import { MondayEffectDirective as MondayEffectRealDirective } from './implementations/monday-effect.directive';
+import { FridayDriftDirective } from './implementations/friday-drift.directive';
+import { TurnaroundTuesdayDirective } from './implementations/turnaround-tuesday.directive';
+import { OpexGammaDirective } from './implementations/opex-gamma.directive';
+import { TripleWitchingDirective } from './implementations/triple-witching.directive';
+import { ElectionCycleDirective } from './implementations/election-cycle.directive';
+
 @Module({
   imports: [ProvidersModule],
   controllers: [DirectivesController],
@@ -231,6 +244,18 @@ import { PositionSizeConfidenceDirective } from './implementations/position-size
     MarketRegimeDirective,
     PositionSizeKellyDirective,
     PositionSizeConfidenceDirective,
+    // Seasonality (real)
+    SantaClausRallyDirective,
+    JanuaryEffectDirective,
+    SellInMayDirective,
+    SeptemberSlumpDirective,
+    OctoberReliefDirective,
+    MondayEffectRealDirective,
+    FridayDriftDirective,
+    TurnaroundTuesdayDirective,
+    OpexGammaDirective,
+    TripleWitchingDirective,
+    ElectionCycleDirective,
     // Stubs — Equity-Specific
     NvdaEarningsMomentumDirective,
     TslaSentimentAmplifierDirective,

@@ -143,6 +143,7 @@ export class ScoreHistoryService {
       id: string;
       timestamp: string;
       strategyId: string;
+      strategyName: string;
       symbolsScored: number;
       scores: Array<{ ticker: string; value: number; confidence: number }>;
     }>;
@@ -156,6 +157,16 @@ export class ScoreHistoryService {
       take: 500,
       include: { symbol: { select: { ticker: true } } },
     });
+
+    // Collect unique strategy IDs and resolve names in one query
+    const strategyIds = [...new Set(scores.map((s) => s.strategyId).filter(Boolean))];
+    const strategies = strategyIds.length > 0
+      ? await this.prisma.strategy.findMany({
+          where: { id: { in: strategyIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const nameMap = new Map(strategies.map((s) => [s.id, s.name]));
 
     // Group by minute-window (truncate seconds)
     const groups = new Map<string, typeof scores>();
@@ -173,6 +184,7 @@ export class ScoreHistoryService {
         id: `run-${new Date(timestamp).getTime()}`,
         timestamp,
         strategyId: entries[0]?.strategyId || 'unknown',
+        strategyName: nameMap.get(entries[0]?.strategyId || '') || 'Unknown Strategy',
         symbolsScored: entries.length,
         scores: entries.map((e) => ({
           ticker: (e as any).symbol?.ticker || e.symbolId,

@@ -5,6 +5,9 @@ import './trading-platforms.css';
 
 const PROVIDER_ALL = 'ALL';
 
+// Known trading platform providers — always show in filter
+const KNOWN_PROVIDERS = ['alpaca', 'alphavantage', 'trading212', 'fred', 'ecb', 'mt5'];
+
 function formatTime(value) {
   if (!value) return '-';
   return new Date(value).toLocaleTimeString();
@@ -34,6 +37,11 @@ export default function ApiActivityPage() {
   const records = Array.isArray(activityQuery.data?.records) ? activityQuery.data.records : [];
   const summary = summaryQuery.data || {};
   const providers = Array.isArray(summary.providers) ? summary.providers : [];
+  // Merge known trading platforms into filter list
+  const allProviders = useMemo(() => {
+    const merged = new Set([...KNOWN_PROVIDERS, ...providers]);
+    return [...merged].sort();
+  }, [providers]);
   const latencyBuckets = Array.isArray(summary.latencyBuckets) ? summary.latencyBuckets : [];
   const maxLatency = Math.max(...latencyBuckets.map((bucket) => bucket.avgLatencyMs), 1);
 
@@ -63,7 +71,7 @@ export default function ApiActivityPage() {
             <span>Provider</span>
             <select value={provider} onChange={(event) => setProvider(event.target.value)}>
               <option value={PROVIDER_ALL}>All providers</option>
-              {providers.map((item) => (
+              {allProviders.map((item) => (
                 <option key={item} value={item}>{item}</option>
               ))}
             </select>
