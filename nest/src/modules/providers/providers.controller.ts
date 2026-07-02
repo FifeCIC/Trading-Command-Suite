@@ -11,6 +11,7 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ProvidersService } from './providers.service';
 import { AdapterFactory } from './adapter-factory';
 import { RateLimitGovernor } from './rate-limit-governor.service';
+import { ProviderDegradationService } from './provider-degradation.service';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
 import { Trading212Adapter } from './adapters/trading212.adapter';
 
@@ -22,7 +23,16 @@ export class ProvidersController {
     private readonly adapterFactory: AdapterFactory,
     private readonly t212Adapter: Trading212Adapter,
     private readonly rateLimitGovernor: RateLimitGovernor,
+    private readonly degradation: ProviderDegradationService,
   ) {}
+
+  @Get('degradation')
+  getDegradation() {
+    return {
+      providers: this.degradation.getAll(),
+      degradedCount: this.degradation.getAll().filter(p => p.status !== 'healthy' && p.status !== 'unknown').length,
+    };
+  }
 
   @Get('governor')
   getGovernorStatus() {

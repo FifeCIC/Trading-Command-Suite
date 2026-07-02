@@ -24,12 +24,9 @@ export const NAV_TREE = {
   trading: {
     label: 'Trading',
     views: [
-      { id: 'trading-strategies', label: 'Trading Strategies', icon: '◆' },
-      { id: 'portfolio-overview', label: 'Portfolio Overview', icon: '◉' },
-      { id: 'stock-investigation', label: 'Stock Investigation', icon: '🔍' },
-      { id: 'portfolio-events', label: 'Portfolio Events', icon: '📅' },
-      { id: 'trade-history', label: 'Trade History', icon: '◈' },
       { id: 'positions-monitor', label: 'Positions Monitor', icon: '◈' },
+      { id: 'trading-strategies', label: 'Trading Strategies', icon: '◆' },
+      { id: 'strategy-comparison', label: 'Strategy Comparison', icon: '⚖' },
       { id: 'trade-journal', label: 'Trade Journal', icon: '▤' },
       // { id: 'btc-speed', label: 'Bitcoin Speed', icon: '₿' },  // MOCK — awaiting crypto-enabled MT5 broker
       { id: 'trading-plans', label: 'Trading Plans', icon: '📋' },
@@ -170,6 +167,7 @@ export const NAV_TREE = {
       { id: 'theme-lab-transitions', label: 'Transitions Lab', icon: '⇢' },
       { id: 'theme-lab-scroll', label: 'Scroll Animations', icon: '⇣' },
       { id: 'component-lab', label: 'Component Lab', icon: '🧩' },
+      { id: 'responsive-layout-lab', label: 'Responsive Layout Lab', icon: '📐' },
       { id: 'charts-lab', label: 'Charts Lab', icon: '📊' },
       { id: 'snapshot-replay', label: 'Snapshot Replay', icon: '⏮' },
       { id: 'scoring-overview', label: 'Theme Example: Scoring Overview', icon: '🎨' },
@@ -179,6 +177,7 @@ export const NAV_TREE = {
       { id: 'trading212-portfolio', label: 'Trading212 Portfolio (Lab)', icon: '🔬' },
       { id: 'snapshots', label: 'Snapshots (Lab)', icon: '🔬' },
       { id: 'portfolio-lab', label: 'Portfolio Lab', icon: '🧪' },
+      { id: 'timeline', label: 'Timeline (Lab)', icon: '📅' },
     ],
   },
   wizard: {

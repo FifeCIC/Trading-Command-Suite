@@ -1,6 +1,8 @@
 .ec-page { max-width: none; margin: 0; padding: 1.25rem 1.5rem; color: var(--ink); }
 .ec-header h1 { margin: 0 0 0.2rem; font-size: 1.3rem; }
 .ec-subtitle { color: var(--ink-soft); font-size: 0.82rem; margin: 0 0 1rem; }
+.ec-empty { text-align: center; padding: 2rem; color: var(--ink-soft); font-size: 0.8rem; }
+.ec-affects { font-size: 0.65rem; color: var(--accent); margin-top: 0.2rem; }
 .ec-timeline { position: relative; padding-left: 1.5rem; }
 .ec-timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--line); }
 .ec-event { position: relative; padding: 0.65rem 0.75rem; margin-bottom: 0.6rem; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; border-left: 3px solid var(--line); cursor: pointer; }

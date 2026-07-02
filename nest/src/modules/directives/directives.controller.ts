@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Query, Body } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Delete, Param, Query, Body } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { DirectivesService } from './directives.service';
 import { PROTOCOL_REGISTRY } from './directive-groups';
@@ -11,8 +11,17 @@ export class DirectivesController {
   @Get()
   @ApiOperation({ summary: 'List all registered directives with metadata' })
   @ApiOkResponse({ description: 'Array of directive definitions' })
-  list() {
+  async list() {
     const directives = this.directivesService.list();
+
+    // Load active-status from DB
+    const dbStatuses = new Map<string, boolean>();
+    try {
+      const dbDirectives = await this.directivesService.getDbStatuses();
+      for (const d of dbDirectives) {
+        dbStatuses.set(d.id, d.active);
+      }
+    } catch { /* DB might not be available */ }
 
     // Build a category map from all protocol groups
     const directiveCategory = new Map<string, string>();
@@ -47,7 +56,19 @@ export class DirectivesController {
       category: directiveCategory.get(d.id) ?? 'Other',
       priority: d.priority ?? 50,
       protocolCount: protocolCounts.get(d.id) ?? 0,
+      active: dbStatuses.has(d.id) ? dbStatuses.get(d.id) : true, // default active
     }));
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Toggle a directive active/inactive' })
+  async toggleDirective(
+    @Param('id') id: string,
+    @Body() body: { active: boolean },
+  ) {
+    // Find or create DB Directive row, then toggle
+    const directive = await this.directivesService.upsertDirective(id, body.active);
+    return { id, active: body.active, persisted: true };
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━

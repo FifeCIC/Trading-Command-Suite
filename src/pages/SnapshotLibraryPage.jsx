@@ -1,74 +1,22 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import { createChart, CandlestickSeries } from 'lightweight-charts';
+import LoadingSkeleton from '../components/LoadingSkeleton';
 import './snapshot-library.css';
 
-const DEFAULT_SYMBOLS = ['NVDA', 'AAPL', 'TSLA', 'MSFT', 'SPY', 'BTCUSD', 'XAUUSD', 'EURUSD'];
+const TIMEFRAMES = ['1M', '5M', '15M', '1H', '4H', '1D', '1W'];
+const QUICK_SYMBOLS = ['EURUSD', 'USDJPY', 'XAUUSD', 'BTCUSD', 'SPY', 'NVDA', 'AAPL', 'MSFT'];
 
-export default function SnapshotLibraryPage() {
-  const [note, setNote] = useState('');
-  const [capturing, setCapturing] = useState(false);
-  const [compSymbol, setCompSymbol] = useState('NVDA');
-  const [dateA, setDateA] = useState('');
-  const [dateB, setDateB] = useState('');
-  const [compResult, setCompResult] = useState(null);
-  const [compLoading, setCompLoading] = useState(false);
-  const chartARef = useRef(null);
-  const chartBRef = useRef(null);
-  const qc = useQueryClient();
-
-  const snapshotsQuery = useQuery({
-    queryKey: ['snapshots'],
-    queryFn: () => apiGet('/api/snapshots'),
-  });
-
-  const snapshots = snapshotsQuery.data || [];
-
-  async function handleCapture() {
-    setCapturing(true);
-    await apiPost('/api/snapshots', {
-      symbol: 'NVDA',
-      timeframe: '1d',
-      notes: note || 'Manual snapshot',
-      candleData: Array.from({ length: 100 }, (_, i) => ({
-        timestamp: new Date(Date.now() - (99 - i) * 3600000).toISOString(),
-        open: 140 + Math.random() * 5,
-        high: 143 + Math.random() * 5,
-        low: 139 + Math.random() * 5,
-        close: 141 + Math.random() * 5,
-        volume: 50000000 + Math.random() * 20000000,
-      })),
-    });
-    setNote('');
-    setCapturing(false);
-    qc.invalidateQueries({ queryKey: ['snapshots'] });
-  }
-
-  async function handleDelete(id) {
-    if (!confirm('Delete this snapshot?')) return;
-    await fetch(`/api/snapshots/${id}`, { method: 'DELETE' });
-    qc.invalidateQueries({ queryKey: ['snapshots'] });
-  }
-
-  async function handleCompare() {
-    if (!dateA || !dateB || !compSymbol) return;
-    setCompLoading(true);
-    try {
-      const result = await apiPost('/api/snapshots/compare', { symbol: compSymbol, dateA, dateB });
-      setCompResult(result);
-    } catch (e) {
-      setCompResult({ error: 'Comparison failed. Is the backend running?' });
-    }
-    setCompLoading(false);
-  }
-
-  function renderMiniChart(el, bars) {
-    if (!el || !bars?.length) return;
-    const chart = createChart(el, {
-      height: 150,
+function MiniChart({ bars, id }) {
+  const elRef = useRef(null);
+  useEffect(() => {
+    if (!elRef.current || !bars?.length) return;
+    const chart = createChart(elRef.current, {
+      height: 120,
       layout: { background: { color: 'transparent' }, textColor: '#94a3b8', fontSize: 9 },
-      grid: { vertLines: { color: 'rgba(148,163,184,0.06)' }, horzLines: { color: 'rgba(148,163,184,0.06)' } },
+      grid: { vertLines: { visible: false }, horzLines: { visible: false } },
       timeScale: { borderColor: 'rgba(148,163,184,0.1)', timeVisible: false },
       rightPriceScale: { borderColor: 'rgba(148,163,184,0.1)' },
       crosshair: { mode: 0 },
@@ -78,166 +26,216 @@ export default function SnapshotLibraryPage() {
       borderUpColor: '#22c55e', borderDownColor: '#ef4444',
       wickUpColor: '#22c55e', wickDownColor: '#ef4444',
     });
-    cs.setData(bars);
+    cs.setData(bars.map(b => ({
+      time: b.timestamp ? new Date(b.timestamp).toISOString().split('T')[0] : b.time,
+      open: b.open, high: b.high, low: b.low, close: b.close,
+    })).filter(c => c.time));
     chart.timeScale().fitContent();
-  }
+    return () => chart.remove();
+  }, [bars, id]);
+  return <div ref={elRef} className="sl-mini-chart" />;
+}
+
+export default function SnapshotLibraryPage() {
+  const qc = useQueryClient();
+  const [symbol, setSymbol] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [timeframe, setTimeframe] = useState('1D');
+  const [notes, setNotes] = useState('');
+  const [expandedId, setExpandedId] = useState(null);
+
+  // Comparison state
+  const [compSymbol, setCompSymbol] = useState('');
+  const [dateA, setDateA] = useState('');
+  const [dateB, setDateB] = useState('');
+  const [compResult, setCompResult] = useState(null);
+  const [compLoading, setCompLoading] = useState(false);
+
+  const snapshotsQuery = useQuery({
+    queryKey: ['snapshots'],
+    queryFn: () => apiGet('/api/snapshots'),
+    refetchInterval: 15000,
+  });
+
+  const importMutation = useMutation({
+    mutationFn: (payload) => apiPost('/api/snapshots/import', payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['snapshots'] });
+      setNotes('');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => fetch(`/api/snapshots/${id}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['snapshots'] }),
+  });
+
+  const snapshots = snapshotsQuery.data || [];
+
+  const handleImport = useCallback(() => {
+    if (!symbol.trim() || !startDate || !endDate) return;
+    importMutation.mutate({ symbol: symbol.trim().toUpperCase(), startDate, endDate, timeframe, notes: notes || undefined });
+  }, [symbol, startDate, endDate, timeframe, notes, importMutation]);
+
+  const handleCompare = useCallback(async () => {
+    if (!dateA || !dateB || !compSymbol) return;
+    setCompLoading(true);
+    try {
+      const result = await apiPost('/api/snapshots/compare', { symbol: compSymbol, dateA, dateB });
+      setCompResult(result);
+    } catch {
+      setCompResult({ error: 'Comparison failed. Is the backend running?' });
+    }
+    setCompLoading(false);
+  }, [compSymbol, dateA, dateB]);
 
   return (
-    <main className="snp-page">
-      <header className="snp-header">
-        <h1>Market Snapshots</h1>
-        <p>Capture and replay chart moments for training and analysis.</p>
-      </header>
+    <div className="sl-page">
+      <motion.header className="sl-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        <h1>Snapshot Library</h1>
+        <p className="sl-subtitle">Import real market data for a symbol + date range. Use snapshots for backtesting and moment-in-time replay.</p>
+      </motion.header>
 
-      <div className="snp-capture-bar">
-        <input type="text" placeholder="Notes (optional)..." value={note} onChange={(e) => setNote(e.target.value)} />
-        <button type="button" className="snp-btn" onClick={handleCapture} disabled={capturing}>
-          {capturing ? 'Capturing…' : '📸 Capture NVDA Snapshot'}
-        </button>
-      </div>
-
-      <div className="snp-grid">
-        {snapshots.length === 0 && <p className="snp-empty">No snapshots yet. Capture one above.</p>}
-        {snapshots.map((s) => (
-          <article key={s.id} className="snp-card">
-            <div className="snp-card-header">
-              <strong>{s.symbol}</strong>
-              <span className="snp-chip">{s.timeframe}</span>
-              {s.starred && <span className="snp-star">⭐</span>}
-            </div>
-            <p className="snp-notes">{s.notes || 'No notes'}</p>
-            <div className="snp-meta">
-              {s.candleData?.length || 0} candles · {new Date(s.createdAt).toLocaleDateString()}
-            </div>
-            <div className="snp-actions">
-              <button type="button" className="snp-btn-sm" onClick={() => window.open(`/research/replay/${s.id}`, '_blank')}>
-                ▶ Replay
-              </button>
-              <button type="button" className="snp-btn-sm snp-btn-del" onClick={() => handleDelete(s.id)}>
-                🗑
-              </button>
-            </div>
-          </article>
-        ))}
-      </div>
-
-      {/* ── Date-range Comparison ── */}
-      <section className="snp-compare-section">
-        <h2>Date-Range Comparison</h2>
-        <p>Compare a symbol's state at two different points in time.</p>
-        <div className="snp-compare-controls">
-          <select value={compSymbol} onChange={(e) => setCompSymbol(e.target.value)}>
-            {DEFAULT_SYMBOLS.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <input type="date" value={dateA} onChange={(e) => setDateA(e.target.value)} placeholder="Date A" />
-          <input type="date" value={dateB} onChange={(e) => setDateB(e.target.value)} placeholder="Date B" />
-          <button type="button" className="snp-btn" onClick={handleCompare} disabled={compLoading || !dateA || !dateB}>
-            {compLoading ? 'Comparing…' : 'Compare'}
-          </button>
-        </div>
-
-        {compResult?.error && <p className="snp-compare-error">{compResult.error}</p>}
-
-        {compResult?.snapA && compResult?.snapB && (
-          <div className="snp-compare-results">
-            {/* Delta bar */}
-            {compResult.delta && (
-              <div className="snp-delta-bar">
-                <span>{compResult.symbol} · </span>
-                <strong className={compResult.delta.priceChange >= 0 ? 'snp-up' : 'snp-down'}>
-                  {compResult.delta.priceChange >= 0 ? '+' : ''}{compResult.delta.priceChange}
-                </strong>
-                <span className={compResult.delta.priceChangePct >= 0 ? 'snp-up' : 'snp-down'}>
-                  ({compResult.delta.priceChangePct >= 0 ? '+' : ''}{compResult.delta.priceChangePct}%)
-                </span>
-                {compResult.delta.signalChanged && (
-                  <span className="snp-delta-badge">Signal: {compResult.delta.signalA} → {compResult.delta.signalB}</span>
-                )}
-                {compResult.delta.seasonalityShift && (
-                  <span className="snp-delta-badge">Seasonality: {compResult.delta.seasonalityShift}</span>
-                )}
-                <span className="snp-delta-badge">News: {compResult.delta.newsBetween} articles</span>
-                {compResult.delta.biggestDirectiveMover && (
-                  <span className="snp-delta-badge">
-                    Top mover: {compResult.delta.biggestDirectiveMover.id} ({compResult.delta.biggestDirectiveMover.delta >= 0 ? '+' : ''}{compResult.delta.biggestDirectiveMover.delta})
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Side-by-side OHLCV + charts */}
-            <div className="snp-compare-cols">
-              {[compResult.snapA, compResult.snapB].map((snap, si) => (
-                <div className="snp-compare-col" key={si}>
-                  <h3>{snap.date} {snap.scoring?.signal && <span className={`snp-signal-chip snp-signal-${snap.scoring.signal.toLowerCase()}`}>{snap.scoring.signal}</span>}</h3>
-                  {snap.closestBar ? (
-                    <table className="snp-compare-table">
-                      <tbody>
-                        <tr><td>Open</td><td>{snap.closestBar.open}</td></tr>
-                        <tr><td>High</td><td>{snap.closestBar.high}</td></tr>
-                        <tr><td>Low</td><td>{snap.closestBar.low}</td></tr>
-                        <tr><td>Close</td><td><strong>{snap.closestBar.close}</strong></td></tr>
-                        <tr><td>Volume</td><td>{snap.closestBar.volume?.toLocaleString() || '—'}</td></tr>
-                      </tbody>
-                    </table>
-                  ) : <p>No data for this date</p>}
-                  {snap.scoring && (
-                    <div className="snp-scoring-mini">
-                      <div className="snp-scoring-row"><span>Score</span><strong>{snap.scoring.composite?.toFixed(1)}</strong></div>
-                      <div className="snp-scoring-row"><span>Directives</span><strong>{snap.scoring.activeDirectives}/{snap.scoring.directiveCount} active</strong></div>
-                      <div className="snp-scoring-row"><span>Seasonality</span><strong>{(snap.scoring.seasonalityMultiplier * 100).toFixed(0)}%</strong></div>
-                    </div>
-                  )}
-                  <div ref={(el) => { if (el && snap.chartBars?.length) renderMiniChart(el, snap.chartBars); }} className="snp-mini-chart" />
-                  {snap.newsCount > 0 && (
-                    <details className="snp-news-detail">
-                      <summary>{snap.newsCount} news articles near this date</summary>
-                      <div className="snp-news-list">
-                        {snap.newsSummary?.map((n, ni) => (
-                          <div key={ni} className={`snp-news-item snp-news-${n.sentiment > 0.1 ? 'pos' : n.sentiment < -0.1 ? 'neg' : 'neut'}`}>
-                            <span className="snp-news-sent">{n.sentiment > 0.1 ? '🟢' : n.sentiment < -0.1 ? '🔴' : '⚪'}</span>
-                            <span>{n.headline}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </details>
-                  )}
-                </div>
+      {/* ── Import Form ── */}
+      <motion.div className="sl-import-form" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+        <h3>Import Market Data</h3>
+        <div className="sl-import-grid">
+          <div className="sl-field">
+            <label>Symbol</label>
+            <input
+              type="text" className="sl-input"
+              value={symbol} onChange={e => setSymbol(e.target.value.toUpperCase())}
+              placeholder="EURUSD, NVDA..."
+            />
+            <div className="sl-quick-symbols">
+              {QUICK_SYMBOLS.map(s => (
+                <button key={s} className={`sl-quick-chip ${symbol === s ? 'active' : ''}`} onClick={() => setSymbol(s)}>{s}</button>
               ))}
             </div>
-
-            {/* Directive-level comparison */}
-            {compResult.snapA.scoring?.breakouts && compResult.snapB.scoring?.breakouts && (
-              <details className="snp-directive-diff">
-                <summary>Directive Score Comparison</summary>
-                <table className="snp-diff-table">
-                  <thead><tr><th>Directive</th><th>{compResult.snapA.date}</th><th>{compResult.snapB.date}</th><th>Δ</th></tr></thead>
-                  <tbody>
-                    {(() => {
-                      const allKeys = new Set([...Object.keys(compResult.snapA.scoring.breakouts), ...Object.keys(compResult.snapB.scoring.breakouts)]);
-                      return [...allKeys].sort().map((key) => {
-                        const a = compResult.snapA.scoring.breakouts[key] || 0;
-                        const b = compResult.snapB.scoring.breakouts[key] || 0;
-                        const delta = b - a;
-                        return (
-                          <tr key={key}>
-                            <td className="snp-diff-key">{key}</td>
-                            <td>{a.toFixed(1)}</td>
-                            <td>{b.toFixed(1)}</td>
-                            <td className={delta > 0 ? 'snp-up' : delta < 0 ? 'snp-down' : ''}>
-                              {delta > 0 ? '+' : ''}{delta.toFixed(1)}
-                            </td>
-                          </tr>
-                        );
-                      });
-                    })()}
-                  </tbody>
-                </table>
-              </details>
-            )}
+          </div>
+          <div className="sl-field">
+            <label>Timeframe</label>
+            <select className="sl-input" value={timeframe} onChange={e => setTimeframe(e.target.value)}>
+              {TIMEFRAMES.map(tf => <option key={tf} value={tf}>{tf}</option>)}
+            </select>
+          </div>
+          <div className="sl-field">
+            <label>Start Date</label>
+            <input type="date" className="sl-input" value={startDate} onChange={e => setStartDate(e.target.value)} />
+          </div>
+          <div className="sl-field">
+            <label>End Date</label>
+            <input type="date" className="sl-input" value={endDate} onChange={e => setEndDate(e.target.value)} />
+          </div>
+        </div>
+        <div className="sl-import-actions">
+          <input type="text" className="sl-input sl-notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional notes..." />
+          <button className="sl-import-btn" onClick={handleImport} disabled={importMutation.isPending || !symbol || !startDate || !endDate}>
+            {importMutation.isPending ? '⏳ Importing...' : '📥 Import Snapshot'}
+          </button>
+        </div>
+        {importMutation.data && (
+          <div className="sl-import-result">
+            ✅ Imported {importMutation.data.symbol} — {importMutation.data.candleData?.length || 0} candles from {importMutation.data.source}
           </div>
         )}
-      </section>
-    </main>
+      </motion.div>
+
+      {/* ── Snapshot List ── */}
+      <motion.div className="sl-list-section" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+        <h3>Saved Snapshots ({snapshots.length})</h3>
+        {snapshotsQuery.isLoading ? <LoadingSkeleton variant="card" count={2} /> : snapshots.length === 0 ? (
+          <p className="sl-empty">No snapshots yet. Import market data above to create one.</p>
+        ) : (
+          <div className="sl-list">
+            {snapshots.map((snap, i) => (
+              <motion.div
+                key={snap.id}
+                className={`sl-card ${expandedId === snap.id ? 'sl-expanded' : ''}`}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03 }}
+                onClick={() => setExpandedId(expandedId === snap.id ? null : snap.id)}
+              >
+                <div className="sl-card-top">
+                  <span className="sl-card-symbol">{snap.symbol}</span>
+                  <span className="sl-card-tf">{snap.timeframe}</span>
+                  <span className="sl-card-bars">{snap.candleData?.length || 0} candles</span>
+                  <span className={`sl-card-source sl-src-${snap.source || 'empty'}`}>{snap.source || 'manual'}</span>
+                  <span className="sl-card-date">{new Date(snap.createdAt).toLocaleDateString()}</span>
+                  <button className="sl-delete-btn" onClick={e => { e.stopPropagation(); deleteMutation.mutate(snap.id); }}>✕</button>
+                </div>
+                {snap.notes && <p className="sl-card-notes">{snap.notes}</p>}
+                {snap.startTime && snap.endTime && (
+                  <p className="sl-card-range">
+                    {new Date(snap.startTime).toLocaleDateString()} → {new Date(snap.endTime).toLocaleDateString()}
+                  </p>
+                )}
+
+                <AnimatePresence>
+                  {expandedId === snap.id && (
+                    <motion.div className="sl-expand" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
+                      <MiniChart bars={snap.candleData} id={snap.id} />
+                      <div className="sl-expand-actions">
+                        <span>First: {snap.candleData?.[0]?.close?.toFixed(2) || '—'}</span>
+                        <span>Last: {snap.candleData?.[snap.candleData?.length - 1]?.close?.toFixed(2) || '—'}</span>
+                        {snap.candleData?.length > 1 && (() => {
+                          const first = snap.candleData[0]?.close;
+                          const last = snap.candleData[snap.candleData.length - 1]?.close;
+                          const chg = first && last ? ((last - first) / first * 100) : 0;
+                          return <span style={{ color: chg >= 0 ? '#22c55e' : '#ef4444' }}>{chg >= 0 ? '+' : ''}{chg.toFixed(2)}%</span>;
+                        })()}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </motion.div>
+
+      {/* ── Compare ── */}
+      <motion.div className="sl-compare-section" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
+        <h3>Date-Range Comparison</h3>
+        <p className="sl-hint">Compare directive scoring at two different dates for the same symbol.</p>
+        <div className="sl-compare-grid">
+          <div className="sl-field">
+            <label>Symbol</label>
+            <input type="text" className="sl-input" value={compSymbol} onChange={e => setCompSymbol(e.target.value.toUpperCase())} placeholder="NVDA" />
+          </div>
+          <div className="sl-field">
+            <label>Date A</label>
+            <input type="date" className="sl-input" value={dateA} onChange={e => setDateA(e.target.value)} />
+          </div>
+          <div className="sl-field">
+            <label>Date B</label>
+            <input type="date" className="sl-input" value={dateB} onChange={e => setDateB(e.target.value)} />
+          </div>
+          <div className="sl-field sl-field-btn">
+            <button className="sl-compare-btn" onClick={handleCompare} disabled={compLoading || !compSymbol || !dateA || !dateB}>
+              {compLoading ? '⏳' : '⚖'} Compare
+            </button>
+          </div>
+        </div>
+
+        {compResult && !compResult.error && (
+          <motion.div className="sl-compare-result" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <div className="sl-compare-header">
+              <span>{compResult.symbol}</span>
+              <span>→</span>
+              <span>Composite delta: <strong style={{ color: compResult.compositeDelta >= 0 ? '#22c55e' : '#ef4444' }}>{compResult.compositeDelta >= 0 ? '+' : ''}{compResult.compositeDelta}</strong></span>
+            </div>
+            {compResult.newsAttribution && (
+              <div className="sl-compare-news">
+                <span>News: {compResult.newsAttribution.headline}</span>
+              </div>
+            )}
+          </motion.div>
+        )}
+        {compResult?.error && <p className="sl-error">{compResult.error}</p>}
+      </motion.div>
+    </div>
   );
 }

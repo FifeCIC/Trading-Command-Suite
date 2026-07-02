@@ -1,5 +1,5 @@
 import { Controller, Get, Query, Param, Logger } from '@nestjs/common';
-import { FinnhubAdapter } from '../providers/adapters/finnhub.adapter';
+import { ProvidersService } from '../providers/providers.service';
 import { ResearchOverviewService } from './research-overview.service';
 import { AnalystTargetsService } from './analyst-targets.service';
 
@@ -8,7 +8,7 @@ export class ResearchController {
   private readonly logger = new Logger(ResearchController.name);
 
   constructor(
-    private readonly finnhub: FinnhubAdapter,
+    private readonly providers: ProvidersService,
     private readonly overviewService: ResearchOverviewService,
     private readonly analystTargets: AnalystTargetsService,
   ) {}
@@ -24,11 +24,14 @@ export class ResearchController {
     @Query('months') months?: string,
   ) {
     const horizonMonths = months ? parseInt(months, 10) : 3;
-    const data = await this.finnhub.getEarningsCalendar(symbol, horizonMonths);
+    const adapter = this.providers.getAdapter('finnhub');
+    const data = adapter && typeof (adapter as any).getEarningsCalendar === 'function'
+      ? await (adapter as any).getEarningsCalendar(symbol, horizonMonths)
+      : [];
     return {
       source: 'finnhub',
       horizonMonths,
-      count: data.length,
+      count: Array.isArray(data) ? data.length : 0,
       events: data,
     };
   }

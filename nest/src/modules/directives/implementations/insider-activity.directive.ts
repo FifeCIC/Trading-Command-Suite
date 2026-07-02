@@ -21,7 +21,7 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
-import { FinnhubAdapter } from '../../providers/adapters/finnhub.adapter';
+import { ProvidersService } from '../../providers/providers.service';
 
 const MIN_BARS = 1;
 const RECENT_DAYS = 30;
@@ -37,7 +37,7 @@ export class InsiderActivityDirective implements IDirective {
   readonly maxScore = 85;
   readonly version = '1.0.0';
 
-  constructor(private readonly finnhub: FinnhubAdapter) {}
+  constructor(private readonly providers: ProvidersService) {}
 
   async calculate(input: DirectiveInput): Promise<DirectiveResult> {
     const symbol = input.symbol;
@@ -52,7 +52,9 @@ export class InsiderActivityDirective implements IDirective {
     }
 
     try {
-      const transactions = await this.finnhub.getInsiderTransactions(symbol);
+      const finnhub = this.providers.getAdapter('finnhub');
+      if (!finnhub) return { score: 0, confidence: 0, signalClass: 'neutral', reason: 'Finnhub not available' };
+      const transactions = await (finnhub as any).getInsiderTransactions(symbol);
       if (!transactions || transactions.length === 0) {
         return {
           score: 0,
@@ -64,7 +66,7 @@ export class InsiderActivityDirective implements IDirective {
 
       // Filter to recent transactions
       const cutoff = new Date(Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000);
-      const recent = transactions.filter(t => {
+      const recent = transactions.filter((t: any) => {
         const d = new Date(t.transactionDate);
         return !isNaN(d.getTime()) && d >= cutoff;
       });
@@ -79,8 +81,8 @@ export class InsiderActivityDirective implements IDirective {
       }
 
       // Count buys vs sells
-      const buys = recent.filter(t => t.transactionCode === 'P' || t.transactionCode === 'A');
-      const sells = recent.filter(t => t.transactionCode === 'S' || t.transactionCode === 'D');
+      const buys = recent.filter((t: any) => t.transactionCode === 'P' || t.transactionCode === 'A');
+      const sells = recent.filter((t: any) => t.transactionCode === 'S' || t.transactionCode === 'D');
       const total = buys.length + sells.length;
 
       // 1. Net buy ratio (0-50)
@@ -88,11 +90,11 @@ export class InsiderActivityDirective implements IDirective {
       const ratioScore = Math.round(buyRatio * 50);
 
       // 2. Cluster bonus (0-25) — multiple buyers = strong signal
-      const uniqueBuyers = new Set(buys.map(b => b.name)).size;
+      const uniqueBuyers = new Set(buys.map((b: any) => b.name)).size;
       const clusterScore = Math.min(25, uniqueBuyers * 5);
 
       // 3. Volume significance (0-10) — total shares traded
-      const totalShares = recent.reduce((s, t) => s + Math.abs(t.share || 0), 0);
+      const totalShares = recent.reduce((s: number, t: any) => s + Math.abs(t.share || 0), 0);
       const volumeScore = Math.min(10, Math.round(totalShares / 10000));
 
       const totalScore = Math.min(this.maxScore, ratioScore + clusterScore + volumeScore);

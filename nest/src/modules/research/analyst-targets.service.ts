@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { FinnhubAdapter } from '../providers/adapters/finnhub.adapter';
-import { FmpAdapter } from '../providers/adapters/fmp.adapter';
+import { ProvidersService } from '../providers/providers.service';
 
 export interface AnalystTargetResult {
   symbol: string;
@@ -20,8 +19,7 @@ export class AnalystTargetsService {
   private readonly logger = new Logger(AnalystTargetsService.name);
 
   constructor(
-    private readonly finnhub: FinnhubAdapter,
-    private readonly fmp: FmpAdapter,
+    private readonly providers: ProvidersService,
   ) {}
 
   /**
@@ -64,32 +62,36 @@ export class AnalystTargetsService {
 
   /**
    * Get analyst target for a single symbol.
-   * Primary source: Finnhub. Fallback: FMP.
+   * Primary source: Finnhub via factory. Fallback: FMP via factory.
    */
   async getTargetForSymbol(symbol: string): Promise<AnalystTargetResult | null> {
     const sym = symbol.toUpperCase();
+    const finnhub = this.providers.getAdapter('finnhub');
+    const fmp = this.providers.getAdapter('fmp');
 
     // Try Finnhub first
     try {
-      const pt = await this.finnhub.getPriceTarget(sym);
-      if (pt && pt.avgTarget > 0) {
-        const currentPrice = pt.currentPrice ?? pt.avgTarget * 0.9;
-        const upside = currentPrice > 0
-          ? Math.round(((pt.avgTarget - currentPrice) / currentPrice) * 10000) / 100
-          : 0;
+      if (finnhub) {
+        const pt = await (finnhub as any).getPriceTarget(sym);
+        if (pt && pt.avgTarget > 0) {
+          const currentPrice = pt.currentPrice ?? pt.avgTarget * 0.9;
+          const upside = currentPrice > 0
+            ? Math.round(((pt.avgTarget - currentPrice) / currentPrice) * 10000) / 100
+            : 0;
 
-        return {
-          symbol: sym,
-          companyName: pt.companyName || sym,
-          currentPrice: Math.round(currentPrice * 100) / 100,
-          avgTarget: Math.round(pt.avgTarget * 100) / 100,
-          highTarget: Math.round((pt.highTarget ?? pt.avgTarget * 1.2) * 100) / 100,
-          lowTarget: Math.round((pt.lowTarget ?? pt.avgTarget * 0.8) * 100) / 100,
-          consensus: pt.consensus ?? this.classifyUpside(upside),
-          analystCount: pt.analystCount ?? 0,
-          upside,
-          source: 'finnhub',
-        };
+          return {
+            symbol: sym,
+            companyName: pt.companyName || sym,
+            currentPrice: Math.round(currentPrice * 100) / 100,
+            avgTarget: Math.round(pt.avgTarget * 100) / 100,
+            highTarget: Math.round((pt.highTarget ?? pt.avgTarget * 1.2) * 100) / 100,
+            lowTarget: Math.round((pt.lowTarget ?? pt.avgTarget * 0.8) * 100) / 100,
+            consensus: pt.consensus ?? this.classifyUpside(upside),
+            analystCount: pt.analystCount ?? 0,
+            upside,
+            source: 'finnhub',
+          };
+        }
       }
     } catch (err) {
       this.logger.debug(`Finnhub price target failed for ${sym}, trying FMP`);
@@ -97,7 +99,7 @@ export class AnalystTargetsService {
 
     // Fallback to FMP
     try {
-      const fpt = await this.fmp.getPriceTarget(sym);
+      const fpt = await (fmp as any).getPriceTarget(sym);
       if (fpt && fpt.targetConsensus > 0) {
         const currentPrice = fpt.currentPrice ?? fpt.targetConsensus * 0.9;
         const upside = currentPrice > 0

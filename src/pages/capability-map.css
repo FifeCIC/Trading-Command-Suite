@@ -2,8 +2,9 @@
 
 .cm-page {
   max-width: none;
-  margin: 0 auto;
-  padding: 1.5rem 2rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.5rem 1.5rem;
   color: var(--ink, #e2e8f0);
 }
 
@@ -229,27 +230,31 @@
 /* ── Tables ── */
 .cm-table-wrap {
   overflow-x: auto;
+  width: 100%;
 }
 
 .cm-table {
   width: 100%;
+  min-width: 100%;
   border-collapse: collapse;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
+  table-layout: auto;
 }
 
 .cm-table th {
   text-align: left;
-  padding: 0.45rem 0.6rem;
+  padding: 0.4rem 0.5rem;
   color: var(--ink-soft, #94a3b8);
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   border-bottom: 1px solid var(--line, #1e2a45);
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .cm-table td {
-  padding: 0.4rem 0.6rem;
+  padding: 0.35rem 0.5rem;
   border-bottom: 1px solid rgba(255,255,255,0.03);
   vertical-align: middle;
 }

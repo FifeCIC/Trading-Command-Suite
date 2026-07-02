@@ -1,0 +1,38 @@
+## Current Known Gaps (as of 2026-07-02)
+
+### Trading Infrastructure
+- **TRADING212 SELL** — agents repeatedly claim API doesn't allow selling and remove/re-add sell code. THIS IS WRONG. Verified flow: controller adds side:"sell" internally → importService places order → adapter sends {ticker, quantity} WITHOUT side field. Trading212 auto-detects sell from existing position.
+- **Trading212 account labels** — AccountsDashboardPage shows "Investment" without Demo/Live label.
+- **Trading Strategies page** — hardcoded fake "In Use" checkmarks and P&L values. No strategies actually running. UI Data Honesty rule in place.
+- **MT5 Bridge port mismatch** — v2 bridge on port 5000, NestJS .env has MT5_BRIDGE_URL=http://localhost:5001.
+- **MT5 Bridge v2 health** — bridge self-reports disconnected but NestJS adapter may have working data endpoints.
+
+### Architecture Debt
+- **Core vs extension boundary** — still needs final ownership rules.
+- **React endpoint schema standard** — should become explicit.
+- **Automated architecture inventory** — future decision.
+- **Browser-level verification path** — not automated.
+- **This page should later reflect live contracts and system state.**
+- **MT5 Python bridge status** — not polled on this page.
+- **Contract register** — missing queue action and storage contracts.
+
+### Scoring/Data Gaps
+- **Directive count drifts** — needs auto-detected count.
+- **Scoring pipeline calibration** — only tested for 16 seeded calibrations.
+- **Exit signal system** — not yet wired into SEES exit urgency column (Phase 2).
+- **No automated drift detection** — documented contracts vs actual route registrations.
+- **FX Timing directive** — placeholder requiring FX data infrastructure.
+- **Analyse Symbol page** — AI analysis placeholder.
+
+### Automation Risk
+- **Rate-limiting risk** — without Symbol Data Cache, parallel protocol runs would make 3x duplicate Finnhub/T212 calls per symbol in 10s window.
+- **Unified broker interface** — not yet implemented. PortfolioService hardcodes Trading212Adapter.
+- **Provider adapter hardcoding** — 9 files fixed 2026-07-02. New services must follow factory pattern.
+- **Trade recording on position close** — FIXED 2026-07-02.
+
+### Process
+- **Agent coordination gap** — agents rewrote MT5 bridge without checking revision history. Coordination rules now in .agent-rules.md.
+
+---
+
+Source: src/pages/architecture-framework.data.js KNOWN_GAPS array

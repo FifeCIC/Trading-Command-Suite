@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { FinnhubAdapter } from '../providers/adapters/finnhub.adapter';
+import { ProvidersService } from '../providers/providers.service';
 
 interface InvestigationFindings {
   price: number;
@@ -20,7 +20,7 @@ export class InvestigationService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly finnhub: FinnhubAdapter,
+    private readonly providers: ProvidersService,
   ) {}
 
   /**
@@ -69,16 +69,36 @@ export class InvestigationService {
     return investigation;
   }
 
+  private emptyFindings(symbol: string): InvestigationFindings {
+    return {
+      price: 0,
+      priceChangePct: null,
+      analystTarget: null,
+      newsSentiment: null,
+      socialSentiment: null,
+      articles: [],
+      earningsProximity: { nextDate: null, daysUntil: null },
+      convictionScore: 0,
+      convictionLabel: 'No Data',
+    };
+  }
+
   /**
-   * Gather all available data for a symbol from Finnhub.
+   * Gather all available data for a symbol.
    */
   private async gatherFindings(symbol: string): Promise<InvestigationFindings> {
+    const finnhub = this.providers.getAdapter('finnhub');
+    if (!finnhub) {
+      this.logger.warn('Finnhub adapter not available via factory');
+      return this.emptyFindings(symbol);
+    }
+
     // Fire all API calls in parallel
     const [quote, news, socialSentiment, priceTarget] = await Promise.allSettled([
-      this.finnhub.getQuote(symbol),
-      this.finnhub.getNews(symbol, 14),
-      this.finnhub.getSocialSentiment(symbol),
-      this.finnhub.getPriceTarget(symbol),
+      (finnhub as any).getQuote(symbol),
+      (finnhub as any).getNews(symbol, 14),
+      (finnhub as any).getSocialSentiment(symbol),
+      (finnhub as any).getPriceTarget(symbol),
     ]);
 
     const price = quote.status === 'fulfilled' && quote.value ? (quote.value.last ?? quote.value.bid ?? 0) : 0;

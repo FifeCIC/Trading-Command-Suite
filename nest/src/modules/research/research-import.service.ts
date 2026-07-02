@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
-import { FinnhubAdapter } from '../providers/adapters/finnhub.adapter';
+import { ProvidersService } from '../providers/providers.service';
 
 @Injectable()
 export class ResearchImportService {
@@ -9,7 +9,7 @@ export class ResearchImportService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly finnhub: FinnhubAdapter,
+    private readonly providers: ProvidersService,
   ) {}
 
   /**
@@ -21,7 +21,12 @@ export class ResearchImportService {
     const startTime = Date.now();
 
     try {
-      const events = await this.finnhub.getEarningsCalendar(undefined, 3);
+      const finnhub = this.providers.getAdapter('finnhub');
+      if (!finnhub) {
+        this.logger.warn('Finnhub adapter not available, skipping earnings import');
+        return;
+      }
+      const events = await (finnhub as any).getEarningsCalendar(undefined, 3);
       let inserted = 0;
       let updated = 0;
 
@@ -89,7 +94,9 @@ export class ResearchImportService {
 
       let fetched = 0;
       for (const { ticker } of symbols) {
-        const target = await this.finnhub.getPriceTarget(ticker);
+        const finnhub = this.providers.getAdapter('finnhub');
+        if (!finnhub) continue;
+        const target = await (finnhub as any).getPriceTarget(ticker);
         if (!target) continue;
 
         const data = {

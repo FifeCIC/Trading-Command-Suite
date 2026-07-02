@@ -20,7 +20,7 @@ export const PAGE_DATA_STATUS = {
   'portfolio-events': { status: 'live', source: '/api/portfolio/events' },
   'trade-history': { status: 'live', source: 'DB' },
   'positions-monitor': { status: 'live', source: 'Alpaca + MT5' },
-  'trade-journal': { status: 'mock', note: 'Local state only' },
+  'trade-journal': { status: 'live', source: '/api/journal/entries + stats' },
   'mt5-connection-manager': { status: 'live', source: 'MT5 Bridge' },
   'accounts-dashboard': { status: 'partial', source: 'Trading212 placeholder' },
   'speed-trading': { status: 'live', source: 'MT5 Bridge + speed-scan' },
@@ -45,7 +45,7 @@ export const PAGE_DATA_STATUS = {
   // ── Research ──
   'research-overview': { status: 'live', note: 'Signal dashboard with /api/scoring/ranked + /api/automation/status' },
   'symbols-browser': { status: 'live', source: 'DB + Providers' },
-  'snapshots': { status: 'mock', note: 'Hardcoded NVDA candles' },
+  'snapshots': { status: 'live', source: 'MarketData DB + MT5 Bridge import' },
   'sector-rotation': { status: 'live', source: 'Finnhub sectors' },
   'fluff-detector': { status: 'live', source: 'News sentiment analysis' },
   'market-correlations': { status: 'live', source: 'Pearson correlation API' },
@@ -53,7 +53,7 @@ export const PAGE_DATA_STATUS = {
   'earnings-calendar': { status: 'live', source: 'Finnhub earnings calendar' },
   'social-networks': { status: 'live', note: 'Finnhub news sentiment — requires FINNHUB_API_KEY' },
   'price-forecast': { status: 'partial', source: 'Finnhub — price-target requires premium subscription' },
-  'events-calendar': { status: 'mock', note: 'Not yet built' },
+  'events-calendar': { status: 'live', source: 'Finnhub earnings + Timeline API' },
   'macro-monitor': { status: 'live', source: 'FRED + ECB adapters' },
 
   // ── Analysis ──
@@ -61,8 +61,8 @@ export const PAGE_DATA_STATUS = {
   'support-resistance': { status: 'live', source: 'Indicators module' },
   'volatility-analysis': { status: 'live', source: 'Indicators module' },
   'technical-indicators': { status: 'live', source: 'Indicators module' },
-  'pattern-scanner': { status: 'mock', note: 'Random pattern data' },
-  'chart-comparison': { status: 'mock', note: 'Not yet built' },
+  'pattern-scanner': { status: 'live', source: 'Market data candles + pattern detector' },
+  'chart-comparison': { status: 'superseded', note: 'Replaced by SEES Arena + market-correlations' },
   'analyse-symbol': { status: 'live', source: 'Scoring + Indicators API' },
 
   // ── Data ──

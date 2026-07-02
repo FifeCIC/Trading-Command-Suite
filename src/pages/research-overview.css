@@ -153,6 +153,27 @@
 .ro-hero-value { display: block; font-size: 3rem; font-weight: 900; color: var(--accent); line-height: 1; }
 .ro-hero-signal { display: block; font-size: 0.75rem; color: var(--ink-soft); margin-top: 0.25rem; }
 
+/* ── Priority Tags ── */
+.ro-pri-tag { font-size: 0.6rem; flex-shrink: 0; }
+.ro-pri-holding { color: #3b82f6; }
+.ro-pri-watch { color: #f59e0b; }
+
+/* ── Forecasts ── */
+.ro-forecast-list { display: flex; flex-direction: column; gap: 0.45rem; }
+.ro-forecast-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.73rem; }
+.ro-forecast-sym { font-weight: 700; min-width: 50px; }
+.ro-forecast-bar-wrap { flex: 1; display: flex; align-items: center; gap: 0.4rem; }
+.ro-forecast-bar { flex: 1; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.ro-forecast-fill { height: 100%; border-radius: 3px; min-width: 2px; }
+.ro-forecast-fill.ro-up { background: #22c55e; }
+.ro-forecast-fill.ro-down { background: #ef4444; }
+.ro-forecast-pct { font-weight: 700; font-size: 0.73rem; min-width: 50px; text-align: right; font-variant-numeric: tabular-nums; }
+.ro-forecast-consensus { font-size: 0.6rem; color: var(--ink-soft); min-width: 45px; text-align: right; text-transform: capitalize; }
+
+/* ── News High-Impact ── */
+.ro-news-high { background: rgba(245,158,11,0.06); }
+.ro-news-impact-badge { font-size: 0.55rem; font-weight: 700; padding: 0 4px; border-radius: 3px; background: rgba(245,158,11,0.15); color: #f59e0b; flex-shrink: 0; }
+
 @media (max-width: 760px) {
   .ro-grid { grid-template-columns: 1fr; }
   .ro-signal-row { grid-template-columns: 24px 60px 1fr 40px 50px; font-size: 0.72rem; }

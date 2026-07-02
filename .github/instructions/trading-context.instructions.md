@@ -34,13 +34,10 @@ applyTo: "nest/src/modules/portfolio/**, nest/src/modules/providers/**, nest/src
 - Rate limit tests should verify the factory skips tripped providers
 
 ## 🏗️ Architecture Update Rule
-**After ANY feature implementation that affects trading subsystems**, update the Architecture Framework page (`/builder/architecture-framework`). Use the `update-architecture-framework` skill for guidance. At minimum:
+**After ANY feature implementation that affects trading subsystems**, file a GitHub Issue with the `revision-log` label. Do NOT edit the Architecture Framework page directly — it is a curated summary, not a change log.
 
-1. **STATUS_SNAPSHOT** — Add a dated bullet summarizing the change
-2. **CURRENT_ROUTE_CONTRACTS** — Add any new API endpoints with route, method, owner, contract
-3. **DATABASE_SCHEMA** — Add new Prisma models to coreEntities or marketDataEntities
-4. **SYSTEM_SPINE** — Add new data-flow pipeline steps
-5. **REVISION_LOG** — Add a dated entry summarizing the feature
-6. **KNOWN_GAPS** — Document any gaps discovered that remain open
+1. **GitHub Issue** — Create a closed issue with label `revision-log` summarizing: what changed, new endpoints, new models, gaps discovered
+2. **If a new API endpoint was added** — Add it to `CURRENT_ROUTE_CONTRACTS` in `architecture-framework.data.js` ONLY
+3. **If a new Prisma model was added** — Add it to `DATABASE_SCHEMA` in `architecture-framework.data.js` ONLY
 
-This applies to ALL development agents working on trading-related files. The architecture page is the implementation front door — keep it current.
+⚠️ Do NOT add to STATUS_SNAPSHOT, REVISION_LOG, or KNOWN_GAPS. Those are curated by the Librarian agent, not by feature-development agents. Excessive entries cause token bloat.

@@ -1,0 +1,45 @@
+## Diagram
+
+\\\
+PROVIDER LAYER → IMPORT LAYER → STORAGE LAYER → DIRECTIVE LAYER → PROTOCOL LAYER → STRATEGY LAYER → UI
+                                              ↑
+                         5 directives bypass ──┘ (call Finnhub directly)
+\\\
+
+## Gap Analysis
+
+### ❌ Critical Gaps
+
+**1. Five directives bypass the database** — call Finnhub directly every scoring run:
+- earnings-momentum → Finnhub /calendar/earnings
+- news-sentiment → Finnhub /news
+- social-buzz → Finnhub /social-sentiment
+- insider-activity → Finnhub /insider-transactions
+- dilution-impact → Finnhub /company-metrics
+
+These should read from stored DB tables. Two already have tables (EarningsEvent, NewsArticle). Three need new tables.
+
+**2. DataFreshness system is partial**
+- DataImportLog model exists in Prisma
+- No DataImportHandler service orchestrating imports
+- No freshness-triggered imports (data too old → auto-refresh)
+- No demand-triggered imports (directive needs data NOW → queue import)
+- No freshness preferences per feature (ideal vs strict)
+
+**3. No degradation cascade**
+- If directive data is stale → protocol should notice → strategy should limit to managing existing positions only
+- This prevents the system from making bad decisions on stale data
+
+### ⚠️ Missing Storage Tables
+- MacroSnapshot (DXY, EURUSD, yields, VIX)
+- SocialMention (Reddit/Twitter volume + sentiment)
+- InsiderTransaction (SEC Form 4 filings)
+- ShareCountHistory (dilution tracking)
+
+### ✅ Already Correct
+- 86 directives read from DirectiveInput (no provider calls)
+- Provider health endpoint exists
+- RateLimitGovernor tracks API usage
+- Data Elements page shows coverage tracking
+- Capability Map now has pipeline integration columns
+- ProviderDegradationService tracks provider health states

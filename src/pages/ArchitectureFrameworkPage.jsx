@@ -27,11 +27,9 @@ import {
   HANDOFF_CHECKLIST,
   INTAKE_TEMPLATE,
   INFORMATION_SOURCES,
-  KNOWN_GAPS,
   MAINTENANCE_WORKFLOW,
   OWNER_DIRECTORY,
   QUEUE_PROVIDER_CARDS,
-  REVISION_LOG,
   ROADMAP_ITEMS,
   SCORING_STRATEGY_CARDS,
   SECTION_META,
@@ -1427,27 +1425,21 @@ export default function ArchitectureFrameworkPage() {
       {visibleIds.has('gaps') && (
         <SectionBlock
           id="gaps"
-          title="Known Gaps And Revision Log"
-          summary="Keep unresolved architecture decisions and local change history visible on the same page as the implementation rules."
+          title="Known Gaps & Revision Log (GitHub)"
+          summary="Known gaps and revision history are tracked as GitHub Issues with `known-gap` and `revision-log` labels. Click the links below to open them."
           collapsed={collapsedSections.includes('gaps')}
           onToggle={toggleSection}
         >
           <div className="architecture-grid architecture-grid-wide">
             <article className="architecture-card">
-              <h3>Known Gaps</h3>
-              <ul>
-                {KNOWN_GAPS.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
+              <h3>🔗 <a href="https://github.com/FifeCIC/Trading-Command-Suite/issues?q=label%3Aknown-gap" target="_blank" rel="noopener noreferrer">Known Gaps</a></h3>
+              <p>Tracked in GitHub Issues with the <code>known-gap</code> label.</p>
+              <p><strong>Master list:</strong> <a href="https://github.com/FifeCIC/Trading-Command-Suite/issues/172" target="_blank" rel="noopener noreferrer">Issue #172</a></p>
             </article>
             <article className="architecture-card">
-              <h3>Revision Log</h3>
-              <ul>
-                {REVISION_LOG.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
+              <h3>📝 <a href="https://github.com/FifeCIC/Trading-Command-Suite/issues?q=label%3Arevision-log+is%3Aclosed" target="_blank" rel="noopener noreferrer">Revision Log</a></h3>
+              <p>Tracked in closed GitHub Issues with the <code>revision-log</code> label.</p>
+              <p><strong>Recent archive:</strong> <a href="https://github.com/FifeCIC/Trading-Command-Suite/issues/173" target="_blank" rel="noopener noreferrer">Issue #173</a> (2026-06-17 through 2026-07-02)</p>
             </article>
           </div>
         </SectionBlock>

@@ -121,9 +121,32 @@ export class Mt5TradingService {
 
   async closePosition(ticket: number): Promise<{ success: boolean; error?: string }> {
     try {
+      // Snapshot position before closing for audit trail
+      const positions = await this.getPositions();
+      const pos = positions.find((p) => p.ticket === ticket);
+
       const res = await fetch(`${this.bridgeUrl}/close/${ticket}`, { method: 'POST' });
       const data = await res.json();
-      return { success: data.retcode === 10009, error: data.comment };
+      const success = data.retcode === 10009;
+
+      // Record the close in trade history
+      if (pos) {
+        const posType = String(pos.type) === '0' || (pos as any).type === 'buy' ? 'buy' : 'sell';
+        this.tradeRecorder.record({
+          symbol: pos.symbol,
+          side: posType === 'buy' ? 'sell' : 'buy', // closing side is opposite
+          quantity: pos.volume,
+          entryPrice: pos.price_open || 0,
+          exitPrice: data.price || pos.price_current || 0,
+          pnl: pos.profit || 0,
+          provider: 'mt5',
+          status: 'closed',
+          origin: 'user',
+          openedAt: pos.time ? new Date(pos.time * 1000) : undefined,
+        });
+      }
+
+      return { success, error: data.comment };
     } catch (err) {
       return { success: false, error: (err as Error).message };
     }

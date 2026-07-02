@@ -15,6 +15,7 @@ import { FinnhubAdapter } from './adapters/finnhub.adapter';
 import { TwelveDataAdapter } from './adapters/twelve-data.adapter';
 import { FmpAdapter } from './adapters/fmp.adapter';
 import { RateLimitGovernor } from './rate-limit-governor.service';
+import { ProviderDegradationService } from './provider-degradation.service';
 
 @Module({
   imports: [DatabaseModule],
@@ -24,6 +25,7 @@ import { RateLimitGovernor } from './rate-limit-governor.service';
     ModeService,
     AdapterFactory,
     RateLimitGovernor,
+    ProviderDegradationService,
     AlpacaAdapter,
     AlphaVantageAdapter,
     Trading212Adapter,
@@ -34,7 +36,7 @@ import { RateLimitGovernor } from './rate-limit-governor.service';
     TwelveDataAdapter,
     FmpAdapter,
   ],
-  exports: [ProvidersService, AdapterFactory, FinnhubAdapter, FmpAdapter, Mt5Adapter, AlphaVantageAdapter, RateLimitGovernor],
+  exports: [ProvidersService, AdapterFactory, FinnhubAdapter, FmpAdapter, Mt5Adapter, AlphaVantageAdapter, RateLimitGovernor, ProviderDegradationService],
 })
 export class ProvidersModule implements OnModuleInit {
   constructor(private readonly adapterFactory: AdapterFactory) {}

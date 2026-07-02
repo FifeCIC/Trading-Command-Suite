@@ -11,6 +11,15 @@
 3. **Real data only** — Never hardcode `SEES_SYMBOLS`, fake arrays, or stub metrics. Query the database. If the data doesn't exist yet, build the backend service to surface it.
 4. **Cross-system depth** — A single page should pull from scoring, portfolio, news, macro, and automation subsystems. Use `ResearchOverviewService` as the pattern: `Promise.all` across multiple fetchers, return a rich aggregated payload.
 
+## Phase Gate Rule 🚦
+
+**DO NOT build features marked as phase-gated.** Check `src/core/phase-gates.js` before starting any new feature. If a feature's phase does not match the active phase (`localStorage` key `tcs:active-phase`, defaults to `'current'`), do NOT implement it. These are intentionally deferred for future releases:
+
+- **phase-2**: Public release features (PDF reports, multi-user auth, billing)
+- **future**: Long-term ideas (social trading, mobile app, marketplace)
+
+Phase-gated features may have placeholders in the UI. Leave them as-is. Do not build them until the phase gate is removed or the active phase is changed.
+
 ## Flow for Every Feature
 
 1. Read the skeleton/stub page to understand the intent
@@ -34,6 +43,7 @@
 
 - `.github/instructions/ui-standards.instructions.md` — What's accepted vs experimental vs forbidden
 - `.github/instructions/trading-context.instructions.md` — Trading domain knowledge
+- `src/core/phase-gates.js` — Features gated behind future phases (DO NOT BUILD unless phase is active)
 - `.github/skills/trading-agent/SKILL.md` — API surface, provider architecture, trading pipelines
 - `.github/skills/create-new-page/SKILL.md` — Page scaffolding (component, CSS, nav-tree, App.jsx route)
 - `src/pages/LabLandingPage.jsx` — Lab overview hub

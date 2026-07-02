@@ -20,6 +20,8 @@ function MKV({ label, val, chg, invert }) {
   );
 }
 
+const PRIORITY = { holding: { label: 'Holding', cls: 'ro-pri-holding', icon: '🔵' }, watchlist: { label: 'Watch', cls: 'ro-pri-watch', icon: '🟡' }, general: { label: '', cls: '', icon: '' } };
+
 export default function ResearchOverviewPage() {
   const { prefs } = usePreferences();
   const overviewQuery = useQuery({
@@ -38,6 +40,7 @@ export default function ResearchOverviewPage() {
   const events = data.upcomingEvents || [];
   const positionNews = data.newsForPositions || [];
   const sectors = data.sectorPerformance || [];
+  const forecasts = data.forecasts || [];
   const fmt = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
   const fv = (v) => v != null ? v.toLocaleString() : '—';
 
@@ -92,12 +95,41 @@ export default function ResearchOverviewPage() {
           <h2 className="ro-card-title">Top Signals</h2>
           {topSignals.length === 0 ? <p className="ro-empty">Run scoring to populate.</p> : (
             <div className="ro-signals">
-              {topSignals.map((s, i) => (
+              {topSignals.map((s, i) => {
+                const p = PRIORITY[s.priority] || PRIORITY.general;
+                return (
                 <div key={s.ticker} className="ro-signal-row">
                   <span className="ro-signal-rank">#{i + 1}</span>
+                  {p.icon && <span className={`ro-pri-tag ${p.cls}`} title={p.label}>{p.icon}</span>}
                   <span className="ro-signal-symbol">{s.ticker}</span>
                   <span className="ro-signal-score">{s.score.toFixed(0)}</span>
                   <span className={'ro-signal-tag ' + s.signal.toLowerCase()}>{s.signal}</span>
+                </div>
+                );
+              })}
+            </div>
+          )}
+        </motion.section>
+
+        <motion.section className="ro-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
+          <h2 className="ro-card-title">Price Forecasts</h2>
+          {forecasts.length === 0 ? <p className="ro-empty">Analyst targets unavailable. Try adding positions first.</p> : (
+            <div className="ro-forecast-list">
+              {forecasts.map((f) => (
+                <div key={f.symbol} className="ro-forecast-row">
+                  <span className="ro-forecast-sym">{f.symbol}</span>
+                  <div className="ro-forecast-bar-wrap">
+                    <div className="ro-forecast-bar">
+                      <div
+                        className={`ro-forecast-fill ${f.upside >= 0 ? 'ro-up' : 'ro-down'}`}
+                        style={{ width: `${Math.min(Math.abs(f.upside), 100)}%` }}
+                      />
+                    </div>
+                    <span className={`ro-forecast-pct ${f.upside >= 0 ? 'ro-up' : 'ro-down'}`}>
+                      {f.upside >= 0 ? '+' : ''}{f.upside}%
+                    </span>
+                  </div>
+                  <span className="ro-forecast-consensus">{f.consensus}</span>
                 </div>
               ))}
             </div>
@@ -155,9 +187,10 @@ export default function ResearchOverviewPage() {
           {positionNews.length === 0 ? <p className="ro-empty">No recent news for held positions.</p> : (
             <div className="ro-news-list">
               {positionNews.map((n, i) => (
-                <div key={i} className={'ro-news-row ro-news-' + (n.sentiment > 0.1 ? 'pos' : n.sentiment < -0.1 ? 'neg' : 'neut')}>
+                <div key={i} className={'ro-news-row ro-news-' + (n.sentiment > 0.1 ? 'pos' : n.sentiment < -0.1 ? 'neg' : 'neut') + (n.isHighImpact ? ' ro-news-high' : '')}>
                   <span className="ro-news-sym">{n.symbol}</span>
                   <span className="ro-news-sent">{n.sentiment > 0.1 ? '🟢' : n.sentiment < -0.1 ? '🔴' : '⚪'}</span>
+                  {n.isHighImpact && <span className="ro-news-impact-badge">HIGH</span>}
                   <span className="ro-news-headline">{n.headline}</span>
                 </div>
               ))}

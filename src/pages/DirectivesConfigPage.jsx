@@ -1,166 +1,146 @@
 /**
  * DirectivesConfigPage
  * ====================
- * Directives configuration page with weight sliders, enable/disable toggles,
- * and localStorage persistence. Canonical weights match CANONICAL-DIRECTIVE-REFERENCE.md.
+ * Per-strategy directive configuration. Pick a strategy, toggle its directives
+ * on/off, and adjust weights. Changes persist to the database via PATCH.
  *
  * Route: /scoring/configure-directives
  */
 
-import { useState, useEffect, useMemo } from 'react'
-import { DIRECTIVE_SEED } from './directives-manager.seed'
-import './directives-config.css'
-
-const STORAGE_KEY = 'tcs:directive-config'
-
-function loadConfig() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch { /* ignore */ }
-  return null
-}
-
-function saveConfig(config) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
-}
-
-const CANONICAL_WEIGHTS = Object.fromEntries(
-  DIRECTIVE_SEED.map((d) => [d.id, d.baseWeight]),
-)
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiGet } from '../core/api/client';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import './directives-config.css';
 
 export default function DirectivesConfigPage() {
-  const [config, setConfig] = useState(() => {
-    const saved = loadConfig()
-    if (saved) return saved
-    return Object.fromEntries(
-      DIRECTIVE_SEED.map((d) => [d.id, { enabled: true, weight: d.baseWeight }]),
-    )
-  })
+  const [selectedStrategy, setSelectedStrategy] = useState(null);
+  const queryClient = useQueryClient();
 
-  // Persist to localStorage on every change
-  useEffect(() => {
-    saveConfig(config)
-  }, [config])
+  // Fetch saved strategies
+  const strategiesQuery = useQuery({
+    queryKey: ['strategies', 'saved'],
+    queryFn: () => apiGet('/api/strategies/saved'),
+    staleTime: 30_000,
+  });
 
-  const totalWeight = useMemo(
-    () => Object.values(config).reduce((sum, d) => sum + (d.enabled ? d.weight : 0), 0),
-    [config],
-  )
+  const strategies = strategiesQuery.data?.strategies || [];
 
-  const isValid = totalWeight === 100
-  const isCanonical = DIRECTIVE_SEED.every(
-    (d) => config[d.id]?.enabled !== false && config[d.id]?.weight === d.baseWeight,
-  )
+  // Fetch directives for selected strategy
+  const directivesQuery = useQuery({
+    queryKey: ['strategy-directives', selectedStrategy],
+    queryFn: () => apiGet(`/api/strategies/${selectedStrategy}/directives`),
+    enabled: !!selectedStrategy,
+    staleTime: 15_000,
+  });
 
-  function setDirective(id, patch) {
-    setConfig((prev) => ({
-      ...prev,
-      [id]: { ...prev[id], ...patch },
-    }))
+  const strategyName = directivesQuery.data?.strategyName || '';
+  const directives = directivesQuery.data?.directives || [];
+
+  // Toggle directive mutation
+  const toggleMutation = useMutation({
+    mutationFn: ({ directiveId, active }) =>
+      apiGet(`/api/strategies/${selectedStrategy}/directives/${directiveId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ active }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['strategy-directives', selectedStrategy] });
+    },
+  });
+
+  function handleToggle(directiveId, currentActive) {
+    toggleMutation.mutate({ directiveId, active: !currentActive });
   }
 
-  function resetToCanonical() {
-    setConfig(
-      Object.fromEntries(
-        DIRECTIVE_SEED.map((d) => [d.id, { enabled: true, weight: d.baseWeight }]),
-      ),
-    )
-  }
-
+  const activeCount = directives.filter((d) => d.active).length;
 
   return (
     <div className="dc-page">
       <header className="dc-header">
         <div>
           <h1>Configure Directives</h1>
-          <p>
-            Enable, disable, and adjust directive weights. Enabled weights must
-            sum to <strong>100</strong> for a valid configuration.
-          </p>
+          <p>Select a strategy, then enable/disable individual directives. Changes persist to the database.</p>
         </div>
         <div className="dc-header-actions">
-          {isCanonical ? (
-            <span className="dc-chip dc-chip--ok">Canonical</span>
-          ) : (
-            <button type="button" className="btn" onClick={resetToCanonical}>
-              Reset to Canonical
-            </button>
-          )}
+          <select
+            className="pf-source-select"
+            value={selectedStrategy || ''}
+            onChange={(e) => setSelectedStrategy(e.target.value || null)}
+            style={{ minWidth: 220 }}
+          >
+            <option value="">— Select a strategy —</option>
+            {strategies.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
         </div>
       </header>
 
-      {/* Weight validation banner */}
-      <div className={`dc-validation-banner ${isValid ? 'dc-valid' : 'dc-invalid'}`}>
-        {isValid
-          ? `✅ Total weight: ${totalWeight}% — Valid configuration`
-          : `⚠️ Total weight: ${totalWeight}% — Must equal 100% (${100 - totalWeight > 0 ? `add ${100 - totalWeight}%` : `reduce ${totalWeight - 100}%`})`}
-      </div>
+      {strategiesQuery.isLoading && <LoadingSkeleton variant="card" count={3} />}
 
-      {/* Directive cards */}
-      <div className="dc-cards">
-        {DIRECTIVE_SEED.map((d) => {
-          const state = config[d.id] || { enabled: true, weight: d.baseWeight }
-          const canonicalWeight = CANONICAL_WEIGHTS[d.id]
+      {!selectedStrategy && !strategiesQuery.isLoading && (
+        <div className="dc-empty">
+          <h2>No strategy selected</h2>
+          <p>Select a strategy above to configure its directives. Strategies are created in the Strategy Builder or via /api/strategies.</p>
+          {strategies.length === 0 && (
+            <p className="dc-hint">No strategies found in the database. Run the strategy seeder or create one in Strategy Builder.</p>
+          )}
+        </div>
+      )}
 
-          return (
-            <article key={d.id} className={`dc-card ${!state.enabled ? 'dc-card--disabled' : ''}`}>
-              <div className="dc-card-header">
-                <div className="dc-card-title">
-                  <h3>{d.name}</h3>
-                  <code className="dc-id">{d.id}</code>
-                  <span className="dc-category-chip">{d.category}</span>
-                  <span className={`dc-badge dc-badge--${d.complexity}`}>{d.complexity}</span>
-                  <span className="dc-badge dc-badge--coverage">{d.testCoverage}% tests</span>
+      {selectedStrategy && directivesQuery.isLoading && <LoadingSkeleton variant="card" count={4} />}
+
+      {selectedStrategy && !directivesQuery.isLoading && directives.length === 0 && (
+        <div className="dc-empty">
+          <h2>No directives configured</h2>
+          <p>"{strategyName}" has no directives linked. Directives are assigned when the strategy is created.</p>
+        </div>
+      )}
+
+      {selectedStrategy && directives.length > 0 && (
+        <>
+          <div className="dc-stats">
+            <span>{activeCount}/{directives.length} active</span>
+            <span className="dc-strategy-name">Strategy: {strategyName}</span>
+          </div>
+
+          <div className="dc-cards">
+            {directives.map((d) => (
+              <article key={d.id} className={`dc-card ${!d.active ? 'dc-card--disabled' : ''}`}>
+                <div className="dc-card-header">
+                  <div className="dc-card-title">
+                    <h3>{d.name}</h3>
+                    <code className="dc-id">{d.type || d.id}</code>
+                    {d.isFork && <span className="dc-badge dc-badge--fork">Fork</span>}
+                    {d.isDefault && <span className="dc-badge dc-badge--default">Default</span>}
+                  </div>
+                  <label className="dc-toggle">
+                    <input
+                      type="checkbox"
+                      checked={d.active}
+                      onChange={() => handleToggle(d.id, d.active)}
+                    />
+                    <span className="dc-toggle-track">
+                      <span className="dc-toggle-thumb" />
+                    </span>
+                    <span className="dc-toggle-label">{d.active ? 'Enabled' : 'Disabled'}</span>
+                  </label>
                 </div>
-                <label className="dc-toggle">
-                  <input
-                    type="checkbox"
-                    checked={state.enabled}
-                    onChange={(e) => setDirective(d.id, { enabled: e.target.checked })}
-                  />
-                  <span className="dc-toggle-track">
-                    <span className="dc-toggle-thumb" />
-                  </span>
-                  <span className="dc-toggle-label">{state.enabled ? 'Enabled' : 'Disabled'}</span>
-                </label>
-              </div>
 
-              <p className="dc-summary">{d.summary}</p>
-
-              <div className="dc-weight-row">
-                <label className="dc-weight-label">
-                  Weight: <strong>{state.enabled ? state.weight : 0}%</strong>
-                  {state.weight !== canonicalWeight && (
-                    <span className="dc-canonical-hint"> (canonical: {canonicalWeight})</span>
-                  )}
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="50"
-                  value={state.weight}
-                  disabled={!state.enabled}
-                  onChange={(e) => setDirective(d.id, { weight: Number(e.target.value) })}
-                  className="dc-slider"
-                />
-                <div className="dc-slider-marks">
-                  <span>0</span>
-                  <span>10</span>
-                  <span>20</span>
-                  <span>30</span>
-                  <span>40</span>
-                  <span>50</span>
+                <div className="dc-weight-row">
+                  <span className="dc-weight-label">Weight: <strong>{d.active ? (d.weight ?? 0) : 0}%</strong></span>
+                  {d.forkReason && <span className="dc-canonical-hint">Fork: {d.forkReason}</span>}
                 </div>
-              </div>
-            </article>
-          )
-        })}
-      </div>
+              </article>
+            ))}
+          </div>
 
-      <p className="dc-hint">
-        Configuration saved to localStorage. Backend integration (POST /api/directives/config) is a future enhancement.
-      </p>
+          <p className="dc-hint">
+            Toggling directives on/off immediately affects scoring for this strategy. Weight adjustments coming in a future update.
+          </p>
+        </>
+      )}
     </div>
-  )
+  );
 }

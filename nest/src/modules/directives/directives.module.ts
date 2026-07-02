@@ -53,6 +53,8 @@ import { NewsSentimentPositiveDirective } from './implementations/news-sentiment
 import { EarningsProximityDirective } from './implementations/earnings-proximity.directive';
 import { VixRegimeDirective } from './implementations/vix-regime.directive';
 import { DxyRegimeDirective } from './implementations/dxy-regime.directive';
+import { GoldMacroCorrelationDirective } from './implementations/gold-macro-correlation.directive';
+import { CadUsdOilCorrelationDirective } from './implementations/cad-usd-oil-correlation.directive';
 import { VolatilityEnvelopeDirective } from './implementations/volatility-envelope.directive';
 import { MomentumExhaustionDirective } from './implementations/momentum-exhaustion.directive';
 import { TargetAchievedDirective } from './implementations/target-achieved.directive';
@@ -95,8 +97,7 @@ import {
   // Candlestick Patterns (now real implementations)
   PinBarPatternDirective,
   // Macro / Regime
-  GoldMacroCorrelationDirective,
-  CadUsdOilCorrelationDirective,
+  // CadUsdOilCorrelationDirective — now real implementation (see cad-usd-oil-correlation.directive.ts)
   // Temporal / Calendar
   MondayEffectDirective,
   FridayPositioningDirective,
@@ -380,9 +381,9 @@ export class DirectivesModule implements OnModuleInit {
     // Implemented — Macro
     private readonly vixRegime: VixRegimeDirective,
     private readonly dxyRegime: DxyRegimeDirective,
-    // Stubs — Macro
     private readonly goldMacro: GoldMacroCorrelationDirective,
     private readonly cadUsdOil: CadUsdOilCorrelationDirective,
+    // Stubs — Macro
     // Stubs — Temporal
     private readonly mondayEffect: MondayEffectDirective,
     private readonly fridayPos: FridayPositioningDirective,
@@ -499,9 +500,9 @@ export class DirectivesModule implements OnModuleInit {
     // Implemented — Macro
     this.directivesService.register(this.vixRegime);
     this.directivesService.register(this.dxyRegime);
-    // Stubs — Macro
     this.directivesService.register(this.goldMacro);
     this.directivesService.register(this.cadUsdOil);
+    // Stubs — Macro
     // Stubs — Temporal
     this.directivesService.register(this.mondayEffect);
     this.directivesService.register(this.fridayPos);

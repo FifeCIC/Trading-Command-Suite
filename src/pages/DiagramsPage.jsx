@@ -824,6 +824,63 @@ const DIAGRAMS = [
     H --> J
     H --> K`,
   },
+  {
+    id: 'data-flow-architecture',
+    label: 'Data Flow Architecture',
+    desc: 'How data flows from providers through import, storage, directives, protocols, and strategies to the UI. Red paths show current gaps — directives that bypass the database. Orange indicates missing pieces.',
+    code: `flowchart TB
+    subgraph PROVIDER["🔌 PROVIDER LAYER"]
+        MT5["MT5 Bridge<br/>free, unlimited"]
+        FH["Finnhub<br/>60/min"]
+        AV["Alpha Vantage<br/>5/min"]
+        FMP["FMP<br/>250/day"]
+        T212["Trading212<br/>demo"]
+    end
+    subgraph IMPORT["📥 IMPORT LAYER"]
+        DIR["DataImportHandler<br/>· Scheduled cron<br/>· Freshness-triggered<br/>· Demand-triggered<br/>· Rate-limit aware"]
+    end
+    subgraph STORAGE["💾 STORAGE LAYER"]
+        EARN["✅ EarningsEvent"]
+        NEWS["✅ NewsArticle"]
+        BARS["✅ MarketBar"]
+        MACRO["❌ MacroSnapshot"]
+        LOG["✅ DataImportLog"]
+        MENTION["❌ SocialMention"]
+        INSIDER["❌ InsiderTransaction"]
+    end
+    subgraph DIRECTIVE["🎯 DIRECTIVE LAYER"]
+        GOOD["✅ 90 directives<br/>DB-only"]
+        BAD["❌ 3 directives<br/>call providers"]
+    end
+    subgraph PROTOCOL["📊 PROTOCOL LAYER"]
+        PG["Protocol Groups"]
+        DEG["❌ Degradation rules"]
+    end
+    subgraph STRATEGY["⚡ STRATEGY LAYER"]
+        TS["Trading Strategies"]
+        AL["Automation Loop"]
+        SDEG["❌ Stale-data safety"]
+    end
+    subgraph UI["🖥 PRESENTATION"]
+        DE["Data Elements"]
+        FRESH["⚠️ Freshness indicators"]
+        CM["Capability Map"]
+    end
+    PROVIDER --> IMPORT
+    IMPORT --> STORAGE
+    STORAGE --> DIRECTIVE
+    BAD -.->|"❌ bypasses DB"| PROVIDER
+    DIRECTIVE --> PROTOCOL
+    PROTOCOL --> STRATEGY
+    STRATEGY --> UI
+    style BAD fill:#ef4444,color:#fff
+    style MACRO fill:#f59e0b,color:#000
+    style MENTION fill:#f59e0b,color:#000
+    style INSIDER fill:#f59e0b,color:#000
+    style DEG fill:#f59e0b,color:#000
+    style SDEG fill:#f59e0b,color:#000
+    style FRESH fill:#f59e0b,color:#000`,
+  },
 ];
 
 export default function DiagramsPage() {

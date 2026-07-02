@@ -1,20 +1,28 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion } from 'motion/react';
-import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '../core/api/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiGet, apiPost } from '../core/api/client';
 import './positions-monitor.css';
 
 function RiskBar({ pct, label }) {
   const color = pct > 20 ? '#ef4444' : pct > 10 ? '#f59e0b' : '#22c55e';
+  const displayPct = Math.min(Math.max(pct || 0, 0), 100);
   return (
     <div className="pm-risk-bar">
-      <motion.div className="pm-risk-fill" initial={{ width: 0 }} animate={{ width: `${Math.min(pct, 100)}%` }} transition={{ duration: 0.5, ease: 'easeOut' }} style={{ background: color }} />
-      <span className="pm-risk-label">{label}: {pct.toFixed(1)}%</span>
+      <motion.div className="pm-risk-fill" initial={{ width: 0 }} animate={{ width: `${displayPct}%` }} transition={{ duration: 0.5, ease: 'easeOut' }} style={{ background: color }} />
+      <span className="pm-risk-label">{label}: {displayPct.toFixed(1)}%</span>
     </div>
   );
 }
 
-function CFDPosition({ pos, index }) {
+function CFDPosition({ pos, index, onClose }) {
+  const riskPct = pos.riskPct || (
+    pos.currentPrice && pos.avgCost
+      ? Math.abs(((pos.currentPrice - pos.avgCost) / pos.avgCost) * 100)
+      : pos.allocation ? pos.allocation * 100
+      : 0
+  );
+
   return (
     <motion.div
       className="pm-pos-card"
@@ -44,7 +52,16 @@ function CFDPosition({ pos, index }) {
       {pos.daysHeld > 7 && (
         <div className="pm-warning">⚠ CFD held {pos.daysHeld} days — consider closing</div>
       )}
-      <RiskBar pct={pos.riskPct || 5} label="Risk Exposure" />
+      <RiskBar pct={riskPct} label="Risk Exposure" />
+
+      {/* Action row */}
+      <div className="pm-actions">
+        {pos.source === 'MT5' && (
+          <button className="pm-close-btn" onClick={() => onClose(pos.ticket, pos.symbol)}>✕ Close Position</button>
+        )}
+        <a className="pm-nav-link" href={`/research/investigation?symbol=${pos.symbol}`} target="_blank" rel="noopener">🔍 Research</a>
+        <a className="pm-nav-link" href={`/analysis/analyse-symbol?symbol=${pos.symbol}`} target="_blank" rel="noopener">📊 Analyse</a>
+      </div>
     </motion.div>
   );
 }
@@ -79,11 +96,12 @@ function OptionPosition({ pos }) {
 export default function PositionsMonitorPage() {
   const [tab, setTab] = useState('cfd');
   const [sourceFilter, setSourceFilter] = useState('all');
+  const qc = useQueryClient();
 
-  // MT5 positions
+  // MT5 positions — correct endpoint
   const mt5Query = useQuery({
     queryKey: ['mt5-positions'],
-    queryFn: () => fetch('/api/providers/mt5/positions').then((r) => r.json()).catch(() => ({ positions: [] })),
+    queryFn: () => apiGet('/api/trading/mt5/positions').catch(() => ({ positions: [] })),
     staleTime: 10000,
     refetchInterval: 30000,
   });
@@ -96,20 +114,37 @@ export default function PositionsMonitorPage() {
     refetchInterval: 60000,
   });
 
+  // Close mutation — deletes position via MT5 bridge
+  const closeMutation = useMutation({
+    mutationFn: ({ ticket }) => fetch(`/api/trading/mt5/close/${ticket}`, { method: 'DELETE' }).then(r => r.json()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['mt5-positions'] });
+      qc.invalidateQueries({ queryKey: ['trade-history'] });
+    },
+  });
+
+  const handleClose = useCallback((ticket, symbol) => {
+    if (window.confirm(`Close ${symbol} position #${ticket}?`)) {
+      closeMutation.mutate({ ticket });
+    }
+  }, [closeMutation]);
+
   const mt5Positions = (mt5Query.data?.positions || []).map((p) => ({
     symbol: p.symbol,
-    direction: p.type === 'buy' ? 'BUY' : 'SELL',
+    direction: p.type === 0 || (p.type === 'buy') ? 'BUY' : 'SELL',
     volume: String(p.volume),
     leverage: '—',
     margin: '—',
     pnl: p.profit || 0,
-    daysHeld: p.openTime ? Math.floor((Date.now() - new Date(p.openTime).getTime()) / 86400000) : 0,
+    daysHeld: p.time ? Math.floor((Date.now() - p.time * 1000) / 86400000) : 0,
     sl: p.sl,
     tp: p.tp,
     overnightFee: p.swap || 0,
-    riskPct: 0,
+    riskPct: p.price_open && p.price_current ? Math.abs(((p.price_current - p.price_open) / p.price_open) * 100) : 0,
     ticket: p.ticket,
     source: 'MT5',
+    currentPrice: p.price_current,
+    avgCost: p.price_open,
   }));
 
   const t212Positions = (t212Query.data?.positions || []).map((p) => ({
@@ -157,7 +192,7 @@ export default function PositionsMonitorPage() {
         <div className="pm-positions">
           {(mt5Query.isLoading || t212Query.isLoading) && <div className="pm-empty">Loading positions...</div>}
           {cfdPositions.length === 0 && !mt5Query.isLoading && !t212Query.isLoading && <div className="pm-empty">No open positions. Connect MT5 or Trading212 to see your holdings.</div>}
-          {cfdPositions.map((p, i) => <CFDPosition key={p.ticket || i} pos={p} index={i} />)}
+          {cfdPositions.map((p, i) => <CFDPosition key={p.ticket || i} pos={p} index={i} onClose={handleClose} />)}
         </div>
       )}
 

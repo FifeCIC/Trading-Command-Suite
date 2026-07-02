@@ -135,30 +135,92 @@ export class ScoreHistoryService {
   }
 
   /**
-   * Get scoring runs grouped by time window (60-second buckets).
-   * Each "run" is a group of scores within the same minute.
+   * Get scoring runs grouped by time + strategy.
+   * Supports search, pagination, and per-run signal summaries.
+   *
+   * Query params:
+   *   search    — filter by ticker or strategy name
+   *   page      — page number (1-based, default 1)
+   *   limit     — runs per page (default 30, max 100)
+   *   strategyId — filter by specific strategy
    */
-  async getRuns(limit = 30): Promise<{
+  async getRuns(opts?: {
+    search?: string;
+    page?: number;
+    limit?: number;
+    strategyId?: string;
+  }): Promise<{
     runs: Array<{
       id: string;
       timestamp: string;
       strategyId: string;
       strategyName: string;
       symbolsScored: number;
+      avgScore: number;
+      signalSummary: { buy: number; sell: number; neutral: number };
+      topSymbol: { ticker: string; value: number } | null;
       scores: Array<{ ticker: string; value: number; confidence: number }>;
     }>;
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    queryTimeMs: number;
   }> {
+    const startTime = Date.now();
+    const page = Math.max(1, opts?.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, opts?.limit ?? 30));
+    const search = opts?.search?.trim() || null;
+    const strategyFilter = opts?.strategyId || null;
+
     if (!this.prisma.isAvailable) {
-      return { runs: [] };
+      return { runs: [], total: 0, page, pageSize, totalPages: 0, queryTimeMs: Date.now() - startTime };
     }
 
-    const scores = await this.prisma.score.findMany({
+    // Build where clause for search
+    const where: any = {};
+    if (strategyFilter) where.strategyId = strategyFilter;
+
+    // Fetch raw scores — if search is active, also fetch symbol tickers to filter
+    let scores;
+    if (search) {
+      // Find matching symbols first
+      const matchingSymbols = await this.prisma.symbol.findMany({
+        where: { ticker: { contains: search.toUpperCase() } },
+        select: { id: true, ticker: true },
+      });
+      const matchingIds = matchingSymbols.map((s) => s.id);
+
+      // Also check strategy names
+      const matchingStrategies = await this.prisma.strategy.findMany({
+        where: { name: { contains: search } },
+        select: { id: true },
+      });
+
+      const symbolFilter = matchingIds.length > 0 ? { symbolId: { in: matchingIds } } : {};
+      const strategyNameFilter = matchingStrategies.length > 0 ? { strategyId: { in: matchingStrategies.map((s) => s.id) } } : {};
+
+      if (matchingIds.length === 0 && matchingStrategies.length === 0) {
+        return { runs: [], total: 0, page, pageSize, totalPages: 0, queryTimeMs: Date.now() - startTime };
+      }
+
+      where.OR = [];
+      if (matchingIds.length > 0) where.OR.push(symbolFilter);
+      if (matchingStrategies.length > 0) where.OR.push(strategyNameFilter);
+    }
+
+    scores = await this.prisma.score.findMany({
+      where: Object.keys(where).length > 0 ? where : undefined,
       orderBy: { timestamp: 'desc' },
-      take: 500,
+      take: 1000,
       include: { symbol: { select: { ticker: true } } },
     });
 
-    // Collect unique strategy IDs and resolve names in one query
+    if (scores.length === 0) {
+      return { runs: [], total: 0, page, pageSize, totalPages: 0, queryTimeMs: Date.now() - startTime };
+    }
+
+    // Resolve strategy names
     const strategyIds = [...new Set(scores.map((s) => s.strategyId).filter(Boolean))];
     const strategies = strategyIds.length > 0
       ? await this.prisma.strategy.findMany({
@@ -168,32 +230,120 @@ export class ScoreHistoryService {
       : [];
     const nameMap = new Map(strategies.map((s) => [s.id, s.name]));
 
-    // Group by minute-window (truncate seconds)
+    // Group by minute + strategyId (each unique run)
     const groups = new Map<string, typeof scores>();
     for (const s of scores) {
       const ts = new Date(s.timestamp);
       ts.setSeconds(0, 0);
-      const key = ts.toISOString();
+      const key = `${ts.toISOString()}::${s.strategyId}`;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(s);
     }
 
-    const runs = Array.from(groups.entries())
-      .slice(0, limit)
-      .map(([timestamp, entries]) => ({
-        id: `run-${new Date(timestamp).getTime()}`,
-        timestamp,
-        strategyId: entries[0]?.strategyId || 'unknown',
-        strategyName: nameMap.get(entries[0]?.strategyId || '') || 'Unknown Strategy',
-        symbolsScored: entries.length,
-        scores: entries.map((e) => ({
-          ticker: (e as any).symbol?.ticker || e.symbolId,
-          value: e.value,
-          confidence: 0,
-        })),
-      }))
+    // Build run objects with signal summaries
+    const allRuns = Array.from(groups.entries())
+      .map(([key, entries]) => {
+        const [timestamp] = key.split('::');
+        const strategyId = entries[0]?.strategyId || 'unknown';
+        const values = entries.map((e) => e.value);
+        const avgScore = values.reduce((a, b) => a + b, 0) / values.length;
+
+        // Signal classification
+        let buy = 0, sell = 0, neutral = 0;
+        for (const e of entries) {
+          if (e.value >= 60) buy++;
+          else if (e.value <= 40) sell++;
+          else neutral++;
+        }
+
+        // Top symbol
+        const best = entries.reduce((best, e) =>
+          e.value > (best?.value ?? -999) ? e : best, null as any);
+        const topSymbol = best ? { ticker: (best as any).symbol?.ticker || best.symbolId, value: best.value } : null;
+
+        return {
+          id: `run-${new Date(timestamp).getTime()}-${strategyId.slice(0, 8)}`,
+          timestamp,
+          strategyId,
+          strategyName: nameMap.get(strategyId) || 'Unknown Strategy',
+          symbolsScored: entries.length,
+          avgScore: Math.round(avgScore * 10) / 10,
+          signalSummary: { buy, sell, neutral },
+          topSymbol,
+          scores: entries.map((e) => ({
+            ticker: (e as any).symbol?.ticker || e.symbolId,
+            value: e.value,
+            confidence: 0,
+          })),
+        };
+      })
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-    return { runs };
+    const total = allRuns.length;
+    const totalPages = Math.ceil(total / pageSize);
+    const offset = (page - 1) * pageSize;
+    const runs = allRuns.slice(offset, offset + pageSize);
+
+    return { runs, total, page, pageSize, totalPages, queryTimeMs: Date.now() - startTime };
+  }
+
+  /**
+   * Get detailed scores for a specific run (by timestamp + strategyId).
+   */
+  async getRunScores(runId: string): Promise<{
+    run: {
+      id: string;
+      timestamp: string;
+      strategyId: string;
+      strategyName: string;
+      scores: Array<{
+        ticker: string;
+        value: number;
+        breakdown: any;
+      }>;
+    } | null;
+  }> {
+    // runId format: "run-{epochMs}-{strategyPrefix}"
+    const parts = runId.replace('run-', '').split('-');
+    const epochMs = parseInt(parts[0], 10);
+    if (isNaN(epochMs)) return { run: null };
+
+    const runDate = new Date(epochMs);
+    const windowStart = new Date(runDate);
+    windowStart.setSeconds(0, 0);
+    const windowEnd = new Date(windowStart.getTime() + 60000);
+
+    const strategyPrefix = parts.slice(1).join('-');
+
+    const scores = await this.prisma.score.findMany({
+      where: {
+        timestamp: { gte: windowStart, lt: windowEnd },
+        ...(strategyPrefix ? { strategyId: { startsWith: strategyPrefix } } : {}),
+      },
+      orderBy: { value: 'desc' },
+      include: { symbol: { select: { ticker: true } } },
+    });
+
+    if (scores.length === 0) return { run: null };
+
+    const strategyId = scores[0].strategyId;
+    const strategy = await this.prisma.strategy.findUnique({
+      where: { id: strategyId },
+      select: { name: true },
+    });
+
+    return {
+      run: {
+        id: runId,
+        timestamp: windowStart.toISOString(),
+        strategyId,
+        strategyName: strategy?.name || 'Unknown',
+        scores: scores.map((s) => ({
+          ticker: (s as any).symbol?.ticker || s.symbolId,
+          value: s.value,
+          breakdown: s.breakdown,
+        })),
+      },
+    };
   }
 }

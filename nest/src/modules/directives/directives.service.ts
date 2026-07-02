@@ -390,6 +390,47 @@ export class DirectivesService {
   }
 
   /**
+   * Upsert a directive's active status in the DB.
+   * Enables runtime toggling without restarting the server.
+   */
+  async upsertDirective(id: string, active: boolean) {
+    if (!this.prisma.isAvailable) return null;
+
+    const existing = await this.prisma.directive.findUnique({ where: { id } });
+    if (existing) {
+      return this.prisma.directive.update({
+        where: { id },
+        data: { active, updatedAt: new Date() },
+      });
+    }
+
+    // Get registered directive info
+    const reg = this.registry.get(id);
+    return this.prisma.directive.create({
+      data: {
+        id,
+        name: reg?.name ?? id,
+        type: id,
+        weight: reg?.priority ?? 50,
+        config: {},
+        active,
+        isDefault: true,
+      },
+    });
+  }
+
+  /**
+   * Get all DB directive records for active-status lookup.
+   */
+  async getDbStatuses() {
+    if (!this.prisma.isAvailable) return [];
+    return this.prisma.directive.findMany({
+      select: { id: true, active: true },
+      where: { isDefault: true },
+    });
+  }
+
+  /**
    * Get all forks with parent and strategy info.
    */
   async getForks() {

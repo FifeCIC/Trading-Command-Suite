@@ -50,6 +50,7 @@ import ResearchOverviewPage from './pages/ResearchOverviewPage';
 import PlatformComparisonsPage from './pages/PlatformComparisonsPage';
 import PluginTabSkeletonPage from './pages/PluginTabSkeletonPage';
 import TradingStrategiesPage from './pages/TradingStrategiesPage';
+import StrategyComparisonPage from './pages/StrategyComparisonPage';
 import RiskControlsPage from './pages/RiskControlsPage';
 import HomeDashboardPage from './pages/HomeDashboardPage';
 import CacheMonitorPage from './pages/CacheMonitorPage';
@@ -99,6 +100,7 @@ import ThemeLabContainer from './pages/ThemeLabContainer';
 import ThemeLabScroll from './pages/ThemeLabScroll';
 import ThemeLabPopover from './pages/ThemeLabPopover';
 import ComponentLabPage from './pages/ComponentLabPage';
+import ResponsiveLayoutLabPage from './pages/ResponsiveLayoutLabPage';
 import ChartsLabPage from './pages/ChartsLabPage';
 import UserWatchlistsPage from './pages/UserWatchlistsPage';
 import CreateWatchlistPage from './pages/CreateWatchlistPage';
@@ -486,6 +488,9 @@ function AppShell() {
 
     if (secondaryView === 'component-lab') {
       return <ComponentLabPage />;
+    }
+    if (secondaryView === 'responsive-layout-lab') {
+      return <ResponsiveLayoutLabPage />;
     }
 
     if (secondaryView === 'charts-lab') {
@@ -899,6 +904,9 @@ function AppShell() {
 
     if (secondaryView === 'trading-strategies') {
       return <TradingStrategiesPage />;
+    }
+    if (secondaryView === 'strategy-comparison') {
+      return <StrategyComparisonPage />;
     }
     if (PLUGIN_TAB_SKELETONS[secondaryView]) {
       return <PluginTabSkeletonPage tabId={secondaryView} />;

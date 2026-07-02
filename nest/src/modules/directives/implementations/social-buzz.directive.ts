@@ -21,7 +21,7 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
-import { FinnhubAdapter } from '../../providers/adapters/finnhub.adapter';
+import { ProvidersService } from '../../providers/providers.service';
 
 const MIN_BARS = 1;
 const HIGH_BUZZ_THRESHOLD = 50; // mentions to be considered "buzzing"
@@ -37,7 +37,7 @@ export class SocialBuzzDirective implements IDirective {
   readonly maxScore = 70; // Supplementary signal — not primary
   readonly version = '1.0.0';
 
-  constructor(private readonly finnhub: FinnhubAdapter) {}
+  constructor(private readonly providers: ProvidersService) {}
 
   async calculate(input: DirectiveInput): Promise<DirectiveResult> {
     const symbol = input.symbol;
@@ -52,7 +52,9 @@ export class SocialBuzzDirective implements IDirective {
     }
 
     try {
-      const data = await this.finnhub.getSocialSentiment(symbol);
+      const finnhub = this.providers.getAdapter('finnhub');
+      if (!finnhub) return { score: 0, confidence: 0, signalClass: 'neutral', reason: 'Finnhub not available' };
+      const data = await (finnhub as any).getSocialSentiment(symbol);
       if (!data) {
         return {
           score: 0,

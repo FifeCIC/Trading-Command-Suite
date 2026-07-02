@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { AlphaVantageAdapter } from '../providers/adapters/alpha-vantage.adapter';
+import { ProvidersService } from '../providers/providers.service';
 
 export interface ImportResult {
   imported: number;
@@ -15,7 +15,7 @@ export class EarningsService {
   private readonly logger = new Logger(EarningsService.name);
 
   constructor(
-    private readonly alphaVantage: AlphaVantageAdapter,
+    private readonly providers: ProvidersService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -28,7 +28,10 @@ export class EarningsService {
     let rateLimitHits = 0;
     let errorMessage: string | null = null;
 
-    const events = await this.alphaVantage.getEarningsCalendar(undefined, horizonMonths);
+    const alpha = this.providers.getAdapter('alphavantage');
+    const events = alpha && typeof (alpha as any).getEarningsCalendar === 'function'
+      ? await (alpha as any).getEarningsCalendar(undefined, horizonMonths)
+      : [];
 
     if (!events.length) {
       this.logger.warn('No earnings events returned from Alpha Vantage');

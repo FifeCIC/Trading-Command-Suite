@@ -28,24 +28,25 @@ export default function SectorRotationPage() {
   const [sortTf, setSortTf] = useState('m1');
 
   const { data: perfData, isLoading, isError } = useQuery({
-    queryKey: ['sectors', 'performance'],
-    queryFn: () => apiGet('/api/indicators/sectors/performance?tf=D1'),
+    queryKey: ['sectors', 'rotation'],
+    queryFn: () => apiGet('/api/scoring/sectors/rotation'),
     refetchInterval: 120_000,
   });
 
+  const sectorsData = perfData?.sectors || [];
+  const protocolMap = perfData?.protocolMap || {};
+
   const sectors = useMemo(() => {
     return SECTOR_META.map((meta) => {
-      const apiPerf = perfData?.[meta.etf];
+      const apiSec = sectorsData.find((s) => s.etf === meta.etf);
       return {
         ...meta,
-        perf: {
-          d1: apiPerf?.d1 ?? 0,
-          w1: apiPerf?.w1 ?? 0,
-          m1: apiPerf?.m1 ?? 0,
-        },
-        momentum: apiPerf?.d1 ?? 0,  // short-term
-        trend: apiPerf?.m1 ?? 0,       // long-term
-        hasData: apiPerf != null,
+        perf: apiSec?.performance || { d1: 0, w1: 0, m1: 0 },
+        momentum: apiSec?.momentum ?? 0,
+        trend: apiSec?.trend ?? 0,
+        hasData: apiSec?.hasData ?? false,
+        bestProtocol: apiSec?.bestProtocol || null,
+        protocolScores: apiSec?.protocolScores || [],
       };
     });
   }, [perfData]);
@@ -141,10 +142,64 @@ export default function SectorRotationPage() {
                   <td className="sr2-name">{s.name}</td>
                   <td className="sr2-etf">{s.etf}</td>
                   {TIMEFRAMES.map((tf) => {
+                    if (!s.hasData) return <td key={tf.key} className="sr2-right sr2-mono" style={{ color: 'var(--ink-soft)', fontSize: '0.7rem' }}>No data</td>;
                     const v = s.perf[tf.key] ?? 0;
                     const cls = v >= 2 ? 'sr2-up-strong' : v >= 0 ? 'sr2-up' : 'sr2-down';
                     return <td key={tf.key} className={`sr2-right sr2-mono ${cls} ${sortTf === tf.key ? 'sr2-sorted' : ''}`}>{v >= 0 ? '+' : ''}{v.toFixed(1)}%</td>;
                   })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Protocol Stratification */}
+      <section className="sr2-section">
+        <h2>Protocol Stratification</h2>
+        <p className="sr2-hint">Which scoring protocols perform best per sector. Shows best protocol for each sector and the score it assigns.</p>
+        <div className="sr2-table-wrap">
+          <table className="sr2-table">
+            <thead>
+              <tr>
+                <th>Sector</th>
+                <th>ETF</th>
+                <th>Best Protocol</th>
+                <th>Score</th>
+                <th>All Protocols</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((s) => (
+                <tr key={s.id}>
+                  <td className="sr2-name">{s.name}</td>
+                  <td className="sr2-etf">{s.etf}</td>
+                  <td>
+                    {s.bestProtocol ? (
+                      <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{s.bestProtocol.name}</span>
+                    ) : <span className="sr2-down">No data</span>}
+                  </td>
+                  <td className="sr2-mono">
+                    {s.bestProtocol ? (
+                      <span className={s.bestProtocol.score >= 65 ? 'sr2-up-strong' : s.bestProtocol.score >= 40 ? 'sr2-up' : 'sr2-down'}>
+                        {s.bestProtocol.score.toFixed(0)}
+                      </span>
+                    ) : '—'}
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                      {s.protocolScores.map((ps) => (
+                        <span key={ps.protocolId}
+                          className={ps.score >= 65 ? 'sr2-up-strong' : ps.score >= 40 ? 'sr2-up' : 'sr2-down'}
+                          style={{ fontSize: '0.6rem', padding: '1px 5px', borderRadius: 3, border: '1px solid currentColor', opacity: 0.85 }}
+                          title={`${ps.protocolName}: ${ps.score.toFixed(0)} — ${ps.signal}`}>
+                          {ps.protocolName.replace(/ V\d+$/, '')}: {ps.score.toFixed(0)}
+                        </span>
+                      ))}
+                      {s.protocolScores.length === 0 && s.hasData && <span className="sr2-hint">No protocols match</span>}
+                      {!s.hasData && <span className="sr2-hint">No market data</span>}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

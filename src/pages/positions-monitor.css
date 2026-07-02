@@ -170,6 +170,22 @@
   font-weight: 600;
 }
 
+/* Actions row */
+.pm-actions {
+  display: flex; gap: 0.4rem; align-items: center; margin-top: 0.5rem; flex-wrap: wrap;
+}
+.pm-close-btn {
+  padding: 0.3rem 0.7rem; border: 1px solid #ef4444; border-radius: 5px;
+  background: rgba(239,68,68,0.1); color: #ef4444; cursor: pointer;
+  font-family: inherit; font-size: 0.68rem; font-weight: 600;
+}
+.pm-close-btn:hover { background: rgba(239,68,68,0.2); }
+.pm-nav-link {
+  font-size: 0.65rem; color: var(--ink-soft); text-decoration: none;
+  padding: 0.2rem 0.5rem; border: 1px solid var(--line); border-radius: 4px;
+}
+.pm-nav-link:hover { border-color: var(--accent); color: var(--accent); }
+
 .pm-empty {
   text-align: center;
   padding: 40px;

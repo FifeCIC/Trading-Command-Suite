@@ -16,6 +16,7 @@ import { ScoreHistoryService } from './score-history.service';
 import { StrategyCompetitionService } from './strategy-competition.service';
 import { PredictiveScoringService } from './predictive-scoring.service';
 import { OutcomeTrackerService } from './outcome-tracker.service';
+import { SectorRotationService } from './sector-rotation.service';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
 
 @ApiTags('scoring')
@@ -27,6 +28,7 @@ export class ScoringController {
     private readonly competitionService: StrategyCompetitionService,
     private readonly predictiveService: PredictiveScoringService,
     private readonly outcomeTracker: OutcomeTrackerService,
+    private readonly sectorRotation: SectorRotationService,
   ) {}
 
   @Get('ranked')
@@ -125,11 +127,31 @@ export class ScoringController {
   // ── Strategy Competition (Q157) ──
 
   @Get('runs')
-  @ApiOperation({ summary: 'Get scoring runs grouped by time window' })
-  getRuns(@Query('limit') limit?: string) {
+  @ApiOperation({ summary: 'Get scoring runs grouped by time + strategy with search & pagination' })
+  getRuns(
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('strategyId') strategyId?: string,
+  ) {
+    const parsedPage = Number(page ?? 1);
     const parsedLimit = Number(limit ?? 30);
+    const safePage = Number.isFinite(parsedPage) ? Math.max(parsedPage, 1) : 1;
     const safeLimit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 100) : 30;
-    return this.scoreHistoryService.getRuns(safeLimit);
+
+    return this.scoreHistoryService.getRuns({
+      search: search?.trim() || undefined,
+      page: safePage,
+      limit: safeLimit,
+      strategyId: strategyId?.trim() || undefined,
+    });
+  }
+
+  @Get('runs/:runId')
+  @ApiOperation({ summary: 'Get detailed scores for a specific scoring run' })
+  @ApiParam({ name: 'runId', description: 'Run ID (format: run-{epochMs}-{strategyPrefix})' })
+  getRunScores(@Param('runId') runId: string) {
+    return this.scoreHistoryService.getRunScores(runId);
   }
 
   @Post('compete')
@@ -157,5 +179,14 @@ export class ScoringController {
       generatedAt: new Date().toISOString(),
       disclaimer: 'PROTOTYPE — Predictive scores are experimental. Based on scheduled events only.',
     };
+  }
+
+  // ── Sector Rotation ──
+
+  @Get('sectors/rotation')
+  @UseInterceptors(new CacheInterceptor(60000))
+  @ApiOperation({ summary: 'Sector ETF rotation with protocol stratification' })
+  async getSectorRotation() {
+    return this.sectorRotation.getRotation();
   }
 }

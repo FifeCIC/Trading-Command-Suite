@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ModeService } from '../../config/mode.service';
 import {
@@ -145,54 +145,6 @@ export class StrategiesController {
     return { id: s.id, name: s.name, description: s.description, config: s.config };
   }
 
-  @Get(':id/directives')
-  async getStrategyDirectives(@Param('id') id: string) {
-    if (!this.prisma.isAvailable) return { directives: [] };
-
-    const strategy = await this.prisma.strategy.findUnique({
-      where: { id },
-    });
-    if (!strategy) return { error: 'Strategy not found' };
-
-    // Extract directive IDs from strategy config
-    const config = strategy.config as any;
-    const weights = config?.weights ?? {};
-    const directiveIds = Object.keys(weights);
-
-    // Resolve each directive: fork if exists, otherwise original
-    const resolved = await Promise.all(
-      directiveIds.map(async (directiveId) => {
-        // Look for a fork
-        const fork = await this.prisma.directive.findFirst({
-          where: { parentId: directiveId, strategyId: id, isDefault: false },
-        });
-        if (fork) {
-          return {
-            ...fork,
-            weight: weights[directiveId] ?? fork.weight,
-            isFork: true,
-          };
-        }
-        // Fall back to original
-        const original = await this.prisma.directive.findUnique({
-          where: { id: directiveId },
-        });
-        if (!original) return null;
-        return {
-          ...original,
-          weight: weights[directiveId] ?? original.weight,
-          isFork: false,
-        };
-      }),
-    );
-
-    return {
-      strategyId: id,
-      strategyName: strategy.name,
-      directives: resolved.filter(Boolean),
-    };
-  }
-
   @Post(':id/duplicate')
   async duplicateStrategy(@Param('id') id: string) {
     if (!this.prisma.isAvailable) return { error: 'DB unavailable' };
@@ -234,5 +186,135 @@ export class StrategiesController {
       } catch (e) { results.push({ name: s.strategyName, status: 'error', error: (e as Error).message }); }
     }
     return { seeded: results.length, results };
+  }
+
+  // ── Directive Configuration ──
+
+  @Get(':id/directives')
+  async getStrategyDirectives(@Param('id') id: string) {
+    if (!this.prisma.isAvailable) return { directives: [] };
+
+    const strategy = await this.prisma.strategy.findUnique({
+      where: { id },
+      include: { directives: true },
+    });
+    if (!strategy) return { error: 'Strategy not found' };
+
+    // Strategy.directives are the DB-linked Directive rows
+    // Also check strategy.config.weights for weight overrides
+    const config = strategy.config as any;
+    const weights = config?.weights ?? {};
+
+    // Get all directives linked to this strategy via DB relation
+    const dbDirectives = strategy.directives || [];
+
+    // If DB directives exist, use them. Otherwise, resolve from config weights.
+    if (dbDirectives.length > 0) {
+      return {
+        strategyId: id,
+        strategyName: strategy.name,
+        directives: dbDirectives.map((d) => ({
+          id: d.id,
+          name: d.name,
+          type: d.type,
+          weight: d.weight,
+          active: d.active,
+          parentId: d.parentId,
+          isDefault: d.isDefault,
+          forkReason: d.forkReason,
+        })),
+      };
+    }
+
+    // Fallback: resolve from config weights (legacy)
+    const directiveIds = Object.keys(weights);
+    if (directiveIds.length === 0) {
+      return { strategyId: id, strategyName: strategy.name, directives: [] };
+    }
+
+    const resolved = await Promise.all(
+      directiveIds.map(async (directiveId) => {
+        const original = await this.prisma.directive.findUnique({
+          where: { id: directiveId === 'rsi-overbought' ? 'rsi-overbought' : directiveId },
+        });
+        if (!original) return null;
+        return {
+          id: original.id,
+          name: original.name,
+          type: original.type,
+          weight: weights[directiveId] ?? original.weight,
+          active: original.active,
+          parentId: original.parentId,
+          isDefault: original.isDefault,
+          forkReason: null as string | null,
+        };
+      }),
+    );
+
+    return {
+      strategyId: id,
+      strategyName: strategy.name,
+      directives: resolved.filter(Boolean),
+    };
+  }
+
+  @Patch(':id/directives/:directiveId')
+  async updateDirective(
+    @Param('id') strategyId: string,
+    @Param('directiveId') directiveId: string,
+    @Body() body: { active?: boolean; weight?: number },
+  ) {
+    if (!this.prisma.isAvailable) return { error: 'DB unavailable' };
+
+    const strategy = await this.prisma.strategy.findUnique({
+      where: { id: strategyId },
+    });
+    if (!strategy) return { error: 'Strategy not found' };
+
+    // Update directive in the DB relation
+    try {
+      const directive = await this.prisma.directive.findFirst({
+        where: { id: directiveId, strategyId },
+      });
+
+      if (directive) {
+        // Update existing
+        await this.prisma.directive.update({
+          where: { id: directiveId },
+          data: {
+            ...(body.active !== undefined ? { active: body.active } : {}),
+            ...(body.weight !== undefined ? { weight: body.weight } : {}),
+          },
+        });
+      } else {
+        // Directive not linked to this strategy — update config weights instead
+        const config = (strategy.config as any) || {};
+        const weights = config.weights || {};
+
+        if (body.active !== undefined) {
+          if (!body.active) {
+            delete weights[directiveId];
+          } else {
+            weights[directiveId] = body.weight ?? 5;
+          }
+        }
+        if (body.weight !== undefined && body.active !== false) {
+          weights[directiveId] = body.weight;
+        }
+
+        await this.prisma.strategy.update({
+          where: { id: strategyId },
+          data: {
+            config: { ...config, weights },
+            updatedAt: new Date(),
+          },
+        });
+      }
+
+      return { success: true, directiveId, strategyId, ...body };
+    } catch (err) {
+      this.logger.error(`Failed to update directive ${directiveId}: ${(err as Error).message}`);
+      return { error: 'Update failed' };
+    }
   }
 }

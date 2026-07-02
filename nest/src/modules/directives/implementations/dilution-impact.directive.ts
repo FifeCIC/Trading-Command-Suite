@@ -22,7 +22,7 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
-import { FinnhubAdapter } from '../../providers/adapters/finnhub.adapter';
+import { ProvidersService } from '../../providers/providers.service';
 
 const MIN_BARS = 1;
 
@@ -37,7 +37,7 @@ export class DilutionImpactDirective implements IDirective {
   readonly maxScore = 60; // Risk penalty — lower ceiling
   readonly version = '1.0.0';
 
-  constructor(private readonly finnhub: FinnhubAdapter) {}
+  constructor(private readonly providers: ProvidersService) {}
 
   async calculate(input: DirectiveInput): Promise<DirectiveResult> {
     const symbol = input.symbol;
@@ -52,7 +52,9 @@ export class DilutionImpactDirective implements IDirective {
     }
 
     try {
-      const metrics = await this.finnhub.getCompanyMetrics(symbol);
+      const finnhub = this.providers.getAdapter('finnhub');
+      if (!finnhub) return { score: 0, confidence: 0, signalClass: 'neutral', reason: 'Finnhub not available' };
+      const metrics = await (finnhub as any).getCompanyMetrics(symbol);
       if (!metrics) {
         return {
           score: 0,

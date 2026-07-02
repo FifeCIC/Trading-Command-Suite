@@ -4,9 +4,11 @@ description: "Update the Architecture Framework page (/builder/architecture-fram
 ---
 # Update Architecture Framework
 
-## When to Use
+> ⚠️ **This skill is for the LIBRARIAN agent only.** Feature-development agents should NOT use this skill. Instead, create a closed GitHub Issue with the `revision-log` label summarizing the change. The Librarian curates `architecture-framework.data.js` periodically from those issues.
 
-Trigger this skill after any architecture-sensitive change:
+## When to Use (Librarian only)
+
+Trigger this skill after:
 - A new REST endpoint was added
 - A new backend module or subsystem was created
 - A new React page/view was added to the shell

@@ -47,9 +47,8 @@ Use the `create-new-page` skill at `.github/skills/create-new-page/SKILL.md`:
 
 ### Architecture Updates
 After any feature that changes endpoints, modules, or data flow:
-- Add STATUS_SNAPSHOT entry to `src/pages/architecture-framework.data.js`
-- Use the `update-architecture-framework` skill for guidance
-- The librarian agent handles documentation updates
+- Create a closed GitHub Issue with `revision-log` label summarizing the change. Do NOT edit `architecture-framework.data.js` — the Librarian curates it.
+- The librarian agent handles all documentation and architecture updates
 
 ## Prompt Execution
 

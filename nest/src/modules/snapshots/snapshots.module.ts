@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Delete, Param, Body, Query, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { SnapshotComparisonService } from './snapshot-comparison.service';
+import { MarketDataService } from '../market-data/market-data.service';
 
 @Controller('snapshots')
 export class SnapshotsController {
@@ -10,6 +11,7 @@ export class SnapshotsController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly comparisonService: SnapshotComparisonService,
+    private readonly marketData: MarketDataService,
   ) {}
 
   @Get()
@@ -24,22 +26,92 @@ export class SnapshotsController {
     return s;
   }
 
-  @Post()
-  save(@Body() body: any) {
+  /**
+   * Import real market data for a symbol + date range as a snapshot.
+   * Fetches from MarketBar (DB) with MT5 bridge fallback.
+   */
+  @Post('import')
+  async importSnapshot(@Body() body: {
+    symbol: string;
+    timeframe?: string;
+    startDate: string;
+    endDate: string;
+    notes?: string;
+  }) {
+    const symbol = (body.symbol || '').toUpperCase();
+    const timeframe = body.timeframe || '1d';
+    const notes = body.notes || `Imported ${symbol} ${timeframe}`;
+
+    if (!symbol) return { error: 'Symbol is required' };
+    if (!body.startDate || !body.endDate) return { error: 'startDate and endDate are required' };
+
+    const startDate = new Date(body.startDate);
+    const endDate = new Date(body.endDate);
+
+    // Look up symbol in DB
+    const sym = await this.prisma.symbol.findFirst({ where: { ticker: symbol } });
+    const symbolId = sym?.id;
+
+    let candleData: any[] = [];
+
+    if (symbolId) {
+      // Fetch from MarketBar table (date range)
+      const bars = await this.prisma.marketBar.findMany({
+        where: {
+          symbolId,
+          timeframe,
+          timestamp: { gte: startDate, lte: endDate },
+        },
+        orderBy: [{ timestamp: 'asc' }],
+        take: 500,
+      });
+
+      candleData = bars.map((b) => ({
+        timestamp: b.timestamp.toISOString(),
+        open: b.open, high: b.high, low: b.low, close: b.close,
+        volume: b.volume || 0,
+      }));
+    }
+
+    // Fallback: try MT5 bridge if no DB data
+    if (candleData.length === 0) {
+      try {
+        const mt5Url = `${process.env.MT5_BRIDGE_URL || 'http://localhost:5000'}/candles`;
+        const res = await fetch(`${mt5Url}?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}&limit=200`);
+        const mt5Data = await res.json();
+        if (Array.isArray(mt5Data)) {
+          candleData = mt5Data
+            .filter((b: any) => {
+              const t = new Date(b.time || b.timestamp);
+              return t >= startDate && t <= endDate;
+            })
+            .map((b: any) => ({
+              timestamp: new Date(b.time || b.timestamp).toISOString(),
+              open: b.open, high: b.high, low: b.low, close: b.close,
+              volume: b.tick_volume || b.volume || 0,
+            }));
+        }
+      } catch (err) {
+        this.logger.warn(`MT5 bridge fallback failed: ${(err as Error).message}`);
+      }
+    }
+
     const entry = {
       id: `snap-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      symbol: body.symbol || 'UNKNOWN',
-      timeframe: body.timeframe || '1h',
-      startTime: body.startTime || new Date().toISOString(),
-      endTime: body.endTime || new Date().toISOString(),
-      candleData: body.candleData || [],
-      directiveScores: body.directiveScores || null,
-      notes: body.notes || '',
+      symbol,
+      timeframe,
+      startTime: body.startDate,
+      endTime: body.endDate,
+      candleData,
+      directiveScores: null,
+      notes,
       starred: false,
       createdAt: new Date().toISOString(),
+      source: candleData.length > 0 && symbolId ? 'database' : candleData.length > 0 ? 'mt5-bridge' : 'empty',
     };
+
     this.snapshots.push(entry);
-    this.logger.log(`Snapshot saved: ${entry.symbol} (${entry.candleData.length || 0} candles)`);
+    this.logger.log(`Snapshot imported: ${symbol} ${timeframe} (${candleData.length} candles, source: ${entry.source})`);
     return entry;
   }
 
@@ -133,9 +205,10 @@ export class SnapshotsController {
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../database/database.module';
 import { ScoringModule } from '../scoring/scoring.module';
+import { MarketDataModule } from '../market-data/market-data.module';
 
 @Module({
-  imports: [DatabaseModule, ScoringModule],
+  imports: [DatabaseModule, ScoringModule, MarketDataModule],
   controllers: [SnapshotsController],
   providers: [SnapshotComparisonService],
 })

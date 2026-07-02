@@ -1,5 +1,5 @@
 import { Fragment, useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
 import LoadingSkeleton from '../components/LoadingSkeleton'
 import './directives-manager.css'
@@ -11,7 +11,8 @@ function hydrateFromApi(raw) {
     code: raw.id,
     name: raw.name,
     category: raw.category ?? 'Uncategorized',
-    status: 'active',
+    active: raw.active !== false, // default true
+    status: raw.active !== false ? 'active' : 'inactive',
     complexity: 'Medium',
     baseWeight: raw.priority ?? 50,
     boostEnabled: false,
@@ -40,6 +41,7 @@ export default function DirectivesManagerPage() {
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState(null)
   const [expandedRows, setExpandedRows] = useState(() => new Set())
+  const queryClient = useQueryClient()
 
   const directivesQuery = useQuery({
     queryKey: ['directives'],
@@ -50,6 +52,33 @@ export default function DirectivesManagerPage() {
   const loaded = directivesQuery.data ?? []
   const allDirectives = useMemo(() => loaded.map(hydrateFromApi), [loaded])
   const seeded = allDirectives.length > 0
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, active }) =>
+      apiGet(`/api/directives/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ active }),
+      }),
+    onMutate: async ({ id, active }) => {
+      await queryClient.cancelQueries({ queryKey: ['directives'] })
+      const previous = queryClient.getQueryData(['directives'])
+      queryClient.setQueryData(['directives'], (old) =>
+        (old || []).map((d) => d.id === id ? { ...d, active } : d)
+      )
+      return { previous }
+    },
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(['directives'], context?.previous)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['directives'] })
+    },
+  })
+
+  function handleToggle(e, id, currentActive) {
+    e.stopPropagation()
+    toggleMutation.mutate({ id, active: !currentActive })
+  }
 
   const filterable = useMemo(() => {
     if (allDirectives.length === 0) return []
@@ -161,7 +190,7 @@ export default function DirectivesManagerPage() {
         <div className="directives-toolbar-stats" role="status" aria-live="polite">
           <span><strong>{allDirectives.length}</strong> total</span>
           <span className="directives-stat-dot stat-active" />
-          <span><strong>{allDirectives.filter((item) => item.status === 'active').length}</strong> active</span>
+          <span><strong>{allDirectives.filter((item) => item.active).length}</strong> active</span>
         </div>
       </section>
 
@@ -207,7 +236,16 @@ export default function DirectivesManagerPage() {
                         </span>
                       </td>
                       <td>{item.category}</td>
-                      <td><span className={`directive-chip tone-${statusTone}`}>{item.status}</span></td>
+                      <td>
+                        <span
+                          className={`directive-chip tone-${statusTone}`}
+                          style={{ cursor: 'pointer', userSelect: 'none' }}
+                          onClick={(e) => handleToggle(e, item.id, item.active)}
+                          title={`Click to ${item.active ? 'disable' : 'enable'} ${item.name}`}
+                        >
+                          {item.status}
+                        </span>
+                      </td>
                       <td>{item.complexity}</td>
                       <td>
                         base {item.baseWeight}

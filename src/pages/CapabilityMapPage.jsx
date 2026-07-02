@@ -7,22 +7,66 @@ import { PAGE_DATA_STATUS } from '../core/page-data-status';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './capability-map.css';
 
+// ── Known feature annotations ──────────────────────────
+const KNOWN_FEATURES = {
+  // Directives
+  'dxy-regime': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'gold-macro-correlation': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'stub' },
+  'cad-usd-oil-correlation': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'stub' },
+  'vix-regime': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'correlation-drag': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'stub' },
+  'rollover-risk': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  // Backend Tech
+  'SEES Scoring Engine': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Speed Scan Service': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Gated Scoring Pipeline': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Protocol System': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Directive Registry (87 directives)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Portfolio Service (T212)': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Trading212 Import Service': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Scoring Scheduler': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Score History Service': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Outcome Tracker (Q304)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Seasonal Affinity Service': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Correlation Service': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'stub' },
+  'Backtest Service': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+  'Alert Service': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'TradingGatesService (3-Gate Pipeline)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'Risk Service (Drawdown Alerts)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'Automation (9 endpoints)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  // Platform
+  'MT5 Bridge': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'Trading212 API': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'Finnhub': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'DeepSeek AI': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // Frontend
+  'Portfolio Lab': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'planned', devCompletion: 'partial' },
+  'Speed Scanner': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Protocol Selector (Scoring)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Signal Ladder + Directive Drilldown': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Execution Queue (Timeline + Retry)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+};
+
 // ── Build unified capability rows ──
 
 function buildCapabilityRows(directives, providers) {
   const rows = [];
+
+  const def = { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'partial' };
 
   // ── Pages (from nav tree + page data status) ──
   Object.entries(NAV_TREE).forEach(([areaKey, area]) => {
     area.views.forEach((view) => {
       const meta = PAGE_DATA_STATUS[view.id];
       rows.push({
+        ...def,
         category: 'Page',
         area: area.label,
         name: view.label,
         type: 'UI',
         status: 'ALPHA',
         notes: meta?.source || meta?.note || '',
+        uiSurfaces: 1,
       });
     });
   });
@@ -30,13 +74,16 @@ function buildCapabilityRows(directives, providers) {
   // ── Directives (from API or fallback) ──
   if (directives && Array.isArray(directives)) {
     directives.forEach((d) => {
+      const known = KNOWN_FEATURES[d.id] || KNOWN_FEATURES[d.name] || {};
       rows.push({
+        ...def,
         category: 'Directive',
         area: d.category || 'Uncategorized',
         name: d.name,
         type: 'Backend',
         status: 'ALPHA',
         notes: d.description?.substring(0, 80) || '',
+        ...known,
       });
     });
   }
@@ -44,13 +91,16 @@ function buildCapabilityRows(directives, providers) {
   // ── Providers ──
   (providers || []).forEach((p) => {
     const name = p.displayName || p.name || p.provider || 'Unknown';
+    const known = KNOWN_FEATURES[name] || KNOWN_FEATURES[p.provider] || {};
     rows.push({
+      ...def,
       category: 'Provider',
       area: 'Data',
       name,
       type: 'Integration',
       status: 'ALPHA',
       notes: `Quotes: ${p.quotes !== false ? '✓' : '✗'} · Candles: ${p.candles !== false ? '✓' : '✗'} · News: ${p.news ? '✓' : '✗'} · Fund: ${p.fundamentals ? '✓' : '✗'} · Portfolio: ${p.portfolio ? '✓' : '✗'}`,
+      ...known,
     });
   });
 
@@ -84,13 +134,16 @@ function buildCapabilityRows(directives, providers) {
     { name: 'Snapshots', count: 2 },
     { name: 'Backtest Data', count: 1 },
   ].forEach((mod) => {
+    const known = KNOWN_FEATURES[mod.name] || {};
     rows.push({
+      ...def,
       category: 'API Module',
       area: 'Backend',
       name: mod.name,
       type: 'Backend',
       status: 'ALPHA',
       notes: `${mod.count} endpoints`,
+      ...known,
     });
   });
 
@@ -123,14 +176,21 @@ function buildCapabilityRows(directives, providers) {
     'Risk Gauges + Circuit Breaker UI',
     'Research Dashboard (8-Panel Aggregate)',
     'Protocol Selector (Scoring)',
+    'Execution Queue (Timeline + Retry)',
+    'User Preferences System (12 Settings)',
+    'Strategy Showdown + Live Positions',
   ].forEach((name) => {
+    const known = KNOWN_FEATURES[name] || {};
     rows.push({
+      ...def,
       category: 'Frontend Feature',
       area: 'UI',
       name,
       type: 'Frontend',
       status: 'ALPHA',
       notes: '',
+      uiSurfaces: 1,
+      ...known,
     });
   });
 
@@ -153,13 +213,16 @@ function buildCapabilityRows(directives, providers) {
     'Web (Cross-browser)',
     'PWA (Mobile)',
   ].forEach((name) => {
+    const known = KNOWN_FEATURES[name] || {};
     rows.push({
+      ...def,
       category: 'Platform Support',
       area: 'Infrastructure',
       name,
       type: 'Platform',
       status: 'ALPHA',
       notes: '',
+      ...known,
     });
   });
 
@@ -173,6 +236,7 @@ function buildCapabilityRows(directives, providers) {
     'Multi-Timeframe Scorer',
     'Speed Scan Service',
     'Strategy Competition Service',
+    'Strategy Comparison (Showdown)',
     'Gated Scoring Pipeline',
     'Directive Registry (87 directives)',
     'Protocol System',
@@ -191,24 +255,61 @@ function buildCapabilityRows(directives, providers) {
     'API Activity Middleware',
     'Process Manager',
   ].forEach((name) => {
+    const known = KNOWN_FEATURES[name] || {};
     rows.push({
+      ...def,
       category: 'Backend Tech',
       area: 'Backend',
       name,
       type: 'Backend',
       status: 'ALPHA',
       notes: '',
+      ...known,
     });
   });
 
   return rows;
 }
 
-// ── Status Badge ──
+// ── Badge Components ──
 function StatusBadge({ status }) {
   const color = '#8b5cf6';
   const bg = 'rgba(139,92,246,0.12)';
   return <span className="cm-badge" style={{ color, background: bg }}>{status}</span>;
+}
+
+function DataBadge({ value }) {
+  const map = {
+    stored: { color: '#22c55e', bg: 'rgba(34,197,94,0.12)', icon: '💾' },
+    config: { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', icon: '⚙' },
+    cached: { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', icon: '🔄' },
+    ephemeral: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)', icon: '💨' },
+  };
+  const m = map[value] || map.ephemeral;
+  return <span className="cm-badge" style={{ color: m.color, background: m.bg }} title={value}>{m.icon} {value}</span>;
+}
+
+function PipelineBadge({ value }) {
+  const map = {
+    both: { color: '#22c55e', bg: 'rgba(34,197,94,0.12)', label: 'score + trade' },
+    scoring: { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', label: 'scoring' },
+    trading: { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', label: 'trading' },
+    none: { color: '#a1a1aa', bg: 'rgba(161,161,170,0.12)', label: 'none' },
+    planned: { color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', label: 'planned' },
+  };
+  const m = map[value] || map.none;
+  return <span className="cm-badge" style={{ color: m.color, background: m.bg }} title={value}>{m.label}</span>;
+}
+
+function DoneBadge({ value }) {
+  const map = {
+    complete: { color: '#22c55e', bg: 'rgba(34,197,94,0.12)', icon: '✓' },
+    partial: { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', icon: '◐' },
+    stub: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)', icon: '✗' },
+    planned: { color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', icon: '→' },
+  };
+  const m = map[value] || map.partial;
+  return <span className="cm-badge" style={{ color: m.color, background: m.bg }} title={value}>{m.icon} {value}</span>;
 }
 
 // ── Main Page ──
@@ -253,6 +354,8 @@ export default function CapabilityMapPage() {
   }, [allRows, filter, search]);
 
   const totals = allRows.reduce((acc, r) => { acc[r.category] = (acc[r.category] || 0) + 1; return acc; }, {});
+  const completeLoop = allRows.filter((r) => r.dataPersistence === 'stored' && r.uiSurfaces > 0 && (r.pipelineIntegration === 'scoring' || r.pipelineIntegration === 'trading' || r.pipelineIntegration === 'both') && r.devCompletion === 'complete').length;
+  const completeDev = allRows.filter((r) => r.devCompletion === 'complete').length;
 
   if (allRows.length === 0) return <div className="cm-page"><LoadingSkeleton variant="table" rows={20} cols={5} /></div>;
 
@@ -268,6 +371,10 @@ export default function CapabilityMapPage() {
       {/* ── Summary ── */}
       <div className="cm-summary">
         <div className="cm-summary-item"><span className="cm-summary-value">{allRows.length}</span><span className="cm-summary-label">total capabilities</span></div>
+        <div className="cm-summary-item" title="Features where data is stored (not ephemeral), has at least 1 UI surface, is integrated into scoring/trading, and is marked complete">
+          <span className="cm-summary-value" style={{color: completeLoop > completeDev * 0.3 ? '#22c55e' : '#f59e0b'}}>{completeLoop}/{completeDev}</span>
+          <span className="cm-summary-label">complete loops</span>
+        </div>
         {categories.map((cat) => (
           <div key={cat} className="cm-summary-item">
             <span className="cm-summary-value">{totals[cat] || 0}</span>
@@ -303,6 +410,10 @@ export default function CapabilityMapPage() {
               <th>Name</th>
               <th>Type</th>
               <th>Status</th>
+              <th title="Is data stored in the database (stored), held in memory (cached), or does it evaporate after use (ephemeral)? Configuration data stored as part of the codebase counts as 'config'.">💾 Data</th>
+              <th title="How many UI components, pages, or panels display data from this capability? 0 = API-only, no visual surface.">🖥 UI</th>
+              <th title="Is this capability integrated into the scoring pipeline, trading execution, both, or neither? 'planned' = design exists but not wired yet.">🔗 Pipeline</th>
+              <th title="Is the implementation complete per developer intentions? 'stub' = placeholder, 'partial' = in progress, 'complete' = done, 'planned' = designed but not built.">✅ Done</th>
               <th>Notes</th>
             </tr>
           </thead>
@@ -314,7 +425,11 @@ export default function CapabilityMapPage() {
                 <td><strong>{row.name}</strong></td>
                 <td style={{ fontSize: 11, color: 'var(--ink-soft)' }}>{row.type}</td>
                 <td><StatusBadge status={row.status} /></td>
-                <td style={{ fontSize: 11, color: 'var(--ink-soft)', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.notes || '—'}</td>
+                <td><DataBadge value={row.dataPersistence} /></td>
+                <td style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, color: row.uiSurfaces > 0 ? '#22c55e' : 'var(--ink-soft)' }}>{row.uiSurfaces}</td>
+                <td><PipelineBadge value={row.pipelineIntegration} /></td>
+                <td><DoneBadge value={row.devCompletion} /></td>
+                <td style={{ fontSize: 11, color: 'var(--ink-soft)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.notes || '—'}</td>
               </motion.tr>
             ))}
           </tbody>
@@ -322,7 +437,7 @@ export default function CapabilityMapPage() {
       </div>
 
       <div className="cm-footer">
-        {filtered.length} of {allRows.length} capabilities shown · All statuses ALPHA — to be promoted to BETA after strengthening
+        {filtered.length} of {allRows.length} capabilities shown · {completeLoop} have a complete data loop (stored + UI + pipeline + complete) · Click column headers for details
       </div>
     </div>
   );
