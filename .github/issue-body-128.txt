@@ -1,0 +1,67 @@
+**Domain**: Speed Trading / Core / Patterns
+
+Batch scanner scoring all Tier A/B symbols against their best protocol every N seconds. Returns ranked list with top pick. POST /api/speed/scan endpoint with symbol-to-protocol mapping.
+
+**Source**: speed-scanner.md
+
+---
+
+## User Discussion (2026-07-01)
+
+### Core Problem
+In speed trading on the 5-second chart, there are real micro-trends — and failing to recognize when a trend is present vs. when the market is sideways leads to losses fast. The scanner should help answer: **"Which symbol has the clearest trend right now?"**
+
+### Trend Detection Layer
+- Is there such a thing as a "5-minute trend" on a 5-second chart? Discuss — likely yes, measured as directional persistence over N consecutive candles
+- Detect **trend clarity** per symbol: how clean is the current directional move? (ADX on micro-timeframe, consecutive same-direction candles, low noise ratio)
+- Rank symbols by trend clarity, not just composite score
+
+### Symbol Switching
+- When a symbol's trend fades or goes sideways, the system should suggest switching to the next-best symbol
+- The speed trading page could show a "next best" indicator: "NVDA trending strongly (score 87) — consider switching from TSLA (score 42, sideways)"
+- Auto-switch or manual-switch? Discuss — likely manual with strong visual cues
+
+### Candlestick Pattern Integration
+The pattern scanner (#146, now implemented) detects 11 real candle patterns. These patterns could play a strong role in:
+1. **Entry confirmation** — only enter when a bullish pattern (hammer, morning star, engulfing) aligns with the trend
+2. **Pause/exit signal** — when doji clusters or inside bars appear, the market is sideways → pause trading
+3. **Trend continuation check** — three white soldiers / three black crows confirm trend strength
+
+### Sideways Market Detection
+- Doji clusters (2+ dojis in last 5 candles) → indecision → pause trading
+- Inside bars stacking (3+ inside bars) → compression → wait for breakout
+- Low ADX on micro-timeframe → no trend → skip symbol
+
+### Technical Approach
+The scanner should combine:
+- **Directive scores** (existing SEES pipeline — momentum, volume, session timing)
+- **Pattern signals** (from pattern-detector.js — bullish/bearish/neutral counts in recent window)
+- **Trend clarity** (ADX on 5s bars, directional persistence, noise ratio)
+
+Output per symbol:
+```
+{
+  symbol: "NVDA",
+  compositeScore: 87,
+  trendClarity: "strong",       // strong | weak | sideways
+  trendDirection: "up",         // up | down | none
+  recentPatterns: ["hammer", "engulfing-bull"],
+  patternSignal: "bullish",     // bullish | bearish | neutral
+  recommendation: "trade",      // trade | pause | switch
+  nextBestSymbol: "TSLA"
+}
+```
+
+### Implementation Priority
+1. Speed scan endpoint returning ranked symbols with trend clarity
+2. Pattern overlay on speed trading chart (show detected patterns on 5s candles)
+3. Sideways detection → pause signal
+4. Symbol switching recommendation in speed trading UI
+
+### Acceptance
+- [ ] Scanner runs every N seconds (configurable, default 5s)
+- [ ] Returns ranked list with trend clarity per symbol
+- [ ] Pattern detection integrated into scoring
+- [ ] Sideways market detection triggers pause recommendation
+- [ ] Speed trading page shows "next best" symbol suggestion
+- [ ] Builds clean

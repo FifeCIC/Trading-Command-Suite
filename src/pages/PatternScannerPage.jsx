@@ -1,6 +1,7 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
+import { createChart, CandlestickSeries } from 'lightweight-charts';
 import { apiGet } from '../core/api/client';
 import { detectPatterns } from '../core/patterns/pattern-detector';
 import './pattern-scanner.css';
@@ -41,6 +42,14 @@ export default function PatternScannerPage() {
     return detectPatterns(rawCandles);
   }, [rawCandles, hasRealData]);
 
+  // Format candles for lightweight-charts
+  const chartCandles = useMemo(() => {
+    return rawCandles.map((c) => ({
+      time: c.timestamp ? new Date(c.timestamp).toISOString().split('T')[0] : c.time || c.date || '',
+      open: c.open, high: c.high, low: c.low, close: c.close,
+    })).filter((c) => c.time);
+  }, [rawCandles]);
+
   const filtered = filterType === 'all' ? detections : detections.filter((d) => d.type === filterType);
 
   const stats = useMemo(() => {
@@ -55,8 +64,7 @@ export default function PatternScannerPage() {
       <header className="ps-header">
         <h1>Pattern Scanner</h1>
         <p className="ps-subtitle">
-          Real candlestick pattern detection on <strong>{symbol}</strong> · {candles.length} candles ·
-          {useRealData && rawCandles.length > 0 ? ' Live data' : ' Mock data'}
+          Real-time candle pattern detection — {hasRealData ? `${chartCandles.length} candles loaded` : 'no data loaded'}
         </p>
       </header>
 
@@ -88,6 +96,13 @@ export default function PatternScannerPage() {
 
       {hasRealData && (
       <>
+      {/* Candlestick chart */}
+      {chartCandles.length > 0 && (
+        <section className="ps-section">
+          <PsChart candles={chartCandles} detections={detections} />
+        </section>
+      )}
+
       {/* Stats bar */}
       <motion.div className="ps-stats" initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}>
         <span className="ps-stat"><strong>{stats.total}</strong> patterns</span>
@@ -119,7 +134,14 @@ export default function PatternScannerPage() {
               transition={{ duration: 0.2, delay: i * 0.03 }}
               whileHover={{ scale: 1.02 }}
               className={`ps-card ${p.type}`}
-              onClick={() => setExpandedId(expandedId === `${p.pattern}-${p.index}` ? null : `${p.pattern}-${p.index}`)}
+              onClick={() => {
+                const newId = expandedId === `${p.pattern}-${p.index}` ? null : `${p.pattern}-${p.index}`;
+                setExpandedId(newId);
+                // Dispatch custom event for chart to scroll to this candle
+                if (newId) {
+                  window.dispatchEvent(new CustomEvent('ps-scroll-to', { detail: { index: p.index } }));
+                }
+              }}
             >
               <div className="ps-card-header">
                 <span className="ps-card-name">{p.pattern}</span>
@@ -160,6 +182,88 @@ export default function PatternScannerPage() {
       )}
     </div>
   );
+}
+
+// ── Chart Component ──────────────────────────────────────
+
+function PsChart({ candles, detections }) {
+  const containerRef = useRef(null);
+  const chartRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current || !candles?.length) return;
+
+    const chart = createChart(containerRef.current, {
+      height: 380,
+      layout: {
+        background: { color: 'transparent' },
+        textColor: 'var(--ink-soft, #94a3b8)',
+        fontSize: 11,
+      },
+      grid: {
+        vertLines: { color: 'rgba(148,163,184,0.06)' },
+        horzLines: { color: 'rgba(148,163,184,0.06)' },
+      },
+      crosshair: { mode: 0 },
+      timeScale: { borderColor: 'rgba(148,163,184,0.1)', barSpacing: 8 },
+      rightPriceScale: { borderColor: 'rgba(148,163,184,0.1)' },
+    });
+
+    chartRef.current = chart;
+
+    const cs = chart.addSeries(CandlestickSeries, {
+      upColor: '#22c55e', downColor: '#ef4444',
+      borderUpColor: '#22c55e', borderDownColor: '#ef4444',
+      wickUpColor: '#22c55e', wickDownColor: '#ef4444',
+    });
+    cs.setData(candles);
+
+    // Add pattern markers with enhanced visibility
+    if (detections?.length > 0) {
+      const markers = detections.map((d) => ({
+        time: candles[d.index]?.time,
+        position: d.type === 'bullish' ? 'belowBar' : 'aboveBar',
+        color: d.type === 'bullish' ? '#22c55e' : d.type === 'bearish' ? '#ef4444' : '#f59e0b',
+        shape: d.type === 'bullish' ? 'arrowUp' : d.type === 'bearish' ? 'arrowDown' : 'circle',
+        text: d.pattern,
+        size: 3,
+      })).filter((m) => m.time);
+
+      cs.setMarkers(markers);
+    }
+
+    chart.timeScale().fitContent();
+
+    // Listen for scroll-to events from pattern cards
+    const handleScrollTo = (e) => {
+      const { index } = e.detail;
+      const targetTime = candles[index]?.time;
+      if (targetTime && chartRef.current) {
+        chartRef.current.timeScale().scrollToPosition(
+          chartRef.current.timeScale().coordinateToIndex(
+            chartRef.current.timeScale().timeToCoordinate(targetTime) ?? 0
+          ) / (candles.length || 1),
+          false
+        );
+        // Flash the target candle area briefly
+        setTimeout(() => {
+          try {
+            chartRef.current.timeScale().fitContent();
+          } catch {}
+        }, 2000);
+      }
+    };
+
+    window.addEventListener('ps-scroll-to', handleScrollTo);
+
+    return () => {
+      window.removeEventListener('ps-scroll-to', handleScrollTo);
+      chart.remove();
+      chartRef.current = null;
+    };
+  }, [candles, detections]);
+
+  return <div ref={containerRef} className="ps-chart-container" />;
 }
 
 // Mini candlestick visual

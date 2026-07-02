@@ -425,6 +425,28 @@ model MarketSnapshot {
   @@index([starred, createdAt])
 }
 
+// ── Chart Snapshot ────────────────────────────────────────
+// Captures chart STATE (not a screenshot image):
+// symbol, timeframe, indicators, drawings, annotations.
+// Foundation for sharing analysis moments and timeline integration.
+
+model ChartSnapshot {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  symbol      String   @db.VarChar(20)
+  timeframe   String   @db.VarChar(20)
+  indicators  Json     @default("[]")   // [{ id, params }] — which indicators were active
+  drawings    Json     @default("[]")   // [{ type, points, label }] — lines, zones, text
+  annotations String?  @db.Text         // User notes / analysis text
+  visibleRange Json?                    // { from, to } — chart zoom state
+  priceAtTime Float?                    // Snapshot price when captured
+  tags        Json     @default("[]")   // ["earnings", "breakout", "support-test"]
+  createdAt   DateTime @default(now())
+
+  @@index([symbol])
+  @@index([symbol, createdAt])
+  @@index([createdAt])
+}
+
 model ProtocolVersion {
   id         String   @id @default(uuid()) @db.VarChar(36)
   strategyId String   @db.VarChar(36)
@@ -1036,4 +1058,58 @@ model StockInvestigation {
   @@index([symbol, investigatedAt])
   @@index([status])
   @@map("stock_investigation")
+}
+
+// ─── Planner Area ─────────────────────────────────────────
+
+model FundAllocation {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  name        String   @db.VarChar(200)
+  amount      Float
+  currency    String   @default("GBP") @db.VarChar(10)
+  source      String   @default("earnings") @db.VarChar(50)
+  notes       String?  @db.Text
+  allocations Json     @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("fund_allocation")
+}
+
+model TradingStylePreference {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  styleKey    String   @unique @db.VarChar(50)
+  label       String   @db.VarChar(100)
+  description String?  @db.Text
+  category    String   @db.VarChar(50)
+  enabled     Boolean  @default(false)
+  preferences Json     @default("{}")
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("trading_style_preference")
+}
+
+model TradingObjective {
+  id              String   @id @default(uuid()) @db.VarChar(36)
+  title           String   @db.VarChar(200)
+  description     String?  @db.Text
+  category        String   @db.VarChar(50)
+  targetAmount    Float?
+  currentAmount   Float    @default(0)
+  currency        String   @default("GBP") @db.VarChar(10)
+  targetDate      DateTime?
+  status          String   @default("active") @db.VarChar(20)
+  linkedStrategy  String?  @db.VarChar(200)
+  linkedAccount   String?  @db.VarChar(100)
+  isBuiltIn       Boolean  @default(false)
+  progressPct     Float    @default(0)
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("trading_objective")
+  @@index([status])
+  @@index([category])
 }

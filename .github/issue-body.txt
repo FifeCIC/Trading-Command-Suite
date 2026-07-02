@@ -1,0 +1,27 @@
+## Goal
+
+First real end-to-end use of the full pipeline: Watchlist → Protocol → Scoring Strategy → Automation → MT5 trading.
+
+## Context
+dxy-regime directive now detects USD strength effects on gold, forex, commodities, crypto. Need a dedicated protocol optimized for DXY-sensitive symbols.
+
+## Protocol: dxy-sensitivity-v1
+- Technical (40%): speed-momentum, bollinger-squeeze, volume-confirmation, rsi-oversold, support-resistance, session-timing-filter
+- Sentiment (20%): news-sentiment
+- Risk (40%): dxy-regime, volatility-regime, liquidity-check, position-concentration, correlation-drag
+- Symbols: XAUUSD, XAGUSD, EURUSD, GBPUSD, AUDUSD, NZDUSD, USDCAD, USDJPY, USDCHF, BTCUSD
+- Timeframe: 5s-30s tick scalp
+
+## DXY Data
+- Preferred: MT5 DX/DXY symbol (zero rate limit)
+- Fallback: Finnhub forex EURUSD as proxy (60 calls/min)
+
+## Acceptance
+1. All 10 symbols available in MT5
+2. DXY data source wired
+3. Protocol scores all symbols via SpeedScan
+4. DXY Sensitive watchlist created
+5. Scoring strategy pairs protocol + watchlist
+6. Automation loop runs strategy
+7. Manual test: 1 MT5 trade from top signal
+8. Log: score → decision → execution → PnL

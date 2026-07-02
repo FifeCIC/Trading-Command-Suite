@@ -78,6 +78,15 @@ export default function AutomationDashboardPage() {
     return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
 
+  // Directive breakdown for selected symbol
+  const envelopeQuery = useQuery({
+    queryKey: ['signals', 'envelope', selectedSymbol],
+    queryFn: () => apiGet(`/api/signals/envelope/${selectedSymbol}`),
+    enabled: !!selectedSymbol,
+    staleTime: 30000,
+  });
+  const envelope = envelopeQuery.data;
+
   return (
     <div className="ad-page">
       <motion.header className="ad-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
@@ -313,10 +322,51 @@ export default function AutomationDashboardPage() {
           <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
             <h2 className="ad-panel-title">🔍 Why Panel</h2>
             {selectedSymbol ? (
+              envelopeQuery.isLoading ? <LoadingSkeleton variant="card" count={1} /> :
+              envelope ? (
               <div className="ad-why-panel">
-                <p className="ad-why-symbol">{selectedSymbol}</p>
-                <p className="ad-empty">Directive breakdown coming soon — click a portfolio symbol to see which directives fired and why.</p>
+                <div className="ad-why-header">
+                  <span className="ad-why-symbol">{selectedSymbol}</span>
+                  <span className="ad-why-composite" style={{ color: envelope.signal === 'BUY' ? '#22c55e' : envelope.signal === 'SELL' ? '#ef4444' : '#94a3b8' }}>
+                    {envelope.composite.toFixed(0)} — {envelope.signal}
+                  </span>
+                  <span className="ad-why-confidence">Conf: {envelope.confidence}%</span>
+                  {envelope.rarity && <span className="ad-why-rarity" style={{ color: envelope.rarityColor }}>{envelope.rarity}</span>}
+                </div>
+                {envelope.preTradeBlockers.length > 0 && (
+                  <div className="ad-why-blockers">
+                    {envelope.preTradeBlockers.map((b, i) => <span key={i} className="ad-blocker-tag">🚫 {b}</span>)}
+                  </div>
+                )}
+                <div className="ad-why-groups">
+                  {envelope.groups.map(g => (
+                    <div key={g.groupId} className={`ad-why-group ${g.isRisk ? 'ad-why-risk' : ''}`}>
+                      <div className="ad-why-group-head">
+                        <span>{g.groupName}</span>
+                        <span style={{ color: g.score > 65 ? '#22c55e' : g.score < 35 ? '#ef4444' : '#94a3b8', fontWeight: 800 }}>{g.score}</span>
+                      </div>
+                      {g.topDirectives.map(d => (
+                        <div key={d.id} className={`ad-why-dir ad-why-dir-${d.signalClass}`}>
+                          <span className="ad-why-dir-name">{d.name}</span>
+                          <span className="ad-why-dir-score">{d.normalized}</span>
+                          <span className="ad-why-dir-reason">{d.reason}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                {envelope.conflicts.length > 0 && (
+                  <div className="ad-why-conflicts">
+                    <span className="ad-why-conflicts-title">⚠ Conflicts</span>
+                    {envelope.conflicts.map((c, i) => (
+                      <span key={i} className="ad-conflict-chip">{c.description}</span>
+                    ))}
+                  </div>
+                )}
               </div>
+              ) : (
+                <p className="ad-empty">No directive data available for {selectedSymbol}. Run scoring first.</p>
+              )
             ) : (
               <p className="ad-empty">Click a portfolio score (left column) to see the directive breakdown.</p>
             )}

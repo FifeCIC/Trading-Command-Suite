@@ -83,8 +83,14 @@ function detectHarami(prev, curr) {
 
 function detectInsideBar(prev, curr) {
   if (!prev) return null;
-  if (curr.high < prev.high && curr.low > prev.low)
-    return { pattern: 'inside-bar', confidence: Math.round(80 + Math.random() * 15), type: 'neutral' };
+  if (curr.high < prev.high && curr.low > prev.low) {
+    // Tighter inside bar = higher confidence
+    const prevRange = totalRange(prev.high, prev.low);
+    const currRange = totalRange(curr.high, curr.low);
+    const ratio = 1 - (currRange / prevRange); // 0 = same size, 1 = tiny inside
+    const confidence = Math.round(65 + ratio * 30);
+    return { pattern: 'inside-bar', confidence: Math.min(98, confidence), type: 'neutral' };
+  }
   return null;
 }
 
@@ -92,8 +98,13 @@ function detectThreeWhiteSoldiers(candles, i) {
   if (i < 2) return null;
   const c1 = candles[i - 2], c2 = candles[i - 1], c3 = candles[i];
   if (isBullish(c1.open, c1.close) && isBullish(c2.open, c2.close) && isBullish(c3.open, c3.close)) {
-    if (c3.close > c2.close && c2.close > c1.close && c3.open > c2.open && c2.open > c1.open)
-      return { pattern: 'three-white-soldiers', confidence: 70 + Math.round(Math.random() * 20), type: 'bullish' };
+    if (c3.close > c2.close && c2.close > c1.close && c3.open > c2.open && c2.open > c1.open) {
+      // Stronger momentum = higher confidence
+      const momentum = ((c3.close - c1.open) / (c1.open || 0.01)) * 100;
+      const consistency = (body(c2.open, c2.close) + body(c3.open, c3.close)) / (body(c1.open, c1.close) + 0.01);
+      const confidence = Math.round(60 + Math.min(35, Math.abs(momentum) * 2 + consistency * 5));
+      return { pattern: 'three-white-soldiers', confidence: Math.min(98, confidence), type: 'bullish' };
+    }
   }
   return null;
 }
@@ -102,8 +113,12 @@ function detectThreeBlackCrows(candles, i) {
   if (i < 2) return null;
   const c1 = candles[i - 2], c2 = candles[i - 1], c3 = candles[i];
   if (isBearish(c1.open, c1.close) && isBearish(c2.open, c2.close) && isBearish(c3.open, c3.close)) {
-    if (c3.close < c2.close && c2.close < c1.close && c3.open < c2.open && c2.open < c1.open)
-      return { pattern: 'three-black-crows', confidence: 70 + Math.round(Math.random() * 20), type: 'bearish' };
+    if (c3.close < c2.close && c2.close < c1.close && c3.open < c2.open && c2.open < c1.open) {
+      const momentum = ((c1.open - c3.close) / (c1.open || 0.01)) * 100;
+      const consistency = (body(c2.open, c2.close) + body(c3.open, c3.close)) / (body(c1.open, c1.close) + 0.01);
+      const confidence = Math.round(60 + Math.min(35, Math.abs(momentum) * 2 + consistency * 5));
+      return { pattern: 'three-black-crows', confidence: Math.min(98, confidence), type: 'bearish' };
+    }
   }
   return null;
 }
@@ -112,8 +127,11 @@ function detectMorningStar(candles, i) {
   if (i < 2) return null;
   const c1 = candles[i - 2], c2 = candles[i - 1], c3 = candles[i];
   if (isBearish(c1.open, c1.close) && body(c2.open, c2.close) / totalRange(c2.high, c2.low) < 0.3 && isBullish(c3.open, c3.close)) {
-    if (c3.close > (c1.open + c1.close) / 2)
-      return { pattern: 'morning-star', confidence: 65 + Math.round(Math.random() * 25), type: 'bullish' };
+    if (c3.close > (c1.open + c1.close) / 2) {
+      const reversalStrength = (c3.close - c1.close) / (c1.open - c1.close || 0.01);
+      const confidence = Math.round(60 + Math.min(35, reversalStrength * 20));
+      return { pattern: 'morning-star', confidence: Math.min(98, confidence), type: 'bullish' };
+    }
   }
   return null;
 }
@@ -122,8 +140,11 @@ function detectEveningStar(candles, i) {
   if (i < 2) return null;
   const c1 = candles[i - 2], c2 = candles[i - 1], c3 = candles[i];
   if (isBullish(c1.open, c1.close) && body(c2.open, c2.close) / totalRange(c2.high, c2.low) < 0.3 && isBearish(c3.open, c3.close)) {
-    if (c3.close < (c1.open + c1.close) / 2)
-      return { pattern: 'evening-star', confidence: 65 + Math.round(Math.random() * 25), type: 'bearish' };
+    if (c3.close < (c1.open + c1.close) / 2) {
+      const reversalStrength = (c1.close - c3.close) / (c1.close - c1.open || 0.01);
+      const confidence = Math.round(60 + Math.min(35, reversalStrength * 20));
+      return { pattern: 'evening-star', confidence: Math.min(98, confidence), type: 'bearish' };
+    }
   }
   return null;
 }
@@ -169,25 +190,4 @@ export function detectPatterns(candles) {
   }
 
   return results;
-}
-
-/**
- * Generate mock candles for demo when API unavailable.
- * Realistic upward trend with pullbacks.
- */
-export function generateMockCandles(count = 100) {
-  const candles = [];
-  let price = 100;
-  for (let i = 0; i < count; i++) {
-    const trend = 0.1 + Math.random() * 0.2;
-    const noise = (Math.random() - 0.4) * 2;
-    const change = trend + noise;
-    const open = price;
-    const close = price + change;
-    const high = Math.max(open, close) + Math.random() * 1.5;
-    const low = Math.min(open, close) - Math.random() * 1.5;
-    candles.push({ time: i, open: +open.toFixed(2), high: +high.toFixed(2), low: +low.toFixed(2), close: +close.toFixed(2), volume: Math.floor(Math.random() * 1e6 + 5e5) });
-    price = close;
-  }
-  return candles;
 }

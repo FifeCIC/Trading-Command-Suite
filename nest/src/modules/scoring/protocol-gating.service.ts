@@ -11,7 +11,13 @@ import {
   PROTOCOL_REGISTRY,
   DirectiveGroup,
 } from '../directives/directive-groups';
+import { AdapterFactory } from '../providers/adapter-factory';
 import { isScoringDemo } from '../../config/scoring-mode';
+import {
+  RiskGatingEngine,
+  RiskDirectiveResult,
+  RiskGateResult,
+} from './risk-gating-engine.service';
 
 // ─── Result Types ────────────────────────────────────────
 
@@ -48,6 +54,13 @@ export interface GatedScore {
   breakouts: Record<string, DirectiveBreakout[]>;
   gatingActive: boolean;
   rarity?: RarityInfo;
+  riskGate?: {
+    hardGateTriggered: boolean;
+    hardGateReason: string | null;
+    multiplierChain: import('./risk-gating-engine.service').MultiplierStep[];
+    warnings: string[];
+    riskScore: number;
+  };
   meta: {
     additiveEquivalent: number;
     gatingDelta: number;
@@ -96,6 +109,8 @@ export class ProtocolGatingService {
   constructor(
     private readonly directivesService: DirectivesService,
     private readonly prisma: PrismaService,
+    private readonly riskEngine: RiskGatingEngine,
+    private readonly adapterFactory: AdapterFactory,
   ) {}
 
   /**
@@ -118,11 +133,22 @@ export class ProtocolGatingService {
       min15Bars?: import('../directives/interfaces/directive.interface').MarketBar[];
     },
   ): Promise<GatedScore> {
+    // ── Fetch EURUSD for DXY proxy ────────────────────────
+    let eurusdValue: number | undefined;
+    try {
+      const mt5 = this.adapterFactory.create('mt5');
+      if (mt5) {
+        const q = await mt5.getQuote('EURUSD');
+        if (q?.last) eurusdValue = q.last;
+      }
+    } catch { /* MT5 offline — directive handles it */ }
+
     const input: DirectiveInput = {
       symbol,
       bars,
+      eurusdValue,
       ...(higherTfBars ?? {}),
-    };
+    } as DirectiveInput;
 
     // Select protocol groups
     const activeGroups = protocolId
@@ -192,31 +218,27 @@ export class ProtocolGatingService {
       subScores[groupId] = Math.round(avg);
     }
 
-    // 4. Apply risk gate (multiplicative)
-    const riskScore = subScores['risk'] ?? 50;
-    const riskGroup = activeGroups.find((g) => g.id === 'risk')!;
-    let riskMultiplier = riskScore / 100;
+    // 4. Apply tiered risk gating via RiskGatingEngine
+    const riskDirectives: RiskDirectiveResult[] = (breakouts['risk'] ?? []).map((b) => ({
+      directiveId: b.directiveId,
+      name: b.name,
+      score: b.score,
+      maxScore: b.maxScore,
+      reason: b.reason,
+    }));
 
-    // Apply floor/ceiling — relaxed in demo mode
-    const demo = isScoringDemo();
-    const effectiveMin = demo ? Math.max(0.5, riskGroup.minMultiplier) : riskGroup.minMultiplier;
-    const effectiveMax = demo ? Math.min(1.5, riskGroup.maxMultiplier * 1.2) : riskGroup.maxMultiplier;
-    if (riskMultiplier < effectiveMin) {
-      riskMultiplier = effectiveMin;
-    } else if (riskMultiplier > effectiveMax) {
-      riskMultiplier = riskGroup.maxMultiplier;
-    }
+    const rawBeforeRisk = (subScores['technical'] ?? 50) * 0.40 + (subScores['sentiment'] ?? 50) * 0.35;
+    const riskResult = this.riskEngine.apply(rawBeforeRisk, riskDirectives);
 
-    // 5. Compute composite
-    const technicalContribution = (subScores['technical'] ?? 50) * 0.40;
-    const sentimentContribution = (subScores['sentiment'] ?? 50) * 0.35;
-    const rawComposite = (technicalContribution + sentimentContribution) * riskMultiplier;
+    const composite = riskResult.hardGateTriggered
+      ? 0
+      : Math.round(Math.max(0, Math.min(100, riskResult.finalScore)));
 
-    const composite = Math.round(Math.max(0, Math.min(100, rawComposite)));
     const signal: 'BUY' | 'HOLD' | 'SELL' =
       composite >= ENTRY_THRESHOLD ? 'BUY' : composite >= HOLD_FLOOR ? 'HOLD' : 'SELL';
 
     // Meta: show what additive would have given
+    const riskScore = subScores['risk'] ?? 50;
     const additiveEquivalent = Math.round(
       ((subScores['technical'] ?? 50) + (subScores['sentiment'] ?? 50) + riskScore) / 3,
     );
@@ -232,10 +254,17 @@ export class ProtocolGatingService {
       composite,
       signal,
       subScores,
-      riskMultiplier: Number(riskMultiplier.toFixed(2)),
+      riskMultiplier: Number(riskResult.multiplier),
       breakouts,
       gatingActive: true,
       rarity,
+      riskGate: {
+        hardGateTriggered: riskResult.hardGateTriggered,
+        hardGateReason: riskResult.hardGateReason,
+        multiplierChain: riskResult.multiplierChain,
+        warnings: riskResult.warnings,
+        riskScore: riskResult.riskScore,
+      },
       meta: {
         additiveEquivalent,
         gatingDelta: composite - additiveEquivalent,

@@ -1,0 +1,19 @@
+{
+  "id": "dxy-sensitive",
+  "label": "DXY Sensitive",
+  "description": "Symbols most affected by USD strength/weakness — metals, forex majors, crypto. Used with dxy-sensitivity-v1 protocol for DXY-driven speed trading.",
+  "symbols": [
+    { "ticker": "XAUUSD", "exchange": "MT5", "type": "metal" },
+    { "ticker": "XAGUSD", "exchange": "MT5", "type": "metal" },
+    { "ticker": "EURUSD", "exchange": "MT5", "type": "forex" },
+    { "ticker": "GBPUSD", "exchange": "MT5", "type": "forex" },
+    { "ticker": "USDJPY", "exchange": "MT5", "type": "forex" },
+    { "ticker": "USDCAD", "exchange": "MT5", "type": "forex" },
+    { "ticker": "USDCHF", "exchange": "MT5", "type": "forex" },
+    { "ticker": "NZDUSD", "exchange": "MT5", "type": "forex" },
+    { "ticker": "AUDUSD", "exchange": "MT5", "type": "forex" },
+    { "ticker": "USDCNH", "exchange": "MT5", "type": "forex" },
+    { "ticker": "USDSEK", "exchange": "MT5", "type": "forex" },
+    { "ticker": "BTCUSD", "exchange": "MT5", "type": "crypto" }
+  ]
+}

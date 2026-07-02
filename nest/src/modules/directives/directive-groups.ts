@@ -76,6 +76,7 @@ export const DIRECTIVE_GROUPS: DirectiveGroup[] = [
       'liquidity-check',
       'budget-gate',
       'rollover-risk',
+      'dxy-regime',
     ],
   },
 ];
@@ -1353,6 +1354,57 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Seconds to minutes',
     winRateTarget: '60–70%',
     idealFor: 'US/Canada session (14:30–21:00 GMT). Best during oil inventory releases (Wed 15:30 GMT) and BOC rate decisions. Avoid Canadian holidays when liquidity drops.',
+    seasonalAffinity: { monthly: {} },
+  },
+
+  // ── DXY Sensitivity V1 ──
+
+  'dxy-sensitivity-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'Micro-Structure Technicals',
+        description: 'Forex/metals micro-moves — DXY-driven momentum, squeezes, volume spikes',
+        weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',       // 120 — Micro-velocity across USD pairs
+          'bollinger-squeeze',    // 100 — Squeeze before economic data
+          'volume-confirmation',  // 100 — Volume confirms macro move
+          'rsi-oversold',         // 120 — Oversold bounce on USD pairs
+          'rsi-overbought',       // 100 — Overbought reversion
+          'support-resistance',   // 100 — Round number S/R on majors
+          'session-timing-filter',// 100 — London/NY overlap only
+          'atr-expansion',        // 100 — ATR for stop placement
+        ],
+        directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
+      },
+      {
+        id: 'sentiment', name: 'USD Sentiment',
+        description: 'DXY regime is the primary sentiment driver — everything else follows',
+        weight: 0.20, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',       // 100 — Fed speak, NFP, CPI, FOMC
+        ],
+      },
+      {
+        id: 'risk', name: 'DXY-Driven Risk',
+        description: 'Heavy DXY risk gating — USD strength/weakness gates all positions',
+        weight: 0.40, isRiskGate: true, minMultiplier: 0.3, maxMultiplier: 1.25,
+        directiveIds: [
+          'dxy-regime',           // 100 — DXY strength/weakness gates everything
+          'volatility-regime',    // 100 — Macro vol kills scalps
+          'liquidity-check',      // 100 — Major spreads during news
+          'position-concentration',// 100 — Don't over-allocate correlated pairs
+          'correlation-drag',     // 100 — Multiple USD positions = amplified risk
+        ],
+      },
+    ],
+    name: 'DXY Sensitivity V1',
+    description: 'USD-driven protocol for gold, silver, forex majors, and crypto. DXY regime gates all positions — USD strength/weakness is the primary driver. Designed for XTrend speed trading during London/NY overlap.',
+    tradingStyle: 'Tick Scalp',
+    recommendedTimeframe: '5s–30s',
+    avgHoldTime: 'Seconds to a few minutes',
+    winRateTarget: '60–70%',
+    idealFor: 'XTrend speed trading on DXY-sensitive symbols: XAUUSD, XAGUSD, EURUSD, GBPUSD, AUDUSD, NZDUSD, USDCAD, USDJPY, USDCHF, BTCUSD. Best during London/NY overlap (12:00–16:00 GMT) and US economic data releases.',
     seasonalAffinity: { monthly: {} },
   },
 };

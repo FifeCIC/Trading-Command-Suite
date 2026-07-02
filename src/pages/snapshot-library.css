@@ -64,4 +64,38 @@
 .snp-compare-table td { padding: 0.2rem 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .snp-compare-table td:first-child { color: var(--ink-soft); width: 50px; }
 
-.snp-mini-chart { margin-top: 0.5rem; height: 150px; border-radius: 6px; overflow: hidden; }
+.snp-delta-badge {
+  font-size: 0.75rem; padding: 0.15rem 0.5rem;
+  background: rgba(255,255,255,0.06); border-radius: 4px;
+  margin-left: 0.5rem;
+}
+
+.snp-signal-chip {
+  font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 3px;
+  font-weight: 700; text-transform: uppercase; margin-left: 0.4rem;
+}
+.snp-signal-buy { background: rgba(34,197,94,0.15); color: #22c55e; }
+.snp-signal-sell { background: rgba(239,68,68,0.15); color: #ef4444; }
+.snp-signal-hold { background: rgba(245,158,11,0.15); color: #f59e0b; }
+
+.snp-scoring-mini {
+  margin-top: 0.5rem; padding: 0.4rem 0.5rem;
+  background: rgba(255,255,255,0.03); border-radius: 6px;
+  font-size: 0.72rem;
+}
+.snp-scoring-row { display: flex; justify-content: space-between; padding: 0.15rem 0; }
+.snp-scoring-row span { color: var(--ink-soft); }
+.snp-scoring-row strong { color: var(--ink); font-weight: 600; }
+
+.snp-news-detail { margin-top: 0.5rem; font-size: 0.72rem; }
+.snp-news-detail summary { cursor: pointer; color: var(--accent); }
+.snp-news-list { margin-top: 0.3rem; max-height: 150px; overflow-y: auto; }
+.snp-news-item { display: flex; gap: 0.3rem; padding: 0.15rem 0; font-size: 0.68rem; border-bottom: 1px solid rgba(255,255,255,0.02); }
+.snp-news-sent { flex-shrink: 0; }
+
+.snp-directive-diff { margin-top: 1rem; }
+.snp-directive-diff summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+.snp-diff-table { width: 100%; margin-top: 0.5rem; font-size: 0.72rem; border-collapse: collapse; }
+.snp-diff-table th { text-align: left; padding: 0.25rem 0.5rem; color: var(--ink-soft); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--line); }
+.snp-diff-table td { padding: 0.2rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.02); }
+.snp-diff-key { font-family: monospace; font-size: 0.65rem; color: var(--accent); }

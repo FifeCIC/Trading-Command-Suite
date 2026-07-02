@@ -140,53 +140,101 @@ export default function SnapshotLibraryPage() {
 
         {compResult?.snapA && compResult?.snapB && (
           <div className="snp-compare-results">
+            {/* Delta bar */}
             {compResult.delta && (
               <div className="snp-delta-bar">
-                <span>Change: </span>
+                <span>{compResult.symbol} · </span>
                 <strong className={compResult.delta.priceChange >= 0 ? 'snp-up' : 'snp-down'}>
                   {compResult.delta.priceChange >= 0 ? '+' : ''}{compResult.delta.priceChange}
                 </strong>
                 <span className={compResult.delta.priceChangePct >= 0 ? 'snp-up' : 'snp-down'}>
                   ({compResult.delta.priceChangePct >= 0 ? '+' : ''}{compResult.delta.priceChangePct}%)
                 </span>
+                {compResult.delta.signalChanged && (
+                  <span className="snp-delta-badge">Signal: {compResult.delta.signalA} → {compResult.delta.signalB}</span>
+                )}
+                {compResult.delta.seasonalityShift && (
+                  <span className="snp-delta-badge">Seasonality: {compResult.delta.seasonalityShift}</span>
+                )}
+                <span className="snp-delta-badge">News: {compResult.delta.newsBetween} articles</span>
+                {compResult.delta.biggestDirectiveMover && (
+                  <span className="snp-delta-badge">
+                    Top mover: {compResult.delta.biggestDirectiveMover.id} ({compResult.delta.biggestDirectiveMover.delta >= 0 ? '+' : ''}{compResult.delta.biggestDirectiveMover.delta})
+                  </span>
+                )}
               </div>
             )}
 
+            {/* Side-by-side OHLCV + charts */}
             <div className="snp-compare-cols">
-              {/* Date A */}
-              <div className="snp-compare-col">
-                <h3>{compResult.snapA.date}</h3>
-                {compResult.snapA.closestBar ? (
-                  <table className="snp-compare-table">
-                    <tbody>
-                      <tr><td>Open</td><td>{compResult.snapA.closestBar.open}</td></tr>
-                      <tr><td>High</td><td>{compResult.snapA.closestBar.high}</td></tr>
-                      <tr><td>Low</td><td>{compResult.snapA.closestBar.low}</td></tr>
-                      <tr><td>Close</td><td><strong>{compResult.snapA.closestBar.close}</strong></td></tr>
-                      <tr><td>Volume</td><td>{compResult.snapA.closestBar.volume?.toLocaleString() || '—'}</td></tr>
-                    </tbody>
-                  </table>
-                ) : <p>No data for this date</p>}
-                <div ref={(el) => { if (el && compResult.snapA.chartBars?.length) renderMiniChart(el, compResult.snapA.chartBars); }} className="snp-mini-chart" />
-              </div>
-
-              {/* Date B */}
-              <div className="snp-compare-col">
-                <h3>{compResult.snapB.date}</h3>
-                {compResult.snapB.closestBar ? (
-                  <table className="snp-compare-table">
-                    <tbody>
-                      <tr><td>Open</td><td>{compResult.snapB.closestBar.open}</td></tr>
-                      <tr><td>High</td><td>{compResult.snapB.closestBar.high}</td></tr>
-                      <tr><td>Low</td><td>{compResult.snapB.closestBar.low}</td></tr>
-                      <tr><td>Close</td><td><strong>{compResult.snapB.closestBar.close}</strong></td></tr>
-                      <tr><td>Volume</td><td>{compResult.snapB.closestBar.volume?.toLocaleString() || '—'}</td></tr>
-                    </tbody>
-                  </table>
-                ) : <p>No data for this date</p>}
-                <div ref={(el) => { if (el && compResult.snapB.chartBars?.length) renderMiniChart(el, compResult.snapB.chartBars); }} className="snp-mini-chart" />
-              </div>
+              {[compResult.snapA, compResult.snapB].map((snap, si) => (
+                <div className="snp-compare-col" key={si}>
+                  <h3>{snap.date} {snap.scoring?.signal && <span className={`snp-signal-chip snp-signal-${snap.scoring.signal.toLowerCase()}`}>{snap.scoring.signal}</span>}</h3>
+                  {snap.closestBar ? (
+                    <table className="snp-compare-table">
+                      <tbody>
+                        <tr><td>Open</td><td>{snap.closestBar.open}</td></tr>
+                        <tr><td>High</td><td>{snap.closestBar.high}</td></tr>
+                        <tr><td>Low</td><td>{snap.closestBar.low}</td></tr>
+                        <tr><td>Close</td><td><strong>{snap.closestBar.close}</strong></td></tr>
+                        <tr><td>Volume</td><td>{snap.closestBar.volume?.toLocaleString() || '—'}</td></tr>
+                      </tbody>
+                    </table>
+                  ) : <p>No data for this date</p>}
+                  {snap.scoring && (
+                    <div className="snp-scoring-mini">
+                      <div className="snp-scoring-row"><span>Score</span><strong>{snap.scoring.composite?.toFixed(1)}</strong></div>
+                      <div className="snp-scoring-row"><span>Directives</span><strong>{snap.scoring.activeDirectives}/{snap.scoring.directiveCount} active</strong></div>
+                      <div className="snp-scoring-row"><span>Seasonality</span><strong>{(snap.scoring.seasonalityMultiplier * 100).toFixed(0)}%</strong></div>
+                    </div>
+                  )}
+                  <div ref={(el) => { if (el && snap.chartBars?.length) renderMiniChart(el, snap.chartBars); }} className="snp-mini-chart" />
+                  {snap.newsCount > 0 && (
+                    <details className="snp-news-detail">
+                      <summary>{snap.newsCount} news articles near this date</summary>
+                      <div className="snp-news-list">
+                        {snap.newsSummary?.map((n, ni) => (
+                          <div key={ni} className={`snp-news-item snp-news-${n.sentiment > 0.1 ? 'pos' : n.sentiment < -0.1 ? 'neg' : 'neut'}`}>
+                            <span className="snp-news-sent">{n.sentiment > 0.1 ? '🟢' : n.sentiment < -0.1 ? '🔴' : '⚪'}</span>
+                            <span>{n.headline}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+                </div>
+              ))}
             </div>
+
+            {/* Directive-level comparison */}
+            {compResult.snapA.scoring?.breakouts && compResult.snapB.scoring?.breakouts && (
+              <details className="snp-directive-diff">
+                <summary>Directive Score Comparison</summary>
+                <table className="snp-diff-table">
+                  <thead><tr><th>Directive</th><th>{compResult.snapA.date}</th><th>{compResult.snapB.date}</th><th>Δ</th></tr></thead>
+                  <tbody>
+                    {(() => {
+                      const allKeys = new Set([...Object.keys(compResult.snapA.scoring.breakouts), ...Object.keys(compResult.snapB.scoring.breakouts)]);
+                      return [...allKeys].sort().map((key) => {
+                        const a = compResult.snapA.scoring.breakouts[key] || 0;
+                        const b = compResult.snapB.scoring.breakouts[key] || 0;
+                        const delta = b - a;
+                        return (
+                          <tr key={key}>
+                            <td className="snp-diff-key">{key}</td>
+                            <td>{a.toFixed(1)}</td>
+                            <td>{b.toFixed(1)}</td>
+                            <td className={delta > 0 ? 'snp-up' : delta < 0 ? 'snp-down' : ''}>
+                              {delta > 0 ? '+' : ''}{delta.toFixed(1)}
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </details>
+            )}
           </div>
         )}
       </section>

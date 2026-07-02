@@ -37,18 +37,70 @@ export class AIController {
     }
   }
 
-  /** Step 2: Classify all positions (no AI needed) */
-  @Post('classify')
-  async classify(@Body() body: {
+  /** Step 3: Full AI portfolio analysis */
+  @Post('analyze')
+  async analyze(@Body() body: {
     positions: Array<{ symbol: string; ticker: string; quantity: number; avgCost: number; currentPrice: number; value: number; pnl: number; pnlPct: number }>;
     scores: Array<{ symbol: string; score: number; signal: string; strength: string; dataStatus: string }>;
     cash?: number;
+    question?: string; // optional user question to guide analysis
   }) {
-    const result = this.lab.analyze({
+    if (!this.deepseek.isConfigured) {
+      return { ok: false, error: 'DEEPSEEK_API_KEY not set' };
+    }
+
+    // Run deterministic classification first
+    const lab = this.lab.analyze({
       positions: body.positions || [],
       scores: body.scores || [],
       cash: body.cash ?? 0,
     });
-    return { ok: true, ...result };
+
+    // Build system prompt
+    const systemPrompt = `You are a portfolio restructuring advisor for an active trader. Your job is to analyze their positions and recommend specific actions.
+
+CONTEXT:
+- The trader uses SEES (Scoring Engine Evaluation System) which scores positions 0-1500+ based on technical, sentiment, and risk directives.
+- Scores >800 = strong buy conviction. Scores 500-800 = buy. 200-500 = hold. <200 = weak. 0 = no data (dead position).
+- The trader wants ACTIONS, not just observations. Every suggestion should be concrete.
+- Loss avoidance is preferred — don't recommend selling positions with large losses unless the outlook is truly hopeless.
+
+CLASSIFICATIONS (pre-computed):
+${lab.classifications.map(c => `- ${c.symbol}: score=${c.score}, signal=${c.signal}, P&L=${c.pnlPct}%, recommendation=${c.recommendation}, reason: ${c.reasoning}`).join('\n')}
+
+SCENARIOS (pre-computed):
+${lab.scenarios.map(s => `- ${s.name} (${s.riskLevel} risk): ${s.description}`).join('\n')}
+
+GUIDELINES:
+1. Be specific — name the symbols, dollar amounts, and reasons.
+2. Prioritize actions that free dead capital for strong signals.
+3. Flag any risks the trader might not see (earnings, concentration, sector overlap).
+4. Keep it concise — bullet points preferred.
+5. If the trader asked a specific question, answer it directly first.`;
+
+    const userMessage = body.question
+      ? `My question: ${body.question}\n\nFull portfolio context is in the system message.`
+      : 'Analyze my portfolio and recommend specific actions.';
+
+    try {
+      const result = await this.deepseek.chat(
+        [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage },
+        ],
+        { temperature: 0.5, maxTokens: 1500 },
+      );
+
+      return {
+        ok: true,
+        analysis: result.content,
+        usage: result.usage,
+        model: result.model,
+        classifications: lab.classifications,
+        scenarios: lab.scenarios,
+      };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message, classifications: lab.classifications, scenarios: lab.scenarios };
+    }
   }
 }

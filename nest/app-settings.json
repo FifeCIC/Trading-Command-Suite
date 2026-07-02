@@ -1,0 +1,19 @@
+{
+  "earnings": {
+    "importHorizonMonths": 6,
+    "autoRefreshDays": 7
+  },
+  "correlation": {
+    "refreshMinutes": 360,
+    "warningThreshold": 0.5
+  },
+  "seasonality": {
+    "weightMultiplier": 1
+  },
+  "analyst": {
+    "refreshHours": 24
+  },
+  "data": {
+    "stalenessHours": 24
+  }
+}

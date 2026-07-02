@@ -12,14 +12,14 @@ function StackCard({ stack }) {
   return (
     <div className="sa-stack-card">
       <div className="sa-stack-header" style={{ borderTopColor: stack.color }}>
-        <strong>{stack.strategy}</strong>
+        <strong>{stack.strategyName}</strong>
         <span className="sa-winrate" style={{ color: stack.color }}>
-          {(stack.winRate * 100).toFixed(0)}% WR
+          {stack.winRate != null ? `${(stack.winRate * 100).toFixed(0)}% WR` : `${stack.symbols?.length ?? 0} symbols`}
         </span>
       </div>
       <div className="sa-stack-symbols">
         {stack.symbols.map((s) => (
-          <div key={s.symbol} className={`sa-symbol-row ${s.score > s.prevScore ? 'sa-flash-up' : s.score < s.prevScore ? 'sa-flash-down' : ''}`}>
+          <div key={s.symbol} className="sa-symbol-row">
             <span className="sa-sym">{s.symbol}</span>
             <span className={`sa-sig-dot sa-sig-${s.signal}`} title={s.signal.toUpperCase()} />
             <span className="sa-score">{s.score}</span>
@@ -56,15 +56,26 @@ export default function SeesArenaPage() {
   const data = arenaQuery.data;
 
   if (!data && !arenaQuery.isLoading) {
-
-  if (!data && !arenaQuery.isLoading) {
     return (
       <UnavailablePlaceholder
         title="SEES Arena"
-        message="The arena scoring endpoint returned no data. The scoring pipeline may need to run first, or the arena endpoint may not be fully implemented."
+        message="The arena scoring endpoint returned no data. The scoring pipeline may need to run first."
         action="View Live Ordering Stack"
         actionUrl="/scoring/live-ordering-stack"
       />
+    );
+  }
+
+  if (arenaQuery.isLoading) {
+    return <div className="sa-page"><h1>SEES Arena</h1><p className="sa-loading">Loading arena data…</p></div>;
+  }
+
+  if (!data || !data.stacks?.length) {
+    return (
+      <div className="sa-page">
+        <h1>SEES Arena</h1>
+        <p className="sa-empty">No strategies active — build one in Strategy Builder.</p>
+      </div>
     );
   }
 
@@ -114,7 +125,7 @@ export default function SeesArenaPage() {
         <button type="button" className="sa-scroll-btn sa-scroll-left" onClick={() => scroll(-1)} aria-label="Scroll left">‹</button>
         <div className="sa-stacks" ref={scrollRef}>
           {data.stacks.map((stack) => (
-            <StackCard key={stack.id} stack={stack} />
+            <StackCard key={stack.strategyId} stack={stack} />
           ))}
           {data.stacks.length === 0 && (
             <p className="sa-empty">No strategies active — build one in Strategy Builder</p>
@@ -140,5 +151,4 @@ export default function SeesArenaPage() {
       </div>
     </div>
   );
-}
 }

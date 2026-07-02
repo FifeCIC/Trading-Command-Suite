@@ -46,6 +46,7 @@ import { StarsModule } from './modules/stars/stars.module';
 import { AutomationModule } from './modules/automation/automation.module';
 import { AIModule } from './modules/ai/ai.module';
 import { WatchlistsModule } from './modules/watchlists/watchlists.module';
+import { PlannerModule } from './modules/planner/planner.module';
 import { RateLimiterMiddleware } from './common/middleware/rate-limiter.middleware';
 import { MetricsMiddleware } from './common/middleware/metrics.middleware';
 
@@ -101,6 +102,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     AutomationModule,
     AIModule,
     WatchlistsModule,
+    PlannerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

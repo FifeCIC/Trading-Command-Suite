@@ -315,3 +315,15 @@
   .ps-grid { grid-template-columns: 1fr; }
   .ps-candle-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
 }
+
+/* ── Chart ────────────────────────────────────────────── */
+.ps-section { margin-bottom: 1rem; }
+
+.ps-chart-container {
+  width: 100%;
+  height: 350px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}

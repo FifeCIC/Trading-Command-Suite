@@ -10,6 +10,7 @@ import {
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ProvidersService } from './providers.service';
 import { AdapterFactory } from './adapter-factory';
+import { RateLimitGovernor } from './rate-limit-governor.service';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
 import { Trading212Adapter } from './adapters/trading212.adapter';
 
@@ -20,7 +21,13 @@ export class ProvidersController {
     private readonly providersService: ProvidersService,
     private readonly adapterFactory: AdapterFactory,
     private readonly t212Adapter: Trading212Adapter,
+    private readonly rateLimitGovernor: RateLimitGovernor,
   ) {}
+
+  @Get('governor')
+  getGovernorStatus() {
+    return this.rateLimitGovernor.getStatus();
+  }
 
   @Get('rate-limits')
   @ApiOperation({ summary: 'Get rate limit state for all provider adapters' })

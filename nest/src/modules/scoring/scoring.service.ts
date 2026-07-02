@@ -24,6 +24,7 @@ import { NotificationService } from '../notifications/notifications.service';
 import { CalibrationService } from '../calibration/calibration.service';
 import { OutcomeTrackerService } from './outcome-tracker.service';
 import { SeasonalAffinityService } from './seasonal-affinity.service';
+import { AdapterFactory } from '../providers/adapter-factory';
 import {
   DirectiveInput,
   MarketBar,
@@ -106,6 +107,7 @@ export class ScoringService implements OnModuleInit {
     private readonly calibrationService: CalibrationService,
     private readonly outcomeTracker: OutcomeTrackerService,
     private readonly seasonalAffinity: SeasonalAffinityService,
+    private readonly adapterFactory: AdapterFactory,
   ) {}
 
   /** On startup, detect directive version changes and log warnings. */
@@ -177,9 +179,27 @@ export class ScoringService implements OnModuleInit {
 
     const ranked: RankedSymbol[] = [];
 
+    // ── Fetch EURUSD for DXY proxy ────────────────────────
+    let eurusdValue: number | undefined;
+    try {
+      const mt5 = this.adapterFactory.create('mt5');
+      if (mt5) {
+        const eurusdQuote = await mt5.getQuote('EURUSD');
+        if (eurusdQuote?.last) {
+          eurusdValue = eurusdQuote.last;
+        }
+      }
+    } catch {
+      // MT5 may be offline — directive falls back gracefully
+    }
+
     for (const symbol of symbols) {
       const bars = await this.loadBars(symbol.id);
-      const input: DirectiveInput = { symbol: symbol.ticker, bars };
+      const input: DirectiveInput = {
+        symbol: symbol.ticker,
+        bars,
+        eurusdValue,
+      } as DirectiveInput;
       const results = await this.directivesService.runAll(input);
 
       // Apply symbol-specific calibrations before building breakdown

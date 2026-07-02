@@ -25,11 +25,14 @@ import { SeasonalityService } from './seasonality.service';
 import { SeasonalityController } from './seasonality.controller';
 import { SeasonalAffinityService } from './seasonal-affinity.service';
 import { TickRecorderService } from './tick-recorder.service';
+import { TimezoneService } from './timezone.service';
+import { MicroTrendDetector } from './micro-trend-detector.service';
+import { RiskGatingEngine } from './risk-gating-engine.service';
 
 @Module({
   imports: [DatabaseModule, DirectivesModule, NotificationsModule, CalibrationModule, MarketDataModule, ProvidersModule, forwardRef(() => PortfolioModule)],
   controllers: [ScoringController, ArenaController, AlgorithmLabController, ProtocolsController, ProtocolGatingController, SpeedScanController, SeasonalityController],
-  providers: [ScoringService, ScoreHistoryService, ScoringSchedulerService, AveragingScorer, StrategyCompetitionService, PredictiveScoringService, ProtocolGatingService, OutcomeTrackerService, SpeedScanService, SeasonalityService, SeasonalAffinityService, TickRecorderService],
-  exports: [ScoringService, ScoreHistoryService, AveragingScorer, StrategyCompetitionService, PredictiveScoringService, ProtocolGatingService, OutcomeTrackerService, SpeedScanService, SeasonalityService, SeasonalAffinityService, TickRecorderService],
+  providers: [ScoringService, ScoreHistoryService, ScoringSchedulerService, AveragingScorer, StrategyCompetitionService, PredictiveScoringService, ProtocolGatingService, OutcomeTrackerService, SpeedScanService, SeasonalityService, SeasonalAffinityService, TickRecorderService, TimezoneService, MicroTrendDetector, RiskGatingEngine],
+  exports: [ScoringService, ScoreHistoryService, AveragingScorer, StrategyCompetitionService, PredictiveScoringService, ProtocolGatingService, OutcomeTrackerService, SpeedScanService, SeasonalityService, SeasonalAffinityService, TickRecorderService, TimezoneService, MicroTrendDetector, RiskGatingEngine],
 })
 export class ScoringModule {}

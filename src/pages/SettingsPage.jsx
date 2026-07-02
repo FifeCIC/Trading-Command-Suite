@@ -1,4 +1,5 @@
 import { useUiStore } from '../stores/useUiStore';
+import { usePreferences } from '../core/hooks/usePreferences';
 import './settings.css'
 
 function SettingRow({ label, children, hint }) {
@@ -22,6 +23,8 @@ export default function SettingsPage() {
   const qaChecks = useUiStore((state) => state.qaChecks || {});
   const resetQaChecks = useUiStore((state) => state.resetQaChecks);
   const qaCount = Object.keys(qaChecks).length;
+
+  const { prefs, set, setMany, reset: resetPrefs, defaults } = usePreferences();
   return (
     <div className="settings-page">
       <header className="settings-header">
@@ -114,6 +117,118 @@ export default function SettingsPage() {
       </section>
 
       <section className="settings-section">
+        <h2>User Preferences</h2>
+        <p className="settings-section-desc">Customize defaults for the new Signals, Risk, and Research features.</p>
+
+        <SettingRow label="Default Signal Symbols" hint="Comma-separated tickers pre-filled in Signals Workbench.">
+          <input
+            type="text"
+            className="settings-input"
+            value={prefs.defaultSignalSymbols}
+            onChange={e => set('defaultSignalSymbols', e.target.value)}
+            placeholder="AAPL, NVDA, MSFT"
+          />
+        </SettingRow>
+
+        <SettingRow label="Default Protocol" hint="Pre-selected protocol in Signals Workbench and SEES pages.">
+          <input
+            type="text"
+            className="settings-input"
+            value={prefs.defaultProtocol}
+            onChange={e => set('defaultProtocol', e.target.value)}
+            placeholder="btc-speed-v1"
+          />
+        </SettingRow>
+
+        <SettingRow label="Signals Auto-Refresh" hint="Auto-refresh the signal ladder at the interval below.">
+          <div className="inline-actions">
+            <button type="button" className={prefs.signalsAutoRefresh ? 'cta' : ''} onClick={() => set('signalsAutoRefresh', true)}>On</button>
+            <button type="button" className={!prefs.signalsAutoRefresh ? 'cta' : ''} onClick={() => set('signalsAutoRefresh', false)}>Off</button>
+          </div>
+        </SettingRow>
+
+        <SettingRow label="Signals Refresh (s)" hint="Auto-refresh interval for signal ladder.">
+          <input
+            type="number" min="10" max="300" step="5"
+            className="settings-input settings-input-sm"
+            value={Math.round(prefs.signalsRefreshInterval / 1000)}
+            onChange={e => set('signalsRefreshInterval', Math.max(10000, parseInt(e.target.value, 10) * 1000))}
+          />
+        </SettingRow>
+
+        <SettingRow label="Research Refresh (s)" hint="Auto-refresh interval for Research Overview dashboard.">
+          <input
+            type="number" min="10" max="300" step="5"
+            className="settings-input settings-input-sm"
+            value={Math.round(prefs.researchRefreshInterval / 1000)}
+            onChange={e => set('researchRefreshInterval', Math.max(10000, parseInt(e.target.value, 10) * 1000))}
+          />
+        </SettingRow>
+
+        <h3 style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--ink-soft)' }}>Risk Limits</h3>
+
+        <SettingRow label="Max Drawdown (%)" hint="Circuit breaker trips when drawdown exceeds this.">
+          <input
+            type="number" min="5" max="50" step="1"
+            className="settings-input settings-input-sm"
+            value={prefs.riskMaxDrawdown}
+            onChange={e => set('riskMaxDrawdown', parseInt(e.target.value, 10) || 25)}
+          />
+        </SettingRow>
+
+        <SettingRow label="Max Positions" hint="Maximum number of concurrent open positions.">
+          <input
+            type="number" min="1" max="20" step="1"
+            className="settings-input settings-input-sm"
+            value={prefs.riskMaxPositions}
+            onChange={e => set('riskMaxPositions', parseInt(e.target.value, 10) || 5)}
+          />
+        </SettingRow>
+
+        <SettingRow label="Max Per Symbol (%)" hint="Maximum portfolio allocation to a single symbol.">
+          <input
+            type="number" min="5" max="100" step="5"
+            className="settings-input settings-input-sm"
+            value={prefs.riskMaxPerSymbol}
+            onChange={e => set('riskMaxPerSymbol', parseInt(e.target.value, 10) || 25)}
+          />
+        </SettingRow>
+
+        <SettingRow label="Max Per Trade Risk (%)" hint="Maximum portfolio risk per individual trade.">
+          <input
+            type="number" min="1" max="10" step="0.5"
+            className="settings-input settings-input-sm"
+            value={prefs.riskMaxPerTrade}
+            onChange={e => set('riskMaxPerTrade', parseFloat(e.target.value) || 2)}
+          />
+        </SettingRow>
+
+        <SettingRow label="CB Drawdown Trigger (%)" hint="Circuit breaker trips at this drawdown level.">
+          <input
+            type="number" min="5" max="40" step="1"
+            className="settings-input settings-input-sm"
+            value={prefs.circuitBreakerDrawdownTrigger}
+            onChange={e => set('circuitBreakerDrawdownTrigger', parseInt(e.target.value, 10) || 20)}
+          />
+        </SettingRow>
+
+        <SettingRow label="CB Exposure Trigger (%)" hint="Circuit breaker trips when total exposure exceeds this.">
+          <input
+            type="number" min="20" max="100" step="5"
+            className="settings-input settings-input-sm"
+            value={prefs.circuitBreakerExposureTrigger}
+            onChange={e => set('circuitBreakerExposureTrigger', parseInt(e.target.value, 10) || 80)}
+          />
+        </SettingRow>
+
+        <SettingRow label="Reset Preferences" hint="Restore all preferences to their default values.">
+          <button type="button" className="cta" onClick={() => { if (window.confirm('Reset all preferences to defaults?')) resetPrefs(); }}>
+            ↺ Reset to Defaults
+          </button>
+        </SettingRow>
+      </section>
+
+      <section className="settings-section">
         <h2>Data Retention</h2>
         <SettingRow label="Analytics Queue Purge" hint="How often local analytics events are purged (hours).">
           <code>24</code>
@@ -128,24 +243,34 @@ export default function SettingsPage() {
 
       <section className="settings-section">
         <h2>Display</h2>
-        <SettingRow label="Default Timeframe" hint="Default chart timeframe (1h, 4h, 1d, 1w).">
-          <code>1h</code>
+        <SettingRow label="Default Timeframe" hint="Default chart timeframe for Speed Charts and scanners.">
+          <select className="settings-select" value={prefs.defaultTimeframe} onChange={e => set('defaultTimeframe', e.target.value)}>
+            {['1m','5m','15m','30m','1h','4h','1d','1w'].map(tf => <option key={tf} value={tf}>{tf}</option>)}
+          </select>
         </SettingRow>
         <SettingRow label="Decimal Places" hint="Number of decimal places for price display.">
-          <code>2</code>
+          <input type="number" min="0" max="6" step="1" className="settings-input settings-input-sm"
+            value={prefs.decimalPlaces} onChange={e => set('decimalPlaces', parseInt(e.target.value, 10) || 2)} />
         </SettingRow>
         <SettingRow label="Compact Mode" hint="Reduce padding and font sizes for higher information density.">
-          <code>off</code>
+          <div className="inline-actions">
+            <button type="button" className={prefs.compactMode ? 'cta' : ''} onClick={() => set('compactMode', true)}>On</button>
+            <button type="button" className={!prefs.compactMode ? 'cta' : ''} onClick={() => set('compactMode', false)}>Off</button>
+          </div>
         </SettingRow>
       </section>
 
       <section className="settings-section">
         <h2>Performance</h2>
         <SettingRow label="Polling Interval" hint="Default polling interval for live data panels (seconds).">
-          <code>30</code>
+          <input type="number" min="5" max="120" step="5" className="settings-input settings-input-sm"
+            value={prefs.pollingInterval} onChange={e => set('pollingInterval', Math.max(5, parseInt(e.target.value, 10) || 30))} />
         </SettingRow>
         <SettingRow label="Chart Animation" hint="Enable animations on chart components.">
-          <code>on</code>
+          <div className="inline-actions">
+            <button type="button" className={prefs.chartAnimation ? 'cta' : ''} onClick={() => set('chartAnimation', true)}>On</button>
+            <button type="button" className={!prefs.chartAnimation ? 'cta' : ''} onClick={() => set('chartAnimation', false)}>Off</button>
+          </div>
         </SettingRow>
       </section>
 

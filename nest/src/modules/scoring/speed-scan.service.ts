@@ -11,6 +11,7 @@ import { ProtocolGatingService } from './protocol-gating.service';
 import { MarketDataService } from '../market-data/market-data.service';
 import { PrismaService } from '../../database/prisma.service';
 import { SeasonalAffinityService } from './seasonal-affinity.service';
+import { MicroTrendDetector, TrendAnalysis } from './micro-trend-detector.service';
 
 export interface SymbolScore {
   symbol: string;
@@ -20,6 +21,27 @@ export interface SymbolScore {
   gated: boolean;
   riskMultiplier: number;
   subScores: { technical: number; sentiment: number; risk: number };
+  trend?: {
+    adx: number;
+    clarity: string;
+    direction: string;
+    persistence: number;
+    sideways: boolean;
+    sidewaysReasons: string[];
+    noiseRatio: number;
+    patternCount: number;
+    patternTypes: string[];
+    patternSignal: string;
+    recommendation: string;
+    recommendationReason: string;
+  };
+  riskGate?: {
+    hardGateTriggered: boolean;
+    hardGateReason: string | null;
+    warnings: string[];
+    riskScore: number;
+    multiplierChain: any[];
+  } | null;
 }
 
 export interface SkippedSymbol {
@@ -32,6 +54,8 @@ export interface ScanResult {
   skipped: SkippedSymbol[];
   ranked: string[];
   topPick: string | null;
+  topPickTrend: string | null;
+  nextBestSymbol: string | null;
   scannedAt: string;
   scanMs: number;
 }
@@ -143,6 +167,7 @@ export class SpeedScanService {
     private readonly marketData: MarketDataService,
     private readonly prisma: PrismaService,
     private readonly seasonalAffinity: SeasonalAffinityService,
+    private readonly trendDetector: MicroTrendDetector,
   ) {}
 
   /**
@@ -200,6 +225,12 @@ export class SpeedScanService {
         const seasonalMultiplier = this.seasonalAffinity.getMultiplier(protocol);
         const seasonAdjustedComposite = score.composite * seasonalMultiplier;
 
+        // ── Trend analysis on the market bars ──
+        const trendBars = marketBars.map((b: any) => ({
+          open: b.open, high: b.high, low: b.low, close: b.close,
+        }));
+        const trendResult = this.trendDetector.analyze(trendBars);
+
         return {
           symbol,
           protocol,
@@ -212,6 +243,27 @@ export class SpeedScanService {
             sentiment: score.subScores?.sentiment ?? 50,
             risk: score.subScores?.risk ?? 50,
           },
+          trend: {
+            adx: trendResult.adx,
+            clarity: trendResult.trendClarity,
+            direction: trendResult.trendDirection,
+            persistence: trendResult.persistence.consecutive,
+            sideways: trendResult.sideways.active,
+            sidewaysReasons: trendResult.sideways.reasons,
+            noiseRatio: Math.round(trendResult.noiseRatio * 100),
+            patternCount: trendResult.patternCount,
+            patternTypes: trendResult.patternTypes,
+            patternSignal: trendResult.patternSignal,
+            recommendation: trendResult.recommendation.action,
+            recommendationReason: trendResult.recommendation.reason,
+          },
+          riskGate: score.riskGate ? {
+            hardGateTriggered: score.riskGate.hardGateTriggered,
+            hardGateReason: score.riskGate.hardGateReason,
+            warnings: score.riskGate.warnings,
+            riskScore: score.riskGate.riskScore,
+            multiplierChain: score.riskGate.multiplierChain,
+          } : null,
           skipped: false,
         };
       } catch (err) {
@@ -238,15 +290,23 @@ export class SpeedScanService {
 
     const ranked = scored.map(r => r.symbol);
     const topPick = scored.length > 0 ? scored[0].symbol : null;
+    const topPickTrend = scored.length > 0 ? `${scored[0].trend?.clarity ?? '?'} ${scored[0].trend?.direction ?? ''}` : null;
+    const nextBestSymbol = scored.length > 1 ? scored[1].symbol : null;
     const scanMs = Date.now() - start;
 
-    this.logger.log(`SpeedScan: ${scored.length} scored, ${skipped.length} skipped in ${scanMs}ms — top: ${topPick} (${scored[0]?.composite?.toFixed(1) ?? 'N/A'})`);
+    this.logger.log(
+      `SpeedScan: ${scored.length} scored, ${skipped.length} skipped in ${scanMs}ms — ` +
+      `top: ${topPick} (${scored[0]?.composite?.toFixed(1) ?? 'N/A'}, ${topPickTrend})` +
+      (nextBestSymbol ? ` | next: ${nextBestSymbol}` : ''),
+    );
 
     return {
       scan: scored,
       skipped,
       ranked,
       topPick,
+      topPickTrend,
+      nextBestSymbol,
       scannedAt: new Date().toISOString(),
       scanMs,
     };

@@ -78,6 +78,9 @@ function buildCapabilityRows(directives, providers) {
     { name: 'Watchlists', count: 4 },
     { name: 'Processes', count: 3 },
     { name: 'Speed Trading', count: 3 },
+    { name: 'Signals (Envelope + Ladder)', count: 3 },
+    { name: 'Risk (Overview + Gates)', count: 4 },
+    { name: 'Research Overview', count: 1 },
     { name: 'Snapshots', count: 2 },
     { name: 'Backtest Data', count: 1 },
   ].forEach((mod) => {
@@ -115,6 +118,11 @@ function buildCapabilityRows(directives, providers) {
     'Popover API',
     'Scroll-Driven Animations',
     'Glass Panels',
+    'Signal Ladder + Directive Drilldown',
+    'Conflict Resolver (Bull/Bear Detection)',
+    'Risk Gauges + Circuit Breaker UI',
+    'Research Dashboard (8-Panel Aggregate)',
+    'Protocol Selector (Scoring)',
   ].forEach((name) => {
     rows.push({
       category: 'Frontend Feature',
@@ -172,6 +180,10 @@ function buildCapabilityRows(directives, providers) {
     'Trading212 Import Service',
     'Correlation Service',
     'Risk Service (Drawdown Alerts)',
+    'TradingGatesService (3-Gate Pipeline)',
+    'SignalEnvelopeService (Scoring Bridge)',
+    'RiskOverviewService (Circuit Breaker)',
+    'ResearchOverviewService (7-Source Aggregation)',
     'Trading Scheduler (Daily Cron)',
     'Backtest Service',
     'Alert Service',

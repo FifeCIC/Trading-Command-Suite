@@ -1,0 +1,28 @@
+.ts-page { padding: 16px 20px; max-width: 900px; }
+.ts-header { margin-bottom: 16px; }
+.ts-header h1 { margin: 0 0 4px; font-size: 1.3rem; }
+.ts-subtitle { margin: 0; color: var(--textDim); font-size: 0.85rem; }
+.ts-count { color: var(--accent); font-weight: 600; }
+
+.ts-empty { text-align: center; padding: 40px 20px; color: var(--textDim); }
+.ts-seed-btn { margin-top: 10px; padding: 8px 18px; background: var(--accent); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+
+.ts-grid { display: flex; flex-direction: column; gap: 20px; }
+.ts-category { }
+.ts-cat-label { font-size: 0.75rem; text-transform: uppercase; color: var(--textFaint); margin: 0 0 8px; letter-spacing: 0.5px; }
+.ts-cat-items { display: flex; flex-direction: column; gap: 6px; }
+
+.ts-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+.ts-card:hover { border-color: var(--accent); }
+.ts-enabled { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, var(--panel)); }
+.ts-card-left { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.ts-card-label { font-weight: 600; font-size: 0.9rem; }
+.ts-card-desc { font-size: 0.75rem; color: var(--textDim); }
+
+.ts-toggle { width: 44px; height: 24px; border-radius: 12px; background: var(--border); position: relative; transition: background 0.2s; flex-shrink: 0; }
+.ts-toggle-on { background: var(--accent); }
+.ts-toggle-knob { width: 18px; height: 18px; border-radius: 50%; background: #fff; position: absolute; top: 3px; left: 3px; transition: left 0.2s; }
+.ts-toggle-on .ts-toggle-knob { left: 23px; }
+
+.ts-future-note { margin-top: 20px; padding: 10px 14px; background: var(--panel); border: 1px dashed var(--border); border-radius: 6px; }
+.ts-future-note p { margin: 0; font-size: 0.78rem; color: var(--textFaint); }

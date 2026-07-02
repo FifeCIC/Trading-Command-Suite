@@ -1,0 +1,92 @@
+.eq-page { max-width: none; margin: 0; padding: 1.25rem 1.5rem; color: var(--ink); }
+
+/* Header */
+.eq-header { margin-bottom: 0.5rem; }
+.eq-header h1 { margin: 0 0 0.15rem; font-size: 1.2rem; }
+.eq-subtitle { color: var(--ink-soft); font-size: 0.75rem; margin: 0; }
+
+/* Stats Bar */
+.eq-stats-bar { display: flex; gap: 0.4rem; margin-bottom: 0.6rem; flex-wrap: wrap; align-items: center; }
+.eq-stat-chip {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 0.35rem 0.65rem; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel); min-width: 60px;
+}
+.eq-stat-count { font-size: 1.1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.eq-stat-label { font-size: 0.58rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
+.eq-stat-refresh { font-size: 0.7rem; color: var(--accent); margin-left: auto; }
+
+/* Timeline */
+.eq-timeline { display: flex; flex-direction: column; gap: 0.4rem; }
+
+/* Job Card */
+.eq-job-card {
+  background: var(--panel); border: 1px solid var(--line); border-left: 4px solid #94a3b8;
+  border-radius: 8px; padding: 0.6rem 0.75rem;
+}
+.eq-job-card.eq-job-running { border-left-color: #3b82f6; box-shadow: 0 0 8px rgba(59,130,246,0.08); }
+
+.eq-job-top { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.eq-job-name { font-weight: 700; font-size: 0.82rem; }
+.eq-job-status {
+  font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 1px 7px; border-radius: 4px;
+}
+.eq-job-protocol { font-size: 0.65rem; color: var(--ink-soft); }
+.eq-cancel-btn {
+  font-size: 0.65rem; padding: 2px 8px; border: 1px solid #ef4444; border-radius: 4px;
+  background: transparent; color: #ef4444; cursor: pointer; font-family: inherit;
+  margin-left: auto;
+}
+.eq-cancel-btn:hover { background: rgba(239,68,68,0.1); }
+.eq-retry-badge { font-size: 0.62rem; color: #f59e0b; font-weight: 600; }
+
+/* Progress */
+.eq-job-progress { margin: 0.35rem 0; }
+.eq-progress-wrap { position: relative; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.eq-progress-bar {
+  position: absolute; left: 0; top: 0; height: 100%; border-radius: 3px;
+  background: #3b82f6; transition: width 0.5s;
+}
+.eq-progress-text {
+  position: absolute; right: 0; top: -14px; font-size: 0.6rem; color: var(--ink-soft);
+}
+
+/* Timeline */
+.eq-job-timeline { display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 0.2rem 0; }
+.eq-job-time { font-size: 0.65rem; color: var(--ink-soft); }
+.eq-job-duration { font-size: 0.65rem; color: var(--accent); font-weight: 600; }
+
+/* Symbols */
+.eq-job-symbols { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; margin: 0.2rem 0; }
+.eq-symbols-label { font-size: 0.62rem; color: var(--ink-soft); }
+.eq-symbol-tag { font-size: 0.65rem; background: rgba(128,128,128,0.08); padding: 1px 5px; border-radius: 3px; }
+
+/* Error */
+.eq-job-error { font-size: 0.68rem; color: #ef4444; margin-top: 0.2rem; padding: 0.2rem 0.4rem; background: rgba(239,68,68,0.05); border-radius: 4px; }
+
+/* Results */
+.eq-job-results { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 0.3rem; }
+.eq-result-chip {
+  font-size: 0.63rem; padding: 1px 5px; border-radius: 3px;
+  font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.eq-result-chip.eq-result-buy { background: rgba(34,197,94,0.1); color: #22c55e; }
+.eq-result-chip.eq-result-sell { background: rgba(239,68,68,0.1); color: #ef4444; }
+.eq-result-chip.eq-result-hold { background: rgba(148,163,184,0.1); color: #94a3b8; }
+.eq-result-more { font-size: 0.6rem; color: var(--ink-soft); }
+
+/* Trace */
+.eq-job-trace { display: flex; gap: 0.5rem; margin-top: 0.3rem; padding-top: 0.3rem; border-top: 1px solid rgba(128,128,128,0.06); }
+.eq-trace-id { font-size: 0.6rem; color: var(--ink-soft); font-family: monospace; }
+.eq-trace-run { font-size: 0.6rem; color: var(--ink-soft); }
+
+/* Empty */
+.eq-empty-state { text-align: center; padding: 3rem 1rem; }
+.eq-empty-icon { font-size: 2rem; margin-bottom: 0.5rem; color: var(--ink-soft); }
+.eq-empty-state h2 { font-size: 1rem; margin: 0 0 0.3rem; }
+.eq-empty-state p { color: var(--ink-soft); font-size: 0.75rem; max-width: 400px; margin: 0 auto; }
+
+@media (max-width: 760px) {
+  .eq-job-top { flex-direction: column; align-items: flex-start; gap: 0.2rem; }
+}

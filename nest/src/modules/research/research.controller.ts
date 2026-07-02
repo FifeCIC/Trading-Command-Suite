@@ -1,11 +1,22 @@
 import { Controller, Get, Query, Param, Logger } from '@nestjs/common';
 import { FinnhubAdapter } from '../providers/adapters/finnhub.adapter';
+import { ResearchOverviewService } from './research-overview.service';
+import { AnalystTargetsService } from './analyst-targets.service';
 
 @Controller('research')
 export class ResearchController {
   private readonly logger = new Logger(ResearchController.name);
 
-  constructor(private readonly finnhub: FinnhubAdapter) {}
+  constructor(
+    private readonly finnhub: FinnhubAdapter,
+    private readonly overviewService: ResearchOverviewService,
+    private readonly analystTargets: AnalystTargetsService,
+  ) {}
+
+  @Get('overview')
+  async getOverview() {
+    return this.overviewService.getOverview();
+  }
 
   @Get('earnings/calendar')
   async getEarningsCalendar(
@@ -31,33 +42,18 @@ export class ResearchController {
     const symbolList = symbols ? symbols.split(',').map((s) => s.trim().toUpperCase()) : [];
 
     if (symbolList.length === 0) {
-      return { source: 'finnhub', targets: [], error: 'No symbols provided. Use ?symbols=AAPL,NVDA,MSFT' };
+      return { source: 'finnhub+fmp', targets: [], error: 'No symbols provided. Use ?symbols=AAPL,NVDA,MSFT' };
     }
 
-    const results = [];
-    for (const symbol of symbolList.slice(0, 10)) {
-      const target = await this.finnhub.getPriceTarget(symbol);
-      if (target) results.push(target);
-    }
-
-    // Sort
-    if (sort === 'upside') {
-      results.sort((a, b) => (order === 'asc' ? 1 : -1) * ((a.upside ?? 0) - (b.upside ?? 0)));
-    }
-
-    return {
-      source: 'finnhub',
-      count: results.length,
-      targets: results,
-    };
+    return this.analystTargets.getTargets(symbolList.slice(0, 14), sort, order);
   }
 
   @Get('analyst/targets/:symbol')
   async getSymbolTarget(@Param('symbol') symbol: string) {
-    const target = await this.finnhub.getPriceTarget(symbol.toUpperCase());
+    const target = await this.analystTargets.getTargetForSymbol(symbol.toUpperCase());
     if (!target) {
-      return { source: 'finnhub', target: null, error: `No analyst coverage for ${symbol.toUpperCase()}` };
+      return { source: 'finnhub+fmp', target: null, error: `No analyst coverage for ${symbol.toUpperCase()}` };
     }
-    return { source: 'finnhub', target };
+    return { source: target.source, target };
   }
 }

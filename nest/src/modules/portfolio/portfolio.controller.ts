@@ -2,6 +2,7 @@ import { Controller, Get, Query, Logger } from '@nestjs/common';
 import { PortfolioService, PortfolioResponse } from './portfolio.service';
 import { CorrelationService } from './correlation.service';
 import { EarningsService } from '../earnings/earnings.service';
+import { ExitSignalService } from './exit-signal.service';
 
 @Controller('portfolio')
 export class PortfolioController {
@@ -11,6 +12,7 @@ export class PortfolioController {
     private readonly portfolioService: PortfolioService,
     private readonly correlationService: CorrelationService,
     private readonly earningsService: EarningsService,
+    private readonly exitSignalService: ExitSignalService,
   ) {}
 
   @Get()
@@ -55,6 +57,11 @@ export class PortfolioController {
   @Get('exposure')
   async getExposure() {
     return this.correlationService.getExposure();
+  }
+
+  @Get('exit-signals')
+  async getExitSignals() {
+    return this.exitSignalService.analyzeAll();
   }
 
   @Get('events')
@@ -103,13 +110,40 @@ export class PortfolioController {
 
     upcoming.sort((a, b) => (a.events[0]?.daysUntil ?? 999) - (b.events[0]?.daysUntil ?? 999));
 
+    // Compute risk score for each position: earnings proximity × allocation
+    const withRisk = upcoming.map((item) => {
+      const daysUntil = item.events[0]?.daysUntil ?? 999;
+      const allocation = item.position?.allocation ?? 0;
+
+      // Risk score: closer earnings + higher allocation = higher risk
+      const proximityRisk = daysUntil <= 7 ? 40 : daysUntil <= 14 ? 30 : daysUntil <= 30 ? 15 : 5;
+      const allocationRisk = allocation > 15 ? 35 : allocation > 10 ? 25 : allocation > 5 ? 15 : 5;
+      const riskScore = Math.min(100, proximityRisk + allocationRisk);
+
+      let riskLevel: string;
+      if (riskScore >= 60) riskLevel = 'HIGH';
+      else if (riskScore >= 35) riskLevel = 'MEDIUM';
+      else riskLevel = 'LOW';
+
+      return {
+        ...item,
+        riskScore,
+        riskLevel,
+      };
+    });
+
     const nextEarnings = upcoming.length > 0 ? { symbol: upcoming[0].symbol, date: upcoming[0].events[0].date, daysUntil: upcoming[0].events[0].daysUntil } : null;
 
     return {
       holdings: symbols.length,
-      upcomingEvents: upcoming,
+      upcomingEvents: withRisk,
       nextEarnings,
       noData: [...new Set(noData)],
+      riskSummary: {
+        high: withRisk.filter((r) => r.riskLevel === 'HIGH').length,
+        medium: withRisk.filter((r) => r.riskLevel === 'MEDIUM').length,
+        low: withRisk.filter((r) => r.riskLevel === 'LOW').length,
+      },
     };
   }
 }

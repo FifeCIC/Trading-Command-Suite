@@ -76,11 +76,16 @@ import StrategyWizardPage from './pages/StrategyWizardPage';
 import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
 import SymbolDetailPage from './pages/SymbolDetailPage';
 import SpeedTradingPage from './pages/SpeedTradingPage';
+import SpeedScannerPage from './pages/SpeedScannerPage';
 import BtcSpeedTradingPage from './pages/BtcSpeedTradingPage';
 import GoldSpeedTradingPage from './pages/GoldSpeedTradingPage';
+import PortfolioLabPage from './pages/PortfolioLabPage';
 import SnapshotLibraryPage from './pages/SnapshotLibraryPage';
 import ExitSignalsPage from './pages/ExitSignalsPage';
 import StockInvestigationPage from './pages/StockInvestigationPage';
+import PersonalFinancesPage from './pages/PersonalFinancesPage';
+import TradingStylesPage from './pages/TradingStylesPage';
+import ObjectivesPage from './pages/ObjectivesPage';
 import CalculatorsPage from './pages/CalculatorsPage';
 import SystemStatusPage from './pages/SystemStatusPage';
 import SystemLogPage from './pages/SystemLogPage';
@@ -543,6 +548,18 @@ function AppShell() {
       return <ExitSignalsPage />;
     }
 
+    if (secondaryView === 'personal-finances') {
+      return <PersonalFinancesPage />;
+    }
+
+    if (secondaryView === 'trading-styles') {
+      return <TradingStylesPage />;
+    }
+
+    if (secondaryView === 'objectives') {
+      return <ObjectivesPage />;
+    }
+
     if (secondaryView === 'backtest') {
       return <BacktestPage />;
     }
@@ -567,6 +584,10 @@ function AppShell() {
       return <TradeJournalPage />;
     }
 
+    if (secondaryView === 'speed-scanner') {
+      return <SpeedScannerPage />;
+    }
+
     if (secondaryView === 'speed-trading') {
       return <SpeedTradingPage />;
     }
@@ -577,6 +598,10 @@ function AppShell() {
 
     if (secondaryView === 'gold-speed') {
       return <GoldSpeedTradingPage />;
+    }
+
+    if (secondaryView === 'portfolio-lab') {
+      return <PortfolioLabPage />;
     }
 
     if (secondaryView === 'trading212-portfolio') {

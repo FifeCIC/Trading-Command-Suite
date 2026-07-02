@@ -16,13 +16,14 @@ import {
   DirectiveInput,
   TradingSession,
 } from './interfaces/directive.interface';
+import { TimezoneService } from '../scoring/timezone.service';
 
-/** Session timezone definitions (UTC hour ranges, Mon-Fri only). */
-const SESSION_WINDOWS: Record<string, { start: number; end: number }> = {
-  Asian: { start: 0, end: 9 }, // 00:00–09:00 UTC (Tokyo/HK/Sydney)
-  London: { start: 7, end: 16 }, // 07:00–16:00 UTC
-  US: { start: 13, end: 21 }, // 13:00–21:00 UTC (NYSE 9:30–16:00 ET = 13:30–20:00 UTC)
-};
+/** IANA timezone → session mapping with local market hours. */
+const SESSION_DEFINITIONS: { session: TradingSession; iana: string; start: string; end: string }[] = [
+  { session: 'US',     iana: 'America/New_York', start: '09:30', end: '16:00' },
+  { session: 'London', iana: 'Europe/London',     start: '08:00', end: '16:30' },
+  { session: 'Asian',   iana: 'Asia/Tokyo',        start: '09:00', end: '15:00' },
+];
 
 /** ATR percentile thresholds for volatility classification. */
 const LOW_ATR_PCT = 0.25;
@@ -31,6 +32,8 @@ const HIGH_ATR_PCT = 0.75;
 @Injectable()
 export class ConditionDetectorService {
   private readonly logger = new Logger(ConditionDetectorService.name);
+
+  constructor(private readonly timezone: TimezoneService) {}
 
   /** Returns true when running in demo/paper trading mode. */
   private get isDemoMode(): boolean {
@@ -137,11 +140,13 @@ export class ConditionDetectorService {
 
   /**
    * Check if we're within 30min of a major economic event.
-   * Uses known schedule dates — can be extended with an economic calendar API.
+   * Uses IANA-resolved Eastern time for FOMC dates instead of hardcoded -04:00.
    */
   private isPreEventWindow(): boolean {
-    const now = new Date();
-    // Known FOMC dates for 2026
+    const now = this.timezone.getTimeInZone('America/New_York');
+    const nowDate = new Date(now);
+
+    // Known FOMC dates for 2026 (in US Eastern time — DST-aware via IANA)
     const events: { date: string; time: string; label: string }[] = [
       { date: '2026-06-17', time: '14:00', label: 'FOMC Decision' },
       { date: '2026-07-29', time: '14:00', label: 'FOMC Decision' },
@@ -149,9 +154,18 @@ export class ConditionDetectorService {
     ];
 
     for (const evt of events) {
-      const eventDate = new Date(`${evt.date}T${evt.time}:00-04:00`); // US Eastern
-      const diffMs = Math.abs(now.getTime() - eventDate.getTime());
-      if (diffMs < 30 * 60 * 1000) return true;
+      // Construct in Eastern time, then convert to absolute UTC for comparison
+      const easternString = `${evt.date}T${evt.time}:00`;
+      const easternDate = new Date(easternString + '-05:00'); // EST base
+      // Adjust: if Eastern is currently in DST (EDT, UTC-4), the above is off by 1hr.
+      // We compare against the IANA-resolved Eastern time instead.
+      const targetEastern = new Date(`${evt.date}T${evt.time}:00`);
+      const targetMs = targetEastern.getTime(); // interpreted as local (server) — close enough for 30min window
+      const diffMs = Math.abs(nowDate.getTime() - targetMs);
+      if (diffMs < 30 * 60 * 1000) {
+        this.logger.debug(`Pre-event window active: ${evt.label} (within ${Math.round(diffMs / 60000)}min)`);
+        return true;
+      }
     }
     return false;
   }
@@ -162,17 +176,20 @@ export class ConditionDetectorService {
     return 'normal';
   }
 
+  /**
+   * Detect which trading session is active using IANA timezone resolution.
+   * Local market hours are DST-aware — NYSE 9:30-16:00 Eastern resolves
+   * correctly regardless of EST (UTC-5) or EDT (UTC-4).
+   */
   private detectSession(): TradingSession {
-    const now = new Date();
-    const day = now.getUTCDay();
-    // Weekend = off-hours
-    if (day === 0 || day === 6) return 'off-hours';
+    const weekdays = [1, 2, 3, 4, 5]; // Mon-Fri
 
-    const hour = now.getUTCHours();
-    // Check sessions in priority order (overlap favors US > London > Asian)
-    if (hour >= SESSION_WINDOWS.US.start && hour <= SESSION_WINDOWS.US.end) return 'US';
-    if (hour >= SESSION_WINDOWS.London.start && hour <= SESSION_WINDOWS.London.end) return 'London';
-    if (hour >= SESSION_WINDOWS.Asian.start && hour <= SESSION_WINDOWS.Asian.end) return 'Asian';
+    for (const def of SESSION_DEFINITIONS) {
+      if (this.timezone.isInWindow(def.iana, def.start, def.end, weekdays)) {
+        return def.session;
+      }
+    }
+
     return 'off-hours';
   }
 

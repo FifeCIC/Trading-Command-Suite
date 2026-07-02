@@ -19,6 +19,7 @@ import {
   ProviderProfile,
   ProviderQuote,
 } from '../interfaces/provider-adapter.interface';
+import { RateLimitGovernor } from '../rate-limit-governor.service';
 
 const BASE_URL = 'https://finnhub.io/api/v1';
 
@@ -43,6 +44,8 @@ export class FinnhubAdapter implements IProviderAdapter {
   private minuteStart = Date.now();
   private disabled = false;                // 🔒 set true when credentials are bad — skip all subsequent calls
   private disabledReason = '';
+
+  constructor(private readonly governor?: RateLimitGovernor) {}
 
   private get token(): string {
     return this.apiKey;
@@ -90,6 +93,7 @@ export class FinnhubAdapter implements IProviderAdapter {
 
       if (res.status === 429) {
         this.logger.warn('Finnhub rate limit hit (429) — waiting 60s');
+        this.governor?.recordCall('finnhub', false, 429);
         await new Promise((r) => setTimeout(r, 60_000));
         return null;
       }
@@ -97,10 +101,16 @@ export class FinnhubAdapter implements IProviderAdapter {
       if (res.status === 401 || res.status === 403) {
         this.disabled = true;
         this.disabledReason = 'Finnhub API key invalid (401/403)';
+        this.governor?.recordCall('finnhub', false, res.status);
         throw new Error('Finnhub API key invalid — all Finnhub calls disabled for this process');
       }
 
-      if (!res.ok) return null;
+      if (!res.ok) {
+        this.governor?.recordCall('finnhub', false, res.status);
+        return null;
+      }
+
+      this.governor?.recordCall('finnhub', true, res.status);
       return (await res.json()) as T;
     } catch (err) {
       this.logger.warn(`Finnhub request failed: ${(err as Error).message}`);

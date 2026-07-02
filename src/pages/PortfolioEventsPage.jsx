@@ -18,9 +18,12 @@ export default function PortfolioEventsPage() {
   const upcoming = data.upcomingEvents ?? [];
   const nextEarnings = data.nextEarnings;
   const noData = data.noData ?? [];
+  const riskSummary = data.riskSummary ?? {};
 
   const isLoading = eventsQuery.isLoading;
   const isEmpty = !isLoading && upcoming.length === 0;
+
+  const RISK_COLORS = { HIGH: '#ef4444', MEDIUM: '#f59e0b', LOW: '#22c55e' };
 
   return (
     <div className="pe-page">
@@ -39,6 +42,11 @@ export default function PortfolioEventsPage() {
             <span className="pe-next-symbol">{nextEarnings.symbol}</span>
             <span className="pe-next-days">{nextEarnings.daysUntil} days</span>
             <span className="pe-next-date">{nextEarnings.date}</span>
+          </div>
+        )}
+        {riskSummary.high > 0 && (
+          <div className="pe-risk-alert">
+            ⚠️ {riskSummary.high} high-risk position{riskSummary.high > 1 ? 's' : ''} — earnings + large allocation
           </div>
         )}
       </motion.header>
@@ -65,9 +73,14 @@ export default function PortfolioEventsPage() {
             >
               <div className="pe-card-header">
                 <span className="pe-symbol">{item.symbol}</span>
+                {item.riskLevel && (
+                  <span className="pe-risk-badge" style={{ background: (RISK_COLORS[item.riskLevel] || '#6b7280') + '20', color: RISK_COLORS[item.riskLevel] }}>
+                    {item.riskLevel} RISK ({item.riskScore})
+                  </span>
+                )}
                 {item.position && (
                   <span className="pe-position">
-                    {item.position.shares} shares · ${item.position.value?.toFixed(0)}
+                    {item.position.shares} shares · ${item.position.value?.toFixed(0)} · {item.position.allocation?.toFixed(1)}% alloc
                   </span>
                 )}
               </div>

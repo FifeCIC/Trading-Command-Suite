@@ -1,0 +1,99 @@
+.rc-page { max-width: none; margin: 0; padding: 1.25rem 1.5rem; color: var(--ink); }
+
+/* Header */
+.rc-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+.rc-header h1 { margin: 0 0 0.15rem; font-size: 1.2rem; }
+.rc-subtitle { color: var(--ink-soft); font-size: 0.75rem; margin: 0; }
+.rc-clock { font-size: 0.7rem; color: var(--ink-soft); white-space: nowrap; }
+
+/* Gauges Row */
+.rc-gauges { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 0.75rem; }
+
+/* Gauge */
+.rc-gauge {
+  display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
+  padding: 0.8rem 0.5rem; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; text-align: center;
+}
+.rc-gauge-ring {
+  width: 64px; height: 64px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center;
+}
+.rc-gauge-icon { font-size: 1.2rem; }
+.rc-gauge-value { font-size: 1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rc-gauge-label { font-size: 0.6rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* Circuit Breaker */
+.rc-circuit {
+  display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+  padding: 0.8rem 0.5rem; border-radius: 10px; border: 2px solid var(--line);
+  text-align: center; cursor: default; transition: border-color 0.3s;
+}
+.rc-circuit.rc-ready { border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.03); }
+.rc-circuit.rc-tripped { border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.05); animation: pulse-red 2s infinite; }
+@keyframes pulse-red { 0%, 100% { border-color: rgba(239,68,68,0.4); } 50% { border-color: rgba(239,68,68,0.8); } }
+.rc-circuit-icon { font-size: 1.4rem; }
+.rc-circuit-state { font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+.rc-circuit-label { font-size: 0.6rem; color: var(--ink-soft); text-transform: uppercase; }
+.rc-circuit-triggers { display: flex; flex-direction: column; gap: 2px; margin-top: 0.2rem; }
+.rc-trigger-tag { font-size: 0.58rem; color: #ef4444; background: rgba(239,68,68,0.1); padding: 1px 6px; border-radius: 3px; }
+
+/* Sections */
+.rc-section {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 0.75rem 1rem; margin-bottom: 0.5rem;
+}
+.rc-section h2 { margin: 0 0 0.5rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; }
+
+/* Portfolio Health */
+.rc-health-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; margin-bottom: 0.5rem; }
+.rc-health-card {
+  display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+  padding: 0.5rem; border: 1px solid var(--line); border-radius: 8px; background: rgba(128,128,128,0.02);
+}
+.rc-health-val { font-size: 1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rc-health-lbl { font-size: 0.6rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.03em; }
+
+/* Warnings */
+.rc-warnings { display: flex; flex-direction: column; gap: 2px; }
+.rc-warning-row { font-size: 0.72rem; color: #f59e0b; padding: 0.2rem 0; }
+
+/* Limits */
+.rc-limits-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem; }
+.rc-limit-row {
+  display: flex; justify-content: space-between; padding: 0.35rem 0.5rem;
+  border: 1px solid var(--line); border-radius: 6px; font-size: 0.72rem;
+}
+.rc-limit-key { color: var(--ink-soft); }
+.rc-limit-val { font-weight: 700; }
+
+/* Gates */
+.rc-badge-on { font-size: 0.6rem; background: rgba(34,197,94,0.12); color: #22c55e; padding: 1px 6px; border-radius: 4px; font-weight: 700; }
+.rc-badge-off { font-size: 0.6rem; background: rgba(107,114,128,0.12); color: #6b7280; padding: 1px 6px; border-radius: 4px; font-weight: 700; }
+.rc-gates-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+.rc-gate-card {
+  border: 1px solid var(--line); border-top: 3px solid #22c55e;
+  border-radius: 8px; padding: 0.6rem; background: rgba(128,128,128,0.01);
+}
+.rc-gate-title { margin: 0 0 0.4rem; font-size: 0.75rem; }
+.rc-gate-grid { display: flex; flex-direction: column; gap: 3px; }
+.rc-gate-kv { display: flex; justify-content: space-between; font-size: 0.68rem; }
+.rc-gate-key { color: var(--ink-soft); }
+.rc-gate-val { font-weight: 600; }
+.rc-gate-tags { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; margin-top: 0.3rem; font-size: 0.65rem; }
+.rc-tag-label { color: var(--ink-soft); margin-right: 2px; }
+.rc-tag { background: rgba(128,128,128,0.08); padding: 1px 5px; border-radius: 3px; }
+
+/* Kill Switch */
+.rc-empty { color: var(--ink-soft); font-size: 0.75rem; margin: 0; }
+.rc-kill-log { display: flex; flex-direction: column; gap: 0.3rem; }
+.rc-kill-event { display: flex; gap: 0.5rem; padding: 0.4rem 0.5rem; background: rgba(239,68,68,0.05); border-left: 3px solid #ef4444; border-radius: 4px; font-size: 0.72rem; }
+.rc-kill-time { font-weight: 600; color: #ef4444; white-space: nowrap; }
+.rc-kill-reason { color: var(--ink-soft); }
+
+@media (max-width: 760px) {
+  .rc-gauges { grid-template-columns: 1fr 1fr; }
+  .rc-health-grid { grid-template-columns: 1fr 1fr; }
+  .rc-gates-grid { grid-template-columns: 1fr; }
+  .rc-limits-grid { grid-template-columns: 1fr 1fr; }
+}

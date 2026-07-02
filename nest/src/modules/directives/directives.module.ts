@@ -3,6 +3,7 @@ import { DirectivesService } from './directives.service';
 import { DirectivesController } from './directives.controller';
 import { ConditionDetectorService } from './condition-detector.service';
 import { ProvidersModule } from '../providers/providers.module';
+import { TimezoneService } from '../scoring/timezone.service';
 
 // Implemented (real math)
 import { RsiOversoldDirective } from './implementations/rsi-oversold.directive';
@@ -51,6 +52,7 @@ import { ConfluenceReversalComboDirective } from './implementations/confluence-r
 import { NewsSentimentPositiveDirective } from './implementations/news-sentiment.directive';
 import { EarningsProximityDirective } from './implementations/earnings-proximity.directive';
 import { VixRegimeDirective } from './implementations/vix-regime.directive';
+import { DxyRegimeDirective } from './implementations/dxy-regime.directive';
 import { VolatilityEnvelopeDirective } from './implementations/volatility-envelope.directive';
 import { MomentumExhaustionDirective } from './implementations/momentum-exhaustion.directive';
 import { TargetAchievedDirective } from './implementations/target-achieved.directive';
@@ -162,6 +164,7 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
   providers: [
     DirectivesService,
     ConditionDetectorService,
+    TimezoneService,
     // Implemented
     RsiOversoldDirective,
     MacdCrossoverDirective,
@@ -208,6 +211,7 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     PinBarPatternDirective,
     // Implemented — Macro
     VixRegimeDirective,
+    DxyRegimeDirective,
     // MT5 Ported Indicators (Q156) — 17 new directives
     WilliamsRDirective,
     AwesomeOscillatorDirective,
@@ -313,6 +317,8 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
   ],
   exports: [
     DirectivesService,
+    ConditionDetectorService,
+    TimezoneService,
     // Q228 — Pattern Detector Service needs these
     DojiPatternDirective,
     EngulfingPatternDirective,
@@ -373,6 +379,7 @@ export class DirectivesModule implements OnModuleInit {
     private readonly pinBar: PinBarPatternDirective,
     // Implemented — Macro
     private readonly vixRegime: VixRegimeDirective,
+    private readonly dxyRegime: DxyRegimeDirective,
     // Stubs — Macro
     private readonly goldMacro: GoldMacroCorrelationDirective,
     private readonly cadUsdOil: CadUsdOilCorrelationDirective,
@@ -491,6 +498,7 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.pinBar);
     // Implemented — Macro
     this.directivesService.register(this.vixRegime);
+    this.directivesService.register(this.dxyRegime);
     // Stubs — Macro
     this.directivesService.register(this.goldMacro);
     this.directivesService.register(this.cadUsdOil);

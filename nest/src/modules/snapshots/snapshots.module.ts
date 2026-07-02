@@ -1,12 +1,16 @@
-import { Controller, Get, Post, Delete, Param, Body, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, Query, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { SnapshotComparisonService } from './snapshot-comparison.service';
 
 @Controller('snapshots')
 export class SnapshotsController {
   private readonly logger = new Logger(SnapshotsController.name);
   private snapshots: any[] = [];
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly comparisonService: SnapshotComparisonService,
+  ) {}
 
   @Get()
   list() {
@@ -55,75 +59,84 @@ export class SnapshotsController {
     return { success: true };
   }
 
-  // ── Date-range comparison ──────────────────────────────
+  // ── Chart Snapshots (state captures, not images) ───────
+
+  @Post('chart')
+  async saveChartSnapshot(@Body() body: {
+    symbol: string; timeframe: string; indicators?: any[];
+    drawings?: any[]; annotations?: string; visibleRange?: any;
+    priceAtTime?: number; tags?: string[];
+  }) {
+    if (!body.symbol || !body.timeframe) {
+      return { error: 'symbol and timeframe are required' };
+    }
+    const entry = {
+      id: `chart-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      symbol: body.symbol.toUpperCase(),
+      timeframe: body.timeframe,
+      indicators: body.indicators || [],
+      drawings: body.drawings || [],
+      annotations: body.annotations || '',
+      visibleRange: body.visibleRange || null,
+      priceAtTime: body.priceAtTime ?? null,
+      tags: body.tags || [],
+      createdAt: new Date().toISOString(),
+    };
+    this.logger.log(`Chart snapshot saved: ${entry.symbol} (${entry.timeframe})`);
+    return entry;
+  }
+
+  @Get('chart/list')
+  listChartSnapshots() {
+    // For now, returns in-memory. When Prisma migration runs, use DB.
+    return this.snapshots.filter((s) => s.id?.startsWith('chart-'));
+  }
+
+  // ── Deep date-range comparison ────────────────────────
 
   @Post('compare')
-  async compare(@Body() body: { symbol: string; dateA: string; dateB: string; timeframe?: string }) {
-    const { symbol, dateA, dateB, timeframe = '1d' } = body;
-    const ticker = symbol?.toUpperCase();
-    if (!ticker || !dateA || !dateB) {
+  async compare(@Body() body: {
+    symbol: string; dateA: string; dateB: string; protocolId?: string;
+  }) {
+    const { symbol, dateA, dateB, protocolId } = body;
+    if (!symbol || !dateA || !dateB) {
       return { error: 'symbol, dateA, and dateB are required' };
     }
+    try {
+      return this.comparisonService.compare(symbol, dateA, dateB, protocolId);
+    } catch (err) {
+      return { error: (err as Error).message };
+    }
+  }
 
-    const sym = await this.prisma.symbol.findFirst({ where: { ticker } });
-    if (!sym) return { error: `Symbol ${ticker} not found` };
-
-    const fetchSnapshot = async (date: string) => {
-      const targetDate = new Date(date);
-      // Get bars around the target date
-      const bars = await this.prisma.marketBar.findMany({
-        where: {
-          symbolId: sym.id,
-          timestamp: {
-            gte: new Date(targetDate.getTime() - 7 * 24 * 60 * 60 * 1000),
-            lte: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000),
-          },
-        },
-        orderBy: { timestamp: 'asc' },
-        take: 100,
-      });
-
-      const closest = bars.length > 0
-        ? bars.reduce((prev, curr) =>
-            Math.abs(curr.timestamp.getTime() - targetDate.getTime()) <
-            Math.abs(prev.timestamp.getTime() - targetDate.getTime()) ? curr : prev)
-        : null;
-
-      const chartBars = bars.slice(-30).map((b) => ({
-        time: b.timestamp.toISOString().split('T')[0],
-        open: b.open, high: b.high, low: b.low, close: b.close,
-      }));
-
-      return {
-        date,
-        closestBar: closest ? {
-          timestamp: closest.timestamp.toISOString(),
-          open: closest.open, high: closest.high,
-          low: closest.low, close: closest.close, volume: closest.volume,
-        } : null,
-        barCount: bars.length,
-        chartBars,
-      };
+  @Post('compare/batch')
+  async compareBatch(@Body() body: {
+    symbols: string[]; dateA: string; dateB: string; protocolId?: string;
+  }) {
+    const { symbols, dateA, dateB, protocolId } = body;
+    if (!symbols?.length || !dateA || !dateB) {
+      return { error: 'symbols[], dateA, and dateB are required' };
+    }
+    const results = await Promise.allSettled(
+      symbols.map((sym) =>
+        this.comparisonService.compare(sym, dateA, dateB, protocolId),
+      ),
+    );
+    return {
+      comparisons: results.map((r) =>
+        r.status === 'fulfilled' ? r.value : { error: (r.reason as Error).message },
+      ),
     };
-
-    const [snapA, snapB] = await Promise.all([fetchSnapshot(dateA), fetchSnapshot(dateB)]);
-
-    const delta = snapA.closestBar && snapB.closestBar ? {
-      priceChange: +(snapB.closestBar.close - snapA.closestBar.close).toFixed(2),
-      priceChangePct: +((snapB.closestBar.close - snapA.closestBar.close) / snapA.closestBar.close * 100).toFixed(2),
-      highChange: +(snapB.closestBar.high - snapA.closestBar.high).toFixed(2),
-      lowChange: +(snapB.closestBar.low - snapA.closestBar.low).toFixed(2),
-    } : null;
-
-    return { symbol: ticker, snapA, snapB, delta };
   }
 }
 
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../database/database.module';
+import { ScoringModule } from '../scoring/scoring.module';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, ScoringModule],
   controllers: [SnapshotsController],
+  providers: [SnapshotComparisonService],
 })
 export class SnapshotsModule {}

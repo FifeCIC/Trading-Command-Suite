@@ -4,7 +4,7 @@
  * Areas map to footer/quick-menu primary items.
  * Each area's `views` array drives the left sidebar.
  *
- * Current areas (12):
+ * Current areas (13):
  *   - trading    → Trading (SEES tabs, strategies, portfolio, MT5)
  *   - scoring    → Scoring (directives, protocols, SEES diagnostics)
  *   - research   → Research (symbols, snapshots, macro, news, events)
@@ -12,6 +12,7 @@
  *   - data       → Data (sources, tables, imports, API activity, caches)
  *   - watchlists → Watchlists (active symbols, user lists)
  *   - automation → Automation (execution queue, rules, alerts)
+ *   - planner    → Planner (finances, trading styles, objectives)
  *   - builder    → Development (architecture, diagrams, assets, lab tools)
  *   - training   → Training (candle patterns, order testing, MT5 demo)
  *   - status     → Status (system health, platform, risk, security)
@@ -107,6 +108,7 @@ export const NAV_TREE = {
   automation: {
     label: 'Automation',
     views: [
+      { id: 'speed-scanner', label: 'Speed Scanner', icon: '⚡' },
       { id: 'automation-dashboard', label: 'Dashboard', icon: '◉' },
       { id: 'execution-queue', label: 'Execution Queue', icon: '⇢' },
       { id: 'strategies-compare', label: 'Strategy Comparison', icon: '⇆' },
@@ -176,12 +178,21 @@ export const NAV_TREE = {
       { id: 'gold-speed', label: 'Gold Speed (Lab)', icon: '🔬' },
       { id: 'trading212-portfolio', label: 'Trading212 Portfolio (Lab)', icon: '🔬' },
       { id: 'snapshots', label: 'Snapshots (Lab)', icon: '🔬' },
+      { id: 'portfolio-lab', label: 'Portfolio Lab', icon: '🧪' },
     ],
   },
   wizard: {
     label: 'Strategy Wizard',
     views: [
       { id: 'strategy-wizard', label: 'Build Strategy', icon: '🧙' },
+    ],
+  },
+  planner: {
+    label: 'Planner',
+    views: [
+      { id: 'personal-finances', label: 'Personal Finances', icon: '💰' },
+      { id: 'trading-styles', label: 'Trading Styles', icon: '🎨' },
+      { id: 'objectives', label: 'Objectives', icon: '🎯' },
     ],
   },
   settings: {

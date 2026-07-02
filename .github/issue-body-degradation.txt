@@ -1,0 +1,79 @@
+## Problem
+
+When a provider API key expires (e.g. Finnhub 401/403), the system silently degrades — directives return fallback scores, protocols run with partial data, and the user has no idea their scoring is operating on incomplete inputs. This is dangerous for trading decisions.
+
+## Current Behavior
+
+- Finnhub expiry disables 4 directives: EarningsMomentum, SocialBuzz, InsiderActivity, DilutionImpact
+- Each directive logs a warning but continues
+- Protocols run with reduced directive counts
+- Scores are computed from partial data without any degradation indicator
+- The user sees scores that look normal but are actually incomplete
+
+## Discussion Agenda
+
+### 1. Protocol Integrity Gates
+Should protocols have a minimum directive count or minimum data coverage threshold? If a protocol requires 10 directives but only 6 can return real data, should the protocol be marked as degraded or disabled entirely?
+
+Technical suggestion: Add a `minDirectiveCoverage` (e.g. 0.7 = 70%) to ProtocolRun config. If coverage drops below threshold, the protocol run is flagged `degraded` or `unreliable`.
+
+### 2. Cascading Degradation
+- Individual directive failure → directive returns `no_data` with reason
+- Protocol coverage below threshold → protocol marked `degraded`
+- Strategy relying on degraded protocol → strategy output flagged
+- Automation loop using degraded strategy → trading paused with alert
+
+### 3. Existing Position Handling (Critical)
+When the system detects degraded scoring, what should happen to open positions?
+
+Options to discuss:
+- **Close profitable positions** as a precaution (user-configurable)
+- **Adjust TP/SL** — tighten stops or widen targets to capture more before uncertainty
+- **Notification only** — alert the user but take no action
+- **Pause new entries** — stop opening new positions but don't touch existing ones
+
+### 4. User-Configurable Degradation Settings
+Proposed settings page additions:
+- `degradation.closeProfitablePositions` — bool, default false
+- `degradation.adjustStopsOnDegradation` — bool, default false
+- `degradation.notifyOnDegradation` — bool, default true
+- `degradation.pauseAutomationOnDegradation` — bool, default true
+- `degradation.minAcceptableProviderHealth` — percentage, default 50%
+
+### 5. Provider Health & Key Expiry Detection
+- Proactive key expiration checking (Finnhub free keys may expire periodically)
+- Health endpoint should report `credentialsOk: false` with specific reason
+- Dashboard should show degraded providers prominently
+- Automated key expiry reminder (check response for 401/403 and alert)
+
+### 6. Degradation Visibility in UI
+- Score cards should show a degradation indicator when computed from partial data
+- Protocol runner should show directive coverage percentage
+- Automation dashboard should show a warning banner when providers are unhealthy
+- Exit signals should factor in data reliability
+
+## Technical Suggestions
+
+```typescript
+// Proposed DegradationService
+interface ProtocolHealth {
+  protocolId: string;
+  expectedDirectives: number;
+  activeDirectives: number;
+  coverage: number; // 0-1
+  status: 'healthy' | 'degraded' | 'unreliable' | 'disabled';
+  failedProviders: string[];
+  degradedSince: Date;
+}
+
+// ScoringService integration
+if (protocolHealth.coverage < config.minCoverage) {
+  return { score: null, reason: 'protocol_degraded', coverage: protocolHealth.coverage };
+}
+```
+
+## Related
+
+- Finnhub free tier: 60 calls/min — key rotation may be needed periodically
+- Rate Limit Governor (#123) complements this — prevents exhausting limits
+- Provider Health page (#158) should show degradation status
