@@ -17,6 +17,8 @@ import { StrategyCompetitionService } from './strategy-competition.service';
 import { PredictiveScoringService } from './predictive-scoring.service';
 import { OutcomeTrackerService } from './outcome-tracker.service';
 import { SectorRotationService } from './sector-rotation.service';
+import { SeasonalAffinityService } from './seasonal-affinity.service';
+import { ProviderDegradationService } from '../providers/provider-degradation.service';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
 
 @ApiTags('scoring')
@@ -29,6 +31,8 @@ export class ScoringController {
     private readonly predictiveService: PredictiveScoringService,
     private readonly outcomeTracker: OutcomeTrackerService,
     private readonly sectorRotation: SectorRotationService,
+    private readonly degradationService: ProviderDegradationService,
+    private readonly seasonalAffinity: SeasonalAffinityService,
   ) {}
 
   @Get('ranked')
@@ -48,6 +52,44 @@ export class ScoringController {
       : 20;
 
     return this.scoringService.rankAll(strategyId, safeLimit);
+  }
+
+  @Get('degradation')
+  @UseInterceptors(new CacheInterceptor(15000))
+  @ApiOperation({ summary: 'Get provider degradation status and scoring integrity' })
+  @ApiOkResponse({ description: 'Degradation status with provider health and coverage' })
+  getDegradation() {
+    const allProviders = this.degradationService.getAll();
+    const failedProviders = allProviders.filter(p => p.status === 'failed');
+    const degradedProviders = allProviders.filter(p => p.status === 'degraded');
+    const healthyProviders = allProviders.filter(p => p.status === 'healthy');
+    const coverage = allProviders.length > 0
+      ? (allProviders.length - failedProviders.length) / allProviders.length
+      : 1.0;
+
+    return {
+      isDegraded: failedProviders.length > 0 || degradedProviders.length > 0,
+      coverage: Number(coverage.toFixed(2)),
+      providers: {
+        total: allProviders.length,
+        healthy: healthyProviders.length,
+        degraded: degradedProviders.length,
+        failed: failedProviders.length,
+      },
+      failedProviderIds: failedProviders.map(p => p.providerId),
+      degradedProviderIds: degradedProviders.map(p => p.providerId),
+      details: allProviders.map(p => ({
+        providerId: p.providerId,
+        status: p.status,
+        reason: p.reason,
+      })),
+      warning: failedProviders.length > 0
+        ? `Scoring degraded — ${failedProviders.length} provider(s) failed: ${failedProviders.map(p => p.providerId).join(', ')}`
+        : degradedProviders.length > 0
+          ? `Scoring degraded — ${degradedProviders.length} provider(s) experiencing issues`
+          : null,
+      timestamp: new Date().toISOString(),
+    };
   }
 
   @Post('run')
@@ -188,5 +230,53 @@ export class ScoringController {
   @ApiOperation({ summary: 'Sector ETF rotation with protocol stratification' })
   async getSectorRotation() {
     return this.sectorRotation.getRotation();
+  }
+
+  /**
+   * GET /api/scoring/seasonal/current
+   *
+   * Returns the current seasonal affinity weight for every protocol.
+   * Shows which protocols are seasonally favored/disfavored right now.
+   */
+  @Get('seasonal/current')
+  @UseInterceptors(new CacheInterceptor(300000))
+  async getSeasonalWeights() {
+    const { PROTOCOL_REGISTRY } = await import('../directives/directive-groups');
+    const weights: Array<{
+      protocolId: string;
+      protocolName: string;
+      weight: number;
+      label: string;
+      source: string;
+      month: number;
+      day: number;
+    }> = [];
+
+    for (const [id, proto] of Object.entries(PROTOCOL_REGISTRY)) {
+      const affinity = this.seasonalAffinity.getAffinity(id);
+      weights.push({
+        protocolId: id,
+        protocolName: proto.name,
+        weight: Math.round(affinity.weight * 100) / 100,
+        label: affinity.label || '',
+        source: affinity.source,
+        month: affinity.month + 1,
+        day: affinity.day,
+      });
+    }
+
+    weights.sort((a, b) => b.weight - a.weight);
+
+    const now = new Date();
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    return {
+      generatedAt: now.toISOString(),
+      currentMonth: monthNames[now.getMonth()],
+      currentDay: now.getDate(),
+      protocols: weights,
+      topPick: weights[0] || null,
+      activeCount: weights.filter(w => w.weight !== 0).length,
+    };
   }
 }

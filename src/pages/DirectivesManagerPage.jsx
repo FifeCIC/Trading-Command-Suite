@@ -11,9 +11,10 @@ function hydrateFromApi(raw) {
     code: raw.id,
     name: raw.name,
     category: raw.category ?? 'Uncategorized',
-    active: raw.active !== false, // default true
+    active: raw.active !== false,
     status: raw.active !== false ? 'active' : 'inactive',
-    complexity: 'Medium',
+    complexity: raw.complexity?.label ?? 'Basic',
+    protocolCount: raw.protocolCount ?? 0,
     baseWeight: raw.priority ?? 50,
     boostEnabled: false,
     multiplierEnabled: false,
@@ -203,6 +204,7 @@ export default function DirectivesManagerPage() {
                 <th>Category</th>
                 <th>Status</th>
                 <th>Complexity</th>
+                <th>Protocols</th>
                 <th>Weighting</th>
                 <th>Tests</th>
               </tr>
@@ -247,6 +249,9 @@ export default function DirectivesManagerPage() {
                         </span>
                       </td>
                       <td>{item.complexity}</td>
+                      <td style={{ color: item.protocolCount > 0 ? 'var(--accent)' : 'var(--ink-soft)' }}>
+                        {item.protocolCount || '—'}
+                      </td>
                       <td>
                         base {item.baseWeight}
                         <span className="directive-weight-meta">

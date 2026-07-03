@@ -62,6 +62,7 @@
 
 .sc-empty { text-align: center; padding: 2rem; color: var(--ink-soft); font-size: 0.78rem; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 0.6rem; }
 .sc-empty-text { color: var(--ink-soft); font-size: 0.75rem; }
+.sc-source-note { color: var(--ink-soft); font-size: 0.7rem; font-style: italic; margin-bottom: 0.5rem; }
 
 @media (max-width: 768px) {
   .sc-best-worst { grid-template-columns: 1fr; }

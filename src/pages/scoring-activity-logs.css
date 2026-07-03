@@ -51,3 +51,53 @@
 .sal-formula-label { color: var(--ink-soft); }
 .sal-formula-term { color: var(--accent); }
 .sal-formula-eq { color: var(--ink); font-weight: 700; }
+
+/* ── Directive Trace ── */
+.sal-expand-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.3rem;
+}
+.sal-score-chip {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.3rem 0.5rem; border-radius: 4px; cursor: pointer;
+  border: 1px solid transparent; transition: border-color 0.15s;
+  background: rgba(14,165,166,0.03);
+}
+.sal-score-chip:hover { border-color: var(--accent); }
+.sal-score-active { border-color: var(--accent); background: rgba(14,165,166,0.08); }
+.sal-trace-loading, .sal-trace-empty { font-size: 0.7rem; color: var(--ink-soft); padding: 0.5rem 0; }
+.sal-trace {
+  border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem; background: rgba(128,128,128,0.02);
+}
+.sal-trace-head {
+  display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; font-weight: 700;
+  margin-bottom: 0.4rem; padding-bottom: 0.3rem; border-bottom: 1px solid rgba(128,128,128,0.08);
+}
+.sal-trace-close {
+  margin-left: auto; background: none; border: 1px solid transparent; color: var(--ink-soft);
+  cursor: pointer; font-size: 0.7rem; padding: 1px 4px; border-radius: 3px;
+}
+.sal-trace-close:hover { border-color: #ef4444; color: #ef4444; }
+.sal-trace-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.35rem; }
+.sal-trace-group {
+  border: 1px solid var(--line); border-radius: 6px; padding: 0.3rem;
+}
+.sal-trace-risk { background: rgba(239,68,68,0.02); }
+.sal-trace-group-head {
+  display: flex; justify-content: space-between; font-size: 0.68rem; font-weight: 700;
+  margin-bottom: 0.15rem;
+}
+.sal-trace-dir {
+  display: flex; align-items: center; gap: 0.3rem; padding: 0.1rem 0.2rem;
+  border-radius: 2px; font-size: 0.62rem; border-left: 3px solid transparent;
+}
+.sal-trace-bullish { border-left-color: rgba(34,197,94,0.3); }
+.sal-trace-bearish { border-left-color: rgba(239,68,68,0.3); }
+.sal-trace-neutral { border-left-color: rgba(148,163,184,0.2); }
+.sal-trace-dir-name { min-width: 85px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sal-trace-dir-score { font-weight: 700; min-width: 22px; text-align: right; }
+.sal-trace-dir-reason { font-size: 0.58rem; color: var(--ink-soft); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sal-trace-conflicts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 0.3rem; }
+.sal-conflict-chip {
+  font-size: 0.6rem; color: #f59e0b; background: rgba(245,158,11,0.08);
+  padding: 1px 5px; border-radius: 3px;
+}

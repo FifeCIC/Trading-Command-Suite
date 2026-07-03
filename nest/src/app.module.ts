@@ -31,6 +31,7 @@ import { TrainingModule } from './modules/training/training.module';
 import { NewsModule } from './modules/news/news.module';
 import { ResearchModule } from './modules/research/research.module';
 import { SnapshotsModule } from './modules/snapshots/snapshots.module';
+import { DecoderModule } from './modules/decoder/decoder.module';
 import { TimelineModule } from './modules/timeline/timeline.module';
 import { JournalModule } from './modules/journal/journal.module';
 import { CalibrationModule } from './modules/calibration/calibration.module';
@@ -87,6 +88,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     NewsModule,
     ResearchModule,
     SnapshotsModule,
+    DecoderModule,
     TimelineModule,
     JournalModule,
     CalibrationModule,

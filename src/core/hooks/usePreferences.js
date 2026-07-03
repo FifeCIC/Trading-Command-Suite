@@ -21,6 +21,12 @@ const DEFAULTS = {
   // Performance
   pollingInterval: 30,
   chartAnimation: true,
+  // Degradation — how the system behaves when providers fail
+  degradationNotify: true,
+  degradationPauseAutomation: true,
+  degradationCloseProfitable: false,
+  degradationAdjustStops: false,
+  degradationMinProviderHealth: 50,
 };
 
 let cached = null;

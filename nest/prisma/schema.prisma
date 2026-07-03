@@ -678,6 +678,19 @@ model CacheMeta {
   updatedAt  DateTime @updatedAt
 }
 
+model DecodedDocument {
+  id                String   @id @default(uuid()) @db.VarChar(36)
+  content           String   @db.Text
+  format            String   @db.VarChar(50)
+  parsedFields      Json
+  extractedSymbols  Json
+  sentiment         String?  @db.VarChar(20)
+  analysis          Json?
+  createdAt         DateTime @default(now())
+
+  @@index([format, createdAt])
+}
+
 model StrategyMeta {
   id          String   @id @default(uuid()) @db.VarChar(36)
   strategyId  String   @unique @db.VarChar(36)
@@ -957,17 +970,19 @@ model StrategyEvaluation {
 }
 
 model ProtocolRun {
-  id           Int      @id @default(autoincrement())
-  name         String   @db.VarChar(200)
-  protocolId   String   @db.VarChar(100)
-  symbols      Json
-  status       String   @default("pending") @db.VarChar(20)
-  results      Json?
-  errorMessage String?  @db.Text
-  runCount     Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  lastRunAt    DateTime?
+  id              Int      @id @default(autoincrement())
+  name            String   @db.VarChar(200)
+  protocolId      String   @db.VarChar(100)
+  symbols         Json
+  status          String   @default("pending") @db.VarChar(20)
+  results         Json?
+  errorMessage    String?  @db.Text
+  coverage        Float?   @default(1.0)
+  degradedProviders String? @db.Text
+  runCount        Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastRunAt       DateTime?
 
   @@index([protocolId])
   @@index([status])
@@ -1112,4 +1127,85 @@ model TradingObjective {
   @@map("trading_objective")
   @@index([status])
   @@index([category])
+}
+
+// ── Macro Snapshot ────────────────────────────────────────
+// Persists DXY regime and macro context at each scoring run.
+// Enables regime-change detection, historical analysis,
+// and notifications when DXY crosses key thresholds.
+
+model MacroSnapshot {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  dxyValue    Float?                        // DXY index value (or proxy-derived)
+  eurusdValue Float?                        // EURUSD quote used as proxy
+  regime      String   @db.VarChar(20)     // weak | neutral | strong | extreme
+  source      String   @db.VarChar(50)     // mt5 | finnhub | eurusd-proxy
+  dxyActual   Float?                        // Direct DXY quote if available (non-proxy)
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([regime, createdAt])
+}
+
+// ── Social Mentions ───────────────────────────────────────
+// Stores social media sentiment snapshots from Finnhub.
+// Populated by ResearchImportService cron job.
+// Consumed by social-buzz directive instead of live API calls.
+
+model SocialMention {
+  id               String   @id @default(uuid()) @db.VarChar(36)
+  symbol           String   @db.VarChar(20)
+  redditMentions   Int      @default(0)
+  redditSentiment  Float    @default(0)       // -1 to 1
+  twitterMentions  Int      @default(0)
+  twitterSentiment Float    @default(0)       // -1 to 1
+  totalMentions    Int      @default(0)
+  avgSentiment     Float    @default(0)       // -1 to 1
+  source           String   @default("finnhub") @db.VarChar(30)
+  fetchedAt        DateTime @default(now())
+
+  @@index([symbol, fetchedAt])
+  @@index([fetchedAt])
+}
+
+// ── Insider Transactions ──────────────────────────────────
+// Stores insider buying/selling records from Finnhub.
+// Populated by ResearchImportService cron job.
+// Consumed by insider-activity directive instead of live API calls.
+
+model InsiderTransaction {
+  id              String   @id @default(uuid()) @db.VarChar(36)
+  symbol          String   @db.VarChar(20)
+  name            String   @db.VarChar(200)
+  share           Int      @default(0)
+  change          Int      @default(0)
+  transactionDate DateTime
+  transactionCode String   @db.VarChar(10)    // P=Purchase, S=Sell, A=Award, D=Disposition
+  filingDate      DateTime
+  currency        String   @default("USD") @db.VarChar(10)
+  source          String   @default("finnhub") @db.VarChar(30)
+  fetchedAt       DateTime @default(now())
+
+  @@index([symbol, transactionDate])
+  @@index([fetchedAt])
+}
+
+// ── Company Metrics ───────────────────────────────────────
+// Stores share dilution and market cap data from Finnhub.
+// Populated by ResearchImportService cron job.
+// Consumed by dilution-impact directive instead of live API calls.
+
+model CompanyMetric {
+  id                String   @id @default(uuid()) @db.VarChar(36)
+  symbol            String   @db.VarChar(20)
+  sharesOutstanding Float    @default(0)       // in millions
+  shareChange3m     Float    @default(0)       // % change over 3 months
+  shareChange12m    Float    @default(0)       // % change over 12 months
+  marketCap         Float    @default(0)       // in millions
+  source            String   @default("finnhub") @db.VarChar(30)
+  fetchedAt         DateTime @default(now())
+
+  @@unique([symbol])
+  @@index([symbol, fetchedAt])
+  @@index([fetchedAt])
 }

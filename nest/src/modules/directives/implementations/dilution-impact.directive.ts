@@ -5,7 +5,8 @@
  * Share count increases dilute existing shareholders and typically
  * pressure stock prices.
  *
- * Data source: Finnhub /stock/metric (free tier)
+ * Data source: CompanyMetric DB table (populated by ResearchImportService cron).
+ * Previously called Finnhub /stock/metric directly on every scoring run.
  *
  * Scoring:
  * - 3-month share change: penalty for dilution (0-40)
@@ -22,7 +23,7 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
-import { ProvidersService } from '../../providers/providers.service';
+import { PrismaService } from '../../../database/prisma.service';
 
 const MIN_BARS = 1;
 
@@ -32,12 +33,14 @@ export class DilutionImpactDirective implements IDirective {
   readonly id = 'dilution-impact';
   readonly name = 'Dilution Impact';
   readonly description =
-    'Penalises stocks with recent share dilution. No dilution = full score. Finnhub free tier.';
+    'Penalises stocks with recent share dilution. No dilution = full score. Reads from CompanyMetric DB table.';
   readonly priority = 45;
   readonly maxScore = 60; // Risk penalty — lower ceiling
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
 
-  constructor(private readonly providers: ProvidersService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+  ) {}
 
   async calculate(input: DirectiveInput): Promise<DirectiveResult> {
     const symbol = input.symbol;
@@ -52,14 +55,16 @@ export class DilutionImpactDirective implements IDirective {
     }
 
     try {
-      const finnhub = this.providers.getAdapter('finnhub');
-      if (!finnhub) return { score: 0, confidence: 0, signalClass: 'neutral', reason: 'Finnhub not available' };
-      const metrics = await (finnhub as any).getCompanyMetrics(symbol);
+      // Query company metrics from DB
+      const metrics = await this.prisma.companyMetric.findUnique({
+        where: { symbol: symbol.toUpperCase() },
+      });
+
       if (!metrics) {
         return {
           score: 0,
-          confidence: 0.5,
-          reason: `No company metrics data for ${symbol}. Unable to assess dilution risk.`,
+          confidence: 0,
+          reason: `No company metrics data for ${symbol}. Import job may not have run yet.`,
           signalClass: 'neutral',
         };
       }
@@ -98,15 +103,15 @@ export class DilutionImpactDirective implements IDirective {
       return {
         score: totalScore,
         confidence: 0.65,
-        reason: `${riskLabel}. 3m change: ${change3m > 0 ? '+' : ''}${change3m.toFixed(1)}%, 12m change: ${change12m > 0 ? '+' : ''}${change12m.toFixed(1)}%, Shares: ${shares}M. Penalty: ${totalPenalty}/${this.maxScore}. Score: ${totalScore}/${this.maxScore}.`,
+        reason: `${riskLabel} (DB). 3m change: ${change3m > 0 ? '+' : ''}${change3m.toFixed(1)}%, 12m change: ${change12m > 0 ? '+' : ''}${change12m.toFixed(1)}%, Shares: ${shares}M. Penalty: ${totalPenalty}/${this.maxScore}. Score: ${totalScore}/${this.maxScore}.`,
         signalClass: 'neutral',
       };
     } catch (err) {
       this.logger.warn(`Dilution impact failed for ${symbol}: ${(err as Error).message}`);
       return {
         score: 0,
-        confidence: 0.1,
-        reason: `Failed to fetch dilution data: ${(err as Error).message}`,
+        confidence: 0,
+        reason: `Failed to query dilution data from DB: ${(err as Error).message}`,
         signalClass: 'neutral',
       };
     }

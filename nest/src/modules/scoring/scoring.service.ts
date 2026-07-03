@@ -24,7 +24,9 @@ import { NotificationService } from '../notifications/notifications.service';
 import { CalibrationService } from '../calibration/calibration.service';
 import { OutcomeTrackerService } from './outcome-tracker.service';
 import { SeasonalAffinityService } from './seasonal-affinity.service';
+import { MacroSnapshotService } from './macro-snapshot.service';
 import { AdapterFactory } from '../providers/adapter-factory';
+import { ProviderDegradationService } from '../providers/provider-degradation.service';
 import {
   DirectiveInput,
   MarketBar,
@@ -65,6 +67,9 @@ export interface RankedSymbol {
   maxPossibleScore: number;
   totalDirectives: number;
   activeDirectives: number;
+  coverage: number;
+  degraded: boolean;
+  degradedProviders: string[];
   confidence: number;
   freshness: string;
   signal: string;
@@ -78,6 +83,13 @@ export interface RankedResult {
   services: { database: boolean; queue: boolean; redis: boolean };
   strategy: { name: string; entryThreshold: number; watchThreshold: number; maxPossibleScore: number; directiveCount: number };
   summary: { symbolsWithData: number; symbolsWithoutData: number; totalSymbols: number };
+  degradation: {
+    overallCoverage: number;
+    degradedProviders: string[];
+    failedProviders: string[];
+    isDegraded: boolean;
+    warning: string | null;
+  };
   conditionVector?: {
     regime: string;
     volatility: string;
@@ -107,7 +119,9 @@ export class ScoringService implements OnModuleInit {
     private readonly calibrationService: CalibrationService,
     private readonly outcomeTracker: OutcomeTrackerService,
     private readonly seasonalAffinity: SeasonalAffinityService,
+    private readonly macroSnapshot: MacroSnapshotService,
     private readonly adapterFactory: AdapterFactory,
+    private readonly degradationService: ProviderDegradationService,
   ) {}
 
   /** On startup, detect directive version changes and log warnings. */
@@ -147,6 +161,30 @@ export class ScoringService implements OnModuleInit {
     const protocolMaxScore = allDirectives.reduce((sum, d) => sum + d.maxScore, 0);
     const protocolDirectiveCount = allDirectives.length;
 
+    // ── Degradation check ─────────────────────────────────
+    // Check all registered providers for health status. Failed/degraded providers
+    // mean some directives may return no_data or fallback scores.
+    const allProviders = this.degradationService.getAll();
+    const failedProviders = allProviders.filter(p => p.status === 'failed').map(p => p.providerId);
+    const degradedProviders = allProviders.filter(p => p.status === 'degraded').map(p => p.providerId);
+    const totalKnownProviders = allProviders.length || 5; // fallback: 5 known providers
+    const healthyCount = totalKnownProviders - failedProviders.length;
+    const overallCoverage = totalKnownProviders > 0 ? healthyCount / totalKnownProviders : 1.0;
+    const isDegraded = failedProviders.length > 0 || degradedProviders.length > 0;
+    const degradationWarning = failedProviders.length > 0
+      ? `Scoring is DEGRADED — ${failedProviders.length} provider(s) failed: ${failedProviders.join(', ')}. Scores may be unreliable.`
+      : degradedProviders.length > 0
+        ? `Scoring is DEGRADED — ${degradedProviders.length} provider(s) degraded: ${degradedProviders.join(', ')}.`
+        : null;
+
+    const degradation = {
+      overallCoverage,
+      degradedProviders,
+      failedProviders,
+      isDegraded,
+      warning: degradationWarning,
+    };
+
     const base = {
       mode: modeInfo.mode,
       services: {
@@ -164,7 +202,7 @@ export class ScoringService implements OnModuleInit {
     };
 
     if (!this.prisma.isAvailable) {
-      return { ...base, summary: { symbolsWithData: 0, symbolsWithoutData: 0, totalSymbols: 0 }, ranked: [] };
+      return { ...base, degradation, summary: { symbolsWithData: 0, symbolsWithoutData: 0, totalSymbols: 0 }, ranked: [] };
     }
 
     const symbols = await this.prisma.symbol.findMany({
@@ -174,7 +212,7 @@ export class ScoringService implements OnModuleInit {
     });
 
     if (symbols.length === 0) {
-      return { ...base, summary: { symbolsWithData: 0, symbolsWithoutData: 0, totalSymbols: 0 }, ranked: [] };
+      return { ...base, degradation, summary: { symbolsWithData: 0, symbolsWithoutData: 0, totalSymbols: 0 }, ranked: [] };
     }
 
     const ranked: RankedSymbol[] = [];
@@ -191,6 +229,17 @@ export class ScoringService implements OnModuleInit {
       }
     } catch {
       // MT5 may be offline — directive falls back gracefully
+    }
+
+    // ── Persist macro snapshot & detect regime change ─────
+    if (eurusdValue !== undefined && eurusdValue > 0) {
+      // Derive DXY proxy from EURUSD (EURUSD is 57.6% of DXY basket — inverse)
+      const proxyDxy = eurusdValue >= 1.15 ? 98 : eurusdValue >= 1.08 ? 103 : 108;
+      this.macroSnapshot.capture({
+        eurusdValue,
+        dxyValue: proxyDxy,
+        source: 'eurusd-proxy',
+      }).catch(err => this.logger.warn(`Macro snapshot failed: ${(err as Error).message}`));
     }
 
     for (const symbol of symbols) {
@@ -362,6 +411,10 @@ export class ScoringService implements OnModuleInit {
         });
       }
 
+      // Compute per-symbol coverage from active vs total directives
+      const symbolCoverage = totalDirectives > 0 ? activeDirectives / totalDirectives : 1;
+      const symbolDegraded = symbolCoverage < 1.0;
+
       ranked.push({
         symbolId: symbol.id,
         ticker: symbol.ticker,
@@ -370,6 +423,9 @@ export class ScoringService implements OnModuleInit {
         maxPossibleScore: hasData ? maxPossibleScore : 0,
         totalDirectives,
         activeDirectives,
+        coverage: Number(symbolCoverage.toFixed(2)),
+        degraded: symbolDegraded,
+        degradedProviders: [...failedProviders, ...degradedProviders],
         confidence: hasData ? Number(avgConfidence.toFixed(2)) : 0,
         freshness: hasData ? 'live' : 'deterministic',
         signal,
@@ -425,6 +481,7 @@ export class ScoringService implements OnModuleInit {
 
     return {
       ...base,
+      degradation,
       summary,
       conditionVector: this.buildConditionVectorResponse(),
       activationStats: this.buildActivationStats(ranked),

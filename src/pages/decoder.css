@@ -306,3 +306,27 @@
   white-space: pre-wrap;
   color: var(--ink, #e2e8f0);
 }
+
+/* ─── AI Analysis Panel ────────────────────────────────── */
+.decoder-ai-panel {
+  margin-top: 0.5rem; padding: 0.6rem 0.8rem;
+  border: 1px solid var(--line); border-radius: 8px;
+  background: rgba(128,128,128,0.02);
+}
+.decoder-ai-loading { font-size: 0.75rem; color: var(--accent); text-align: center; }
+.decoder-ai-hint { font-size: 0.7rem; color: var(--ink-soft); text-align: center; }
+.decoder-ai-head {
+  display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.3rem; flex-wrap: wrap;
+}
+.decoder-ai-sentiment { font-weight: 700; font-size: 0.78rem; }
+.decoder-ai-confidence { font-size: 0.65rem; color: var(--ink-soft); }
+.decoder-ai-score { font-size: 0.65rem; color: var(--ink-soft); }
+.decoder-ai-summary { font-size: 0.72rem; color: var(--ink-soft); line-height: 1.4; margin: 0.3rem 0; }
+.decoder-ai-tickers, .decoder-ai-dates {
+  display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-top: 0.25rem;
+}
+.decoder-ai-label { font-size: 0.62rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.03em; }
+.decoder-date-tag {
+  font-size: 0.62rem; background: rgba(59,130,246,0.08); color: #3b82f6;
+  padding: 1px 5px; border-radius: 3px;
+}

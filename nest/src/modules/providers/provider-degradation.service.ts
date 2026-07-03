@@ -17,7 +17,7 @@
  *   }
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 
 export type ProviderHealth = 'healthy' | 'degraded' | 'failed' | 'unknown';
 
@@ -32,12 +32,22 @@ interface ProviderState {
 export class ProviderDegradationService {
   private readonly logger = new Logger(ProviderDegradationService.name);
   private readonly states = new Map<string, ProviderState>();
+  private notifications: any = null; // NotificationService injected optionally
 
   /** Maximum consecutive errors before marking as failed */
   private readonly MAX_ERRORS = 3;
 
   /** How long to wait before retrying a failed provider (ms) */
   private readonly RETRY_AFTER_MS = 300_000; // 5 min
+
+  constructor() {
+    // NotificationService injected via setter to avoid circular dependency
+  }
+
+  /** Set notification service reference (called by module after construction) */
+  setNotificationService(service: any): void {
+    this.notifications = service;
+  }
 
   // ── Public API ──────────────────────────────────────────
 
@@ -85,6 +95,7 @@ export class ProviderDegradationService {
     const existing = this.states.get(providerId);
     if (existing?.status === 'failed') {
       this.logger.log(`${providerId}: recovered from failed state`);
+      this.notifyStatusChange(providerId, 'healthy', 'Recovered from failed state');
     }
     this.states.set(providerId, {
       status: 'healthy',
@@ -101,13 +112,17 @@ export class ProviderDegradationService {
 
     // 401/403 = auth failure = immediate fail (no recovery without key fix)
     if (httpStatus === 401 || httpStatus === 403) {
+      const wasHealthy = existing?.status === 'healthy' || existing?.status === 'degraded' || !existing;
       this.states.set(providerId, {
         status: 'failed',
         lastChecked: Date.now(),
         consecutiveErrors: errors,
         reason: `Auth failure (HTTP ${httpStatus}): ${error}`,
       });
-      this.logger.warn(`${providerId}: auth failure — marked as failed until key is updated`);
+      if (wasHealthy) {
+        this.logger.warn(`${providerId}: auth failure — marked as failed until key is updated`);
+        this.notifyStatusChange(providerId, 'failed', `Auth failure (HTTP ${httpStatus}) — ${error}`);
+      }
       return;
     }
 
@@ -124,13 +139,17 @@ export class ProviderDegradationService {
 
     // Consecutive errors — degrade then fail
     if (errors >= this.MAX_ERRORS) {
+      const wasNotFailed = existing?.status !== 'failed';
       this.states.set(providerId, {
         status: 'failed',
         lastChecked: Date.now(),
         consecutiveErrors: errors,
         reason: `${errors} consecutive errors: ${error}`,
       });
-      this.logger.warn(`${providerId}: marked as failed after ${errors} errors`);
+      if (wasNotFailed) {
+        this.logger.warn(`${providerId}: marked as failed after ${errors} errors`);
+        this.notifyStatusChange(providerId, 'failed', `Failed after ${errors} consecutive errors`);
+      }
     } else {
       this.states.set(providerId, {
         status: 'degraded',
@@ -138,6 +157,22 @@ export class ProviderDegradationService {
         consecutiveErrors: errors,
         reason: `${errors} consecutive errors: ${error}`,
       });
+    }
+  }
+
+  /** Send a notification when provider status changes */
+  private notifyStatusChange(providerId: string, status: string, detail: string): void {
+    if (!this.notifications) return;
+    try {
+      this.notifications.send({
+        event: 'provider-degraded',
+        title: `Provider ${status === 'failed' ? 'FAILED' : 'RECOVERED'}: ${providerId}`,
+        body: `${providerId} is now ${status}. ${detail}`,
+        metadata: { providerId, status, detail },
+      });
+    } catch (err) {
+      // Never let notification errors cascade
+      this.logger.debug(`Failed to send provider notification: ${(err as Error).message}`);
     }
   }
 

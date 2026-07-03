@@ -1,4 +1,6 @@
 import { useState, useCallback } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { apiPost } from '../core/api/client';
 import './decoder.css';
 
 // Known format parsers
@@ -116,15 +118,17 @@ export default function DecoderPage() {
   const [input, setInput] = useState('');
   const [detectedFormat, setDetectedFormat] = useState('generic');
   const [parseResults, setParseResults] = useState(null);
-  const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(true);
+  const [backendResult, setBackendResult] = useState(null);
+
+  const parseMutation = useMutation({
+    mutationFn: (content) => apiPost('/api/decoder/parse', { content }),
+    onSuccess: (data) => setBackendResult(data),
+  });
 
   const handlePaste = useCallback((e) => {
     const text = e.clipboardData?.getData('text') || e.target.value;
-    // Debounce detection on next tick
-    setTimeout(() => {
-      const format = detectFormat(text);
-      setDetectedFormat(format);
-    }, 0);
+    setTimeout(() => setDetectedFormat(detectFormat(text)), 0);
   }, []);
 
   const handleParse = useCallback(() => {
@@ -144,7 +148,6 @@ export default function DecoderPage() {
           const m = matches[0];
           if (m) {
             let value = m[1] || m[0];
-            // Clean up common extras
             if (pattern.key === 'revenueEst' && m[2]) value = `${m[1]} ${m[2]}`;
             if (pattern.key === 'shortChange' && m[2]) value = `${m[1]} ${m[2]}`;
             if (pattern.key === 'priceDrift' && m[2]) value = `${m[1]} ${m[2]}`;
@@ -158,7 +161,12 @@ export default function DecoderPage() {
     } else {
       setParseResults({ format, raw: input });
     }
-  }, [input]);
+
+    // Send to backend for analysis + persistence
+    if (aiEnabled) {
+      parseMutation.mutate(input);
+    }
+  }, [input, aiEnabled, parseMutation]);
 
   const activeFormat = FORMATS[detectedFormat] || FORMATS.generic;
 
@@ -166,7 +174,7 @@ export default function DecoderPage() {
     <div className="decoder-page">
       <header className="decoder-header">
         <h1>Decoder</h1>
-        <p>Paste structured content (Earnings Whisper emails, JSON, CSV) to extract key data points automatically.</p>
+        <p>Paste structured content (Earnings Whisper emails, JSON, CSV) to extract key data points. AI analysis runs pattern-based scoring.</p>
       </header>
 
       <div className="decoder-layout">
@@ -188,25 +196,52 @@ export default function DecoderPage() {
           />
 
           <div className="decoder-actions">
-            <button type="button" className="decoder-btn decoder-btn--primary" onClick={handleParse} disabled={!input.trim()}>
-              Parse Content
+            <button type="button" className="decoder-btn decoder-btn--primary" onClick={handleParse} disabled={!input.trim() || parseMutation.isPending}>
+              {parseMutation.isPending ? '⏳ Analyzing...' : 'Parse Content'}
             </button>
             <label className="decoder-ai-toggle">
               <input type="checkbox" checked={aiEnabled} onChange={(e) => setAiEnabled(e.target.checked)} />
               <span>AI Analysis</span>
-              <span className="decoder-ai-badge">Coming Soon</span>
+              <span className="decoder-ai-badge" style={{ background: aiEnabled ? 'rgba(34,197,94,0.12)' : 'rgba(148,163,184,0.12)', color: aiEnabled ? '#22c55e' : '#94a3b8' }}>
+                {aiEnabled ? 'Active' : 'Off'}
+              </span>
             </label>
           </div>
 
           {aiEnabled && (
-            <div className="decoder-ai-placeholder">
-              <p>🤖 AI-powered insight extraction will be activated here. The system will analyze parsed earnings data and provide:</p>
-              <ul>
-                <li>Beat/miss probability assessment</li>
-                <li>Comparison to sector peers</li>
-                <li>Option flow interpretation</li>
-                <li>Historical accuracy of whisper vs actual</li>
-              </ul>
+            <div className="decoder-ai-panel">
+              {parseMutation.isPending ? (
+                <p className="decoder-ai-loading">⏳ Analyzing content...</p>
+              ) : backendResult ? (
+                <div className="decoder-ai-result">
+                  <div className="decoder-ai-head">
+                    <span className="decoder-ai-sentiment" style={{
+                      color: backendResult.sentiment === 'bullish' ? '#22c55e' : backendResult.sentiment === 'bearish' ? '#ef4444' : '#94a3b8'
+                    }}>
+                      {backendResult.sentiment === 'bullish' ? '🟢 Bullish' : backendResult.sentiment === 'bearish' ? '🔴 Bearish' : '⚪ Neutral'}
+                    </span>
+                    <span className="decoder-ai-confidence">Confidence: {backendResult.analysis?.confidence || 0}%</span>
+                    <span className="decoder-ai-score">Sentiment: {backendResult.analysis?.sentimentScore || 50}/100</span>
+                  </div>
+                  <p className="decoder-ai-summary">{backendResult.analysis?.summary}</p>
+                  {backendResult.extractedSymbols?.length > 0 && (
+                    <div className="decoder-ai-tickers">
+                      <span className="decoder-ai-label">Symbols:</span>
+                      {backendResult.extractedSymbols.map(s => <span key={s} className="decoder-tag">{s}</span>)}
+                    </div>
+                  )}
+                  {backendResult.analysis?.keyDates?.length > 0 && (
+                    <div className="decoder-ai-dates">
+                      <span className="decoder-ai-label">Key Dates:</span>
+                      {backendResult.analysis.keyDates.map((d, i) => (
+                        <span key={i} className="decoder-date-tag">{d.label}: {d.date}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="decoder-ai-hint">AI analysis will extract sentiment, symbols, key dates, and generate a summary.</p>
+              )}
             </div>
           )}
         </section>

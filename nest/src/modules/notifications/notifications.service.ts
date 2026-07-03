@@ -18,6 +18,8 @@ export type NotificationEvent =
   | 'daily-limit'
   | 'daily-summary'
   | 'backtest-complete'
+  | 'provider-degraded'
+  | 'dxy-regime-change'
   | 'test';
 
 export interface NotificationMessage {
@@ -51,6 +53,8 @@ const DEFAULT_PREFERENCES: NotificationPreference[] = [
   { event: 'daily-limit', channels: ['email', 'discord'], enabled: true },
   { event: 'daily-summary', channels: ['email'], enabled: true },
   { event: 'backtest-complete', channels: ['telegram'], enabled: true },
+  { event: 'provider-degraded', channels: ['windows', 'telegram', 'discord'], enabled: true },
+  { event: 'dxy-regime-change', channels: ['windows', 'telegram', 'discord'], enabled: true },
   { event: 'test', channels: ['windows', 'telegram', 'discord', 'email'], enabled: true },
 ];
 

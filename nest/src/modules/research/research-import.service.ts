@@ -142,4 +142,182 @@ export class ResearchImportService {
       this.logger.error(`Analyst target import failed: ${(err as Error).message}`);
     }
   }
+
+  /**
+   * Every 6 hours — fetch social sentiment for all tracked symbols.
+   * Finnhub /stock/social-sentiment (free tier).
+   * Stores in SocialMention table for use by social-buzz directive.
+   */
+  @Cron('0 */6 * * *') // Every 6 hours
+  async importSocialSentiment() {
+    this.logger.log('Starting social sentiment import...');
+    const startTime = Date.now();
+
+    try {
+      const finnhub = this.providers.getAdapter('finnhub');
+      if (!finnhub) {
+        this.logger.warn('Finnhub adapter not available, skipping social sentiment import');
+        return;
+      }
+
+      const symbols = await this.prisma.symbol.findMany({
+        where: { active: true },
+        select: { ticker: true },
+      });
+
+      let fetched = 0;
+      for (const { ticker } of symbols) {
+        try {
+          const data = await (finnhub as any).getSocialSentiment(ticker);
+          if (!data) continue;
+
+          await this.prisma.socialMention.create({
+            data: {
+              symbol: ticker,
+              redditMentions: data.redditMentions ?? 0,
+              redditSentiment: data.redditSentiment ?? 0,
+              twitterMentions: data.twitterMentions ?? 0,
+              twitterSentiment: data.twitterSentiment ?? 0,
+              totalMentions: data.totalMentions ?? 0,
+              avgSentiment: data.avgSentiment ?? 0,
+              source: data.source || 'finnhub',
+            },
+          });
+          fetched++;
+        } catch (symbolErr) {
+          this.logger.warn(`Social sentiment fetch failed for ${ticker}: ${(symbolErr as Error).message}`);
+        }
+      }
+
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      this.logger.log(`Social sentiment import complete: ${fetched} symbols (${duration}s)`);
+    } catch (err) {
+      this.logger.error(`Social sentiment import failed: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * Every 12 hours — fetch insider transactions for all tracked symbols.
+   * Finnhub /stock/insider-transactions (free tier).
+   * Stores in InsiderTransaction table for use by insider-activity directive.
+   */
+  @Cron('0 */12 * * *') // Every 12 hours
+  async importInsiderTransactions() {
+    this.logger.log('Starting insider transaction import...');
+    const startTime = Date.now();
+
+    try {
+      const finnhub = this.providers.getAdapter('finnhub');
+      if (!finnhub) {
+        this.logger.warn('Finnhub adapter not available, skipping insider transaction import');
+        return;
+      }
+
+      const symbols = await this.prisma.symbol.findMany({
+        where: { active: true },
+        select: { ticker: true },
+      });
+
+      let totalInserted = 0;
+      for (const { ticker } of symbols) {
+        try {
+          const transactions = await (finnhub as any).getInsiderTransactions(ticker);
+          if (!transactions || !Array.isArray(transactions)) continue;
+
+          for (const t of transactions) {
+            // Skip if already stored
+            const existing = await this.prisma.insiderTransaction.findFirst({
+              where: {
+                symbol: ticker,
+                name: t.name,
+                transactionDate: new Date(t.transactionDate),
+                transactionCode: t.transactionCode,
+              },
+            });
+            if (existing) continue;
+
+            await this.prisma.insiderTransaction.create({
+              data: {
+                symbol: ticker,
+                name: t.name,
+                share: t.share ?? 0,
+                change: t.change ?? 0,
+                transactionDate: new Date(t.transactionDate),
+                transactionCode: t.transactionCode,
+                filingDate: t.filingDate ? new Date(t.filingDate) : new Date(),
+                currency: t.currency || 'USD',
+              },
+            });
+            totalInserted++;
+          }
+        } catch (symbolErr) {
+          this.logger.warn(`Insider transaction fetch failed for ${ticker}: ${(symbolErr as Error).message}`);
+        }
+      }
+
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      this.logger.log(`Insider transaction import complete: ${totalInserted} new records (${duration}s)`);
+    } catch (err) {
+      this.logger.error(`Insider transaction import failed: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * Daily at 08:00 — fetch company metrics (share dilution, market cap) for all tracked symbols.
+   * Finnhub /stock/metric (free tier).
+   * Stores in CompanyMetric table for use by dilution-impact directive.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_8AM)
+  async importCompanyMetrics() {
+    this.logger.log('Starting company metrics import...');
+    const startTime = Date.now();
+
+    try {
+      const finnhub = this.providers.getAdapter('finnhub');
+      if (!finnhub) {
+        this.logger.warn('Finnhub adapter not available, skipping company metrics import');
+        return;
+      }
+
+      const symbols = await this.prisma.symbol.findMany({
+        where: { active: true },
+        select: { ticker: true },
+      });
+
+      let fetched = 0;
+      for (const { ticker } of symbols) {
+        try {
+          const metrics = await (finnhub as any).getCompanyMetrics(ticker);
+          if (!metrics) continue;
+
+          await this.prisma.companyMetric.upsert({
+            where: { symbol: ticker },
+            update: {
+              sharesOutstanding: metrics.sharesOutstanding ?? 0,
+              shareChange3m: metrics.shareChange3m ?? 0,
+              shareChange12m: metrics.shareChange12m ?? 0,
+              marketCap: metrics.marketCap ?? 0,
+              fetchedAt: new Date(),
+            },
+            create: {
+              symbol: ticker,
+              sharesOutstanding: metrics.sharesOutstanding ?? 0,
+              shareChange3m: metrics.shareChange3m ?? 0,
+              shareChange12m: metrics.shareChange12m ?? 0,
+              marketCap: metrics.marketCap ?? 0,
+              source: metrics.source || 'finnhub',
+            },
+          });
+          fetched++;
+        } catch (symbolErr) {
+          this.logger.warn(`Company metrics fetch failed for ${ticker}: ${(symbolErr as Error).message}`);
+        }
+      }
+
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      this.logger.log(`Company metrics import complete: ${fetched} symbols (${duration}s)`);
+    } catch (err) {
+      this.logger.error(`Company metrics import failed: ${(err as Error).message}`);
+    }
+  }
 }

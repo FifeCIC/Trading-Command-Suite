@@ -9,6 +9,7 @@ export const STATUS_SNAPSHOT = [
   'Agentic AI discoverability: /api/architecture/manifest endpoint provides machine-readable system map. Diagrams page has 19 Mermaid diagrams. GitHub Issues are the canonical task tracking system. Full revision history in closed issues with `revision-log` label.',
   '2026-06-26: Automation Architecture v1 designed — broker-agnostic automation loop with Timeline system as decision modifier (FOMC→reduce risk, earnings→block symbol, session open→boost protocols, seasonality→adjust thresholds).',
   '2026-07-01–02: Agent sessions — EarningsModule, AnalystTargetsService (Finnhub→FMP fallback), Settings API, Market Correlations wired, Seasonality directives, DataImportLog, PortfolioSnapshot models. 15+ issues closed. See GitHub Issues with `revision-log` label for detailed history.',
+  '2026-07-03: Directive data-source hardening (Issue #171) — 3 directives (social-buzz, insider-activity, dilution-impact) converted from live Finnhub API calls to DB-backed queries. New Prisma models: SocialMention, InsiderTransaction, CompanyMetric. New cron import pipeline in ResearchImportService (6h/12h/daily schedules). Zero external API calls during scoring for these directives. Also: news-sentiment directive already uses bar data (no Finnhub call), earnings-momentum already DB-backed (no change needed).',
 ]
 
 export const ARCHITECTURE_INDEX = [
@@ -128,6 +129,7 @@ export const CURRENT_SLICE = [
   'Responsive shell fix — .main-stage horizontal padding removed (grid gap handles spacing). Left/right rails hide at ≤1100px, off-canvas hamburger at ≤768px. Responsive Layout Lab page created as interactive reference.',
   'Phase Gates system — src/core/phase-gates.js prevents work on deferred features (phase-2: PDF reports, multi-user, billing; future: social trading, mobile app). React-ui-agent rules updated to respect phase gates.',
   '3 guide docs created — docs/signals-workbench.md, docs/risk-controls.md, docs/research-dashboard.md with architecture diagrams, data flows, and UI feature descriptions.',
+  'Decoder — POST /api/decoder/parse with pattern-based AI analysis (sentiment scoring, symbol extraction, key date detection). DecodedDocument model persists results. No external API dependency.',
   'Strategy Comparison — GET /api/trading/strategy-comparison compares strategies by actual closed trade outcomes (win rate, total P&L, avg win/loss, max drawdown, profit factor). Live positions grouped by strategy from Trade table. Frontend shows showdown table + live position cards.',
   'Automation Loop (designed) — broker-agnostic setInterval tick: 1) check Timeline for active events, 2) fetch ALL brokers\' portfolios, 3) score every position, 4) evaluate active strategies, 5) dispatch (manual/semi-auto/auto), 6) execute via IBrokerPortfolio.placeOrder. Safety: max 1 trade/tick, min 60s between trades, emergency stop.',
   'Automation Dashboard (designed) — multi-broker cockpit at /trading/automation. Panels: Broker Bar, Live Timeline, Active Strategies, Portfolio Scores (tabbed by broker), Why Panel (directive breakdown + timeline context), Decision Log, Trade History. Master pause/run-now/emergency-stop controls.',
@@ -1326,6 +1328,7 @@ export const KNOWN_GAPS = [
 ]
 
 export const REVISION_LOG = [
+  '2026-07-03: #171 — Directive data-source hardening. 3 directives (social-buzz, insider-activity, dilution-impact) converted from live Finnhub API → DB-backed (SocialMention, InsiderTransaction, CompanyMetric tables). 3 cron import jobs added to ResearchImportService. Zero Finnhub calls during scoring for these directives. Also verified earnings-momentum (already DB-backed) and news-sentiment (uses bar data, no Finnhub call).',
   'Revision history is tracked in closed GitHub Issues with the `revision-log` label.',
   'Query: gh issue list --label revision-log --state closed --repo FifeCIC/trading-command-suite',
   'Master archive: #173 (2026-06-17 through 2026-07-02) + #167 (2026-06-16 and earlier).',
@@ -1428,6 +1431,30 @@ export const DATABASE_SCHEMA = {
       fields: ['id (PK)', 'timestamp', 'endpoint', 'method', 'provider', 'statusCode', 'durationMs', 'responseSize'],
       relationships: [],
       indexes: ['timestamp', 'provider + timestamp', 'statusCode + timestamp', 'method + endpoint'],
+    },
+    {
+      table: 'SocialMention',
+      description: 'Social media sentiment from Reddit/Twitter via Finnhub. Populated by ResearchImportService cron (every 6h). Consumed by social-buzz directive.',
+      fields: ['id (PK)', 'symbol', 'redditMentions', 'redditSentiment', 'twitterMentions', 'twitterSentiment', 'totalMentions', 'avgSentiment', 'source', 'fetchedAt'],
+      relationships: [],
+      indexes: ['symbol + fetchedAt', 'fetchedAt'],
+      status: 'implemented (2026-07-03)',
+    },
+    {
+      table: 'InsiderTransaction',
+      description: 'Insider buying/selling records via Finnhub. Populated by ResearchImportService cron (every 12h). Consumed by insider-activity directive.',
+      fields: ['id (PK)', 'symbol', 'name', 'share', 'change', 'transactionDate', 'transactionCode', 'filingDate', 'currency', 'source', 'fetchedAt'],
+      relationships: [],
+      indexes: ['symbol + transactionDate', 'fetchedAt'],
+      status: 'implemented (2026-07-03)',
+    },
+    {
+      table: 'CompanyMetric',
+      description: 'Share dilution and market cap via Finnhub. Populated by ResearchImportService cron (daily 08:00). Consumed by dilution-impact directive.',
+      fields: ['id (PK)', 'symbol (unique)', 'sharesOutstanding', 'shareChange3m', 'shareChange12m', 'marketCap', 'source', 'fetchedAt'],
+      relationships: [],
+      indexes: ['symbol + fetchedAt', 'fetchedAt'],
+      status: 'implemented (2026-07-03)',
     },
   ],
   plannedMetaTables: [
@@ -1604,6 +1631,9 @@ export const DATABASE_SCHEMA = {
     'PortfolioSnapshotPosition stores per-position data within snapshots (symbol, quantity, avgPrice, currentPrice, value, pnl, pnlPct, allocation) — CASCADE from PortfolioSnapshot.',
     'EarningsEvent stores upcoming earnings dates and estimates from Alpha Vantage with symbol+reportDate lookup.',
     'AnalystTarget stores analyst price targets (high/low/avg/consensus) from Finnhub and FMP per symbol.',
+    'SocialMention stores social media sentiment snapshots (Reddit + Twitter mention counts and sentiment) from Finnhub. Populated via ResearchImportService cron (every 6h). Consumed by social-buzz directive.',
+    'InsiderTransaction stores insider buying/selling records (name, shares, transaction code, filing date) from Finnhub. Populated via ResearchImportService cron (every 12h). Consumed by insider-activity directive.',
+    'CompanyMetric stores share dilution and market cap data (shares outstanding, 3m/12m change %) from Finnhub. Populated via ResearchImportService cron (daily 08:00). Consumed by dilution-impact directive.',
     'ScoreSnapshot stores composite scores with rarity percentiles per protocol for percentile-based rarity bands.',
     'UserStar enables users to favourite/star items across the app (userId + itemType + itemId unique constraint).',
     'Planned: SymbolMeta/Fundamentals/Technical extend Symbol with additional data',
@@ -1617,6 +1647,9 @@ export const DATABASE_SCHEMA = {
     '6. Signal generated based on Score → 7. Order created from Signal (planned)',
     '7b. PortfolioSnapshot captures portfolio state at session/daily/weekly intervals',
     '8. EarningsService imports Alpha Vantage EARNINGS_CALENDAR → EarningsEvent table (1 API call → bulk DB)',
+    '9. ResearchImportService.importSocialSentiment() (every 6h) → Finnhub /social-sentiment → SocialMention table → social-buzz directive reads DB',
+    '10. ResearchImportService.importInsiderTransactions() (every 12h) → Finnhub /insider-transactions → InsiderTransaction table → insider-activity directive reads DB',
+    '11. ResearchImportService.importCompanyMetrics() (daily 08:00) → Finnhub /stock/metric → CompanyMetric table → dilution-impact directive reads DB',
     'ProviderHealth tracked independently - monitors data source availability',
     'Meta tables store extended attributes without modifying core schema',
   ],

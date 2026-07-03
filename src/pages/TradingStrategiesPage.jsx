@@ -96,7 +96,7 @@ export default function TradingStrategiesPage() {
       .then(r => r.ok ? r.json() : [])
       .then(data => {
         if (cancelled) return;
-        setTrading(Array.isArray(data) ? data : []);
+        setTrading(data.viable || []);
         setLoading(false);
       })
       .catch(e => {

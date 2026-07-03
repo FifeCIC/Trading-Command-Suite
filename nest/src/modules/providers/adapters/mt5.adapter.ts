@@ -25,6 +25,7 @@ import {
   ProviderProfile,
   ProviderQuote,
 } from '../interfaces/provider-adapter.interface';
+import { NotificationService } from '../../notifications/notifications.service';
 
 interface BridgeQuoteResponse {
   symbol: string;
@@ -67,7 +68,9 @@ export class Mt5Adapter implements IProviderAdapter {
   tripped = false;
   private trippedAt: number | null = null;
 
-  constructor() {
+  constructor(
+    private readonly notifications?: NotificationService,
+  ) {
     this.bridgeUrl = process.env.MT5_BRIDGE_URL || 'http://localhost:5001';
   }
 
@@ -82,6 +85,11 @@ export class Mt5Adapter implements IProviderAdapter {
         this.tripped = false;
         this.consecutiveErrors = 0;
         this.logger.log('MT5 circuit breaker released after cooldown');
+        this.notifications?.send({
+          title: '✅ MT5 Bridge Reconnected',
+          body: 'Circuit breaker released — MT5 bridge is responding again.',
+          event: 'provider-degraded',
+        }).catch(() => {});
       } else {
         this.logger.debug('MT5 circuit breaker active — skipping request');
         return null;
@@ -99,6 +107,11 @@ export class Mt5Adapter implements IProviderAdapter {
           this.tripped = true;
           this.trippedAt = Date.now();
           this.logger.warn('MT5 bridge circuit breaker TRIPPED (5 consecutive errors)');
+          this.notifications?.send({
+            title: '🚨 MT5 Bridge Disconnected',
+            body: 'Circuit breaker tripped — 5 consecutive errors. Trading via MT5 is unavailable until the bridge recovers.',
+            event: 'provider-degraded',
+          }).catch(() => {});
         }
         return null;
       }

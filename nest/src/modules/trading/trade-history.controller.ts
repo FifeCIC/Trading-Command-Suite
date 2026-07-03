@@ -132,9 +132,13 @@ export class TradeHistoryController {
       };
     }).sort((a, b) => b.totalPnl - a.totalPnl);
 
-    // ── 2. Live positions from MT5 (not yet strategy-tagged — show open trades) ──
+    // ── 2. Live positions from DB (open trades ≤ 7 days old) ──
+    const staleThreshold = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const openTrades = await this.prisma.trade.findMany({
-      where: { status: 'open' },
+      where: { 
+        status: 'open',
+        openedAt: { gte: staleThreshold },
+      },
       orderBy: { openedAt: 'desc' },
       take: 100,
     }).catch(() => []);
@@ -156,6 +160,7 @@ export class TradeHistoryController {
 
     return {
       generatedAt: new Date().toISOString(),
+      liveSource: 'DB (stale-filtered, ≤7 days). Long-term: wire to MT5/T212 position endpoints.',
       showdown,
       livePositions: Array.from(liveByStrategy.entries()).map(([strategy, positions]) => ({
         strategy,

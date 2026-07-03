@@ -487,6 +487,37 @@
   padding: 2px 8px; border-radius: 10px; font-weight: 700;
   letter-spacing: 0.08em;
 }
+
+/* ── Degradation Banner ── */
+.so-degradation-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  color: #92400e;
+  font-size: 0.82rem;
+}
+.so-degradation-icon { font-size: 1.3rem; flex-shrink: 0; }
+.so-degradation-body strong { display: block; margin-bottom: 0.15rem; }
+.so-degradation-body p { margin: 0.1rem 0; }
+.so-degradation-detail { font-size: 0.75rem; color: #92400ecc; }
+.so-degradation-coverage { font-size: 0.72rem; font-weight: 600; margin-top: 0.3rem; }
+
+/* ── Degradation Row Indicators ── */
+.so-row-degraded { background: #fef3c720; }
+.so-degrade-dot {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 0.7rem;
+  color: #f59e0b;
+  cursor: help;
+  vertical-align: middle;
+}
+}
 @keyframes los-pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
 .los-refreshing {
   text-align: center; font-size: 0.68rem; color: var(--ink-soft);
@@ -526,4 +557,33 @@
   .so-strategy-key {
     text-align: left;
   }
+}
+
+/* ── Pairing Guidance ── */
+.los-guidance {
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+.los-guidance--strong {
+  background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.2);
+  color: #22c55e;
+}
+.los-guidance--ok {
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.2);
+  color: #f59e0b;
+}
+.los-guidance--weak {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.2);
+  color: #ef4444;
+}
+.los-guidance-reasons {
+  font-weight: 400;
+  font-size: 0.65rem;
+  opacity: 0.8;
 }

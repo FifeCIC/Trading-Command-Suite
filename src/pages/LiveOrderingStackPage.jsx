@@ -51,20 +51,119 @@ export default function LiveOrderingStackPage() {
   });
   const protocols = (protoQuery.data?.protocols ?? []).filter(p => p.source === 'code');
 
-  // ── Auto-select first watchlist + matching protocol ──
+  // ── Smart Pairing Logic ──
+  const pairingScores = useMemo(() => {
+    const scores = new Map(); // key: `${watchlistId}::${protocolId}`, value: { score, reason }
+    
+    for (const wl of watchlists) {
+      const wlSymbols = (wl.symbols || []).map(s => (typeof s === 'string' ? s : s.ticker).toUpperCase());
+      const wlName = (wl.label || '').toLowerCase();
+      const wlId = wl.id;
+      
+      for (const proto of protocols) {
+        const protoName = (proto.name || '').toLowerCase();
+        const protoId = proto.id;
+        let score = 0;
+        const reasons = [];
+        
+        // 1. Name matching: protocol name appears in watchlist label or vice versa
+        if (wlName.includes(protoName) || protoName.includes(wlName)) {
+          score += 30;
+          reasons.push('name match');
+        }
+        
+        // 2. Trading style keywords in watchlist
+        const style = (proto.tradingStyle || '').toLowerCase();
+        if (style && wlName.includes(style)) {
+          score += 20;
+          reasons.push('style match');
+        }
+        
+        // 3. Symbol type matching: crypto protocols should pair with crypto watchlists
+        const isCrypto = wlSymbols.some(s => s.includes('BTC') || s.includes('ETH') || s.includes('XRP') || s.includes('USD') && s.length > 5);
+        const isForex = wlSymbols.some(s => ['EURUSD','GBPUSD','USDJPY','XAUUSD','USDCAD'].includes(s));
+        const isStocks = wlSymbols.some(s => ['AAPL','NVDA','MSFT','TSLA','SPY','QQQ','GOOGL','META'].includes(s));
+        
+        if (protoId.includes('btc') || protoId.includes('crypto')) {
+          if (isCrypto) { score += 25; reasons.push('crypto match'); }
+          else { score -= 20; reasons.push('no crypto symbols'); }
+        }
+        if (protoId.includes('forex') || protoId.includes('dxy')) {
+          if (isForex) { score += 25; reasons.push('forex match'); }
+          else { score -= 15; reasons.push('no forex symbols'); }
+        }
+        if (protoId.includes('tech') || protoId.includes('spy') || protoId.includes('qqq')) {
+          if (isStocks) { score += 25; reasons.push('stock match'); }
+          else { score -= 10; reasons.push('no stock symbols'); }
+        }
+        if (protoId.includes('xau') || protoId.includes('gold')) {
+          if (wlSymbols.includes('XAUUSD')) { score += 25; reasons.push('gold symbol present'); }
+          else { score -= 20; reasons.push('missing XAUUSD'); }
+        }
+        if (protoId.includes('oil') || protoId.includes('crude')) {
+          if (wlSymbols.some(s => s.includes('OIL') || s === 'USOIL' || s === 'XTIUSD')) { score += 25; reasons.push('oil symbol present'); }
+        }
+        
+        // 4. idealFor keyword overlap with symbols
+        const ideal = (proto.idealFor || '').toLowerCase();
+        if (ideal) {
+          const keywordMatch = wlSymbols.some(s => ideal.includes(s.toLowerCase()));
+          if (keywordMatch) { score += 15; reasons.push('ideal match'); }
+        }
+        
+        scores.set(`${wlId}::${protoId}`, { score, reasons });
+      }
+    }
+    return scores;
+  }, [watchlists, protocols]);
+
+  // Compatible watchlists for selected protocol
+  const compatibleWatchlists = useMemo(() => {
+    if (!protocolId) return watchlists;
+    return [...watchlists].sort((a, b) => {
+      const scoreA = pairingScores.get(`${a.id}::${protocolId}`)?.score ?? 0;
+      const scoreB = pairingScores.get(`${b.id}::${protocolId}`)?.score ?? 0;
+      return scoreB - scoreA;
+    });
+  }, [watchlists, protocolId, pairingScores]);
+
+  // Compatible protocols for selected watchlist
+  const compatibleProtocols = useMemo(() => {
+    if (!watchlistId) return protocols;
+    return [...protocols].sort((a, b) => {
+      const scoreA = pairingScores.get(`${watchlistId}::${a.id}`)?.score ?? 0;
+      const scoreB = pairingScores.get(`${watchlistId}::${b.id}`)?.score ?? 0;
+      return scoreB - scoreA;
+    });
+  }, [protocols, watchlistId, pairingScores]);
+
+  // Pairing guidance
+  const pairingGuidance = useMemo(() => {
+    if (!watchlistId || !protocolId) return null;
+    const pair = pairingScores.get(`${watchlistId}::${protocolId}`);
+    if (!pair) return null;
+    if (pair.score >= 40) return { level: 'strong', text: '✅ Strong pairing', reasons: pair.reasons };
+    if (pair.score >= 15) return { level: 'ok', text: '⚡ Acceptable pairing', reasons: pair.reasons };
+    return { level: 'weak', text: '⚠ Weak pairing — consider a different protocol', reasons: pair.reasons };
+  }, [watchlistId, protocolId, pairingScores]);
+
+  // ── Auto-select first watchlist + best matching protocol ──
   useEffect(() => {
     if (watchlists.length > 0 && !watchlistId) {
       const first = watchlists[0];
       setWatchlistId(first.id);
-      // Try to match protocol name to watchlist
-      const wlName = (first.label || '').toLowerCase();
-      const match = protocols.find(p =>
-        (p.name || '').toLowerCase().includes(wlName) ||
-        p.id.includes(wlName.replace(/\s+/g, '-'))
-      );
-      setProtocolId(match ? match.id : (protocols[0]?.id ?? ''));
+      // Use pairing scores to find best protocol
+      if (protocols.length > 0) {
+        let bestProto = protocols[0];
+        let bestScore = -Infinity;
+        for (const p of protocols) {
+          const score = pairingScores.get(`${first.id}::${p.id}`)?.score ?? 0;
+          if (score > bestScore) { bestScore = score; bestProto = p; }
+        }
+        setProtocolId(bestProto.id);
+      }
     }
-  }, [watchlists, protocols, watchlistId]);
+  }, [watchlists, protocols, watchlistId, pairingScores]);
 
   // ── Watchlist symbols ──
   const symbolsQuery = useQuery({
@@ -137,17 +236,29 @@ export default function LiveOrderingStackPage() {
         <label className="los-select-label">
           <span>Watchlist</span>
           <select value={watchlistId} onChange={e => setWatchlistId(e.target.value)} className="los-select">
-            {watchlists.map(w => (
-              <option key={w.id} value={w.id}>{w.label} ({w.symbolCount ?? '?'} symbols)</option>
-            ))}
+            {compatibleWatchlists.map(w => {
+              const score = pairingScores.get(`${w.id}::${protocolId}`)?.score ?? 0;
+              const indicator = !protocolId ? '' : score >= 40 ? ' ★' : score >= 15 ? ' ·' : '';
+              return (
+                <option key={w.id} value={w.id}>
+                  {w.label} ({w.symbolCount ?? '?'}){indicator}
+                </option>
+              );
+            })}
           </select>
         </label>
         <label className="los-select-label">
           <span>Protocol</span>
           <select value={protocolId} onChange={e => setProtocolId(e.target.value)} className="los-select">
-            {protocols.map(p => (
-              <option key={p.id} value={p.id}>{p.name ?? p.id}</option>
-            ))}
+            {compatibleProtocols.map(p => {
+              const score = pairingScores.get(`${watchlistId}::${p.id}`)?.score ?? 0;
+              const indicator = !watchlistId ? '' : score >= 40 ? ' ★' : score >= 15 ? ' ·' : '';
+              return (
+                <option key={p.id} value={p.id}>
+                  {p.name ?? p.id}{indicator}
+                </option>
+              );
+            })}
           </select>
         </label>
         <button
@@ -158,6 +269,16 @@ export default function LiveOrderingStackPage() {
           {autoRefresh ? '⏸ Auto' : '▶ Manual'} 
         </button>
       </div>
+
+      {/* ── Pairing Guidance ── */}
+      {pairingGuidance && (
+        <div className={`los-guidance los-guidance--${pairingGuidance.level}`}>
+          {pairingGuidance.text}
+          {pairingGuidance.reasons.length > 0 && (
+            <span className="los-guidance-reasons"> — {pairingGuidance.reasons.join(', ')}</span>
+          )}
+        </div>
+      )}
 
       {/* ── Summary cards ── */}
       <div className="so-summary-grid">

@@ -1,10 +1,56 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './scoring-activity-logs.css';
+
+function DirectiveTrace({ symbol, onClose }) {
+  const envQuery = useQuery({
+    queryKey: ['directive-trace', symbol],
+    queryFn: () => apiGet(`/api/signals/envelope/${symbol}`),
+    staleTime: 30000,
+  });
+  const env = envQuery.data;
+
+  if (envQuery.isLoading) return <p className="sal-trace-loading">Loading directive trace for {symbol}...</p>;
+  if (!env || env.groups?.length === 0) return <p className="sal-trace-empty">No directive data for {symbol}.</p>;
+
+  return (
+    <div className="sal-trace">
+      <div className="sal-trace-head">
+        <span>{symbol}</span>
+        <span style={{ color: env.signal === 'BUY' ? '#22c55e' : env.signal === 'SELL' ? '#ef4444' : '#94a3b8', fontWeight: 800 }}>
+          {env.composite.toFixed(0)} — {env.signal}
+        </span>
+        <button className="sal-trace-close" onClick={onClose}>✕</button>
+      </div>
+      <div className="sal-trace-groups">
+        {env.groups.map(g => (
+          <div key={g.groupId} className={`sal-trace-group ${g.isRisk ? 'sal-trace-risk' : ''}`}>
+            <div className="sal-trace-group-head">
+              <span>{g.groupName}</span>
+              <span style={{ color: g.score > 65 ? '#22c55e' : g.score < 35 ? '#ef4444' : '#94a3b8' }}>{g.score}</span>
+            </div>
+            {g.topDirectives.map(d => (
+              <div key={d.id} className={`sal-trace-dir sal-trace-${d.signalClass}`}>
+                <span className="sal-trace-dir-name">{d.name}</span>
+                <span className="sal-trace-dir-score">{d.normalized}</span>
+                <span className="sal-trace-dir-reason">{d.reason}</span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      {env.conflicts?.length > 0 && (
+        <div className="sal-trace-conflicts">
+          {env.conflicts.map((c, i) => <span key={i} className="sal-conflict-chip">{c.description}</span>)}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function getPctColor(v, max) {
   if (!max || max === 0) return 'sal-pct-mid';
@@ -23,6 +69,7 @@ export default function ScoringActivityLogsPage() {
   const [filter, setFilter] = useState('all');
   const [expandedRun, setExpandedRun] = useState(null);
   const [sortBy, setSortBy] = useState('time');
+  const [traceSymbol, setTraceSymbol] = useState(null);
 
   const runsQuery = useQuery({
     queryKey: ['scoring', 'runs'],
@@ -139,16 +186,15 @@ export default function ScoringActivityLogsPage() {
                           exit={{ opacity: 0, height: 0 }}
                         >
                           <td colSpan={4} style={{ padding: '0.5rem 1rem' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.3rem' }}>
+                            <div className="sal-expand-grid">
                               {(run.scores || [])
                                 .sort((a, b) => b.value - a.value)
                                 .map((s) => (
-                                  <div key={s.ticker} style={{
-                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                    padding: '0.25rem 0.5rem', borderRadius: 4,
-                                    background: s.value > 0 ? 'rgba(14,165,166,0.04)' : 'transparent',
-                                    fontSize: '0.72rem',
-                                  }}>
+                                  <div key={s.ticker}
+                                    className={`sal-score-chip ${traceSymbol === s.ticker ? 'sal-score-active' : ''}`}
+                                    onClick={() => setTraceSymbol(traceSymbol === s.ticker ? null : s.ticker)}
+                                    title="Click for directive trace"
+                                  >
                                     <span className="sal-symbol" style={{ fontSize: '0.72rem' }}>{s.ticker}</span>
                                     <span className={`sal-pct-chip ${getPctColor(s.value, maxScore)}`}>
                                       {s.value}
@@ -156,6 +202,11 @@ export default function ScoringActivityLogsPage() {
                                   </div>
                                 ))}
                             </div>
+                            {traceSymbol && (
+                              <div style={{ marginTop: '0.5rem' }}>
+                                <DirectiveTrace symbol={traceSymbol} onClose={() => setTraceSymbol(null)} />
+                              </div>
+                            )}
                           </td>
                         </motion.tr>
                       )}

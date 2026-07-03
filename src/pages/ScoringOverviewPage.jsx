@@ -49,6 +49,7 @@ export default function ScoringOverviewPage() {
   const mode = data.mode ?? '...';
   const services = data.services ?? {};
   const strategy = data.strategy ?? {};
+  const degradation = data.degradation ?? { isDegraded: false, warning: null, overallCoverage: 1, failedProviders: [], degradedProviders: [] };
 
   // ---- Loading state ----
   if (rankQuery.isLoading) {
@@ -130,6 +131,24 @@ export default function ScoringOverviewPage() {
           {services.queue === false && <span className="so-chip-warn">Queue offline</span>}
         </p>
       </header>
+
+      {/* ── Degradation Warning Banner ── */}
+      {degradation.isDegraded && (
+        <div className="so-degradation-banner">
+          <span className="so-degradation-icon">⚠️</span>
+          <div className="so-degradation-body">
+            <strong>Scoring Integrity Degraded</strong>
+            <p>{degradation.warning || 'Some providers are unavailable. Scores may be unreliable.'}</p>
+            {degradation.failedProviders.length > 0 && (
+              <p className="so-degradation-detail">Failed: {degradation.failedProviders.join(', ')}</p>
+            )}
+            {degradation.degradedProviders.length > 0 && (
+              <p className="so-degradation-detail">Degraded: {degradation.degradedProviders.join(', ')}</p>
+            )}
+            <p className="so-degradation-coverage">Coverage: {(degradation.overallCoverage * 100).toFixed(0)}%</p>
+          </div>
+        </div>
+      )}
 
       {/* ---- Summary cards ---- */}
       <div className="so-summary-grid">
@@ -264,17 +283,21 @@ export default function ScoringOverviewPage() {
                   <th>Score</th>
                   <th title="Percentage of protocol max possible score">% Max</th>
                   <th>Signal</th>
+                  <th>Coverage</th>
                   <th>Freshness</th>
                 </tr>
               </thead>
               <tbody>
                 {top5.map((item, i) => (
-                  <tr key={item.symbolId}>
+                  <tr key={item.symbolId} className={item.degraded ? 'so-row-degraded' : ''}>
                     <td className="so-num">{i + 1}</td>
-                    <td><strong>{item.ticker}</strong></td>
+                    <td><strong>{item.ticker}</strong>{item.degraded && <span className="so-degrade-dot" title={`${item.activeDirectives}/${item.totalDirectives} directives active`}>⚠</span>}</td>
                     <td className="so-num">{(item.score ?? 0).toFixed(1)}</td>
                     <td className="so-num">{((item.normalizedScore ?? 0)).toFixed(0)}%</td>
                     <td><span className={`so-signal-chip so-signal--${item.signal ?? 'unknown'}`}>{item.signal ?? 'unknown'}</span></td>
+                    <td className="so-num" style={{ color: item.coverage < 0.7 ? '#ef4444' : item.coverage < 1 ? '#f59e0b' : '#22c55e' }}>
+                      {item.activeDirectives}/{item.totalDirectives} ({(item.coverage * 100).toFixed(0)}%)
+                    </td>
                     <td><span className={`so-freshness-chip ${FRESHNESS_COLORS[item.freshness] ?? ''}`}>{item.freshness ?? 'unknown'}</span></td>
                   </tr>
                 ))}

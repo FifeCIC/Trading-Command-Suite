@@ -38,6 +38,7 @@ export const NAV_TREE = {
     label: 'Scoring',
     views: [
       { id: 'directives-manager', label: 'Directives', icon: '◆' },
+      { id: 'directives-status', label: 'Directive Status', icon: '📋' },
       { id: 'live-ordering-stack', label: 'Live Ordering Stack', icon: '◉' },
       { id: 'sees-advanced', label: 'SEES Advanced', icon: '◆' },
       { id: 'signals-workbench', label: 'Signals Workbench', icon: '◈' },
@@ -162,6 +163,7 @@ export const NAV_TREE = {
       { id: 'lab', label: 'Lab Sandbox', icon: '🔬' },
       { id: 'lab-landing', label: 'Lab Overview', icon: '🔬' },
       { id: 'feature-lab', label: 'Feature Lab', icon: '🔬' },
+      { id: 'preference-lab', label: 'Preference Lab', icon: '⚙' },
       { id: 'theme-lab', label: 'Theme Lab', icon: '🎨' },
       { id: 'theme-lab-motion', label: 'Motion Lab', icon: '◆' },
       { id: 'theme-lab-transitions', label: 'Transitions Lab', icon: '⇢' },

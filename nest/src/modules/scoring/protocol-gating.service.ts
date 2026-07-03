@@ -12,6 +12,7 @@ import {
   DirectiveGroup,
 } from '../directives/directive-groups';
 import { AdapterFactory } from '../providers/adapter-factory';
+import { MacroSnapshotService } from './macro-snapshot.service';
 import { isScoringDemo } from '../../config/scoring-mode';
 import {
   RiskGatingEngine,
@@ -111,6 +112,7 @@ export class ProtocolGatingService {
     private readonly prisma: PrismaService,
     private readonly riskEngine: RiskGatingEngine,
     private readonly adapterFactory: AdapterFactory,
+    private readonly macroSnapshot: MacroSnapshotService,
   ) {}
 
   /**
@@ -142,6 +144,16 @@ export class ProtocolGatingService {
         if (q?.last) eurusdValue = q.last;
       }
     } catch { /* MT5 offline — directive handles it */ }
+
+    // ── Persist macro snapshot ────────────────────────────
+    if (eurusdValue !== undefined && eurusdValue > 0) {
+      const proxyDxy = eurusdValue >= 1.15 ? 98 : eurusdValue >= 1.08 ? 103 : 108;
+      this.macroSnapshot.capture({
+        eurusdValue,
+        dxyValue: proxyDxy,
+        source: 'eurusd-proxy',
+      }).catch(err => this.logger.warn(`Snapshot: ${(err as Error).message}`));
+    }
 
     const input: DirectiveInput = {
       symbol,

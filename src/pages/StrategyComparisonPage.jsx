@@ -123,6 +123,7 @@ export default function StrategyComparisonPage() {
       {/* ── Live Positions ── */}
       <motion.div className="sc-section" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <h2>Live Positions by Strategy</h2>
+        {data?.liveSource && <p className="sc-source-note">{data.liveSource}</p>}
         {livePositions.length === 0 ? (
           <p className="sc-empty-text">No open positions currently tracked by strategy.</p>
         ) : (

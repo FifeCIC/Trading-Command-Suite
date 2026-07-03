@@ -338,20 +338,6 @@ export class VixRegimeDirective implements IDirective {
 }
 
 @Injectable()
-export class GoldMacroCorrelationDirective implements IDirective {
-  readonly id = 'gold-macro-correlation';
-  readonly name = 'Gold Macro Correlation';
-  readonly description = 'Gold vs real yields, USD, Fed policy, safe-haven demand.';
-  readonly priority = 0;
-  readonly maxScore = 100;
-  readonly version = '1.0.0';
-
-  calculate(_input: DirectiveInput): DirectiveResult {
-    return stubResult(this.id, 'gold-macro-correlation.php');
-  }
-}
-
-@Injectable()
 export class CadUsdOilCorrelationDirective implements IDirective {
   readonly id = 'cad-usd-oil-correlation';
   readonly name = 'CAD/USD Oil Correlation';

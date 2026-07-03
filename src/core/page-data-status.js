@@ -70,7 +70,7 @@ export const PAGE_DATA_STATUS = {
   'sources': { status: 'live', source: 'Provider registry' },
   'import-jobs': { status: 'live', source: 'DB import runs' },
   'data-elements': { status: 'live', source: 'DB' },
-  'decoder': { status: 'mock', note: 'Not yet built' },
+  'decoder': { status: 'live', source: '/api/decoder/parse + pattern-based analysis' },
   'database-tables': { status: 'live', source: 'Prisma schema + DB' },
   'imports-history': { status: 'live', source: 'DB' },
   'api-activity': { status: 'live', source: 'API activity logs' },

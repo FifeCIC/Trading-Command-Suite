@@ -1,0 +1,8 @@
+Fixed - Strategy Comparison live positions now filtered and sourced.
+
+Changes:
+1. Backend: Open trades filtered to 7 days old max (stale threshold).
+2. Backend: Added liveSource field to response.
+3. Frontend: Source provenance indicator shown under Live Positions heading.
+
+Long-term: wire live positions to MT5/T212 position endpoints.

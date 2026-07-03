@@ -5,7 +5,8 @@
  * Cluster buying by multiple insiders is a strong bullish signal.
  * Heavy selling can be bearish, but insiders sell for many reasons.
  *
- * Data source: Finnhub /stock/insider-transactions (free tier)
+ * Data source: InsiderTransaction DB table (populated by ResearchImportService cron).
+ * Previously called Finnhub /stock/insider-transactions directly on every scoring run.
  *
  * Scoring:
  * - Net buy ratio: percentage of purchases vs sales (0-50)
@@ -21,7 +22,7 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
-import { ProvidersService } from '../../providers/providers.service';
+import { PrismaService } from '../../../database/prisma.service';
 
 const MIN_BARS = 1;
 const RECENT_DAYS = 30;
@@ -32,12 +33,14 @@ export class InsiderActivityDirective implements IDirective {
   readonly id = 'insider-activity';
   readonly name = 'Insider Activity';
   readonly description =
-    'Scores insider buying/selling clusters. Cluster buying = strong bullish. Finnhub free tier.';
+    'Scores insider buying/selling clusters. Cluster buying = strong bullish. Reads from InsiderTransaction DB table.';
   readonly priority = 50;
   readonly maxScore = 85;
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
 
-  constructor(private readonly providers: ProvidersService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+  ) {}
 
   async calculate(input: DirectiveInput): Promise<DirectiveResult> {
     const symbol = input.symbol;
@@ -52,37 +55,28 @@ export class InsiderActivityDirective implements IDirective {
     }
 
     try {
-      const finnhub = this.providers.getAdapter('finnhub');
-      if (!finnhub) return { score: 0, confidence: 0, signalClass: 'neutral', reason: 'Finnhub not available' };
-      const transactions = await (finnhub as any).getInsiderTransactions(symbol);
-      if (!transactions || transactions.length === 0) {
-        return {
-          score: 0,
-          confidence: 0.5,
-          reason: `No insider transaction data for ${symbol}.`,
-          signalClass: 'neutral',
-        };
-      }
-
-      // Filter to recent transactions
+      // Query insider transactions from DB (last 30 days)
       const cutoff = new Date(Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000);
-      const recent = transactions.filter((t: any) => {
-        const d = new Date(t.transactionDate);
-        return !isNaN(d.getTime()) && d >= cutoff;
+      const recent = await this.prisma.insiderTransaction.findMany({
+        where: {
+          symbol: symbol.toUpperCase(),
+          transactionDate: { gte: cutoff },
+        },
+        orderBy: { transactionDate: 'desc' },
       });
 
-      if (recent.length === 0) {
+      if (!recent || recent.length === 0) {
         return {
           score: 0,
-          confidence: 0.5,
-          reason: `No insider transactions in last ${RECENT_DAYS} days for ${symbol}.`,
+          confidence: 0,
+          reason: `No insider transaction data for ${symbol}. Import job may not have run yet.`,
           signalClass: 'neutral',
         };
       }
 
       // Count buys vs sells
-      const buys = recent.filter((t: any) => t.transactionCode === 'P' || t.transactionCode === 'A');
-      const sells = recent.filter((t: any) => t.transactionCode === 'S' || t.transactionCode === 'D');
+      const buys = recent.filter((t) => t.transactionCode === 'P' || t.transactionCode === 'A');
+      const sells = recent.filter((t) => t.transactionCode === 'S' || t.transactionCode === 'D');
       const total = buys.length + sells.length;
 
       // 1. Net buy ratio (0-50)
@@ -90,11 +84,11 @@ export class InsiderActivityDirective implements IDirective {
       const ratioScore = Math.round(buyRatio * 50);
 
       // 2. Cluster bonus (0-25) — multiple buyers = strong signal
-      const uniqueBuyers = new Set(buys.map((b: any) => b.name)).size;
+      const uniqueBuyers = new Set(buys.map((b) => b.name)).size;
       const clusterScore = Math.min(25, uniqueBuyers * 5);
 
       // 3. Volume significance (0-10) — total shares traded
-      const totalShares = recent.reduce((s: number, t: any) => s + Math.abs(t.share || 0), 0);
+      const totalShares = recent.reduce((s, t) => s + Math.abs(t.share || 0), 0);
       const volumeScore = Math.min(10, Math.round(totalShares / 10000));
 
       const totalScore = Math.min(this.maxScore, ratioScore + clusterScore + volumeScore);
@@ -114,15 +108,15 @@ export class InsiderActivityDirective implements IDirective {
       return {
         score: totalScore,
         confidence: Math.min(0.8, recent.length / 10),
-        reason: `${label}: ${buys.length}B/${sells.length}S from ${uniqueBuyers} insiders, ${totalSharesK}K shares (${RECENT_DAYS}d). Ratio=${ratioScore}/50, Cluster=${clusterScore}/25, Vol=${volumeScore}/10. Total=${totalScore}/${this.maxScore}.`,
+        reason: `${label}: ${buys.length}B/${sells.length}S from ${uniqueBuyers} insiders, ${totalSharesK}K shares (${RECENT_DAYS}d, DB). Ratio=${ratioScore}/50, Cluster=${clusterScore}/25, Vol=${volumeScore}/10. Total=${totalScore}/${this.maxScore}.`,
         signalClass,
       };
     } catch (err) {
       this.logger.warn(`Insider activity failed for ${symbol}: ${(err as Error).message}`);
       return {
         score: 0,
-        confidence: 0.1,
-        reason: `Failed to fetch insider data: ${(err as Error).message}`,
+        confidence: 0,
+        reason: `Failed to query insider data from DB: ${(err as Error).message}`,
         signalClass: 'neutral',
       };
     }

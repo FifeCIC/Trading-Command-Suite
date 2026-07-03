@@ -1,4 +1,4 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { DatabaseModule } from '../../database/database.module';
 import { ModeService } from '../../config/mode.service';
 import { ProvidersController } from './providers.controller';
@@ -16,9 +16,11 @@ import { TwelveDataAdapter } from './adapters/twelve-data.adapter';
 import { FmpAdapter } from './adapters/fmp.adapter';
 import { RateLimitGovernor } from './rate-limit-governor.service';
 import { ProviderDegradationService } from './provider-degradation.service';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { NotificationService } from '../notifications/notifications.service';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, NotificationsModule],
   controllers: [ProvidersController, Mt5Controller],
   providers: [
     ProvidersService,
@@ -39,25 +41,15 @@ import { ProviderDegradationService } from './provider-degradation.service';
   exports: [ProvidersService, AdapterFactory, FinnhubAdapter, FmpAdapter, Mt5Adapter, AlphaVantageAdapter, RateLimitGovernor, ProviderDegradationService],
 })
 export class ProvidersModule implements OnModuleInit {
-  constructor(private readonly adapterFactory: AdapterFactory) {}
+  constructor(
+    private readonly adapterFactory: AdapterFactory,
+    private readonly degradation: ProviderDegradationService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   onModuleInit() {
-    this.adapterFactory.register('alpaca', AlpacaAdapter, {
-      name: 'Alpaca Markets',
-      apiKeyEnv: 'ALPACA_API_KEY',
-      baseUrl: 'https://paper-api.alpaca.markets',
-      capabilities: ['quotes', 'candles', 'profiles'],
-      failoverPriority: 10,
-    });
-
-    this.adapterFactory.register('alphavantage', AlphaVantageAdapter, {
-      name: 'Alpha Vantage',
-      apiKeyEnv: 'ALPHA_VANTAGE_API_KEY',
-      baseUrl: 'https://www.alphavantage.co',
-      capabilities: ['quotes', 'candles'],
-      failoverPriority: 20,
-    });
-
+    // Wire NotificationService into degradation for provider alerts
+    this.degradation.setNotificationService(this.notificationService);
     this.adapterFactory.register('trading212', Trading212Adapter, {
       name: 'Trading212',
       apiKeyEnv: 'TRADING212_API_KEY',
