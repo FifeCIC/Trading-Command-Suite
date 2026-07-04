@@ -27,6 +27,7 @@ export const NAV_TREE = {
       { id: 'market-context', label: 'Market Context', icon: '🌐' },
       { id: 'positions-monitor', label: 'Positions Monitor', icon: '◈' },
       { id: 'trading-strategies', label: 'Trading Strategies', icon: '◆' },
+      { id: 'create-strategy', label: 'Create Strategy', icon: '⊞' },
       { id: 'strategy-comparison', label: 'Strategy Comparison', icon: '⚖' },
       { id: 'trade-journal', label: 'Trade Journal', icon: '▤' },
       // { id: 'btc-speed', label: 'Bitcoin Speed', icon: '₿' },  // MOCK — awaiting crypto-enabled MT5 broker

@@ -27,6 +27,7 @@ import PortfolioPage from '../pages/PortfolioPage.jsx';
 import PortfolioEventsPage from '../pages/PortfolioEventsPage.jsx';
 import TradeHistoryPage from '../pages/TradeHistoryPage.jsx';
 import PositionsMonitorPage from '../pages/PositionsMonitorPage.jsx';
+import CreateStrategyPage from '../pages/CreateStrategyPage.jsx';
 
 // ── Scoring ──
 import DirectivesManagerPage from '../pages/DirectivesManagerPage.jsx';
@@ -171,6 +172,7 @@ export const VIEW_COMPONENTS = {
   'portfolio-events': PortfolioEventsPage,
   'trade-history': TradeHistoryPage,
   'positions-monitor': PositionsMonitorPage,
+  'create-strategy': CreateStrategyPage,
   'trading212-portfolio': Trading212PortfolioPage,
   'mt5-trading': Mt5TradingPage,
   'mt5-demo-trading': Mt5TradingPage,

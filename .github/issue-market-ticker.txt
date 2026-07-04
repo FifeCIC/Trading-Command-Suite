@@ -1,0 +1,37 @@
+## Concept
+Bloomberg-style scrolling ticker tape across the app header — always visible, always updating. Not a widget you need to open — ambient awareness.
+
+## Data Sources (left to right)
+
+### 1. Session Status
+- London 🇬🇧 open · NY 🇺🇸 open · Tokyo 🇯🇵 closed
+- Next session opening in: 2h 15m (Tokyo)
+- Color-coded: green=open, amber=closing soon, grey=closed
+
+### 2. Upcoming High-Impact Events
+- FOMC Minutes in 2h 30m
+- NFP tomorrow 08:30
+- AAPL earnings Jul 24
+- Sourced from TimelineService /api/automation/timeline
+
+### 3. Provider Health Dot
+- 🟢 Finnhub · 🟢 MT5 · 🟡 Alpha Vantage (slow) · 🔴 Polygon (down)
+- Sourced from ProviderHealth table
+
+### 4. Watchlist Top Movers
+- XAUUSD ↑1.2% · NVDA ↓0.8% · EURUSD ↑0.3%
+- Sourced from real-time quotes (MT5 bridge)
+
+### 5. Automation Pulse
+- 3 strategies active · 12 positions · 0 alerts · Last tick: 3s ago
+- Sourced from AutomationConfig + LoopTick
+
+## Implementation
+- Extend existing \TickerBar\ component or build new \MarketTape\ component
+- Scrolling animation (CSS marquee or requestAnimationFrame)
+- Fixed to top of viewport below header
+- Each section separated by · or |
+- Click section → navigate to relevant area (click session → timeline, click mover → symbol detail)
+
+## Phase
+Phase 1 — core market awareness. No trading decisions from this, just situational awareness.

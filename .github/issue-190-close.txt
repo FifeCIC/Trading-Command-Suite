@@ -1,0 +1,23 @@
+## Completed - Strategy Performance Dashboard
+
+### Backend: PerformanceService refactored
+- Replaced in-memory Map<TradeRecord> with Prisma queries against Trade table
+- GET /api/performance — per-strategy stats (win rate, P&L, profit factor, symbols, avg holding)
+- GET /api/performance/summary/full?days=90 — equity curve (daily P&L), monthly breakdown, overall stats
+- All data from real closed trades in DB — no mock data
+
+### Frontend: PerformanceLabPage rebuilt
+- 5 summary cards: Total P&L, Win Rate, Profit Factor, Closed Trades, Active Strategies
+- 30/90/180/365 day toggle buttons
+- Per-strategy cards with P&L badges, win rate, trade count, symbol list, bar charts
+- Equity curve bar chart (daily cum P&L)
+- Monthly breakdown table (trades, wins, losses, win rate, P&L per month)
+- Loading skeleton, API offline banner, empty state
+
+### Files changed
+- nest/src/modules/performance/performance.service.ts — Prisma rewrite
+- nest/src/modules/performance/performance.controller.ts — async endpoints
+- src/pages/PerformanceLabPage.jsx — real dashboard (was hardcoded demo)
+- src/pages/performance-lab.css — full styling
+- src/core/architecture-reference.js — added performance entry
+- src/pages/CapabilityMapPage.jsx — added dashboard entry
