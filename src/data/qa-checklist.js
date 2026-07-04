@@ -1,0 +1,375 @@
+/**
+ * QA Testing Checklist
+ * ====================
+ * Structured test inventory organized by system area.
+ * Each entry: what to test, how to test it, expected behavior, status.
+ *
+ * When a directive/protocol version changes, entries auto-flag as "needs retest"
+ * (Phase 2 — version tracking). For now, manual status toggle.
+ */
+
+const QA_CHECKLIST = [
+  // ═══════════════════════════════════════════════════
+  // SCORING PIPELINE
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-score-001',
+    area: 'Scoring Pipeline',
+    system: 'SEES Scoring Engine',
+    name: 'Full symbol ranking returns real scores',
+    procedure: 'GET /api/scoring/ranked?limit=10 — verify all 10 entries have ticker, composite score, signal, and dataStatus',
+    expected: 'Non-zero scores for symbols with market data. dataStatus should be "live" not "no_data".',
+    category: 'API',
+    priority: 'critical',
+    versionNote: '99 directives, 32 protocols',
+  },
+  {
+    id: 'qa-score-002',
+    area: 'Scoring Pipeline',
+    system: 'SEES Scoring Engine',
+    name: 'New divergence directives produce valid scores',
+    procedure: 'Check DirectivesStatusPage — verify rsi-divergence, macd-divergence, obv-divergence appear with non-zero avg scores',
+    expected: 'Divergence directives should show bullish bias in downtrends, bearish in uptrends.',
+    category: 'Directive',
+    priority: 'high',
+    versionNote: 'Sprint 2026-07-03 — v1.0.0',
+  },
+  {
+    id: 'qa-score-003',
+    area: 'Scoring Pipeline',
+    system: 'SEES Scoring Engine',
+    name: 'MTF Confluence protocols agree on direction',
+    procedure: 'POST /api/scoring/arena/consensus { symbol: "XAUUSD" } — check if mtf-confluence-conservative and mtf-confluence-weighted agree',
+    expected: 'Conservative gives fewer signals but higher confidence. Weighted gives more signals.',
+    category: 'Protocol',
+    priority: 'high',
+    versionNote: 'Sprint 2026-07-03 — v1.0.0',
+  },
+  {
+    id: 'qa-score-004',
+    area: 'Scoring Pipeline',
+    system: 'SEES Scoring Engine',
+    name: 'VWAP Confluence triggers at VWAP touches',
+    procedure: 'On a ranging day, check XAUUSD or SPY — price should be near VWAP for vwap-confluence-simple to score high',
+    expected: 'Score > 60 when price is within 0.5% of VWAP with elevated volume.',
+    category: 'Directive',
+    priority: 'medium',
+    versionNote: 'Sprint 2026-07-03 — v1.0.0',
+  },
+  {
+    id: 'qa-score-005',
+    area: 'Scoring Pipeline',
+    system: 'Protocol Consensus Engine',
+    name: 'Ensemble voting produces meaningful consensus',
+    procedure: 'POST /api/scoring/arena/consensus { symbol: "XAUUSD" } — verify response has votes.bullish/bearish/neutral counts, dominantSignal, conviction',
+    expected: 'At least 15 of 32 protocols should produce scores. Agreement % should be >30% unless market is extremely choppy.',
+    category: 'API',
+    priority: 'high',
+    versionNote: 'Sprint 2026-07-04 — v1.0.0',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // AUTOMATION & EXECUTION
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-auto-001',
+    area: 'Automation',
+    system: 'Automation Loop',
+    name: 'Loop starts and ticks without errors',
+    procedure: 'POST /api/automation/start → wait 30s → GET /api/automation/status. Check loopEnabled=true, tickCount>0.',
+    expected: 'Loop stays running. No crashes or error logs.',
+    category: 'Integration',
+    priority: 'critical',
+    versionNote: '5-min interval default',
+  },
+  {
+    id: 'qa-auto-002',
+    area: 'Automation',
+    system: 'Automation Loop',
+    name: 'Scoring strategies persist across restarts',
+    procedure: 'Create a scoring strategy via POST /api/automation/scoring-strategies. Restart NestJS. GET /api/automation/scoring-strategies — verify it still exists.',
+    expected: 'Strategy survives restart. DB persistence works.',
+    category: 'Integration',
+    priority: 'critical',
+    versionNote: 'Sprint 2026-07-03 — scoring_strategy table',
+  },
+  {
+    id: 'qa-auto-003',
+    area: 'Automation',
+    system: 'Trading Scheduler',
+    name: 'Daily cron produces real suggestions',
+    procedure: 'POST /api/scheduler/run-now — check run.steps for "scoring: ok" and real symbol names in suggestions (not hardcoded AAPL/NVDA/TSLA)',
+    expected: 'Suggestions come from live ScoringService.rankAll(). Scoring step shows "20 symbols scored".',
+    category: 'Integration',
+    priority: 'high',
+    versionNote: 'Sprint 2026-07-03 — wired to live scoring',
+  },
+  {
+    id: 'qa-auto-004',
+    area: 'Automation',
+    system: 'Trading Scheduler',
+    name: 'Auto-execution stays in paper-safe mode',
+    procedure: 'With no auto-trade strategies enabled, run the scheduler. Check run.autoExecuted=false.',
+    expected: 'Paper-safe by default. Auto-execution only when strategies explicitly set to mode=auto AND tradingEnabled=true.',
+    category: 'Safety',
+    priority: 'critical',
+    versionNote: 'Always enforced',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // TRADING EXECUTION
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-trade-001',
+    area: 'Trading',
+    system: 'MT5 Bridge',
+    name: 'MT5 quotes flow without interruption',
+    procedure: 'Check server logs for "MT5: fetching quote for EURUSD" every ~15-30s. No circuit breaker trips.',
+    expected: 'Consistent quote flow. Circuit breaker only trips when bridge is genuinely down.',
+    category: 'Integration',
+    priority: 'critical',
+    versionNote: 'Bridge v2 on port 5001',
+  },
+  {
+    id: 'qa-trade-002',
+    area: 'Trading',
+    system: 'MT5 Bridge',
+    name: 'MT5 candle fallback works for scoring',
+    procedure: 'Score a symbol with no DB bars (e.g., NZDUSD). Check logs for "MT5 fallback: imported X bars".',
+    expected: 'MT5 bridge provides candles on-demand. Bars stored in marketbar table for future use.',
+    category: 'Integration',
+    priority: 'high',
+    versionNote: 'Sprint 2026-07-04 — on-demand fallback',
+  },
+  {
+    id: 'qa-trade-003',
+    area: 'Trading',
+    system: 'Paper Trading',
+    name: 'Paper trades record correctly',
+    procedure: 'POST /api/paper-trading/order { symbol: "EURUSD", type: "BUY", volume: 0.01 }. Check account equity changes. Close position via DELETE.',
+    expected: 'PnL tracked correctly. SL/TP auto-close works. History persists.',
+    category: 'Feature',
+    priority: 'high',
+    versionNote: 'Sprint 2026-07-03 — virtual $10k ledger',
+  },
+  {
+    id: 'qa-trade-004',
+    area: 'Trading',
+    system: 'Trading Strategy Execution',
+    name: 'Strategy evaluate() returns valid scoring',
+    procedure: 'POST /api/trading/strategies/{id}/evaluate for an active strategy. Check response has composite, signal, rarity.',
+    expected: 'Non-zero composite. Signal matches composite threshold. Rarity band present.',
+    category: 'API',
+    priority: 'high',
+    versionNote: 'With regime-adaptive sizing + trailing stops',
+  },
+  {
+    id: 'qa-trade-005',
+    area: 'Trading',
+    system: 'Trading Strategy Execution',
+    name: 'Regime-adaptive sizing scales positions',
+    procedure: 'Execute a strategy in high-volatility conditions. Check the execute() response for regimeSizing multiplier.',
+    expected: 'high vol → 0.5×, chaotic → 0.25×, strong trend → 1.25×.',
+    category: 'Feature',
+    priority: 'medium',
+    versionNote: 'Sprint 2026-07-04',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // RISK MANAGEMENT
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-risk-001',
+    area: 'Risk',
+    system: 'Risk Service',
+    name: 'Stop-loss and take-profit calculators work',
+    procedure: 'POST /api/risk/calculate-position with stopLoss type=atr-multiple, takeProfit type=risk-reward',
+    expected: 'Valid SL/TP prices returned. Kelly sizing produces safe fraction.',
+    category: 'API',
+    priority: 'high',
+    versionNote: '5 stop types, 4 TP types, 3 sizing methods',
+  },
+  {
+    id: 'qa-risk-002',
+    area: 'Risk',
+    system: 'Monte Carlo Simulator',
+    name: 'Simulation produces risk metrics',
+    procedure: 'POST /api/risk/monte-carlo with a trade PnL sequence. Check response.metrics for riskOfRuin, sharpeApproximation, medianFinalEquity.',
+    expected: '10k iterations complete. riskOfRuin 0-1. Sharpe computed. Recommendation string present.',
+    category: 'Feature',
+    priority: 'medium',
+    versionNote: 'Sprint 2026-07-03 — v1.0.0',
+  },
+  {
+    id: 'qa-risk-003',
+    area: 'Risk',
+    system: 'Trading Gates',
+    name: 'Three-gate pipeline blocks invalid trades',
+    procedure: 'POST /api/trading-gates/check with score below threshold, outside hours, or max positions reached.',
+    expected: 'Gate 1 (threshold <60) → blocked. Gate 2 (outside 9:30-16:00 ET) → blocked. Gate 3 (max 5 positions) → blocked.',
+    category: 'Safety',
+    priority: 'critical',
+    versionNote: '3-gate pipeline',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // DATA PIPELINE
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-data-001',
+    area: 'Data',
+    system: 'Market Data',
+    name: 'Data freshness check reports correctly',
+    procedure: 'GET /api/market-data/freshness?timeframe=1h&maxAgeMinutes=60',
+    expected: 'Returns fresh/stale/missing counts. Symbols with recent bars show "fresh".',
+    category: 'API',
+    priority: 'medium',
+    versionNote: '41k+ bars in DB',
+  },
+  {
+    id: 'qa-data-002',
+    area: 'Data',
+    system: 'Market Data',
+    name: 'Provider health shows accurate status',
+    procedure: 'GET /api/providers/health — check each provider has status, credentialsConfigured, and for MT5: features.dxySource',
+    expected: 'MT5 shows healthy with dxySource="eurusd-proxy". T212 shows credentials if configured.',
+    category: 'UI',
+    priority: 'medium',
+    versionNote: 'Sprint 2026-07-04 — broker-aware gating',
+  },
+  {
+    id: 'qa-data-003',
+    area: 'Data',
+    system: 'Earnings Calendar',
+    name: 'Earnings data imports and cross-references portfolio',
+    procedure: 'GET /api/portfolio/events — verify positions with upcoming earnings appear with risk scores.',
+    expected: 'Events cross-referenced with positions. Risk levels HIGH/MEDIUM/LOW based on proximity × allocation.',
+    category: 'Feature',
+    priority: 'medium',
+    versionNote: 'Finnhub + Alpha Vantage sources',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // BACKTESTING
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-back-001',
+    area: 'Backtesting',
+    system: 'Backtest Service',
+    name: 'Walk-forward optimization works',
+    procedure: 'POST /api/backtest/walk-forward { symbol: "XAUUSD", trainDays: 365, testDays: 180 }',
+    expected: 'Returns train + test results with optimizedParams. Out-of-sample win rate computed.',
+    category: 'Feature',
+    priority: 'high',
+    versionNote: 'Grid search SL/TP optimization',
+  },
+  {
+    id: 'qa-back-002',
+    area: 'Backtesting',
+    system: 'Backtest Service',
+    name: 'Slippage/spread modeling reduces P&L',
+    procedure: 'Run same backtest with and without slippage/spread params. Compare tradeWinRate and avgTradePnl.',
+    expected: 'With slippage=0.0001, spread=0.0001 (forex), win rate and avg PnL should be slightly lower than without.',
+    category: 'Feature',
+    priority: 'high',
+    versionNote: 'Sprint 2026-07-04 — execution realism',
+  },
+  {
+    id: 'qa-back-003',
+    area: 'Backtesting',
+    system: 'Backtest Service',
+    name: 'New protocols produce backtest results',
+    procedure: 'Run backtests for divergence-suite-v1, mtf-conservative-v1, vwap-simple-v1 on XAUUSD with 365 days.',
+    expected: 'Each protocol produces entry signals with forward returns. Bracket trades simulate correctly.',
+    category: 'Protocol',
+    priority: 'high',
+    versionNote: 'Sprint 2026-07-03 — 6 new protocols',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // UI / UX
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-ui-001',
+    area: 'UI',
+    system: 'Frontend Pages',
+    name: 'All research pages show real data',
+    procedure: 'Visit each: /research/social-networks, /research/price-forecast, /research/volatility-analysis, /research/support-resistance, /research/sector-rotation, /research/pattern-scanner, /research/market-correlations, /research/technical-indicators.',
+    expected: 'No mock/demo data. All pages show real API responses with loading/error/empty states.',
+    category: 'UI',
+    priority: 'high',
+    versionNote: 'Fixed Sprint 2026-07-03 — #197',
+  },
+  {
+    id: 'qa-ui-002',
+    area: 'UI',
+    system: 'Frontend Pages',
+    name: 'Market Status Ticker shows live data',
+    procedure: 'Look at header ticker bar. Verify sessions, events, providers, automation sections all update.',
+    expected: 'London/NY/Tokyo sessions with correct open/closed state. Provider health chips update. Events from timeline.',
+    category: 'UI',
+    priority: 'low',
+    versionNote: 'Bloomberg-style scrolling tape',
+  },
+  {
+    id: 'qa-ui-003',
+    area: 'UI',
+    system: 'Frontend Pages',
+    name: 'Performance Dashboard shows trade history',
+    procedure: 'Visit /builder/performance-lab. Check overall P&L, win rate, per-strategy cards, equity curve.',
+    expected: 'Data from real DB trades. Equity curve renders. Monthly breakdown table populated.',
+    category: 'UI',
+    priority: 'medium',
+    versionNote: 'Real DB data — no mock',
+  },
+  {
+    id: 'qa-ui-004',
+    area: 'UI',
+    system: 'Frontend Pages',
+    name: 'Signal alerts appear on trade execution',
+    procedure: 'Execute a paper trade. Check that notification is sent via Telegram/Discord channels (check notification history).',
+    expected: 'entry-signal event fired. Alert contains symbol, direction, composite, size, SL/TP, regime label.',
+    category: 'Integration',
+    priority: 'medium',
+    versionNote: 'Sprint 2026-07-04 — notification wiring',
+  },
+  {
+    id: 'qa-ui-005',
+    area: 'UI',
+    system: 'Frontend Pages',
+    name: 'AI Co-Pilot explains signals',
+    procedure: 'POST /api/lab/explain-signal with a signal from ranked symbols. Check response.explanation is natural language.',
+    expected: '2-3 sentence explanation identifying strongest supporting and opposing factors. Model info present.',
+    category: 'Feature',
+    priority: 'low',
+    versionNote: 'Sprint 2026-07-04 — DeepSeek integration',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // BROKER INTEGRATION
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-broker-001',
+    area: 'Broker',
+    system: 'MT5 vs Trading212',
+    name: 'MT5 and T212 data sources are isolated',
+    procedure: 'GET /api/portfolio?source=mt5 vs GET /api/portfolio?source=trading212. Verify different positions returned.',
+    expected: 'MT5 shows 1 forex position (USDJPY). T212 shows 9 stock positions. No cross-contamination.',
+    category: 'Integration',
+    priority: 'critical',
+    versionNote: 'Separate adapters, separate position tracking',
+  },
+  {
+    id: 'qa-broker-002',
+    area: 'Broker',
+    system: 'MT5 Bridge',
+    name: 'DXY proxy warning appears for MT5',
+    procedure: 'Visit /data/provider-health. Check MT5 provider card for features.dxySource note.',
+    expected: 'Shows "eurusd-proxy" with explanatory note about DXY futures unavailability.',
+    category: 'UI',
+    priority: 'low',
+    versionNote: 'Sprint 2026-07-04 — #165',
+  },
+];
+
+export default QA_CHECKLIST;

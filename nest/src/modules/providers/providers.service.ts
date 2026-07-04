@@ -102,6 +102,11 @@ export class ProvidersService {
               : 'Missing API credentials'),
           checkedAt: row?.checkedAt?.toISOString() ?? null,
           latencyMs: row?.latencyMs ?? null,
+          // Broker-aware feature gating (Sprint 2026-07-04)
+          features: config.id === 'mt5' ? {
+            dxySource: 'eurusd-proxy' as const,
+            dxyNote: 'Your broker does not offer DXY futures. USD strength estimated from EURUSD (57.6% of DXY basket).',
+          } : undefined,
         };
       }),
     };

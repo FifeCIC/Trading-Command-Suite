@@ -91,6 +91,9 @@ const KNOWN_FEATURES = {
   'PerformanceService (Prisma, equity curve)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
   'Insider Activity (DB-backed, on-demand)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Dilution Impact (DB-backed, on-demand)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Seasonality Heatmap': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Recently Analysed Symbols': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Create Strategy Page': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
 };
 
 // ── Build unified capability rows ──
@@ -232,6 +235,10 @@ function buildCapabilityRows(directives, providers) {
     'MTF Confluence (Conservative + Weighted)',
     'Divergence Suite (RSI + MACD + OBV)',
     'VWAP Confluence (Simple + Bands)',
+    'Seasonality Heatmap (Monthly Win Rates)',
+    'Recently Analysed Symbols (History + Quick Score)',
+    'Create Strategy (Trading + Protocol Link)',
+    'Paper Trading Dashboard',
     'Gap Scanner (Directive)',
     'User Preferences System (12 Settings)',
     'Strategy Showdown + Live Positions',

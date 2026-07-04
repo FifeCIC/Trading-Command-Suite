@@ -115,6 +115,7 @@ import SettingsPage from '../pages/SettingsPage.jsx';
 import ServerControlsPage from '../pages/ServerControlsPage.jsx';
 import ReportsPage from '../pages/ReportsPage.jsx';
 import CapabilityMapPage from '../pages/CapabilityMapPage.jsx';
+import QATestingPage from '../pages/QATestingPage.jsx';
 import ArchitectureFrameworkPage from '../pages/ArchitectureFrameworkPage.jsx';
 import DiagramsPage from '../pages/DiagramsPage.jsx';
 
@@ -263,6 +264,7 @@ export const VIEW_COMPONENTS = {
   'server-controls': ServerControlsPage,
   'reports': ReportsPage,
   'capability-map': CapabilityMapPage,
+  'qa-testing': QATestingPage,
   'architecture-framework': ArchitectureFrameworkPage,
   'diagrams': DiagramsPage,
 

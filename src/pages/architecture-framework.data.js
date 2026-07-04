@@ -49,6 +49,7 @@ export const DOMAINS = [
   'Directive execution',
   'Calibration and weight overrides',
   'Condition detection and activation gate',
+  'MicroTrendDetector (ADX, trend clarity, sideways detection)',
   'Strategy aggregation',
   'Scoring and ranking',
   'Exit signal system',
@@ -58,6 +59,7 @@ export const DOMAINS = [
   'SEES presentation layer',
   'Algorithm lab and pipeline visualization',
   'Portfolio and trading execution',
+  'Planner (allocations, styles, objectives)',
   'Operational governance and verification',
   'Automation and multi-protocol orchestration',
 ]
@@ -406,7 +408,7 @@ export const CONTRACT_CARDS = [
   },
 ]
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-02'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-04'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -1374,6 +1376,7 @@ export const KNOWN_GAPS = [
 ]
 
 export const REVISION_LOG = [
+  '2026-07-04: Sprint cleanup — Provider Degradation Service + Scoring Degradation Monitor (Issue #163), MarketContextService 7-Day Awareness (#133), ProviderHealthPage (#158), ChartComparison real MT5 candles (#150), SeasonalityHeatmap (#130), RecentlyAnalysedSymbols (#149), ConfigureDirectives wired (#156), EventsCalendar external links (#154), divergence swing-detection fix (#202), Known Gaps migrated from #172, CapabilityMap updated.',
   '2026-07-03: #201 — Market Status Ticker. Bloomberg-style scrolling tape in app header. 5 data sections: sessions (3-market timezone), timeline events, provider health dots, automation pulse, next session countdown. CSS marquee, TanStack Query polling. Self-contained MarketTape component in header second row.',
   '2026-07-03: #177 — On-demand import refactor. Insider + company metrics imports converted from cron → on-demand (single-symbol). Directives self-heal: if DB data missing, trigger import for just that symbol, retry DB, then score. Saves Finnhub rate limits — no calls for unscored symbols. Bulk methods (importInsiderTransactionsBulk, importCompanyMetricsBulk) retained for manual admin use.',
   '2026-07-03: #171 — Directive data-source hardening. 3 directives (social-buzz, insider-activity, dilution-impact) converted from live Finnhub API → DB-backed (SocialMention, InsiderTransaction, CompanyMetric tables). 3 cron import jobs added to ResearchImportService. Zero Finnhub calls during scoring for these directives. Also verified earnings-momentum (already DB-backed) and news-sentiment (uses bar data, no Finnhub call).',

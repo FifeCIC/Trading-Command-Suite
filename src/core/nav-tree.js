@@ -160,6 +160,7 @@ export const NAV_TREE = {
       { id: 'audit-log', label: 'Audit Log', icon: '▤' },
       { id: 'setup', label: 'Setup Checklist', icon: '⊞' },
       { id: 'capability-map', label: 'Capability Map', icon: '🗺️' },
+      { id: 'qa-testing', label: 'QA Testing', icon: '🧪' },
     ],
   },
   lab: {

@@ -6,6 +6,7 @@
  * GET  /api/scoring/arena         — trading strategy stacks with real protocol scores
  * GET  /api/scoring/arena/filters — available types, portfolios, protocols
  * POST /api/scoring/arena/compare — multi-protocol comparison matrix
+ * POST /api/scoring/arena/consensus — protocol ensemble voting (all protocols) (Sprint 2026-07-04)
  *
  * Architecture:
  *   Protocol (25) → Trading Strategy (grouping) → Ranked Symbols
@@ -18,6 +19,7 @@ import { Controller, Get, Post, Body, Query, Logger } from '@nestjs/common';
 import { ScoringService } from './scoring.service';
 import { StrategyCompetitionService } from './strategy-competition.service';
 import { ProtocolGatingService } from './protocol-gating.service';
+import { ProtocolConsensusService } from './protocol-consensus.service';
 import { PROTOCOL_REGISTRY } from '../directives/directive-groups';
 import { PrismaService } from '../../database/prisma.service';
 
@@ -135,6 +137,7 @@ export class ArenaController {
     private readonly scoringService: ScoringService,
     private readonly competitionService: StrategyCompetitionService,
     private readonly protocolGating: ProtocolGatingService,
+    private readonly consensusService: ProtocolConsensusService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -441,5 +444,21 @@ export class ArenaController {
       ),
       comparison,
     };
+  }
+
+  /**
+   * POST /api/scoring/arena/consensus
+   * Protocol Consensus Engine — ensemble voting across ALL 32 protocols.
+   * Single symbol or batch mode.
+   */
+  @Post('consensus')
+  async getConsensus(@Body() body: { symbols?: string[]; symbol?: string }) {
+    if (body.symbols?.length) {
+      return this.consensusService.batchConsensus(body.symbols);
+    }
+    if (body.symbol) {
+      return this.consensusService.computeConsensus(body.symbol);
+    }
+    return { error: 'Provide symbol or symbols[] in request body' };
   }
 }

@@ -152,10 +152,24 @@ export const CURRENT_SLICE = [
   'Automation Loop (designed) — broker-agnostic setInterval tick: 1) check Timeline for active events, 2) fetch ALL brokers\' portfolios, 3) score every position, 4) evaluate active strategies, 5) dispatch (manual/semi-auto/auto), 6) execute via IBrokerPortfolio.placeOrder. Safety: max 1 trade/tick, min 60s between trades, emergency stop.',
   'Automation Dashboard (designed) — multi-broker cockpit at /trading/automation. Panels: Broker Bar, Live Timeline, Active Strategies, Portfolio Scores (tabbed by broker), Why Panel (directive breakdown + timeline context), Decision Log, Trade History. Master pause/run-now/emergency-stop controls.',
   'Automation Timeline (designed) — TimelineService consulted by loop on every tick. Event types: economic (FOMC/NFP/CPI), earnings (Finnhub/Polygon), session windows (London/NY/Tokyo/Sydney), seasonality (hour×day win rates from SeasonalityService), protocol activation windows. Events can block/gate/boost/reduce. Visual timeline component on dashboard.',
+  // ── Sprint 2026-07-03/04 ──
+  'Paper Trading — PaperTradingService with virtual P&L mode. Virtual account with configurable balance, simulated order execution at market prices, trade history, P&L tracking. No real money at risk.',
+  'Monte Carlo Risk-of-Ruin — MonteCarloService in risk module. POST /api/risk/monte-carlo takes trade PnL sequence, runs 10k iterations with replacement. Outputs equity distribution, risk of ruin, optimal position size, Sharpe, profit factor.',
+  'Market Context (7-Day) — MarketContextService + MarketContextPage. Day-of-week profiles (Monday gap fill, Wednesday triple swap, Friday EOW), session timers, upcoming events, pre-flight checklist. GET /api/trading/sessions/market-context.',
+  'Market Status Ticker — Bloomberg-style scrolling tape in app header. 5 sections: sessions (computed), events (TimelineService), providers (ProviderHealth), automation status, next session. CSS marquee animation, pauses on hover, all queries fail gracefully.',
+  'Provider Health Dashboard — Standalone ProviderHealthPage at /data/provider-health. 7 provider cards with real-time status, latency, credentials check. Summary chips, services row (DB/queue/Redis), auto-refresh 30s.',
+  'Provider Degradation — ProviderDegradationService monitors all providers for rate limits, errors, latency. ScoringDegradationMonitor warns when directive scores are compromised by provider outages. Integrated into gated scoring pipeline.',
+  'Divergence Suite — 3 new directives: rsi-divergence, macd-divergence, obv-divergence. Detects bullish/bearish divergence (price new extremes, indicator fails to confirm). Registered in divergence-suite-v1 protocol.',
+  'VWAP Confluence — 2 new directives: vwap-confluence-simple, vwap-confluence-bands. Combines VWAP + RSI + Volume for mean-reversion signals. vwap-reversion-v1 protocol.',
+  'MTF Confluence — 2 new directives: mtf-confluence-conservative, mtf-confluence-weighted. Requires daily/1h/5m all-alignment for high-confidence signals. mtf-confluence-v1 protocol.',
+  'Gap Scanner — gap-scanner directive detects pre-market price gaps (up/down), classifies small/large/extreme, estimates fill probability. gap-scanner-v1 protocol.',
+  'Cron→On-Demand Refactor — Removed @Cron from importInsiderTransactions() and importCompanyMetrics(). Replaced with single-symbol on-demand import triggered by directives when DB data is missing. Saves Finnhub rate limits.',
+  'Trading Scheduler + Scoring Bridge — ScoringStrategy model (DB-persisted watchlist+protocol pairs). TradingScheduler runs live scoring at configurable intervals, writes StrategyEvaluation records, feeds automation loop.',
+  'Bug Fixes — #174 Trading Strategies API shape fix, #175 Strategy Comparison stale filter, #155 Gold-macro-correlation stub cleanup, #204 Earnings surprise display guard.',
 ]
 
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-02'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-04'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -220,6 +234,54 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated read access',
     owner: 'RiskController',
     contract: 'Unified risk dashboard: portfolio health (Position/Trade P&L, drawdown curve), risk limits config, 3-gate status (threshold/scope/position), circuit breaker state.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/risk/monte-carlo',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'RiskController',
+    contract: 'Runs 10k-iteration Monte Carlo simulation on trade PnL sequence. Returns equity distribution, risk of ruin, optimal position size analysis, Sharpe, profit factor.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/performance/summary/full',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'PerformanceController',
+    contract: 'Full performance summary from Trade table (Prisma). Returns per-strategy stats, daily equity curve, monthly breakdown, overall win rate/P&L/profit factor. Query: ?days=90.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/performance',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'PerformanceController',
+    contract: 'Per-strategy performance stats from Trade table: win rate, P&L, profit factor, symbol list, avg holding time. Sorted by total P&L.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/trading/sessions/market-context',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'SessionTrackerController',
+    contract: '7-day market awareness: day-of-week profile, session timers (Asia/London/NY), upcoming events (earnings/FOMC/OpEx), pre-flight checklist, swap/warning alerts.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/paper-trading/order',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'PaperTradingController',
+    contract: 'Place simulated order in virtual account. Executes at current market price, tracks P&L, no real money at risk. Returns order with virtual fill.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/paper-trading/account',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'PaperTradingController',
+    contract: 'Virtual account summary: balance, equity, open positions, closed P&L, trade history.',
     status: 'active',
   },
   {
