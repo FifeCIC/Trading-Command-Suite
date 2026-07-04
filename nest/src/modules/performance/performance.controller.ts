@@ -1,40 +1,28 @@
-import { Controller, Get, Post, Param, Body } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { PerformanceService } from './performance.service';
 
 @Controller('performance')
 export class PerformanceController {
   constructor(private readonly perf: PerformanceService) {}
 
-  @Post('trade')
-  recordTrade(@Body() body: { strategyId: string; strategyName: string; symbol: string; action: 'buy' | 'sell'; quantity: number; entryPrice: number; entryScore?: number }) {
-    return this.perf.recordTrade({
-      ...body,
-      exitPrice: null,
-      pnl: null,
-      pnlPercent: null,
-      exitReason: null,
-      entryScore: body.entryScore ?? null,
-      openedAt: new Date().toISOString(),
-    });
-  }
-
-  @Post('trade/:id/close')
-  closeTrade(@Param('id') id: string, @Body() body: { exitPrice: number; exitReason: string }) {
-    return this.perf.closeTrade(id, body.exitPrice, body.exitReason) ?? { error: 'Trade not found' };
-  }
-
+  /** GET /api/performance — all strategies with performance stats */
   @Get()
-  getAllPerformance() {
-    return { strategies: this.perf.getAllPerformance() };
+  async getAllPerformance() {
+    const strategies = await this.perf.getAllPerformance();
+    return { strategies, count: strategies.length };
   }
 
+  /** GET /api/performance/:strategyId — single strategy detail */
   @Get(':strategyId')
-  getPerformance(@Param('strategyId') strategyId: string) {
-    return this.perf.getStrategyPerformance(strategyId) ?? { error: 'No trades for this strategy' };
+  async getPerformance(@Param('strategyId') strategyId: string) {
+    const perf = await this.perf.getStrategyPerformance(strategyId);
+    return perf ?? { error: 'No trades for this strategy', strategyId };
   }
 
-  @Get('trade/all')
-  getAllTrades() {
-    return { trades: this.perf.getAllTrades() };
+  /** GET /api/performance/summary/full?days=90 — equity curve + monthly breakdown + overall */
+  @Get('summary/full')
+  async getSummary(@Query('days') days?: string) {
+    const d = parseInt(days || '90', 10);
+    return this.perf.getSummary(Math.min(d, 365));
   }
 }

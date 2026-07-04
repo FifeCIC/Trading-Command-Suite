@@ -14,9 +14,13 @@ export interface BacktestRunRequest {
   symbol: string;
   days?: number;
   timeframe?: string;
-  protocolId?: string;         // NEW: which protocol to test
-  slPct?: number;              // NEW: stop-loss % (for bracket simulation)
-  tpPct?: number;              // NEW: take-profit % (for bracket simulation)
+  protocolId?: string;
+  slPct?: number;
+  tpPct?: number;
+  /** Execution realism (Sprint 2026-07-04). All in price units (e.g. 0.0001 = 1 pip for EURUSD). */
+  slippage?: number;           // Slippage per trade (default 0.0001 = 1 pip forex)
+  spread?: number;             // Bid-ask spread cost (default 0.0001 = 1 pip forex)
+  assetClass?: 'forex' | 'stock' | 'crypto'; // Auto-sets sensible defaults
 }
 
 export interface TradeRecord {
@@ -87,10 +91,18 @@ export class BacktestService {
       protocolId,
       slPct = 1.0,
       tpPct = 1.0,
+      slippage: rawSlippage,
+      spread: rawSpread,
+      assetClass,
     } = request;
 
+    // ── Execution realism defaults (Sprint 2026-07-04) ──
+    const isForex = assetClass === 'forex' || (symbol.length === 6 && /^[A-Z]{6}$/.test(symbol));
+    const slippage = rawSlippage ?? (isForex ? 0.0001 : 0.01);
+    const spread = rawSpread ?? (isForex ? 0.0001 : 0.01);
+
     const doBrackets = slPct > 0 && tpPct > 0;
-    this.logger.log(`Backtest: ${symbol} over ${days} days (${timeframe}), protocol=${protocolId ?? 'default'}, brackets=${doBrackets}`);
+    this.logger.log(`Backtest: ${symbol} ${days}d ${timeframe} protocol=${protocolId ?? 'default'} brackets=${doBrackets} slip=${slippage} spread=${spread}`);
 
     // Load all bars
     const rows = await this.prisma.marketBar.findMany({
@@ -178,14 +190,17 @@ export class BacktestService {
             }
           }
 
-          const pnl = exitPrice - currentClose;
+          // ── Apply execution costs (Sprint 2026-07-04) ──
+          const entryCost = currentClose + spread / 2;  // Pay the ask (spread)
+          const exitCost = exitPrice - slippage;          // Market order slippage
+          const pnl = exitCost - entryCost;
           const pnlPct = (pnl / currentClose) * 100;
 
           trades.push({
             entryDate: currentBar.timestamp.toISOString().split('T')[0],
-            entryPrice: currentClose,
+            entryPrice: Number(entryCost.toFixed(5)),
             exitDate,
-            exitPrice,
+            exitPrice: Number(exitCost.toFixed(5)),
             direction: 'LONG',
             pnl: Number(pnl.toFixed(4)),
             pnlPct: Number(pnlPct.toFixed(2)),

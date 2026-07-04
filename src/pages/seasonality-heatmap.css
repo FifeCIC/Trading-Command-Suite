@@ -1,0 +1,189 @@
+/* Seasonality Heatmap — seasonality-heatmap.css */
+
+.sh-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.35rem;
+  color: var(--ink);
+}
+
+.sh-header { margin-bottom: 1rem; }
+.sh-header h1 { margin: 0; }
+.sh-subtitle { margin: 0.2rem 0 0; color: var(--ink-soft); font-size: 0.8rem; }
+
+/* ── Symbol input ── */
+.sh-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.sh-input {
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--border, #334155);
+  border-radius: 6px;
+  background: var(--panel, #1e293b);
+  color: var(--ink);
+  font-family: 'Source Code Pro', 'Consolas', monospace;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  width: 140px;
+  letter-spacing: 0.04em;
+}
+.sh-input:focus { outline: none; border-color: var(--accent, #0ea5a6); box-shadow: 0 0 0 2px var(--accent, #0ea5a6)22; }
+
+.sh-btn {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--accent, #0ea5a6);
+  border-radius: 6px;
+  background: var(--accent, #0ea5a6);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.sh-btn:hover:not(:disabled) { opacity: 0.85; }
+.sh-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.sh-btn-secondary {
+  background: var(--panel, #1e293b);
+  color: var(--ink);
+  border-color: var(--border, #334155);
+  padding: 0.45rem 0.6rem;
+}
+
+/* ── Summary row ── */
+.sh-summary {
+  display: flex;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+.sh-best { color: #22c55e; font-weight: 600; }
+.sh-worst { color: #ef4444; font-weight: 600; }
+
+/* ── Heatmap grid ── */
+.sh-heatmap-wrap {
+  position: relative;
+  overflow-x: auto;
+  margin-bottom: 0.8rem;
+}
+
+.sh-col-headers {
+  display: flex;
+  margin-left: 38px;
+}
+.sh-col-header {
+  width: 34px;
+  text-align: center;
+  font-size: 0.55rem;
+  color: var(--ink-soft);
+  padding: 2px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sh-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1px;
+}
+
+.sh-row-label {
+  width: 36px;
+  text-align: right;
+  padding-right: 6px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.sh-cell {
+  width: 34px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1px;
+  border-radius: 3px;
+  cursor: default;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.sh-cell-data:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 6px rgba(0,0,0,0.4);
+  z-index: 2;
+}
+
+.sh-cell-empty {
+  background: var(--panel, #1e293b) !important;
+  opacity: 0.5 !important;
+}
+
+.sh-cell-val {
+  font-size: 0.52rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  pointer-events: none;
+}
+
+/* ── Tooltip ── */
+.sh-tooltip-anchor {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  pointer-events: none;
+}
+
+.sh-tooltip {
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--accent, #0ea5a6);
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.76rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+.sh-tooltip strong { color: var(--ink); }
+.sh-tooltip-samples { font-size: 0.66rem; color: var(--ink-soft); }
+
+/* ── Legend ── */
+.sh-legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.66rem;
+  color: var(--ink-soft);
+}
+
+.sh-legend-label { margin: 0 4px; }
+
+.sh-legend-swatch {
+  width: 20px;
+  height: 14px;
+  border-radius: 2px;
+  border: 1px solid var(--border, #33415533);
+}
+
+/* ── Empty state ── */
+.sh-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--ink-soft);
+}
+.sh-empty-hint { font-size: 0.76rem; opacity: 0.7; margin-top: 0.3rem; }

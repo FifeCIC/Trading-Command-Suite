@@ -988,6 +988,25 @@ model ProtocolRun {
   @@index([status])
 }
 
+model ScoringStrategy {
+  id              String   @id @default(uuid()) @db.VarChar(36)
+  name            String   @db.VarChar(200)
+  protocolId      String   @db.VarChar(100)
+  watchlistName   String   @db.VarChar(100)
+  brokerId        String   @default("mt5") @db.VarChar(50)
+  mode            String   @default("manual") @db.VarChar(20)
+  tradeThreshold  Float    @default(60)
+  baseSize        Float    @default(0.01)
+  slPct           Float    @default(1.0)
+  tpPct           Float    @default(1.0)
+  enabled         Boolean  @default(true)
+  tradingEnabled  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("scoring_strategy")
+}
+
 model SymbolProtocolAffinity {
   symbol              String   @db.VarChar(20)
   protocolId          String   @db.VarChar(100)

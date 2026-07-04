@@ -58,7 +58,10 @@ export class LiquidityCheckDirective implements IDirective {
     const volumeScore = Math.max(0, Math.min(40, (1 - Math.min(volCV, 2) / 2) * 40));
 
     // 2. Range tightness (tighter ranges = more liquid)
-    const ranges = recent.map(b => (b.high - b.low) / ((b.high + b.low) / 2)); // % range
+    const ranges = recent.map(b => {
+      const mid = (b.high + b.low) / 2;
+      return mid > 0 ? (b.high - b.low) / mid : 0; // guard: 0/0 → 0
+    });
     const avgRange = ranges.reduce((s, r) => s + r, 0) / ranges.length;
     // < 1% range = very liquid (score 35), > 5% = illiquid (score 0)
     const rangeScore = Math.max(0, Math.min(35, (1 - Math.min(avgRange, 0.05) / 0.05) * 35));
@@ -66,6 +69,7 @@ export class LiquidityCheckDirective implements IDirective {
     // 3. Gap frequency (fewer gaps = more liquid)
     let gapCount = 0;
     for (let i = 1; i < recent.length; i++) {
+      if (recent[i - 1].close <= 0) continue; // guard: skip bad data
       const gapPct = Math.abs(recent[i].open - recent[i - 1].close) / recent[i - 1].close;
       if (gapPct > 0.02) gapCount++; // >2% gap = illiquid
     }

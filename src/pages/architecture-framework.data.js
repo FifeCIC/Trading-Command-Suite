@@ -10,6 +10,9 @@ export const STATUS_SNAPSHOT = [
   '2026-06-26: Automation Architecture v1 designed — broker-agnostic automation loop with Timeline system as decision modifier (FOMC→reduce risk, earnings→block symbol, session open→boost protocols, seasonality→adjust thresholds).',
   '2026-07-01–02: Agent sessions — EarningsModule, AnalystTargetsService (Finnhub→FMP fallback), Settings API, Market Correlations wired, Seasonality directives, DataImportLog, PortfolioSnapshot models. 15+ issues closed. See GitHub Issues with `revision-log` label for detailed history.',
   '2026-07-03: Directive data-source hardening (Issue #171) — 3 directives (social-buzz, insider-activity, dilution-impact) converted from live Finnhub API calls to DB-backed queries. New Prisma models: SocialMention, InsiderTransaction, CompanyMetric. New cron import pipeline in ResearchImportService (6h/12h/daily schedules). Zero external API calls during scoring for these directives. Also: news-sentiment directive already uses bar data (no Finnhub call), earnings-momentum already DB-backed (no change needed).',
+  '2026-07-03: On-demand import refactor (Issue #177) — insider + company metrics imports converted from cron to on-demand. Directives now self-heal: query DB → if no data → trigger single-symbol Finnhub import → retry DB → score. Saves rate limits for symbols never scored. Bulk methods retained for manual trigger (no @Cron). insider-activity v1.2.0, dilution-impact v1.2.0.',
+  '2026-07-03: Market Status Ticker (Issue #201) — Bloomberg-style scrolling tape in header row. 5 sections: Sessions (3-market timezone), Upcoming Events (timeline API), Provider Health Dots, Automation Pulse (strategies/positions/tick), Next Session countdown. CSS marquee, pauses on hover, color-coded status. Zero new dependencies.',
+  '2026-07-03: Directive Status Performance Stats (Issue #176) — GET /api/directives/stats endpoint computes per-directive performance from Score history: avg score, directional bias (bullish/bearish/neutral ratio), protocol count. DirectivesStatusPage table updated with Avg Score and Direction columns with color-coded indicators.',
 ]
 
 export const ARCHITECTURE_INDEX = [
@@ -132,6 +135,7 @@ export const CURRENT_SLICE = [
   'Decoder — POST /api/decoder/parse with pattern-based AI analysis (sentiment scoring, symbol extraction, key date detection). DecodedDocument model persists results. No external API dependency.',
   'Strategy Comparison — GET /api/trading/strategy-comparison compares strategies by actual closed trade outcomes (win rate, total P&L, avg win/loss, max drawdown, profit factor). Live positions grouped by strategy from Trade table. Frontend shows showdown table + live position cards.',
   'Automation Loop (designed) — broker-agnostic setInterval tick: 1) check Timeline for active events, 2) fetch ALL brokers\' portfolios, 3) score every position, 4) evaluate active strategies, 5) dispatch (manual/semi-auto/auto), 6) execute via IBrokerPortfolio.placeOrder. Safety: max 1 trade/tick, min 60s between trades, emergency stop.',
+  'Directive Performance Stats — GET /api/directives/stats computes per-directive performance from Score.breakdown history: avg score, directional bias (bullish/bearish/neutral ratio), protocol count. DirectivesStatusPage shows Avg Score and Direction columns with color-coded indicators.',
   'Automation Dashboard (designed) — multi-broker cockpit at /trading/automation. Panels: Broker Bar, Live Timeline, Active Strategies, Portfolio Scores (tabbed by broker), Why Panel (directive breakdown + timeline context), Decision Log, Trade History. Master pause/run-now/emergency-stop controls.',
   'Automation Timeline (designed) — TimelineService consulted by loop on every tick. Event types: economic (FOMC/NFP/CPI), earnings (Finnhub/Polygon), session windows (London/NY/Tokyo/Sydney), seasonality (hour×day win rates from SeasonalityService), protocol activation windows. Events can block/gate/boost/reduce. Visual timeline component on dashboard.',
 ]
@@ -459,6 +463,14 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated read access',
     owner: 'SignalsController',
     contract: 'Single symbol signal envelope with full directive breakdown, risk gate chain, group scores, and pre-trade blockers.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/directives/stats',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'DirectivesController',
+    contract: 'Per-directive performance stats from Score history: average normalized score, directional bias (bullish/bearish/neutral), protocol count, and recent activity count. Sorted by avg score descending.',
     status: 'active',
   },
   {
@@ -1328,6 +1340,8 @@ export const KNOWN_GAPS = [
 ]
 
 export const REVISION_LOG = [
+  '2026-07-03: #201 — Market Status Ticker. Bloomberg-style scrolling tape in app header. 5 data sections: sessions (3-market timezone), timeline events, provider health dots, automation pulse, next session countdown. CSS marquee, TanStack Query polling. Self-contained MarketTape component in header second row.',
+  '2026-07-03: #177 — On-demand import refactor. Insider + company metrics imports converted from cron → on-demand (single-symbol). Directives self-heal: if DB data missing, trigger import for just that symbol, retry DB, then score. Saves Finnhub rate limits — no calls for unscored symbols. Bulk methods (importInsiderTransactionsBulk, importCompanyMetricsBulk) retained for manual admin use.',
   '2026-07-03: #171 — Directive data-source hardening. 3 directives (social-buzz, insider-activity, dilution-impact) converted from live Finnhub API → DB-backed (SocialMention, InsiderTransaction, CompanyMetric tables). 3 cron import jobs added to ResearchImportService. Zero Finnhub calls during scoring for these directives. Also verified earnings-momentum (already DB-backed) and news-sentiment (uses bar data, no Finnhub call).',
   'Revision history is tracked in closed GitHub Issues with the `revision-log` label.',
   'Query: gh issue list --label revision-log --state closed --repo FifeCIC/trading-command-suite',
@@ -1647,9 +1661,9 @@ export const DATABASE_SCHEMA = {
     '6. Signal generated based on Score → 7. Order created from Signal (planned)',
     '7b. PortfolioSnapshot captures portfolio state at session/daily/weekly intervals',
     '8. EarningsService imports Alpha Vantage EARNINGS_CALENDAR → EarningsEvent table (1 API call → bulk DB)',
-    '9. ResearchImportService.importSocialSentiment() (every 6h) → Finnhub /social-sentiment → SocialMention table → social-buzz directive reads DB',
-    '10. ResearchImportService.importInsiderTransactions() (every 12h) → Finnhub /insider-transactions → InsiderTransaction table → insider-activity directive reads DB',
-    '11. ResearchImportService.importCompanyMetrics() (daily 08:00) → Finnhub /stock/metric → CompanyMetric table → dilution-impact directive reads DB',
+    '9. ResearchImportService.importSocialSentiment() (every 6h cron) → Finnhub /social-sentiment → SocialMention table → social-buzz directive reads DB',
+    '10. insider-activity directive: DB query → if empty → ResearchImportService.importInsiderTransactionsForSymbol(symbol) on-demand → retry DB → score. Bulk method importInsiderTransactionsBulk() retained for manual use.',
+    '11. dilution-impact directive: DB query → if empty → ResearchImportService.importCompanyMetricsForSymbol(symbol) on-demand → retry DB → score. Bulk method importCompanyMetricsBulk() retained for manual use.',
     'ProviderHealth tracked independently - monitors data source availability',
     'Meta tables store extended attributes without modifying core schema',
   ],

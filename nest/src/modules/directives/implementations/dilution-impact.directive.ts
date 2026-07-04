@@ -24,8 +24,10 @@ import {
   IDirective,
 } from '../interfaces/directive.interface';
 import { PrismaService } from '../../../database/prisma.service';
+import { ResearchImportService } from '../../research/research-import.service';
 
 const MIN_BARS = 1;
+const STALE_DAYS = 7;
 
 @Injectable()
 export class DilutionImpactDirective implements IDirective {
@@ -33,13 +35,14 @@ export class DilutionImpactDirective implements IDirective {
   readonly id = 'dilution-impact';
   readonly name = 'Dilution Impact';
   readonly description =
-    'Penalises stocks with recent share dilution. No dilution = full score. Reads from CompanyMetric DB table.';
+    'Penalises stocks with recent share dilution. No dilution = full score. On-demand import + DB read.';
   readonly priority = 45;
   readonly maxScore = 60; // Risk penalty — lower ceiling
-  readonly version = '1.1.0';
+  readonly version = '1.2.0';
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly researchImport: ResearchImportService,
   ) {}
 
   async calculate(input: DirectiveInput): Promise<DirectiveResult> {
@@ -61,59 +64,69 @@ export class DilutionImpactDirective implements IDirective {
       });
 
       if (!metrics) {
-        return {
-          score: 0,
-          confidence: 0,
-          reason: `No company metrics data for ${symbol}. Import job may not have run yet.`,
-          signalClass: 'neutral',
-        };
+        // Trigger on-demand import, then retry DB query once
+        this.logger.log(`No company metrics for ${symbol} — triggering on-demand import`);
+        await this.researchImport.importCompanyMetricsForSymbol(symbol);
+
+        // Retry DB query after import
+        const retryMetrics = await this.prisma.companyMetric.findUnique({
+          where: { symbol: symbol.toUpperCase() },
+        });
+
+        if (!retryMetrics) {
+          return {
+            score: 0,
+            confidence: 0,
+            reason: `No company metrics data for ${symbol}. On-demand import returned no data.`,
+            signalClass: 'neutral',
+          };
+        }
+        return this.scoreMetrics(retryMetrics);
       }
 
-      // Start from full score and subtract penalties
-      let penalty3m = 0;
-      let penalty12m = 0;
-      let penaltySeverity = 0;
-
-      // 3-month share change — penalty for dilution (shares increasing = bad)
-      const change3m = metrics.shareChange3m || 0;
-      if (change3m > 0) {
-        // 1% dilution = 5pt penalty, capped at 40
-        penalty3m = Math.min(40, Math.round(change3m * 5));
-      }
-
-      // 12-month share change — penalty for sustained dilution
-      const change12m = metrics.shareChange12m || 0;
-      if (change12m > 0) {
-        penalty12m = Math.min(30, Math.round(change12m * 3));
-      }
-
-      // Absolute dilution severity — if shares outstanding is very high
-      const shares = metrics.sharesOutstanding || 0;
-      if (shares > 1000) { // > 1B shares = mega-cap dilution risk
-        penaltySeverity = Math.min(30, Math.round((shares - 1000) / 100));
-      }
-
-      const totalPenalty = penalty3m + penalty12m + penaltySeverity;
-      const totalScore = Math.max(0, this.maxScore - totalPenalty);
-
-      const riskLabel = totalScore >= 50 ? 'No dilution concern'
-        : totalScore >= 30 ? 'Moderate dilution detected'
-        : 'Significant dilution — caution';
-
-      return {
-        score: totalScore,
-        confidence: 0.65,
-        reason: `${riskLabel} (DB). 3m change: ${change3m > 0 ? '+' : ''}${change3m.toFixed(1)}%, 12m change: ${change12m > 0 ? '+' : ''}${change12m.toFixed(1)}%, Shares: ${shares}M. Penalty: ${totalPenalty}/${this.maxScore}. Score: ${totalScore}/${this.maxScore}.`,
-        signalClass: 'neutral',
-      };
+      return this.scoreMetrics(metrics);
     } catch (err) {
       this.logger.warn(`Dilution impact failed for ${symbol}: ${(err as Error).message}`);
       return {
         score: 0,
         confidence: 0,
-        reason: `Failed to query dilution data from DB: ${(err as Error).message}`,
+        reason: `Failed to query/import dilution data: ${(err as Error).message}`,
         signalClass: 'neutral',
       };
     }
+  }
+
+  private scoreMetrics(metrics: any): DirectiveResult {
+    let penalty3m = 0;
+    let penalty12m = 0;
+    let penaltySeverity = 0;
+
+    const change3m = metrics.shareChange3m || 0;
+    if (change3m > 0) {
+      penalty3m = Math.min(40, Math.round(change3m * 5));
+    }
+
+    const change12m = metrics.shareChange12m || 0;
+    if (change12m > 0) {
+      penalty12m = Math.min(30, Math.round(change12m * 3));
+    }
+
+    const shares = metrics.sharesOutstanding || 0;
+    if (shares > 1000) {
+      penaltySeverity = Math.min(30, Math.round((shares - 1000) / 100));
+    }
+
+    const totalPenalty = penalty3m + penalty12m + penaltySeverity;
+    const totalScore = Math.max(0, this.maxScore - totalPenalty);
+
+    const riskLabel = totalScore >= 50 ? 'No dilution concern'
+      : totalScore >= 30 ? 'Moderate dilution detected' : 'Significant dilution — caution';
+
+    return {
+      score: totalScore,
+      confidence: 0.65,
+      reason: `${riskLabel} (on-demand). 3m change: ${change3m > 0 ? '+' : ''}${change3m.toFixed(1)}%, 12m change: ${change12m > 0 ? '+' : ''}${change12m.toFixed(1)}%, Shares: ${shares}M. Penalty: ${totalPenalty}/${this.maxScore}. Score: ${totalScore}/${this.maxScore}.`,
+      signalClass: 'neutral',
+    };
   }
 }

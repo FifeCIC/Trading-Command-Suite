@@ -24,6 +24,7 @@ export const NAV_TREE = {
   trading: {
     label: 'Trading',
     views: [
+      { id: 'market-context', label: 'Market Context', icon: '🌐' },
       { id: 'positions-monitor', label: 'Positions Monitor', icon: '◈' },
       { id: 'trading-strategies', label: 'Trading Strategies', icon: '◆' },
       { id: 'strategy-comparison', label: 'Strategy Comparison', icon: '⚖' },
@@ -38,6 +39,7 @@ export const NAV_TREE = {
     label: 'Scoring',
     views: [
       { id: 'directives-manager', label: 'Directives', icon: '◆' },
+      { id: 'configure-directives', label: 'Configure Directives', icon: '⚙' },
       { id: 'directives-status', label: 'Directive Status', icon: '📋' },
       { id: 'live-ordering-stack', label: 'Live Ordering Stack', icon: '◉' },
       { id: 'sees-advanced', label: 'SEES Advanced', icon: '◆' },
@@ -75,6 +77,7 @@ export const NAV_TREE = {
       { id: 'pattern-scanner', label: 'Pattern Scanner', icon: '◆' },
       { id: 'chart-comparison', label: 'Chart Comparison', icon: '📊' },
       { id: 'analyse-symbol', label: 'Analyse Symbol', icon: '🔍' },
+      { id: 'seasonality-heatmap', label: 'Seasonality Heatmap', icon: '🌡' },
     ],
   },
   data: {
@@ -82,6 +85,7 @@ export const NAV_TREE = {
     views: [
       { id: 'data-landing', label: 'Data Overview', icon: '◉' },
       { id: 'sources', label: 'Sources', icon: '⊞' },
+      { id: 'provider-health', label: 'Provider Health', icon: '❤' },
       { id: 'import-jobs', label: 'Import Jobs', icon: '⇣' },
       { id: 'data-elements', label: 'Data Elements', icon: '⊡' },
       { id: 'backtest-data', label: 'Backtest Data', icon: '⧖' },

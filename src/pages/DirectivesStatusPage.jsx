@@ -14,7 +14,16 @@ export default function DirectivesStatusPage() {
     staleTime: 30_000,
   });
 
+  const statsQuery = useQuery({
+    queryKey: ['directives-stats'],
+    queryFn: () => apiGet('/api/directives/stats'),
+    staleTime: 60_000,
+  });
+
   const directives = directivesQuery.data || [];
+  const statsData = statsQuery.data?.stats || [];
+  const statMap = {};
+  statsData.forEach(s => { statMap[s.id] = s; });
   const totalDirectives = directives.length;
 
   if (directivesQuery.isLoading) {
@@ -72,19 +81,30 @@ export default function DirectivesStatusPage() {
                 <th>ID</th>
                 <th>Category</th>
                 <th>Priority</th>
+                <th>Avg Score</th>
+                <th>Direction</th>
                 <th>Protocols</th>
               </tr>
             </thead>
             <tbody>
-              {directives.map((d) => (
+              {directives.map((d) => {
+                const st = statMap[d.id];
+                return (
                 <tr key={d.id}>
                   <td><strong>{d.name}</strong></td>
                   <td><code>{d.id}</code></td>
                   <td><CategoryChip category={d.category || 'Uncategorized'} /></td>
                   <td className="ds-num">{d.priority ?? '—'}</td>
+                  <td className="ds-num" style={{ color: (st?.avgScore || 50) > 60 ? '#22c55e' : (st?.avgScore || 50) < 40 ? '#ef4444' : 'var(--ink)' }}>
+                    {st?.avgScore != null ? st.avgScore : '—'}
+                  </td>
+                  <td className="ds-num" style={{ color: st?.directionalBias === 'bullish' ? '#22c55e' : st?.directionalBias === 'bearish' ? '#ef4444' : '#94a3b8' }}>
+                    {st?.directionalBias ? `${st.directionalBias} ${st.biasPct}%` : '—'}
+                  </td>
                   <td className="ds-num">{d.protocolCount ?? '—'}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

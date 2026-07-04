@@ -50,6 +50,21 @@ export class Mt5TradingService {
     } catch { return []; }
   }
 
+  /** Fetch candles from MT5 bridge for on-demand scoring (Sprint 2026-07-04) */
+  async getCandles(symbol: string, timeframe = '1h', limit = 200): Promise<Array<{ timestamp: Date; open: number; high: number; low: number; close: number; volume: number }>> {
+    try {
+      const res = await fetch(`${this.bridgeUrl}/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(timeframe)}&limit=${Math.min(limit, 1000)}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (!data?.bars?.length) return [];
+      return data.bars.map((b: any) => ({
+        timestamp: new Date(b.timestamp),
+        open: Number(b.open), high: Number(b.high), low: Number(b.low),
+        close: Number(b.close), volume: Number(b.volume),
+      }));
+    } catch { return []; }
+  }
+
   async placeOrder(params: {
     symbol: string;
     type: 'BUY' | 'SELL';

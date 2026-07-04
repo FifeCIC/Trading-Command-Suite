@@ -197,13 +197,12 @@ export class ResearchImportService {
   }
 
   /**
-   * Every 12 hours — fetch insider transactions for all tracked symbols.
+   * Bulk import — fetch insider transactions for ALL tracked symbols.
+   * No longer cron-scheduled. Called manually or via admin endpoint.
    * Finnhub /stock/insider-transactions (free tier).
-   * Stores in InsiderTransaction table for use by insider-activity directive.
    */
-  @Cron('0 */12 * * *') // Every 12 hours
-  async importInsiderTransactions() {
-    this.logger.log('Starting insider transaction import...');
+  async importInsiderTransactionsBulk() {
+    this.logger.log('Starting bulk insider transaction import...');
     const startTime = Date.now();
 
     try {
@@ -225,7 +224,6 @@ export class ResearchImportService {
           if (!transactions || !Array.isArray(transactions)) continue;
 
           for (const t of transactions) {
-            // Skip if already stored
             const existing = await this.prisma.insiderTransaction.findFirst({
               where: {
                 symbol: ticker,
@@ -256,20 +254,72 @@ export class ResearchImportService {
       }
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      this.logger.log(`Insider transaction import complete: ${totalInserted} new records (${duration}s)`);
+      this.logger.log(`Bulk insider transaction import complete: ${totalInserted} new records (${duration}s)`);
     } catch (err) {
-      this.logger.error(`Insider transaction import failed: ${(err as Error).message}`);
+      this.logger.error(`Bulk insider transaction import failed: ${(err as Error).message}`);
     }
   }
 
   /**
-   * Daily at 08:00 — fetch company metrics (share dilution, market cap) for all tracked symbols.
-   * Finnhub /stock/metric (free tier).
-   * Stores in CompanyMetric table for use by dilution-impact directive.
+   * On-demand single-symbol import — called by insider-activity directive when DB data is missing/stale.
+   * Fetches insider transactions for one symbol and upserts into InsiderTransaction table.
+   * Returns the count of new records inserted.
    */
-  @Cron(CronExpression.EVERY_DAY_AT_8AM)
-  async importCompanyMetrics() {
-    this.logger.log('Starting company metrics import...');
+  async importInsiderTransactionsForSymbol(symbol: string): Promise<number> {
+    try {
+      const finnhub = this.providers.getAdapter('finnhub');
+      if (!finnhub) {
+        this.logger.warn(`Finnhub not available — skipping insider import for ${symbol}`);
+        return 0;
+      }
+
+      const transactions = await (finnhub as any).getInsiderTransactions(symbol);
+      if (!transactions || !Array.isArray(transactions)) return 0;
+
+      let inserted = 0;
+      for (const t of transactions) {
+        const existing = await this.prisma.insiderTransaction.findFirst({
+          where: {
+            symbol: symbol.toUpperCase(),
+            name: t.name,
+            transactionDate: new Date(t.transactionDate),
+            transactionCode: t.transactionCode,
+          },
+        });
+        if (existing) continue;
+
+        await this.prisma.insiderTransaction.create({
+          data: {
+            symbol: symbol.toUpperCase(),
+            name: t.name,
+            share: t.share ?? 0,
+            change: t.change ?? 0,
+            transactionDate: new Date(t.transactionDate),
+            transactionCode: t.transactionCode,
+            filingDate: t.filingDate ? new Date(t.filingDate) : new Date(),
+            currency: t.currency || 'USD',
+          },
+        });
+        inserted++;
+      }
+
+      if (inserted > 0) {
+        this.logger.log(`On-demand insider import for ${symbol}: ${inserted} new records`);
+      }
+      return inserted;
+    } catch (err) {
+      this.logger.warn(`On-demand insider import failed for ${symbol}: ${(err as Error).message}`);
+      return 0;
+    }
+  }
+
+  /**
+   * Bulk import — fetch company metrics for ALL tracked symbols.
+   * No longer cron-scheduled. Called manually or via admin endpoint.
+   * Finnhub /stock/metric (free tier).
+   */
+  async importCompanyMetricsBulk() {
+    this.logger.log('Starting bulk company metrics import...');
     const startTime = Date.now();
 
     try {
@@ -315,9 +365,52 @@ export class ResearchImportService {
       }
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      this.logger.log(`Company metrics import complete: ${fetched} symbols (${duration}s)`);
+      this.logger.log(`Bulk company metrics import complete: ${fetched} symbols (${duration}s)`);
     } catch (err) {
-      this.logger.error(`Company metrics import failed: ${(err as Error).message}`);
+      this.logger.error(`Bulk company metrics import failed: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * On-demand single-symbol import — called by dilution-impact directive when DB data is missing/stale.
+   * Fetches company metrics for one symbol and upserts into CompanyMetric table.
+   * Returns true if data was successfully fetched and stored.
+   */
+  async importCompanyMetricsForSymbol(symbol: string): Promise<boolean> {
+    try {
+      const finnhub = this.providers.getAdapter('finnhub');
+      if (!finnhub) {
+        this.logger.warn(`Finnhub not available — skipping company metrics import for ${symbol}`);
+        return false;
+      }
+
+      const metrics = await (finnhub as any).getCompanyMetrics(symbol);
+      if (!metrics) return false;
+
+      await this.prisma.companyMetric.upsert({
+        where: { symbol: symbol.toUpperCase() },
+        update: {
+          sharesOutstanding: metrics.sharesOutstanding ?? 0,
+          shareChange3m: metrics.shareChange3m ?? 0,
+          shareChange12m: metrics.shareChange12m ?? 0,
+          marketCap: metrics.marketCap ?? 0,
+          fetchedAt: new Date(),
+        },
+        create: {
+          symbol: symbol.toUpperCase(),
+          sharesOutstanding: metrics.sharesOutstanding ?? 0,
+          shareChange3m: metrics.shareChange3m ?? 0,
+          shareChange12m: metrics.shareChange12m ?? 0,
+          marketCap: metrics.marketCap ?? 0,
+          source: metrics.source || 'finnhub',
+        },
+      });
+
+      this.logger.log(`On-demand company metrics import for ${symbol}: stored`);
+      return true;
+    } catch (err) {
+      this.logger.warn(`On-demand company metrics import failed for ${symbol}: ${(err as Error).message}`);
+      return false;
     }
   }
 }

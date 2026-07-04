@@ -6,6 +6,7 @@ import Breadcrumbs from './components/Breadcrumbs';
 import DevOverlay from './components/DevOverlay';
 import ErrorBoundary from './components/ErrorBoundary';
 import TickerBar from './components/TickerBar';
+import MarketTape from './components/MarketTape';
 
 import { apiGet } from './core/api/client';
 import { FEATURE_FLAGS } from './core/features/flags';
@@ -666,7 +667,7 @@ function AppShell() {
             </a>
           </div>
         </div>
-
+        <MarketTape />
       </header>
 
       {mobileNavOpen && (

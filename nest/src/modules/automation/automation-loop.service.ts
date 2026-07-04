@@ -19,6 +19,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
+import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { TimelineService } from './timeline.service';
 import { ScoringService } from '../scoring/scoring.service';
@@ -141,9 +142,10 @@ export class AutomationLoopService {
     private readonly scoringService: ScoringService,
     private readonly strategyService: TradingStrategyService,
     private readonly tradeRecorder: TradeRecorderService,
+    private readonly prisma: PrismaService,
   ) {
-    // Initialize broker states for all brokerage-capable adapters
     this.initBrokerStates();
+    this.loadScoringStrategies();
   }
 
   private initBrokerStates() {
@@ -160,6 +162,69 @@ export class AutomationLoopService {
           requireConfirmation: true,
         };
       }
+    }
+  }
+
+  // ── DB Persistence ──────────────────────────────────
+
+  /** Load scoring strategies from DB on startup */
+  async loadScoringStrategies() {
+    try {
+      if (!this.prisma.isAvailable) return;
+      const rows = await this.prisma.scoringStrategy.findMany({ orderBy: { createdAt: 'asc' } });
+      this.scoringStrategies = rows.map(r => ({
+        id: r.id,
+        name: r.name,
+        protocolId: r.protocolId,
+        watchlistName: r.watchlistName,
+        brokerId: r.brokerId,
+        mode: r.mode as 'manual' | 'semi-auto' | 'auto',
+        tradeThreshold: r.tradeThreshold,
+        baseSize: r.baseSize,
+        slPct: r.slPct,
+        tpPct: r.tpPct,
+        enabled: r.enabled,
+        tradingEnabled: r.tradingEnabled,
+      }));
+      this.logger.log(`Loaded ${this.scoringStrategies.length} scoring strategies from DB`);
+    } catch (err) {
+      this.logger.warn(`Failed to load scoring strategies from DB: ${(err as Error).message}`);
+    }
+  }
+
+  /** Persist a scoring strategy to DB */
+  async saveScoringStrategy(strat: ScoringStrategy) {
+    try {
+      if (!this.prisma.isAvailable) return;
+      await this.prisma.scoringStrategy.upsert({
+        where: { id: strat.id },
+        create: {
+          id: strat.id, name: strat.name, protocolId: strat.protocolId,
+          watchlistName: strat.watchlistName, brokerId: strat.brokerId,
+          mode: strat.mode, tradeThreshold: strat.tradeThreshold,
+          baseSize: strat.baseSize, slPct: strat.slPct, tpPct: strat.tpPct,
+          enabled: strat.enabled, tradingEnabled: strat.tradingEnabled,
+        },
+        update: {
+          name: strat.name, protocolId: strat.protocolId,
+          watchlistName: strat.watchlistName, brokerId: strat.brokerId,
+          mode: strat.mode, tradeThreshold: strat.tradeThreshold,
+          baseSize: strat.baseSize, slPct: strat.slPct, tpPct: strat.tpPct,
+          enabled: strat.enabled, tradingEnabled: strat.tradingEnabled,
+        },
+      });
+    } catch (err) {
+      this.logger.warn(`Failed to save scoring strategy ${strat.id}: ${(err as Error).message}`);
+    }
+  }
+
+  /** Delete a scoring strategy from DB */
+  async deleteScoringStrategy(id: string) {
+    try {
+      if (!this.prisma.isAvailable) return;
+      await this.prisma.scoringStrategy.delete({ where: { id } });
+    } catch (err) {
+      this.logger.warn(`Failed to delete scoring strategy ${id}: ${(err as Error).message}`);
     }
   }
 

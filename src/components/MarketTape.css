@@ -1,0 +1,81 @@
+/* ── Market Tape — Bloomberg-style scrolling ticker ── */
+
+.market-tape {
+  width: 100%;
+  overflow: hidden;
+  background: var(--panel, #0f172a);
+  border-top: 1px solid var(--line, #1e293b);
+  border-bottom: 1px solid var(--line, #1e293b);
+  padding: 6px 0;
+  position: relative;
+  z-index: 10;
+}
+
+.mkt-tape-track {
+  display: inline-block;
+  white-space: nowrap;
+  animation: mkt-scroll 60s linear infinite;
+  font-size: 0.78rem;
+  font-family: var(--font-mono, 'JetBrains Mono', 'Fira Code', monospace);
+  line-height: 1.4;
+  color: var(--ink-soft, #94a3b8);
+  will-change: transform;
+}
+
+.mkt-tape-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes mkt-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.mkt-tape-section {
+  display: inline;
+  padding: 0 4px;
+  cursor: default;
+  transition: opacity 0.2s;
+}
+
+.mkt-tape-section:hover {
+  opacity: 0.8;
+}
+
+.mkt-tape-label {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.68rem;
+  color: var(--ink-soft, #64748b);
+  margin-right: 2px;
+}
+
+.mkt-tape-label::after {
+  content: ':';
+  color: var(--ink-soft, #64748b);
+}
+
+.mkt-tape-sep {
+  display: inline;
+  color: var(--line, #334155);
+  padding: 0 6px;
+  user-select: none;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .market-tape {
+    padding: 4px 0;
+  }
+  .mkt-tape-track {
+    font-size: 0.7rem;
+  }
+  .mkt-tape-label {
+    font-size: 0.62rem;
+  }
+  @keyframes mkt-scroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+}

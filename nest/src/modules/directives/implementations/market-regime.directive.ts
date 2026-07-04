@@ -110,7 +110,7 @@ export class MarketRegimeDirective implements IDirective {
     }
     const smooth = (v: number[]) => { let s = v.slice(0, period).reduce((a, b) => a + b, 0) / period; const r = [s]; for (let j = period; j < v.length; j++) r.push(r[r.length - 1] + (v[j] - r[r.length - 1]) / period); return r; };
     const atrS = smooth(tr), pdiS = smooth(plusDM), mdiS = smooth(minusDM);
-    const dx = pdiS.map((_, i) => atrS[i] > 0 ? (Math.abs(pdiS[i] - mdiS[i]) / (pdiS[i] + mdiS[i])) * 100 : 0);
+    const dx = pdiS.map((_, i) => (pdiS[i] + mdiS[i]) > 0 ? (Math.abs(pdiS[i] - mdiS[i]) / (pdiS[i] + mdiS[i])) * 100 : 0);
     return dx.slice(-period).reduce((a, b) => a + b, 0) / period;
   }
 

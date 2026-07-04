@@ -214,6 +214,83 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     idealFor: 'Equity portfolios, multi-day holds, balanced risk/reward',
     seasonalAffinity: { monthly: {} },
   },
+
+  // ── Built-in Default ─────────────────────────────────
+  // Always-available protocol using only MT5-sourced directives.
+  // Seeded as the default scoring + trading strategy on first run.
+  // Zero external API dependencies — works with MetaQuotes-Demo out of the box.
+
+  'built-in-default': {
+    groups: [
+      {
+        id: 'technical',
+        name: 'Core Technicals',
+        description: 'MT5 price/candle data only — momentum, volume, patterns',
+        weight: 0.45,
+        isRiskGate: false,
+        minMultiplier: 1.0,
+        maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',           // 120 — Price velocity
+          'rsi-oversold',             // 120 — Oversold bounce
+          'macd-crossover',           // 110 — Trend change
+          'volume-confirmation',      // 100 — Volume validates
+          'bollinger-squeeze',        // 100 — Vol compression
+          'doji-pattern',             // 100 — Reversal
+          'engulfing-pattern',        // 100 — Strong reversal
+          'support-resistance',       // 100 — Key levels
+          'atr-dip',                  //  95 — Normalised pullback
+          'momentum-exhaustion',      // 100 — Trend fatigue
+        ],
+        directiveMaxScores: {
+          'speed-momentum': 120,
+          'rsi-oversold': 120,
+          'macd-crossover': 110,
+          'atr-dip': 95,
+        },
+      },
+      {
+        id: 'sentiment',
+        name: 'Macro Context',
+        description: 'DXY regime from EURUSD proxy — always available from MT5',
+        weight: 0.15,
+        isRiskGate: false,
+        minMultiplier: 1.0,
+        maxMultiplier: 1.0,
+        directiveIds: [
+          'dxy-regime',               // 100 — USD strength proxy
+        ],
+      },
+      {
+        id: 'risk',
+        name: 'Position Risk',
+        description: 'Budget, liquidity, and session timing — protects the account',
+        weight: 0.40,
+        isRiskGate: true,
+        minMultiplier: 0.4,
+        maxMultiplier: 1.2,
+        directiveIds: [
+          'budget-gate',              // 100 — Signal budget
+          'liquidity-check',          //  80 — Spread/volume
+          'rollover-risk',            // 100 — Avoid rollover
+          'session-open-effect',      // 110 — Trade only active hours
+          'position-size-confidence', // 100 — Size by confidence
+        ],
+        directiveMaxScores: {
+          'liquidity-check': 80,
+          'session-open-effect': 110,
+        },
+      },
+    ],
+    name: 'Built-in Default',
+    description: 'Always-available default protocol. Uses only MT5 price/candle data — no external API keys needed. Works with MetaQuotes-Demo out of the box. 16 directives across technicals, macro context, and risk gates. Designed to give meaningful signals without any configuration.',
+    tradingStyle: 'Swing / Intraday',
+    recommendedTimeframe: '15m',
+    avgHoldTime: '1–4 hours',
+    winRateTarget: '55–65%',
+    idealFor: 'Default pipeline — EURUSD, GBPUSD, XAUUSD on MT5 demo. Zero-config startup. Always shows in Scoring + Trading pages.',
+  },
+
   'btc-speed-v1': {
     groups: BTC_SPEED_GROUPS,
     name: 'BTC Investment Monitor V1',
@@ -1406,5 +1483,426 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     winRateTarget: '60–70%',
     idealFor: 'XTrend speed trading on DXY-sensitive symbols: XAUUSD, XAGUSD, EURUSD, GBPUSD, AUDUSD, NZDUSD, USDCAD, USDJPY, USDCHF, BTCUSD. Best during London/NY overlap (12:00–16:00 GMT) and US economic data releases.',
     seasonalAffinity: { monthly: {} },
+  },
+
+  // ══════════════════════════════════════════════════════════════════
+  // Sprint 2026-07-03 — New Protocol Presets
+  // ══════════════════════════════════════════════════════════════════
+
+  // ── Divergence Suite V1 ──
+  'divergence-suite-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'Divergence Detection',
+        description: 'RSI + MACD + OBV divergence detection. OBV divergence carries highest weight (smart money).',
+        weight: 0.45, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'rsi-divergence',       // 110 — RSI price/vs indicator divergence
+          'macd-divergence',      // 115 — MACD histogram divergence (stronger)
+          'obv-divergence',       // 120 — OBV volume divergence (strongest)
+        ],
+        directiveMaxScores: {
+          'rsi-divergence': 110,
+          'macd-divergence': 115,
+          'obv-divergence': 120,
+        },
+      },
+      {
+        id: 'sentiment', name: 'Trend Confirmation',
+        description: 'Volume confirmation and momentum to validate divergence signals',
+        weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'volume-confirmation',  // 100 — Elevated volume confirms signal
+          'momentum-roc',         // 100 — Momentum direction check
+        ],
+      },
+      {
+        id: 'risk', name: 'Divergence Risk Gates',
+        description: 'Divergence signals need trend context — never trade divergence against strong trend',
+        weight: 0.30, isRiskGate: true, minMultiplier: 0.4, maxMultiplier: 1.2,
+        directiveIds: [
+          'volatility-regime',    // 100 — High vol = false divergences
+          'market-regime',        // 100 — Trending vs ranging context
+          'liquidity-check',      // 100 — Spread check
+        ],
+      },
+    ],
+    name: 'Divergence Suite V1',
+    description: 'Multi-indicator divergence detection suite. Combines RSI, MACD, and OBV divergence with volume confirmation. OBV (smart money) divergence given highest weight. Best used as a reversal/mean-reversion signal in ranging markets.',
+    tradingStyle: 'Swing / Position',
+    recommendedTimeframe: '1h–1d',
+    avgHoldTime: 'Hours to days',
+    winRateTarget: '60–70%',
+    idealFor: 'Reversal detection on liquid equities and indices. Works best in ranging/mean-reverting markets — disable during strong trends.',
+  },
+
+  // ── MTF Conservative V1 ──
+  'mtf-conservative-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'MTF Alignment (Conservative)',
+        description: 'All 3 timeframes (1d, 1h, 15m) must align bullish. High accuracy, low frequency.',
+        weight: 0.50, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'mtf-confluence-conservative', // 115 — All 3 bullish required
+          'ema-structure',               // 100 — EMA structure confirmation
+          'volume-confirmation',         // 100 — Volume must confirm
+        ],
+        directiveMaxScores: {
+          'mtf-confluence-conservative': 115,
+        },
+      },
+      {
+        id: 'sentiment', name: 'Trend Context',
+        description: 'Macro trend and sentiment confirmation',
+        weight: 0.20, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',       // 100 — News must not contradict
+          'analyst-consensus',    // 100 — Analyst direction check
+        ],
+      },
+      {
+        id: 'risk', name: 'Conservative Risk',
+        description: 'Tight risk gates — conservative entries need conservative risk',
+        weight: 0.30, isRiskGate: true, minMultiplier: 0.5, maxMultiplier: 1.15,
+        directiveIds: [
+          'volatility-regime',    // 100 — No entries in extreme vol
+          'liquidity-check',      // 100 — Must be tradeable
+          'position-concentration',// 100 — Don't overallocate
+          'session-open-effect',  // 100 — Avoid open volatility
+        ],
+      },
+    ],
+    name: 'MTF Confluence Conservative V1',
+    description: 'Requires ALL 3 timeframes (daily, hourly, 15-min) to align bullish for entry. ~3-5 high-confidence signals per month on SPY. Very high accuracy — designed for position entries, not scalping.',
+    tradingStyle: 'Swing / Position',
+    recommendedTimeframe: '1d (signal), 1h/15m (confirmation)',
+    avgHoldTime: 'Days to weeks',
+    winRateTarget: '65–75%',
+    idealFor: 'SPY, QQQ, AAPL, MSFT — liquid index ETFs and mega-caps. Use for core position entries.',
+  },
+
+  // ── MTF Weighted V1 ──
+  'mtf-weighted-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'MTF Composite (Weighted)',
+        description: '50/35/15 weighted composite across 3 timeframes. More signals, balanced accuracy.',
+        weight: 0.45, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'mtf-confluence-weighted', // 110 — Weighted composite
+          'macd-crossover',          // 110 — MACD signal confirmation
+          'rsi-oversold',            // 120 — RSI entry timing
+        ],
+        directiveMaxScores: {
+          'mtf-confluence-weighted': 110,
+          'macd-crossover': 110,
+          'rsi-oversold': 120,
+        },
+      },
+      {
+        id: 'sentiment', name: 'Market Bias',
+        description: 'VIX regime and news sentiment for directional bias',
+        weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'vix-regime',           // 100 — VIX context
+          'news-sentiment',       // 100 — News bias
+        ],
+      },
+      {
+        id: 'risk', name: 'Balanced Risk',
+        description: 'Standard risk gates — weighted entries need standard protection',
+        weight: 0.30, isRiskGate: true, minMultiplier: 0.45, maxMultiplier: 1.2,
+        directiveIds: [
+          'volatility-regime',    // 100
+          'liquidity-check',      // 100
+          'position-concentration',// 100
+          'budget-gate',          // 100 — Risk budget check
+        ],
+      },
+    ],
+    name: 'MTF Confluence Weighted V1',
+    description: 'Uses 50/35/15 macro/meso/micro weighting for ~15-20 signals per month on SPY. More trading opportunities than conservative variant, balanced per-signal accuracy. Composite > 0.3 = bullish entry.',
+    tradingStyle: 'Swing / Day Trade',
+    recommendedTimeframe: '1h–1d',
+    avgHoldTime: 'Hours to days',
+    winRateTarget: '55–65%',
+    idealFor: 'Active traders wanting more frequent signals. SPY, QQQ, liquid stocks. Pair with trailing stops for best results.',
+  },
+
+  // ── VWAP Simple V1 ──
+  'vwap-simple-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'VWAP AND-Gate',
+        description: 'Price at VWAP + RSI confirming + Volume elevated = mean-reversion entry',
+        weight: 0.45, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'vwap-confluence-simple', // 105 — AND-gate: VWAP + RSI + Volume
+          'vwap',                   // 100 — VWAP standalone
+          'volume-confirmation',    // 100 — Volume check
+        ],
+        directiveMaxScores: {
+          'vwap-confluence-simple': 105,
+        },
+      },
+      {
+        id: 'sentiment', name: 'Session Context',
+        description: 'Session timing and news check',
+        weight: 0.20, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'session-timing-filter', // 100 — Best during active sessions
+          'news-sentiment',        // 100 — No adverse news
+        ],
+      },
+      {
+        id: 'risk', name: 'Mean-Reversion Risk',
+        description: 'Mean-reversion trades need tight risk — VWAP can fail during trends',
+        weight: 0.35, isRiskGate: true, minMultiplier: 0.4, maxMultiplier: 1.2,
+        directiveIds: [
+          'market-regime',        // 100 — VWAP fails in strong trends
+          'volatility-regime',    // 100 — No mean-reversion in extreme vol
+          'liquidity-check',      // 100
+          'position-concentration',// 100
+        ],
+      },
+    ],
+    name: 'VWAP Simple AND-Gate V1',
+    description: 'Prop-firm staple mean-reversion strategy. Price must be at VWAP (within 0.5%), RSI must be neutral (40-65), and volume must be elevated. Simple 3-condition AND-gate — all must confirm. High win rate on liquid equities.',
+    tradingStyle: 'Day Trade / Scalp',
+    recommendedTimeframe: '5m–15m',
+    avgHoldTime: 'Minutes to hours',
+    winRateTarget: '60–70%',
+    idealFor: 'Intraday mean-reversion on SPY, QQQ, AAPL, MSFT. Best during active sessions (9:30-11:30, 14:00-16:00 ET).',
+  },
+
+  // ── VWAP Bands V1 ──
+  'vwap-bands-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'VWAP Standard Deviation Bands',
+        description: 'VWAP ±1σ/±2σ bands for precision entries. -2σ = deep discount buy zone.',
+        weight: 0.45, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'vwap-confluence-bands', // 110 — σ-band based scoring
+          'rsi-oversold',          // 120 — RSI confirmation at -2σ
+          'volume-surge',          // 100 — Volume surge confirms institutional interest
+        ],
+        directiveMaxScores: {
+          'vwap-confluence-bands': 110,
+          'rsi-oversold': 120,
+        },
+      },
+      {
+        id: 'sentiment', name: 'Market Structure',
+        description: 'Trend context for band entries — buy at -2σ in uptrends only',
+        weight: 0.20, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'market-regime',        // 100 — Avoid -2σ entries in downtrends
+          'news-sentiment',       // 100
+        ],
+      },
+      {
+        id: 'risk', name: 'Band Risk Gates',
+        description: 'Deep discount entries can be value traps — need risk context',
+        weight: 0.35, isRiskGate: true, minMultiplier: 0.35, maxMultiplier: 1.25,
+        directiveIds: [
+          'volatility-regime',    // 100
+          'liquidity-check',      // 100
+          'position-concentration',// 100
+          'rollover-risk',        // 100 — Avoid holding through events
+        ],
+      },
+    ],
+    name: 'VWAP Full Bands V1',
+    description: 'Uses VWAP standard deviation (±1σ, ±2σ) bands for precision mean-reversion entries. -2σ zone = deep institutional discount (strong buy). +2σ zone = overextended (bearish). More nuanced than simple AND-gate — accounts for how far price has deviated from VWAP.',
+    tradingStyle: 'Swing / Day Trade',
+    recommendedTimeframe: '15m–1h',
+    avgHoldTime: 'Hours to 1-2 days',
+    winRateTarget: '55–65%',
+    idealFor: 'Patience entries at extreme VWAP deviations. Works on all liquid symbols. Best entries at -2σ during uptrends.',
+  },
+
+  // ── Gap Scanner V1 ──
+  'gap-scanner-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'Gap Detection',
+        description: 'Overnight/opening gap detection with fill-probability scoring',
+        weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'gap-scanner',          // 100 — Gap type/size/direction classification
+          'volume-confirmation',  // 100 — Volume confirms gap signal
+          'session-open-effect',  // 100 — Session open behavior
+        ],
+      },
+      {
+        id: 'sentiment', name: 'Gap Context',
+        description: 'News catalyst and market bias for gap validation',
+        weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'news-sentiment',       // 100 — Gap caused by news?
+          'vix-regime',           // 100 — Vol context for gap
+        ],
+      },
+      {
+        id: 'risk', name: 'Gap Risk Gates',
+        description: 'Gap trading is high-risk — tight risk gates',
+        weight: 0.35, isRiskGate: true, minMultiplier: 0.3, maxMultiplier: 1.15,
+        directiveIds: [
+          'volatility-regime',    // 100 — Extreme vol = gaps are news-driven
+          'liquidity-check',      // 100 — Wide spreads during gaps
+          'position-concentration',// 100
+          'budget-gate',          // 100 — Risk budget for gap trades
+        ],
+      },
+    ],
+    name: 'Gap Scanner V1',
+    description: 'Detects overnight/opening price gaps and scores them by fill probability. Small gaps (0.5-2%) have high fill probability — fade them. Large gaps (2-5%) may gap-and-go — follow momentum. Extreme gaps (5%+) are news-driven and unpredictable. Best used within first 15-60 min of market open.',
+    tradingStyle: 'Day Trade',
+    recommendedTimeframe: '1m–5m',
+    avgHoldTime: 'Minutes to hours',
+    winRateTarget: '55–65%',
+    idealFor: 'Opening-range trading on SPY, QQQ, and liquid stocks. Use only during first hour of US market session.',
+  },
+
+  // ── Earnings Momentum Auto-Play V1 (Sprint 2026-07-04) ──
+  'earnings-momentum-v1': {
+    groups: [
+      {
+        id: 'technical', name: 'Earnings Quality',
+        description: 'Earnings surprise magnitude + revision trend + recency. Heavily weighted toward fundamental quality.',
+        weight: 0.45, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'earnings-momentum',        // 90 — Surprise magnitude + QoQ growth + recency (DB-backed)
+          'rsi-oversold',             // 120 — Entry timing on dips
+          'volume-confirmation',      // 100 — Volume must confirm pre-earnings interest
+        ],
+        directiveMaxScores: {
+          'earnings-momentum': 90,
+          'rsi-oversold': 120,
+        },
+      },
+      {
+        id: 'sentiment', name: 'Analyst & News Context',
+        description: 'Analyst consensus and news sentiment must support the earnings momentum',
+        weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
+        directiveIds: [
+          'analyst-consensus',        // 100 — Analyst target direction
+          'news-sentiment',           // 100 — No adverse news before earnings
+          'earnings-proximity',       // 100 — Must be 5-14 days from earnings (sweet spot)
+        ],
+      },
+      {
+        id: 'risk', name: 'Pre-Earnings Risk Gates',
+        description: 'Tight risk — pre-earnings moves can reverse. Exit 1-2 days before event.',
+        weight: 0.30, isRiskGate: true, minMultiplier: 0.3, maxMultiplier: 1.1,
+        directiveIds: [
+          'volatility-regime',        // 100 — No entries in extreme vol
+          'liquidity-check',          // 100 — Must be tradeable
+          'position-concentration',   // 100 — Don't overallocate to single earnings play
+          'budget-gate',              // 100 — Risk budget for earnings trades
+        ],
+      },
+    ],
+    name: 'Earnings Momentum Auto-Play V1',
+    description: 'Captures pre-earnings drift by entering on strong earnings momentum 5-14 days before the report date. Auto-exits 1-2 days before earnings to avoid the binary event. Based on the well-documented pre-earnings announcement drift anomaly. Uses DB-backed earnings-momentum directive (surprise magnitude, QoQ growth, recency).',
+    tradingStyle: 'Swing / Event-Driven',
+    recommendedTimeframe: '1d (signal), 1h (entry timing)',
+    avgHoldTime: '3-10 days',
+    winRateTarget: '55–65%',
+    idealFor: 'Liquid stocks with consistent earnings beats. Best entered 5-14 days before earnings, exited 1-2 days before. NOT for holding through earnings — this captures the run-up, not the binary gamble.',
+  },
+
+  // ── MT5 Technical Core V1 ───────────────────────────
+  // Production protocol for demo validation on MetaQuotes-Demo.
+  // Uses ONLY MT5-sourced directives — no Finnhub/Alpha Vantage dependency.
+  // All technical signals come from price/candle data via the MT5 bridge.
+  // DXY regime uses EURUSD proxy (always available from MT5).
+  // Risk gates: budget, liquidity, session timing, rollover.
+
+  'mt5-technical-core-v1': {
+    groups: [
+      {
+        id: 'technical',
+        name: 'Price Action & Momentum',
+        description: 'Core technicals from MT5 candle data — no external API needed',
+        weight: 0.40,
+        isRiskGate: false,
+        minMultiplier: 1.0,
+        maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',           // 120 — 5-bar velocity (highest weight)
+          'rsi-oversold',             // 120 — Oversold reversion
+          'rsi-overbought',           // 100 — Overbought warning
+          'macd-crossover',           // 110 — MACD signal line cross
+          'atr-dip',                  //  95 — Normalised dip from highs
+          'volume-confirmation',      // 100 — Volume confirms move
+          'volume-rhythm',            // 100 — Accumulation/distribution pattern
+          'bollinger-squeeze',        // 100 — Volatility compression before breakout
+          'vwap',                     // 100 — Institutional volume-weighted price
+          'doji-pattern',             // 100 — Reversal candlestick
+          'hammer-pattern',           // 100 — Reversal candlestick
+          'engulfing-pattern',        // 100 — Strong reversal signal
+          'mt5-engulfing',            // 100 — MT5-ported engulfing (RSI confirmed)
+          'mt5-harami',               // 100 — MT5-ported harami (RSI confirmed)
+          'support-resistance',       // 100 — Key levels
+          'confluence-reversal-combo',// 100 — Multiple reversal signals
+          'momentum-continuation-combo',// 100 — Trend continuation
+          'momentum-exhaustion',      // 100 — Trend exhaustion warning
+          'overhead-supply-pressure', // 100 — Supply zone overhead
+        ],
+        directiveMaxScores: {
+          'speed-momentum': 120,
+          'rsi-oversold': 120,
+          'macd-crossover': 110,
+          'atr-dip': 95,
+        },
+      },
+      {
+        id: 'sentiment',
+        name: 'Macro Context (MT5-Sourced)',
+        description: 'DXY regime from EURUSD proxy + gold correlation',
+        weight: 0.25,
+        isRiskGate: false,
+        minMultiplier: 1.0,
+        maxMultiplier: 1.0,
+        directiveIds: [
+          'dxy-regime',               // 100 — USD strength/weakness from EURUSD
+          'gold-macro-correlation',    // 100 — Gold vs DXY/real yields context
+          'cad-usd-oil-correlation',   // 100 — CAD petrocurrency correlation
+        ],
+      },
+      {
+        id: 'risk',
+        name: 'Position & Execution Risk',
+        description: 'Risk gates protect the small account — budget, liquidity, session timing',
+        weight: 0.35,
+        isRiskGate: true,
+        minMultiplier: 0.4,           // Worst risk = 40% of signal survives
+        maxMultiplier: 1.2,           // Low risk = 20% boost
+        directiveIds: [
+          'budget-gate',              // 100 — Signal budget management
+          'liquidity-check',          //  80 — Spread/volume adequacy
+          'rollover-risk',            // 100 — Avoid rollover windows
+          'session-open-effect',      // 110 — Session timing filter
+          'position-size-confidence', // 100 — Confidence-weighted sizing
+          'target-achieved',          // 100 — Profit target proximity
+          'time-stop',                // 100 — Position aging
+          'market-regime',            // 100 — Trending vs ranging context
+        ],
+        directiveMaxScores: {
+          'liquidity-check': 80,
+          'session-open-effect': 110,
+        },
+      },
+    ],
+    name: 'MT5 Technical Core V1',
+    description: 'Production-ready protocol for MetaQuotes-Demo validation. Uses ONLY MT5-sourced directives — no Finnhub/Alpha Vantage dependency. All technical signals from candle data via MT5 bridge. DXY regime uses EURUSD proxy. Focus on liquid forex + gold with tight risk gates for small account protection ($1,000 balance).',
+    tradingStyle: 'Swing / Intraday',
+    recommendedTimeframe: '15m',
+    avgHoldTime: '1–4 hours',
+    winRateTarget: '55–65%',
+    idealFor: 'Demo validation on MetaQuotes-Demo account #10011309743. EURUSD, GBPUSD, XAUUSD. 0.01 lot entries. Tight stops at 1.5× ATR. Risk gates protect the $1K balance from over-trading and session risk.',
   },
 };

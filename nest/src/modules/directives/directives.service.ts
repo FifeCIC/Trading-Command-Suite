@@ -420,6 +420,18 @@ export class DirectivesService {
   }
 
   /**
+   * Get recent scores with breakdown data for stats computation.
+   */
+  async getRecentScores(limit = 200) {
+    if (!this.prisma.isAvailable) return [];
+    return this.prisma.score.findMany({
+      orderBy: { timestamp: 'desc' },
+      take: limit,
+      select: { breakdown: true, strategyId: true, timestamp: true },
+    });
+  }
+
+  /**
    * Get all DB directive records for active-status lookup.
    */
   async getDbStatuses() {

@@ -8,6 +8,7 @@ import { Controller, Get, Post, Body, Logger } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RiskService, PortfolioRisk, PositionSizeType, StopLossType, TakeProfitType } from './risk.service';
 import { TradingGatesService, GateConfig } from '../trading-gates/trading-gates.service';
+import { MonteCarloService } from './monte-carlo.service';
 import { PrismaService } from '../../database/prisma.service';
 
 @ApiTags('risk')
@@ -18,6 +19,7 @@ export class RiskController {
   constructor(
     private readonly riskService: RiskService,
     private readonly tradingGates: TradingGatesService,
+    private readonly monteCarlo: MonteCarloService,
     private readonly prisma: PrismaService,
   ) {}
 

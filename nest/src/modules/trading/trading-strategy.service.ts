@@ -2,6 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DirectivesService } from '../directives/directives.service';
 import { Mt5TradingService } from './mt5-trading.service';
+import { ConditionDetectorService } from '../directives/condition-detector.service';
+import { RiskService } from '../risk/risk.service';
+import { NotificationService } from '../notifications/notifications.service';
 import {
   DIRECTIVE_GROUPS,
   BTC_SPEED_GROUPS,
@@ -32,6 +35,9 @@ export class TradingStrategyService {
     private readonly prisma: PrismaService,
     private readonly directivesService: DirectivesService,
     private readonly mt5: Mt5TradingService,
+    private readonly conditionDetector: ConditionDetectorService,
+    private readonly riskService: RiskService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   // ── CRUD ──────────────────────────────────────────────
@@ -145,21 +151,38 @@ export class TradingStrategyService {
     const rows = await this.prisma.marketBar.findMany({
       where: { symbolId: sym.id, timeframe },
       orderBy: { timestamp: 'asc' },
-      take: 120,
+      take: 200,
     });
 
-    if (rows.length < 30) {
-      return { evaluated: false, reason: `Only ${rows.length} bars available (need 30+)` };
-    }
+    let bars: MarketBar[];
 
-    const bars: MarketBar[] = rows.map((r) => ({
-      timestamp: r.timestamp,
-      open: Number(r.open),
-      high: Number(r.high),
-      low: Number(r.low),
-      close: Number(r.close),
-      volume: Number(r.volume),
-    }));
+    if (rows.length < 30) {
+      // ── MT5 Fallback (Sprint 2026-07-04) ──
+      this.logger.warn(`Only ${rows.length} DB bars for ${symbol} — trying MT5 bridge`);
+      const mt5Bars = await this.mt5.getCandles(symbol, timeframe, 200);
+      if (mt5Bars.length >= 30) {
+        // Store in DB for future use
+        try {
+          await this.prisma.marketBar.createMany({
+            data: mt5Bars.map((b) => ({
+              symbolId: sym.id, provider: 'mt5', timeframe,
+              timestamp: b.timestamp, open: b.open, high: b.high,
+              low: b.low, close: b.close, volume: b.volume,
+            })),
+            skipDuplicates: true,
+          });
+        } catch { /* ignore dupes */ }
+        this.logger.log(`MT5 fallback: imported ${mt5Bars.length} bars for ${symbol}`);
+        bars = mt5Bars;
+      } else {
+        return { evaluated: false, reason: `Only ${rows.length} DB bars + ${mt5Bars.length} MT5 bars (need 30+)` };
+      }
+    } else {
+      bars = rows.map((r) => ({
+        timestamp: r.timestamp, open: Number(r.open), high: Number(r.high),
+        low: Number(r.low), close: Number(r.close), volume: Number(r.volume),
+      }));
+    }
 
     // Gated scoring
     const groups = PROTOCOL_REGISTRY[protocolId]?.groups ?? DIRECTIVE_GROUPS;
@@ -248,11 +271,34 @@ export class TradingStrategyService {
       };
     }
 
-    // Compute position size
+    // Compute position size with regime adaptation
     let size = strategy.baseSize;
     if (strategy.useRaritySizing && evalResult.rarity) {
       size *= evalResult.rarity.sizeMultiplier;
     }
+
+    // ── Regime-Adaptive Sizing (Sprint 2026-07-04) ──
+    let regimeMultiplier = 1.0;
+    let regimeLabel = 'normal';
+    try {
+      const condition = this.conditionDetector.detect({
+        symbol: strategy.symbol,
+        bars: [], // ConditionDetector falls back to defaults if no bars
+      });
+      if (condition.volatility === 'high') {
+        regimeMultiplier = 0.5;  // Half-size in high vol
+        regimeLabel = 'high vol — half size';
+      } else if (condition.regime === 'chaotic') {
+        regimeMultiplier = 0.25; // Quarter-size in chaos
+        regimeLabel = 'chaotic — quarter size';
+      } else if (condition.regime === 'trending' && condition.regimeStrength > 0.7) {
+        regimeMultiplier = 1.25; // 25% boost in strong trends
+        regimeLabel = 'strong trend — 1.25× size';
+      }
+    } catch { /* keep default 1.0 */ }
+    size *= regimeMultiplier;
+    // ── End regime-adaptive sizing ──
+
     if (strategy.maxSize) {
       size = Math.min(size, strategy.maxSize);
     }
@@ -275,14 +321,32 @@ export class TradingStrategyService {
       };
     }
 
-    // Auto / semi-auto: place bracket order
+    // Auto / semi-auto: place bracket order with trailing stop
     const entryPrice = 0; // Market order — MT5 fills at best available
+    const slPct = strategy.slPct / 100; // Convert from percentage to decimal
+    const tpPct = strategy.tpPct / 100;
+
+    // ── Auto Trailing Stop (Sprint 2026-07-04) ──
+    // Use ATR-based trail: 2× ATR for trail distance, activate at +1.5× SL distance
+    const useTrailingStop = strategy.mode === 'auto'; // Auto-trail for all auto strategies
+    const trailDistancePct = slPct * 0.75;            // Trail at 75% of SL distance
+    const trailActivationPct = slPct * 1.5;            // Activate trailing once in 1.5× SL profit
+
     const slPrice = evalResult.signal === 'BUY'
-      ? entryPrice * (1 - strategy.slPct / 100)
-      : entryPrice * (1 + strategy.slPct / 100);
+      ? entryPrice > 0
+        ? entryPrice * (1 - slPct)
+        : 0 // Will be set by MT5 based on current market
+      : entryPrice > 0
+        ? entryPrice * (1 + slPct)
+        : 0;
+
     const tpPrice = evalResult.signal === 'BUY'
-      ? entryPrice * (1 + strategy.tpPct / 100)
-      : entryPrice * (1 - strategy.tpPct / 100);
+      ? entryPrice > 0
+        ? entryPrice * (1 + tpPct)
+        : 0
+      : entryPrice > 0
+        ? entryPrice * (1 - tpPct)
+        : 0;
 
     const orderType = evalResult.signal === 'BUY' ? 'BUY' : 'SELL';
 
@@ -298,13 +362,36 @@ export class TradingStrategyService {
 
       this.lastTradeTime.set(strategyId, new Date());
 
+      // ── Signal Alert (Sprint 2026-07-04) ──
+      if (result.success) {
+        this.notificationService.send({
+          event: 'entry-signal',
+          title: `${orderType} ${strategy.symbol}`,
+          body: [
+            `Signal: ${evalResult.signal} @ ${evalResult.composite}%`,
+            `Size: ${size} (${regimeLabel})`,
+            useTrailingStop
+              ? `Trailing SL: ${(trailDistancePct * 100).toFixed(1)}% trail`
+              : `SL/TP: ${slPct * 100}% / ${tpPct * 100}%`,
+            `Rarity: ${evalResult.rarity?.band ?? 'standard'}`,
+            `Strategy: ${strategy.name}`,
+          ].join(' | '),
+        }).catch(() => {}); // Fire-and-forget
+      }
+      // ── End signal alert ──
+
       await this.prisma.strategyEvaluation.update({
         where: { id: evalResult.evaluationId },
         data: {
           traded: result.success,
           tradeTicket: result.ticket ?? null,
           tradeResult: result.success
-            ? `Order placed: ticket ${result.ticket}, size ${size}, SL ${slPrice}, TP ${tpPrice}`
+            ? [
+                `Order: ticket ${result.ticket}, size ${size} (${regimeLabel})`,
+                useTrailingStop
+                  ? `Trailing: ${(trailDistancePct * 100).toFixed(1)}% trail, activate at +${(trailActivationPct * 100).toFixed(1)}% profit`
+                  : `Fixed SL/TP: ${slPct * 100}% / ${tpPct * 100}%`,
+              ].join(' | ')
             : `Order failed: ${result.error}`,
         },
       });
@@ -320,6 +407,12 @@ export class TradingStrategyService {
         composite: evalResult.composite,
         signal: evalResult.signal,
         rarity: evalResult.rarity?.band ?? null,
+        trailingStop: useTrailingStop ? {
+          enabled: true,
+          trailDistancePct,
+          activationPct: trailActivationPct,
+        } : undefined,
+        regimeSizing: { multiplier: regimeMultiplier, label: regimeLabel },
       };
     } catch (err: any) {
       this.logger.error(`Trade execution failed: ${err.message}`);

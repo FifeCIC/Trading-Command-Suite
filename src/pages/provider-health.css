@@ -1,0 +1,238 @@
+/* Provider Health Page — provider-health.css */
+
+.ph-page {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 1.35rem;
+  color: var(--ink);
+}
+
+.ph-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.ph-header h1 { margin: 0; }
+
+.ph-subtitle {
+  margin: 0.3rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+
+.ph-subtitle strong {
+  color: var(--ink);
+  text-transform: uppercase;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+}
+
+.ph-refresh-btn {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--border, #334155);
+  border-radius: 6px;
+  background: var(--panel, #1e293b);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: 600;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.ph-refresh-btn:hover:not(:disabled) {
+  background: var(--panel-hover, #334155);
+  border-color: var(--accent, #0ea5a6);
+}
+
+.ph-refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Summary chips ── */
+.ph-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.7rem;
+}
+
+.ph-summary-chip {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.ph-summary-total {
+  background: var(--panel, #1e293b);
+  color: var(--ink-soft);
+  border: 1px solid var(--border, #334155);
+}
+
+/* ── Services row ── */
+.ph-services-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+.ph-service-chip {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ph-svc-up   { background: #22c55e20; color: #22c55e; }
+.ph-svc-down { background: #ef444420; color: #ef4444; }
+
+/* ── Provider cards grid ── */
+.ph-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 0.8rem;
+}
+
+.ph-card {
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--border, #334155);
+  border-radius: 8px;
+  padding: 0.85rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.ph-card:hover {
+  border-color: var(--accent, #0ea5a6);
+  box-shadow: 0 0 0 1px var(--accent, #0ea5a6) inset;
+}
+
+.ph-card--active {
+  border-color: #22c55e;
+  box-shadow: 0 0 8px #22c55e18;
+}
+
+.ph-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.ph-card-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.ph-card-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+.ph-card-name {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ph-active-badge {
+  font-size: 0.55rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #22c55e20;
+  color: #22c55e;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ph-status-badge {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Card body rows ── */
+.ph-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.ph-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ph-card-key {
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.ph-card-val {
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ph-endpoint {
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  max-width: 200px;
+}
+
+.ph-mono {
+  font-family: 'Source Code Pro', 'Consolas', monospace;
+  font-size: 0.7rem;
+}
+
+.ph-cred-ok      { color: #22c55e; }
+.ph-cred-missing { color: #ef4444; }
+
+/* ── Card message ── */
+.ph-card-msg {
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 5px;
+  background: var(--panel-alt, #0f172a);
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+/* ── Empty state ── */
+.ph-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--ink-soft);
+}
+
+.ph-empty-hint {
+  font-size: 0.78rem;
+  margin-top: 0.3rem;
+  opacity: 0.7;
+}

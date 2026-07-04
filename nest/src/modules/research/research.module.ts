@@ -11,6 +11,6 @@ import { ProvidersModule } from '../providers/providers.module';
   imports: [ProvidersModule],
   controllers: [ResearchController, InvestigationController],
   providers: [ResearchImportService, InvestigationService, ResearchOverviewService, AnalystTargetsService],
-  exports: [InvestigationService],
+  exports: [InvestigationService, ResearchImportService],
 })
 export class ResearchModule {}

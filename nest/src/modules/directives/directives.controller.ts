@@ -135,6 +135,65 @@ export class DirectivesController {
     }));
   }
 
+  /**
+   * GET /api/directives/stats
+   *
+   * Returns per-directive performance stats from Score history.
+   * Computes: average score, directional bias, top protocols, recent activity.
+   */
+  @Get('stats')
+  async getStats() {
+    // Get recent scores with breakdown data
+    const scores = await this.directivesService.getRecentScores(200).catch(() => []);
+    const directives = this.directivesService.list();
+
+    // Build per-directive stats
+    const statMap = new Map<string, {
+      totalScore: number;
+      count: number;
+      bullishCount: number;
+      bearishCount: number;
+      protocols: Set<string>;
+    }>();
+
+    for (const s of scores) {
+      const breakdown = (s as any).breakdown || {};
+      for (const [dirId, dirScore] of Object.entries(breakdown)) {
+        if (!statMap.has(dirId)) {
+          statMap.set(dirId, { totalScore: 0, count: 0, bullishCount: 0, bearishCount: 0, protocols: new Set() });
+        }
+        const st = statMap.get(dirId)!;
+        st.totalScore += dirScore as number;
+        st.count++;
+        if ((dirScore as number) >= 50) st.bullishCount++;
+        else if ((dirScore as number) < 30) st.bearishCount++;
+        if ((s as any).strategyId) st.protocols.add((s as any).strategyId);
+      }
+    }
+
+    const stats = directives.map(d => {
+      const st = statMap.get(d.id);
+      if (!st) return {
+        id: d.id, name: d.name,
+        avgScore: null, count: 0,
+        directionalBias: 'no-data',
+        biasPct: 0,
+        protocolCount: 0,
+      };
+      return {
+        id: d.id,
+        name: d.name,
+        avgScore: Math.round(st.totalScore / st.count),
+        count: st.count,
+        directionalBias: st.bullishCount > st.bearishCount ? 'bullish' : st.bearishCount > st.bullishCount ? 'bearish' : 'neutral',
+        biasPct: st.count > 0 ? Math.round((Math.max(st.bullishCount, st.bearishCount) / st.count) * 100) : 0,
+        protocolCount: st.protocols.size,
+      };
+    }).sort((a, b) => (b.avgScore || 0) - (a.avgScore || 0));
+
+    return { generatedAt: new Date().toISOString(), stats, total: stats.length };
+  }
+
   @Patch(':id')
   @ApiOperation({ summary: 'Toggle a directive active/inactive' })
   async toggleDirective(

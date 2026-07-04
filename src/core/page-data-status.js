@@ -21,6 +21,7 @@ export const PAGE_DATA_STATUS = {
   'trade-history': { status: 'live', source: 'DB' },
   'positions-monitor': { status: 'live', source: 'Alpaca + MT5' },
   'trade-journal': { status: 'live', source: '/api/journal/entries + stats' },
+  'market-context': { status: 'live', source: '/api/trading/sessions/market-context (MarketContextService)' },
   'mt5-connection-manager': { status: 'live', source: 'MT5 Bridge' },
   'accounts-dashboard': { status: 'partial', source: 'Trading212 placeholder' },
   'speed-trading': { status: 'live', source: 'MT5 Bridge + speed-scan' },
@@ -57,17 +58,19 @@ export const PAGE_DATA_STATUS = {
   'macro-monitor': { status: 'live', source: 'FRED + ECB adapters' },
 
   // ── Analysis ──
-  'recently-analysed-symbols': { status: 'partial', source: 'Some cached data' },
+  'recently-analysed-symbols': { status: 'live', source: '/api/scoring/recently-analysed (Score snapshots)' },
   'support-resistance': { status: 'live', source: 'Indicators module' },
   'volatility-analysis': { status: 'live', source: 'Indicators module' },
   'technical-indicators': { status: 'live', source: 'Indicators module' },
   'pattern-scanner': { status: 'live', source: 'Market data candles + pattern detector' },
-  'chart-comparison': { status: 'superseded', note: 'Replaced by SEES Arena + market-correlations' },
+  'chart-comparison': { status: 'live', source: 'MT5 candles + SEES ranked scores' },
   'analyse-symbol': { status: 'live', source: 'Scoring + Indicators API' },
+  'seasonality-heatmap': { status: 'live', source: '/api/speed/seasonality/:symbol (MT5 data)' },
 
   // ── Data ──
   'data-landing': { status: 'mock', note: 'Static overview' },
   'sources': { status: 'live', source: 'Provider registry' },
+  'provider-health': { status: 'live', source: '/api/providers/health (30s refresh)' },
   'import-jobs': { status: 'live', source: 'DB import runs' },
   'data-elements': { status: 'live', source: 'DB' },
   'decoder': { status: 'live', source: '/api/decoder/parse + pattern-based analysis' },

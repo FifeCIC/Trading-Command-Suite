@@ -92,6 +92,11 @@ import ImportJobsPage from '../pages/ImportJobsPage.jsx';
 import ApiActivityPage from '../pages/ApiActivityPage.jsx';
 import ApiEndpointsPage from '../pages/ApiEndpointsPage.jsx';
 import SourcesPage from '../pages/SourcesPage.jsx';
+import ProviderHealthPage from '../pages/ProviderHealthPage.jsx';
+import MarketContextPage from '../pages/MarketContextPage.jsx';
+import SeasonalityHeatmapPage from '../pages/SeasonalityHeatmapPage.jsx';
+import DirectivesConfigPage from '../pages/DirectivesConfigPage.jsx';
+import RecentlyAnalysedSymbolsPage from '../pages/RecentlyAnalysedSymbolsPage.jsx';
 import PlatformComparisonsPage from '../pages/PlatformComparisonsPage.jsx';
 
 // ── Backtest / Strategies ──
@@ -234,7 +239,11 @@ export const VIEW_COMPONENTS = {
   'api-activity': ApiActivityPage,
   'api-endpoints': ApiEndpointsPage,
   'sources': SourcesPage,
-  'provider-health': SourcesPage,           // aliased
+  'provider-health': ProviderHealthPage,
+  'market-context': MarketContextPage,
+  'seasonality-heatmap': SeasonalityHeatmapPage,
+  'configure-directives': DirectivesConfigPage,
+  'recently-analysed-symbols': RecentlyAnalysedSymbolsPage,
   'platform-comparisons': PlatformComparisonsPage,
 
   // Backtest / Strategies

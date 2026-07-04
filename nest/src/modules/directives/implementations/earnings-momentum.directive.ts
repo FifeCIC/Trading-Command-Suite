@@ -97,12 +97,17 @@ export class EarningsMomentumDirective implements IDirective {
       const recencyScore = Math.max(0, Math.min(30, 30 - daysSinceEarnings * 0.3));
 
       const totalScore = Math.round(surpriseScore + revisionScore + recencyScore);
-      const signalClass = totalScore >= 60 ? 'bullish' : totalScore >= 45 ? 'neutral' : 'neutral';
+      const signalClass = totalScore >= 60 ? 'bullish' : 'neutral';
+
+      // Reason string: use same math as scoring (guard estimate !== 0)
+      const surpriseDisplay = (estimate !== 0 && actual !== 0)
+        ? `${actual > estimate ? '+' : ''}${((actual - estimate) / Math.abs(estimate) * 100).toFixed(1)}%`
+        : 'N/A';
 
       return {
         score: totalScore,
         confidence: 0.6,
-        reason: `${symbol} earnings: surprise=${surpriseScore.toFixed(0)}/40 (${actual > estimate ? '+' : ''}${((actual - estimate) / Math.abs(estimate || 1) * 100).toFixed(1)}%), revision=${revisionScore.toFixed(0)}/30, recency=${recencyScore.toFixed(0)}/30 (${daysSinceEarnings.toFixed(0)}d ago). Total=${totalScore}/${this.maxScore}.`,
+        reason: `${symbol} earnings: surprise=${surpriseScore.toFixed(0)}/40 (${surpriseDisplay}), revision=${revisionScore.toFixed(0)}/30, recency=${recencyScore.toFixed(0)}/30 (${daysSinceEarnings.toFixed(0)}d ago). Total=${totalScore}/${this.maxScore}.`,
         signalClass,
       };
     } catch (err) {

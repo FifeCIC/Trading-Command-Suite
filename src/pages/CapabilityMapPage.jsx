@@ -26,8 +26,8 @@ const KNOWN_FEATURES = {
   'ExitSignalService (Multi-factor)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'RateLimitGovernor (9 providers)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
   'TimezoneService (IANA-aware)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Protocol System (25 protocols)': { dataPersistence: 'config', uiSurfaces: 3, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Directive Registry (91 directives)': { dataPersistence: 'config', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Protocol System (32 protocols)': { dataPersistence: 'config', uiSurfaces: 3, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Directive Registry (99 directives)': { dataPersistence: 'config', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Multi-Protocol SEES Arena': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Trading Strategy Stacks (real)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Sector Rotation + Protocol Strat': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
@@ -62,6 +62,35 @@ const KNOWN_FEATURES = {
   'User Preferences (Display+Risk)': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
   'Exit Signals Page': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Market Correlations (Live 90d)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  // Sprint 2026-07-03 — Divergence Suite
+  'rsi-divergence': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'macd-divergence': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'obv-divergence': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  // Sprint 2026-07-03 — VWAP Confluence
+  'vwap-confluence-simple': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'vwap-confluence-bands': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  // Sprint 2026-07-03 — MTF Confluence
+  'mtf-confluence-conservative': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'mtf-confluence-weighted': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  // Sprint 2026-07-03 — Gap Scanner
+  'gap-scanner': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  // Sprint 2026-07-03 — Paper Trading + Monte Carlo
+  'PaperTradingService': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'MonteCarloService': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  // Sprint 2026-07-03 — Automation Bridge
+  'ScoringStrategy (DB-persisted)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Trading Scheduler (Live Scoring)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  // Frontend additions
+  'Market Status Ticker': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Market Context Page': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Provider Health Page': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // 2026-07-03/04 — Degradation & Market Awareness
+  'Provider Degradation Service': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'MarketContextService (7-Day)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Scoring Degradation Monitor': { dataPersistence: 'ephemeral', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'PerformanceService (Prisma, equity curve)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Insider Activity (DB-backed, on-demand)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Dilution Impact (DB-backed, on-demand)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
 };
 
 // ── Build unified capability rows ──
@@ -129,7 +158,7 @@ function buildCapabilityRows(directives, providers) {
     { name: 'Import Jobs', count: 3 },
     { name: 'Scoring', count: 7 },
     { name: 'News', count: 4 },
-    { name: 'Directives (~94)', count: 6 },
+    { name: 'Directives (~99)', count: 6 },
     { name: 'Strategies', count: 5 },
     { name: 'Earnings', count: 4 },
     { name: 'Portfolio', count: 4 },
@@ -140,6 +169,7 @@ function buildCapabilityRows(directives, providers) {
     { name: 'Training', count: 3 },
     { name: 'Backtest', count: 1 },
     { name: 'Architecture', count: 1 },
+    { name: 'Paper Trading', count: 10 },
     { name: 'Automation', count: 9 },
     { name: 'System', count: 4 },
     { name: 'Watchlists', count: 4 },
@@ -150,6 +180,7 @@ function buildCapabilityRows(directives, providers) {
     { name: 'Research Overview', count: 1 },
     { name: 'Snapshots', count: 2 },
     { name: 'Backtest Data', count: 1 },
+    { name: 'Performance (summary + equity)', count: 3 },
   ].forEach((mod) => {
     const known = KNOWN_FEATURES[mod.name] || {};
     rows.push({
@@ -180,10 +211,12 @@ function buildCapabilityRows(directives, providers) {
     'Breadcrumbs',
     'Collapsible Sidebar',
     'Global Search',
+    'Market Status Ticker (Bloomberg-style Scrolling Tape)',
     'Ticker Bar (Background Events)',
     'Network Status Bar',
     'PWA Install Prompt',
     'Analytics / Performance Monitoring',
+    'Strategy Performance Dashboard (Equity Curve + Monthly Breakdown)',
     'Container Queries',
     'Popover API',
     'Scroll-Driven Animations',
@@ -194,6 +227,12 @@ function buildCapabilityRows(directives, providers) {
     'Research Dashboard (8-Panel Aggregate)',
     'Protocol Selector (Scoring)',
     'Execution Queue (Timeline + Retry)',
+    'Market Context Page (Session-aware)',
+    'Provider Health Dashboard',
+    'MTF Confluence (Conservative + Weighted)',
+    'Divergence Suite (RSI + MACD + OBV)',
+    'VWAP Confluence (Simple + Bands)',
+    'Gap Scanner (Directive)',
     'User Preferences System (12 Settings)',
     'Strategy Showdown + Live Positions',
   ].forEach((name) => {
@@ -255,7 +294,7 @@ function buildCapabilityRows(directives, providers) {
     'Strategy Competition Service',
     'Strategy Comparison (Showdown)',
     'Gated Scoring Pipeline',
-    'Directive Registry (87 directives)',
+    'Directive Registry (99 directives)',
     'Protocol System',
     'Portfolio Service (T212)',
     'Trading212 Import Service',
@@ -264,8 +303,12 @@ function buildCapabilityRows(directives, providers) {
     'TradingGatesService (3-Gate Pipeline)',
     'SignalEnvelopeService (Scoring Bridge)',
     'RiskOverviewService (Circuit Breaker)',
-    'ResearchOverviewService (7-Source Aggregation)',
-    'Trading Scheduler (Daily Cron)',
+    'ResearchImportService (5 import pipelines)',
+    'On-Demand Symbol Import (Self-Healing Directives)',
+    'Trading Scheduler (Live Scoring — wired)',
+    'PaperTradingService (Virtual Ledger)',
+    'MonteCarloService (Risk-of-Ruin Sim)',
+    'ScoringStrategy Persistence (DB)',
     'Backtest Service',
     'Alert Service',
     'Notification Service (Email/Win/Telegram/Discord)',

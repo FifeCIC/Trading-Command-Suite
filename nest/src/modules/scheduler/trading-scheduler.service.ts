@@ -3,6 +3,8 @@ import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
 import { ModeService } from '../../config/mode.service';
 import { NotificationService } from '../notifications/notifications.service';
+import { ScoringService } from '../scoring/scoring.service';
+import { AutomationLoopService } from '../automation/automation-loop.service';
 
 export interface SchedulerRun {
   id: string;
@@ -22,6 +24,8 @@ export class TradingSchedulerService {
     private readonly prisma: PrismaService,
     private readonly modeService: ModeService,
     private readonly notificationService: NotificationService,
+    private readonly scoringService: ScoringService,
+    private readonly automationLoop: AutomationLoopService,
   ) {}
 
   /** Default schedule: 9am Mon-Fri */
@@ -117,27 +121,62 @@ export class TradingSchedulerService {
       return;
     }
     try {
-      const symbols = await this.prisma.symbol.count({ where: { active: true } });
-      run.steps.push({ name: 'scoring', status: 'ok', detail: `${symbols} active symbols available for scoring` });
-    } catch {
-      run.steps.push({ name: 'scoring', status: 'error', detail: 'Scoring run failed' });
+      const activeSymbols = await this.prisma.symbol.findMany({ where: { active: true }, select: { id: true, ticker: true } });
+      if (activeSymbols.length === 0) {
+        run.steps.push({ name: 'scoring', status: 'skipped', detail: 'No active symbols' });
+        return;
+      }
+      const result = await this.scoringService.rankAll();
+      const scored = result?.ranked?.length || 0;
+      run.steps.push({ name: 'scoring', status: 'ok', detail: `${scored} symbols scored (${activeSymbols.length} active)` });
+    } catch (err) {
+      run.steps.push({ name: 'scoring', status: 'error', detail: (err as Error).message });
     }
   }
 
-  private generateSuggestions(run: SchedulerRun): void {
-    // In production: filter symbols with score ≥ entry threshold, check allocation limits
-    run.suggestions = [
-      { symbol: 'AAPL', score: 72, action: 'BUY (paper)' },
-      { symbol: 'NVDA', score: 68, action: 'BUY (paper)' },
-      { symbol: 'TSLA', score: 42, action: 'WATCH' },
-    ];
-    run.steps.push({ name: 'suggestions', status: 'ok', detail: '3 suggestions generated' });
+  private async generateSuggestions(run: SchedulerRun): Promise<void> {
+    try {
+      const result = await this.scoringService.rankAll(undefined, 10);
+      const ranked = (result as any)?.ranked || [];
+      if (!ranked.length) {
+        run.steps.push({ name: 'suggestions', status: 'ok', detail: 'No ranked symbols available' });
+        return;
+      }
+      run.suggestions = ranked.slice(0, 5).map((r: any) => ({
+        symbol: r.ticker || r.symbol || '?',
+        score: Math.round(r.score || r.composite || 0),
+        action: (r.signal === 'buy' || r.signal === 'BUY' || r.score >= 65) ? 'BUY (paper)' :
+                (r.score >= 40) ? 'WATCH' : 'HOLD',
+      }));
+      run.steps.push({ name: 'suggestions', status: 'ok', detail: `${run.suggestions.length} suggestions from live scoring` });
+    } catch (err) {
+      run.steps.push({ name: 'suggestions', status: 'error', detail: (err as Error).message });
+    }
   }
 
-  private maybeAutoExecute(run: SchedulerRun): void {
-    // In production: check if trading strategy has automation.enabled
-    run.autoExecuted = false;
-    run.steps.push({ name: 'auto-execute', status: 'skipped', detail: 'Auto-execution disabled (paper mode)' });
+  private async maybeAutoExecute(run: SchedulerRun): Promise<void> {
+    // Safety: only auto-execute if automation loop is running and has scoring strategies
+    const hasAutoStrategies = this.automationLoop.scoringStrategies.some(
+      s => s.enabled && s.tradingEnabled && s.mode === 'auto'
+    );
+    if (!hasAutoStrategies) {
+      run.autoExecuted = false;
+      run.steps.push({ name: 'auto-execute', status: 'skipped', detail: 'No auto-trade strategies enabled — paper-safe mode' });
+      return;
+    }
+    try {
+      const decisions = await this.automationLoop.tick();
+      const executed = decisions.filter(d => d.decision === 'EXECUTED');
+      run.autoExecuted = executed.length > 0;
+      run.steps.push({
+        name: 'auto-execute',
+        status: 'ok',
+        detail: `${executed.length} trades executed, ${decisions.length} evaluated`,
+      });
+    } catch (err) {
+      run.autoExecuted = false;
+      run.steps.push({ name: 'auto-execute', status: 'error', detail: (err as Error).message });
+    }
   }
 
   /** Get recent runs */

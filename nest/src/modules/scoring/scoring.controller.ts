@@ -148,6 +148,15 @@ export class ScoringController {
     return this.scoreHistoryService.getLatest(symbolId);
   }
 
+  @Get('recently-analysed')
+  @ApiOperation({ summary: 'Get recently analysed symbols with latest scores' })
+  @ApiOkResponse({ description: 'Distinct symbols with latest score, ordered by most recent' })
+  getRecentlyAnalysed(@Query('limit') limit?: string) {
+    const parsed = Number(limit ?? 30);
+    const safe = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), 100) : 30;
+    return this.scoreHistoryService.getRecentlyAnalysed(safe);
+  }
+
   // ── Q304: Self-Improving Scoring — Accuracy ──
 
   @Get('accuracy')
@@ -241,7 +250,7 @@ export class ScoringController {
   @Get('seasonal/current')
   @UseInterceptors(new CacheInterceptor(300000))
   async getSeasonalWeights() {
-    const { PROTOCOL_REGISTRY } = await import('../directives/directive-groups');
+    const { PROTOCOL_REGISTRY } = await import('../directives/directive-groups.js');
     const weights: Array<{
       protocolId: string;
       protocolName: string;
@@ -252,7 +261,7 @@ export class ScoringController {
       day: number;
     }> = [];
 
-    for (const [id, proto] of Object.entries(PROTOCOL_REGISTRY)) {
+    for (const [id, proto] of Object.entries(PROTOCOL_REGISTRY) as [string, { name: string }][]) {
       const affinity = this.seasonalAffinity.getAffinity(id);
       weights.push({
         protocolId: id,

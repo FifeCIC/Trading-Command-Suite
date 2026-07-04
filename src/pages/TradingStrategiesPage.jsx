@@ -96,7 +96,9 @@ export default function TradingStrategiesPage() {
       .then(r => r.ok ? r.json() : [])
       .then(data => {
         if (cancelled) return;
-        setTrading(data.viable || []);
+        // API returns flat array; support both legacy {viable:[]} and current [] formats
+        const list = Array.isArray(data) ? data : (data.viable || data.strategies || []);
+        setTrading(list);
         setLoading(false);
       })
       .catch(e => {

@@ -45,6 +45,7 @@ import { EarningsModule } from './modules/earnings/earnings.module';
 import { PlanModule } from './modules/plan/plan.module';
 import { StarsModule } from './modules/stars/stars.module';
 import { AutomationModule } from './modules/automation/automation.module';
+import { PaperTradingModule } from './modules/paper-trading/paper-trading.module';
 import { AIModule } from './modules/ai/ai.module';
 import { WatchlistsModule } from './modules/watchlists/watchlists.module';
 import { PlannerModule } from './modules/planner/planner.module';
@@ -102,6 +103,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     PlanModule,
     StarsModule,
     AutomationModule,
+    PaperTradingModule,
     AIModule,
     WatchlistsModule,
     PlannerModule,

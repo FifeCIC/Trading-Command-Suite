@@ -23,3 +23,26 @@
 .ec-protocol-impact p { font-size: 0.72rem; color: var(--ink-soft); margin: 0.2rem 0; }
 .ec-protocol-impact code { font-size: 0.65rem; background: rgba(0,0,0,0.15); padding: 0.1rem 0.3rem; border-radius: 3px; }
 .ec-impact-note { font-style: italic; }
+
+/* Held position badge */
+.ec-held-badge {
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(34,197,94,0.12);
+  color: #22c55e;
+  white-space: nowrap;
+}
+
+/* Source link */
+.ec-source-link {
+  display: inline-block;
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+  color: var(--accent, #0ea5a6);
+  text-decoration: none;
+  font-weight: 600;
+}
+.ec-source-link:hover { text-decoration: underline; }

@@ -31,6 +31,16 @@ export interface ScoreHistoryEntry {
   timestamp: Date;
 }
 
+export interface RecentlyAnalysedSymbol {
+  symbolId: string;
+  ticker: string;
+  latestScore: number;
+  latestConfidence: number;
+  lastAnalysedAt: string;
+  totalRuns: number;
+  signal: string;
+}
+
 @Injectable()
 export class ScoreHistoryService {
   private readonly logger = new Logger(ScoreHistoryService.name);
@@ -345,5 +355,55 @@ export class ScoreHistoryService {
         })),
       },
     };
+  }
+
+  /**
+   * GET /api/scoring/recently-analysed
+   * Returns distinct symbols that have been scored, with their latest score
+   * and ticker name, ordered by most recent first.
+   */
+  async getRecentlyAnalysed(limit = 30): Promise<RecentlyAnalysedSymbol[]> {
+    if (!this.prisma.isAvailable) return [];
+
+    const scores = await this.prisma.score.findMany({
+      select: { symbolId: true, value: true, breakdown: true, timestamp: true },
+      orderBy: { timestamp: 'desc' },
+      take: 500,
+    });
+
+    const symbolMap = new Map<string, { symbolId: string; latestScore: number; latestConfidence: number; lastAnalysedAt: Date; totalRuns: number }>();
+    for (const s of scores) {
+      const existing = symbolMap.get(s.symbolId);
+      if (!existing) {
+        symbolMap.set(s.symbolId, {
+          symbolId: s.symbolId, latestScore: s.value,
+          latestConfidence: (s.breakdown as any)?.confidence ?? 0,
+          lastAnalysedAt: s.timestamp, totalRuns: 1,
+        });
+      } else {
+        existing.totalRuns++;
+      }
+    }
+
+    const symbolIds = Array.from(symbolMap.keys());
+    const symbols = symbolIds.length > 0
+      ? await this.prisma.symbol.findMany({ where: { id: { in: symbolIds } }, select: { id: true, ticker: true } }).catch(() => [])
+      : [];
+    const tickerMap = new Map(symbols.map((s) => [s.id, s.ticker]));
+
+    return Array.from(symbolMap.values())
+      .map((entry) => {
+        const ticker = tickerMap.get(entry.symbolId) || entry.symbolId.slice(0, 8);
+        const signal = entry.latestScore >= 60 ? 'entry' : entry.latestScore >= 40 ? 'watch' : 'defensive';
+        return {
+          symbolId: entry.symbolId, ticker,
+          latestScore: Number(entry.latestScore.toFixed(1)),
+          latestConfidence: Number(entry.latestConfidence.toFixed(2)),
+          lastAnalysedAt: entry.lastAnalysedAt.toISOString(),
+          totalRuns: entry.totalRuns, signal,
+        };
+      })
+      .sort((a, b) => new Date(b.lastAnalysedAt).getTime() - new Date(a.lastAnalysedAt).getTime())
+      .slice(0, limit);
   }
 }

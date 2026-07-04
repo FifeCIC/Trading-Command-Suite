@@ -1,0 +1,92 @@
+/* Recently Analysed Symbols — recently-analysed.css */
+
+.ra-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.35rem;
+  color: var(--ink);
+}
+
+.ra-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.ra-header h1 { margin: 0; }
+.ra-subtitle { margin: 0.2rem 0 0; color: var(--ink-soft); font-size: 0.8rem; }
+
+.ra-refresh-btn {
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--border, #334155);
+  border-radius: 6px;
+  background: var(--panel, #1e293b);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* ── Table ── */
+.ra-table-wrap {
+  overflow-x: auto;
+}
+
+.ra-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.ra-table th {
+  text-align: left;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  border-bottom: 2px solid var(--border, #334155);
+}
+
+.ra-table td {
+  padding: 0.5rem 0.7rem;
+  border-bottom: 1px solid var(--border, #33415533);
+}
+
+.ra-table tbody tr:hover { background: var(--panel-hover, #33415522); }
+
+.ra-ticker {
+  font-family: 'Source Code Pro', 'Consolas', monospace;
+  font-size: 0.88rem;
+  letter-spacing: 0.04em;
+}
+
+.ra-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.ra-time {
+  font-size: 0.76rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.ra-signal-chip {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+/* ── Empty state ── */
+.ra-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--ink-soft);
+}
+.ra-empty-hint { font-size: 0.76rem; opacity: 0.7; margin-top: 0.3rem; }

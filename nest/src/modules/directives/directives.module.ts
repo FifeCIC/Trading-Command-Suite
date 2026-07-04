@@ -3,6 +3,7 @@ import { DirectivesService } from './directives.service';
 import { DirectivesController } from './directives.controller';
 import { ConditionDetectorService } from './condition-detector.service';
 import { ProvidersModule } from '../providers/providers.module';
+import { ResearchModule } from '../research/research.module';
 import { TimezoneService } from '../scoring/timezone.service';
 
 // Implemented (real math)
@@ -38,6 +39,16 @@ import { CciDirective } from './implementations/cci.directive';
 // Implemented volume rhythm
 import { VolumeRhythmDirective } from './implementations/volume-rhythm.directive';
 import { VwapDirective } from './implementations/vwap.directive';
+// Implemented — Divergence Suite (Sprint 2026-07-03)
+import { RsiDivergenceDirective } from './implementations/rsi-divergence.directive';
+import { MacdDivergenceDirective } from './implementations/macd-divergence.directive';
+import { ObvDivergenceDirective } from './implementations/obv-divergence.directive';
+// Implemented — VWAP Confluence (Simple + Bands)
+import { VwapConfluenceSimpleDirective, VwapConfluenceBandsDirective } from './implementations/vwap-confluence.directive';
+// Implemented — MTF Confluence (Conservative + Weighted)
+import { MtfConfluenceConservativeDirective, MtfConfluenceWeightedDirective } from './implementations/mtf-confluence.directive';
+// Implemented — Gap Scanner
+import { GapScannerDirective } from './implementations/gap-scanner.directive';
 import { VolumeSurgeDirective } from './implementations/volume-surge.directive';
 import { BollingerBandSqueezeDirective } from './implementations/bollinger-squeeze.directive';
 import { SupportResistanceLevelsDirective } from './implementations/support-resistance.directive';
@@ -160,7 +171,7 @@ import { TripleWitchingDirective } from './implementations/triple-witching.direc
 import { ElectionCycleDirective } from './implementations/election-cycle.directive';
 
 @Module({
-  imports: [ProvidersModule],
+  imports: [ProvidersModule, ResearchModule],
   controllers: [DirectivesController],
   providers: [
     DirectivesService,
@@ -198,6 +209,18 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     VolumeRhythmDirective,
     VwapDirective,
     VolumeSurgeDirective,
+    // Implemented — Divergence Suite (Sprint 2026-07-03)
+    RsiDivergenceDirective,
+    MacdDivergenceDirective,
+    ObvDivergenceDirective,
+    // Implemented — VWAP Confluence
+    VwapConfluenceSimpleDirective,
+    VwapConfluenceBandsDirective,
+    // Implemented — MTF Confluence
+    MtfConfluenceConservativeDirective,
+    MtfConfluenceWeightedDirective,
+    // Implemented — Gap Scanner
+    GapScannerDirective,
     // Implemented — Patterns
     DojiPatternDirective,
     EngulfingPatternDirective,
@@ -366,6 +389,18 @@ export class DirectivesModule implements OnModuleInit {
     private readonly volumeRhythm: VolumeRhythmDirective,
     private readonly vwap: VwapDirective,
     private readonly volumeSurge: VolumeSurgeDirective,
+    // Divergence Suite (Sprint 2026-07-03)
+    private readonly rsiDiv: RsiDivergenceDirective,
+    private readonly macdDiv: MacdDivergenceDirective,
+    private readonly obvDiv: ObvDivergenceDirective,
+    // VWAP Confluence
+    private readonly vwapSimple: VwapConfluenceSimpleDirective,
+    private readonly vwapBands: VwapConfluenceBandsDirective,
+    // MTF Confluence
+    private readonly mtfConservative: MtfConfluenceConservativeDirective,
+    private readonly mtfWeighted: MtfConfluenceWeightedDirective,
+    // Gap Scanner
+    private readonly gapScanner: GapScannerDirective,
     // Implemented — Patterns
     private readonly doji: DojiPatternDirective,
     private readonly engulfing: EngulfingPatternDirective,
@@ -485,6 +520,18 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.volumeRhythm);
     this.directivesService.register(this.vwap);
     this.directivesService.register(this.volumeSurge);
+    // Divergence Suite (Sprint 2026-07-03)
+    this.directivesService.register(this.rsiDiv);
+    this.directivesService.register(this.macdDiv);
+    this.directivesService.register(this.obvDiv);
+    // VWAP Confluence
+    this.directivesService.register(this.vwapSimple);
+    this.directivesService.register(this.vwapBands);
+    // MTF Confluence
+    this.directivesService.register(this.mtfConservative);
+    this.directivesService.register(this.mtfWeighted);
+    // Gap Scanner
+    this.directivesService.register(this.gapScanner);
     // Implemented — Patterns
     this.directivesService.register(this.doji);
     this.directivesService.register(this.hammer);

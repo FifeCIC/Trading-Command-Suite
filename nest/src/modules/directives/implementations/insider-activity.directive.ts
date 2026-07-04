@@ -23,9 +23,11 @@ import {
   IDirective,
 } from '../interfaces/directive.interface';
 import { PrismaService } from '../../../database/prisma.service';
+import { ResearchImportService } from '../../research/research-import.service';
 
 const MIN_BARS = 1;
 const RECENT_DAYS = 30;
+const STALE_DAYS = 7;
 
 @Injectable()
 export class InsiderActivityDirective implements IDirective {
@@ -33,13 +35,14 @@ export class InsiderActivityDirective implements IDirective {
   readonly id = 'insider-activity';
   readonly name = 'Insider Activity';
   readonly description =
-    'Scores insider buying/selling clusters. Cluster buying = strong bullish. Reads from InsiderTransaction DB table.';
+    'Scores insider buying/selling clusters. Cluster buying = strong bullish. On-demand import + DB read.';
   readonly priority = 50;
   readonly maxScore = 85;
-  readonly version = '1.1.0';
+  readonly version = '1.2.0';
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly researchImport: ResearchImportService,
   ) {}
 
   async calculate(input: DirectiveInput): Promise<DirectiveResult> {
@@ -66,59 +69,71 @@ export class InsiderActivityDirective implements IDirective {
       });
 
       if (!recent || recent.length === 0) {
-        return {
-          score: 0,
-          confidence: 0,
-          reason: `No insider transaction data for ${symbol}. Import job may not have run yet.`,
-          signalClass: 'neutral',
-        };
+        // Trigger on-demand import, then retry DB query once
+        this.logger.log(`No insider data for ${symbol} — triggering on-demand import`);
+        await this.researchImport.importInsiderTransactionsForSymbol(symbol);
+
+        // Retry DB query after import
+        const retryResult = await this.prisma.insiderTransaction.findMany({
+          where: {
+            symbol: symbol.toUpperCase(),
+            transactionDate: { gte: cutoff },
+          },
+          orderBy: { transactionDate: 'desc' },
+        });
+
+        if (!retryResult || retryResult.length === 0) {
+          return {
+            score: 0,
+            confidence: 0,
+            reason: `No insider transaction data for ${symbol}. On-demand import returned no records.`,
+            signalClass: 'neutral',
+          };
+        }
+        return this.scoreTransactions(symbol, retryResult);
       }
 
-      // Count buys vs sells
-      const buys = recent.filter((t) => t.transactionCode === 'P' || t.transactionCode === 'A');
-      const sells = recent.filter((t) => t.transactionCode === 'S' || t.transactionCode === 'D');
-      const total = buys.length + sells.length;
-
-      // 1. Net buy ratio (0-50)
-      const buyRatio = total > 0 ? buys.length / total : 0;
-      const ratioScore = Math.round(buyRatio * 50);
-
-      // 2. Cluster bonus (0-25) — multiple buyers = strong signal
-      const uniqueBuyers = new Set(buys.map((b) => b.name)).size;
-      const clusterScore = Math.min(25, uniqueBuyers * 5);
-
-      // 3. Volume significance (0-10) — total shares traded
-      const totalShares = recent.reduce((s, t) => s + Math.abs(t.share || 0), 0);
-      const volumeScore = Math.min(10, Math.round(totalShares / 10000));
-
-      const totalScore = Math.min(this.maxScore, ratioScore + clusterScore + volumeScore);
-
-      const signalClass = totalScore >= 50
-        ? 'bullish'
-        : totalScore >= 25 && buyRatio > 0.5
-          ? 'neutral'
-          : 'neutral';
-
-      const label = buyRatio > 0.7 ? 'Strong insider buying'
-        : buyRatio > 0.5 ? 'Moderate insider buying'
-        : buyRatio > 0.3 ? 'Mixed insider activity'
-        : 'Insider selling';
-      const totalSharesK = Math.round(totalShares / 1000);
-
-      return {
-        score: totalScore,
-        confidence: Math.min(0.8, recent.length / 10),
-        reason: `${label}: ${buys.length}B/${sells.length}S from ${uniqueBuyers} insiders, ${totalSharesK}K shares (${RECENT_DAYS}d, DB). Ratio=${ratioScore}/50, Cluster=${clusterScore}/25, Vol=${volumeScore}/10. Total=${totalScore}/${this.maxScore}.`,
-        signalClass,
-      };
+      return this.scoreTransactions(symbol, recent);
     } catch (err) {
       this.logger.warn(`Insider activity failed for ${symbol}: ${(err as Error).message}`);
       return {
         score: 0,
         confidence: 0,
-        reason: `Failed to query insider data from DB: ${(err as Error).message}`,
+        reason: `Failed to query/import insider data: ${(err as Error).message}`,
         signalClass: 'neutral',
       };
     }
+  }
+
+  private scoreTransactions(symbol: string, recent: any[]): DirectiveResult {
+    const buys = recent.filter((t) => t.transactionCode === 'P' || t.transactionCode === 'A');
+    const sells = recent.filter((t) => t.transactionCode === 'S' || t.transactionCode === 'D');
+    const total = buys.length + sells.length;
+
+    const buyRatio = total > 0 ? buys.length / total : 0;
+    const ratioScore = Math.round(buyRatio * 50);
+
+    const uniqueBuyers = new Set(buys.map((b) => b.name)).size;
+    const clusterScore = Math.min(25, uniqueBuyers * 5);
+
+    const totalShares = recent.reduce((s, t) => s + Math.abs(t.share || 0), 0);
+    const volumeScore = Math.min(10, Math.round(totalShares / 10000));
+
+    const totalScore = Math.min(this.maxScore, ratioScore + clusterScore + volumeScore);
+
+    const signalClass = totalScore >= 50 ? 'bullish'
+      : totalScore >= 25 && buyRatio > 0.5 ? 'neutral' : 'neutral';
+
+    const label = buyRatio > 0.7 ? 'Strong insider buying'
+      : buyRatio > 0.5 ? 'Moderate insider buying'
+      : buyRatio > 0.3 ? 'Mixed insider activity' : 'Insider selling';
+    const totalSharesK = Math.round(totalShares / 1000);
+
+    return {
+      score: totalScore,
+      confidence: Math.min(0.8, recent.length / 10),
+      reason: `${label}: ${buys.length}B/${sells.length}S from ${uniqueBuyers} insiders, ${totalSharesK}K shares (${RECENT_DAYS}d, on-demand). Ratio=${ratioScore}/50, Cluster=${clusterScore}/25, Vol=${volumeScore}/10. Total=${totalScore}/${this.maxScore}.`,
+      signalClass,
+    };
   }
 }

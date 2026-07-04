@@ -16,6 +16,14 @@ const EVENT_TYPES = {
   default: { color: '#94a3b8', icon: '📅' },
 };
 
+const SOURCE_LINKS = {
+  fomc: { label: 'Federal Reserve', url: 'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm' },
+  cpi: { label: 'BLS CPI', url: 'https://www.bls.gov/news.release/cpi.toc.htm' },
+  nfp: { label: 'BLS Employment', url: 'https://www.bls.gov/news.release/empsit.toc.htm' },
+  gdp: { label: 'BEA GDP', url: 'https://www.bea.gov/data/gdp/gross-domestic-product' },
+  economic: { label: 'Investing.com Calendar', url: 'https://www.investing.com/economic-calendar/' },
+};
+
 function mapEventType(type) {
   const t = (type || '').toLowerCase();
   if (t.includes('earnings')) return 'earnings';
@@ -44,7 +52,20 @@ export default function EventsCalendarPage() {
     staleTime: 300_000,
   });
 
+  // Portfolio positions for cross-reference
+  const portfolioQuery = useQuery({
+    queryKey: ['events', 'portfolio'],
+    queryFn: () => apiGet('/api/portfolio'),
+    staleTime: 120_000,
+  });
+
   const isLoading = earningsQuery.isLoading && timelineQuery.isLoading;
+
+  const heldSymbols = useMemo(() => {
+    const positions = portfolioQuery.data?.positions || portfolioQuery.data || [];
+    if (!Array.isArray(positions)) return new Set();
+    return new Set(positions.map(p => (p.symbol || '').toUpperCase()).filter(Boolean));
+  }, [portfolioQuery.data]);
 
   const events = useMemo(() => {
     const all = [];
@@ -129,6 +150,7 @@ export default function EventsCalendarPage() {
                   <div className="ec-event-header">
                     <span className="ec-event-icon">{typeMeta.icon}</span>
                     <strong>{evt.label}</strong>
+                    {heldSymbols.has(evt.symbol?.toUpperCase()) && <span className="ec-held-badge" title="You hold this symbol">🎯 Held</span>}
                     <span className={`ec-impact ec-impact-${evt.impact}`}>{evt.impact}</span>
                   </div>
                   <div className="ec-event-meta">
@@ -161,6 +183,11 @@ export default function EventsCalendarPage() {
                               ? `${evt.symbol} earnings will affect scoring proximity. Earnings proximity directive reduces score as the date approaches.`
                               : evt.description || 'Macro event may increase volatility regime scoring for affected symbols.'}
                           </p>
+                          {SOURCE_LINKS[evt.type] && (
+                            <a className="ec-source-link" href={SOURCE_LINKS[evt.type].url} target="_blank" rel="noopener noreferrer">
+                              🔗 {SOURCE_LINKS[evt.type].label} →
+                            </a>
+                          )}
                         </div>
                       </motion.div>
                     )}

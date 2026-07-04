@@ -5,10 +5,12 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { DatabaseModule } from '../../database/database.module';
 import { TradingGatesModule } from '../trading-gates/trading-gates.module';
 
+import { MonteCarloService } from './monte-carlo.service';
+
 @Module({
   imports: [NotificationsModule, DatabaseModule, TradingGatesModule],
   controllers: [RiskController],
-  providers: [RiskService],
-  exports: [RiskService],
+  providers: [RiskService, MonteCarloService],
+  exports: [RiskService, MonteCarloService],
 })
 export class RiskModule {}

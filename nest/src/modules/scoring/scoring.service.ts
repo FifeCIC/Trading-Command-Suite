@@ -243,7 +243,7 @@ export class ScoringService implements OnModuleInit {
     }
 
     for (const symbol of symbols) {
-      const bars = await this.loadBars(symbol.id);
+      const bars = await this.loadBars(symbol.id, symbol.ticker);
       const input: DirectiveInput = {
         symbol: symbol.ticker,
         bars,
@@ -649,26 +649,63 @@ export class ScoringService implements OnModuleInit {
     };
   }
 
-  private async loadBars(symbolId: string): Promise<MarketBar[]> {
+  private async loadBars(symbolId: string, ticker?: string): Promise<MarketBar[]> {
     try {
       const rows = await this.prisma.marketBar.findMany({
         where: { symbolId },
         orderBy: { timestamp: 'asc' },
-        take: 100,
+        take: 200,
       });
 
-      return rows.map((r) => ({
-        timestamp: r.timestamp,
-        open: Number(r.open),
-        high: Number(r.high),
-        low: Number(r.low),
-        close: Number(r.close),
-        volume: Number(r.volume),
-      }));
+      if (rows.length >= 30) {
+        return rows.map((r) => ({
+          timestamp: r.timestamp,
+          open: Number(r.open),
+          high: Number(r.high),
+          low: Number(r.low),
+          close: Number(r.close),
+          volume: Number(r.volume),
+        }));
+      }
+
+      // ── MT5 Fallback (Sprint 2026-07-04) ──
+      if (ticker && rows.length < 30) {
+        try {
+          const mt5 = this.adapterFactory.create('mt5');
+          if (mt5) {
+            const tf = '1h';
+            const mt5Bars = await mt5.getCandles(ticker, tf, 200);
+            if (mt5Bars && mt5Bars.length > 0) {
+              const importData = mt5Bars.map((b) => ({
+                symbolId, provider: 'mt5', timeframe: tf,
+                timestamp: b.timestamp, open: b.open, high: b.high,
+                low: b.low, close: b.close, volume: b.volume,
+              }));
+              try { await this.prisma.marketBar.createMany({ data: importData, skipDuplicates: true }); } catch { /* dupes ok */ }
+              this.logger.log(`MT5 fallback: imported ${mt5Bars.length} ${tf} bars for ${ticker}`);
+              return mt5Bars;
+            }
+          }
+        } catch (mt5Err) {
+          this.logger.warn(`MT5 fallback failed for ${ticker}: ${(mt5Err as Error).message}`);
+        }
+      }
+      // ── End MT5 fallback ──
+
+      if (rows.length > 0) {
+        return rows.map((r) => ({
+          timestamp: r.timestamp,
+          open: Number(r.open),
+          high: Number(r.high),
+          low: Number(r.low),
+          close: Number(r.close),
+          volume: Number(r.volume),
+        }));
+      }
+
+      return [];
     } catch {
-      this.logger.warn(
-        `No market bars for ${symbolId} — directives will score 0.`,
-      );
+      this.logger.warn(`No market bars for ${symbolId} — directives will score 0.`);
       return [];
     }
   }

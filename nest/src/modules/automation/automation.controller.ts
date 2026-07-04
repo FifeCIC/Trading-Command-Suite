@@ -341,7 +341,7 @@ export class AutomationController {
 
   /** POST /api/automation/scoring-strategies */
   @Post('scoring-strategies')
-  addScoringStrategy(@Body() body: {
+  async addScoringStrategy(@Body() body: {
     name: string; protocolId: string; watchlistName: string;
     brokerId: string; mode?: string; tradeThreshold?: number;
     baseSize?: number; slPct?: number; tpPct?: number;
@@ -362,23 +362,26 @@ export class AutomationController {
       tradingEnabled: false,
     };
     this.loop.scoringStrategies.push(strat);
+    await this.loop.saveScoringStrategy(strat);
     return strat;
   }
 
   /** DELETE /api/automation/scoring-strategies/:id */
   @Delete('scoring-strategies/:id')
-  removeScoringStrategy(@Param('id') id: string) {
+  async removeScoringStrategy(@Param('id') id: string) {
     this.loop.scoringStrategies = this.loop.scoringStrategies.filter(s => s.id !== id);
+    await this.loop.deleteScoringStrategy(id);
     return { removed: id };
   }
 
   /** POST /api/automation/scoring-strategies/:id/toggle */
   @Post('scoring-strategies/:id/toggle')
-  toggleScoringStrategy(@Param('id') id: string, @Body() body: { enabled?: boolean; tradingEnabled?: boolean }) {
+  async toggleScoringStrategy(@Param('id') id: string, @Body() body: { enabled?: boolean; tradingEnabled?: boolean }) {
     const s = this.loop.scoringStrategies.find(s => s.id === id);
     if (!s) return { error: 'Not found' };
     if (body.enabled !== undefined) s.enabled = body.enabled;
     if (body.tradingEnabled !== undefined) s.tradingEnabled = body.tradingEnabled;
+    await this.loop.saveScoringStrategy(s);
     return s;
   }
 }

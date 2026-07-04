@@ -50,6 +50,16 @@ export class RsiOversoldDirective implements IDirective {
 
     const currentRsi = rsiValues[rsiValues.length - 1];
     const previousRsi = rsiValues[rsiValues.length - 2];
+
+    // Guard: NaN/Infinity RSI values from edge-case data
+    if (!Number.isFinite(currentRsi) || !Number.isFinite(previousRsi)) {
+      return {
+        score: 0, confidence: 0.1,
+        reason: 'RSI calculation produced non-finite value — possibly bad data.',
+        signalClass: 'neutral',
+      };
+    }
+
     const curling = currentRsi > previousRsi;
 
     if (currentRsi >= OVERSOLD_THRESHOLD) {

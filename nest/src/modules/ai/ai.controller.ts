@@ -103,4 +103,49 @@ GUIDELINES:
       return { ok: false, error: (err as Error).message, classifications: lab.classifications, scenarios: lab.scenarios };
     }
   }
+
+  /**
+   * POST /api/lab/explain-signal
+   * AI Co-Pilot — explain WHY a signal fired in natural language.
+   * Sends directive breakdown + market context to DeepSeek.
+   */
+  @Post('explain-signal')
+  async explainSignal(@Body() body: {
+    symbol: string;
+    signal: string;
+    composite: number;
+    protocolName?: string;
+    directives?: Array<{ name: string; score: number; reason: string }>;
+  }) {
+    if (!this.deepseek.isConfigured) {
+      return { ok: false, error: 'DEEPSEEK_API_KEY not set' };
+    }
+
+    const directiveSummary = (body.directives || [])
+      .slice(0, 8)
+      .map(d => `- ${d.name}: score ${d.score}, ${d.reason}`)
+      .join('\n');
+
+    const prompt = `You are a trading signal analyst. Explain this signal in plain English.
+
+Symbol: ${body.symbol}
+Signal: ${body.signal}
+Composite Score: ${body.composite}%
+Protocol: ${body.protocolName || 'default'}
+
+Directive breakdown:
+${directiveSummary || 'No directive details available'}
+
+Give a 2-3 sentence explanation of WHY this trade makes sense (or why it's risky). Mention the strongest supporting and opposing factors. Be honest — if the signal is weak or contradictory, say so. Keep it under 150 words.`;
+
+    try {
+      const result = await this.deepseek.chat(
+        [{ role: 'user', content: prompt }],
+        { temperature: 0.3, maxTokens: 300 },
+      );
+      return { ok: true, explanation: result.content, model: result.model };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  }
 }

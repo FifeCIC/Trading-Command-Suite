@@ -595,8 +595,19 @@ export class Trading212Adapter implements IProviderAdapter {
 
   /**
    * Place order via IProviderAdapter interface.
+   * ⛔ PORTFOLIO-ONLY GUARD: Trading212 is configured for portfolio monitoring only.
+   * No trading actions are permitted through this adapter. To enable trading,
+   * set TRADING212_TRADING_ENABLED=true in .env.
    */
   async placeOrder(params: BrokerOrderRequest): Promise<BrokerOrderResult> {
+    if (process.env.TRADING212_TRADING_ENABLED !== 'true') {
+      this.logger.warn(
+        `⛔ Trading212 trade BLOCKED for ${params.symbol} — portfolio monitoring only. ` +
+        `Set TRADING212_TRADING_ENABLED=true to enable trading.`,
+      );
+      return { success: false, error: 'Trading212 is portfolio-monitoring only. Set TRADING212_TRADING_ENABLED=true to enable.' };
+    }
+
     const result = await this.placeMarketOrder({
       ticker: this.toT212Ticker(params.symbol),
       quantity: params.quantity,
