@@ -6,6 +6,25 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './objectives.css';
 
+/** Lightweight markdown-to-HTML for trusted notes content */
+function renderMarkdown(text) {
+  if (!text) return '';
+  let html = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  // Headings
+  html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+  html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+  // Bold
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Arrows
+  html = html.replace(/→/g, '<span class="ob-arrow">→</span>');
+  // Newlines → <br>
+  html = html.replace(/\n/g, '<br/>');
+  return html;
+}
+
 const CATEGORY_LABELS = {
   'active-trading': '🎯 Active Trading',
   'account-growth': '📈 Account Growth',
@@ -192,7 +211,9 @@ export default function ObjectivesPage() {
                     {obj.targetDate && <span className="ob-tag">By: {new Date(obj.targetDate).toLocaleDateString()}</span>}
                   </div>
 
-                  {obj.notes && <p className="ob-card-notes">{obj.notes}</p>}
+                  {obj.notes && (
+                    <div className="ob-card-notes" dangerouslySetInnerHTML={{ __html: renderMarkdown(obj.notes) }} />
+                  )}
 
                   <div className="ob-card-actions">
                     {obj.status === 'active' && (

@@ -21298,3 +21298,9 @@
 2026-07-04 01:21:21,128 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1014.61
 2026-07-04 01:21:21,129 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
 2026-07-04 01:21:21,145 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-05 00:51:39,767 [INFO] MetaTrader5 package loaded
+2026-07-05 00:51:39,770 [INFO] Connecting to MT5 at startup...
+2026-07-05 00:51:39,771 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #7)
+2026-07-05 00:51:39,796 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1014.61
+2026-07-05 00:51:39,797 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-05 00:51:39,836 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000

@@ -19,6 +19,7 @@ export const STATUS_SNAPSHOT = [
   '🚨 NEW (2026-07-01): GitHub Issues integration — 13 broken frontend pages audited and tracked as GitHub Issues. Architecture domain labels link issues to AF sections.',
   '🚨 NEW (2026-07-01): Mandatory UI Contracts — every prompt must define user-facing outcome, data source, empty/error/loading states, and acceptance test.',
   '🚦 NEW (2026-07-02): PHASE GATE SYSTEM — Features gated to phase-2 (PDF reports, multi-user auth, billing, landing page) and future (social trading, mobile app, AI chatbot, marketplace) are OFF-LIMITS. Agents must check src/core/phase-gates.js before building.',
+  '🚦 UPDATED (2026-07-04): PHASE RESTRUCTURE — Phase 1: Core Engine (data→score→signal→decide→execute→track). Phase 2: Backtesting & Social Proof (validate strategies, publish results). Phase 3: Public Launch (multi-user, billing, landing page). Strategy: Build → Prove → Launch. 15 non-pipeline issues deferred to phase-3. 11 backtest issues labeled phase-2. #126 Multi-Screen Cockpit kept in phase-1.',
   'Real contracts should live here, not only planning notes. Open decisions stay visible on the same surface as the rules.',
   'Cross-page navigation: Architecture Framework ↔ Diagrams ↔ Capability Map are linked via nav buttons in each page header.',
   'Agentic AI discoverability: /api/architecture/manifest endpoint provides machine-readable system map. Diagrams page has 19 Mermaid diagrams. GitHub Issues are the canonical task tracking system. Full revision history in closed issues with `revision-log` label.',

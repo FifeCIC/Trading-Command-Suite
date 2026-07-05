@@ -96,6 +96,7 @@ import SourcesPage from '../pages/SourcesPage.jsx';
 import ProviderHealthPage from '../pages/ProviderHealthPage.jsx';
 import MarketContextPage from '../pages/MarketContextPage.jsx';
 import SeasonalityHeatmapPage from '../pages/SeasonalityHeatmapPage.jsx';
+import GapScannerPage from '../pages/GapScannerPage.jsx';
 import DirectivesConfigPage from '../pages/DirectivesConfigPage.jsx';
 import RecentlyAnalysedSymbolsPage from '../pages/RecentlyAnalysedSymbolsPage.jsx';
 import PlatformComparisonsPage from '../pages/PlatformComparisonsPage.jsx';
@@ -245,6 +246,7 @@ export const VIEW_COMPONENTS = {
   'provider-health': ProviderHealthPage,
   'market-context': MarketContextPage,
   'seasonality-heatmap': SeasonalityHeatmapPage,
+  'gap-scanner': GapScannerPage,
   'configure-directives': DirectivesConfigPage,
   'recently-analysed-symbols': RecentlyAnalysedSymbolsPage,
   'platform-comparisons': PlatformComparisonsPage,

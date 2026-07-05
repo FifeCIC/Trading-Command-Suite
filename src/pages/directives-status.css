@@ -1,35 +1,30 @@
-.directives-status-page {
-  max-width: 1060px;
+/* ── Directives Status Page ── */
+.ds-page {
+  max-width: 1100px;
   margin: 0 auto;
   padding: 1.35rem;
   color: var(--ink);
 }
 
-.ds-page-header {
-  margin-bottom: 1rem;
+.ds-header {
+  margin-bottom: 1.2rem;
 }
 
-.ds-page-header h1 {
+.ds-title {
   margin: 0;
-}
-
-.ds-eyebrow {
-  margin: 0;
-  font-size: 0.76rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--accent);
+  font-size: 1.3rem;
 }
 
 .ds-subtitle {
-  margin: 0.3rem 0 0;
+  margin: 0.25rem 0 0;
   color: var(--ink-soft);
+  font-size: 0.85rem;
 }
 
-/* Summary grid */
+/* ── Summary Grid ── */
 .ds-summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 1fr 1fr 1fr 2fr;
   gap: 0.7rem;
   margin-bottom: 1rem;
 }
@@ -41,102 +36,136 @@
   background: color-mix(in srgb, var(--panel) 92%, var(--bg) 8%);
 }
 
+.ds-summary--active { border-left: 3px solid #22c55e; }
+.ds-summary--inactive { border-left: 3px solid #ef4444; }
+.ds-summary--progress { border-left: 3px solid var(--accent); }
+
+.ds-summary-num {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
 .ds-summary-label {
-  margin: 0;
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink-soft);
-}
-
-.ds-summary-value {
-  display: block;
-  font-size: 1.6rem;
-  font-weight: 700;
-  margin: 0.25rem 0;
-  color: var(--ink);
+  margin-top: 0.15rem;
 }
 
 .ds-summary-note {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--ink-soft);
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.7rem;
+  font-size: 0.7rem;
 }
 
-/* Progress section */
-.ds-progress-section {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 1rem;
-  background: color-mix(in srgb, var(--panel) 92%, var(--bg) 8%);
-  margin-bottom: 1rem;
+.ds-cat-count {
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.7rem;
 }
 
-.ds-progress-section h2 {
-  margin: 0 0 0.7rem;
+/* ── Progress Bar ── */
+.ds-progress-wrap {
+  margin-top: 0.3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .ds-progress-track {
-  height: 8px;
+  flex: 1;
+  height: 10px;
   background: var(--line);
-  border-radius: 4px;
+  border-radius: 5px;
   overflow: hidden;
-  margin-bottom: 0.6rem;
 }
 
 .ds-progress-fill {
   height: 100%;
-  background: var(--accent);
-  border-radius: 4px;
-  transition: width 0.3s;
+  border-radius: 5px;
+  transition: width 0.4s ease;
 }
 
-.ds-progress-steps {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 0.4rem;
-}
-
-.ds-step {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.76rem;
-  color: var(--ink-soft);
-}
-
-.ds-step.done {
-  color: var(--ink);
-}
-
-.ds-step-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.68rem;
+.ds-progress-pct {
+  font-size: 0.85rem;
   font-weight: 700;
-  background: var(--line);
-  color: var(--ink-soft);
-  flex-shrink: 0;
+  color: var(--ink);
+  min-width: 2.5rem;
+  text-align: right;
 }
 
-.ds-step.done .ds-step-icon {
+/* ── Toolbar ── */
+.ds-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  margin-bottom: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.ds-cat-filters {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.ds-cat-btn {
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink-soft);
+  font-size: 0.74rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.ds-cat-btn:hover { border-color: var(--accent); color: var(--ink); }
+.ds-cat-btn--active {
   background: var(--accent);
   color: #fff;
+  border-color: var(--accent);
 }
 
-/* Table */
-.ds-table-section {
-  margin-bottom: 1rem;
+.ds-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 
-.ds-table-section h2 {
-  margin: 0 0 0.5rem;
+.ds-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.76rem;
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
 }
 
+.ds-toggle input { accent-color: var(--accent); }
+
+.ds-search {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 0.8rem;
+  width: 200px;
+  outline: none;
+}
+
+.ds-search:focus { border-color: var(--accent); }
+.ds-search::placeholder { color: var(--ink-soft); }
+
+/* ── Table ── */
 .ds-table-wrap {
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -151,91 +180,121 @@
 
 .ds-table th {
   text-align: left;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--ink-soft);
   border-bottom: 1px solid var(--line);
   padding: 0.55rem 0.6rem;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
 }
 
-.ds-table td {
+.ds-table th:hover { color: var(--ink); }
+
+.ds-row td {
   padding: 0.5rem 0.6rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent 30%);
-  vertical-align: top;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent 50%);
+  vertical-align: middle;
+  font-size: 0.82rem;
 }
 
-.ds-table strong {
+.ds-row--even td { background: color-mix(in srgb, var(--line) 8%, transparent 92%); }
+
+.ds-cell--name { min-width: 200px; }
+.ds-cell--num { text-align: center; font-variant-numeric: tabular-nums; }
+
+.ds-name {
   display: block;
+  font-weight: 600;
   color: var(--ink);
 }
 
-.ds-table small {
+.ds-id {
   display: block;
-  color: var(--ink-soft);
-  font-size: 0.76rem;
-  margin-top: 0.12rem;
-}
-
-.ds-table code {
-  background: color-mix(in srgb, var(--line) 60%, var(--panel));
-  padding: 0.1rem 0.35rem;
-  border-radius: 3px;
   font-size: 0.7rem;
   color: var(--accent);
+  font-family: 'SF Mono', 'Cascadia Code', monospace;
+  margin-top: 0.1rem;
 }
 
-/* Category chip */
-.ds-category-chip {
+.ds-empty {
+  text-align: center;
+  padding: 2rem !important;
+  color: var(--ink-soft);
+}
+
+/* ── Category Badge ── */
+.ds-cat-badge {
   display: inline-block;
   border-radius: 999px;
-  padding: 0.16rem 0.52rem;
+  padding: 0.2rem 0.55rem;
   font-size: 0.68rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  border: 1px solid;
+  white-space: nowrap;
 }
 
-.ds-category--momentum { border-color: #3bd9ff; color: #3bd9ff; }
-.ds-category--trend { border-color: #5ef58d; color: #5ef58d; }
-.ds-category--volatility { border-color: #ffbb53; color: #ffbb53; }
-.ds-category--participation { border-color: #8f7dff; color: #8f7dff; }
-
-/* Badge */
-.ds-badge {
+/* ── Status Pill ── */
+.ds-status-pill {
   display: inline-block;
   border-radius: 999px;
-  padding: 0.16rem 0.52rem;
-  font-size: 0.68rem;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
 }
 
-.ds-badge--done { background: #00ff4120; color: #00a63e; }
-.ds-badge--pending { background: #ffaa0020; color: #9a6400; }
+.ds-active { background: #22c55e18; color: #22c55e; }
+.ds-inactive { background: #ef444418; color: #ef4444; }
 
-/* Complexity bar */
-.ds-complexity-bar {
-  display: flex;
-  gap: 3px;
+/* ── Complexity ── */
+.ds-complexity {
+  display: inline-block;
+  border: 1.5px solid;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
 }
 
-.ds-complexity-seg {
-  width: 18px;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--line);
+/* ── Directional Bias ── */
+.ds-bias {
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.ds-bias--bullish { color: #22c55e; }
+.ds-bias--bearish { color: #ef4444; }
+.ds-bias--neutral { color: #94a3b8; }
+
+/* ── Sort Arrow ── */
+.ds-sort-arrow {
+  margin-left: 0.2rem;
+  font-size: 0.65rem;
+  opacity: 0.4;
+}
+.ds-sort-active { opacity: 1; color: var(--accent); }
+
+/* ── Footer ── */
+.ds-footer {
+  margin-top: 0.5rem;
+  text-align: right;
+  font-size: 0.76rem;
+  color: var(--ink-soft);
 }
 
-.ds-complexity-seg.filled { background: var(--accent); }
-
-/* Coverage */
-.ds-coverage {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .ds-summary-grid { grid-template-columns: 1fr 1fr; }
+  .ds-toolbar { flex-direction: column; align-items: stretch; }
+  .ds-toolbar-right { justify-content: space-between; }
+  .ds-search { width: 100%; }
+  .ds-table-wrap { overflow-x: auto; }
 }
 
 .ds-coverage-bar {

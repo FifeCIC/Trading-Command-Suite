@@ -145,14 +145,41 @@ export class PlannerService {
     const defaults = [
       {
         title: 'Active MT5 Trading',
-        description: 'Get TCS actively trading via MT5 with the automation loop running live strategies',
+        description: 'Get TCS actively trading via MT5 on the MetaQuotes-Demo account — fast-paced testing with the automation loop running live strategies, SL/TP enforcement, multi-strategy concurrent execution, and full pipeline observability.',
         category: 'active-trading',
         targetAmount: null,
         currentAmount: 0,
         currency: 'GBP',
         linkedStrategy: 'MT5 Automation Loop',
         linkedAccount: 'MT5',
-        notes: 'Core objective: have the automation loop executing real trades on MT5 with risk management active',
+        notes: `## Objective
+Have the automation loop executing real trades on MT5 (MetaQuotes-Demo) with risk management active. This objective is pending a sprint review before full-scale execution.
+
+## Success Criteria (post-sprint review)
+
+1. **Accelerated Testing Velocity** — Positions opened and closed at a faster rate. This may involve simplifying a protocol or relaxing risk constraints on the MetaQuotes-Demo account to generate more activity quickly, then fine-tuning once the pipeline is proven.
+
+2. **MT5 ↔ TCS Position Sync** — Confirm that every position is perfectly synchronised between MT5 and TCS in both directions. No orphaned positions, no stale state.
+
+3. **Full Pipeline Verification** — Validate the complete pipeline end-to-end: directive scoring → protocol aggregation → strategy signal → automation execution → MT5 trade → position tracking → P&L recording. This requires high-frequency automation activity to properly examine.
+
+4. **Manual + Automated Trade Coexistence** — Conduct manual MT5 trades alongside automated ones. This requires a Scoring Strategy that runs independently without a Trading Strategy consuming it, otherwise duplicate trades could fire from the same signal.
+
+5. **Multi-Strategy Concurrent Execution** — Trades firing from multiple strategies configured for different time horizons (e.g. scalp, day-trade, swing). This maximises productive use of capital and tests the automation loop's ability to manage parallel strategies without interference.
+
+6. **Stop-Loss & Take-Profit Enforcement** — Every automated position must be opened with SL and TP levels attached, set according to the strategy's risk parameters.
+
+7. **Style-Appropriate Exits** — Positions closed according to their trading style:
+   - Scalps: closed quickly (seconds to minutes)
+   - Day trades: closed near end of session/day
+   - Intraday/swing: trailing SL managed throughout
+   This requires at least 3 distinct Trading Strategies to witness all three behaviours.
+
+8. **UI Observability** — The UI must make it easy to identify:
+   - Daily P&L results at a glance
+   - P&L broken down by Trading Strategy
+   - Which Scoring Strategies supported each trade
+   - Directive-specific history stats changing in real time as trades execute`,
       },
       {
         title: 'Grow Xtrend Account: £59 → £500',

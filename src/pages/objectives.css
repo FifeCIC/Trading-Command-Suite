@@ -39,7 +39,11 @@
 
 .ob-card-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
 .ob-tag { font-size: 0.68rem; padding: 2px 7px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--textDim); }
-.ob-card-notes { margin: 6px 0; font-size: 0.78rem; color: var(--textFaint); font-style: italic; }
+.ob-card-notes { margin: 6px 0; font-size: 0.78rem; color: var(--textFaint); line-height: 1.5; }
+.ob-card-notes h3 { font-size: 0.9rem; color: var(--ink); margin: 0.6rem 0 0.3rem; font-weight: 700; }
+.ob-card-notes h4 { font-size: 0.82rem; color: var(--ink); margin: 0.4rem 0 0.2rem; font-weight: 600; }
+.ob-card-notes strong { color: var(--ink-soft); }
+.ob-arrow { color: var(--accent); margin: 0 0.15rem; }
 
 .ob-card-actions { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
 .ob-action-btn { padding: 4px 10px; font-size: 0.72rem; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; background: var(--bg); color: var(--text); }

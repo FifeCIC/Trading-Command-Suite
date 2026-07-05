@@ -30,28 +30,12 @@ export interface TaskStatus {
 
 const TASKS: ProcessTask[] = [
   {
-    id: 'tradercore:react',
-    label: 'Trading Command Suite (Frontend)',
+    id: 'tradercore:all',
+    label: 'Trading Command Suite (All Services)',
     cwd: 'C:\\wamp64\\www\\trading-command-suite',
-    command: 'npm run dev',
-    port: 5173,
-    pidFile: 'C:\\wamp64\\www\\intranet\\task-runner\\tradercore_react.pid',
-  },
-  {
-    id: 'tradercore:api:3201',
-    label: 'Trading Command Suite (API)',
-    cwd: 'C:\\wamp64\\www\\trading-command-suite\\nest',
-    command: 'npm run start:dev',
+    command: 'pwsh -File scripts/tcs-launch.ps1',
     port: 3201,
-    pidFile: 'C:\\wamp64\\www\\intranet\\task-runner\\tradercore_api_3201.pid',
-  },
-  {
-    id: 'tradercore:mt5-bridge',
-    label: 'Trading Command Suite (MT5 Bridge)',
-    cwd: process.env.MT5_BRIDGE_CWD || 'C:\\wamp64\\www\\trading-command-suite\\scripts\\mt5-bridge',
-    command: `"${process.env.MT5_PYTHON_PATH || 'python'}" ${process.env.MT5_BRIDGE_SCRIPT || 'mt5_bridge.py'}`,
-    port: 5000,
-    pidFile: 'C:\\wamp64\\www\\intranet\\task-runner\\tradercore_mt5-bridge.pid',
+    pidFile: 'C:\\wamp64\\www\\intranet\\task-runner\\tradercore_all.pid',
   },
 ];
 

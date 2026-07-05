@@ -19,6 +19,8 @@ The Intranet uses `api-tasks.php` as the single source of truth for all managed 
 
 ### 1. Add Task Definition
 Edit `C:\wamp64\www\intranet\api-tasks.php`. Add to the `$tasks` array:
+
+**Standard single-process task:**
 ```php
 'project-id:role' => [
     'label'   => 'Human-Readable Name',
@@ -27,13 +29,28 @@ Edit `C:\wamp64\www\intranet\api-tasks.php`. Add to the `$tasks` array:
     'port'    => 1234,
 ],
 ```
+
+**Multi-service launcher task (e.g., TCS all-in-one):**
+```php
+'project-id:all' => [
+    'label'       => 'Project Name (All Services)',
+    'cwd'         => 'C:\\wamp64\\www\\project-folder',
+    'command'     => 'pwsh -File scripts/launch.ps1',
+    'stopCommand' => 'pwsh -File scripts/stop.ps1',
+    'port'        => 3201,          // primary health-check port
+    'linkUrl'     => 'http://localhost:5173',  // frontend URL for "Open" button
+    'type'        => 'launcher',
+],
+```
+- `type: 'launcher'` triggers special handling: fire-and-forget start with port polling, custom stopCommand instead of PID kill
+- `linkUrl` overrides the auto-generated `http://localhost:{port}` link
 - Use double backslashes in Windows paths
 - The port is used for health checking — the task runner polls it
 - Set `cwd` and `command` to `null` if it's a manual-only service (like MailHog)
 
 ### 2. Verify Task ID Convention
 - Use lowercase, colon-separated: `project:role` or `project:role:port`
-- Examples: `tradercore:api:3201`, `streamerops:dev`, `omnicore:server:3101`
+- Examples: `tradercore:all`, `streamerops:dev`, `omnicore:server:3101`
 
 ### 3. Test the Task
 ```powershell
@@ -50,7 +67,7 @@ Invoke-RestMethod -Method POST "http://localhost/intranet/api-tasks.php?action=s
 ### 4. Update Trading Command Suite Server Controls (if applicable)
 If the task is a Trading Command Suite service, add its ID to the `TRADING_TASKS` array in `src/pages/ServerControlsPage.jsx`:
 ```js
-const TRADING_TASKS = ['tradercore:react', 'tradercore:api:3201', 'tradercore:mt5-bridge', 'new-task-id'];
+const TRADING_TASKS = ['tradercore:all', 'new-task-id'];
 ```
 
 ## Key Files

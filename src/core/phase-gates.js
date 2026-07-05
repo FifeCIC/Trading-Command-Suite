@@ -1,17 +1,13 @@
 /**
- * Phase Gates — Features that are designed but intentionally deferred.
+ * Phase Gates — Development phases for the Trading Command Suite.
  *
- * These features are visible in the app as placeholders but should NOT be
- * worked on until their phase is activated. This prevents accidentally
- * spending time on "nice-to-have" features meant for a future release.
+ * Phase 1: Core Engine     — Data pipeline, scoring, automation, execution
+ * Phase 2: Prove & Publish — Backtesting, validation, social proof, content
+ * Phase 3: Public Launch   — Multi-user, billing, landing page, marketplace
  *
- * Phases:
- *   'current'  — Active development (default, no gate)
- *   'phase-2'  — Public release features (PDF reports, multi-user, etc.)
- *   'future'   — Long-term ideas (may never be built)
- *
- * To activate a phase, change the activePhase below or set
- * `localStorage.setItem('tcs:active-phase', 'phase-2')` in the browser console.
+ * Strategy: Build → Prove → Launch (not Build → Launch → Prove).
+ * Social proof from backtest results and content published to
+ * Twitter/Reddit/Discord builds trust before a landing page exists.
  */
 
 const STORAGE_KEY = 'tcs:active-phase';
@@ -27,33 +23,56 @@ function getActivePhase() {
 /**
  * Features gated behind specific phases.
  *
- * Key: page/feature ID
- * Value: { phase, label, description, dependsOn }
+ * Phase 2: Backtesting & Social Proof
+ *   Backtest all directives, validate strategies against historical data,
+ *   publish equity curves and win rates to social media. Build audience
+ *   through evidence, not promises.
+ *
+ * Phase 3: Public Launch
+ *   Multi-user platform with billing, PDF reports, landing page.
+ *   Only after the engine is proven and an audience exists.
  */
 export const PHASE_GATES = {
-  // ── Phase 2: Public Release ──────────────────────────
-  'reports': {
+  // ── Phase 2: Backtesting & Social Proof ────────────────
+  'backtest-full-pipeline': {
     phase: 'phase-2',
+    label: 'Full Backtest Pipeline',
+    description: 'Backtest all directives against historical data with parameter optimization and walk-forward validation.',
+  },
+  'social-content': {
+    phase: 'phase-2',
+    label: 'Social Media Publishing',
+    description: 'Automated equity curve screenshots, win rate summaries, and strategy performance posts for Twitter/Reddit/Discord.',
+  },
+  'strategy-showcase': {
+    phase: 'phase-2',
+    label: 'Public Strategy Showcase',
+    description: 'Public-facing strategy performance pages with verified track records for social proof.',
+  },
+
+  // ── Phase 3: Public Launch ─────────────────────────────
+  'reports': {
+    phase: 'phase-3',
     label: 'PDF Reports',
-    description: 'Generate downloadable PDF reports for completed backtest runs. Requires PDF generation service.',
+    description: 'Generate downloadable PDF reports for completed backtest runs.',
   },
   'multi-user-auth': {
-    phase: 'phase-2',
+    phase: 'phase-3',
     label: 'Multi-User Authentication',
     description: 'User accounts, roles, and permission-based access control.',
   },
   'public-landing': {
-    phase: 'phase-2',
+    phase: 'phase-3',
     label: 'Public Landing Page',
     description: 'Marketing website with feature showcase, pricing, and signup flow.',
   },
   'subscription-billing': {
-    phase: 'phase-2',
+    phase: 'phase-3',
     label: 'Subscription & Billing',
     description: 'Stripe integration for paid tiers with usage-based billing.',
   },
 
-  // ── Future: Long-term Ideas ───────────────────────────
+  // ── Future: Long-term Ideas ────────────────────────────
   'social-trading': {
     phase: 'future',
     label: 'Social Trading',

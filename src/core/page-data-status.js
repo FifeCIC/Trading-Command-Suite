@@ -51,7 +51,7 @@ export const PAGE_DATA_STATUS = {
   'fluff-detector': { status: 'live', source: 'News sentiment analysis' },
   'market-correlations': { status: 'live', source: 'Pearson correlation API' },
   'news-intel': { status: 'live', source: 'Finnhub + DB' },
-  'earnings-calendar': { status: 'live', source: 'Finnhub earnings calendar' },
+  'gap-scanner': { status: 'live', source: 'SEES gap-scanner directive via /api/scoring/ranked' },
   'social-networks': { status: 'live', note: 'Finnhub news sentiment — requires FINNHUB_API_KEY' },
   'price-forecast': { status: 'partial', source: 'Finnhub — price-target requires premium subscription' },
   'events-calendar': { status: 'live', source: 'Finnhub earnings + Timeline API' },

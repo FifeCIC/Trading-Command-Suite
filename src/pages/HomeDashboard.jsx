@@ -41,7 +41,7 @@ export default function HomeDashboard() {
     setRestarting(true);
     setRestartMsg('Sending start command...');
     try {
-      const res = await fetch('/intranet/api-tasks.php?action=start&task=tradercore:api:3201', {
+      const res = await fetch('/intranet/api-tasks.php?action=start&task=tradercore:all', {
         method: 'POST',
         signal: AbortSignal.timeout(15000),
       });
