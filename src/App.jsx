@@ -57,7 +57,6 @@ import HomeDashboardPage from './pages/HomeDashboardPage';
 import CacheMonitorPage from './pages/CacheMonitorPage';
 import PositionsMonitorPage from './pages/PositionsMonitorPage';
 import LiveOrderingStackPage from './pages/LiveOrderingStackPage';
-import SeesAdvancedPage from './pages/SeesAdvancedPage';
 import SeesArenaPage from './pages/SeesArenaPage';
 import AlgorithmLabPage from './pages/AlgorithmLabPage';
 import PerformanceLabPage from './pages/PerformanceLabPage';
@@ -78,6 +77,7 @@ import StrategyBuilderPage from './pages/StrategyBuilderPage';
 import StrategyWizardPage from './pages/StrategyWizardPage';
 import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
 import SymbolDetailPage from './pages/SymbolDetailPage';
+import SymbolPage from './pages/SymbolPage';
 import SpeedTradingPage from './pages/SpeedTradingPage';
 import SpeedScannerPage from './pages/SpeedScannerPage';
 import BtcSpeedTradingPage from './pages/BtcSpeedTradingPage';
@@ -992,6 +992,7 @@ export default function App() {
       <ErrorBoundary message="The application encountered a critical error.">
         <Routes>
           <Route path="/research/symbol/:symbolId" element={<AppShell />} />
+          <Route path="/trading/symbol/:ticker" element={<SymbolPage />} />
           <Route path="/:area/:view" element={<AppShell />} />
           <Route path="/:area" element={<AppShell />} />
           <Route path="/" element={<HomeDashboard />} />

@@ -11,13 +11,14 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
+import Notice from '../components/Notice';
 import './market-context.css';
 
 const MOOD_COLORS = {
-  caution:  { bg: '#fef3c7', border: '#f59e0b', text: '#92400e', icon: '⚠️' },
-  normal:   { bg: '#dcfce7', border: '#22c55e', text: '#166534', icon: '✅' },
-  watchful: { bg: '#fef3c7', border: '#f59e0b', text: '#92400e', icon: '👁️' },
-  prep:     { bg: '#e0e7ff', border: '#6366f1', text: '#3730a3', icon: '📋' },
+  caution:  { bg: 'var(--notice-warning-bg)', border: 'var(--notice-warning-border)', text: 'var(--notice-warning-text)', icon: '⚠️' },
+  normal:   { bg: 'var(--notice-success-bg)', border: 'var(--notice-success-border)', text: 'var(--notice-success-text)', icon: '✅' },
+  watchful: { bg: 'var(--notice-warning-bg)', border: 'var(--notice-warning-border)', text: 'var(--notice-warning-text)', icon: '👁️' },
+  prep:     { bg: 'var(--notice-info-bg)', border: 'var(--notice-info-border)', text: 'var(--notice-info-text)', icon: '📋' },
 };
 
 const IMPACT_COLORS = {
@@ -66,7 +67,12 @@ export default function MarketContextPage() {
       <header className="mc-header">
         <div>
           <h1>Market Context</h1>
-          <p className="mc-subtitle">7-day trading awareness — pre-flight checks & session timing</p>
+          <p className="mc-subtitle">7-day market awareness — upcoming events, session timing, and day-specific pre-flight checks</p>
+          <p className="mc-description">
+            A protocol-agnostic view of the trading environment. Shows which sessions are active,
+            what economic events are approaching, and day-of-week checklists. Individual protocols
+            use this context internally to adjust their signals.
+          </p>
         </div>
         <button className="mc-refresh-btn" onClick={() => refetch()}>↻ Refresh</button>
       </header>
@@ -74,13 +80,10 @@ export default function MarketContextPage() {
       {isError && <ApiOfflineBanner />}
 
       {/* ── Pre-flight status ── */}
-      <div className="mc-preflight" style={{ background: preflightOk ? '#dcfce7' : '#fef3c7', borderColor: preflightOk ? '#22c55e' : '#f59e0b' }}>
-        <span className="mc-preflight-icon">{preflightOk ? '✅' : '⚠️'}</span>
-        <div>
-          <strong>{preflightOk ? 'Pre-flight OK' : 'Pre-flight warnings active'}</strong>
-          <p>{preflightOk ? 'All systems clear for trading.' : 'Review warnings below before trading.'}</p>
-        </div>
-      </div>
+      <Notice level={preflightOk ? 'success' : 'warning'}>
+        <strong>{preflightOk ? 'Pre-flight OK' : 'Pre-flight warnings active'}</strong>
+        {' '}{preflightOk ? 'All systems clear for trading.' : 'Review warnings below before trading.'}
+      </Notice>
 
       {/* ── Day Context Card ── */}
       {day && (
@@ -169,9 +172,7 @@ export default function MarketContextPage() {
       {warnings.length > 0 && (
         <motion.div className="mc-warnings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
           {warnings.map((w, i) => (
-            <div key={i} className={`mc-warning-item ${w.startsWith('⚠️') ? 'mc-warn-critical' : ''}`}>
-              {w}
-            </div>
+            <Notice key={i} level={w.startsWith('⚠️') ? 'critical' : 'warning'}>{w}</Notice>
           ))}
         </motion.div>
       )}

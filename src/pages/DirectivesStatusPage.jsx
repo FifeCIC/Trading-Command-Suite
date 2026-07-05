@@ -209,30 +209,35 @@ export default function DirectivesStatusPage() {
         </p>
       </header>
 
-      {/* ── Summary Cards ── */}
-      <div className="ds-summary-grid">
-        <div className="ds-summary-card">
-          <div className="ds-summary-num">{totals.total}</div>
-          <div className="ds-summary-label">Total Directives</div>
+      {/* ── Stat Pills ── */}
+      <div className="ds-stat-row">
+        <div className="ds-stat-pill">
+          <span className="ds-stat-num">{totals.total}</span>
+          <span className="ds-stat-lbl">Total</span>
         </div>
-        <div className="ds-summary-card ds-summary--active">
-          <div className="ds-summary-num">{totals.active}</div>
-          <div className="ds-summary-label">Active</div>
+        <div className="ds-stat-pill ds-stat-pill--active">
+          <span className="ds-stat-num">{totals.active}</span>
+          <span className="ds-stat-lbl">Active</span>
         </div>
-        <div className="ds-summary-card ds-summary--inactive">
-          <div className="ds-summary-num">{totals.inactive}</div>
-          <div className="ds-summary-label">Inactive</div>
+        <div className="ds-stat-pill ds-stat-pill--inactive">
+          <span className="ds-stat-num">{totals.inactive}</span>
+          <span className="ds-stat-lbl">Inactive</span>
         </div>
-        <div className="ds-summary-card ds-summary--progress">
-          <div className="ds-summary-label">Implementation Progress</div>
-          <ProgressBar pct={activePct} />
-          <div className="ds-summary-note">
-            {Object.entries(catCounts).map(([cat, n]) => (
-              <span key={cat} className="ds-cat-count" style={{ color: CATEGORY_COLORS[cat]?.color || '#64748b' }}>
-                {cat}: {n}
-              </span>
-            ))}
-          </div>
+      </div>
+
+      {/* ── Implementation Progress ── */}
+      <div className="ds-progress-section">
+        <div className="ds-progress-header">
+          <span className="ds-progress-title">Implementation Progress</span>
+          <span className="ds-progress-pct-badge">{activePct}%</span>
+        </div>
+        <ProgressBar pct={activePct} />
+        <div className="ds-category-cloud">
+          {Object.entries(catCounts).map(([cat, n]) => (
+            <span key={cat} className="ds-cat-tag" style={{ color: CATEGORY_COLORS[cat]?.color || '#64748b', borderColor: CATEGORY_COLORS[cat]?.color || '#64748b' }}>
+              {cat} <strong>{n}</strong>
+            </span>
+          ))}
         </div>
       </div>
 

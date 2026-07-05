@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { createChart } from 'lightweight-charts';
+import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts';
 
 // ── Mock data generator ──
 function generateMockCandles(count = 100) {
@@ -96,7 +96,7 @@ export default function TrailingStopDemo() {
       timeScale: { borderColor: 'rgba(255,255,255,0.08)', visible: false },
     });
 
-    candleSeries.current = chart.addCandlestickSeries({
+    candleSeries.current = chart.addSeries(CandlestickSeries, {
       upColor: '#22c55e',
       downColor: '#ef4444',
       borderUpColor: '#22c55e',
@@ -106,7 +106,7 @@ export default function TrailingStopDemo() {
     });
 
     // Entry marker
-    entryMarker.current = chart.addLineSeries({
+    entryMarker.current = chart.addSeries(LineSeries, {
       color: '#f59e0b',
       lineWidth: 1,
       lineStyle: 2,
@@ -115,7 +115,7 @@ export default function TrailingStopDemo() {
     });
 
     // Stop line
-    stopLine.current = chart.addLineSeries({
+    stopLine.current = chart.addSeries(LineSeries, {
       color: '#ef4444',
       lineWidth: 2,
       lineStyle: 2,

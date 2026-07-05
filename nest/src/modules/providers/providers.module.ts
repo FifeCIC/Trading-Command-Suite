@@ -14,6 +14,8 @@ import { PolygonAdapter } from './adapters/polygon.adapter';
 import { FinnhubAdapter } from './adapters/finnhub.adapter';
 import { TwelveDataAdapter } from './adapters/twelve-data.adapter';
 import { FmpAdapter } from './adapters/fmp.adapter';
+import { BinanceAdapter } from './adapters/binance.adapter';
+import { CryptoProviderRouter } from './crypto-provider-router.service';
 import { RateLimitGovernor } from './rate-limit-governor.service';
 import { ProviderDegradationService } from './provider-degradation.service';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -28,6 +30,7 @@ import { NotificationService } from '../notifications/notifications.service';
     AdapterFactory,
     RateLimitGovernor,
     ProviderDegradationService,
+    CryptoProviderRouter,
     AlpacaAdapter,
     AlphaVantageAdapter,
     Trading212Adapter,
@@ -37,8 +40,9 @@ import { NotificationService } from '../notifications/notifications.service';
     FinnhubAdapter,
     TwelveDataAdapter,
     FmpAdapter,
+    BinanceAdapter,
   ],
-  exports: [ProvidersService, AdapterFactory, FinnhubAdapter, FmpAdapter, Mt5Adapter, AlphaVantageAdapter, RateLimitGovernor, ProviderDegradationService],
+  exports: [ProvidersService, AdapterFactory, FinnhubAdapter, FmpAdapter, Mt5Adapter, AlphaVantageAdapter, RateLimitGovernor, ProviderDegradationService, CryptoProviderRouter, BinanceAdapter],
 })
 export class ProvidersModule implements OnModuleInit {
   constructor(
@@ -50,6 +54,16 @@ export class ProvidersModule implements OnModuleInit {
   onModuleInit() {
     // Wire NotificationService into degradation for provider alerts
     this.degradation.setNotificationService(this.notificationService);
+
+    // ── Binance (crypto primary — free, no auth, 24/7) ──
+    this.adapterFactory.register('binance', BinanceAdapter, {
+      name: 'Binance',
+      apiKeyEnv: 'BINANCE_API_KEY',
+      baseUrl: 'https://api.binance.com',
+      capabilities: ['quotes', 'candles', 'profiles'],
+      failoverPriority: 15, // Low number = high priority (preferred for crypto)
+    });
+
     this.adapterFactory.register('trading212', Trading212Adapter, {
       name: 'Trading212',
       apiKeyEnv: 'TRADING212_API_KEY',

@@ -43,4 +43,14 @@ export class TradingStrategyController {
       return { error: err.message, stack: err.stack?.split('\n').slice(0, 3) };
     }
   }
+
+  @Get('risk-limits')
+  getRiskLimits() {
+    return {
+      maxPositionSize: parseFloat(process.env.MT5_MAX_POSITION_SIZE || '1.0'),
+      maxDailyLoss: parseFloat(process.env.MT5_MAX_DAILY_LOSS || '100'),
+      maxOpenPositions: parseInt(process.env.MT5_MAX_OPEN_POSITIONS || '5', 10),
+      note: 'These are server-enforced hard limits. Change in nest/.env and restart NestJS.',
+    };
+  }
 }

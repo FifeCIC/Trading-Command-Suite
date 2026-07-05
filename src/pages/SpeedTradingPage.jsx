@@ -135,13 +135,23 @@ export default function SpeedTradingPage() {
   const [scanLoading, setScanLoading] = useState(false);
   const [scanError, setScanError] = useState(null);
   const [scanExpanded, setScanExpanded] = useState(true);
-  const [chartMode, setChartMode] = useState('candles'); // 'candles' | 'line' | 'minimal'
+  const [chartMode, setChartMode] = useState('candles');
   const [chartSettingsOpen, setChartSettingsOpen] = useState(false);
   const [chartSettings, setChartSettings] = useState({
     showVolume: true, showEMA9: true, showEMA21: true, showEMA50: false,
     gridStyle: 1, upColor: '#22c55e', downColor: '#ef4444',
   });
   const scanTimer = useRef(null);
+
+  // ── Auto-Pilot / Auto-Switch ──
+  const [autoPilot, setAutoPilot] = useState(false);
+  const [apThreshold, setApThreshold] = useState(70);      // min composite to trigger switch
+  const [apMinHoldSec, setApMinHoldSec] = useState(30);    // min seconds before auto-switch
+  const [apConfirmScans, setApConfirmScans] = useState(2); // consecutive scans above threshold
+  const [apLastSwitchAt, setApLastSwitchAt] = useState(0); // timestamp of last auto-switch
+  const [apConfirmCount, setApConfirmCount] = useState(0); // consecutive confirmations
+  const [apLastTop, setApLastTop] = useState(null);        // last top symbol seen
+  const [apSwitchLog, setApSwitchLog] = useState([]);      // log of auto-switches
 
   // ── Protocol directive panel ──
   const [protocolDetail, setProtocolDetail] = useState(null);
@@ -335,6 +345,48 @@ export default function SpeedTradingPage() {
     scanTimer.current = setInterval(doScan, 5000);
     return () => clearInterval(scanTimer.current);
   }, [paused, locked]);
+
+  // ── Auto-Pilot: watch scan data and auto-switch symbol ──
+  useEffect(() => {
+    if (!autoPilot || paused || locked) { setApConfirmCount(0); setApLastTop(null); return; }
+    if (!scanData?.opportunities?.length) return;
+
+    const top = scanData.opportunities[0];
+    const topSymbol = top.symbol || top.ticker;
+    const topScore = top.composite ?? top.score ?? 0;
+
+    // Reset confirmation if top symbol changed
+    if (topSymbol !== apLastTop) {
+      setApLastTop(topSymbol);
+      setApConfirmCount(1);
+      return;
+    }
+
+    // Increment confirmation count
+    const newCount = apConfirmCount + 1;
+    setApConfirmCount(newCount);
+
+    // Check conditions for auto-switch
+    if (topScore < apThreshold) return;                    // below threshold
+    if (topSymbol === symbol) return;                       // already on this symbol
+    if (Date.now() - apLastSwitchAt < apMinHoldSec * 1000) return; // min hold time
+    if (newCount < apConfirmScans) return;                  // not enough confirmations
+
+    // Auto-switch!
+    setSymbol(topSymbol);
+    setApLastSwitchAt(Date.now());
+    setApConfirmCount(0);
+    setApLastTop(null);
+    const logEntry = {
+      id: Date.now(),
+      from: symbol,
+      to: topSymbol,
+      score: topScore,
+      time: new Date().toLocaleTimeString(),
+    };
+    setApSwitchLog(prev => [logEntry, ...prev].slice(0, 20));
+    addLog(`🤖 Auto-switch: ${symbol} → ${topSymbol} (score ${topScore})`);
+  }, [scanData, autoPilot, paused, locked, apThreshold, apMinHoldSec, apConfirmScans, apLastSwitchAt, apLastTop, apConfirmCount, symbol]);
 
   return (
     <div className="st-page" ref={pageRef}>
@@ -570,6 +622,60 @@ export default function SpeedTradingPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── Auto-Pilot Panel ── */}
+      <div className="st-autopilot">
+        <div className="st-ap-header">
+          <span className="st-ap-title">🤖 Auto-Pilot</span>
+          <label className="st-ap-toggle">
+            <input
+              type="checkbox"
+              checked={autoPilot}
+              onChange={(e) => {
+                setAutoPilot(e.target.checked);
+                setApConfirmCount(0);
+                setApLastTop(null);
+                if (e.target.checked) addLog('🤖 Auto-Pilot engaged');
+                else addLog('🤖 Auto-Pilot disengaged');
+              }}
+              disabled={locked}
+            />
+            <span className={`st-ap-toggle-slider ${autoPilot ? 'active' : ''}`} />
+          </label>
+        </div>
+        {autoPilot && (
+          <div className="st-ap-controls">
+            <label className="st-ap-field">
+              <span>Threshold: {apThreshold}</span>
+              <input type="range" min={40} max={95} value={apThreshold} onChange={e => setApThreshold(Number(e.target.value))} />
+            </label>
+            <label className="st-ap-field">
+              <span>Min Hold: {apMinHoldSec}s</span>
+              <input type="range" min={10} max={120} step={5} value={apMinHoldSec} onChange={e => setApMinHoldSec(Number(e.target.value))} />
+            </label>
+            <label className="st-ap-field">
+              <span>Confirmations: {apConfirmScans}</span>
+              <input type="range" min={1} max={5} value={apConfirmScans} onChange={e => setApConfirmScans(Number(e.target.value))} />
+            </label>
+            <div className="st-ap-status">
+              {apLastTop ? (
+                <span>Watching: <strong>{apLastTop}</strong> — {apConfirmCount}/{apConfirmScans} confirms</span>
+              ) : (
+                <span>Waiting for scan data…</span>
+              )}
+            </div>
+          </div>
+        )}
+        {apSwitchLog.length > 0 && (
+          <div className="st-ap-log">
+            {apSwitchLog.slice(0, 5).map(entry => (
+              <div key={entry.id} className="st-ap-log-entry">
+                {entry.time} — {entry.from} → <strong>{entry.to}</strong> ({entry.score})
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Best Opportunities Scanner ── */}

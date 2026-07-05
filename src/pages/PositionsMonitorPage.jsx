@@ -8,11 +8,11 @@ function RiskBar({ pct, label }) {
   const color = pct > 20 ? '#ef4444' : pct > 10 ? '#f59e0b' : '#22c55e';
   const displayPct = Math.min(Math.max(pct || 0, 0), 100);
   return (
-    <div className="pm-risk-bar">
+    <div className="pm-risk-bar" title={`${label}: portion of portfolio value at risk. ${pct > 20 ? 'Above 20% threshold — consider reducing.' : pct > 10 ? 'Moderate risk — monitor closely.' : 'Within acceptable range.'}`}>
       <motion.div className="pm-risk-fill" initial={{ width: 0 }} animate={{ width: `${displayPct}%` }} transition={{ duration: 0.5, ease: 'easeOut' }} style={{ background: color }} />
-      <span className="pm-risk-label">{label}: {displayPct.toFixed(1)}%</span>
+      <span className="pm-risk-label" title="Risk Exposure = |(Current − Entry) / Entry| × 100%. Represents how much this position could lose if it moved against you.">{label}: {displayPct.toFixed(1)}%</span>
       {/* 20% threshold marker */}
-      <div className="pm-risk-threshold" style={{ left: '20%' }} title="Risk threshold: 20%" />
+      <div className="pm-risk-threshold" style={{ left: '20%' }} title="20% risk threshold — positions above this line need review" />
     </div>
   );
 }
@@ -88,11 +88,11 @@ function CFDPosition({ pos, index, onClose, isClosing }) {
             onClick={() => onClose(pos.ticket, pos.symbol)}
             disabled={isClosing}
           >
-            {isClosing ? '⌛ Closing...' : '✕ Close Position'}
+            {isClosing ? '⌛ Closing...' : '✕ Close'}
           </button>
         )}
-        <a className="pm-nav-link" href={`/research/investigation?symbol=${pos.symbol}`} target="_blank" rel="noopener">🔍 Research</a>
-        <a className="pm-nav-link" href={`/analysis/analyse-symbol?symbol=${pos.symbol}`} target="_blank" rel="noopener">📊 Analyse</a>
+        <a className="pm-nav-link" href={`/analysis/analyse-symbol?symbol=${pos.symbol}`} target="_blank" rel="noopener">🔍 Analyse</a>
+        <a className="pm-nav-link" href={`/trading/chart-comparison?symbol=${pos.symbol}`} target="_blank" rel="noopener">📈 Chart</a>
       </div>
     </motion.div>
   );
@@ -193,7 +193,9 @@ export default function PositionsMonitorPage() {
   // MT5 positions
   const mt5Query = useQuery({
     queryKey: ['mt5-positions'],
-    queryFn: () => apiGet('/api/trading/mt5/positions').catch(() => ({ positions: [] })),
+    queryFn: () => apiGet('/api/trading/mt5/positions')
+      .then(data => ({ positions: Array.isArray(data) ? data : (data?.positions || []) }))
+      .catch(() => ({ positions: [] })),
     staleTime: 10000,
     refetchInterval: 30000,
   });
@@ -256,10 +258,10 @@ export default function PositionsMonitorPage() {
     };
   }), [mt5Query.data]);
 
-  // Map Trading212 positions
+  // Map Trading212 positions (long-only Invest accounts — direction is always BUY)
   const t212Positions = useMemo(() => (t212Query.data?.positions || []).map((p) => ({
     symbol: p.ticker || p.symbol,
-    direction: 'BUY',
+    direction: p.direction || p.side || 'BUY',  // T212 Invest is long-only; check for direction field if available
     volume: String(p.shares || p.quantity || '—'),
     leverage: '—',
     margin: p.avgCost && (p.shares || p.quantity) ? (p.avgCost * (p.shares || p.quantity)).toFixed(2) : '—',

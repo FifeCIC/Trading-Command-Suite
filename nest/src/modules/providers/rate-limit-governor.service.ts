@@ -75,6 +75,13 @@ export class RateLimitGovernor {
       warningThreshold: 20,
       adaptiveWindowMs: 60000,
     },
+    binance: {
+      maxCallsPerMinute: 600,    // 1200 weight/min ≈ 600 simple requests/min
+      maxCallsPerDay: null,
+      criticalThreshold: 100,
+      warningThreshold: 200,
+      adaptiveWindowMs: 60000,
+    },
   };
 
   private currentUsage: Map<string, ProviderUsage> = new Map();

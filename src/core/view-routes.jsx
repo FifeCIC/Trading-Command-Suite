@@ -32,7 +32,6 @@ import CreateStrategyPage from '../pages/CreateStrategyPage.jsx';
 // ── Scoring ──
 import DirectivesManagerPage from '../pages/DirectivesManagerPage.jsx';
 import LiveOrderingStackPage from '../pages/LiveOrderingStackPage.jsx';
-import SeesAdvancedPage from '../pages/SeesAdvancedPage.jsx';
 import SeesArenaPage from '../pages/SeesArenaPage.jsx';
 import SignalsWorkbenchPage from '../pages/SignalsWorkbenchPage.jsx';
 import ExitSignalsPage from '../pages/ExitSignalsPage.jsx';
@@ -117,6 +116,7 @@ import ServerControlsPage from '../pages/ServerControlsPage.jsx';
 import ReportsPage from '../pages/ReportsPage.jsx';
 import CapabilityMapPage from '../pages/CapabilityMapPage.jsx';
 import QATestingPage from '../pages/QATestingPage.jsx';
+import SymbolPage from '../pages/SymbolPage.jsx';
 import ArchitectureFrameworkPage from '../pages/ArchitectureFrameworkPage.jsx';
 import DiagramsPage from '../pages/DiagramsPage.jsx';
 
@@ -185,7 +185,6 @@ export const VIEW_COMPONENTS = {
   'directives-status': DirectivesStatusPage,
   'live-ordering-stack': LiveOrderingStackPage,
   'sees-arena': SeesArenaPage,
-  'sees-advanced': SeesAdvancedPage,
   'signals-workbench': SignalsWorkbenchPage,
   'exit-signals': ExitSignalsPage,
   'scoring-runs': ScoringRunsPage,
@@ -284,6 +283,7 @@ export const VIEW_COMPONENTS = {
   'lab': LabPage,
   'feature-lab': FeatureLabPage,
   'preference-lab': PreferenceLab,
+  'user-preferences': PreferenceLab,
   'performance-lab': PerformanceLabPage,
   'snapshot-replay': SnapshotReplayPage,
   'portfolio-lab': PortfolioLabPage,

@@ -32,7 +32,7 @@
   margin-left: 0.5rem;
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
-  font-size: 0.64rem;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   background: #ffaa0020;
@@ -56,7 +56,7 @@
 
 .so-card-label {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink-soft);
@@ -120,7 +120,7 @@
 }
 
 .so-distro-label {
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--ink-soft);
   text-align: right;
@@ -176,7 +176,7 @@
 
 .so-freshness-label {
   display: block;
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin-top: 0.15rem;
@@ -196,7 +196,7 @@
   display: inline-block;
   border-radius: 999px;
   padding: 0.12rem 0.48rem;
-  font-size: 0.66rem;
+  font-size: 0.76rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -224,7 +224,7 @@
   display: inline-block;
   border-radius: 999px;
   padding: 0.14rem 0.5rem;
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -284,7 +284,7 @@
 
 .so-table th {
   text-align: left;
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--ink-soft);
@@ -357,7 +357,7 @@
 /* ---- Footer ---- */
 .so-footer {
   text-align: center;
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   color: var(--ink-soft);
   margin: 1rem 0 0;
 }
@@ -367,7 +367,7 @@
   border: none;
   color: var(--accent);
   cursor: pointer;
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   text-decoration: underline;
   padding: 0;
 }
@@ -444,7 +444,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--ink-soft);
@@ -496,37 +496,84 @@
   padding: 0.7rem 0.9rem;
   margin-bottom: 1rem;
   border-radius: 8px;
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
-  color: #92400e;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.25);
+  color: #f59e0b;
   font-size: 0.82rem;
 }
 .so-degradation-icon { font-size: 1.3rem; flex-shrink: 0; }
-.so-degradation-body strong { display: block; margin-bottom: 0.15rem; }
+.so-degradation-body strong { display: block; margin-bottom: 0.15rem; color: #f59e0b; }
 .so-degradation-body p { margin: 0.1rem 0; }
-.so-degradation-detail { font-size: 0.75rem; color: #92400ecc; }
-.so-degradation-coverage { font-size: 0.72rem; font-weight: 600; margin-top: 0.3rem; }
+.so-degradation-detail { font-size: 0.75rem; color: #f59e0bcc; }
+.so-degradation-coverage { font-size: 0.82rem; font-weight: 600; margin-top: 0.3rem; color: #d97706; }
 
 /* ── Degradation Row Indicators ── */
-.so-row-degraded { background: #fef3c720; }
+.so-row-degraded { background: rgba(245,158,11,0.04); }
 .so-degrade-dot {
   display: inline-block;
   margin-left: 4px;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   color: #f59e0b;
   cursor: help;
   vertical-align: middle;
 }
-}
 @keyframes los-pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+
+/* ── Header actions (view toggle + export + help) ── */
+.los-header-actions { display: flex; align-items: center; gap: 0.5rem; }
+.los-view-tabs { display: flex; gap: 0.15rem; }
+.los-view-tab {
+  padding: 0.25rem 0.6rem; border: 1px solid var(--line); border-radius: 6px;
+  background: transparent; color: var(--ink-soft); cursor: pointer;
+  font-family: inherit; font-size: 0.72rem; font-weight: 600;
+}
+.los-view-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(14,165,166,0.08); }
+.los-view-tab:hover { border-color: var(--ink-soft); }
+.los-export-btn {
+  padding: 0.25rem 0.6rem; border: 1px solid var(--line); border-radius: 6px;
+  background: transparent; color: var(--ink); cursor: pointer;
+  font-family: inherit; font-size: 0.72rem; font-weight: 600;
+}
+.los-export-btn:hover { border-color: var(--accent); }
+.los-export-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.los-help-btn {
+  width: 26px; height: 26px; border: 1px solid var(--line); border-radius: 50%;
+  background: transparent; color: var(--ink-soft); cursor: pointer;
+  font-family: inherit; font-size: 0.72rem; font-weight: 700;
+}
+.los-help-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Card View ── */
+.los-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.5rem; margin-top: 0.75rem; }
+.los-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0.7rem; }
+.los-card-top { border-color: var(--accent); }
+.los-card-head { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem; }
+.los-card-rank { font-size: 0.82rem; color: var(--ink-soft); min-width: 22px; }
+.los-card-symbol { font-weight: 700; font-size: 0.85rem; }
+.los-card-score { font-weight: 800; font-size: 1.1rem; font-variant-numeric: tabular-nums; margin-left: auto; }
+.los-card-signal { font-size: 0.68rem; font-weight: 700; padding: 1px 8px; border-radius: 4px; text-transform: uppercase; }
+.los-card-body { display: flex; align-items: center; gap: 0.75rem; font-size: 0.73rem; color: var(--ink-soft); }
+.los-card-risk { font-weight: 600; }
+.los-card-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 0.4rem; }
+.los-card-chip { font-size: 0.65rem; padding: 1px 6px; border-radius: 3px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ── Help Modal ── */
+.los-help-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.los-help-modal { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1.25rem; min-width: 280px; box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+.los-help-modal h3 { margin: 0 0 0.5rem; font-size: 0.9rem; }
+.los-help-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.los-help-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid rgba(128,128,128,0.08); }
+.los-help-table kbd { background: var(--line); padding: 1px 6px; border-radius: 3px; font-family: monospace; font-size: 0.75rem; }
+.los-help-close { margin-top: 0.6rem; padding: 0.35rem 0.8rem; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--ink); cursor: pointer; font-family: inherit; font-size: 0.78rem; }
+.los-help-close:hover { border-color: var(--accent); }
 .los-refreshing {
-  text-align: center; font-size: 0.68rem; color: var(--ink-soft);
+  text-align: center; font-size: 0.78rem; color: var(--ink-soft);
   margin: 0.5rem 0 0; animation: los-pulse .8s ease-in-out infinite;
 }
 .los-stack-table-wrap { border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
 .los-stack-table { width: 100%; border-collapse: collapse; }
 .los-stack-table th {
-  text-align: left; font-size: 0.7rem; text-transform: uppercase;
+  text-align: left; font-size: 0.8rem; text-transform: uppercase;
   letter-spacing: 0.04em; color: var(--ink-soft);
   border-bottom: 1px solid var(--line); padding: 0.5rem 0.55rem;
   background: color-mix(in srgb, var(--panel) 96%, var(--bg) 4%);
@@ -552,38 +599,17 @@
   display: inline-block; border-radius: 999px; padding: 2px 10px;
   font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
 }
-.los-protocol { font-size: 0.72rem; color: var(--ink-soft); font-family: monospace; }
+.los-protocol { font-size: 0.82rem; color: var(--ink-soft); font-family: monospace; }
 
   .so-strategy-key {
     text-align: left;
   }
 }
 
-/* ── Pairing Guidance ── */
-.los-guidance {
-  padding: 0.35rem 0.65rem;
-  border-radius: 6px;
-  font-size: 0.7rem;
+/* ── Objectives Link ── */
+.los-obj-link {
+  color: var(--accent);
+  text-decoration: none;
   font-weight: 600;
-  margin-bottom: 0.75rem;
 }
-.los-guidance--strong {
-  background: rgba(34,197,94,0.08);
-  border: 1px solid rgba(34,197,94,0.2);
-  color: #22c55e;
-}
-.los-guidance--ok {
-  background: rgba(245,158,11,0.08);
-  border: 1px solid rgba(245,158,11,0.2);
-  color: #f59e0b;
-}
-.los-guidance--weak {
-  background: rgba(239,68,68,0.08);
-  border: 1px solid rgba(239,68,68,0.2);
-  color: #ef4444;
-}
-.los-guidance-reasons {
-  font-weight: 400;
-  font-size: 0.65rem;
-  opacity: 0.8;
-}
+.los-obj-link:hover { text-decoration: underline; }

@@ -30,6 +30,54 @@
   gap: 1rem;
 }
 
+/* ── Path Toggle ── */
+.cs-path-toggle {
+  border: 1px solid var(--line, #334155);
+  border-radius: 10px;
+  padding: 0.85rem;
+  margin: 0;
+}
+.cs-path-toggle legend {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft, #94a3b8);
+  padding: 0 0.4rem;
+}
+.cs-path-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+.cs-path-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0.75rem;
+  border: 2px solid var(--line, #334155);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.cs-path-option.active {
+  border-color: var(--accent, #6366f1);
+  background: rgba(99, 102, 241, 0.06);
+}
+.cs-path-option:hover { border-color: var(--ink-soft, #94a3b8); }
+.cs-path-option input[type="radio"] { display: none; }
+.cs-path-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink, #e2e8f0);
+}
+.cs-path-desc {
+  font-size: 0.7rem;
+  color: var(--ink-soft, #94a3b8);
+  line-height: 1.4;
+}
+}
+
 .cs-field {
   display: flex;
   flex-direction: column;

@@ -54,12 +54,12 @@
   vertical-align: middle;
 }
 .pf-mode-demo {
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #f59e0b;
+  background: var(--notice-warning-bg);
+  color: var(--notice-warning-text);
+  border: 1px solid var(--notice-warning-border);
 }
 .pf-mode-live {
-  background: #d1fae5;
-  color: #065f46;
-  border: 1px solid #10b981;
+  background: var(--notice-success-bg);
+  color: var(--notice-success-text);
+  border: 1px solid var(--notice-success-border);
 }

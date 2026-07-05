@@ -21,52 +21,87 @@
   font-size: 0.85rem;
 }
 
-/* ── Summary Grid ── */
-.ds-summary-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 2fr;
-  gap: 0.7rem;
-  margin-bottom: 1rem;
+/* ── Stat Pills Row ── */
+.ds-stat-row {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 0.7rem;
 }
 
-.ds-summary-card {
+.ds-stat-pill {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 0.85rem;
-  background: color-mix(in srgb, var(--panel) 92%, var(--bg) 8%);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 94%, var(--bg) 6%);
 }
 
-.ds-summary--active { border-left: 3px solid #22c55e; }
-.ds-summary--inactive { border-left: 3px solid #ef4444; }
-.ds-summary--progress { border-left: 3px solid var(--accent); }
+.ds-stat-pill--active { border-left: 3px solid #22c55e; }
+.ds-stat-pill--inactive { border-left: 3px solid #ef4444; }
 
-.ds-summary-num {
-  font-size: 1.6rem;
+.ds-stat-num {
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--ink);
 }
 
-.ds-summary-label {
+.ds-stat-lbl {
   font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: var(--ink-soft);
-  margin-top: 0.15rem;
 }
 
-.ds-summary-note {
-  margin-top: 0.5rem;
+/* ── Progress Section ── */
+.ds-progress-section {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  background: color-mix(in srgb, var(--panel) 92%, var(--bg) 8%);
+  margin-bottom: 1rem;
+}
+
+.ds-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+
+.ds-progress-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ds-progress-pct-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent 88%);
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+}
+
+/* ── Category Cloud ── */
+.ds-category-cloud {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem 0.7rem;
-  font-size: 0.7rem;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
 }
 
-.ds-cat-count {
+.ds-cat-tag {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid;
+  border-radius: 999px;
   white-space: nowrap;
-  font-weight: 600;
-  font-size: 0.7rem;
+  opacity: 0.85;
 }
+.ds-cat-tag strong { font-weight: 700; }
 
 /* ── Progress Bar ── */
 .ds-progress-wrap {

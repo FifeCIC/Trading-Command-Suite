@@ -42,6 +42,38 @@ logger.info('MetaTrader5 package loaded')
 connection_errors = 0
 last_connection_attempt = None
 
+# ─── Risk Limits (from env) ──────────────────────────────
+
+MAX_POSITION_SIZE = float(os.environ.get('MT5_MAX_POSITION_SIZE', '5.0'))       # max volume per position
+MAX_DAILY_LOSS = float(os.environ.get('MT5_MAX_DAILY_LOSS', '500.0'))            # stop if daily loss exceeded
+MAX_OPEN_POSITIONS = int(os.environ.get('MT5_MAX_OPEN_POSITIONS', '10'))         # cap total positions
+
+# ─── Idempotency Store ────────────────────────────────────
+
+recent_orders = {}  # key: clientOrderId → {ticket, symbol, volume, time, status}
+IDEMPOTENCY_WINDOW_SEC = 60  # deduplication window
+
+def is_duplicate_order(client_order_id):
+    """Check if a clientOrderId was already used in the idempotency window."""
+    if not client_order_id:
+        return False, None
+    now = time.time()
+    # Clean expired entries
+    expired = [k for k, v in recent_orders.items() if now - v['time'] > IDEMPOTENCY_WINDOW_SEC]
+    for k in expired:
+        del recent_orders[k]
+    if client_order_id in recent_orders:
+        return True, recent_orders[client_order_id]
+    return False, None
+
+# ─── Trade Journal ────────────────────────────────────────
+
+def journal_trade(action, details):
+    """Structured trade journal entry to bridge log."""
+    entry = {'timestamp': datetime.now().isoformat(), 'action': action}
+    entry.update(details)
+    logger.info(f'[TRADE JOURNAL] {json.dumps(entry)}')
+
 def get_active_credentials():
     active = os.environ.get('MT5_ACTIVE_ACCOUNT', '1')
     account = os.environ.get(f'MT5_ACCOUNT_{active}', os.environ.get('MT5_ACCOUNT', ''))
@@ -51,16 +83,95 @@ def get_active_credentials():
 
 def list_accounts():
     accounts = []
-    for i in range(1, 10):
+    active_slot = os.environ.get('MT5_ACTIVE_ACCOUNT', '1')
+    for i in range(1, 100):
         acc = os.environ.get(f'MT5_ACCOUNT_{i}', '')
-        if acc:
-            active = os.environ.get('MT5_ACTIVE_ACCOUNT', '1')
-            accounts.append({
-                'number': i, 'login': acc,
-                'server': os.environ.get(f'MT5_SERVER_{i}', ''),
-                'active': str(i) == str(active),
-            })
+        if not acc:
+            continue
+        # Validate: MT5 logins must be numeric
+        try:
+            int(acc)
+        except (ValueError, TypeError):
+            logger.warning(f'Skipping invalid account #{i}: "{acc}" is not a numeric MT5 login')
+            continue
+        accounts.append({
+            'number': i,
+            'login': acc,
+            'server': os.environ.get(f'MT5_SERVER_{i}', ''),
+            'active': str(i) == str(active_slot),
+        })
     return accounts
+
+def get_env_path():
+    """Resolve the .env file path (same logic as startup)."""
+    return os.path.join(os.path.dirname(__file__), '..', '..', 'nest', '.env')
+
+def save_env_file():
+    """Persist current os.environ MT5 account entries back to .env file.
+    Preserves non-MT5 lines and updates only MT5_ACCOUNT/PASSWORD/SERVER/ACTIVE entries.
+    """
+    env_path = get_env_path()
+    if not os.path.exists(env_path):
+        logger.warning(f'.env file not found at {env_path} — skipping persistence')
+        return
+
+    # Collect current MT5 env entries
+    mt5_keys = set()
+    for key in os.environ:
+        if key.startswith('MT5_ACCOUNT_') or key.startswith('MT5_PASSWORD_') or key.startswith('MT5_SERVER_') or key == 'MT5_ACTIVE_ACCOUNT':
+            mt5_keys.add(key)
+
+    with open(env_path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+
+    # Remove old MT5 entries, append new ones at the end of the MT5 block
+    new_lines = []
+    in_mt5_block = False
+    mt5_written = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith('# --- MT5') or stripped.startswith('MT5_BRIDGE_URL='):
+            in_mt5_block = True
+            new_lines.append(line)
+            continue
+        if in_mt5_block and (stripped.startswith('# Account') or stripped.startswith('MT5_ACCOUNT_') or
+                             stripped.startswith('MT5_PASSWORD_') or stripped.startswith('MT5_SERVER_') or
+                             stripped.startswith('MT5_ACTIVE_ACCOUNT=') or stripped.startswith('# Active')):
+            if not mt5_written:
+                # Write all current accounts in slot order
+                active_slot = os.environ.get('MT5_ACTIVE_ACCOUNT', '1')
+                for i in range(1, 100):
+                    acc = os.environ.get(f'MT5_ACCOUNT_{i}', '')
+                    if not acc:
+                        continue
+                    try:
+                        int(acc)
+                    except (ValueError, TypeError):
+                        continue
+                    server = os.environ.get(f'MT5_SERVER_{i}', '')
+                    new_lines.append(f'# Account {i}: {server or acc}\n')
+                    new_lines.append(f'MT5_ACCOUNT_{i}={acc}\n')
+                    new_lines.append(f'MT5_PASSWORD_{i}={os.environ.get(f"MT5_PASSWORD_{i}", "")}\n')
+                    new_lines.append(f'MT5_SERVER_{i}={server}\n')
+                    new_lines.append('\n')
+                new_lines.append(f'# Active account\n')
+                new_lines.append(f'MT5_ACTIVE_ACCOUNT={active_slot}\n')
+                new_lines.append('\n')
+                mt5_written = True
+            continue
+        if in_mt5_block and stripped == '' and not mt5_written:
+            new_lines.append(line)
+            continue
+        # End of MT5 block (empty line after MT5 entries, or next section)
+        if in_mt5_block and mt5_written and (stripped.startswith('#') and not stripped.startswith('# Account') and not stripped.startswith('# Active')):
+            in_mt5_block = False
+        new_lines.append(line)
+
+    with open(env_path, 'w', encoding='utf-8') as f:
+        f.writelines(new_lines)
+
+    logger.info(f'Persisted {sum(1 for k in mt5_keys if k.startswith("MT5_ACCOUNT_"))} accounts to {env_path}')
+
 
 def timeframe_to_mt5(tf):
     mapping = {'1m': mt5.TIMEFRAME_M1,'5m': mt5.TIMEFRAME_M5,'15m': mt5.TIMEFRAME_M15,
@@ -266,6 +377,62 @@ class BridgeHandler(BaseHTTPRequestHandler):
                             'importance': e.importance, 'time': datetime.fromtimestamp(e.time).isoformat() if e.time else None})
                 return json_response(self, {'events': result, 'count': len(result)})
 
+            # /positions/sync — force-refresh from broker
+            if path == '/positions/sync':
+                ok, err = ensure_mt5()
+                if not ok: return json_response(self, {'connected': False, 'error': str(err)}, 503)
+                positions = mt5.positions_get()
+                result = []
+                if positions:
+                    for p in positions:
+                        result.append({'ticket': p.ticket, 'symbol': p.symbol, 'type': 'buy' if p.type==0 else 'sell',
+                            'volume': float(p.volume), 'priceOpen': float(p.price_open), 'priceCurrent': float(p.price_current),
+                            'sl': float(p.sl) if p.sl else None, 'tp': float(p.tp) if p.tp else None,
+                            'profit': float(p.profit), 'swap': float(p.swap),
+                            'openTime': datetime.fromtimestamp(p.time).isoformat(), 'magic': p.magic, 'comment': p.comment})
+                journal_trade('positions_sync', {'count': len(result)})
+                return json_response(self, {'positions': result, 'count': len(result), 'syncedAt': datetime.now().isoformat()})
+
+            # /order/<ticket> — order/position status
+            if len(parts) == 2 and parts[0] == 'order':
+                ticket = int(parts[1])
+                ok, err = ensure_mt5()
+                if not ok: return json_response(self, {'connected': False, 'error': str(err)}, 503)
+                # Check open positions first
+                positions = mt5.positions_get(ticket=ticket)
+                if positions:
+                    p = positions[0]
+                    return json_response(self, {'ticket': p.ticket, 'symbol': p.symbol,
+                        'type': 'buy' if p.type==0 else 'sell', 'volume': float(p.volume),
+                        'priceOpen': float(p.price_open), 'priceCurrent': float(p.price_current),
+                        'sl': float(p.sl) if p.sl else None, 'tp': float(p.tp) if p.tp else None,
+                        'profit': float(p.profit), 'swap': float(p.swap),
+                        'openTime': datetime.fromtimestamp(p.time).isoformat(),
+                        'status': 'open', 'comment': p.comment})
+                # Check pending orders
+                orders = mt5.orders_get(ticket=ticket)
+                if orders:
+                    o = orders[0]
+                    return json_response(self, {'ticket': o.ticket, 'symbol': o.symbol,
+                        'type': 'buy' if o.type in (0,2,4) else 'sell', 'volume': float(o.volume),
+                        'priceOpen': float(o.price_open), 'priceCurrent': float(o.price_current),
+                        'sl': float(o.sl) if o.sl else None, 'tp': float(o.tp) if o.tp else None,
+                        'openTime': datetime.fromtimestamp(o.time_setup).isoformat(),
+                        'status': 'pending', 'comment': o.comment})
+                # Check history
+                from_date = datetime.now() - timedelta(days=7)
+                to_date = datetime.now() + timedelta(days=1)
+                history = mt5.history_orders_get(ticket=ticket, date_from=from_date, date_to=to_date)
+                if history:
+                    h = history[0]
+                    return json_response(self, {'ticket': h.ticket, 'symbol': h.symbol,
+                        'type': 'buy' if h.type in (0,2,4) else 'sell', 'volume': float(h.volume),
+                        'priceOpen': float(h.price_open), 'priceCurrent': float(h.price_current),
+                        'openTime': datetime.fromtimestamp(h.time_setup).isoformat(),
+                        'status': h.state == 3 and 'filled' or h.state == 4 and 'cancelled' or 'closed',
+                        'comment': h.comment})
+                return json_response(self, {'error': f'Order {ticket} not found'}, 404)
+
             # /history/deals?days=30
             if path == '/history/deals':
                 ok, err = ensure_mt5()
@@ -306,7 +473,35 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 volume = float(body.get('volume', 0.01))
                 sl = body.get('sl'); tp = body.get('tp')
                 comment = body.get('comment', 'TCS Trade')
+                client_order_id = body.get('clientOrderId', '').strip()
                 if not symbol: return json_response(self, {'error': 'Symbol required'}, 400)
+
+                # ── Idempotency check ──
+                if client_order_id:
+                    dup, existing = is_duplicate_order(client_order_id)
+                    if dup:
+                        logger.info(f'Duplicate order blocked: {client_order_id} → existing ticket {existing["ticket"]}')
+                        return json_response(self, {'success': True, 'ticket': existing['ticket'],
+                            'symbol': existing['symbol'], 'volume': existing['volume'],
+                            'duplicate': True, 'clientOrderId': client_order_id,
+                            'message': f'Duplicate order — existing ticket {existing["ticket"]}'})
+
+                # ── Risk Limits ──
+                # Max position size
+                if volume > MAX_POSITION_SIZE:
+                    return json_response(self, {'error': f'Volume {volume} exceeds max position size {MAX_POSITION_SIZE}'}, 400)
+                # Max open positions
+                existing_positions = mt5.positions_get()
+                current_count = len(existing_positions) if existing_positions else 0
+                if current_count >= MAX_OPEN_POSITIONS:
+                    return json_response(self, {'error': f'Max open positions ({MAX_OPEN_POSITIONS}) reached — {current_count} currently open'}, 400)
+                # Daily loss check
+                if MAX_DAILY_LOSS > 0:
+                    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                    deals_today = mt5.history_deals_get(today_start, datetime.now() + timedelta(days=1))
+                    daily_pnl = sum(float(d.profit) for d in deals_today) if deals_today else 0
+                    if daily_pnl < -MAX_DAILY_LOSS:
+                        return json_response(self, {'error': f'Daily loss limit exceeded: {daily_pnl:.2f} vs -{MAX_DAILY_LOSS:.2f}'}, 400)
 
                 mt5_type = {'buy': mt5.ORDER_TYPE_BUY, 'market_buy': mt5.ORDER_TYPE_BUY,
                            'sell': mt5.ORDER_TYPE_SELL, 'market_sell': mt5.ORDER_TYPE_SELL,
@@ -316,6 +511,33 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
                 tick = mt5.symbol_info_tick(symbol)
                 if not tick: return json_response(self, {'error': f'No quote for {symbol}'}, 400)
+
+                # ── Pre-flight symbol validation ──
+                sym_info = mt5.symbol_info(symbol)
+                if sym_info:
+                    # Check trade mode — reject if market closed
+                    if sym_info.trade_mode != mt5.SYMBOL_TRADE_MODE_FULL:
+                        return json_response(self, {'error': f'{symbol} not tradeable (trade mode: {sym_info.trade_mode})'}, 400)
+                    # Check volume limits
+                    if volume < sym_info.volume_min:
+                        return json_response(self, {'error': f'Volume {volume} below {symbol} minimum ({sym_info.volume_min})'}, 400)
+                    if sym_info.volume_max > 0 and volume > sym_info.volume_max:
+                        return json_response(self, {'error': f'Volume {volume} exceeds {symbol} maximum ({sym_info.volume_max})'}, 400)
+                    # Check spread is reasonable (< 5% of price)
+                    spread_pct = (tick.ask - tick.bid) / tick.bid * 100 if tick.bid > 0 else 0
+                    if spread_pct > 5:
+                        return json_response(self, {'error': f'Spread too wide for {symbol}: {spread_pct:.2f}%'}, 400)
+                else:
+                    logger.warning(f'symbol_info({symbol}) returned None — skipping tradeability checks')
+
+                # Check margin
+                account = mt5.account_info()
+                if account and account.margin_free is not None:
+                    required_margin = sym_info.margin_initial if sym_info else (volume * 1000)
+                    if account.margin_free < required_margin:
+                        return json_response(self, {'error': f'Insufficient margin: need {required_margin:.2f}, have {account.margin_free:.2f}'}, 400)
+                # ── End pre-flight validation ──
+
                 price = body.get('price') or (tick.ask if mt5_type in (mt5.ORDER_TYPE_BUY, mt5.ORDER_TYPE_BUY_LIMIT, mt5.ORDER_TYPE_BUY_STOP) else tick.bid)
                 is_market = order_type in ('buy','sell','market_buy','market_sell')
 
@@ -329,8 +551,17 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 result = mt5.order_send(req)
                 if not result or result.retcode != mt5.TRADE_RETCODE_DONE:
                     error = mt5.last_error() if not result else result.comment
+                    journal_trade('order_failed', {'symbol': symbol, 'type': order_type, 'volume': volume, 'error': str(error), 'clientOrderId': client_order_id or None})
                     return json_response(self, {'success': False, 'error': str(error)}, 400)
-                return json_response(self, {'success': True, 'ticket': result.order, 'volume': volume, 'symbol': symbol, 'price': price, 'type': order_type})
+
+                # Store idempotency key
+                if client_order_id:
+                    recent_orders[client_order_id] = {
+                        'ticket': result.order, 'symbol': symbol,
+                        'volume': volume, 'time': time.time(), 'status': 'filled'}
+
+                journal_trade('order_placed', {'ticket': result.order, 'symbol': symbol, 'type': order_type, 'volume': volume, 'price': price, 'clientOrderId': client_order_id or None})
+                return json_response(self, {'success': True, 'ticket': result.order, 'volume': volume, 'symbol': symbol, 'price': price, 'type': order_type, 'clientOrderId': client_order_id or None})
 
             # /close/<ticket>
             if len(parts) == 2 and parts[0] == 'close':
@@ -394,6 +625,87 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     return json_response(self, {'success': False, 'error': str(error)}, 400)
                 return json_response(self, {'success': True, 'ticket': ticket, 'closed': vol, 'remaining': float(pos.volume)-vol, 'closePrice': cp})
 
+            # /orders/bulk — place/modify/close multiple orders
+            if path == '/orders/bulk':
+                ok, err = ensure_mt5()
+                if not ok: return json_response(self, {'success': False, 'error': str(err)}, 503)
+                operations = body.get('operations', [])
+                if not operations or not isinstance(operations, list):
+                    return json_response(self, {'error': 'operations array required'}, 400)
+                results = []
+                for i, op in enumerate(operations):
+                    action = op.get('action', 'place')
+                    try:
+                        if action == 'place':
+                            sym = op.get('symbol', '').upper()
+                            otype = op.get('type', 'buy').lower()
+                            vol = float(op.get('volume', 0.01))
+                            tick = mt5.symbol_info_tick(sym)
+                            if not tick:
+                                results.append({'index': i, 'success': False, 'error': f'No quote for {sym}'})
+                                continue
+                            mt5_type = {'buy': mt5.ORDER_TYPE_BUY, 'sell': mt5.ORDER_TYPE_SELL}.get(otype)
+                            if not mt5_type:
+                                results.append({'index': i, 'success': False, 'error': f'Unknown type: {otype}'})
+                                continue
+                            price = tick.ask if mt5_type == mt5.ORDER_TYPE_BUY else tick.bid
+                            req = {'action': mt5.TRADE_ACTION_DEAL, 'symbol': sym, 'volume': vol,
+                                   'type': mt5_type, 'price': price, 'deviation': 20, 'magic': 234000,
+                                   'comment': op.get('comment', 'TCS Bulk'), 'type_time': mt5.ORDER_TIME_GTC}
+                            if op.get('sl'): req['sl'] = float(op['sl'])
+                            if op.get('tp'): req['tp'] = float(op['tp'])
+                            res = mt5.order_send(req)
+                            ok_res = res and res.retcode == mt5.TRADE_RETCODE_DONE
+                            results.append({'index': i, 'success': ok_res,
+                                'ticket': res.order if ok_res else None, 'symbol': sym, 'action': 'place',
+                                'error': None if ok_res else (res.comment if res else str(mt5.last_error()))})
+                        elif action == 'close':
+                            ticket = int(op.get('ticket', 0))
+                            positions = mt5.positions_get(ticket=ticket)
+                            if not positions:
+                                results.append({'index': i, 'success': False, 'error': f'Position {ticket} not found'})
+                                continue
+                            pos = positions[0]; is_buy = pos.type == 0
+                            tick = mt5.symbol_info_tick(pos.symbol)
+                            if not tick:
+                                results.append({'index': i, 'success': False, 'error': f'No quote'})
+                                continue
+                            cp = tick.bid if is_buy else tick.ask
+                            req = {'action': mt5.TRADE_ACTION_DEAL, 'symbol': pos.symbol,
+                                   'volume': float(pos.volume), 'position': ticket,
+                                   'type': mt5.ORDER_TYPE_SELL if is_buy else mt5.ORDER_TYPE_BUY,
+                                   'price': cp, 'deviation': 20, 'magic': 234000,
+                                   'comment': 'TCS Bulk Close', 'type_time': mt5.ORDER_TIME_GTC}
+                            res = mt5.order_send(req)
+                            ok_res = res and res.retcode == mt5.TRADE_RETCODE_DONE
+                            results.append({'index': i, 'success': ok_res,
+                                'ticket': ticket, 'symbol': pos.symbol, 'action': 'close',
+                                'error': None if ok_res else (res.comment if res else str(mt5.last_error()))})
+                        elif action == 'modify':
+                            ticket = int(op.get('ticket', 0))
+                            positions = mt5.positions_get(ticket=ticket)
+                            if not positions:
+                                results.append({'index': i, 'success': False, 'error': f'Position {ticket} not found'})
+                                continue
+                            pos = positions[0]
+                            req = {'action': mt5.TRADE_ACTION_SLTP, 'position': ticket,
+                                   'symbol': pos.symbol,
+                                   'sl': float(op.get('sl', 0)) or float(pos.sl or 0),
+                                   'tp': float(op.get('tp', 0)) or float(pos.tp or 0)}
+                            res = mt5.order_send(req)
+                            ok_res = res and res.retcode == mt5.TRADE_RETCODE_DONE
+                            results.append({'index': i, 'success': ok_res,
+                                'ticket': ticket, 'symbol': pos.symbol, 'action': 'modify',
+                                'error': None if ok_res else (res.comment if res else str(mt5.last_error()))})
+                        else:
+                            results.append({'index': i, 'success': False, 'error': f'Unknown action: {action}'})
+                    except Exception as e:
+                        results.append({'index': i, 'success': False, 'error': str(e)})
+                journal_trade('bulk_operations', {'total': len(operations), 'succeeded': len([r for r in results if r['success']])})
+                return json_response(self, {'results': results, 'total': len(operations),
+                    'succeeded': len([r for r in results if r['success']]),
+                    'failed': len([r for r in results if not r['success']])})
+
             # /refresh
             if path == '/refresh':
                 ok, err = ensure_mt5()
@@ -438,11 +750,18 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 password = body.get('password','')
                 server = body.get('server','')
                 if not login or not password: return json_response(self, {'error': 'login and password required'}, 400)
+                # Validate login is numeric
+                try:
+                    int(login)
+                except (ValueError, TypeError):
+                    return json_response(self, {'error': f'Invalid login "{login}" — must be a numeric MT5 account ID'}, 400)
                 for i in range(1, 100):
                     if not os.environ.get(f'MT5_ACCOUNT_{i}'):
                         os.environ[f'MT5_ACCOUNT_{i}'] = login
                         os.environ[f'MT5_PASSWORD_{i}'] = password
                         os.environ[f'MT5_SERVER_{i}'] = server
+                        save_env_file()
+                        logger.info(f'Added account #{i} ({login}) — persisted to .env')
                         break
                 return json_response(self, {'success': True, 'login': login, 'server': server})
 
@@ -455,7 +774,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 os.environ.pop(f'MT5_PASSWORD_{number}', None)
                 os.environ.pop(f'MT5_SERVER_{number}', None)
                 if login:
-                    logger.info(f'Removed account #{number} ({login})')
+                    save_env_file()
+                    logger.info(f'Removed account #{number} ({login}) — persisted to .env')
                     return json_response(self, {'success': True, 'removed': login, 'number': number})
                 return json_response(self, {'error': f'Account #{number} not found'}, 404)
 

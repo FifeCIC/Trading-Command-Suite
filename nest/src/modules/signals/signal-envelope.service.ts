@@ -2,6 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ProtocolGatingService, GatedScore, DirectiveBreakout } from '../scoring/protocol-gating.service';
 import { MarketDataService } from '../market-data/market-data.service';
+import { ScoreHistoryService } from '../scoring/score-history.service';
+
+/** Strategy ID used when persisting Signals Workbench scores. */
+const SIGNALS_WORKBENCH_STRATEGY_ID = 'signals-workbench';
 
 /**
  * SignalEnvelopeService
@@ -83,6 +87,7 @@ export class SignalEnvelopeService {
     private readonly prisma: PrismaService,
     private readonly protocolGating: ProtocolGatingService,
     private readonly marketData: MarketDataService,
+    private readonly scoreHistory: ScoreHistoryService,
   ) {}
 
   /**
@@ -125,6 +130,12 @@ export class SignalEnvelopeService {
       .slice(0, 10);
 
     const protocolName = protocolId ? this.getProtocolName(protocolId) : null;
+
+    // ── Persist scores to DB so they appear in scoring-runs / scoring-activity-logs ──
+    const strategyId = protocolId || SIGNALS_WORKBENCH_STRATEGY_ID;
+    this.persistScores(envelopes, strategyId).catch(err =>
+      this.logger.warn(`Failed to persist signal scores: ${(err as Error).message}`),
+    );
 
     return {
       generatedAt: new Date().toISOString(),
@@ -432,5 +443,81 @@ export class SignalEnvelopeService {
    */
   async getDrilldown(ticker: string, protocolId?: string): Promise<SignalEnvelope> {
     return this.buildEnvelope(ticker, protocolId);
+  }
+
+  /**
+   * Persist scored envelopes to the Score table so they appear in
+   * scoring-runs and scoring-activity-logs pages.
+   */
+  private async persistScores(
+    envelopes: SignalEnvelope[],
+    strategyId: string,
+  ): Promise<void> {
+    const strategy = await this.ensureStrategy(strategyId);
+
+    for (const env of envelopes) {
+      if (env.composite === 50 && env.signal === 'HOLD' && env.confidence === 0) {
+        continue; // Skip empty/no-data envelopes
+      }
+
+      try {
+        const sym = await this.prisma.symbol.findFirst({
+          where: { ticker: env.symbol },
+          select: { id: true },
+        });
+        if (!sym) continue;
+
+        await this.scoreHistory.storeSnapshot(
+          sym.id,
+          strategy.id,
+          env.composite,
+          {
+            signal: env.signal,
+            confidence: env.confidence,
+            rarity: env.rarity,
+            source: 'signals-workbench',
+            protocolId: strategyId !== SIGNALS_WORKBENCH_STRATEGY_ID ? strategyId : null,
+            riskMultiplier: env.riskGate.multiplier,
+            preTradeReady: env.preTradeReady,
+            blockerCount: env.preTradeBlockers.length,
+          },
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Failed to persist score for ${env.symbol}: ${(err as Error).message}`,
+        );
+      }
+    }
+
+    this.logger.log(
+      `Persisted ${envelopes.filter(e => e.confidence > 0).length} signal scores to DB (strategy: ${strategyId})`,
+    );
+  }
+
+  /**
+   * Find or create the strategy used to tag persisted scores.
+   */
+  private async ensureStrategy(strategyId: string): Promise<{ id: string; name: string }> {
+    const existing = await this.prisma.strategy.findUnique({
+      where: { id: strategyId },
+      select: { id: true, name: true },
+    });
+    if (existing) return existing;
+
+    // Create a placeholder strategy for signals-workbench
+    const created = await this.prisma.strategy.create({
+      data: {
+        id: strategyId,
+        name: strategyId === SIGNALS_WORKBENCH_STRATEGY_ID
+          ? 'Signals Workbench'
+          : `Signals Workbench — ${strategyId}`,
+        description: 'Auto-created for Signals Workbench score persistence',
+        config: {},
+      },
+      select: { id: true, name: true },
+    });
+
+    this.logger.log(`Created placeholder strategy "${created.name}" (${created.id})`);
+    return created;
   }
 }

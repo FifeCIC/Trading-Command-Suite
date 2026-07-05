@@ -7,14 +7,62 @@
  * Original WordPress plugin had this — now in the React PWA.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { apiGet, apiPost } from '../core/api/client';
 import './create-strategy.css';
 
+// ── Protocol → Broker compatibility ──
+const PROTOCOL_BROKER_MAP = {
+  // MT5 supports forex, commodities, indices, crypto (if enabled)
+  mt5: {
+    supportedStyles: ['scalp', 'day-trade', 'swing', 'position', 'speed'],
+    supportedAssetTypes: ['forex', 'commodity', 'index', 'crypto', 'stock'],
+    tradingEnabled: true,
+    note: 'Full execution — SL/TP, trailing stops, partial close',
+  },
+  // Trading212 supports stocks/ETFs only, long-only, no auto-execution
+  trading212: {
+    supportedStyles: ['swing', 'position'],
+    supportedAssetTypes: ['stock', 'etf'],
+    tradingEnabled: false,
+    note: 'Portfolio monitoring only — no trade execution',
+  },
+  // Paper trading supports everything, no real money
+  paper: {
+    supportedStyles: ['scalp', 'day-trade', 'swing', 'position', 'speed'],
+    supportedAssetTypes: ['forex', 'commodity', 'index', 'crypto', 'stock', 'etf'],
+    tradingEnabled: true,
+    note: 'Virtual ledger — ideal for testing new strategies',
+  },
+};
+
+// ── Protocol trading style → default risk parameters ──
+const STYLE_DEFAULTS = {
+  scalp:    { baseSize: 0.01, slPct: 0.3, tpPct: 0.5, minComposite: 70, timeframe: '5s' },
+  'day-trade': { baseSize: 0.02, slPct: 0.5, tpPct: 1.0, minComposite: 65, timeframe: '5m' },
+  speed:    { baseSize: 0.01, slPct: 0.2, tpPct: 0.4, minComposite: 75, timeframe: '15s' },
+  swing:    { baseSize: 0.05, slPct: 1.5, tpPct: 3.0, minComposite: 60, timeframe: '1h' },
+  position: { baseSize: 0.1, slPct: 3.0, tpPct: 6.0, minComposite: 55, timeframe: '1d' },
+};
+
+// ── Symbol → asset type inference ──
+function inferAssetType(symbol) {
+  const s = symbol.toUpperCase();
+  if (['EURUSD','GBPUSD','USDJPY','USDCAD','AUDUSD','NZDUSD','USDCHF'].includes(s)) return 'forex';
+  if (['XAUUSD','XAGUSD','USOIL','UKOIL','XTIUSD','XBRUSD'].includes(s)) return 'commodity';
+  if (['BTCUSD','ETHUSD','XRPUSD','LTCUSD'].includes(s)) return 'crypto';
+  if (['SPX500','TECH100','DJI30','US500','NAS100','GER40','UK100'].includes(s)) return 'index';
+  return 'stock';
+}
+
 export default function CreateStrategyPage() {
+  // ── Creation path ──
+  const [creationPath, setCreationPath] = useState('protocol'); // 'protocol' | 'scoring-strategy'
+
   // ── Form state ──
   const [name, setName] = useState('');
   const [protocolId, setProtocolId] = useState('');
+  const [scoringStrategyId, setScoringStrategyId] = useState('');
   const [symbol, setSymbol] = useState('EURUSD');
   const [timeframe, setTimeframe] = useState('15m');
   const [mode, setMode] = useState('semi-auto');
@@ -57,6 +105,45 @@ export default function CreateStrategyPage() {
     return () => { cancelled = true; };
   }, []);
 
+  // ── Selected protocol metadata ──
+  const selectedProtocol = useMemo(() => protocols.find(p => p.id === protocolId), [protocols, protocolId]);
+  const protocolStyle = selectedProtocol?.tradingStyle || 'swing';
+  const assetType = useMemo(() => inferAssetType(symbol), [symbol]);
+
+  // ── Filtered brokers based on protocol + symbol compatibility ──
+  const compatibleBrokers = useMemo(() => {
+    if (!protocolId) return Object.keys(PROTOCOL_BROKER_MAP);
+    const style = protocolStyle;
+    return Object.entries(PROTOCOL_BROKER_MAP)
+      .filter(([, cfg]) => cfg.supportedStyles.includes(style) && cfg.supportedAssetTypes.includes(assetType))
+      .map(([id]) => id);
+  }, [protocolId, protocolStyle, assetType]);
+
+  // ── Protocol change → auto-populate defaults ──
+  const handleProtocolChange = (newProtocolId) => {
+    setProtocolId(newProtocolId);
+    const proto = protocols.find(p => p.id === newProtocolId);
+    if (!proto) return;
+    const style = proto.tradingStyle || 'swing';
+    const defaults = STYLE_DEFAULTS[style] || STYLE_DEFAULTS.swing;
+    setBaseSize(String(defaults.baseSize));
+    setSlPct(String(defaults.slPct));
+    setTpPct(String(defaults.tpPct));
+    setMinComposite(String(defaults.minComposite));
+    setTimeframe(defaults.timeframe);
+    // Auto-name
+    if (!name.trim()) {
+      setName(`${proto.name || proto.id} — ${symbol}`);
+    }
+    // If current broker isn't compatible, switch to first compatible
+    if (!compatibleBrokers.includes(brokerId)) {
+      const firstCompatible = Object.entries(PROTOCOL_BROKER_MAP)
+        .filter(([, cfg]) => cfg.supportedStyles.includes(style))
+        .map(([id]) => id)[0] || 'mt5';
+      setBrokerId(firstCompatible);
+    }
+  };
+
   // ── Symbol suggestions ──
   const COMMON_SYMBOLS = [
     'EURUSD', 'GBPUSD', 'USDJPY', 'USDCAD', 'AUDUSD', 'NZDUSD',
@@ -70,19 +157,27 @@ export default function CreateStrategyPage() {
   // ── Submit ──
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !protocolId || !symbol) {
-      setSaveError('Name, Protocol, and Symbol are required.');
+    const isScoringPath = creationPath === 'scoring-strategy';
+
+    if (!name.trim()) {
+      setSaveError('Strategy name is required.');
       return;
     }
+    if (isScoringPath && !scoringStrategyId) {
+      setSaveError('Please select a Scoring Strategy.');
+      return;
+    }
+    if (!isScoringPath && (!protocolId || !symbol)) {
+      setSaveError('Protocol and Symbol are required for the Protocol + Symbol path.');
+      return;
+    }
+
     setSaving(true);
     setSaveError(null);
     setSaved(null);
     try {
-      const result = await apiPost('/api/trading/strategies', {
+      const body = {
         name: name.trim(),
-        protocolId,
-        symbol: symbol.toUpperCase(),
-        timeframe,
         mode,
         brokerId,
         baseSize: parseFloat(baseSize) || 0.01,
@@ -90,7 +185,25 @@ export default function CreateStrategyPage() {
         tpPct: parseFloat(tpPct) || 1.0,
         minComposite: parseInt(minComposite) || 60,
         active: true,
-      });
+      };
+
+      if (isScoringPath) {
+        // Scoring Strategy path — protocol and symbols come from the strategy
+        body.scoringStrategyId = scoringStrategyId;
+        const strat = scoringStrategies.find(s => s.id === scoringStrategyId);
+        if (strat) {
+          body.protocolId = strat.protocolId;
+          body.timeframe = timeframe;
+          body.symbol = symbol || strat.watchlistId || 'auto';
+        }
+      } else {
+        // Protocol + Symbol path
+        body.protocolId = protocolId;
+        body.symbol = symbol.toUpperCase();
+        body.timeframe = timeframe;
+      }
+
+      const result = await apiPost('/api/trading/strategies', body);
       setSaved(result);
     } catch (err) {
       setSaveError(err.message);
@@ -119,6 +232,35 @@ export default function CreateStrategyPage() {
       )}
 
       <form className="cs-form" onSubmit={handleSubmit}>
+        {/* ── Creation Path Toggle ── */}
+        <fieldset className="cs-path-toggle">
+          <legend>Creation Method</legend>
+          <div className="cs-path-options">
+            <label className={`cs-path-option ${creationPath === 'protocol' ? 'active' : ''}`}>
+              <input
+                type="radio"
+                name="creationPath"
+                value="protocol"
+                checked={creationPath === 'protocol'}
+                onChange={() => setCreationPath('protocol')}
+              />
+              <span className="cs-path-label">Protocol + Symbol</span>
+              <span className="cs-path-desc">Pick a protocol, enter a symbol. Full manual control.</span>
+            </label>
+            <label className={`cs-path-option ${creationPath === 'scoring-strategy' ? 'active' : ''}`}>
+              <input
+                type="radio"
+                name="creationPath"
+                value="scoring-strategy"
+                checked={creationPath === 'scoring-strategy'}
+                onChange={() => setCreationPath('scoring-strategy')}
+              />
+              <span className="cs-path-label">Scoring Strategy</span>
+              <span className="cs-path-desc">Select a pre-configured strategy with watchlist, protocol, and thresholds.</span>
+            </label>
+          </div>
+        </fieldset>
+
         {/* ── Name ── */}
         <label className="cs-field">
           <span>Strategy Name</span>
@@ -131,84 +273,115 @@ export default function CreateStrategyPage() {
           />
         </label>
 
-        {/* ── Protocol ── */}
-        <label className="cs-field">
-          <span>Scoring Protocol</span>
-          <select value={protocolId} onChange={e => setProtocolId(e.target.value)} required>
-            <option value="">— Select a protocol —</option>
-            {protocols.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.name} ({p.directiveCount} directives, {p.tradingStyle || 'Swing'})
-              </option>
-            ))}
-          </select>
-        </label>
+        {/* ── Protocol + Symbol PATH ── */}
+        {creationPath === 'protocol' && (
+          <>
+            {/* ── Protocol ── */}
+            <label className="cs-field">
+              <span>Scoring Protocol</span>
+              <select value={protocolId} onChange={e => handleProtocolChange(e.target.value)} required>
+                <option value="">— Select a protocol —</option>
+                {protocols.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.directiveCount || '?'} directives, {p.tradingStyle || 'Swing'})
+                  </option>
+                ))}
+              </select>
+              {selectedProtocol && (
+                <span className="cs-hint">
+                  Style: {protocolStyle} · {selectedProtocol.directiveCount || '?'} directives
+                  {STYLE_DEFAULTS[protocolStyle] && <> · Defaults: {STYLE_DEFAULTS[protocolStyle].baseSize} lot, SL {STYLE_DEFAULTS[protocolStyle].slPct}%, TP {STYLE_DEFAULTS[protocolStyle].tpPct}%</>}
+                </span>
+              )}
+            </label>
 
-        {/* ── Scoring Strategy (optional) ── */}
-        <label className="cs-field">
-          <span>Scoring Strategy (optional — for automation config)</span>
-          <select
-            value=""
-            onChange={() => {}}
-            className="cs-select-optional"
-          >
-            <option value="">— None (default scoring) —</option>
-            {scoringStrategies.filter(s => s.enabled).map(s => (
-              <option key={s.id} value={s.id}>
-                {s.name} — {s.protocolId} (threshold: {s.tradeThreshold})
-              </option>
-            ))}
-          </select>
-          <span className="cs-hint">Scoring strategies configure watchlists and thresholds for automation.</span>
-        </label>
+            {/* ── Symbol ── */}
+            <label className="cs-field">
+              <span>Symbol</span>
+              <div className="cs-symbol-row">
+                <input
+                  type="text"
+                  value={symbol}
+                  onChange={e => setSymbol(e.target.value.toUpperCase())}
+                  placeholder="EURUSD"
+                  list="cs-symbol-list"
+                  required
+                />
+                <datalist id="cs-symbol-list">
+                  {COMMON_SYMBOLS.map(s => <option key={s} value={s} />)}
+                </datalist>
+              </div>
+            </label>
+          </>
+        )}
 
-        {/* ── Symbol ── */}
-        <label className="cs-field">
-          <span>Symbol</span>
-          <div className="cs-symbol-row">
-            <input
-              type="text"
-              value={symbol}
-              onChange={e => setSymbol(e.target.value.toUpperCase())}
-              placeholder="EURUSD"
+        {/* ── Scoring Strategy PATH ── */}
+        {creationPath === 'scoring-strategy' && (
+          <label className="cs-field">
+            <span>Scoring Strategy</span>
+            <select
+              value={scoringStrategyId}
+              onChange={e => {
+                const id = e.target.value;
+                setScoringStrategyId(id);
+                const strat = scoringStrategies.find(s => s.id === id);
+                if (strat) {
+                  handleProtocolChange(strat.protocolId);
+                  setBrokerId(strat.brokerId || 'mt5');
+                  setMode(strat.mode || 'semi-auto');
+                  setBaseSize(String(strat.baseSize || 0.01));
+                  setSlPct(String(strat.slPct || 1.0));
+                  setTpPct(String(strat.tpPct || 1.0));
+                  setMinComposite(String(strat.tradeThreshold || 60));
+                  if (!name.trim()) setName(strat.name || '');
+                }
+              }}
               required
-              list="common-symbols"
-            />
-            <datalist id="common-symbols">
-              {COMMON_SYMBOLS.map(s => <option key={s} value={s} />)}
-            </datalist>
-          </div>
-        </label>
+            >
+              <option value="">— Select a scoring strategy —</option>
+              {scoringStrategies.filter(s => s.enabled).map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.name} — {s.protocolId} @ {s.brokerId || '?'} (threshold: {s.tradeThreshold})
+                </option>
+              ))}
+            </select>
+            <span className="cs-hint">
+              The scoring strategy's watchlist defines which symbols are traded.
+              Protocol and risk defaults are pre-filled automatically.
+            </span>
+          </label>
+        )}
 
-        {/* ── Timeframe ── */}
-        <label className="cs-field">
-          <span>Timeframe</span>
-          <select value={timeframe} onChange={e => setTimeframe(e.target.value)}>
-            {TIMEFRAMES.map(tf => <option key={tf} value={tf}>{tf}</option>)}
-          </select>
-        </label>
+        {/* ── Timeframe (only for protocol path) ── */}
+        {creationPath === 'protocol' && (
+          <label className="cs-field">
+            <span>Timeframe</span>
+            <select value={timeframe} onChange={e => setTimeframe(e.target.value)}>
+              {TIMEFRAMES.map(tf => <option key={tf} value={tf}>{tf}</option>)}
+            </select>
+          </label>
+        )}
 
-        {/* ── Broker ── */}
+        {/* ── Broker Account ── */}
         <label className="cs-field">
           <span>Broker Account</span>
           <select value={brokerId} onChange={e => setBrokerId(e.target.value)}>
-            <option value="mt5">
-              MT5 — MetaQuotes-Demo #{mt5Account?.account || '10011309743'}
-              {mt5Account ? ` (${mt5Account.balance ? '$' + mt5Account.balance : 'connected'})` : ''}
-            </option>
-            <option value="trading212">Trading212 — Portfolio monitoring only (trading disabled)</option>
-            <option value="paper">Paper Trading — Virtual account for testing</option>
+            {Object.entries(PROTOCOL_BROKER_MAP).map(([id, cfg]) => {
+              const isCompatible = compatibleBrokers.includes(id);
+              return (
+                <option key={id} value={id} disabled={!isCompatible}>
+                  {id === 'mt5' ? `MT5${mt5Account ? ` (${mt5Account.balance != null ? '$' + mt5Account.balance : 'connected'})` : ''}` :
+                   id === 'trading212' ? 'Trading212 (portfolio-monitoring only)' :
+                   'Paper Trading (virtual $10k)'}
+                  {!isCompatible ? ' — incompatible' : ''}
+                </option>
+              );
+            })}
           </select>
-          {brokerId === 'trading212' && (
-            <span className="cs-hint cs-warning">
-              ⚠️ Trading212 is portfolio-monitoring only. No trades will execute.
-            </span>
-          )}
-          {brokerId === 'paper' && (
-            <span className="cs-hint">
-              Paper trading uses a virtual ledger — no real money. Ideal for testing.
-            </span>
-          )}
+          <span className="cs-hint">
+            {PROTOCOL_BROKER_MAP[brokerId]?.note}
+            {!compatibleBrokers.includes(brokerId) && ' ⚠️ This broker may not support the selected protocol style.'}
+          </span>
         </label>
 
         {/* ── Mode ── */}

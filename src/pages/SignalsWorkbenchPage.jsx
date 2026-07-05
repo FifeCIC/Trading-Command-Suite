@@ -21,11 +21,43 @@ export default function SignalsWorkbenchPage() {
   const [protocolId, setProtocolId] = useState(prefs.defaultProtocol || '');
   const [expandedSymbol, setExpandedSymbol] = useState(null);
   const [viewMode, setViewMode] = useState('ladder');
+  const [sessionRuns, setSessionRuns] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sw-session-runs') || '[]'); }
+    catch { return []; }
+  });
+
+  const persistRuns = (runs) => {
+    setSessionRuns(runs);
+    try { localStorage.setItem('sw-session-runs', JSON.stringify(runs.slice(-50))); }
+    catch { /* localStorage quota */ }
+  };
 
   const ladderMutation = useMutation({
     mutationFn: (payload) => apiPost('/api/signals/ladder', payload),
     onSuccess: (data) => {
       qc.setQueryData(['signals-ladder'], data);
+      // Accumulate this scan in the session log
+      if (data.envelopes && data.envelopes.length > 0) {
+        setSessionRuns(prev => {
+          const run = {
+            id: Date.now(),
+            timestamp: data.generatedAt || new Date().toISOString(),
+            protocolName: data.protocolName || 'Default',
+            symbolsScanned: data.totalSymbols || 0,
+            buyCount: data.buyCount || 0,
+            sellCount: data.sellCount || 0,
+            holdCount: data.holdCount || 0,
+            avgComposite: data.envelopes.length > 0
+              ? Math.round(data.envelopes.reduce((s, e) => s + e.composite, 0) / data.envelopes.length)
+              : 0,
+            symbols: data.envelopes.map(e => e.symbol).join(', '),
+          };
+          const updated = [...prev, run].slice(-50); // Keep last 50 runs
+          try { localStorage.setItem('sw-session-runs', JSON.stringify(updated)); }
+          catch { /* quota */ }
+          return updated;
+        });
+      }
     },
   });
 
@@ -303,6 +335,47 @@ export default function SignalsWorkbenchPage() {
               );
             })
           )}
+        </motion.div>
+      )}
+
+      {/* ── Session Accumulation Table ── */}
+      {sessionRuns.length > 0 && (
+        <motion.div className="sw-session-log" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
+          <div className="sw-session-head">
+            <h3>Session Scan History</h3>
+            <span className="sw-session-count">{sessionRuns.length} scan{sessionRuns.length !== 1 ? 's' : ''}</span>
+            <button className="sw-session-clear" onClick={() => { setSessionRuns([]); try { localStorage.removeItem('sw-session-runs'); } catch {} }}>Clear</button>
+          </div>
+          <div className="sw-session-table-wrap">
+            <table className="sw-session-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Protocol</th>
+                  <th>Symbols</th>
+                  <th>Avg</th>
+                  <th>Signals</th>
+                  <th>Scanned</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sessionRuns.slice().reverse().map(run => (
+                  <tr key={run.id}>
+                    <td className="sw-sess-time">{new Date(run.timestamp).toLocaleTimeString()}</td>
+                    <td className="sw-sess-protocol">{run.protocolName}</td>
+                    <td className="sw-sess-symbols" title={run.symbols}>{run.symbolsScanned}</td>
+                    <td className="sw-sess-avg" style={{ color: run.avgComposite >= 60 ? '#22c55e' : run.avgComposite >= 40 ? '#f59e0b' : '#ef4444' }}>{run.avgComposite}</td>
+                    <td className="sw-sess-signals">
+                      {run.buyCount > 0 && <span className="sw-sess-sig sw-sess-buy">{run.buyCount}B</span>}
+                      {run.sellCount > 0 && <span className="sw-sess-sig sw-sess-sell">{run.sellCount}S</span>}
+                      {run.holdCount > 0 && <span className="sw-sess-sig sw-sess-hold">{run.holdCount}H</span>}
+                    </td>
+                    <td className="sw-sess-scanned">{run.symbols}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </motion.div>
       )}
 

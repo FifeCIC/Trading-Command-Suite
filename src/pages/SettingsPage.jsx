@@ -1,5 +1,7 @@
 import { useUiStore } from '../stores/useUiStore';
 import { usePreferences } from '../core/hooks/usePreferences';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '../core/api/client';
 import './settings.css'
 
 function SettingRow({ label, children, hint }) {
@@ -25,6 +27,15 @@ export default function SettingsPage() {
   const qaCount = Object.keys(qaChecks).length;
 
   const { prefs, set, setMany, reset: resetPrefs, defaults } = usePreferences();
+
+  const riskLimitsQuery = useQuery({
+    queryKey: ['trading-risk-limits'],
+    queryFn: () => apiGet('/api/trading/strategies/risk-limits').catch(() => null),
+    staleTime: 300_000,
+    retry: 1,
+  });
+  const serverLimits = riskLimitsQuery.data;
+
   return (
     <div className="settings-page">
       <header className="settings-header">
@@ -220,6 +231,30 @@ export default function SettingsPage() {
             onChange={e => set('circuitBreakerExposureTrigger', parseInt(e.target.value, 10) || 80)}
           />
         </SettingRow>
+
+        {serverLimits && (
+          <>
+            <h3 style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--ink-soft)' }}>Server-Enforced Hard Limits</h3>
+            <p style={{ fontSize: '0.68rem', color: 'var(--ink-soft)', margin: '0 0 0.4rem' }}>
+              These are set in <code>nest/.env</code> and require a server restart to change.
+              Strategies and UI settings cannot override them.
+            </p>
+            <SettingRow label="Max Position Size (lots)" hint="Hard cap on any single position volume.">
+              <code style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)' }}>{serverLimits.maxPositionSize}</code>
+            </SettingRow>
+            <SettingRow label="Max Daily Loss ($)" hint="Trading halts if today's P&L drops below this.">
+              <code style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ef4444' }}>${serverLimits.maxDailyLoss}</code>
+            </SettingRow>
+            <SettingRow label="Max Open Positions" hint="Absolute cap on concurrent positions across all strategies.">
+              <code style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)' }}>{serverLimits.maxOpenPositions}</code>
+            </SettingRow>
+            {serverLimits.note && (
+              <p style={{ fontSize: '0.65rem', color: 'var(--ink-soft)', fontStyle: 'italic', margin: '0.25rem 0 0' }}>
+                ℹ️ {serverLimits.note}
+              </p>
+            )}
+          </>
+        )}
 
         <SettingRow label="Reset Preferences" hint="Restore all preferences to their default values.">
           <button type="button" className="cta" onClick={() => { if (window.confirm('Reset all preferences to defaults?')) resetPrefs(); }}>

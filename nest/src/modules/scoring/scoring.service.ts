@@ -27,6 +27,7 @@ import { SeasonalAffinityService } from './seasonal-affinity.service';
 import { MacroSnapshotService } from './macro-snapshot.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { ProviderDegradationService } from '../providers/provider-degradation.service';
+import { CryptoProviderRouter } from '../providers/crypto-provider-router.service';
 import {
   DirectiveInput,
   MarketBar,
@@ -122,6 +123,7 @@ export class ScoringService implements OnModuleInit {
     private readonly macroSnapshot: MacroSnapshotService,
     private readonly adapterFactory: AdapterFactory,
     private readonly degradationService: ProviderDegradationService,
+    private readonly cryptoRouter: CryptoProviderRouter,
   ) {}
 
   /** On startup, detect directive version changes and log warnings. */
@@ -668,8 +670,29 @@ export class ScoringService implements OnModuleInit {
         }));
       }
 
-      // ── MT5 Fallback (Sprint 2026-07-04) ──
+      // ── Live Data Fallback ──
       if (ticker && rows.length < 30) {
+        // Check if this is a crypto ticker — use the crypto router
+        if (this.cryptoRouter.isCrypto(ticker)) {
+          try {
+            const tf = '1h';
+            const bars = await this.cryptoRouter.getCandles(ticker, tf, 200);
+            if (bars && bars.length > 0) {
+              const importData = bars.map((b) => ({
+                symbolId, provider: 'binance', timeframe: tf,
+                timestamp: b.timestamp, open: b.open, high: b.high,
+                low: b.low, close: b.close, volume: b.volume,
+              }));
+              try { await this.prisma.marketBar.createMany({ data: importData, skipDuplicates: true }); } catch { /* dupes ok */ }
+              this.logger.log(`Crypto router: imported ${bars.length} ${tf} bars for ${ticker}`);
+              return bars;
+            }
+          } catch (cryptoErr) {
+            this.logger.warn(`Crypto router fallback failed for ${ticker}: ${(cryptoErr as Error).message}`);
+          }
+        }
+
+        // ── MT5 Fallback (for non-crypto or crypto failover) ──
         try {
           const mt5 = this.adapterFactory.create('mt5');
           if (mt5) {
@@ -690,7 +713,7 @@ export class ScoringService implements OnModuleInit {
           this.logger.warn(`MT5 fallback failed for ${ticker}: ${(mt5Err as Error).message}`);
         }
       }
-      // ── End MT5 fallback ──
+      // ── End Live Data Fallback ──
 
       if (rows.length > 0) {
         return rows.map((r) => ({

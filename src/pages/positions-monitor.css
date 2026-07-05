@@ -43,17 +43,17 @@
   align-items: center;
   gap: 4px;
   margin-left: auto;
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   color: #64748b;
 }
 .pm-source-filter span { margin-right: 4px; }
 .pm-source-chip {
-  padding: 3px 10px;
+  padding: 4px 12px;
   border: 1px solid #2d3040;
   border-radius: 4px;
   background: none;
   color: #64748b;
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   cursor: pointer;
   font-family: inherit;
 }
@@ -119,12 +119,12 @@
 
 .pm-pos-pnl {
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.1rem;
 }
 
 .pm-pos-pnl-pct {
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   opacity: 0.85;
 }
 
@@ -137,7 +137,7 @@
   align-items: center;
   gap: 6px;
   margin-bottom: 10px;
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
@@ -159,13 +159,13 @@
 }
 
 .pm-pos-details span:first-child {
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   color: #64748b;
   text-transform: uppercase;
 }
 
 .pm-pos-details span:last-child {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 500;
 }
 
@@ -178,7 +178,7 @@
   border: 1px solid #78350f;
   border-radius: 6px;
   color: #fbbf24;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   margin-bottom: 10px;
 }
 
@@ -201,10 +201,11 @@
   position: absolute;
   top: 2px;
   left: 8px;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   color: #e2e8f0;
   font-weight: 600;
   z-index: 1;
+  cursor: help;
 }
 
 .pm-risk-threshold {
@@ -221,9 +222,9 @@
   display: flex; gap: 0.4rem; align-items: center; margin-top: 0.5rem; flex-wrap: wrap;
 }
 .pm-close-btn {
-  padding: 0.3rem 0.7rem; border: 1px solid #ef4444; border-radius: 5px;
+  padding: 0.35rem 0.8rem; border: 1px solid #ef4444; border-radius: 5px;
   background: rgba(239,68,68,0.1); color: #ef4444; cursor: pointer;
-  font-family: inherit; font-size: 0.68rem; font-weight: 600;
+  font-family: inherit; font-size: 0.8rem; font-weight: 600;
   transition: background 0.15s;
 }
 .pm-close-btn:hover:not(:disabled) { background: rgba(239,68,68,0.2); }
@@ -232,8 +233,8 @@
   cursor: not-allowed;
 }
 .pm-nav-link {
-  font-size: 0.65rem; color: var(--ink-soft); text-decoration: none;
-  padding: 0.2rem 0.5rem; border: 1px solid var(--line); border-radius: 4px;
+  font-size: 0.78rem; color: var(--ink-soft); text-decoration: none;
+  padding: 0.25rem 0.6rem; border: 1px solid var(--line); border-radius: 4px;
 }
 .pm-nav-link:hover { border-color: var(--accent); color: var(--accent); }
 
@@ -257,14 +258,14 @@
 }
 
 .pm-summary-label {
-  font-size: 0.6rem;
+  font-size: 0.75rem;
   color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .pm-summary-value {
-  font-size: 0.9rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #e2e8f0;
 }
@@ -275,7 +276,7 @@
   align-items: center;
   gap: 4px;
   margin-left: 12px;
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   color: #64748b;
 }
 

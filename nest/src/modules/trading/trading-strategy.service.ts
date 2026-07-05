@@ -326,6 +326,13 @@ export class TradingStrategyService {
     const slPct = strategy.slPct / 100; // Convert from percentage to decimal
     const tpPct = strategy.tpPct / 100;
 
+    // ── Pre-Flight Safety Gates (Issue #28) ──────────────
+    const safetyCheck = await this.runSafetyGates(strategy, size);
+    if (!safetyCheck.allowed) {
+      return { executed: false, reason: safetyCheck.reason };
+    }
+    // ── End safety gates ──
+
     // ── Auto Trailing Stop (Sprint 2026-07-04) ──
     // Use ATR-based trail: 2× ATR for trail distance, activate at +1.5× SL distance
     const useTrailingStop = strategy.mode === 'auto'; // Auto-trail for all auto strategies
@@ -418,6 +425,90 @@ export class TradingStrategyService {
       this.logger.error(`Trade execution failed: ${err.message}`);
       return { executed: false, reason: err.message };
     }
+  }
+
+  /**
+   * Pre-flight safety gates before any MT5 order.
+   * Checks env-driven risk limits + RiskService portfolio gates.
+   */
+  private async runSafetyGates(
+    strategy: any,
+    size: number,
+  ): Promise<{ allowed: boolean; reason: string }> {
+    // ── 1. MT5_MAX_POSITION_SIZE ──
+    const maxPosSize = parseFloat(process.env.MT5_MAX_POSITION_SIZE || '1.0');
+    if (size > maxPosSize) {
+      return { allowed: false, reason: `Position size ${size} exceeds MT5_MAX_POSITION_SIZE (${maxPosSize})` };
+    }
+
+    // ── 2. MT5_MAX_OPEN_POSITIONS ──
+    const maxOpenPositions = parseInt(process.env.MT5_MAX_OPEN_POSITIONS || '5', 10);
+    try {
+      const positions = await this.mt5.getPositions();
+      if (positions.length >= maxOpenPositions) {
+        return { allowed: false, reason: `Max open positions (${maxOpenPositions}) reached — ${positions.length} currently open` };
+      }
+    } catch { /* MT5 may be unreachable — proceed with caution */ }
+
+    // ── 3. MT5_MAX_DAILY_LOSS ──
+    const maxDailyLoss = parseFloat(process.env.MT5_MAX_DAILY_LOSS || '100');
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const trades = await this.prisma.trade.findMany({
+        where: {
+          provider: 'mt5',
+          closedAt: { gte: today },
+          pnl: { not: null },
+        },
+        select: { pnl: true },
+      });
+      const dailyPnl = trades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+      if (dailyPnl < -maxDailyLoss) {
+        return { allowed: false, reason: `Daily loss $${Math.abs(dailyPnl).toFixed(2)} exceeds MT5_MAX_DAILY_LOSS ($${maxDailyLoss})` };
+      }
+    } catch { /* DB may be unavailable */ }
+
+    // ── 4. RiskService portfolio gates ──
+    try {
+      const positions = await this.mt5.getPositions().catch(() => []);
+      const account = await this.mt5.getAccount().catch(() => null);
+      const portfolioValue = account?.equity ?? account?.balance ?? 10_000;
+      const estimatedCapital = size * 100_000; // Rough forex estimate: 1 lot ≈ $100k notional
+
+      const riskProfile = {
+        maxPortfolioRisk: 0.15,
+        maxPerTradeRisk: 0.02,
+        maxPerSymbol: 0.25,
+        maxPositions: maxOpenPositions,
+        maxDrawdown: 0.25,
+        trailingStopAtProfit: 0.03,
+      };
+
+      const posCheck = this.riskService.canOpenPosition(
+        positions.length,
+        portfolioValue,
+        estimatedCapital,
+        riskProfile,
+      );
+      if (!posCheck.allowed) {
+        return { allowed: false, reason: posCheck.reason };
+      }
+
+      // Drawdown check — use account balance as peak proxy
+      const drawdownCheck = this.riskService.checkDrawdown(
+        Math.max(portfolioValue, portfolioValue), // TODO: track peak equity properly
+        portfolioValue,
+        riskProfile,
+      );
+      if (drawdownCheck.inDrawdown) {
+        return { allowed: false, reason: `Drawdown ${(drawdownCheck.drawdownPercent * 100).toFixed(1)}% exceeds limit` };
+      }
+    } catch (err: any) {
+      this.logger.warn(`Risk gate check failed: ${err.message} — proceeding with caution`);
+    }
+
+    return { allowed: true, reason: 'All safety gates passed' };
   }
 
   // ── Helpers ───────────────────────────────────────────
