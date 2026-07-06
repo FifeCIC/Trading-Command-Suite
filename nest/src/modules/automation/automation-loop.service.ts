@@ -25,6 +25,26 @@ import { TimelineService } from './timeline.service';
 import { ScoringService } from '../scoring/scoring.service';
 import { TradingStrategyService } from '../trading/trading-strategy.service';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
+import { PROTOCOL_REGISTRY } from '../directives/directive-groups';
+
+// ── Protocol-aware thresholds by trading style ──
+const STYLE_THRESHOLDS: Record<string, number> = {
+  scalp: 75,
+  'day-trade': 65,
+  speed: 80,
+  swing: 55,
+  position: 45,
+};
+
+function getStyleThreshold(protocolId: string): number {
+  const style = PROTOCOL_REGISTRY[protocolId]?.tradingStyle?.toLowerCase() || '';
+  if (style.includes('scalp') || style.includes('tick')) return STYLE_THRESHOLDS.scalp;
+  if (style.includes('speed')) return STYLE_THRESHOLDS.speed;
+  if (style.includes('day')) return STYLE_THRESHOLDS['day-trade'];
+  if (style.includes('swing')) return STYLE_THRESHOLDS.swing;
+  if (style.includes('position')) return STYLE_THRESHOLDS.position;
+  return 60;
+}
 
 export interface LoopState {
   loopEnabled: boolean;
@@ -158,7 +178,7 @@ export class AutomationLoopService {
           enabled: id === 'trading212', // Only T212 enabled by default for now
           tradingEnabled: false, // NEVER auto-trade by default
           scoreIntervalMs: 300000,
-          tradeThreshold: 65,
+          tradeThreshold: getStyleThreshold(''), // Per-protocol — updated when strategies load
           requireConfirmation: true,
         };
       }
@@ -167,11 +187,56 @@ export class AutomationLoopService {
 
   // ── DB Persistence ──────────────────────────────────
 
-  /** Load scoring strategies from DB on startup */
+  /** Load scoring strategies from DB on startup. Auto-creates from trading strategies if empty. */
   async loadScoringStrategies() {
     try {
       if (!this.prisma.isAvailable) return;
-      const rows = await this.prisma.scoringStrategy.findMany({ orderBy: { createdAt: 'asc' } });
+      let rows = await this.prisma.scoringStrategy.findMany({ orderBy: { createdAt: 'asc' } });
+
+      // Auto-create scoring strategies from trading strategies if DB is empty
+      if (rows.length === 0) {
+        const strategies = await this.strategyService.findAll();
+        const activeStrats = strategies.filter((s: any) => s.active);
+        const uniqueProtocols = new Map<string, any>();
+
+        for (const strat of activeStrats) {
+          if (!strat.protocolId) continue;
+          if (!uniqueProtocols.has(strat.protocolId)) {
+            uniqueProtocols.set(strat.protocolId, strat);
+          }
+        }
+
+        if (uniqueProtocols.size > 0) {
+          this.logger.log(`No scoring strategies found — auto-creating from ${uniqueProtocols.size} unique protocols`);
+
+          for (const [protocolId, strat] of uniqueProtocols) {
+            try {
+              await this.prisma.scoringStrategy.create({
+                data: {
+                  name: `${protocolId} — Auto`,
+                  protocolId,
+                  watchlistName: 'default',
+                  brokerId: strat.brokerId || 'mt5',
+                  mode: 'semi-auto',
+                  tradeThreshold: strat.minComposite || getStyleThreshold(protocolId),
+                  baseSize: strat.baseSize ?? 0.01,
+                  slPct: strat.slPct ?? 1.0,
+                  tpPct: strat.tpPct ?? 1.0,
+                  enabled: true,
+                  tradingEnabled: false,
+                },
+              });
+              this.logger.log(`  Created scoring strategy for protocol: ${protocolId}`);
+            } catch (err) {
+              this.logger.warn(`  Failed to create scoring strategy for ${protocolId}: ${(err as Error).message}`);
+            }
+          }
+
+          // Reload after creation
+          rows = await this.prisma.scoringStrategy.findMany({ orderBy: { createdAt: 'asc' } });
+        }
+      }
+
       this.scoringStrategies = rows.map(r => ({
         id: r.id,
         name: r.name,
@@ -478,7 +543,8 @@ export class AutomationLoopService {
         if (lookupScore && lookupScore.score !== null && lookupScore.score !== undefined) {
           const adjScore = lookupScore.score * this.state.globalRiskMultiplier;
           const brokerState = this.state.brokerStates[strategy.brokerId || 'mt5'];
-          const threshold = brokerState?.tradeThreshold ?? 65;
+          // Strategy's own minComposite takes priority over broker default
+          const threshold = strategy.minComposite ?? brokerState?.tradeThreshold ?? getStyleThreshold(strategy.protocolId);
           const passed = adjScore >= threshold;
           
           // Attempt full evaluation for DB persistence (fire-and-forget, don't block)
@@ -551,7 +617,7 @@ export class AutomationLoopService {
 
       // Threshold check
       const brokerState = this.state.brokerStates[strategy.brokerId || 'mt5'];
-      const threshold = brokerState?.tradeThreshold ?? 65;
+      const threshold = brokerState?.tradeThreshold ?? 60;
       const adjustedComposite = pos.composite * this.state.globalRiskMultiplier;
       if (adjustedComposite < threshold) {
         return {

@@ -181,10 +181,21 @@ export default function ObjectivesPage() {
                   transition={{ delay: i * 0.04 }}
                 >
                   <div className="ob-card-header">
-                    <span className="ob-card-title">{obj.isBuiltIn && '📌 '}{obj.title}</span>
-                    <span className="ob-status-badge" style={{ background: (STATUS_COLORS[obj.status] || '#6b7280') + '20', color: STATUS_COLORS[obj.status] }}>
-                      {obj.status}
+                    <span className="ob-card-title">
+                      {obj.isBuiltIn && '📌 '}
+                      {obj.priority > 0 && <span className="ob-priority-badge" title={`Priority ${obj.priority}`}>P{obj.priority}</span>}
+                      {obj.title}
                     </span>
+                    <div className="ob-card-badges">
+                      {obj.phase && obj.phase !== 'planning' && (
+                        <span className={`ob-phase-badge ob-phase--${obj.phase}`}>
+                          {obj.phase === 'demo' ? '🧪 Demo' : obj.phase === 'live' ? '🔴 Live' : obj.phase}
+                        </span>
+                      )}
+                      <span className="ob-status-badge" style={{ background: (STATUS_COLORS[obj.status] || '#6b7280') + '20', color: STATUS_COLORS[obj.status] }}>
+                        {obj.status}
+                      </span>
+                    </div>
                   </div>
 
                   {obj.description && <p className="ob-card-desc">{obj.description}</p>}

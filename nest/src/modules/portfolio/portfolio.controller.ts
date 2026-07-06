@@ -1,5 +1,6 @@
 import { Controller, Get, Query, Logger } from '@nestjs/common';
 import { PortfolioService, PortfolioResponse } from './portfolio.service';
+import { PortfolioPriceService } from './portfolio-price.service';
 import { CorrelationService } from './correlation.service';
 import { EarningsService } from '../earnings/earnings.service';
 import { ExitSignalService } from './exit-signal.service';
@@ -10,6 +11,7 @@ export class PortfolioController {
 
   constructor(
     private readonly portfolioService: PortfolioService,
+    private readonly priceService: PortfolioPriceService,
     private readonly correlationService: CorrelationService,
     private readonly earningsService: EarningsService,
     private readonly exitSignalService: ExitSignalService,
@@ -145,5 +147,25 @@ export class PortfolioController {
         low: withRisk.filter((r) => r.riskLevel === 'LOW').length,
       },
     };
+  }
+
+  /**
+   * GET /api/portfolio/computed
+   *
+   * Returns portfolio positions enriched with live prices from the provider
+   * fallback chain (MT5 → Yahoo → Polygon → Finnhub → Twelve Data → FMP).
+   * P&L is derived at query time, not stored.
+   */
+  @Get('computed')
+  async getComputed(@Query('source') source?: string) {
+    const src = source || 'trading212';
+    const portfolio = await this.portfolioService.getPortfolio(src);
+    const positions = (portfolio.positions ?? []).map((p: any) => ({
+      symbol: p.symbol || p.ticker || '',
+      quantity: p.shares ?? p.quantity ?? p.volume ?? 0,
+      avgCost: p.avgCost ?? p.averagePrice ?? p.entryPrice ?? 0,
+      currentPrice: p.currentPrice ?? p.price ?? undefined,
+    }));
+    return this.priceService.computePortfolio(positions, src);
   }
 }

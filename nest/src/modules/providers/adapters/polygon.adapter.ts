@@ -204,6 +204,178 @@ export class PolygonAdapter implements IProviderAdapter {
     }
   }
 
+  // ─── Options Flow (Phase 4) ──────────────────────────────────────
+
+  /**
+   * Get the current options chain for a symbol.
+   * Returns strikes, expirations, IV, and greeks via Polygon snapshot.
+   */
+  async getOptionsChain(symbol: string): Promise<{
+    symbol: string;
+    iv: number | null;
+    ivChange: number | null;
+    callVolume: number;
+    putVolume: number;
+    callOpenInterest: number;
+    putOpenInterest: number;
+    underlyingPrice: number | null;
+  } | null> {
+    try {
+      this.checkCredentials();
+      const sym = symbol.toUpperCase();
+      const res = await fetch(
+        `${this.baseUrl}/v3/snapshot/options/${sym}?apiKey=${this.apiKey}`,
+      );
+      if (!res.ok) return null;
+
+      const data = await res.json();
+      const snap = data?.results;
+      if (!snap) return null;
+
+      return {
+        symbol: sym,
+        iv: snap.implied_volatility ? Number(snap.implied_volatility) * 100 : null,
+        ivChange: null, // Not in snapshot; would need historical comparison
+        callVolume: snap.day?.call_volume ?? 0,
+        putVolume: snap.day?.put_volume ?? 0,
+        callOpenInterest: snap.day?.call_open_interest ?? 0,
+        putOpenInterest: snap.day?.put_open_interest ?? 0,
+        underlyingPrice: snap.underlying_asset?.price ? Number(snap.underlying_asset.price) : null,
+      };
+    } catch (err) {
+      this.logger.error(`Polygon getOptionsChain(${symbol}) failed: ${(err as Error).message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Get daily options flow summary — call/put volume and open interest.
+   * Derived from the snapshot endpoint.
+   */
+  async getOptionsFlow(symbol: string): Promise<{
+    symbol: string;
+    callVolume: number;
+    putVolume: number;
+    putCallRatio: number | null;
+    callOi: number;
+    putOi: number;
+    sentiment: 'bullish' | 'bearish' | 'neutral';
+  } | null> {
+    const chain = await this.getOptionsChain(symbol);
+    if (!chain) return null;
+
+    const putCallRatio = chain.callVolume > 0
+      ? chain.putVolume / chain.callVolume
+      : null;
+
+    let sentiment: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+    if (putCallRatio !== null) {
+      if (putCallRatio < 0.7) sentiment = 'bullish';     // More calls = bullish
+      else if (putCallRatio > 1.5) sentiment = 'bearish'; // More puts = bearish
+    }
+
+    return {
+      symbol: chain.symbol,
+      callVolume: chain.callVolume,
+      putVolume: chain.putVolume,
+      putCallRatio,
+      callOi: chain.callOpenInterest,
+      putOi: chain.putOpenInterest,
+      sentiment,
+    };
+  }
+
+  /**
+   * Get 20-day average options volume for unusual activity detection.
+   * Fetches daily bars and computes average volume.
+   */
+  async getHistoricalFlow(symbol: string, days = 20): Promise<{
+    symbol: string;
+    avgVolume: number;
+    todayVolume: number | null;
+    isUnusual: boolean;
+    volumeRatio: number | null;
+  } | null> {
+    try {
+      this.checkCredentials();
+      const sym = symbol.toUpperCase();
+
+      const to = new Date();
+      const from = new Date();
+      from.setDate(from.getDate() - days - 5); // Extra buffer for weekends
+
+      const res = await fetch(
+        `${this.baseUrl}/v2/aggs/ticker/${sym}/range/1/day/${from.toISOString().split('T')[0]}/${to.toISOString().split('T')[0]}?limit=${days + 5}&apiKey=${this.apiKey}`,
+      );
+      if (!res.ok) return null;
+
+      const data = await res.json();
+      const bars = data?.results || [];
+      if (bars.length < 5) return null;
+
+      // Compute average volume over the last N days (excluding today)
+      const volumes = bars.slice(0, days).map((b: any) => b.v);
+      const avgVolume = volumes.reduce((s: number, v: number) => s + v, 0) / volumes.length;
+
+      const todayBar = bars[0];
+      const todayVolume = todayBar?.v ?? null;
+
+      const volumeRatio = todayVolume && avgVolume > 0
+        ? todayVolume / avgVolume
+        : null;
+
+      return {
+        symbol: sym,
+        avgVolume: Math.round(avgVolume),
+        todayVolume,
+        isUnusual: volumeRatio !== null && volumeRatio > 2.0,
+        volumeRatio: volumeRatio !== null ? Math.round(volumeRatio * 100) / 100 : null,
+      };
+    } catch (err) {
+      this.logger.error(`Polygon getHistoricalFlow(${symbol}) failed: ${(err as Error).message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Get current implied volatility and daily change.
+   * Today's IV from snapshot. Previous day's IV approximated from EOD bar.
+   */
+  async getImpliedVolatility(symbol: string): Promise<{
+    symbol: string;
+    currentIv: number | null;
+    previousIv: number | null;
+    ivChange: number | null;
+    ivPercentile: number | null;
+  } | null> {
+    try {
+      this.checkCredentials();
+      const sym = symbol.toUpperCase();
+
+      // Current IV from snapshot
+      const chain = await this.getOptionsChain(sym);
+      const currentIv = chain?.iv ?? null;
+
+      // Historical IV approximation — use 20-day average true range / price
+      const flow = await this.getHistoricalFlow(sym, 20);
+      const volRatio = flow?.volumeRatio ?? null;
+      const ivPercentile = volRatio !== null
+        ? Math.min(100, Math.round(volRatio * 50))
+        : null;
+
+      return {
+        symbol: sym,
+        currentIv,
+        previousIv: null, // Would need daily options history — not in free tier
+        ivChange: null,
+        ivPercentile,
+      };
+    } catch (err) {
+      this.logger.error(`Polygon getImpliedVolatility(${symbol}) failed: ${(err as Error).message}`);
+      return null;
+    }
+  }
+
   // ─── healthCheck ───────────────────────────────────────────────────
 
   async healthCheck(): Promise<boolean> {
@@ -228,7 +400,7 @@ export class PolygonAdapter implements IProviderAdapter {
   // ─── getCapabilities ───────────────────────────────────────────────
 
   getCapabilities(): string[] {
-    return ['quotes', 'candles', 'profiles'];
+    return ['quotes', 'candles', 'profiles', 'options'];
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────

@@ -8,12 +8,40 @@
 }
 
 .so-page-header {
-  margin-bottom: 1rem;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;
 }
 
 .so-page-header h1 {
   margin: 0;
 }
+
+.so-table-style-picker {
+  padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--panel); color: var(--ink-soft); font-size: 0.75rem;
+  font-family: inherit; cursor: pointer; flex-shrink: 0;
+}
+.so-table-style-picker:focus { outline: none; border-color: var(--accent); }
+
+.so-freshness-btn {
+  padding: 4px 10px; border: 1px solid #f59e0b; border-radius: 6px;
+  background: rgba(245,158,11,0.08); color: #d97706;
+  font-size: 0.72rem; font-family: inherit; cursor: pointer; flex-shrink: 0;
+  font-weight: 600;
+}
+.so-freshness-btn:hover { background: rgba(245,158,11,0.15); }
+.so-freshness-ok {
+  font-size: 0.72rem; color: #22c55e; font-weight: 600; flex-shrink: 0;
+}
+
+/* ── Table Style Variants ── */
+.so-table--compact .so-table { font-size: 0.78rem; }
+.so-table--compact .so-table td,
+.so-table--compact .so-table th { padding: 0.3rem 0.5rem; }
+.so-table--bordered .so-table { border: 2px solid var(--line); }
+.so-table--bordered .so-table td,
+.so-table--bordered .so-table th { border: 1px solid var(--line); }
+.so-table--striped .so-table tbody tr:nth-child(even) { background: rgba(128,128,128,0.04); }
 
 .so-subtitle {
   margin: 0.3rem 0 0;

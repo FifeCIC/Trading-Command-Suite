@@ -18,6 +18,7 @@ const DEFAULTS = {
   defaultTimeframe: '1h',
   decimalPlaces: 2,
   compactMode: false,
+  tableStyle: 'default',      // 'default' | 'compact' | 'bordered' | 'striped'
   // Performance
   pollingInterval: 30,
   chartAnimation: true,

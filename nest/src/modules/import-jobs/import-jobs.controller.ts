@@ -3,11 +3,15 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PaginationInterceptor } from '../../common/interceptors/pagination.interceptor';
 import { TriggerImportDto } from './dto/trigger-import.dto';
 import { ImportJobsService } from './import-jobs.service';
+import { DataImportOrchestrator } from './data-import-orchestrator.service';
 
 @ApiTags('imports')
 @Controller('imports')
 export class ImportJobsController {
-  constructor(private readonly importJobsService: ImportJobsService) {}
+  constructor(
+    private readonly importJobsService: ImportJobsService,
+    private readonly orchestrator: DataImportOrchestrator,
+  ) {}
 
   @Post('refresh/:symbolId')
   @ApiOperation({ summary: 'Direct real-data import for one symbol (bypasses queue, calls adapters)' })
@@ -63,5 +67,22 @@ export class ImportJobsController {
   @ApiOperation({ summary: 'Check batch import progress' })
   getBatchStatus() {
     return this.importJobsService.getBatchStatus();
+  }
+
+  /** Orchestrate freshness + imports for a single symbol */
+  @Post('orchestrate/:symbolId')
+  @ApiOperation({ summary: 'Orchestrate data freshness across all types for a symbol' })
+  async orchestrateSymbol(
+    @Param('symbolId') symbolId: string,
+    @Query('ticker') ticker?: string,
+  ) {
+    return this.orchestrator.ensureSymbolFresh(symbolId, ticker);
+  }
+
+  /** Orchestrate freshness for all portfolio symbols */
+  @Post('orchestrate/portfolio')
+  @ApiOperation({ summary: 'Orchestrate data freshness for all active portfolio symbols' })
+  async orchestratePortfolio() {
+    return this.orchestrator.ensurePortfolioFresh();
   }
 }

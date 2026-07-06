@@ -91,12 +91,31 @@ export class PlannerService {
   // ── Trading Objectives ──────────────────────────────────
 
   async getObjectives(status?: string) {
-    const where: any = {};
-    if (status) where.status = status;
-    return this.prisma.tradingObjective.findMany({
-      where,
-      orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
-    });
+    // Use raw SQL to ensure priority + phase are returned (Prisma client may be stale)
+    try {
+      let query = 'SELECT * FROM trading_objective';
+      const params: any[] = [];
+      if (status) { query += ' WHERE status = ?'; params.push(status); }
+      query += ' ORDER BY COALESCE(priority, 99) ASC, createdAt DESC';
+      const rows: any[] = await this.prisma.$queryRawUnsafe(query, ...params);
+      return rows.map((r: any) => ({
+        ...r,
+        priority: r.priority ?? 50,
+        phase: r.phase ?? 'planning',
+        isBuiltIn: Boolean(r.isBuiltIn),
+        progressPct: Number(r.progressPct ?? 0),
+        currentAmount: Number(r.currentAmount ?? 0),
+        targetAmount: r.targetAmount ? Number(r.targetAmount) : null,
+      }));
+    } catch {
+      // Fallback to Prisma client
+      const where: any = {};
+      if (status) where.status = status;
+      return this.prisma.tradingObjective.findMany({
+        where,
+        orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+      });
+    }
   }
 
   async createObjective(data: {
@@ -107,6 +126,8 @@ export class PlannerService {
     currentAmount?: number;
     currency?: string;
     targetDate?: string;
+    priority?: number;
+    phase?: string;
     linkedStrategy?: string;
     linkedAccount?: string;
     notes?: string;
@@ -120,6 +141,8 @@ export class PlannerService {
         currentAmount: data.currentAmount ?? 0,
         currency: data.currency ?? 'GBP',
         targetDate: data.targetDate ? new Date(data.targetDate) : null,
+        priority: data.priority ?? 50,
+        phase: data.phase ?? 'planning',
         linkedStrategy: data.linkedStrategy ?? null,
         linkedAccount: data.linkedAccount ?? null,
         notes: data.notes ?? null,
@@ -147,6 +170,8 @@ export class PlannerService {
         title: 'Active MT5 Trading',
         description: 'Get TCS actively trading via MT5 on the MetaQuotes-Demo account — fast-paced testing with the automation loop running live strategies, SL/TP enforcement, multi-strategy concurrent execution, and full pipeline observability.',
         category: 'active-trading',
+        priority: 1,
+        phase: 'live',
         targetAmount: null,
         currentAmount: 0,
         currency: 'GBP',

@@ -71,6 +71,11 @@ export default function FeatureLabPage() {
                 <TrailingStopDemo />
               </div>
             )}
+            {demo.id === 'auto-risk' && expanded === 'auto-risk' && (
+              <div style={{ padding: '0 1rem 1rem' }}>
+                <AutoRiskSizingDemo />
+              </div>
+            )}
           </div>
         ))}
       </div>

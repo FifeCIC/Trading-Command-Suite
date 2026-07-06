@@ -164,9 +164,42 @@ export class Trading212ImportService {
         });
       }
 
+      // Store positions in the normalized Position table (UPSERT by symbol+provider)
+      let persistedCount = 0;
+      if (this.prisma.isAvailable) {
+        try {
+          // Delete stale T212 positions that are no longer in the portfolio
+          await this.prisma.position.deleteMany({
+            where: { provider: 'trading212' },
+          });
+
+          // Insert fresh positions from the API
+          for (const pos of positions) {
+            const cleanTicker = cleanT212Ticker(pos.ticker);
+            await this.prisma.position.create({
+              data: {
+                symbol: cleanTicker,
+                quantity: pos.quantity,
+                avgPrice: pos.averagePrice,
+                currentPrice: pos.currentPrice,
+                pnl: pos.ppl ?? null,
+                provider: 'trading212',
+                accountId: 'trading212',
+                lastQuotedAt: new Date(),
+              },
+            });
+            persistedCount++;
+          }
+
+          this.logger.log(`Trading212: persisted ${persistedCount} positions to Position table`);
+        } catch (err) {
+          this.logger.warn(`Failed to persist T212 positions to DB: ${(err as Error).message}`);
+        }
+      }
+
       // Store account snapshot
       if (account) {
-        this.logger.log(`Trading212: imported ${imported.length} positions, account value: $${account.total}`);
+        this.logger.log(`Trading212: imported ${imported.length} positions, ${persistedCount} persisted, account value: $${account.total}`);
       }
 
       return {

@@ -24,7 +24,7 @@ const SECTIONS = {
   },
   display: {
     label: 'Display',
-    keys: ['defaultTimeframe', 'decimalPlaces', 'compactMode'],
+    keys: ['defaultTimeframe', 'decimalPlaces', 'compactMode', 'tableStyle'],
   },
   performance: {
     label: 'Performance',

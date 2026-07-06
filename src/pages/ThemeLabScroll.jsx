@@ -1,24 +1,64 @@
+import { useState, useEffect, useRef } from 'react';
+import StickyHeader from '../components/StickyHeader';
+
+/** Reveal-on-scroll card — uses IntersectionObserver for reliable cross-browser support */
+function RevealCard({ index }) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setVisible(true); obs.unobserve(el); }
+    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className="tl-scroll-reveal" style={{
+      padding: '1.5rem', background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 10,
+      opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(30px)',
+      transition: 'opacity 0.5s ease-out, transform 0.5s ease-out',
+    }}>
+      <h3 style={{ margin: '0 0 0.3rem', fontSize: '1rem' }}>Section {index + 1}</h3>
+      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
+        This card reveals itself as you scroll down. Uses <code>IntersectionObserver</code> —
+        reliable across all modern browsers. Fires when 15% visible.
+      </p>
+    </div>
+  );
+}
+
 export default function ThemeLabScroll() {
+  const [scrollPct, setScrollPct] = useState(0);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const h = document.documentElement;
+      const pct = h.scrollTop / Math.max(1, h.scrollHeight - h.clientHeight) * 100;
+      setScrollPct(pct);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
     <div className="tl-page" style={{ paddingBottom: '4rem' }}>
       <header className="tl-header">
         <h1>Scroll-Driven Animations</h1>
         <p className="tl-subtitle">
-          CSS animations tied to scroll position. Parallax, reveal-on-scroll, header shrink.
-          <br /><strong>Status: 🧪 Experimental</strong> — Chrome/Edge only. Must degrade gracefully on Firefox/Safari.
-          <br /><span style={{ fontSize: '0.75rem', color: 'var(--ink-soft)' }}>Used in: Strategy Builder protocol cards, Architecture Framework section reveals.</span>
+          CSS + JavaScript animations tied to scroll position. Parallax, reveal-on-scroll, header shrink.
+          <br /><strong>Status: ✅ Stable</strong> — Uses IntersectionObserver + scroll events. Works in all modern browsers.
+          <br /><span style={{ fontSize: '0.82rem', color: 'var(--ink-soft)' }}>Used in: Strategy Builder protocol cards, Architecture Framework section reveals.</span>
         </p>
       </header>
 
       {/* Scroll progress bar */}
       <div style={{
         position: 'fixed', top: 0, left: 0, height: 3, zIndex: 100,
-        background: 'var(--accent)',
-        animation: 'scroll-progress linear',
-        animationTimeline: 'scroll()',
-      }}>
-        <style>{`@keyframes scroll-progress { from { width: 0%; } to { width: 100%; } }`}</style>
-      </div>
+        width: `${scrollPct}%`, background: 'var(--accent)',
+        transition: 'width 0.1s linear',
+      }} />
 
       {/* Reveal cards */}
       <section className="tl-section">
@@ -26,25 +66,7 @@ export default function ThemeLabScroll() {
         <p className="tl-subtitle">These cards fade and slide up as you scroll into them.</p>
         <div style={{ display: 'grid', gap: '1rem' }}>
           {Array.from({ length: 8 }, (_, i) => (
-            <div key={i} className="tl-scroll-reveal" style={{
-              padding: '1.5rem', background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 10,
-              viewTimelineName: `--reveal-${i}`,
-              animation: 'reveal 0.6s ease-out both',
-              animationTimeline: `--reveal-${i}`,
-              animationRange: 'entry 20% cover 40%',
-            }}>
-              <style>{`
-                @keyframes reveal {
-                  from { opacity: 0; transform: translateY(30px); }
-                  to { opacity: 1; transform: translateY(0); }
-                }
-              `}</style>
-              <h3 style={{ margin: '0 0 0.3rem', fontSize: '1rem' }}>Section {i + 1}</h3>
-              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--ink-soft)' }}>
-                This card reveals itself as you scroll down. It uses <code>animation-timeline: view()</code> —
-                no JavaScript required. The animation plays between "entry 20%" and "cover 40%" of the viewport.
-              </p>
-            </div>
+            <RevealCard key={i} index={i} />
           ))}
         </div>
       </section>
@@ -52,26 +74,13 @@ export default function ThemeLabScroll() {
       {/* Parallax demo */}
       <section className="tl-section" style={{ marginTop: '2rem' }}>
         <h2>Header Shrink (scroll-driven)</h2>
-        <div style={{
-          position: 'sticky', top: 0, zIndex: 10, padding: '1.5rem 1rem',
-          background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: '0 0 10px 10px',
-          textAlign: 'center',
-          animation: 'header-shrink linear',
-          animationTimeline: 'scroll()',
-          animationRange: '0px 200px',
-        }}>
-          <style>{`
-            @keyframes header-shrink {
-              from { padding: 1.5rem 1rem; font-size: 1.2rem; }
-              to { padding: 0.5rem 1rem; font-size: 0.85rem; }
-            }
-          `}</style>
+        <StickyHeader>
           <span style={{ fontWeight: 600 }}>Scroll down to see this shrink ↑</span>
-        </div>
+        </StickyHeader>
         <div style={{ marginTop: '1rem', display: 'grid', gap: '0.75rem' }}>
           {Array.from({ length: 6 }, (_, i) => (
-            <div key={i} style={{ padding: '1rem', background: 'rgba(0,0,0,0.08)', border: '1px solid var(--line)', borderRadius: 8, fontSize: '0.78rem', color: 'var(--ink-soft)' }}>
-              Scroll content row {i + 1} — the sticky header above should shrink as you scroll.
+            <div key={i} style={{ padding: '1rem', background: 'rgba(0,0,0,0.08)', border: '1px solid var(--line)', borderRadius: 8, fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
+              Scroll content row {i + 1} — the sticky header above shrinks after 80px of scroll.
             </div>
           ))}
         </div>
@@ -81,17 +90,20 @@ export default function ThemeLabScroll() {
         <h2>Browser Support</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.5rem' }}>
           {[
-            { b: 'Chrome 115+', ok: true },
-            { b: 'Edge 115+', ok: true },
-            { b: 'Safari', ok: false, note: 'Partial in TP' },
-            { b: 'Firefox', ok: false, note: 'Not yet supported' },
+            { b: 'Chrome', ok: true },
+            { b: 'Edge', ok: true },
+            { b: 'Safari', ok: true },
+            { b: 'Firefox', ok: true },
           ].map((b) => (
-            <div key={b.b} style={{ padding: '0.5rem 0.65rem', background: 'rgba(0,0,0,0.1)', border: `1px solid ${b.ok ? '#22c55e44' : '#f59e0b44'}`, borderRadius: 8, fontSize: '0.78rem' }}>
+            <div key={b.b} style={{ padding: '0.5rem 0.65rem', background: 'rgba(0,0,0,0.1)', border: `1px solid ${b.ok ? '#22c55e44' : '#f59e0b44'}`, borderRadius: 8, fontSize: '0.85rem' }}>
               <span style={{ color: b.ok ? '#22c55e' : '#f59e0b' }}>{b.ok ? '✅' : '⚠️'}</span> {b.b}
-              {b.note && <div style={{ fontSize: '0.68rem', color: 'var(--ink-soft)' }}>{b.note}</div>}
             </div>
           ))}
         </div>
+        <p style={{ fontSize: '0.82rem', color: 'var(--ink-soft)', marginTop: '0.75rem' }}>
+          Now uses <strong>IntersectionObserver</strong> + scroll events instead of CSS <code>animation-timeline: scroll()</code>.
+          This provides reliable cross-browser support without experimental features.
+        </p>
       </section>
     </div>
   );

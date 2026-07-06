@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { createChart } from 'lightweight-charts';
+import { useQuery } from '@tanstack/react-query';
+import { createChart, CandlestickSeries } from 'lightweight-charts';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './snapshot-replay.css';
@@ -69,6 +70,15 @@ export default function SnapshotReplayPage() {
     currentScore: Math.round(d.scores[Math.min(currentIdx, d.scores.length - 1)] || 0),
   }));
 
+  // ── Current signal derived from directive scores ──
+  const currentSignal = useMemo(() => {
+    const avg = currentScores.reduce((s, d) => s + d.currentScore, 0) / Math.max(1, currentScores.length);
+    const signal = avg >= 60 ? 'buy' : avg >= 40 ? 'hold' : 'sell';
+    const startPrice = candles[0]?.close ?? 100;
+    const runningPnl = currentCandle ? ((currentCandle.close - startPrice) / startPrice) * 100 : 0;
+    return { signal, avgScore: Math.round(avg), runningPnl: +runningPnl.toFixed(1) };
+  }, [currentScores, currentCandle, candles]);
+
   // ── Chart setup ──
   useEffect(() => {
     if (!chartRef.current) return;
@@ -83,7 +93,7 @@ export default function SnapshotReplayPage() {
       timeScale: { borderColor: 'rgba(255,255,255,0.08)', visible: false },
     });
 
-    candleSeries.current = chart.addCandlestickSeries({
+    candleSeries.current = chart.addSeries(CandlestickSeries, {
       upColor: '#22c55e', downColor: '#ef4444',
       borderUpColor: '#22c55e', borderDownColor: '#ef4444',
       wickUpColor: '#22c55e', wickDownColor: '#ef4444',

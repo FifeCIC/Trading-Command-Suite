@@ -19,7 +19,6 @@ import MultiStrategyComparisonPage from './pages/MultiStrategyComparisonPage';
 import ScenarioAnalysisPage from './pages/ScenarioAnalysisPage';
 import FaqPage from './pages/FaqPage';
 import PortfolioPage from './pages/PortfolioPage';
-import Trading212PortfolioPage from './pages/Trading212PortfolioPage';
 import PortfolioEventsPage from './pages/PortfolioEventsPage';
 import Mt5TradingPage from './pages/Mt5TradingPage';
 import TradeHistoryPage from './pages/TradeHistoryPage';

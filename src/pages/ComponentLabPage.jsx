@@ -1,6 +1,10 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, createContext, useContext } from 'react';
 import DetachableWidget from '../components/DetachableWidget';
 import './component-lab.css';
+
+// ── Widget Scale Context ──
+const WidgetScaleContext = createContext(1);
+const useWidgetScale = () => useContext(WidgetScaleContext);
 
 // ═══════════════════════════════════════════════════════════
 // Demo data generators
@@ -39,6 +43,7 @@ const SAMPLE_SIGNALS = [
 // ═══════════════════════════════════════════════════════════
 
 function MarketTickerWidget() {
+  const scale = useWidgetScale();
   const [tickers, setTickers] = useState(() =>
     INITIAL_TICKERS.map((t) => ({
       ...t,
@@ -71,6 +76,7 @@ function MarketTickerWidget() {
     <DetachableWidget
       title="Market Ticker"
       size="md"
+      contentScale={scale}
       statusDot
       badge={`${tickers.length} symbols`}
       colorAccent="#0ea5a6"
@@ -121,6 +127,7 @@ function MarketTickerWidget() {
 // ═══════════════════════════════════════════════════════════
 
 function SignalFeedWidget() {
+  const scale = useWidgetScale();
   const [signals] = useState(SAMPLE_SIGNALS);
   const [expanded, setExpanded] = useState(null);
 
@@ -128,6 +135,7 @@ function SignalFeedWidget() {
     <DetachableWidget
       title="Signal Feed"
       size="md"
+      contentScale={scale}
       statusDot
       badge={String(signals.length)}
       colorAccent="#f59e0b"
@@ -161,6 +169,7 @@ function SignalFeedWidget() {
 // ═══════════════════════════════════════════════════════════
 
 function RiskGaugeWidget() {
+  const scale = useWidgetScale();
   const metrics = useMemo(
     () => ({
       var: (Math.random() * 3 + 0.8).toFixed(1),
@@ -177,6 +186,7 @@ function RiskGaugeWidget() {
     <DetachableWidget
       title="Risk Gauge"
       size="sm"
+      contentScale={scale}
       colorAccent={riskLevel === 'high' ? '#ef4444' : riskLevel === 'mid' ? '#f59e0b' : '#22c55e'}
       subtitle={`Exposure: ${metrics.exposure}%`}
     >
@@ -216,6 +226,7 @@ function RiskGaugeWidget() {
 // ═══════════════════════════════════════════════════════════
 
 function PositionSummaryWidget() {
+  const scale = useWidgetScale();
   const positions = useMemo(
     () => [
       { sym: 'AAPL', qty: 50, entry: 195.2, current: 198.32, pnl: 156 },
@@ -231,6 +242,7 @@ function PositionSummaryWidget() {
     <DetachableWidget
       title="Positions"
       size="md"
+      contentScale={scale}
       statusDot
       badge={`${positions.length} open`}
       colorAccent="#8b5cf6"
@@ -275,6 +287,7 @@ function PositionSummaryWidget() {
 // ═══════════════════════════════════════════════════════════
 
 function SystemHealthWidget() {
+  const scale = useWidgetScale();
   const [checks] = useState([
     { label: 'NestJS API', ok: true, latency: '12ms' },
     { label: 'MySQL', ok: true, latency: '3ms' },
@@ -289,6 +302,7 @@ function SystemHealthWidget() {
     <DetachableWidget
       title="System Health"
       size="sm"
+      contentScale={scale}
       statusDot={allOk}
       badge={allOk ? 'All OK' : '1 down'}
       colorAccent={allOk ? '#22c55e' : '#f59e0b'}
@@ -311,6 +325,7 @@ function SystemHealthWidget() {
 // ═══════════════════════════════════════════════════════════
 
 function MiniChartWidget() {
+  const scale = useWidgetScale();
   const points = useMemo(() => {
     const pts = [];
     let v = 50;
@@ -328,6 +343,7 @@ function MiniChartWidget() {
     <DetachableWidget
       title="SPY Intraday"
       size="sm"
+      contentScale={scale}
       subtitle="Minute candles"
       colorAccent="#0ea5a6"
       badge="R 20"
@@ -363,8 +379,24 @@ function MiniChartWidget() {
 
 export default function ComponentLabPage() {
   const [showCodes, setShowCodes] = useState(false);
+  const [widgetScale, setWidgetScale] = useState(() => {
+    try { return parseFloat(localStorage.getItem('cl-widget-scale') || '1'); }
+    catch { return 1; }
+  });
+
+  const setScale = (s) => {
+    setWidgetScale(s);
+    try { localStorage.setItem('cl-widget-scale', String(s)); } catch {}
+  };
+
+  const SCALE_OPTIONS = [
+    { label: 'Compact', value: 0.75, desc: 'Dense data views' },
+    { label: 'Normal', value: 1, desc: 'Default size' },
+    { label: 'Large', value: 1.3, desc: 'Easier reading' },
+  ];
 
   return (
+    <WidgetScaleContext.Provider value={widgetScale}>
     <div className="cl-page">
       <header className="cl-header">
         <h1>Component Lab</h1>
@@ -373,6 +405,19 @@ export default function ComponentLabPage() {
           Each widget can be detached into a floating overlay for a custom dashboard layout.
         </p>
         <div className="cl-header-actions">
+          <div className="cl-scale-bar">
+            <span className="cl-scale-label">Widget Size:</span>
+            {SCALE_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                className={`cl-scale-btn ${widgetScale === opt.value ? 'active' : ''}`}
+                onClick={() => setScale(opt.value)}
+                title={opt.desc}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
           <button type="button" className="cl-toggle-btn" onClick={() => setShowCodes(!showCodes)}>
             {showCodes ? 'Hide' : 'Show'} Usage Patterns
           </button>
@@ -458,5 +503,6 @@ defaultMinimized boolean     Start minimized`}</pre>
         </div>
       </section>
     </div>
+    </WidgetScaleContext.Provider>
   );
 }

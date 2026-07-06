@@ -109,8 +109,8 @@ export const NAV_TREE = {
   automation: {
     label: 'Automation',
     views: [
-      { id: 'speed-scanner', label: 'Speed Scanner', icon: '⚡' },
       { id: 'automation-dashboard', label: 'Dashboard', icon: '◉' },
+      { id: 'speed-scanner', label: 'Speed Scanner', icon: '⚡' },
       { id: 'execution-queue', label: 'Execution Queue', icon: '⇢' },
       { id: 'strategies-compare', label: 'Strategy Comparison', icon: '⇆' },
       { id: 'automation-rules', label: 'Automation Rules', icon: '⚙' },
@@ -179,7 +179,6 @@ export const NAV_TREE = {
       { id: 'mt5-trading', label: 'MT5 Trading (Lab)', icon: '🔬' },
       { id: 'speed-trading', label: 'Speed Trading (Lab)', icon: '🔬' },
       { id: 'gold-speed', label: 'Gold Speed (Lab)', icon: '🔬' },
-      { id: 'trading212-portfolio', label: 'Trading212 Portfolio (Lab)', icon: '🔬' },
       { id: 'snapshots', label: 'Snapshots (Lab)', icon: '🔬' },
       { id: 'portfolio-lab', label: 'Portfolio Lab', icon: '🧪' },
       { id: 'timeline', label: 'Timeline (Lab)', icon: '📅' },

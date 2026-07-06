@@ -21,6 +21,9 @@ const REC_COLORS = {
 
 export default function SpeedScannerPage() {
   const [interval, setInterval] = useState(10000);
+  const [sortBy, setSortBy] = useState('composite');
+  const [filterRec, setFilterRec] = useState('all');
+  const [filterSignal, setFilterSignal] = useState('all');
 
   const scanQuery = useQuery({
     queryKey: ['speed', 'scan'],
@@ -46,6 +49,31 @@ export default function SpeedScannerPage() {
     return { total: scanned.length, trending, sideways, trade };
   }, [scanned]);
 
+  // Sort + filter
+  const CLARITY_ORDER = { strong: 3, moderate: 2, weak: 1 };
+  const sortedScanned = useMemo(() => {
+    let list = [...scanned];
+
+    // Filter by recommendation
+    if (filterRec === 'trade') list = list.filter(s => s.trend?.recommendation === 'trade');
+    else if (filterRec === 'actionable') list = list.filter(s => s.trend?.recommendation !== 'pause');
+    else if (filterRec === 'not-pause') list = list.filter(s => s.trend?.recommendation !== 'pause');
+
+    // Filter by signal
+    if (filterSignal === 'buy') list = list.filter(s => s.signal === 'buy');
+    else if (filterSignal === 'sell') list = list.filter(s => s.signal === 'sell');
+
+    // Sort
+    switch (sortBy) {
+      case 'adx': list.sort((a, b) => (b.trend?.adx || 0) - (a.trend?.adx || 0)); break;
+      case 'patterns': list.sort((a, b) => (b.trend?.patternCount || 0) - (a.trend?.patternCount || 0)); break;
+      case 'clarity': list.sort((a, b) => (CLARITY_ORDER[b.trend?.clarity] || 0) - (CLARITY_ORDER[a.trend?.clarity] || 0)); break;
+      case 'composite':
+      default: list.sort((a, b) => (b.composite || 0) - (a.composite || 0)); break;
+    }
+    return list;
+  }, [scanned, sortBy, filterRec, filterSignal]);
+
   return (
     <div className="ss-page">
       <motion.header className="ss-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
@@ -54,6 +82,11 @@ export default function SpeedScannerPage() {
           <p className="ss-subtitle">
             Real-time symbol ranking with trend clarity, pattern detection, and trade/pause recommendations.
             {!isLoading && <span> {stats.total} symbols · {stats.trending} trending · {stats.trade} tradeable</span>}
+            {apiOnline && (
+              <span className="ss-live-badge" title="Live market data pipeline: MT5 candles → SpeedScanService → directive scoring → trend detection → trade/pause recommendation">
+                <span className="ss-live-dot" /> Live Data
+              </span>
+            )}
           </p>
         </div>
         <div className="ss-header-right">
@@ -126,9 +159,53 @@ export default function SpeedScannerPage() {
         </div>
       )}
 
+      {/* Sort & Filter bar */}
+      {!isLoading && scanned.length > 0 && (
+        <div className="ss-filter-bar">
+          <div className="ss-filter-group">
+            <span className="ss-filter-label">Sort:</span>
+            {[
+              { key: 'composite', label: 'Score' },
+              { key: 'adx', label: 'ADX' },
+              { key: 'patterns', label: 'Patterns' },
+              { key: 'clarity', label: 'Clarity' },
+            ].map(s => (
+              <button key={s.key} className={`ss-filter-chip ${sortBy === s.key ? 'ss-filter-active' : ''}`} onClick={() => setSortBy(s.key)}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+          <div className="ss-filter-group">
+            <span className="ss-filter-label">Rec:</span>
+            {[
+              { key: 'all', label: 'All' },
+              { key: 'trade', label: 'Trade' },
+              { key: 'actionable', label: 'Actionable' },
+            ].map(f => (
+              <button key={f.key} className={`ss-filter-chip ${filterRec === f.key ? 'ss-filter-active' : ''}`} onClick={() => setFilterRec(f.key)}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <div className="ss-filter-group">
+            <span className="ss-filter-label">Signal:</span>
+            {[
+              { key: 'all', label: 'All' },
+              { key: 'buy', label: 'Buy' },
+              { key: 'sell', label: 'Sell' },
+            ].map(f => (
+              <button key={f.key} className={`ss-filter-chip ${filterSignal === f.key ? 'ss-filter-active' : ''}`} onClick={() => setFilterSignal(f.key)}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <span className="ss-filter-count">{sortedScanned.length} of {scanned.length} symbols</span>
+        </div>
+      )}
+
       {/* Symbol ranking */}
       <div className="ss-list">
-        {scanned.map((sym, i) => {
+        {sortedScanned.map((sym, i) => {
           const t = sym.trend ?? {};
           const isTop = sym.symbol === topPick;
           const trendColor = TREND_COLORS[t.clarity] || '#6b7280';

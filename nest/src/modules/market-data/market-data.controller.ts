@@ -1,9 +1,10 @@
-import { Controller, Get, Param, Query, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, Body, UseInterceptors } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ModeService } from '../../config/mode.service';
 import { ImportJobsService } from '../import-jobs/import-jobs.service';
 import { CheckFreshnessDto } from './dto/check-freshness.dto';
 import { FreshnessService } from './freshness.service';
+import { PriceRefreshService } from './price-refresh.service';
 import { MarketDataService } from './market-data.service';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
 
@@ -13,6 +14,7 @@ export class MarketDataController {
   constructor(
     private readonly marketDataService: MarketDataService,
     private readonly freshnessService: FreshnessService,
+    private readonly priceRefresh: PriceRefreshService,
     private readonly importJobsService: ImportJobsService,
     private readonly modeService: ModeService,
   ) {}
@@ -96,5 +98,44 @@ export class MarketDataController {
     @Query('timeframe') timeframe = '1h',
   ) {
     return this.marketDataService.getLatestBar(symbolId, timeframe);
+  }
+
+  @Get('freshness/:symbolId/overall')
+  @ApiOperation({ summary: 'Get overall freshness across all data types for a symbol' })
+  async overallFreshness(@Param('symbolId') symbolId: string) {
+    return this.freshnessService.overallFreshness(symbolId);
+  }
+
+  @Post('prices/refresh')
+  @ApiOperation({ summary: 'Refresh live prices for portfolio positions via provider chain' })
+  async refreshPrices() {
+    const result = await this.priceRefresh.refreshAllPositions();
+    return { ...result, timestamp: new Date().toISOString() };
+  }
+
+  @Post('freshness/batch')
+  @ApiOperation({ summary: 'Check freshness for a specific set of symbols' })
+  async batchFreshness(@Body() body: { symbols: string[]; timeframe?: string }) {
+    const symbols = body.symbols || [];
+    const timeframe = body.timeframe || '1m';
+    if (symbols.length === 0) return { results: [] };
+    const results = await Promise.all(
+      symbols.map(async (ticker) => {
+        const result = await this.freshnessService.checkOne(
+          ticker, timeframe, undefined,
+        ).catch(() => ({ symbolId: ticker, ticker, status: 'missing' as const, latestTimestamp: null, ageMinutes: null, timeframe }));
+        return { ...result, ticker: result.ticker || ticker };
+      }),
+    );
+    return { results, checkedAt: new Date().toISOString() };
+  }
+
+  @Post('refresh')
+  @ApiOperation({ summary: 'Refresh prices for specified symbols via provider chain' })
+  async refreshSymbols(@Body() body: { symbols: string[] }) {
+    const symbols = body.symbols || [];
+    if (symbols.length === 0) return { refreshed: [] };
+    const result = await this.priceRefresh.refreshPrices(symbols);
+    return { ...result, timestamp: new Date().toISOString() };
   }
 }

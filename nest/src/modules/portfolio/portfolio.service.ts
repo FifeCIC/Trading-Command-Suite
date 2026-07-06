@@ -57,8 +57,31 @@ export class PortfolioService {
       this.t212.getAccount(),
     ]);
 
+    // Map broker positions, or fall back to Position table if adapter returns empty
+    let rawPositions: any[] = brokerPositions;
+    if (rawPositions.length === 0 && this.prisma.isAvailable) {
+      const dbPositions = await this.prisma.position.findMany({
+        where: { provider: 'trading212' },
+        orderBy: { symbol: 'asc' },
+      });
+      if (dbPositions.length > 0) {
+        this.logger.log(`Using ${dbPositions.length} cached positions from Position table`);
+        rawPositions = dbPositions.map(p => ({
+          symbol: p.symbol,
+          ticker: p.symbol,
+          quantity: p.quantity,
+          avgCost: p.avgPrice,
+          currentPrice: p.currentPrice ?? 0,
+          marketValue: (p.currentPrice ?? 0) * p.quantity,
+          unrealizedPnl: p.pnl ?? 0,
+          unrealizedPnlPct: p.avgPrice > 0 ? ((p.currentPrice ?? 0) - p.avgPrice) / p.avgPrice * 100 : 0,
+          openedAt: p.openedAt?.toISOString() ?? new Date().toISOString(),
+        }));
+      }
+    }
+
     // BrokerPosition is already normalized — map directly to PortfolioPosition
-    const positions: PortfolioPosition[] = brokerPositions.map((p) => ({
+    const positions: PortfolioPosition[] = rawPositions.map((p: any) => ({
       symbol: p.symbol,
       ticker: p.ticker,
       shares: p.quantity,

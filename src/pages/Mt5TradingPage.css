@@ -4,7 +4,7 @@
    Uses mt5u- prefix to avoid collision with global mt5- classes
    ═══════════════════════════════════════════════════════ */
 
-.mt5u-page { max-width: 1200px; margin: 0 auto; padding: 1.25rem 1.5rem; color: var(--ink, #d1d5db); }
+.mt5u-page { max-width: var(--page-max-width, 1200px); margin: 0 auto; padding: 1.25rem 1.5rem; color: var(--ink, #d1d5db); }
 
 /* ── Loading ── */
 .mt5u-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; gap: 1rem; color: var(--ink-soft, #94a3b8); }
@@ -79,6 +79,27 @@
 .mt5u-tab.active { color: var(--accent, #93c5fd); border-bottom-color: var(--accent, #3b82f6); }
 .mt5u-close-all { margin-left: auto !important; margin-right: 0.5rem; padding: 0.3rem 0.6rem; font-size: 0.7rem; background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3); border-radius: 5px; color: #ef4444; cursor: pointer; font-weight: 600; }
 .mt5u-close-all:hover { background: rgba(239,68,68,.25); }
+
+/* ── Layout Width Toggle ── */
+.mt5u-layout-bar {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 0.75rem;
+  padding: 6px 12px; background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155); border-radius: 8px;
+}
+.mt5u-layout-label {
+  font-size: 0.68rem; color: var(--ink-soft, #64748b);
+  text-transform: uppercase; margin-right: 4px;
+}
+.mt5u-layout-btn {
+  padding: 3px 10px; border: 1px solid var(--line, #334155); border-radius: 5px;
+  background: none; color: var(--ink-soft, #94a3b8); font-size: 0.7rem;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.mt5u-layout-btn:hover { border-color: var(--accent, #3b82f6); color: var(--ink, #e2e8f0); }
+.mt5u-layout-btn.active {
+  background: rgba(59,130,246,0.15); color: var(--accent, #3b82f6);
+  border-color: var(--accent, #3b82f6);
+}
 
 .mt5u-table-wrap { padding: 0; overflow-x: auto; }
 

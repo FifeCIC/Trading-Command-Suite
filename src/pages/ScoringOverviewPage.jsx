@@ -15,7 +15,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchRankedSymbols } from '../core/api/scoring';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import { usePreferences } from '../core/hooks/usePreferences';
+import { useDataFreshness } from '../core/hooks/useDataFreshness';
 import './scoring-overview.css';
+
+const TABLE_STYLES = [
+  { value: 'default', label: 'Default' },
+  { value: 'compact', label: 'Compact' },
+  { value: 'bordered', label: 'Bordered' },
+  { value: 'striped', label: 'Striped' },
+];
 
 /** @param {{ low: number, high: number }} bucket @param {number} val */
 function inBucket(bucket, val) {
@@ -121,15 +130,39 @@ export default function ScoringOverviewPage() {
   // Top 5
   const top5 = ranked.slice(0, 5);
 
+  const { prefs, set } = usePreferences();
+  const { stale, checking, lastRefresh, refresh } = useDataFreshness({
+    symbols: ranked.slice(0, 20).map(r => r.symbol || r.ticker).filter(Boolean),
+    enabled: ranked.length > 0,
+  });
+
   return (
     <div className="so-page">
       <header className="so-page-header">
-        <h1>All Directives</h1>
-        <p className="so-subtitle">
-          Default protocol: <strong>Conviction Dip Accumulation</strong> — runs every registered directive
-          {services.database === false && <span className="so-chip-warn">DB offline</span>}
-          {services.queue === false && <span className="so-chip-warn">Queue offline</span>}
-        </p>
+        <div>
+          <h1>All Directives</h1>
+          <p className="so-subtitle">
+            Default protocol: <strong>Conviction Dip Accumulation</strong> — runs every registered directive
+            {services.database === false && <span className="so-chip-warn">DB offline</span>}
+            {services.queue === false && <span className="so-chip-warn">Queue offline</span>}
+          </p>
+        </div>
+        <select
+          className="so-table-style-picker"
+          value={prefs.tableStyle || 'default'}
+          onChange={e => set('tableStyle', e.target.value)}
+          title="Table style for A/B testing"
+        >
+          {TABLE_STYLES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
+        {stale && (
+          <button className="so-freshness-btn" onClick={refresh} title="Data may be stale — click to refresh prices">
+            {checking ? '⟳ Refreshing…' : '⟳ Refresh Prices'}
+          </button>
+        )}
+        {lastRefresh && !stale && (
+          <span className="so-freshness-ok" title={`Prices refreshed at ${new Date(lastRefresh).toLocaleTimeString()}`}>✓ Fresh</span>
+        )}
       </header>
 
       {/* ── Degradation Warning Banner ── */}
@@ -274,7 +307,7 @@ export default function ScoringOverviewPage() {
             </p>
           </div>
         ) : (
-          <div className="so-table-wrap">
+          <div className={`so-table-wrap so-table--${prefs.tableStyle || 'default'}`}>
             <table className="so-table">
               <thead>
                 <tr>

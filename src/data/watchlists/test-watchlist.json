@@ -1,0 +1,5 @@
+[
+  { "ticker": "EURUSD", "symbol": "EURUSD", "name": "Euro / US Dollar" },
+  { "ticker": "GBPUSD", "symbol": "GBPUSD", "name": "British Pound / US Dollar" },
+  { "ticker": "XAUUSD", "symbol": "XAUUSD", "name": "Gold / US Dollar" }
+]

@@ -30,6 +30,7 @@ model Symbol {
   importRuns ImportRun[]
   backtestRuns BacktestRun[]
   recordingSessions TickRecordingSession[]
+  positions  Position[]
 }
 
 model Strategy {
@@ -617,16 +618,20 @@ model Order {
 model Position {
   id          String   @id @default(uuid()) @db.VarChar(36)
   symbol      String   @db.VarChar(20)
+  symbolId    String?  @db.VarChar(36)
+  symbolRef   Symbol?  @relation(fields: [symbolId], references: [id], onDelete: SetNull)
   quantity    Float
   avgPrice    Float
   currentPrice Float?
   pnl         Float?
   provider    String   @db.VarChar(50)
   accountId   String?  @db.VarChar(100)
+  lastQuotedAt DateTime?
   openedAt    DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([symbol])
+  @@index([symbolId])
   @@index([provider, accountId])
 }
 
@@ -1135,6 +1140,8 @@ model TradingObjective {
   currency        String   @default("GBP") @db.VarChar(10)
   targetDate      DateTime?
   status          String   @default("active") @db.VarChar(20)
+  priority        Int      @default(50)
+  phase           String   @default("planning") @db.VarChar(20)
   linkedStrategy  String?  @db.VarChar(200)
   linkedAccount   String?  @db.VarChar(100)
   isBuiltIn       Boolean  @default(false)

@@ -44,6 +44,7 @@ export default function DetachableWidget({
   children,
   footer,
   className = '',
+  contentScale = 1,
 }) {
   const [minimized, setMinimized] = useState(defaultMinimized);
   const [detached, setDetached] = useState(false);
@@ -229,10 +230,13 @@ export default function DetachableWidget({
   );
 
   // ── Inline rendering ─────────────────────────────────────
+  const scaleStyle = contentScale !== 1
+    ? { '--dw-scale': contentScale, minHeight: `${200 * contentScale}px` }
+    : {};
   const widgetBody = (
     <div
       className={`dw-widget ${minimized ? 'dw-minimized' : ''} ${className}`}
-      style={colorAccent ? { borderLeftColor: colorAccent } : undefined}
+      style={colorAccent ? { borderLeftColor: colorAccent, ...scaleStyle } : scaleStyle}
       ref={floatingRef}
       data-size={size}
     >

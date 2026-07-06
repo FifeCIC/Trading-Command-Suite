@@ -144,11 +144,24 @@ export default function AutomationDashboardPage() {
         ) : (
           <div className="ad-broker-list">
             {Object.keys(brokerStates).length > 0 ? (
-              Object.entries(brokerStates).map(([id, bs]) => (
-                <span key={id} className={`ad-broker-chip ${bs.enabled ? 'ad-broker-on' : 'ad-broker-off'}`}>
-                  {id} {bs.enabled ? '🟢' : '⚫'} {bs.tradingEnabled ? '🔴LIVE' : ''}
+              Object.entries(brokerStates).map(([id, bs]) => {
+                const connected = bs.enabled;
+                const trading = connected && bs.tradingEnabled;
+                const statusLabel = connected ? (trading ? '🟢 Trading Enabled' : '🟡 Monitor Only') : '⚫ Offline';
+                const badgeColor = connected ? (trading ? '#22c55e' : '#f59e0b') : '#6b7280';
+                const tooltipText = connected
+                  ? `${id.toUpperCase()} — ${trading ? 'LIVE TRADING' : 'Monitoring only (trading disabled)'} | Threshold: ${bs.tradeThreshold || 65} | Confirm required: ${bs.requireConfirmation ? 'Yes' : 'No'}`
+                  : `${id.toUpperCase()} — Offline (not connected or disabled)`;
+                return (
+                <span key={id} className={`ad-broker-badge ${connected ? 'ad-broker-on' : 'ad-broker-off'}`}
+                      style={connected && !trading ? { borderColor: '#f59e0b', color: '#f59e0b' } : undefined}
+                      title={tooltipText}>
+                  <span className="ad-broker-dot" style={{ background: badgeColor }} />
+                  <span className="ad-broker-name">{id}</span>
+                  <span className="ad-broker-status">{statusLabel}</span>
                 </span>
-              ))
+                );
+              })
             ) : (
               <span className="ad-broker-note">Start the loop to initialize broker states</span>
             )}
@@ -195,23 +208,31 @@ export default function AutomationDashboardPage() {
             {strategies.length === 0 ? (
               <p className="ad-empty">
                 No active strategies.{' '}
-                <a href="/trading/trading-strategies">Create one in Trading Strategies →</a>
+                <a href="/strategies/create-strategy">Create one in Create Strategy →</a>
               </p>
             ) : (
               <div className="ad-strategy-list">
-                {strategies.map((s) => (
+                {strategies.map((s) => {
+                  const isTrading = Boolean(s.symbol);
+                  const isScoring = Boolean(s.watchlistName);
+                  const typeLabel = isTrading ? 'Trading' : isScoring ? 'Scoring' : 'Strategy';
+                  const typeColor = isTrading ? '#3b82f6' : isScoring ? '#8b5cf6' : '#94a3b8';
+                  return (
                   <div key={s.id} className="ad-strategy-card">
                     <div className="ad-strategy-header">
                       <span className={`ad-strategy-dot ${s.active ? 'ad-active' : ''}`} />
                       <strong>{s.name}</strong>
+                      <span className="ad-strategy-type" style={{ background: typeColor + '18', color: typeColor, borderColor: typeColor + '33' }}>{typeLabel}</span>
                       <span className="ad-strategy-broker">{s.brokerId}</span>
                     </div>
                     <div className="ad-strategy-meta">
+                      {isTrading && <><span>{s.symbol}</span> · </>}
                       <span>{s.protocolId}</span> · <span>{s.mode}</span>
                       {s.lastComposite != null && <span> · Score: {s.lastComposite}</span>}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </motion.section>

@@ -11,8 +11,15 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.2s, border-color 0.2s;
+  transition: box-shadow 0.2s, border-color 0.2s, min-height 0.3s;
   height: fit-content;
+}
+
+/* Content scaling via CSS variable */
+.dw-widget[style*="--dw-scale"] .dw-body {
+  transform: scale(var(--dw-scale));
+  transform-origin: top left;
+  width: calc(100% / var(--dw-scale));
 }
 
 .dw-widget:hover {

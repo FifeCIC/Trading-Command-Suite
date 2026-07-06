@@ -15,6 +15,16 @@ export default function Mt5TradingPage() {
   const [mode, setMode] = useState('demo'); // 'demo' | 'live'
   const [platform, setPlatform] = useState('mt5');
 
+  // ── Layout ──
+  const [layoutWidth, setLayoutWidth] = useState('desktop'); // 'full' | '4k' | 'desktop' | 'laptop' | 'tablet'
+  const LAYOUT_WIDTHS = {
+    full: { label: 'Full Width', maxWidth: 'none' },
+    '4k': { label: '4K', maxWidth: '2560px' },
+    desktop: { label: 'Desktop', maxWidth: '1440px' },
+    laptop: { label: 'Laptop', maxWidth: '1200px' },
+    tablet: { label: 'Tablet', maxWidth: '960px' },
+  };
+
   // ── Data State ──
   const [account, setAccount] = useState(null);
   const [positions, setPositions] = useState([]);
@@ -248,7 +258,22 @@ export default function Mt5TradingPage() {
   }
 
   return (
-    <div className="mt5u-page">
+    <div className="mt5u-page" style={{ '--page-max-width': LAYOUT_WIDTHS[layoutWidth].maxWidth }}>
+      {/* ── Layout Width Toggle ── */}
+      <div className="mt5u-layout-bar">
+        <span className="mt5u-layout-label">Width:</span>
+        {Object.entries(LAYOUT_WIDTHS).map(([key, val]) => (
+          <button
+            key={key}
+            className={`mt5u-layout-btn ${layoutWidth === key ? 'active' : ''}`}
+            onClick={() => setLayoutWidth(key)}
+            title={val.maxWidth === 'none' ? 'Use all available screen width' : `Max width: ${val.maxWidth}`}
+          >
+            {val.label}
+          </button>
+        ))}
+      </div>
+
       {/* ── Header ── */}
       <div className="mt5u-header">
         <div className="mt5u-header-left">

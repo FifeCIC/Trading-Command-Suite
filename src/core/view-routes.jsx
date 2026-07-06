@@ -72,7 +72,6 @@ import BtcSpeedTradingPage from '../pages/BtcSpeedTradingPage.jsx';
 import GoldSpeedTradingPage from '../pages/GoldSpeedTradingPage.jsx';
 
 // ── Portfolio / Trading212 ──
-import Trading212PortfolioPage from '../pages/Trading212PortfolioPage.jsx';
 import Mt5TradingPage from '../pages/Mt5TradingPage.jsx';
 import Mt5StatusPage from '../pages/Mt5StatusPage.jsx';
 
@@ -175,7 +174,6 @@ export const VIEW_COMPONENTS = {
   'trade-history': TradeHistoryPage,
   'positions-monitor': PositionsMonitorPage,
   'create-strategy': CreateStrategyPage,
-  'trading212-portfolio': Trading212PortfolioPage,
   'mt5-trading': Mt5TradingPage,
   'mt5-demo-trading': Mt5TradingPage,
   'mt5-status': Mt5StatusPage,

@@ -127,6 +127,19 @@ export default function LabPage() {
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '24px 16px 64px' }}>
+      <style>{`
+        @keyframes lab-glow-pulse {
+          0%, 100% { box-shadow: 0 0 8px rgba(91,141,239,0.3); }
+          50% { box-shadow: 0 0 22px rgba(91,141,239,0.7); }
+        }
+        @keyframes lab-pulse-scale {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.04); }
+        }
+        .lab-btn-glow { animation: lab-glow-pulse 2s ease-in-out infinite; }
+        .lab-btn-pulse { animation: lab-pulse-scale 1.5s ease-in-out infinite; }
+        .lab-btn-glow:hover, .lab-btn-pulse:hover { animation: none; transform: scale(1.03); }
+      `}</style>
       <motion.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -233,8 +246,8 @@ export default function LabPage() {
                     userSelect: 'none',
                   }}
                 >
-                  <h3 style={{ margin: 0 }}>Hover &amp; tap me</h3>
-                  <p style={{ margin: '8px 0 0', color: 'var(--color-text-muted, #8892b0)', fontSize: 13 }}>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Hover &amp; tap me</h3>
+                  <p style={{ margin: '8px 0 0', color: 'var(--color-text-muted, #8892b0)', fontSize: '0.9rem' }}>
                     Uses <code>whileHover</code> and <code>whileTap</code> from Motion.
                   </p>
                 </motion.div>
@@ -267,17 +280,22 @@ export default function LabPage() {
 
               <PlaygroundBlock title="Button variants">
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {['Primary', 'Secondary', 'Danger', 'Ghost'].map((variant) => {
+                  {['Primary', 'Secondary', 'Success', 'Danger', 'Ghost', 'Glow', 'Pulse'].map((variant) => {
                     const styleMap = {
                       Primary: { background: 'var(--color-accent, #5b8def)', color: '#fff', border: 'none' },
                       Secondary: { background: 'var(--color-surface-raised, #1a2332)', color: 'var(--color-text, #e0e0e0)', border: '1px solid var(--color-border, #333)' },
+                      Success: { background: 'var(--color-success, #00c896)', color: '#fff', border: 'none' },
                       Danger: { background: 'var(--color-danger, #ff4d6a)', color: '#fff', border: 'none' },
                       Ghost: { background: 'transparent', color: 'var(--color-text-muted, #8892b0)', border: '1px solid transparent' },
+                      Glow: { background: 'var(--color-accent, #5b8def)', color: '#fff', border: 'none', boxShadow: '0 0 14px rgba(91,141,239,0.5)' },
+                      Pulse: { background: 'var(--color-surface-raised, #1a2332)', color: 'var(--color-text, #e0e0e0)', border: '1px solid var(--color-border, #333)' },
                     };
+                    const extraClass = variant === 'Glow' ? 'lab-btn-glow' : variant === 'Pulse' ? 'lab-btn-pulse' : '';
                     return (
                       <button
                         key={variant}
                         type="button"
+                        className={extraClass || undefined}
                         style={{
                           padding: '8px 18px',
                           borderRadius: 'var(--radius-md, 6px)',
@@ -285,6 +303,7 @@ export default function LabPage() {
                           fontFamily: 'inherit',
                           fontSize: 13,
                           fontWeight: 500,
+                          transition: 'all 0.2s',
                           ...styleMap[variant],
                         }}
                       >

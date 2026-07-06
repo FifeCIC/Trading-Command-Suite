@@ -198,4 +198,123 @@ export class FreshnessService {
       ? this.MARKET_HOURS_THRESHOLD_MINUTES
       : this.OFF_HOURS_THRESHOLD_MINUTES;
   }
+
+  // ── Multi-Type Freshness (beyond MarketBar) ────────────────
+
+  /** Thresholds per data type (minutes) */
+  private readonly TYPE_THRESHOLDS: Record<string, number> = {
+    marketBar: 60,
+    earnings: 1440,   // 24h — earnings don't change intraday
+    news: 120,         // 2h — news ages quickly
+    dividends: 1440,   // 24h
+    profile: 10080,    // 7 days — company profiles change rarely
+  };
+
+  /**
+   * Get overall freshness for a symbol across all data types.
+   * Returns the worst status across all types.
+   */
+  async overallFreshness(symbolId: string, ticker?: string): Promise<{
+    symbolId: string;
+    ticker: string | undefined;
+    status: FreshnessStatus;
+    types: Record<string, FreshnessResult>;
+    recommendation: string;
+  }> {
+    const types: Record<string, FreshnessResult> = {};
+
+    // Market bars (1h)
+    types.marketBar = await this.checkOne(symbolId, '1h');
+
+    // Earnings — check if any future earnings exist within threshold
+    types.earnings = await this.checkDataType(
+      symbolId, ticker, 'earnings', this.TYPE_THRESHOLDS.earnings,
+      async () => {
+        if (!this.prisma.isAvailable) return null;
+        const row = await this.prisma.earningsEvent.findFirst({
+          where: { symbol: ticker || symbolId },
+          orderBy: { reportDate: 'desc' },
+          select: { reportDate: true },
+        });
+        return row?.reportDate ?? null;
+      },
+    );
+
+    // News
+    types.news = await this.checkDataType(
+      symbolId, ticker, 'news', this.TYPE_THRESHOLDS.news,
+      async () => {
+        if (!this.prisma.isAvailable) return null;
+        const row = await this.prisma.newsArticle.findFirst({
+          where: { symbol: ticker || symbolId },
+          orderBy: { publishedAt: 'desc' },
+          select: { publishedAt: true },
+        });
+        return row?.publishedAt ?? null;
+      },
+    );
+
+    // Profile
+    types.profile = await this.checkDataType(
+      symbolId, ticker, 'profile', this.TYPE_THRESHOLDS.profile,
+      async () => {
+        if (!this.prisma.isAvailable) return null;
+        const row = await this.prisma.symbol.findUnique({
+          where: { id: symbolId },
+          select: { updatedAt: true },
+        });
+        return row?.updatedAt ?? null;
+      },
+    );
+
+    // Worst status wins
+    const statusOrder: FreshnessStatus[] = ['missing', 'stale', 'fresh'];
+    let worstStatus: FreshnessStatus = 'fresh';
+    const staleTypes: string[] = [];
+
+    for (const [type, result] of Object.entries(types)) {
+      if (result && statusOrder.indexOf(result.status) < statusOrder.indexOf(worstStatus)) {
+        worstStatus = result.status;
+      }
+      if (result && result.status !== 'fresh') {
+        staleTypes.push(type);
+      }
+    }
+
+    let recommendation = 'All data fresh — ready for scoring.';
+    if (worstStatus === 'missing') {
+      recommendation = `Missing data: ${staleTypes.join(', ')}. Run imports to populate.`;
+    } else if (worstStatus === 'stale') {
+      recommendation = `Stale data: ${staleTypes.join(', ')}. Consider refreshing.`;
+    }
+
+    return { symbolId, ticker, status: worstStatus, types, recommendation };
+  }
+
+  /**
+   * Generic freshness check for any data type with a custom fetcher.
+   */
+  private async checkDataType(
+    symbolId: string,
+    ticker: string | undefined,
+    type: string,
+    thresholdMinutes: number,
+    fetcher: () => Promise<Date | null>,
+  ): Promise<FreshnessResult> {
+    try {
+      const latest = await fetcher();
+      if (!latest) {
+        return { symbolId, ticker, timeframe: type, status: 'missing', latestTimestamp: null, ageMinutes: null };
+      }
+      const ageMinutes = (Date.now() - latest.getTime()) / 60000;
+      const status: FreshnessStatus = ageMinutes <= thresholdMinutes ? 'fresh' : 'stale';
+      return {
+        symbolId, ticker, timeframe: type, status,
+        latestTimestamp: latest.toISOString(),
+        ageMinutes: Number(ageMinutes.toFixed(2)),
+      };
+    } catch {
+      return { symbolId, ticker, timeframe: type, status: 'missing', latestTimestamp: null, ageMinutes: null };
+    }
+  }
 }
