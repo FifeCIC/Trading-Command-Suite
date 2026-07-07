@@ -21,8 +21,8 @@
 }
 
 .qt-panel {
-  background: #1a1d2e;
-  border: 1px solid #2d3040;
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 14px;
 }
@@ -30,7 +30,7 @@
 .qt-panel h3 {
   margin: 0 0 12px;
   font-size: 0.9rem;
-  color: #94a3b8;
+  color: var(--color-neutral);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -65,7 +65,7 @@
 .qt-sig-score { width: 35px; text-align: right; font-weight: 600; }
 .qt-bullish { color: #4ade80; }
 .qt-bearish { color: #f87171; }
-.qt-sig-signal { color: #64748b; font-size: 0.7rem; text-transform: uppercase; }
+.qt-sig-signal { color: var(--color-muted); font-size: 0.7rem; text-transform: uppercase; }
 
 /* Chart placeholder */
 .qt-chart-placeholder {
@@ -84,7 +84,7 @@
 .qt-price-label {
   display: block;
   font-size: 0.7rem;
-  color: #64748b;
+  color: var(--color-muted);
 }
 
 .qt-price-value {
@@ -94,7 +94,7 @@
 
 .qt-price-signal {
   font-size: 0.8rem;
-  color: #94a3b8;
+  color: var(--color-neutral);
   text-transform: uppercase;
 }
 
@@ -111,7 +111,7 @@
 .qt-symbol-select label, .qt-amount-select label {
   display: block;
   font-size: 0.7rem;
-  color: #64748b;
+  color: var(--color-muted);
   margin-bottom: 4px;
 }
 
@@ -136,14 +136,14 @@
   border: 1px solid #334155;
   border-radius: 6px;
   background: #0f1117;
-  color: #94a3b8;
+  color: var(--color-neutral);
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
 }
 
 .qt-amount-btn.qt-active {
-  border-color: #3b82f6;
+  border-color: var(--color-accent-blue);
   color: #60a5fa;
   background: #111827;
 }
@@ -160,7 +160,7 @@
   padding: 14px 8px;
   border: none;
   border-radius: 8px;
-  background: #16a34a;
+  background: var(--color-profit);
   color: #fff;
   font-size: 1rem;
   font-weight: 700;
@@ -174,7 +174,7 @@
   padding: 14px 8px;
   border: none;
   border-radius: 8px;
-  background: #dc2626;
+  background: var(--color-loss);
   color: #fff;
   font-size: 1rem;
   font-weight: 700;
@@ -185,7 +185,7 @@
 
 /* Summary */
 .qt-summary {
-  border-top: 1px solid #2d3040;
+  border-top: 1px solid var(--color-border);
   padding-top: 12px;
 }
 
@@ -196,13 +196,13 @@
   padding: 4px 0;
 }
 
-.qt-summary-row span:first-child { color: #64748b; }
+.qt-summary-row span:first-child { color: var(--color-muted); }
 .qt-profit { color: #4ade80; font-weight: 600; }
 .qt-loss { color: #f87171; font-weight: 600; }
 
 /* Positions */
 .qt-positions {
-  border-top: 1px solid #2d3040;
+  border-top: 1px solid var(--color-border);
   padding-top: 10px;
   margin-top: 10px;
 }
@@ -210,7 +210,7 @@
 .qt-positions h4 {
   margin: 0 0 6px;
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--color-muted);
 }
 
 .qt-position-row {
@@ -218,21 +218,21 @@
   gap: 8px;
   font-size: 0.7rem;
   padding: 3px 0;
-  color: #94a3b8;
+  color: var(--color-neutral);
 }
 
 /* Trade log */
 .qt-log {
   margin-top: 16px;
-  background: #1a1d2e;
-  border: 1px solid #2d3040;
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 12px 14px;
 }
 
 .qt-log h4 {
   margin: 0 0 8px;
-  color: #94a3b8;
+  color: var(--color-neutral);
   font-size: 0.8rem;
 }
 
@@ -246,11 +246,11 @@
   gap: 12px;
   padding: 4px 0;
   font-size: 0.75rem;
-  border-bottom: 1px solid #111318;
+  border-bottom: 1px solid var(--color-input-bg);
 }
 
-.qt-log-buy { border-left: 2px solid #16a34a; padding-left: 8px; }
-.qt-log-sell { border-left: 2px solid #dc2626; padding-left: 8px; }
+.qt-log-buy { border-left: 2px solid var(--color-profit); padding-left: 8px; }
+.qt-log-sell { border-left: 2px solid var(--color-loss); padding-left: 8px; }
 
 /* Disclaimer */
 .qt-disclaimer {
@@ -264,5 +264,5 @@
 .qt-disclaimer p {
   margin: 0;
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--color-muted);
 }

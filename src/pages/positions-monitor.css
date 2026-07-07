@@ -17,24 +17,24 @@
   display: flex;
   gap: 4px;
   margin: 16px 0;
-  border-bottom: 1px solid #2d3040;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .pm-tab {
   padding: 8px 18px;
   border: none;
   background: none;
-  color: #64748b;
+  color: var(--color-muted);
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   border-bottom: 2px solid transparent;
 }
 
-.pm-tab:hover { color: #94a3b8; }
+.pm-tab:hover { color: var(--color-neutral); }
 .pm-tab.pm-active {
   color: #e2e8f0;
-  border-bottom-color: #3b82f6;
+  border-bottom-color: var(--color-accent-blue);
 }
 
 /* Source filter */
@@ -44,24 +44,24 @@
   gap: 4px;
   margin-left: auto;
   font-size: 0.78rem;
-  color: #64748b;
+  color: var(--color-muted);
 }
 .pm-source-filter span { margin-right: 4px; }
 .pm-source-chip {
   padding: 4px 12px;
-  border: 1px solid #2d3040;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   background: none;
-  color: #64748b;
+  color: var(--color-muted);
   font-size: 0.78rem;
   cursor: pointer;
   font-family: inherit;
 }
-.pm-source-chip:hover { border-color: #3b82f6; color: #94a3b8; }
+.pm-source-chip:hover { border-color: var(--color-accent-blue); color: var(--color-neutral); }
 .pm-source-chip.pm-active {
   background: rgba(59,130,246,0.15);
-  color: #3b82f6;
-  border-color: #3b82f6;
+  color: var(--color-accent-blue);
+  border-color: var(--color-accent-blue);
 }
 
 /* Source badge on cards */
@@ -82,15 +82,15 @@
 }
 
 .pm-pos-card {
-  background: #1a1d2e;
-  border: 1px solid #2d3040;
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 14px 16px;
 }
 
 /* Win/loss left border */
-.pm-pos-card.pm-win { border-left: 3px solid #22c55e; }
-.pm-pos-card.pm-lose { border-left: 3px solid #ef4444; }
+.pm-pos-card.pm-win { border-left: 3px solid var(--color-profit); }
+.pm-pos-card.pm-lose { border-left: 3px solid var(--color-loss); }
 
 .pm-option { border-left: 3px solid #8b5cf6; }
 
@@ -141,7 +141,7 @@
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
-.pm-price-entry { color: #64748b; }
+.pm-price-entry { color: var(--color-muted); }
 .pm-price-arrow { color: #475569; }
 .pm-price-current { font-weight: 600; }
 
@@ -160,7 +160,7 @@
 
 .pm-pos-details span:first-child {
   font-size: 0.72rem;
-  color: #64748b;
+  color: var(--color-muted);
   text-transform: uppercase;
 }
 
@@ -186,7 +186,7 @@
 .pm-risk-bar {
   position: relative;
   height: 20px;
-  background: #111318;
+  background: var(--color-input-bg);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -222,8 +222,8 @@
   display: flex; gap: 0.4rem; align-items: center; margin-top: 0.5rem; flex-wrap: wrap;
 }
 .pm-close-btn {
-  padding: 0.35rem 0.8rem; border: 1px solid #ef4444; border-radius: 5px;
-  background: rgba(239,68,68,0.1); color: #ef4444; cursor: pointer;
+  padding: 0.35rem 0.8rem; border: 1px solid var(--color-loss); border-radius: 5px;
+  background: rgba(239,68,68,0.1); color: var(--color-loss); cursor: pointer;
   font-family: inherit; font-size: 0.8rem; font-weight: 600;
   transition: background 0.15s;
 }
@@ -245,8 +245,8 @@
   gap: 12px;
   padding: 12px 16px;
   margin-bottom: 16px;
-  background: linear-gradient(135deg, #1a1d2e, #1e2139);
-  border: 1px solid #2d3040;
+  background: linear-gradient(135deg, var(--color-panel), #1e2139);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
 }
 
@@ -259,7 +259,7 @@
 
 .pm-summary-label {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--color-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -277,7 +277,7 @@
   gap: 4px;
   margin-left: 12px;
   font-size: 0.78rem;
-  color: #64748b;
+  color: var(--color-muted);
 }
 
 /* Data freshness */

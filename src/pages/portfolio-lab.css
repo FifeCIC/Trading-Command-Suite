@@ -34,8 +34,8 @@
   color: var(--text-secondary, #999);
 }
 
-.plab-stat.positive { color: #22c55e; }
-.plab-stat.negative { color: #ef4444; }
+.plab-stat.positive { color: var(--color-profit); }
+.plab-stat.negative { color: var(--color-loss); }
 
 .plab-analyze-btn {
   margin-left: auto;
@@ -110,8 +110,8 @@
 }
 
 .plab-pos-pnl { font-weight: 600; }
-.plab-pos-pnl.positive { color: #22c55e; }
-.plab-pos-pnl.negative { color: #ef4444; }
+.plab-pos-pnl.positive { color: var(--color-profit); }
+.plab-pos-pnl.negative { color: var(--color-loss); }
 
 .plab-pos-rec {
   font-size: 12px;
@@ -248,9 +248,9 @@
   margin-bottom: 10px;
 }
 
-.plab-scenario-card.risk-low { border-left: 3px solid #22c55e; }
-.plab-scenario-card.risk-medium { border-left: 3px solid #f59e0b; }
-.plab-scenario-card.risk-high { border-left: 3px solid #ef4444; }
+.plab-scenario-card.risk-low { border-left: 3px solid var(--color-profit); }
+.plab-scenario-card.risk-medium { border-left: 3px solid var(--color-warning); }
+.plab-scenario-card.risk-high { border-left: 3px solid var(--color-loss); }
 
 .plab-scenario-name {
   font-weight: 700;
@@ -276,7 +276,7 @@
 .plab-scenario-return {
   font-size: 12px;
   font-weight: 600;
-  color: #22c55e;
+  color: var(--color-profit);
   margin-bottom: 4px;
 }
 
@@ -307,9 +307,9 @@
   text-align: center;
 }
 
-.action-sell .plab-action-type { background: rgba(239,68,68,0.15); color: #ef4444; }
-.action-buy .plab-action-type { background: rgba(34,197,94,0.15); color: #22c55e; }
-.action-average_down .plab-action-type { background: rgba(59,130,246,0.15); color: #3b82f6; }
+.action-sell .plab-action-type { background: rgba(239,68,68,0.15); color: var(--color-loss); }
+.action-buy .plab-action-type { background: rgba(34,197,94,0.15); color: var(--color-profit); }
+.action-average_down .plab-action-type { background: rgba(59,130,246,0.15); color: var(--color-accent-blue); }
 .action-hold .plab-action-type { background: rgba(161,161,170,0.15); color: #a1a1aa; }
 
 .plab-action-symbol { font-weight: 600; }
@@ -333,4 +333,4 @@
   font-size: 14px;
   color: var(--text-secondary, #888);
 }
-.plab-error { color: #ef4444; }
+.plab-error { color: var(--color-loss); }

@@ -24,14 +24,14 @@
 .so-table-style-picker:focus { outline: none; border-color: var(--accent); }
 
 .so-freshness-btn {
-  padding: 4px 10px; border: 1px solid #f59e0b; border-radius: 6px;
+  padding: 4px 10px; border: 1px solid var(--color-warning); border-radius: 6px;
   background: rgba(245,158,11,0.08); color: #d97706;
   font-size: 0.72rem; font-family: inherit; cursor: pointer; flex-shrink: 0;
   font-weight: 600;
 }
 .so-freshness-btn:hover { background: rgba(245,158,11,0.15); }
 .so-freshness-ok {
-  font-size: 0.72rem; color: #22c55e; font-weight: 600; flex-shrink: 0;
+  font-size: 0.72rem; color: var(--color-profit); font-weight: 600; flex-shrink: 0;
 }
 
 /* ── Table Style Variants ── */
@@ -176,9 +176,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-.so-bucket--low { background: #6b7280; }
-.so-bucket--watch { background: #f59e0b; }
-.so-bucket--mid { background: #3b82f6; }
+.so-bucket--low { background: var(--color-text-dim); }
+.so-bucket--watch { background: var(--color-warning); }
+.so-bucket--mid { background: var(--color-accent-blue); }
 .so-bucket--entry { background: #10b981; }
 .so-bucket--strong { background: #8b5cf6; }
 
@@ -215,8 +215,8 @@
 .so-freshness--fresh .so-freshness-count { color: #00a63e; }
 .so-freshness--stale { border-color: #e6a70040; }
 .so-freshness--stale .so-freshness-count { color: #d4a200; }
-.so-freshness--missing { border-color: #ef444440; }
-.so-freshness--missing .so-freshness-count { color: #ef4444; }
+.so-freshness--missing { border-color: rgba(239,68,68,0.25); }
+.so-freshness--missing .so-freshness-count { color: var(--color-loss); }
 .so-freshness--deterministic { border-color: #8b5cf640; }
 .so-freshness--deterministic .so-freshness-count { color: #8b5cf6; }
 
@@ -260,9 +260,9 @@
 }
 
 .so-signal--entry { border-color: #10b981; color: #10b981; }
-.so-signal--watch { border-color: #f59e0b; color: #f59e0b; }
-.so-signal--defensive { border-color: #ef4444; color: #ef4444; }
-.so-signal--unknown { border-color: #6b7280; color: #6b7280; }
+.so-signal--watch { border-color: var(--color-warning); color: var(--color-warning); }
+.so-signal--defensive { border-color: var(--color-loss); color: var(--color-loss); }
+.so-signal--unknown { border-color: var(--color-text-dim); color: var(--color-text-dim); }
 
 /* ---- Strategy panel ---- */
 .so-strategy-panel {
@@ -348,16 +348,16 @@
 
 /* ---- Error ---- */
 .so-error-card {
-  border: 1px solid #ef444440;
+  border: 1px solid rgba(239,68,68,0.25);
   border-radius: 12px;
   padding: 1.5rem;
   text-align: center;
-  background: #ef444408;
+  background: rgba(239,68,68,0.03);
 }
 
 .so-error-msg {
   margin: 0;
-  color: #ef4444;
+  color: var(--color-loss);
   font-weight: 600;
 }
 
@@ -491,7 +491,7 @@
 .los-select:focus { border-color: var(--accent, #0ea5a6); outline: none; }
 .los-auto-btn {
   background: var(--panel, #1e293b);
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--color-neutral));
   border: 1px solid var(--line, #334155);
   border-radius: 8px;
   padding: 0.45rem 0.75rem;
@@ -502,16 +502,16 @@
   font-weight: 600;
   letter-spacing: 0.03em;
 }
-.los-auto-btn.active { background: #16a34a; color: #fff; border-color: #16a34a; }
+.los-auto-btn.active { background: var(--color-profit); color: #fff; border-color: var(--color-profit); }
 .los-stack-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
 .los-stack-header h2 { margin: 0; }
 .los-live-badge {
-  font-size: 0.6rem; background: #16a34a; color: #fff;
+  font-size: 0.6rem; background: var(--color-profit); color: #fff;
   padding: 2px 8px; border-radius: 10px; font-weight: 700;
   letter-spacing: 0.08em; animation: los-pulse 1.5s ease-in-out infinite;
 }
 .los-paused-badge {
-  font-size: 0.6rem; background: #64748b; color: #fff;
+  font-size: 0.6rem; background: var(--color-muted); color: #fff;
   padding: 2px 8px; border-radius: 10px; font-weight: 700;
   letter-spacing: 0.08em;
 }
@@ -526,13 +526,13 @@
   border-radius: 8px;
   background: rgba(245,158,11,0.08);
   border: 1px solid rgba(245,158,11,0.25);
-  color: #f59e0b;
+  color: var(--color-warning);
   font-size: 0.82rem;
 }
 .so-degradation-icon { font-size: 1.3rem; flex-shrink: 0; }
-.so-degradation-body strong { display: block; margin-bottom: 0.15rem; color: #f59e0b; }
+.so-degradation-body strong { display: block; margin-bottom: 0.15rem; color: var(--color-warning); }
 .so-degradation-body p { margin: 0.1rem 0; }
-.so-degradation-detail { font-size: 0.75rem; color: #f59e0bcc; }
+.so-degradation-detail { font-size: 0.75rem; color: var(--color-warning)cc; }
 .so-degradation-coverage { font-size: 0.82rem; font-weight: 600; margin-top: 0.3rem; color: #d97706; }
 
 /* ── Degradation Row Indicators ── */
@@ -541,7 +541,7 @@
   display: inline-block;
   margin-left: 4px;
   font-size: 0.8rem;
-  color: #f59e0b;
+  color: var(--color-warning);
   cursor: help;
   vertical-align: middle;
 }

@@ -474,7 +474,11 @@ export class TradingStrategyService {
       const positions = await this.mt5.getPositions().catch(() => []);
       const account = await this.mt5.getAccount().catch(() => null);
       const portfolioValue = account?.equity ?? account?.balance ?? 10_000;
-      const estimatedCapital = size * 100_000; // Rough forex estimate: 1 lot ≈ $100k notional
+      // Use actual margin impact instead of notional (0.01 lot at 1:30 = ~$33, not $1,000)
+      const leverage = account?.margin && account?.balance
+        ? account.balance / account.margin
+        : 30;
+      const estimatedCapital = (size * 100_000) / Math.max(leverage, 1); // Margin used, not notional
 
       const riskProfile = {
         maxPortfolioRisk: 0.15,

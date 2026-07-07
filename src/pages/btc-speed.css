@@ -24,7 +24,7 @@
 
 .btc-lockout-box {
   text-align: center;
-  color: #ef4444;
+  color: var(--color-loss);
 }
 
 .btc-lockout-box h1 { font-size: 2.5rem; margin: 0; }
@@ -34,7 +34,7 @@
   text-align: center;
   padding: 6px;
   background: rgba(245, 158, 11, 0.15);
-  color: #f59e0b;
+  color: var(--color-warning);
   font-size: 0.78rem;
   font-weight: 600;
   border-radius: 6px;
@@ -151,7 +151,7 @@
 .btc-buy.flash { box-shadow: 0 0 24px rgba(16, 185, 129, 0.7); }
 
 .btc-sell {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: linear-gradient(135deg, var(--color-loss), var(--color-loss));
   color: #fff;
 }
 
@@ -179,8 +179,8 @@
 
 .btc-meta-btn:hover { border-color: var(--accent); color: var(--text); }
 .btc-meta-btn.recording {
-  border-color: #ef4444;
-  color: #ef4444;
+  border-color: var(--color-loss);
+  color: var(--color-loss);
   animation: btc-pulse 1.5s infinite;
 }
 
@@ -227,9 +227,9 @@
 }
 
 .btc-price-mid.up { color: #10b981; }
-.btc-price-mid.down { color: #ef4444; }
+.btc-price-mid.down { color: var(--color-loss); }
 
-.btc-price-bid { font-size: 0.72rem; color: #ef4444; }
+.btc-price-bid { font-size: 0.72rem; color: var(--color-loss); }
 .btc-price-ask { font-size: 0.72rem; color: #10b981; }
 .btc-price-spread { font-size: 0.68rem; color: var(--text-muted); }
 
@@ -301,12 +301,12 @@
 .btc-scan-symbol { font-weight: 600; color: var(--text-strong); min-width: 70px; }
 .btc-scan-score { font-weight: 700; font-size: 0.85rem; }
 .btc-scan-score.strong { color: #10b981; }
-.btc-scan-score.weak { color: #ef4444; }
+.btc-scan-score.weak { color: var(--color-loss); }
 .btc-scan-signal { font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 3px; }
 .btc-scan-signal.buy { background: rgba(16,185,129,0.15); color: #10b981; }
-.btc-scan-signal.sell { background: rgba(239,68,68,0.15); color: #ef4444; }
-.btc-scan-signal.hold { background: rgba(100,116,139,0.15); color: #94a3b8; }
-.btc-scan-error { color: #ef4444; font-size: 0.75rem; padding: 4px; }
+.btc-scan-signal.sell { background: rgba(239,68,68,0.15); color: var(--color-loss); }
+.btc-scan-signal.hold { background: rgba(100,116,139,0.15); color: var(--color-neutral); }
+.btc-scan-error { color: var(--color-loss); font-size: 0.75rem; padding: 4px; }
 .btc-scan-empty { color: var(--text-muted); font-size: 0.75rem; padding: 4px; }
 
 /* ── Action Log ──────────────────────────────────────── */

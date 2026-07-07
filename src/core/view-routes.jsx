@@ -131,6 +131,7 @@ import ThemeLabScroll from '../pages/ThemeLabScroll.jsx';
 import ThemeLabPopover from '../pages/ThemeLabPopover.jsx';
 import LabLandingPage from '../pages/LabLandingPage.jsx';
 import LabPage from '../pages/LabPage.jsx';
+import PipelineGraphLabPage from '../pages/PipelineGraphLabPage.jsx';
 import FeatureLabPage from '../pages/FeatureLabPage.jsx';
 import PreferenceLab from '../pages/PreferenceLab.jsx';
 import PerformanceLabPage from '../pages/PerformanceLabPage.jsx';
@@ -278,6 +279,7 @@ export const VIEW_COMPONENTS = {
   'theme-lab-scroll': ThemeLabScroll,
   'theme-lab-popover': ThemeLabPopover,
   'lab-landing': LabLandingPage,
+  'pipeline-graph-lab': PipelineGraphLabPage,
   'lab': LabPage,
   'feature-lab': FeatureLabPage,
   'preference-lab': PreferenceLab,

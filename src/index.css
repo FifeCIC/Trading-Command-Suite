@@ -16,37 +16,32 @@
 }
 
 :root {
-  --bg: #f4f7fb;
-  --ink: #0f172a;
-  --ink-soft: #334155;
-  --panel: #ffffff;
-  --line: #d9e2ec;
-  --accent: #0ea5a6;
-  --danger: #dc2626;
-  --shadow-card: 0 10px 24px rgba(15, 23, 42, 0.08);
-  --font-body: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  /* Notice banners — replaces WordPress .notice-success/.notice-warning/.notice-error */
-  --notice-success-bg: rgba(34,197,94,0.08);
-  --notice-success-border: rgba(34,197,94,0.2);
-  --notice-success-text: #16a34a;
-  --notice-warning-bg: rgba(245,158,11,0.08);
-  --notice-warning-border: rgba(245,158,11,0.2);
-  --notice-warning-text: #d97706;
-  --notice-critical-bg: rgba(239,68,68,0.08);
-  --notice-critical-border: rgba(239,68,68,0.2);
-  --notice-critical-text: #dc2626;
-  --notice-info-bg: rgba(59,130,246,0.08);
-  --notice-info-border: rgba(59,130,246,0.2);
-  --notice-info-text: #2563eb;
-}
-
-:root[data-bg-tone='black'] {
   --bg: #000000;
-  --panel: #000000;
-  --line: #1a1a1a;
   --ink: #e5e7eb;
   --ink-soft: #94a3b8;
+  --panel: #000000;
+  --line: #1a1a1a;
+  --accent: #0ea5a6;
+  --danger: #ef4444;
   --shadow-card: 0 12px 28px rgba(0, 0, 0, 0.65);
+  --font-body: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+  /* ── Semantic color tokens (#252) ── */
+  --color-profit: #22c55e;
+  --color-loss: #ef4444;
+  --color-buy: #22c55e;
+  --color-sell: #ef4444;
+  --color-accent-blue: #3b82f6;
+  --color-warning: #f59e0b;
+  --color-neutral: #94a3b8;
+  --color-muted: #64748b;
+  --color-text-dim: #6b7280;
+  --color-panel: #1a1d2e;
+  --color-border: #2d3040;
+  --color-grid: #1e2030;
+  --color-input-bg: #111318;
+
+  /* Notice banners */
   --notice-success-bg: rgba(34,197,94,0.06);
   --notice-success-border: rgba(34,197,94,0.15);
   --notice-success-text: #22c55e;
@@ -59,6 +54,15 @@
   --notice-info-bg: rgba(59,130,246,0.06);
   --notice-info-border: rgba(59,130,246,0.15);
   --notice-info-text: #60a5fa;
+}
+
+/* Legacy: data-bg-tone='black' is now the default — this block is a no-op keepalive */
+:root[data-bg-tone='black'] {
+  --bg: #000000;
+  --panel: #000000;
+  --line: #1a1a1a;
+  --ink: #e5e7eb;
+  --ink-soft: #94a3b8;
 }
 
 * {
@@ -166,23 +170,14 @@ body {
 }
 
 :root[data-bg-tone='black'] body {
-  background: #000000;
+  /* black is now the :root default — transparent override */
 }
 
-:root[data-bg-tone='black'] button {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  color: var(--ink);
-}
-
+/* All data-bg-tone scoped selectors are now transparent since black=default */
+:root[data-bg-tone='black'] button,
 :root[data-bg-tone='black'] .cta,
 :root[data-bg-tone='black'] .nav-active,
-:root[data-bg-tone='black'] button.nav-active {
-  background: var(--accent);
-  border-color: transparent;
-  color: #fff;
-}
-
+:root[data-bg-tone='black'] button.nav-active,
 :root[data-bg-tone='black'] .topbar,
 :root[data-bg-tone='black'] .main-stage,
 :root[data-bg-tone='black'] .left-rail,
@@ -192,6 +187,32 @@ body {
 :root[data-bg-tone='black'] .demo-panel,
 :root[data-bg-tone='black'] .app-footer-nav,
 :root[data-bg-tone='black'] .footer-panel {
+  /* black is now the :root default — these are transparent */
+}
+
+button {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.cta,
+.nav-active,
+button.nav-active {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+}
+
+.topbar,
+.main-stage,
+.left-rail,
+.right-rail,
+.content-card,
+.intro-panel,
+.demo-panel,
+.app-footer-nav,
+.footer-panel {
   background: var(--panel);
 }
 

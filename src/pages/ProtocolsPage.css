@@ -393,11 +393,6 @@
 .protocols-directive.variable-max {
   border-color: #8b5cf640;
 }
-  line-height: 1.8;
-  color: var(--text-primary, #e2e8f0);
-  overflow-x: auto;
-  max-width: 600px;
-}
 
 /* ── States ── */
 

@@ -17,8 +17,8 @@
 /* Stats */
 .ps-stats { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; font-size: 0.78rem; }
 .ps-stat { color: var(--ink-soft); }
-.ps-stat-bull { color: #22c55e; }
-.ps-stat-bear { color: #ef4444; }
+.ps-stat-bull { color: var(--color-profit); }
+.ps-stat-bear { color: var(--color-loss); }
 .ps-filter { display: flex; gap: 0.25rem; margin-left: auto; }
 .ps-filter button { padding: 0.2rem 0.5rem; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--ink-soft); cursor: pointer; font-family: inherit; font-size: 0.65rem; font-weight: 600; }
 .ps-filter button.active { border-color: var(--accent); color: var(--accent); background: rgba(14,165,166,0.08); }
@@ -37,9 +37,9 @@
 .ps-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
 .ps-card-name { font-size: 0.82rem; font-weight: 600; color: var(--ink); text-transform: capitalize; }
 .ps-card-type { font-size: 0.55rem; font-weight: 700; text-transform: uppercase; padding: 0.1rem 0.35rem; border-radius: 999px; }
-.ps-card-type.bullish { background: rgba(34,197,94,0.1); color: #22c55e; }
-.ps-card-type.bearish { background: rgba(239,68,68,0.1); color: #ef4444; }
-.ps-card-type.neutral { background: rgba(148,163,184,0.1); color: #94a3b8; }
+.ps-card-type.bullish { background: rgba(34,197,94,0.1); color: var(--color-profit); }
+.ps-card-type.bearish { background: rgba(239,68,68,0.1); color: var(--color-loss); }
+.ps-card-type.neutral { background: rgba(148,163,184,0.1); color: var(--color-neutral); }
 .ps-mini-candle { display: flex; justify-content: center; margin: 0.3rem 0; }
 .ps-card-footer { display: flex; align-items: center; gap: 0.4rem; }
 .ps-card-bar { font-size: 0.62rem; color: var(--ink-soft); font-family: monospace; }
@@ -65,7 +65,7 @@
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--line, #1e2a45);
   border-radius: 6px;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--color-neutral));
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -95,7 +95,7 @@
 }
 
 .ps-hint {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--color-neutral));
   font-size: 0.8rem;
   margin: 0 0 0.75rem;
 }
@@ -106,7 +106,7 @@
   background: rgba(255,255,255,0.06);
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--color-neutral));
 }
 
 /* ── Chart pattern grid ───────────────────────────────────── */
@@ -161,9 +161,9 @@
   white-space: nowrap;
 }
 
-.ps-bullish { background: rgba(34,197,94,0.18); color: #22c55e; }
-.ps-bearish { background: rgba(239,68,68,0.18); color: #ef4444; }
-.ps-neutral  { background: rgba(245,158,11,0.18); color: #f59e0b; }
+.ps-bullish { background: rgba(34,197,94,0.18); color: var(--color-profit); }
+.ps-bearish { background: rgba(239,68,68,0.18); color: var(--color-loss); }
+.ps-neutral  { background: rgba(245,158,11,0.18); color: var(--color-warning); }
 
 .ps-type-sm { font-size: 0.58rem; padding: 0.08rem 0.35rem; }
 
@@ -182,9 +182,9 @@
   flex-shrink: 0;
 }
 
-.ps-conf-high { color: #22c55e; }
-.ps-conf-mid  { color: #f59e0b; }
-.ps-conf-low  { color: #ef4444; }
+.ps-conf-high { color: var(--color-profit); }
+.ps-conf-mid  { color: var(--color-warning); }
+.ps-conf-low  { color: var(--color-loss); }
 
 /* ── Sparkline ────────────────────────────────────────────── */
 .ps-sparkline {
@@ -209,12 +209,12 @@
   padding: 0.1rem 0.4rem;
   border-radius: 999px;
   background: rgba(255,255,255,0.06);
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--color-neutral));
 }
 
 .ps-reliability, .ps-bar-loc {
   font-size: 0.65rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--color-neutral));
 }
 
 /* ── Expanded body ────────────────────────────────────────── */
@@ -226,7 +226,7 @@
 
 .ps-desc {
   font-size: 0.78rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--color-neutral));
   margin: 0 0 0.5rem;
   line-height: 1.5;
 }
@@ -307,7 +307,7 @@
   padding: 0.08rem 0.35rem;
   border-radius: 999px;
   background: rgba(34,197,94,0.2);
-  color: #22c55e;
+  color: var(--color-profit);
   letter-spacing: 0.04em;
 }
 

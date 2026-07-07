@@ -166,6 +166,7 @@ export const NAV_TREE = {
     views: [
       { id: 'lab', label: 'Lab Sandbox', icon: '🔬' },
       { id: 'lab-landing', label: 'Lab Overview', icon: '🔬' },
+      { id: 'pipeline-graph-lab', label: 'Pipeline Graph (Prototype)', icon: '🗺️' },
       { id: 'feature-lab', label: 'Feature Lab', icon: '🔬' },
       { id: 'theme-lab', label: 'Theme Lab', icon: '🎨' },
       { id: 'theme-lab-motion', label: 'Motion Lab', icon: '◆' },

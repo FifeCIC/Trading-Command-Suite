@@ -73,9 +73,9 @@
 /* Input styles for User Preferences */
 .settings-input {
   padding: 0.35rem 0.5rem;
-  border: 1px solid var(--line, #2d3040);
+  border: 1px solid var(--line, var(--color-border));
   border-radius: 6px;
-  background: var(--panel, #1a1d2e);
+  background: var(--panel, var(--color-panel));
   color: var(--ink, #e2e8f0);
   font-family: inherit;
   font-size: 0.78rem;

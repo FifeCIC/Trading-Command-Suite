@@ -23,13 +23,13 @@
 .sc-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid rgba(128,128,128,0.05); white-space: nowrap; }
 .sc-row-best { background: rgba(34,197,94,0.03); }
 .sc-table tbody tr:hover { background: rgba(14,165,166,0.04); }
-.sc-up { color: #22c55e; }
-.sc-down { color: #ef4444; }
+.sc-up { color: var(--color-profit); }
+.sc-down { color: var(--color-loss); }
 
 /* PnL Badge */
 .sc-pnl-badge { font-weight: 700; font-size: 0.72rem; font-variant-numeric: tabular-nums; }
-.sc-pnl-up { color: #22c55e; }
-.sc-pnl-down { color: #ef4444; }
+.sc-pnl-up { color: var(--color-profit); }
+.sc-pnl-down { color: var(--color-loss); }
 
 /* Best/Worst */
 .sc-best-worst { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem; }
@@ -55,8 +55,8 @@
 .sc-live-pos { display: flex; align-items: center; gap: 0.4rem; font-size: 0.68rem; padding: 0.12rem 0; }
 .sc-lp-symbol { font-weight: 600; min-width: 60px; }
 .sc-lp-side { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
-.sc-buy { color: #22c55e; }
-.sc-sell { color: #ef4444; }
+.sc-buy { color: var(--color-profit); }
+.sc-sell { color: var(--color-loss); }
 .sc-lp-qty { color: var(--ink-soft); }
 .sc-lp-entry { font-family: monospace; font-size: 0.62rem; color: var(--ink-soft); }
 

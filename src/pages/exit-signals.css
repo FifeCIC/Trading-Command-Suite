@@ -30,9 +30,9 @@
 .es-metric-value { font-size: 0.78rem; font-weight: 700; }
 .es-action {
   font-size: 0.7rem; padding: 0.35rem 0.5rem; border-radius: 4px;
-  background: rgba(239,68,68,0.08); color: #ef4444;
+  background: rgba(239,68,68,0.08); color: var(--color-loss);
 }
-.es-action-hold { background: rgba(34,197,94,0.08); color: #22c55e; }
+.es-action-hold { background: rgba(34,197,94,0.08); color: var(--color-profit); }
 
 .es-legend {
   display: flex; gap: 1.25rem; flex-wrap: wrap; margin-top: 1rem;

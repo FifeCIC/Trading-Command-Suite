@@ -1,6 +1,5 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { DevtoolsModule } from '@nestjs/devtools-integration';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { QueueModule } from './queue/queue.module';
@@ -57,9 +56,6 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
-    }),
-    DevtoolsModule.register({
-      http: false, // Disabled — port 8000 conflicts with other services
     }),
     QueueModule.forRoot(),
     AuthModule,

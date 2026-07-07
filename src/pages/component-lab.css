@@ -19,7 +19,7 @@
 }
 
 .cl-subtitle {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--color-neutral));
   font-size: 0.88rem;
   margin: 0 0 0.6rem;
   line-height: 1.5;
@@ -46,18 +46,18 @@
   border: 1px solid var(--line, #1e2a45); border-radius: 8px;
 }
 .cl-scale-label {
-  font-size: 0.7rem; color: var(--ink-soft, #64748b);
+  font-size: 0.7rem; color: var(--ink-soft, var(--color-muted));
   text-transform: uppercase; margin-right: 4px;
 }
 .cl-scale-btn {
   padding: 3px 12px; border: 1px solid var(--line, #1e2a45);
-  border-radius: 5px; background: none; color: var(--ink-soft, #94a3b8);
+  border-radius: 5px; background: none; color: var(--ink-soft, var(--color-neutral));
   font-size: 0.72rem; cursor: pointer; font-family: inherit; transition: all 0.15s;
 }
-.cl-scale-btn:hover { border-color: var(--accent, #3b82f6); color: var(--ink, #e2e8f0); }
+.cl-scale-btn:hover { border-color: var(--accent, var(--color-accent-blue)); color: var(--ink, #e2e8f0); }
 .cl-scale-btn.active {
-  background: rgba(59,130,246,0.15); color: var(--accent, #3b82f6);
-  border-color: var(--accent, #3b82f6);
+  background: rgba(59,130,246,0.15); color: var(--accent, var(--color-accent-blue));
+  border-color: var(--accent, var(--color-accent-blue));
 }
 
 /* Toggle button */
@@ -74,7 +74,7 @@
 }
 
 .cl-hint {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--color-neutral));
   font-size: 0.82rem;
   margin: 0 0 0.75rem;
   line-height: 1.5;
@@ -94,7 +94,7 @@
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--line, #1e2a45);
   border-radius: 6px;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--color-neutral));
   cursor: pointer;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
@@ -129,7 +129,7 @@
   margin: 0;
   font-size: 0.7rem;
   line-height: 1.45;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--color-neutral));
   background: rgba(0, 0, 0, 0.25);
   padding: 0.5rem 0.65rem;
   border-radius: 6px;
@@ -148,7 +148,7 @@
 .cl-ticker-table th {
   text-align: left;
   font-weight: 500;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--color-neutral));
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -181,15 +181,15 @@
 }
 
 .cl-up {
-  color: #22c55e !important;
+  color: var(--color-profit) !important;
 }
 
 .cl-down {
-  color: #ef4444 !important;
+  color: var(--color-loss) !important;
 }
 
 .cl-muted {
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--color-neutral));
 }
 
 .cl-hide-sm {
@@ -244,29 +244,29 @@
 
 .cl-action-buy {
   background: rgba(34, 197, 94, 0.18);
-  color: #22c55e;
+  color: var(--color-profit);
 }
 
 .cl-action-sell {
   background: rgba(239, 68, 68, 0.18);
-  color: #ef4444;
+  color: var(--color-loss);
 }
 
 .cl-action-hold {
   background: rgba(245, 158, 11, 0.18);
-  color: #f59e0b;
+  color: var(--color-warning);
 }
 
 .cl-confidence {
   margin-left: auto;
   font-size: 0.72rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--color-neutral));
 }
 
 .cl-signal-reason {
   margin: 0.35rem 0 0;
   font-size: 0.74rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--color-neutral));
   line-height: 1.4;
 }
 
@@ -286,7 +286,7 @@
 
 .cl-risk-label {
   font-size: 0.68rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft, var(--color-neutral));
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
@@ -305,15 +305,15 @@
 }
 
 .cl-risk-low {
-  background: #22c55e;
+  background: var(--color-profit);
 }
 
 .cl-risk-mid {
-  background: #f59e0b;
+  background: var(--color-warning);
 }
 
 .cl-risk-high {
-  background: #ef4444;
+  background: var(--color-loss);
 }
 
 /* ── System health ────────────────────────────────────────── */
@@ -338,12 +338,12 @@
 }
 
 .cl-health-ok {
-  background: #22c55e;
+  background: var(--color-profit);
   box-shadow: 0 0 6px rgba(34, 197, 94, 0.35);
 }
 
 .cl-health-fail {
-  background: #ef4444;
+  background: var(--color-loss);
   box-shadow: 0 0 6px rgba(239, 68, 68, 0.35);
 }
 

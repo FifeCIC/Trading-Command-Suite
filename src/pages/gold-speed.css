@@ -14,11 +14,11 @@
   position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000;
   display: flex; align-items: center; justify-content: center;
 }
-.gold-lockout-box { text-align: center; color: #ef4444; }
+.gold-lockout-box { text-align: center; color: var(--color-loss); }
 .gold-lockout-box h1 { font-size: 2.5rem; margin: 0; }
 .gold-pause {
   text-align: center; padding: 6px; background: rgba(245,158,11,0.15);
-  color: #f59e0b; font-size: 0.78rem; font-weight: 600; border-radius: 6px; margin-bottom: 12px;
+  color: var(--color-warning); font-size: 0.78rem; font-weight: 600; border-radius: 6px; margin-bottom: 12px;
 }
 
 /* ── Header ──────────────────────────────────────────── */
@@ -28,7 +28,7 @@
 }
 .gold-header-left { display: flex; align-items: center; gap: 12px; }
 .gold-title {
-  font-size: 1.2rem; font-weight: 700; color: #f59e0b; margin: 0;
+  font-size: 1.2rem; font-weight: 700; color: var(--color-warning); margin: 0;
   display: flex; align-items: center; gap: 8px;
 }
 .gold-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #475569; }
@@ -41,8 +41,8 @@
   background: var(--bg-card); color: var(--text-muted); font-size: 0.72rem;
   font-weight: 600; cursor: pointer;
 }
-.gold-tf-btn:hover { border-color: #f59e0b; color: var(--text); }
-.gold-tf-btn.active { background: #f59e0b; color: #000; border-color: #f59e0b; }
+.gold-tf-btn:hover { border-color: var(--color-warning); color: var(--text); }
+.gold-tf-btn.active { background: var(--color-warning); color: #000; border-color: var(--color-warning); }
 
 .gold-header-center { display: flex; align-items: center; gap: 8px; }
 .gold-size-label { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
@@ -53,17 +53,17 @@
 .gold-buy { background: linear-gradient(135deg,#10b981,#059669); color: #fff; }
 .gold-buy:hover { box-shadow: 0 0 12px rgba(16,185,129,0.4); }
 .gold-buy.flash { box-shadow: 0 0 24px rgba(16,185,129,0.7); }
-.gold-sell { background: linear-gradient(135deg,#ef4444,#dc2626); color: #fff; }
+.gold-sell { background: linear-gradient(135deg,var(--color-loss),var(--color-loss)); color: #fff; }
 .gold-sell:hover { box-shadow: 0 0 12px rgba(239,68,68,0.4); }
 .gold-sell.flash { box-shadow: 0 0 24px rgba(239,68,68,0.7); }
 
 .gold-header-right { display: flex; align-items: center; gap: 8px; }
 .gold-meta-btn { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted); font-size: 0.72rem; cursor: pointer; }
-.gold-meta-btn:hover { border-color: #f59e0b; }
-.gold-meta-btn.recording { border-color: #ef4444; color: #ef4444; animation: gold-pulse 1.5s infinite; }
+.gold-meta-btn:hover { border-color: var(--color-warning); }
+.gold-meta-btn.recording { border-color: var(--color-loss); color: var(--color-loss); animation: gold-pulse 1.5s infinite; }
 .gold-chart-toggle { display: flex; gap: 2px; }
 .gold-chart-btn { padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-card); font-size: 0.75rem; cursor: pointer; }
-.gold-chart-btn.active { background: #f59e0b; border-color: #f59e0b; }
+.gold-chart-btn.active { background: var(--color-warning); border-color: var(--color-warning); }
 
 /* ── Price Strip ─────────────────────────────────────── */
 .gold-price-strip {
@@ -71,11 +71,11 @@
   background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
   margin-bottom: 12px; font-variant-numeric: tabular-nums;
 }
-.gold-price-symbol { font-weight: 700; font-size: 0.85rem; color: #f59e0b; }
+.gold-price-symbol { font-weight: 700; font-size: 0.85rem; color: var(--color-warning); }
 .gold-price-mid { font-size: 1.3rem; font-weight: 700; color: var(--text-strong); }
 .gold-price-mid.up { color: #10b981; }
-.gold-price-mid.down { color: #ef4444; }
-.gold-price-bid { font-size: 0.72rem; color: #ef4444; }
+.gold-price-mid.down { color: var(--color-loss); }
+.gold-price-bid { font-size: 0.72rem; color: var(--color-loss); }
 .gold-price-ask { font-size: 0.72rem; color: #10b981; }
 .gold-sparkline { width: 80px; height: 20px; margin-left: auto; }
 
@@ -95,12 +95,12 @@
 .gold-scan-symbol { font-weight: 600; color: var(--text-strong); min-width: 70px; }
 .gold-scan-score { font-weight: 700; font-size: 0.85rem; }
 .gold-scan-score.strong { color: #10b981; }
-.gold-scan-score.weak { color: #ef4444; }
+.gold-scan-score.weak { color: var(--color-loss); }
 .gold-scan-signal { font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 3px; }
 .gold-scan-signal.buy { background: rgba(16,185,129,0.15); color: #10b981; }
-.gold-scan-signal.sell { background: rgba(239,68,68,0.15); color: #ef4444; }
-.gold-scan-signal.hold { background: rgba(100,116,139,0.15); color: #94a3b8; }
-.gold-scan-error { color: #ef4444; font-size: 0.75rem; padding: 4px; }
+.gold-scan-signal.sell { background: rgba(239,68,68,0.15); color: var(--color-loss); }
+.gold-scan-signal.hold { background: rgba(100,116,139,0.15); color: var(--color-neutral); }
+.gold-scan-error { color: var(--color-loss); font-size: 0.75rem; padding: 4px; }
 
 /* ── Log ─────────────────────────────────────────────── */
 .gold-log { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; max-height: 200px; }

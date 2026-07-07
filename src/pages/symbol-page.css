@@ -9,8 +9,8 @@
 .sym-header-right { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
 .sym-price { font-size: 1.35rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .sym-change { font-size: 0.85rem; font-weight: 700; }
-.sym-up { color: #22c55e; }
-.sym-down { color: #ef4444; }
+.sym-up { color: var(--color-profit); }
+.sym-down { color: var(--color-loss); }
 .sym-chip { font-size: 0.68rem; padding: 0.1rem 0.45rem; border-radius: 4px; background: var(--panel); border: 1px solid var(--line); color: var(--ink-soft); }
 
 /* Grid */
@@ -21,8 +21,8 @@
 .sym-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0.85rem; margin-bottom: 0.75rem; }
 .sym-card h2 { margin: 0 0 0.5rem; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
 .sym-card--score { border-left: 4px solid var(--accent, #6366f1); }
-.sym-card--risk { border-left: 4px solid #ef4444; }
-.sym-card--earnings { border-left: 4px solid #f59e0b; }
+.sym-card--risk { border-left: 4px solid var(--color-loss); }
+.sym-card--earnings { border-left: 4px solid var(--color-warning); }
 .sym-muted { color: var(--ink-soft); font-size: 0.78rem; margin: 0; }
 
 /* Score */
@@ -30,17 +30,17 @@
 .sym-score-val { font-size: 2rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .sym-score-signal { font-size: 0.82rem; font-weight: 700; padding: 2px 10px; border-radius: 5px; text-transform: uppercase; letter-spacing: 0.04em; }
 .sym-score-meta { display: flex; gap: 0.75rem; font-size: 0.78rem; color: var(--ink-soft); margin-bottom: 0.4rem; }
-.sym-ready { font-size: 0.78rem; color: #22c55e; font-weight: 700; background: rgba(34,197,94,0.08); padding: 2px 8px; border-radius: 4px; }
+.sym-ready { font-size: 0.78rem; color: var(--color-profit); font-weight: 700; background: rgba(34,197,94,0.08); padding: 2px 8px; border-radius: 4px; }
 .sym-blockers { display: flex; flex-direction: column; gap: 2px; }
-.sym-blocker { font-size: 0.73rem; color: #ef4444; }
+.sym-blocker { font-size: 0.73rem; color: var(--color-loss); }
 
 /* Risk Gate */
 .sym-risk-mult { font-size: 0.82rem; margin-bottom: 0.3rem; }
-.sym-risk-hard { display: block; font-size: 0.73rem; color: #ef4444; margin-top: 0.2rem; }
+.sym-risk-hard { display: block; font-size: 0.73rem; color: var(--color-loss); margin-top: 0.2rem; }
 .sym-risk-chain { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 0.3rem; }
 .sym-risk-step { font-size: 0.68rem; background: rgba(239,68,68,0.06); padding: 1px 6px; border-radius: 3px; font-variant-numeric: tabular-nums; }
 .sym-risk-warnings { display: flex; flex-direction: column; gap: 2px; }
-.sym-risk-warn { font-size: 0.73rem; color: #f59e0b; }
+.sym-risk-warn { font-size: 0.73rem; color: var(--color-warning); }
 
 /* Earnings */
 .sym-earning { display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.82rem; }
@@ -67,9 +67,9 @@
 /* Conflicts */
 .sym-conflicts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 0.5rem; }
 .sym-conflict { font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; }
-.sym-conflict-high { background: rgba(239,68,68,0.1); color: #ef4444; }
-.sym-conflict-medium { background: rgba(245,158,11,0.1); color: #f59e0b; }
-.sym-conflict-low { background: rgba(148,163,184,0.1); color: #94a3b8; }
+.sym-conflict-high { background: rgba(239,68,68,0.1); color: var(--color-loss); }
+.sym-conflict-medium { background: rgba(245,158,11,0.1); color: var(--color-warning); }
+.sym-conflict-low { background: rgba(148,163,184,0.1); color: var(--color-neutral); }
 
 /* Protocol Scores */
 .sym-protocols { display: flex; flex-direction: column; gap: 0.35rem; }
@@ -77,13 +77,13 @@
 .sym-proto-head { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; }
 .sym-proto-head strong { min-width: 120px; }
 .sym-proto-score { font-weight: 800; min-width: 30px; }
-.sym-proto-score.buy, .sym-proto-score.entry { color: #22c55e; }
-.sym-proto-score.sell, .sym-proto-score.exit { color: #ef4444; }
-.sym-proto-score.neutral, .sym-proto-score.watch, .sym-proto-score.hold { color: #f59e0b; }
+.sym-proto-score.buy, .sym-proto-score.entry { color: var(--color-profit); }
+.sym-proto-score.sell, .sym-proto-score.exit { color: var(--color-loss); }
+.sym-proto-score.neutral, .sym-proto-score.watch, .sym-proto-score.hold { color: var(--color-warning); }
 .sym-proto-sig { font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 3px; text-transform: uppercase; }
-.sym-proto-sig.buy, .sym-proto-sig.entry { background: rgba(34,197,94,0.12); color: #22c55e; }
-.sym-proto-sig.sell, .sym-proto-sig.exit { background: rgba(239,68,68,0.12); color: #ef4444; }
-.sym-proto-sig.neutral, .sym-proto-sig.watch, .sym-proto-sig.hold { background: rgba(245,158,11,0.12); color: #f59e0b; }
+.sym-proto-sig.buy, .sym-proto-sig.entry { background: rgba(34,197,94,0.12); color: var(--color-profit); }
+.sym-proto-sig.sell, .sym-proto-sig.exit { background: rgba(239,68,68,0.12); color: var(--color-loss); }
+.sym-proto-sig.neutral, .sym-proto-sig.watch, .sym-proto-sig.hold { background: rgba(245,158,11,0.12); color: var(--color-warning); }
 .sym-proto-meta { display: flex; gap: 0.75rem; font-size: 0.7rem; color: var(--ink-soft); margin-top: 0.2rem; }
 
 /* News */
