@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import BacktestChartPane from '../components/backtest/BacktestChartPane';
+import EquityCurveChart from '../components/backtest/EquityCurveChart';
 
 export default function BacktestPage() {
   const [symbol, setSymbol] = useState('NVDA');
@@ -24,7 +25,15 @@ export default function BacktestPage() {
     refetchInterval: false,
   });
 
+  const equityQuery = useQuery({
+    queryKey: ['backtest-equity', runId],
+    queryFn: () => apiGet(`/api/backtest/equity/${runId}`),
+    enabled: Boolean(runId),
+    refetchInterval: false,
+  });
+
   const result = resultQuery.data;
+  const equityData = equityQuery.data;
   const stats = result?.stats;
 
   return (
@@ -66,6 +75,14 @@ export default function BacktestPage() {
           </div>
 
           {result?.period && <p className="bt-period">Period: {result.period}</p>}
+
+          {/* Equity curve + drawdown */}
+          {equityData && !equityData.error && equityData.equity?.length > 0 && (
+            <div className="bt-chart-section">
+              <h3>Equity Curve &amp; Drawdown</h3>
+              <EquityCurveChart equityData={equityData} symbol={symbol} height={300} />
+            </div>
+          )}
 
           {/* Chart visualization */}
           {showChart && (

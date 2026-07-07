@@ -221,3 +221,57 @@
   color: #d1d5db;
   margin: 0 0 0.5rem;
 }
+
+/* ── Equity Curve Chart ── */
+.bt-equity-wrapper {
+  border: 1px solid #2d3040;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #13141a;
+}
+
+.bt-equity-summary {
+  display: flex;
+  gap: 20px;
+  padding: 10px 16px;
+  background: #1a1d2e;
+  border-bottom: 1px solid #2d3040;
+  flex-wrap: wrap;
+}
+
+.bt-equity-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bt-equity-label {
+  font-size: 0.65rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bt-equity-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: monospace;
+  color: #d1d5db;
+}
+
+.bt-equity-chart {
+  width: 100%;
+}
+
+.bt-equity-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  background: #13141a;
+  border: 1px solid #2d3040;
+  border-radius: 8px;
+  color: #6b7280;
+  font-size: 13px;
+}

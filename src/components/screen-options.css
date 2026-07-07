@@ -1,0 +1,190 @@
+/* Screen Options — #249 */
+
+/* Sticky gear button */
+.so-gear-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 998;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--border, #374151);
+  background: var(--panel, #111827);
+  color: var(--textDim, #9ca3af);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  transition: all 0.2s;
+}
+.so-gear-btn:hover {
+  color: var(--accent, #0ea5a6);
+  border-color: var(--accent, #0ea5a6);
+  transform: scale(1.08);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.so-gear-btn:active { transform: scale(0.95); }
+.so-gear-active {
+  color: var(--accent, #0ea5a6);
+  border-color: var(--accent, #0ea5a6);
+  background: rgba(14,165,166,0.1);
+}
+
+/* Backdrop */
+.so-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(2px);
+}
+
+/* Panel */
+.so-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 360px;
+  max-width: 90vw;
+  z-index: 1000;
+  background: var(--panel, #111827);
+  border-left: 1px solid var(--border, #374151);
+  box-shadow: -4px 0 24px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* Header */
+.so-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border, #374151);
+}
+.so-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text, #e5e7eb);
+}
+.so-view-name {
+  color: var(--textDim, #9ca3af);
+  font-weight: 400;
+}
+.so-close-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  color: var(--textDim, #9ca3af);
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.so-close-btn:hover { background: var(--bg, #0f172a); color: var(--text, #e5e7eb); }
+
+/* Body */
+.so-body {
+  flex: 1;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.so-empty {
+  color: var(--textFaint, #6b7280);
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: 40px;
+}
+
+/* Section */
+.so-section-title {
+  margin: 0 0 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text, #e5e7eb);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.so-section-desc {
+  margin: 0 0 10px;
+  font-size: 0.75rem;
+  color: var(--textDim, #9ca3af);
+}
+
+/* Radio group */
+.so-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.so-radio-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #374151);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.so-radio-option:hover {
+  border-color: var(--accent, #0ea5a6);
+}
+.so-radio-selected {
+  border-color: var(--accent, #0ea5a6);
+  background: rgba(14,165,166,0.08);
+}
+.so-radio-option input[type="radio"] {
+  margin-top: 2px;
+  accent-color: var(--accent, #0ea5a6);
+  cursor: pointer;
+}
+.so-radio-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.so-radio-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text, #e5e7eb);
+}
+.so-radio-desc {
+  font-size: 0.72rem;
+  color: var(--textDim, #9ca3af);
+  line-height: 1.3;
+}
+
+/* Footer */
+.so-footer {
+  padding: 14px 18px;
+  border-top: 1px solid var(--border, #374151);
+  display: flex;
+  justify-content: flex-end;
+}
+.so-done-btn {
+  padding: 8px 24px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent, #0ea5a6);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.so-done-btn:hover { filter: brightness(1.15); }
+.so-done-btn:active { transform: scale(0.97); }

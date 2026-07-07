@@ -3,18 +3,22 @@ import { useState } from 'react';
 import TrailingStopDemo from '../components/FeatureLab/TrailingStopDemo';
 import TimezoneDecisionDemo from '../components/FeatureLab/TimezoneDecisionDemo';
 import AutoRiskSizingDemo from '../components/FeatureLab/AutoRiskSizingDemo';
+import PartialTakeProfitDemo from '../components/FeatureLab/PartialTakeProfitDemo';
+import SessionOpenEffectDemo from '../components/FeatureLab/SessionOpenEffectDemo';
+import NewsDissipationDemo from '../components/FeatureLab/NewsDissipationDemo';
+import DirectiveConfigDemo from '../components/FeatureLab/DirectiveConfigDemo';
 
 const DEMOS = [
   { id: 'trailing-stop', label: 'Trailing Stop', status: 'active', desc: 'Animated trailing stop following price with ATR-based calculation. Visual demo with chart overlay.' },
-  { id: 'partial-tp', label: 'Partial Take-Profit', status: 'planned', desc: 'Take 50% at 1:1, let rest run. Fund reallocation visualisation.' },
+  { id: 'partial-tp', label: 'Partial Take-Profit', status: 'active', desc: 'Take 50% at 1:1, let rest run. Fund reallocation visualisation.' },
   { id: 'auto-risk', label: 'Auto Risk Sizing', status: 'active', desc: 'Dynamic position sizing from account risk %. Visual slider showing how risk % scales position size.' },
-  { id: 'session-open', label: 'Session Open Effect', status: 'planned', desc: 'Directional bias prediction at US/London/Asian opens.' },
-  { id: 'news-dissipation', label: 'News Dissipation Curve', status: 'planned', desc: 'How news event effects decay over time.' },
+  { id: 'session-open', label: 'Session Open Effect', status: 'active', desc: 'Directional bias prediction at US/London/Asian opens.' },
+  { id: 'news-dissipation', label: 'News Dissipation Curve', status: 'active', desc: 'How news event effects decay over time.' },
 ];
 
 const DECISIONS = [
   { id: 'timezone', label: 'Timezone Handling', status: 'active', desc: 'IANA timezone strings vs UTC offsets — visual DST comparison for time-gated directives.' },
-  { id: 'directive-config', label: 'Default vs Custom Config', status: 'planned', desc: 'Visual comparison of directive behaviour with default weights vs customised weights.' },
+  { id: 'directive-config', label: 'Default vs Custom Config', status: 'active', desc: 'Visual comparison of directive behaviour with default weights vs customised weights.' },
 ];
 
 export default function FeatureLabPage() {
@@ -76,6 +80,21 @@ export default function FeatureLabPage() {
                 <AutoRiskSizingDemo />
               </div>
             )}
+            {demo.id === 'partial-tp' && expanded === 'partial-tp' && (
+              <div style={{ padding: '0 1rem 1rem' }}>
+                <PartialTakeProfitDemo />
+              </div>
+            )}
+            {demo.id === 'session-open' && expanded === 'session-open' && (
+              <div style={{ padding: '0 1rem 1rem' }}>
+                <SessionOpenEffectDemo />
+              </div>
+            )}
+            {demo.id === 'news-dissipation' && expanded === 'news-dissipation' && (
+              <div style={{ padding: '0 1rem 1rem' }}>
+                <NewsDissipationDemo />
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -124,9 +143,9 @@ export default function FeatureLabPage() {
                 <TimezoneDecisionDemo />
               </div>
             )}
-            {d.id === 'auto-risk' && expanded === 'auto-risk' && (
+            {d.id === 'directive-config' && expanded === 'directive-config' && (
               <div style={{ padding: '0 1rem 1rem' }}>
-                <AutoRiskSizingDemo />
+                <DirectiveConfigDemo />
               </div>
             )}
           </div>

@@ -1,0 +1,124 @@
+/**
+ * DuplicateGuardService
+ * =====================
+ * Prevents duplicate position execution across all trade flows:
+ * speed trading, automation, keyboard, scan-to-trade.
+ *
+ * Strategy:
+ *   1. Check open positions for this symbol from all brokers
+ *   2. Check recent trades for this symbol+protocol within cooldown window
+ *   3. Block if either check matches
+ */
+
+import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../../database/prisma.service';
+
+export interface DuplicateCheckResult {
+  blocked: boolean;
+  reason?: string;
+  existingPositions?: number;
+  recentTrades?: number;
+  cooldownRemaining?: number; // seconds until cooldown expires
+}
+
+@Injectable()
+export class DuplicateGuardService {
+  private readonly logger = new Logger(DuplicateGuardService.name);
+
+  /** Default cooldown in minutes */
+  private readonly DEFAULT_COOLDOWN_MINUTES = 5;
+
+  constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Check if a trade would create a duplicate position.
+   *
+   * @param symbol     — ticker to check (e.g. 'EURUSD', 'AAPL')
+   * @param brokerId   — broker to check against (e.g. 'mt5', 'trading212')
+   * @param protocolId — protocol/strategy for recent-trade check (optional)
+   * @param cooldownMinutes — override default cooldown (optional)
+   */
+  async checkDuplicate(
+    symbol: string,
+    brokerId: string,
+    protocolId?: string,
+    cooldownMinutes?: number,
+  ): Promise<DuplicateCheckResult> {
+    const ticker = symbol.toUpperCase();
+    const cooldown = cooldownMinutes ?? this.DEFAULT_COOLDOWN_MINUTES;
+    const reasons: string[] = [];
+    let existingPositions = 0;
+    let recentTrades = 0;
+
+    // 1. Check open positions for this symbol+broke
+    if (this.prisma.isAvailable) {
+      try {
+        const positions = await this.prisma.position.findMany({
+          where: { symbol: ticker, provider: brokerId },
+          select: { id: true, quantity: true },
+        });
+        existingPositions = positions.length;
+        if (existingPositions > 0) {
+          reasons.push(`${existingPositions} open position(s) on ${brokerId.toUpperCase()}`);
+        }
+      } catch (err) {
+        this.logger.warn(`Position check failed for ${ticker}: ${(err as Error).message}`);
+      }
+    }
+
+    // 2. Check recent trades for this symbol within cooldown window
+    if (this.prisma.isAvailable) {
+      try {
+        const cooldownDate = new Date(Date.now() - cooldown * 60_000);
+        const where: any = {
+          symbol: ticker,
+          openedAt: { gte: cooldownDate },
+          status: { in: ['open', 'filled'] },
+        };
+        if (protocolId) where.strategy = protocolId;
+
+        const trades = await this.prisma.trade.findMany({
+          where,
+          select: { id: true, openedAt: true },
+          orderBy: { openedAt: 'desc' },
+        });
+        recentTrades = trades.length;
+        if (recentTrades > 0) {
+          reasons.push(`${recentTrades} recent trade(s) in last ${cooldown}min`);
+        }
+      } catch (err) {
+        this.logger.warn(`Trade check failed for ${ticker}: ${(err as Error).message}`);
+      }
+    }
+
+    const blocked = reasons.length > 0;
+    const reason = blocked
+      ? `Duplicate blocked for ${ticker}: ${reasons.join('; ')}. Close existing or wait for cooldown.`
+      : undefined;
+
+    if (blocked) {
+      this.logger.warn(`DUPLICATE BLOCKED: ${ticker} on ${brokerId} — ${reasons.join(', ')}`);
+    }
+
+    return {
+      blocked,
+      reason,
+      existingPositions,
+      recentTrades,
+    };
+  }
+
+  /**
+   * Quick check — returns true if trade should be blocked.
+   * Convenience for inline guards.
+   */
+  async isBlocked(
+    symbol: string,
+    brokerId: string,
+    protocolId?: string,
+    cooldownMinutes?: number,
+  ): Promise<boolean> {
+    const result = await this.checkDuplicate(symbol, brokerId, protocolId, cooldownMinutes);
+    return result.blocked;
+  }
+}

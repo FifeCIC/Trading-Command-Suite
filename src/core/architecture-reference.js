@@ -167,10 +167,23 @@ export const CURRENT_SLICE = [
   'Cron→On-Demand Refactor — Removed @Cron from importInsiderTransactions() and importCompanyMetrics(). Replaced with single-symbol on-demand import triggered by directives when DB data is missing. Saves Finnhub rate limits.',
   'Trading Scheduler + Scoring Bridge — ScoringStrategy model (DB-persisted watchlist+protocol pairs). TradingScheduler runs live scoring at configurable intervals, writes StrategyEvaluation records, feeds automation loop.',
   'Bug Fixes — #174 Trading Strategies API shape fix, #175 Strategy Comparison stale filter, #155 Gold-macro-correlation stub cleanup, #204 Earnings surprise display guard.',
+  // ── 2026-07-04/07 — Data Pipeline, Providers, UI ──
+  'Data Import Orchestrator — Unified freshness across all data types (market bars, earnings, news, portfolio). DataImportOrchestratorService coordinates import jobs, checks staleness, triggers refreshes. Replaces scattered per-module import logic.',
+  'Live Portfolio Pricing — PortfolioPriceService provides real-time position values from MT5 quotes and T212 API. Computed P&L, allocation percentages, and provider-summary breakdowns.',
+  'Trading212 Import Pipeline — Trading212ImportService fetches positions, account summary, and instrument details. Stores in Position table with provider attribution. Serves /api/portfolio/trading212 endpoints.',
+  'Crypto Provider Infrastructure — Binance adapter (spot quotes, candles, 24h ticker). Polygon.io adapter (stocks, forex, crypto). CryptoProviderRouter routes crypto symbols to best available provider (Binance preferred).',
+  'Protocol Consensus Service — Multi-protocol scoring: runs symbol through multiple protocols, identifies consensus signals, detects conflicting signals. Used by SEES Arena and automation scoring.',
+  'Unified Scoring Logs — ScoringLogService + ScoringLogController. GET /api/scoring/logs with filtering by symbol, protocol, date range. Structured log format with directive breakdown, signal class, confidence.',
+  'Process Manager — ProcessManagerService tracks background processes (imports, scoring runs, bridge connections). Status, PID, uptime, last error. Used by System Status page.',
+  'Automation Dashboard Refresh — Layout fixes (#238-241): overflowing content boxes, MT5 status clarity, active bar contrast, scoring vs trading strategy distinction. Dashboard moved to first Automation menu position.',
+  'Gap Scanner UI — GapScannerPage with pre-market gap table, fill probability, volume overlay, gap classification. Paired with gap-scanner directive for real-time scanning.',
+  'QA Testing Page — QATestingPage with structured checklist, pass/fail/skip states, localStorage persistence. Covers directive execution, provider health, UI rendering, trading pipeline.',
+  'UI Component Library — DetachableWidget (dockable panels), StickyHeader (scroll-aware fixed header), StatusBadge (health/status pill), Notice (alert banner). Feature Lab demos for PartialTakeProfit, SessionOpenEffect, TrailingStop.',
+  'Speed Scanner Enhancements — Sort/filter controls (#236), Live Data badge (#235), text sizing improvements (#234). Button variants for base theme (#233).',
 ]
 
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-04'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-07'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -283,6 +296,46 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated read access',
     owner: 'PaperTradingController',
     contract: 'Virtual account summary: balance, equity, open positions, closed P&L, trade history.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/import-jobs/orchestrate',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'ImportJobsController',
+    contract: 'Unified data import orchestration. Checks freshness across all data types, triggers stale imports, returns status per data type. Replaces scattered per-module import endpoints.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/import-jobs/status',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'ImportJobsController',
+    contract: 'Current freshness status for all data types: market bars, earnings, news, portfolio, fundamentals. Per-symbol staleness with last import timestamps.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/scoring/logs',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'ScoringLogController',
+    contract: 'Unified scoring logs with filtering by symbol, protocol, date range. Structured entries with directive breakdown, signal class, confidence. Replaces scattered console.log output.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/portfolio/trading212/positions',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'PortfolioController',
+    contract: 'Live Trading212 positions imported via Trading212ImportService. Real-time pricing from PortfolioPriceService. Position values, P&L, allocation percentages.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/trading/strategies',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'TradingStrategyController',
+    contract: 'Trading strategies with protocol bindings, broker configuration, mode (manual/semi-auto/auto), SL/TP settings. Returns { mode, total, viableCount, viable: [...] }.',
     status: 'active',
   },
   {

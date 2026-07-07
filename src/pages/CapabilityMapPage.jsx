@@ -94,6 +94,25 @@ const KNOWN_FEATURES = {
   'Seasonality Heatmap': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Recently Analysed Symbols': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Create Strategy Page': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  // 2026-07-04/07 — Data Pipeline & Providers
+  'Data Import Orchestrator (unified freshness)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Freshness Service + Price Refresh': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Portfolio Price Service (live pricing)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Trading212 Import Pipeline': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Crypto Provider Router (Binance default)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Binance Adapter': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Polygon.io Adapter': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Protocol Consensus Service (multi-protocol)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Scoring Log Service (unified logging)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Process Manager Service': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  // UI Components & Pages
+  'Gap Scanner Page': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'QA Testing Page + Checklist': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Preference Lab': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Symbol Detail Page': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Feature Lab Demos (TP/Session/Trailing Stop)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Detachable Widget System': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Sticky Header Component': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
 };
 
 // ── Build unified capability rows ──
@@ -184,6 +203,10 @@ function buildCapabilityRows(directives, providers) {
     { name: 'Snapshots', count: 2 },
     { name: 'Backtest Data', count: 1 },
     { name: 'Performance (summary + equity)', count: 3 },
+    { name: 'Market Context (7-Day)', count: 1 },
+    { name: 'Data Import (orchestrator)', count: 4 },
+    { name: 'Crypto Providers (Binance)', count: 2 },
+    { name: 'Scoring Logs (unified)', count: 2 },
   ].forEach((mod) => {
     const known = KNOWN_FEATURES[mod.name] || {};
     rows.push({
@@ -242,6 +265,14 @@ function buildCapabilityRows(directives, providers) {
     'Gap Scanner (Directive)',
     'User Preferences System (12 Settings)',
     'Strategy Showdown + Live Positions',
+    'QA Testing Page + Checklist',
+    'Preference Lab + User Settings',
+    'Symbol Detail Page (Research Quick-View)',
+    'Feature Lab (TP/Session/Trailing Stop Demos)',
+    'Detachable Widget System',
+    'Sticky Header + Notice Components',
+    'Status Badge Component',
+    'Multi-Screen Cockpit (Phase 1)',
   ].forEach((name) => {
     const known = KNOWN_FEATURES[name] || {};
     rows.push({

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
@@ -24,12 +24,36 @@ export default function SpeedScannerPage() {
   const [sortBy, setSortBy] = useState('composite');
   const [filterRec, setFilterRec] = useState('all');
   const [filterSignal, setFilterSignal] = useState('all');
+  const [tradeMode, setTradeMode] = useState(() => {
+    try { return localStorage.getItem('ss-trade-mode') || 'quick-trade'; }
+    catch { return 'quick-trade'; }
+  });
+  const [tradeResult, setTradeResult] = useState(null);
+  const queryClient = useQueryClient();
 
   const scanQuery = useQuery({
     queryKey: ['speed', 'scan'],
     queryFn: () => apiPost('/api/speed/scan', { symbols: undefined, timeframe: '5s' }),
     refetchInterval: interval,
   });
+
+  const tradeMutation = useMutation({
+    mutationFn: (body) => apiPost('/api/speed/trade', body),
+    onSuccess: (result) => {
+      setTradeResult(result);
+      if (result?.status === 'EXECUTED' || result?.status === 'QUEUED_FOR_AUTOMATION') {
+        queryClient.invalidateQueries({ queryKey: ['speed', 'scan'] });
+      }
+    },
+    onSettled: () => {
+      setTimeout(() => setTradeResult(null), 5000);
+    },
+  });
+
+  const handleTrade = (symbol, mode = 'quick-trade') => {
+    setTradeResult(null);
+    tradeMutation.mutate({ symbol, mode });
+  };
 
   const data = scanQuery.data ?? {};
   const scanned = data.scan ?? [];
@@ -110,7 +134,18 @@ export default function SpeedScannerPage() {
 
       {/* Summary bar */}
       {!isLoading && (
-        <div className="ss-summary">
+        <>
+          {tradeResult && (
+            <div className={`ss-trade-result ${tradeResult.status === 'EXECUTED' || tradeResult.status === 'QUEUED_FOR_AUTOMATION' ? 'ss-trade-success' : 'ss-trade-error'}`}>
+              {tradeResult.status === 'EXECUTED' && <span>✅ Trade executed: {tradeResult.symbol} @ {tradeResult.price} — Order #{tradeResult.orderId}</span>}
+              {tradeResult.status === 'QUEUED_FOR_AUTOMATION' && <span>🤖 Queued: {tradeResult.symbol} — will execute on next loop ({tradeResult.protocol || 'default'} protocol)</span>}
+              {tradeResult.status === 'DUPLICATE' && <span>⚠️ {tradeResult.message}</span>}
+              {tradeResult.status === 'ERROR' && <span>❌ {tradeResult.message}</span>}
+              {tradeResult.status === 'ONE_CLICK_READY' && <span>🎯 Ready: {tradeResult.symbol} — {tradeResult.executeAction || 'confirm in terminal'}</span>}
+              {tradeResult.status === 'KEYBOARD_READY' && <span>⌨️ {tradeResult.symbol} mapped to {tradeResult.hotkey || 'default key'} — press to execute</span>}
+            </div>
+          )}
+          <div className="ss-summary">
           <div className="ss-summary-item">
             <span className="ss-summary-label">Scanned</span>
             <span className="ss-summary-value">{stats.total}</span>
@@ -132,6 +167,7 @@ export default function SpeedScannerPage() {
             <span className="ss-summary-value">{scanMs ?? '—'}ms</span>
           </div>
         </div>
+        </>
       )}
 
       {/* Next best alert */}
@@ -297,6 +333,22 @@ export default function SpeedScannerPage() {
                   ⚠️ {t.sidewaysReasons?.[0] ?? 'Sideways market'}
                 </div>
               )}
+
+              {/* Trade action */}
+              <div className="ss-trade-col">
+                {t.recommendation === 'trade' ? (
+                  <button
+                    className={`ss-trade-btn ${tradeMutation.isPending && tradeMutation.variables?.symbol === sym.symbol ? 'ss-trade-loading' : ''}`}
+                    onClick={() => handleTrade(sym.symbol, tradeMode)}
+                    disabled={tradeMutation.isPending}
+                    title={`${tradeMode} ${sym.symbol}`}
+                  >
+                    {tradeMutation.isPending && tradeMutation.variables?.symbol === sym.symbol ? '⟳' : tradeMode === 'quick-trade' ? '⚡' : tradeMode === 'one-click' ? '🎯' : tradeMode === 'automation' ? '🤖' : '⌨️'}
+                  </button>
+                ) : (
+                  <span className="ss-trade-disabled" title="Only tradeable symbols">—</span>
+                )}
+              </div>
             </motion.div>
           );
         })}

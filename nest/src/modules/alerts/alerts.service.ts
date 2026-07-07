@@ -133,4 +133,12 @@ export class AlertsService {
     const active = this.alerts.filter((a) => a.status === 'active');
     return { active: active.length, critical: active.filter((a) => a.severity === 'critical').length };
   }
+
+  /** Add a real alert (called by AlertTriggerService for live conditions) */
+  addAlert(severity: AlertSeverity, category: AlertCategory, title: string, message: string): Alert {
+    const alert = this.makeAlert(severity, category, title, message, new Date());
+    this.alerts.unshift(alert);
+    if (this.alerts.length > 200) this.alerts.pop();
+    return alert;
+  }
 }

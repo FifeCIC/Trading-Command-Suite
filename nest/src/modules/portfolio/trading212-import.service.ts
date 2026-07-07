@@ -185,7 +185,6 @@ export class Trading212ImportService {
                 pnl: pos.ppl ?? null,
                 provider: 'trading212',
                 accountId: 'trading212',
-                lastQuotedAt: new Date(),
               },
             });
             persistedCount++;

@@ -23,8 +23,10 @@ import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { TimelineService } from './timeline.service';
 import { ScoringService } from '../scoring/scoring.service';
+import { ScoringLogService } from '../system/scoring-log.service';
 import { TradingStrategyService } from '../trading/trading-strategy.service';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
+import { DuplicateGuardService } from '../trading/duplicate-guard.service';
 import { PROTOCOL_REGISTRY } from '../directives/directive-groups';
 
 // ── Protocol-aware thresholds by trading style ──
@@ -162,6 +164,8 @@ export class AutomationLoopService {
     private readonly scoringService: ScoringService,
     private readonly strategyService: TradingStrategyService,
     private readonly tradeRecorder: TradeRecorderService,
+    private readonly duplicateGuard: DuplicateGuardService,
+    private readonly scoringLog: ScoringLogService,
     private readonly prisma: PrismaService,
   ) {
     this.initBrokerStates();
@@ -409,6 +413,25 @@ export class AutomationLoopService {
         // Log scored positions
         const scored = allPositions.filter(p => p.composite !== null);
         this.logger.log(`  Scored ${scored.length}/${allPositions.length} positions`);
+
+        // ── Scoring log: unified logging ──
+        this.scoringLog.logScoringRun({
+          symbolsScored: scored.length,
+          avgScore: scored.length > 0 ? scored.reduce((s, p) => s + p.composite, 0) / scored.length : 0,
+          topSymbol: scored[0]?.symbol,
+          topScore: scored[0]?.composite,
+          durationMs: Date.now() - tickStart,
+        });
+        // Log top 3 signals
+        for (const pos of scored.slice(0, 3)) {
+          if (pos.composite >= 40) {
+            this.scoringLog.logSignal({
+              symbol: pos.symbol, composite: pos.composite,
+              signal: pos.signal, confidence: pos.confidence ?? 50,
+            });
+          }
+        }
+        // ── End scoring log ──
         for (const pos of scored.slice(0, 5)) {
           decisions.push({
             timestamp: new Date().toISOString(),
@@ -460,10 +483,18 @@ export class AutomationLoopService {
             if ((strat.mode === 'auto' || strat.mode === 'semi-auto') && this.state.brokerStates[strat.brokerId]?.tradingEnabled) {
               if (this.lastAnyTradeAt && (Date.now() - this.lastAnyTradeAt) < 60000) continue;
 
+              const side = s.signal || 'BUY';
+
+              // Duplicate guard — block if position already open
+              const dupCheck = await this.duplicateGuard.checkDuplicate(sym, strat.brokerId, strat.protocolId);
+              if (dupCheck.blocked) {
+                decisions.push({ timestamp: new Date().toISOString(), strategyId: strat.id, symbol: sym, brokerId: strat.brokerId, decision: 'BLOCKED', reason: dupCheck.reason || 'Duplicate position', composite: s.score, signal: side });
+                continue;
+              }
+
               const broker = this.adapterFactory.create(strat.brokerId);
               if (!broker?.placeOrder) continue;
 
-              const side = s.signal || 'BUY';
               const sl = side === 'BUY' ? s.lastPrice * (1 - strat.slPct/100) : s.lastPrice * (1 + strat.slPct/100);
               const tp = side === 'BUY' ? s.lastPrice * (1 + strat.tpPct/100) : s.lastPrice * (1 - strat.tpPct/100);
 

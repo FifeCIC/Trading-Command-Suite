@@ -122,6 +122,7 @@ import MarketCorrelationsPage from './pages/MarketCorrelationsPage';
 import CapabilityMapPage from './pages/CapabilityMapPage';
 import SourcesPage from './pages/SourcesPage';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
+import ScreenOptions from './components/ScreenOptions';
 
 import { useNetworkStatus } from './utils/networkStatus';
 import { useUiStore } from './stores/useUiStore';
@@ -200,6 +201,19 @@ function AppShell() {
   // ── Sidebar collapse ──
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // ── Screen Options overlay ──
+  const [screenOptionsOpen, setScreenOptionsOpen] = useState(false);
+  const [screenOptionsView, setScreenOptionsView] = useState(null);
+
+  // Update screen options view when user navigates
+  useEffect(() => {
+    const viewId = secondaryView;
+    // Map known views to their registry keys
+    const VIEW_TO_OPTIONS = {
+      'speed-scanner': 'speed-scanner',
+    };
+    setScreenOptionsView(VIEW_TO_OPTIONS[viewId] || null);
+  }, [primaryArea, secondaryView]);
   const { adapters, meta } = useThemeRuntime({ mode: themeMode, packId: themePack });
   const availablePacks = Array.isArray(meta?.availablePacks) ? meta.availablePacks : [];
   const availableAdapters = Array.isArray(meta?.availableAdapters) ? meta.availableAdapters : [];
@@ -981,6 +995,12 @@ function AppShell() {
           </div>
         )}
       </footer>
+
+      <ScreenOptions
+        activeView={screenOptionsView}
+        isOpen={screenOptionsOpen}
+        onToggle={() => setScreenOptionsOpen((v) => !v)}
+      />
     </div>
   );
 }

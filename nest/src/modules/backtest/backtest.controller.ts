@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Param, Body, Query } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Param, Body, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { BacktestService } from './backtest.service';
 import type { BacktestRunRequest } from './backtest.service';
@@ -79,5 +79,39 @@ export class BacktestController {
   @ApiOperation({ summary: 'Comprehensive market bar inventory — all symbols with bar counts, date ranges, providers, and backtest run stats' })
   async dataInventory() {
     return this.backtestService.getDataInventory();
+  }
+
+  /** List all persisted backtest runs */
+  @Get('runs')
+  async listRuns(
+    @Query('symbol') symbol?: string,
+    @Query('protocolId') protocolId?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.backtestService.listAllRuns({
+      symbol,
+      protocolId,
+      limit: limit ? parseInt(limit, 10) : 50,
+    });
+  }
+
+  /** Compare multiple runs side-by-side */
+  @Post('runs/compare')
+  async compareRuns(@Body() body: { runIds: string[] }) {
+    if (!body.runIds?.length) return { error: 'runIds array is required' };
+    return this.backtestService.compareRuns(body.runIds);
+  }
+
+  /** Delete a backtest run */
+  @Delete('runs/:runId')
+  async deleteRun(@Param('runId') runId: string) {
+    return this.backtestService.deleteRun(runId);
+  }
+
+  /** Equity curve + drawdown for a run */
+  @Get('equity/:runId')
+  @ApiOperation({ summary: 'Get equity curve and drawdown data for a backtest run' })
+  async getEquityCurve(@Param('runId') runId: string) {
+    return this.backtestService.getEquityCurve(runId);
   }
 }

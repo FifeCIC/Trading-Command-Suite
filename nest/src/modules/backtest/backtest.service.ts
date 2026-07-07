@@ -17,10 +17,12 @@ export interface BacktestRunRequest {
   protocolId?: string;
   slPct?: number;
   tpPct?: number;
-  /** Execution realism (Sprint 2026-07-04). All in price units (e.g. 0.0001 = 1 pip for EURUSD). */
-  slippage?: number;           // Slippage per trade (default 0.0001 = 1 pip forex)
-  spread?: number;             // Bid-ask spread cost (default 0.0001 = 1 pip forex)
-  assetClass?: 'forex' | 'stock' | 'crypto'; // Auto-sets sensible defaults
+  /** Weight overrides — keyed by directive ID, overrides default weights */
+  weights?: Record<string, number>;
+  /** Execution realism */
+  slippage?: number;
+  spread?: number;
+  assetClass?: 'forex' | 'stock' | 'crypto';
 }
 
 export interface TradeRecord {
@@ -134,12 +136,44 @@ export class BacktestService {
     for (let day = windowSize; day < bars.length; day++) {
       const window = bars.slice(day - windowSize, day);
 
-      // Inline protocol-gated scoring (avoids DI circular deps)
-      const groups = protocolId
-        ? (PROTOCOL_REGISTRY[protocolId]?.groups ?? DIRECTIVE_GROUPS)
-        : DIRECTIVE_GROUPS;
+      // Use production ScoringService.rankAll() for full directive coverage
+      let composite: number;
+      let signal: string;
+      try {
+        const ranked = await this.scoringService.rankAll(symbol, 1);
+        if (ranked?.ranked?.length > 0) {
+          composite = ranked.ranked[0].score ?? 50;
+          signal = ranked.ranked[0].signal ?? 'HOLD';
+        } else {
+          // Fallback to inline protocol-gated scoring
+          const groups = protocolId
+            ? (PROTOCOL_REGISTRY[protocolId]?.groups ?? DIRECTIVE_GROUPS)
+            : DIRECTIVE_GROUPS;
+          const result = await this.fullScore(symbol, window, groups);
+          composite = result.composite;
+          signal = result.signal;
+        }
+      } catch {
+        // ScoringService failed — fall back to inline scoring
+        const groups = protocolId
+          ? (PROTOCOL_REGISTRY[protocolId]?.groups ?? DIRECTIVE_GROUPS)
+          : DIRECTIVE_GROUPS;
+        const result = await this.fullScore(symbol, window, groups);
+        composite = result.composite;
+        signal = result.signal;
+      }
 
-      const { composite, signal } = await this.fullScore(symbol, window, groups);
+      // Apply weight overrides if provided
+      if (request.weights && Object.keys(request.weights).length > 0) {
+        // Weight overrides applied via fullScore fallback for precision
+        const groups = protocolId
+          ? (PROTOCOL_REGISTRY[protocolId]?.groups ?? DIRECTIVE_GROUPS)
+          : DIRECTIVE_GROUPS;
+        const result = await this.fullScore(symbol, window, groups, request.weights);
+        composite = result.composite;
+        signal = result.signal;
+      }
+
       const score = composite;
 
       const currentBar = bars[day];
@@ -351,6 +385,188 @@ export class BacktestService {
     });
   }
 
+  /** List all backtest runs with optional filters */
+  async listAllRuns(opts?: { symbol?: string; protocolId?: string; limit?: number }): Promise<{
+    runs: Array<{
+      id: string; symbol: string; protocolId: string; timeframe: string;
+      period: string; totalTrades: number; winRate: number; totalPnl: number;
+      sharpeRatio: number; maxDrawdown: number; createdAt: string;
+    }>;
+    total: number;
+  }> {
+    const where: any = {};
+    if (opts?.symbol) {
+      const sym = await this.prisma.symbol.findUnique({ where: { ticker: opts.symbol.toUpperCase() } });
+      if (sym) where.symbolId = sym.id;
+    }
+    if (opts?.protocolId) where.protocolId = opts.protocolId;
+
+    const [runs, total] = await Promise.all([
+      this.prisma.backtestRun.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: opts?.limit ?? 50,
+        include: { symbol: { select: { ticker: true } } },
+      }),
+      this.prisma.backtestRun.count({ where }),
+    ]);
+
+    return {
+      runs: runs.map(r => ({
+        id: r.id,
+        symbol: (r as any).symbol?.ticker || 'unknown',
+        protocolId: r.protocolId,
+        timeframe: r.timeframe,
+        period: `${r.startDate.toISOString().split('T')[0]} → ${r.endDate.toISOString().split('T')[0]}`,
+        totalTrades: r.totalTrades,
+        winRate: Math.round(r.winRate * 10000) / 100,
+        totalPnl: Math.round(r.totalPnl * 100) / 100,
+        sharpeRatio: Math.round(r.sharpeRatio * 100) / 100,
+        maxDrawdown: Math.round(r.maxDrawdown * 10000) / 100,
+        createdAt: r.createdAt.toISOString(),
+      })),
+      total,
+    };
+  }
+
+  /** Compare multiple backtest runs side-by-side */
+  async compareRuns(runIds: string[]): Promise<{
+    runs: Array<{
+      id: string; symbol: string; protocolId: string;
+      totalTrades: number; winRate: number; totalPnl: number;
+      profitFactor: number; sharpeRatio: number; maxDrawdown: number;
+      avgTradePnl: number;
+    }>;
+    best: { id: string; metric: string; value: number } | null;
+  }> {
+    const runs = await this.prisma.backtestRun.findMany({
+      where: { id: { in: runIds } },
+      include: { symbol: { select: { ticker: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const formatted = runs.map(r => ({
+      id: r.id,
+      symbol: (r as any).symbol?.ticker || 'unknown',
+      protocolId: r.protocolId,
+      totalTrades: r.totalTrades,
+      winRate: Math.round(r.winRate * 10000) / 100,
+      totalPnl: Math.round(r.totalPnl * 100) / 100,
+      profitFactor: Math.round(r.profitFactor * 100) / 100,
+      sharpeRatio: Math.round(r.sharpeRatio * 100) / 100,
+      maxDrawdown: Math.round(r.maxDrawdown * 10000) / 100,
+      avgTradePnl: Math.round(r.avgTradePnl * 10000) / 100,
+    }));
+
+    // Find best by Sharpe ratio
+    let best: { id: string; metric: string; value: number } | null = null;
+    if (formatted.length > 0) {
+      const bestBySharpe = formatted.reduce((a, b) => a.sharpeRatio > b.sharpeRatio ? a : b);
+      best = { id: bestBySharpe.id, metric: 'sharpeRatio', value: bestBySharpe.sharpeRatio };
+    }
+
+    return { runs: formatted, best };
+  }
+
+  /** Delete a backtest run and its trades */
+  async deleteRun(runId: string): Promise<{ deleted: boolean }> {
+    try {
+      await this.prisma.backtestRun.delete({ where: { id: runId } });
+      this.logger.log(`Deleted backtest run ${runId}`);
+      return { deleted: true };
+    } catch {
+      return { deleted: false };
+    }
+  }
+
+  /**
+   * Computes the equity curve and drawdown from stored trades.
+   * Equity = cumulative PnL from all trades in chronological order.
+   * Drawdown = (peak - current) / peak * 100 at each point.
+   */
+  async getEquityCurve(runId: string): Promise<{
+    runId: string;
+    symbol: string;
+    startingCapital?: number;
+    equity: Array<{ time: string; equity: number; drawdownPct: number }>;
+    summary: {
+      totalTrades: number;
+      totalPnl: number;
+      finalEquity: number;
+      maxDrawdownPct: number;
+      maxDrawdownStart: string | null;
+      maxDrawdownEnd: string | null;
+      peakEquity: number;
+      peakDate: string | null;
+    };
+  } | { error: string }> {
+    const run = await this.prisma.backtestRun.findUnique({
+      where: { id: runId },
+      include: {
+        trades: { orderBy: { entryDate: 'asc' } },
+        symbol: { select: { ticker: true } },
+      },
+    });
+
+    if (!run) return { error: 'Run not found' };
+
+    const trades = run.trades || [];
+    const startingCapital = 0; // equity curve starts at zero cumulative PnL
+    const equity: Array<{ time: string; equity: number; drawdownPct: number }> = [];
+
+    let cumulative = 0;
+    let peak = 0;
+    let maxDrawdownPct = 0;
+    let maxDrawdownStart: string | null = null;
+    let maxDrawdownEnd: string | null = null;
+    let currentDrawdownStart: string | null = null;
+    let peakDate: string | null = null;
+
+    // Add starting point
+    equity.push({ time: run.startDate.toISOString(), equity: 0, drawdownPct: 0 });
+
+    for (const trade of trades) {
+      cumulative += Number(trade.pnl);
+
+      if (cumulative > peak) {
+        peak = cumulative;
+        peakDate = trade.exitDate.toISOString();
+        currentDrawdownStart = null; // reset drawdown tracking
+      } else if (currentDrawdownStart === null) {
+        currentDrawdownStart = trade.exitDate.toISOString();
+      }
+
+      const drawdown = peak > 0 ? ((peak - cumulative) / Math.abs(peak)) * 100 : 0;
+      if (drawdown > maxDrawdownPct) {
+        maxDrawdownPct = drawdown;
+        maxDrawdownStart = currentDrawdownStart;
+        maxDrawdownEnd = trade.exitDate.toISOString();
+      }
+
+      equity.push({
+        time: trade.exitDate.toISOString(),
+        equity: Math.round(cumulative * 100) / 100,
+        drawdownPct: Math.round(drawdown * 100) / 100,
+      });
+    }
+
+    return {
+      runId,
+      symbol: run.symbol?.ticker || '',
+      equity,
+      summary: {
+        totalTrades: trades.length,
+        totalPnl: run.totalPnl,
+        finalEquity: equity.length > 0 ? equity[equity.length - 1].equity : 0,
+        maxDrawdownPct: Math.round(maxDrawdownPct * 100) / 100,
+        maxDrawdownStart,
+        maxDrawdownEnd,
+        peakEquity: peak,
+        peakDate,
+      },
+    };
+  }
+
   private formatRunResult(run: any): BacktestResult {
     return {
       id: run.id,
@@ -501,6 +717,7 @@ export class BacktestService {
     symbol: string,
     bars: MarketBar[],
     groups: DirectiveGroup[],
+    weightOverrides?: Record<string, number>,
   ): Promise<{ composite: number; signal: string; breakdown: Array<{ directiveId: string; score: number; maxScore: number; signalClass: string }> }> {
     const input: DirectiveInput = { symbol, bars };
     const allResults = await this.directivesService.runAll(input);
