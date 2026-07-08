@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { apiGet } from '../core/api/client';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
 import './trading-platforms.css';
 import './data-elements.css';
 
@@ -141,11 +143,11 @@ export default function DataElementsPage() {
   const statusIcon = { complete: '✅', partial: '⚠️', unavailable: '❌', unknown: '⏳' };
 
   if (loading) {
-    return <div className="trading-platforms-page"><div className="tp-page-header"><h1>Data Elements</h1></div><p style={{ padding: '1rem' }}>Loading...</p></div>;
+    return <div className="trading-platforms-page"><div className="tp-page-header"><h1>Data Elements</h1></div><LoadingSkeleton variant="card" count={4} /></div>;
   }
 
   if (error) {
-    return <div className="trading-platforms-page"><div className="tp-page-header"><h1>Data Elements</h1></div><p style={{ padding: '1rem', color: 'var(--tcs-warn)' }}>Could not load data: {error}</p></div>;
+    return <div className="trading-platforms-page"><div className="tp-page-header"><h1>Data Elements</h1></div><EmptyState icon="❌" title="Could not load data" description={error} /></div>;
   }
 
   return (

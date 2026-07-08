@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { apiPost } from '../core/api/client';
+import EmptyState from '../components/EmptyState';
 import './decoder.css';
 
 // Known format parsers
@@ -59,7 +60,7 @@ function detectFormat(text) {
 
 function EarningsWhisperResult({ results }) {
   if (!results || results.length === 0) {
-    return <p className="decoder-empty">No earnings data detected. Try pasting a complete Earnings Whisper email.</p>;
+    return <EmptyState icon="📧" title="No earnings data detected" description="Try pasting a complete Earnings Whisper email." />;
   }
 
   // Group by company

@@ -23,6 +23,19 @@ export interface BacktestRunRequest {
   slippage?: number;
   spread?: number;
   assetClass?: 'forex' | 'stock' | 'crypto';
+  /** News exclusion mode (#105) */
+  newsExclusion?: 'none' | 'exclude' | 'only' | 'reduce';
+  /** Position sizing + commission (#50, #269, #271) */
+  positionModel?: 'fixedPercent' | 'fixedDollar' | 'atrEqualRisk' | 'kellyFull' | 'kellyHalf';
+  accountSize?: number;      // starting account balance in USD
+  riskPct?: number;          // risk % per trade (for fixedPercent/atrEqualRisk model)
+  fixedAmount?: number;      // fixed $ per trade (for fixedDollar model)
+  commission?: number;       // flat commission per trade ($)
+  /** ATR equal-risk (#271) */
+  atrPeriod?: number;         // lookback for ATR calculation (default 14)
+  atrMultiplier?: number;     // stop distance = ATR * multiplier (default 1.5)
+  /** Kelly criterion (#269) */
+  kellyCapPct?: number;       // max position size cap for Kelly (default 25%)
 }
 
 export interface TradeRecord {
@@ -37,6 +50,9 @@ export interface TradeRecord {
   score: number;
   signal: string;
   protocolId: string;
+  // Execution realism (#50)
+  positionSize?: number;  // number of shares/contracts
+  commission?: number;    // commission deducted ($)
 }
 
 export interface EntrySignal {
@@ -57,7 +73,26 @@ export interface BacktestResult {
   totalDays: number;
   timeframe: string;
   entrySignals: EntrySignal[];
-  trades?: TradeRecord[];              // NEW: bracket simulation results
+  trades?: TradeRecord[];
+  /** News exclusion mode used (#105) */
+  newsExclusion?: string;
+  /** Number of news dates found for this symbol/period */
+  newsDatesCount?: number;
+  /** Execution realism applied (#50) */
+  execution?: {
+    slippage: number;
+    spread: number;
+    commission: number;
+    positionModel: string;
+    accountSize: number;
+    riskPct: number;
+    fixedAmount: number;
+    atrPeriod?: number;
+    atrMultiplier?: number;
+    kellyCapPct?: number;
+    kellyFraction?: number;
+    kellyEdge?: number;
+  };
   stats: {
     totalSignals: number;
     winRate: number;
@@ -66,12 +101,17 @@ export interface BacktestResult {
     maxDrawdown10d: number;
     profitFactor: number;
     sharpeApproximation: number;
-    // NEW: bracket trade stats
+    // bracket trade stats
     totalTrades?: number;
     tradeWinRate?: number;
     avgTradePnl?: number;
     totalPnl?: number;
     maxTradeDrawdown?: number;
+    // position sizing stats (#50)
+    avgPositionSize?: number;
+    totalCommission?: number;
+    netPnl?: number;
+    grossPnl?: number;
   };
 }
 
@@ -96,15 +136,32 @@ export class BacktestService {
       slippage: rawSlippage,
       spread: rawSpread,
       assetClass,
+      newsExclusion = 'none',
+      // ── Position sizing + commission (#50) ──
+      positionModel = 'fixedPercent',
+      accountSize = 10000,
+      riskPct = 2.0,
+      fixedAmount = 100,
+      commission: rawCommission,
+      // ── ATR equal-risk (#271) ──
+      atrPeriod = 14,
+      atrMultiplier = 1.5,
+      // ── Kelly criterion (#269) ──
+      kellyCapPct = 25,
     } = request;
 
-    // ── Execution realism defaults (Sprint 2026-07-04) ──
+    // ── Execution realism defaults ──
     const isForex = assetClass === 'forex' || (symbol.length === 6 && /^[A-Z]{6}$/.test(symbol));
-    const slippage = rawSlippage ?? (isForex ? 0.0001 : 0.01);
-    const spread = rawSpread ?? (isForex ? 0.0001 : 0.01);
+    const isCrypto = assetClass === 'crypto';
+    const slippage = rawSlippage ?? (isForex ? 0.0001 : isCrypto ? 0.002 : 0.01);
+    const spread = rawSpread ?? (isForex ? 0.0001 : isCrypto ? 0.001 : 0.01);
+    const commission = rawCommission ?? (isForex ? 0 : isCrypto ? 0.1 : 0); // forex=spread only, stocks=$0 (modern brokers), crypto=0.1% maker/taker
 
     const doBrackets = slPct > 0 && tpPct > 0;
-    this.logger.log(`Backtest: ${symbol} ${days}d ${timeframe} protocol=${protocolId ?? 'default'} brackets=${doBrackets} slip=${slippage} spread=${spread}`);
+    const sizingLabel = positionModel.startsWith('kelly')
+      ? `${positionModel}(cap=${kellyCapPct}%)`
+      : positionModel;
+    this.logger.log(`Backtest: ${symbol} ${days}d ${timeframe} protocol=${protocolId ?? 'default'} brackets=${doBrackets} slip=${slippage} spread=${spread} commission=${commission} sizing=${sizingLabel} acct=${accountSize} risk=${riskPct}%`);
 
     // Load all bars
     const rows = await this.prisma.marketBar.findMany({
@@ -129,12 +186,47 @@ export class BacktestService {
       volume: Number(r.volume),
     }));
 
+    // ── News exclusion (#105) ──
+    let newsDates: Set<string> | null = null;
+    let newsData: Array<{ date: string; sentiment: number; impact: string }> = [];
+    if (newsExclusion !== 'none' && this.prisma.isAvailable) {
+      try {
+        const ticker = symbol.toUpperCase();
+        const newsRows = await this.prisma.newsArticle.findMany({
+          where: {
+            symbol: ticker,
+            publishedAt: {
+              gte: bars[0].timestamp,
+              lte: bars[bars.length - 1].timestamp,
+            },
+          },
+          select: { publishedAt: true, sentiment: true, impact: true },
+        });
+        newsDates = new Set(newsRows.map(n => n.publishedAt.toISOString().split('T')[0]));
+        newsData = newsRows.map(n => ({
+          date: n.publishedAt.toISOString().split('T')[0],
+          sentiment: n.sentiment,
+          impact: n.impact,
+        }));
+        this.logger.log(`News exclusion: ${newsDates.size} news dates found for ${ticker} (mode: ${newsExclusion})`);
+      } catch (err) {
+        this.logger.warn(`News query failed, running without exclusion: ${(err as Error).message}`);
+      }
+    }
+
     const entrySignals: EntrySignal[] = [];
     const trades: TradeRecord[] = [];
     const windowSize = 100;
 
     for (let day = windowSize; day < bars.length; day++) {
       const window = bars.slice(day - windowSize, day);
+      const currentBar = bars[day];
+      const barDate = currentBar.timestamp.toISOString().split('T')[0];
+
+      // ── News exclusion gate (#105) ──
+      const isNewsDay = newsDates?.has(barDate) ?? false;
+      if (newsExclusion === 'exclude' && isNewsDay) continue;           // skip entirely
+      if (newsExclusion === 'only' && !isNewsDay) continue;             // only keep news days
 
       // Use production ScoringService.rankAll() for full directive coverage
       let composite: number;
@@ -176,7 +268,6 @@ export class BacktestService {
 
       const score = composite;
 
-      const currentBar = bars[day];
       const currentClose = currentBar.close;
 
       // Entry signal
@@ -195,7 +286,7 @@ export class BacktestService {
           wasProfitable: (future10 || 0) > currentClose,
         });
 
-        // Bracket order simulation
+        // Bracket order simulation with execution realism (#50)
         if (doBrackets) {
           const slPrice = currentClose * (1 - slPct / 100);
           const tpPrice = currentClose * (1 + tpPct / 100);
@@ -209,7 +300,6 @@ export class BacktestService {
             const fb = bars[future];
 
             // Check intra-bar: did SL or TP get hit?
-            // For a LONG trade: SL is below entry, TP is above
             if (fb.low <= slPrice) {
               exitPrice = slPrice;
               exitReason = 'SL';
@@ -224,11 +314,69 @@ export class BacktestService {
             }
           }
 
-          // ── Apply execution costs (Sprint 2026-07-04) ──
-          const entryCost = currentClose + spread / 2;  // Pay the ask (spread)
-          const exitCost = exitPrice - slippage;          // Market order slippage
-          const pnl = exitCost - entryCost;
-          const pnlPct = (pnl / currentClose) * 100;
+          // ── Symmetric execution costs (fixed #50) ──
+          // Entry: buy at ask = mid + spread/2 + slippage
+          // Exit: sell at bid = mid - spread/2 - slippage
+          const entryCost = currentClose + (spread / 2) + slippage;
+          const exitCost = exitPrice - (spread / 2) - slippage;
+          const rawPnlPerShare = exitCost - entryCost;
+
+          // ── Position sizing (#50, #269, #271) ──
+          let positionSize: number;
+          if (positionModel === 'fixedDollar') {
+            positionSize = Math.floor(fixedAmount / entryCost);
+          } else if (positionModel === 'atrEqualRisk') {
+            // ATR-based equal risk (#271): stop = ATR * multiplier
+            const windowBars = bars.slice(Math.max(0, day - windowSize), day + 1);
+            const atrValues = this.computeATR(
+              windowBars.map(b => b.high),
+              windowBars.map(b => b.low),
+              windowBars.map(b => b.close),
+              atrPeriod,
+            );
+            const currentAtr = atrValues[atrValues.length - 1] || 0;
+            const atrStopDistance = currentAtr * atrMultiplier;
+            if (currentAtr > 0 && atrStopDistance > 0) {
+              positionSize = Math.floor((accountSize * (riskPct / 100)) / atrStopDistance);
+            } else {
+              positionSize = Math.floor((accountSize * (riskPct / 100)) / currentClose);
+            }
+          } else if (positionModel === 'kellyFull' || positionModel === 'kellyHalf') {
+            // Kelly criterion (#269): f = (bp - q) / b
+            // b = tpPct/slPct (reward:risk ratio), p = estimated win rate, q = 1-p
+            // Conservative estimate: use tp/sl ratio as b, assume 50% win rate
+            // Full Kelly: position = accountEquity * f / price, capped at kellyCapPct%
+            const b = tpPct / slPct; // reward:risk ratio from SL/TP params
+            const p = 0.5;            // neutral prior — real traders estimate their edge
+            const q = 1 - p;
+            const kellyFraction = (b * p - q) / b;
+            const cappedFraction = Math.min(kellyFraction, kellyCapPct / 100);
+            const effectiveFraction = positionModel === 'kellyHalf'
+              ? cappedFraction / 2
+              : cappedFraction;
+            if (effectiveFraction <= 0) {
+              // Kelly says don't trade — fall back to minimal position
+              positionSize = 1;
+            } else {
+              positionSize = Math.floor((accountSize * effectiveFraction) / entryCost);
+            }
+          } else {
+            // fixedPercent: risk accountSize * riskPct% on the stop distance
+            const stopDistance = currentClose - slPrice;
+            if (stopDistance <= 0) {
+              positionSize = Math.floor((accountSize * (riskPct / 100)) / currentClose);
+            } else {
+              positionSize = Math.floor((accountSize * (riskPct / 100)) / stopDistance);
+            }
+          }
+          if (positionSize < 1) positionSize = 1;
+
+          // ── Commission (#50) ──
+          const totalCommission = commission * positionSize; // per-share commission model
+
+          const grossPnl = rawPnlPerShare * positionSize;
+          const netPnl = grossPnl - totalCommission;
+          const pnlPct = (netPnl / (entryCost * positionSize)) * 100;
 
           trades.push({
             entryDate: currentBar.timestamp.toISOString().split('T')[0],
@@ -236,12 +384,14 @@ export class BacktestService {
             exitDate,
             exitPrice: Number(exitCost.toFixed(5)),
             direction: 'LONG',
-            pnl: Number(pnl.toFixed(4)),
+            pnl: Number(netPnl.toFixed(4)),
             pnlPct: Number(pnlPct.toFixed(2)),
             exitReason,
             score: Number(score.toFixed(1)),
             signal,
             protocolId: protocolId ?? 'default',
+            positionSize,
+            commission: Number(totalCommission.toFixed(4)),
           });
         }
       }
@@ -265,8 +415,13 @@ export class BacktestService {
     const tradeWinRate = trades.length ? tradeWinners / trades.length : 0;
     const avgTradePnl = trades.length ? trades.reduce((s, t) => s + t.pnlPct, 0) / trades.length : 0;
     const totalPnl = trades.reduce((s, t) => s + t.pnl, 0);
+    const grossPnlTotal = trades.reduce((s, t) => s + t.pnl + (t.commission ?? 0), 0);
+    const totalCommissionPaid = trades.reduce((s, t) => s + (t.commission ?? 0), 0);
     const tradePnls = trades.map(t => t.pnl);
     const maxTradeDrawdown = tradePnls.length ? Math.min(...tradePnls) : 0;
+    const avgPositionSize = trades.length
+      ? trades.reduce((s, t) => s + (t.positionSize ?? 1), 0) / trades.length
+      : 0;
 
     const result: BacktestResult = {
       id: `${symbol}-${Date.now()}`,
@@ -277,6 +432,30 @@ export class BacktestService {
       timeframe,
       entrySignals: entrySignals.slice(-200),
       trades: doBrackets ? trades : undefined,
+      execution: {
+        slippage: Number(slippage.toFixed(6)),
+        spread: Number(spread.toFixed(6)),
+        commission: Number(commission.toFixed(4)),
+        positionModel,
+        accountSize,
+        riskPct,
+        fixedAmount,
+        ...(positionModel === 'atrEqualRisk' ? {
+          atrPeriod,
+          atrMultiplier,
+        } : {}),
+        ...(positionModel.startsWith('kelly') ? {
+          kellyCapPct,
+          kellyFraction: Number((() => {
+            const b = tpPct / slPct;
+            const p = 0.5;
+            const q = 1 - p;
+            const kf = (b * p - q) / b;
+            return Math.min(kf, kellyCapPct / 100) / (positionModel === 'kellyHalf' ? 2 : 1);
+          })().toFixed(4)),
+          kellyEdge: Number(((tpPct / slPct * 0.5 - 0.5) / (tpPct / slPct) * 100).toFixed(2)),
+        } : {}),
+      },
       stats: {
         totalSignals: entrySignals.length,
         winRate: Number(winRate.toFixed(2)),
@@ -291,6 +470,10 @@ export class BacktestService {
           avgTradePnl: Number(avgTradePnl.toFixed(2)),
           totalPnl: Number(totalPnl.toFixed(4)),
           maxTradeDrawdown: Number(maxTradeDrawdown.toFixed(4)),
+          grossPnl: Number(grossPnlTotal.toFixed(4)),
+          totalCommission: Number(totalCommissionPaid.toFixed(4)),
+          netPnl: Number(totalPnl.toFixed(4)),
+          avgPositionSize: Number(avgPositionSize.toFixed(1)),
         } : {}),
       },
     };
@@ -335,6 +518,8 @@ export class BacktestService {
               exitReason: t.exitReason,
               entryScore: t.score,
               signal: t.signal,
+              positionSize: t.positionSize,
+              commission: t.commission,
             })),
           });
         }
@@ -344,8 +529,8 @@ export class BacktestService {
       this.logger.error(`Failed to persist backtest for ${symbol}: ${(err as Error).message}`);
     }
 
-    this.logger.log(`Backtest ${symbol}: ${entrySignals.length} signals, winRate=${(winRate*100).toFixed(0)}%`);
-    return { ...result, id: persistedRunId || result.id };
+    this.logger.log(`Backtest ${symbol}: ${entrySignals.length} signals, winRate=${(winRate*100).toFixed(0)}%${newsExclusion !== 'none' ? ` (news: ${newsExclusion}, ${newsDates?.size ?? 0} news dates)` : ''}`);
+    return { ...result, id: persistedRunId || result.id, newsExclusion, newsDatesCount: newsDates?.size ?? 0 };
   }
 
   async getResult(runId: string): Promise<BacktestResult | null> {
@@ -567,6 +752,170 @@ export class BacktestService {
     };
   }
 
+  /**
+   * #106 — Full Directive Backtest Coverage.
+   * Runs each directive individually against historical bars and reports
+   * per-directive win rate, average return, and signal distribution.
+   */
+  async runDirectiveCoverage(body: { symbol: string; days?: number; timeframe?: string }) {
+    const { symbol, days = 365, timeframe = '1d' } = body;
+    const ticker = symbol.toUpperCase();
+
+    // Load bars
+    const bars = await this.prisma.marketBar.findMany({
+      where: { symbol: { ticker }, timeframe },
+      orderBy: { timestamp: 'asc' },
+      take: days + 30,
+    });
+
+    if (!bars.length) {
+      return { error: `No market bars for ${ticker} (${timeframe})` };
+    }
+
+    // Get all registered directives
+    const directiveList = this.directivesService.listRegistered();
+    const results: Array<{
+      directiveId: string;
+      name: string;
+      signals: number;
+      buyCount: number;
+      sellCount: number;
+      holdCount: number;
+      avgScore: number;
+      winRate5d: number;
+      avgReturn5d: number;
+      winRate10d: number;
+      avgReturn10d: number;
+      error?: string;
+    }> = [];
+
+    const WINDOW = 100;
+
+    for (const d of directiveList) {
+      try {
+        let buyCount = 0;
+        let sellCount = 0;
+        let holdCount = 0;
+        let totalScore = 0;
+        let wins5d = 0;
+        let total5d = 0;
+        let sumReturn5d = 0;
+        let wins10d = 0;
+        let total10d = 0;
+        let sumReturn10d = 0;
+
+        // Slide window across bars, only scoring the last bar in each window
+        for (let i = WINDOW - 1; i < bars.length; i += 5) {
+          const windowBars = bars.slice(Math.max(0, i - WINDOW + 1), i + 1);
+          const currentBar = bars[i];
+          if (!currentBar) continue;
+
+          // Build DirectiveInput for this window
+          const input = this.buildDirectiveInput(ticker, windowBars, currentBar, timeframe);
+
+          // Run the single directive
+          const outcome = await this.directivesService.runSingle(d.id, input);
+          if (!outcome) { holdCount++; continue; }
+
+          totalScore += outcome.score ?? 0;
+
+          if (outcome.signalClass === 'bullish') {
+            buyCount++;
+            // Check 5d forward return
+            const bar5d = bars[i + 5];
+            if (bar5d) {
+              total5d++;
+              const ret5d = ((bar5d.close - currentBar.close) / currentBar.close) * 100;
+              sumReturn5d += ret5d;
+              if (ret5d > 0) wins5d++;
+            }
+            // Check 10d forward return
+            const bar10d = bars[i + 10];
+            if (bar10d) {
+              total10d++;
+              const ret10d = ((bar10d.close - currentBar.close) / currentBar.close) * 100;
+              sumReturn10d += ret10d;
+              if (ret10d > 0) wins10d++;
+            }
+          } else if (outcome.signalClass === 'bearish') {
+            sellCount++;
+          } else {
+            holdCount++;
+          }
+        }
+
+        const signalCount = buyCount + sellCount;
+        results.push({
+          directiveId: d.id,
+          name: d.name,
+          signals: signalCount,
+          buyCount,
+          sellCount,
+          holdCount,
+          avgScore: signalCount > 0 ? Math.round(totalScore / signalCount) : 0,
+          winRate5d: total5d > 0 ? Math.round((wins5d / total5d) * 100) : 0,
+          avgReturn5d: total5d > 0 ? Math.round((sumReturn5d / total5d) * 100) / 100 : 0,
+          winRate10d: total10d > 0 ? Math.round((wins10d / total10d) * 100) : 0,
+          avgReturn10d: total10d > 0 ? Math.round((sumReturn10d / total10d) * 100) / 100 : 0,
+        });
+      } catch (err: any) {
+        results.push({
+          directiveId: d.id,
+          name: d.name,
+          signals: 0,
+          buyCount: 0,
+          sellCount: 0,
+          holdCount: 0,
+          avgScore: 0,
+          winRate5d: 0,
+          avgReturn5d: 0,
+          winRate10d: 0,
+          avgReturn10d: 0,
+          error: err.message,
+        });
+      }
+    }
+
+    // Sort by win rate descending
+    results.sort((a, b) => b.winRate10d - a.winRate10d);
+
+    return {
+      symbol: ticker,
+      timeframe,
+      days,
+      barsUsed: bars.length,
+      directivesTested: results.length,
+      passCount: results.filter(r => !r.error).length,
+      failCount: results.filter(r => r.error).length,
+      results,
+    };
+  }
+
+  /**
+   * Builds a DirectiveInput from a window of bars for per-directive testing.
+   */
+  private buildDirectiveInput(
+    ticker: string,
+    windowBars: any[],
+    _currentBar: any,
+    timeframe: string,
+  ) {
+    const bars = windowBars.map(b => ({
+      timestamp: b.timestamp,
+      open: Number(b.open),
+      high: Number(b.high),
+      low: Number(b.low),
+      close: Number(b.close),
+      volume: Number(b.volume || 0),
+    }));
+
+    return {
+      symbol: ticker,
+      timeframe,
+      bars,
+    };
+  }
+
   private formatRunResult(run: any): BacktestResult {
     return {
       id: run.id,
@@ -588,7 +937,21 @@ export class BacktestService {
         score: Number(t.entryScore),
         signal: t.signal,
         protocolId: run.protocolId,
+        positionSize: t.positionSize ? Number(t.positionSize) : undefined,
+        commission: t.commission ? Number(t.commission) : undefined,
       })) || [],
+      execution: {
+        slippage: Number(run.slippage ?? 0.01),
+        spread: Number(run.spread ?? 0.01),
+        commission: Number(run.commission ?? 0),
+        positionModel: run.positionModel ?? 'fixedPercent',
+        accountSize: run.accountSize ?? 10000,
+        riskPct: run.riskPct ?? 2,
+        fixedAmount: 100,
+        ...(run.positionModel?.startsWith?.('kelly') ? {
+          kellyCapPct: 25,
+        } : {}),
+      },
       stats: {
         totalSignals: run.totalTrades,
         winRate: run.winRate,
@@ -837,6 +1200,31 @@ export class BacktestService {
   }
 
   // ── Indicator helpers (pure functions) ──
+
+  private computeATR(highs: number[], lows: number[], closes: number[], period: number): number[] {
+    const result = Array(closes.length).fill(0);
+    if (closes.length < period + 1) return result;
+
+    // True ranges
+    const tr: number[] = [highs[0] - lows[0]];
+    for (let i = 1; i < closes.length; i++) {
+      tr.push(Math.max(
+        highs[i] - lows[i],
+        Math.abs(highs[i] - closes[i - 1]),
+        Math.abs(lows[i] - closes[i - 1]),
+      ));
+    }
+
+    // Wilder's smoothed ATR
+    let sum = 0;
+    for (let i = 0; i < period; i++) sum += tr[i];
+    result[period - 1] = sum / period;
+
+    for (let i = period; i < closes.length; i++) {
+      result[i] = (result[i - 1] * (period - 1) + tr[i]) / period;
+    }
+    return result;
+  }
 
   private computeRSI(closes: number[], period: number): number[] {
     const result = Array(closes.length).fill(0);

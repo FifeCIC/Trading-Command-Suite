@@ -14,9 +14,12 @@ $ErrorActionPreference = 'Continue'
 # ── Kill anything on our ports ─────────────────────────────
 
 Write-Host "`n  Stopping existing services…" -ForegroundColor DarkGray
-@(3201, 5000, 5173) | ForEach-Object {
+@(3201, 5000, 5173, 5174) | ForEach-Object {
     $conn = Get-NetTCPConnection -LocalPort $_ -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($conn) { Stop-Process -Id $conn.OwningProcess -Force -ErrorAction SilentlyContinue }
+    if ($conn) { 
+        try { Stop-Process -Id $conn.OwningProcess -Force -ErrorAction Stop } catch {}
+        $null = cmd /c "taskkill /F /PID $($conn.OwningProcess) 2>nul"
+    }
 }
 Start-Sleep -Seconds 2
 
@@ -48,7 +51,7 @@ Write-Host "    PID $($nest.Id)" -ForegroundColor DarkGray
 if (-not $SkipFrontend) {
     Write-Host "  Starting Vite Frontend (port 5173)…" -ForegroundColor Green
     $vite = Start-Process -FilePath "npx" `
-        -ArgumentList "vite --host" `
+        -ArgumentList "vite --host --port 5173 --strictPort" `
         -WorkingDirectory $ROOT `
         -PassThru -NoNewWindow `
         -RedirectStandardOutput "$env:TEMP\vite.log" `

@@ -235,6 +235,24 @@ export function getNavStructure() {
 }
 
 /**
+ * Filter nav structure by experience level.
+ * Returns the same shape as getNavStructure() but with beginner/experienced views removed.
+ * @param {'beginner'|'experienced'|'expert'} level
+ */
+export function getFilteredNavStructure(level) {
+  // Lazy import to avoid circular dependency
+  const { isNavVisible } = require('./experience-levels');
+  const structure = {};
+  for (const [key, area] of Object.entries(NAV_TREE)) {
+    const filtered = area.views.filter(v => isNavVisible(v.id, level));
+    if (filtered.length > 0) {
+      structure[key] = filtered;
+    }
+  }
+  return structure;
+}
+
+/**
  * Resolve which area owns a given view id.
  */
 export function resolveArea(viewId) {

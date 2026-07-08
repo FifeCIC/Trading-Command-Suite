@@ -293,6 +293,18 @@ export default function SettingsPage() {
             <button type="button" className={!prefs.compactMode ? 'cta' : ''} onClick={() => set('compactMode', false)}>Off</button>
           </div>
         </SettingRow>
+
+        <SettingRow label="Experience Level" hint="Controls which views and features are visible. Beginner hides advanced tools. Expert unlocks everything.">
+          <select
+            className="settings-select"
+            value={prefs.experienceLevel || 'beginner'}
+            onChange={e => set('experienceLevel', e.target.value)}
+          >
+            <option value="beginner">Beginner — core pages, simplified trading</option>
+            <option value="experienced">Experienced — scoring, strategies, research</option>
+            <option value="expert">Expert — full access, automation, builder tools</option>
+          </select>
+        </SettingRow>
       </section>
 
       <section className="settings-section">

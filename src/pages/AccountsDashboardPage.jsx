@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet } from '../core/api/client';
+import EmptyState from '../components/EmptyState';
 import './trading-platforms.css';
 import './accounts-dashboard.css';
 
@@ -194,7 +195,7 @@ export default function AccountsDashboardPage() {
               </div>
 
               {liveMT5.length === 0 && t212Account.total == null && (
-                <p className="ad-empty">No live accounts connected. Start MT5 bridge or configure Trading212 credentials.</p>
+                <EmptyState icon="💼" title="No live accounts connected" description="Start MT5 bridge or configure Trading212 credentials." />
               )}
             </div>
           </section>
@@ -260,7 +261,7 @@ export default function AccountsDashboardPage() {
                     </div>
                   </div>
                 ))}
-                {demoMT5.length === 0 && <p className="ad-empty">No demo accounts found.</p>}
+                {demoMT5.length === 0 && <EmptyState icon="🧪" title="No demo accounts found" />}
               </div>
             )}
           </section>

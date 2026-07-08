@@ -157,3 +157,30 @@
   to { transform: rotate(360deg); }
 }
 .ss-trade-disabled { font-size: 0.7rem; color: var(--textFaint); }
+
+/* ── Mobile: collapse rows to vertical cards ── */
+@media (max-width: 900px) {
+  .ss-page { padding: 12px 10px; }
+  .ss-header { flex-direction: column; gap: 8px; }
+  .ss-header h1 { font-size: 1.15rem; }
+  .ss-header-right { width: 100%; flex-wrap: wrap; }
+  .ss-filter-bar { gap: 8px; }
+  .ss-filter-group { width: 100%; justify-content: flex-start; }
+  .ss-filter-count { margin-left: 0; width: 100%; text-align: left; }
+  .ss-row { flex-direction: column; align-items: flex-start; gap: 6px; padding: 10px 12px; }
+  .ss-rank { width: auto; }
+  .ss-symbol-col { min-width: 0; }
+  .ss-score-col { text-align: left; display: flex; gap: 8px; align-items: baseline; }
+  .ss-trend-col { min-width: 0; width: 100%; }
+  .ss-pattern-col { min-width: 0; }
+  .ss-rec-col { min-width: 0; flex-direction: row; gap: 8px; align-items: baseline; }
+  .ss-trade-col { align-self: flex-end; }
+}
+@media (max-width: 500px) {
+  .ss-summary { gap: 8px; padding: 8px 10px; }
+  .ss-summary-item { min-width: 50px; }
+  .ss-summary-value { font-size: 0.9rem; }
+  .ss-filter-bar { gap: 4px; padding: 6px 8px; }
+  .ss-top-pick { padding: 4px 10px; }
+  .ss-top-symbol { font-size: 0.85rem; }
+}

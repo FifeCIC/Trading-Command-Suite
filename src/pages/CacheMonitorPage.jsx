@@ -8,6 +8,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
 
 export default function CacheMonitorPage() {
   const qc = useQueryClient();
@@ -70,12 +72,14 @@ export default function CacheMonitorPage() {
         </button>
       </div>
 
-      {statsQuery.isLoading && <p className="cm-loading">Loading cache stats...</p>}
+      {statsQuery.isLoading && <LoadingSkeleton variant="text" lines={3} />}
 
       {!statsQuery.isLoading && filtered.length === 0 && (
-        <p className="cm-empty">
-          {statsQuery.isError ? 'Could not reach cache API.' : 'No cache entries.'}
-        </p>
+        <EmptyState
+          icon="🗂️"
+          title={statsQuery.isError ? 'Could not reach cache API' : 'No cache entries'}
+          description={statsQuery.isError ? 'The cache monitoring endpoint is unavailable.' : 'Cache is empty — no entries to display.'}
+        />
       )}
 
       {filtered.length > 0 && (

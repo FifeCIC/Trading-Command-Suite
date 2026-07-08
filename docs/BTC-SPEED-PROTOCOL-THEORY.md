@@ -215,8 +215,9 @@ To validate this protocol, backtesting must support:
 2. **Bracket order simulation** — entry at bar close, check if SL or TP is hit first, record outcome
 3. **Confidence-based sizing** — position size varies with score, affecting P&L
 4. **Walk-forward optimization** — train weights on year 1-2, test on year 3-4
-5. **News exclusion mode** — ability to exclude periods with major news events to isolate protocol performance
-6. **Equity curve** — cumulative P&L, max drawdown, Sharpe ratio, win rate
+5. **News exclusion mode** ✅ `POST /api/backtest/run { newsExclusion: 'exclude'|'only'|'reduce' }` — Queries NewsArticle table, filters signals on news days. Completed #105.
+6. **Equity curve** ✅ `GET /api/backtest/equity/:runId` — Cumulative P&L, max drawdown %, peak equity. Completed #103.
+7. **Directive coverage** ✅ `POST /api/backtest/coverage` — Per-directive win rate and forward returns. Completed #106.
 
 ---
 

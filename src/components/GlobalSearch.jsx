@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { DIRECTIVE_SEED } from '../pages/directives-manager.seed';
+import EmptyState from './EmptyState';
 
 const PROVIDERS = [
   { id: 'trading212', name: 'Trading 212' },
@@ -138,7 +139,7 @@ export default function GlobalSearch() {
       )}
       {isOpen && debouncedQuery.length >= 2 && results.length === 0 && !symbolsQuery.isLoading && (
         <div className="global-search-results">
-          <div className="global-search-empty">No results for "{debouncedQuery}"</div>
+          <EmptyState icon="🔍" title={`No results for "${debouncedQuery}"`} />
         </div>
       )}
     </div>

@@ -4,14 +4,88 @@ import { apiGet, apiPost } from '../core/api/client';
 import BacktestChartPane from '../components/backtest/BacktestChartPane';
 import EquityCurveChart from '../components/backtest/EquityCurveChart';
 
+// ── Preset profiles (#50) ──
+const EXECUTION_PRESETS = {
+  forex: {
+    label: '💱 Forex',
+    slippage: 0.0001,
+    spread: 0.0001,
+    commission: 0,
+    positionModel: 'fixedPercent',
+    accountSize: 10000,
+    riskPct: 2,
+    assetClass: 'forex',
+  },
+  stocks: {
+    label: '📈 US Stocks',
+    slippage: 0.01,
+    spread: 0.01,
+    commission: 0,
+    positionModel: 'fixedPercent',
+    accountSize: 10000,
+    riskPct: 2,
+    assetClass: 'stock',
+  },
+  crypto: {
+    label: '₿ Crypto',
+    slippage: 0.002,
+    spread: 0.001,
+    commission: 0.1,
+    positionModel: 'fixedPercent',
+    accountSize: 10000,
+    riskPct: 2,
+    assetClass: 'crypto',
+  },
+};
+
 export default function BacktestPage() {
   const [symbol, setSymbol] = useState('NVDA');
   const [days, setDays] = useState(365);
   const [runId, setRunId] = useState('');
   const [showChart, setShowChart] = useState(false);
+  const [newsExclusion, setNewsExclusion] = useState('none');
+  const [showExecution, setShowExecution] = useState(false);
+
+  // Execution realism state (#50)
+  const [slippage, setSlippage] = useState(0.01);
+  const [spread, setSpread] = useState(0.01);
+  const [commission, setCommission] = useState(0);
+  const [positionModel, setPositionModel] = useState('fixedPercent');
+  const [accountSize, setAccountSize] = useState(10000);
+  const [riskPct, setRiskPct] = useState(2);
+  const [kellyCapPct, setKellyCapPct] = useState(25);
+  const [atrPeriod, setAtrPeriod] = useState(14);
+  const [atrMultiplier, setAtrMultiplier] = useState(1.5);
+  const [activePreset, setActivePreset] = useState('stocks');
+
+  const applyPreset = (key) => {
+    const p = EXECUTION_PRESETS[key];
+    if (!p) return;
+    setSlippage(p.slippage);
+    setSpread(p.spread);
+    setCommission(p.commission);
+    setPositionModel(p.positionModel);
+    setAccountSize(p.accountSize);
+    setRiskPct(p.riskPct);
+    setActivePreset(key);
+  };
 
   const runMutation = useMutation({
-    mutationFn: () => apiPost('/api/backtest/run', { symbol, days, timeframe: '1d' }),
+    mutationFn: () => apiPost('/api/backtest/run', {
+      symbol,
+      days,
+      timeframe: '1d',
+      newsExclusion,
+      slippage,
+      spread,
+      commission,
+      positionModel,
+      accountSize,
+      riskPct,
+      kellyCapPct,
+      atrPeriod,
+      atrMultiplier,
+    }),
     onSuccess: (data) => {
       setRunId(data.id);
       setShowChart(true);
@@ -35,6 +109,7 @@ export default function BacktestPage() {
   const result = resultQuery.data;
   const equityData = equityQuery.data;
   const stats = result?.stats;
+  const execution = result?.execution;
 
   return (
     <div className="bt-page">
@@ -55,9 +130,101 @@ export default function BacktestPage() {
             <option value={1825}>1825 (5 years)</option>
           </select>
         </label>
+        <label>
+          News
+          <select value={newsExclusion} onChange={(e) => setNewsExclusion(e.target.value)} title="Filter out news-driven signals to isolate protocol performance">
+            <option value="none">📰 Include (realistic)</option>
+            <option value="exclude">🚫 Exclude (protocol purity)</option>
+            <option value="only">📡 News-only (sensitivity)</option>
+            <option value="reduce">📉 Reduce weight</option>
+          </select>
+        </label>
         <button type="button" className="bt-run" disabled={runMutation.isPending} onClick={() => runMutation.mutate()}>
           {runMutation.isPending ? 'Running...' : 'Run Backtest'}
         </button>
+      </div>
+
+      {/* ── Execution Realism Panel (#50) ── */}
+      <div className="bt-execution-section">
+        <button
+          type="button"
+          className={`bt-execution-toggle ${showExecution ? 'open' : ''}`}
+          onClick={() => setShowExecution(!showExecution)}
+        >
+          ⚙ Execution Realism {showExecution ? '▾' : '▸'}
+          {activePreset && <span className="bt-preset-badge">{EXECUTION_PRESETS[activePreset].label}</span>}
+        </button>
+
+        {showExecution && (
+          <div className="bt-execution-panel">
+            {/* Preset buttons */}
+            <div className="bt-presets">
+              {Object.entries(EXECUTION_PRESETS).map(([key, p]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`bt-preset-btn ${activePreset === key ? 'active' : ''}`}
+                  onClick={() => applyPreset(key)}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="bt-execution-grid">
+              <label title="Slippage as decimal (0.01 = 1%)">
+                Slippage
+                <input type="number" step="0.0001" min="0" value={slippage} onChange={e => { setSlippage(parseFloat(e.target.value) || 0); setActivePreset(''); }} />
+              </label>
+              <label title="Spread as decimal (0.01 = 1%)">
+                Spread
+                <input type="number" step="0.0001" min="0" value={spread} onChange={e => { setSpread(parseFloat(e.target.value) || 0); setActivePreset(''); }} />
+              </label>
+              <label title="Per-share/contract commission ($)">
+                Commission $
+                <input type="number" step="0.01" min="0" value={commission} onChange={e => { setCommission(parseFloat(e.target.value) || 0); setActivePreset(''); }} />
+              </label>
+              <label title="Position sizing model">
+                Sizing Model
+                <select value={positionModel} onChange={e => { setPositionModel(e.target.value); setActivePreset(''); }}>
+                  <option value="fixedPercent">% of Equity</option>
+                  <option value="fixedDollar">Fixed $</option>
+                  <option value="atrEqualRisk">ATR Equal Risk</option>
+                  <option value="kellyFull">Kelly (full)</option>
+                  <option value="kellyHalf">Kelly (half)</option>
+                </select>
+              </label>
+              {(positionModel === 'kellyFull' || positionModel === 'kellyHalf') && (
+                <label title="Maximum % of account allowed per trade. Kelly can be aggressive — cap it.">
+                  Kelly Cap %
+                  <input type="number" step="5" min="5" max="50" value={kellyCapPct} onChange={e => { setKellyCapPct(parseFloat(e.target.value) || 25); setActivePreset(''); }} />
+                </label>
+              )}
+              {positionModel === 'atrEqualRisk' && (
+                <label title="Stop distance = ATR × multiplier. Higher = wider stop, smaller position.">
+                  ATR Multiplier
+                  <input type="number" step="0.5" min="0.5" max="5" value={atrMultiplier} onChange={e => { setAtrMultiplier(parseFloat(e.target.value) || 1.5); setActivePreset(''); }} />
+                </label>
+              )}
+              {positionModel === 'atrEqualRisk' && (
+                <label title="ATR lookback period. 14 = standard, 10 = more responsive, 20 = smoother.">
+                  ATR Period
+                  <input type="number" step="1" min="5" max="50" value={atrPeriod} onChange={e => { setAtrPeriod(parseInt(e.target.value, 10) || 14); setActivePreset(''); }} />
+                </label>
+              )}
+              {!(positionModel === 'kellyFull' || positionModel === 'kellyHalf') && (
+                <label title="Risk per trade as % of account. Position size = (account * risk%) / stopDistance">
+                  Risk %
+                  <input type="number" step="0.5" min="0.5" max="20" value={riskPct} onChange={e => { setRiskPct(parseFloat(e.target.value) || 2); setActivePreset(''); }} />
+                </label>
+              )}
+              <label title="Starting account balance for position sizing">
+                Account Size
+                <input type="number" step="1000" min="1000" value={accountSize} onChange={e => { setAccountSize(parseInt(e.target.value) || 10000); setActivePreset(''); }} />
+              </label>
+            </div>
+          </div>
+        )}
       </div>
 
       {runMutation.isError && <p className="bt-error">{(runMutation.error && runMutation.error.message) || 'Backtest failed'}</p>}
@@ -72,9 +239,49 @@ export default function BacktestPage() {
             <div className="bt-stat"><div className="bt-stat-value">{stats.maxDrawdown10d}%</div><div>Max Drawdown (10d)</div></div>
             <div className="bt-stat"><div className="bt-stat-value">{stats.profitFactor}</div><div>Profit Factor</div></div>
             <div className="bt-stat"><div className="bt-stat-value">{stats.sharpeApproximation}</div><div>Sharpe (approx)</div></div>
+            {/* Bracket trade stats */}
+            {stats.totalTrades != null && (
+              <>
+                <div className="bt-stat"><div className="bt-stat-value">{stats.totalTrades}</div><div>Bracket Trades</div></div>
+                <div className="bt-stat"><div className="bt-stat-value">{(stats.tradeWinRate * 100).toFixed(0)}%</div><div>Trade Win Rate</div></div>
+                <div className="bt-stat"><div className="bt-stat-value">{stats.avgTradePnl}%</div><div>Avg Trade PnL</div></div>
+                <div className="bt-stat"><div className="bt-stat-value">${stats.totalPnl?.toFixed(2)}</div><div>Total PnL</div></div>
+                <div className="bt-stat"><div className="bt-stat-value">{stats.grossPnl != null ? `$${stats.grossPnl.toFixed(2)}` : '—'}</div><div>Gross PnL</div></div>
+                <div className="bt-stat"><div className="bt-stat-value">{stats.totalCommission != null ? `$${stats.totalCommission.toFixed(2)}` : '—'}</div><div>Total Commission</div></div>
+                <div className="bt-stat"><div className="bt-stat-value">{stats.avgPositionSize != null ? Math.round(stats.avgPositionSize) : '—'}</div><div>Avg Pos Size</div></div>
+                <div className="bt-stat"><div className="bt-stat-value">{stats.maxTradeDrawdown != null ? `$${stats.maxTradeDrawdown.toFixed(2)}` : '—'}</div><div>Max Trade DD</div></div>
+              </>
+            )}
           </div>
 
           {result?.period && <p className="bt-period">Period: {result.period}</p>}
+
+          {/* Execution realism info */}
+          {execution && (
+            <p className="bt-execution-info">
+              ⚙ Slippage: {(execution.slippage * 100).toFixed(2)}% · Spread: {(execution.spread * 100).toFixed(2)}%
+              · Commission: ${execution.commission.toFixed(2)}/share · {execution.positionModel === 'fixedPercent'
+                ? `${execution.riskPct}% risk on $${execution.accountSize.toLocaleString()}`
+                : execution.positionModel === 'fixedDollar'
+                ? `$${execution.fixedAmount} fixed`
+                : execution.positionModel?.startsWith('kelly')
+                ? <>Kelly ({execution.positionModel === 'kellyHalf' ? 'half' : 'full'})
+                  · f={(execution.kellyFraction * 100).toFixed(1)}%
+                  · Edge: {execution.kellyEdge > 0 ? '+' : ''}{execution.kellyEdge}%
+                  · Cap: {execution.kellyCapPct}%
+                  {execution.kellyFraction * 100 > 25 && <span style={{ color: 'var(--danger)', fontWeight: 700 }}> ⚠ Aggressive!</span>}
+                </>
+                : `$${execution.fixedAmount} fixed`}
+            </p>
+          )}
+
+          {/* News exclusion info */}
+          {result?.newsExclusion && result.newsExclusion !== 'none' && (
+            <p className="bt-news-info">
+              📡 News mode: <strong>{result.newsExclusion}</strong>
+              {result.newsDatesCount != null && <span> — {result.newsDatesCount} news dates found</span>}
+            </p>
+          )}
 
           {/* Equity curve + drawdown */}
           {equityData && !equityData.error && equityData.equity?.length > 0 && (

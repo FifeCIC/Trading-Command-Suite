@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
 import './directives-config.css';
 
 export default function DirectivesConfigPage() {
@@ -80,22 +81,25 @@ export default function DirectivesConfigPage() {
       {strategiesQuery.isLoading && <LoadingSkeleton variant="card" count={3} />}
 
       {!selectedStrategy && !strategiesQuery.isLoading && (
-        <div className="dc-empty">
-          <h2>No strategy selected</h2>
-          <p>Select a strategy above to configure its directives. Strategies are created in the Strategy Builder or via /api/strategies.</p>
-          {strategies.length === 0 && (
-            <p className="dc-hint">No strategies found in the database. Run the strategy seeder or create one in Strategy Builder.</p>
-          )}
-        </div>
+        <EmptyState
+          icon="📋"
+          title="No strategy selected"
+          description={strategies.length === 0
+            ? 'No strategies found in the database. Run the strategy seeder or create one in Strategy Builder.'
+            : 'Select a strategy above to configure its directives.'}
+          actionLabel={strategies.length === 0 ? 'Create Strategy' : undefined}
+          actionHref={strategies.length === 0 ? '/strategies/create-strategy' : undefined}
+        />
       )}
 
       {selectedStrategy && directivesQuery.isLoading && <LoadingSkeleton variant="card" count={4} />}
 
       {selectedStrategy && !directivesQuery.isLoading && directives.length === 0 && (
-        <div className="dc-empty">
-          <h2>No directives configured</h2>
-          <p>"{strategyName}" has no directives linked. Directives are assigned when the strategy is created.</p>
-        </div>
+        <EmptyState
+          icon="📝"
+          title="No directives configured"
+          description={`"${strategyName}" has no directives linked. Directives are assigned when the strategy is created.`}
+        />
       )}
 
       {selectedStrategy && directives.length > 0 && (

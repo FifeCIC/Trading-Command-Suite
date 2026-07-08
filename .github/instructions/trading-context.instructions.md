@@ -22,6 +22,14 @@ applyTo: "nest/src/modules/portfolio/**, nest/src/modules/providers/**, nest/src
 - Calibrations in `seed.ts` adjust weight multipliers per symbol+directive
 - The `earnings-proximity` directive currently returns mock-neutral (needs Alpha Vantage wiring)
 
+### ⚠️ Directive Score Range (CRITICAL)
+- **Scores are NOT capped at 100.** Each directive declares its own `maxScore` (e.g., 120, 180, 200).
+- A directive with `maxScore=180` naturally carries more weight than one with `maxScore=90`.
+- The protocol's total maximum is the sum of ALL directive maxScores in that protocol.
+- **Percentages are for display only.** `rankAll()` normalizes scores to a 0-100% scale for the UI so humans see "65/100 GOOD", but the raw scores flowing through the pipeline are unbounded.
+- When writing a new directive: set `maxScore` proportional to its importance. A rare, high-conviction signal (earnings surprise, halving cycle) should have `maxScore=200`. A routine filter (volume check) should have `maxScore=60`.
+- Never clamp or `.min(100)` a directive score — let the weight system do its job.
+
 ## Provider Pattern
 - Every adapter implements `IProviderAdapter`: `getQuote`, `getCandles`, `getProfile`, `healthCheck`
 - Adapters register in `providers.module.ts` with `failoverPriority`

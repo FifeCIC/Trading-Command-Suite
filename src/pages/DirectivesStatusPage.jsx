@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './directives-status.css';
 
@@ -185,10 +186,11 @@ export default function DirectivesStatusPage() {
     return (
       <main className="directives-status-page">
         <h1>Directive Status</h1>
-        <div className="pf-unavailable">
-          <h2>No Directives Registered</h2>
-          <p>The NestJS directive registry is empty. Ensure the backend is running.</p>
-        </div>
+        <EmptyState
+          icon="📋"
+          title="No Directives Registered"
+          description="The NestJS directive registry is empty. Ensure the backend is running."
+        />
       </main>
     );
   }

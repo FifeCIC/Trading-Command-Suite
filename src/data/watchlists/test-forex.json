@@ -1,0 +1,5 @@
+[
+  { "ticker": "EURUSD", "symbol": "EURUSD" },
+  { "ticker": "GBPUSD", "symbol": "GBPUSD" },
+  { "ticker": "USDCAD", "symbol": "USDCAD" }
+]

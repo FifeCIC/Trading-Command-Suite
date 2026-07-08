@@ -113,6 +113,15 @@ const KNOWN_FEATURES = {
   'Feature Lab Demos (TP/Session/Trailing Stop)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
   'Detachable Widget System': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
   'Sticky Header Component': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // 2026-07-07/08 — Alerts, Backtest, Duplicate Guard
+  'AlertTriggerService (9 triggers)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'DuplicateGuardService': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'Backtest News Exclusion (#105)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Backtest Equity Curve (#103)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Backtest Run Compare (#104)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Pipeline Graph (NodeMapper)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Design Token System (#252)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'EmptyState Component (#255)': { dataPersistence: 'localStorage', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
 };
 
 // ── Build unified capability rows ──
@@ -207,6 +216,8 @@ function buildCapabilityRows(directives, providers) {
     { name: 'Data Import (orchestrator)', count: 4 },
     { name: 'Crypto Providers (Binance)', count: 2 },
     { name: 'Scoring Logs (unified)', count: 2 },
+    { name: 'Alerts (triggers + service)', count: 4 },
+    { name: 'Trading (strategies + duplicate)', count: 3 },
   ].forEach((mod) => {
     const known = KNOWN_FEATURES[mod.name] || {};
     rows.push({

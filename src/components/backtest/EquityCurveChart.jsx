@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { createChart, LineSeries, AreaSeries, ColorType } from 'lightweight-charts';
+import EmptyState from '../EmptyState';
 
 /**
  * EquityCurveChart — renders a cumulative P&L equity curve with drawdown shading.
@@ -129,10 +130,11 @@ export default function EquityCurveChart({ equityData, symbol, height = 300 }) {
 
   if (!equityData?.equity?.length) {
     return (
-      <div className="bt-equity-empty">
-        <p>No trade data — equity curve requires bracket trades (SL/TP &gt; 0).</p>
-        <p className="bt-chart-hint">Re-run backtest with SL% and TP% set to generate bracket trades.</p>
-      </div>
+      <EmptyState
+        icon="📉"
+        title="No trade data"
+        description="Equity curve requires bracket trades (SL/TP > 0). Re-run backtest with SL% and TP% set."
+      />
     );
   }
 

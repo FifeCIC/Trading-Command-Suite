@@ -1,6 +1,8 @@
+import EmptyState from '../EmptyState';
+
 export default function PositionsTable({ positions = [], onClose }) {
   if (!positions.length) {
-    return <p className="mt5-empty">No open positions</p>;
+    return <EmptyState icon="📊" title="No open positions" />;
   }
 
   return (

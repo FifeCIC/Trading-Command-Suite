@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
 import './AlgorithmLabPage.css';
 
 // ── API ────────────────────────────────────────────────────
@@ -192,17 +194,17 @@ export default function AlgorithmLabPage() {
         </div>
 
         {loading && runs.length === 0 && (
-          <div className="al-log-empty">Loading scoring runs...</div>
+          <LoadingSkeleton variant="card" count={3} />
         )}
 
         {!loading && runs.length === 0 && !error && (
-          <div className="al-empty">
-            <h2>No scoring runs yet</h2>
-            <p>Click &ldquo;Run Scoring&rdquo; to execute a fresh pipeline run and see results here.</p>
-            <button type="button" className="al-cta-btn" onClick={loadData}>
-              🔄 Run First Scoring
-            </button>
-          </div>
+          <EmptyState
+            icon="🧪"
+            title="No scoring runs yet"
+            description={'Click "Run Scoring" to execute a fresh pipeline run and see results here.'}
+            actionLabel="Run First Scoring"
+            actionOnClick={loadData}
+          />
         )}
 
         {runs.map((run) => (

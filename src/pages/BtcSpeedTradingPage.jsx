@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import SpeedChart from '../components/SpeedChart';
 import SpeedDecisionPanel from '../components/SpeedDecisionPanel';
+import EmptyState from '../components/EmptyState';
 import './btc-speed.css';
 
 const SYMBOL = 'BTCUSD';
@@ -289,7 +290,7 @@ export default function BtcSpeedTradingPage() {
                 <span className={`btc-scan-signal ${item.signal?.toLowerCase()}`}>{item.signal}</span>
               </div>
             ))}
-            {scanData?.scan?.length === 0 && <div className="btc-scan-empty">No signals</div>}
+            {scanData?.scan?.length === 0 && <EmptyState icon="🔍" title="No signals" />}
           </div>
         )}
       </div>
@@ -304,7 +305,7 @@ export default function BtcSpeedTradingPage() {
               <span className="btc-log-msg">{entry.msg}</span>
             </div>
           ))}
-          {actionLog.length === 0 && <div className="btc-log-empty">No actions yet</div>}
+          {actionLog.length === 0 && <EmptyState icon="📝" title="No actions yet" />}
         </div>
       </div>
 

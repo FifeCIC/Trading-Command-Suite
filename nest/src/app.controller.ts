@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Post } from '@nestjs/common';
 import { AppService } from './app.service';
 import { ModeService } from './config/mode.service';
 import { PrismaService } from './database/prisma.service';
@@ -6,6 +6,8 @@ import { ProvidersService } from './modules/providers/providers.service';
 
 @Controller()
 export class AppController {
+  private startedAt = Date.now();
+
   constructor(
     private readonly appService: AppService,
     private readonly modeService: ModeService,
@@ -14,8 +16,30 @@ export class AppController {
   ) {}
 
   @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  getServerInfo() {
+    const uptimeSec = Math.floor((Date.now() - this.startedAt) / 1000);
+    const uptimeFmt = `${Math.floor(uptimeSec / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m ${uptimeSec % 60}s`;
+    const providerStatus: any[] = [];
+
+    return {
+      server: 'Trading Command Suite — NestJS API',
+      version: process.env.npm_package_version || '0.1.0',
+      uptime: uptimeFmt,
+      uptimeSeconds: uptimeSec,
+      database: this.prisma.isAvailable ? 'connected' : 'disconnected',
+      mode: process.env.QUEUE_MODE === 'local' ? 'local' : 'fallback',
+      port: process.env.PORT ?? 3201,
+      providers: null,
+      endpoints: {
+        health: '/api/health',
+        docs: '/docs',
+        automation: '/api/automation/status',
+        scoring: '/api/scoring/runs',
+        strategies: '/api/trading/strategies',
+        portfolio: '/api/portfolio/summary',
+        market: '/api/trading/sessions/market-context',
+      },
+    };
   }
 
   @Get('version')

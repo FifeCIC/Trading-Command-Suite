@@ -61,6 +61,22 @@ export class DirectivesService {
     return Array.from(this.registry.values());
   }
 
+  listRegistered(): Array<{ id: string; name: string }> {
+    return Array.from(this.registry.entries()).map(([id, d]) => ({ id, name: d.name }));
+  }
+
+  /** Run a single directive by ID — used by per-directive backtest coverage (#106). */
+  async runSingle(id: string, input: any): Promise<DirectiveResult | null> {
+    const directive = this.registry.get(id);
+    if (!directive) return null;
+    try {
+      return await directive.calculate(input);
+    } catch (err) {
+      this.logger.warn(`runSingle ${id} failed: ${(err as Error).message}`);
+      return null;
+    }
+  }
+
   /** Run all registered directives against the same input, with activation gates. Supports async directives. */
   async runAll(input: DirectiveInput): Promise<Map<string, DirectiveResult>> {
     const results = new Map<string, DirectiveResult>();

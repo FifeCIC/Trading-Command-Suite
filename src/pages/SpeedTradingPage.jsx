@@ -7,6 +7,7 @@ import { getProtocolsForSymbol } from '../data/speed-protocols';
 import SpeedChart from '../components/SpeedChart';
 import SeasonalityHeatmap from '../components/SeasonalityHeatmap';
 import SpeedDecisionPanel from '../components/SpeedDecisionPanel';
+import EmptyState from '../components/EmptyState';
 import './speed-trading.css';
 
 const SIZE_PRESETS = [1, 5, 10];
@@ -529,9 +530,7 @@ export default function SpeedTradingPage() {
               </div>
             </>
           ) : (
-            <div className="st-dir-empty">
-              <p>Select a symbol to see its protocol directives</p>
-            </div>
+            <EmptyState icon="📋" title="Select a symbol" description="Choose a symbol to see its protocol directives." />
           )}
         </div>
 
@@ -729,7 +728,7 @@ export default function SpeedTradingPage() {
                 )}
               </>
             ) : (
-              <div className="st-scan-empty">No symbols scored yet — running first scan…</div>
+              <EmptyState icon="🔍" title="No symbols scored yet" description="Running first scan…" />
             )}
           </div>
         )}

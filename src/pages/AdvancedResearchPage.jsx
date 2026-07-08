@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiPost, apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './advanced-research.css';
 
@@ -316,16 +317,11 @@ export default function AdvancedResearchPage() {
 
       {/* Empty State */}
       {!lastSymbol && !investigateMutation.isPending && (
-        <motion.div className="ar-empty-state" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-          <div className="ar-empty-icon">🔬</div>
-          <h2>Enter a symbol to investigate</h2>
-          <p>Deep-dive analysis pulls live data from Finnhub: quotes, news sentiment, analyst targets, social buzz, and earnings proximity — all scored into a conviction model.</p>
-          <div className="ar-empty-hints">
-            {['AAPL', 'NVDA', 'MSFT', 'TSLA', 'GOOGL'].map(s => (
-              <span key={s} onClick={() => handleRun(s)}>{s}</span>
-            ))}
-          </div>
-        </motion.div>
+        <EmptyState
+          icon="🔬"
+          title="Enter a symbol to investigate"
+          description="Deep-dive analysis pulls live data from Finnhub: quotes, news sentiment, analyst targets, social buzz, and earnings proximity — all scored into a conviction model."
+        />
       )}
     </div>
   );

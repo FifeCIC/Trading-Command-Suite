@@ -19,6 +19,12 @@ const DEFAULTS = {
   decimalPlaces: 2,
   compactMode: false,
   tableStyle: 'default',      // 'default' | 'compact' | 'bordered' | 'striped'
+  // Experience level — controls feature gating
+  experienceLevel: 'beginner', // 'beginner' | 'experienced' | 'expert'
+  // Accessibility & UX
+  pageTransitions: true,       // View Transitions API page morphing
+  keyboardShortcutsHelp: true, // Show keyboard shortcuts helper
+  highContrastText: false,     // Boost text contrast for accessibility
   // Performance
   pollingInterval: 30,
   chartAnimation: true,

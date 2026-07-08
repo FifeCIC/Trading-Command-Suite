@@ -114,4 +114,11 @@ export class BacktestController {
   async getEquityCurve(@Param('runId') runId: string) {
     return this.backtestService.getEquityCurve(runId);
   }
+
+  /** Per-directive coverage: backtest every directive individually */
+  @Post('coverage')
+  @ApiOperation({ summary: 'Run every directive individually against historical data and report per-directive performance' })
+  async directiveCoverage(@Body() body: { symbol: string; days?: number; timeframe?: string }) {
+    return this.backtestService.runDirectiveCoverage(body);
+  }
 }

@@ -67,4 +67,11 @@
 @media (max-width: 768px) {
   .sc-best-worst { grid-template-columns: 1fr; }
   .sc-live-grid { grid-template-columns: 1fr; }
+  .sc-table { font-size: 0.72rem; }
+  .sc-table th, .sc-table td { padding: 6px 8px; }
+}
+@media (max-width: 500px) {
+  .sc-page { padding: 12px 8px; }
+  .sc-summary { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .sc-header h1 { font-size: 1.15rem; }
 }

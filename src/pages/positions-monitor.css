@@ -1,7 +1,7 @@
 /* Positions Monitor (CFD + Options) */
 
 .pm-page {
-  max-width: 900px;
+  max-width: var(--page-max-width, 1400px);
   margin: 0 auto;
   padding: 20px 16px;
   color: #e2e8f0;

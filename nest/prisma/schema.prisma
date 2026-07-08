@@ -184,6 +184,13 @@ model BacktestRun {
   sharpeRatio  Float
   maxDrawdown  Float
   avgTradePnl  Float
+  // Execution realism (#50)
+  slippage     Float?   // slippage % used
+  spread       Float?   // spread % used
+  commission   Float?   // commission per trade ($)
+  positionModel String? @db.VarChar(30)  // fixedPercent | fixedDollar | atrEqualRisk | kellyFull | kellyHalf
+  accountSize  Float?   // starting account balance
+  riskPct      Float?   // risk % per trade
   createdAt    DateTime @default(now())
 
   symbol Symbol         @relation(fields: [symbolId], references: [id], onDelete: Cascade)
@@ -207,6 +214,9 @@ model BacktestTrade {
   exitReason String   @db.VarChar(20)  // TP | SL | EOD
   entryScore Float
   signal     String   @db.VarChar(20)
+  // Execution realism (#50)
+  positionSize Float?  // number of shares/contracts
+  commission   Float?  // commission deducted ($)
 
   run    BacktestRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 

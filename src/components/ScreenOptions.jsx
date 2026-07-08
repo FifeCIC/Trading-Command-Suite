@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import EmptyState from './EmptyState';
 import './screen-options.css';
 
 /** Registry of option definitions keyed by view ID */
@@ -27,6 +28,23 @@ const OPTIONS_REGISTRY = {
           { value: 'one-click', label: '🎯 One-Click', desc: 'Confirm before execution' },
           { value: 'automation', label: '🤖 Automation', desc: 'Queue for next automation loop' },
           { value: 'keyboard', label: '⌨️ Keyboard', desc: 'Map to a hotkey for manual execution' },
+        ],
+      },
+    ],
+  },
+  'pipeline-graph-lab': {
+    title: 'Pipeline Graph',
+    sections: [
+      {
+        id: 'connectorMode',
+        label: 'Connector Style',
+        description: 'How connection lines are drawn between nodes',
+        type: 'radio',
+        key: 'pg-connector-mode',
+        defaultValue: 'diagonal',
+        options: [
+          { value: 'diagonal', label: '╱ Diagonal', desc: 'Straight lines between ports — reliable and clean' },
+          { value: 'orthogonal', label: '└ Orthogonal', desc: 'Right-angle L-bends — experimental, some paths may cross' },
         ],
       },
     ],
@@ -123,7 +141,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
 
               <div className="so-body">
                 {!registry ? (
-                  <p className="so-empty">No options available for this view.</p>
+                  <EmptyState icon="⚙️" title="No options available" description="This view has no configurable options." />
                 ) : (
                   registry.sections.map((section) => (
                     <div key={section.id} className="so-section">

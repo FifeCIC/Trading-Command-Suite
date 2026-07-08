@@ -232,18 +232,21 @@ function ServerStatusPanel() {
   const [copied, setCopied] = useState(false);
 
   const STARTUP_COMMANDS = [
-    '# ── 1. Start NestJS API (port 3201) ──',
-    'cd C:\\wamp64\\www\\trading-command-suite\\nest',
+    '# ── Unified Launcher (all services) ──',
+    'pwsh -File C:\\wamp64\\www\\trading-command-suite\\scripts\\tcs-launch.ps1',
+    '',
+    '# ── Individual services (when needed) ──',
+    '',
+    '# NestJS API only (port 3201):',
     '$env:DATABASE_URL = "mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"',
-    'node dist/src/main.js',
+    'npm --prefix C:\\wamp64\\www\\trading-command-suite\\nest run start',
     '',
-    '# ── 2. Start MT5 Bridge (port 5000) ──',
-    'cd C:\\wamp64\\www\\trading-command-suite',
-    'python scripts/mt5-bridge/mt5_bridge_v2.py',
+    '# MT5 Bridge only (port 5000):',
+    'cd C:\\wamp64\\www\\trading-command-suite\\scripts\\mt5-bridge',
+    'python mt5_bridge_v2.py',
     '',
-    '# ── 3. Start Vite Dev Server (port 5173) ──',
-    'cd C:\\wamp64\\www\\trading-command-suite',
-    'npm run dev',
+    '# Vite Frontend only (port 5173):',
+    'npm --prefix C:\\wamp64\\www\\trading-command-suite run dev',
   ].join('\n');
 
   const checkApi = useCallback(async () => {

@@ -7,6 +7,7 @@
 
 import { useState } from 'react'
 import DirectiveCard from './DirectiveCard'
+import EmptyState from '../EmptyState'
 import './strategy-builder.css'
 
 const CATEGORY_ORDER = ['Momentum', 'Trend', 'Volatility', 'Participation', 'Pattern', 'Volume', 'Macro']
@@ -98,7 +99,7 @@ export default function DirectivePalette({ directives, onDragStart }) {
         )}
 
         {filtered.length === 0 && (
-          <p className="sb-empty">No directives match your search.</p>
+          <EmptyState icon="🔍" title="No directives match your search" />
         )}
       </div>
     </div>

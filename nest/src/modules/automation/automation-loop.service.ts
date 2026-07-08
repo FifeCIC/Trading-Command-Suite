@@ -578,9 +578,48 @@ export class AutomationLoopService {
           const threshold = strategy.minComposite ?? brokerState?.tradeThreshold ?? getStyleThreshold(strategy.protocolId);
           const passed = adjScore >= threshold;
           
-          // Attempt full evaluation for DB persistence (fire-and-forget, don't block)
+          // Attempt full evaluation for DB persistence
           try {
             const evalResult = await this.strategyService.evaluate(strategyId);
+            if (evalResult.evaluated && evalResult.passed && strategy.mode === 'auto') {
+              // ── Auto-execute when no existing position ──
+              const bs = this.state.brokerStates[strategy.brokerId || 'mt5'];
+              if (bs?.tradingEnabled && (!this.lastAnyTradeAt || Date.now() - this.lastAnyTradeAt >= 60000)) {
+                const broker = this.adapterFactory.create(strategy.brokerId || 'mt5');
+                if (broker?.placeOrder) {
+                  let size = (strategy as any).baseSize || 0.01;
+                  const slPct = (strategy as any).slPct || 1.0;
+                  const tpPct = (strategy as any).tpPct || 1.0;
+                  const entryPrice = evalResult.signal === 'SELL' ? lookupScore.lastPrice : lookupScore.lastPrice;
+                  const sl = evalResult.signal === 'BUY' ? entryPrice * (1 - slPct / 100) : entryPrice * (1 + slPct / 100);
+                  const tp = evalResult.signal === 'BUY' ? entryPrice * (1 + tpPct / 100) : entryPrice * (1 - tpPct / 100);
+                  const orderResult = await broker.placeOrder({
+                    symbol: strategy.symbol,
+                    side: evalResult.signal as 'BUY' | 'SELL',
+                    quantity: size,
+                    sl,
+                    tp,
+                    comment: `TCS ${strategy.name} | ${evalResult.composite}%`,
+                  });
+                  this.lastAnyTradeAt = Date.now();
+                  this.lastTradeTime.set(strategyId, Date.now());
+                  if (orderResult.success) {
+                    try { this.tradeRecorder.record({ symbol: strategy.symbol, side: evalResult.signal?.toLowerCase(), quantity: size, entryPrice: orderResult.price || lookupScore.lastPrice || 0, pnl: 0, provider: strategy.brokerId || 'mt5', status: 'open', origin: 'strategy' } as any); } catch {}
+                  }
+                  return {
+                    timestamp: new Date().toISOString(),
+                    strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
+                    decision: orderResult.success ? 'EXECUTED' : 'FAILED',
+                    reason: orderResult.success ? `Ticket ${orderResult.ticket}` : (orderResult.error || 'Unknown'),
+                    composite: evalResult.composite ?? lookupScore.score,
+                    signal: evalResult.signal,
+                    ticket: orderResult.ticket,
+                    price: orderResult.price,
+                    quantity: size,
+                  };
+                }
+              }
+            }
             if (evalResult.evaluated) {
               return {
                 timestamp: new Date().toISOString(),

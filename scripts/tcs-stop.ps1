@@ -8,17 +8,25 @@
 
 Write-Host "`n  Stopping Trading Command Suite services…" -ForegroundColor DarkGray
 
-$ports = @(3201, 5000, 5173)
+$ports = @(3201, 5000, 5173, 5174)
 $killed = @()
 
 foreach ($port in $ports) {
     $conn = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($conn) {
+        $procId = $conn.OwningProcess
+        # Try PowerShell first, fall back to cmd taskkill for admin-owned processes
         try {
-            Stop-Process -Id $conn.OwningProcess -Force -ErrorAction Stop
-            $killed += "$port (PID $($conn.OwningProcess))"
+            Stop-Process -Id $procId -Force -ErrorAction Stop
+            $killed += "$port (PID $procId)"
         } catch {
-            Write-Host "    Failed to kill port $port — $_" -ForegroundColor Red
+            # Try cmd-level kill for stubborn processes
+            $result = cmd /c "taskkill /F /PID $procId 2>&1"
+            if ($LASTEXITCODE -eq 0) {
+                $killed += "$port (PID $procId, via taskkill)"
+            } else {
+                Write-Host "    ⚠ Port $port is held by PID $procId — requires admin to free" -ForegroundColor Yellow
+            }
         }
     }
 }

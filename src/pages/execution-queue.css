@@ -89,4 +89,12 @@
 
 @media (max-width: 760px) {
   .eq-job-top { flex-direction: column; align-items: flex-start; gap: 0.2rem; }
+  .eq-summary { gap: 8px; }
+  .eq-summary-item { min-width: 60px; }
+  .eq-job { padding: 8px 10px; }
+}
+@media (max-width: 500px) {
+  .eq-page { padding: 12px 8px; }
+  .eq-header h1 { font-size: 1.15rem; }
+  .eq-stats { grid-template-columns: repeat(2, 1fr); }
 }

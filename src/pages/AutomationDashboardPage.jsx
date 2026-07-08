@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './automation-dashboard.css';
 
@@ -175,9 +176,11 @@ export default function AutomationDashboardPage() {
           <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
             <h2 className="ad-panel-title">📊 Portfolio Scores</h2>
             {portfolioScoresQuery.isLoading && <LoadingSkeleton variant="text" lines={5} />}
-            {portfolioScoresQuery.isError && <p className="ad-empty">Unable to load scores — is the NestJS backend running?</p>}
+            {portfolioScoresQuery.isError && (
+              <EmptyState icon="⚠️" title="Unable to load scores" description="Is the NestJS backend running?" />
+            )}
             {!portfolioScoresQuery.isLoading && scores.length === 0 && (
-              <p className="ad-empty">No portfolio scores yet. Import your Trading212 portfolio or add symbols in Settings.</p>
+              <EmptyState icon="📊" title="No portfolio scores yet" description="Import your Trading212 portfolio or add symbols in Settings." actionLabel="Go to Settings" actionHref="/settings" />
             )}
             {scores.length > 0 && (
               <div className="ad-score-list">
@@ -206,10 +209,7 @@ export default function AutomationDashboardPage() {
             <h2 className="ad-panel-title">🎯 Active Strategies</h2>
             {statusQuery.isLoading && <LoadingSkeleton variant="text" lines={3} />}
             {strategies.length === 0 ? (
-              <p className="ad-empty">
-                No active strategies.{' '}
-                <a href="/strategies/create-strategy">Create one in Create Strategy →</a>
-              </p>
+              <EmptyState icon="🎯" title="No active strategies" description="Create a strategy to start trading or scoring." actionLabel="Create Strategy" actionHref="/strategies/create-strategy" />
             ) : (
               <div className="ad-strategy-list">
                 {strategies.map((s) => {
@@ -295,7 +295,7 @@ export default function AutomationDashboardPage() {
                   </div>
                 ))}
                 {Object.keys(brokerStates).length === 0 && (
-                  <p className="ad-empty">No brokers configured. Start the loop to initialize broker states.</p>
+                  <EmptyState icon="⚙️" title="No brokers configured" description="Start the loop to initialize broker states." />
                 )}
               </div>
             )}
@@ -306,10 +306,10 @@ export default function AutomationDashboardPage() {
             <h2 className="ad-panel-title">⏱ Timeline {timelineEvents.length > 0 && <span style={{ fontSize: '0.7rem', color: 'var(--ink-soft)', fontWeight: 400 }}>({timelineEvents.length} events)</span>}</h2>
             {timelineQuery.isLoading && <LoadingSkeleton variant="text" lines={4} />}
             {timelineQuery.isError && (
-              <p className="ad-empty">Timeline unavailable — backend may be starting up.</p>
+              <EmptyState icon="⏱️" title="Timeline unavailable" description="Backend may be starting up." />
             )}
             {!timelineQuery.isLoading && timelineEvents.length === 0 && (
-              <p className="ad-empty">No active events in the next 4 hours. Markets may be closed or calm.</p>
+              <EmptyState icon="⏱️" title="No active events" description="No events in the next 4 hours. Markets may be closed or calm." />
             )}
             {timelineEvents.length > 0 && (
               <div className="ad-timeline-list">
@@ -386,10 +386,10 @@ export default function AutomationDashboardPage() {
                 )}
               </div>
               ) : (
-                <p className="ad-empty">No directive data available for {selectedSymbol}. Run scoring first.</p>
+                <EmptyState icon="🔍" title={`No data for ${selectedSymbol}`} description="Run scoring first to populate directive breakdowns." />
               )
             ) : (
-              <p className="ad-empty">Click a portfolio score (left column) to see the directive breakdown.</p>
+              <EmptyState icon="👆" title="Select a symbol" description="Click a portfolio score (left column) to see the directive breakdown." />
             )}
           </motion.section>
 
@@ -397,7 +397,7 @@ export default function AutomationDashboardPage() {
           <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
             <h2 className="ad-panel-title">📋 Decision Log {recentDecisions.length > 0 && <span style={{ fontSize: '0.7rem', color: 'var(--ink-soft)', fontWeight: 400 }}>({recentDecisions.length})</span>}</h2>
             {recentDecisions.length === 0 ? (
-              <p className="ad-empty">No decisions yet. Start the loop and click Run Now to trigger a tick.</p>
+              <EmptyState icon="📋" title="No decisions yet" description="Start the loop and click Run Now to trigger a tick." />
             ) : (
               <div className="ad-decision-list">
                 {recentDecisions.slice(0, 15).map((d, i) => (

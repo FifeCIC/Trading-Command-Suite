@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
 import './events-calendar.css';
 
 const EVENT_TYPES = {
@@ -124,9 +125,7 @@ export default function EventsCalendarPage() {
       {isLoading ? (
         <LoadingSkeleton variant="card" count={5} />
       ) : events.length === 0 ? (
-        <div className="ec-empty">
-          <p>No upcoming events found. Earnings and macro events will appear here when data is available.</p>
-        </div>
+        <EmptyState icon="📅" title="No upcoming events" description="Earnings and macro events will appear here when data is available." />
       ) : (
       /* Timeline */
       <div className="ec-timeline">

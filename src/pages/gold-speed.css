@@ -4,7 +4,7 @@
 
 .gold-page {
   padding: 16px;
-  max-width: 1200px;
+  max-width: var(--page-max-width, 1400px);
   margin: 0 auto;
   color: var(--text);
   position: relative;

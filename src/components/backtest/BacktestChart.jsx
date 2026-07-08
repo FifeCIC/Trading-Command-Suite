@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { createChart, CandlestickSeries, ColorType } from 'lightweight-charts';
+import EmptyState from '../EmptyState';
 import './BacktestChart.css';
 
 function timeToDate(time) {
@@ -293,10 +294,11 @@ export default function BacktestChart({ data, symbol, loading, showSignalsOnly =
   if (!data?.bars?.length) {
     return (
       <div className="bt-chart-container">
-        <div className="bt-chart-empty">
-          <p>No chart data available</p>
-          <p className="bt-chart-hint">Run a backtest or ensure market data exists for {symbol || 'symbol'}</p>
-        </div>
+        <EmptyState
+          icon="📈"
+          title="No chart data available"
+          description={`Run a backtest or ensure market data exists for ${symbol || 'symbol'}`}
+        />
       </div>
     );
   }

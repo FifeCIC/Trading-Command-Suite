@@ -1,0 +1,12 @@
+[
+  { "id": "data", "x": 66, "y": 170 },
+  { "id": "scoring", "x": 380, "y": 60 },
+  { "id": "signals", "x": 325, "y": 315 },
+  { "id": "automation", "x": 680, "y": 60 },
+  { "id": "execution", "x": 833, "y": 278 },
+  { "id": "db", "x": 1083, "y": 93 },
+  { "id": "portfolio", "x": 1028, "y": 489 },
+  { "id": "risk", "x": 73, "y": 502 },
+  { "id": "alerts", "x": 331, "y": 650 },
+  { "id": "providers", "x": 581, "y": 465 }
+]

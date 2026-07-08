@@ -370,6 +370,147 @@ const QA_CHECKLIST = [
     priority: 'low',
     versionNote: 'Sprint 2026-07-04 — #165',
   },
+
+  // ═══════════════════════════════════════════════════
+  // ALERTS & MONITORING
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-alert-001',
+    area: 'Alerts',
+    system: 'Alert Trigger Service',
+    name: 'Alerts fire on MT5 disconnection',
+    procedure: 'Stop MT5 bridge process. Wait 60s. Check Alert Center for "mt5-disconnected" alert.',
+    expected: 'Alert appears with severity=critical. Reconnecting dismisses it.',
+    category: 'Integration',
+    priority: 'high',
+    versionNote: 'Sprint 2026-07-07 — AlertTriggerService',
+  },
+  {
+    id: 'qa-alert-002',
+    area: 'Alerts',
+    system: 'Alert Trigger Service',
+    name: 'Earnings proximity alert fires',
+    procedure: 'Import earnings for NVDA with reportDate tomorrow. Wait for 60s poll. Check alert appears.',
+    expected: 'Alert: "NVDA earnings in 1 day" with severity=warning.',
+    category: 'Integration',
+    priority: 'medium',
+    versionNote: 'Sprint 2026-07-07',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // BACKTEST ENHANCEMENTS
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-backtest-001',
+    area: 'Backtest',
+    system: 'Backtest Service',
+    name: 'News exclusion mode affects results',
+    procedure: 'Run backtest on NVDA with newsExclusion=exclude then newsExclusion=none. Compare trade counts.',
+    expected: 'exclude mode should have fewer trades (excludes dates with news). Result shows newsCount > 0.',
+    category: 'API',
+    priority: 'medium',
+    versionNote: 'Sprint 2026-07-07 — #105',
+  },
+  {
+    id: 'qa-backtest-002',
+    area: 'Backtest',
+    system: 'Backtest Service',
+    name: 'Equity curve renders correctly',
+    procedure: 'Run backtest, note runId. GET /api/backtest/equity/:runId. Check EquityCurveChart component.',
+    expected: 'Green equity line, red drawdown fill, final P&L + peak + max drawdown summary bar.',
+    category: 'UI',
+    priority: 'medium',
+    versionNote: 'Sprint 2026-07-07 — #103',
+  },
+  {
+    id: 'qa-backtest-003',
+    area: 'Backtest',
+    system: 'Backtest Service',
+    name: 'Run comparison identifies best strategy',
+    procedure: 'Run 3 backtests with different protocols. POST /api/backtest/runs/compare with all 3 IDs.',
+    expected: 'Returns best-by-Sharpe identified. All runs listed with metrics.',
+    category: 'API',
+    priority: 'medium',
+    versionNote: 'Sprint 2026-07-07 — #104',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // DUPLICATE PREVENTION
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-dup-001',
+    area: 'Trading',
+    system: 'Duplicate Guard Service',
+    name: 'Duplicate position blocked',
+    procedure: 'Place a buy order for EURUSD via MT5. Immediately try to place another via Speed Scanner trade endpoint.',
+    expected: 'Second order returns DUPLICATE_BLOCKED with reason: "Position already exists for EURUSD".',
+    category: 'Integration',
+    priority: 'critical',
+    versionNote: 'Sprint 2026-07-07 — #250',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // PIPELINE GRAPH
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-pg-001',
+    area: 'Builder',
+    system: 'Pipeline Graph (NodeMapper)',
+    name: 'All 10 nodes render with live health data',
+    procedure: 'Visit /lab/pipeline-graph-lab. Verify Automation shows tick count, Providers show health counts.',
+    expected: 'Green health glow on running services. Unknown nodes grey. Down nodes red.',
+    category: 'UI',
+    priority: 'medium',
+    versionNote: 'Sprint 2026-07-07',
+  },
+  {
+    id: 'qa-pg-002',
+    area: 'Builder',
+    system: 'Pipeline Graph (NodeMapper)',
+    name: 'Click node shows documentation overlay',
+    procedure: 'Click Scoring Engine node. Verify overlay shows endpoints, tables, files, directives.',
+    expected: 'Overlay slides up. Shows all 4 sections. Close button works.',
+    category: 'UI',
+    priority: 'medium',
+    versionNote: 'Sprint 2026-07-07',
+  },
+  {
+    id: 'qa-pg-003',
+    area: 'Builder',
+    system: 'Pipeline Graph (NodeMapper)',
+    name: 'Connector mode toggle works via Screen Options',
+    procedure: 'Click gear button bottom-right → Screen Options → toggle Orthogonal → Done.',
+    expected: 'Connection lines switch from diagonal to L-shaped. Toggle back works.',
+    category: 'UI',
+    priority: 'low',
+    versionNote: 'Sprint 2026-07-07',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // DESIGN SYSTEM
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-design-001',
+    area: 'UI',
+    system: 'Design Tokens',
+    name: 'Design tokens applied consistently',
+    procedure: 'Visit 5 key pages (Trading Strategies, Speed Scanner, Automation Dashboard, Performance Lab, Portfolio). Check profit/loss colors.',
+    expected: 'All use var(--color-profit) / var(--color-loss). No hardcoded #22c55e or #ef4444.',
+    category: 'UI',
+    priority: 'low',
+    versionNote: 'Sprint 2026-07-07 — #252',
+  },
+  {
+    id: 'qa-design-002',
+    area: 'UI',
+    system: 'Empty States',
+    name: 'Empty states show consistently across pages',
+    procedure: 'Visit pages without data (e.g., fresh account on Position Monitor, Execution Queue).',
+    expected: 'All show EmptyState component with icon + description, not raw strings.',
+    category: 'UI',
+    priority: 'low',
+    versionNote: 'Sprint 2026-07-07 — #255',
+  },
 ];
 
 export default QA_CHECKLIST;

@@ -7,6 +7,7 @@ import DevOverlay from './components/DevOverlay';
 import ErrorBoundary from './components/ErrorBoundary';
 import TickerBar from './components/TickerBar';
 import MarketTape from './components/MarketTape';
+import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp';
 
 import { apiGet } from './core/api/client';
 import { FEATURE_FLAGS } from './core/features/flags';
@@ -131,7 +132,8 @@ import { useThemeRuntime } from './theme/useThemeRuntime';
 import './theme/packs/ai-original.css';
 import './theme/packs/scifi.css';
 import { featureFlags } from './utils/featureFlags';
-import { NAV_TREE, PRIMARY_PAGES, QUICK_MENU, getNavStructure } from './core/nav-tree';
+import { NAV_TREE, PRIMARY_PAGES, QUICK_MENU, getNavStructure, getFilteredNavStructure } from './core/nav-tree';
+import { getExperienceLevel } from './core/experience-levels';
 import { PLUGIN_TAB_SKELETONS } from './pages/plugin-tab-skeletons';
 import { VIEW_COMPONENTS } from './core/view-routes.jsx';
 
@@ -211,6 +213,7 @@ function AppShell() {
     // Map known views to their registry keys
     const VIEW_TO_OPTIONS = {
       'speed-scanner': 'speed-scanner',
+      'pipeline-graph-lab': 'pipeline-graph-lab',
     };
     setScreenOptionsView(VIEW_TO_OPTIONS[viewId] || null);
   }, [primaryArea, secondaryView]);
@@ -338,6 +341,15 @@ function AppShell() {
   useEffect(() => {
     document.documentElement.setAttribute('data-bg-tone', backgroundTone);
   }, [backgroundTone]);
+
+  // ── Apply user preferences to document root ──
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('tcs:preferences');
+      const prefs = raw ? JSON.parse(raw) : {};
+      document.documentElement.setAttribute('data-page-transitions', prefs.pageTransitions !== false ? 'true' : 'false');
+    } catch { /* preference not yet saved */ }
+  }, []);
 
   useEffect(() => {
     return featureFlags.subscribe(setFfState);
@@ -1017,6 +1029,7 @@ export default function App() {
           <Route path="/" element={<HomeDashboard />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <KeyboardShortcutsHelp />
       </ErrorBoundary>
     </BrowserRouter>
   );

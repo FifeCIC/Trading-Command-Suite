@@ -1,4 +1,4 @@
-.pf-page { max-width: none; margin: 0 auto; padding: 1.5rem 2rem; color: var(--ink); }
+.pf-page { max-width: var(--page-max-width, 1400px); margin: 0 auto; padding: 1.5rem 2rem; color: var(--ink); }
 .pf-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 .pf-header h1 { margin: 0; font-size: 1.5rem; }
 .pf-add-btn { padding: 0.4rem 1rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); cursor: pointer; font-size: 0.88rem; }

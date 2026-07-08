@@ -8,7 +8,7 @@ Usage:
     python mt5_bridge_v2.py
 """
 
-import os, sys, json, logging, time
+import os, json, logging, time
 from logging.handlers import RotatingFileHandler
 from datetime import datetime, timedelta
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -201,7 +201,7 @@ def ensure_mt5():
     try:
         if mt5.terminal_info() is not None and mt5.account_info() is not None:
             return True, None
-    except:
+    except (RuntimeError, Exception):
         pass
     connection_errors += 1
     return False, 'MT5 not connected'
@@ -784,7 +784,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 login = body.get('login',''); password = body.get('password',''); server = body.get('server','')
                 if not login or not password: return json_response(self, {'error': 'login and password required'}, 400)
                 try: login_int = int(login)
-                except: return json_response(self, {'error': f'Invalid login: {login}'}, 400)
+                except (ValueError, TypeError): return json_response(self, {'error': f'Invalid login: {login}'}, 400)
                 mt5.shutdown()
                 ok = mt5.initialize(login=login_int, password=str(password), server=str(server))
                 if ok:

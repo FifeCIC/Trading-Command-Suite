@@ -15,6 +15,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchRankedSymbols } from '../core/api/scoring';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
 import { usePreferences } from '../core/hooks/usePreferences';
 import { useDataFreshness } from '../core/hooks/useDataFreshness';
 import './scoring-overview.css';
@@ -213,7 +214,7 @@ export default function ScoringOverviewPage() {
         <section className="so-panel">
           <h2>Score Distribution</h2>
           {totalScored === 0 ? (
-            <p className="so-empty">No scores to distribute yet. Add symbols and seed market data.</p>
+            <EmptyState icon="📊" title="No scores to distribute yet" description="Add symbols and seed market data." />
           ) : (
             <div className="so-distro">
               {bucketCounts.map(b => (
@@ -236,7 +237,7 @@ export default function ScoringOverviewPage() {
         <section className="so-panel">
           <h2>Freshness Breakdown</h2>
           {totalScored === 0 ? (
-            <p className="so-empty">No data to report.</p>
+            <EmptyState icon="📋" title="No data to report" />
           ) : (
             <div className="so-freshness-grid">
               {Object.entries(freshnessBins).map(([key, count]) => (

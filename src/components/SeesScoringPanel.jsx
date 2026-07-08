@@ -17,6 +17,7 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchRankedSymbols } from '../core/api/scoring'
 import LoadingSkeleton from './LoadingSkeleton'
+import EmptyState from './EmptyState'
 
 /**
  * Determine data status for a ranked symbol.
@@ -105,10 +106,7 @@ export default function SeesScoringPanel({ strategyId, limit = 20 }) {
   if (ranked.length === 0) {
     return (
       <div className="sees-panel">
-        <p>No ranked symbols yet.</p>
-        <p className="hint">
-          Mode: <strong>{mode}</strong>. Symbols need price data before scoring can produce rankings.
-        </p>
+        <EmptyState icon="🏆" title="No ranked symbols yet" description={`Mode: ${mode}. Symbols need price data before scoring can produce rankings.`} />
       </div>
     )
   }
@@ -121,16 +119,13 @@ export default function SeesScoringPanel({ strategyId, limit = 20 }) {
           <h2>SEES Rankings</h2>
           <span className={`mode-badge mode-${mode}`}>{mode}</span>
         </div>
-        <div className="sees-empty-no-data">
-          <p className="sees-empty-icon">📊</p>
-          <p><strong>No market data available.</strong></p>
-          <p>Check provider credentials in <code>.env</code> or seed market data to see scores.</p>
-          <div className="sees-empty-actions" style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-            <button type="button" className="btn" onClick={() => rankQuery.refetch()}>
-              Refresh
-            </button>
-          </div>
-        </div>
+        <EmptyState
+          icon="📊"
+          title="No market data available"
+          description="Check provider credentials in .env or seed market data to see scores."
+          actionLabel="Refresh"
+          actionOnClick={() => rankQuery.refetch()}
+        />
       </div>
     )
   }

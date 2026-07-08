@@ -19,6 +19,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { AlertsService, type AlertSeverity } from './alerts.service';
 import { PrismaService } from '../../database/prisma.service';
+import { MarketCalendarService } from '../calendar/market-calendar.service';
 import * as http from 'http';
 
 interface TriggerConfig {
@@ -51,6 +52,7 @@ export class AlertTriggerService implements OnModuleInit {
   constructor(
     private readonly alerts: AlertsService,
     private readonly prisma: PrismaService,
+    private readonly calendar: MarketCalendarService,
   ) {}
 
   onModuleInit() {
@@ -197,21 +199,18 @@ export class AlertTriggerService implements OnModuleInit {
   }
 
   private async checkMarketClose(cfg: TriggerConfig): Promise<{ triggered: boolean; title: string; message: string } | null> {
-    const now = new Date();
-    const hour = now.getUTCHours();
-    const minute = now.getUTCMinutes();
-    // Approximate session closes (UTC): US 21:00, London 16:00, Asia 07:00
-    const closes = [
-      { label: 'US Session', hour: 21, min: 0 },
-      { label: 'London Session', hour: 16, min: 0 },
-    ];
-    for (const sess of closes) {
-      const closeMin = sess.hour * 60 + sess.min;
-      const nowMin = hour * 60 + minute;
-      const diffMin = closeMin - nowMin;
-      if (diffMin > 0 && diffMin < (cfg.threshold || 30)) {
-        return { triggered: true, title: `${sess.label} Closing Soon`, message: `${sess.label} closes in ${diffMin} minutes.` };
-      }
+    const status = this.calendar.getMarketStatus('US');
+    if (!status.isOpen && status.status === 'pre-market') {
+      // Market hasn't opened yet — no close alert needed
+      return { triggered: false, title: '', message: '' };
+    }
+    if (status.minutesUntilClose != null && status.minutesUntilClose > 0 && status.minutesUntilClose < (cfg.threshold || 30)) {
+      const label = status.holidayName ? `${status.holidayName} (Early Close)` : 'US Session';
+      return {
+        triggered: true,
+        title: `${label} Closing Soon`,
+        message: `US market closes in ${status.minutesUntilClose} minutes${status.holidayName ? ` (${status.holidayName})` : ''}.`,
+      };
     }
     return { triggered: false, title: '', message: '' };
   }

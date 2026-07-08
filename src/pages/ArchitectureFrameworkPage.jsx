@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
 import LoadingSkeleton from '../components/LoadingSkeleton'
+import EmptyState from '../components/EmptyState'
 import ApiOfflineBanner from '../components/ApiOfflineBanner'
 import {
   ACTIVATION_GATE_SYSTEM,
@@ -1197,7 +1198,7 @@ export default function ArchitectureFrameworkPage() {
             {providerHealthQuery.isLoading && <LoadingSkeleton variant="table" rows={4} cols={2} />}
             {providerHealthQuery.error && <ApiOfflineBanner compact />}
             {!providerHealthQuery.isLoading && !providerHealthQuery.error && providerHealth.length === 0 && (
-              <p>No provider health entries have been recorded yet.</p>
+              <EmptyState icon="🏥" title="No provider health entries" description="Provider health has not been recorded yet." />
             )}
             {!providerHealthQuery.isLoading && !providerHealthQuery.error && providerHealth.length > 0 && (
               <div className="architecture-table-wrap">
@@ -1233,7 +1234,7 @@ export default function ArchitectureFrameworkPage() {
             {importRunsQuery.isLoading && <LoadingSkeleton variant="table" rows={4} cols={3} />}
             {importRunsQuery.error && <ApiOfflineBanner compact />}
             {!importRunsQuery.isLoading && !importRunsQuery.error && recentImportRuns.length === 0 && (
-              <p>No import runs have been recorded yet.</p>
+              <EmptyState icon="📥" title="No import runs" description="Import runs have not been recorded yet." />
             )}
             {!importRunsQuery.isLoading && !importRunsQuery.error && recentImportRuns.length > 0 && (
               <div className="architecture-table-wrap">

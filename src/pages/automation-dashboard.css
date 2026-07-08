@@ -1,6 +1,6 @@
 /* ── Automation Dashboard ──────────────────────────────────── */
 
-.ad-page { padding: 1.5rem 2rem; max-width: 1400px; margin: 0 auto; }
+.ad-page { padding: 1.5rem 2rem; max-width: var(--page-max-width, 1400px); margin: 0 auto; }
 
 /* Header */
 .ad-header {

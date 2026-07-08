@@ -28,6 +28,7 @@ import { AlertsModule } from './modules/alerts/alerts.module';
 import { CacheModule } from './modules/cache/cache.module';
 import { TrainingModule } from './modules/training/training.module';
 import { NewsModule } from './modules/news/news.module';
+import { CalendarModule } from './modules/calendar/calendar.module';
 import { ResearchModule } from './modules/research/research.module';
 import { SnapshotsModule } from './modules/snapshots/snapshots.module';
 import { DecoderModule } from './modules/decoder/decoder.module';
@@ -83,6 +84,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     CacheModule,
     TrainingModule,
     NewsModule,
+    CalendarModule,
     ResearchModule,
     SnapshotsModule,
     DecoderModule,

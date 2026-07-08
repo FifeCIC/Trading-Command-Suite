@@ -16,9 +16,14 @@ POST /api/backtest/run
   "symbol": "XAUUSD",
   "days": 365,
   "slippage": 0.0001,
-  "spread": 0.0001
+  "spread": 0.0001,
+  "newsExclusion": "none"
 }
 ```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `newsExclusion` | `"none"` | `"none"` — include all signals; `"exclude"` — skip news days (protocol purity); `"only"` — only news days (sensitivity); `"reduce"` — planned: weight signals lower on news days |
 
 | Asset Class | Default Slippage | Default Spread | Auto-Detection |
 |-------------|-----------------|----------------|----------------|
@@ -36,6 +41,13 @@ Enabling slippage/spread modeling will **reduce** backtest win rates and average
 - Validate that a strategy's edge survives execution costs
 - Compare strategies on risk-adjusted, cost-inclusive returns
 - Set realistic expectations before going live
+
+### Related Endpoints
+
+```
+GET /api/backtest/equity/:runId     — Cumulative P&L equity curve + drawdown (#103)
+POST /api/backtest/coverage         — Per-directive win rate across all 99 directives (#106)
+```
 
 ---
 

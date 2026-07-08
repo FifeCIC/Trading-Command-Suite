@@ -5,6 +5,8 @@ import { ModeService } from '../../config/mode.service';
 import { NotificationService } from '../notifications/notifications.service';
 import { ScoringService } from '../scoring/scoring.service';
 import { AutomationLoopService } from '../automation/automation-loop.service';
+import { EarningsService } from '../earnings/earnings.service';
+import { MarketCalendarService } from '../calendar/market-calendar.service';
 
 export interface SchedulerRun {
   id: string;
@@ -26,6 +28,8 @@ export class TradingSchedulerService {
     private readonly notificationService: NotificationService,
     private readonly scoringService: ScoringService,
     private readonly automationLoop: AutomationLoopService,
+    private readonly earningsService: EarningsService,
+    private readonly calendar: MarketCalendarService,
   ) {}
 
   /** Default schedule: 9am Mon-Fri */
@@ -57,6 +61,9 @@ export class TradingSchedulerService {
 
       // Step 2: Data freshness
       await this.checkFreshness(run);
+
+      // Step 2.5: Import calendar events (earnings + check for upcoming) — #244
+      await this.importCalendarEvents(run);
 
       // Step 3: Run scoring (simulated if no live data)
       await this.runScoring(run);
@@ -95,11 +102,50 @@ export class TradingSchedulerService {
     const mode = this.modeService.getModeInfo();
     run.steps.push({ name: 'mode', status: 'ok', detail: `Mode: ${mode.mode}, DB: ${mode.database}` });
 
+    // Market calendar check (replaces mock) — #39
+    const market = this.calendar.getMarketStatus('US');
+    if (market.isOpen) {
+      run.steps.push({ name: 'market-open', status: 'ok', detail: `US market open, closes in ${market.minutesUntilClose ?? '?'}min` });
+    } else if (market.status === 'closed' && market.holidayName) {
+      run.steps.push({ name: 'market-open', status: 'error', detail: `Closed — ${market.holidayName}. Next open: ${market.nextOpen ?? '?'}` });
+    } else if (market.status === 'pre-market') {
+      run.steps.push({ name: 'market-open', status: 'ok', detail: `Pre-market — opens at ${market.nextOpen ?? '?'}` });
+    } else {
+      run.steps.push({ name: 'market-open', status: 'skipped', detail: `Market ${market.status}` });
+    }
+
     // Rate limit check
     run.steps.push({ name: 'rate-limits', status: 'ok', detail: 'OK (mock)' });
+  }
 
-    // Market open check (mock — would call Alpaca /v2/clock in production)
-    run.steps.push({ name: 'market-open', status: 'ok', detail: 'Paper trading — always open' });
+  private async importCalendarEvents(run: SchedulerRun): Promise<void> {
+    try {
+      // Check if earnings data is stale
+      const isStale = await this.earningsService.isStale();
+      if (isStale) {
+        const result = await this.earningsService.importCalendar(3);
+        run.steps.push({
+          name: 'earnings-import',
+          status: 'ok',
+          detail: `Imported ${result.imported} earnings events (${result.skipped} skipped, ${result.total} total)`,
+        });
+      } else {
+        // Read upcoming events for this week
+        const calendar = await this.earningsService.getCalendar(7);
+        const upcoming = calendar.filter(e => new Date(e.reportDate) > new Date());
+        run.steps.push({
+          name: 'earnings-import',
+          status: 'ok',
+          detail: `${upcoming.length} earnings events this week (data fresh)`,
+        });
+      }
+    } catch (err) {
+      run.steps.push({
+        name: 'earnings-import',
+        status: 'error',
+        detail: `Failed: ${(err as Error).message}`,
+      });
+    }
   }
 
   private async checkFreshness(run: SchedulerRun): Promise<void> {

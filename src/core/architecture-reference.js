@@ -180,10 +180,22 @@ export const CURRENT_SLICE = [
   'QA Testing Page — QATestingPage with structured checklist, pass/fail/skip states, localStorage persistence. Covers directive execution, provider health, UI rendering, trading pipeline.',
   'UI Component Library — DetachableWidget (dockable panels), StickyHeader (scroll-aware fixed header), StatusBadge (health/status pill), Notice (alert banner). Feature Lab demos for PartialTakeProfit, SessionOpenEffect, TrailingStop.',
   'Speed Scanner Enhancements — Sort/filter controls (#236), Live Data badge (#235), text sizing improvements (#234). Button variants for base theme (#233).',
+  // ── 2026-07-07/08 — Alerts, Backtest, Duplicate Guard ──
+  'Alert Trigger Service — 9 trigger types polling every 60s: MT5 disconnected, provider degraded, data staleness, position P&L, swap accrual, margin utilization, market close proximity, weekend gap risk, earnings proximity. Each trigger has configurable threshold + cooldown. Registered in AlertsModule with OnModuleInit auto-start.',
+  'Duplicate Position Guard — DuplicateGuardService prevents double positions. Before any trade (manual, scan-to-trade, automation), queries Position table for existing open position + Trade table for recent entries within cooldown window. Returns DUPLICATE_BLOCKED or ALLOWED.',
+  'Backtest News Exclusion — POST /api/backtest/run accepts newsExclusion: none|exclude|only|reduce. Queries NewsArticle table, creates date set, filters signals. Isolates protocol performance from news events.',
+  'Backtest Equity Curve — GET /api/backtest/equity/:runId returns cumulative P&L points with drawdown overlay. EquityCurveChart component with green curve + red drawdown shading + dashed zero-line.',
+  'Backtest Run Comparison — POST /api/backtest/runs/compare compares multiple runs side-by-side with best-by-Sharpe identification. DELETE /api/backtest/runs/:runId with cascade.',
+  'Trading Strategy Controller — GET /api/trading/strategies returns { mode, total, viableCount, viable: [...] }. POST /api/trading/strategies/:id/evaluate scores against current market data.',
+  'Speed Scan Trade Endpoint — POST /api/speed/trade unified trade endpoint for scan-to-trade flow. Accepts mode (quick-trade|one-click|automation|keyboard), reads protocol defaults for SL/TP/size.',
+  'Pipeline Graph (NodeMapper) — Interactive system map at /lab/pipeline-graph-lab. 10 nodes, 14 connections, live health from APIs. Clickable documentation overlays. Screen Options toggle for connector style. Positions stored in pipeline-graph-positions.json.',
+  'Design Tokens — Centralized --color-profit, --color-loss, --color-buy, --color-sell, --color-accent-blue, --color-warning, --color-neutral, --color-muted tokens in index.css. Replaced hardcoded hex values in 22 CSS files.',
+  'Empty State Component — Reusable EmptyState component (icon, title, description, actionButton). Applied across 20+ pages replacing raw strings. LoadingSkeleton standardized on all data-dependent pages.',
+  'Phase Restructure — Phase 1: Core Engine, Phase 2: Backtesting & Social Proof, Phase 3: Public Launch. 15 issues deferred to phase-3. 11 backtest issues labeled phase-2. Strategy: Build → Prove → Launch.',
 ]
 
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-07'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-08'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
