@@ -50,8 +50,8 @@ Write-Host "    PID $($nest.Id)" -ForegroundColor DarkGray
 
 if (-not $SkipFrontend) {
     Write-Host "  Starting Vite Frontend (port 5173)…" -ForegroundColor Green
-    $vite = Start-Process -FilePath "npx" `
-        -ArgumentList "vite --host --port 5173 --strictPort" `
+    $vite = Start-Process -FilePath "cmd" `
+        -ArgumentList "/c npx vite --host --port 5173 --strictPort" `
         -WorkingDirectory $ROOT `
         -PassThru -NoNewWindow `
         -RedirectStandardOutput "$env:TEMP\vite.log" `

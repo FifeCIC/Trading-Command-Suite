@@ -881,6 +881,67 @@ const DIAGRAMS = [
     style SDEG fill:#f59e0b,color:#000
     style FRESH fill:#f59e0b,color:#000`,
   },
+  {
+    id: 'mt5-execution',
+    label: 'MT5 Execution Pipeline',
+    desc: 'Full trace from automation tick through scoring, evaluation, safety gates, bridge, to MT5 order execution. 36 decision gates across 20 files.',
+    code: `flowchart TD
+    TICK["Automation Tick 5-min"] --> SCORE["Scoring Pipeline 99 Directives"]
+    SCORE --> RANK["Ranked Symbols score/signal"]
+
+    RANK --> G1{"Score below threshold?"}
+    G1 -->|yes| SKIP1["SKIP"]
+    G1 -->|no| G2{"Cooldown active?"}
+    G2 -->|yes| SKIP2["SKIP"]
+    G2 -->|no| G3{"Duplicate position?"}
+    G3 -->|yes| BLOCK["BLOCKED"]
+    G3 -->|no| G4{"Mode = auto?"}
+    G4 -->|semi-auto| QUEUE["QUEUED needs confirm"]
+    G4 -->|auto| EVAL["StrategyService.evaluate"]
+
+    EVAL --> G5{"Symbol in DB?"}
+    G5 -->|no| F1["SKIP no symbol"]
+    G5 -->|yes| G6{"30+ bars?"}
+    G6 -->|no| F2["SKIP no data"]
+    G6 -->|yes| DIR["Run Directives Gated Scoring"]
+    DIR --> G7{"composite >= min?"}
+    G7 -->|no| F3["SKIP score low"]
+    G7 -->|yes| G8{"Rarity band OK?"}
+    G8 -->|no| F4["SKIP rarity"]
+    G8 -->|yes| EXEC["StrategyService.execute"]
+
+    EXEC --> G9{"Manual mode?"}
+    G9 -->|yes| LOG["LOG ONLY"]
+    G9 -->|no| G10["Safety Gates"]
+    G10 --> G11{"Size OK?"}
+    G11 -->|no| F5["BLOCKED"]
+    G11 -->|yes| G12{"Position limit?"}
+    G12 -->|no| F6["BLOCKED"]
+    G12 -->|yes| G13{"Daily loss?"}
+    G13 -->|no| F7["BLOCKED"]
+    G13 -->|yes| G14{"Risk OK?"}
+    G14 -->|no| F8["BLOCKED"]
+    G14 -->|yes| MT5["POST :5000/order"]
+
+    MT5 --> B1{"Bridge up?"}
+    B1 -->|no| F9["FAILED"]
+    B1 -->|yes| B2{"MT5 connected?"}
+    B2 -->|no| F10["FAILED"]
+    B2 -->|yes| B3{"AutoTrading on?"}
+    B3 -->|no| FAIL["AutoTrading disabled"]
+    B3 -->|yes| B4{"Vol Spread Margin OK?"}
+    B4 -->|no| REJ["REJECTED"]
+    B4 -->|yes| TRADE["TRADE EXECUTED mt5.order_send"]
+
+    style TRADE fill:#27ae60,color:#fff
+    style FAIL fill:#c0392b,color:#fff
+    style TICK fill:#8e44ad,color:#fff
+    style SCORE fill:#2980b9,color:#fff
+    style RANK fill:#2980b9,color:#fff
+    style EVAL fill:#2980b9,color:#fff
+    style EXEC fill:#27ae60,color:#fff
+    style MT5 fill:#e67e22,color:#fff`,
+  },
 ];
 
 export default function DiagramsPage() {

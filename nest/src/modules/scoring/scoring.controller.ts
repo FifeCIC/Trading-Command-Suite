@@ -18,6 +18,7 @@ import { PredictiveScoringService } from './predictive-scoring.service';
 import { OutcomeTrackerService } from './outcome-tracker.service';
 import { SectorRotationService } from './sector-rotation.service';
 import { SeasonalAffinityService } from './seasonal-affinity.service';
+import { StackPerformanceService } from './stack-performance.service';
 import { ProviderDegradationService } from '../providers/provider-degradation.service';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
 
@@ -33,6 +34,7 @@ export class ScoringController {
     private readonly sectorRotation: SectorRotationService,
     private readonly degradationService: ProviderDegradationService,
     private readonly seasonalAffinity: SeasonalAffinityService,
+    private readonly stackPerformance: StackPerformanceService,
   ) {}
 
   @Get('ranked')
@@ -287,5 +289,54 @@ export class ScoringController {
       topPick: weights[0] || null,
       activeCount: weights.filter(w => w.weight !== 0).length,
     };
+  }
+
+  /**
+   * GET /api/scoring/metastacks/ratings
+   * Returns performance ratings for all MetaStacks.
+   * A MetaStack = Watchlist + Protocol + Scoring Strategy + Trading Strategy.
+   */
+  @Get('metastacks/ratings')
+  @UseInterceptors(new CacheInterceptor(60000))
+  @ApiOperation({ summary: 'Get performance ratings for all MetaStacks' })
+  @ApiOkResponse({ description: 'MetaStack ratings with stars, effectiveness rate, and fingerprint' })
+  async getMetaStackRatings() {
+    return this.stackPerformance.computeAllRatings();
+  }
+
+  /**
+   * GET /api/scoring/metastacks/:id/rating
+   */
+  @Get('metastacks/:id/rating')
+  @UseInterceptors(new CacheInterceptor(30000))
+  @ApiOperation({ summary: 'Get rating for a single MetaStack' })
+  @ApiParam({ name: 'id', type: 'string' })
+  async getMetaStackRating(@Param('id') id: string) {
+    return this.stackPerformance.getMetaStackRating(id);
+  }
+
+  /**
+   * GET /api/scoring/metastacks/:id/fingerprint
+   * Check if a MetaStack's components have changed since its last trade.
+   */
+  @Get('metastacks/:id/fingerprint')
+  @ApiOperation({ summary: 'Check if MetaStack fingerprint has changed' })
+  @ApiParam({ name: 'id', type: 'string' })
+  async checkFingerprint(@Param('id') id: string) {
+    return this.stackPerformance.checkFingerprintChange(id);
+  }
+
+  // ── Legacy aliases (backward compat) ──────────────────────
+
+  @Get('stacks/ratings')
+  @UseInterceptors(new CacheInterceptor(60000))
+  async getStackRatingsLegacy() {
+    return this.stackPerformance.computeAllRatings();
+  }
+
+  @Get('stacks/:id/rating')
+  @UseInterceptors(new CacheInterceptor(30000))
+  async getStackRatingLegacy(@Param('id') id: string) {
+    return this.stackPerformance.getMetaStackRating(id);
   }
 }

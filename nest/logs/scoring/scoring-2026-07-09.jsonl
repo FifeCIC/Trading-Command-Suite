@@ -1,0 +1,4 @@
+{"timestamp":"2026-07-09T00:01:02.510Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":511}}
+{"timestamp":"2026-07-09T00:07:16.902Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":74894}}
+{"timestamp":"2026-07-09T00:14:40.390Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":2237}}
+{"timestamp":"2026-07-09T00:14:57.262Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":1895}}

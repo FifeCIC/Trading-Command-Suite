@@ -159,9 +159,9 @@ export default function MarketTape() {
   // 4. Automation pulse
   if (autoQuery.data) {
     const auto = autoQuery.data;
-    const strategies = auto.activeStrategies || 0;
-    const positions = (auto.brokerStates && Array.isArray(auto.brokerStates))
-      ? auto.brokerStates.reduce((sum, b) => sum + (b.positionCount || 0), 0)
+    const strategies = auto.activeStrategies?.length || 0;
+    const positions = (auto.brokerStates && typeof auto.brokerStates === 'object')
+      ? Object.values(auto.brokerStates).reduce((sum, b) => sum + (b.positionCount || 0), 0)
       : 0;
     const pulse = auto.loopEnabled ? 'Live' : 'Paused';
     const lastTick = auto.lastTickAt ? timeUntil(auto.lastTickAt) + ' ago' : '—';

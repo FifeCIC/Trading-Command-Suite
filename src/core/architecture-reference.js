@@ -11,7 +11,7 @@
  * Token budget: ~23K (vs ~38K for full Architecture Framework)
  * 
  * @generated — extracted from architecture-framework.data.js
- * @updated 2026-07-02
+ * @updated 2026-07-09
  */
 export const STATUS_SNAPSHOT = [
   'This page is the implementation front door for architecture-sensitive work.',
@@ -192,10 +192,13 @@ export const CURRENT_SLICE = [
   'Design Tokens — Centralized --color-profit, --color-loss, --color-buy, --color-sell, --color-accent-blue, --color-warning, --color-neutral, --color-muted tokens in index.css. Replaced hardcoded hex values in 22 CSS files.',
   'Empty State Component — Reusable EmptyState component (icon, title, description, actionButton). Applied across 20+ pages replacing raw strings. LoadingSkeleton standardized on all data-dependent pages.',
   'Phase Restructure — Phase 1: Core Engine, Phase 2: Backtesting & Social Proof, Phase 3: Public Launch. 15 issues deferred to phase-3. 11 backtest issues labeled phase-2. Strategy: Build → Prove → Launch.',
+  // ── Sprint 2026-07-09 — MetaStack System ──
+  'MetaStack Rating Engine — Rates each MetaStack (watchlist + protocol + scoring strategy + trading strategy) by actual trade outcomes. Computes effectiveness rate (PnL/hour), profit factor, win rate, max drawdown, and a composite 0-100 rating with star bands (Elite/Strong/Average/Weak/Untested). Ratings normalize for runtime so a strategy that made $500 in 2 hours outranks one that made $1000 in 50 hours.',
+  'MetaStack Fingerprint — Each MetaStack gets a SHA-256 hash of its component state (protocol, watchlist symbols, broker, thresholds, SL/TP). When any component changes, the fingerprint changes — UI can warn users that performance history may not reflect the current configuration. GET /api/scoring/metastacks/:id/fingerprint returns current fingerprint and change status.',
 ]
 
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-08'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-09'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -460,6 +463,22 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated operator access',
     owner: 'Protocols controller',
     contract: 'Lists all scoring protocols with directive counts, maxPossibleScore, scheduler status, and recent activity feed.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/scoring/metastacks/ratings',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Scoring controller',
+    contract: 'Returns all MetaStacks ranked by composite 0-100 rating with star bands (Elite/Strong/Average/Weak/Untested). Ratings computed from actual trade outcomes: PnL/hour effectiveness rate, profit factor, win rate, max drawdown, SHA-256 fingerprint of component state.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/scoring/metastacks/:id/fingerprint',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Scoring controller',
+    contract: 'Checks whether a MetaStack component fingerprint (protocol, watchlist symbols, broker, thresholds, SL/TP) has changed since last persisted. Used by UI to warn when performance history may be stale.',
     status: 'active',
   },
   {

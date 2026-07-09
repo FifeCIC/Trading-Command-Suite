@@ -18,6 +18,7 @@ export interface TradeRecord {
   pnl?: number;
   provider: 'trading212' | 'mt5' | 'manual';
   strategy?: string;
+  scoringStrategyId?: string;
   status: 'open' | 'closed' | 'rejected';
   origin?: 'user' | 'agent' | 'strategy' | 'system';
   openedAt?: Date;
@@ -45,6 +46,7 @@ export class TradeRecorderService {
           pnl: trade.pnl,
           provider: trade.provider,
           strategy: trade.strategy || null,
+          scoringStrategyId: trade.scoringStrategyId || null,
           status: trade.status,
           origin: trade.origin || 'user',
           openedAt: trade.openedAt || new Date(),

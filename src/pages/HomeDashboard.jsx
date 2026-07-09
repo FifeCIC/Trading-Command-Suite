@@ -6,11 +6,14 @@ import { NAV_TREE } from '../core/nav-tree';
 import './HomeDashboard.css';
 
 const AREA_ICONS = {
-  trading: '📈', scoring: '🎯', research: '🔬', data: '🗄️',
+  qa: '🧪', trading: '📈', scoring: '🎯', research: '🔬', data: '🗄️',
   watchlists: '👁️', automation: '⚙️', platforms: '🔌',
   focus: '🎯', training: '🕯️', testing: '🧪',
   status: '📡', settings: '⚙️', wizard: '🧙', ops: '🛡️',
 };
+
+/** Trading workflow areas — shown first as a focused group */
+const WORKFLOW_AREAS = ['qa', 'watchlists', 'scoring', 'trading'];
 
 const SETUP_STEPS = [
   { id: 'connect-mt5', label: 'Connect MT5 Bridge', done: false, desc: 'Link MetaTrader 5 for live forex data & trading' },
@@ -90,6 +93,9 @@ export default function HomeDashboard() {
     firstView: (area.views || [])[0]?.id || 'overview',
   }));
 
+  const workflowAreas = areas.filter(a => WORKFLOW_AREAS.includes(a.id));
+  const supportingAreas = areas.filter(a => !WORKFLOW_AREAS.includes(a.id));
+
   const doneSteps = SETUP_STEPS.filter(s => s.done).length;
   const totalSteps = SETUP_STEPS.length;
   const progressPct = Math.round((doneSteps / totalSteps) * 100);
@@ -135,14 +141,32 @@ export default function HomeDashboard() {
         </div>
       </section>
 
-      {/* ── Quick Navigation ── */}
-      <section className="nd-section">
-        <h2>📂 Navigation Areas</h2>
-        <div className="nd-nav-grid">
-          {areas.map((area) => (
+      {/* ── Trading Workflow ── */}
+      <section className="nd-section nd-workflow">
+        <h2 className="nd-section-label">🧪 Trading Workflow</h2>
+        <div className="nd-nav-grid nd-nav-grid-primary">
+          {workflowAreas.map((area) => (
             <button
               key={area.id}
-              className="nd-nav-card"
+              className="nd-nav-card nd-nav-card-primary"
+              onClick={() => navigate(`/${area.id}/${area.firstView}`)}
+            >
+              <span className="nd-nav-icon">{area.icon}</span>
+              <span className="nd-nav-label">{area.label}</span>
+              <span className="nd-nav-count">{area.viewCount} views</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Supporting Areas ── */}
+      <section className="nd-section nd-supporting">
+        <h2 className="nd-section-label">🔧 Supporting Areas</h2>
+        <div className="nd-nav-grid nd-nav-grid-secondary">
+          {supportingAreas.map((area) => (
+            <button
+              key={area.id}
+              className="nd-nav-card nd-nav-card-secondary"
               onClick={() => navigate(`/${area.id}/${area.firstView}`)}
             >
               <span className="nd-nav-icon">{area.icon}</span>

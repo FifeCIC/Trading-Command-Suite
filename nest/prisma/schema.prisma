@@ -646,24 +646,26 @@ model Position {
 }
 
 model Trade {
-  id          String   @id @default(uuid()) @db.VarChar(36)
-  symbol      String   @db.VarChar(20)
-  side        String   @db.VarChar(10)
-  quantity    Float
-  entryPrice  Float
-  exitPrice   Float?
-  pnl         Float?
-  status      String   @default("open") @db.VarChar(50)
-  provider    String   @db.VarChar(50)
-  strategy    String?  @db.VarChar(200)
-  origin      String   @default("user") @db.VarChar(20)
-  openedAt    DateTime @default(now())
-  closedAt    DateTime?
-  createdAt   DateTime @default(now())
+  id                String   @id @default(uuid()) @db.VarChar(36)
+  symbol            String   @db.VarChar(20)
+  side              String   @db.VarChar(10)
+  quantity          Float
+  entryPrice        Float
+  exitPrice         Float?
+  pnl               Float?
+  status            String   @default("open") @db.VarChar(50)
+  provider          String   @db.VarChar(50)
+  strategy          String?  @db.VarChar(200)
+  scoringStrategyId String?  @db.VarChar(36)
+  origin            String   @default("user") @db.VarChar(20)
+  openedAt          DateTime @default(now())
+  closedAt          DateTime?
+  createdAt         DateTime @default(now())
 
   @@index([symbol, openedAt])
   @@index([status])
   @@index([origin, createdAt])
+  @@index([scoringStrategyId])
 }
 
 model ApiCalls {
@@ -1016,6 +1018,7 @@ model ScoringStrategy {
   tpPct           Float    @default(1.0)
   enabled         Boolean  @default(true)
   tradingEnabled  Boolean  @default(false)
+  activatedAt     DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -1244,4 +1247,38 @@ model CompanyMetric {
   @@unique([symbol])
   @@index([symbol, fetchedAt])
   @@index([fetchedAt])
+}
+
+// ── Stack Performance Rating ──────────────────────────────
+// Tracks cumulative performance for each scoring strategy stack.
+// Computed hourly/daily from Trade records, used for stack ratings.
+
+model StackPerformance {
+  id                String   @id @default(uuid()) @db.VarChar(36)
+  scoringStrategyId String   @unique @db.VarChar(36)
+  totalTrades       Int      @default(0)
+  winningTrades     Int      @default(0)
+  losingTrades      Int      @default(0)
+  totalPnl          Float    @default(0)
+  grossProfit       Float    @default(0)
+  grossLoss         Float    @default(0)
+  maxDrawdown       Float    @default(0)
+  peakEquity        Float    @default(0)
+  currentEquity     Float    @default(0)
+  firstTradeAt      DateTime?
+  lastTradeAt       DateTime?
+  runtimeHours      Float    @default(0)
+  effectivenessRate Float    @default(0)
+  profitFactor      Float    @default(0)
+  winRate           Float    @default(0)
+  sharpeApprox      Float    @default(0)
+  rating            Float    @default(0)
+  fingerprint       String?  @db.VarChar(16)  // SHA-256 hash of MetaStack components at compute time
+  computedAt        DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("stack_performance")
+  @@index([scoringStrategyId])
+  @@index([rating])
 }

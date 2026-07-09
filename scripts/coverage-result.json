@@ -1,0 +1,2017 @@
+{
+  "symbol": "SPY",
+  "timeframe": "1d",
+  "days": 730,
+  "barsUsed": 365,
+  "directivesTested": 99,
+  "passCount": 99,
+  "failCount": 0,
+  "auditSummary": {
+    "runDate": "2026-07-08T17:07:32.047Z",
+    "thresholds": {
+      "underperforming": "<45%",
+      "needsRefinement": "45-55%",
+      "verified": ">55%"
+    },
+    "counts": {
+      "total": 99,
+      "underperforming": 3,
+      "needsRefinement": 84,
+      "verified": 12,
+      "errors": 0
+    },
+    "underperforming": [
+      {
+        "directiveId": "obv-divergence",
+        "name": "OBV Divergence Scanner",
+        "winRate10d": 40,
+        "signals": 21
+      },
+      {
+        "directiveId": "support-resistance-levels",
+        "name": "Support & Resistance Levels",
+        "winRate10d": 0,
+        "signals": 19
+      },
+      {
+        "directiveId": "overhead-supply-pressure",
+        "name": "Overhead Supply Pressure",
+        "winRate10d": 0,
+        "signals": 44
+      }
+    ],
+    "needsRefinement": [
+      {
+        "directiveId": "rsi-oversold",
+        "name": "RSI Oversold Reversion",
+        "winRate10d": 100,
+        "signals": 2
+      },
+      {
+        "directiveId": "vwap-confluence-simple",
+        "name": "VWAP Confluence (Simple AND-Gate)",
+        "winRate10d": 100,
+        "signals": 2
+      },
+      {
+        "directiveId": "rsi-divergence",
+        "name": "RSI Divergence Scanner",
+        "winRate10d": 50,
+        "signals": 27
+      },
+      {
+        "directiveId": "macd-divergence",
+        "name": "MACD Divergence Scanner",
+        "winRate10d": 50,
+        "signals": 25
+      },
+      {
+        "directiveId": "mfi",
+        "name": "Money Flow Index",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "adx",
+        "name": "Average Directional Index",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "stochastic",
+        "name": "Stochastic Oscillator",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "rsi-overbought",
+        "name": "RSI Overbought Warning",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "multi-timeframe-trend",
+        "name": "Multi-Timeframe Trend Alignment",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "price-above-sma",
+        "name": "Price Above SMA 50",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "ma-crossover",
+        "name": "MA Crossover",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "moving-averages",
+        "name": "Moving Averages Alignment",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "bollinger-bands",
+        "name": "Bollinger Bands",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "cci",
+        "name": "Commodity Channel Index",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "volatility-tools",
+        "name": "Volatility Calculator",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "obv",
+        "name": "On-Balance Volume",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "volume-rhythm",
+        "name": "Volume Rhythm",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "vwap",
+        "name": "VWAP",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "volume-surge",
+        "name": "Volume Surge Detection",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "mtf-confluence-conservative",
+        "name": "MTF Confluence (Conservative — ALL 3 Aligned)",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "mtf-confluence-weighted",
+        "name": "MTF Confluence (Weighted — 50/35/15 Composite)",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "gap-scanner",
+        "name": "Pre-Market Gap Scanner",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "doji-pattern",
+        "name": "Doji Pattern",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "hammer-pattern",
+        "name": "Hammer Pattern",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "engulfing-pattern",
+        "name": "Engulfing Pattern",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "three-soldiers-pattern",
+        "name": "Three White Soldiers",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "mt5-engulfing",
+        "name": "MT5 Engulfing Pattern (with RSI confirmation)",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "mt5-harami",
+        "name": "MT5 Harami Pattern (with RSI confirmation)",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "mt5-star-doji",
+        "name": "MT5 Morning/Evening Star (with RSI confirmation)",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "mt5-hammer",
+        "name": "MT5 Hammer/Shooting Star (with RSI confirmation)",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "pin-bar-pattern",
+        "name": "Pin Bar Pattern",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "vix-regime",
+        "name": "VIX Regime",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "dxy-regime",
+        "name": "DXY Regime",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "gold-macro-correlation",
+        "name": "Gold Macro Correlation",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "cad-usd-oil-correlation",
+        "name": "CAD/USD Oil Correlation",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "monday-effect",
+        "name": "Monday Effect",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "friday-positioning",
+        "name": "Friday Positioning",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "midweek-momentum",
+        "name": "Midweek Momentum",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "advanced-weekly-rhythm",
+        "name": "Advanced Weekly Rhythm Composite",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "spy-options-expiry",
+        "name": "SPY Options Expiry Effect",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "spy-month-end-rebalancing",
+        "name": "SPY Month-End Rebalancing",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "spy-qqq-relative-strength",
+        "name": "SPY/QQQ Relative Strength",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "crypto-fear-greed",
+        "name": "Crypto Fear & Greed Index",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "market-regime",
+        "name": "Market Regime Detection",
+        "winRate10d": 0,
+        "signals": 1
+      },
+      {
+        "directiveId": "position-size-kelly",
+        "name": "Kelly Position Sizing",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "position-size-confidence",
+        "name": "Confidence-Weighted Sizing",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "nvda-earnings-momentum",
+        "name": "NVDA Earnings Momentum",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "tsla-sentiment-amplifier",
+        "name": "TSLA Sentiment Amplifier",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "news-sentiment-positive",
+        "name": "Positive News Sentiment",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "earnings-proximity",
+        "name": "Earnings Proximity",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "dividend-yield-attractive",
+        "name": "Attractive Dividend Yield",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "price-action",
+        "name": "Price Action",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "confluence-reversal-combo",
+        "name": "Confluence Reversal Combo",
+        "winRate10d": 0,
+        "signals": 3
+      },
+      {
+        "directiveId": "panic-exhaustion-absorption",
+        "name": "Panic Exhaustion & Absorption",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "time-based-support",
+        "name": "Time-Based Support",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "isa-reset",
+        "name": "ISA Reset",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "portfolio-performance",
+        "name": "Portfolio Performance",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "basic-weekly-rhythm",
+        "name": "Basic Weekly Rhythm Composite",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "intraday-u-pattern",
+        "name": "Intraday U-Pattern",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "institutional-timing",
+        "name": "Institutional Timing",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "macd",
+        "name": "MACD (General)",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "adaptive-risk-monitor",
+        "name": "Adaptive Risk Monitor",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "analyst-adjustments",
+        "name": "Analyst Adjustments",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "conviction-growth",
+        "name": "Conviction Growth",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "earnings-implementation",
+        "name": "Earnings Strategy Implementation",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "earnings-whispers",
+        "name": "Earnings Whispers",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "like-zacks",
+        "name": "Zacks-Style Rank Proxy",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "mean-reversion",
+        "name": "Mean Reversion Strategy",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "resistance-levels-strategy",
+        "name": "Resistance Levels Strategy",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "sp500-regime",
+        "name": "S&P 500 Regime Filter",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "vix-strategy",
+        "name": "VIX-Based Strategy",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "weekly-rhythm-strategy",
+        "name": "Weekly Rhythm Strategy",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "volatility-envelope",
+        "name": "Volatility Envelope",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "momentum-exhaustion",
+        "name": "Momentum Exhaustion",
+        "winRate10d": 0,
+        "signals": 4
+      },
+      {
+        "directiveId": "regime-shift-exit",
+        "name": "Regime Shift Exit",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "time-stop",
+        "name": "Time Stop",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "session-open-effect",
+        "name": "Session Open Effect",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "budget-gate",
+        "name": "Budget Gate",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "liquidity-check",
+        "name": "Liquidity Check",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "earnings-momentum",
+        "name": "Earnings Momentum",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "social-buzz",
+        "name": "Social Buzz",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "insider-activity",
+        "name": "Insider Activity",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "dilution-impact",
+        "name": "Dilution Impact",
+        "winRate10d": 0,
+        "signals": 0
+      },
+      {
+        "directiveId": "rollover-risk",
+        "name": "Rollover Risk",
+        "winRate10d": 0,
+        "signals": 0
+      }
+    ],
+    "verified": [
+      {
+        "directiveId": "crypto-weekend-effect",
+        "name": "Crypto Weekend Effect",
+        "winRate10d": 100,
+        "signals": 13
+      },
+      {
+        "directiveId": "micro-sr-levels",
+        "name": "Micro Support & Resistance Levels",
+        "winRate10d": 83,
+        "signals": 31
+      },
+      {
+        "directiveId": "target-achieved",
+        "name": "Target Achieved",
+        "winRate10d": 78,
+        "signals": 53
+      },
+      {
+        "directiveId": "volume-confirmation",
+        "name": "Volume Confirmation",
+        "winRate10d": 75,
+        "signals": 22
+      },
+      {
+        "directiveId": "speed-momentum",
+        "name": "Speed Momentum",
+        "winRate10d": 75,
+        "signals": 51
+      },
+      {
+        "directiveId": "vwap-confluence-bands",
+        "name": "VWAP Confluence (Full Bands)",
+        "winRate10d": 75,
+        "signals": 11
+      },
+      {
+        "directiveId": "ema-structure",
+        "name": "Price Above EMA Structure",
+        "winRate10d": 72,
+        "signals": 52
+      },
+      {
+        "directiveId": "momentum-continuation-combo",
+        "name": "Momentum Continuation Combo",
+        "winRate10d": 72,
+        "signals": 25
+      },
+      {
+        "directiveId": "macd-crossover",
+        "name": "MACD Bullish Crossover",
+        "winRate10d": 70,
+        "signals": 44
+      },
+      {
+        "directiveId": "atr-dip",
+        "name": "ATR Normalized Dip",
+        "winRate10d": 70,
+        "signals": 33
+      },
+      {
+        "directiveId": "bollinger-band-squeeze",
+        "name": "Bollinger Band Squeeze",
+        "winRate10d": 67,
+        "signals": 29
+      },
+      {
+        "directiveId": "btc-halving-cycle",
+        "name": "Bitcoin Halving Cycle",
+        "winRate10d": 61,
+        "signals": 35
+      }
+    ],
+    "recommendedActions": {
+      "underperforming": "Create child issues to stub or remove each directive — no statistical edge on SPY over this period.",
+      "needsRefinement": "Create child issues to refine each directive — tweak parameters, add confirmation filters.",
+      "verified": "Mark each directive source file with // @verified — these have predictive edge and should be preserved."
+    }
+  },
+  "results": [
+    {
+      "directiveId": "rsi-oversold",
+      "name": "RSI Oversold Reversion",
+      "signals": 2,
+      "buyCount": 2,
+      "sellCount": 0,
+      "holdCount": 52,
+      "avgScore": 99,
+      "winRate5d": 50,
+      "avgReturn5d": 0.85,
+      "winRate10d": 100,
+      "avgReturn10d": 4.9,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "vwap-confluence-simple",
+      "name": "VWAP Confluence (Simple AND-Gate)",
+      "signals": 2,
+      "buyCount": 2,
+      "sellCount": 0,
+      "holdCount": 52,
+      "avgScore": 547,
+      "winRate5d": 100,
+      "avgReturn5d": 2.21,
+      "winRate10d": 100,
+      "avgReturn10d": 2.23,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "crypto-weekend-effect",
+      "name": "Crypto Weekend Effect",
+      "signals": 13,
+      "buyCount": 13,
+      "sellCount": 0,
+      "holdCount": 41,
+      "avgScore": 72,
+      "winRate5d": 85,
+      "avgReturn5d": 1.35,
+      "winRate10d": 100,
+      "avgReturn10d": 2.28,
+      "classification": "VERIFIED"
+    },
+    {
+      "directiveId": "micro-sr-levels",
+      "name": "Micro Support & Resistance Levels",
+      "signals": 31,
+      "buyCount": 7,
+      "sellCount": 24,
+      "holdCount": 23,
+      "avgScore": 66,
+      "winRate5d": 86,
+      "avgReturn5d": 1.07,
+      "winRate10d": 83,
+      "avgReturn10d": 1.55,
+      "classification": "VERIFIED"
+    },
+    {
+      "directiveId": "target-achieved",
+      "name": "Target Achieved",
+      "signals": 53,
+      "buyCount": 10,
+      "sellCount": 43,
+      "holdCount": 1,
+      "avgScore": 93,
+      "winRate5d": 56,
+      "avgReturn5d": 0.32,
+      "winRate10d": 78,
+      "avgReturn10d": 1.46,
+      "classification": "VERIFIED"
+    },
+    {
+      "directiveId": "volume-confirmation",
+      "name": "Volume Confirmation",
+      "signals": 22,
+      "buyCount": 12,
+      "sellCount": 10,
+      "holdCount": 32,
+      "avgScore": 108,
+      "winRate5d": 75,
+      "avgReturn5d": 0.4,
+      "winRate10d": 75,
+      "avgReturn10d": 1.29,
+      "classification": "VERIFIED"
+    },
+    {
+      "directiveId": "speed-momentum",
+      "name": "Speed Momentum",
+      "signals": 51,
+      "buyCount": 33,
+      "sellCount": 18,
+      "holdCount": 3,
+      "avgScore": 82,
+      "winRate5d": 64,
+      "avgReturn5d": 0.39,
+      "winRate10d": 75,
+      "avgReturn10d": 0.94,
+      "classification": "VERIFIED"
+    },
+    {
+      "directiveId": "vwap-confluence-bands",
+      "name": "VWAP Confluence (Full Bands)",
+      "signals": 11,
+      "buyCount": 4,
+      "sellCount": 7,
+      "holdCount": 43,
+      "avgScore": 119,
+      "winRate5d": 50,
+      "avgReturn5d": 0.93,
+      "winRate10d": 75,
+      "avgReturn10d": 3.28,
+      "classification": "VERIFIED"
+    },
+    {
+      "directiveId": "ema-structure",
+      "name": "Price Above EMA Structure",
+      "signals": 52,
+      "buyCount": 48,
+      "sellCount": 4,
+      "holdCount": 2,
+      "avgScore": 72,
+      "winRate5d": 68,
+      "avgReturn5d": 0.38,
+      "winRate10d": 72,
+      "avgReturn10d": 0.76,
+      "classification": "VERIFIED"
+    },
+    {
+      "directiveId": "momentum-continuation-combo",
+      "name": "Momentum Continuation Combo",
+      "signals": 25,
+      "buyCount": 25,
+      "sellCount": 0,
+      "holdCount": 29,
+      "avgScore": 99,
+      "winRate5d": 68,
+      "avgReturn5d": 0.72,
+      "winRate10d": 72,
+      "avgReturn10d": 1.24,
+      "classification": "VERIFIED"
+    },
+    {
+      "directiveId": "macd-crossover",
+      "name": "MACD Bullish Crossover",
+      "signals": 44,
+      "buyCount": 10,
+      "sellCount": 34,
+      "holdCount": 10,
+      "avgScore": 28,
+      "winRate5d": 70,
+      "avgReturn5d": 0.73,
+      "winRate10d": 70,
+      "avgReturn10d": 1.26,
+      "classification": "VERIFIED"
+    },
+    {
+      "directiveId": "atr-dip",
+      "name": "ATR Normalized Dip",
+      "signals": 33,
+      "buyCount": 28,
+      "sellCount": 5,
+      "holdCount": 21,
+      "avgScore": 95,
+      "winRate5d": 71,
+      "avgReturn5d": 0.44,
+      "winRate10d": 70,
+      "avgReturn10d": 0.73,
+      "classification": "VERIFIED"
+    },
+    {
+      "directiveId": "bollinger-band-squeeze",
+      "name": "Bollinger Band Squeeze",
+      "signals": 29,
+      "buyCount": 29,
+      "sellCount": 0,
+      "holdCount": 25,
+      "avgScore": 109,
+      "winRate5d": 68,
+      "avgReturn5d": 0.24,
+      "winRate10d": 67,
+      "avgReturn10d": 0.55,
+      "classification": "VERIFIED"
+    },
+    {
+      "directiveId": "btc-halving-cycle",
+      "name": "Bitcoin Halving Cycle",
+      "signals": 35,
+      "buyCount": 35,
+      "sellCount": 0,
+      "holdCount": 19,
+      "avgScore": 43,
+      "winRate5d": 62,
+      "avgReturn5d": 0.3,
+      "winRate10d": 61,
+      "avgReturn10d": 0.65,
+      "classification": "VERIFIED"
+    },
+    {
+      "directiveId": "rsi-divergence",
+      "name": "RSI Divergence Scanner",
+      "signals": 27,
+      "buyCount": 6,
+      "sellCount": 21,
+      "holdCount": 27,
+      "avgScore": 45,
+      "winRate5d": 33,
+      "avgReturn5d": 0.04,
+      "winRate10d": 50,
+      "avgReturn10d": 1.01,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "macd-divergence",
+      "name": "MACD Divergence Scanner",
+      "signals": 25,
+      "buyCount": 6,
+      "sellCount": 19,
+      "holdCount": 29,
+      "avgScore": 48,
+      "winRate5d": 33,
+      "avgReturn5d": 0.04,
+      "winRate10d": 50,
+      "avgReturn10d": 1.01,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "obv-divergence",
+      "name": "OBV Divergence Scanner",
+      "signals": 21,
+      "buyCount": 12,
+      "sellCount": 9,
+      "holdCount": 33,
+      "avgScore": 101,
+      "winRate5d": 45,
+      "avgReturn5d": -0.09,
+      "winRate10d": 40,
+      "avgReturn10d": 0.45,
+      "classification": "UNDERPERFORMING"
+    },
+    {
+      "directiveId": "mfi",
+      "name": "Money Flow Index",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "adx",
+      "name": "Average Directional Index",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "stochastic",
+      "name": "Stochastic Oscillator",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "rsi-overbought",
+      "name": "RSI Overbought Warning",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "multi-timeframe-trend",
+      "name": "Multi-Timeframe Trend Alignment",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "price-above-sma",
+      "name": "Price Above SMA 50",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "ma-crossover",
+      "name": "MA Crossover",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "moving-averages",
+      "name": "Moving Averages Alignment",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "bollinger-bands",
+      "name": "Bollinger Bands",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "cci",
+      "name": "Commodity Channel Index",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "volatility-tools",
+      "name": "Volatility Calculator",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "obv",
+      "name": "On-Balance Volume",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "volume-rhythm",
+      "name": "Volume Rhythm",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "vwap",
+      "name": "VWAP",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "volume-surge",
+      "name": "Volume Surge Detection",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "mtf-confluence-conservative",
+      "name": "MTF Confluence (Conservative — ALL 3 Aligned)",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "mtf-confluence-weighted",
+      "name": "MTF Confluence (Weighted — 50/35/15 Composite)",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "gap-scanner",
+      "name": "Pre-Market Gap Scanner",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "doji-pattern",
+      "name": "Doji Pattern",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "hammer-pattern",
+      "name": "Hammer Pattern",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "engulfing-pattern",
+      "name": "Engulfing Pattern",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "three-soldiers-pattern",
+      "name": "Three White Soldiers",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "mt5-engulfing",
+      "name": "MT5 Engulfing Pattern (with RSI confirmation)",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "mt5-harami",
+      "name": "MT5 Harami Pattern (with RSI confirmation)",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "mt5-star-doji",
+      "name": "MT5 Morning/Evening Star (with RSI confirmation)",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "mt5-hammer",
+      "name": "MT5 Hammer/Shooting Star (with RSI confirmation)",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "pin-bar-pattern",
+      "name": "Pin Bar Pattern",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "vix-regime",
+      "name": "VIX Regime",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "dxy-regime",
+      "name": "DXY Regime",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "gold-macro-correlation",
+      "name": "Gold Macro Correlation",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "cad-usd-oil-correlation",
+      "name": "CAD/USD Oil Correlation",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "monday-effect",
+      "name": "Monday Effect",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "friday-positioning",
+      "name": "Friday Positioning",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "midweek-momentum",
+      "name": "Midweek Momentum",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "advanced-weekly-rhythm",
+      "name": "Advanced Weekly Rhythm Composite",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "spy-options-expiry",
+      "name": "SPY Options Expiry Effect",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "spy-month-end-rebalancing",
+      "name": "SPY Month-End Rebalancing",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "spy-qqq-relative-strength",
+      "name": "SPY/QQQ Relative Strength",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "crypto-fear-greed",
+      "name": "Crypto Fear & Greed Index",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "market-regime",
+      "name": "Market Regime Detection",
+      "signals": 1,
+      "buyCount": 0,
+      "sellCount": 1,
+      "holdCount": 53,
+      "avgScore": 811,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "position-size-kelly",
+      "name": "Kelly Position Sizing",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "position-size-confidence",
+      "name": "Confidence-Weighted Sizing",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "nvda-earnings-momentum",
+      "name": "NVDA Earnings Momentum",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "tsla-sentiment-amplifier",
+      "name": "TSLA Sentiment Amplifier",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "news-sentiment-positive",
+      "name": "Positive News Sentiment",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "earnings-proximity",
+      "name": "Earnings Proximity",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "dividend-yield-attractive",
+      "name": "Attractive Dividend Yield",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "price-action",
+      "name": "Price Action",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "confluence-reversal-combo",
+      "name": "Confluence Reversal Combo",
+      "signals": 3,
+      "buyCount": 3,
+      "sellCount": 0,
+      "holdCount": 51,
+      "avgScore": 399,
+      "winRate5d": 100,
+      "avgReturn5d": 1.46,
+      "winRate10d": 0,
+      "avgReturn10d": -0.98,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "support-resistance-levels",
+      "name": "Support & Resistance Levels",
+      "signals": 19,
+      "buyCount": 0,
+      "sellCount": 19,
+      "holdCount": 35,
+      "avgScore": 82,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "UNDERPERFORMING"
+    },
+    {
+      "directiveId": "overhead-supply-pressure",
+      "name": "Overhead Supply Pressure",
+      "signals": 44,
+      "buyCount": 0,
+      "sellCount": 44,
+      "holdCount": 10,
+      "avgScore": 30,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "UNDERPERFORMING"
+    },
+    {
+      "directiveId": "panic-exhaustion-absorption",
+      "name": "Panic Exhaustion & Absorption",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "time-based-support",
+      "name": "Time-Based Support",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "isa-reset",
+      "name": "ISA Reset",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "portfolio-performance",
+      "name": "Portfolio Performance",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "basic-weekly-rhythm",
+      "name": "Basic Weekly Rhythm Composite",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "intraday-u-pattern",
+      "name": "Intraday U-Pattern",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "institutional-timing",
+      "name": "Institutional Timing",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "macd",
+      "name": "MACD (General)",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "adaptive-risk-monitor",
+      "name": "Adaptive Risk Monitor",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "analyst-adjustments",
+      "name": "Analyst Adjustments",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "conviction-growth",
+      "name": "Conviction Growth",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "earnings-implementation",
+      "name": "Earnings Strategy Implementation",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "earnings-whispers",
+      "name": "Earnings Whispers",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "like-zacks",
+      "name": "Zacks-Style Rank Proxy",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "mean-reversion",
+      "name": "Mean Reversion Strategy",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "resistance-levels-strategy",
+      "name": "Resistance Levels Strategy",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "sp500-regime",
+      "name": "S&P 500 Regime Filter",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "vix-strategy",
+      "name": "VIX-Based Strategy",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "weekly-rhythm-strategy",
+      "name": "Weekly Rhythm Strategy",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "volatility-envelope",
+      "name": "Volatility Envelope",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "momentum-exhaustion",
+      "name": "Momentum Exhaustion",
+      "signals": 4,
+      "buyCount": 0,
+      "sellCount": 4,
+      "holdCount": 50,
+      "avgScore": 280,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "regime-shift-exit",
+      "name": "Regime Shift Exit",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "time-stop",
+      "name": "Time Stop",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "session-open-effect",
+      "name": "Session Open Effect",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "budget-gate",
+      "name": "Budget Gate",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "liquidity-check",
+      "name": "Liquidity Check",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "earnings-momentum",
+      "name": "Earnings Momentum",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "social-buzz",
+      "name": "Social Buzz",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "insider-activity",
+      "name": "Insider Activity",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "dilution-impact",
+      "name": "Dilution Impact",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    },
+    {
+      "directiveId": "rollover-risk",
+      "name": "Rollover Risk",
+      "signals": 0,
+      "buyCount": 0,
+      "sellCount": 0,
+      "holdCount": 54,
+      "avgScore": 0,
+      "winRate5d": 0,
+      "avgReturn5d": 0,
+      "winRate10d": 0,
+      "avgReturn10d": 0,
+      "classification": "NEEDS_REFINEMENT"
+    }
+  ]
+}

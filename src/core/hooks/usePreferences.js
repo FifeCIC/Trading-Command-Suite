@@ -34,6 +34,8 @@ const DEFAULTS = {
   degradationCloseProfitable: false,
   degradationAdjustStops: false,
   degradationMinProviderHealth: 50,
+  // Automation — auto-start behaviour
+  autoStartAutomation: true,   // Restore loop + MT5 trading state on server start
 };
 
 let cached = null;

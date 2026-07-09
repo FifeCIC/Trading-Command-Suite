@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TradeRecorderService } from './trade-recorder.service';
 
-const BRIDGE_URL = process.env.MT5_BRIDGE_URL || 'http://localhost:5001';
+const BRIDGE_URL = process.env.MT5_BRIDGE_URL || 'http://localhost:5000';
 
 export interface Mt5Position {
   ticket: number;

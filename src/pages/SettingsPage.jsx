@@ -308,6 +308,16 @@ export default function SettingsPage() {
       </section>
 
       <section className="settings-section">
+        <h2>Automation</h2>
+        <SettingRow label="Auto-Start on Server Boot" hint="When ON, the automation loop and MT5 trading state are restored automatically when the server starts. When OFF, you must manually start via the Automation Dashboard.">
+          <div className="inline-actions">
+            <button type="button" className={prefs.autoStartAutomation ? 'cta' : ''} onClick={() => set('autoStartAutomation', true)}>On</button>
+            <button type="button" className={!prefs.autoStartAutomation ? 'cta' : ''} onClick={() => set('autoStartAutomation', false)}>Off</button>
+          </div>
+        </SettingRow>
+      </section>
+
+      <section className="settings-section">
         <h2>Performance</h2>
         <SettingRow label="Polling Interval" hint="Default polling interval for live data panels (seconds).">
           <input type="number" min="5" max="120" step="5" className="settings-input settings-input-sm"

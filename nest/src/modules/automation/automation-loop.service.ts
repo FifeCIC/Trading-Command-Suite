@@ -16,7 +16,7 @@
  *   6. Record all decisions
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { PrismaService } from '../../database/prisma.service';
@@ -133,7 +133,7 @@ function readWatchlist(name: string): string[] | null {
 }
 
 @Injectable()
-export class AutomationLoopService {
+export class AutomationLoopService implements OnModuleInit {
   private readonly logger = new Logger(AutomationLoopService.name);
   private timer: ReturnType<typeof setInterval> | null = null;
   private lastAnyTradeAt: number = 0;
@@ -170,6 +170,40 @@ export class AutomationLoopService {
   ) {
     this.initBrokerStates();
     this.loadScoringStrategies();
+    // Auto-restore on startup is deferred to onModuleInit (needs DB connection)
+  }
+
+  async onModuleInit() {
+    // Auto-restore loop + MT5 trading if AUTO_START_AUTOMATION env is not 'false' (defaults true)
+    const autoStart = process.env.AUTO_START_AUTOMATION !== 'false';
+    if (!autoStart) {
+      this.logger.log('Auto-start disabled (AUTO_START_AUTOMATION=false) — loop requires manual start');
+      return;
+    }
+    // Wait for DB
+    let attempts = 0;
+    while (!this.prisma.isAvailable && attempts < 10) {
+      await new Promise(r => setTimeout(r, 2000));
+      attempts++;
+    }
+    if (!this.prisma.isAvailable) {
+      this.logger.warn('Database unavailable after 20s — skipping auto-restore');
+      return;
+    }
+    this.logger.log('Auto-start enabled — restoring automation state...');
+    if (this.state.brokerStates['mt5']) {
+      this.state.brokerStates['mt5'].enabled = true;
+      this.state.brokerStates['mt5'].tradingEnabled = true;
+    }
+    try {
+      const strategies = await this.strategyService.findAll();
+      for (const s of strategies) {
+        if (s.active && !(s as any).brokerId) {
+          await this.strategyService.update(s.id, { brokerId: 'mt5' } as any);
+        }
+      }
+    } catch (e) { this.logger.warn(`Failed to patch strategies: ${(e as Error).message}`); }
+    this.start();
   }
 
   private initBrokerStates() {
@@ -514,7 +548,7 @@ export class AutomationLoopService {
                 });
                 this.lastAnyTradeAt = Date.now();
                 if (result.success) {
-                  try { this.tradeRecorder.record({ symbol: sym, side: side.toLowerCase(), quantity: strat.baseSize, entryPrice: result.price||s.lastPrice||0, pnl:0, provider: strat.brokerId, status:'open', origin:'strategy' } as any); } catch {}
+                  try { this.tradeRecorder.record({ symbol: sym, side: side.toLowerCase(), quantity: strat.baseSize, entryPrice: result.price||s.lastPrice||0, pnl:0, provider: strat.brokerId, status:'open', origin:'strategy', scoringStrategyId: strat.id } as any); } catch {}
                 }
                 decisions.push({ timestamp: new Date().toISOString(), strategyId: strat.id, symbol: sym, brokerId: strat.brokerId, decision: result.success?'EXECUTED':'FAILED', reason: result.success?`Ticket ${result.ticket}`:(result.error||'Unknown'), composite: s.score, signal: side, ticket: result.ticket, price: result.price, quantity: strat.baseSize });
               }
@@ -604,7 +638,7 @@ export class AutomationLoopService {
                   this.lastAnyTradeAt = Date.now();
                   this.lastTradeTime.set(strategyId, Date.now());
                   if (orderResult.success) {
-                    try { this.tradeRecorder.record({ symbol: strategy.symbol, side: evalResult.signal?.toLowerCase(), quantity: size, entryPrice: orderResult.price || lookupScore.lastPrice || 0, pnl: 0, provider: strategy.brokerId || 'mt5', status: 'open', origin: 'strategy' } as any); } catch {}
+                    try { this.tradeRecorder.record({ symbol: strategy.symbol, side: evalResult.signal?.toLowerCase(), quantity: size, entryPrice: orderResult.price || lookupScore.lastPrice || 0, pnl: 0, provider: strategy.brokerId || 'mt5', status: 'open', origin: 'strategy', scoringStrategyId: strategyId } as any); } catch {}
                   }
                   return {
                     timestamp: new Date().toISOString(),
@@ -814,6 +848,7 @@ export class AutomationLoopService {
               provider: strategy.brokerId || 'mt5',
               status: 'open',
               origin: 'strategy',
+              scoringStrategyId: strategyId,
             } as any);
           } catch { /* non-critical */ }
         }

@@ -21,19 +21,20 @@
  */
 
 export const NAV_TREE = {
-  trading: {
-    label: 'Trading',
+  qa: {
+    label: 'QA',
     views: [
-      { id: 'market-context', label: 'Market Context', icon: '🌐' },
-      { id: 'positions-monitor', label: 'Positions Monitor', icon: '◈' },
-      { id: 'trading-strategies', label: 'Trading Strategies', icon: '◆' },
-      { id: 'create-strategy', label: 'Create Strategy', icon: '⊞' },
-      { id: 'strategy-comparison', label: 'Strategy Comparison', icon: '⚖' },
-      { id: 'trade-journal', label: 'Trade Journal', icon: '▤' },
-      // { id: 'btc-speed', label: 'Bitcoin Speed', icon: '₿' },  // MOCK — awaiting crypto-enabled MT5 broker
-      { id: 'trading-plans', label: 'Trading Plans', icon: '📋' },
-      { id: 'calculators', label: 'Calculators', icon: '⊞' },
-      { id: 'accounts-dashboard', label: 'Accounts', icon: '💰' },
+      { id: 'qa-testing', label: 'QA Checklist', icon: '🧪' },
+      { id: 'order-testing', label: 'Order Testing', icon: '🧪' },
+    ],
+  },
+  watchlists: {
+    label: 'Watchlists',
+    views: [
+      { id: 'active-symbols', label: 'Active Symbols', icon: '★' },
+      { id: 'user-watchlists', label: 'User Watchlists', icon: '⊞' },
+      { id: 'create-watchlist', label: 'Create Watchlist', icon: '⊞' },
+      { id: 'add-symbol', label: 'Add Symbol', icon: '➕' },
     ],
   },
   scoring: {
@@ -52,58 +53,18 @@ export const NAV_TREE = {
       { id: 'scoring-activity-logs', label: 'Scoring Activity Logs', icon: '▤' },
     ],
   },
-  research: {
-    label: 'Research',
+  trading: {
+    label: 'Trading',
     views: [
-      { id: 'research-overview', label: 'Overview', icon: '◉' },
-      { id: 'symbols-browser', label: 'Symbols', icon: '⊞' },
-      { id: 'sector-rotation', label: 'Sector Rotation', icon: '◎' },
-      { id: 'market-correlations', label: 'Market Correlations', icon: '⊡' },
-      { id: 'news-intel', label: 'News Intel', icon: '◈' },      { id: 'gap-scanner', label: 'Gap Scanner', icon: '🔍' },      { id: 'earnings-calendar', label: 'Earnings Calendar', icon: '◷' },
-      { id: 'social-networks', label: 'Social Networks', icon: '⬡' },
-      { id: 'price-forecast', label: 'Price Forecast', icon: '◆' },
-      { id: 'events-calendar', label: 'Events Calendar', icon: '◷' },
-      { id: 'macro-monitor', label: 'Macro Monitor', icon: '◎' },
-    ],
-  },
-  analysis: {
-    label: 'Analysis',
-    views: [
-      { id: 'recently-analysed-symbols', label: 'Recently Analysed Symbols', icon: '◉' },
-      { id: 'support-resistance', label: 'Support & Resistance', icon: '▦' },
-      { id: 'volatility-analysis', label: 'Volatility Analysis', icon: '▦' },
-      { id: 'technical-indicators', label: 'Technical Indicators', icon: '⊞' },
-      { id: 'pattern-scanner', label: 'Pattern Scanner', icon: '◆' },
-      { id: 'chart-comparison', label: 'Chart Comparison', icon: '📊' },
-      { id: 'analyse-symbol', label: 'Analyse Symbol', icon: '🔍' },
-      { id: 'seasonality-heatmap', label: 'Seasonality Heatmap', icon: '🌡' },
-    ],
-  },
-  data: {
-    label: 'Data',
-    views: [
-      { id: 'data-landing', label: 'Data Overview', icon: '◉' },
-      { id: 'sources', label: 'Sources', icon: '⊞' },
-      { id: 'provider-health', label: 'Provider Health', icon: '❤' },
-      { id: 'import-jobs', label: 'Import Jobs', icon: '⇣' },
-      { id: 'data-elements', label: 'Data Elements', icon: '⊡' },
-      { id: 'backtest-data', label: 'Backtest Data', icon: '⧖' },
-      { id: 'decoder', label: 'Decoder', icon: '⊞' },
-      { id: 'database-tables', label: 'Tables', icon: '▤' },
-      { id: 'api-activity', label: 'API Activity', icon: '◈' },
-      { id: 'api-endpoints', label: 'API Endpoints', icon: '◉' },
-      { id: 'transient-caches', label: 'Cache Monitor', icon: '◈' },
-      { id: 'create-source', label: 'Create Source', icon: '⊞' },
-      { id: 'api-keys', label: 'API Keys', icon: '⚙' },
-    ],
-  },
-  watchlists: {
-    label: 'Watchlists',
-    views: [
-      { id: 'active-symbols', label: 'Active Symbols', icon: '★' },
-      { id: 'user-watchlists', label: 'User Watchlists', icon: '⊞' },
-      { id: 'create-watchlist', label: 'Create Watchlist', icon: '⊞' },
-      { id: 'add-symbol', label: 'Add Symbol', icon: '➕' },
+      { id: 'market-context', label: 'Market Context', icon: '🌐' },
+      { id: 'positions-monitor', label: 'Positions Monitor', icon: '◈' },
+      { id: 'trading-strategies', label: 'Trading Strategies', icon: '◆' },
+      { id: 'create-strategy', label: 'Create Strategy', icon: '⊞' },
+      { id: 'strategy-comparison', label: 'Strategy Comparison', icon: '⚖' },
+      { id: 'trade-journal', label: 'Trade Journal', icon: '▤' },
+      { id: 'trading-plans', label: 'Trading Plans', icon: '📋' },
+      { id: 'calculators', label: 'Calculators', icon: '⊞' },
+      { id: 'accounts-dashboard', label: 'Accounts', icon: '💰' },
     ],
   },
   automation: {
@@ -117,16 +78,14 @@ export const NAV_TREE = {
       { id: 'alert-center', label: 'Alert Center', icon: '◈' },
     ],
   },
-  builder: {
+  research: {
     label: 'Development',
     views: [
       { id: 'architecture-framework', label: 'Architecture', icon: '⬡' },
       { id: 'diagrams', label: 'Diagrams', icon: '▦' },
       { id: 'assets', label: 'Assets', icon: '⊞' },
-      { id: 'workflow-wizards', label: 'Workflow Wizards', icon: '⚙' },
       // ── Lab (remaining) ──
       { id: 'theme-lab-container', label: 'Container Queries', icon: '⊡' },
-      { id: 'theme-lab-popover', label: 'Popover API', icon: '◉' },
       { id: 'algorithm-lab', label: 'Algorithm Log', icon: '📐' },
       { id: 'backtest', label: 'Backtest Engine', icon: '⬡' },
       { id: 'performance-lab', label: 'Protocol Performance', icon: '📊' },
@@ -137,7 +96,6 @@ export const NAV_TREE = {
     views: [
       { id: 'candle-patterns', label: 'Pattern Detection', icon: '🕯️' },
       { id: 'candle-patterns-guide', label: 'Candle Patterns', icon: '◉' },
-      { id: 'order-testing', label: 'Order Testing', icon: '🧪' },
       { id: 'mt5-demo-trading', label: 'MT5 Demo Trading', icon: '🎮' },
     ],
   },
@@ -150,15 +108,12 @@ export const NAV_TREE = {
       { id: 'platform-api-management', label: 'API Management', icon: '⚙' },
       { id: 'platform-comparisons', label: 'API Comparisons', icon: '▤' },
       { id: 'platform-api-efficiency', label: 'API Efficiency', icon: '◈' },
-      { id: 'platform-switches', label: 'Platform Switches', icon: '⇢' },
-      // ── Risk & Security ──
-      { id: 'risk-controls', label: 'Risk Controls', icon: '◈' },
+      // ── Security ──
       { id: 'security', label: 'Security', icon: '⚙' },
       { id: 'analytics', label: 'Analytics', icon: '▦' },
       { id: 'audit-log', label: 'Audit Log', icon: '▤' },
       { id: 'setup', label: 'Setup Checklist', icon: '⊞' },
       { id: 'capability-map', label: 'Capability Map', icon: '🗺️' },
-      { id: 'qa-testing', label: 'QA Testing', icon: '🧪' },
     ],
   },
   lab: {
@@ -172,6 +127,7 @@ export const NAV_TREE = {
       { id: 'theme-lab-motion', label: 'Motion Lab', icon: '◆' },
       { id: 'theme-lab-transitions', label: 'Transitions Lab', icon: '⇢' },
       { id: 'theme-lab-scroll', label: 'Scroll Animations', icon: '⇣' },
+      { id: 'theme-lab-popover', label: 'Popover API', icon: '◉' },
       { id: 'component-lab', label: 'Component Lab', icon: '🧩' },
       { id: 'responsive-layout-lab', label: 'Responsive Layout Lab', icon: '📐' },
       { id: 'charts-lab', label: 'Charts Lab', icon: '📊' },
@@ -207,6 +163,8 @@ export const NAV_TREE = {
       { id: 'settings-education', label: 'Education', icon: '◉' },
       { id: 'theme-packs', label: 'Theme Packs', icon: '🎨' },
       { id: 'user-preferences', label: 'User Preferences', icon: '⚙' },
+      { id: 'risk-controls', label: 'Risk Controls', icon: '◈' },
+      { id: 'platform-switches', label: 'Platform Switches', icon: '⇢' },
     ],
   },
 };
