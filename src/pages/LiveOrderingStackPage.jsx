@@ -463,7 +463,7 @@ export default function LiveOrderingStackPage() {
                     <td className="los-norm">
                       {r.riskMultiplier != null && r.riskMultiplier > 0
                         ? `${(r.riskMultiplier * 100).toFixed(0)}%`
-                        : <span style="color:#64748b">—</span>}
+                        : <span style={{color:'#64748b'}}>—</span>}
                     </td>
                   </tr>
                 ))}

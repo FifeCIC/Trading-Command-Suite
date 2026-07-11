@@ -1,4 +1,22 @@
+import { useState } from 'react';
+
 export default function ThemeLabTransitions() {
+  const [slowMo, setSlowMo] = useState(false);
+
+  function toggleSlowMo() {
+    const next = !slowMo;
+    setSlowMo(next);
+    if (next) {
+      document.documentElement.style.setProperty('--vt-old-duration', '0.8s');
+      document.documentElement.style.setProperty('--vt-new-duration', '1s');
+      document.documentElement.style.setProperty('--vt-new-delay', '0.2s');
+    } else {
+      document.documentElement.style.removeProperty('--vt-old-duration');
+      document.documentElement.style.removeProperty('--vt-new-duration');
+      document.documentElement.style.removeProperty('--vt-new-delay');
+    }
+  }
+
   return (
     <div className="tl-page">
       <header className="tl-header">
@@ -53,6 +71,24 @@ export default function ThemeLabTransitions() {
       <section className="tl-section">
         <h2>Test It</h2>
         <p className="tl-subtitle">Click any sidebar item or quick-menu button. Notice the crossfade between pages. The effect is automatic — every route change triggers it.</p>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem' }}>
+          <button
+            onClick={toggleSlowMo}
+            style={{
+              padding: '0.5rem 1rem',
+              fontSize: '0.82rem',
+              background: slowMo ? 'rgba(245,158,11,0.2)' : 'rgba(14,165,166,0.12)',
+              border: `1px solid ${slowMo ? '#f59e0b' : 'var(--accent)'}`,
+              borderRadius: 6,
+              color: slowMo ? '#f59e0b' : 'var(--accent)',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            {slowMo ? '🐢 Slow-Mo ON (0.8s/1s)' : '▶ Normal Speed (0.2s/0.25s)'}
+          </button>
+          {slowMo && <span style={{ fontSize: '0.75rem', color: '#f59e0b' }}>Transitions slowed for observation — click test links below</span>}
+        </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           {['analysis/support-resistance', 'research/news-intel', 'trading/portfolio-overview', 'lab/theme-lab'].map((path) => (
             <a key={path} href={`/${path}`} style={{ padding: '0.4rem 0.75rem', fontSize: '0.78rem', background: 'rgba(14,165,166,0.12)', border: '1px solid var(--accent)', borderRadius: 6, color: 'var(--accent)', textDecoration: 'none' }}>

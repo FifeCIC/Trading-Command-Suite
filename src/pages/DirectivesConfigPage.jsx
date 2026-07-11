@@ -60,8 +60,8 @@ export default function DirectivesConfigPage() {
     <div className="dc-page">
       <header className="dc-header">
         <div>
-          <h1>Configure Directives</h1>
-          <p>Select a strategy, then enable/disable individual directives. Changes persist to the database.</p>
+          <h1>Protocol Editor</h1>
+          <p>Select a protocol (strategy), then enable/disable its individual directives. Changes persist to the database.</p>
         </div>
         <div className="dc-header-actions">
           <select

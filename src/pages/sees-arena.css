@@ -22,6 +22,26 @@
 .sa-protocol-chip { padding: 0.25rem 0.6rem; border: 1px solid var(--line); border-radius: 20px; font-size: 0.7rem; cursor: pointer; background: transparent; color: var(--ink-soft); font-family: inherit; transition: all 0.15s; white-space: nowrap; }
 .sa-protocol-chip:hover { border-color: var(--accent); color: var(--ink); }
 .sa-protocol-chip.sa-chip-active { background: rgba(14,165,166,0.12); border-color: var(--accent); color: var(--accent); }
+.sa-protocol-chip.sa-chip-disabled { opacity: 0.4; cursor: not-allowed; }
+.sa-protocol-chip.sa-chip-disabled:hover { border-color: var(--line); color: var(--ink-soft); }
+.sa-chip-warn { margin-right: 0.25rem; font-size: 0.65rem; }
+
+/* ── Auto-run Toggle ── */
+.sa-autorun-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--ink-soft, #94a3b8);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+.sa-autorun-toggle input[type="checkbox"] {
+  accent-color: var(--accent, #0ea5a6);
+  width: 14px;
+  height: 14px;
+}
 
 /* ── Tooltip ── */
 .sa-tooltip-wrap { position: relative; display: inline-flex; }

@@ -96,9 +96,10 @@ export default function Mt5TradingPage() {
 
   useEffect(() => {
     refreshAll();
+    if (!connected) return; // don't poll when offline
     const interval = setInterval(refreshAll, 10000);
     return () => clearInterval(interval);
-  }, [refreshAll]);
+  }, [refreshAll, connected]);
 
   // ── Account Switching ──
   async function handleSwitchAccount(accountNum) {
@@ -257,6 +258,27 @@ export default function Mt5TradingPage() {
     );
   }
 
+  // ── Offline State (after initial load attempt fails) ──
+  if (!connected) {
+    return (
+      <div className="mt5u-page">
+        <div className="mt5u-offline-full">
+          <div className="mt5u-offline-icon">🔌</div>
+          <h2>MT5 Bridge Offline</h2>
+          <p>Start <code>mt5_bridge.py</code> from Server Controls to connect.</p>
+          <button
+            type="button"
+            className="mt5u-offline-retry"
+            onClick={() => { setLoading(true); refreshAll(); }}
+          >
+            Retry Connection
+          </button>
+          {error && <p className="mt5u-offline-error">{error}</p>}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mt5u-page" style={{ '--page-max-width': LAYOUT_WIDTHS[layoutWidth].maxWidth }}>
       {/* ── Layout Width Toggle ── */}
@@ -396,13 +418,6 @@ export default function Mt5TradingPage() {
           </div>
         </div>
       )}
-
-      {!account && !connected && (
-        <div className="mt5u-offline">
-          ⚠️ MT5 Bridge offline — start <code>mt5_bridge.py</code> from Server Controls
-        </div>
-      )}
-
       {/* ── Main Layout ── */}
       <div className="mt5u-layout">
         {/* Quick Trade Panel */}

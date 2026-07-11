@@ -98,18 +98,39 @@ export default function ChartsLabPage() {
       });
     }
   }
-
   const tickCount = tickCountRef.current;
 
+  // ── Demo/generated data when MT5 is offline ──
+  const generateDemoCandles = useCallback((count = 60, basePrice = 1.08) => {
+    const now = Math.floor(Date.now() / 1000);
+    const tfSec = { '1m': 60, '5m': 300, '15m': 900, '1h': 3600 };
+    const step = tfSec[timeframe] || 300;
+    const candles = [];
+    let price = basePrice;
+    for (let i = count; i >= 0; i--) {
+      const t = now - (i * step);
+      const vol = Math.random() * 0.02;
+      const change = (Math.random() - 0.48) * vol;
+      const open = price;
+      const close = price + change;
+      const high = Math.max(open, close) + Math.random() * vol * 0.5;
+      const low = Math.min(open, close) - Math.random() * vol * 0.5;
+      price = close;
+      candles.push({ time: t, open, high, low, close, volume: Math.floor(Math.random() * 5000 + 1000) });
+    }
+    return candles;
+  }, [timeframe]);
+
+  const hasLiveData = quote || candles.length > 0 || tickCount > 0;
+  const displayCandles = candles.length > 0 ? candles : (hasLiveData ? [] : generateDemoCandles(bars));
+  const isDemoData = !hasLiveData && displayCandles.length > 0;
+
   // ── Historical candles (chart-ready format) ──
-  const historicalCandles = candles.map(c => {
+  const historicalCandles = displayCandles.map(c => {
     const ts = c.timestamp || c.time;
     const unix = typeof ts === 'string' ? new Date(ts).getTime() / 1000 : ts;
     return { time: unix, open: c.open, high: c.high, low: c.low, close: c.close };
   });
-
-  // Use live ticks when available, fall back to historical candles
-  const hasLiveData = ticks.length > 0;
 
   // ── Synthetic OHLC from quote polling (for 1s/5s/15s) ──
   // Each poll snapshots bid/ask into a synthetic bar bucket
@@ -248,8 +269,12 @@ export default function ChartsLabPage() {
         )}
 
         <div className="clab-data-info">
-          {tickCount > 0 ? `${tickCount} ticks · ${ticks.length > 0 ? Math.ceil((ticks[ticks.length-1].time - ticks[0].time) / 1000) : 0}s of data` : 'Waiting for MT5 quotes…'}
-          {candles.length > 0 && ` · ${candles.length} MT5 candles loaded`}
+          {isDemoData ? (
+            <span className="clab-demo-badge">📊 Demo data — MT5 offline</span>
+          ) : tickCount > 0 ? (
+            `${tickCount} ticks · ${ticks.length > 0 ? Math.ceil((ticks[ticks.length-1].time - ticks[0].time) / 1000) : 0}s of data`
+          ) : 'Waiting for MT5 quotes…'}
+          {!isDemoData && candles.length > 0 && ` · ${candles.length} MT5 candles loaded`}
         </div>
       </div>
 

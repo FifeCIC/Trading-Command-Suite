@@ -60,9 +60,37 @@
 .mt5u-acct-card.positive strong { color: #22c55e; }
 .mt5u-acct-card.negative strong { color: #ef4444; }
 
-/* ── Offline Banner ── */
-.mt5u-offline { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); border-radius: 8px; padding: 0.75rem 1rem; color: #fca5a5; margin-bottom: 1rem; font-size: 0.85rem; }
-.mt5u-offline code { background: #1e1e2e; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.8rem; }
+/* ── Full-Page Offline State ── */
+.mt5u-offline-full {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 50vh;
+  padding: 3rem 2rem;
+}
+.mt5u-offline-icon { font-size: 3rem; margin-bottom: 1rem; }
+.mt5u-offline-full h2 { font-size: 1.4rem; color: #f1f5f9; margin: 0 0 0.5rem; }
+.mt5u-offline-full p { color: #94a3b8; font-size: 0.95rem; margin: 0 0 1.5rem; }
+.mt5u-offline-full code { background: #1e1e2e; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.85rem; }
+.mt5u-offline-retry {
+  padding: 0.6rem 1.5rem;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+.mt5u-offline-retry:hover { background: #2563eb; }
+.mt5u-offline-error { color: #ef4444; font-size: 0.85rem; margin-top: 1rem; }
+
+/* ── Old Offline Banner (deprecated, now uses full-page state) ── */
+.mt5u-offline { display: none; }
 
 /* ── Main Layout ── */
 .mt5u-layout { display: grid; grid-template-columns: 300px 1fr; gap: 1rem; }

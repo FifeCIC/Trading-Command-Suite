@@ -2,8 +2,8 @@ import { useParams, Link } from 'react-router-dom';
 import { NAV_TREE } from '../core/nav-tree';
 
 /**
- * Breadcrumbs — maps the current /:area/:view route to human-readable labels.
- * Renders: Home > Area Label > Page Label
+ * Breadcrumbs — maps the current /:area/:view route to boxed pill segments.
+ * Renders: [Home] [Area] [View]
  */
 export default function Breadcrumbs() {
   const { area, view } = useParams();
@@ -16,14 +16,10 @@ export default function Breadcrumbs() {
 
   return (
     <nav className="breadcrumbs" aria-label="Breadcrumb">
-      <Link to="/">Home</Link>
-      <span className="breadcrumbs-sep">›</span>
-      <Link to={`/${area}`}>{areaLabel}</Link>
+      <Link to="/" className="breadcrumbs-pill">Home</Link>
+      <Link to={`/${area}`} className="breadcrumbs-pill">{areaLabel}</Link>
       {view && (
-        <>
-          <span className="breadcrumbs-sep">›</span>
-          <span className="breadcrumbs-current">{viewLabel}</span>
-        </>
+        <span className="breadcrumbs-pill breadcrumbs-current">{viewLabel}</span>
       )}
     </nav>
   );

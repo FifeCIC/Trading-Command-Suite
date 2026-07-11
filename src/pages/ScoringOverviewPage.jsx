@@ -61,6 +61,13 @@ export default function ScoringOverviewPage() {
   const strategy = data.strategy ?? {};
   const degradation = data.degradation ?? { isDegraded: false, warning: null, overallCoverage: 1, failedProviders: [], degradedProviders: [] };
 
+  // ── Hooks: MUST be called before any early returns ──
+  const { prefs, set } = usePreferences();
+  const { stale, checking, lastRefresh, refresh } = useDataFreshness({
+    symbols: (Array.isArray(data.ranked) ? data.ranked : []).slice(0, 20).map(r => r.symbol || r.ticker).filter(Boolean),
+    enabled: (Array.isArray(data.ranked) ? data.ranked : []).length > 0,
+  });
+
   // ---- Loading state ----
   if (rankQuery.isLoading) {
     return (
@@ -130,12 +137,6 @@ export default function ScoringOverviewPage() {
 
   // Top 5
   const top5 = ranked.slice(0, 5);
-
-  const { prefs, set } = usePreferences();
-  const { stale, checking, lastRefresh, refresh } = useDataFreshness({
-    symbols: ranked.slice(0, 20).map(r => r.symbol || r.ticker).filter(Boolean),
-    enabled: ranked.length > 0,
-  });
 
   return (
     <div className="so-page">

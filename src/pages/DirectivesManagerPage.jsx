@@ -28,6 +28,10 @@ function hydrateFromApi(raw) {
     lastReview: '—',
     outputs: [],
     riskNotes: '',
+    // ── Fields from Directives Status that are now merged here ──
+    avgScore: raw.avgScore ?? null,
+    runs: raw.runs ?? null,
+    bias: raw.bias ?? null,
   }
 }
 
@@ -204,6 +208,9 @@ export default function DirectivesManagerPage() {
                 <th>Category</th>
                 <th>Status</th>
                 <th>Complexity</th>
+                <th>AVG Score</th>
+                <th>RUNS</th>
+                <th>BIAS</th>
                 <th>Protocols</th>
                 <th>Weighting</th>
                 <th>Tests</th>
@@ -249,6 +256,9 @@ export default function DirectivesManagerPage() {
                         </span>
                       </td>
                       <td>{item.complexity}</td>
+                      <td style={{ fontWeight: 700, color: 'var(--accent)' }}>{item.avgScore ?? '—'}</td>
+                      <td>{item.runs ?? '—'}</td>
+                      <td style={{ fontWeight: 700, color: (item.bias ?? 0) > 0 ? '#22c55e' : (item.bias ?? 0) < 0 ? '#ef4444' : 'var(--ink-soft)' }}>{item.bias ?? '—'}</td>
                       <td style={{ color: item.protocolCount > 0 ? 'var(--accent)' : 'var(--ink-soft)' }}>
                         {item.protocolCount || '—'}
                       </td>
@@ -263,7 +273,7 @@ export default function DirectivesManagerPage() {
                     </tr>
                     {expanded && (
                       <tr className="directive-expand">
-                        <td colSpan={6}>
+                        <td colSpan={10}>
                           <div className="directive-expand-grid">
                             <div>
                               <h3>Formula</h3>
@@ -302,9 +312,10 @@ export default function DirectivesManagerPage() {
           {selected && (
             <>
               <header className="directive-detail-header">
-                <h2>{selected.name}</h2>
-                <span className={`directive-chip tone-${toneForStatus(selected.status)}`}>{selected.status}</span>
-                <p className="directive-code">{selected.code}</p>
+                <div className="directive-detail-header-row">
+                  <h2 style={{color:'var(--accent)', fontSize:'1.05rem'}}>{selected.name}</h2>
+                  <span className={`directive-chip tone-${toneForStatus(selected.status)}`}>{selected.status}</span>
+                </div>
               </header>
 
               <section className="directive-detail-section">
@@ -328,14 +339,6 @@ export default function DirectivesManagerPage() {
                       <input type="range" min="1" max="100" defaultValue={selected.baseWeight} className="directive-slider" />
                       <span>{selected.baseWeight}</span>
                     </div>
-                  </div>
-                  <div>
-                    <span className="directive-detail-label">Category</span>
-                    <span>{selected.category}</span>
-                  </div>
-                  <div>
-                    <span className="directive-detail-label">Complexity</span>
-                    <span>{selected.complexity}</span>
                   </div>
                 </div>
               </section>

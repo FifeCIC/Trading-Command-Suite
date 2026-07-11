@@ -83,7 +83,7 @@ const OPTIONS_REGISTRY = {
   },
 };
 
-export default function ScreenOptions({ activeView, onSettingsChange, isOpen, onToggle }) {
+export default function ScreenOptions({ activeView, onSettingsChange, isOpen, onToggle, isBookmarked, onToggleBookmark }) {
   var prefs = usePreferences();
   var registry = activeView ? OPTIONS_REGISTRY[activeView] : null;
 
@@ -148,15 +148,25 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
 
   return (
     <>
-      {/* Sticky gear button */}
-      <button
-        className={`so-gear-btn ${isOpen ? 'so-gear-active' : ''}`}
-        onClick={onToggle}
-        title={`Screen Options${registry ? ` — ${registry.title}` : ''}`}
-        aria-label="Open screen options"
-      >
-        ⚙
-      </button>
+      {/* Sticky buttons */}
+      <div className="so-sticky-btns">
+        <button
+          className={`so-gear-btn ${isBookmarked ? 'so-bookmarked' : ''}`}
+          onClick={onToggleBookmark}
+          title={isBookmarked ? 'Remove bookmark' : 'Bookmark this page'}
+          aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark this page'}
+        >
+          {isBookmarked ? '⭐' : '☆'}
+        </button>
+        <button
+          className={`so-gear-btn ${isOpen ? 'so-gear-active' : ''}`}
+          onClick={onToggle}
+          title={`Screen Options${registry ? ` — ${registry.title}` : ''}`}
+          aria-label="Open screen options"
+        >
+          ⚙
+        </button>
+      </div>
 
       {/* Overlay */}
       <AnimatePresence>

@@ -97,9 +97,9 @@ export default function SignalsWorkbenchPage() {
     <div className="sw-page">
       <motion.header className="sw-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div>
-          <h1>Signals Workbench</h1>
+          <h1>Signals Ladder</h1>
           <p className="sw-subtitle">
-            Live signal ladder — directive breakdown, confidence rails, conflict resolution, pre-trade readiness.
+            Ranked signal comparison across protocols. Identifies the strongest entries by composite score.
           </p>
         </div>
         <span className="sw-clock">

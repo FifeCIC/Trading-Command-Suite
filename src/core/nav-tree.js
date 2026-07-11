@@ -24,7 +24,7 @@ export const NAV_TREE = {
   dashboard: {
     label: 'Dashboard',
     views: [
-      { id: 'home', label: 'Home', icon: '🏠' },
+      { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
     ],
   },
   qa: {
@@ -47,10 +47,10 @@ export const NAV_TREE = {
     label: 'Scoring',
     views: [
       { id: 'directives-manager', label: 'Directives', icon: '◆' },
-      { id: 'configure-directives', label: 'Configure Directives', icon: '⚙' },
+      { id: 'configure-directives', label: 'Protocol Editor', icon: '⚙' },
       { id: 'directives-status', label: 'Directive Status', icon: '📋' },
       { id: 'live-ordering-stack', label: 'Live Ordering Stack', icon: '◉' },
-      { id: 'signals-workbench', label: 'Signals Workbench', icon: '◈' },
+      { id: 'signals-workbench', label: 'Signals Ladder', icon: '◈' },
       { id: 'exit-signals', label: 'Exit Signals', icon: '🚪' },
       { id: 'sees-arena', label: 'SEES Arena', icon: '◆' },
       { id: 'protocols', label: 'Protocols 📋', icon: '📋' },
@@ -138,15 +138,16 @@ export const NAV_TREE = {
       { id: 'responsive-layout-lab', label: 'Responsive Layout Lab', icon: '📐' },
       { id: 'charts-lab', label: 'Charts Lab', icon: '📊' },
       { id: 'snapshot-replay', label: 'Snapshot Replay', icon: '⏮' },
-      { id: 'triple-screen', label: 'Triple-Screen Cockpit', icon: '🖥️' },
       { id: 'metastack-display', label: 'M.E.T.A. Display', icon: '📐' },
       { id: 'scoring-overview', label: 'Theme Example: Scoring Overview', icon: '🎨' },
       { id: 'mt5-trading', label: 'MT5 Trading (Lab)', icon: '🔬' },
+      { id: '_divider_prototypes', label: 'Prototypes', icon: '🧪', kind: 'section-header' },
       { id: 'speed-trading', label: 'Speed Trading (Lab)', icon: '🔬' },
       { id: 'gold-speed', label: 'Gold Speed (Lab)', icon: '🔬' },
       { id: 'snapshots', label: 'Snapshots (Lab)', icon: '🔬' },
       { id: 'portfolio-lab', label: 'Portfolio Lab', icon: '🧪' },
       { id: 'timeline', label: 'Timeline (Lab)', icon: '📅' },
+      { id: 'triple-screen', label: 'Triple-Screen Cockpit', icon: '🖥️' },
     ],
   },
   wizard: {

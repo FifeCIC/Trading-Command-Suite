@@ -1,11 +1,18 @@
 /* Screen Options — #249 */
 
-/* Sticky gear button */
-.so-gear-btn {
+/* Sticky buttons container */
+.so-sticky-btns {
   position: fixed;
   bottom: 20px;
   right: 20px;
   z-index: 998;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Sticky gear/bookmark button */
+.so-gear-btn {
   width: 42px;
   height: 42px;
   border-radius: 50%;
@@ -27,6 +34,16 @@
   border-color: var(--accent, #0ea5a6);
 }
 .so-gear-btn:active { transform: scale(0.95); }
+.so-bookmarked {
+  opacity: 0.85;
+  color: #f59e0b;
+  border-color: #f59e0b;
+}
+.so-bookmarked:hover {
+  opacity: 1;
+  color: #fbbf24;
+  border-color: #fbbf24;
+}
 .so-gear-active {
   color: var(--accent, #0ea5a6);
   border-color: var(--accent, #0ea5a6);

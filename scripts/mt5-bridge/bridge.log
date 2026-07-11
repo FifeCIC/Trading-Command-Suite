@@ -21656,3 +21656,343 @@
 2026-07-11 00:59:44,581 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:59:44.581488", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
 2026-07-11 00:59:44,700 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:59:44.700383", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
 2026-07-11 00:59:44,784 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:59:44.784465", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:05:31,130 [INFO] MetaTrader5 package loaded
+2026-07-11 16:05:31,133 [INFO] Connecting to MT5 at startup...
+2026-07-11 16:05:31,134 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-11 16:05:31,152 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1271.4
+2026-07-11 16:05:31,152 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-11 16:05:31,193 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-11 16:10:50,933 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:10:50.933308", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:10:51,030 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:10:51.029918", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:10:51,124 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:10:51.123936", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:10:51,247 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:10:51.247874", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:15:47,558 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:15:47.558042", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:15:47,686 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:15:47.686429", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:15:47,817 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:15:47.817690", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:15:47,943 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:15:47.943757", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:15:49,316 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:15:49,337 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:15:49,482 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:15:59,300 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:16:09,280 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:16:19,300 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:16:29,288 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:16:34,366 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:16:34,433 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:16:34,453 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:16:44,384 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:16:54,410 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:17:04,380 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:17:14,371 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:17:24,386 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:17:34,385 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:17:44,386 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:17:54,384 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:18:04,385 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:18:14,399 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:18:24,387 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:18:34,389 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:18:44,387 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:18:54,397 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:19:03,638 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:19:13,634 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:19:23,651 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:19:33,640 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:19:43,640 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:19:53,646 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:20:03,648 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:20:13,644 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:20:23,647 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:20:33,647 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:20:43,656 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:20:48,165 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:20:48.165060", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:20:48,290 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:20:48.290530", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:20:48,388 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:20:48.388748", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:20:48,520 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:20:48.520456", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:20:53,653 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:21:03,651 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:21:13,660 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:21:23,656 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:21:33,657 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:21:43,663 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:21:53,666 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:22:03,667 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:22:13,666 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:22:23,670 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:22:33,674 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:22:43,671 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:22:53,670 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:23:03,671 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:23:13,672 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:23:23,676 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:23:33,679 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:23:43,678 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:23:53,680 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:24:03,684 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:24:13,684 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:24:23,682 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:24:33,692 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:24:43,690 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:24:53,689 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:25:03,695 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:25:13,696 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:25:23,694 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:25:33,700 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:25:43,699 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:25:46,069 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:25:46.069714", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:25:46,154 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:25:46.154865", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:25:46,234 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:25:46.233970", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:25:46,310 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:25:46.310001", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:25:53,697 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:26:03,704 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:26:13,706 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:26:23,705 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:26:33,702 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:26:43,707 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:26:53,706 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:27:03,708 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:27:13,710 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:27:23,711 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:27:33,715 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:27:43,717 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:27:53,715 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:28:03,717 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:28:13,717 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:28:23,728 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:28:33,720 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:28:43,731 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:28:53,722 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:29:03,725 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:29:13,732 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:29:23,730 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:29:33,730 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:29:43,731 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:29:53,733 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:30:03,735 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:30:13,735 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:30:23,736 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:30:33,738 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:30:43,740 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:30:46,080 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:30:46.080100", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:30:46,158 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:30:46.158603", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:30:46,233 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:30:46.233890", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:30:46,312 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:30:46.312732", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:30:53,739 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:31:03,743 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:31:13,744 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:31:23,745 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:31:33,745 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:31:43,749 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:31:53,754 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:32:03,750 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:32:13,751 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:32:23,754 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:32:33,763 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:32:43,759 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:32:53,764 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:33:03,765 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:33:13,761 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:33:23,761 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:33:33,767 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:33:43,770 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:33:53,773 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:34:03,768 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:34:13,775 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:34:23,769 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:34:33,771 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:34:43,776 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:34:53,777 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:35:03,776 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:35:13,775 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:35:23,780 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:35:33,778 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:35:43,783 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:35:46,093 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:35:46.093641", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-11 16:35:46,141 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:35:46.141543", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-11 16:35:46,189 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:35:46.189413", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-11 16:35:46,237 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:35:46.236964", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-11 16:35:53,785 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:36:03,783 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:36:13,788 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:36:23,784 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:36:33,790 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:36:43,789 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:36:53,788 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:37:03,793 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:37:13,794 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:37:23,795 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:37:33,796 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:37:43,799 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:37:53,799 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:38:03,799 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:38:13,800 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:38:23,798 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:38:33,810 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:38:43,807 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:38:53,805 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:39:03,805 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:39:13,807 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:39:23,807 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:39:33,814 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:39:43,813 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:39:53,809 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:40:03,812 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:40:13,813 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:40:23,810 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:40:33,815 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:40:43,819 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:40:46,152 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:40:46.151956", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:40:46,229 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:40:46.229821", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:40:46,303 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:40:46.303523", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:40:46,381 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:40:46.381684", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:40:53,815 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:41:03,817 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:41:13,825 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:41:23,820 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:41:33,823 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:41:43,832 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:41:53,822 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:42:03,823 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:42:13,822 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:42:23,826 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:42:33,826 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:42:43,840 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:42:53,830 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:43:03,832 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:43:13,834 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:43:23,833 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:43:33,862 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:43:43,835 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:43:53,834 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:44:03,837 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:44:13,846 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:44:23,842 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:44:33,839 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:44:43,842 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:44:53,840 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:45:03,843 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:45:13,845 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:45:23,848 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:45:33,850 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:45:43,847 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:45:46,222 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:45:46.222537", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:45:46,300 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:45:46.300717", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:45:46,377 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:45:46.377892", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:45:46,454 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:45:46.454345", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:45:53,846 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:46:03,849 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:46:13,852 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:46:23,855 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:46:33,856 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:46:43,856 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:46:53,859 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:47:03,857 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:47:13,869 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:47:23,867 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:47:33,868 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:47:43,870 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:47:53,863 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:48:03,865 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:48:13,866 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:48:23,866 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:48:33,867 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:48:43,872 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:48:53,872 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:49:03,874 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:49:13,890 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:49:23,871 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:49:33,876 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:49:43,872 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:49:53,878 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:50:03,876 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:50:13,878 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:50:23,879 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:50:33,880 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:50:43,886 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:50:46,237 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:50:46.237393", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:50:46,310 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:50:46.310249", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:50:46,381 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:50:46.381570", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:50:46,451 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:50:46.451669", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:50:53,882 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:51:03,884 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:51:13,884 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:51:23,886 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:51:33,886 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:51:43,887 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:51:53,886 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:52:03,892 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:52:13,889 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:52:23,890 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:52:33,889 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:52:43,896 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:52:53,890 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:53:03,894 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:53:13,894 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:53:23,893 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:53:33,894 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:53:43,896 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:53:53,902 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:54:03,899 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:54:13,899 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:54:23,921 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:54:33,903 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-11 16:55:46,272 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:55:46.272195", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:55:46,363 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:55:46.363058", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:55:46,446 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:55:46.446370", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 16:55:46,530 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T16:55:46.530804", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:00:46,357 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:00:46.357116", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:00:46,463 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:00:46.463291", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:00:46,565 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:00:46.565118", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:00:46,653 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:00:46.653397", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:05:46,310 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:05:46.310109", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:05:46,396 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:05:46.396215", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:05:46,474 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:05:46.474145", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:05:46,550 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:05:46.550380", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:10:46,388 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:10:46.388347", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:10:46,474 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:10:46.474732", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:10:46,558 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:10:46.558736", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:10:46,636 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:10:46.636037", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:15:46,398 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:15:46.398877", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:15:46,478 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:15:46.478720", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:15:46,552 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:15:46.552833", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:15:46,627 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:15:46.627156", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:20:46,420 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:20:46.420017", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:20:46,499 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:20:46.499045", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:20:46,583 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:20:46.583379", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:20:46,665 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:20:46.665193", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:25:46,416 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:25:46.416061", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:25:46,491 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:25:46.491619", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:25:46,565 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:25:46.565435", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:25:46,650 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:25:46.650479", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:30:46,482 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:30:46.482687", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:30:46,565 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:30:46.565484", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:30:46,649 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:30:46.649098", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:30:46,728 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:30:46.727917", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:35:46,476 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:35:46.476384", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:35:46,557 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:35:46.557166", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:35:46,638 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:35:46.638287", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:35:46,728 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:35:46.728062", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:40:46,482 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:40:46.482457", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:40:46,563 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:40:46.563145", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:40:46,637 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:40:46.637813", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:40:46,720 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:40:46.720178", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:45:46,509 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:45:46.508929", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:45:46,584 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:45:46.584894", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:45:46,656 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:45:46.656881", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:45:46,733 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:45:46.733750", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:50:46,519 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:50:46.519042", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:50:46,597 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:50:46.597243", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:50:46,671 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:50:46.671793", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:50:46,743 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:50:46.743538", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:55:46,602 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:55:46.602619", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:55:46,691 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:55:46.691732", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:55:46,779 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:55:46.779433", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 17:55:46,888 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T17:55:46.888208", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 18:00:46,577 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T18:00:46.577817", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 18:00:46,663 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T18:00:46.663653", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 18:00:46,739 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T18:00:46.739855", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 18:00:46,813 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T18:00:46.813812", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 18:05:46,522 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T18:05:46.522277", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 18:05:46,600 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T18:05:46.600478", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 18:05:46,673 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T18:05:46.673414", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 18:05:46,749 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T18:05:46.749012", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}

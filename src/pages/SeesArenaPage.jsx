@@ -1,8 +1,24 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './sees-arena.css';
+
+const STORAGE_KEY = 'tcs:arena-state';
+
+/** Load persisted arena state from localStorage */
+function loadArenaState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return { symbolsInput: 'SPY, QQQ, NVDA, XAUUSD, BTCUSD', selectedProtocols: null, autoRun: false };
+}
+
+/** Save arena state to localStorage */
+function saveArenaState(state) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* quota */ }
+}
 
 // ── Tooltip (hover for methodology) ──
 function Tooltip({ content }) {
@@ -15,10 +31,15 @@ function Tooltip({ content }) {
   );
 }
 
-function ProtocolChip({ id, name, description, active, onToggle }) {
+function ProtocolChip({ id, name, description, active, onToggle, dataInsufficient }) {
   return (
-    <button type="button" className={`sa-protocol-chip ${active ? 'sa-chip-active' : ''}`}
-      onClick={() => onToggle(id)} title={description}>
+    <button
+      type="button"
+      className={`sa-protocol-chip ${active ? 'sa-chip-active' : ''} ${dataInsufficient ? 'sa-chip-disabled' : ''}`}
+      onClick={() => onToggle(id)}
+      title={dataInsufficient ? `${name}: insufficient data (requires MT5 connected)` : description}
+    >
+      {dataInsufficient && <span className="sa-chip-warn">⚠️</span>}
       {name || id}
     </button>
   );
@@ -37,18 +58,47 @@ const CONSENSUS_LABELS = {
 };
 
 export default function SeesArenaPage() {
+  // ── Persisted state from localStorage ──
+  const saved = useMemo(() => loadArenaState(), []);
+
   const [tab, setTab] = useState('compare');
-  const [symbolsInput, setSymbolsInput] = useState('SPY, QQQ, NVDA, XAUUSD, BTCUSD');
-  const [selectedProtocols, setSelectedProtocols] = useState(null);
+  const [symbolsInput, setSymbolsInput] = useState(saved.symbolsInput);
+  const [selectedProtocols, setSelectedProtocols] = useState(saved.selectedProtocols);
   const [compResult, setCompResult] = useState(null);
   const [comparing, setComparing] = useState(false);
+  const [autoRun, setAutoRun] = useState(saved.autoRun);
+  const autoRunRef = useRef(autoRun);
+
+  // Keep ref in sync
+  useEffect(() => { autoRunRef.current = autoRun; }, [autoRun]);
+
+  // ── Persist on relevant state changes ──
+  useEffect(() => {
+    saveArenaState({ symbolsInput, selectedProtocols, autoRun });
+  }, [symbolsInput, selectedProtocols, autoRun]);
 
   const filtersQuery = useQuery({
     queryKey: ['arena-filters'], queryFn: () => apiGet('/api/scoring/arena/filters'), staleTime: 60_000,
   });
   const protocols = filtersQuery.data?.protocols || [];
   const allProtocolIds = useMemo(() => protocols.map((p) => p.id), [protocols]);
-  const activeProtocols = selectedProtocols || allProtocolIds;
+
+  // Determine which protocols have insufficient data (e.g. need MT5)
+  const dataInsufficientIds = useMemo(() => {
+    return new Set(
+      protocols
+        .filter((p) => p.requiresMt5 && !filtersQuery.data?.mt5Connected)
+        .map((p) => p.id)
+    );
+  }, [protocols, filtersQuery.data?.mt5Connected]);
+
+  // Default active = all protocols that have sufficient data
+  const defaultProtocols = useMemo(
+    () => allProtocolIds.filter((id) => !dataInsufficientIds.has(id)),
+    [allProtocolIds, dataInsufficientIds]
+  );
+
+  const activeProtocols = selectedProtocols || defaultProtocols;
   const protocolMap = useMemo(() => {
     const m = {}; for (const p of protocols) m[p.id] = p; return m;
   }, [protocols]);
@@ -59,24 +109,35 @@ export default function SeesArenaPage() {
   });
 
   function toggleProtocol(id) {
+    if (dataInsufficientIds.has(id)) return; // can't toggle data-insufficient
     if (!selectedProtocols) {
-      setSelectedProtocols(allProtocolIds.filter((p) => p !== id));
+      setSelectedProtocols(defaultProtocols.filter((p) => p !== id));
     } else if (selectedProtocols.includes(id)) {
       const next = selectedProtocols.filter((p) => p !== id);
       setSelectedProtocols(next.length === 0 ? null : next);
     } else { setSelectedProtocols([...selectedProtocols, id]); }
   }
 
-  async function runComparison() {
-    const syms = symbolsInput.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
-    if (!syms.length) return;
+  const runComparison = useCallback(async (syms) => {
+    const symbols = syms || symbolsInput.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+    if (!symbols.length) return;
     setComparing(true);
     try {
-      const r = await apiPost('/api/scoring/arena/compare', { symbols: syms, protocols: selectedProtocols || undefined });
+      const r = await apiPost('/api/scoring/arena/compare', { symbols, protocols: selectedProtocols || undefined });
       setCompResult(r);
     } catch { setCompResult({ error: 'Comparison failed — backend may be offline.' }); }
     setComparing(false);
-  }
+  }, [symbolsInput, selectedProtocols]);
+
+  // ── Auto-run on mount if user had it enabled ──
+  useEffect(() => {
+    if (autoRunRef.current && protocols.length > 0) {
+      const syms = symbolsInput.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+      if (syms.length > 0) runComparison(syms);
+    }
+    // Only run on mount when protocols load
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [protocols.length]);
 
   return (
     <div className="sa-page">
@@ -89,22 +150,27 @@ export default function SeesArenaPage() {
 
       <div className="sa-tabs">
         <button className={`sa-tab ${tab === 'compare' ? 'sa-active' : ''}`} onClick={() => setTab('compare')}>Compare Protocols</button>
-        <button className={`sa-tab ${tab === 'stacks' ? 'sa-active' : ''}`} onClick={() => setTab('stacks')}>Strategy Stacks</button>
+        <button className={`sa-tab ${tab === 'stacks' ? 'sa-active' : ''}`} onClick={() => setTab('stacks')}>Strategy Ladders</button>
       </div>
 
       {tab === 'compare' && (<>
         <div className="sa-controls">
           <input type="text" className="sa-symbol-input" placeholder="Symbols: SPY, QQQ, NVDA, XAUUSD..."
             value={symbolsInput} onChange={(e) => setSymbolsInput(e.target.value)} />
-          <button className="sa-btn" onClick={runComparison} disabled={comparing}>
+          <button className="sa-btn" onClick={() => runComparison()} disabled={comparing}>
             {comparing ? '⟳ Comparing...' : '▶ Compare'}
           </button>
+          <label className="sa-autorun-toggle" title="Remember selections and auto-run on return">
+            <input type="checkbox" checked={autoRun} onChange={(e) => setAutoRun(e.target.checked)} />
+            <span>Auto-run</span>
+          </label>
         </div>
 
         <div className="sa-protocol-toggles">
           {protocols.map((p) => (
             <ProtocolChip key={p.id} id={p.id} name={p.name} description={p.description}
-              active={activeProtocols.includes(p.id)} onToggle={toggleProtocol} />
+              active={activeProtocols.includes(p.id)} dataInsufficient={dataInsufficientIds.has(p.id)}
+              onToggle={toggleProtocol} />
           ))}
           {protocols.length === 0 && <span className="sa-hint">Loading protocols...</span>}
         </div>

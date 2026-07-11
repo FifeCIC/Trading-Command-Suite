@@ -15,6 +15,7 @@ import { withDevTag } from './dev-runtime/tags';
 import { getPerformanceSnapshot, startPerformanceMonitoring } from './performance/monitor';
 import ArchitectureFrameworkPage from './pages/ArchitectureFrameworkPage';
 import HomeDashboard from './pages/HomeDashboard';
+import DashboardPage from './pages/DashboardPage';
 import BacktestPage from './pages/BacktestPage';
 import MultiStrategyComparisonPage from './pages/MultiStrategyComparisonPage';
 import ScenarioAnalysisPage from './pages/ScenarioAnalysisPage';
@@ -182,7 +183,8 @@ function AppShell() {
   const navigate = useNavigate();
 
   const isHomePage = location.pathname === '/';
-  const primaryArea = symbolId ? 'research' : (isHomePage ? 'dashboard' : (area || 'trading'));
+  const isDashboardPage = location.pathname === '/dashboard';
+  const primaryArea = symbolId ? 'research' : (isHomePage || isDashboardPage ? null : (area || 'trading'));
   const secondaryView = symbolId ? 'symbol-detail' : (view || 'directives-manager');
   const [demoPrompt, setDemoPrompt] = useState('Generate a responsive planning concept for eco garden week.');
   const [demoOutput, setDemoOutput] = useState('');
@@ -669,7 +671,7 @@ function AppShell() {
                 key={item.id}
                 type="button"
                 className={primaryArea === item.id ? 'nav-active' : ''}
-                onClick={() => item.id === 'dashboard' ? navigate('/') : onPrimarySelect(item.id)}
+                onClick={() => item.id === 'dashboard' ? navigate('/dashboard') : onPrimarySelect(item.id)}
               >
                 {item.label}
               </button>
@@ -729,6 +731,11 @@ function AppShell() {
             if (item.id === 'import-jobs' && !ffState.importJobs) return false;
             return true;
           }).map((item) => (
+            item.kind === 'section-header' ? (
+              <div key={item.id} className="rail-section-header">
+                <span className="rail-section-header-label">{item.icon} {item.label}</span>
+              </div>
+            ) : (
             <button
               key={item.id}
               type="button"
@@ -746,6 +753,7 @@ function AppShell() {
                 <span className="rail-status-dot rail-status-dot--error" aria-label="API errors present" />
               )}
             </button>
+            )
           ))}
         </div>
 
@@ -899,14 +907,6 @@ function AppShell() {
       <main className="main-stage" {...withDevTag('main.stage', { area: secondaryView })}>
         <div className="main-top-row">
           <Breadcrumbs />
-          <button
-            type="button"
-            className={`star-toggle${bookmarks.some((b) => b.id === `${primaryArea}/${secondaryView}`) ? ' starred' : ''}`}
-            onClick={() => toggleBookmark(primaryArea, secondaryView)}
-            title={bookmarks.some((b) => b.id === `${primaryArea}/${secondaryView}`) ? 'Remove bookmark' : 'Bookmark this page'}
-          >
-            {bookmarks.some((b) => b.id === `${primaryArea}/${secondaryView}`) ? '⭐' : '☆'}
-          </button>
         </div>
         <ErrorBoundary message="Something went wrong rendering this view.">
           {renderMainContent()}
@@ -1014,6 +1014,8 @@ function AppShell() {
         activeView={screenOptionsView}
         isOpen={screenOptionsOpen}
         onToggle={() => setScreenOptionsOpen((v) => !v)}
+        isBookmarked={bookmarks.some((b) => b.id === `${primaryArea}/${secondaryView}`)}
+        onToggleBookmark={() => toggleBookmark(primaryArea, secondaryView)}
       />
     </div>
   );
@@ -1029,6 +1031,7 @@ export default function App() {
           <Route path="/:area/:view" element={<AppShell />} />
           <Route path="/:area" element={<AppShell />} />
           <Route path="/" element={<HomeDashboard />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <KeyboardShortcutsHelp />

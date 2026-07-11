@@ -161,6 +161,59 @@ export default function ThemeLabPage() {
         </div>
       </section>
 
+      {/* ── Neon Border Card Variants ────────────────────────── */}
+      <section className="tl-section">
+        <h2>Neon Border Card Variants</h2>
+        <p className="tl-hint">Glowing borders for highlighting cards — success, warning, danger, and info variants.</p>
+        <div className="tl-card-grid">
+          {[
+            { label: 'Success Glow', bg: '#141a2e', glow: 'rgba(34,197,94,0.5)', border: 'rgba(34,197,94,0.6)', desc: 'Positive confirmation, profit targets hit, or trade wins.' },
+            { label: 'Warning Glow', bg: '#141a2e', glow: 'rgba(245,158,11,0.5)', border: 'rgba(245,158,11,0.6)', desc: 'Attention needed, approaching limits, or pending actions.' },
+            { label: 'Danger Glow', bg: '#141a2e', glow: 'rgba(239,68,68,0.5)', border: 'rgba(239,68,68,0.6)', desc: 'Stop-loss triggered, critical risk, or system failure.' },
+            { label: 'Info Glow', bg: '#141a2e', glow: 'rgba(59,130,246,0.5)', border: 'rgba(59,130,246,0.6)', desc: 'New data available, insights ready, or informational highlight.' },
+          ].map((n, i) => (
+            <div
+              key={i}
+              className="tl-sample-card tl-neon-card"
+              style={{
+                background: n.bg,
+                borderColor: n.border,
+                boxShadow: `0 0 16px ${n.glow}, inset 0 0 8px ${n.glow.replace('0.5', '0.08')}`,
+              }}
+            >
+              <div className="tl-card-header" style={{ borderBottomColor: n.border }}>
+                <h3>{n.label}</h3>
+              </div>
+              <p style={{ color: '#e2e8f0', fontSize: '0.88rem' }}>{n.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Pulsing Header Card ──────────────────────────────── */}
+      <section className="tl-section">
+        <h2>Pulsing Header Card</h2>
+        <p className="tl-hint">A card with a pulsing header — useful for indicating active problems or live-updating status.</p>
+        <div className="tl-card-grid">
+          {[
+            { label: 'Critical Alert', bg: '#1a1420', border: 'rgba(239,68,68,0.4)', pulse: 'tl-pulse-red', desc: '2 positions need attention — stop-loss levels breached on TSLA and NVDA.' },
+            { label: 'Live Updating', bg: '#141a20', border: 'rgba(59,130,246,0.4)', pulse: 'tl-pulse-blue', desc: 'Market data streaming — 47 symbols updating in real time.' },
+            { label: 'Pending Action', bg: '#1a1a14', border: 'rgba(245,158,11,0.4)', pulse: 'tl-pulse-amber', desc: 'Earnings report due tomorrow — review positions in AAPL and MSFT.' },
+          ].map((p, i) => (
+            <div
+              key={i}
+              className="tl-sample-card"
+              style={{ background: p.bg, borderColor: p.border }}
+            >
+              <div className={`tl-pulse-header ${p.pulse}`} style={{ borderBottomColor: p.border }}>
+                <h3>{p.label}</h3>
+              </div>
+              <p style={{ color: '#e2e8f0', fontSize: '0.88rem' }}>{p.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ── Table at Different Shades ───────────────────────── */}
       <section className="tl-section">
         <h2>Table at Different Shade Levels</h2>
