@@ -106,6 +106,23 @@ export class MarketDataController {
     return this.freshnessService.overallFreshness(symbolId);
   }
 
+  @Get('candles')
+  @ApiOperation({ summary: 'Proxy MT5 bridge candles for charting' })
+  async candles(
+    @Query('symbol') symbol: string,
+    @Query('timeframe') timeframe = '5m',
+    @Query('limit') limit = '100',
+  ) {
+    try {
+      const res = await fetch(
+        `http://localhost:5000/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}&limit=${Math.min(Number(limit), 1000)}`,
+      );
+      return res.json();
+    } catch {
+      return { bars: [], symbol, timeframe };
+    }
+  }
+
   @Post('prices/refresh')
   @ApiOperation({ summary: 'Refresh live prices for portfolio positions via provider chain' })
   async refreshPrices() {

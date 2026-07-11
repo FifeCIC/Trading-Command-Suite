@@ -23,13 +23,25 @@ const SETUP_STEPS = [
 export default function HomeDashboardPage() {
   const navigate = useNavigate();
 
-  const healthQuery = useQuery({
-    queryKey: ['health'],
-    queryFn: () => apiGet('/api/version'),
+  const serverQuery = useQuery({
+    queryKey: ['server'],
+    queryFn: () => apiGet('/api/'),
+    refetchInterval: 30000,
   });
 
-  const statusDot = healthQuery.data ? '🟢' : healthQuery.isLoading ? '⏳' : '🔴';
-  const statusLabel = healthQuery.data ? 'API Online' : healthQuery.isLoading ? 'Checking\u2026' : 'API Offline';
+  const serverData = serverQuery.data;
+  const apiOnline = serverData && serverData.database;
+  const statusDot = apiOnline ? '🟢' : serverQuery.isLoading ? '⏳' : '🔴';
+  const statusLabel = apiOnline ? 'API Online' : serverQuery.isLoading ? 'Checking\u2026' : 'API Offline';
+
+  // MT5 bridge status
+  const mt5 = serverData?.mt5Bridge;
+  const mt5Connected = mt5?.connected;
+  const mt5TradeAllowed = mt5?.tradeAllowed;
+  const mt5StatusClass = mt5Connected ? (mt5TradeAllowed ? 'ok' : 'warn') : 'err';
+  const mt5StatusText = mt5Connected
+    ? (mt5TradeAllowed ? '✅ AutoTrading ON' : '⚠️ AutoTrading OFF')
+    : 'Disconnected';
 
   const areas = Object.entries(NAV_TREE).map(([id, area]) => ({
     id,
@@ -118,8 +130,8 @@ export default function HomeDashboardPage() {
           <div className="nd-status-grid">
             <div className="nd-status-item">
               <span className="nd-status-label">NestJS API</span>
-              <span className={`nd-status-value ${healthQuery.data ? 'ok' : 'err'}`}>
-                {healthQuery.data ? 'Running' : 'Offline'}
+              <span className={`nd-status-value ${apiOnline ? 'ok' : 'err'}`}>
+                {apiOnline ? 'Running' : 'Offline'}
               </span>
             </div>
             <div className="nd-status-item">
@@ -128,7 +140,15 @@ export default function HomeDashboardPage() {
             </div>
             <div className="nd-status-item">
               <span className="nd-status-label">MT5 Bridge</span>
-              <span className="nd-status-value ok">Port 5000</span>
+              <span className={`nd-status-value ${mt5StatusClass}`}>
+                {mt5Connected ? `Port 5000 — $${mt5?.balance?.toLocaleString() ?? '—'}` : 'Offline'}
+              </span>
+            </div>
+            <div className="nd-status-item">
+              <span className="nd-status-label">MT5 AutoTrading</span>
+              <span className={`nd-status-value ${mt5TradeAllowed === null ? '' : mt5TradeAllowed ? 'ok' : 'warn'}`}>
+                {mt5TradeAllowed === null ? '—' : mt5TradeAllowed ? '✅ Enabled' : '❌ Disabled'}
+              </span>
             </div>
             <div className="nd-status-item">
               <span className="nd-status-label">Trading212</span>
@@ -140,7 +160,7 @@ export default function HomeDashboardPage() {
             </div>
             <div className="nd-status-item">
               <span className="nd-status-label">Version</span>
-              <span className="nd-status-value">{healthQuery.data?.version || '—'}</span>
+              <span className="nd-status-value">{serverData?.version || '—'}</span>
             </div>
           </div>
         </section>

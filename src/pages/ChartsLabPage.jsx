@@ -23,10 +23,12 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { SPEED_PROTOCOL_SYMBOLS } from '../data/speed-protocols';
 import CandlestickChart from '../components/CandlestickChart';
+
+const CHART_SYMBOLS = [...new Set(['EURUSD', 'GBPUSD', 'XAUUSD', 'USDCAD', ...SPEED_PROTOCOL_SYMBOLS])].sort();
 import CanvasCandlestickChart from '../components/CanvasCandlestickChart';
 import './charts-lab.css';
 
-const TIMEFRAMES = ['1s', '5s', '15s', '1m', '5m'];
+const TIMEFRAMES = ['1m', '5m', '15m', '1h'];
 const ENGINES = [
   { id: 'canvas', label: 'Canvas 2D', desc: 'Custom-built candle renderer' },
   { id: 'lightweight', label: 'Lightweight Charts', desc: 'TradingView free lib' },
@@ -35,18 +37,23 @@ const ENGINES = [
 
 const INDICATOR_PRESETS = [
   { type: 'ema', period: 9, color: '#f59e0b', label: 'EMA 9' },
-  { type: 'ema', period: 21, color: '#3b82f6', label: 'EMA 21' },
+  { type: 'ema', period: 20, color: '#3b82f6', label: 'EMA 20' },
   { type: 'ema', period: 50, color: '#a78bfa', label: 'EMA 50' },
-  { type: 'sma', period: 20, color: '#ec4899', label: 'SMA 20' },
-  { type: 'sma', period: 200, color: '#ef4444', label: 'SMA 200' },
+  { type: 'ema', period: 200, color: '#ec4899', label: 'EMA 200' },
+  { type: 'sma', period: 20, color: '#22c55e', label: 'SMA 20' },
+  { type: 'sma', period: 50, color: '#ef4444', label: 'SMA 50' },
+  { type: 'sma', period: 200, color: '#f97316', label: 'SMA 200' },
+  { type: 'vwap', period: 0, color: '#f59e0b', label: 'VWAP' },
+  { type: 'macd', period: 0, color: '#3b82f6', label: 'MACD (12,26,9)' },
+  { type: 'rsi', period: 14, color: '#a78bfa', label: 'RSI 14' },
 ];
 
 export default function ChartsLabPage() {
-  const [symbol, setSymbol] = useState('BTCUSD');
-  const [timeframe, setTf] = useState('5s');
+  const [symbol, setSymbol] = useState('EURUSD');
+  const [timeframe, setTf] = useState('5m');
   const [engine, setEngine] = useState('lightweight');
   const [bars, setBars] = useState(60);
-  const [activeIndicators, setActiveIndicators] = useState(new Set(['ema-9', 'ema-21']));
+  const [activeIndicators, setActiveIndicators] = useState(new Set(['ema-20', 'ema-50', 'ema-200']));
   const chartContainerRef = useRef(null);
 
   // ── Tick accumulator for synthetic candles ──
@@ -54,7 +61,7 @@ export default function ChartsLabPage() {
   const tickCountRef = useRef(0);
 
   // ── Live quotes ────────────────────────────────────
-  const tfMs = { '1s': 1000, '5s': 5000, '15s': 15000, '1m': 60000, '5m': 300000 };
+  const tfMs = { '1m': 60000, '5m': 300000, '15m': 900000, '1h': 3600000 };
   const quoteQuery = useQuery({
     queryKey: ['lab-quote', symbol],
     queryFn: () => apiGet(`/api/speed/quote/${symbol}`).catch(() => null),
@@ -63,14 +70,14 @@ export default function ChartsLabPage() {
     enabled: !!symbol,
   });
 
-  // ── MT5 candles (1m+) ──────────────────────────────
+  // ── MT5 candles (all timeframes, fallback when market closed) ──
   const candlesQuery = useQuery({
     queryKey: ['lab-candles', symbol, timeframe],
     queryFn: () =>
-      apiGet(`/api/providers/mt5/candles?symbol=${symbol}&timeframe=${timeframe}&limit=${bars}`).catch(() => null),
+      apiGet(`/api/market-data/candles?symbol=${symbol}&timeframe=${timeframe}&limit=${bars}`).catch(() => null),
     refetchInterval: tfMs[timeframe] ?? 60000,
     staleTime: 5000,
-    enabled: ['1m', '5m'].includes(timeframe) && !!symbol,
+    enabled: !!symbol,
   });
 
   const quote = quoteQuery.data;
@@ -94,6 +101,16 @@ export default function ChartsLabPage() {
 
   const tickCount = tickCountRef.current;
 
+  // ── Historical candles (chart-ready format) ──
+  const historicalCandles = candles.map(c => {
+    const ts = c.timestamp || c.time;
+    const unix = typeof ts === 'string' ? new Date(ts).getTime() / 1000 : ts;
+    return { time: unix, open: c.open, high: c.high, low: c.low, close: c.close };
+  });
+
+  // Use live ticks when available, fall back to historical candles
+  const hasLiveData = ticks.length > 0;
+
   // ── Synthetic OHLC from quote polling (for 1s/5s/15s) ──
   // Each poll snapshots bid/ask into a synthetic bar bucket
 
@@ -113,7 +130,7 @@ export default function ChartsLabPage() {
         <div className="clab-control-group">
           <label>Symbol</label>
           <select value={symbol} onChange={(e) => setSymbol(e.target.value)}>
-            {SPEED_PROTOCOL_SYMBOLS.map((s) => (
+            {CHART_SYMBOLS.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
@@ -189,6 +206,12 @@ export default function ChartsLabPage() {
             <span className="clab-quote-ask">A {quote.ask?.toFixed(5) ?? '—'}</span>
             <span className="clab-quote-mid">{quote.mid?.toFixed(5) ?? '—'}</span>
             <span className="clab-quote-spread">Δ {quote.spread?.toFixed(5) ?? '—'}</span>
+            {(() => {
+              const spreadPct = quote.mid ? (quote.spread / quote.mid) * 100 : null;
+              if (spreadPct === null) return null;
+              const rating = spreadPct < 0.01 ? '🟢 Tight' : spreadPct < 0.05 ? '🟡 Normal' : '🔴 Wide';
+              return <span className={`clab-quote-liquidity ${spreadPct < 0.01 ? 'liq-tight' : spreadPct < 0.05 ? 'liq-normal' : 'liq-wide'}`} title={`Spread: ${spreadPct.toFixed(3)}%`}>{rating}</span>;
+            })()}
           </>
         ) : (
           <span className="clab-quote-wait">Waiting for MT5…</span>
@@ -202,8 +225,10 @@ export default function ChartsLabPage() {
           <CandlestickChart
             containerRef={chartContainerRef}
             ticks={ticks}
+            historicalCandles={historicalCandles.length > 0 ? historicalCandles : null}
             intervalMs={tfMs[timeframe] ?? 5000}
             maxBars={bars}
+            indicators={INDICATOR_PRESETS.filter((ind) => activeIndicators.has(`${ind.type}-${ind.period}`))}
           />
         )}
         {engine === 'canvas' && (

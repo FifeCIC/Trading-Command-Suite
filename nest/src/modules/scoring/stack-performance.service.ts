@@ -17,8 +17,8 @@
  *   > 20   ★★☆☆☆  Weak
  *   ≤ 20   ★☆☆☆☆  Untested
  *
- * Fingerprint: A hash of (watchlist symbols + protocol directive set + scoring params + trading params).
- * When any component changes, the fingerprint changes — the UI can warn that this MetaStack has diverged
+ * Configuration Signature: A SHA-256 hash of (watchlist symbols + protocol directive set + scoring params + trading params).
+ * When any component changes, the signature changes — the UI can warn that this MetaStack has diverged
  * from the version that produced its performance history.
  */
 
@@ -50,9 +50,9 @@ export interface MetaStackRating {
   lastTradeAt: string | null;
   recencyDecay: number;
   confidenceFactor: number;
-  /** Current fingerprint of the MetaStack components. */
+  /** Current configuration signature of the MetaStack components. */
   fingerprint: string;
-  /** Whether the current fingerprint matches the one at rating time. */
+  /** Whether the current signature matches the one at rating time. */
   fingerprintChanged: boolean;
 }
 

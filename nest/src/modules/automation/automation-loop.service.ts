@@ -191,7 +191,20 @@ export class AutomationLoopService implements OnModuleInit {
       return;
     }
     this.logger.log('Auto-start enabled — restoring automation state...');
-    if (this.state.brokerStates['mt5']) {
+    // Re-init broker states now that ProvidersModule has registered adapters
+    this.initBrokerStates();
+    // Ensure MT5 is enabled for trading (auto-create if missing)
+    if (!this.state.brokerStates['mt5']) {
+      this.state.brokerStates['mt5'] = {
+        brokerId: 'mt5',
+        enabled: true,
+        tradingEnabled: true,
+        scoreIntervalMs: 300000,
+        tradeThreshold: 3,
+        requireConfirmation: false,
+      };
+      this.logger.log('Auto-created MT5 broker state (was missing after initBrokerStates)');
+    } else {
       this.state.brokerStates['mt5'].enabled = true;
       this.state.brokerStates['mt5'].tradingEnabled = true;
     }
@@ -546,8 +559,8 @@ export class AutomationLoopService implements OnModuleInit {
                   symbol: sym, side: side as 'BUY'|'SELL', quantity: strat.baseSize, sl, tp,
                   comment: `TCS ${strat.name} | ${s.score}%`,
                 });
-                this.lastAnyTradeAt = Date.now();
                 if (result.success) {
+                  this.lastAnyTradeAt = Date.now();
                   try { this.tradeRecorder.record({ symbol: sym, side: side.toLowerCase(), quantity: strat.baseSize, entryPrice: result.price||s.lastPrice||0, pnl:0, provider: strat.brokerId, status:'open', origin:'strategy', scoringStrategyId: strat.id } as any); } catch {}
                 }
                 decisions.push({ timestamp: new Date().toISOString(), strategyId: strat.id, symbol: sym, brokerId: strat.brokerId, decision: result.success?'EXECUTED':'FAILED', reason: result.success?`Ticket ${result.ticket}`:(result.error||'Unknown'), composite: s.score, signal: side, ticket: result.ticket, price: result.price, quantity: strat.baseSize });
@@ -635,9 +648,9 @@ export class AutomationLoopService implements OnModuleInit {
                     tp,
                     comment: `TCS ${strategy.name} | ${evalResult.composite}%`,
                   });
-                  this.lastAnyTradeAt = Date.now();
-                  this.lastTradeTime.set(strategyId, Date.now());
                   if (orderResult.success) {
+                    this.lastAnyTradeAt = Date.now();
+                    this.lastTradeTime.set(strategyId, Date.now());
                     try { this.tradeRecorder.record({ symbol: strategy.symbol, side: evalResult.signal?.toLowerCase(), quantity: size, entryPrice: orderResult.price || lookupScore.lastPrice || 0, pnl: 0, provider: strategy.brokerId || 'mt5', status: 'open', origin: 'strategy', scoringStrategyId: strategyId } as any); } catch {}
                   }
                   return {
@@ -683,6 +696,49 @@ export class AutomationLoopService implements OnModuleInit {
         // No scoreMap entry — try full evaluate anyway (data may have arrived)
         try {
           const evalResult = await this.strategyService.evaluate(strategyId);
+          if (evalResult.evaluated && evalResult.passed && strategy.mode === 'auto') {
+            // ── Auto-execute for symbols not in rankAll (e.g. forex) ──
+            const bs = this.state.brokerStates[strategy.brokerId || 'mt5'];
+            if (bs?.tradingEnabled && (!this.lastAnyTradeAt || Date.now() - this.lastAnyTradeAt >= 60000)) {
+              const broker = this.adapterFactory.create(strategy.brokerId || 'mt5');
+              if (broker?.placeOrder) {
+                const size = (strategy as any).baseSize || 0.01;
+                const slPct = (strategy as any).slPct || 1.0;
+                const tpPct = (strategy as any).tpPct || 1.0;
+                const side = evalResult.signal as 'BUY' | 'SELL';
+                let entryPrice = 0;
+                try {
+                  const quote = await broker.getQuote(strategy.symbol);
+                  if (quote?.ask && quote?.bid) {
+                    entryPrice = side === 'BUY' ? quote.ask : quote.bid;
+                  }
+                } catch { /* use 0 — bridge will use market */ }
+                const sl = entryPrice > 0 ? (side === 'BUY' ? entryPrice * (1 - slPct / 100) : entryPrice * (1 + slPct / 100)) : 0;
+                const tp = entryPrice > 0 ? (side === 'BUY' ? entryPrice * (1 + tpPct / 100) : entryPrice * (1 - tpPct / 100)) : 0;
+                const orderResult = await broker.placeOrder({
+                  symbol: strategy.symbol,
+                  side,
+                  quantity: size,
+                  sl,
+                  tp,
+                  comment: `TCS ${strategy.name} | ${evalResult.composite}%`,
+                });
+                if (orderResult.success) {
+                  this.lastAnyTradeAt = Date.now();
+                  this.lastTradeTime.set(strategyId, Date.now());
+                  try { this.tradeRecorder.record({ symbol: strategy.symbol, side: side.toLowerCase(), quantity: size, entryPrice: orderResult.price || entryPrice, pnl: 0, provider: strategy.brokerId || 'mt5', status: 'open', origin: 'strategy', scoringStrategyId: strategyId } as any); } catch {}
+                }
+                return {
+                  timestamp: new Date().toISOString(),
+                  strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
+                  decision: orderResult.success ? 'EXECUTED' : 'FAILED',
+                  reason: orderResult.success ? `Ticket ${orderResult.ticket}` : (orderResult.error || 'Unknown'),
+                  composite: evalResult.composite ?? 0, signal: evalResult.signal,
+                  ticket: orderResult.ticket, price: orderResult.price, quantity: size,
+                };
+              }
+            }
+          }
           if (evalResult.evaluated) {
             return {
               timestamp: new Date().toISOString(),
@@ -715,6 +771,17 @@ export class AutomationLoopService implements OnModuleInit {
           timestamp: new Date().toISOString(),
           strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
           decision: 'BLOCKED', reason: `Timeline: ${blockEvent.label}`,
+          composite: pos.composite, signal: pos.signal,
+        };
+      }
+
+      // Duplicate position guard — don't stack orders on existing positions
+      const maxPos = (strategy as any).maxPositions ?? 1;
+      if (maxPos <= 1) {
+        return {
+          timestamp: new Date().toISOString(),
+          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
+          decision: 'SKIP', reason: 'Position already open (maxPositions=1)',
           composite: pos.composite, signal: pos.signal,
         };
       }

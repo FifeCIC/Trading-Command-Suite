@@ -136,6 +136,8 @@ import FeatureLabPage from '../pages/FeatureLabPage.jsx';
 import PreferenceLab from '../pages/PreferenceLab.jsx';
 import PerformanceLabPage from '../pages/PerformanceLabPage.jsx';
 import SnapshotReplayPage from '../pages/SnapshotReplayPage.jsx';
+import TripleScreenPage from '../pages/TripleScreenPage.jsx';
+import MetaStackDisplayPage from '../pages/MetaStackDisplayPage.jsx';
 import PortfolioLabPage from '../pages/PortfolioLabPage.jsx';
 
 // ── Training ──
@@ -253,7 +255,7 @@ export const VIEW_COMPONENTS = {
   'backtest': BacktestPage,
   'strategies-compare': MultiStrategyComparisonPage,
   'scenario-analysis': ScenarioAnalysisPage,
-  'strategies': StrategiesPage,
+  'strategies': TradingStrategiesPage,
 
   // Status / System
   'status': SystemStatusPage,
@@ -286,6 +288,8 @@ export const VIEW_COMPONENTS = {
   'user-preferences': PreferenceLab,
   'performance-lab': PerformanceLabPage,
   'snapshot-replay': SnapshotReplayPage,
+  'triple-screen': TripleScreenPage,
+  'metastack-display': MetaStackDisplayPage,
   'portfolio-lab': PortfolioLabPage,
   'snapshots': SnapshotLibraryPage,
 

@@ -299,7 +299,7 @@ export class ScoringController {
   @Get('metastacks/ratings')
   @UseInterceptors(new CacheInterceptor(60000))
   @ApiOperation({ summary: 'Get performance ratings for all MetaStacks' })
-  @ApiOkResponse({ description: 'MetaStack ratings with stars, effectiveness rate, and fingerprint' })
+  @ApiOkResponse({ description: 'MetaStack ratings with stars, effectiveness rate, and configuration signature' })
   async getMetaStackRatings() {
     return this.stackPerformance.computeAllRatings();
   }
@@ -317,10 +317,10 @@ export class ScoringController {
 
   /**
    * GET /api/scoring/metastacks/:id/fingerprint
-   * Check if a MetaStack's components have changed since its last trade.
+   * Check if a MetaStack's configuration signature has changed since its last trade.
    */
   @Get('metastacks/:id/fingerprint')
-  @ApiOperation({ summary: 'Check if MetaStack fingerprint has changed' })
+  @ApiOperation({ summary: 'Check if MetaStack configuration signature has changed' })
   @ApiParam({ name: 'id', type: 'string' })
   async checkFingerprint(@Param('id') id: string) {
     return this.stackPerformance.checkFingerprintChange(id);

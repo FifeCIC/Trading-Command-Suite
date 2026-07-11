@@ -942,6 +942,203 @@ const DIAGRAMS = [
     style EXEC fill:#27ae60,color:#fff
     style MT5 fill:#e67e22,color:#fff`,
   },
+
+  // ── MetaStack System ────────────────────────────────────
+
+  {
+    id: 'metastack-product',
+    label: 'M.E.T.A. Product Hierarchy',
+    desc: 'Trading Command Suite delivers SEES signals layered into M.E.T.A. (Modular Expert Trading Architecture) for complete trading automation. Each MetaStack combines watchlist, protocol, scoring strategy, and trading strategy into a rateable unit.',
+    code: `flowchart TB
+    subgraph TCS["Trading Command Suite"]
+        direction TB
+        subgraph SEES["SEES — Signal Engine"]
+            A["99+ Directives<br/>Technical · Sentiment · Macro · Seasonal"]
+            B["32 Protocols<br/>Grouped directives for specific strategies"]
+            C["Ranked Symbol Output<br/>Composite scores 0-100"]
+            A --> B --> C
+        end
+        subgraph MS["M.E.T.A. — Modular Expert Trading Architecture"]
+            direction LR
+            D["📋 Watchlist<br/>What to trade"]
+            E["⚙️ Protocol<br/>How to score it"]
+            F["🎯 Scoring Strategy<br/>Thresholds + Risk Params"]
+            G["📊 Trading Strategy<br/>Execution Rules"]
+            H["⭐ Performance Rating<br/>★★★★★"]
+            D --> E --> F --> G --> H
+        end
+        C --> MS
+    end
+
+    style TCS fill:#0d1117,stroke:#3b82f6,color:#e5e7eb
+    style SEES fill:#111827,stroke:#22c55e,color:#e5e7eb
+    style MS fill:#111827,stroke:#f59e0b,color:#e5e7eb
+    style A fill:#1e3a5f,color:#e5e7eb
+    style B fill:#1e3a5f,color:#e5e7eb
+    style C fill:#1e3a5f,color:#e5e7eb
+    style D fill:#5c3d0e,color:#e5e7eb
+    style E fill:#5c3d0e,color:#e5e7eb
+    style F fill:#5c3d0e,color:#e5e7eb
+    style G fill:#5c3d0e,color:#e5e7eb
+    style H fill:#f59e0b,color:#000`,
+  },
+
+  {
+    id: 'metastack-rating',
+    label: 'M.E.T.A. Rating Engine',
+    desc: 'How each MetaStack earns a 0-100 composite rating from actual trade outcomes. Part of the Modular Expert Trading Architecture. Ratings normalize for runtime, penalize small samples, and fade with inactivity.',
+    code: `flowchart LR
+    subgraph Inputs["Trade Data"]
+        A["Trade Records<br/>scoringStrategyId"]
+    end
+    subgraph Metrics["Raw Metrics"]
+        B["Total PnL"]
+        C["Win Rate<br/>wins / total"]
+        D["Profit Factor<br/>grossProfit / grossLoss"]
+        E["Max Drawdown<br/>peak - trough"]
+        F["Runtime Hours<br/>first → last trade"]
+    end
+    subgraph Formula["Rating Formula"]
+        G["Effectiveness Rate<br/>PnL / runtimeHours"]
+        H["Confidence Factor<br/>clamp(trades/100, 0.1, 1.0)"]
+        I["Recency Decay<br/>exp(-days/30)"]
+        J["Consistency Factor<br/>1 - abs(winRate-0.5) × 0.3"]
+        K["Composite Rating<br/>0-100"]
+    end
+    subgraph Bands["Star Bands"]
+        L["★★★★★ Elite > 80"]
+        M["★★★★☆ Strong > 60"]
+        N["★★★☆☆ Average > 40"]
+        O["★★☆☆☆ Weak > 20"]
+        P["★☆☆☆☆ Untested ≤ 20"]
+    end
+    A --> B
+    A --> C
+    A --> D
+    A --> E
+    A --> F
+    B --> G
+    C --> J
+    G --> K
+    H --> K
+    I --> K
+    J --> K
+    K --> L
+    K --> M
+    K --> N
+    K --> O
+    K --> P
+
+    style Inputs fill:#1e3a5f,stroke:#3b82f6,color:#e5e7eb
+    style Metrics fill:#1a1a2e,stroke:#6366f1,color:#e5e7eb
+    style Formula fill:#1a1a2e,stroke:#8b5cf6,color:#e5e7eb
+    style Bands fill:#1a1a2e,stroke:#f59e0b,color:#e5e7eb
+    style A fill:#2563eb,color:#fff
+    style B fill:#475569,color:#e5e7eb
+    style C fill:#475569,color:#e5e7eb
+    style D fill:#475569,color:#e5e7eb
+    style E fill:#475569,color:#e5e7eb
+    style F fill:#475569,color:#e5e7eb
+    style G fill:#7c3aed,color:#fff
+    style H fill:#7c3aed,color:#fff
+    style I fill:#7c3aed,color:#fff
+    style J fill:#7c3aed,color:#fff
+    style K fill:#a855f7,color:#fff
+    style L fill:#22c55e,color:#000
+    style M fill:#4ade80,color:#000
+    style N fill:#f59e0b,color:#000
+    style O fill:#f97316,color:#000
+    style P fill:#ef4444,color:#fff`,
+  },
+
+  {
+    id: 'metastack-signature',
+    label: 'M.E.T.A. Configuration Signature',
+    desc: 'SHA-256 hash of MetaStack components detects configuration drift. When a watchlist symbol, protocol, or risk parameter changes, the signature changes — warning users that performance history may be stale.',
+    code: `flowchart TB
+    subgraph Components["MetaStack Components"]
+        direction LR
+        A["📋 Watchlist<br/>symbols JSON"]
+        B["⚙️ Protocol<br/>protocolId"]
+        C["🎯 Scoring<br/>threshold · SL% · TP% · size"]
+        D["🏦 Broker<br/>brokerId"]
+        E["🎛️ Mode<br/>manual | semi-auto | auto"]
+    end
+    subgraph Hash["Signature Generation"]
+        F["JSON.stringify<br/>all components"]
+        G["SHA-256 Hash<br/>first 16 chars"]
+        H["Signature<br/>dab799be07b0b2e6"]
+    end
+    subgraph Detection["Change Detection"]
+        I["Current Signature"]
+        J["Last Persisted<br/>StackPerformance.signature"]
+        K{"Match?"}
+        L["✅ Performance<br/>history valid"]
+        M["⚠️ Warning<br/>MetaStack changed<br/>since last trade"]
+    end
+    A --> F
+    B --> F
+    C --> F
+    D --> F
+    E --> F
+    F --> G --> H
+    H --> I
+    J --> K
+    I --> K
+    K -->|yes| L
+    K -->|no| M
+
+    style Components fill:#1e3a5f,stroke:#3b82f6,color:#e5e7eb
+    style Hash fill:#1a1a2e,stroke:#8b5cf6,color:#e5e7eb
+    style Detection fill:#1a1a2e,stroke:#f59e0b,color:#e5e7eb
+    style A fill:#475569,color:#e5e7eb
+    style B fill:#475569,color:#e5e7eb
+    style C fill:#475569,color:#e5e7eb
+    style D fill:#475569,color:#e5e7eb
+    style E fill:#475569,color:#e5e7eb
+    style F fill:#7c3aed,color:#fff
+    style G fill:#7c3aed,color:#fff
+    style H fill:#a855f7,color:#fff
+    style I fill:#2563eb,color:#fff
+    style J fill:#2563eb,color:#fff
+    style K fill:#f59e0b,color:#000
+    style L fill:#22c55e,color:#000
+    style M fill:#ef4444,color:#fff`,
+  },
+
+  {
+    id: 'metastack-lifecycle',
+    label: 'MetaStack Lifecycle',
+    desc: 'A MetaStack from creation to rating to iteration. Components can change at any point — fingerprints track when the configuration that produced results no longer matches.',
+    code: `flowchart TD
+    A["✨ Create MetaStack<br/>Name + watchlist + protocol<br/>+ scoring + trading params"] --> B["🔬 Test Phase<br/>Manual trading via<br/>Speed Scanner"]
+    B --> C["🤖 Automation Phase<br/>ScoringStrategy enabled<br/>in automation loop"]
+    C --> D["📊 Data Collection<br/>Trades accumulate<br/>scoringStrategyId recorded"]
+    D --> E["⭐ Rating Computed<br/>GET /api/scoring/<br/>metastacks/ratings"]
+    E --> F{"Satisfied with<br/>performance?"}
+    F -->|yes| G["✅ Keep Running<br/>Monitor fingerprint<br/>for drift"]
+    F -->|no| H["🔧 Tweak Parameters<br/>Adjust SL%, threshold,<br/>or swap protocols"]
+    H --> I{"Fingerprint<br/>changed?"}
+    I -->|yes| J["⚠️ New fingerprint<br/>Performance history<br/>may not apply"]
+    I -->|no| K["Same config<br/>Continue collecting<br/>data"]
+    G --> L["🔄 Periodic Review<br/>Re-rate via API<br/>Compare stacks"]
+    J --> D
+    K --> D
+    L --> F
+
+    style A fill:#2563eb,color:#fff
+    style B fill:#6366f1,color:#fff
+    style C fill:#8b5cf6,color:#fff
+    style D fill:#475569,color:#e5e7eb
+    style E fill:#f59e0b,color:#000
+    style F fill:#f59e0b,color:#000
+    style G fill:#22c55e,color:#000
+    style H fill:#f97316,color:#000
+    style I fill:#f59e0b,color:#000
+    style J fill:#ef4444,color:#fff
+    style K fill:#22c55e,color:#000
+    style L fill:#3b82f6,color:#fff`,
+  },
 ];
 
 export default function DiagramsPage() {
@@ -968,7 +1165,7 @@ export default function DiagramsPage() {
       <div className="pf-header">
         <div>
           <h1>System Diagrams</h1>
-          <p className="pf-hint" style={{ margin: '0.25rem 0 0' }}>Architecture and workflow diagrams for the Trading Command Suite. 19 diagrams covering all major subsystems.</p>
+          <p className="pf-hint" style={{ margin: '0.25rem 0 0' }}>Architecture and workflow diagrams for the Trading Command Suite. 25 diagrams covering all major subsystems.</p>
           <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
             <a href="/builder/architecture-framework" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '2px 8px', border: '1px solid var(--line)', borderRadius: 4 }}>⬡ Architecture Framework</a>
             <a href="/status/capability-map" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '2px 8px', border: '1px solid var(--line)', borderRadius: 4 }}>🗺️ Capability Map</a>

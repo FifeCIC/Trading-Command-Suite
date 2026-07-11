@@ -71,7 +71,7 @@ export class Mt5Adapter implements IProviderAdapter {
   constructor(
     private readonly notifications?: NotificationService,
   ) {
-    this.bridgeUrl = process.env.MT5_BRIDGE_URL || 'http://localhost:5001';
+    this.bridgeUrl = process.env.MT5_BRIDGE_URL || 'http://localhost:5000';
   }
 
   private get authHeaders(): Record<string, string> {
@@ -222,19 +222,22 @@ export class Mt5Adapter implements IProviderAdapter {
   }
 
   async placeOrder(params: BrokerOrderRequest): Promise<BrokerOrderResult> {
+    // MT5 only allows basic ASCII in comments — sanitize
+    const safeComment = (params.comment ?? 'TCS auto').replace(/[^a-zA-Z0-9 -]/g, '').substring(0, 50);
     const body = {
       symbol: params.symbol,
       type: params.side === 'BUY' ? 'buy' : 'sell',
       volume: params.quantity,
       sl: params.sl ?? null,
       tp: params.tp ?? null,
-      comment: params.comment ?? 'TCS auto',
+      comment: safeComment,
     };
 
-    this.logger.log(`MT5 order: ${body.type} ${body.symbol} ×${body.volume}`);
+    this.logger.log(`MT5 order: ${body.type} ${body.symbol} ×${body.volume} [url=${this.bridgeUrl} tripped=${this.tripped} errors=${this.consecutiveErrors}]`);
     const data = await this.bridgePost<any>('/order', body);
 
     if (!data) {
+      this.logger.warn(`MT5 order FAILED: bridgePost returned null [url=${this.bridgeUrl} tripped=${this.tripped} errors=${this.consecutiveErrors}]`);
       return { success: false, error: 'Bridge unreachable' };
     }
 

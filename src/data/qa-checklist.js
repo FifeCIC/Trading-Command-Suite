@@ -606,6 +606,72 @@ const QA_CHECKLIST = [
     category: 'Integration',
     priority: 'low',
   },
+
+  // ═══════════════════════════════════════════════════
+  // PROVIDER HEALTH & API MONITORING
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-prov-001',
+    area: 'Providers',
+    system: 'API Rate Limiting',
+    name: 'Finnhub — call frequency audit',
+    procedure: 'Check NestJS logs for "Finnhub: N calls in the last minute" entries. Verify N stays well below 60/min free tier limit. If keys are being cancelled, check for burst patterns or cron job overlaps.',
+    expected: 'Peak calls/min < 40. No consecutive calls without delay. Cron jobs staggered.',
+    category: 'Investigation',
+    priority: 'high',
+    versionNote: 'Finnhub disabled 2026-07-10 due to key expiry issues',
+  },
+  {
+    id: 'qa-prov-002',
+    area: 'Providers',
+    system: 'API Rate Limiting',
+    name: 'MT5 bridge — request frequency audit',
+    procedure: 'Check bridge.log for request rate. Verify QuoteGateway polling interval (250ms). Verify candles requests are cached where possible.',
+    expected: 'No burst patterns exceeding 10 req/s. Bridge not returning rate-limit errors.',
+    category: 'Investigation',
+    priority: 'medium',
+  },
+  {
+    id: 'qa-prov-003',
+    area: 'Providers',
+    system: 'API Key Management',
+    name: 'Provider key validity check',
+    procedure: 'GET /api/providers/health — verify each provider shows credentialsConfigured=true and status=healthy (or a clear explanation for degraded/failed).',
+    expected: 'All active providers have valid keys. Degraded providers have clear status messages.',
+    category: 'Monitoring',
+    priority: 'high',
+  },
+  {
+    id: 'qa-prov-004',
+    area: 'Providers',
+    system: 'API Rate Limiting',
+    name: 'Provider call log review (weekly)',
+    procedure: 'Review adapter logs for each active provider. Count total API calls per day. Cross-reference with rate limits. Flag any provider exceeding 80% of its limit.',
+    expected: 'All providers under 80% of documented rate limits. No unexpected call patterns.',
+    category: 'Audit',
+    priority: 'medium',
+  },
+  {
+    id: 'qa-prov-005',
+    area: 'Providers',
+    system: 'API Key Management',
+    name: 'Disabled provider — no errant calls',
+    procedure: 'After disabling a provider (e.g., Finnhub 2026-07-10), verify zero API calls are made to that provider. Check logs for any hardcoded references that bypass the adapter factory.',
+    expected: 'Zero calls. Only "adapter not available" or "disabled" log messages.',
+    category: 'Regression',
+    priority: 'high',
+  },
+  {
+    id: 'qa-prov-006',
+    area: 'Providers',
+    system: 'API Rate Limiting',
+    name: 'On-demand import — call explosion check',
+    procedure: 'Trigger a scoring run that hits symbols without insider/earnings data. Verify the on-demand import doesn\'t fire for every symbol simultaneously (should batch or throttle). Check ResearchImportService logs.',
+    expected: 'On-demand imports are throttled (max 1 per symbol per 5 min). No call explosion when scoring many new symbols.',
+    category: 'Investigation',
+    priority: 'high',
+    versionNote: 'This is likely the cause of Finnhub key cancellations — insider-activity directive triggers on-demand import for every symbol scored',
+  },
 ];
 
 export default QA_CHECKLIST;

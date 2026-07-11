@@ -3,6 +3,8 @@ import { AppService } from './app.service';
 import { ModeService } from './config/mode.service';
 import { PrismaService } from './database/prisma.service';
 import { ProvidersService } from './modules/providers/providers.service';
+import { Mt5ConnectionManager } from './modules/providers/mt5/mt5-connection-manager.service';
+import { StopGuardianService } from './modules/automation/stop-guardian.service';
 
 @Controller()
 export class AppController {
@@ -13,13 +15,32 @@ export class AppController {
     private readonly modeService: ModeService,
     private readonly prisma: PrismaService,
     private readonly providersService: ProvidersService,
+    private readonly mt5Connection: Mt5ConnectionManager,
+    private readonly stopGuardian: StopGuardianService,
   ) {}
 
   @Get()
-  getServerInfo() {
+  async getServerInfo() {
     const uptimeSec = Math.floor((Date.now() - this.startedAt) / 1000);
     const uptimeFmt = `${Math.floor(uptimeSec / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m ${uptimeSec % 60}s`;
-    const providerStatus: any[] = [];
+
+    // Fetch MT5 bridge health and terminal info
+    let mt5Bridge: any = { connected: false, tradeAllowed: null, account: null, balance: null };
+    try {
+      const health = await this.mt5Connection.getHealth();
+      const terminal = await this.mt5Connection.getTerminalInfo();
+      mt5Bridge = {
+        connected: health?.connected ?? false,
+        tradeAllowed: terminal?.tradeAllowed ?? null,
+        account: health?.account ?? null,
+        server: health?.server ?? null,
+        balance: health?.balance ?? null,
+        equity: health?.equity ?? null,
+        build: terminal?.build ?? null,
+      };
+    } catch {
+      // MT5 bridge unavailable — keep defaults
+    }
 
     return {
       server: 'Trading Command Suite — NestJS API',
@@ -29,6 +50,13 @@ export class AppController {
       database: this.prisma.isAvailable ? 'connected' : 'disconnected',
       mode: process.env.QUEUE_MODE === 'local' ? 'local' : 'fallback',
       port: process.env.PORT ?? 3201,
+      mt5Bridge,
+      stopGuardian: {
+        enabled: this.stopGuardian.state.enabled,
+        guardedCount: this.stopGuardian.state.guardedPositions.length,
+        lastTickAt: this.stopGuardian.state.lastTickAt,
+        tickCount: this.stopGuardian.state.tickCount,
+      },
       providers: null,
       endpoints: {
         health: '/api/health',

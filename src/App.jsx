@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { analytics, trackAppView, trackSupportClick } from './analytics';
 import Breadcrumbs from './components/Breadcrumbs';
@@ -178,9 +178,11 @@ function ContentCard({ title, children }) {
 
 function AppShell() {
   const { area, view, symbolId } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
-  
-  const primaryArea = symbolId ? 'research' : (area || 'trading');
+
+  const isHomePage = location.pathname === '/';
+  const primaryArea = symbolId ? 'research' : (isHomePage ? 'dashboard' : (area || 'trading'));
   const secondaryView = symbolId ? 'symbol-detail' : (view || 'directives-manager');
   const [demoPrompt, setDemoPrompt] = useState('Generate a responsive planning concept for eco garden week.');
   const [demoOutput, setDemoOutput] = useState('');
@@ -667,7 +669,7 @@ function AppShell() {
                 key={item.id}
                 type="button"
                 className={primaryArea === item.id ? 'nav-active' : ''}
-                onClick={() => onPrimarySelect(item.id)}
+                onClick={() => item.id === 'dashboard' ? navigate('/') : onPrimarySelect(item.id)}
               >
                 {item.label}
               </button>

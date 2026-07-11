@@ -22,6 +22,7 @@ import { TradingGatesModule } from './modules/trading-gates/trading-gates.module
 import { PerformanceModule } from './modules/performance/performance.module';
 import { SystemModule } from './modules/system/system.module';
 import { BacktestModule } from './modules/backtest/backtest.module';
+import { ReplayModule } from './modules/replay/replay.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ExportModule } from './modules/export/export.module';
 import { AlertsModule } from './modules/alerts/alerts.module';
@@ -78,6 +79,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     PerformanceModule,
     SystemModule,
     BacktestModule,
+    ReplayModule,
     NotificationsModule,
     AlertsModule,
     ExportModule,

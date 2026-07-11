@@ -81,6 +81,21 @@
   margin: 0 0 1rem;
 }
 
+.nd-section-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.75rem 0;
+}
+
+.nd-workflow {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #1e293b;
+}
+
 .nd-section-header {
   display: flex;
   justify-content: space-between;
@@ -212,10 +227,26 @@
   color: inherit;
 }
 
+.nd-nav-card-primary {
+  border-top-color: #10b981;
+}
+
+.nd-nav-card-secondary {
+  border-top-color: #6366f1;
+}
+
 .nd-nav-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   border-color: #3b82f6;
+}
+
+.nd-nav-card-primary:hover {
+  border-color: #10b981;
+}
+
+.nd-nav-card-secondary:hover {
+  border-color: #6366f1;
 }
 
 .nd-nav-card:active {
@@ -284,8 +315,16 @@
   color: #22c55e;
 }
 
+.nd-status-value.warn {
+  color: #f59e0b;
+}
+
 .nd-status-value.err {
   color: #ef4444;
+}
+
+.nd-status-value.mt5 {
+  color: #3b82f6;
 }
 
 /* ── Tips ─────────────────────────────────────────────────── */

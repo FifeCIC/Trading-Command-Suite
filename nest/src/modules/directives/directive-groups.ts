@@ -34,11 +34,11 @@ export const DIRECTIVE_GROUPS: DirectiveGroup[] = [
       'macd-crossover',
       'ema-structure',
       'volume-confirmation',
-      'momentum-roc',
-      'bollinger-squeeze',
-      'support-resistance',
-      'atr-expansion',
-      'session-timing-filter',
+      'speed-momentum',
+      'bollinger-band-squeeze',
+      'support-resistance-levels',
+      'volatility-tools',
+      'session-open-effect',
       'session-open-effect',
     ],
   },
@@ -52,8 +52,8 @@ export const DIRECTIVE_GROUPS: DirectiveGroup[] = [
     maxMultiplier: 1.0,
     directiveIds: [
       'analyst-adjustments',
-      'analyst-consensus',
-      'news-sentiment',
+      'analyst-adjustments',
+      'news-sentiment-positive',
       'earnings-proximity',
       'earnings-momentum',
       'social-buzz',
@@ -69,10 +69,10 @@ export const DIRECTIVE_GROUPS: DirectiveGroup[] = [
     minMultiplier: 0.3,    // Worst risk = 30% of signal survives
     maxMultiplier: 1.2,    // Best risk = 20% boost
     directiveIds: [
-      'position-concentration',
-      'correlation-drag',
+      'portfolio-performance',
+      'spy-qqq-relative-strength',
       'dilution-impact',
-      'volatility-regime',
+      'vix-regime',
       'liquidity-check',
       'budget-gate',
       'rollover-risk',
@@ -127,15 +127,15 @@ export const BTC_SPEED_GROUPS: DirectiveGroup[] = [
     maxMultiplier: 1.0,
     directiveIds: [
       'speed-momentum',       // 120 — Core velocity signal
-      'bollinger-squeeze',    // 100 — Expansion catalyst
+      'bollinger-band-squeeze',    // 100 — Expansion catalyst
       'volume-confirmation',  // 100 — Volume support
-      'atr-expansion',        // 100 — Vol opportunity
+      'volatility-tools',        // 100 — Vol opportunity
       'rsi-oversold',         // 120 — Oversold bounce
-      'support-resistance',   // 100 — Round numbers
+      'support-resistance-levels',   // 100 — Round numbers
       'multi-timeframe-trend',// 120 — 1D/1H/15M alignment
       'micro-sr-levels',      // 100 — Micro S/R levels
       'rsi-overbought',       // 100 — Overbought reversion
-      'session-timing-filter',// 100 — Session quality
+      'session-open-effect',// 100 — Session quality
     ],
     directiveMaxScores: {
       'speed-momentum': 120,
@@ -152,7 +152,7 @@ export const BTC_SPEED_GROUPS: DirectiveGroup[] = [
     maxMultiplier: 1.0,
     directiveIds: [
       'crypto-fear-greed',    //  60 — Contrarian sentiment
-      'news-sentiment',       // 100 — Crypto news flow
+      'news-sentiment-positive',       // 100 — Crypto news flow
       'social-buzz',          // 100 — Social activity
     ],
     directiveMaxScores: {
@@ -170,9 +170,9 @@ export const BTC_SPEED_GROUPS: DirectiveGroup[] = [
     directiveIds: [
       'btc-halving-cycle',    // 200 — Macro cycle bonus (multiplicative gate)
       'crypto-weekend-effect',//  50 — Weekend risk awareness
-      'volatility-regime',    // 100 — Kill in extreme vol
+      'vix-regime',    // 100 — Kill in extreme vol
       'liquidity-check',      // 100 — Spread/volume check
-      'position-concentration',// 100 — Don't over-allocate
+      'portfolio-performance',// 100 — Don't over-allocate
     ],
     directiveMaxScores: {
       'btc-halving-cycle': 200,
@@ -235,10 +235,10 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
           'rsi-oversold',             // 120 — Oversold bounce
           'macd-crossover',           // 110 — Trend change
           'volume-confirmation',      // 100 — Volume validates
-          'bollinger-squeeze',        // 100 — Vol compression
+          'bollinger-band-squeeze',        // 100 — Vol compression
           'doji-pattern',             // 100 — Reversal
           'engulfing-pattern',        // 100 — Strong reversal
-          'support-resistance',       // 100 — Key levels
+          'support-resistance-levels',       // 100 — Key levels
           'atr-dip',                  //  95 — Normalised pullback
           'momentum-exhaustion',      // 100 — Trend fatigue
         ],
@@ -316,15 +316,15 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'speed-momentum',       // 120 — 5-candle velocity (use with 5s–30s candles)
-          'bollinger-squeeze',    // 100 — Micro-squeeze before tick breakout
+          'bollinger-band-squeeze',    // 100 — Micro-squeeze before tick breakout
           'volume-confirmation',  // 100 — Volume micro-spike confirms entry
           'rsi-oversold',         // 120 — Tick-level oversold bounce
           'rsi-overbought',       // 100 — Tick-level overbought reversion
-          'support-resistance',   // 100 — Micro S/R (round numbers, prior wicks)
+          'support-resistance-levels',   // 100 — Micro S/R (round numbers, prior wicks)
           'multi-timeframe-trend',// 120 — 1D/1H/15M trend alignment
           'micro-sr-levels',      // 100 — Session S/R, VWAP, round numbers
-          'atr-expansion',        // 100 — Micro ATR for stop placement
-          'session-timing-filter',// 100 — Only trade liquid sessions
+          'volatility-tools',        // 100 — Micro ATR for stop placement
+          'session-open-effect',// 100 — Only trade liquid sessions
         ],
         directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
       },
@@ -334,7 +334,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.20, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'crypto-fear-greed',    //  60 — Background risk appetite
-          'news-sentiment',       // 100 — Avoid entries during high-impact news
+          'news-sentiment-positive',       // 100 — Avoid entries during high-impact news
         ],
         directiveMaxScores: { 'crypto-fear-greed': 60 },
       },
@@ -344,9 +344,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.40, isRiskGate: true, minMultiplier: 0.5, maxMultiplier: 1.3,
         directiveIds: [
           'liquidity-check',      // 100 — Spread/volume must support $1 entries
-          'volatility-regime',    // 100 — Extreme vol kills tick scalps
+          'vix-regime',    // 100 — Extreme vol kills tick scalps
           'crypto-weekend-effect',//  50 — Weekend liquidity dry-up
-          'position-concentration',// 100 — Don't over-allocate scalp positions
+          'portfolio-performance',// 100 — Don't over-allocate scalp positions
         ],
         directiveMaxScores: { 'crypto-weekend-effect': 50 },
       },
@@ -371,13 +371,13 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'speed-momentum',       // 120 — Gold micro-velocity
-          'bollinger-squeeze',    // 100 — Squeeze before data releases
+          'bollinger-band-squeeze',    // 100 — Squeeze before data releases
           'volume-confirmation',  // 100 — Volume spike confirms gold move
-          'atr-expansion',        // 100 — Micro-ATR for gold tick sizing
+          'volatility-tools',        // 100 — Micro-ATR for gold tick sizing
           'rsi-oversold',         // 120 — Gold oversold bounce
           'rsi-overbought',       // 100 — Gold overbought reversion
-          'support-resistance',   // 100 — Gold round numbers ($2000, $2050...)
-          'session-timing-filter',// 100 — Only liquid gold sessions
+          'support-resistance-levels',   // 100 — Gold round numbers ($2000, $2050...)
+          'session-open-effect',// 100 — Only liquid gold sessions
         ],
         directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
       },
@@ -386,7 +386,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Gold IS sentiment — DXY, real rates, fear gauge',
         weight: 0.20, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',            // 100 — Gold reacts to every headline
+          'news-sentiment-positive',            // 100 — Gold reacts to every headline
           'gold-macro-correlation',    // 100 — DXY/real rates context
         ],
       },
@@ -395,9 +395,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Gold-specific: spread widening during news, weekend gaps, over-allocation',
         weight: 0.40, isRiskGate: true, minMultiplier: 0.4, maxMultiplier: 1.3,
         directiveIds: [
-          'volatility-regime',     // 100 — Extreme vol kills gold scalps
+          'vix-regime',     // 100 — Extreme vol kills gold scalps
           'liquidity-check',       // 100 — Gold spreads widen on news
-          'position-concentration',// 100 — Don't over-allocate gold
+          'portfolio-performance',// 100 — Don't over-allocate gold
           'crypto-weekend-effect', //  50 — Weekend gap risk (thin gold weekends)
         ],
         directiveMaxScores: { 'crypto-weekend-effect': 50 },
@@ -426,13 +426,13 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'speed-momentum',       // 120 — Oil micro-velocity
-          'bollinger-squeeze',    // 100 — Squeeze before EIA/OPEC events
+          'bollinger-band-squeeze',    // 100 — Squeeze before EIA/OPEC events
           'volume-confirmation',  // 100 — Volume spike confirms crude move
-          'atr-expansion',        // 100 — Micro-ATR for oil tick sizing
+          'volatility-tools',        // 100 — Micro-ATR for oil tick sizing
           'rsi-oversold',         // 120 — Oil oversold bounce (mean reversion)
           'rsi-overbought',       // 100 — Oil overbought reversion
-          'support-resistance',   // 100 — Oil key levels ($70, $75, $80, $85)
-          'session-timing-filter',// 100 — NY session only
+          'support-resistance-levels',   // 100 — Oil key levels ($70, $75, $80, $85)
+          'session-open-effect',// 100 — NY session only
         ],
         directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
       },
@@ -441,7 +441,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Oil drivers: OPEC, EIA, geopolitics, USD',
         weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',            // 100 — OPEC, EIA, geopolitics dominate
+          'news-sentiment-positive',            // 100 — OPEC, EIA, geopolitics dominate
           'cad-usd-oil-correlation',   // 100 — Oil/CAD correlation confirmation
         ],
       },
@@ -450,9 +450,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Oil-specific: geopolitical vol spikes, NY session liquidity windows',
         weight: 0.35, isRiskGate: true, minMultiplier: 0.45, maxMultiplier: 1.3,
         directiveIds: [
-          'volatility-regime',     // 100 — Oil vol spikes on geopolitics
+          'vix-regime',     // 100 — Oil vol spikes on geopolitics
           'liquidity-check',       // 100 — Crude spreads matter for $1 scalps
-          'position-concentration',// 100 — Don't over-allocate energy
+          'portfolio-performance',// 100 — Don't over-allocate energy
           'session-open-effect',   // 100 — NY open crude moves
         ],
       },
@@ -477,13 +477,13 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'speed-momentum',       // 120 — Gamma acceleration in last hour
-          'bollinger-squeeze',    // 100 — Pre-breakout squeeze at strikes
+          'bollinger-band-squeeze',    // 100 — Pre-breakout squeeze at strikes
           'volume-confirmation',  // 100 — Options-driven volume spikes
-          'atr-expansion',        // 100 — Micro-ATR for stop placement
+          'volatility-tools',        // 100 — Micro-ATR for stop placement
           'rsi-oversold',         // 120 — Oversold at max pain level
           'rsi-overbought',       // 100 — Overbought at gamma wall
-          'support-resistance',   // 100 — SPY $5/$10 strike clusters
-          'session-timing-filter',// 100 — US session only
+          'support-resistance-levels',   // 100 — SPY $5/$10 strike clusters
+          'session-open-effect',// 100 — US session only
         ],
         directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
       },
@@ -492,7 +492,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'VIX, breadth, macro — SPY is the market',
         weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',       // 100 — Econ data, Fed, earnings
+          'news-sentiment-positive',       // 100 — Econ data, Fed, earnings
           'vix-regime',           // 100 — VIX/SPY inverse correlation
         ],
       },
@@ -501,9 +501,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'SPY doesn\'t gap 5% — tighter risk gates than crypto',
         weight: 0.35, isRiskGate: true, minMultiplier: 0.5, maxMultiplier: 1.25,
         directiveIds: [
-          'volatility-regime',    // 100 — Extreme VIX kills scalps
+          'vix-regime',    // 100 — Extreme VIX kills scalps
           'liquidity-check',      // 100 — SPY always liquid but check spread
-          'position-concentration',// 100 — Don't over-allocate indices
+          'portfolio-performance',// 100 — Don't over-allocate indices
           'session-open-effect',  // 100 — First 30min sets daily range
         ],
       },
@@ -529,10 +529,10 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         directiveIds: [
           'ema-structure',        // 100 — 9/21/50 EMA alignment for trend
           'macd-crossover',       // 110 — Session trend changes
-          'bollinger-squeeze',    // 100 — Pre-breakout compression
+          'bollinger-band-squeeze',    // 100 — Pre-breakout compression
           'volume-confirmation',  // 100 — Institutional volume profile
-          'support-resistance',   // 100 — Key SPY levels ($500, $510, $520...)
-          'momentum-roc',         // 100 — Intraday momentum shifts
+          'support-resistance-levels',   // 100 — Key SPY levels ($500, $510, $520...)
+          'speed-momentum',         // 100 — Intraday momentum shifts
           'rsi-oversold',         // 120 — VWAP bounce oversold
           'rsi-overbought',       // 100 — Overbought at resistance
         ],
@@ -543,9 +543,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'VIX, market breadth, Fed posture',
         weight: 0.30, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',       // 100 — Econ data dominates SPY
+          'news-sentiment-positive',       // 100 — Econ data dominates SPY
           'vix-regime',           // 100 — VIX/SPY correlation
-          'analyst-consensus',    // 100 — Wall Street SPY targets
+          'analyst-adjustments',    // 100 — Wall Street SPY targets
         ],
       },
       {
@@ -553,10 +553,10 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Day trade risk — session quality, position sizing, overnight avoidance',
         weight: 0.30, isRiskGate: true, minMultiplier: 0.55, maxMultiplier: 1.2,
         directiveIds: [
-          'volatility-regime',    // 100 — Don't day trade during VIX > 30
-          'session-timing-filter',// 100 — Only trade liquid US hours
+          'vix-regime',    // 100 — Don't day trade during VIX > 30
+          'session-open-effect',// 100 — Only trade liquid US hours
           'liquidity-check',      // 100 — SPY always liquid but check
-          'position-concentration',// 100 — Index allocation cap
+          'portfolio-performance',// 100 — Index allocation cap
         ],
       },
     ],
@@ -580,13 +580,13 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.45, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'speed-momentum',       // 120 — Higher beta = stronger momentum signals
-          'bollinger-squeeze',    // 100 — Tech squeeze before earnings/macro
+          'bollinger-band-squeeze',    // 100 — Tech squeeze before earnings/macro
           'volume-confirmation',  // 100 — NVDA/AAPL/MSFT volume dominance
-          'atr-expansion',        // 100 — Wider ATR for tech volatility
+          'volatility-tools',        // 100 — Wider ATR for tech volatility
           'rsi-oversold',         // 120 — Tech dip buying
           'rsi-overbought',       // 100 — Tech overbought = trend continuation
-          'support-resistance',   // 100 — QQQ round numbers
-          'session-timing-filter',// 100 — US session only
+          'support-resistance-levels',   // 100 — QQQ round numbers
+          'session-open-effect',// 100 — US session only
         ],
         directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
       },
@@ -595,8 +595,8 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Tech earnings, rates sensitivity, risk appetite',
         weight: 0.20, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',       // 100 — Tech earnings, AI news, rate decisions
-          'analyst-consensus',    // 100 — Tech analyst targets matter more
+          'news-sentiment-positive',       // 100 — Tech earnings, AI news, rate decisions
+          'analyst-adjustments',    // 100 — Tech analyst targets matter more
         ],
       },
       {
@@ -604,9 +604,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'QQQ moves 1.2x SPY — wider risk gate to allow for beta amplification',
         weight: 0.35, isRiskGate: true, minMultiplier: 0.45, maxMultiplier: 1.3,
         directiveIds: [
-          'volatility-regime',    // 100 — Tech vol ≠ market vol
+          'vix-regime',    // 100 — Tech vol ≠ market vol
           'liquidity-check',      // 100 — QQQ always liquid but spreads widen in panic
-          'position-concentration',// 100 — Tech allocation cap
+          'portfolio-performance',// 100 — Tech allocation cap
           'session-open-effect',  // 100 — Tech opens with momentum
         ],
       },
@@ -632,10 +632,10 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         directiveIds: [
           'ema-structure',        // 100 — Tech trend structure
           'macd-crossover',       // 110 — Trend changes on tech
-          'bollinger-squeeze',    // 100 — Squeeze before earnings/macro
+          'bollinger-band-squeeze',    // 100 — Squeeze before earnings/macro
           'volume-confirmation',  // 100 — NVDA/AAPL/MSFT volume confirms
-          'momentum-roc',         // 100 — Tech momentum is everything
-          'support-resistance',   // 100 — QQQ key levels
+          'speed-momentum',         // 100 — Tech momentum is everything
+          'support-resistance-levels',   // 100 — QQQ key levels
           'rsi-oversold',         // 120 — Tech dip = buy
           'rsi-overbought',       // 100 — Tech OB = stay long
         ],
@@ -646,8 +646,8 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Earnings, AI, rates — tech lives and dies by sentiment',
         weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',       // 100 — Tech news cycles
-          'analyst-consensus',    // 100 — Tech analyst targets
+          'news-sentiment-positive',       // 100 — Tech news cycles
+          'analyst-adjustments',    // 100 — Tech analyst targets
           'earnings-proximity',   // 100 — Earnings season risk/reward
         ],
       },
@@ -656,10 +656,10 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Top 3 stocks = 30% of QQQ — concentration risk is real',
         weight: 0.30, isRiskGate: true, minMultiplier: 0.45, maxMultiplier: 1.3,
         directiveIds: [
-          'volatility-regime',    // 100 — Tech vol spikes on earnings
-          'session-timing-filter',// 100 — US session only
+          'vix-regime',    // 100 — Tech vol spikes on earnings
+          'session-open-effect',// 100 — US session only
           'liquidity-check',      // 100 — Check spreads
-          'position-concentration',// 100 — Index allocation cap
+          'portfolio-performance',// 100 — Index allocation cap
         ],
       },
     ],
@@ -683,13 +683,13 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'speed-momentum',       // 120 — Dow momentum (lower amplitude)
-          'bollinger-squeeze',    // 100 — Squeeze before sector rotation
+          'bollinger-band-squeeze',    // 100 — Squeeze before sector rotation
           'volume-confirmation',  // 100 — Volume confirms rotation
-          'atr-expansion',        // 100 — Lower ATR, tighter stops
+          'volatility-tools',        // 100 — Lower ATR, tighter stops
           'rsi-oversold',         // 120 — Value dip buying
           'rsi-overbought',       // 100 — Overbought cyclicals
-          'support-resistance',   // 100 — DJI respects round thousands
-          'session-timing-filter',// 100 — US session only
+          'support-resistance-levels',   // 100 — DJI respects round thousands
+          'session-open-effect',// 100 — US session only
         ],
         directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
       },
@@ -698,8 +698,8 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Dow is value/cyclicals — rates, inflation, employment',
         weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',       // 100 — Econ data, Fed, employment
-          'analyst-consensus',    // 100 — Industrial analyst targets
+          'news-sentiment-positive',       // 100 — Econ data, Fed, employment
+          'analyst-adjustments',    // 100 — Industrial analyst targets
         ],
       },
       {
@@ -707,9 +707,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Lower beta = tighter risk gate. Dow doesn\'t gap like QQQ.',
         weight: 0.35, isRiskGate: true, minMultiplier: 0.55, maxMultiplier: 1.2,
         directiveIds: [
-          'volatility-regime',    // 100 — Dow vol is lower
+          'vix-regime',    // 100 — Dow vol is lower
           'liquidity-check',      // 100 — Always liquid but check
-          'position-concentration',// 100 — Index allocation cap
+          'portfolio-performance',// 100 — Index allocation cap
           'session-open-effect',  // 100 — NY open rotation
         ],
       },
@@ -734,13 +734,13 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'speed-momentum',       // 120 — FTSE momentum
-          'bollinger-squeeze',    // 100 — Squeeze before London open
+          'bollinger-band-squeeze',    // 100 — Squeeze before London open
           'volume-confirmation',  // 100 — LSE volume profile
-          'atr-expansion',        // 100 — FTSE ATR (GBP-denominated)
+          'volatility-tools',        // 100 — FTSE ATR (GBP-denominated)
           'rsi-oversold',         // 120 — Commodity dip buying
           'rsi-overbought',       // 100 — Overbought miners/energy
-          'support-resistance',   // 100 — FTSE round numbers
-          'session-timing-filter',// 100 — London session only
+          'support-resistance-levels',   // 100 — FTSE round numbers
+          'session-open-effect',// 100 — London session only
         ],
         directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
       },
@@ -749,8 +749,8 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'FTSE sensitive to GBP, commodities, UK econ data',
         weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',       // 100 — UK econ data, BoE, commodity news
-          'analyst-consensus',    // 100 — FTSE analyst targets
+          'news-sentiment-positive',       // 100 — UK econ data, BoE, commodity news
+          'analyst-adjustments',    // 100 — FTSE analyst targets
         ],
       },
       {
@@ -758,9 +758,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'FTSE trades London hours — gap risk from US close, Asian open',
         weight: 0.35, isRiskGate: true, minMultiplier: 0.5, maxMultiplier: 1.2,
         directiveIds: [
-          'volatility-regime',    // 100 — FTSE vol during UK events
+          'vix-regime',    // 100 — FTSE vol during UK events
           'liquidity-check',      // 100 — Check LSE spreads
-          'position-concentration',// 100 — Index allocation cap
+          'portfolio-performance',// 100 — Index allocation cap
           'session-open-effect',  // 100 — London open (08:00 GMT)
         ],
       },
@@ -785,13 +785,13 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'speed-momentum',       // 120 — TSLA moves fast
-          'bollinger-squeeze',    // 100 — Squeeze before Elon/news
+          'bollinger-band-squeeze',    // 100 — Squeeze before Elon/news
           'volume-confirmation',  // 100 — TSLA volume is massive
-          'atr-expansion',        // 100 — TSLA ATR is huge for a stock
+          'volatility-tools',        // 100 — TSLA ATR is huge for a stock
           'rsi-oversold',         // 120 — TSLA dip = generational buy (usually)
           'rsi-overbought',       // 100 — TSLA OB can keep running
-          'support-resistance',   // 100 — TSLA round numbers + fib levels
-          'session-timing-filter',// 100 — US session only
+          'support-resistance-levels',   // 100 — TSLA round numbers + fib levels
+          'session-open-effect',// 100 — US session only
         ],
         directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
       },
@@ -800,7 +800,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'TSLA sentiment is unique — Elon, deliveries, AI narrative',
         weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',       // 100 — Elon tweets, delivery numbers, product launches
+          'news-sentiment-positive',       // 100 — Elon tweets, delivery numbers, product launches
           'social-buzz',          // 100 — TSLA social media activity is predictive
         ],
       },
@@ -809,9 +809,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'TSLA is NOT an index — idiosyncratic risk requires wider gates',
         weight: 0.35, isRiskGate: true, minMultiplier: 0.4, maxMultiplier: 1.35,
         directiveIds: [
-          'volatility-regime',    // 100 — TSLA vol can spike 2-3x normal
+          'vix-regime',    // 100 — TSLA vol can spike 2-3x normal
           'liquidity-check',      // 100 — TSLA always liquid but spreads widen
-          'position-concentration',// 100 — Single stock risk — tighter allocation
+          'portfolio-performance',// 100 — Single stock risk — tighter allocation
           'earnings-proximity',   // 100 — Earnings risk/reward
         ],
       },
@@ -836,13 +836,13 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.45, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'speed-momentum',       // 120 — DOGE momentum is everything
-          'bollinger-squeeze',    // 100 — Squeeze before Elon tweet / community event
+          'bollinger-band-squeeze',    // 100 — Squeeze before Elon tweet / community event
           'volume-confirmation',  // 100 — DOGE volume spikes on social
-          'atr-expansion',        // 100 — DOGE ATR is enormous
+          'volatility-tools',        // 100 — DOGE ATR is enormous
           'rsi-oversold',         // 120 — Meme dip = buy (usually)
           'rsi-overbought',       // 100 — DOGE OB = FOMO, can run further
-          'support-resistance',   // 100 — DOGE respects round cents
-          'session-timing-filter',// 100 — 24/7 but US peak is most active
+          'support-resistance-levels',   // 100 — DOGE respects round cents
+          'session-open-effect',// 100 — 24/7 but US peak is most active
         ],
         directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
       },
@@ -861,9 +861,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'DOGE can drop 20% in an hour — wide risk gates essential',
         weight: 0.25, isRiskGate: true, minMultiplier: 0.35, maxMultiplier: 1.4,
         directiveIds: [
-          'volatility-regime',    // 100 — DOGE vol is extreme
+          'vix-regime',    // 100 — DOGE vol is extreme
           'liquidity-check',      // 100 — DOGE spreads can be wide
-          'position-concentration',// 100 — Meme coin = tiny allocation
+          'portfolio-performance',// 100 — Meme coin = tiny allocation
         ],
       },
     ],
@@ -887,13 +887,13 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'speed-momentum',       // 120 — China momentum (policy-driven)
-          'bollinger-squeeze',    // 100 — Squeeze before policy announcements
+          'bollinger-band-squeeze',    // 100 — Squeeze before policy announcements
           'volume-confirmation',  // 100 — Volume on Shanghai/Shenzhen
-          'atr-expansion',        // 100 — CHINA50 ATR (policy events)
+          'volatility-tools',        // 100 — CHINA50 ATR (policy events)
           'rsi-oversold',         // 120 — China dips on regulatory fear
           'rsi-overbought',       // 100 — China OB on stimulus
-          'support-resistance',   // 100 — Round numbers + government intervention levels
-          'session-timing-filter',// 100 — Asian session only
+          'support-resistance-levels',   // 100 — Round numbers + government intervention levels
+          'session-open-effect',// 100 — Asian session only
         ],
         directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
       },
@@ -902,8 +902,8 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'China is policy-driven — PBoC, Politburo, regulatory announcements',
         weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',       // 100 — PBoC, regulatory, trade war news
-          'analyst-consensus',    // 100 — China analyst targets
+          'news-sentiment-positive',       // 100 — PBoC, regulatory, trade war news
+          'analyst-adjustments',    // 100 — China analyst targets
         ],
       },
       {
@@ -911,9 +911,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Government intervention, circuit breakers, capital controls',
         weight: 0.35, isRiskGate: true, minMultiplier: 0.35, maxMultiplier: 1.3,
         directiveIds: [
-          'volatility-regime',    // 100 — China vol on policy events
+          'vix-regime',    // 100 — China vol on policy events
           'liquidity-check',      // 100 — CHINA50 spreads can be wide
-          'position-concentration',// 100 — Emerging market allocation
+          'portfolio-performance',// 100 — Emerging market allocation
         ],
       },
     ],
@@ -940,10 +940,10 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
           'ema-structure',        // 100 — Multi-timeframe trend alignment
           'macd-crossover',       // 110 — Trend change signals
           'volume-confirmation',  // 100 — Institutional flow confirmation
-          'bollinger-squeeze',    // 100 — Squeeze before breakouts
+          'bollinger-band-squeeze',    // 100 — Squeeze before breakouts
           'rsi-oversold',         // 120 — Dip-buying momentum (oversold = opportunity)
-          'support-resistance',   // 100 — Key levels matter for hot stocks
-          'momentum-roc',         // 100 — Rate of change confirms trend strength
+          'support-resistance-levels',   // 100 — Key levels matter for hot stocks
+          'speed-momentum',         // 100 — Rate of change confirms trend strength
         ],
         directiveMaxScores: { 'speed-momentum': 120, 'macd-crossover': 110, 'rsi-oversold': 120 },
       },
@@ -952,8 +952,8 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Momentum stocks live and die by analyst targets, news flow, and earnings surprises',
         weight: 0.35, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',       // 100 — News drives momentum stocks
-          'analyst-consensus',    // 100 — Upgrades/downgrades move these stocks
+          'news-sentiment-positive',       // 100 — News drives momentum stocks
+          'analyst-adjustments',    // 100 — Upgrades/downgrades move these stocks
           'social-buzz',          // 100 — Reddit/Twitter/StockTwits activity
           'earnings-proximity',   // 100 — Earnings are make-or-break events
         ],
@@ -963,9 +963,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'These stocks can drop 40% in a month — wider risk gates than steady stocks',
         weight: 0.30, isRiskGate: true, minMultiplier: 0.40, maxMultiplier: 1.30,
         directiveIds: [
-          'volatility-regime',    // 100 — Momentum vol is high, set expectations
+          'vix-regime',    // 100 — Momentum vol is high, set expectations
           'liquidity-check',      // 100 — Tight spreads essential for entry
-          'position-concentration',// 100 — Don't over-allocate single momentum names
+          'portfolio-performance',// 100 — Don't over-allocate single momentum names
           'earnings-momentum',    // 100 — Post-earnings drift is real
         ],
       },
@@ -991,11 +991,11 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         directiveIds: [
           'speed-momentum',       // 120 — Outbreak news = instant momentum
           'volume-confirmation',  // 100 — Volume spike confirms headline move
-          'bollinger-squeeze',    // 100 — Squeeze before trial results / WHO announcements
+          'bollinger-band-squeeze',    // 100 — Squeeze before trial results / WHO announcements
           'rsi-oversold',         // 120 — Overreaction dip-buying on negative headlines
           'rsi-overbought',       // 100 — Overbought on panic = reversion opportunity
-          'support-resistance',   // 100 — Bio/pharma respects key levels
-          'atr-expansion',        // 100 — Biotech ATR explodes on news
+          'support-resistance-levels',   // 100 — Bio/pharma respects key levels
+          'volatility-tools',        // 100 — Biotech ATR explodes on news
         ],
         directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
       },
@@ -1004,9 +1004,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Pandemic stocks ARE sentiment — WHO, CDC, government contracts drive everything',
         weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',       // 100 — WHO/CDC headlines, trial results, gov contracts
+          'news-sentiment-positive',       // 100 — WHO/CDC headlines, trial results, gov contracts
           'social-buzz',          // 100 — Social media panic/fear tracking
-          'analyst-consensus',    // 100 — Biotech analyst upgrades on pipeline news
+          'analyst-adjustments',    // 100 — Biotech analyst upgrades on pipeline news
         ],
       },
       {
@@ -1014,9 +1014,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Biotech can gap 50% on trial failure — wide gates essential',
         weight: 0.25, isRiskGate: true, minMultiplier: 0.35, maxMultiplier: 1.4,
         directiveIds: [
-          'volatility-regime',    // 100 — Biotech vol is extreme during outbreaks
+          'vix-regime',    // 100 — Biotech vol is extreme during outbreaks
           'liquidity-check',      // 100 — Small-cap bio spreads widen dramatically
-          'position-concentration',// 100 — Never over-allocate single biotech names
+          'portfolio-performance',// 100 — Never over-allocate single biotech names
         ],
       },
     ],
@@ -1041,13 +1041,13 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         directiveIds: [
           'speed-momentum',       // 120 — 3x amplifies momentum 3x
           'volume-confirmation',  // 100 — Volume confirms leverage flow
-          'bollinger-squeeze',    // 100 — Squeeze = breakout imminent (3x magnitude)
+          'bollinger-band-squeeze',    // 100 — Squeeze = breakout imminent (3x magnitude)
           'rsi-oversold',         // 120 — Oversold leverage = violent bounce
           'rsi-overbought',       // 100 — Overbought leverage = sharp reversion
-          'support-resistance',   // 100 — Key levels matter 3x more
-          'atr-expansion',        // 100 — ATR is 3x the underlying
+          'support-resistance-levels',   // 100 — Key levels matter 3x more
+          'volatility-tools',        // 100 — ATR is 3x the underlying
           'ema-structure',        // 100 — Trend alignment across timeframes
-          'session-timing-filter',// 100 — Only trade liquid sessions (LSE hours)
+          'session-open-effect',// 100 — Only trade liquid sessions (LSE hours)
         ],
         directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
       },
@@ -1056,9 +1056,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'With 79 diverse symbols, correlation patterns reveal macro tides vs sector rotations',
         weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',       // 100 — Macro news drives indices + sectors
-          'analyst-consensus',    // 100 — Sector/stock analyst direction
-          'correlation-drag',     // 100 — When all leverage moves together = cleaner signal
+          'news-sentiment-positive',       // 100 — Macro news drives indices + sectors
+          'analyst-adjustments',    // 100 — Sector/stock analyst direction
+          'spy-qqq-relative-strength',     // 100 — When all leverage moves together = cleaner signal
         ],
       },
       {
@@ -1066,9 +1066,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: '79 symbols across 5 categories. 3x leverage = 3x drawdowns. Wider pool = wider gate for signal diversity.',
         weight: 0.45, isRiskGate: true, minMultiplier: 0.25, maxMultiplier: 1.40,
         directiveIds: [
-          'volatility-regime',    // 100 — VIX/fear context for 3x exposure
+          'vix-regime',    // 100 — VIX/fear context for 3x exposure
           'liquidity-check',      // 100 — LSE leverage spreads can gap
-          'position-concentration',// 100 — 3x = tiny position = tight cap
+          'portfolio-performance',// 100 — 3x = tiny position = tight cap
           'budget-gate',          // 100 — Never over-allocate leverage capital
         ],
       },
@@ -1093,10 +1093,10 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'rsi-overbought',      // 100 — VIX spikes = overbought, reversion
-          'bollinger-squeeze',   // 100 — VIX squeezes before explosions
+          'bollinger-band-squeeze',   // 100 — VIX squeezes before explosions
           'volume-confirmation', // 100 — Volume spike confirms VIX move
-          'atr-expansion',       // 100 — ATR explodes during VIX events
-          'support-resistance',  // 100 — VIX respects historical levels
+          'volatility-tools',       // 100 — ATR explodes during VIX events
+          'support-resistance-levels',  // 100 — VIX respects historical levels
           'mean-reversion',      // 100 — VIX always mean-reverts
         ],
       },
@@ -1105,7 +1105,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'VIX IS sentiment — fear gauge',
         weight: 0.35, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',      // 100 — Fear-driven news spikes VIX
+          'news-sentiment-positive',      // 100 — Fear-driven news spikes VIX
           'vix-regime',          // 100 — What regime is VIX itself in?
         ],
       },
@@ -1114,7 +1114,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'VIX-specific: contango, term structure, SPX correlation',
         weight: 0.25, isRiskGate: true, minMultiplier: 0.3, maxMultiplier: 1.2,
         directiveIds: [
-          'volatility-regime',   // 100 — Don't fade extreme vol
+          'vix-regime',   // 100 — Don't fade extreme vol
           'liquidity-check',     // 100 — Wide spreads during panic
           'sp500-regime',        // 100 — VIX/SPX correlation context
         ],
@@ -1141,8 +1141,8 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         directiveIds: [
           'ema-structure',       // 100 — Gold trends last weeks
           'macd-crossover',      // 110 — Trend changes signal macro shifts
-          'support-resistance',  // 100 — Gold respects key levels ($2000, $2500)
-          'bollinger-squeeze',   // 100 — Gold squeezes before macro moves
+          'support-resistance-levels',  // 100 — Gold respects key levels ($2000, $2500)
+          'bollinger-band-squeeze',   // 100 — Gold squeezes before macro moves
           'volume-confirmation', // 100 — Volume on COMEX confirms moves
           'rsi-oversold',        // 120 — Oversold gold = macro fear peak
           'rsi-overbought',      // 100 — Overbought gold = complacency
@@ -1154,8 +1154,8 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.35, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'gold-macro-correlation', // 100 — Real rates, DXY, inflation context
-          'news-sentiment',         // 100 — Geopolitical risk drives gold
-          'analyst-consensus',      // 100 — Wall Street gold targets
+          'news-sentiment-positive',         // 100 — Geopolitical risk drives gold
+          'analyst-adjustments',      // 100 — Wall Street gold targets
         ],
       },
       {
@@ -1163,9 +1163,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Gold-specific: contango, storage, correlation reversal',
         weight: 0.25, isRiskGate: true, minMultiplier: 0.3, maxMultiplier: 1.2,
         directiveIds: [
-          'volatility-regime',   // 100 — Gold vol ≠ equity vol
+          'vix-regime',   // 100 — Gold vol ≠ equity vol
           'liquidity-check',     // 100 — Spread check on XAUUSD
-          'position-concentration', // 100 — Don't over-allocate gold
+          'portfolio-performance', // 100 — Don't over-allocate gold
         ],
       },
     ],
@@ -1189,13 +1189,13 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'speed-momentum',       // 120 — Nikkei futures momentum
-          'bollinger-squeeze',    // 100 — Squeeze before Tokyo open
+          'bollinger-band-squeeze',    // 100 — Squeeze before Tokyo open
           'volume-confirmation',  // 100 — TSE volume profile
-          'atr-expansion',        // 100 — JPY-denominated ATR
+          'volatility-tools',        // 100 — JPY-denominated ATR
           'rsi-oversold',         // 120 — BOJ dip buying pattern
           'rsi-overbought',       // 100 — Overbought exporters
-          'support-resistance',   // 100 — Nikkei fib levels
-          'session-timing-filter',// 100 — Tokyo session only
+          'support-resistance-levels',   // 100 — Nikkei fib levels
+          'session-open-effect',// 100 — Tokyo session only
         ],
         directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
       },
@@ -1204,8 +1204,8 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'JPN225 sensitive to USDJPY, BOJ policy, Asian risk appetite',
         weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',       // 100 — BOJ, Japan econ data, Asia risk
-          'analyst-consensus',    // 100 — Nikkei analyst targets
+          'news-sentiment-positive',       // 100 — BOJ, Japan econ data, Asia risk
+          'analyst-adjustments',    // 100 — Nikkei analyst targets
         ],
       },
       {
@@ -1213,9 +1213,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'JPN225 trades Tokyo hours — thin before open, gap risk from US close',
         weight: 0.35, isRiskGate: true, minMultiplier: 0.4, maxMultiplier: 1.2,
         directiveIds: [
-          'volatility-regime',    // 100 — Nikkei vol during BOJ/Asia events
+          'vix-regime',    // 100 — Nikkei vol during BOJ/Asia events
           'liquidity-check',      // 100 — Check TSE spreads
-          'position-concentration',// 100 — Index allocation cap
+          'portfolio-performance',// 100 — Index allocation cap
           'session-open-effect',  // 100 — Tokyo open (00:00 UTC)
           'rollover-risk',        // 100 — Gap risk around rollover
         ],
@@ -1241,13 +1241,13 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'speed-momentum',       // 120 — Euro Stoxx momentum
-          'bollinger-squeeze',    // 100 — Squeeze before European open
+          'bollinger-band-squeeze',    // 100 — Squeeze before European open
           'volume-confirmation',  // 100 — Euronext/Xetra volume
-          'atr-expansion',        // 100 — EUR-denominated ATR
+          'volatility-tools',        // 100 — EUR-denominated ATR
           'rsi-oversold',         // 120 — ECB dip buying pattern
           'rsi-overbought',       // 100 — Overbought luxury/industrial
-          'support-resistance',   // 100 — Euro Stoxx round numbers
-          'session-timing-filter',// 100 — European session only
+          'support-resistance-levels',   // 100 — Euro Stoxx round numbers
+          'session-open-effect',// 100 — European session only
         ],
         directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
       },
@@ -1256,8 +1256,8 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'EUSTX50 sensitive to EUR, ECB policy, EU political risk',
         weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',       // 100 — ECB, EU econ data, political risk
-          'analyst-consensus',    // 100 — Euro Stoxx analyst targets
+          'news-sentiment-positive',       // 100 — ECB, EU econ data, political risk
+          'analyst-adjustments',    // 100 — Euro Stoxx analyst targets
         ],
       },
       {
@@ -1265,9 +1265,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'EUSTX50 trades European hours — gap risk from US close, Asian open',
         weight: 0.35, isRiskGate: true, minMultiplier: 0.45, maxMultiplier: 1.2,
         directiveIds: [
-          'volatility-regime',    // 100 — EStoxx vol during ECB/EU events
+          'vix-regime',    // 100 — EStoxx vol during ECB/EU events
           'liquidity-check',      // 100 — Check Eurex spreads
-          'position-concentration',// 100 — Index allocation cap
+          'portfolio-performance',// 100 — Index allocation cap
           'session-open-effect',  // 100 — European open (07:00 UTC)
           'rollover-risk',        // 100 — Gap risk around rollover
         ],
@@ -1295,11 +1295,11 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'ema-structure',       // 100 — Oil trends with supply shifts
-          'support-resistance',  // 100 — Oil respects technical levels
-          'bollinger-squeeze',   // 100 — OPEC meetings = squeeze → expansion
+          'support-resistance-levels',  // 100 — Oil respects technical levels
+          'bollinger-band-squeeze',   // 100 — OPEC meetings = squeeze → expansion
           'volume-confirmation', // 100 — Volume confirms supply events
-          'atr-expansion',       // 100 — ATR spikes on geopolitical events
-          'momentum-roc',        // 100 — Supply shock momentum
+          'volatility-tools',       // 100 — ATR spikes on geopolitical events
+          'speed-momentum',        // 100 — Supply shock momentum
         ],
       },
       {
@@ -1308,8 +1308,8 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.35, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'cad-usd-oil-correlation', // 100 — Oil/CAD correlation signal
-          'news-sentiment',          // 100 — OPEC, EIA, geopolitical news
-          'analyst-consensus',       // 100 — Energy sector analyst targets
+          'news-sentiment-positive',          // 100 — OPEC, EIA, geopolitical news
+          'analyst-adjustments',       // 100 — Energy sector analyst targets
         ],
       },
       {
@@ -1317,9 +1317,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Oil-specific: contango/backwardation, geopolitical risk',
         weight: 0.25, isRiskGate: true, minMultiplier: 0.3, maxMultiplier: 1.2,
         directiveIds: [
-          'volatility-regime',   // 100 — Oil vol spikes on geopolitics
+          'vix-regime',   // 100 — Oil vol spikes on geopolitics
           'liquidity-check',     // 100 — Spread check on WTI/Brent
-          'position-concentration', // 100 — Energy allocation cap
+          'portfolio-performance', // 100 — Energy allocation cap
         ],
       },
     ],
@@ -1344,8 +1344,8 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         directiveIds: [
           'rsi-oversold',        // 120 — Forex oversold = bounce within range
           'rsi-overbought',      // 100 — Forex overbought = mean reversion
-          'bollinger-squeeze',   // 100 — Squeeze before session breakout
-          'support-resistance',  // 100 — Pairs respect round numbers
+          'bollinger-band-squeeze',   // 100 — Squeeze before session breakout
+          'support-resistance-levels',  // 100 — Pairs respect round numbers
           'ema-structure',       // 100 — Multi-session trend structure
           'macd-crossover',      // 110 — Session trend changes
           'session-open-effect', // 100 — Session open reversals
@@ -1356,9 +1356,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Forex drivers: rates, data, carry trade',
         weight: 0.35, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'fx-timing',           //  80 — Session timing for specific pairs
-          'news-sentiment',      // 100 — Economic data, central bank news
-          'analyst-consensus',   // 100 — Bank forecasts for pairs
+          'session-open-effect',           //  80 — Session timing for specific pairs
+          'news-sentiment-positive',      // 100 — Economic data, central bank news
+          'analyst-adjustments',   // 100 — Bank forecasts for pairs
         ],
       },
       {
@@ -1366,10 +1366,10 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Forex risk: correlation, session liquidity, rollover',
         weight: 0.25, isRiskGate: true, minMultiplier: 0.3, maxMultiplier: 1.2,
         directiveIds: [
-          'session-timing-filter', // 100 — Trade only in liquid sessions
-          'volatility-regime',     // 100 — Avoid during central bank events
+          'session-open-effect', // 100 — Trade only in liquid sessions
+          'vix-regime',     // 100 — Avoid during central bank events
           'liquidity-check',       // 100 — Spread check on crosses
-          'correlation-drag',      // 100 — Avoid correlated pair overexposure
+          'spy-qqq-relative-strength',      // 100 — Avoid correlated pair overexposure
         ],
       },
     ],
@@ -1396,10 +1396,10 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
           'multi-timeframe-trend',  // 120 — D/4H/1H alignment for trend bias
           'micro-sr-levels',        // 100 — Key S/R on CAD crosses
           'ema-structure',          // 100 — 9/21/50 EMA alignment
-          'bollinger-squeeze',      // 100 — Pre-oil-news compression
+          'bollinger-band-squeeze',      // 100 — Pre-oil-news compression
           'volume-confirmation',    // 100 — Volume confirms CAD moves
-          'support-resistance',     // 100 — Key levels (USDCAD: 1.30, 1.35, 1.40)
-          'session-timing-filter',  // 100 — US/Canada session only
+          'support-resistance-levels',     // 100 — Key levels (USDCAD: 1.30, 1.35, 1.40)
+          'session-open-effect',  // 100 — US/Canada session only
         ],
         directiveMaxScores: { 'speed-momentum': 120, 'multi-timeframe-trend': 120 },
       },
@@ -1409,7 +1409,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.20, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'cad-usd-oil-correlation', // 100 — WTI/CAD correlation
-          'news-sentiment',          // 100 — BOC rate decisions, Canada GDP, OPEC
+          'news-sentiment-positive',          // 100 — BOC rate decisions, Canada GDP, OPEC
         ],
       },
       {
@@ -1417,10 +1417,10 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'BOC events, oil shock, cross-pair correlation drag',
         weight: 0.40, isRiskGate: true, minMultiplier: 0.4, maxMultiplier: 1.25,
         directiveIds: [
-          'volatility-regime',     // 100 — Kill during BOC/oil shock volatility
+          'vix-regime',     // 100 — Kill during BOC/oil shock volatility
           'liquidity-check',       // 100 — Cross CAD pairs can have wide spreads
-          'position-concentration',// 100 — Don't over-allocate across multiple CAD pairs
-          'correlation-drag',      // 100 — Multiple CAD positions = amplified oil risk
+          'portfolio-performance',// 100 — Don't over-allocate across multiple CAD pairs
+          'spy-qqq-relative-strength',      // 100 — Multiple CAD positions = amplified oil risk
         ],
       },
     ],
@@ -1444,13 +1444,13 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.40, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'speed-momentum',       // 120 — Micro-velocity across USD pairs
-          'bollinger-squeeze',    // 100 — Squeeze before economic data
+          'bollinger-band-squeeze',    // 100 — Squeeze before economic data
           'volume-confirmation',  // 100 — Volume confirms macro move
           'rsi-oversold',         // 120 — Oversold bounce on USD pairs
           'rsi-overbought',       // 100 — Overbought reversion
-          'support-resistance',   // 100 — Round number S/R on majors
-          'session-timing-filter',// 100 — London/NY overlap only
-          'atr-expansion',        // 100 — ATR for stop placement
+          'support-resistance-levels',   // 100 — Round number S/R on majors
+          'session-open-effect',// 100 — London/NY overlap only
+          'volatility-tools',        // 100 — ATR for stop placement
         ],
         directiveMaxScores: { 'speed-momentum': 120, 'rsi-oversold': 120 },
       },
@@ -1459,7 +1459,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'DXY regime is the primary sentiment driver — everything else follows',
         weight: 0.20, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',       // 100 — Fed speak, NFP, CPI, FOMC
+          'news-sentiment-positive',       // 100 — Fed speak, NFP, CPI, FOMC
         ],
       },
       {
@@ -1468,10 +1468,10 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.40, isRiskGate: true, minMultiplier: 0.3, maxMultiplier: 1.25,
         directiveIds: [
           'dxy-regime',           // 100 — DXY strength/weakness gates everything
-          'volatility-regime',    // 100 — Macro vol kills scalps
+          'vix-regime',    // 100 — Macro vol kills scalps
           'liquidity-check',      // 100 — Major spreads during news
-          'position-concentration',// 100 — Don't over-allocate correlated pairs
-          'correlation-drag',     // 100 — Multiple USD positions = amplified risk
+          'portfolio-performance',// 100 — Don't over-allocate correlated pairs
+          'spy-qqq-relative-strength',     // 100 — Multiple USD positions = amplified risk
         ],
       },
     ],
@@ -1513,7 +1513,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'volume-confirmation',  // 100 — Elevated volume confirms signal
-          'momentum-roc',         // 100 — Momentum direction check
+          'speed-momentum',         // 100 — Momentum direction check
         ],
       },
       {
@@ -1521,7 +1521,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Divergence signals need trend context — never trade divergence against strong trend',
         weight: 0.30, isRiskGate: true, minMultiplier: 0.4, maxMultiplier: 1.2,
         directiveIds: [
-          'volatility-regime',    // 100 — High vol = false divergences
+          'vix-regime',    // 100 — High vol = false divergences
           'market-regime',        // 100 — Trending vs ranging context
           'liquidity-check',      // 100 — Spread check
         ],
@@ -1557,8 +1557,8 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Macro trend and sentiment confirmation',
         weight: 0.20, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',       // 100 — News must not contradict
-          'analyst-consensus',    // 100 — Analyst direction check
+          'news-sentiment-positive',       // 100 — News must not contradict
+          'analyst-adjustments',    // 100 — Analyst direction check
         ],
       },
       {
@@ -1566,9 +1566,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Tight risk gates — conservative entries need conservative risk',
         weight: 0.30, isRiskGate: true, minMultiplier: 0.5, maxMultiplier: 1.15,
         directiveIds: [
-          'volatility-regime',    // 100 — No entries in extreme vol
+          'vix-regime',    // 100 — No entries in extreme vol
           'liquidity-check',      // 100 — Must be tradeable
-          'position-concentration',// 100 — Don't overallocate
+          'portfolio-performance',// 100 — Don't overallocate
           'session-open-effect',  // 100 — Avoid open volatility
         ],
       },
@@ -1606,7 +1606,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'vix-regime',           // 100 — VIX context
-          'news-sentiment',       // 100 — News bias
+          'news-sentiment-positive',       // 100 — News bias
         ],
       },
       {
@@ -1614,9 +1614,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Standard risk gates — weighted entries need standard protection',
         weight: 0.30, isRiskGate: true, minMultiplier: 0.45, maxMultiplier: 1.2,
         directiveIds: [
-          'volatility-regime',    // 100
+          'vix-regime',    // 100
           'liquidity-check',      // 100
-          'position-concentration',// 100
+          'portfolio-performance',// 100
           'budget-gate',          // 100 — Risk budget check
         ],
       },
@@ -1651,8 +1651,8 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Session timing and news check',
         weight: 0.20, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'session-timing-filter', // 100 — Best during active sessions
-          'news-sentiment',        // 100 — No adverse news
+          'session-open-effect', // 100 — Best during active sessions
+          'news-sentiment-positive',        // 100 — No adverse news
         ],
       },
       {
@@ -1661,9 +1661,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.35, isRiskGate: true, minMultiplier: 0.4, maxMultiplier: 1.2,
         directiveIds: [
           'market-regime',        // 100 — VWAP fails in strong trends
-          'volatility-regime',    // 100 — No mean-reversion in extreme vol
+          'vix-regime',    // 100 — No mean-reversion in extreme vol
           'liquidity-check',      // 100
-          'position-concentration',// 100
+          'portfolio-performance',// 100
         ],
       },
     ],
@@ -1699,7 +1699,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         weight: 0.20, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
           'market-regime',        // 100 — Avoid -2σ entries in downtrends
-          'news-sentiment',       // 100
+          'news-sentiment-positive',       // 100
         ],
       },
       {
@@ -1707,9 +1707,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Deep discount entries can be value traps — need risk context',
         weight: 0.35, isRiskGate: true, minMultiplier: 0.35, maxMultiplier: 1.25,
         directiveIds: [
-          'volatility-regime',    // 100
+          'vix-regime',    // 100
           'liquidity-check',      // 100
-          'position-concentration',// 100
+          'portfolio-performance',// 100
           'rollover-risk',        // 100 — Avoid holding through events
         ],
       },
@@ -1741,7 +1741,7 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'News catalyst and market bias for gap validation',
         weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'news-sentiment',       // 100 — Gap caused by news?
+          'news-sentiment-positive',       // 100 — Gap caused by news?
           'vix-regime',           // 100 — Vol context for gap
         ],
       },
@@ -1750,9 +1750,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Gap trading is high-risk — tight risk gates',
         weight: 0.35, isRiskGate: true, minMultiplier: 0.3, maxMultiplier: 1.15,
         directiveIds: [
-          'volatility-regime',    // 100 — Extreme vol = gaps are news-driven
+          'vix-regime',    // 100 — Extreme vol = gaps are news-driven
           'liquidity-check',      // 100 — Wide spreads during gaps
-          'position-concentration',// 100
+          'portfolio-performance',// 100
           'budget-gate',          // 100 — Risk budget for gap trades
         ],
       },
@@ -1788,8 +1788,8 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Analyst consensus and news sentiment must support the earnings momentum',
         weight: 0.25, isRiskGate: false, minMultiplier: 1.0, maxMultiplier: 1.0,
         directiveIds: [
-          'analyst-consensus',        // 100 — Analyst target direction
-          'news-sentiment',           // 100 — No adverse news before earnings
+          'analyst-adjustments',        // 100 — Analyst target direction
+          'news-sentiment-positive',           // 100 — No adverse news before earnings
           'earnings-proximity',       // 100 — Must be 5-14 days from earnings (sweet spot)
         ],
       },
@@ -1798,9 +1798,9 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
         description: 'Tight risk — pre-earnings moves can reverse. Exit 1-2 days before event.',
         weight: 0.30, isRiskGate: true, minMultiplier: 0.3, maxMultiplier: 1.1,
         directiveIds: [
-          'volatility-regime',        // 100 — No entries in extreme vol
+          'vix-regime',        // 100 — No entries in extreme vol
           'liquidity-check',          // 100 — Must be tradeable
-          'position-concentration',   // 100 — Don't overallocate to single earnings play
+          'portfolio-performance',   // 100 — Don't overallocate to single earnings play
           'budget-gate',              // 100 — Risk budget for earnings trades
         ],
       },
@@ -1839,14 +1839,14 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
           'atr-dip',                  //  95 — Normalised dip from highs
           'volume-confirmation',      // 100 — Volume confirms move
           'volume-rhythm',            // 100 — Accumulation/distribution pattern
-          'bollinger-squeeze',        // 100 — Volatility compression before breakout
+          'bollinger-band-squeeze',        // 100 — Volatility compression before breakout
           'vwap',                     // 100 — Institutional volume-weighted price
           'doji-pattern',             // 100 — Reversal candlestick
           'hammer-pattern',           // 100 — Reversal candlestick
           'engulfing-pattern',        // 100 — Strong reversal signal
           'mt5-engulfing',            // 100 — MT5-ported engulfing (RSI confirmed)
           'mt5-harami',               // 100 — MT5-ported harami (RSI confirmed)
-          'support-resistance',       // 100 — Key levels
+          'support-resistance-levels',       // 100 — Key levels
           'confluence-reversal-combo',// 100 — Multiple reversal signals
           'momentum-continuation-combo',// 100 — Trend continuation
           'momentum-exhaustion',      // 100 — Trend exhaustion warning

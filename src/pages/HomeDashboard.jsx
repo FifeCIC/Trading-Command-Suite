@@ -15,15 +15,6 @@ const AREA_ICONS = {
 /** Trading workflow areas — shown first as a focused group */
 const WORKFLOW_AREAS = ['qa', 'watchlists', 'scoring', 'trading'];
 
-const SETUP_STEPS = [
-  { id: 'connect-mt5', label: 'Connect MT5 Bridge', done: false, desc: 'Link MetaTrader 5 for live forex data & trading' },
-  { id: 'import-portfolio', label: 'Import Trading212 Portfolio', done: true, desc: 'Live portfolio connected — 16 positions loaded' },
-  { id: 'add-api-keys', label: 'Add Provider API Keys', done: false, desc: 'Yahoo, Finnhub, Polygon for free data' },
-  { id: 'create-strategy', label: 'Create First Strategy', done: false, desc: 'Build a scoring strategy with directives' },
-  { id: 'run-backtest', label: 'Run a Backtest', done: false, desc: 'Validate strategy against historical data' },
-  { id: 'first-trade', label: 'Place First Trade', done: false, desc: 'Execute a demo trade via MT5 bridge' },
-];
-
 export default function HomeDashboard() {
   const navigate = useNavigate();
   const [restarting, setRestarting] = useState(false);
@@ -31,14 +22,26 @@ export default function HomeDashboard() {
 
   const healthQuery = useQuery({
     queryKey: ['home-health'],
-    queryFn: () => apiGet('/api/version').catch(() => null),
+    queryFn: () => apiGet('/api/').catch(() => null),
     staleTime: 30_000,
   });
 
-  const version = healthQuery.data?.version || '—';
-  const isApiOnline = Boolean(healthQuery.data?.version);
+  const serverData = healthQuery.data;
+  const isApiOnline = Boolean(serverData?.database);
+  const version = serverData?.version || '—';
   const statusDot = isApiOnline ? '🟢' : healthQuery.isLoading ? '⏳' : '🔴';
   const statusLabel = isApiOnline ? `API Online (v${version})` : healthQuery.isLoading ? 'Checking…' : 'API Offline';
+
+  // MT5 bridge/AutoTrading status
+  const mt5 = serverData?.mt5Bridge;
+  const mt5Connected = mt5?.connected;
+  const mt5TradeAllowed = mt5?.tradeAllowed;
+  const mt5StatusClass = mt5Connected ? (mt5TradeAllowed ? 'ok' : 'warn') : 'err';
+
+  // Stop Guardian status
+  const sg = serverData?.stopGuardian;
+  const sgEnabled = sg?.enabled;
+  const sgGuardedCount = sg?.guardedCount ?? 0;
 
   const handleRestartBackend = useCallback(async () => {
     setRestarting(true);
@@ -96,10 +99,6 @@ export default function HomeDashboard() {
   const workflowAreas = areas.filter(a => WORKFLOW_AREAS.includes(a.id));
   const supportingAreas = areas.filter(a => !WORKFLOW_AREAS.includes(a.id));
 
-  const doneSteps = SETUP_STEPS.filter(s => s.done).length;
-  const totalSteps = SETUP_STEPS.length;
-  const progressPct = Math.round((doneSteps / totalSteps) * 100);
-
   return (
     <div className="nav-dashboard">
       {/* ── Header ── */}
@@ -119,27 +118,54 @@ export default function HomeDashboard() {
         </div>
       </header>
 
-      {/* ── Getting Started ── */}
-      <section className="nd-section nd-setup">
-        <div className="nd-section-header">
-          <h2>🚀 Getting Started</h2>
-          <span className="nd-progress-badge">{doneSteps}/{totalSteps} complete</span>
-        </div>
-        <div className="nd-progress-bar">
-          <div className="nd-progress-fill" style={{ width: `${progressPct}%` }} />
-        </div>
-        <div className="nd-setup-grid">
-          {SETUP_STEPS.map((step) => (
-            <div key={step.id} className={`nd-setup-card ${step.done ? 'is-done' : ''}`}>
-              <span className="nd-setup-check">{step.done ? '✅' : '⬜'}</span>
-              <div className="nd-setup-info">
-                <strong>{step.label}</strong>
-                <span>{step.desc}</span>
-              </div>
+      {/* ── System Status & Tips ── */}
+      <div className="nd-bottom-grid">
+        <section className="nd-section nd-status-section">
+          <h2>🖥️ System Status</h2>
+          <div className="nd-status-grid">
+            <div className="nd-status-item">
+              <span className="nd-status-label">NestJS API</span>
+              <span className={`nd-status-value ${isApiOnline ? 'ok' : 'err'}`}>
+                {isApiOnline ? 'Running' : 'Offline'}
+              </span>
             </div>
-          ))}
-        </div>
-      </section>
+            <div className="nd-status-item">
+              <span className="nd-status-label">Database</span>
+              <span className="nd-status-value ok">MySQL (tradingcs)</span>
+            </div>
+            <div className="nd-status-item">
+              <span className="nd-status-label">MT5 Bridge</span>
+              <span className={`nd-status-value ${mt5StatusClass}`}>
+                {mt5Connected ? `Port 5000 — $${mt5?.balance?.toLocaleString() ?? '—'}` : 'Offline'}
+              </span>
+            </div>
+            <div className="nd-status-item">
+              <span className="nd-status-label">MT5 AutoTrading</span>
+              <span className={`nd-status-value ${mt5TradeAllowed === null ? '' : mt5TradeAllowed ? 'ok' : 'warn'}`}>
+                {mt5TradeAllowed === null ? '—' : mt5TradeAllowed ? '✅ Enabled' : '❌ Disabled'}
+              </span>
+            </div>
+            <div className="nd-status-item">
+              <span className="nd-status-label">Stop Guardian</span>
+              <span className={`nd-status-value ${sgEnabled ? 'ok' : ''}`}>
+                {sgEnabled ? `🛡️ Guarding ${sgGuardedCount}` : '⏸ Stopped'}
+              </span>
+            </div>
+            <div className="nd-status-item">
+              <span className="nd-status-label">Trading212</span>
+              <span className="nd-status-value ok">Live — $2,393</span>
+            </div>
+            <div className="nd-status-item">
+              <span className="nd-status-label">Frontend</span>
+              <span className="nd-status-value ok">Vite (5173)</span>
+            </div>
+            <div className="nd-status-item">
+              <span className="nd-status-label">Version</span>
+              <span className="nd-status-value">{version}</span>
+            </div>
+          </div>
+        </section>
+      </div>
 
       {/* ── Trading Workflow ── */}
       <section className="nd-section nd-workflow">
@@ -176,51 +202,6 @@ export default function HomeDashboard() {
           ))}
         </div>
       </section>
-
-      {/* ── Status & Tips ── */}
-      <div className="nd-bottom-grid">
-        <section className="nd-section nd-status-section">
-          <h2>🖥️ System Status</h2>
-          <div className="nd-status-grid">
-            <div className="nd-status-item">
-              <span className="nd-status-label">NestJS API</span>
-              <span className={`nd-status-value ${isApiOnline ? 'ok' : 'err'}`}>
-                {isApiOnline ? 'Running' : 'Offline'}
-              </span>
-            </div>
-            <div className="nd-status-item">
-              <span className="nd-status-label">Database</span>
-              <span className="nd-status-value ok">MySQL (tradingcs)</span>
-            </div>
-            <div className="nd-status-item">
-              <span className="nd-status-label">MT5 Bridge</span>
-              <span className="nd-status-value ok">Port 5000</span>
-            </div>
-            <div className="nd-status-item">
-              <span className="nd-status-label">Trading212</span>
-              <span className="nd-status-value ok">Live — $2,393</span>
-            </div>
-            <div className="nd-status-item">
-              <span className="nd-status-label">Frontend</span>
-              <span className="nd-status-value ok">Vite</span>
-            </div>
-            <div className="nd-status-item">
-              <span className="nd-status-label">Version</span>
-              <span className="nd-status-value">{version}</span>
-            </div>
-          </div>
-        </section>
-
-        <section className="nd-section">
-          <h2>💡 Tips</h2>
-          <ul className="nd-tips">
-            <li><strong>SEES Live Stack</strong> — See which symbols score highest right now.</li>
-            <li><strong>Strategy Builder</strong> — Combine directives with custom weights.</li>
-            <li><strong>Speed Trading</strong> — Use keyboard shortcuts (B=buy, S=sell) for fast execution.</li>
-            <li><strong>Candle Patterns</strong> — Training area with visual pattern detection.</li>
-          </ul>
-        </section>
-      </div>
 
       {!isApiOnline && (
         <section className="nd-section nd-setup" style={{ marginTop: '1.5rem', borderColor: 'rgba(239,68,68,0.3)' }}>

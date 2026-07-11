@@ -9,6 +9,7 @@ import { AlpacaAdapter } from './adapters/alpaca.adapter';
 import { AlphaVantageAdapter } from './adapters/alpha-vantage.adapter';
 import { Trading212Adapter } from './adapters/trading212.adapter';
 import { Mt5Adapter } from './adapters/mt5.adapter';
+import { Mt5ConnectionManager } from './mt5/mt5-connection-manager.service';
 import { YahooFinanceAdapter } from './adapters/yahoo-finance.adapter';
 import { PolygonAdapter } from './adapters/polygon.adapter';
 import { FinnhubAdapter } from './adapters/finnhub.adapter';
@@ -31,6 +32,7 @@ import { NotificationService } from '../notifications/notifications.service';
     RateLimitGovernor,
     ProviderDegradationService,
     CryptoProviderRouter,
+    Mt5ConnectionManager,
     AlpacaAdapter,
     AlphaVantageAdapter,
     Trading212Adapter,
@@ -42,7 +44,7 @@ import { NotificationService } from '../notifications/notifications.service';
     FmpAdapter,
     BinanceAdapter,
   ],
-  exports: [ProvidersService, AdapterFactory, FinnhubAdapter, FmpAdapter, Mt5Adapter, AlphaVantageAdapter, RateLimitGovernor, ProviderDegradationService, CryptoProviderRouter, BinanceAdapter],
+  exports: [ProvidersService, AdapterFactory, FinnhubAdapter, FmpAdapter, Mt5Adapter, AlphaVantageAdapter, RateLimitGovernor, ProviderDegradationService, CryptoProviderRouter, BinanceAdapter, Mt5ConnectionManager],
 })
 export class ProvidersModule implements OnModuleInit {
   constructor(
@@ -76,7 +78,7 @@ export class ProvidersModule implements OnModuleInit {
       name: 'MetaTrader 5',
       apiKeyEnv: 'MT5_ACCOUNT',
       baseUrl: process.env.MT5_BRIDGE_URL || 'http://localhost:5001',
-      capabilities: ['quotes', 'candles'],
+      capabilities: ['quotes', 'candles', 'trades'],
       failoverPriority: 40,
     });
 
@@ -102,6 +104,7 @@ export class ProvidersModule implements OnModuleInit {
       baseUrl: 'https://finnhub.io/api/v1',
       capabilities: ['quotes', 'candles', 'profiles', 'news', 'fundamentals'],
       failoverPriority: 50,
+      enabled: false,  // Key expires too quickly — disabled 2026-07-10
     });
 
     this.adapterFactory.register('twelvedata', TwelveDataAdapter, {

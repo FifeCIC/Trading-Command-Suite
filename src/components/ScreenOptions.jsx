@@ -8,8 +8,40 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { usePreferences } from '../core/hooks/usePreferences';
 import EmptyState from './EmptyState';
 import './screen-options.css';
+
+/** Global preferences shown on ALL views */
+var GLOBAL_PREFERENCES = [
+  {
+    id: 'displayMode',
+    label: 'Display Mode',
+    description: 'Focused shows plain-language trading information. Technical shows raw data and identifiers.',
+    type: 'radio',
+    key: 'tcs:preferences',
+    field: 'displayMode',
+    defaultValue: 'focused',
+    options: [
+      { value: 'focused', label: 'Focused', desc: 'Plain language — \"Strong Buy\", \"FOREX Majors\", interpreted signals' },
+      { value: 'technical', label: 'Technical', desc: 'Raw data — composite scores, protocol IDs, slugs, port numbers' },
+    ],
+  },
+  {
+    id: 'experienceLevel',
+    label: 'Experience Level',
+    description: 'Controls feature gating and information density across the app.',
+    type: 'radio',
+    key: 'tcs:preferences',
+    field: 'experienceLevel',
+    defaultValue: 'beginner',
+    options: [
+      { value: 'beginner', label: 'Beginner', desc: 'Essential features only — guided workflows and simple language' },
+      { value: 'experienced', label: 'Experienced', desc: 'Full feature set — assumes trading and platform familiarity' },
+      { value: 'expert', label: 'Expert', desc: 'All features unlocked — advanced configuration and raw data access' },
+    ],
+  },
+];
 
 /** Registry of option definitions keyed by view ID */
 const OPTIONS_REGISTRY = {
@@ -52,16 +84,22 @@ const OPTIONS_REGISTRY = {
 };
 
 export default function ScreenOptions({ activeView, onSettingsChange, isOpen, onToggle }) {
-  const registry = activeView ? OPTIONS_REGISTRY[activeView] : null;
+  var prefs = usePreferences();
+  var registry = activeView ? OPTIONS_REGISTRY[activeView] : null;
 
-  // Read current values from localStorage
-  const [values, setValues] = useState(() => {
-    const initial = {};
+  // Read current global preference values
+  var displayMode = prefs.displayMode || 'focused';
+  var experienceLevel = prefs.experienceLevel || 'beginner';
+
+  // Read view-specific values from localStorage
+  var [values, setValues] = useState(function () {
+    var initial = {};
     if (registry) {
-      for (const section of registry.sections) {
+      for (var i = 0; i < registry.sections.length; i++) {
+        var section = registry.sections[i];
         try {
           initial[section.key] = localStorage.getItem(section.key) || section.defaultValue;
-        } catch {
+        } catch (e) {
           initial[section.key] = section.defaultValue;
         }
       }
@@ -69,14 +107,14 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
     return initial;
   });
 
-  // Sync values when view changes
-  useEffect(() => {
+  useEffect(function () {
     if (registry) {
-      const next = {};
-      for (const section of registry.sections) {
+      var next = {};
+      for (var i = 0; i < registry.sections.length; i++) {
+        var section = registry.sections[i];
         try {
           next[section.key] = localStorage.getItem(section.key) || section.defaultValue;
-        } catch {
+        } catch (e) {
           next[section.key] = section.defaultValue;
         }
       }
@@ -84,20 +122,29 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
     }
   }, [activeView]);
 
-  const handleChange = useCallback((key, value) => {
-    const next = { ...values, [key]: value };
+  var handleViewChange = useCallback(function (key, value) {
+    var next = { ...values, [key]: value };
     setValues(next);
-    try { localStorage.setItem(key, value); } catch {}
-    if (onSettingsChange) onSettingsChange({ key, value });
+    try { localStorage.setItem(key, value); } catch (e) {}
+    if (onSettingsChange) onSettingsChange({ key: key, value: value });
   }, [values, onSettingsChange]);
 
+  var handleGlobalChange = useCallback(function (field, value) {
+    prefs.set(field, value);
+  }, [prefs]);
+
   // Close on Escape
-  useEffect(() => {
+  useEffect(function () {
     if (!isOpen) return;
-    const onKey = (e) => { if (e.key === 'Escape') onToggle(); };
+    var onKey = function (e) { if (e.key === 'Escape') onToggle(); };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return function () { window.removeEventListener('keydown', onKey); };
   }, [isOpen, onToggle]);
+
+  // Build global section state for rendering
+  var globalValueMap = { displayMode: displayMode, experienceLevel: experienceLevel };
+  var hasGlobalSections = true; // always show global section
+  var hasViewSections = registry && registry.sections.length > 0;
 
   return (
     <>
@@ -140,39 +187,87 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
               </div>
 
               <div className="so-body">
-                {!registry ? (
-                  <EmptyState icon="⚙️" title="No options available" description="This view has no configurable options." />
-                ) : (
-                  registry.sections.map((section) => (
-                    <div key={section.id} className="so-section">
-                      <h3 className="so-section-title">{section.label}</h3>
-                      {section.description && (
-                        <p className="so-section-desc">{section.description}</p>
-                      )}
-                      {section.type === 'radio' && (
-                        <div className="so-radio-group">
-                          {section.options.map((opt) => (
-                            <label
-                              key={opt.value}
-                              className={`so-radio-option ${values[section.key] === opt.value ? 'so-radio-selected' : ''}`}
-                            >
-                              <input
-                                type="radio"
-                                name={section.key}
-                                value={opt.value}
-                                checked={values[section.key] === opt.value}
-                                onChange={() => handleChange(section.key, opt.value)}
-                              />
-                              <span className="so-radio-content">
-                                <span className="so-radio-label">{opt.label}</span>
-                                <span className="so-radio-desc">{opt.desc}</span>
-                              </span>
-                            </label>
-                          ))}
+                {/* ── Global preferences (always shown) ── */}
+                <div className="so-global-section">
+                  <h3 className="so-global-label">Preferences</h3>
+                  {GLOBAL_PREFERENCES.map(function (section) {
+                    return (
+                      <div key={section.id} className="so-section">
+                        <h3 className="so-section-title">{section.label}</h3>
+                        {section.description && (
+                          <p className="so-section-desc">{section.description}</p>
+                        )}
+                        {section.type === 'radio' && (
+                          <div className="so-radio-group">
+                            {section.options.map(function (opt) {
+                              var currentValue = globalValueMap[section.field];
+                              return (
+                                <label
+                                  key={opt.value}
+                                  className={'so-radio-option' + (currentValue === opt.value ? ' so-radio-selected' : '')}
+                                >
+                                  <input
+                                    type="radio"
+                                    name={'global-' + section.field}
+                                    value={opt.value}
+                                    checked={currentValue === opt.value}
+                                    onChange={function () { handleGlobalChange(section.field, opt.value); }}
+                                  />
+                                  <span className="so-radio-content">
+                                    <span className="so-radio-label">{opt.label}</span>
+                                    <span className="so-radio-desc">{opt.desc}</span>
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ── View-specific options ── */}
+                {hasViewSections ? (
+                  <div className="so-view-section">
+                    <h3 className="so-global-label">View Options — {registry.title}</h3>
+                    {registry.sections.map(function (section) {
+                      return (
+                        <div key={section.id} className="so-section">
+                          <h3 className="so-section-title">{section.label}</h3>
+                          {section.description && (
+                            <p className="so-section-desc">{section.description}</p>
+                          )}
+                          {section.type === 'radio' && (
+                            <div className="so-radio-group">
+                              {section.options.map(function (opt) {
+                                return (
+                                  <label
+                                    key={opt.value}
+                                    className={'so-radio-option' + (values[section.key] === opt.value ? ' so-radio-selected' : '')}
+                                  >
+                                    <input
+                                      type="radio"
+                                      name={section.key}
+                                      value={opt.value}
+                                      checked={values[section.key] === opt.value}
+                                      onChange={function () { handleViewChange(section.key, opt.value); }}
+                                    />
+                                    <span className="so-radio-content">
+                                      <span className="so-radio-label">{opt.label}</span>
+                                      <span className="so-radio-desc">{opt.desc}</span>
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ))
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <EmptyState icon="⚙" title="No view-specific options" description="This view has no additional configurable options." />
                 )}
               </div>
 

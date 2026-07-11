@@ -16,7 +16,7 @@ import { sma } from '../utils/indicators';
 
 const MA_PERIODS = [20, 50, 200];
 const MA_BONUSES = [20, 30, 50]; // Base contribution per MA
-const MIN_BARS = 205;
+const MIN_BARS = 200;
 
 @Injectable()
 export class PriceActionDirective implements IDirective {

@@ -59,6 +59,8 @@ export interface DirectiveResult {
   gatedReason?: string;
   /** Time modifiers that were applied to adjust the score. */
   timeModifiersApplied?: { adjustment: number; reason: string }[];
+  /** Arbitrary metadata from the directive (e.g., wick ratio, ATR values). */
+  metadata?: Record<string, any>;
 }
 
 export interface TimeWindow {

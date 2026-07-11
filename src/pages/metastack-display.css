@@ -1,0 +1,130 @@
+/* MetaStack Display — metastack-display.css */
+
+.msd-page { padding: 20px 24px; background: var(--bg, #000000); color: var(--ink, #e5e7eb); }
+
+.msd-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+.msd-header h2 { margin: 0; font-size: 1.25rem; }
+.msd-subtitle { margin: 4px 0 0; font-size: 0.88rem; color: var(--ink-soft, #94a3b8); }
+.msd-header-right { display: flex; align-items: center; gap: 10px; }
+.msd-stack-select {
+  padding: 8px 14px; background: var(--panel, #1a1d2e); border: 1px solid var(--color-border, #2d3040);
+  border-radius: 6px; color: var(--ink, #e5e7eb); font-size: 0.88rem; min-width: 220px;
+}
+.msd-loading-text { font-size: 0.85rem; color: var(--color-muted, #64748b); }
+
+/* ── Scroll container ────────────────────────────────── */
+.msd-scroll { overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; scrollbar-color: var(--color-border, #2d3040) transparent; }
+
+/* ── Row labels ──────────────────────────────────────── */
+.msd-row-label {
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--accent, #0ea5a6); margin-bottom: 8px; padding-left: 2px;
+}
+.msd-row-label-tech {
+  color: var(--color-muted, #64748b); margin-top: 28px; padding-top: 16px;
+  border-top: 1px solid var(--color-border, #2d3040);
+}
+
+/* ── Rows ────────────────────────────────────────────── */
+.msd-row { display: flex; gap: 0; align-items: stretch; min-width: max-content; }
+.msd-row-technical { padding-bottom: 8px; }
+
+.msd-stage-group { display: flex; align-items: stretch; flex-shrink: 0; }
+
+/* ── Cards ───────────────────────────────────────────── */
+.msd-card {
+  width: 268px; flex-shrink: 0;
+  background: var(--panel, #1a1d2e); border: 1px solid var(--color-border, #2d3040);
+  border-radius: 10px; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.msd-card-focused { min-height: 280px; }
+.msd-card-technical { width: 220px; background: rgba(0,0,0,0.18); border-color: rgba(255,255,255,0.04); }
+
+.msd-card-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px 0; }
+.msd-card-head-tech { padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.msd-card-icon { font-size: 1.15rem; }
+.msd-card-title { font-size: 0.92rem; font-weight: 700; }
+.msd-card-body { flex: 1; padding: 10px 16px 16px; display: flex; flex-direction: column; }
+
+/* ── Connectors ──────────────────────────────────────── */
+.msd-connector {
+  display: flex; align-items: center; justify-content: center; width: 44px; flex-shrink: 0;
+  font-size: 1.1rem; color: var(--accent, #0ea5a6); opacity: 0.5;
+}
+.msd-connector-tech { opacity: 0.25; }
+
+/* ═══════════════════════════════════════════════════
+   FOCUSED ROW STYLES
+   ═══════════════════════════════════════════════════ */
+
+.msd-focused-body { display: flex; flex-direction: column; flex: 1; }
+
+.msd-f-hero {
+  font-size: 1.08rem; font-weight: 700; margin-bottom: 8px; color: var(--ink, #e5e7eb);
+}
+.msd-f-desc {
+  font-size: 0.85rem; color: var(--ink-soft, #94a3b8); margin: 0 0 10px; line-height: 1.55;
+}
+.msd-f-slug {
+  margin-top: auto; padding-top: 10px;
+  font-size: 0.72rem; color: var(--color-muted, #64748b);
+  font-family: 'JetBrains Mono', 'Fira Code', monospace; opacity: 0.5;
+  border-top: 1px solid rgba(255,255,255,0.03);
+}
+
+/* Signal cards */
+.msd-signal {
+  padding: 10px 12px; border-radius: 6px; margin-bottom: 5px;
+  border-left: 4px solid transparent;
+}
+.msd-signal-strong-up { background: rgba(34,197,94,0.08); border-left-color: #22c55e; }
+.msd-signal-up { background: rgba(34,197,94,0.04); border-left-color: rgba(34,197,94,0.45); }
+.msd-signal-neutral { background: rgba(255,255,255,0.02); border-left-color: rgba(107,114,128,0.35); }
+.msd-signal-down { background: rgba(239,68,68,0.04); border-left-color: rgba(239,68,68,0.45); }
+.msd-signal-strong-down { background: rgba(239,68,68,0.08); border-left-color: #ef4444; }
+
+.msd-signal-sym { font-size: 0.78rem; font-weight: 700; font-family: 'JetBrains Mono', 'Fira Code', monospace; display: block; }
+.msd-signal-label { font-size: 0.9rem; font-weight: 700; display: block; margin-top: 2px; }
+.msd-signal-strong-up .msd-signal-label, .msd-signal-up .msd-signal-label { color: #22c55e; }
+.msd-signal-down .msd-signal-label, .msd-signal-strong-down .msd-signal-label { color: #ef4444; }
+.msd-signal-neutral .msd-signal-label { color: var(--ink-soft, #94a3b8); }
+
+/* Parameter rows */
+.msd-param { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.msd-param:last-child { border-bottom: none; }
+.msd-param-label { font-size: 0.85rem; color: var(--ink-soft, #94a3b8); }
+.msd-param-val { font-size: 0.85rem; font-weight: 600; color: var(--ink, #e5e7eb); font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+
+/* Performance */
+.msd-perf-rating { text-align: center; padding: 6px 0; }
+.msd-perf-stars { font-size: 1.5rem; display: block; letter-spacing: 3px; }
+.msd-perf-label { font-size: 0.9rem; font-weight: 700; display: block; margin-top: 2px; }
+.msd-perf-stats { display: flex; gap: 10px; margin-top: 12px; }
+.msd-perf-stat { flex: 1; text-align: center; padding: 12px 6px; background: rgba(0,0,0,0.18); border-radius: 8px; }
+.msd-perf-num { font-size: 1.15rem; font-weight: 700; display: block; font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+.msd-perf-unit { font-size: 0.7rem; color: var(--color-muted, #64748b); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-top: 2px; }
+
+/* Empty */
+.msd-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 0; gap: 6px; color: var(--color-muted, #64748b); font-size: 0.85rem; flex: 1; }
+.msd-empty-icon { font-size: 1.5rem; opacity: 0.25; }
+
+/* ═══════════════════════════════════════════════════
+   TECHNICAL ROW STYLES
+   ═══════════════════════════════════════════════════ */
+
+.msd-tech-list { display: flex; flex-direction: column; gap: 2px; }
+.msd-tech-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 0; font-size: 0.8rem; color: var(--ink-soft, #94a3b8);
+  border-bottom: 1px solid rgba(255,255,255,0.02);
+}
+.msd-tech-item:last-child { border-bottom: none; }
+.msd-tech-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.78rem; color: var(--color-muted, #64748b); }
+
+/* ── Responsive ──────────────────────────────────────── */
+@media (max-width: 900px) {
+  .msd-card { width: 220px; }
+  .msd-card-technical { width: 180px; }
+  .msd-connector { width: 32px; }
+}

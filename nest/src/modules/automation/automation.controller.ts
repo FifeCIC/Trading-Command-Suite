@@ -309,19 +309,36 @@ export class AutomationController {
         return this.loop.stop();
       }
     }
-    // Per-broker toggle
-    if (this.loop.state.brokerStates[target]) {
-      this.loop.state.brokerStates[target].enabled = body.enabled ?? !this.loop.state.brokerStates[target].enabled;
-      return { brokerId: target, enabled: this.loop.state.brokerStates[target].enabled };
+    // Per-broker toggle — create state if missing
+    if (!this.loop.state.brokerStates[target]) {
+      this.loop.state.brokerStates[target] = {
+        brokerId: target,
+        enabled: false,
+        tradingEnabled: false,
+        scoreIntervalMs: 300000,
+        tradeThreshold: 60,
+        requireConfirmation: true,
+      };
     }
-    return { error: `Unknown target: ${target}` };
+    this.loop.state.brokerStates[target].enabled = body.enabled ?? !this.loop.state.brokerStates[target].enabled;
+    return { brokerId: target, enabled: this.loop.state.brokerStates[target].enabled };
   }
 
   /** POST /api/automation/config — update broker config */
   @Post('config')
   updateConfig(@Body() body: { brokerId: string; tradingEnabled?: boolean; tradeThreshold?: number; requireConfirmation?: boolean; scoreIntervalMs?: number }) {
+    // Auto-create broker state if missing
+    if (!this.loop.state.brokerStates[body.brokerId]) {
+      this.loop.state.brokerStates[body.brokerId] = {
+        brokerId: body.brokerId,
+        enabled: false,
+        tradingEnabled: false,
+        scoreIntervalMs: 300000,
+        tradeThreshold: 60,
+        requireConfirmation: true,
+      };
+    }
     const bs = this.loop.state.brokerStates[body.brokerId];
-    if (!bs) return { error: `Unknown broker: ${body.brokerId}` };
     if (body.tradingEnabled !== undefined) bs.tradingEnabled = body.tradingEnabled;
     if (body.tradeThreshold !== undefined) bs.tradeThreshold = body.tradeThreshold;
     if (body.requireConfirmation !== undefined) bs.requireConfirmation = body.requireConfirmation;

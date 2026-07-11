@@ -21,6 +21,12 @@
  */
 
 export const NAV_TREE = {
+  dashboard: {
+    label: 'Dashboard',
+    views: [
+      { id: 'home', label: 'Home', icon: '🏠' },
+    ],
+  },
   qa: {
     label: 'QA',
     views: [
@@ -132,6 +138,8 @@ export const NAV_TREE = {
       { id: 'responsive-layout-lab', label: 'Responsive Layout Lab', icon: '📐' },
       { id: 'charts-lab', label: 'Charts Lab', icon: '📊' },
       { id: 'snapshot-replay', label: 'Snapshot Replay', icon: '⏮' },
+      { id: 'triple-screen', label: 'Triple-Screen Cockpit', icon: '🖥️' },
+      { id: 'metastack-display', label: 'M.E.T.A. Display', icon: '📐' },
       { id: 'scoring-overview', label: 'Theme Example: Scoring Overview', icon: '🎨' },
       { id: 'mt5-trading', label: 'MT5 Trading (Lab)', icon: '🔬' },
       { id: 'speed-trading', label: 'Speed Trading (Lab)', icon: '🔬' },

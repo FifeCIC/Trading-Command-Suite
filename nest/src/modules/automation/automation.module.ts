@@ -10,13 +10,15 @@ import { ExecutionQueueService } from './execution-queue.service';
 import { MultiProtocolRankingService } from './multi-protocol-ranking.service';
 import { TimelineService } from './timeline.service';
 import { AutomationLoopService } from './automation-loop.service';
+import { StopGuardianService } from './stop-guardian.service';
 import { AutomationController } from './automation.controller';
+import { StopGuardianController } from './stop-guardian.controller';
 import { TimelineController } from './timeline.controller';
 
 @Global()
 @Module({
   imports: [DirectivesModule, CalibrationModule, ScoringModule, ProvidersModule, TradingModule],
-  controllers: [AutomationController, TimelineController],
+  controllers: [AutomationController, StopGuardianController, TimelineController],
   providers: [
     SymbolDataCacheService,
     ProtocolRunnerService,
@@ -24,6 +26,7 @@ import { TimelineController } from './timeline.controller';
     MultiProtocolRankingService,
     TimelineService,
     AutomationLoopService,
+    StopGuardianService,
   ],
   exports: [
     SymbolDataCacheService,
@@ -32,6 +35,7 @@ import { TimelineController } from './timeline.controller';
     MultiProtocolRankingService,
     TimelineService,
     AutomationLoopService,
+    StopGuardianService,
   ],
 })
 export class AutomationModule {}

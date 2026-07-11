@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import './trading-strategies.css';
 
-const TRADING = 'http://localhost:3201/api/trading/strategies';
+const TRADING = '/api/trading/strategies';
 
 // ── Strategy intelligence maps ──
 const PROTOCOL_INTEL = {
@@ -88,6 +88,9 @@ export default function TradingStrategiesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
+  const [editField, setEditField] = useState(null);     // which field is being edited
+  const [editValue, setEditValue] = useState('');        // current input value
+  const [saving, setSaving] = useState(false);           // save in progress
 
   useEffect(() => {
     let cancelled = false;
@@ -124,6 +127,87 @@ export default function TradingStrategiesPage() {
         setTrading(prev => prev.map(s => s.id === id ? { ...s, active: updated.active } : s));
       })
       .catch(() => {});
+  };
+
+  // ── Inline Edit Helpers ──
+  const startEdit = (field, currentValue) => {
+    setEditField(field);
+    setEditValue(currentValue ?? '');
+  };
+
+  const cancelEdit = () => {
+    setEditField(null);
+    setEditValue('');
+  };
+
+  const saveEdit = async () => {
+    if (!selectedId || !editField) return;
+    setSaving(true);
+    const val = editField === 'mode' || editField === 'brokerId'
+      ? editValue
+      : Number(editValue);
+    try {
+      const res = await fetch(`${TRADING}/${selectedId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [editField]: val }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setTrading(prev => prev.map(s => s.id === selectedId ? { ...s, ...updated } : s));
+      }
+    } catch {}
+    setSaving(false);
+    setEditField(null);
+    setEditValue('');
+  };
+
+  const handleEditKey = (e) => {
+    if (e.key === 'Enter') saveEdit();
+    if (e.key === 'Escape') cancelEdit();
+  };
+
+  // Reusable inline editor
+  const Editable = ({ field, label, value, suffix = '', type = 'number', options }) => {
+    const isEditing = editField === field;
+    return (
+      <div className="ts-editable-row" onClick={() => !isEditing && startEdit(field, value)}>
+        <span className="ts-req-label">{label}</span>
+        {isEditing ? (
+          <span className="ts-edit-group">
+            {options ? (
+              <select
+                className="ts-edit-input ts-edit-select"
+                value={editValue}
+                onChange={e => setEditValue(e.target.value)}
+                onBlur={saveEdit}
+                onKeyDown={handleEditKey}
+                autoFocus
+              >
+                {options.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            ) : (
+              <input
+                className="ts-edit-input"
+                type={type}
+                value={editValue}
+                onChange={e => setEditValue(e.target.value)}
+                onBlur={saveEdit}
+                onKeyDown={handleEditKey}
+                autoFocus
+                min={type === 'number' ? '0' : undefined}
+                step={type === 'number' ? 'any' : undefined}
+              />
+            )}
+            {saving && <span className="ts-saving">…</span>}
+          </span>
+        ) : (
+          <span className="ts-req-value ts-clickable" title="Click to edit">
+            {value ?? '—'}{!isEditing && suffix}
+          </span>
+        )}
+      </div>
+    );
   };
 
   if (loading) return <main className="trading-strategies-page"><p className="ts-empty">Loading…</p></main>;
@@ -255,26 +339,39 @@ export default function TradingStrategiesPage() {
                   </div>
                 </section>
 
-                {/* Trade Config */}
+                {/* Trade Config — EDITABLE */}
                 <section className="ts-detail-section">
-                  <h3>Trade Configuration</h3>
-                  <div className="ts-detail-card ts-status-grid">
-                    <div><span className="ts-req-label">Min Score</span><span className="ts-req-value">{selected.minComposite ?? '—'}</span></div>
-                    <div><span className="ts-req-label">Position Size</span><span className="ts-req-value">{selected.baseSize ?? '—'}</span></div>
-                    <div><span className="ts-req-label">Stop Loss</span><span className="ts-req-value">{selected.slPct ?? '—'}%</span></div>
-                    <div><span className="ts-req-label">Take Profit</span><span className="ts-req-value">{selected.tpPct ?? '—'}%</span></div>
+                  <h3>⚙ Trade Configuration</h3>
+                  <div className="ts-detail-card ts-edit-grid">
+                    <Editable field="minComposite" label="Min Score" value={selected.minComposite} />
+                    <Editable field="baseSize" label="Position Size" value={selected.baseSize} suffix=" lots" />
+                    <Editable field="slPct" label="Stop Loss" value={selected.slPct} suffix="%" />
+                    <Editable field="tpPct" label="Take Profit" value={selected.tpPct} suffix="%" />
+                    <Editable field="cooldownMinutes" label="Cooldown" value={selected.cooldownMinutes} suffix=" min" />
+                    <Editable field="maxPositions" label="Max Positions" value={selected.maxPositions} />
+                    <Editable field="brokerId" label="Broker" value={selected.brokerId} type="text" />
+                    <Editable field="mode" label="Mode" value={selected.mode} options={['manual','semi-auto','auto']} />
                   </div>
                 </section>
 
-                {/* Status */}
+                {/* Status — read-only telemetry */}
                 <section className="ts-detail-section">
-                  <h3>Status</h3>
+                  <h3>📊 Status</h3>
                   <div className="ts-detail-card ts-status-grid">
-                    <div><span className="ts-req-label">Mode</span><span>{selected.mode}</span></div>
-                    <div><span className="ts-req-label">Active</span><span className={`ts-chip ${selected.active ? 'ts-chip-ok' : 'ts-chip-warn'}`}>{selected.active ? 'ON' : 'OFF'}</span></div>
+                    <div>
+                      <span className="ts-req-label">Active</span>
+                      <span onClick={e => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          className={`ts-chip ${selected.active ? 'ts-chip-ok' : 'ts-chip-warn'}`}
+                          onClick={() => handleToggle(selected.id)}
+                        >
+                          {selected.active ? 'ON' : 'OFF'}
+                        </button>
+                      </span>
+                    </div>
                     <div><span className="ts-req-label">Last Eval</span><span>{selected.lastEvaluatedAt ? new Date(selected.lastEvaluatedAt).toLocaleString() : 'Never'}</span></div>
                     <div><span className="ts-req-label">Last Signal</span><span>{selected.lastSignal ?? '—'}</span></div>
-                    <div><span className="ts-req-label">Eval Count</span><span>{selected.evaluationCount ?? 0}</span></div>
                     <div><span className="ts-req-label">Composite</span><span>{selected.lastComposite?.toFixed(1) ?? '—'}</span></div>
                   </div>
                 </section>

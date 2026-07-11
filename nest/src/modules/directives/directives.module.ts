@@ -92,6 +92,7 @@ import { ParabolicSARDirective } from './implementations/mt5-indicators.directiv
 import { ADXDICrossoverDirective } from './implementations/mt5-indicators.directives';
 import { BollingerPctBDirective } from './implementations/mt5-indicators.directives';
 import { ATRTrailingStopDirective } from './implementations/mt5-indicators.directives';
+import { WickFilterDirective } from './implementations/wick-filter.directive';
 import { MomentumROCDirective } from './implementations/mt5-indicators.directives';
 import { DeMarkerDirective } from './implementations/mt5-indicators.directives';
 import { AccumulationDistDirective } from './implementations/mt5-indicators.directives';
@@ -248,6 +249,7 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     ADXDICrossoverDirective,
     BollingerPctBDirective,
     ATRTrailingStopDirective,
+    WickFilterDirective,
     MomentumROCDirective,
     DeMarkerDirective,
     AccumulationDistDirective,
@@ -421,6 +423,7 @@ export class DirectivesModule implements OnModuleInit {
     // Stubs — Macro
     // Stubs — Temporal
     private readonly mondayEffect: MondayEffectDirective,
+    private readonly mondayEffectReal: MondayEffectRealDirective,
     private readonly fridayPos: FridayPositioningDirective,
     private readonly midweek: MidweekMomentumDirective,
     private readonly weeklyRhythm: AdvancedWeeklyRhythmDirective,
@@ -473,6 +476,7 @@ export class DirectivesModule implements OnModuleInit {
     private readonly weeklyRhythmStrat: WeeklyRhythmStrategyDirective,
     private readonly volEnvelope: VolatilityEnvelopeDirective,
     private readonly momentumExhaust: MomentumExhaustionDirective,
+    private readonly wickFilter: WickFilterDirective,
     private readonly targetAchieved: TargetAchievedDirective,
     private readonly regimeShiftExit: RegimeShiftExitDirective,
     private readonly timeStop: TimeStopDirective,
@@ -550,8 +554,8 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.goldMacro);
     this.directivesService.register(this.cadUsdOil);
     // Stubs — Macro
-    // Stubs — Temporal
-    this.directivesService.register(this.mondayEffect);
+    // Temporal — real (not stub)
+    this.directivesService.register(this.mondayEffectReal);
     this.directivesService.register(this.fridayPos);
     this.directivesService.register(this.midweek);
     this.directivesService.register(this.weeklyRhythm);
@@ -605,6 +609,7 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.volEnvelope);
     // Q238 — Exit Signals
     this.directivesService.register(this.momentumExhaust);
+    this.directivesService.register(this.wickFilter);
     this.directivesService.register(this.targetAchieved);
     this.directivesService.register(this.regimeShiftExit);
     this.directivesService.register(this.timeStop);

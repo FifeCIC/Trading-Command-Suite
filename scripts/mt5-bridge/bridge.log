@@ -21422,3 +21422,237 @@
 2026-07-09 01:17:25,780 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-09T01:17:25.780417", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.02, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
 2026-07-09 01:17:52,739 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-09T01:17:52.739050", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.02, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
 2026-07-09 01:18:14,406 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-09T01:18:14.406297", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.02, "error": "AutoTrading disabled by client", "clientOrderId": null}
+2026-07-09 16:58:54,958 [INFO] MetaTrader5 package loaded
+2026-07-09 16:58:54,959 [INFO] Connecting to MT5 at startup...
+2026-07-09 16:58:54,960 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-09 16:58:54,973 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1014.61
+2026-07-09 16:58:54,974 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-09 16:58:55,001 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-09 21:26:22,536 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-09T21:26:22.525633", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-07-09 21:36:07,414 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-09T21:36:07.414026", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-07-09 21:46:07,647 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-09T21:46:07.647116", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-07-09 21:46:39,065 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-09T21:46:39.065872", "action": "order_failed", "symbol": "EURUSD", "type": "buy", "volume": 0.01, "error": "AutoTrading disabled by client", "clientOrderId": null}
+2026-07-09 21:55:13,944 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-09T21:55:13.944067", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.02, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-07-09 21:55:48,037 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-09T21:55:48.037845", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-07-09 21:56:00,273 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-09T21:56:00.273490", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-07-09 21:56:07,402 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-09T21:56:07.402610", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-07-09 21:56:10,963 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-09T21:56:10.963666", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "AutoTrading disabled by client", "clientOrderId": null}
+2026-07-09 22:00:18,282 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-09T22:00:18.282534", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "AutoTrading disabled by client", "clientOrderId": null}
+2026-07-09 23:01:27,057 [INFO] MetaTrader5 package loaded
+2026-07-09 23:01:27,058 [INFO] Connecting to MT5 at startup...
+2026-07-09 23:01:27,058 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-09 23:01:27,083 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1014.61
+2026-07-09 23:01:27,084 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-09 23:01:27,102 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-09 23:23:37,520 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-09T23:23:37.519647", "action": "order_placed", "ticket": 152321285476, "symbol": "EURUSD", "type": "sell", "volume": 0.01, "price": 1.14329, "clientOrderId": null}
+2026-07-10 01:05:31,772 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T01:05:31.770811", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-07-10 01:06:48,950 [INFO] MetaTrader5 package loaded
+2026-07-10 01:06:48,950 [INFO] Connecting to MT5 at startup...
+2026-07-10 01:06:48,951 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-10 01:06:48,976 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1014.61
+2026-07-10 01:06:48,976 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-10 01:06:49,007 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-10 01:12:51,095 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T01:12:51.095045", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-07-10 01:13:15,923 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T01:13:15.923183", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-07-10 01:13:28,282 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T01:13:28.282282", "action": "order_placed", "ticket": 152321418681, "symbol": "EURUSD", "type": "sell", "volume": 0.01, "price": 1.14333, "clientOrderId": null}
+2026-07-10 01:17:46,597 [INFO] MetaTrader5 package loaded
+2026-07-10 01:17:46,598 [INFO] Connecting to MT5 at startup...
+2026-07-10 01:17:46,599 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-10 01:17:46,626 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1014.61
+2026-07-10 01:17:46,626 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-10 01:17:46,640 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-10 01:17:57,500 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T01:17:57.500251", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-07-10 01:19:27,659 [INFO] MetaTrader5 package loaded
+2026-07-10 01:19:27,659 [INFO] Connecting to MT5 at startup...
+2026-07-10 01:19:27,660 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-10 01:19:27,685 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1014.61
+2026-07-10 01:19:27,686 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-10 01:19:27,707 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-10 01:19:35,421 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T01:19:35.421067", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.02, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-07-10 01:20:06,586 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T01:20:06.586162", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.02, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-07-10 01:22:33,731 [INFO] MetaTrader5 package loaded
+2026-07-10 01:22:33,732 [INFO] Connecting to MT5 at startup...
+2026-07-10 01:22:33,732 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-10 01:22:33,754 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1014.61
+2026-07-10 01:22:33,754 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-10 01:22:33,785 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-10 01:23:57,089 [INFO] MetaTrader5 package loaded
+2026-07-10 01:23:57,089 [INFO] Connecting to MT5 at startup...
+2026-07-10 01:23:57,090 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-10 01:23:57,114 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1014.61
+2026-07-10 01:23:57,115 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-10 01:23:57,130 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-10 01:26:00,777 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T01:26:00.777472", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-07-10 01:32:51,487 [INFO] MetaTrader5 package loaded
+2026-07-10 01:32:51,488 [INFO] Connecting to MT5 at startup...
+2026-07-10 01:32:51,488 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-10 01:32:51,520 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1014.61
+2026-07-10 01:32:51,520 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-10 01:32:51,552 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-10 01:33:57,066 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T01:33:57.065904", "action": "order_placed", "ticket": 152321463590, "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "price": 4115.55, "clientOrderId": null}
+2026-07-10 01:38:08,296 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T01:38:08.296603", "action": "order_placed", "ticket": 152321476693, "symbol": "USDCAD", "type": "sell", "volume": 0.02, "price": 1.41717, "clientOrderId": null}
+2026-07-10 01:43:04,548 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T01:43:04.548492", "action": "order_placed", "ticket": 152321486389, "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "price": 4121.92, "clientOrderId": null}
+2026-07-10 01:48:07,559 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T01:48:07.559575", "action": "order_placed", "ticket": 152321501468, "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "price": 4124.11, "clientOrderId": null}
+2026-07-10 01:53:04,332 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T01:53:04.332224", "action": "order_placed", "ticket": 152321513216, "symbol": "USDCAD", "type": "sell", "volume": 0.02, "price": 1.41653, "clientOrderId": null}
+2026-07-10 01:58:04,540 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T01:58:04.540074", "action": "order_placed", "ticket": 152321530482, "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "price": 4126.49, "clientOrderId": null}
+2026-07-10 02:03:06,815 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T02:03:06.815584", "action": "order_placed", "ticket": 152321547583, "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "price": 4123.35, "clientOrderId": null}
+2026-07-10 12:56:40,138 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T12:56:40.138412", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-10 13:01:41,261 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T13:01:41.260990", "action": "order_placed", "ticket": 152323761097, "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "price": 4103.4, "clientOrderId": null}
+2026-07-10 13:06:40,961 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T13:06:40.960986", "action": "order_placed", "ticket": 152323779789, "symbol": "USDCAD", "type": "sell", "volume": 0.02, "price": 1.41558, "clientOrderId": null}
+2026-07-10 13:11:40,911 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T13:11:40.911403", "action": "order_placed", "ticket": 152323801642, "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "price": 4103.82, "clientOrderId": null}
+2026-07-10 13:16:41,338 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T13:16:41.338445", "action": "order_placed", "ticket": 152323845579, "symbol": "USDCAD", "type": "sell", "volume": 0.02, "price": 1.41512, "clientOrderId": null}
+2026-07-10 13:21:40,863 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T13:21:40.863918", "action": "order_placed", "ticket": 152323880190, "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "price": 4108.74, "clientOrderId": null}
+2026-07-10 13:26:41,082 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T13:26:41.082910", "action": "order_placed", "ticket": 152323908221, "symbol": "USDCAD", "type": "sell", "volume": 0.02, "price": 1.41536, "clientOrderId": null}
+2026-07-10 13:31:41,473 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T13:31:41.473703", "action": "order_placed", "ticket": 152323937268, "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "price": 4104.22, "clientOrderId": null}
+2026-07-10 13:36:40,887 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T13:36:40.887354", "action": "order_placed", "ticket": 152323972254, "symbol": "USDCAD", "type": "sell", "volume": 0.02, "price": 1.41483, "clientOrderId": null}
+2026-07-10 13:41:43,384 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T13:41:43.383899", "action": "order_placed", "ticket": 152324008066, "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "price": 4100.24, "clientOrderId": null}
+2026-07-10 13:46:41,301 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T13:46:41.301345", "action": "order_placed", "ticket": 152324035935, "symbol": "USDCAD", "type": "sell", "volume": 0.02, "price": 1.41497, "clientOrderId": null}
+2026-07-10 13:51:41,522 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T13:51:41.522106", "action": "order_placed", "ticket": 152324062176, "symbol": "XAUUSD", "type": "sell", "volume": 0.02, "price": 4104.1, "clientOrderId": null}
+2026-07-10 13:56:41,818 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T13:56:41.818307", "action": "order_placed", "ticket": 152324087361, "symbol": "USDCAD", "type": "sell", "volume": 0.02, "price": 1.41456, "clientOrderId": null}
+2026-07-10 13:59:55,450 [INFO] MetaTrader5 package loaded
+2026-07-10 13:59:55,451 [INFO] Connecting to MT5 at startup...
+2026-07-10 13:59:55,452 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-10 13:59:55,531 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1154.57
+2026-07-10 13:59:55,531 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-10 13:59:55,571 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-10 14:34:44,127 [INFO] MetaTrader5 package loaded
+2026-07-10 14:34:44,128 [INFO] Connecting to MT5 at startup...
+2026-07-10 14:34:44,128 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-10 14:34:44,213 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1271.4
+2026-07-10 14:34:44,213 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-10 14:34:44,229 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-10 14:45:12,906 [INFO] MetaTrader5 package loaded
+2026-07-10 14:45:12,907 [INFO] Connecting to MT5 at startup...
+2026-07-10 14:45:12,907 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-10 14:45:12,931 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1271.4
+2026-07-10 14:45:12,932 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-10 14:45:12,942 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-10 14:47:23,651 [INFO] MetaTrader5 package loaded
+2026-07-10 14:47:23,652 [INFO] Connecting to MT5 at startup...
+2026-07-10 14:47:23,652 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-10 14:47:23,671 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1271.4
+2026-07-10 14:47:23,671 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-10 14:47:23,681 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-10 15:29:51,838 [INFO] MetaTrader5 package loaded
+2026-07-10 15:29:51,839 [INFO] Connecting to MT5 at startup...
+2026-07-10 15:29:51,839 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-10 15:29:51,871 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1271.4
+2026-07-10 15:29:51,872 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-10 15:29:51,885 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-10 22:46:40,470 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T22:46:40.450916", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 22:47:27,706 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T22:47:27.706609", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 22:49:07,242 [INFO] MetaTrader5 package loaded
+2026-07-10 22:49:07,244 [INFO] Connecting to MT5 at startup...
+2026-07-10 22:49:07,244 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-10 22:49:07,267 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1271.4
+2026-07-10 22:49:07,267 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-10 22:49:07,279 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-10 22:52:33,242 [INFO] MetaTrader5 package loaded
+2026-07-10 22:52:33,242 [INFO] Connecting to MT5 at startup...
+2026-07-10 22:52:33,243 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-10 22:52:33,263 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1271.4
+2026-07-10 22:52:33,264 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-10 22:52:33,274 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-10 22:57:35,529 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T22:57:35.527211", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 22:57:35,614 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T22:57:35.614054", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 22:57:35,683 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T22:57:35.683627", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 22:57:35,752 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T22:57:35.751935", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:02:40,913 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:02:40.913738", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:02:41,057 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:02:41.057653", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:02:41,230 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:02:41.230100", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:02:41,438 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:02:41.438235", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:03:45,734 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-10 23:03:45,772 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-10 23:07:35,420 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:07:35.420331", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:07:35,489 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:07:35.489091", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:07:35,557 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:07:35.557567", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:07:35,652 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:07:35.652087", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:12:35,815 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:12:35.815224", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:12:35,934 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:12:35.934756", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:12:36,024 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:12:36.024761", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:12:36,119 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:12:36.119818", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:17:35,442 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:17:35.442388", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:17:35,517 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:17:35.517159", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:17:35,588 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:17:35.588312", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:17:35,658 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:17:35.658049", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:22:35,455 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:22:35.455348", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:22:35,528 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:22:35.528378", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:22:35,599 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:22:35.599673", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:22:35,667 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:22:35.667270", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:27:35,458 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:27:35.458455", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:27:35,533 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:27:35.533541", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:27:35,603 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:27:35.603004", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:27:35,670 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:27:35.670863", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:32:35,510 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:32:35.510057", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:32:35,585 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:32:35.584918", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:32:35,661 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:32:35.660960", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:32:35,741 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:32:35.741088", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:37:35,511 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:37:35.511561", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:37:35,586 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:37:35.586168", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:37:35,656 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:37:35.656326", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:37:35,724 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:37:35.724826", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:42:35,656 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:42:35.656336", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:42:35,732 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:42:35.732125", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:42:35,800 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:42:35.799915", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:42:35,871 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:42:35.871135", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:47:35,656 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:47:35.655997", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:47:35,785 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:47:35.785748", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:47:35,869 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:47:35.869496", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:47:35,950 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:47:35.950389", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:52:35,607 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:52:35.607219", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:52:35,708 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:52:35.708593", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:52:35,807 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:52:35.807266", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:52:35,905 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:52:35.905649", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:57:35,495 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:57:35.495066", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:57:35,571 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:57:35.571034", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:57:35,638 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:57:35.638561", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-10 23:57:35,708 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-10T23:57:35.708524", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:02:35,519 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:02:35.519146", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:02:35,592 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:02:35.592327", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:02:35,660 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:02:35.660273", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:02:35,730 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:02:35.730157", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:07:35,551 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:07:35.551504", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:07:35,624 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:07:35.623982", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:07:35,699 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:07:35.699756", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:07:35,769 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:07:35.769221", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:12:35,510 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:12:35.510705", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:12:35,585 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:12:35.585254", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:12:35,656 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:12:35.656349", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:12:35,732 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:12:35.732469", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:17:35,481 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:17:35.481711", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:17:35,554 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:17:35.553982", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:17:35,621 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:17:35.621439", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:17:35,695 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:17:35.695466", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:22:35,566 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:22:35.566153", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:22:35,647 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:22:35.647864", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:22:35,728 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:22:35.728212", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:22:35,804 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:22:35.804534", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:27:35,453 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:27:35.453563", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:27:35,530 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:27:35.530823", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:27:35,605 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:27:35.605205", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:27:35,674 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:27:35.674840", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:32:35,505 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:32:35.505519", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:32:35,591 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:32:35.591058", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:32:35,666 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:32:35.666729", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:32:35,743 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:32:35.743558", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:36:20,796 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-11 00:40:01,425 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:40:01.425717", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:40:01,655 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:40:01.655044", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:40:02,096 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:40:02.096887", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:40:02,666 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:40:02.666416", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:43:11,467 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:43:11.176912", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:43:12,279 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:43:12.279229", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:43:12,929 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:43:12.929812", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:43:13,424 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:43:13.424655", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:52:47,188 [INFO] MetaTrader5 package loaded
+2026-07-11 00:52:47,215 [INFO] Connecting to MT5 at startup...
+2026-07-11 00:52:47,216 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-11 00:52:47,334 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1271.4
+2026-07-11 00:52:47,334 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-11 00:52:48,477 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-11 00:53:16,144 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:53:16.144481", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:53:32,578 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:53:32.578693", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:59:44,492 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:59:44.492862", "action": "order_failed", "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:59:44,581 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:59:44.581488", "action": "order_failed", "symbol": "USDCAD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:59:44,700 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:59:44.700383", "action": "order_failed", "symbol": "GBPUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}
+2026-07-11 00:59:44,784 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-11T00:59:44.784465", "action": "order_failed", "symbol": "EURUSD", "type": "sell", "volume": 0.01, "error": "Market closed", "clientOrderId": null}

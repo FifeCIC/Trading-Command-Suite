@@ -21,6 +21,8 @@ const DEFAULTS = {
   tableStyle: 'default',      // 'default' | 'compact' | 'bordered' | 'striped'
   // Experience level — controls feature gating
   experienceLevel: 'beginner', // 'beginner' | 'experienced' | 'expert'
+  // Display classification — controls information density and language
+  displayMode: 'focused',     // 'focused' | 'technical'
   // Accessibility & UX
   pageTransitions: true,       // View Transitions API page morphing
   keyboardShortcutsHelp: true, // Show keyboard shortcuts helper
