@@ -4,6 +4,7 @@ import { CalibrationModule } from '../calibration/calibration.module';
 import { ScoringModule } from '../scoring/scoring.module';
 import { ProvidersModule } from '../providers/providers.module';
 import { TradingModule } from '../trading/trading.module';
+import { MarketDataModule } from '../market-data/market-data.module';
 import { SymbolDataCacheService } from './symbol-data-cache.service';
 import { ProtocolRunnerService } from './protocol-runner.service';
 import { ExecutionQueueService } from './execution-queue.service';
@@ -17,7 +18,7 @@ import { TimelineController } from './timeline.controller';
 
 @Global()
 @Module({
-  imports: [DirectivesModule, CalibrationModule, ScoringModule, ProvidersModule, TradingModule],
+  imports: [DirectivesModule, CalibrationModule, ScoringModule, ProvidersModule, TradingModule, MarketDataModule],
   controllers: [AutomationController, StopGuardianController, TimelineController],
   providers: [
     SymbolDataCacheService,

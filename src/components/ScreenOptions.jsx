@@ -62,6 +62,20 @@ const OPTIONS_REGISTRY = {
           { value: 'keyboard', label: '⌨️ Keyboard', desc: 'Map to a hotkey for manual execution' },
         ],
       },
+      {
+        id: 'layoutWidth',
+        label: 'Layout Width',
+        description: 'Maximum content width for this view',
+        type: 'radio',
+        key: 'ss-layout-width',
+        defaultValue: 'full',
+        options: [
+          { value: 'full', label: 'Full Width', desc: 'Use all available screen width' },
+          { value: '4k', label: '4K (2560px)', desc: 'Wide layout for large monitors' },
+          { value: 'desktop', label: 'Desktop (1440px)', desc: 'Standard desktop layout' },
+          { value: 'laptop', label: 'Laptop (1024px)', desc: 'Compact for smaller screens' },
+        ],
+      },
     ],
   },
   'pipeline-graph-lab': {
@@ -77,6 +91,58 @@ const OPTIONS_REGISTRY = {
         options: [
           { value: 'diagonal', label: '╱ Diagonal', desc: 'Straight lines between ports — reliable and clean' },
           { value: 'orthogonal', label: '└ Orthogonal', desc: 'Right-angle L-bends — experimental, some paths may cross' },
+        ],
+      },
+      {
+        id: 'layoutWidth',
+        label: 'Layout Width',
+        description: 'Maximum content width for this view',
+        type: 'radio',
+        key: 'pg-layout-width',
+        defaultValue: 'full',
+        options: [
+          { value: 'full', label: 'Full Width', desc: 'Use all available screen width' },
+          { value: '4k', label: '4K (2560px)', desc: 'Wide layout for large monitors' },
+          { value: 'desktop', label: 'Desktop (1440px)', desc: 'Standard desktop layout' },
+          { value: 'laptop', label: 'Laptop (1024px)', desc: 'Compact for smaller screens' },
+        ],
+      },
+    ],
+  },
+  'active-symbols': {
+    title: 'Active Symbols',
+    sections: [
+      {
+        id: 'layoutWidth',
+        label: 'Layout Width',
+        description: 'Maximum content width for this view',
+        type: 'radio',
+        key: 'as-layout-width',
+        defaultValue: 'full',
+        options: [
+          { value: 'full', label: 'Full Width', desc: 'Use all available screen width' },
+          { value: '4k', label: '4K (2560px)', desc: 'Wide layout for large monitors' },
+          { value: 'desktop', label: 'Desktop (1440px)', desc: 'Standard desktop layout' },
+          { value: 'laptop', label: 'Laptop (1024px)', desc: 'Compact for smaller screens' },
+        ],
+      },
+    ],
+  },
+  'directives-manager': {
+    title: 'Directives Manager',
+    sections: [
+      {
+        id: 'layoutWidth',
+        label: 'Layout Width',
+        description: 'Maximum content width for this view',
+        type: 'radio',
+        key: 'dm-layout-width',
+        defaultValue: 'full',
+        options: [
+          { value: 'full', label: 'Full Width', desc: 'Use all available screen width' },
+          { value: '4k', label: '4K (2560px)', desc: 'Wide layout for large monitors' },
+          { value: 'desktop', label: 'Desktop (1440px)', desc: 'Standard desktop layout' },
+          { value: 'laptop', label: 'Laptop (1024px)', desc: 'Compact for smaller screens' },
         ],
       },
     ],

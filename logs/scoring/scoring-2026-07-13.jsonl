@@ -1,0 +1,8 @@
+{"timestamp":"2026-07-13T01:11:45.641Z","category":"scoring_run","level":"info","message":"1 symbols scored (avg 2523.0)","data":{"symbolsScored":1,"avgScore":2523,"topSymbol":"XAUUSD","topScore":2523,"durationMs":6711}}
+{"timestamp":"2026-07-13T01:11:45.673Z","category":"signal","level":"info","message":"XAUUSD: defensive @ 2523 (50%)","data":{"symbol":"XAUUSD","composite":2523,"signal":"defensive","confidence":50}}
+{"timestamp":"2026-07-13T01:16:15.262Z","category":"scoring_run","level":"info","message":"1 symbols scored (avg 2523.0)","data":{"symbolsScored":1,"avgScore":2523,"topSymbol":"XAUUSD","topScore":2523,"durationMs":534}}
+{"timestamp":"2026-07-13T01:16:15.263Z","category":"signal","level":"info","message":"XAUUSD: defensive @ 2523 (50%)","data":{"symbol":"XAUUSD","composite":2523,"signal":"defensive","confidence":50}}
+{"timestamp":"2026-07-13T01:21:15.206Z","category":"scoring_run","level":"info","message":"1 symbols scored (avg 2523.0)","data":{"symbolsScored":1,"avgScore":2523,"topSymbol":"XAUUSD","topScore":2523,"durationMs":466}}
+{"timestamp":"2026-07-13T01:21:15.207Z","category":"signal","level":"info","message":"XAUUSD: defensive @ 2523 (50%)","data":{"symbol":"XAUUSD","composite":2523,"signal":"defensive","confidence":50}}
+{"timestamp":"2026-07-13T01:26:15.317Z","category":"scoring_run","level":"info","message":"1 symbols scored (avg 2523.0)","data":{"symbolsScored":1,"avgScore":2523,"topSymbol":"XAUUSD","topScore":2523,"durationMs":567}}
+{"timestamp":"2026-07-13T01:26:15.318Z","category":"signal","level":"info","message":"XAUUSD: defensive @ 2523 (50%)","data":{"symbol":"XAUUSD","composite":2523,"signal":"defensive","confidence":50}}

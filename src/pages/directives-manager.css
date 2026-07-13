@@ -450,3 +450,41 @@
     font-size: 0.9rem;
   }
 }
+
+/* ── Category & Complexity badges (mirror directives-status styling) ── */
+.directives-table td:nth-child(2) { /* Category */
+  color: var(--accent, #0ea5a6);
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+.directives-table td:nth-child(4) { /* Complexity */
+  color: var(--ink-soft, #94a3b8);
+  font-weight: 500;
+  font-size: 0.78rem;
+}
+
+/* ── AVG Score / RUNS / BIAS columns ── */
+.directives-table td:nth-child(5),
+.directives-table td:nth-child(6),
+.directives-table td:nth-child(7) {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+}
+
+/* ── Directive code/slug blue styling (from directives-status) ── */
+.directive-primary small {
+  color: #3b82f6;
+  font-size: 0.7rem;
+  display: block;
+  opacity: 0.85;
+}
+
+/* ── Sidebar header row — status toggles to top-right ── */
+.directive-detail-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+.directive-detail-header-row h2 { margin: 0; }

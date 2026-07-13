@@ -27,6 +27,8 @@ import { ScoringLogService } from '../system/scoring-log.service';
 import { TradingStrategyService } from '../trading/trading-strategy.service';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
 import { DuplicateGuardService } from '../trading/duplicate-guard.service';
+import { ProtocolGatingService } from '../scoring/protocol-gating.service';
+import { MarketDataService } from '../market-data/market-data.service';
 import { PROTOCOL_REGISTRY } from '../directives/directive-groups';
 
 // ── Protocol-aware thresholds by trading style ──
@@ -167,10 +169,11 @@ export class AutomationLoopService implements OnModuleInit {
     private readonly duplicateGuard: DuplicateGuardService,
     private readonly scoringLog: ScoringLogService,
     private readonly prisma: PrismaService,
+    private readonly protocolGating: ProtocolGatingService,
+    private readonly marketData: MarketDataService,
   ) {
     this.initBrokerStates();
-    this.loadScoringStrategies();
-    // Auto-restore on startup is deferred to onModuleInit (needs DB connection)
+    // loadScoringStrategies() is deferred to onModuleInit (needs DB connection)
   }
 
   async onModuleInit() {
@@ -216,6 +219,7 @@ export class AutomationLoopService implements OnModuleInit {
         }
       }
     } catch (e) { this.logger.warn(`Failed to patch strategies: ${(e as Error).message}`); }
+    await this.loadScoringStrategies();
     this.start();
   }
 
@@ -262,8 +266,10 @@ export class AutomationLoopService implements OnModuleInit {
 
           for (const [protocolId, strat] of uniqueProtocols) {
             try {
-              await this.prisma.scoringStrategy.create({
-                data: {
+              await this.prisma.scoringStrategy.upsert({
+                where: { id: `auto-${protocolId}` },
+                create: {
+                  id: `auto-${protocolId}`,
                   name: `${protocolId} — Auto`,
                   protocolId,
                   watchlistName: 'default',
@@ -275,6 +281,12 @@ export class AutomationLoopService implements OnModuleInit {
                   tpPct: strat.tpPct ?? 1.0,
                   enabled: true,
                   tradingEnabled: false,
+                },
+                update: {
+                  name: `${protocolId} — Auto`,
+                  watchlistName: 'default',
+                  brokerId: strat.brokerId || 'mt5',
+                  tradeThreshold: strat.minComposite || getStyleThreshold(protocolId),
                 },
               });
               this.logger.log(`  Created scoring strategy for protocol: ${protocolId}`);
@@ -288,21 +300,29 @@ export class AutomationLoopService implements OnModuleInit {
         }
       }
 
-      this.scoringStrategies = rows.map(r => ({
-        id: r.id,
-        name: r.name,
-        protocolId: r.protocolId,
-        watchlistName: r.watchlistName,
-        brokerId: r.brokerId,
-        mode: r.mode as 'manual' | 'semi-auto' | 'auto',
-        tradeThreshold: r.tradeThreshold,
-        baseSize: r.baseSize,
-        slPct: r.slPct,
-        tpPct: r.tpPct,
-        enabled: r.enabled,
-        tradingEnabled: r.tradingEnabled,
-      }));
-      this.logger.log(`Loaded ${this.scoringStrategies.length} scoring strategies from DB`);
+      // Map and deduplicate: one strategy per protocolId
+      const seen = new Map<string, ScoringStrategy>();
+      for (const r of rows) {
+        if (!seen.has(r.protocolId)) {
+          seen.set(r.protocolId, {
+            id: r.id,
+            name: r.name,
+            protocolId: r.protocolId,
+            watchlistName: r.watchlistName,
+            brokerId: r.brokerId,
+            mode: r.mode as 'manual' | 'semi-auto' | 'auto',
+            tradeThreshold: r.tradeThreshold,
+            baseSize: r.baseSize,
+            slPct: r.slPct,
+            tpPct: r.tpPct,
+            enabled: r.enabled,
+            tradingEnabled: r.tradingEnabled,
+          });
+        }
+      }
+      this.scoringStrategies = Array.from(seen.values());
+
+      this.logger.log(`Loaded ${this.scoringStrategies.length} scoring strategies (${rows.length} DB rows, deduplicated)`);
     } catch (err) {
       this.logger.warn(`Failed to load scoring strategies from DB: ${(err as Error).message}`);
     }
@@ -495,79 +515,82 @@ export class AutomationLoopService implements OnModuleInit {
         this.logger.error(`Scoring failed: ${(err as Error).message}`);
       }
 
-      // 3b. Score watchlist symbols for each enabled scoring strategy
+      // 3b. Score watchlist symbols for each enabled scoring strategy using protocol gating
       for (const strat of this.scoringStrategies) {
         if (!strat.enabled) continue;
         const wlSymbols = readWatchlist(strat.watchlistName);
         if (!wlSymbols || wlSymbols.length === 0) continue;
 
         try {
-          const newSymbols = wlSymbols.filter(s => !allSymbols.includes(s));
-          if (newSymbols.length === 0) continue;
-
-          const ranked = await this.scoringService.rankAll(undefined, [...allSymbols, ...newSymbols].length + 10);
-          const scoreMap = new Map<string, any>();
-          if (ranked?.ranked) for (const e of ranked.ranked) scoreMap.set(e.ticker, e);
-
+          // Use gated protocol scoring per symbol instead of flat rankAll()
           let scoredCount = 0;
           for (const sym of wlSymbols) {
-            const s = scoreMap.get(sym);
-            if (!s || s.score === null) continue;
+            // Get symbol from DB for bar fetching
+            const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: sym } });
+            if (!dbSym) continue;
+
+            const bars = await this.marketData.getBars(dbSym.id, '5m', 100);
+            if (!bars || bars.length < 20) continue;
+
+            const gated = await this.protocolGating.scoreWithGating(sym, bars, strat.protocolId);
+            if (!gated || gated.composite === undefined) continue;
+
             scoredCount++;
 
-            const adjScore = s.score * this.state.globalRiskMultiplier;
+            const adjScore = gated.composite * this.state.globalRiskMultiplier;
             if (adjScore < strat.tradeThreshold) continue;
 
             decisions.push({
               timestamp: new Date().toISOString(),
               strategyId: strat.id, symbol: sym, brokerId: strat.brokerId,
               decision: 'SCORED',
-              reason: `${strat.watchlistName} × ${strat.protocolId}: ${s.score}`,
-              composite: s.score, signal: s.signal,
+              reason: `${strat.watchlistName} × ${strat.protocolId}: ${gated.composite}`,
+              composite: gated.composite, signal: gated.signal,
             });
 
             // Dispatch if trading enabled
             if ((strat.mode === 'auto' || strat.mode === 'semi-auto') && this.state.brokerStates[strat.brokerId]?.tradingEnabled) {
               if (this.lastAnyTradeAt && (Date.now() - this.lastAnyTradeAt) < 60000) continue;
 
-              const side = s.signal || 'BUY';
+              const side = gated.signal || 'BUY';
+              const lastPrice = bars[bars.length - 1]?.close || 0;
 
               // Duplicate guard — block if position already open
               const dupCheck = await this.duplicateGuard.checkDuplicate(sym, strat.brokerId, strat.protocolId);
               if (dupCheck.blocked) {
-                decisions.push({ timestamp: new Date().toISOString(), strategyId: strat.id, symbol: sym, brokerId: strat.brokerId, decision: 'BLOCKED', reason: dupCheck.reason || 'Duplicate position', composite: s.score, signal: side });
+                decisions.push({ timestamp: new Date().toISOString(), strategyId: strat.id, symbol: sym, brokerId: strat.brokerId, decision: 'BLOCKED', reason: dupCheck.reason || 'Duplicate position', composite: gated.composite, signal: side });
                 continue;
               }
 
               const broker = this.adapterFactory.create(strat.brokerId);
               if (!broker?.placeOrder) continue;
 
-              const sl = side === 'BUY' ? s.lastPrice * (1 - strat.slPct/100) : s.lastPrice * (1 + strat.slPct/100);
-              const tp = side === 'BUY' ? s.lastPrice * (1 + strat.tpPct/100) : s.lastPrice * (1 - strat.tpPct/100);
+              const sl = side === 'BUY' ? lastPrice * (1 - strat.slPct/100) : lastPrice * (1 + strat.slPct/100);
+              const tp = side === 'BUY' ? lastPrice * (1 + strat.tpPct/100) : lastPrice * (1 - strat.tpPct/100);
 
               if (strat.mode === 'semi-auto') {
                 const aid = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
                 this.state.pendingActions.push({
                   id: aid, strategyId: strat.id, symbol: sym, brokerId: strat.brokerId,
-                  side, quantity: strat.baseSize, composite: s.score,
+                  side, quantity: strat.baseSize, composite: gated.composite,
                   createdAt: new Date().toISOString(),
                   expiresAt: new Date(Date.now() + 5*60000).toISOString(),
                 });
-                decisions.push({ timestamp: new Date().toISOString(), strategyId: strat.id, symbol: sym, brokerId: strat.brokerId, decision: 'QUEUED', reason: 'Awaiting confirmation', composite: s.score, signal: side, actionId: aid });
+                decisions.push({ timestamp: new Date().toISOString(), strategyId: strat.id, symbol: sym, brokerId: strat.brokerId, decision: 'QUEUED', reason: 'Awaiting confirmation', composite: gated.composite, signal: side, actionId: aid });
               } else {
                 const result = await broker.placeOrder({
                   symbol: sym, side: side as 'BUY'|'SELL', quantity: strat.baseSize, sl, tp,
-                  comment: `TCS ${strat.name} | ${s.score}%`,
+                  comment: `TCS ${strat.name} | ${gated.composite}%`,
                 });
                 if (result.success) {
                   this.lastAnyTradeAt = Date.now();
-                  try { this.tradeRecorder.record({ symbol: sym, side: side.toLowerCase(), quantity: strat.baseSize, entryPrice: result.price||s.lastPrice||0, pnl:0, provider: strat.brokerId, status:'open', origin:'strategy', scoringStrategyId: strat.id } as any); } catch {}
+                  try { this.tradeRecorder.record({ symbol: sym, side: side.toLowerCase(), quantity: strat.baseSize, entryPrice: result.price||lastPrice||0, pnl:0, provider: strat.brokerId, status:'open', origin:'strategy', scoringStrategyId: strat.id } as any); } catch {}
                 }
-                decisions.push({ timestamp: new Date().toISOString(), strategyId: strat.id, symbol: sym, brokerId: strat.brokerId, decision: result.success?'EXECUTED':'FAILED', reason: result.success?`Ticket ${result.ticket}`:(result.error||'Unknown'), composite: s.score, signal: side, ticket: result.ticket, price: result.price, quantity: strat.baseSize });
+                decisions.push({ timestamp: new Date().toISOString(), strategyId: strat.id, symbol: sym, brokerId: strat.brokerId, decision: result.success?'EXECUTED':'FAILED', reason: result.success?`Ticket ${result.ticket}`:(result.error||'Unknown'), composite: gated.composite, signal: side, ticket: result.ticket, price: result.price, quantity: strat.baseSize });
               }
             }
           }
-          if (scoredCount > 0) this.logger.log(`  Watchlist "${strat.watchlistName}": ${scoredCount}/${wlSymbols.length} above threshold`);
+          if (scoredCount > 0) this.logger.log(`  Watchlist "${strat.watchlistName}" (protocol: ${strat.protocolId}): ${scoredCount}/${wlSymbols.length} scored`);
         } catch (err) {
           this.logger.error(`Watchlist scoring "${strat.watchlistName}" failed: ${(err as Error).message}`);
         }

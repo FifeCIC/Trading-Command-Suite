@@ -38,7 +38,7 @@ export const NAV_TREE = {
     label: 'Watchlists',
     views: [
       { id: 'active-symbols', label: 'Active Symbols', icon: '★' },
-      { id: 'user-watchlists', label: 'User Watchlists', icon: '⊞' },
+      { id: 'user-watchlists', label: 'Watchlists', icon: '⊞' },
       { id: 'create-watchlist', label: 'Create Watchlist', icon: '⊞' },
       { id: 'add-symbol', label: 'Add Symbol', icon: '➕' },
     ],
@@ -48,7 +48,6 @@ export const NAV_TREE = {
     views: [
       { id: 'directives-manager', label: 'Directives', icon: '◆' },
       { id: 'configure-directives', label: 'Protocol Editor', icon: '⚙' },
-      { id: 'directives-status', label: 'Directive Status', icon: '📋' },
       { id: 'live-ordering-stack', label: 'Live Ordering Stack', icon: '◉' },
       { id: 'signals-workbench', label: 'Signals Ladder', icon: '◈' },
       { id: 'exit-signals', label: 'Exit Signals', icon: '🚪' },

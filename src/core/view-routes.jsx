@@ -35,7 +35,6 @@ import LiveOrderingStackPage from '../pages/LiveOrderingStackPage.jsx';
 import SeesArenaPage from '../pages/SeesArenaPage.jsx';
 import SignalsWorkbenchPage from '../pages/SignalsWorkbenchPage.jsx';
 import ExitSignalsPage from '../pages/ExitSignalsPage.jsx';
-import DirectivesStatusPage from '../pages/DirectivesStatusPage.jsx';
 import ScoringRunsPage from '../pages/ScoringRunsPage.jsx';
 import ScoringActivityLogsPage from '../pages/ScoringActivityLogsPage.jsx';
 import ProtocolsPage from '../pages/ProtocolsPage.jsx';
@@ -183,7 +182,6 @@ export const VIEW_COMPONENTS = {
 
   // Scoring
   'directives-manager': DirectivesManagerPage,
-  'directives-status': DirectivesStatusPage,
   'live-ordering-stack': LiveOrderingStackPage,
   'sees-arena': SeesArenaPage,
   'signals-workbench': SignalsWorkbenchPage,

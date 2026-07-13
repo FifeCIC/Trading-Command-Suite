@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query, Logger } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdapterFactory } from './adapter-factory';
 import { Mt5Adapter } from './adapters/mt5.adapter';
@@ -319,5 +319,49 @@ export class Mt5Controller {
     } catch (err: any) {
       return { orders: [], error: err.message || 'Bridge unreachable' };
     }
+  }
+
+  @Get('quotes')
+  @ApiOperation({ summary: 'Bulk quote lookup for one or more symbols' })
+  @ApiOkResponse({ description: 'Array of quote objects with bid/ask/spread' })
+  async getQuotes(@Query('symbols') symbols?: string) {
+    const adapter = this.getMt5Adapter();
+    if (!adapter) {
+      return { quotes: [], connected: false, error: 'MT5 adapter not registered' };
+    }
+
+    // Resolve symbol list from query param
+    const symbolList = symbols
+      ? symbols.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean)
+      : ['EURUSD', 'GBPUSD', 'XAUUSD', 'USDCAD'];
+
+    // Fetch each quote in parallel, silently dropping failures
+    const results = await Promise.allSettled(
+      symbolList.map((sym) => adapter.getQuote(sym))
+    );
+
+    const quotes: { symbol: string; bid: number | null; ask: number | null; spread: number | null; timestamp: string }[] = [];
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value) {
+        const q = r.value;
+        quotes.push({
+          symbol: q.symbol,
+          bid: q.bid,
+          ask: q.ask,
+          spread: q.ask != null && q.bid != null
+            ? Number(((q.ask - q.bid) * 10000).toFixed(1))
+            : null,
+          timestamp: q.timestamp instanceof Date ? q.timestamp.toISOString() : String(q.timestamp),
+        });
+      }
+    }
+
+    return {
+      quotes,
+      connected: quotes.length > 0,
+      requested: symbolList.length,
+      returned: quotes.length,
+      timestamp: new Date().toISOString(),
+    };
   }
 }

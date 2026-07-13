@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
+import Notice from '../components/Notice';
 import './exit-signals.css';
 
 const URGENCY_COLORS = {
@@ -62,9 +63,9 @@ export default function ExitSignalsPage() {
           </p>
         </div>
         {summary && (summary.critical > 0 || summary.high > 0) && (
-          <div className="es-alert-banner">
-            ⚠️ {summary.critical + summary.high} position{summary.critical + summary.high > 1 ? 's' : ''} need{summary.critical + summary.high === 1 ? 's' : ''} attention
-          </div>
+          <Notice level="critical" title="Positions need attention">
+            {summary.critical + summary.high} position{summary.critical + summary.high > 1 ? 's' : ''} flagged — {summary.critical} critical, {summary.high} high urgency.
+          </Notice>
         )}
       </motion.header>
 
@@ -79,85 +80,124 @@ export default function ExitSignalsPage() {
       )}
 
       {!isEmpty && Array.isArray(signals) && (
-        <div className="es-grid">
-          {signals.map((sig, i) => (
-            <motion.div
-              key={sig.symbol || sig.ticker || i}
-              className={`es-card es-urgency-${sig.urgency?.toLowerCase()}`}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-              style={{ borderLeft: `4px solid ${URGENCY_COLORS[sig.urgency] || URGENCY_COLORS.NONE}` }}
-            >
-              <div className="es-card-header">
-                <div className="es-symbol-row">
-                  <span className="es-symbol">{sig.symbol || sig.ticker}</span>
-                  {sig.pnlPct != null && (
-                    <span className={`es-pnl ${sig.pnlPct >= 0 ? 'positive' : 'negative'}`}>
-                      {sig.pnlPct >= 0 ? '+' : ''}{sig.pnlPct.toFixed(1)}%
-                    </span>
-                  )}
-                </div>
-                <span className="es-urgency-badge" style={{ background: (URGENCY_COLORS[sig.urgency] || URGENCY_COLORS.NONE) + '20', color: URGENCY_COLORS[sig.urgency] || URGENCY_COLORS.NONE }}>
-                  {URGENCY_LABELS[sig.urgency] || sig.urgency}
-                </span>
-              </div>
+        (() => {
+          // Group by urgency level
+          const groups = { CRITICAL: [], HIGH: [], MEDIUM: [], LOW: [], NONE: [] };
+          for (const s of signals) {
+            const g = s.urgency || 'NONE';
+            if (groups[g]) groups[g].push(s); else groups.NONE.push(s);
+          }
+          const groupOrder = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'NONE'];
+          const groupLabels = { CRITICAL: '⚠️ Critical — Exit Now', HIGH: '▲ High — Consider Exit', MEDIUM: '◆ Medium — Monitor', LOW: '✅ Low — Strong Hold', NONE: '— No Signal' };
 
-              <div className="es-card-body">
-                <div className="es-metrics-row">
-                  <div className="es-metric">
-                    <span className="es-metric-label">Score</span>
-                    <span className="es-metric-value">{sig.currentScore ?? '—'}</span>
-                  </div>
-                  <div className="es-metric">
-                    <span className="es-metric-label">Trend</span>
-                    <span className="es-metric-value">
-                      {TREND_ICONS[sig.scoreTrend] || '—'} {sig.scoreTrend}
-                      {sig.scoreVelocity != null && sig.scoreVelocity !== 0 && (
-                        <span className="es-velocity">
-                          {' '}({sig.scoreVelocity > 0 ? '+' : ''}{sig.scoreVelocity})
+          return groupOrder.map((level) => {
+            const items = groups[level];
+            if (!items || items.length === 0) return null;
+            return (
+              <div key={level} className="es-group">
+                <div className={`es-group-header es-group-header-${level.toLowerCase()}`}>
+                  {groupLabels[level]}
+                  <span style={{ fontSize:'0.78rem', opacity:0.7 }}>({items.length})</span>
+                </div>
+                <div className="es-grid">
+                  {items.map((sig, i) => (
+                    <motion.div
+                      key={sig.symbol || sig.ticker || i}
+                      className="es-card"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04 }}
+                    >
+                      <div className="es-card-header">
+                        <div className="es-symbol-row">
+                          <span className="es-symbol">{sig.symbol || sig.ticker}</span>
+                          {sig.pnlPct != null && (
+                            <span className={`es-pnl ${sig.pnlPct >= 0 ? 'positive' : 'negative'}`}>
+                              {sig.pnlPct >= 0 ? '+' : ''}{sig.pnlPct.toFixed(1)}%
+                            </span>
+                          )}
+                        </div>
+                        <span className="es-urgency-badge" style={{ background: (URGENCY_COLORS[sig.urgency] || URGENCY_COLORS.NONE) + '20', color: URGENCY_COLORS[sig.urgency] || URGENCY_COLORS.NONE }}>
+                          {URGENCY_LABELS[sig.urgency] || sig.urgency}
                         </span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="es-metric">
-                    <span className="es-metric-label">Urgency</span>
-                    <span className="es-metric-value">{sig.urgencyScore}/100</span>
-                  </div>
-                </div>
-
-                {sig.positionValue != null && sig.positionValue > 0 && (
-                  <div className="es-metrics-row">
-                    <div className="es-metric">
-                      <span className="es-metric-label">Position</span>
-                      <span className="es-metric-value">${sig.positionValue.toFixed(0)}</span>
-                    </div>
-                    <div className="es-metric">
-                      <span className="es-metric-label">Signal</span>
-                      <span className={`es-metric-value es-signal-${sig.signal}`}>{sig.signal}</span>
-                    </div>
-                  </div>
-                )}
-
-                {sig.reasons && sig.reasons.length > 0 && (
-                  <div className="es-reasons">
-                    {sig.reasons.map((reason, ri) => (
-                      <div key={ri} className="es-reason">
-                        {reason.startsWith('⚠️') ? reason : `• ${reason}`}
                       </div>
-                    ))}
-                  </div>
-                )}
 
-                {sig.lastUpdated && (
-                  <div className="es-updated">
-                    Updated: {new Date(sig.lastUpdated).toLocaleString()}
-                  </div>
-                )}
+                      <div className="es-card-body">
+                        <div className="es-metrics-row">
+                          <div className="es-metric">
+                            <span className="es-metric-label">Score</span>
+                            <span className="es-metric-value">{sig.currentScore ?? '—'}</span>
+                          </div>
+                          <div className="es-metric">
+                            <span className="es-metric-label">Trend</span>
+                            <span className="es-metric-value">
+                              {TREND_ICONS[sig.scoreTrend] || '—'} {sig.scoreTrend}
+                              {sig.scoreVelocity != null && sig.scoreVelocity !== 0 && (
+                                <span className="es-velocity">
+                                  {' '}({sig.scoreVelocity > 0 ? '+' : ''}{sig.scoreVelocity})
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          <div className="es-metric">
+                            <span className="es-metric-label">Urgency</span>
+                            <span className="es-metric-value">{sig.urgencyScore}/100</span>
+                          </div>
+                        </div>
+
+                        {sig.positionValue != null && sig.positionValue > 0 && (
+                          <div className="es-metrics-row">
+                            <div className="es-metric">
+                              <span className="es-metric-label">Position</span>
+                              <span className="es-metric-value">${sig.positionValue.toFixed(0)}</span>
+                            </div>
+                            <div className="es-metric">
+                              <span className="es-metric-label">Signal</span>
+                              <span className={`es-metric-value es-signal-${sig.signal}`}>{sig.signal}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* ── Source + Broker info ── */}
+                        <div className="es-source-row">
+                          {sig.source && <span className="es-source-badge">📦 {sig.source}</span>}
+                          {sig.broker && <span className="es-source-badge">🏦 {sig.broker}</span>}
+                          {!sig.source && !sig.broker && <span className="es-source-badge">— No broker info</span>}
+                        </div>
+
+                        {sig.reasons && sig.reasons.length > 0 && (
+                          <div className="es-reasons">
+                            {sig.reasons.map((reason, ri) => (
+                              <div key={ri} className="es-reason">
+                                {reason.startsWith('⚠️') ? reason : `• ${reason}`}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div style={{ display:'flex', gap:'0.5rem', marginTop:'0.25rem' }}>
+                          {sig.urgency === 'CRITICAL' || sig.urgency === 'HIGH' ? (
+                            <button type="button" className="es-action">
+                              {sig.urgency === 'CRITICAL' ? 'Exit Now' : 'Review Exit'}
+                            </button>
+                          ) : (
+                            <button type="button" className="es-action es-action-hold">Hold</button>
+                          )}
+                        </div>
+
+                        {sig.lastUpdated && (
+                          <div className="es-updated">
+                            Updated: {new Date(sig.lastUpdated).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
               </div>
-            </motion.div>
-          ))}
-        </div>
+            );
+          });
+        })()
       )}
     </div>
   );

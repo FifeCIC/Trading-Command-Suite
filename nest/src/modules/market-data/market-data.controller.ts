@@ -116,10 +116,23 @@ export class MarketDataController {
     try {
       const res = await fetch(
         `http://localhost:5000/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}&limit=${Math.min(Number(limit), 1000)}`,
+        { signal: AbortSignal.timeout(10000) },
       );
-      return res.json();
+      if (!res.ok) {
+        return { bars: [], symbol, timeframe, limit: Math.min(Number(limit), 1000), status: 'unavailable', reason: `Bridge HTTP ${res.status}` };
+      }
+      const data = await res.json();
+      const bars = data?.bars || data || [];
+      return {
+        bars: Array.isArray(bars) ? bars : [],
+        symbol,
+        timeframe,
+        limit: Math.min(Number(limit), 1000),
+        status: bars.length > 0 ? 'available' : 'no_data',
+        total: Array.isArray(bars) ? bars.length : 0,
+      };
     } catch {
-      return { bars: [], symbol, timeframe };
+      return { bars: [], symbol, timeframe, limit: Math.min(Number(limit), 1000), status: 'unavailable', reason: 'MT5 bridge unreachable' };
     }
   }
 

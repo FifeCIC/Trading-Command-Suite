@@ -123,7 +123,27 @@ export class DirectivesController {
       }
     }
 
-    return directives.map((d) => ({
+    // ── Merge stats from Score history ──
+    const recentScores = await this.directivesService.getRecentScores(200).catch(() => []);
+    const statMap = new Map<string, { totalScore: number; count: number; bullishCount: number; bearishCount: number; protocols: Set<string> }>();
+    for (const s of recentScores) {
+      const breakdown = (s as any).breakdown || {};
+      for (const [dirId, dirScore] of Object.entries(breakdown)) {
+        if (!statMap.has(dirId)) {
+          statMap.set(dirId, { totalScore: 0, count: 0, bullishCount: 0, bearishCount: 0, protocols: new Set() });
+        }
+        const st = statMap.get(dirId)!;
+        st.totalScore += dirScore as number;
+        st.count++;
+        if ((dirScore as number) >= 50) st.bullishCount++;
+        else if ((dirScore as number) < 30) st.bearishCount++;
+        if ((s as any).strategyId) st.protocols.add((s as any).strategyId);
+      }
+    }
+
+    return directives.map((d) => {
+      const st = statMap.get(d.id);
+      return {
       id: d.id,
       name: d.name,
       description: d.description ?? '',
@@ -132,7 +152,12 @@ export class DirectivesController {
       protocolCount: protocolCounts.get(d.id) ?? 0,
       complexity: complexityMap[d.id] ?? { level: 1, label: 'Basic', factors: [] },
       active: dbStatuses.has(d.id) ? dbStatuses.get(d.id) : true,
-    }));
+      // ── Merged stats ──
+      avgScore: st ? Math.round(st.totalScore / st.count) : null,
+      runs: st ? st.count : null,
+      bias: st ? (st.bullishCount > st.bearishCount ? 'bullish' : st.bearishCount > st.bullishCount ? 'bearish' : 'neutral') : null,
+    };
+    });
   }
 
   /**

@@ -81,7 +81,9 @@ export default function ChartsLabPage() {
   });
 
   const quote = quoteQuery.data;
-  const candles = candlesQuery.data?.bars ?? [];
+  const candlesData = candlesQuery.data;
+  const candles = candlesData?.bars ?? [];
+  const candleStatus = candlesData?.status; // 'available' | 'unavailable' | 'no_data'
 
   // Accumulate ticks into our synthetic candle engine
   const prevQuoteRef = useRef(null);
@@ -269,7 +271,11 @@ export default function ChartsLabPage() {
         )}
 
         <div className="clab-data-info">
-          {isDemoData ? (
+          {candleStatus === 'unavailable' ? (
+            <span className="clab-demo-badge">🔌 Market data offline — showing demo candles</span>
+          ) : candleStatus === 'no_data' ? (
+            <span className="clab-demo-badge">📭 No candles for {symbol} — showing demo data</span>
+          ) : isDemoData ? (
             <span className="clab-demo-badge">📊 Demo data — MT5 offline</span>
           ) : tickCount > 0 ? (
             `${tickCount} ticks · ${ticks.length > 0 ? Math.ceil((ticks[ticks.length-1].time - ticks[0].time) / 1000) : 0}s of data`

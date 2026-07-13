@@ -1,4 +1,6 @@
 import { useState, useCallback, useMemo, createContext, useContext } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '../core/api/client';
 import DetachableWidget from '../components/DetachableWidget';
 import './component-lab.css';
 
@@ -44,26 +46,52 @@ const SAMPLE_SIGNALS = [
 
 function MarketTickerWidget() {
   const scale = useWidgetScale();
-  const [tickers, setTickers] = useState(() =>
-    INITIAL_TICKERS.map((t) => ({
-      ...t,
-      price: fakePrice(t.base),
-      ...fakeChange(),
-      volume: fakeVolume(),
-    })),
-  );
   const [paused, setPaused] = useState(false);
 
-  const refresh = useCallback(() => {
-    setTickers((prev) =>
-      prev.map((t) => ({
-        ...t,
+  // ── Real data from MT5 quotes endpoint ──
+  const quotesQuery = useQuery({
+    queryKey: ['lab-mt5-quotes'],
+    queryFn: () => apiGet('/api/providers/mt5/quotes?symbols=AAPL,NVDA,TSLA,MSFT,AMD').catch(() => null),
+    refetchInterval: paused ? false : 5000,
+    staleTime: 2000,
+  });
+  const rawQuotes = quotesQuery.data?.quotes || [];
+
+  // ── System health for MT5 status ──
+  const healthQuery = useQuery({
+    queryKey: ['lab-health'],
+    queryFn: () => apiGet('/api/').catch(() => null),
+    staleTime: 30_000,
+  });
+  const mt5Connected = healthQuery.data?.mt5Bridge?.connected === true;
+
+  // Merge API data with our known symbols, falling back to demo data when offline
+  const tickers = useMemo(() => {
+    const apiMap = {};
+    for (const q of rawQuotes) apiMap[q.symbol] = q;
+
+    return INITIAL_TICKERS.map((t) => {
+      const live = apiMap[t.sym];
+      if (live && mt5Connected) {
+        const change = ((live.bid - t.base) / t.base) * 100;
+        return {
+          sym: t.sym,
+          price: live.bid?.toFixed(2) ?? fakePrice(t.base),
+          value: change.toFixed(2),
+          positive: change >= 0,
+          volume: fakeVolume(),
+        };
+      }
+      return {
+        sym: t.sym,
         price: fakePrice(t.base),
         ...fakeChange(),
         volume: fakeVolume(),
-      })),
-    );
-  }, []);
+      };
+    });
+  }, [rawQuotes, mt5Connected]);
+
+  const refresh = useCallback(() => {}, []);
 
   // Auto-refresh every 2s unless paused
   useState(() => {
@@ -128,17 +156,40 @@ function MarketTickerWidget() {
 
 function SignalFeedWidget() {
   const scale = useWidgetScale();
-  const [signals] = useState(SAMPLE_SIGNALS);
   const [expanded, setExpanded] = useState(null);
+
+  // ── Real data from signals ladder API ──
+  const signalsQuery = useQuery({
+    queryKey: ['lab-signals'],
+    queryFn: () => apiGet('/api/signals/ladder?symbols=AAPL,NVDA,TSLA,MSFT,AMD&protocol=default').catch(() => null),
+    refetchInterval: 15_000,
+    staleTime: 10_000,
+  });
+  const apiSignals = signalsQuery.data?.envelopes || [];
+
+  // Map API data to widget format, or fall back to sample data when offline
+  const signals = useMemo(() => {
+    if (apiSignals.length > 0) {
+      return apiSignals.slice(0, 6).map((e, i) => ({
+        id: i + 1,
+        sym: e.symbol,
+        action: e.signal === 'BUY' ? 'BUY' : e.signal === 'SELL' ? 'SELL' : 'HOLD',
+        confidence: e.composite || 50,
+        reason: e.summary || e.directiveSummary || `${e.protocolId}: scored ${e.composite}`,
+      }));
+    }
+    return SAMPLE_SIGNALS; // fallback demo data
+  }, [apiSignals]);
 
   return (
     <DetachableWidget
       title="Signal Feed"
       size="md"
       contentScale={scale}
-      statusDot
+      statusDot={apiSignals.length > 0}
       badge={String(signals.length)}
       colorAccent="#f59e0b"
+      subtitle={apiSignals.length > 0 ? 'Live data' : 'Demo data'}
     >
       <div className="cl-signal-list">
         {signals.map((s) => (
@@ -288,13 +339,23 @@ function PositionSummaryWidget() {
 
 function SystemHealthWidget() {
   const scale = useWidgetScale();
-  const [checks] = useState([
-    { label: 'NestJS API', ok: true, latency: '12ms' },
-    { label: 'MySQL', ok: true, latency: '3ms' },
-    { label: 'MT5 Bridge', ok: true, latency: '45ms' },
-    { label: 'Alpaca API', ok: false, latency: 'timeout' },
-    { label: 'Redis Cache', ok: true, latency: '1ms' },
-  ]);
+
+  // ── Real data from health endpoint ──
+  const healthQuery = useQuery({
+    queryKey: ['lab-health-widget'],
+    queryFn: () => apiGet('/api/').catch(() => null),
+    staleTime: 15_000,
+  });
+  const h = healthQuery.data || {};
+  const mt5 = h.mt5Bridge || {};
+
+  const checks = useMemo(() => [
+    { label: 'NestJS API', ok: Boolean(h.database), latency: healthQuery.isLoading ? '...' : 'responsive' },
+    { label: 'MySQL', ok: Boolean(h.database), latency: 'connected' },
+    { label: 'MT5 Bridge', ok: mt5.connected === true, latency: mt5.connected ? `Port 5000` : 'offline' },
+    { label: 'Stop Guardian', ok: h.stopGuardian?.enabled === true, latency: h.stopGuardian?.enabled ? `Guarding ${h.stopGuardian?.guardedCount ?? 0}` : 'stopped' },
+    { label: 'Trading212', ok: Boolean(h.trading212), latency: h.trading212 ? 'Live' : '—' },
+  ], [h, healthQuery.isLoading, mt5]);
 
   const allOk = checks.every((c) => c.ok);
 

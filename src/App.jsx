@@ -218,6 +218,8 @@ function AppShell() {
     const VIEW_TO_OPTIONS = {
       'speed-scanner': 'speed-scanner',
       'pipeline-graph-lab': 'pipeline-graph-lab',
+      'active-symbols': 'active-symbols',
+      'directives-manager': 'directives-manager',
     };
     setScreenOptionsView(VIEW_TO_OPTIONS[viewId] || null);
   }, [primaryArea, secondaryView]);
