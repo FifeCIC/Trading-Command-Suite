@@ -63,6 +63,7 @@ export default function CreateStrategyPage() {
   const [name, setName] = useState('');
   const [protocolId, setProtocolId] = useState('');
   const [scoringStrategyId, setScoringStrategyId] = useState('');
+  const [watchlistId, setWatchlistId] = useState('');
   const [symbol, setSymbol] = useState('EURUSD');
   const [timeframe, setTimeframe] = useState('15m');
   const [mode, setMode] = useState('semi-auto');
@@ -75,6 +76,7 @@ export default function CreateStrategyPage() {
   // ── Data sources ──
   const [protocols, setProtocols] = useState([]);
   const [scoringStrategies, setScoringStrategies] = useState([]);
+  const [watchlists, setWatchlists] = useState([]);
   const [mt5Account, setMt5Account] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -87,14 +89,16 @@ export default function CreateStrategyPage() {
     let cancelled = false;
     async function load() {
       try {
-        const [protos, scoring, mt5] = await Promise.all([
+        const [protos, scoring, wls, mt5] = await Promise.all([
           apiGet('/api/scoring/gated/protocols').catch(() => ({ protocols: [] })),
           apiGet('/api/automation/scoring-strategies').catch(() => []),
+          apiGet('/api/watchlists').catch(() => ({ watchlists: [] })),
           apiGet('/api/trading/mt5/account').catch(() => null),
         ]);
         if (cancelled) return;
         setProtocols((protos.protocols || protos || []).filter(p => p.active !== false));
         setScoringStrategies(Array.isArray(scoring) ? scoring : (scoring.strategies || []));
+        setWatchlists(wls.watchlists || []);
         setMt5Account(mt5);
         setLoading(false);
       } catch (err) {
@@ -167,8 +171,8 @@ export default function CreateStrategyPage() {
       setSaveError('Please select a Scoring Strategy.');
       return;
     }
-    if (!isScoringPath && (!protocolId || !symbol)) {
-      setSaveError('Protocol and Symbol are required for the Protocol + Symbol path.');
+    if (!isScoringPath && (!protocolId || !watchlistId)) {
+      setSaveError('Protocol and Watchlist are required for the Protocol path.');
       return;
     }
 
@@ -197,10 +201,11 @@ export default function CreateStrategyPage() {
           body.symbol = symbol || strat.watchlistId || 'auto';
         }
       } else {
-        // Protocol + Symbol path
+        // Protocol path — symbols come from the selected watchlist
         body.protocolId = protocolId;
-        body.symbol = symbol.toUpperCase();
+        body.watchlistId = watchlistId;
         body.timeframe = timeframe;
+        body.symbol = 'auto'; // derived from watchlist at runtime
       }
 
       const result = await apiPost('/api/trading/strategies', body);
@@ -295,22 +300,16 @@ export default function CreateStrategyPage() {
               )}
             </label>
 
-            {/* ── Symbol ── */}
+            {/* ── Watchlist ── */}
             <label className="cs-field">
-              <span>Symbol</span>
-              <div className="cs-symbol-row">
-                <input
-                  type="text"
-                  value={symbol}
-                  onChange={e => setSymbol(e.target.value.toUpperCase())}
-                  placeholder="EURUSD"
-                  list="cs-symbol-list"
-                  required
-                />
-                <datalist id="cs-symbol-list">
-                  {COMMON_SYMBOLS.map(s => <option key={s} value={s} />)}
-                </datalist>
-              </div>
+              <span>Watchlist (symbols to trade)</span>
+              <select value={watchlistId} onChange={e => setWatchlistId(e.target.value)} required>
+                <option value="">— Select a watchlist —</option>
+                {watchlists.map(w => (
+                  <option key={w.id} value={w.id}>{w.name || w.label || w.id} ({w.symbolCount || w.symbols?.length || 0} symbols)</option>
+                ))}
+              </select>
+              <span className="cs-hint">The protocol scores all symbols in this watchlist. The trading strategy will trade whichever symbols pass the score threshold.</span>
             </label>
           </>
         )}
@@ -412,9 +411,9 @@ export default function CreateStrategyPage() {
             </label>
           </div>
           <label className="cs-field">
-            <span>Min Composite Score</span>
+            <span>Min Composite Score (% of protocol max)</span>
             <input type="number" value={minComposite} onChange={e => setMinComposite(e.target.value)} min="0" max="100" />
-            <span className="cs-hint">Only trade when composite score exceeds this threshold (0–100).</span>
+            <span className="cs-hint">Only trade when composite score exceeds this percentage of the protocol's maximum possible score. E.g., 60 means the protocol must score at least 60% of its theoretical max.</span>
           </label>
         </fieldset>
 

@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '../core/api/client';
 import './trading-strategies.css';
 
 const TRADING = '/api/trading/strategies';
@@ -112,6 +114,24 @@ export default function TradingStrategiesPage() {
       });
     return () => { cancelled = true; };
   }, []);
+
+  // Portfolio positions for cross-referencing
+  const portfolioQuery = useQuery({
+    queryKey: ['portfolio-for-strategies'],
+    queryFn: () => apiGet('/api/portfolio?source=mt5').catch(() => ({ positions: [] })),
+    refetchInterval: 60_000,
+  });
+  const positions = Array.isArray(portfolioQuery.data?.positions) ? portfolioQuery.data.positions : [];
+
+  // ── Compute position counts per symbol ──
+  const positionCountBySymbol = useMemo(() => {
+    const map = {};
+    for (const p of positions) {
+      const sym = (p.symbol || p.ticker || '').toUpperCase();
+      map[sym] = (map[sym] || 0) + 1;
+    }
+    return map;
+  }, [positions]);
 
   const selected = useMemo(() => {
     if (!selectedId) return null;
@@ -239,6 +259,7 @@ export default function TradingStrategiesPage() {
                   <th>Symbol</th>
                   <th>Name</th>
                   <th>TF</th>
+                  <th>Pos</th>
                   <th>SL / TP</th>
                   <th>Mode</th>
                   <th>Active</th>
@@ -254,6 +275,17 @@ export default function TradingStrategiesPage() {
                     <td className="ts-name">{s.symbol}</td>
                     <td className="ts-name-col">{s.name}</td>
                     <td>{s.timeframe}</td>
+                    <td>
+                      {(() => {
+                        const sym = (s.symbol || '').toUpperCase();
+                        const count = positionCountBySymbol[sym] || 0;
+                        return count > 0 ? (
+                          <span className="ts-chip ts-chip-ok" title={`${count} open position(s) for ${sym}`}>{count}</span>
+                        ) : (
+                          <span style={{ color: 'var(--ink-soft)' }}>—</span>
+                        );
+                      })()}
+                    </td>
                     <td>{s.slPct ?? '—'}% / {s.tpPct ?? '—'}%</td>
                     <td>{s.mode}</td>
                     <td onClick={e => e.stopPropagation()}>

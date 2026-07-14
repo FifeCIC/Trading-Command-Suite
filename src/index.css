@@ -24,6 +24,15 @@
 .left-rail          { view-transition-name: left-rail; }
 
 /* Disable transitions when user preference is off */
+
+/* ── Screen Options: hide page title / description ────────── */
+html[data-hide-page-title='true'] h1,
+html[data-hide-page-title='true'] .sb-header h1,
+html[data-hide-page-title='true'] .page-header h1 { display: none; }
+html[data-hide-page-subtitle='true'] .sb-subtitle,
+html[data-hide-page-subtitle='true'] .page-subtitle,
+html[data-hide-page-subtitle='true'] .po-subtitle { display: none; }
+
 :root[data-page-transitions='false'] .main-stage,
 :root[data-page-transitions='false'] .topbar,
 :root[data-page-transitions='false'] .left-rail {

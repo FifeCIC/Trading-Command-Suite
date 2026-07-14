@@ -177,3 +177,85 @@
   border-color: var(--notice-critical-border);
   color: var(--notice-critical-text);
 }
+
+/* ── Session cards (multi-factor) ── */
+.mc-sessions-panel { margin-bottom: 0.8rem; }
+.mc-section-hint { font-size: 0.7rem; color: var(--ink-soft); margin: -0.4rem 0 0.6rem; }
+.mc-sessions-grid {
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+
+.mc-session-card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 0.6rem 0.75rem;
+  transition: border-color 0.2s;
+}
+.mc-session-card.mc-session-live { border-color: #22c55e44; }
+.mc-session-card.mc-session-strongest { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 4%, var(--panel)); }
+
+.mc-session-card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.5rem; margin-bottom: 0.25rem;
+}
+.mc-session-card-left { display: flex; align-items: center; gap: 0.4rem; }
+.mc-session-region { font-size: 0.65rem; color: var(--ink-soft); background: var(--line); padding: 1px 6px; border-radius: 999px; }
+
+.mc-strongest-badge {
+  font-size: 0.65rem; font-weight: 700; color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+}
+
+.mc-session-time-row {
+  display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;
+  font-size: 0.74rem;
+}
+.mc-session-time { color: var(--ink-soft); }
+.mc-session-timer { font-size: 0.72rem; color: #22c55e; font-weight: 600; }
+.mc-session-timer.mc-next { color: #f59e0b; }
+
+/* ── Session indicators ── */
+.mc-session-indicators {
+  display: flex; gap: 0.5rem; flex-wrap: wrap;
+}
+.mc-indicator {
+  display: flex; flex-direction: column; gap: 0.1rem;
+  padding: 0.25rem 0.5rem; border-radius: 6px;
+  background: color-mix(in srgb, var(--line) 30%, transparent);
+  min-width: 56px; cursor: help;
+}
+.mc-ind-combined { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.mc-ind-label { font-size: 0.58rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
+.mc-ind-value { font-size: 0.78rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mc-ind-good { color: #22c55e; }
+.mc-ind-mid { color: #f59e0b; }
+.mc-ind-warn { color: #ef4444; }
+.mc-ind-none { color: var(--ink-soft); }
+.mc-ind-strength { font-size: 0.85rem; padding: 1px 3px; border-radius: 3px; }
+
+/* ── Verified checklist ── */
+.mc-checklist-panel { margin-bottom: 0.8rem; }
+.mc-checklist-summary { font-size: 0.65rem; font-weight: 400; margin-left: 0.5rem; display: inline-flex; gap: 0.4rem; }
+.mc-checklist-ok { color: #22c55e; }
+.mc-checklist-warn { color: #f59e0b; }
+
+.mc-checklist-item {
+  display: flex; align-items: baseline; gap: 0.35rem; flex-wrap: wrap;
+  padding: 0.3rem 0; font-size: 0.82rem; line-height: 1.4;
+  border-bottom: 1px solid var(--line);
+}
+.mc-checklist-item:last-child { border-bottom: none; }
+.mc-checklist-item.mc-warn { color: #f59e0b; }
+.mc-checklist-item.mc-check-pass .mc-checklist-icon { color: #22c55e; }
+.mc-checklist-item.mc-check-fail { color: #ef4444; font-weight: 600; }
+
+.mc-checklist-icon { flex-shrink: 0; width: 1.2em; text-align: center; }
+.mc-checklist-text { flex: 1; min-width: 0; }
+.mc-checklist-detail {
+  font-size: 0.65rem; padding: 1px 6px; border-radius: 999px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.mc-detail-ok { background: #22c55e15; color: #22c55e; }
+.mc-detail-fail { background: #ef444415; color: #ef4444; }
+
+.mc-empty-note { font-size: 0.78rem; color: var(--ink-soft); margin-top: 0.4rem; text-align: center; }

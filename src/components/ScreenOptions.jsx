@@ -232,6 +232,12 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   var hasGlobalSections = true; // always show global section
   var hasViewSections = registry && registry.sections.length > 0;
 
+  // Apply hide title/subtitle preferences to the document so CSS can respond
+  useEffect(function () {
+    document.documentElement.dataset.hidePageTitle = hidePageTitle ? 'true' : 'false';
+    document.documentElement.dataset.hidePageSubtitle = hidePageSubtitle ? 'true' : 'false';
+  }, [hidePageTitle, hidePageSubtitle]);
+
   return (
     <>
       {/* Sticky buttons */}

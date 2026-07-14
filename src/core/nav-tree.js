@@ -147,6 +147,7 @@ export const NAV_TREE = {
       { id: 'portfolio-lab', label: 'Portfolio Lab', icon: '🧪' },
       { id: 'timeline', label: 'Timeline (Lab)', icon: '📅' },
       { id: 'triple-screen', label: 'Triple-Screen Cockpit', icon: '🖥️' },
+      { id: 'hot-stock-picks', label: 'Hot Stock Picks', icon: '🔥' },
     ],
   },
   wizard: {

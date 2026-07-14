@@ -6,7 +6,6 @@
  */
 
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import DirectiveCard from './DirectiveCard'
 import './strategy-builder.css'
 
@@ -21,9 +20,6 @@ const CATEGORY_COLORS = {
 }
 
 export default function StrategyCanvas({ directives, weights, onWeightChange, onRemove, onReset, directivesMeta }) {
-  const navigate = useNavigate()
-  const [saveStatus, setSaveStatus] = useState(null)
-  const [strategyName, setStrategyName] = useState('')
   const [dragOver, setDragOver] = useState(false)
 
   const totalWeight = useMemo(
@@ -32,30 +28,6 @@ export default function StrategyCanvas({ directives, weights, onWeightChange, on
   )
   const isValid = totalWeight === 100
   const remaining = 100 - totalWeight
-
-  async function handleSave() {
-    if (directives.length === 0 || !strategyName.trim()) return
-    setSaveStatus('saving')
-    try {
-      const res = await fetch('/api/strategies', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: strategyName.trim(),
-          directives: directives.map((id) => ({ id, weight: weights[id] || 0 })),
-        }),
-      })
-      const data = await res.json()
-      if (data.success) {
-        setSaveStatus('saved')
-        setTimeout(() => setSaveStatus(null), 3000)
-      } else {
-        setSaveStatus('error')
-      }
-    } catch {
-      setSaveStatus('error')
-    }
-  }
 
   function handleDragOver(e) {
     e.preventDefault()
@@ -86,7 +58,7 @@ export default function StrategyCanvas({ directives, weights, onWeightChange, on
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Strategy metadata */}
+      {/* Protocol canvas header */}
       <div className="sb-canvas-header">
         <h3>Your Protocol</h3>
         <div className="sb-weight-summary">
@@ -96,14 +68,6 @@ export default function StrategyCanvas({ directives, weights, onWeightChange, on
           {!isValid && <span className="sb-weight-remaining">({remaining > 0 ? `add ${remaining}%` : `reduce ${Math.abs(remaining)}%`})</span>}
         </div>
       </div>
-
-      <input
-        type="text"
-        className="sb-strategy-name"
-        placeholder="Protocol name..."
-        value={strategyName}
-        onChange={(e) => setStrategyName(e.target.value)}
-      />
 
       {/* Dropped directives */}
       <div className="sb-canvas-directives">
@@ -130,29 +94,15 @@ export default function StrategyCanvas({ directives, weights, onWeightChange, on
         )}
       </div>
 
-      {/* Save button */}
+      {/* Canvas actions — save is handled by the parent Protocol Details form */}
       {directives.length > 0 && (
         <div className="sb-canvas-actions">
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={handleSave}
-            disabled={!isValid || !strategyName.trim() || saveStatus === 'saving'}
-          >
-            {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? '✓ Saved' : saveStatus === 'error' ? 'Error! Retry' : 'Save Strategy'}
-          </button>
-          <button type="button" className="btn" onClick={onReset}>
-            Reset
-          </button>
-          {directives.length > 0 && isValid && (
-            <button
-              type="button"
-              className="btn"
-              onClick={() => navigate(`/trading/strategy-builder`)}
-            >
-              View Strategies
-            </button>
+          {!isValid && (
+            <span className="sb-weight-hint">Set directive weights to total 100% before saving</span>
           )}
+          <button type="button" className="btn" onClick={onReset}>
+            Clear Canvas
+          </button>
         </div>
       )}
     </div>

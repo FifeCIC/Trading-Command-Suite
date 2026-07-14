@@ -10,7 +10,30 @@ import DirectiveCard from './DirectiveCard'
 import EmptyState from '../EmptyState'
 import './strategy-builder.css'
 
-const CATEGORY_ORDER = ['Momentum', 'Trend', 'Volatility', 'Participation', 'Pattern', 'Volume', 'Macro']
+// Preferred display order; any categories not listed here appear after, sorted alphabetically
+const CATEGORY_ORDER = [
+  'Core Technicals',
+  'Technical Analysis',
+  'Bearish Technical Analysis',
+  'Price Action & Momentum',
+  'Divergence Detection',
+  'Divergence Risk Gates',
+  'VWAP AND-Gate',
+  'VWAP Standard Deviation Bands',
+  'Gap Detection',
+  'MTF Alignment (Conservative)',
+  'MTF Composite (Weighted)',
+  'Exit Signals',
+  'Sentiment & Fundamentals',
+  'Sentiment & Macro Context',
+  'Market Context',
+  'Risk',
+  'Risk & Structural',
+  'Short-Side Risk & Structural',
+  'Position Risk',
+  'Position & Execution Risk',
+  'Other',
+]
 
 export default function DirectivePalette({ directives, onDragStart }) {
   const [search, setSearch] = useState('')
@@ -63,22 +86,31 @@ export default function DirectivePalette({ directives, onDragStart }) {
       />
 
       <div className="sb-palette-scroll">
-        {CATEGORY_ORDER.filter((c) => grouped[c]?.length).map((cat) => (
-          <div key={cat} className="sb-category-group">
-            <h4 className="sb-category-title">{cat}</h4>
-            <div className="sb-category-cards">
-              {grouped[cat].map((d) => (
-                <DirectiveCard
-                  key={d.id}
-                  directive={d}
-                  onDragStart={onDragStart}
-                  isBottomed={bottomIds.has(d.id)}
-                  onSendToBottom={() => sendToBottom(d.id)}
-                />
-              ))}
+        {/* Render categories in preferred order, then remaining alphabetically */}
+        {(() => {
+          const orderedCats = CATEGORY_ORDER.filter((c) => grouped[c]?.length);
+          const remainingCats = Object.keys(grouped)
+            .filter((c) => !CATEGORY_ORDER.includes(c) && c !== 'Uncategorized')
+            .sort();
+          const allCats = [...orderedCats, ...remainingCats];
+
+          return allCats.map((cat) => (
+            <div key={cat} className="sb-category-group">
+              <h4 className="sb-category-title">{cat}</h4>
+              <div className="sb-category-cards">
+                {grouped[cat].map((d) => (
+                  <DirectiveCard
+                    key={d.id}
+                    directive={d}
+                    onDragStart={onDragStart}
+                    isBottomed={bottomIds.has(d.id)}
+                    onSendToBottom={() => sendToBottom(d.id)}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ));
+        })()}
 
         {/* Remaining uncategorized */}
         {grouped['Uncategorized']?.length > 0 && (

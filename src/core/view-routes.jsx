@@ -136,6 +136,7 @@ import PreferenceLab from '../pages/PreferenceLab.jsx';
 import PerformanceLabPage from '../pages/PerformanceLabPage.jsx';
 import SnapshotReplayPage from '../pages/SnapshotReplayPage.jsx';
 import TripleScreenPage from '../pages/TripleScreenPage.jsx';
+import HotStockPicksPage from '../pages/HotStockPicksPage.jsx';
 import MetaStackDisplayPage from '../pages/MetaStackDisplayPage.jsx';
 import PortfolioLabPage from '../pages/PortfolioLabPage.jsx';
 import ScoringDebugLab from '../pages/ScoringDebugLab.jsx';
@@ -288,6 +289,7 @@ export const VIEW_COMPONENTS = {
   'performance-lab': PerformanceLabPage,
   'snapshot-replay': SnapshotReplayPage,
   'triple-screen': TripleScreenPage,
+  'hot-stock-picks': HotStockPicksPage,
   'metastack-display': MetaStackDisplayPage,
   'portfolio-lab': PortfolioLabPage,
   'scoring-debug-lab': ScoringDebugLab,

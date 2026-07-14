@@ -1,0 +1,226 @@
+/* Hot Stock Picks — /lab/hot-stock-picks */
+
+.hsp-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  color: var(--ink);
+}
+
+.hsp-header {
+  margin-bottom: 1.25rem;
+}
+
+.hsp-header h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.4rem;
+}
+
+.hsp-subtitle {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.hsp-refreshing {
+  color: var(--accent);
+  font-size: 0.78rem;
+  animation: hsp-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes hsp-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* ── Filters ── */
+
+.hsp-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.hsp-filter-chip {
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.hsp-filter-chip:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.hsp-filter-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #042f2e;
+}
+
+/* ── Grid ── */
+
+.hsp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+/* ── Card ── */
+
+.hsp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  text-decoration: none;
+  color: var(--ink);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  box-shadow: var(--shadow-card);
+}
+
+.hsp-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+.hsp-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hsp-rank {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.hsp-ticker {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.hsp-signal {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.hsp-signal-entry {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
+.hsp-signal-watch {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+.hsp-signal-neutral {
+  background: rgba(100, 116, 139, 0.12);
+  color: #94a3b8;
+}
+
+/* ── Score bar ── */
+
+.hsp-score-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hsp-score-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.hsp-score-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.hsp-score-high {
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+}
+
+.hsp-score-mid {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.hsp-score-low {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.hsp-score-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  min-width: 32px;
+  text-align: right;
+}
+
+/* ── Confidence / bias ── */
+
+.hsp-confidence {
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+}
+
+.hsp-bias {
+  color: var(--ink-soft);
+}
+
+/* ── Reasons ── */
+
+.hsp-reasons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.hsp-reason-tag {
+  font-size: 0.68rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink-soft);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+
+/* ── Footer ── */
+
+.hsp-footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.hsp-footer-note {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  opacity: 0.6;
+}

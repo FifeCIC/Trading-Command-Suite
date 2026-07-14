@@ -198,6 +198,8 @@ export default function DashboardPage() {
         activeView={null}
         isOpen={screenOptionsOpen}
         onToggle={() => setScreenOptionsOpen((v) => !v)}
+        isBookmarked={false}
+        onToggleBookmark={() => {}}
       />
     </div>
   );

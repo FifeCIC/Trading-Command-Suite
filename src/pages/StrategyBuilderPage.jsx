@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { apiGet, apiPost } from '../core/api/client'
@@ -7,6 +7,18 @@ import StarToggle from '../components/StarToggle'
 import DirectivePalette from '../components/StrategyBuilder/DirectivePalette'
 import StrategyCanvas from '../components/StrategyBuilder/StrategyCanvas'
 import '../components/StrategyBuilder/strategy-builder.css'
+
+// Heuristic: derive compatible symbol types from directive category
+function getCompatibleTypes(directive) {
+  const cat = (directive.category || '').toLowerCase();
+  const id = (directive.id || '').toLowerCase();
+  // Crypto-specific directives
+  if (cat.includes('crypto') || id.includes('crypto') || id.includes('btc')) return ['crypto'];
+  // Forex-specific directives
+  if (cat.includes('forex') || id.includes('forex') || id.includes('fx-')) return ['forex'];
+  // Most directives work for all symbol types
+  return ['stock', 'crypto', 'forex'];
+}
 
 export default function StrategyBuilderPage() {
   const [canvasIds, setCanvasIds] = useState([])
@@ -41,6 +53,36 @@ export default function StrategyBuilderPage() {
     staleTime: 30_000,
   })
   const savedStrategies = savedQuery.data?.strategies ?? []
+
+  // Fetch selected watchlist detail (for symbol type detection)
+  const watchlistDetailQuery = useQuery({
+    queryKey: ['watchlist-detail', selectedWatchlist],
+    queryFn: () => selectedWatchlist ? apiGet(`/api/watchlists/${selectedWatchlist}`).catch(() => null) : Promise.resolve(null),
+    staleTime: 60_000,
+    enabled: !!selectedWatchlist,
+  })
+  const watchlistSymbols = watchlistDetailQuery.data?.symbols ?? []
+
+  // Derive symbol types in the selected watchlist
+  const watchlistTypes = useMemo(() => {
+    if (!watchlistSymbols.length) return []
+    return [...new Set(watchlistSymbols.map(s => s.type).filter(Boolean))]
+  }, [watchlistSymbols])
+
+  // Check if any canvas directive is type-mismatched with the selected watchlist
+  const typeMismatches = useMemo(() => {
+    if (!watchlistTypes.length || !canvasIds.length) return []
+    return canvasIds.filter(id => {
+      const dir = directives.find(d => d.id === id)
+      if (!dir) return false
+      const compat = getCompatibleTypes(dir)
+      // Directive is mismatched if none of the watchlist types are compatible
+      return !watchlistTypes.some(t => compat.includes(t))
+    }).map(id => {
+      const dir = directives.find(d => d.id === id)
+      return { id, name: dir?.name || id, compat: getCompatibleTypes(dir || {}) }
+    })
+  }, [watchlistTypes, canvasIds, directives])
 
   // Save mutation
   const saveMutation = useMutation({
@@ -143,8 +185,26 @@ export default function StrategyBuilderPage() {
                 <option key={w.id} value={w.id}>{w.name} ({w.symbols?.length ?? 0} symbols)</option>
               ))}
             </select>
+            {watchlistTypes.length > 0 && (
+              <span className="sb-type-tags">
+                {watchlistTypes.map(t => (
+                  <span key={t} className={`sb-type-tag sb-type-${t}`}>{t}</span>
+                ))}
+              </span>
+            )}
           </label>
         </div>
+        {/* Type mismatch warning */}
+        {typeMismatches.length > 0 && (
+          <div className="sb-mismatch-warning">
+            ⚠️ These directives may not be compatible with the selected watchlist's symbol types ({watchlistTypes.join(', ')}):
+            <ul>
+              {typeMismatches.map(m => (
+                <li key={m.id}>{m.name} — compatible with: {m.compat.join(', ')}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className="sb-meta-row">
           <label>
             <span>Description</span>
