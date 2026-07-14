@@ -62,7 +62,7 @@ export class RsiOversoldDirective implements IDirective {
 
     const curling = currentRsi > previousRsi;
 
-    if (currentRsi >= OVERSOLD_THRESHOLD) {
+    if (currentRsi > OVERSOLD_THRESHOLD) {
       // Not oversold — score based on proximity to threshold
       const proximity = Math.max(0, 1 - (currentRsi - OVERSOLD_THRESHOLD) / 20);
       const score = proximity * 25;

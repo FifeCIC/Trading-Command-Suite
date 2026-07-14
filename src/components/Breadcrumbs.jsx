@@ -16,7 +16,7 @@ export default function Breadcrumbs() {
 
   return (
     <nav className="breadcrumbs" aria-label="Breadcrumb">
-      <Link to="/" className="breadcrumbs-pill">Home</Link>
+      <Link to="/dashboard" className="breadcrumbs-pill">Dashboard</Link>
       <Link to={`/${area}`} className="breadcrumbs-pill">{areaLabel}</Link>
       {view && (
         <span className="breadcrumbs-pill breadcrumbs-current">{viewLabel}</span>

@@ -51,6 +51,8 @@ export interface GatedScore {
   composite: number;
   signal: 'BUY' | 'HOLD' | 'SELL';
   subScores: Record<string, number>;
+  subRawTotals: Record<string, number>;
+  subMaxTotals: Record<string, number>;
   riskMultiplier: number;
   breakouts: Record<string, DirectiveBreakout[]>;
   gatingActive: boolean;
@@ -163,9 +165,11 @@ export class ProtocolGatingService {
     } as DirectiveInput;
 
     // Select protocol groups
+    const protocolConfig = protocolId ? PROTOCOL_REGISTRY[protocolId] : null;
     const activeGroups = protocolId
-      ? (PROTOCOL_REGISTRY[protocolId]?.groups ?? DIRECTIVE_GROUPS)
+      ? (protocolConfig?.groups ?? DIRECTIVE_GROUPS)
       : DIRECTIVE_GROUPS;
+    const directionMode = protocolConfig?.directionMode ?? 'LONG_ONLY';
 
     // 1. Run ALL directives
     const allResults = await this.directivesService.runAll(input);
@@ -179,37 +183,47 @@ export class ProtocolGatingService {
 
       for (const directiveId of group.directiveIds) {
         const result = allResults.get(directiveId);
-        if (result) {
-          groupResults.push(result);
-          // Get maxScore from the directive instance
-          const directive = this.directivesService.get(directiveId);
-          maxScores.set(directiveId, directive?.maxScore ?? 100);
-        }
+        if (!result) continue;
+        // Filter by directionBias: don't include opposite-direction directives
+        const directive = this.directivesService.get(directiveId);
+        const bias = directive?.directionBias ?? 'neutral';
+        if (directionMode === 'LONG_ONLY' && bias === 'bearish') continue;
+        if (directionMode === 'SHORT_ONLY' && bias === 'bullish') continue;
+        groupResults.push(result);
+        maxScores.set(directiveId, directive?.maxScore ?? 100);
       }
 
       groups.set(group.id, { results: groupResults, config: group, maxScores });
     }
 
-    // 3. Compute group sub-scores (normalized to 0-100 within group)
+    // 3. Compute group sub-scores (raw-total percentage of max possible)
+    // Each directive contributes its RAW score (not normalized to 0-100 first).
+    // Group score = (sum of raw scores / sum of maxScores) × 100.
+    // This preserves directive weight: a maxScore=180 directive naturally
+    // contributes more than a maxScore=90 one.
     const subScores: Record<string, number> = {};
+    const subRawTotals: Record<string, number> = {};
+    const subMaxTotals: Record<string, number> = {};
     const breakouts: Record<string, DirectiveBreakout[]> = {};
 
     for (const [groupId, { results, config, maxScores }] of groups) {
       breakouts[groupId] = [];
 
       if (results.length === 0) {
-        subScores[groupId] = 50; // Neutral default when no directives match
+        subScores[groupId] = 0; // No active directives = no contribution
+        subRawTotals[groupId] = 0;
+        subMaxTotals[groupId] = 0;
         continue;
       }
 
-      // Normalize each directive score to 0-100 based on its maxScore
-      const normalized: number[] = [];
+      let rawSum = 0;
+      let maxSum = 0;
+
       for (const result of results) {
-        // Find the directive ID by matching result in allResults
         const directiveId = this.findDirectiveId(allResults, result);
         const maxScore = directiveId ? (maxScores.get(directiveId) ?? 100) : 100;
-        const normalizedScore = maxScore > 0 ? (result.score / maxScore) * 100 : 0;
-        normalized.push(normalizedScore);
+        rawSum += result.score;
+        maxSum += maxScore;
 
         const directive = directiveId ? this.directivesService.get(directiveId) : null;
 
@@ -218,16 +232,18 @@ export class ProtocolGatingService {
           name: directive?.name ?? directiveId ?? 'Unknown',
           score: result.score,
           maxScore,
-          normalizedScore: Math.round(normalizedScore),
+          normalizedScore: maxScore > 0 ? Math.round((result.score / maxScore) * 100) : 0,
           signalClass: result.signalClass ?? 'neutral',
           reason: result.reason,
           groupId,
         });
       }
 
-      // Group score = average of normalized directive scores
-      const avg = normalized.reduce((a, b) => a + b, 0) / normalized.length;
-      subScores[groupId] = Math.round(avg);
+      // Group percentage = sum of raw scores / sum of maxScores × 100
+      const groupPct = maxSum > 0 ? (rawSum / maxSum) * 100 : 0;
+      subScores[groupId] = Math.round(groupPct);
+      subRawTotals[groupId] = rawSum;
+      subMaxTotals[groupId] = maxSum;
     }
 
     // 4. Apply tiered risk gating via RiskGatingEngine
@@ -239,20 +255,29 @@ export class ProtocolGatingService {
       reason: b.reason,
     }));
 
-    const rawBeforeRisk = (subScores['technical'] ?? 50) * 0.40 + (subScores['sentiment'] ?? 50) * 0.35;
+    // Default to 0 for non-risk groups — no active directives = no contribution
+    const rawBeforeRisk = (subScores['technical'] ?? 0) * 0.40 + (subScores['sentiment'] ?? 0) * 0.35;
     const riskResult = this.riskEngine.apply(rawBeforeRisk, riskDirectives);
 
     const composite = riskResult.hardGateTriggered
       ? 0
       : Math.round(Math.max(0, Math.min(100, riskResult.finalScore)));
 
-    const signal: 'BUY' | 'HOLD' | 'SELL' =
-      composite >= ENTRY_THRESHOLD ? 'BUY' : composite >= HOLD_FLOOR ? 'HOLD' : 'SELL';
+    // directionMode is extracted earlier — see protocol selection above
+    let signal: 'BUY' | 'HOLD' | 'SELL';
+    if (composite >= ENTRY_THRESHOLD) {
+      signal = 'BUY';
+    } else if (composite >= HOLD_FLOOR) {
+      signal = 'HOLD';
+    } else {
+      // Low composite: directionMode determines HOLD vs SELL
+      signal = directionMode === 'LONG_ONLY' ? 'HOLD' : 'SELL';
+    }
 
     // Meta: show what additive would have given
-    const riskScore = subScores['risk'] ?? 50;
+    const riskScore = subScores['risk'] ?? 50; // 50 = neutral risk baseline
     const additiveEquivalent = Math.round(
-      ((subScores['technical'] ?? 50) + (subScores['sentiment'] ?? 50) + riskScore) / 3,
+      ((subScores['technical'] ?? 0) + (subScores['sentiment'] ?? 0) + riskScore) / 3,
     );
 
     // Rarity: compute percentile against historical scores for this protocol
@@ -266,6 +291,8 @@ export class ProtocolGatingService {
       composite,
       signal,
       subScores,
+      subRawTotals,
+      subMaxTotals,
       riskMultiplier: Number(riskResult.multiplier),
       breakouts,
       gatingActive: true,

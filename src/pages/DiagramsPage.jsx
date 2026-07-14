@@ -948,24 +948,28 @@ const DIAGRAMS = [
   {
     id: 'metastack-product',
     label: 'M.E.T.A. Product Hierarchy',
-    desc: 'Trading Command Suite delivers SEES signals layered into M.E.T.A. (Modular Expert Trading Architecture) for complete trading automation. Each MetaStack combines watchlist, protocol, scoring strategy, and trading strategy into a rateable unit.',
+    desc: 'Trading Command Suite delivers SEES signals layered into M.E.T.A. (Modular Expert Trading Architecture). Each protocol now has dedicated LONG and SHORT variants — direction is encoded in protocol selection, not an API parameter.',
     code: `flowchart TB
     subgraph TCS["Trading Command Suite"]
         direction TB
         subgraph SEES["SEES — Signal Engine"]
-            A["99+ Directives<br/>Technical · Sentiment · Macro · Seasonal"]
-            B["32 Protocols<br/>Grouped directives for specific strategies"]
+            A["99+ Directives<br/>6 with directionBias<br/>bullish | bearish | neutral"]
+            B["32 Protocols<br/>Each with directionMode:<br/>LONG_ONLY | SHORT_ONLY | BOTH"]
             C["Ranked Symbol Output<br/>Composite scores 0-100"]
             A --> B --> C
         end
         subgraph MS["M.E.T.A. — Modular Expert Trading Architecture"]
-            direction LR
+            direction TB
+            subgraph ProtocolPair["Protocol Pair (LONG + SHORT)"]
+                PL["🟢 LONG Protocol<br/>e.g. built-in-default<br/>directionMode: LONG_ONLY"]
+                PS["🔴 SHORT Protocol<br/>e.g. built-in-short<br/>directionMode: SHORT_ONLY"]
+            end
             D["📋 Watchlist<br/>What to trade"]
-            E["⚙️ Protocol<br/>How to score it"]
-            F["🎯 Scoring Strategy<br/>Thresholds + Risk Params"]
-            G["📊 Trading Strategy<br/>Execution Rules"]
-            H["⭐ Performance Rating<br/>★★★★★"]
-            D --> E --> F --> G --> H
+            E["🎯 Scoring Strategy<br/>Thresholds + Risk Params<br/>shortProtocolId for dual-direction"]
+            F["📊 Trading Strategy<br/>Execution Rules<br/>Auto-selects LONG vs SHORT"]
+            G["⭐ Performance Rating<br/>★★★★★ per MetaStack"]
+            D --> ProtocolPair
+            ProtocolPair --> E --> F --> G
         end
         C --> MS
     end
@@ -973,14 +977,16 @@ const DIAGRAMS = [
     style TCS fill:#0d1117,stroke:#3b82f6,color:#e5e7eb
     style SEES fill:#111827,stroke:#22c55e,color:#e5e7eb
     style MS fill:#111827,stroke:#f59e0b,color:#e5e7eb
+    style ProtocolPair fill:#1a1a2e,stroke:#8b5cf6,color:#e5e7eb
     style A fill:#1e3a5f,color:#e5e7eb
     style B fill:#1e3a5f,color:#e5e7eb
     style C fill:#1e3a5f,color:#e5e7eb
+    style PL fill:#22c55e,color:#000
+    style PS fill:#ef4444,color:#fff
     style D fill:#5c3d0e,color:#e5e7eb
     style E fill:#5c3d0e,color:#e5e7eb
     style F fill:#5c3d0e,color:#e5e7eb
-    style G fill:#5c3d0e,color:#e5e7eb
-    style H fill:#f59e0b,color:#000`,
+    style G fill:#f59e0b,color:#000`,
   },
 
   {
@@ -1109,15 +1115,15 @@ const DIAGRAMS = [
   {
     id: 'metastack-lifecycle',
     label: 'MetaStack Lifecycle',
-    desc: 'A MetaStack from creation to rating to iteration. Components can change at any point — fingerprints track when the configuration that produced results no longer matches.',
+    desc: 'A MetaStack from creation to rating to iteration. Dual-protocol (LONG + SHORT) scoring determines trade direction automatically. Fingerprints track when configuration drifts.',
     code: `flowchart TD
-    A["✨ Create MetaStack<br/>Name + watchlist + protocol<br/>+ scoring + trading params"] --> B["🔬 Test Phase<br/>Manual trading via<br/>Speed Scanner"]
-    B --> C["🤖 Automation Phase<br/>ScoringStrategy enabled<br/>in automation loop"]
+    A["✨ Create MetaStack<br/>Name + watchlist + protocol<br/>+ shortProtocolId + scoring + trading"] --> B["🔬 Test Phase<br/>Manual LONG/SHORT trading<br/>via Speed Scanner"]
+    B --> C["🤖 Automation Phase<br/>ScoringStrategy enabled<br/>Dual-protocol: LONG vs SHORT"]
     C --> D["📊 Data Collection<br/>Trades accumulate<br/>scoringStrategyId recorded"]
     D --> E["⭐ Rating Computed<br/>GET /api/scoring/<br/>metastacks/ratings"]
     E --> F{"Satisfied with<br/>performance?"}
     F -->|yes| G["✅ Keep Running<br/>Monitor fingerprint<br/>for drift"]
-    F -->|no| H["🔧 Tweak Parameters<br/>Adjust SL%, threshold,<br/>or swap protocols"]
+    F -->|no| H["🔧 Tweak Parameters<br/>Adjust SL%, threshold,<br/>swap LONG/SHORT protocols"]
     H --> I{"Fingerprint<br/>changed?"}
     I -->|yes| J["⚠️ New fingerprint<br/>Performance history<br/>may not apply"]
     I -->|no| K["Same config<br/>Continue collecting<br/>data"]
@@ -1138,6 +1144,82 @@ const DIAGRAMS = [
     style J fill:#ef4444,color:#fff
     style K fill:#22c55e,color:#000
     style L fill:#3b82f6,color:#fff`,
+  },
+
+  {
+    id: 'protocol-direction',
+    label: 'Protocol Direction Architecture',
+    desc: 'Protocols encode trading direction via directionMode (LONG_ONLY | SHORT_ONLY | BOTH). The automation loop compares LONG vs SHORT scores to determine trade direction. No direction query parameter — direction is selected by choosing the right protocol.',
+    code: `flowchart TB
+    subgraph Registry["PROTOCOL_REGISTRY"]
+        direction LR
+        R1["built-in-default<br/>directionMode: LONG_ONLY<br/>groups: DIRECTIVE_GROUPS"]
+        R2["built-in-short<br/>directionMode: SHORT_ONLY<br/>groups: SHORT_DIRECTIVE_GROUPS"]
+        R3["mt5-technical-core-v1<br/>directionMode: LONG_ONLY"]
+        R4["mt5-technical-short<br/>directionMode: SHORT_ONLY"]
+    end
+
+    subgraph Directives["Directive Filtering (protocol-gating.service.ts)"]
+        D1["6 directives with directionBias"]
+        D2["bullish (4): momentum-exhaustion, target-achieved, volume-surge, vwap"]
+        D3["bearish (2): cci, williams-r"]
+        D4["LONG_ONLY: exclude bearish directives"]
+        D5["SHORT_ONLY: exclude bullish directives"]
+        D1 --> D2
+        D1 --> D3
+        D2 --> D5
+        D3 --> D4
+    end
+
+    subgraph Scoring["ScoringStrategy (DB)"]
+        S1["protocolId: 'built-in-default'"]
+        S2["shortProtocolId: 'built-in-short'"]
+        S3["Dual-protocol scoring in automation loop"]
+        S1 --> S3
+        S2 --> S3
+    end
+
+    subgraph Decision["Trade Direction Decision"]
+        T1["Score with LONG protocol"]
+        T2["Score with SHORT protocol"]
+        T3{"longScore > shortScore<br/>AND above threshold?"}        
+        T4["🟢 BUY signal"]
+        T5{"shortScore > longScore<br/>AND above threshold?"}
+        T6["🔴 SELL signal"]
+        T7["⚪ HOLD — both below threshold"]
+        T1 --> T3
+        T2 --> T5
+        T3 -->|yes| T4
+        T3 -->|no| T5
+        T5 -->|yes| T6
+        T5 -->|no| T7
+    end
+
+    Registry --> Directives --> Scoring --> Decision
+
+    style Registry fill:#1e3a5f,stroke:#3b82f6,color:#e5e7eb
+    style Directives fill:#1a1a2e,stroke:#8b5cf6,color:#e5e7eb
+    style Scoring fill:#1a1a2e,stroke:#6366f1,color:#e5e7eb
+    style Decision fill:#1a1a2e,stroke:#f59e0b,color:#e5e7eb
+    style R1 fill:#22c55e,color:#000
+    style R2 fill:#ef4444,color:#fff
+    style R3 fill:#22c55e,color:#000
+    style R4 fill:#ef4444,color:#fff
+    style D1 fill:#7c3aed,color:#fff
+    style D2 fill:#22c55e,color:#000
+    style D3 fill:#ef4444,color:#fff
+    style D4 fill:#475569,color:#e5e7eb
+    style D5 fill:#475569,color:#e5e7eb
+    style S1 fill:#22c55e,color:#000
+    style S2 fill:#ef4444,color:#fff
+    style S3 fill:#6366f1,color:#fff
+    style T1 fill:#22c55e,color:#000
+    style T2 fill:#ef4444,color:#fff
+    style T3 fill:#f59e0b,color:#000
+    style T4 fill:#22c55e,color:#000
+    style T5 fill:#f59e0b,color:#000
+    style T6 fill:#ef4444,color:#fff
+    style T7 fill:#64748b,color:#fff`,
   },
 ];
 
@@ -1165,7 +1247,7 @@ export default function DiagramsPage() {
       <div className="pf-header">
         <div>
           <h1>System Diagrams</h1>
-          <p className="pf-hint" style={{ margin: '0.25rem 0 0' }}>Architecture and workflow diagrams for the Trading Command Suite. 25 diagrams covering all major subsystems.</p>
+          <p className="pf-hint" style={{ margin: '0.25rem 0 0' }}>Architecture and workflow diagrams for the Trading Command Suite. 26 diagrams covering all major subsystems.</p>
           <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
             <a href="/builder/architecture-framework" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '2px 8px', border: '1px solid var(--line)', borderRadius: 4 }}>⬡ Architecture Framework</a>
             <a href="/status/capability-map" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '2px 8px', border: '1px solid var(--line)', borderRadius: 4 }}>🗺️ Capability Map</a>

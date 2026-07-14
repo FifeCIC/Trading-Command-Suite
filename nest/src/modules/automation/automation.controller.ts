@@ -359,15 +359,17 @@ export class AutomationController {
   /** POST /api/automation/scoring-strategies */
   @Post('scoring-strategies')
   async addScoringStrategy(@Body() body: {
-    name: string; protocolId: string; watchlistName: string;
-    brokerId: string; mode?: string; tradeThreshold?: number;
-    baseSize?: number; slPct?: number; tpPct?: number;
+    name: string; protocolId: string; shortProtocolId?: string;
+    watchlistName: string; brokerId: string; mode?: string;
+    tradeThreshold?: number; baseSize?: number;
+    slPct?: number; tpPct?: number;
   }) {
     const id = `ss-${Date.now()}`;
     const strat = {
       id,
       name: body.name,
       protocolId: body.protocolId,
+      shortProtocolId: body.shortProtocolId ?? undefined,
       watchlistName: body.watchlistName,
       brokerId: body.brokerId || 'mt5',
       mode: (body.mode as any) || 'manual',

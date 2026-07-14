@@ -91,8 +91,7 @@ function CFDPosition({ pos, index, onClose, isClosing }) {
             {isClosing ? '⌛ Closing...' : '✕ Close'}
           </button>
         )}
-        <a className="pm-nav-link" href={`/analysis/analyse-symbol?symbol=${pos.symbol}`} target="_blank" rel="noopener">🔍 Analyse</a>
-        <a className="pm-nav-link" href={`/trading/chart-comparison?symbol=${pos.symbol}`} target="_blank" rel="noopener">📈 Chart</a>
+        <a className="pm-nav-link" href={`/research/symbol/${pos.symbol}`}>🔍 Details</a>
       </div>
     </motion.div>
   );
@@ -195,17 +194,22 @@ export default function PositionsMonitorPage() {
     queryKey: ['mt5-positions'],
     queryFn: () => apiGet('/api/trading/mt5/positions')
       .then(data => ({ positions: Array.isArray(data) ? data : (data?.positions || []) }))
-      .catch(() => ({ positions: [] })),
-    staleTime: 10000,
+      .catch(() => null),
+    staleTime: 15000,
     refetchInterval: 30000,
+    retry: 2,
+    placeholderData: (prev) => prev,
   });
 
   // Trading212 portfolio
   const t212Query = useQuery({
     queryKey: ['t212-portfolio-positions'],
-    queryFn: () => apiGet('/api/portfolio?source=trading212').catch(() => ({ positions: [] })),
-    staleTime: 15000,
-    refetchInterval: 60000,
+    queryFn: () => apiGet('/api/portfolio?source=trading212').catch(() => null),
+    staleTime: 30000,
+    refetchInterval: 120000,
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
+    placeholderData: (prev) => prev,
   });
 
   // Close mutation
@@ -274,7 +278,7 @@ export default function PositionsMonitorPage() {
     riskPct: Math.abs(p.pnlPct || 0),
     allocation: p.allocation ? p.allocation * 100 : null,
     ticket: p.ticker || p.symbol,
-    source: 'Trading212',
+    source: p.accountType === 'DEMO' ? 'T212 Demo' : 'Trading212',
     currentPrice: p.currentPrice,
     avgCost: p.avgCost,
   })), [t212Query.data]);
@@ -286,7 +290,7 @@ export default function PositionsMonitorPage() {
   const filteredPositions = useMemo(() => {
     let list = sourceFilter === 'all'
       ? allPositions
-      : allPositions.filter((p) => p.source.toLowerCase() === sourceFilter.toLowerCase());
+      : allPositions.filter((p) => p.source.toLowerCase().includes(sourceFilter.toLowerCase()));
     return [...list].sort(sortFn);
   }, [allPositions, sourceFilter, sortFn]);
 
@@ -303,6 +307,13 @@ export default function PositionsMonitorPage() {
 
       {/* Portfolio Summary Banner */}
       <SummaryBanner positions={allPositions} />
+
+      {/* T212 rate-limit / fetch warning */}
+      {t212Query.data === null && !t212Query.isLoading && (
+        <div className="pm-warning-banner">
+          ⚠️ Trading212 data unavailable — API may be rate-limited. Showing cached MT5 data.
+        </div>
+      )}
 
       <div className="pm-tabs">
         <button className={`pm-tab ${tab === 'cfd' ? 'pm-active' : ''}`} onClick={() => setTab('cfd')}>Positions</button>

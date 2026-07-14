@@ -17,6 +17,7 @@ export class VwapDirective implements IDirective {
   readonly id = 'vwap';
   readonly name = 'VWAP';
   readonly description = 'Price relative to VWAP. Above = bullish intraday sentiment, below = bearish.';
+  readonly directionBias = 'bullish' as const;
 
   readonly priority = 50;
   readonly maxScore = 100;

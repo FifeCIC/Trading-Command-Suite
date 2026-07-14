@@ -143,6 +143,8 @@ export class ProtocolGatingController {
         composite: 50,
         signal: 'HOLD',
         subScores: { technical: 50, sentiment: 50, risk: 50 },
+        subRawTotals: {},
+        subMaxTotals: {},
         riskMultiplier: 0.5,
         breakouts: {},
         gatingActive: false,

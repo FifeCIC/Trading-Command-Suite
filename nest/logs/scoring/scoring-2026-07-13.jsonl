@@ -33,3 +33,16 @@
 {"timestamp":"2026-07-13T01:49:17.246Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":419}}
 {"timestamp":"2026-07-13T01:54:17.278Z","category":"scoring_run","level":"info","message":"1 symbols scored (avg 2523.0)","data":{"symbolsScored":1,"avgScore":2523,"topSymbol":"XAUUSD","topScore":2523,"durationMs":449}}
 {"timestamp":"2026-07-13T01:54:17.278Z","category":"signal","level":"info","message":"XAUUSD: defensive @ 2523 (50%)","data":{"symbol":"XAUUSD","composite":2523,"signal":"defensive","confidence":50}}
+{"timestamp":"2026-07-13T23:42:55.828Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":552}}
+{"timestamp":"2026-07-13T23:43:45.470Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":565}}
+{"timestamp":"2026-07-13T23:43:56.248Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":409}}
+{"timestamp":"2026-07-13T23:44:05.099Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":402}}
+{"timestamp":"2026-07-13T23:44:31.517Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":419}}
+{"timestamp":"2026-07-13T23:44:39.620Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":756}}
+{"timestamp":"2026-07-13T23:44:48.502Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":461}}
+{"timestamp":"2026-07-13T23:45:05.157Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":404}}
+{"timestamp":"2026-07-13T23:47:59.074Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":486}}
+{"timestamp":"2026-07-13T23:48:08.369Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":416}}
+{"timestamp":"2026-07-13T23:48:37.714Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":418}}
+{"timestamp":"2026-07-13T23:52:43.627Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":403}}
+{"timestamp":"2026-07-13T23:57:43.668Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":434}}

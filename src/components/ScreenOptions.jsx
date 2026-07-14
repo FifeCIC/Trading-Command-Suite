@@ -41,6 +41,24 @@ var GLOBAL_PREFERENCES = [
       { value: 'expert', label: 'Expert', desc: 'All features unlocked — advanced configuration and raw data access' },
     ],
   },
+  {
+    id: 'hidePageTitle',
+    label: 'Page Title',
+    description: 'Show or hide the main heading on each page.',
+    type: 'checkbox',
+    key: 'tcs:preferences',
+    field: 'hidePageTitle',
+    defaultValue: false,
+  },
+  {
+    id: 'hidePageSubtitle',
+    label: 'Page Description',
+    description: 'Show or hide the subtitle/description under the page heading.',
+    type: 'checkbox',
+    key: 'tcs:preferences',
+    field: 'hidePageSubtitle',
+    defaultValue: false,
+  },
 ];
 
 /** Registry of option definitions keyed by view ID */
@@ -156,6 +174,8 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   // Read current global preference values
   var displayMode = prefs.displayMode || 'focused';
   var experienceLevel = prefs.experienceLevel || 'beginner';
+  var hidePageTitle = prefs.hidePageTitle === true;
+  var hidePageSubtitle = prefs.hidePageSubtitle === true;
 
   // Read view-specific values from localStorage
   var [values, setValues] = useState(function () {
@@ -208,7 +228,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   }, [isOpen, onToggle]);
 
   // Build global section state for rendering
-  var globalValueMap = { displayMode: displayMode, experienceLevel: experienceLevel };
+  var globalValueMap = { displayMode: displayMode, experienceLevel: experienceLevel, hidePageTitle: hidePageTitle, hidePageSubtitle: hidePageSubtitle };
   var hasGlobalSections = true; // always show global section
   var hasViewSections = registry && registry.sections.length > 0;
 
@@ -297,6 +317,16 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                               );
                             })}
                           </div>
+                        )}
+                        {section.type === 'checkbox' && (
+                          <label className="so-checkbox-option">
+                            <input
+                              type="checkbox"
+                              checked={globalValueMap[section.field] === true}
+                              onChange={function (e) { handleGlobalChange(section.field, e.target.checked); }}
+                            />
+                            <span>{section.description || section.label}</span>
+                          </label>
                         )}
                       </div>
                     );

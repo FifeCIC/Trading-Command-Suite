@@ -11,7 +11,7 @@
  * Token budget: ~23K (vs ~38K for full Architecture Framework)
  * 
  * @generated — extracted from architecture-framework.data.js
- * @updated 2026-07-09
+ * @updated 2026-07-14
  */
 export const STATUS_SNAPSHOT = [
   'This page is the implementation front door for architecture-sensitive work.',
@@ -194,11 +194,15 @@ export const CURRENT_SLICE = [
   'Phase Restructure — Phase 1: Core Engine, Phase 2: Backtesting & Social Proof, Phase 3: Public Launch. 15 issues deferred to phase-3. 11 backtest issues labeled phase-2. Strategy: Build → Prove → Launch.',
   // ── Sprint 2026-07-09 — MetaStack System ──
   'M.E.T.A. Rating Engine (Modular Expert Trading Architecture) — Rates each MetaStack (watchlist + protocol + scoring strategy + trading strategy) by actual trade outcomes. Computes effectiveness rate (PnL/hour), profit factor, win rate, max drawdown, and a composite 0-100 rating with star bands (Elite/Strong/Average/Weak/Untested). Ratings normalize for runtime so a strategy that made $500 in 2 hours outranks one that made $1000 in 50 hours.',
-  'M.E.T.A. Configuration Signature — Each MetaStack gets a SHA-256 hash of its component state (protocol, watchlist symbols, broker, thresholds, SL/TP). When any component changes, the signature changes — the UI warns users that performance history may not reflect the current configuration. GET /api/scoring/metastacks/:id/fingerprint returns current signature and change status.',
+  'M.E.T.A. Configuration Signature — Each MetaStack gets a SHA-256 hash of its component state (protocol, shortProtocolId, watchlist symbols, broker, thresholds, SL/TP). When any component changes, the signature changes — the UI warns users that performance history may not reflect the current configuration. GET /api/scoring/metastacks/:id/fingerprint returns current signature and change status.',
+  // ── Sprint 2026-07-14 — Protocol Direction Architecture ──
+  'Protocol Direction Mode — directionMode field on PROTOCOL_REGISTRY entries: LONG_ONLY | SHORT_ONLY | BOTH. Each protocol declares its trading direction at the registry level. 3 SHORT_ONLY protocols: default-short, built-in-short, mt5-technical-short. SHORT_ONLY protocols use SHORT_DIRECTIVE_GROUPS (bearish-technical, bearish-sentiment, short-risk). LONG_ONLY is the implicit default for all other protocols.',
+  'Directive Direction Bias — 6 directives carry directionBias: 4 bullish (momentum-exhaustion, target-achieved, volume-surge, vwap), 2 bearish (cci, williams-r). LONG_ONLY protocols exclude bearish directives; SHORT_ONLY protocols exclude bullish directives. Neutral directives run in both.',
+  'Dual-Protocol Scoring — ScoringStrategy.shortProtocolId enables dual-direction scoring in the automation loop. The loop scores with both LONG and SHORT protocols, compares scores, and auto-selects the winning direction (BUY vs SELL). If both scores are below threshold, result is HOLD.',
 ]
 
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-09'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-14'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {

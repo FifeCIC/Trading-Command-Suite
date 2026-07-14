@@ -88,7 +88,7 @@ export default function StrategyCanvas({ directives, weights, onWeightChange, on
     >
       {/* Strategy metadata */}
       <div className="sb-canvas-header">
-        <h3>Your Strategy</h3>
+        <h3>Your Protocol</h3>
         <div className="sb-weight-summary">
           <span className={isValid ? 'sb-weight-ok' : 'sb-weight-warn'}>
             {totalWeight}/100
@@ -110,7 +110,7 @@ export default function StrategyCanvas({ directives, weights, onWeightChange, on
         {directives.length === 0 ? (
           <div className="sb-drop-placeholder">
             <span className="sb-drop-icon">⬇</span>
-            <p>Drag directives here to build your strategy</p>
+            <p>Drag directives here to build your protocol</p>
             <p className="sb-hint">Tip: search & filter in the palette, then drag cards across</p>
           </div>
         ) : (

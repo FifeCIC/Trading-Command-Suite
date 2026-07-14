@@ -440,11 +440,17 @@ export class DirectivesService {
    */
   async getRecentScores(limit = 200) {
     if (!this.prisma.isAvailable) return [];
-    return this.prisma.score.findMany({
-      orderBy: { timestamp: 'desc' },
-      take: limit,
-      select: { breakdown: true, strategyId: true, timestamp: true },
-    });
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Score query timed out')), 5000),
+    );
+    return Promise.race([
+      this.prisma.score.findMany({
+        orderBy: { timestamp: 'desc' },
+        take: limit,
+        select: { breakdown: true, strategyId: true, timestamp: true },
+      }),
+      timeout,
+    ]);
   }
 
   /**

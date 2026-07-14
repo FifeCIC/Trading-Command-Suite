@@ -24,6 +24,7 @@ export class CciDirective implements IDirective {
   readonly id = 'cci';
   readonly name = 'Commodity Channel Index';
   readonly description = 'Measures price vs statistical mean. CCI < -100 = oversold bounce. CCI > 100 = overbought.';
+  readonly directionBias = 'bearish' as const;
 
   readonly priority = 50;
   readonly maxScore = 100;

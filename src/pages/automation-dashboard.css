@@ -63,7 +63,7 @@
 
 /* Grid */
 .ad-grid {
-  display: grid; grid-template-columns: 3fr 2fr; gap: 1rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
   min-width: 0;
 }
 @media (max-width: 900px) { .ad-grid { grid-template-columns: 1fr; } }

@@ -14,18 +14,25 @@ export default function StrategyBuilderPage() {
   // Strategy metadata
   const [strategyName, setStrategyName] = useState('')
   const [description, setDescription] = useState('')
-  const [goals, setGoals] = useState('')
-  const [symbolFocus, setSymbolFocus] = useState('')
+  const [selectedWatchlist, setSelectedWatchlist] = useState('')
   const [savedMsg, setSavedMsg] = useState('')
   const [metaOpen, setMetaOpen] = useState(true)
 
   // Fetch directives from live API
   const directivesQuery = useQuery({
     queryKey: ['directives'],
-    queryFn: () => apiGet('/api/directives'),
+    queryFn: () => apiGet('/api/directives').catch(() => []),
     staleTime: 60_000,
   })
   const directives = directivesQuery.data ?? []
+
+  // Fetch watchlists for the selector
+  const watchlistsQuery = useQuery({
+    queryKey: ['watchlists'],
+    queryFn: () => apiGet('/api/watchlists').catch(() => ({ watchlists: [] })),
+    staleTime: 30_000,
+  })
+  const watchlists = watchlistsQuery.data?.watchlists ?? []
 
   // Fetch saved strategies
   const savedQuery = useQuery({
@@ -38,10 +45,9 @@ export default function StrategyBuilderPage() {
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: () => apiPost('/api/strategies', {
-      name: strategyName || 'Untitled Strategy',
+      name: strategyName || 'Untitled Protocol',
       description,
-      goals,
-      symbolFocus: symbolFocus ? symbolFocus.split(',').map(s => s.trim()).filter(Boolean) : [],
+      watchlistId: selectedWatchlist || null,
       directives: canvasIds.map(id => ({ id, weight: weights[id] || 10 })),
     }),
     onSuccess: () => {
@@ -98,8 +104,8 @@ export default function StrategyBuilderPage() {
   return (
     <div className="sb-page">
       <header className="sb-header">
-        <h1>Strategy Builder</h1>
-        <Link to="/scoring/strategy-wizard" style={{ fontSize: '0.8rem', color: 'var(--accent, #0ea5a6)' }}>🧙 Try the Strategy Wizard →</Link>
+        <h1>Protocol Builder</h1>
+        <p className="sb-subtitle" style={{fontSize:'0.82rem',color:'var(--ink-soft)',margin:'0.2rem 0 0'}}>Create a protocol by selecting directives from the palette. Protocols define WHAT to score — individual directives contribute evidence. Note: some directives are symbol-type-specific — ensure your chosen symbols match.</p>
       </header>
 
       {/* Collapsible metadata form toggle */}
@@ -109,14 +115,14 @@ export default function StrategyBuilderPage() {
         onClick={() => setMetaOpen((v) => !v)}
       >
         <span className={`sb-meta-toggle-arrow${metaOpen ? ' sb-meta-toggle-arrow--open' : ''}`}>▶</span>
-        Strategy Details {metaOpen ? '' : '(hidden)'}
+        Protocol Details {metaOpen ? '' : '(hidden)'}
       </button>
 
       {/* Strategy metadata form */}
       <div className={`sb-meta-form${metaOpen ? '' : ' sb-meta-form--collapsed'}`}>
         <div className="sb-meta-row">
           <label>
-            <span>Strategy Name</span>
+            <span>Protocol Name</span>
             <input
               type="text"
               value={strategyName}
@@ -126,14 +132,17 @@ export default function StrategyBuilderPage() {
             />
           </label>
           <label>
-            <span>Symbol Focus (comma-separated)</span>
-            <input
-              type="text"
-              value={symbolFocus}
-              onChange={(e) => setSymbolFocus(e.target.value)}
-              placeholder="e.g., NVDA, AAPL, TSLA"
+            <span>Watchlist</span>
+            <select
+              value={selectedWatchlist}
+              onChange={(e) => setSelectedWatchlist(e.target.value)}
               className="sb-input"
-            />
+            >
+              <option value="">— All active symbols —</option>
+              {watchlists.map((w) => (
+                <option key={w.id} value={w.id}>{w.name} ({w.symbols?.length ?? 0} symbols)</option>
+              ))}
+            </select>
           </label>
         </div>
         <div className="sb-meta-row">
@@ -147,16 +156,7 @@ export default function StrategyBuilderPage() {
               rows={2}
             />
           </label>
-          <label>
-            <span>Goals</span>
-            <textarea
-              value={goals}
-              onChange={(e) => setGoals(e.target.value)}
-              placeholder="e.g., Target 5% monthly, Focus on tech pullbacks"
-              className="sb-input sb-textarea"
-              rows={2}
-            />
-          </label>
+
         </div>
         <div className="sb-meta-actions">
           <button
@@ -165,7 +165,7 @@ export default function StrategyBuilderPage() {
             disabled={canvasIds.length === 0 || saveMutation.isPending}
             onClick={() => saveMutation.mutate()}
           >
-            {saveMutation.isPending ? 'Saving...' : 'Save Strategy'}
+            {saveMutation.isPending ? 'Saving...' : 'Save Protocol'}
           </button>
           <button type="button" className="sb-btn sb-btn-reset" onClick={handleReset}>
             Reset Canvas
@@ -177,7 +177,7 @@ export default function StrategyBuilderPage() {
       {/* Saved strategies sidebar toggle */}
       {savedStrategies.length > 0 && (
         <details className="sb-saved-list">
-          <summary>Saved Strategies ({savedStrategies.length})</summary>
+          <summary>Saved Protocols ({savedStrategies.length})</summary>
           <div className="sb-saved-grid">
             {savedStrategies.map((s) => (
               <button
@@ -187,8 +187,7 @@ export default function StrategyBuilderPage() {
                 onClick={() => {
                   setStrategyName(s.name || '')
                   setDescription(s.description || '')
-                  setGoals(s.goals || '')
-                  setSymbolFocus((s.symbolFocus || []).join(', '))
+                  setSelectedWatchlist(s.watchlistId || '')
                   const dirIds = (s.directives || []).map(d => d.id)
                   setCanvasIds(dirIds)
                   const w = {}
@@ -202,7 +201,7 @@ export default function StrategyBuilderPage() {
                 </div>
                 <span className="sb-saved-meta">
                   {s.directives?.length || 0} directives
-                  {s.symbolFocus?.length ? ` · ${s.symbolFocus.slice(0,3).join(', ')}` : ''}
+                  {s.directives?.length ? ` · ${s.directives.length} directives` : ''}
                 </span>
               </button>
             ))}

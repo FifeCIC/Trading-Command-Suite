@@ -110,6 +110,7 @@ import CreateWatchlistPage from './pages/CreateWatchlistPage';
 import FeatureLabPage from './pages/FeatureLabPage';
 import LabLandingPage from './pages/LabLandingPage';
 import LabPage from './pages/LabPage';
+import ScoringDebugLab from './pages/ScoringDebugLab';
 import SnapshotReplayPage from './pages/SnapshotReplayPage';
 import SocialNetworksPage from './pages/SocialNetworksPage';
 import SupportResistancePage from './pages/SupportResistancePage';

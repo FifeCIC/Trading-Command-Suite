@@ -125,6 +125,10 @@ export class RiskGatingEngine {
       weightedRiskSum += rule.severity;
     }
 
+    // Cap total risk penalty — don't let multiple moderate risks compound below 0.5
+    // A neutral market with no actual crises shouldn't lose more than half its signal
+    cumulativeMultiplier = Math.max(0.5, cumulativeMultiplier);
+
     // Compute aggregate risk score (0-100, inverted: 0 = safe, 100 = extreme risk)
     const riskScore = totalRiskWeight > 0
       ? Math.round((weightedRiskSum / totalRiskWeight) * 100)
@@ -158,32 +162,32 @@ export class RiskGatingEngine {
         if (severity > 0.7) {
           return { tier: 'hard_gate', severity, weight: 1.0, reason: 'Daily loss limit exceeded — no new positions allowed' };
         }
-        return { tier: 'soft_modifier', severity, weight: 0.8, reason: `Budget utilization at ${(severity * 100).toFixed(0)}%` };
+        return { tier: 'soft_modifier', severity, weight: 0.4, reason: `Budget utilization at ${(severity * 100).toFixed(0)}%` };
 
       case 'position-concentration':
         if (severity > 0.8) {
           return { tier: 'hard_gate', severity, weight: 1.0, reason: 'Position concentration critical — portfolio overexposed to single symbol/sector' };
         }
-        return { tier: 'soft_modifier', severity, weight: 0.6, reason: `Position concentration elevated — ${(severity * 100).toFixed(0)}% of limit` };
+        return { tier: 'soft_modifier', severity, weight: 0.3, reason: `Position concentration elevated — ${(severity * 100).toFixed(0)}% of limit` };
 
       case 'liquidity-check':
         if (severity > 0.9) {
           return { tier: 'hard_gate', severity, weight: 1.0, reason: 'Symbol liquidity too low — cannot execute at acceptable spread' };
         }
-        return { tier: 'soft_modifier', severity, weight: 0.5, reason: `Spread/liquidity concern (${(severity * 100).toFixed(0)}%)` };
+        return { tier: 'soft_modifier', severity, weight: 0.25, reason: `Spread/liquidity concern (${(severity * 100).toFixed(0)}%)` };
 
       // SOFT MODIFIERS — scale proportionally
       case 'correlation-drag':
-        return { tier: 'soft_modifier', severity, weight: 0.5, reason: `High correlation with existing positions — diversification penalty` };
+        return { tier: 'soft_modifier', severity, weight: 0.25, reason: `High correlation with existing positions — diversification penalty` };
 
       case 'dilution-impact':
-        return { tier: 'soft_modifier', severity, weight: 0.4, reason: severity > 0.5 ? 'Significant shareholder dilution detected' : 'Minor dilution concern' };
+        return { tier: 'soft_modifier', severity, weight: 0.2, reason: severity > 0.5 ? 'Significant shareholder dilution detected' : 'Minor dilution concern' };
 
       case 'volatility-regime':
-        return { tier: 'soft_modifier', severity, weight: 0.6, reason: severity > 0.7 ? 'Extreme volatility regime — reduce position size' : 'Elevated volatility — caution' };
+        return { tier: 'soft_modifier', severity, weight: 0.3, reason: severity > 0.7 ? 'Extreme volatility regime — reduce position size' : 'Elevated volatility — caution' };
 
       case 'rollover-risk':
-        return { tier: 'soft_modifier', severity, weight: 0.3, reason: severity > 0.5 ? 'Near contract rollover — watch for spread widening' : 'Rollover period approaching' };
+        return { tier: 'soft_modifier', severity, weight: 0.15, reason: severity > 0.5 ? 'Near contract rollover — watch for spread widening' : 'Rollover period approaching' };
 
       // REGIME OVERRIDE — changes directional bias
       case 'dxy-regime':
@@ -196,7 +200,7 @@ export class RiskGatingEngine {
         };
 
       default:
-        return { tier: 'soft_modifier', severity, weight: 0.3, reason: directive.reason || `Risk signal: ${(severity * 100).toFixed(0)}%` };
+        return { tier: 'soft_modifier', severity, weight: 0.15, reason: directive.reason || `Risk signal: ${(severity * 100).toFixed(0)}%` };
     }
   }
 }

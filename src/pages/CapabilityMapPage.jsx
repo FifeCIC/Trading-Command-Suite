@@ -122,6 +122,10 @@ const KNOWN_FEATURES = {
   // 2026-07-08/09 — M.E.T.A. System
   'M.E.T.A. Ratings Engine': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
   'M.E.T.A. Signature Verification': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  // 2026-07-14 — Protocol Direction Architecture
+  'Protocol Direction Mode (LONG/SHORT)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Directive Direction Bias Filtering': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Dual-Protocol Scoring (LONG vs SHORT)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
   'Pipeline Graph (NodeMapper)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
   'Design Token System (#252)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
   'EmptyState Component (#255)': { dataPersistence: 'localStorage', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },

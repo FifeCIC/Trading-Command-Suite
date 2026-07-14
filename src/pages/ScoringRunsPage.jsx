@@ -141,9 +141,10 @@ export default function ScoringRunsPage() {
               <thead>
                 <tr>
                   <th>Time</th>
-                  <th>Strategy</th>
+                  <th>Protocol / Strategy</th>
                   <th>Signals</th>
                   <th>Avg</th>
+                  <th>Max %</th>
                   <th>Top</th>
                   <th></th>
                 </tr>
@@ -177,6 +178,11 @@ export default function ScoringRunsPage() {
                       <td>
                         <span className={run.avgScore >= 60 ? 'pf-green' : run.avgScore >= 40 ? 'pf-amber' : 'pf-red'}>
                           {run.avgScore?.toFixed(1)}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 600, color: 'var(--accent)', fontSize: '0.82rem' }}>
+                          {run.maxScore ? `${((run.avgScore / run.maxScore) * 100).toFixed(0)}%` : '—'}
                         </span>
                       </td>
                       <td>

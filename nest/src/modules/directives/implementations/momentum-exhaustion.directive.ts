@@ -17,6 +17,7 @@ export class MomentumExhaustionDirective implements IDirective {
   readonly id = 'momentum-exhaustion';
   readonly name = 'Momentum Exhaustion';
   readonly description = 'Detects fading momentum — RSI overbought + declining volume. Exit urgency signal.';
+  readonly directionBias = 'bullish' as const;
   readonly priority = 65;
   readonly maxScore = 100;
   readonly version = '1.0.0';

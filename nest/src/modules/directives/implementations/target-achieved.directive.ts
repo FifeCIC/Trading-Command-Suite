@@ -17,6 +17,7 @@ export class TargetAchievedDirective implements IDirective {
   readonly id = 'target-achieved';
   readonly name = 'Target Achieved';
   readonly description = 'Checks if price has reached ATR-based or swing-based profit targets.';
+  readonly directionBias = 'bullish' as const;
   readonly priority = 60;
   readonly maxScore = 100;
   readonly version = '1.0.0';

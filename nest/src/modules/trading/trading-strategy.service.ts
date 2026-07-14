@@ -16,10 +16,18 @@ export interface StrategySummary {
   id: string;
   name: string;
   protocolId: string;
+  shortProtocolId?: string | null;
   symbol: string;
   timeframe: string;
   mode: string;
   active: boolean;
+  brokerId?: string;
+  minComposite?: number;
+  baseSize?: number;
+  slPct?: number;
+  tpPct?: number;
+  cooldownMinutes?: number;
+  maxPositions?: number;
   lastEvaluatedAt: string | null;
   lastSignal: string | null;
   lastComposite: number | null;
@@ -59,6 +67,7 @@ export class TradingStrategyService {
         id: s.id,
         name: s.name,
         protocolId: s.protocolId,
+        shortProtocolId: (s as any).shortProtocolId ?? null,
         symbol: s.symbol,
         timeframe: s.timeframe,
         mode: s.mode,

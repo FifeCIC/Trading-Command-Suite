@@ -222,3 +222,19 @@
   padding-top: 8px;
   border-top: 1px solid rgba(14,165,166,0.15);
 }
+
+/* ── Checkbox Options ── */
+.so-checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+.so-checkbox-option input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+}

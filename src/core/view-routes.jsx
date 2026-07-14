@@ -138,6 +138,7 @@ import SnapshotReplayPage from '../pages/SnapshotReplayPage.jsx';
 import TripleScreenPage from '../pages/TripleScreenPage.jsx';
 import MetaStackDisplayPage from '../pages/MetaStackDisplayPage.jsx';
 import PortfolioLabPage from '../pages/PortfolioLabPage.jsx';
+import ScoringDebugLab from '../pages/ScoringDebugLab.jsx';
 
 // ── Training ──
 import TrainingCandlePatternsPage from '../pages/TrainingCandlePatternsPage.jsx';
@@ -289,6 +290,7 @@ export const VIEW_COMPONENTS = {
   'triple-screen': TripleScreenPage,
   'metastack-display': MetaStackDisplayPage,
   'portfolio-lab': PortfolioLabPage,
+  'scoring-debug-lab': ScoringDebugLab,
   'snapshots': SnapshotLibraryPage,
 
   // Training

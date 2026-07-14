@@ -138,6 +138,15 @@ export interface IDirective {
   readonly description: string;
 
   /**
+   * Directional bias of this directive.
+   * - 'bullish': Only produces buy/hold signals. Exclude from SHORT_ONLY protocols.
+   * - 'bearish': Only produces sell/hold signals. Exclude from LONG_ONLY protocols.
+   * - 'neutral': No directional bias. Include in all protocols.
+   * Defaults to 'neutral' if not set.
+   */
+  readonly directionBias?: 'bullish' | 'bearish' | 'neutral';
+
+  /**
    * The maximum score this directive can return.
    * Higher maxScore = more influence on the total protocol score.
    * A directive with maxScore=180 naturally carries ~2× the weight of one with maxScore=90.

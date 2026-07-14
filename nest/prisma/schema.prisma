@@ -942,6 +942,7 @@ model TradingStrategy {
   name          String   @db.VarChar(200)
   description   String?  @db.Text
   protocolId    String   @db.VarChar(36)
+  shortProtocolId String? @db.VarChar(36)
   symbol        String   @db.VarChar(20)
   brokerId      String   @default("mt5") @db.VarChar(50)
   timeframe     String   @db.VarChar(10)   @default("5m")
@@ -1009,6 +1010,7 @@ model ScoringStrategy {
   id              String   @id @default(uuid()) @db.VarChar(36)
   name            String   @db.VarChar(200)
   protocolId      String   @db.VarChar(100)
+  shortProtocolId String?  @db.VarChar(100)
   watchlistName   String   @db.VarChar(100)
   brokerId        String   @default("mt5") @db.VarChar(50)
   mode            String   @default("manual") @db.VarChar(20)

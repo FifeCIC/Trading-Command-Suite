@@ -81,9 +81,77 @@ export const DIRECTIVE_GROUPS: DirectiveGroup[] = [
   },
 ];
 
+// ── SHORT Directive Groups (bearish-only directives for SHORT_ONLY protocols) ──
+
+export const SHORT_DIRECTIVE_GROUPS: DirectiveGroup[] = [
+  {
+    id: 'bearish-technical',
+    name: 'Bearish Technical Analysis',
+    description: 'Overbought, breakdown, distribution — bearish reversal signals',
+    weight: 0.40,
+    isRiskGate: false,
+    minMultiplier: 1.0,
+    maxMultiplier: 1.0,
+    directiveIds: [
+      'rsi-overbought',
+      'stochastic',
+      'williams-r',
+      'cci',
+      'mfi',
+      'engulfing-pattern',
+      'pin-bar-pattern',
+      'doji-pattern',
+      'resistance-levels-strategy',
+      'obv-divergence',
+      'macd-crossover',
+      'speed-momentum',
+    ],
+  },
+  {
+    id: 'bearish-sentiment',
+    name: 'Bearish Sentiment & Fundamentals',
+    description: 'Negative news, downgrades, fear — bearish catalysts',
+    weight: 0.35,
+    isRiskGate: false,
+    minMultiplier: 1.0,
+    maxMultiplier: 1.0,
+    directiveIds: [
+      'analyst-adjustments',
+      'news-sentiment-positive',
+      'earnings-proximity',
+      'earnings-momentum',
+      'social-buzz',
+    ],
+  },
+  {
+    id: 'short-risk',
+    name: 'Short-Side Risk & Structural',
+    description: 'Short-specific risk gates — vol spikes, liquidity, concentration',
+    weight: 0.25,
+    isRiskGate: true,
+    minMultiplier: 0.3,
+    maxMultiplier: 1.2,
+    directiveIds: [
+      'portfolio-performance',
+      'spy-qqq-relative-strength',
+      'dilution-impact',
+      'vix-strategy',
+      'liquidity-check',
+      'budget-gate',
+      'rollover-risk',
+      'dxy-regime',
+    ],
+  },
+];
+
 /** Map directive IDs to their group for O(1) lookup */
 export const DIRECTIVE_TO_GROUP: Map<string, string> = new Map();
 for (const group of DIRECTIVE_GROUPS) {
+  for (const directiveId of group.directiveIds) {
+    DIRECTIVE_TO_GROUP.set(directiveId, group.id);
+  }
+}
+for (const group of SHORT_DIRECTIVE_GROUPS) {
   for (const directiveId of group.directiveIds) {
     DIRECTIVE_TO_GROUP.set(directiveId, group.id);
   }
@@ -202,7 +270,7 @@ export interface SeasonalAffinity {
 }
 
 /** Protocol registry — lookup table for protocol selection */
-export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name: string; description: string; tradingStyle?: string; recommendedTimeframe?: string; avgHoldTime?: string; winRateTarget?: string; idealFor?: string; seasonalAffinity?: SeasonalAffinity }> = {
+export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name: string; description: string; directionMode?: 'LONG_ONLY' | 'SHORT_ONLY' | 'BOTH'; tradingStyle?: string; recommendedTimeframe?: string; avgHoldTime?: string; winRateTarget?: string; idealFor?: string; seasonalAffinity?: SeasonalAffinity }> = {
   default: {
     groups: DIRECTIVE_GROUPS,
     name: 'SEES Default',
@@ -212,6 +280,22 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: 'Days to weeks',
     winRateTarget: '55–65%',
     idealFor: 'Equity portfolios, multi-day holds, balanced risk/reward',
+    seasonalAffinity: { monthly: {} },
+  },
+
+  // ── SEES Default — SHORT variant ────────────────────
+  // Uses bearish directives only. Pair with 'default' for dual-protocol scoring.
+
+  'default-short': {
+    groups: SHORT_DIRECTIVE_GROUPS,
+    name: 'SEES Default (SHORT)',
+    description: 'Short-side variant of SEES Default — overbought, distribution, breakdown detection.',
+    directionMode: 'SHORT_ONLY',
+    tradingStyle: 'Swing / Position',
+    recommendedTimeframe: '1d',
+    avgHoldTime: 'Days to weeks',
+    winRateTarget: '50–60%',
+    idealFor: 'Short-side opportunities, bearish reversals, profit-taking exits',
     seasonalAffinity: { monthly: {} },
   },
 
@@ -289,6 +373,81 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: '1–4 hours',
     winRateTarget: '55–65%',
     idealFor: 'Default pipeline — EURUSD, GBPUSD, XAUUSD on MT5 demo. Zero-config startup. Always shows in Scoring + Trading pages.',
+  },
+
+  // ── Built-in Default — SHORT variant ─────────────────
+  // Mirrors built-in-default but with bearish directives for short-side scoring.
+  // Pair with built-in-default for dual-protocol comparison.
+
+  'built-in-short': {
+    groups: [
+      {
+        id: 'bearish-technical',
+        name: 'Bearish Core Technicals',
+        description: 'MT5 price/candle — overbought, breakdown, distribution',
+        weight: 0.45,
+        isRiskGate: false,
+        minMultiplier: 1.0,
+        maxMultiplier: 1.0,
+        directiveIds: [
+          'speed-momentum',
+          'rsi-overbought',
+          'macd-crossover',
+          'stochastic',
+          'bollinger-band-squeeze',
+          'doji-pattern',
+          'engulfing-pattern',
+          'pin-bar-pattern',
+          'resistance-levels-strategy',
+          'momentum-exhaustion',
+        ],
+        directiveMaxScores: {
+          'speed-momentum': 120,
+          'rsi-overbought': 100,
+          'macd-crossover': 110,
+        },
+      },
+      {
+        id: 'bearish-sentiment',
+        name: 'Macro Context',
+        description: 'DXY regime — USD strength as headwind',
+        weight: 0.15,
+        isRiskGate: false,
+        minMultiplier: 1.0,
+        maxMultiplier: 1.0,
+        directiveIds: [
+          'dxy-regime',
+        ],
+      },
+      {
+        id: 'short-risk',
+        name: 'Short-Side Risk',
+        description: 'Budget, liquidity, session timing — short-side risk gates',
+        weight: 0.40,
+        isRiskGate: true,
+        minMultiplier: 0.4,
+        maxMultiplier: 1.2,
+        directiveIds: [
+          'budget-gate',
+          'liquidity-check',
+          'rollover-risk',
+          'session-open-effect',
+          'position-size-confidence',
+        ],
+        directiveMaxScores: {
+          'liquidity-check': 80,
+          'session-open-effect': 110,
+        },
+      },
+    ],
+    name: 'Built-in Default (SHORT)',
+    description: 'Short-side variant of Built-in Default. Uses bearish MT5 directives — overbought, breakdown, distribution. Pair with built-in-default for dual-protocol BUY/SELL comparison.',
+    directionMode: 'SHORT_ONLY',
+    tradingStyle: 'Swing / Intraday',
+    recommendedTimeframe: '15m',
+    avgHoldTime: '1–4 hours',
+    winRateTarget: '50–60%',
+    idealFor: 'Short opportunities, bearish reversals. Pairs with built-in-default for dual scoring.',
   },
 
   'btc-speed-v1': {
@@ -1904,5 +2063,20 @@ export const PROTOCOL_REGISTRY: Record<string, { groups: DirectiveGroup[]; name:
     avgHoldTime: '1–4 hours',
     winRateTarget: '55–65%',
     idealFor: 'Demo validation on MetaQuotes-Demo account #10011309743. EURUSD, GBPUSD, XAUUSD. 0.01 lot entries. Tight stops at 1.5× ATR. Risk gates protect the $1K balance from over-trading and session risk.',
+  },
+
+  // ── MT5 Technical Core — SHORT variant ────────────────
+  // Pairs with mt5-technical-core-v1 for dual-protocol LONG/SHORT scoring.
+
+  'mt5-technical-short': {
+    groups: SHORT_DIRECTIVE_GROUPS,
+    name: 'MT5 Technical Core (SHORT)',
+    description: 'Short-side variant of MT5 Technical Core. Uses bearish directives — overbought, breakdown, distribution. Pair with mt5-technical-core-v1 for dual BUY/SELL on EURUSD, GBPUSD, XAUUSD.',
+    directionMode: 'SHORT_ONLY',
+    tradingStyle: 'Swing / Intraday',
+    recommendedTimeframe: '15m',
+    avgHoldTime: '1–4 hours',
+    winRateTarget: '50–60%',
+    idealFor: 'Short-side opportunities on liquid forex + gold. Pairs with MT5 Technical Core V1 for dual scoring.',
   },
 };
