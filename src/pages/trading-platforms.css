@@ -244,6 +244,13 @@
   z-index: 1;
 }
 
+.tp-row-selected {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.tp-row-selected:hover {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
 .tp-field-cell {
   min-width: 220px;
   font-weight: 600;

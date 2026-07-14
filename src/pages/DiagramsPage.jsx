@@ -7,100 +7,126 @@ const DIAGRAMS = [
   {
     id: 'sees-research',
     label: 'SEES Research Phase',
-    desc: 'Data sources feed directives, which calculate individual scores. Protocol combines weighted directives into a composite score for research/analysis.',
+    desc: 'Data from 10 providers feeds 99+ directives grouped into Technical, Sentiment, and Risk categories. Risk directives multiplicatively gate Tech+Sentiment scores (0.3x–1.2x). Calibration applies symbol-specific weight overrides. Output is a normalized percentage of maxPossibleScore (unbounded, not capped at 100).',
     code: `flowchart LR
-    subgraph Sources["Data Sources"]
-        A[Market Data APIs]
-        B[MT5 Bridge]
-        C[Historical Data]
+    subgraph Sources["Data Sources (10 Providers)"]
+        A[MT5 Bridge]
+        B[Finnhub / Alpha Vantage]
+        C[DB — MarketBar, Earnings]
     end
-    subgraph Directives["Scoring Directives"]
-        D[RSI Oversold]
-        E[MACD Crossover]
-        F[EMA Structure]
-        G[ATR Dip]
-        H[Volume Confirm]
+    subgraph Groups["Directive Groups (99+)"]
+        D[Technical 40%<br/>momentum, patterns, volume]
+        E[Sentiment 35%<br/>news, earnings, analyst]
+        F[Risk 25%<br/>budget, liquidity, session]
     end
-    subgraph Pipeline["Scoring Pipeline"]
-        I[Protocol Engine]
-        J[Weighted Composite]
-        K[Score Output 0-100]
+    subgraph Calibration["Calibration"]
+        G[Symbol Overrides<br/>weightMultiplier, decay]
     end
-    Sources --> Directives
-    Directives --> I
-    I --> J --> K
-    K --> L[Research Dashboard]
-    K --> M[SEES Rankings]`,
+    subgraph Gating["Multiplicative Risk Gating"]
+        H[Tech × RiskGate]
+        I[Sent × RiskGate]
+        J[totalScore = gatedTech + gatedSent]
+    end
+    subgraph Output["Output"]
+        K[Normalized %<br/>totalScore / maxPossibleScore]
+        L[Research Dashboard]
+        M[SEES Rankings]
+    end
+    Sources --> Groups
+    D --> G
+    E --> G
+    F --> H
+    F --> I
+    G --> H
+    G --> I
+    H --> J
+    I --> J
+    J --> K
+    K --> L
+    K --> M`,
   },
   {
     id: 'sees-trading',
-    label: 'SEES Full Trading Lifecycle',
-    desc: 'Scores feed the trading pipeline: threshold evaluation, risk validation, MT5 order execution, and position monitoring with feedback.',
+    label: 'M.E.T.A. Stack Trading Lifecycle',
+    desc: 'M.E.T.A. Stack orchestrates the full trading lifecycle. Automation tick: Timeline risk check → fetch bars → dual-protocol gated scoring via SEES (LONG vs SHORT) → threshold + cooldown + duplicate guard → mode dispatch (manual/semi-auto/auto) → broker execution via AdapterFactory → trade recording. Monitoring and feedback loops are planned but not yet automated.',
     code: `flowchart TB
-    subgraph Scoring["1. Scoring"]
-        A[Data Sources] --> B[Directives]
-        B --> C[Protocol Engine]
-        C --> D[Composite Score]
+    subgraph Tick["1. Automation Tick (5min default)"]
+        A[Timeline Check] --> B[Global Risk Multiplier]
+        B --> C[Fetch Bars per Symbol]
     end
-    subgraph Trading["2. Trading Decision"]
-        D --> E{Score >= Threshold?}
-        E -->|Yes| F[Risk Controls]
-        E -->|No| G[Skip / Watch]
-        F -->|Passed| H[Generate Order]
-        F -->|Blocked| I[Reject with Reason]
+    subgraph SEES["2. SEES Scoring Engine"]
+        C --> D[LONG Protocol<br/>scoreWithGating]
+        C --> E[SHORT Protocol<br/>scoreWithGating]
+        D --> F{longScore > shortScore?}
+        E --> F
+        F -->|long wins| G[BUY signal]
+        F -->|short wins| H[SELL signal]
+        F -->|both low| I[HOLD]
     end
-    subgraph Execution["3. Execution"]
-        H --> J[MT5 Bridge]
-        J --> K[Broker Order]
-        K --> L[Position Opened]
+    subgraph Gates["3. M.E.T.A. Safety Gates"]
+        G --> J{Score >= Threshold?}
+        H --> J
+        J -->|No| K[SKIP]
+        J -->|Yes| L{Cooldown active?}
+        L -->|Yes| K
+        L -->|No| M{Duplicate position?}
+        M -->|Yes| N[BLOCKED]
+        M -->|No| O{Mode?}
     end
-    subgraph Monitor["4. Monitoring"]
-        L --> M[Position Tracker]
-        M --> N[P&L Updates]
-        N --> O[Exit Signal Check]
-        O -->|Trigger| P[Close Position]
-        O -->|Hold| M
+    subgraph Dispatch["4. Mode Dispatch"]
+        O -->|manual| P[LOG only]
+        O -->|semi-auto| Q[QUEUED<br/>await confirm]
+        O -->|auto| R[Execute]
     end
-    subgraph Feedback["5. Feedback Loop"]
-        N --> Q[Performance Analytics]
-        Q --> R[Strategy Adjustment]
-        R --> C
-    end`,
+    subgraph Execution["5. Broker Execution"]
+        R --> S[AdapterFactory<br/>MT5 or T212]
+        S --> T[placeOrder<br/>symbol, side, size, SL, TP]
+        T --> U[Trade Recorded<br/>scoringStrategyId]
+    end
+    subgraph Planned["6. Planned (not yet automated)"]
+        V[Position Monitor]
+        W[Exit Signal Check]
+        X[Feedback Loop]
+    end
+    U -.-> V
+    V -.-> W
+    W -.-> X
+    style Planned fill:#1a1a2e,stroke:#f59e0b,stroke-dasharray:5 5,color:#f59e0b`,
   },
   {
     id: 'sees-automation',
-    label: 'SEES Automation Lifecycle + User Journey',
-    desc: 'The full system flow wrapped in the automation loop, showing which page the user visits at each step. Distinguishes SEES Strategies (Watchlist+Protocol) from Trading Strategies (execution instances). See docs/architecture/SEES-AUTOMATION-LIFECYCLE.md.',
+    label: 'M.E.T.A. Stack — Setup to Execution',
+    desc: 'End-to-end user journey through the M.E.T.A. Stack (Modular Expert Trading Architecture). Setup: providers → watchlists → protocols. Automation: ScoringStrategy pairs a watchlist+protocol, the loop ticks and invokes SEES for scoring only. Decision and execution are M.E.T.A. responsibilities.',
     code: `flowchart TB
-    subgraph SETUP["1. SETUP"]
+    subgraph SETUP["1. SETUP (User)"]
         A1["Configure Providers"] --> A2["Import Market Data"]
         A2 --> A3["Create Watchlists"]
-        A3 --> A4["Build Protocols"]
-        A4 --> A5["SEES Strategy = Watchlist + Protocol"]
+        A3 --> A4["Build Protocols<br/>(directive groups + weights)"]
+        A4 --> A5["ScoringStrategy =<br/>Watchlist + Protocol + Broker + Mode"]
     end
-    subgraph AUTOMATION["2. AUTOMATION LOOP"]
-        B1["Start Loop"] --> B2["Enable MT5 Broker"]
-        B2 --> B3["Trading Strategy = Protocol + Symbol + Entry Rules"]
-        B3 --> B4["Tick: discover active strategies, score symbols, evaluate entries"]
+    subgraph AUTOMATION["2. AUTOMATION LOOP (M.E.T.A.)"]
+        B1["Start Loop"] --> B2["Enable Broker<br/>(MT5 or T212)"]
+        B2 --> B3["TradingStrategy =<br/>Protocol + Symbol + Entry Rules"]
+        B3 --> B4["Tick: fetch bars,<br/>invoke SEES per symbol"]
     end
-    subgraph SCORING["3. SEES SCORING"]
-        C1["MT5 / Yahoo / DB"] --> C2["89 Directives"]
-        C2 --> C3["Protocol Gating"]
-        C3 --> C4["Composite Score: BUY / HOLD / SELL"]
+    subgraph SEES["3. SEES SCORING ENGINE"]
+        C1["MT5 / DB bars"] --> C2["99+ Directives"]
+        C2 --> C3["Protocol Gating<br/>(multiplicative risk)"]
+        C3 --> C4["Composite Score<br/>+ signal class"]
     end
-    subgraph DECISION["4. DECISION"]
+    subgraph DECISION["4. DECISION (M.E.T.A.)"]
         D1{"Score >= Threshold?"} -->|No| D2["Watch"]
-        D1 -->|Yes| D3{"Risk Gate?"}
+        D1 -->|Yes| D3{"Cooldown + Duplicate?"}
         D3 -->|Blocked| D4["Rejected"]
         D3 -->|Passed| D5{"Mode?"}
-        D5 -->|manual| D6["Alert"]
-        D5 -->|semi-auto| D7["Suggest"]
+        D5 -->|manual| D6["Log"]
+        D5 -->|semi-auto| D7["Queue for confirm"]
         D5 -->|auto| D8["Auto-execute"]
     end
     subgraph EXECUTION["5. EXECUTION"]
-        E1["MT5 Bridge"] --> E2["Order Placed"]
+        E1["AdapterFactory"] --> E2["Order Placed"]
     end
-    subgraph MONITOR["6. MONITOR"]
+    subgraph MONITOR["6. MONITOR (planned)"]
         F1["Position Tracker"] --> F2["P/L Updates"]
     end
     A5 --> B3
@@ -109,47 +135,71 @@ const DIAGRAMS = [
     D7 --> E1
     D8 --> E1
     E2 --> F1
-    F2 -.->|Adjust| B3`,
+    F2 -.->|Planned: adjust| B3
+    style SEES fill:#111827,stroke:#22c55e,color:#e5e7eb
+    style MONITOR fill:#1a1a2e,stroke:#f59e0b,stroke-dasharray:5 5,color:#f59e0b`,
   },
   {
     id: 'data-arch',
     label: 'Data Architecture',
-    desc: 'End-to-end data flow: external APIs → import → transformation → scoring → trading → analytics, with cache and queue layers.',
+    desc: 'End-to-end data flow: 10 providers → AdapterFactory (rate-limited, failover) → normalized storage (MarketBar, Earnings, News, Macro) → SEES directives → scoring → M.E.T.A. trading → analytics. No raw/transform split — adapters normalize on ingest.',
     code: `flowchart TB
-    subgraph Ingest["Data Ingest"]
-        A[Trading212 API] --> D[Import Jobs]
-        B[Alpha Vantage] --> D
-        C[MT5 Bridge] --> D
+    subgraph Ingest["Data Ingest (10 Providers)"]
+        A[MT5 Bridge]
+        B[Finnhub / Alpha Vantage]
+        C[Yahoo / Polygon / Twelve]
+        D[Trading212 / FMP]
+        E[FRED / ECB]
     end
-    subgraph Storage["Storage Layer"]
-        D --> E[(Raw Data)]
-        E --> F[Transform Pipeline]
-        F --> G[(Normalized Tables)]
-        G --> H[(Symbols, Prices)]
+    subgraph Import["Import Layer"]
+        F[AdapterFactory<br/>priority + failover]
+        G[RateLimitGovernor]
+        H[FreshnessService<br/>stale? → re-import]
     end
-    subgraph Processing["Processing"]
-        G --> I[SEES Directives]
-        I --> J[Score Engine]
-        J --> K[(Score Table)]
-        K --> L[Protocol Aggregation]
+    subgraph Storage["Storage (Prisma — 70+ models)"]
+        I[(MarketBar)]
+        J[(EarningsEvent)]
+        K[(NewsArticle)]
+        L[(Symbol + Calibration)]
+        M[(ScoreSnapshot)]
+        N[(Trade + Position + Order)]
     end
-    subgraph Trading["Trading Layer"]
-        L --> M[Strategy Engine]
-        M --> N[Order Generator]
-        N --> O[MT5 Execution]
-        O --> P[(Position Data)]
+    subgraph SEES["SEES Processing"]
+        O[99+ Directives]
+        P[ProtocolGatingService]
+        Q[Composite Score]
+    end
+    subgraph META["M.E.T.A. Trading"]
+        R[AutomationLoop]
+        S[AdapterFactory<br/>MT5 or T212]
+        T[DuplicateGuard + Timeline]
     end
     subgraph Analytics["Analytics"]
-        K --> Q[Cache Layer]
-        P --> R[Performance Analytics]
-        R --> S[Reporting Dashboard]
-        Q --> T[API Responses]
-    end`,
+        U[CacheInterceptor<br/>TTL per endpoint]
+        V[StackPerformance<br/>MetaStack ratings]
+        W[API Responses → React]
+    end
+    Ingest --> F
+    F --> G --> H
+    H --> I
+    H --> J
+    H --> K
+    H --> L
+    I --> O
+    J --> O
+    K --> O
+    L --> P
+    O --> P --> Q
+    Q --> M
+    Q --> R
+    R --> T --> S --> N
+    M --> U --> W
+    N --> V --> W`,
   },
   {
     id: 'component-arch',
     label: 'Component & Route Architecture',
-    desc: 'React component tree and routing: BrowserRouter → AppShell → panels → individual pages, with Zustand stores and TanStack Query.',
+    desc: 'React component tree: BrowserRouter → AppShell → panels → 80+ pages. Zustand stores (useUiStore, useCurrentSymbolStore) + TanStack Query for server state. Routes: /:area/:view, /research/symbol/:symbolId, /.',
     code: `flowchart TB
     A[BrowserRouter] --> B[AppShell]
     B --> C[TopBar]
@@ -157,23 +207,30 @@ const DIAGRAMS = [
     B --> E[MainStage]
     B --> F[RightRail]
     B --> G[Footer]
-    E --> H[renderMainContent]
-    H --> I[Area Views]
-    I --> J[PortfolioPage]
-    I --> K[ScoringRunsPage]
-    I --> L[DirectivesManagerPage]
-    I --> M[...40+ pages]
-    subgraph State["State Management"]
-        N[Zustand Stores] --> O[useUiStore]
-        N --> P[useThemeRuntime]
+    E --> H[Breadcrumbs]
+    E --> I[ErrorBoundary]
+    I --> J[renderMainContent]
+    J --> K[80+ Page Components]
+    subgraph State["Client State (Zustand)"]
+        L[useUiStore<br/>theme, devOverlay, bookmarks]
+        M[useCurrentSymbolStore]
+        N[featureFlags<br/>localStorage]
     end
-    subgraph Data["Data Layer"]
-        Q[TanStack Query] --> R[apiGet / apiPost]
-        R --> S[NestJS API :3201]
+    subgraph Data["Server State (TanStack Query)"]
+        O[apiGet / apiPost]
+        P[NestJS API :3201]
     end
-    D --> T[NavTree Config]
-    F --> U[Status + Actions]
-    G --> V[Area Nav + Flags]`,
+    subgraph Routes["Route Structure"]
+        Q[/:area/:view]
+        R[/research/symbol/:symbolId]
+        S[/ → HomeDashboard]
+    end
+    D --> T[NAV_TREE Config<br/>15 areas]
+    F --> U[Area Nav]
+    G --> V[Dev Overlay<br/>flags + log + info]
+    O --> P
+    B --> W[PwaInstallPrompt]
+    B --> X[ApiOfflineBanner]`,
   },
   {
     id: 'deployment',

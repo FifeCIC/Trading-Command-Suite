@@ -25,6 +25,9 @@ export default function UserWatchlistsPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState(null);
+  const [creatingNew, setCreatingNew] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newSymbols, setNewSymbols] = useState('');
   const queryClient = useQueryClient();
 
   const { data: watchlists, isLoading, error } = useQuery({
@@ -85,7 +88,24 @@ export default function UserWatchlistsPage() {
     }
   }, [selectedId, queryClient]);
 
-  const handleSelect = (id) => setSelectedId(prev => prev === id ? null : id);
+  const handleSelect = (id) => {
+    setCreatingNew(false);
+    setSelectedId(prev => prev === id ? null : id);
+  };
+
+  async function handleCreateWatchlist() {
+    if (!newName.trim()) return;
+    const symbols = newSymbols.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+    try {
+      await apiPost('/api/watchlists', { name: newName.trim(), symbols });
+      setNewName('');
+      setNewSymbols('');
+      setCreatingNew(false);
+      queryClient.invalidateQueries({ queryKey: ['watchlists'] });
+    } catch (e) {
+      // error handled silently
+    }
+  }
 
   const totalSymbols = watchlists?.reduce((s, w) => s + (w.symbolCount || 0), 0) || 0;
 
@@ -149,8 +169,6 @@ export default function UserWatchlistsPage() {
           <h2>User Watchlists</h2>
           <p className="wl-subtitle">
             {isLoading ? 'Loading…' : `${watchlists?.length || 0} watchlists · ${totalSymbols} total symbols`}
-            {' · '}
-            <a href="/watchlists/create-watchlist" style={{ color: 'var(--accent)' }}>Create New</a>
           </p>
         </div>
       </header>
@@ -167,7 +185,7 @@ export default function UserWatchlistsPage() {
       {!isLoading && !error && (!watchlists || watchlists.length === 0) && (
         <div className="wl-empty-state">
           <p>No watchlists saved yet.</p>
-          <a href="/watchlists/create-watchlist" className="wl-create-link">Create your first watchlist →</a>
+          <button className="wl-create-link" onClick={() => setCreatingNew(true)}>Create your first watchlist →</button>
         </div>
       )}
 
@@ -186,12 +204,64 @@ export default function UserWatchlistsPage() {
             <div className="wl-group">
               <div className="wl-group-label">User Watchlists</div>
               {watchlists.filter(w => w.kind !== 'built-in').map((wl, i) => renderWatchlistItem(wl, i))}
+              {/* Inline "Create New Watchlist" entry */}
+              <motion.div
+                className={`wl-list-item wl-create-new ${creatingNew ? 'wl-selected' : ''}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                onClick={() => { setCreatingNew(true); setSelectedId(null); }}
+              >
+                <div className="wl-list-header">
+                  <div className="wl-list-main">
+                    <span className="wl-list-name" style={{ color: 'var(--accent)' }}>⊞ Create New Watchlist</span>
+                  </div>
+                </div>
+              </motion.div>
             </div>
           </div>
 
           {/* ── Right: Symbols Panel ── */}
           <aside className="wl-detail-pane">
-            {!selectedWl ? (
+            {creatingNew ? (
+              <div className="wl-detail-content">
+                <h3>Create New Watchlist</h3>
+                <div className="wl-create-form">
+                  <label>
+                    <span>Watchlist Name</span>
+                    <input
+                      type="text"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      placeholder="e.g., Tech Watchlist"
+                      className="wl-input"
+                      autoFocus
+                    />
+                  </label>
+                  <label>
+                    <span>Symbols (comma-separated tickers)</span>
+                    <input
+                      type="text"
+                      value={newSymbols}
+                      onChange={(e) => setNewSymbols(e.target.value)}
+                      placeholder="e.g., AAPL, MSFT, NVDA"
+                      className="wl-input"
+                    />
+                  </label>
+                  <div className="wl-create-actions">
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleCreateWatchlist}
+                      disabled={!newName.trim()}
+                    >
+                      Create Watchlist
+                    </button>
+                    <button className="btn" onClick={() => { setCreatingNew(false); setNewName(''); setNewSymbols(''); }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : !selectedWl ? (
               <div className="wl-detail-empty">
                 <p>Select a watchlist to view its symbols.</p>
               </div>

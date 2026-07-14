@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 
@@ -24,6 +24,8 @@ export default function ScoringRunsPage() {
   const [page, setPage] = useState(1);
   const [expandedRun, setExpandedRun] = useState(null);
   const [running, setRunning] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [compareMode, setCompareMode] = useState(false);
   const searchTimer = useRef(null);
 
   // Debounce search
@@ -62,6 +64,24 @@ export default function ScoringRunsPage() {
   });
 
   const toggleExpand = (id) => setExpandedRun((prev) => (prev === id ? null : id));
+
+  function toggleSelect(id) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === runs.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(runs.map((r) => r.id)));
+    }
+  }
+
+  const selectedRuns = runs.filter((r) => selectedIds.has(r.id));
 
   async function triggerRun() {
     setRunning(true);
@@ -130,16 +150,28 @@ export default function ScoringRunsPage() {
         <div className="sr-stats-bar">
           <span>Page {data.page}/{totalPages || 1}</span>
           <span>{total} total runs</span>
+          {selectedIds.size > 0 && (
+            <button
+              className="pf-refresh-btn"
+              onClick={() => setCompareMode(!compareMode)}
+              style={{ marginLeft: 'auto', background: compareMode ? 'var(--accent)' : undefined, color: compareMode ? '#fff' : undefined }}
+            >
+              {compareMode ? '✕ Exit Compare' : `⇆ Compare (${selectedIds.size})`}
+            </button>
+          )}
         </div>
       )}
 
       {/* ── Runs Table ──────────────────────────────────────── */}
-      {runs.length > 0 && (
+      {runs.length > 0 && !compareMode && (
         <div className="pf-section">
           <div style={{ overflowX: 'auto' }}>
             <table className="pf-table">
               <thead>
                 <tr>
+                  <th style={{ width: 32 }}>
+                    <input type="checkbox" checked={selectedIds.size === runs.length && runs.length > 0} onChange={toggleSelectAll} />
+                  </th>
                   <th>Time</th>
                   <th>Protocol / Strategy</th>
                   <th>Signals</th>
@@ -154,88 +186,92 @@ export default function ScoringRunsPage() {
                   const expanded = expandedRun === run.id;
                   const sum = run.signalSummary || { buy: 0, sell: 0, neutral: 0 };
                   return (
-                    <tr
-                      key={run.id}
-                      className={`directive-row ${expanded ? 'is-selected' : ''}`}
-                      onClick={() => toggleExpand(run.id)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        {new Date(run.timestamp).toLocaleString(undefined, {
-                          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-                        })}
-                      </td>
-                      <td>
-                        <span className="sruns-strat-name">{run.strategyName || 'Unknown'}</span>
-                      </td>
-                      <td>
-                        <div className="sr-signals">
-                          {signalBadge('buy', sum.buy)}
-                          {signalBadge('sell', sum.sell)}
-                          {signalBadge('neutral', sum.neutral)}
-                        </div>
-                      </td>
-                      <td>
-                        <span className={run.avgScore >= 60 ? 'pf-green' : run.avgScore >= 40 ? 'pf-amber' : 'pf-red'}>
-                          {run.avgScore?.toFixed(1)}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{ fontWeight: 600, color: 'var(--accent)', fontSize: '0.82rem' }}>
-                          {run.maxScore ? `${((run.avgScore / run.maxScore) * 100).toFixed(0)}%` : '—'}
-                        </span>
-                      </td>
-                      <td>
-                        {run.topSymbol ? (
-                          <span>
-                            <strong>{run.topSymbol.ticker}</strong>{' '}
-                            <span className={run.topSymbol.value >= 60 ? 'pf-green' : 'pf-red'}>
-                              {run.topSymbol.value.toFixed(1)}
-                            </span>
+                    <React.Fragment key={run.id}>
+                      <tr
+                        className={`directive-row ${expanded ? 'is-selected' : ''} ${selectedIds.has(run.id) ? 'sr-row-checked' : ''}`}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <input type="checkbox" checked={selectedIds.has(run.id)} onChange={() => toggleSelect(run.id)} />
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }} onClick={() => toggleExpand(run.id)}>
+                          {new Date(run.timestamp).toLocaleString(undefined, {
+                            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                          })}
+                        </td>
+                        <td onClick={() => toggleExpand(run.id)}>
+                          <span className="sruns-strat-name">{run.strategyName || 'Unknown'}</span>
+                        </td>
+                        <td onClick={() => toggleExpand(run.id)}>
+                          <div className="sr-signals">
+                            {signalBadge('buy', sum.buy)}
+                            {signalBadge('sell', sum.sell)}
+                            {signalBadge('neutral', sum.neutral)}
+                          </div>
+                        </td>
+                        <td onClick={() => toggleExpand(run.id)}>
+                          <span className={run.avgScore >= 60 ? 'pf-green' : run.avgScore >= 40 ? 'pf-amber' : 'pf-red'}>
+                            {run.avgScore?.toFixed(1)}
                           </span>
-                        ) : '—'}
-                      </td>
-                      <td><span style={{ color: 'var(--accent)' }}>{expanded ? '▾' : '▸'}</span></td>
-                    </tr>
+                        </td>
+                        <td onClick={() => toggleExpand(run.id)}>
+                          <span style={{ fontWeight: 600, color: 'var(--accent)', fontSize: '0.82rem' }}>
+                            {run.maxScore ? `${((run.avgScore / run.maxScore) * 100).toFixed(0)}%` : '—'}
+                          </span>
+                        </td>
+                        <td onClick={() => toggleExpand(run.id)}>
+                          {run.topSymbol ? (
+                            <span>
+                              <strong>{run.topSymbol.ticker}</strong>{' '}
+                              <span className={run.topSymbol.value >= 60 ? 'pf-green' : 'pf-red'}>
+                                {run.topSymbol.value.toFixed(1)}
+                              </span>
+                            </span>
+                          ) : '—'}
+                        </td>
+                        <td onClick={() => toggleExpand(run.id)}><span style={{ color: 'var(--accent)' }}>{expanded ? '▾' : '▸'}</span></td>
+                      </tr>
+                      {/* Inline accordion detail row */}
+                      {expanded && (
+                        <tr className="sr-expand-row">
+                          <td colSpan={8} style={{ padding: '0.5rem 0.7rem', background: 'color-mix(in srgb, var(--panel) 60%, var(--accent))' }}>
+                            {detailQuery.isLoading && <p className="pf-hint">Loading scores…</p>}
+                            {detailQuery.data?.run?.scores && (
+                              <table className="pf-table" style={{ margin: 0, fontSize: '0.8rem' }}>
+                                <thead>
+                                  <tr>
+                                    <th>Ticker</th>
+                                    <th>Score</th>
+                                    <th>Signal</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {detailQuery.data.run.scores.map((s, i) => (
+                                    <tr key={i}>
+                                      <td><strong>{s.ticker}</strong></td>
+                                      <td className={scoreClass(s.value)}>{s.value.toFixed(1)}</td>
+                                      <td>
+                                        <span className={scoreClass(s.value)}>
+                                          {s.value >= 60 ? '▲ BUY' : s.value >= 40 ? '◆ NEUTRAL' : '▼ SELL'}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
+                            {!detailQuery.isLoading && !detailQuery.data?.run && (
+                              <p className="pf-hint">Scores not available for this run.</p>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
             </table>
           </div>
-
-          {/* Expanded detail row */}
-          {expandedRun && (
-            <div className="sr-expand">
-              {detailQuery.isLoading && <p className="pf-hint">Loading scores…</p>}
-              {detailQuery.data?.run?.scores && (
-                <table className="pf-table" style={{ margin: 0 }}>
-                  <thead>
-                    <tr>
-                      <th>Ticker</th>
-                      <th>Score</th>
-                      <th>Signal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {detailQuery.data.run.scores.map((s, i) => (
-                      <tr key={i}>
-                        <td><strong>{s.ticker}</strong></td>
-                        <td className={scoreClass(s.value)}>{s.value.toFixed(1)}</td>
-                        <td>
-                          <span className={scoreClass(s.value)}>
-                            {s.value >= 60 ? '▲ BUY' : s.value >= 40 ? '◆ NEUTRAL' : '▼ SELL'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-              {!detailQuery.isLoading && !detailQuery.data?.run && (
-                <p className="pf-hint">Scores not available for this run.</p>
-              )}
-            </div>
-          )}
 
           {/* Pagination */}
           {totalPages > 1 && (
@@ -245,6 +281,32 @@ export default function ScoringRunsPage() {
               <button disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Next →</button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Compare Mode ─────────────────────────────────── */}
+      {compareMode && selectedRuns.length >= 2 && (
+        <div className="pf-section sr-compare-panel">
+          <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem' }}>Comparing {selectedRuns.length} Runs</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${selectedRuns.length}, 1fr)`, gap: '0.75rem', overflowX: 'auto' }}>
+            {selectedRuns.map((run) => (
+              <div key={run.id} className="sr-compare-col" style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 8, padding: '0.75rem', minWidth: 200 }}>
+                <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.4rem' }}>{run.strategyName || 'Unknown'}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--ink-soft)', marginBottom: '0.5rem' }}>
+                  {new Date(run.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.75rem' }}>
+                  <span className={run.avgScore >= 60 ? 'pf-green' : run.avgScore >= 40 ? 'pf-amber' : 'pf-red'}>
+                    Avg: {run.avgScore?.toFixed(1)}
+                  </span>
+                  <span style={{ color: 'var(--accent)' }}>
+                    {run.maxScore ? `${((run.avgScore / run.maxScore) * 100).toFixed(0)}%` : '—'}
+                  </span>
+                  {run.topSymbol && <span>Top: <strong>{run.topSymbol.ticker}</strong> {run.topSymbol.value.toFixed(1)}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

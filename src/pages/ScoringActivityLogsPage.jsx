@@ -108,6 +108,9 @@ export default function ScoringActivityLogsPage() {
               ? `${runs.length} scoring runs recorded — click a row to expand detail`
               : 'No scoring runs yet. Trigger a scoring run to see logs here.'}
           </p>
+          <p className="sal-subtitle" style={{ fontSize: '0.68rem', marginTop: '0.15rem', opacity: 0.7 }}>
+            Per-symbol directive trace view — for aggregate summaries see <a href="/scoring/scoring-runs" style={{ color: 'var(--accent)' }}>Scoring Runs</a>
+          </p>
         </div>
         <div className="sal-controls">
           <div className="sal-filters">
@@ -138,7 +141,7 @@ export default function ScoringActivityLogsPage() {
             <thead>
               <tr>
                 <th>Time</th>
-                <th>Strategy</th>
+                <th>Protocol / Strategy</th>
                 <th>Symbols</th>
                 <th>Top Scores</th>
               </tr>

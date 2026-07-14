@@ -100,7 +100,7 @@ export default function StrategyCanvas({ directives, weights, onWeightChange, on
       <input
         type="text"
         className="sb-strategy-name"
-        placeholder="Strategy name..."
+        placeholder="Protocol name..."
         value={strategyName}
         onChange={(e) => setStrategyName(e.target.value)}
       />

@@ -93,6 +93,30 @@
 .sr-fwd-badge.up { background: rgba(34,197,94,0.12); color: #22c55e; }
 .sr-fwd-badge.down { background: rgba(239,68,68,0.12); color: #ef4444; }
 
+/* ── Scoring Runs table ───────────────────────────────── */
+.sr-stats-bar {
+  display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+  padding: 0.4rem 0.7rem; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 6px; margin-bottom: 0.75rem; font-size: 0.78rem; color: var(--ink-soft);
+}
+.sr-signals { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.sruns-strat-name { font-weight: 600; font-size: 0.82rem; }
+.sr-expand-row td { background: color-mix(in srgb, var(--panel) 60%, var(--accent)); }
+.sr-row-checked { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.sr-compare-panel { margin-top: 0.5rem; }
+.sr-compare-col { transition: border-color 0.15s; }
+.sr-compare-col:hover { border-color: var(--accent); }
+.sr-pagination {
+  display: flex; align-items: center; justify-content: center; gap: 1rem;
+  padding: 0.75rem 0; font-size: 0.82rem;
+}
+.sr-pagination button {
+  padding: 0.35rem 0.75rem; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--panel); color: var(--ink); cursor: pointer; font-size: 0.78rem;
+}
+.sr-pagination button:disabled { opacity: 0.35; cursor: not-allowed; }
+.sr-pagination button:not(:disabled):hover { border-color: var(--accent); }
+
 /* Correct / Wrong badge */
 .sr-correct-badge {
   display: inline-block; padding: 1px 8px; border-radius: 3px;

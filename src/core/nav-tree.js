@@ -39,7 +39,6 @@ export const NAV_TREE = {
     views: [
       { id: 'active-symbols', label: 'Active Symbols', icon: '★' },
       { id: 'user-watchlists', label: 'Watchlists', icon: '⊞' },
-      { id: 'create-watchlist', label: 'Create Watchlist', icon: '⊞' },
       { id: 'add-symbol', label: 'Add Symbol', icon: '➕' },
     ],
   },
@@ -78,7 +77,7 @@ export const NAV_TREE = {
       { id: 'automation-dashboard', label: 'Dashboard', icon: '◉' },
       { id: 'speed-scanner', label: 'Speed Scanner', icon: '⚡' },
       { id: 'execution-queue', label: 'Execution Queue', icon: '⇢' },
-      { id: 'strategies-compare', label: 'Strategy Comparison', icon: '⇆' },
+      { id: 'strategies-compare', label: 'Multi-Strategy Compare', icon: '⇆' },
       { id: 'automation-rules', label: 'Bot Rules', icon: '⚙' },
       { id: 'alert-center', label: 'Alert Center', icon: '◈' },
     ],

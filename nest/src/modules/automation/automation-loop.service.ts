@@ -762,65 +762,79 @@ export class AutomationLoopService implements OnModuleInit {
             this.logger.debug(`Protocol-gating failed for ${strategy.symbol}, using scoreMap fallback: ${(err as Error).message}`);
           }
         }
-        // No scoreMap entry — try full evaluate anyway (data may have arrived)
+        // No scoreMap entry — use protocol-gating (forex symbols etc.)
         try {
-          const evalResult = await this.strategyService.evaluate(strategyId);
-          if (evalResult.evaluated && evalResult.passed && strategy.mode === 'auto') {
-            // ── Auto-execute for symbols not in rankAll (e.g. forex) ──
-            const bs = this.state.brokerStates[strategy.brokerId || 'mt5'];
-            if (bs?.tradingEnabled && (!this.lastAnyTradeAt || Date.now() - this.lastAnyTradeAt >= 60000)) {
-              const broker = this.adapterFactory.create(strategy.brokerId || 'mt5');
-              if (broker?.placeOrder) {
-                const size = (strategy as any).baseSize || 0.01;
-                const slPct = (strategy as any).slPct || 1.0;
-                const tpPct = (strategy as any).tpPct || 1.0;
-                const side = evalResult.signal as 'BUY' | 'SELL';
-                let entryPrice = 0;
-                try {
-                  const quote = await broker.getQuote(strategy.symbol);
-                  if (quote?.ask && quote?.bid) {
-                    entryPrice = side === 'BUY' ? quote.ask : quote.bid;
+          const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: strategy.symbol } });
+          const bars = dbSym ? await this.marketData.getBars(dbSym.id, strategy.timeframe || '5m', 100) : null;
+          if (bars && bars.length >= 20) {
+            const longGated = await this.protocolGating.scoreWithGating(strategy.symbol, bars, strategy.protocolId);
+            let shortGated: any = null;
+            let side: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+            let chosenComposite = longGated?.composite ?? 0;
+
+            if ((strategy as any).shortProtocolId) {
+              shortGated = await this.protocolGating.scoreWithGating(strategy.symbol, bars, (strategy as any).shortProtocolId);
+              const longScore = longGated?.composite ?? 0;
+              const shortScore = shortGated?.composite ?? 0;
+              if (longScore > shortScore && longScore >= (strategy.minComposite ?? 3)) {
+                side = 'BUY'; chosenComposite = longScore;
+              } else if (shortScore > longScore && shortScore >= (strategy.minComposite ?? 3)) {
+                side = 'SELL'; chosenComposite = shortScore;
+              }
+            } else {
+              side = (longGated?.signal as 'BUY' | 'SELL' | 'HOLD') ?? 'HOLD';
+              chosenComposite = longGated?.composite ?? 0;
+            }
+
+            // Persist evaluation to DB (best-effort)
+            try { await this.strategyService.evaluate(strategyId); } catch {}
+
+            // ── Auto-execute ──
+            if (side !== 'HOLD' && strategy.mode === 'auto') {
+              const bs = this.state.brokerStates[strategy.brokerId || 'mt5'];
+              if (bs?.tradingEnabled && (!this.lastAnyTradeAt || Date.now() - this.lastAnyTradeAt >= 60000)) {
+                const broker = this.adapterFactory.create(strategy.brokerId || 'mt5');
+                if (broker?.placeOrder) {
+                  let size = (strategy as any).baseSize || 0.01;
+                  const slPct = (strategy as any).slPct || 1.0;
+                  const tpPct = (strategy as any).tpPct || 1.0;
+                  const entryPrice = bars[bars.length - 1]?.close || 0;
+                  const sl = side === 'BUY' ? entryPrice * (1 - slPct / 100) : entryPrice * (1 + slPct / 100);
+                  const tp = side === 'BUY' ? entryPrice * (1 + tpPct / 100) : entryPrice * (1 - tpPct / 100);
+                  const orderResult = await broker.placeOrder({
+                    symbol: strategy.symbol, side: side as 'BUY' | 'SELL',
+                    quantity: size, sl, tp,
+                    comment: `TCS ${strategy.name} | ${chosenComposite}%`,
+                  });
+                  if (orderResult.success) {
+                    this.lastAnyTradeAt = Date.now();
+                    this.lastTradeTime.set(strategyId, Date.now());
+                    try { this.tradeRecorder.record({ symbol: strategy.symbol, side: side.toLowerCase(), quantity: size, entryPrice: orderResult.price || entryPrice, pnl: 0, provider: strategy.brokerId || 'mt5', status: 'open', origin: 'strategy', scoringStrategyId: strategyId } as any); } catch {}
                   }
-                } catch { /* use 0 — bridge will use market */ }
-                const sl = entryPrice > 0 ? (side === 'BUY' ? entryPrice * (1 - slPct / 100) : entryPrice * (1 + slPct / 100)) : 0;
-                const tp = entryPrice > 0 ? (side === 'BUY' ? entryPrice * (1 + tpPct / 100) : entryPrice * (1 - tpPct / 100)) : 0;
-                const orderResult = await broker.placeOrder({
-                  symbol: strategy.symbol,
-                  side,
-                  quantity: size,
-                  sl,
-                  tp,
-                  comment: `TCS ${strategy.name} | ${evalResult.composite}%`,
-                });
-                if (orderResult.success) {
-                  this.lastAnyTradeAt = Date.now();
-                  this.lastTradeTime.set(strategyId, Date.now());
-                  try { this.tradeRecorder.record({ symbol: strategy.symbol, side: side.toLowerCase(), quantity: size, entryPrice: orderResult.price || entryPrice, pnl: 0, provider: strategy.brokerId || 'mt5', status: 'open', origin: 'strategy', scoringStrategyId: strategyId } as any); } catch {}
+                  return {
+                    timestamp: new Date().toISOString(),
+                    strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
+                    decision: orderResult.success ? 'EXECUTED' : 'FAILED',
+                    reason: orderResult.success ? `Ticket ${orderResult.ticket}` : (orderResult.error || 'Unknown'),
+                    composite: chosenComposite, signal: side,
+                    ticket: orderResult.ticket, price: orderResult.price, quantity: size,
+                  };
                 }
-                return {
-                  timestamp: new Date().toISOString(),
-                  strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-                  decision: orderResult.success ? 'EXECUTED' : 'FAILED',
-                  reason: orderResult.success ? `Ticket ${orderResult.ticket}` : (orderResult.error || 'Unknown'),
-                  composite: evalResult.composite ?? 0, signal: evalResult.signal,
-                  ticket: orderResult.ticket, price: orderResult.price, quantity: size,
-                };
               }
             }
-          }
-          if (evalResult.evaluated) {
+
             return {
               timestamp: new Date().toISOString(),
               strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-              decision: evalResult.passed ? 'SCORED' : 'SKIP',
-              reason: evalResult.passed
-                ? `Evaluate passed: ${evalResult.composite}`
-                : `Evaluate: ${evalResult.reason || 'conditions not met'}`,
-                composite: evalResult.composite ?? 0, signal: evalResult.signal ?? 'neutral',
+              decision: side !== 'HOLD' ? 'SCORED' : 'SKIP',
+              reason: side !== 'HOLD'
+                ? `Gated: ${strategy.protocolId}` + (shortGated ? ` vs ${(strategy as any).shortProtocolId}` : '') + ` → ${side} (${chosenComposite})`
+                : `Gated: both sides low → HOLD`,
+              composite: chosenComposite, signal: side,
             };
           }
         } catch (err) {
-          // Symbol not in DB or no bars — expected for newly added strategies
+          this.logger.debug(`Protocol-gating failed for ${strategy.symbol} (no scoreMap): ${(err as Error).message}`);
         }
         return {
           timestamp: new Date().toISOString(),
