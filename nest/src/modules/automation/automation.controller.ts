@@ -363,6 +363,7 @@ export class AutomationController {
     watchlistName: string; brokerId: string; mode?: string;
     tradeThreshold?: number; baseSize?: number;
     slPct?: number; tpPct?: number;
+    maxPyramidTiers?: number;
   }) {
     const id = `ss-${Date.now()}`;
     const strat = {
@@ -377,6 +378,7 @@ export class AutomationController {
       baseSize: body.baseSize ?? 0.01,
       slPct: body.slPct ?? 1.0,
       tpPct: body.tpPct ?? 1.5,
+      maxPyramidTiers: body.maxPyramidTiers ?? 1,
       enabled: true,
       tradingEnabled: false,
     };

@@ -100,6 +100,7 @@ export interface ScoringStrategy {
   baseSize: number;
   slPct: number;
   tpPct: number;
+  maxPyramidTiers: number;
   enabled: boolean;
   tradingEnabled: boolean;
 }
@@ -317,6 +318,7 @@ export class AutomationLoopService implements OnModuleInit {
             baseSize: r.baseSize,
             slPct: r.slPct,
             tpPct: r.tpPct,
+            maxPyramidTiers: (r as any).maxPyramidTiers ?? 1,
             enabled: r.enabled,
             tradingEnabled: r.tradingEnabled,
           });
@@ -342,6 +344,7 @@ export class AutomationLoopService implements OnModuleInit {
           watchlistName: strat.watchlistName, brokerId: strat.brokerId,
           mode: strat.mode, tradeThreshold: strat.tradeThreshold,
           baseSize: strat.baseSize, slPct: strat.slPct, tpPct: strat.tpPct,
+          maxPyramidTiers: strat.maxPyramidTiers ?? 1,
           enabled: strat.enabled, tradingEnabled: strat.tradingEnabled,
         },
         update: {
@@ -350,6 +353,7 @@ export class AutomationLoopService implements OnModuleInit {
           watchlistName: strat.watchlistName, brokerId: strat.brokerId,
           mode: strat.mode, tradeThreshold: strat.tradeThreshold,
           baseSize: strat.baseSize, slPct: strat.slPct, tpPct: strat.tpPct,
+          maxPyramidTiers: strat.maxPyramidTiers ?? 1,
           enabled: strat.enabled, tradingEnabled: strat.tradingEnabled,
         },
       });
@@ -647,6 +651,9 @@ export class AutomationLoopService implements OnModuleInit {
 
     // Store recent decisions (keep last 50)
     this.state.recentDecisions = [...decisions, ...this.state.recentDecisions].slice(0, 50);
+
+    // Persist decisions to DB so they survive restarts
+    this.persistDecisions(decisions, this.state.tickCount);
 
     this.logger.log(`Tick #${this.state.tickCount} completed in ${this.state.lastTickMs}ms — ${decisions.length} decisions`);
     return decisions;
@@ -1048,6 +1055,49 @@ export class AutomationLoopService implements OnModuleInit {
    * Emergency stop — kills loop, flushes pending actions.
    * Does NOT automatically close positions (broker-dependent).
    */
+  /** Persist tick decisions to DB for audit trail survival across restarts. */
+  private persistDecisions(decisions: TickDecision[], tickNumber: number) {
+    if (!this.prisma.isAvailable) return;
+    const records = decisions.map(d => ({
+      timestamp: d.timestamp ? new Date(d.timestamp) : new Date(),
+      tickNumber,
+      strategyId: d.strategyId,
+      symbol: d.symbol,
+      decision: d.decision,
+      reason: d.reason?.slice(0, 500) ?? null,
+      composite: d.composite ?? 0,
+      signal: d.signal ?? null,
+      ticket: typeof d.ticket === 'number' ? d.ticket : (d.ticket ? parseInt(String(d.ticket), 10) || null : null),
+      price: d.price ?? null,
+      quantity: d.quantity ?? null,
+    }));
+
+    // Fire-and-forget — don't block the tick on DB writes
+    this.prisma.decisionLog.createMany({ data: records }).then(
+      () => this.logger.debug(`Persisted ${records.length} decisions to decision_log`),
+    ).catch(err => this.logger.warn(`Failed to persist decisions: ${err.message}`));
+
+    // Also log order attempts for EXECUTED/FAILED decisions
+    const orderDecisions = decisions.filter(d => d.decision === 'EXECUTED' || d.decision === 'FAILED');
+    for (const d of orderDecisions) {
+      const side = d.signal?.toLowerCase();
+      if (!side || (side !== 'buy' && side !== 'sell')) continue;
+      this.prisma.order.create({
+        data: {
+          symbol: d.symbol,
+          type: 'market',
+          side,
+          quantity: d.quantity ?? 0.01,
+          price: d.price ?? null,
+          status: d.decision === 'EXECUTED' ? 'filled' : 'rejected',
+          provider: d.brokerId || 'mt5',
+          providerId: d.ticket ? String(d.ticket) : null,
+          filledAt: d.decision === 'EXECUTED' ? new Date() : null,
+        },
+      }).catch(() => {});
+    }
+  }
+
   emergencyStop(): { stopped: boolean; message: string } {
     this.stop();
     this.state.pendingActions = [];

@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { apiGet, apiPost } from '../core/api/client';
+import '../core/forms.css';
 import './create-strategy.css';
 
 // ── Protocol → Broker compatibility ──
@@ -72,6 +73,7 @@ export default function CreateStrategyPage() {
   const [slPct, setSlPct] = useState('1.5');
   const [tpPct, setTpPct] = useState('2.0');
   const [minComposite, setMinComposite] = useState('60');
+  const [maxPyramidTiers, setMaxPyramidTiers] = useState('1');
 
   // ── Data sources ──
   const [protocols, setProtocols] = useState([]);
@@ -188,6 +190,7 @@ export default function CreateStrategyPage() {
         slPct: parseFloat(slPct) || 1.0,
         tpPct: parseFloat(tpPct) || 1.0,
         minComposite: parseInt(minComposite) || 60,
+        maxPyramidTiers: parseInt(maxPyramidTiers) || 1,
         active: true,
       };
 
@@ -231,17 +234,17 @@ export default function CreateStrategyPage() {
       </header>
 
       {saved && (
-        <div className="cs-success">
+        <div className="ff-success">
           ✅ Strategy created: <strong>{saved.name}</strong> — {saved.symbol} {saved.timeframe} on {saved.brokerId}
         </div>
       )}
 
-      <form className="cs-form" onSubmit={handleSubmit}>
+      <form className="ff-form" onSubmit={handleSubmit}>
         {/* ── Creation Path Toggle ── */}
-        <fieldset className="cs-path-toggle">
-          <legend>Creation Method</legend>
-          <div className="cs-path-options">
-            <label className={`cs-path-option ${creationPath === 'protocol' ? 'active' : ''}`}>
+        <fieldset className="ff-fieldset">
+          <legend className="ff-legend">Creation Method</legend>
+          <div className="ff-toggle-group">
+            <label className={`ff-toggle-option ${creationPath === 'protocol' ? 'active' : ''}`}>
               <input
                 type="radio"
                 name="creationPath"
@@ -249,10 +252,10 @@ export default function CreateStrategyPage() {
                 checked={creationPath === 'protocol'}
                 onChange={() => setCreationPath('protocol')}
               />
-              <span className="cs-path-label">Protocol + Symbol</span>
-              <span className="cs-path-desc">Pick a protocol, enter a symbol. Full manual control.</span>
+              <span className="ff-toggle-label">Protocol + Watchlist</span>
+              <span className="ff-toggle-desc">Pick a protocol and a watchlist. Full manual control.</span>
             </label>
-            <label className={`cs-path-option ${creationPath === 'scoring-strategy' ? 'active' : ''}`}>
+            <label className={`ff-toggle-option ${creationPath === 'scoring-strategy' ? 'active' : ''}`}>
               <input
                 type="radio"
                 name="creationPath"
@@ -260,17 +263,18 @@ export default function CreateStrategyPage() {
                 checked={creationPath === 'scoring-strategy'}
                 onChange={() => setCreationPath('scoring-strategy')}
               />
-              <span className="cs-path-label">Scoring Strategy</span>
-              <span className="cs-path-desc">Select a pre-configured strategy with watchlist, protocol, and thresholds.</span>
+              <span className="ff-toggle-label">Scoring Strategy</span>
+              <span className="ff-toggle-desc">Select a pre-configured strategy with watchlist, protocol, and thresholds.</span>
             </label>
           </div>
         </fieldset>
 
         {/* ── Name ── */}
-        <label className="cs-field">
-          <span>Strategy Name</span>
+        <label className="ff-field">
+          <span className="ff-label">Strategy Name</span>
           <input
             type="text"
+            className="ff-input"
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="e.g. EURUSD Default Pipeline"
@@ -282,9 +286,9 @@ export default function CreateStrategyPage() {
         {creationPath === 'protocol' && (
           <>
             {/* ── Protocol ── */}
-            <label className="cs-field">
-              <span>Scoring Protocol</span>
-              <select value={protocolId} onChange={e => handleProtocolChange(e.target.value)} required>
+            <label className="ff-field">
+              <span className="ff-label">Scoring Protocol</span>
+              <select className="ff-select" value={protocolId} onChange={e => handleProtocolChange(e.target.value)} required>
                 <option value="">— Select a protocol —</option>
                 {protocols.map(p => (
                   <option key={p.id} value={p.id}>
@@ -293,7 +297,7 @@ export default function CreateStrategyPage() {
                 ))}
               </select>
               {selectedProtocol && (
-                <span className="cs-hint">
+                <span className="ff-hint">
                   Style: {protocolStyle} · {selectedProtocol.directiveCount || '?'} directives
                   {STYLE_DEFAULTS[protocolStyle] && <> · Defaults: {STYLE_DEFAULTS[protocolStyle].baseSize} lot, SL {STYLE_DEFAULTS[protocolStyle].slPct}%, TP {STYLE_DEFAULTS[protocolStyle].tpPct}%</>}
                 </span>
@@ -301,24 +305,25 @@ export default function CreateStrategyPage() {
             </label>
 
             {/* ── Watchlist ── */}
-            <label className="cs-field">
-              <span>Watchlist (symbols to trade)</span>
-              <select value={watchlistId} onChange={e => setWatchlistId(e.target.value)} required>
+            <label className="ff-field">
+              <span className="ff-label">Watchlist (symbols to trade)</span>
+              <select className="ff-select" value={watchlistId} onChange={e => setWatchlistId(e.target.value)} required>
                 <option value="">— Select a watchlist —</option>
                 {watchlists.map(w => (
                   <option key={w.id} value={w.id}>{w.name || w.label || w.id} ({w.symbolCount || w.symbols?.length || 0} symbols)</option>
                 ))}
               </select>
-              <span className="cs-hint">The protocol scores all symbols in this watchlist. The trading strategy will trade whichever symbols pass the score threshold.</span>
+              <span className="ff-hint">The protocol scores all symbols in this watchlist. The trading strategy will trade whichever symbols pass the score threshold.</span>
             </label>
           </>
         )}
 
         {/* ── Scoring Strategy PATH ── */}
         {creationPath === 'scoring-strategy' && (
-          <label className="cs-field">
-            <span>Scoring Strategy</span>
+          <label className="ff-field">
+            <span className="ff-label">Scoring Strategy</span>
             <select
+              className="ff-select"
               value={scoringStrategyId}
               onChange={e => {
                 const id = e.target.value;
@@ -332,6 +337,7 @@ export default function CreateStrategyPage() {
                   setSlPct(String(strat.slPct || 1.0));
                   setTpPct(String(strat.tpPct || 1.0));
                   setMinComposite(String(strat.tradeThreshold || 60));
+                  setMaxPyramidTiers(String(strat.maxPyramidTiers ?? 1));
                   if (!name.trim()) setName(strat.name || '');
                 }
               }}
@@ -344,7 +350,7 @@ export default function CreateStrategyPage() {
                 </option>
               ))}
             </select>
-            <span className="cs-hint">
+            <span className="ff-hint">
               The scoring strategy's watchlist defines which symbols are traded.
               Protocol and risk defaults are pre-filled automatically.
             </span>
@@ -353,18 +359,18 @@ export default function CreateStrategyPage() {
 
         {/* ── Timeframe (only for protocol path) ── */}
         {creationPath === 'protocol' && (
-          <label className="cs-field">
-            <span>Timeframe</span>
-            <select value={timeframe} onChange={e => setTimeframe(e.target.value)}>
+          <label className="ff-field">
+            <span className="ff-label">Timeframe</span>
+            <select className="ff-select" value={timeframe} onChange={e => setTimeframe(e.target.value)}>
               {TIMEFRAMES.map(tf => <option key={tf} value={tf}>{tf}</option>)}
             </select>
           </label>
         )}
 
         {/* ── Broker Account ── */}
-        <label className="cs-field">
-          <span>Broker Account</span>
-          <select value={brokerId} onChange={e => setBrokerId(e.target.value)}>
+        <label className="ff-field">
+          <span className="ff-label">Broker Account</span>
+          <select className="ff-select" value={brokerId} onChange={e => setBrokerId(e.target.value)}>
             {Object.entries(PROTOCOL_BROKER_MAP).map(([id, cfg]) => {
               const isCompatible = compatibleBrokers.includes(id);
               return (
@@ -377,16 +383,16 @@ export default function CreateStrategyPage() {
               );
             })}
           </select>
-          <span className="cs-hint">
+          <span className="ff-hint">
             {PROTOCOL_BROKER_MAP[brokerId]?.note}
             {!compatibleBrokers.includes(brokerId) && ' ⚠️ This broker may not support the selected protocol style.'}
           </span>
         </label>
 
         {/* ── Mode ── */}
-        <label className="cs-field">
-          <span>Execution Mode</span>
-          <select value={mode} onChange={e => setMode(e.target.value)}>
+        <label className="ff-field">
+          <span className="ff-label">Execution Mode</span>
+          <select className="ff-select" value={mode} onChange={e => setMode(e.target.value)}>
             <option value="manual">Manual — signals displayed, no automatic action</option>
             <option value="semi-auto">Semi-Auto — trades queued for confirmation</option>
             <option value="auto">Auto — trades execute automatically</option>
@@ -394,32 +400,42 @@ export default function CreateStrategyPage() {
         </label>
 
         {/* ── Risk Params ── */}
-        <fieldset className="cs-fieldset">
-          <legend>Risk Parameters</legend>
-          <div className="cs-row-3">
-            <label className="cs-field">
-              <span>Base Size (lots)</span>
-              <input type="number" value={baseSize} onChange={e => setBaseSize(e.target.value)} step="0.01" min="0.01" />
+        <fieldset className="ff-fieldset">
+          <legend className="ff-legend">Risk Parameters</legend>
+          <div className="ff-row-3">
+            <label className="ff-field">
+              <span className="ff-label">Base Size (lots)</span>
+              <input className="ff-input" type="number" value={baseSize} onChange={e => setBaseSize(e.target.value)} step="0.01" min="0.01" />
             </label>
-            <label className="cs-field">
-              <span>Stop Loss %</span>
-              <input type="number" value={slPct} onChange={e => setSlPct(e.target.value)} step="0.1" min="0.1" />
+            <label className="ff-field">
+              <span className="ff-label">Stop Loss %</span>
+              <input className="ff-input" type="number" value={slPct} onChange={e => setSlPct(e.target.value)} step="0.1" min="0.1" />
             </label>
-            <label className="cs-field">
-              <span>Take Profit %</span>
-              <input type="number" value={tpPct} onChange={e => setTpPct(e.target.value)} step="0.1" min="0.1" />
+            <label className="ff-field">
+              <span className="ff-label">Take Profit %</span>
+              <input className="ff-input" type="number" value={tpPct} onChange={e => setTpPct(e.target.value)} step="0.1" min="0.1" />
             </label>
           </div>
-          <label className="cs-field">
-            <span>Min Composite Score (% of protocol max)</span>
-            <input type="number" value={minComposite} onChange={e => setMinComposite(e.target.value)} min="0" max="100" />
-            <span className="cs-hint">Only trade when composite score exceeds this percentage of the protocol's maximum possible score. E.g., 60 means the protocol must score at least 60% of its theoretical max.</span>
+          <label className="ff-field">
+            <span className="ff-label">Min Composite Score (% of protocol max)</span>
+            <input className="ff-input" type="number" value={minComposite} onChange={e => setMinComposite(e.target.value)} min="0" max="100" />
+            <span className="ff-hint">Only trade when composite score exceeds this percentage of the protocol's maximum possible score. E.g., 60 means the protocol must score at least 60% of its theoretical max.</span>
+          </label>
+          <label className="ff-field">
+            <span className="ff-label">Max Pyramid Tiers</span>
+            <select className="ff-select" value={maxPyramidTiers} onChange={e => setMaxPyramidTiers(e.target.value)}>
+              <option value="1">1 — Single entry only (no pyramid)</option>
+              <option value="2">2 — One additional entry</option>
+              <option value="3">3 — Two additional entries</option>
+              <option value="0">Unlimited — keep adding while signal stays strong</option>
+            </select>
+            <span className="ff-hint">How many additional entries can be stacked onto a winning position. Default: 1 (no pyramid).</span>
           </label>
         </fieldset>
 
         {/* ── Submit ── */}
-        {saveError && <div className="cs-save-error">❌ {saveError}</div>}
-        <button type="submit" className="cs-submit" disabled={saving}>
+        {saveError && <div className="ff-error">❌ {saveError}</div>}
+        <button type="submit" className="ff-submit" disabled={saving}>
           {saving ? 'Creating…' : 'Create Strategy'}
         </button>
       </form>

@@ -230,8 +230,8 @@ export const PLUGIN_TAB_SKELETONS = {
     domain: 'Automation / Operations',
   },
   'automation-rules': {
-    title: 'Automation Rules',
-    subtitle: 'Rule orchestration for entry, exit, lock, and safety automation.',
+    title: 'Bot Rules',
+    subtitle: 'Global hard-rules for bots — entry, exit, lock, and safety automation.',
     domain: 'Automation / Rules',
   },
   'cron-scheduler': {

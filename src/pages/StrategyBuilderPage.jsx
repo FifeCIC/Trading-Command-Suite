@@ -6,6 +6,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton'
 import StarToggle from '../components/StarToggle'
 import DirectivePalette from '../components/StrategyBuilder/DirectivePalette'
 import StrategyCanvas from '../components/StrategyBuilder/StrategyCanvas'
+import '../core/forms.css'
 import '../components/StrategyBuilder/strategy-builder.css'
 
 // Heuristic: derive compatible symbol types from directive category
@@ -162,23 +163,23 @@ export default function StrategyBuilderPage() {
 
       {/* Strategy metadata form */}
       <div className={`sb-meta-form${metaOpen ? '' : ' sb-meta-form--collapsed'}`}>
-        <div className="sb-meta-row">
-          <label>
-            <span>Protocol Name</span>
+        <div className="ff-row-2">
+          <label className="ff-field">
+            <span className="ff-label">Protocol Name</span>
             <input
               type="text"
               value={strategyName}
               onChange={(e) => setStrategyName(e.target.value)}
               placeholder="e.g., Tech Dip Accumulation"
-              className="sb-input"
+              className="ff-input"
             />
           </label>
-          <label>
-            <span>Watchlist</span>
+          <label className="ff-field">
+            <span className="ff-label">Watchlist</span>
             <select
               value={selectedWatchlist}
               onChange={(e) => setSelectedWatchlist(e.target.value)}
-              className="sb-input"
+              className="ff-select"
             >
               <option value="">— All active symbols —</option>
               {watchlists.map((w) => (
@@ -205,14 +206,14 @@ export default function StrategyBuilderPage() {
             </ul>
           </div>
         )}
-        <div className="sb-meta-row">
-          <label>
-            <span>Description</span>
+        <div className="ff-row-2">
+          <label className="ff-field">
+            <span className="ff-label">Description</span>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="What does this strategy aim to do?"
-              className="sb-input sb-textarea"
+              placeholder="What does this protocol aim to do?"
+              className="ff-textarea"
               rows={2}
             />
           </label>

@@ -42,6 +42,23 @@ const TABLE_ROWS = [
   { symbol: 'MSFT', price: 462.75, change: +0.9, signal: 'HOLD' },
 ];
 
+const FORM_STANDARD_CLASSES = [
+  '.app-form           /* Form container - sets field gap */',
+  '.app-form-row       /* Responsive row: 2-col -> 1-col on mobile */',
+  '.app-field          /* Field group: label + input + hint/error */',
+  '.app-field--error   /* Error state - red border + error text */',
+  '.app-field--success /* Success state - green indicator */',
+  '.app-field-label    /* Label - uppercase, spaced from input */',
+  '.app-field-input    /* Input/select/textarea - unified sizing */',
+  '.app-field-textarea /* Textarea variant - resizable vertical */',
+  '.app-field-hint     /* Hint/description below field */',
+  '.app-field-error    /* Error message below field */',
+  '.app-form-actions   /* Button row - right-aligned, gap */',
+  '.app-btn            /* Base button */',
+  '.app-btn-primary    /* Primary action button */',
+  '.app-btn-secondary  /* Secondary/cancel button */',
+].join('\n');
+
 export default function ThemeLabPage() {
   const [activeBg, setActiveBg] = useState(null);
   const navigate = useNavigate();
@@ -262,6 +279,108 @@ export default function ThemeLabPage() {
           </div>
         </section>
       )}
+
+      {/* ── Form Standard ──────────────────────────────────── */}
+      <section className="tl-section">
+        <h2>Form Standard</h2>
+        <p className="tl-hint">
+          Reusable form pattern for consistent spacing, field sizing, error states, and responsive layout.
+          Apply <code>.app-form</code> to any form container, <code>.app-field</code> to each field group.
+        </p>
+
+        <div className="tl-form-demos">
+          {/* Single-column demo */}
+          <div className="tl-form-demo">
+            <h3>Single Column</h3>
+            <div className="app-form">
+              <div className="app-field">
+                <label className="app-field-label">Strategy Name</label>
+                <input type="text" className="app-field-input" placeholder="e.g., Tech Dip Accumulation" defaultValue="" />
+                <span className="app-field-hint">Give your strategy a descriptive name.</span>
+              </div>
+              <div className="app-field">
+                <label className="app-field-label">Watchlist</label>
+                <select className="app-field-input">
+                  <option value="">— Select a watchlist —</option>
+                  <option>Momentum Stocks</option>
+                  <option>Primary</option>
+                </select>
+                <span className="app-field-hint">Symbols will come from the selected watchlist.</span>
+              </div>
+              <div className="app-field">
+                <label className="app-field-label">Description</label>
+                <textarea className="app-field-input app-field-textarea" placeholder="What does this strategy aim to do?" rows={2} />
+              </div>
+            </div>
+          </div>
+
+          {/* Two-column demo */}
+          <div className="tl-form-demo">
+            <h3>Two Column (responsive)</h3>
+            <div className="app-form">
+              <div className="app-form-row">
+                <div className="app-field">
+                  <label className="app-field-label">Min Score</label>
+                  <input type="number" className="app-field-input" placeholder="25" />
+                  <span className="app-field-hint">Composite score threshold (0-100).</span>
+                </div>
+                <div className="app-field">
+                  <label className="app-field-label">Max Positions</label>
+                  <input type="number" className="app-field-input" placeholder="5" />
+                  <span className="app-field-hint">Maximum concurrent positions.</span>
+                </div>
+              </div>
+              <div className="app-form-row">
+                <div className="app-field">
+                  <label className="app-field-label">Stop Loss %</label>
+                  <input type="number" className="app-field-input" placeholder="2.0" step="0.1" />
+                </div>
+                <div className="app-field">
+                  <label className="app-field-label">Take Profit %</label>
+                  <input type="number" className="app-field-input" placeholder="5.0" step="0.1" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Error states demo */}
+          <div className="tl-form-demo">
+            <h3>Error &amp; Disabled States</h3>
+            <div className="app-form">
+              <div className="app-field app-field--error">
+                <label className="app-field-label">Ticker Symbol</label>
+                <input type="text" className="app-field-input" defaultValue="INVALID!" />
+                <span className="app-field-error">Symbol not found. Check the ticker and try again.</span>
+              </div>
+              <div className="app-field">
+                <label className="app-field-label">Exchange</label>
+                <select className="app-field-input" disabled>
+                  <option>NASDAQ</option>
+                </select>
+                <span className="app-field-hint">Exchange selection is locked for this symbol.</span>
+              </div>
+              <div className="app-field app-field--success">
+                <label className="app-field-label">Protocol</label>
+                <select className="app-field-input" defaultValue="built-in">
+                  <option>built-in</option>
+                  <option>custom</option>
+                </select>
+                <span className="app-field-hint" style={{ color: '#22c55e' }}>✓ Protocol is valid and ready to use.</span>
+              </div>
+              <div className="app-form-actions">
+                <button type="button" className="app-btn app-btn-primary">Save Strategy</button>
+                <button type="button" className="app-btn app-btn-secondary">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* CSS snippet reference */}
+        <details className="tl-code-block" style={{ marginTop: '1.5rem' }}>
+          <summary>CSS Classes Reference</summary>
+          <pre className="tl-pre">{FORM_STANDARD_CLASSES}</pre>
+        </details>
+      </section>
     </div>
   );
 }

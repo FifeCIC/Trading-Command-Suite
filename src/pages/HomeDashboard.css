@@ -434,3 +434,79 @@
 .dash-session-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .dash-session-status { margin-left: auto; font-size: 0.72rem; font-weight: 600; color: #64748b; }
 .dash-session-open .dash-session-status { color: #22c55e; }
+
+/* ── Hot Picks Widget ───────────────────────────────────── */
+.dash-hot-picks { position: relative; }
+.dash-hp-refresh {
+  font-size: 0.7rem;
+  color: var(--accent, #0ea5a6);
+  animation: dash-hp-spin 1.5s linear infinite;
+  display: inline-block;
+}
+@keyframes dash-hp-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.dash-hp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dash-hp-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s;
+}
+.dash-hp-item:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.dash-hp-rank {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #64748b;
+  min-width: 22px;
+}
+
+.dash-hp-ticker {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #e2e8f0;
+  flex: 1;
+}
+
+.dash-hp-signal {
+  font-size: 0.8rem;
+}
+
+.dash-hp-score {
+  font-weight: 700;
+  font-size: 0.85rem;
+  min-width: 28px;
+  text-align: right;
+}
+
+.dash-hp-link {
+  display: block;
+  margin-top: 0.5rem;
+  padding: 0.3rem 0;
+  background: none;
+  border: none;
+  color: var(--accent, #0ea5a6);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: inherit;
+  text-align: center;
+  width: 100%;
+}
+.dash-hp-link:hover {
+  text-decoration: underline;
+}

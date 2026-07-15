@@ -42,6 +42,15 @@ export default function DashboardPage() {
   const totalPnl = positions.reduce((s, p) => s + (p.profit || 0), 0);
   const posCount = positions.length;
 
+  // Hot Picks widget
+  const hotPicksQuery = useQuery({
+    queryKey: ['dash-hot-picks'],
+    queryFn: () => apiGet('/api/scoring/ranked?limit=5'),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const hotPicks = hotPicksQuery.data?.ranked ?? [];
+
   const areas = Object.entries(NAV_TREE)
     .filter(([id]) => id !== 'dashboard') // exclude self
     .map(([id, area]) => ({
@@ -155,6 +164,42 @@ export default function DashboardPage() {
           <div className="dash-card">
             <h3>🔧 Dev Updates</h3>
             <p className="dash-hint">Release notes and community updates coming soon — pending TCS website and social presence.</p>
+          </div>
+
+          {/* ── Hot Picks Widget ── */}
+          <div className="dash-card dash-hot-picks">
+            <h3>
+              🔥 Hot Picks
+              {hotPicksQuery.isFetching && <span className="dash-hp-refresh"> ⟳</span>}
+            </h3>
+            {hotPicks.length === 0 ? (
+              <p className="dash-hint">Waiting for scoring data…</p>
+            ) : (
+              <div className="dash-hp-list">
+                {hotPicks.slice(0, 5).map((pick, i) => {
+                  const scoreColor = pick.score >= 50 ? 'var(--color-profit)' : pick.score >= 25 ? 'var(--color-warning)' : 'var(--color-loss)';
+                  return (
+                    <a
+                      key={pick.symbolId}
+                      href={`/research/symbol/${pick.symbolId}`}
+                      className="dash-hp-item"
+                      onClick={(e) => { e.preventDefault(); navigate(`/research/symbol/${pick.symbolId}`); }}
+                    >
+                      <span className="dash-hp-rank">#{i + 1}</span>
+                      <span className="dash-hp-ticker">{pick.ticker}</span>
+                      <span className="dash-hp-signal">{pick.signal === 'entry' ? '🎯' : pick.signal === 'watch' ? '👁' : '—'}</span>
+                      <span className="dash-hp-score" style={{ color: scoreColor }}>{pick.score}</span>
+                    </a>
+                  );
+                })}
+              </div>
+            )}
+            <button
+              className="dash-hp-link"
+              onClick={() => navigate('/lab/hot-stock-picks')}
+            >
+              View all picks →
+            </button>
           </div>
         </div>
       </div>

@@ -59,6 +59,15 @@ var GLOBAL_PREFERENCES = [
     field: 'hidePageSubtitle',
     defaultValue: false,
   },
+  {
+    id: 'highContrastText',
+    label: '🔍 High Contrast Text',
+    description: 'Boost text and accent contrast for readability. Recommended for visual accessibility.',
+    type: 'checkbox',
+    key: 'tcs:preferences',
+    field: 'highContrastText',
+    defaultValue: false,
+  },
 ];
 
 /** Registry of option definitions keyed by view ID */
@@ -176,6 +185,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   var experienceLevel = prefs.experienceLevel || 'beginner';
   var hidePageTitle = prefs.hidePageTitle === true;
   var hidePageSubtitle = prefs.hidePageSubtitle === true;
+  var highContrastText = prefs.highContrastText === true;
 
   // Read view-specific values from localStorage
   var [values, setValues] = useState(function () {
@@ -228,7 +238,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   }, [isOpen, onToggle]);
 
   // Build global section state for rendering
-  var globalValueMap = { displayMode: displayMode, experienceLevel: experienceLevel, hidePageTitle: hidePageTitle, hidePageSubtitle: hidePageSubtitle };
+  var globalValueMap = { displayMode: displayMode, experienceLevel: experienceLevel, hidePageTitle: hidePageTitle, hidePageSubtitle: hidePageSubtitle, highContrastText: highContrastText };
   var hasGlobalSections = true; // always show global section
   var hasViewSections = registry && registry.sections.length > 0;
 

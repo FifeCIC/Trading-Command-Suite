@@ -22,3 +22,17 @@
 {"timestamp":"2026-07-14T22:31:21.966Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":424}}
 {"timestamp":"2026-07-14T22:36:22.031Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":482}}
 {"timestamp":"2026-07-14T22:41:21.968Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":407}}
+{"timestamp":"2026-07-14T22:46:22.111Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":542}}
+{"timestamp":"2026-07-14T22:51:22.103Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":528}}
+{"timestamp":"2026-07-14T22:57:31.604Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":611}}
+{"timestamp":"2026-07-14T23:02:04.671Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":5344}}
+{"timestamp":"2026-07-14T23:13:20.809Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":601}}
+{"timestamp":"2026-07-14T23:18:20.652Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":469}}
+{"timestamp":"2026-07-14T23:23:20.624Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":462}}
+{"timestamp":"2026-07-14T23:28:20.566Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":432}}
+{"timestamp":"2026-07-14T23:33:20.538Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":426}}
+{"timestamp":"2026-07-14T23:38:20.507Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":409}}
+{"timestamp":"2026-07-14T23:43:20.486Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":413}}
+{"timestamp":"2026-07-14T23:48:20.457Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":409}}
+{"timestamp":"2026-07-14T23:53:20.505Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":463}}
+{"timestamp":"2026-07-14T23:58:23.873Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":3845}}

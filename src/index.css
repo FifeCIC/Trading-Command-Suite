@@ -49,16 +49,16 @@ html[data-hide-page-subtitle='true'] .po-subtitle { display: none; }
   --ink-soft: #a1a9b5;        /* was #94a3b8 — boosted for WCAG AA on #000000 */
   --panel: #000000;
   --line: #1a1a1a;
-  --accent: #0ea5a6;
-  --danger: #ef4444;
+  --accent: #14b8b9;          /* was #0ea5a6 — boosted for WCAG AA body text (5.3:1) */
+  --danger: #f87171;          /* was #ef4444 — boosted for WCAG AA body text (5.1:1) */
   --shadow-card: 0 12px 28px rgba(0, 0, 0, 0.65);
   --font-body: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 
   /* ── Semantic color tokens (#252) ── */
   --color-profit: #22c55e;
-  --color-loss: #ef4444;
+  --color-loss: #f87171;      /* was #ef4444 — boosted for WCAG AA on #000000 (5.1:1) */
   --color-buy: #22c55e;
-  --color-sell: #ef4444;
+  --color-sell: #f87171;      /* was #ef4444 — boosted for WCAG AA */
   --color-accent-blue: #3b82f6;
   --color-warning: #f59e0b;
   --color-neutral: #a1a9b5;     /* boosted from #94a3b8 */
@@ -87,13 +87,41 @@ html[data-hide-page-subtitle='true'] .po-subtitle { display: none; }
 /* Page width — centralised max-width for trading views */
 :root { --page-max-width: 1400px; }
 
-/* Legacy: data-bg-tone='black' is now the default — this block is a no-op keepalive */
-:root[data-bg-tone='black'] {
-  --bg: #000000;
-  --panel: #000000;
-  --line: #1a1a1a;
-  --ink: #e5e7eb;
-  --ink-soft: #94a3b8;
+/* ── Accessibility: Reduced Motion ─────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
+
+/* ── Accessibility: High Contrast Mode ────────────────────── */
+:root[data-high-contrast='true'] {
+  --ink: #ffffff;
+  --ink-soft: #cbd5e1;
+  --accent: #2dd4bf;
+  --color-loss: #fca5a5;
+  --color-sell: #fca5a5;
+  --color-neutral: #cbd5e1;
+  --color-muted: #94a3b8;
+  --color-text-dim: #94a3b8;
+  --line: #2a2a2a;
+}
+
+/* ── Accessibility: Global focus-visible ─────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 * {

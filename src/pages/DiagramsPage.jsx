@@ -235,102 +235,122 @@ const DIAGRAMS = [
   {
     id: 'deployment',
     label: 'Deployment & Infrastructure',
-    desc: 'Local development infrastructure: WAMP, NestJS, Vite, Intranet task runner, MT5 bridge, and Google Drive documentation.',
-    code: `flowchart LR
-    subgraph WAMP["WAMP Stack :80"]
-        A[Apache]
-        B[PHP 8.x]
-        C[(MySQL 9.1)]
+    desc: 'Local development infrastructure: WAMP (Apache + MySQL), NestJS with Prisma + BullMQ, Vite PWA, MT5 Python bridge, Redis queue, Intranet task runner (PHP on Apache), and Google Drive documentation. NestJS also acts as process manager (ServerControlsPage → /api/processes). GitHub Actions CI runs on push to master.',
+    code: `flowchart TB
+    subgraph Frontend["Frontend :5173"]
+        A[Vite + React 18 PWA]
+        B[TanStack Query + Zustand]
+        C[ServerControlsPage]
     end
     subgraph Backend["NestJS :3201"]
-        D[API Gateway]
-        E[Modules]
+        D[API /api prefix]
+        E[46 Modules]
         F[Prisma ORM]
+        G[Swagger /docs]
+        H[Process Manager<br/>/api/processes]
+        I[BullMQ Workers]
     end
-    subgraph Frontend["Vite :5173/5188"]
-        G[React 18 PWA]
-        H[TanStack Query]
+    subgraph WAMP["WAMP Stack :80"]
+        J[Apache + PHP 8.x]
+        K[(MySQL — Prisma datasource)]
+        L[Intranet /intranet<br/>api-tasks.php]
+    end
+    subgraph Queue["Redis :6379"]
+        M[Memurai / Redis]
+        N[QUEUE_MODE=local]
     end
     subgraph Bridge["MT5 Bridge :5000"]
-        I[Python Bridge]
-        J[MetaTrader 5]
+        O[Python Flask]
+        P[MetaTrader 5]
     end
-    subgraph Infra["Infrastructure"]
-        K[Intranet Task Runner :80]
-        L[Google Drive Docs]
+    subgraph Docs["Google Drive"]
+        Q[DOCUMENTATION-INDEX.md]
+        R[.agenticmemory/SPRINT.md]
     end
-    G -->|fetch| D
-    D -->|query| C
-    D -->|commands| I
-    I -->|orders| J
-    K -->|start/stop| D
-    K -->|start/stop| G
-    L -->|.agenticmemory| M[Prompts & Docs]`,
+    subgraph CI["GitHub Actions"]
+        S[ci.yml — build + lint]
+        T[Frontend + Backend jobs]
+    end
+    A -->|/api proxy| D
+    A -->|/intranet proxy| L
+    C -->|start/stop| H
+    D --> F --> K
+    I --> M
+    D -->|POST /order| O
+    O --> P
+    L -->|start/stop services| H
+    style Queue fill:#1a1a2e,stroke:#ef4444,color:#e5e7eb
+    style CI fill:#1a1a2e,stroke:#3b82f6,color:#e5e7eb`,
   },
   {
     id: 'activation-gate',
     label: 'Activation Gate & Conditions',
-    desc: 'Pre-scoring condition detection: ConditionDetectorService produces a ConditionVector (entropy, Hurst, session, BOS, range). ActivationGateService evaluates directive suitability metadata (regime, volatility, instrument, timeframe) and classifies each directive as active/reduced/muted/boosted before scoring.',
+    desc: 'Pre-scoring condition detection: ConditionDetectorService produces a ConditionVector (regime, hurst, ADX, ATR percentile, session, preEvent). DirectivesService.evaluateGate() checks each directive\'s SuitabilityProfile (90+ entries) against the vector. Outcomes: muted (score=0 in live), or weight-reduced (−30% regime/volatility, −50% session mismatch). Demo mode reduces weight instead of muting.',
     code: `flowchart TB
-    subgraph Input["Market Data Input"]
-        A[Price Bars]
-        B[Volume Data]
-        C[Session Info]
+    subgraph Input["Market Data (DirectiveInput)"]
+        A[Price Bars<br/>highs, lows, closes]
+        B[Symbol + Timeframe]
     end
-    subgraph Detection["Condition Detection"]
-        D[Entropy Calculator]
-        E[Hurst Exponent]
-        F[Session Classifier]
-        G[BOS Detector]
-        H[Range Analyzer]
+    subgraph Detector["ConditionDetectorService.detect()"]
+        C[ADX 14-period<br/>Wilder smoothing]
+        D[Hurst Exponent<br/>lag-1 autocorrelation proxy]
+        E[ATR Percentile<br/>90-period distribution]
+        F[Session Classifier<br/>US · London · Asian · off-hours]
+        G[Ensemble Score<br/>0.40×Hurst + 0.35×ADX + 0.25×Vol]
     end
-    subgraph Vector["Condition Vector"]
-        I[entropyLevel]
-        J[hurstValue]
-        K[sessionType]
-        L[breakOfStructure]
-        M[rangeState]
+    subgraph Vector["ConditionVector"]
+        H[regime: trending · ranging · chaotic]
+        I[regimeStrength: 0–1]
+        J[volatility: low · normal · high]
+        K[activeSession: US · London · Asian · off-hours]
+        L[adx + atrPercentile + hurstExponent]
+        M[preEvent: boolean<br/>within 30min of FOMC]
     end
-    subgraph Gate["Activation Gate"]
-        N[Suitability Registry<br/>40+ directives]
-        O[Gate Evaluator]
-        P{Match?}
-        Q[active · boosted]
-        R[reduced · muted]
+    subgraph Gate["evaluateGate() in DirectivesService"]
+        N[Suitability Registry<br/>90+ directives]
+        O{Regime match?}
+        P{Volatility match?}
+        Q{Session match?}
     end
-    subgraph Triggers["8 Built-in Triggers"]
-        S[strong-trend]
-        T[high-vol]
-        U[compression]
-        V[ranging]
-        W[asian-session]
-        Z[london-us-overlap]
-        Y[bearish-structure]
-        X[bullish-structure]
+    subgraph Outcomes["Gate Outcomes"]
+        R[MUTED score=0<br/>regime mismatch in live mode]
+        S[REDUCED −30%<br/>volatility mismatch]
+        T[REDUCED −50%<br/>session mismatch]
+        U[PASS weight=1.0<br/>all conditions match]
     end
+    A --> C
     A --> D
-    B --> D
-    C --> F
     A --> E
-    A --> G
-    A --> H
-    D --> I
+    B --> F
+    C --> G
+    D --> G
+    E --> G
+    G --> H
+    G --> I
     E --> J
     F --> K
-    G --> L
-    H --> M
-    I --> O
-    J --> O
-    K --> O
-    L --> O
-    M --> O
+    C --> L
+    D --> L
+    E --> L
+    H --> O
+    J --> P
+    K --> Q
     N --> O
-    O --> P
+    N --> P
+    N --> Q
+    O -->|mismatch live| R
+    O -->|match or demo| P
+    P -->|mismatch| S
     P -->|match| Q
-    P -->|mismatch| R
-    Triggers --> O
-    Q --> SCORING[Directive Scoring]
-    R --> SCORING`,
+    Q -->|mismatch| T
+    Q -->|match| U
+    U --> SCORING[Directive calculate]
+    S --> SCORING
+    T --> SCORING
+    style R fill:#ef4444,color:#fff
+    style S fill:#f59e0b,color:#000
+    style T fill:#f59e0b,color:#000
+    style U fill:#22c55e,color:#000`,
   },
   {
     id: 'exit-signals',

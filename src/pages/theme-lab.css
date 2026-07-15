@@ -375,3 +375,198 @@
 .tl-table-wrap .ds-table tbody tr:nth-child(even):hover {
   background: rgba(255,255,255,0.04);
 }
+
+/* ── Form Standard ───────────────────────────────────────── */
+
+/* Form demo grid in Theme Lab */
+.tl-form-demos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 1.25rem;
+}
+
+.tl-form-demo {
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 10px;
+  padding: 1rem;
+  background: rgba(0,0,0,0.12);
+}
+
+.tl-form-demo h3 {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft, #94a3b8);
+  margin: 0 0 0.75rem;
+}
+
+/* ── Reusable Form Pattern (.app-form) ──────────────────── */
+
+.app-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Responsive row: 2 columns, collapses to 1 on narrow screens */
+.app-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+@media (max-width: 480px) {
+  .app-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Field group: label + input + hint/error */
+.app-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* Label — uppercase, subtle, consistent spacing */
+.app-field-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-soft, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Unified input/select/textarea */
+.app-field-input {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--line, #334155);
+  border-radius: 6px;
+  background: var(--color-input-bg, #111318);
+  color: var(--ink, #e2e8f0);
+  font-size: 0.88rem;
+  font-family: inherit;
+  line-height: 1.4;
+  transition: border-color 0.15s;
+  outline: none;
+  width: 100%;
+}
+
+.app-field-input:focus {
+  border-color: var(--accent, #0ea5a6);
+}
+
+.app-field-input::placeholder {
+  color: #64748b;
+}
+
+.app-field-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(255,255,255,0.03);
+}
+
+/* Textarea variant */
+.app-field-textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+/* Hint text below field */
+.app-field-hint {
+  font-size: 0.72rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+/* Error state */
+.app-field--error .app-field-input {
+  border-color: var(--color-loss, #ef4444);
+}
+
+.app-field--error .app-field-input:focus {
+  box-shadow: 0 0 0 2px rgba(239,68,68,0.15);
+}
+
+.app-field-error {
+  font-size: 0.72rem;
+  color: var(--color-loss, #ef4444);
+  line-height: 1.4;
+}
+
+/* Success state */
+.app-field--success .app-field-input {
+  border-color: var(--color-profit, #22c55e);
+}
+
+/* Action buttons row */
+.app-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+/* Base button */
+.app-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  border: 1px solid transparent;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.app-btn-primary {
+  background: var(--accent, #0ea5a6);
+  color: #042f2e;
+  border-color: var(--accent, #0ea5a6);
+}
+
+.app-btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+.app-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.app-btn-secondary {
+  background: transparent;
+  color: var(--ink-soft, #94a3b8);
+  border-color: var(--line, #334155);
+}
+
+.app-btn-secondary:hover {
+  background: rgba(255,255,255,0.04);
+  color: var(--ink, #e2e8f0);
+}
+
+/* ── Code block ─────────────────────────────────────────── */
+.tl-code-block {
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  background: rgba(0,0,0,0.2);
+}
+
+.tl-code-block summary {
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.78rem;
+  color: var(--ink-soft, #94a3b8);
+  font-weight: 600;
+}
+
+.tl-pre {
+  margin: 0;
+  padding: 0.75rem;
+  font-size: 0.7rem;
+  line-height: 1.6;
+  color: var(--ink-soft, #94a3b8);
+  background: rgba(0,0,0,0.3);
+  border-top: 1px solid var(--line, #334155);
+  overflow-x: auto;
+  white-space: pre;
+}

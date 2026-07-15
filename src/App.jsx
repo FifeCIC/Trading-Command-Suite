@@ -355,7 +355,22 @@ function AppShell() {
       const raw = localStorage.getItem('tcs:preferences');
       const prefs = raw ? JSON.parse(raw) : {};
       document.documentElement.setAttribute('data-page-transitions', prefs.pageTransitions !== false ? 'true' : 'false');
+      document.documentElement.setAttribute('data-high-contrast', prefs.highContrastText === true ? 'true' : 'false');
     } catch { /* preference not yet saved */ }
+  }, []);
+
+  // ── Listen for preference changes ──
+  useEffect(() => {
+    const onStorage = () => {
+      try {
+        const raw = localStorage.getItem('tcs:preferences');
+        const prefs = raw ? JSON.parse(raw) : {};
+        document.documentElement.setAttribute('data-high-contrast', prefs.highContrastText === true ? 'true' : 'false');
+        document.documentElement.setAttribute('data-page-transitions', prefs.pageTransitions !== false ? 'true' : 'false');
+      } catch { /* ignore */ }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   useEffect(() => {

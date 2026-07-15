@@ -1018,6 +1018,7 @@ model ScoringStrategy {
   baseSize        Float    @default(0.01)
   slPct           Float    @default(1.0)
   tpPct           Float    @default(1.0)
+  maxPyramidTiers Int      @default(1)
   enabled         Boolean  @default(true)
   tradingEnabled  Boolean  @default(false)
   activatedAt     DateTime?
@@ -1283,4 +1284,28 @@ model StackPerformance {
   @@map("stack_performance")
   @@index([scoringStrategyId])
   @@index([rating])
+}
+
+// ── Decision Log ─────────────────────────────────────────
+// Persists automation loop decisions across restarts.
+// One row per strategy evaluation per tick.
+
+model DecisionLog {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  timestamp   DateTime @default(now())
+  tickNumber  Int
+  strategyId  String   @db.VarChar(36)
+  symbol      String   @db.VarChar(20)
+  decision    String   @db.VarChar(20)   // SCORED, SKIP, EXECUTED, FAILED, BLOCKED, QUEUED, HOLD
+  reason      String?  @db.Text
+  composite   Float    @default(0)
+  signal      String?  @db.VarChar(10)    // BUY, SELL, HOLD
+  ticket      Int?
+  price       Float?
+  quantity    Float?
+
+  @@map("decision_log")
+  @@index([timestamp])
+  @@index([strategyId, timestamp])
+  @@index([symbol, timestamp])
 }
