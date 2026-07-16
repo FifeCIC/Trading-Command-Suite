@@ -13,8 +13,8 @@
 
 /* Sticky gear/bookmark button */
 .so-gear-btn {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 1px solid var(--color-border, #2d3040);
   background: var(--color-panel, #1a1d2e);
@@ -95,8 +95,8 @@
   font-weight: 400;
 }
 .so-close-btn {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border: none;
   background: none;
   color: var(--textDim, #9ca3af);

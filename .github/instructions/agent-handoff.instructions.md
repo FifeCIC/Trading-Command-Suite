@@ -9,6 +9,25 @@ When you complete ANY code change (feature, bug fix, refactor, test, documentati
 
 **Do not make decisions about whether the change is "big enough."** Every change gets a handoff. The Librarian decides what to batch and when.
 
+## Claiming an Issue (preventing duplicate work)
+
+Before starting work on a GitHub issue, you MUST check if another agent has already claimed it:
+
+```powershell
+gh issue view {number} --repo FifeCIC/Trading-Command-Suite --json comments --jq '[.comments[].body] | any(contains("🤖 Claimed by"))'
+```
+
+- If the output is `true`, **pick a different issue** — that one is already being worked on.
+- If the output is `false`, **claim it immediately** by commenting on the issue:
+
+```powershell
+gh issue comment {number} --repo FifeCIC/Trading-Command-Suite --body "🤖 Claimed by {agent-name} — started work on {date} {time} UTC"
+```
+
+Replace `{agent-name}` with the name of the current agent (e.g. `TCS-Dev`, `Librarian`, `Ivy`).
+
+When you close the issue, the closing comment replaces the claim. No cleanup needed.
+
 ## File Location
 
 ```

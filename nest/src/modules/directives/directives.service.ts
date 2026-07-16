@@ -85,8 +85,11 @@ export class DirectivesService {
     this.tickCache.clear();
   }
 
-  /** Run all registered directives against the same input, with activation gates. Supports async directives. */
-  async runAll(input: DirectiveInput): Promise<Map<string, DirectiveResult>> {
+  /** Run all registered directives against the same input, with activation gates. Supports async directives.
+   *  @param input - The directive input (symbol, bars, etc.)
+   *  @param directiveFilter - Optional set of directive IDs to run. If omitted, runs ALL registered directives.
+   *    Used by protocol-gating to avoid running directives not in the active protocol (#389). */
+  async runAll(input: DirectiveInput, directiveFilter?: Set<string>): Promise<Map<string, DirectiveResult>> {
     // ── Per-tick memoization (#408) ──
     // Directives scoring is deterministic for a given (symbol, bars) combo.
     // Multiple callers (rankAll, protocol-gating, evaluateStrategy) ask for
@@ -102,6 +105,10 @@ export class DirectivesService {
     this.lastConditionVector = cv;
 
     for (const [id, directive] of this.registry) {
+      // ── Protocol-scoped filtering (#389) ──
+      // Skip directives not in the active protocol if a filter is provided.
+      if (directiveFilter && !directiveFilter.has(id)) continue;
+
       try {
         // ── Time-gate check (activeWindow) ──
         if (directive.activeWindow) {

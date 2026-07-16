@@ -142,8 +142,72 @@ html[data-hide-page-subtitle='true'] .po-subtitle { display: none; }
 :root[data-focus-indicator-style="none"] :focus-visible {
   outline: none;
 }
+
+/* ── Accessibility: Screen-reader-only alert region ─────── */
+.sr-only-alert {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 :focus:not(:focus-visible) {
   outline: none;
+}
+
+/* ── Accessibility: Tap Target Minimums (WCAG 2.5.5) #362 ── */
+/* AA minimum (24×24px) — all interactive elements */
+button,
+a[href],
+input[type='checkbox'],
+input[type='radio'],
+select,
+[role='button'],
+[tabindex]:not([tabindex='-1']) {
+  min-height: 24px;
+  min-width: 24px;
+}
+
+/* AAA target (44×44px) — primary action buttons and standalone controls */
+button.cta,
+button.primary,
+.app-empty-action,
+.primary-btn,
+button[type='submit'] {
+  min-height: 44px;
+}
+
+/* Inline links in text — extend hit area via pseudo-element */
+a.tap-inline {
+  position: relative;
+}
+a.tap-inline::after {
+  content: '';
+  position: absolute;
+  inset: -8px -4px;
+}
+
+/* Checkbox/radio labels — ensure the label+input combo is tappable */
+input[type='checkbox'] + span,
+input[type='radio'] + span {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Checkbox/radio inputs — minimum 24×24px (AA) */
+input[type='checkbox'],
+input[type='radio'] {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 * {
@@ -318,7 +382,7 @@ html[data-hide-page-subtitle='true'] .po-subtitle { display: none; }
 /* ── Keyboard Shortcuts Help ── */
 .ksh-trigger {
   position: fixed; bottom: 20px; right: 70px; z-index: 998;
-  width: 42px; height: 42px; border-radius: 50%;
+  width: 44px; height: 44px; border-radius: 50%;
   border: 1px solid var(--color-border, #2d3040);
   background: var(--color-panel, #1a1d2e);
   color: var(--color-neutral, #a1a9b5);
@@ -500,8 +564,10 @@ button.nav-active {
   color: var(--ink-soft);
   cursor: pointer;
   font-size: 0.7rem;
-  padding: 0.15rem 0.35rem;
+  padding: 0.35rem 0.5rem;
   line-height: 1;
+  min-height: 44px;
+  min-width: 44px;
 }
 .rail-collapse-toggle:hover { border-color: var(--accent); color: var(--ink); }
 
@@ -614,6 +680,23 @@ button {
   color: #fff;
   padding: 0.6rem 0.9rem;
   cursor: pointer;
+  min-height: 44px;
+}
+
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+select,
+textarea {
+  min-height: 44px;
+}
+
+input[type="checkbox"] {
+  min-width: 44px;
+  min-height: 44px;
+  accent-color: var(--accent, #0ea5a6);
 }
 
 .cta {
@@ -818,6 +901,7 @@ button.nav-active {
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s;
+  min-height: 44px;
 }
 
 .topbar-area-nav button:hover {
@@ -852,6 +936,7 @@ button.nav-active {
   border: 1px solid var(--line);
   background: var(--panel);
   transition: border-color 0.15s, color 0.15s;
+  min-height: 44px;
 }
 
 .topbar-status-summary:hover {
@@ -1050,6 +1135,7 @@ button.nav-active {
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  min-height: 44px;
 }
 
 .rail-links button:hover {
@@ -1713,7 +1799,7 @@ button.nav-active {
 .msc-topbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
 .msc-controls { display: flex; align-items: center; gap: 0.75rem; font-size: 0.82rem; color: var(--ink-soft); }
 .msc-modes { display: flex; gap: 4px; }
-.msc-mode-btn { padding: 0.2rem 0.6rem; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--ink-soft); font-size: 0.72rem; cursor: pointer; text-transform: capitalize; }
+.msc-mode-btn { padding: 0.4rem 0.75rem; min-height: 44px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--ink-soft); font-size: 0.75rem; cursor: pointer; text-transform: capitalize; }
 .msc-mode-btn.active { border-color: var(--accent); color: var(--ink); background: color-mix(in srgb, var(--accent) 10%, var(--panel)); }
 .msc-error { color: var(--danger); }
 .msc-empty-state { padding: 2rem; text-align: center; color: var(--ink-soft); }
@@ -1765,7 +1851,7 @@ button.nav-active {
 .sa-create { padding: 0.45rem 1.2rem; border: none; border-radius: 6px; background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
 .sa-factors-label { font-size: 0.78rem; color: var(--ink-soft); margin: 0.75rem 0 0.25rem; }
 .sa-factor-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 0.5rem; }
-.sa-factor-chip { padding: 0.15rem 0.45rem; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); font-size: 0.68rem; cursor: pointer; color: var(--ink-soft); }
+.sa-factor-chip { padding: 0.35rem 0.6rem; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); font-size: 0.72rem; cursor: pointer; color: var(--ink-soft); min-height: 44px; display: inline-flex; align-items: center; }
 .sa-factor-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .sa-factor-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0; font-size: 0.78rem; }
 .sa-factor-row input[type=range] { width: 60px; }
@@ -1918,8 +2004,8 @@ button.nav-active {
 .mt5-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
 .mt5-table th { text-align: left; padding: 0.3rem 0.35rem; border-bottom: 2px solid var(--line); color: var(--ink-soft); font-size: 0.65rem; text-transform: uppercase; }
 .mt5-table td { padding: 0.3rem 0.35rem; border-bottom: 1px solid var(--line); }
-.mt5-close-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 0.9rem; padding: 0 0.2rem; }
-.mt5-close-all { font-size: 0.65rem; padding: 0.2rem 0.5rem; background: color-mix(in srgb, var(--danger) 15%, transparent); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); border-radius: 4px; color: var(--danger); cursor: pointer; }
+.mt5-close-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 0.9rem; padding: 0.35rem 0.5rem; min-height: 44px; min-width: 44px; }
+.mt5-close-all { font-size: 0.72rem; padding: 0.4rem 0.75rem; min-height: 44px; background: color-mix(in srgb, var(--danger) 15%, transparent); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); border-radius: 4px; color: var(--danger); cursor: pointer; }
 
 /* Order Form */
 .mt5-order-form { display: flex; flex-direction: column; gap: 0.6rem; }
@@ -1933,7 +2019,7 @@ button.nav-active {
 .mt5-form-row { display: flex; gap: 0.5rem; }
 .mt5-form-row .mt5-form-group { flex: 1; }
 .mt5-lot-btns { display: flex; gap: 0.25rem; margin-top: 0.2rem; }
-.mt5-lot-btns button { flex: 1; font-size: 0.68rem; padding: 0.2rem; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--ink); cursor: pointer; }
+.mt5-lot-btns button { flex: 1; font-size: 0.72rem; padding: 0.4rem 0.3rem; min-height: 44px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--ink); cursor: pointer; }
 .mt5-lot-active { border-color: var(--accent) !important; background: color-mix(in srgb, var(--accent) 20%, transparent) !important; }
 .mt5-order-btns { display: flex; gap: 0.5rem; margin-top: 0.25rem; }
 .mt5-btn-buy { flex: 1; padding: 0.5rem; border: none; border-radius: 6px; background: #00a63e; color: #fff; font-weight: 600; cursor: pointer; }

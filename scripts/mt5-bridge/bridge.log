@@ -23065,3 +23065,9 @@
 2026-07-16 02:52:44,013 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
 2026-07-16 02:52:44,026 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
 2026-07-16 02:53:03,447 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T02:53:03.447181", "action": "order_placed", "ticket": 152345688124, "symbol": "USDCAD", "type": "buy", "volume": 0.01, "price": 1.40475, "clientOrderId": null}
+2026-07-16 03:44:05,005 [INFO] MetaTrader5 package loaded
+2026-07-16 03:44:05,007 [INFO] Connecting to MT5 at startup...
+2026-07-16 03:44:05,007 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-16 03:44:05,337 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1384.21
+2026-07-16 03:44:05,368 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-16 03:44:05,413 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000

@@ -190,6 +190,7 @@ export class ProtocolGatingController {
           directiveCount: 0,
           gatedCount: 0,
           riskDirectiveCount: 0,
+          weightStrategy: 'group-weighted' as const,
         },
       };
     }

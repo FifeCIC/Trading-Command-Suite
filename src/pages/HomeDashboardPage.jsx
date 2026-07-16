@@ -56,7 +56,7 @@ export default function HomeDashboardPage() {
   const progressPct = Math.round((doneSteps / totalSteps) * 100);
 
   return (
-    <div className="nav-dashboard">
+    <div className="nav-dashboard" aria-live="polite" aria-atomic="true">
       <header className="nd-header">
         <div className="nd-header-left">
           <h1 className="nd-title">Navigation Dashboard</h1>

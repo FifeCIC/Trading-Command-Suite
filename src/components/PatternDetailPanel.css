@@ -39,8 +39,10 @@
   color: #94a3b8;
   font-size: 1.5rem;
   cursor: pointer;
-  padding: 0 4px;
+  padding: 0.25rem 0.5rem;
   line-height: 1;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 .pattern-detail-panel .close-btn:hover {

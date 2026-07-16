@@ -565,9 +565,10 @@
 .los-export-btn:hover { border-color: var(--accent); }
 .los-export-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .los-help-btn {
-  width: 26px; height: 26px; border: 1px solid var(--line); border-radius: 50%;
+  min-width: 44px; min-height: 44px; border: 1px solid var(--line); border-radius: 50%;
   background: transparent; color: var(--ink-soft); cursor: pointer;
   font-family: inherit; font-size: 0.72rem; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 .los-help-btn:hover { border-color: var(--accent); color: var(--accent); }
 

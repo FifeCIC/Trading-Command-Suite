@@ -13,12 +13,39 @@ import {
 } from '../directives/directive-groups';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { MacroSnapshotService } from './macro-snapshot.service';
+import { EurUsdCacheService } from './eurusd-cache.service';
 import { isScoringDemo } from '../../config/scoring-mode';
 import {
   RiskGatingEngine,
   RiskDirectiveResult,
   RiskGateResult,
 } from './risk-gating-engine.service';
+
+/**
+ * Weighting Systems
+ * =================
+ * The scoring engine supports two weighting approaches. They are NOT competing —
+ * they operate at different levels and can be selected per MetaStack:
+ *
+ * 1. GROUP-WEIGHTED (default):
+ *    Group weights (Technical=0.40, Sentiment=0.35, Risk=0.25) determine how much
+ *    each group contributes to the composite. Within a group, directive maxScores
+ *    determine relative influence (a maxScore=180 directive naturally contributes
+ *    more than a maxScore=90 one). Composite = (technical×0.40 + sentiment×0.35) × riskMultiplier.
+ *    Best for: protocols with mixed directive types where you want to control
+ *    category balance (e.g. "I want technicals to matter 40% regardless of which
+ *    directives fire").
+ *
+ * 2. MAXSCORE-WEIGHTED:
+ *    Group weights are ignored. The composite is derived solely from directive maxScores
+ *    across ALL active directives. Each directive contributes proportionally to its maxScore
+ *    relative to the sum of all maxScores. No category preference — directives compete
+ *    on their declared importance only.
+ *    Best for: protocols where all directives are the same type and you want pure
+ *    score-based ranking without category bias.
+ *
+ * The weightStrategy is stored on ScoringStrategy and defaults to 'group-weighted'.
+ */
 
 // ─── Result Types ────────────────────────────────────────
 
@@ -70,6 +97,7 @@ export interface GatedScore {
     directiveCount: number;
     gatedCount: number;
     riskDirectiveCount: number;
+    weightStrategy: 'group-weighted' | 'maxscore-weighted';
   };
 }
 
@@ -98,6 +126,25 @@ const RARITY_BANDS: Record<RarityBand, Omit<RarityInfo, 'percentile' | 'sampleSi
   },
 };
 
+// ─── Directive IDs that need EURUSD/DXY ────────────────────
+
+/** Directives that read `eurusdValue` from DirectiveInput for DXY proxy logic. */
+const EURUSD_DEPENDENT_DIRECTIVES = new Set([
+  'dxy-regime',
+  'cad-usd-oil-correlation',
+  'gold-macro-correlation',
+]);
+
+/** Returns true if any of the active directive groups includes a EURUSD-dependent directive. */
+function protocolNeedsEurUsd(groups: DirectiveGroup[]): boolean {
+  for (const group of groups) {
+    for (const id of group.directiveIds) {
+      if (EURUSD_DEPENDENT_DIRECTIVES.has(id)) return true;
+    }
+  }
+  return false;
+}
+
 // ─── Thresholds ──────────────────────────────────────────
 
 const ENTRY_THRESHOLD = 65;
@@ -115,6 +162,7 @@ export class ProtocolGatingService {
     private readonly riskEngine: RiskGatingEngine,
     private readonly adapterFactory: AdapterFactory,
     private readonly macroSnapshot: MacroSnapshotService,
+    private readonly eurusdCache: EurUsdCacheService,
   ) {}
 
   /**
@@ -125,7 +173,11 @@ export class ProtocolGatingService {
    * 2. Group results into Technical / Sentiment / Risk
    * 3. Normalize each group to 0-100
    * 4. Apply risk multiplier (risk score / 100, clamped to floor/ceiling)
-   * 5. Compute composite = (technical × 0.40 + sentiment × 0.35) × riskMultiplier
+   * 5. Compute composite using selected weightStrategy:
+   *    - group-weighted: (technical × 0.40 + sentiment × 0.35) × riskMultiplier
+   *    - maxscore-weighted: (sum of ALL raw scores / sum of ALL maxScores) × 100 × riskMultiplier
+   *
+   * @param weightStrategy - 'group-weighted' (default) | 'maxscore-weighted'
    */
   async scoreWithGating(
     symbol: string,
@@ -136,25 +188,28 @@ export class ProtocolGatingService {
       hourBars?: import('../directives/interfaces/directive.interface').MarketBar[];
       min15Bars?: import('../directives/interfaces/directive.interface').MarketBar[];
     },
+    weightStrategy: 'group-weighted' | 'maxscore-weighted' = 'group-weighted',
   ): Promise<GatedScore> {
-    // ── Fetch EURUSD for DXY proxy ────────────────────────
-    let eurusdValue: number | undefined;
-    try {
-      const mt5 = this.adapterFactory.create('mt5');
-      if (mt5) {
-        const q = await mt5.getQuote('EURUSD');
-        if (q?.last) eurusdValue = q.last;
-      }
-    } catch { /* MT5 offline — directive handles it */ }
+    // Select protocol groups first — needed to determine if EURUSD fetch is required
+    const protocolConfig = protocolId ? PROTOCOL_REGISTRY[protocolId] : null;
+    const activeGroups = protocolId
+      ? (protocolConfig?.groups ?? DIRECTIVE_GROUPS)
+      : DIRECTIVE_GROUPS;
 
-    // ── Persist macro snapshot ────────────────────────────
-    if (eurusdValue !== undefined && eurusdValue > 0) {
-      const proxyDxy = eurusdValue >= 1.15 ? 98 : eurusdValue >= 1.08 ? 103 : 108;
-      this.macroSnapshot.capture({
-        eurusdValue,
-        dxyValue: proxyDxy,
-        source: 'eurusd-proxy',
-      }).catch(err => this.logger.warn(`Snapshot: ${(err as Error).message}`));
+    // ── Fetch EURUSD for DXY proxy (cached per tick) — only if needed ──
+    let eurusdValue: number | undefined;
+    if (protocolNeedsEurUsd(activeGroups)) {
+      eurusdValue = await this.eurusdCache.getValue();
+
+      // ── Persist macro snapshot ──────────────────────────
+      if (eurusdValue !== undefined && eurusdValue > 0) {
+        const proxyDxy = eurusdValue >= 1.15 ? 98 : eurusdValue >= 1.08 ? 103 : 108;
+        this.macroSnapshot.capture({
+          eurusdValue,
+          dxyValue: proxyDxy,
+          source: 'eurusd-proxy',
+        }).catch(err => this.logger.warn(`Snapshot: ${(err as Error).message}`));
+      }
     }
 
     const input: DirectiveInput = {
@@ -164,17 +219,20 @@ export class ProtocolGatingService {
       ...(higherTfBars ?? {}),
     } as DirectiveInput;
 
-    // Select protocol groups
-    const protocolConfig = protocolId ? PROTOCOL_REGISTRY[protocolId] : null;
-    const activeGroups = protocolId
-      ? (protocolConfig?.groups ?? DIRECTIVE_GROUPS)
-      : DIRECTIVE_GROUPS;
     const directionMode = protocolConfig?.directionMode ?? 'LONG_ONLY';
 
-    // 1. Run ALL directives
-    const allResults = await this.directivesService.runAll(input);
+    // 1. Collect directive IDs from active protocol groups (#389)
+    const protocolDirectiveIds = new Set<string>();
+    for (const group of activeGroups) {
+      for (const directiveId of group.directiveIds) {
+        protocolDirectiveIds.add(directiveId);
+      }
+    }
 
-    // 2. Group results with maxScore from directive registry
+    // 2. Run ONLY directives in the active protocol (not all 100+ registered directives)
+    const allResults = await this.directivesService.runAll(input, protocolDirectiveIds);
+
+    // 3. Group results with maxScore from directive registry
     const groups = new Map<string, { results: DirectiveResult[]; config: DirectiveGroup; maxScores: Map<string, number> }>();
 
     for (const group of activeGroups) {
@@ -255,8 +313,22 @@ export class ProtocolGatingService {
       reason: b.reason,
     }));
 
-    // Default to 0 for non-risk groups — no active directives = no contribution
-    const rawBeforeRisk = (subScores['technical'] ?? 0) * 0.40 + (subScores['sentiment'] ?? 0) * 0.35;
+    // 5. Compute composite based on weightStrategy
+    let rawBeforeRisk: number;
+    if (weightStrategy === 'maxscore-weighted') {
+      // MAXSCORE-WEIGHTED: ignore group weights, use all directive scores proportionally
+      // Composite = (sum of all raw scores / sum of all maxScores) × 100
+      let totalRaw = 0;
+      let totalMax = 0;
+      for (const groupId of Object.keys(subRawTotals)) {
+        totalRaw += subRawTotals[groupId] ?? 0;
+        totalMax += subMaxTotals[groupId] ?? 0;
+      }
+      rawBeforeRisk = totalMax > 0 ? (totalRaw / totalMax) * 100 : 0;
+    } else {
+      // GROUP-WEIGHTED (default): group weights determine category balance
+      rawBeforeRisk = (subScores['technical'] ?? 0) * 0.40 + (subScores['sentiment'] ?? 0) * 0.35;
+    }
     const riskResult = this.riskEngine.apply(rawBeforeRisk, riskDirectives);
 
     const composite = riskResult.hardGateTriggered
@@ -310,6 +382,7 @@ export class ProtocolGatingService {
         directiveCount: allResults.size,
         gatedCount: allResults.size,
         riskDirectiveCount: breakouts['risk']?.length ?? 0,
+        weightStrategy,
       },
     };
   }

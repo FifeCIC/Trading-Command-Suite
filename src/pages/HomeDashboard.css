@@ -567,6 +567,8 @@
   color: var(--accent, #0ea5a6);
   text-decoration: none;
   font-weight: 500;
+  min-height: 44px;
+  line-height: 44px;
 }
 
 .dash-div-link:hover {
@@ -637,6 +639,7 @@
   text-decoration: none;
   color: inherit;
   transition: background 0.15s;
+  min-height: 44px;
 }
 .dash-hp-item:hover {
   background: rgba(255,255,255,0.04);
@@ -680,6 +683,8 @@
   font-family: inherit;
   text-align: center;
   width: 100%;
+  min-height: 44px;
+  line-height: 44px;
 }
 .dash-hp-link:hover {
   text-decoration: underline;

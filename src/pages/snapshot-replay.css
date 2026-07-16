@@ -35,8 +35,8 @@
 .sr-ctrl-play.active { border-color: #22c55e; color: #22c55e; }
 .sr-controls-speed { display: flex; gap: 0.2rem; }
 .sr-speed-btn {
-  padding: 0.25rem 0.5rem; border: 1px solid #334155; border-radius: 4px;
-  background: #1e293b; color: #94a3b8; cursor: pointer; font-family: inherit; font-size: 0.65rem;
+  padding: 0.4rem 0.65rem; min-height: 44px; border: 1px solid #334155; border-radius: 4px;
+  background: #1e293b; color: #94a3b8; cursor: pointer; font-family: inherit; font-size: 0.68rem;
 }
 .sr-speed-btn.active { border-color: #818cf8; color: #818cf8; }
 .sr-toggle { font-size: 0.72rem; color: #94a3b8; display: flex; align-items: center; gap: 0.3rem; cursor: pointer; }

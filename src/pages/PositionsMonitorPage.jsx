@@ -299,7 +299,7 @@ export default function PositionsMonitorPage() {
     : null;
 
   return (
-    <div className="pm-page">
+    <div className="pm-page" aria-live="polite" aria-atomic="true">
       <header className="pm-header">
         <h1>Positions Monitor</h1>
         <p>Combined view of all open positions across brokers.</p>

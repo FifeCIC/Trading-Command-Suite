@@ -7,9 +7,29 @@
  *   - Raw numbers become interpretations: composite 72 → "Strong Buy"
  *   - Technical paths become human descriptions
  *   - Hover reveals the underlying technical value
+ *   - Prefers live API data over hardcoded maps, with slug→title as final fallback
  */
 
-/** Slug → friendly name mappings */
+/** Convert a kebab/snake-case slug to a human-readable title */
+function slugToTitle(slug) {
+  if (!slug) return 'Unknown';
+  return slug
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, function (c) { return c.toUpperCase(); })
+    .replace(/\b(Mt5|Btc|Eth|Xrp|Doge|Usd|Cad|Jpy|Gbp|Eur|Aud|Nzd|Chf|Xau|Rsi|Macd|Atr|Vwap|Ema|Sma|Sl|Tp|Pnl)\b/gi,
+      function (m) { return m.toUpperCase(); });
+}
+
+/** Generate a default description from a slug */
+function defaultDescription(slug, type) {
+  var title = slugToTitle(slug);
+  if (type === 'protocol') return title + ' — automated scoring protocol';
+  if (type === 'watchlist') return title + ' — symbol watchlist';
+  if (type === 'broker') return title + ' — trading broker';
+  return title;
+}
+
+/** Slug → friendly name hardcoded overrides for well-known entries */
 var WATCHLIST_NAMES = {
   'forex-majors': { title: 'FOREX Majors', desc: 'EUR/USD, GBP/USD, USD/JPY, AUD/USD, USD/CAD, USD/CHF, NZD/USD — the seven most liquid currency pairs' },
   'default': { title: 'Default Watchlist', desc: 'General-purpose symbol list' },
@@ -28,6 +48,28 @@ var BROKER_NAMES = {
   'mt5': { title: 'MetaTrader 5', desc: 'Local bridge on port 5000 — direct market access for forex and commodities' },
   't212': { title: 'Trading 212', desc: 'ISA account — stocks and ETFs' },
 };
+
+/**
+ * Look up a friendly name for a slug.
+ * Priority: live API data → hardcoded override → slug-to-title conversion
+ */
+function lookupName(slug, type, liveMap) {
+  // 1. Live API data (if provided)
+  if (liveMap && liveMap[slug]) {
+    return {
+      title: liveMap[slug].title || liveMap[slug].name || slugToTitle(slug),
+      desc: liveMap[slug].desc || liveMap[slug].description || defaultDescription(slug, type),
+    };
+  }
+  // 2. Hardcoded override maps
+  var hardcoded;
+  if (type === 'protocol') hardcoded = PROTOCOL_NAMES[slug];
+  else if (type === 'watchlist') hardcoded = WATCHLIST_NAMES[slug];
+  else if (type === 'broker') hardcoded = BROKER_NAMES[slug];
+  if (hardcoded) return hardcoded;
+  // 3. Slug-to-title fallback
+  return { title: slugToTitle(slug), desc: defaultDescription(slug, type) };
+}
 
 /** Interpret a composite score into a human signal */
 function interpretScore(composite) {
@@ -51,10 +93,14 @@ function interpretBand(band, rating) {
 }
 
 /** Produce a Focused (user-friendly) view of a MetaStack */
-export function translateMetaStack(stack, protocols, scores) {
-  var wl = WATCHLIST_NAMES[stack.watchlistName] || { title: stack.watchlistName, desc: '' };
-  var proto = PROTOCOL_NAMES[stack.protocolId] || { title: stack.protocolId, desc: '' };
-  var broker = BROKER_NAMES[stack.brokerId] || { title: stack.brokerId, desc: '' };
+export function translateMetaStack(stack, protocols, scores, liveMaps) {
+  var liveWL = (liveMaps && liveMaps.watchlists) || null;
+  var liveProto = (liveMaps && liveMaps.protocols) || null;
+  var liveBroker = (liveMaps && liveMaps.brokers) || null;
+
+  var wl = lookupName(stack.watchlistName, 'watchlist', liveWL);
+  var proto = lookupName(stack.protocolId, 'protocol', liveProto);
+  var broker = lookupName(stack.brokerId, 'broker', liveBroker);
   var band = interpretBand(stack.band, stack.rating);
 
   // Scoring interpretations

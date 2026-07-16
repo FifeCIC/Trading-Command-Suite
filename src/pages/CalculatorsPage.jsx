@@ -3,6 +3,27 @@ import './calculators.css';
 
 const HISTORY_KEY = 'tcs:calc-history';
 const MAX_HISTORY = 50;
+const VISIBILITY_KEY = 'tcs:calc-visibility';
+
+const CALCULATOR_IDS = [
+  { id: 'averaging-down', label: 'Averaging Down' },
+  { id: 'position-size', label: 'Position Size' },
+  { id: 'profit-loss', label: 'Profit / Loss' },
+  { id: 'risk-reward', label: 'Risk / Reward' },
+];
+
+function loadVisibility() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(VISIBILITY_KEY));
+    if (saved && typeof saved === 'object') return saved;
+  } catch { /* use defaults */ }
+  const defaults = {};
+  CALCULATOR_IDS.forEach(c => { defaults[c.id] = true; });
+  return defaults;
+}
+function saveVisibility(vis) {
+  try { localStorage.setItem(VISIBILITY_KEY, JSON.stringify(vis)); } catch { /* noop */ }
+}
 
 function loadHistory() {
   try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; }
@@ -255,6 +276,18 @@ function RiskRewardCalc({ onCalculate }) {
 
 export default function CalculatorsPage() {
   const { history, addEntry, clearHistory } = useCalculationHistory();
+  const [vis, setVis] = useState(loadVisibility);
+  const [showOptions, setShowOptions] = useState(false);
+
+  const toggleCalc = (id) => {
+    setVis((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      saveVisibility(next);
+      return next;
+    });
+  };
+
+  const visibleCount = Object.values(vis).filter(Boolean).length;
 
   return (
     <div className="calc-page">
@@ -262,18 +295,26 @@ export default function CalculatorsPage() {
         <h1>Trading Calculators</h1>
         <p>Manual trading tools — position sizing, averaging down, P&L, and risk/reward.</p>
       </header>
-      <CalculatorCard title="Averaging Down Calculator">
-        <AveragingDownCalc onCalculate={addEntry} />
-      </CalculatorCard>
-      <CalculatorCard title="Position Size Calculator">
-        <PositionSizeCalc onCalculate={addEntry} />
-      </CalculatorCard>
-      <CalculatorCard title="Profit / Loss Calculator">
-        <ProfitLossCalc onCalculate={addEntry} />
-      </CalculatorCard>
-      <CalculatorCard title="Risk / Reward Calculator" defaultOpen={false}>
-        <RiskRewardCalc onCalculate={addEntry} />
-      </CalculatorCard>
+      {vis['averaging-down'] && (
+        <CalculatorCard title="Averaging Down Calculator">
+          <AveragingDownCalc onCalculate={addEntry} />
+        </CalculatorCard>
+      )}
+      {vis['position-size'] && (
+        <CalculatorCard title="Position Size Calculator">
+          <PositionSizeCalc onCalculate={addEntry} />
+        </CalculatorCard>
+      )}
+      {vis['profit-loss'] && (
+        <CalculatorCard title="Profit / Loss Calculator">
+          <ProfitLossCalc onCalculate={addEntry} />
+        </CalculatorCard>
+      )}
+      {vis['risk-reward'] && (
+        <CalculatorCard title="Risk / Reward Calculator" defaultOpen={false}>
+          <RiskRewardCalc onCalculate={addEntry} />
+        </CalculatorCard>
+      )}
 
       {/* ── Calculation History ── */}
       {history.length > 0 && (
@@ -303,6 +344,35 @@ export default function CalculatorsPage() {
           </div>
         </section>
       )}
+
+      {/* ── Screen Options Disc ── */}
+      <div className="calc-options-bar">
+        <button
+          type="button"
+          className={`calc-options-btn ${showOptions ? 'calc-options-active' : ''}`}
+          onClick={() => setShowOptions(!showOptions)}
+          title="Screen Options"
+          aria-label="Open screen options"
+        >
+          ⚙
+        </button>
+        {showOptions && (
+          <div className="calc-options-dropdown">
+            <h4>Show Calculators</h4>
+            {CALCULATOR_IDS.map(({ id, label }) => (
+              <label key={id} className="calc-options-toggle">
+                <input
+                  type="checkbox"
+                  checked={vis[id] === true}
+                  onChange={() => toggleCalc(id)}
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+            <p className="calc-options-count">{visibleCount} of {CALCULATOR_IDS.length} visible</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

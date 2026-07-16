@@ -100,7 +100,7 @@ export default function SpeedScannerPage() {
   }, [scanned, sortBy, filterRec, filterSignal]);
 
   return (
-    <div className="ss-page">
+    <div className="ss-page" aria-live="polite" aria-atomic="true">
       <motion.header className="ss-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div>
           <h1>⚡ Speed Scanner</h1>

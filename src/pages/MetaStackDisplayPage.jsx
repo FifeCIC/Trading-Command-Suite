@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
@@ -43,6 +43,27 @@ export default function MetaStackDisplayPage() {
   });
   var protocols = protocolsQuery.data ? (protocolsQuery.data.protocols || []) : [];
 
+  // ── Fetch watchlists for name resolution ──
+  var watchlistsQuery = useQuery({
+    queryKey: ['watchlists-list'],
+    queryFn: function () { return apiGet('/api/watchlists').catch(function () { return []; }); },
+    staleTime: 120000,
+  });
+  var watchlists = Array.isArray(watchlistsQuery.data) ? watchlistsQuery.data : [];
+
+  // ── Build live lookup maps from API data ──
+  var liveMaps = useMemo(function () {
+    var protoMap = {};
+    protocols.forEach(function (p) {
+      protoMap[p.id] = { title: p.name || p.title, desc: p.description || p.desc };
+    });
+    var wlMap = {};
+    watchlists.forEach(function (w) {
+      wlMap[w.id] = { title: w.label || w.name || w.title, desc: w.description || w.desc };
+    });
+    return { protocols: protoMap, watchlists: wlMap };
+  }, [protocols, watchlists]);
+
   var scoresQuery = useQuery({
     queryKey: ['speed-scan', selectedStack ? selectedStack.watchlistName : ''],
     queryFn: function () { return apiGet('/api/speed/scan?limit=8'); },
@@ -51,7 +72,7 @@ export default function MetaStackDisplayPage() {
   });
   var rawScores = scoresQuery.data || [];
 
-  var focused = selectedStack ? translateMetaStack(selectedStack, protocols, rawScores) : null;
+  var focused = selectedStack ? translateMetaStack(selectedStack, protocols, rawScores, liveMaps) : null;
 
   return (
     <div className="msd-page">

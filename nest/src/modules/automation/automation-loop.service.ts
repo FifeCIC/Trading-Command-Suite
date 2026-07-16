@@ -54,6 +54,47 @@ function getStyleThreshold(protocolId: string): number {
   return 60;
 }
 
+interface ProtocolComparison {
+  side: 'BUY' | 'SELL' | 'HOLD';
+  composite: number;
+}
+
+/**
+ * Compare LONG vs SHORT protocol scores to determine trade direction.
+ * Shared by all call sites that evaluate dual-protocol strategies.
+ *
+ * @param longGated  - Gated score result from the LONG protocol
+ * @param shortGated - Gated score result from the SHORT protocol (null if single-protocol)
+ * @param threshold  - Minimum composite score required to trigger a trade
+ */
+function compareProtocolPair(
+  longGated: { composite: number; signal?: string } | null | undefined,
+  shortGated: { composite: number } | null | undefined,
+  threshold: number,
+): ProtocolComparison {
+  const longComposite = longGated?.composite ?? 0;
+  const shortComposite = shortGated?.composite ?? 0;
+
+  if (shortGated != null) {
+    // Dual-protocol: LONG vs SHORT comparison
+    if (longComposite > shortComposite && longComposite >= threshold) {
+      return { side: 'BUY', composite: longComposite };
+    }
+    if (shortComposite > longComposite && shortComposite >= threshold) {
+      return { side: 'SELL', composite: shortComposite };
+    }
+    // Neither meets threshold — HOLD with highest composite for logging
+    return { side: 'HOLD', composite: Math.max(longComposite, shortComposite) };
+  }
+
+  // Single-protocol: use the long protocol's signal directly
+  const signal = (longGated as any)?.signal;
+  return {
+    side: (signal === 'BUY' || signal === 'SELL') ? signal : 'HOLD',
+    composite: longComposite,
+  };
+}
+
 export interface LoopState {
   loopEnabled: boolean;
   tickIntervalMs: number;
@@ -96,16 +137,17 @@ export interface ScoringStrategy {
   id: string;
   name: string;
   protocolId: string;
-  shortProtocolId?: string; // Optional SHORT_ONLY protocol for dual-direction scoring
-  watchlistName: string;    // e.g. 'primary', 'momentum-stocks'
-  brokerId: string;          // e.g. 'mt5', 'trading212'
+  shortProtocolId?: string;
+  watchlistName: string;
+  brokerId: string;
   mode: 'manual' | 'semi-auto' | 'auto';
   tradeThreshold: number;
   baseSize: number;
   slPct: number;
   tpPct: number;
   maxPyramidTiers: number;
-  slTpInheritance: string;  // 'inherit' | 'independent' | 'tighten'
+  slTpInheritance: string;
+  weightStrategy: 'group-weighted' | 'maxscore-weighted';
   enabled: boolean;
   tradingEnabled: boolean;
 }
@@ -340,6 +382,7 @@ export class AutomationLoopService implements OnModuleInit {
             tpPct: r.tpPct,
             maxPyramidTiers: (r as any).maxPyramidTiers ?? 1,
             slTpInheritance: (r as any).slTpInheritance ?? 'inherit',
+            weightStrategy: (r as any).weightStrategy ?? 'group-weighted',
             enabled: r.enabled,
             tradingEnabled: r.tradingEnabled,
           });
@@ -553,11 +596,11 @@ export class AutomationLoopService implements OnModuleInit {
       }
 
       // ── Helper: get or compute a gated score for a symbol+protocol pair ──
-      const getGatedScore = async (sym: string, protocolId: string, bars: any[]): Promise<any> => {
-        const cacheKey = `${sym}|${protocolId}`;
+      const getGatedScore = async (sym: string, protocolId: string, bars: any[], ws: 'group-weighted' | 'maxscore-weighted' = 'group-weighted'): Promise<any> => {
+        const cacheKey = `${sym}|${protocolId}|${ws}`;
         const cached = this.gatedScoreCache.get(cacheKey);
         if (cached) return cached;
-        const result = await this.protocolGating.scoreWithGating(sym, bars, protocolId);
+        const result = await this.protocolGating.scoreWithGating(sym, bars, protocolId, undefined, ws);
         if (result && result.composite !== undefined) {
           this.gatedScoreCache.set(cacheKey, result);
         }
@@ -585,31 +628,16 @@ export class AutomationLoopService implements OnModuleInit {
               bars[bars.length - 1]?.timestamp?.toISOString?.() ?? null);
 
             // Score with LONG protocol (cached for step 4 reuse)
-            const longGated = await getGatedScore(sym, strat.protocolId, bars);
+            const longGated = await getGatedScore(sym, strat.protocolId, bars, strat.weightStrategy);
             if (!longGated || longGated.composite === undefined) continue;
 
             let shortGated: any = null;
-            let side: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
-            let chosenComposite = longGated.composite;
-
             if (strat.shortProtocolId) {
               shortGated = await getGatedScore(sym, strat.shortProtocolId, bars);
-              const longScore = longGated.composite;
-              const shortScore = shortGated?.composite ?? 0;
-
-              if (longScore > shortScore && longScore >= strat.tradeThreshold) {
-                side = 'BUY';
-                chosenComposite = longScore;
-              } else if (shortScore > longScore && shortScore >= strat.tradeThreshold) {
-                side = 'SELL';
-                chosenComposite = shortScore;
-              } else {
-                side = 'HOLD';
-                chosenComposite = Math.max(longScore, shortScore);
-              }
-            } else {
-              side = longGated.signal as 'BUY' | 'SELL' | 'HOLD';
             }
+            const { side, composite: chosenComposite } = compareProtocolPair(
+              longGated, shortGated, strat.tradeThreshold,
+            );
 
             scoredCount++;
 
@@ -804,11 +832,13 @@ export class AutomationLoopService implements OnModuleInit {
       };
 
       // ── Helper: get gated score from cache or compute ──
+      // Derive weightStrategy from the trading strategy's protocol (defaults to group-weighted)
+      const ws: 'group-weighted' | 'maxscore-weighted' = 'group-weighted';
       const getGated = async (protocolId: string, bars: any[]): Promise<any> => {
-        const cacheKey = `${strategy.symbol}|${protocolId}`;
+        const cacheKey = `${strategy.symbol}|${protocolId}|${ws}`;
         const cached = this.gatedScoreCache.get(cacheKey);
         if (cached) return cached;
-        const result = await this.protocolGating.scoreWithGating(strategy.symbol, bars, protocolId);
+        const result = await this.protocolGating.scoreWithGating(strategy.symbol, bars, protocolId, undefined, ws);
         if (result && result.composite !== undefined) {
           this.gatedScoreCache.set(cacheKey, result);
         }
@@ -835,22 +865,12 @@ export class AutomationLoopService implements OnModuleInit {
             if (bars) {
               const longGated = await getGated(strategy.protocolId, bars);
               let shortGated: any = null;
-              let side: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
-              let chosenComposite = longGated?.composite ?? 0;
-
               if ((strategy as any).shortProtocolId) {
                 shortGated = await getGated((strategy as any).shortProtocolId, bars);
-                const longScore = longGated?.composite ?? 0;
-                const shortScore = shortGated?.composite ?? 0;
-                if (longScore > shortScore && longScore >= (strategy.minComposite ?? 3)) {
-                  side = 'BUY'; chosenComposite = longScore;
-                } else if (shortScore > longScore && shortScore >= (strategy.minComposite ?? 3)) {
-                  side = 'SELL'; chosenComposite = shortScore;
-                }
-              } else {
-                side = (longGated?.signal as 'BUY' | 'SELL' | 'HOLD') ?? 'HOLD';
-                chosenComposite = longGated?.composite ?? 0;
               }
+              const { side, composite: chosenComposite } = compareProtocolPair(
+                longGated, shortGated, (strategy.minComposite ?? 3),
+              );
 
               // ── Auto-execute when no existing position ──
               if (side !== 'HOLD' && strategy.mode === 'auto') {
@@ -936,22 +956,12 @@ export class AutomationLoopService implements OnModuleInit {
           if (bars) {
             const longGated = await getGated(strategy.protocolId, bars);
             let shortGated: any = null;
-            let side: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
-            let chosenComposite = longGated?.composite ?? 0;
-
             if ((strategy as any).shortProtocolId) {
               shortGated = await getGated((strategy as any).shortProtocolId, bars);
-              const longScore = longGated?.composite ?? 0;
-              const shortScore = shortGated?.composite ?? 0;
-              if (longScore > shortScore && longScore >= (strategy.minComposite ?? 3)) {
-                side = 'BUY'; chosenComposite = longScore;
-              } else if (shortScore > longScore && shortScore >= (strategy.minComposite ?? 3)) {
-                side = 'SELL'; chosenComposite = shortScore;
-              }
-            } else {
-              side = (longGated?.signal as 'BUY' | 'SELL' | 'HOLD') ?? 'HOLD';
-              chosenComposite = longGated?.composite ?? 0;
             }
+            const { side, composite: chosenComposite } = compareProtocolPair(
+              longGated, shortGated, (strategy.minComposite ?? 3),
+            );
 
             // Persist evaluation to DB (best-effort)
             try { await this.strategyService.evaluate(strategyId); } catch {}

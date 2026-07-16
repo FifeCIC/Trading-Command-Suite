@@ -921,6 +921,7 @@ function AppShell() {
       </aside>
 
       <main className="main-stage" {...withDevTag('main.stage', { area: secondaryView })}>
+        <div aria-live="assertive" aria-atomic="true" className="sr-only-alert" role="alert"></div>
         <div className="main-top-row">
           <Breadcrumbs />
         </div>

@@ -70,6 +70,7 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  min-height: 44px;
 }
 
 .btn:hover {
@@ -80,6 +81,7 @@
   border-color: #2d5ca8;
   background: #1f5fb8;
   color: #fff;
+  min-height: 44px;
 }
 
 .btn-primary:hover {

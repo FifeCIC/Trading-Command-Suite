@@ -4,7 +4,7 @@
 .sal-subtitle { color: var(--ink-soft); font-size: 0.78rem; margin: 0; }
 .sal-controls { display: flex; gap: 0.5rem; align-items: center; }
 .sal-filters { display: flex; gap: 0.2rem; }
-.sal-filters button { padding: 0.25rem 0.6rem; border: 1px solid var(--line); border-radius: 5px; background: transparent; color: var(--ink-soft); cursor: pointer; font-family: inherit; font-size: 0.68rem; font-weight: 600; }
+.sal-filters button { padding: 0.4rem 0.75rem; min-height: 44px; border: 1px solid var(--line); border-radius: 5px; background: transparent; color: var(--ink-soft); cursor: pointer; font-family: inherit; font-size: 0.7rem; font-weight: 600; }
 .sal-filters button.active { border-color: var(--accent); color: var(--accent); background: rgba(14,165,166,0.08); }
 .sal-sort { padding: 0.25rem 0.5rem; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); color: var(--ink); font-family: inherit; font-size: 0.68rem; }
 

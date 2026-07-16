@@ -25,6 +25,7 @@ import { CalibrationService } from '../calibration/calibration.service';
 import { OutcomeTrackerService } from './outcome-tracker.service';
 import { SeasonalAffinityService } from './seasonal-affinity.service';
 import { MacroSnapshotService } from './macro-snapshot.service';
+import { EurUsdCacheService } from './eurusd-cache.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { ProviderDegradationService } from '../providers/provider-degradation.service';
 import { CryptoProviderRouter } from '../providers/crypto-provider-router.service';
@@ -121,6 +122,7 @@ export class ScoringService implements OnModuleInit {
     private readonly outcomeTracker: OutcomeTrackerService,
     private readonly seasonalAffinity: SeasonalAffinityService,
     private readonly macroSnapshot: MacroSnapshotService,
+    private readonly eurusdCache: EurUsdCacheService,
     private readonly adapterFactory: AdapterFactory,
     private readonly degradationService: ProviderDegradationService,
     private readonly cryptoRouter: CryptoProviderRouter,
@@ -224,19 +226,8 @@ export class ScoringService implements OnModuleInit {
 
     const ranked: RankedSymbol[] = [];
 
-    // ── Fetch EURUSD for DXY proxy ────────────────────────
-    let eurusdValue: number | undefined;
-    try {
-      const mt5 = this.adapterFactory.create('mt5');
-      if (mt5) {
-        const eurusdQuote = await mt5.getQuote('EURUSD');
-        if (eurusdQuote?.last) {
-          eurusdValue = eurusdQuote.last;
-        }
-      }
-    } catch {
-      // MT5 may be offline — directive falls back gracefully
-    }
+    // ── Fetch EURUSD for DXY proxy (cached per tick) ────
+    const eurusdValue = await this.eurusdCache.getValue();
 
     // ── Persist macro snapshot & detect regime change ─────
     if (eurusdValue !== undefined && eurusdValue > 0) {

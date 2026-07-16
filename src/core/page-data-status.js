@@ -84,7 +84,7 @@ export const PAGE_DATA_STATUS = {
   // ── Watchlists ──
   'active-symbols': { status: 'live', source: 'DB' },
   'user-watchlists': { status: 'mock', note: 'Auth-dependent (Q152)' },
-  'create-watchlist': { status: 'mock', note: 'Auth-dependent (Q152)' },
+  // create-watchlist → merged into user-watchlists (#301)
   'add-symbol': { status: 'live', source: 'DB' },
 
   // ── Automation ──

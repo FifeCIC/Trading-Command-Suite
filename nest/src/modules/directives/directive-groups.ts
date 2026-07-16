@@ -1,7 +1,31 @@
 /**
  * Directive Group Registry — classifies directives into Technical, Sentiment, and Risk groups.
  *
- * Risk directives multiplicatively gate Technical + Sentiment scores.
+ * Two weighting systems coexist. They are documented below:
+ *
+ * ## System 1: Group Weights (group-weighted mode — default)
+ * Each group (Technical=0.40, Sentiment=0.35, Risk=0.25) declares a weight that controls
+ * how much that category contributes to the final composite. This lets you say
+ * "I want technicals to matter 40% regardless of which directives fire within them."
+ *
+ * Composite = (technical×0.40 + sentiment×0.35) × riskMultiplier
+ *
+ * ## System 2: Directive MaxScores (maxscore-weighted mode)
+ * Each directive declares a maxScore (default 100) that represents its maximum possible
+ * contribution. Group weights are IGNORED. All directives compete on their maxScore alone.
+ * The composite is the percentage of total raw score relative to total maxScore across ALL groups.
+ *
+ * Composite = (sum of ALL raw scores / sum of ALL maxScores) × 100 × riskMultiplier
+ *
+ * ## How they interact
+ * Both systems use directive maxScores for within-group ranking (a maxScore=180 directive
+ * contributes more than maxScore=90). The difference is in how groups are combined:
+ * group-weighted uses category weights, maxscore-weighted treats the full directive set as flat.
+ *
+ * Select via weightStrategy on ScoringStrategy (or pass to scoreWithGating()).
+ * Default: group-weighted.
+ *
+ * Risk directives multiplicatively gate Technical + Sentiment scores in BOTH modes.
  * This prevents high-risk positions from passing just because technicals look good.
  *
  * Design: protocol-risk-gating.prompt.md (Q289)

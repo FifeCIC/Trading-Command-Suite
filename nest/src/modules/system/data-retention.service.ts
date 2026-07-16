@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
 
 /**
@@ -14,6 +15,18 @@ export class DataRetentionService {
 
   constructor(private readonly prisma: PrismaService) {
     this.directiveRetentionDays = parseInt(process.env.DATA_RETENTION_DIRECTIVE_DAYS || '30', 10);
+  }
+
+  /** Scheduled daily prune — runs at 3 AM to avoid overlapping with trading activity. */
+  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  async scheduledPruneDirectives() {
+    this.logger.log('Running scheduled directive outcome pruning...');
+    try {
+      const result = await this.pruneDirectiveOutcomes();
+      this.logger.log(`Scheduled prune complete — ${result.deleted} rows deleted.`);
+    } catch (err) {
+      this.logger.error(`Scheduled prune failed: ${(err as Error).message}`);
+    }
   }
 
   /** Prune old directive outcome rows in batches to avoid table locks. */

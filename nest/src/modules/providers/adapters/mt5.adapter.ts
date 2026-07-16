@@ -15,6 +15,7 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../../../database/prisma.service';
 import {
   IProviderAdapter,
   BrokerAccount,
@@ -74,6 +75,7 @@ export class Mt5Adapter implements IProviderAdapter {
   constructor(
     private readonly notifications?: NotificationService,
     private readonly bridgeEvents?: BridgeEventService,
+    private readonly prisma?: PrismaService,
   ) {
     this.bridgeUrl = process.env.MT5_BRIDGE_URL || 'http://localhost:5000';
   }
@@ -271,15 +273,43 @@ export class Mt5Adapter implements IProviderAdapter {
 
     if (!data) {
       this.logger.warn(`MT5 order FAILED: bridgePost returned null [url=${this.bridgeUrl} tripped=${this.tripped} errors=${this.consecutiveErrors}]`);
+      // Record failed order attempt
+      this.prisma?.order.create({
+        data: {
+          symbol: params.symbol,
+          type: 'market',
+          side: params.side === 'BUY' ? 'buy' : 'sell',
+          quantity: params.quantity,
+          status: 'rejected',
+          provider: 'mt5',
+        },
+      }).catch(() => {});
       return { success: false, error: 'Bridge unreachable' };
     }
 
-    return {
+    const result: BrokerOrderResult = {
       success: data.success === true,
       ticket: data.ticket ?? undefined,
       price: data.price ?? undefined,
       error: data.error ?? undefined,
     };
+
+    // Persist every order attempt (success + failure) to the Order table
+    this.prisma?.order.create({
+      data: {
+        symbol: params.symbol,
+        type: 'market',
+        side: params.side === 'BUY' ? 'buy' : 'sell',
+        quantity: params.quantity,
+        price: result.price ?? null,
+        status: result.success ? 'filled' : 'rejected',
+        provider: 'mt5',
+        providerId: result.ticket ? String(result.ticket) : null,
+        filledAt: result.success ? new Date() : null,
+      },
+    }).catch(err => this.logger.warn(`Failed to persist order: ${err.message}`));
+
+    return result;
   }
 
   private async bridgePost<T>(path: string, body: unknown): Promise<T | null> {

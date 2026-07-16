@@ -194,7 +194,7 @@ export default function MarketTape() {
   const doubled = `${tapeHTML}<span class="mkt-tape-sep">│</span>${tapeHTML}`;
 
   return (
-    <div className="market-tape" aria-label="Market status ticker">
+    <div className="market-tape" aria-label="Market status ticker" aria-live="polite" aria-atomic="true">
       <div
         className="mkt-tape-track"
         dangerouslySetInnerHTML={{ __html: doubled }}

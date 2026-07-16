@@ -365,6 +365,7 @@ export class AutomationController {
     slPct?: number; tpPct?: number;
     maxPyramidTiers?: number;
     slTpInheritance?: string;
+    weightStrategy?: 'group-weighted' | 'maxscore-weighted';
   }) {
     const id = `ss-${Date.now()}`;
     const strat = {
@@ -381,6 +382,7 @@ export class AutomationController {
       tpPct: body.tpPct ?? 1.5,
       maxPyramidTiers: body.maxPyramidTiers ?? 1,
       slTpInheritance: body.slTpInheritance ?? 'inherit',
+      weightStrategy: ((body as any).weightStrategy as 'group-weighted' | 'maxscore-weighted') ?? 'group-weighted',
       enabled: true,
       tradingEnabled: false,
     };

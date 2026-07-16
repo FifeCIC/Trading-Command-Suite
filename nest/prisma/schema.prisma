@@ -1021,6 +1021,7 @@ model ScoringStrategy {
   tpPct           Float    @default(1.0)
   maxPyramidTiers Int      @default(1)
   slTpInheritance String   @default("inherit") @db.VarChar(20)
+  weightStrategy  String   @default("group-weighted") @db.VarChar(20)  // group-weighted | maxscore-weighted
   enabled         Boolean  @default(true)
   tradingEnabled  Boolean  @default(false)
   activatedAt     DateTime?

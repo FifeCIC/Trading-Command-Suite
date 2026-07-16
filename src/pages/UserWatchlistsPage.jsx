@@ -1,9 +1,8 @@
 /**
- * User Watchlists Page
- * ====================
- * Two-column layout: accordion list on left, symbols in right panel.
- * Protocol assignment has been removed — protocols will reference watchlists
- * (many-to-many), not the other way around.
+ * Watchlists Page
+ * ===============
+ * Two-column layout: watchlist list on left, symbols in right panel.
+ * Inline creation replaces the old standalone CreateWatchlistPage (#301).
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -200,7 +199,7 @@ export default function UserWatchlistsPage() {
                 {watchlists.filter(w => w.kind === 'built-in').map((wl, i) => renderWatchlistItem(wl, i))}
               </div>
             )}
-            {/* User Watchlists */}
+            {/* Watchlists */}
             <div className="wl-group">
               <div className="wl-group-label">Watchlists</div>
               {watchlists.filter(w => w.kind !== 'built-in').map((wl, i) => renderWatchlistItem(wl, i))}

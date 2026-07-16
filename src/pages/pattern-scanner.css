@@ -10,7 +10,7 @@
 .ps-sym-pill:hover { border-color: var(--accent); color: var(--ink); }
 .ps-sym-pill.active { border-color: var(--accent); background: rgba(14,165,166,0.12); color: var(--accent); }
 .ps-tf-pills { display: flex; gap: 0.2rem; }
-.ps-tf-pill { padding: 0.35rem 0.55rem; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--ink-soft); cursor: pointer; font-family: inherit; font-size: 0.68rem; font-weight: 600; transition: all 0.15s; }
+.ps-tf-pill { padding: 0.45rem 0.65rem; min-height: 44px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--ink-soft); cursor: pointer; font-family: inherit; font-size: 0.72rem; font-weight: 600; transition: all 0.15s; }
 .ps-tf-pill:hover { border-color: var(--accent); }
 .ps-tf-pill.active { border-color: var(--accent); background: rgba(14,165,166,0.12); color: var(--accent); }
 
@@ -20,7 +20,7 @@
 .ps-stat-bull { color: var(--color-profit); }
 .ps-stat-bear { color: var(--color-loss); }
 .ps-filter { display: flex; gap: 0.25rem; margin-left: auto; }
-.ps-filter button { padding: 0.2rem 0.5rem; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--ink-soft); cursor: pointer; font-family: inherit; font-size: 0.65rem; font-weight: 600; }
+.ps-filter button { padding: 0.4rem 0.65rem; min-height: 44px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--ink-soft); cursor: pointer; font-family: inherit; font-size: 0.7rem; font-weight: 600; }
 .ps-filter button.active { border-color: var(--accent); color: var(--accent); background: rgba(14,165,166,0.08); }
 
 /* Grid */

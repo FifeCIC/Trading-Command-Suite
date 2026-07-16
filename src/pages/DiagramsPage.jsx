@@ -935,96 +935,119 @@ const DIAGRAMS = [
   {
     id: 'earnings-pipeline',
     label: 'Earnings Calendar Data Pipeline',
-    desc: 'How earnings data flows from Alpha Vantage, Finnhub, and FMP through adapters into the Earnings table, feeding the earnings-proximity directive and UI.',
+    desc: 'EarningsService.importCalendar() fetches from Alpha Vantage EARNINGS_CALENDAR (single source, single API call for all symbols). Upserts to EarningsEvent table by symbol+reportDate. Staleness check: >7 days since last fetch triggers auto-import. Two directives consume: earnings-proximity (reads earningsDate from DirectiveInput, mock-first) and earnings-momentum (reads EarningsEvent directly from DB via Prisma). Frontend calls /api/research/earnings/calendar (read from DB, zero API calls).',
     code: `flowchart TB
-    subgraph Sources["Data Sources"]
-        A[Alpha Vantage<br/>EARNINGS_CALENDAR]
-        B[Finnhub<br/>/calendar/earnings]
-        C[FMP<br/>/earning_calendar]
+    subgraph Source["Data Source"]
+        A[Alpha Vantage<br/>EARNINGS_CALENDAR endpoint<br/>single API call for all symbols]
     end
-    subgraph Adapters["Provider Adapters"]
-        D[AlphaVantageAdapter<br/>getEarningsCalendar]
-        E[FinnhubAdapter<br/>getEarningsCalendar]
-        F[FmpAdapter<br/>getEarningsCalendar]
+    subgraph Import["EarningsService.importCalendar()"]
+        B[POST /api/earnings/import?horizon=3]
+        C[ProvidersService.getAdapter alphavantage]
+        D[getEarningsCalendar<br/>horizonMonths=3]
+        E[Upsert by symbol+reportDate<br/>findFirst → update or create]
+        F[Record to DataImportLog<br/>status, counts, duration]
     end
-    subgraph Pipeline["Processing"]
-        G[EarningsService<br/>normalize & deduplicate]
-        H[(Earnings Table)]
-        I[EarningsProximityDirective<br/>calculate score]
+    subgraph Staleness["Auto-Refresh"]
+        G[isStale: >7 days since last?]
+        H[refreshIfStale on startup]
     end
-    subgraph Output["Consumption"]
-        J[EarningsCalendarPage<br/>filtered UI]
-        K[Portfolio Cross-Reference<br/>holdings + next earnings]
-        L[SEES Scoring<br/>earnings-proximity score]
+    subgraph Storage["EarningsEvent Table"]
+        I[(symbol, reportDate, epsEstimate<br/>epsActual, surprisePercent<br/>revenueEstimate, timeOfDay, source)]
     end
-    A --> D
-    B --> E
-    C --> F
-    D --> G
-    E --> G
-    F --> G
-    G --> H
-    H --> I
-    I --> L
-    H --> J
-    H --> K`,
+    subgraph Directives["Directive Consumers"]
+        J[earnings-proximity<br/>reads input.earningsDate<br/>mock-first: score=45 if no data]
+        K[earnings-momentum<br/>reads EarningsEvent via Prisma<br/>surprise + revision + recency]
+    end
+    subgraph ReadAPI["Read Endpoints (zero API calls)"]
+        L[GET /api/earnings/calendar?days=90]
+        M[GET /api/earnings/symbol/:symbol]
+        N[GET /api/research/earnings/calendar<br/>frontend proxy]
+    end
+    subgraph UI["Frontend"]
+        O[EarningsCalendarPage<br/>fetchEarningsCalendar via TanStack Query<br/>staleTime: 15min]
+    end
+    A --> C --> D
+    B --> C
+    D --> E --> I
+    E --> F
+    G --> H --> B
+    I --> J
+    I --> K
+    I --> L & M & N
+    N --> O
+    style Staleness fill:#1a1a2e,stroke:#f59e0b,color:#e5e7eb
+    style J fill:#1a1a2e,stroke:#64748b,color:#94a3b8`,
   },
   {
     id: 'data-flow-architecture',
     label: 'Data Flow Architecture',
-    desc: 'How data flows from providers through import, storage, directives, protocols, and strategies to the UI. Red paths show current gaps — directives that bypass the database. Orange indicates missing pieces.',
+    desc: 'End-to-end data flow from 8 registered providers through DataImportOrchestrator (freshness-triggered, demand-triggered, rate-limit aware) into normalized storage (70+ Prisma models). Directives consume DB data — only 1 directive (crypto-fear-greed) bypasses the DB with a direct API call. MacroSnapshot, SocialMention, InsiderTransaction models exist in schema but have zero usage.',
     code: `flowchart TB
-    subgraph PROVIDER["🔌 PROVIDER LAYER"]
-        MT5["MT5 Bridge<br/>free, unlimited"]
-        FH["Finnhub<br/>60/min"]
-        AV["Alpha Vantage<br/>5/min"]
-        FMP["FMP<br/>250/day"]
-        T212["Trading212<br/>demo"]
+    subgraph PROVIDER["🔌 PROVIDER LAYER (8 registered)"] 
+        MT5["MT5 Bridge<br/>unlimited, candles+quotes"]
+        BIN["Binance<br/>no auth, crypto"]
+        T212["Trading212<br/>portfolio+trades"]
+        POLY["Polygon<br/>quotes+candles"]
+        FMP["FMP<br/>fundamentals"]
+        TD["Twelve Data<br/>quotes+candles"]
+        YAH["Yahoo<br/>no auth, fallback"]
+        AV["Alpha Vantage<br/>earnings calendar"]
     end
     subgraph IMPORT["📥 IMPORT LAYER"]
-        DIR["DataImportHandler<br/>· Scheduled cron<br/>· Freshness-triggered<br/>· Demand-triggered<br/>· Rate-limit aware"]
+        DIR["DataImportOrchestrator<br/>· Freshness-triggered<br/>· Demand-triggered<br/>· Rate-limit aware"]
+        FRESH["FreshnessService<br/>overallFreshness per symbol"]
+        PRICE["PriceRefreshService<br/>candle import"]
     end
-    subgraph STORAGE["💾 STORAGE LAYER"]
+    subgraph STORAGE["💾 STORAGE (70+ Prisma models)"]
+        BARS["✅ MarketBar"]
         EARN["✅ EarningsEvent"]
         NEWS["✅ NewsArticle"]
-        BARS["✅ MarketBar"]
-        MACRO["❌ MacroSnapshot"]
+        SCORE["✅ ScoreSnapshot"]
+        TRADE["✅ Trade + Position + Order"]
         LOG["✅ DataImportLog"]
-        MENTION["❌ SocialMention"]
-        INSIDER["❌ InsiderTransaction"]
+        MACRO["⚠️ MacroSnapshot<br/>schema only, zero usage"]
+        MENTION["⚠️ SocialMention<br/>schema only, zero usage"]
+        INSIDER["⚠️ InsiderTransaction<br/>schema only, zero usage"]
     end
-    subgraph DIRECTIVE["🎯 DIRECTIVE LAYER"]
-        GOOD["✅ 90 directives<br/>DB-only"]
-        BAD["❌ 3 directives<br/>call providers"]
+    subgraph DIRECTIVE["🎯 DIRECTIVE LAYER (99+)"]
+        GOOD["✅ 98 directives<br/>DB-only or bar input"]
+        BAD["❌ 1 directive<br/>crypto-fear-greed<br/>calls fetch directly"]
     end
     subgraph PROTOCOL["📊 PROTOCOL LAYER"]
-        PG["Protocol Groups"]
-        DEG["❌ Degradation rules"]
+        PG["32 Protocols<br/>PROTOCOL_REGISTRY"]
+        DEGRAD["✅ ProviderDegradationService<br/>healthy · degraded · failed"]
     end
     subgraph STRATEGY["⚡ STRATEGY LAYER"]
-        TS["Trading Strategies"]
+        TS["TradingStrategy + ScoringStrategy"]
         AL["Automation Loop"]
-        SDEG["❌ Stale-data safety"]
+        SFRESH["✅ FreshnessService<br/>stale check before scoring"]
     end
     subgraph UI["🖥 PRESENTATION"]
-        DE["Data Elements"]
-        FRESH["⚠️ Freshness indicators"]
+        DE["80+ React pages"]
         CM["Capability Map"]
     end
-    PROVIDER --> IMPORT
-    IMPORT --> STORAGE
-    STORAGE --> DIRECTIVE
+    PROVIDER --> DIR
+    DIR --> FRESH
+    FRESH --> PRICE
+    PRICE --> BARS
+    DIR --> EARN
+    DIR --> NEWS
+    DIR --> LOG
+    BARS --> GOOD
+    EARN --> GOOD
+    NEWS --> GOOD
     BAD -.->|"❌ bypasses DB"| PROVIDER
-    DIRECTIVE --> PROTOCOL
-    PROTOCOL --> STRATEGY
-    STRATEGY --> UI
+    GOOD --> PG
+    BAD --> PG
+    PG --> TS
+    TS --> AL
+    AL --> TRADE
+    SCORE --> UI
+    TRADE --> UI
     style BAD fill:#ef4444,color:#fff
     style MACRO fill:#f59e0b,color:#000
     style MENTION fill:#f59e0b,color:#000
-    style INSIDER fill:#f59e0b,color:#000
-    style DEG fill:#f59e0b,color:#000
-    style SDEG fill:#f59e0b,color:#000
-    style FRESH fill:#f59e0b,color:#000`,
+    style INSIDER fill:#f59e0b,color:#000`,
   },
   {
     id: 'mt5-execution',

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiPatch } from '../core/api/client';
@@ -6,6 +6,18 @@ import { exportCsv } from '../utils/exportCsv';
 import './trading-platforms.css';
 
 const SYMBOL_TYPES = ['stock', 'crypto', 'forex'];
+
+// ── Column visibility (localStorage-backed, per-view) ──
+const COLS_KEY = 'tcs:active-symbols:columns';
+const DEFAULT_COLS = { openTrade: true, pnl: true, protocols: true, exchange: true, type: true };
+
+function loadCols() {
+  try { return { ...DEFAULT_COLS, ...JSON.parse(localStorage.getItem(COLS_KEY) || '{}') }; }
+  catch { return { ...DEFAULT_COLS }; }
+}
+function saveCols(cols) {
+  localStorage.setItem(COLS_KEY, JSON.stringify(cols));
+}
 
 export default function ActiveSymbolsPage() {
   const navigate = useNavigate();
@@ -18,6 +30,16 @@ export default function ActiveSymbolsPage() {
   const [error, setError] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [creatingWatchlist, setCreatingWatchlist] = useState(false);
+  const [cols, setCols] = useState(loadCols);
+  const [showColOptions, setShowColOptions] = useState(false);
+
+  const toggleCol = useCallback((key) => {
+    setCols((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      saveCols(next);
+      return next;
+    });
+  }, []);
 
   const symbols = useQuery({
     queryKey: ['active-symbols'],
@@ -214,7 +236,43 @@ export default function ActiveSymbolsPage() {
       </section>
 
       <section className="tp-card tp-comparison-card">
-        <h3>Symbols ({filtered.length})</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+          <h3 style={{ margin: 0 }}>Symbols ({filtered.length})</h3>
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setShowColOptions((v) => !v)}
+              style={{ padding: '4px 12px', fontSize: '0.78rem' }}
+            >
+              ⚙ Columns
+            </button>
+            {showColOptions && (
+              <div className="tp-col-options-dropdown">
+                <label className="tp-col-option">
+                  <input type="checkbox" checked={cols.openTrade} onChange={() => toggleCol('openTrade')} />
+                  Open Trade
+                </label>
+                <label className="tp-col-option">
+                  <input type="checkbox" checked={cols.pnl} onChange={() => toggleCol('pnl')} />
+                  P/L
+                </label>
+                <label className="tp-col-option">
+                  <input type="checkbox" checked={cols.protocols} onChange={() => toggleCol('protocols')} />
+                  Protocols
+                </label>
+                <label className="tp-col-option">
+                  <input type="checkbox" checked={cols.exchange} onChange={() => toggleCol('exchange')} />
+                  Exchange
+                </label>
+                <label className="tp-col-option">
+                  <input type="checkbox" checked={cols.type} onChange={() => toggleCol('type')} />
+                  Type
+                </label>
+              </div>
+            )}
+          </div>
+        </div>
         <div className="tp-comparison-wrap">
           <table className="tp-comparison-table">
             <thead>
@@ -222,13 +280,12 @@ export default function ActiveSymbolsPage() {
                 <th style={{ width: 32 }}>
                   <input type="checkbox" checked={selectedIds.size === filtered.length && filtered.length > 0} onChange={toggleSelectAll} />
                 </th>
-                <th onClick={() => toggleSort('ticker')} style={{ cursor: 'pointer' }}>Ticker{sortIcon('ticker')}</th>
                 <th onClick={() => toggleSort('name')} style={{ cursor: 'pointer' }}>Name{sortIcon('name')}</th>
-                <th>Open Trade</th>
-                <th>P/L</th>
-                <th>Protocols</th>
-                <th onClick={() => toggleSort('exchange')} style={{ cursor: 'pointer' }}>Exchange{sortIcon('exchange')}</th>
-                <th onClick={() => toggleSort('type')} style={{ cursor: 'pointer' }}>Type{sortIcon('type')}</th>
+                {cols.openTrade && <th>Open Trade</th>}
+                {cols.pnl && <th>P/L</th>}
+                {cols.protocols && <th>Protocols</th>}
+                {cols.exchange && <th onClick={() => toggleSort('exchange')} style={{ cursor: 'pointer' }}>Exchange{sortIcon('exchange')}</th>}
+                {cols.type && <th onClick={() => toggleSort('type')} style={{ cursor: 'pointer' }}>Type{sortIcon('type')}</th>}
                 <th>Status</th>
                 <th>Action</th>
               </tr>
@@ -241,34 +298,53 @@ export default function ActiveSymbolsPage() {
                 const protoCount = protocolCountBySymbol[tickerUpper] || 0;
                 const hasOpenTrade = posData && posData.count > 0;
                 const pnl = posData?.totalPnl ?? null;
+                const hasCompanyName = sym.name && sym.name !== sym.ticker;
                 return (
                   <tr key={sym.id} className={selectedIds.has(sym.id) ? 'tp-row-selected' : ''}>
                     <td>
                       <input type="checkbox" checked={selectedIds.has(sym.id)} onChange={() => toggleSelect(sym.id)} />
                     </td>
-                    <td><strong style={{ color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => navigate(`/research/symbol/${sym.ticker}`)} title={`Research ${sym.ticker}`}>{sym.ticker}</strong></td>
-                    <td>{sym.name !== sym.ticker ? sym.name : <span style={{ color: 'var(--ink-soft)', fontStyle: 'italic' }}>—</span>}</td>
                     <td>
-                      {hasOpenTrade ? (
-                        <span className="tp-chip tp-chip--ok" title={`${posData.count} open position(s)`}>● Open ({posData.count})</span>
-                      ) : (
-                        <span className="tp-chip tp-chip--neutral">—</span>
-                      )}
-                    </td>
-                    <td>
-                      {pnl != null ? (
-                        <span style={{ color: pnl >= 0 ? 'var(--color-profit)' : 'var(--color-loss)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                          {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', color: 'var(--accent)', textDecoration: 'underline' }}
+                          onClick={() => navigate(`/research/symbol/${sym.ticker}`)} title={`Research ${sym.ticker}`}>
+                          {hasCompanyName ? sym.name : sym.ticker}
                         </span>
-                      ) : (
-                        <span style={{ color: 'var(--ink-soft)' }}>—</span>
-                      )}
+                        {hasCompanyName && (
+                          <span style={{ fontSize: '0.75rem', color: 'var(--ink-soft)', fontFamily: 'monospace' }}>{sym.ticker}</span>
+                        )}
+                        {!hasCompanyName && sym.name && (
+                          <span style={{ fontSize: '0.75rem', color: 'var(--ink-soft)', fontStyle: 'italic' }}>No company name</span>
+                        )}
+                      </div>
                     </td>
-                    <td>
-                      <span className="tp-chip tp-chip--neutral">{protoCount}</span>
-                    </td>
-                    <td>{sym.exchange}</td>
-                    <td><span className="tp-chip tp-chip--neutral">{sym.type}</span></td>
+                    {cols.openTrade && (
+                      <td>
+                        {hasOpenTrade ? (
+                          <span className="tp-chip tp-chip--ok" title={`${posData.count} open position(s)`}>● Open ({posData.count})</span>
+                        ) : (
+                          <span className="tp-chip tp-chip--neutral">—</span>
+                        )}
+                      </td>
+                    )}
+                    {cols.pnl && (
+                      <td>
+                        {pnl != null ? (
+                          <span style={{ color: pnl >= 0 ? 'var(--color-profit)' : 'var(--color-loss)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                            {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--ink-soft)' }}>—</span>
+                        )}
+                      </td>
+                    )}
+                    {cols.protocols && (
+                      <td>
+                        <span className="tp-chip tp-chip--neutral">{protoCount}</span>
+                      </td>
+                    )}
+                    {cols.exchange && <td>{sym.exchange}</td>}
+                    {cols.type && <td><span className="tp-chip tp-chip--neutral">{sym.type}</span></td>}
                     <td>
                       <span className={`tp-chip ${isActive ? 'tp-chip--ok' : 'tp-chip--warn'}`}>
                         {isActive ? 'Active' : 'Inactive'}

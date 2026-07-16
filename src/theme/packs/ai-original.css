@@ -108,6 +108,7 @@
   cursor: pointer;
   font-family: var(--font-body, 'Inter', system-ui, sans-serif);
   transition: border-color 0.15s ease;
+  min-height: 44px;
 }
 
 [data-theme-pack='ai-original'] .btn:hover {
