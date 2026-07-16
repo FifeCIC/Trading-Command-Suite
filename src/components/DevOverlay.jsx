@@ -96,6 +96,23 @@ Source:   ${window.location.pathname}`;
     };
   }, [inspectMode]);
 
+  // ── Escape key closes inspect mode or overlay ──
+  const toggleDevOverlay = useUiStore((state) => state.toggleDevOverlay);
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        if (inspectMode) {
+          setInspectMode(false);
+        } else {
+          toggleDevOverlay();
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, inspectMode, toggleDevOverlay]);
+
   if (!open) return null;
 
   const healthData = healthQuery?.data || null;

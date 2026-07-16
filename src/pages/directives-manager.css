@@ -377,7 +377,23 @@
   opacity: 0.8;
 }
 
-/* ── Advanced accordion ── */
+/* ── Advanced box (standalone, not accordion) ── */
+
+.directive-detail-advanced-box {
+  margin-top: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.82rem;
+  background: rgba(0,0,0,0.08);
+}
+.directive-detail-advanced-box h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+/* ── Advanced accordion (deprecated, now uses standalone box) ── */
 
 .directive-detail-advanced {
   border: 1px solid var(--line);

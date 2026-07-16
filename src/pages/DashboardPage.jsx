@@ -118,7 +118,7 @@ export default function DashboardPage() {
   const supportingAreas = areas.filter(a => !WORKFLOW_AREAS.includes(a.id));
 
   return (
-    <div className="nav-dashboard" aria-live="polite" aria-atomic="true">
+    <main id="main-content" className="nav-dashboard" aria-live="polite" aria-atomic="true">
       {/* ── Top-Left Logo Bar ── */}
       <div className="nd-topbar">
         <img src="/tcs-logo.png" alt="Trading Command Suite" className="nd-topbar-logo" />
@@ -475,6 +475,6 @@ export default function DashboardPage() {
         isApiOnline={!diagQuery.isError}
         isDbOnline={!diagQuery.isError}
       />
-    </div>
+    </main>
   );
 }

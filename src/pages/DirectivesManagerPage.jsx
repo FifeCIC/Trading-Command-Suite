@@ -145,11 +145,8 @@ export default function DirectivesManagerPage() {
 
   function selectDirective(id) {
     setSelectedId(id)
-    setExpandedRows((previous) => {
-      const next = new Set(previous)
-      next.add(id)
-      return next
-    })
+    // Single-expand: close all other rows
+    setExpandedRows(new Set([id]))
   }
 
   // Loading state
@@ -354,11 +351,6 @@ export default function DirectivesManagerPage() {
               </header>
 
               <section className="directive-detail-section">
-                <h3>Introduction</h3>
-                <p>{selected.summary}</p>
-              </section>
-
-              <section className="directive-detail-section">
                 <h3>Defaults</h3>
                 <div className="directive-detail-defaults">
                   <div>
@@ -399,8 +391,8 @@ export default function DirectivesManagerPage() {
                 </div>
               </section>
 
-              <details className="directive-detail-advanced">
-                <summary>Advanced</summary>
+              <section className="directive-detail-section directive-detail-advanced-box">
+                <h3>Advanced</h3>
                 <div className="directive-detail-advanced-content">
                   <h4>Ownership</h4>
                   <ul>
@@ -413,7 +405,7 @@ export default function DirectivesManagerPage() {
                   <h4>Raw API Data</h4>
                   <pre className="directive-json-pre">{JSON.stringify(selected, null, 2)}</pre>
                 </div>
-              </details>
+              </section>
             </>
           )}
         </aside>

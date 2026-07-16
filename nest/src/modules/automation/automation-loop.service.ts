@@ -486,6 +486,9 @@ export class AutomationLoopService implements OnModuleInit {
     this.gatedScoreCache.clear();
     this.auditLog.logTickStart(this.state.tickCount);
 
+    // Collect positions across all brokers for scoring + snapshot
+    let allPositions: any[] = [];
+
     try {
       // 1. Check Timeline
       const events = await this.timelineService.getActiveEvents(120);
@@ -495,7 +498,7 @@ export class AutomationLoopService implements OnModuleInit {
       this.logger.log(`Tick #${this.state.tickCount}: ${events.length} timeline events, global risk ${this.state.globalRiskMultiplier.toFixed(2)}`);
 
       // 2. Fetch portfolios from all enabled brokers
-      const allPositions: any[] = [];
+      allPositions = [];
       for (const [brokerId, brokerState] of Object.entries(this.state.brokerStates)) {
         if (!brokerState.enabled) continue;
         const adapter = this.adapterFactory.create(brokerId);
@@ -792,6 +795,11 @@ export class AutomationLoopService implements OnModuleInit {
 
     // Persist decisions to DB so they survive restarts
     this.persistDecisions(decisions, this.state.tickCount);
+
+    // ── Portfolio Snapshot (per tick) ───────────────────
+    // Captures equity, P&L, and position count at each decision point.
+    // Enables drawdown analysis and equity curve tracking over time.
+    this.capturePortfolioSnapshot(allPositions, this.state.tickCount);
 
     // Flush audit event buffer (best-effort, noiseless on failure)
     this.auditLog.flush().catch(() => {});
@@ -1278,6 +1286,48 @@ export class AutomationLoopService implements OnModuleInit {
           filledAt: d.decision === 'EXECUTED' ? new Date() : null,
         },
       }).catch(() => {});
+    }
+  }
+
+  /**
+   * Capture a portfolio snapshot after each tick.
+   * Writes total equity, P&L, and position count to portfolio_snapshot.
+   * Fire-and-forget — failures are silent (non-critical).
+   */
+  private capturePortfolioSnapshot(positions: any[], tickNumber: number) {
+    if (!this.prisma.isAvailable) return;
+    try {
+      const totalValue = positions.reduce((s: number, p: any) => s + (p.marketValue || p.value || 0), 0);
+      const totalCost = positions.reduce((s: number, p: any) => s + (p.costBasis || (p.avgCost || 0) * (p.quantity || 0)), 0);
+      const totalPnl = positions.reduce((s: number, p: any) => s + (p.unrealizedPnl || p.pnl || 0), 0);
+
+      // Summarize by provider
+      const providerMap = new Map<string, { value: number; count: number }>();
+      for (const p of positions) {
+        const provider = p.brokerId || p.provider || 'unknown';
+        const entry = providerMap.get(provider) || { value: 0, count: 0 };
+        entry.value += p.marketValue || p.value || 0;
+        entry.count += 1;
+        providerMap.set(provider, entry);
+      }
+      const providerSummary: Record<string, any> = {};
+      for (const [k, v] of providerMap) {
+        providerSummary[k] = { totalValue: v.value, positionCount: v.count };
+      }
+
+      this.prisma.portfolioSnapshot.create({
+        data: {
+          snapshotType: 'session',
+          totalValue: totalValue || 0,
+          totalCost: totalCost || 0,
+          totalPnl: totalPnl || 0,
+          totalPnlPct: totalCost > 0 ? (totalPnl / totalCost) * 100 : 0,
+          positionCount: positions.length,
+          providerSummary: providerSummary as any,
+        },
+      }).catch(() => {});
+    } catch {
+      // Non-critical — don't block the tick loop
     }
   }
 

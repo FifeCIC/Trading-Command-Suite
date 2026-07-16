@@ -23071,3 +23071,20 @@
 2026-07-16 03:44:05,337 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1384.21
 2026-07-16 03:44:05,368 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
 2026-07-16 03:44:05,413 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-16 03:46:30,686 [INFO] MetaTrader5 package loaded
+2026-07-16 03:46:30,687 [INFO] Connecting to MT5 at startup...
+2026-07-16 03:46:30,687 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-16 03:46:38,799 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1384.21
+2026-07-16 03:46:39,114 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-16 03:46:39,183 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-16 14:01:34,045 [INFO] MetaTrader5 package loaded
+2026-07-16 14:01:34,064 [INFO] Connecting to MT5 at startup...
+2026-07-16 14:01:34,064 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-16 14:01:36,414 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.94
+2026-07-16 14:01:36,414 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-16 14:01:36,510 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-16 14:01:59,670 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T14:01:59.669893", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 14:03:50,354 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T14:03:50.354652", "action": "order_placed", "ticket": 152349003181, "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "price": 3986.49, "clientOrderId": null}
+2026-07-16 15:03:50,800 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T15:03:50.799785", "action": "order_placed", "ticket": 152349558775, "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "price": 3995.5, "clientOrderId": null}
+2026-07-16 16:05:50,873 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T16:05:50.873173", "action": "order_placed", "ticket": 152350001430, "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "price": 3993.6, "clientOrderId": null}
+2026-07-16 16:56:47,119 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T16:56:47.118943", "action": "order_placed", "ticket": 152350358874, "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "price": 4006.63, "clientOrderId": null}

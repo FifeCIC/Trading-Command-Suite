@@ -944,6 +944,7 @@ model TradingStrategy {
   description   String?  @db.Text
   protocolId    String   @db.VarChar(36)
   shortProtocolId String? @db.VarChar(36)
+  scoringStrategyId String? @db.VarChar(36)  // Phase A.2: FK to ScoringStrategy — nullable during transition
   symbol        String   @db.VarChar(20)
   brokerId      String   @default("mt5") @db.VarChar(50)
   timeframe     String   @db.VarChar(10)   @default("5m")
@@ -963,8 +964,10 @@ model TradingStrategy {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  scoringStrategy ScoringStrategy? @relation(fields: [scoringStrategyId], references: [id])
   evaluations StrategyEvaluation[]
 
+  @@index([scoringStrategyId])
   @@map("trading_strategy")
 }
 
@@ -1027,6 +1030,8 @@ model ScoringStrategy {
   activatedAt     DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  tradingStrategies TradingStrategy[]
 
   @@map("scoring_strategy")
 }
@@ -1430,4 +1435,79 @@ model GlobalSetting {
   updatedAt DateTime @updatedAt
 
   @@map("global_setting")
+}
+
+// ─── M.E.T.A. Protocol Registry ──────────────────────────
+// DB-backed protocol definitions replacing the hardcoded
+// PROTOCOL_REGISTRY in directive-groups.ts.
+// Phase A.1 of META.Stack Architecture Refactor (#398).
+
+model Protocol {
+  id                   String   @id @default(uuid()) @db.VarChar(36)
+  slug                 String   @unique @db.VarChar(100)  // e.g. 'built-in-default'
+  name                 String   @db.VarChar(200)
+  description          String?  @db.Text
+  directionMode        String   @default("LONG_ONLY") @db.VarChar(20)  // LONG_ONLY | SHORT_ONLY | BOTH
+  tradingStyle         String?  @db.VarChar(50)
+  recommendedTimeframe String?  @db.VarChar(20)
+  avgHoldTime          String?  @db.VarChar(50)
+  winRateTarget        String?  @db.VarChar(20)
+  idealFor             String?  @db.Text
+  isDefault            Boolean  @default(false)
+  seasonalAffinity     Json?                                      // monthly weights + date ranges
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  directiveGroups      ProtocolDirectiveGroup[]
+  symbolAssignments    SymbolProtocolAssignment[]
+
+  @@map("protocol")
+  @@index([slug])
+  @@index([directionMode])
+}
+
+model ProtocolDirectiveGroup {
+  id            String   @id @default(uuid()) @db.VarChar(36)
+  protocolId    String   @db.VarChar(36)
+  groupId       String   @db.VarChar(50)   // 'technical' | 'sentiment' | 'risk' | 'bearish-technical' etc.
+  name          String   @db.VarChar(200)
+  description   String?  @db.Text
+  weight        Float    @default(1.0)     // coefficient in composite formula
+  isRiskGate    Boolean  @default(false)   // multiplicative gate?
+  minMultiplier Float    @default(0.3)
+  maxMultiplier Float    @default(1.2)
+  sortOrder     Int      @default(0)
+
+  protocol      Protocol                    @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+  directives    ProtocolDirectiveEntry[]
+
+  @@unique([protocolId, groupId])
+  @@map("protocol_directive_group")
+}
+
+model ProtocolDirectiveEntry {
+  id           String   @id @default(uuid()) @db.VarChar(36)
+  groupId      String   @db.VarChar(36)
+  directiveId  String   @db.VarChar(100)  // matches directive registry ID
+  maxScore     Int      @default(100)     // per-directive maxScore override
+
+  group        ProtocolDirectiveGroup      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, directiveId])
+  @@map("protocol_directive_entry")
+}
+
+// Symbol ↔ Protocol assignment for speed scanner and auto-matching.
+// Replaces the hardcoded SYMBOL_PROTOCOL_MAP in speed-scan.service.ts.
+model SymbolProtocolAssignment {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  symbol      String   @db.VarChar(20)
+  protocolId  String   @db.VarChar(36)
+  priority    Int      @default(0)          // lower = higher priority
+
+  protocol    Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+
+  @@unique([symbol, protocolId])
+  @@index([symbol])
+  @@map("symbol_protocol_assignment")
 }

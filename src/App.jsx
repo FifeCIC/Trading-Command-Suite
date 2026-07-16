@@ -920,7 +920,7 @@ function AppShell() {
         )}
       </aside>
 
-      <main className="main-stage" {...withDevTag('main.stage', { area: secondaryView })}>
+      <main id="main-content" className="main-stage" {...withDevTag('main.stage', { area: secondaryView })}>
         <div aria-live="assertive" aria-atomic="true" className="sr-only-alert" role="alert"></div>
         <div className="main-top-row">
           <Breadcrumbs />
@@ -1037,6 +1037,7 @@ function AppShell() {
 export default function App() {
   return (
     <BrowserRouter>
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       <ErrorBoundary message="The application encountered a critical error.">
         <Routes>
           <Route path="/research/symbol/:symbolId" element={<AppShell />} />

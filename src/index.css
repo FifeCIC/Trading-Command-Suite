@@ -143,6 +143,27 @@ html[data-hide-page-subtitle='true'] .po-subtitle { display: none; }
   outline: none;
 }
 
+/* ── Accessibility: Skip-to-main-content link ────────────── */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 8px;
+  z-index: 10000;
+  padding: 8px 16px;
+  background: var(--accent, #14b8b9);
+  color: #000;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border-radius: 0 0 6px 6px;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-link:focus {
+  top: 0;
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
 /* ── Accessibility: Screen-reader-only alert region ─────── */
 .sr-only-alert {
   position: absolute;
