@@ -2,12 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiGet } from '../core/api/client';
+import ScreenOptions from '../components/ScreenOptions';
 import './HomeDashboard.css';
 
 export default function HomeDashboard() {
   const navigate = useNavigate();
   const [restarting, setRestarting] = useState(false);
   const [restartMsg, setRestartMsg] = useState(null);
+  const [screenOptionsOpen, setScreenOptionsOpen] = useState(false);
 
   const healthQuery = useQuery({
     queryKey: ['home-health'],
@@ -165,6 +167,17 @@ export default function HomeDashboard() {
           </p>
         </section>
       )}
+      <ScreenOptions
+        activeView={null}
+        isOpen={screenOptionsOpen}
+        onToggle={() => setScreenOptionsOpen((v) => !v)}
+        isBookmarked={false}
+        onToggleBookmark={() => {}}
+        statusLevel={healthQuery.isLoading ? null : isApiOnline ? 'online' : 'offline'}
+        isMt5Online={mt5Connected || false}
+        isApiOnline={isApiOnline}
+        isDbOnline={isApiOnline}
+      />
     </div>
   );
 }

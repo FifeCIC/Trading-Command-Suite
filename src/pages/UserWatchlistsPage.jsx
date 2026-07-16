@@ -166,7 +166,7 @@ export default function UserWatchlistsPage() {
     <div className="wl-page">
       <header className="wl-header">
         <div>
-          <h2>User Watchlists</h2>
+          <h2>Watchlists</h2>
           <p className="wl-subtitle">
             {isLoading ? 'Loading…' : `${watchlists?.length || 0} watchlists · ${totalSymbols} total symbols`}
           </p>
@@ -202,7 +202,7 @@ export default function UserWatchlistsPage() {
             )}
             {/* User Watchlists */}
             <div className="wl-group">
-              <div className="wl-group-label">User Watchlists</div>
+              <div className="wl-group-label">Watchlists</div>
               {watchlists.filter(w => w.kind !== 'built-in').map((wl, i) => renderWatchlistItem(wl, i))}
               {/* Inline "Create New Watchlist" entry */}
               <motion.div

@@ -169,6 +169,81 @@
   margin-top: 0.15rem;
 }
 
+/* ── META.Stack Connections ── */
+.protocols-connections {
+  margin-bottom: 1.5rem;
+  padding: 0.75rem;
+  background: color-mix(in srgb, var(--panel) 80%, var(--accent));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.protocols-connections h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+.protocols-conn-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.78rem;
+}
+.protocols-conn-label {
+  color: var(--ink-soft);
+  min-width: 70px;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.protocols-conn-value {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.protocols-conn-chip {
+  display: inline-block;
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.protocols-conn-trading {
+  background: #22c55e15;
+  color: #22c55e;
+  border-color: #22c55e30;
+}
+.protocols-conn-none {
+  color: var(--ink-soft);
+  font-style: italic;
+  font-size: 0.72rem;
+}
+.protocols-conn-summary {
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.72rem;
+}
+.protocols-conn-ok { color: #22c55e; font-weight: 600; }
+.protocols-conn-partial { color: #f59e0b; }
+.protocols-conn-none { color: var(--ink-soft); font-style: italic; }
+
+/* ── Sidebar connection dots ── */
+.protocols-item-conn {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-left: 4px;
+}
+.protocols-item-conn.connected { background: #22c55e; }
+.protocols-item-conn.partial { background: #f59e0b; }
+.protocols-item-conn.none { background: var(--ink-soft); }
+
 /* ── Protocol ID ── */
 
 .protocols-id-section {

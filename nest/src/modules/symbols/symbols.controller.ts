@@ -124,4 +124,11 @@ export class SymbolsController {
     const data = await this.symbolsService.getProtocols(ticker);
     return { ...this.modeMeta(), ...data };
   }
+
+  @Get(':ticker/focus')
+  @ApiOperation({ summary: 'Single-symbol focus view — protocols, strategies, decisions, outcomes' })
+  async getFocus(@Param('ticker') ticker: string) {
+    const data = await this.symbolsService.getFocus(ticker);
+    return { ...this.modeMeta(), ...data };
+  }
 }

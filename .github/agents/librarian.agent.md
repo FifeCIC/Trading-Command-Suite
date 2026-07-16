@@ -58,6 +58,20 @@ Maintain `docs/theories/`:
 - Update evidence sections when new data arrives
 - Mark theories as Confirmed / Disproven / Superseded based on outcomes
 
+### 7. Handoff Processing (batch documentation updates)
+When invoked with `/update-documentation` or when you detect multiple unprocessed handoff files, process them in batch:
+
+1. **Read `.github/handoffs/`** — list all `.md` files except `README.md`
+2. **For each handoff file**, extract the Capability Map, QA, and Architecture Framework entries
+3. **Update all three pages** in one pass:
+   - `src/pages/CapabilityMapPage.jsx` — add KNOWN_FEATURES entries
+   - `src/data/qa-checklist.js` — add QA test entries
+   - `src/core/architecture-reference.js` — add SLICE + route contract entries
+4. **Move processed files** to `.github/handoffs/processed/`
+5. **Report**: "Processed 5 handoffs → +3 capabilities, +4 QA entries, +2 AF slices"
+
+Token savings: processing 5 handoffs costs ~70K tokens vs ~325K if each agent self-updated (78% reduction).
+
 ## Reference Files
 
 | File | Purpose |
@@ -68,6 +82,7 @@ Maintain `docs/theories/`:
 | `.agenticmemory/prompts/` | Prompt queue — manage lifecycle |
 | `docs/theories/README.md` | Theory Laboratory guide |
 | `docs/theories/` | Individual theory files |
+| `.github/handoffs/` | Agent handoff files — process in batch |
 | `src/pages/architecture-framework.data.js` | Architecture data to update |
 | `src/core/page-data-status.js` | Page data status metadata |
 | `.github/skills/update-architecture-framework/SKILL.md` | How to update architecture |
@@ -80,9 +95,9 @@ Maintain `docs/theories/`:
 - Report: "14 prompts queued, 2 claimed, 1 DONE today"
 
 ### After Any Agent Completes Work
+- Agent writes `.github/handoffs/{date}-{slug}.md` (mandatory via agent-handoff.instructions.md)
+- When invoked with `/update-documentation`, batch-process all unprocessed handoffs
 - Rename prompt from CLAIM__ to DONE__
-- Add STATUS_SNAPSHOT entry to architecture data
-- Update Capability Map if new features shipped
 - Add changelog entry
 
 ### Weekly

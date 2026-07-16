@@ -1,20 +1,17 @@
 ---
-description: "Rule for agents: when implementing or testing features, add structured QA entries to the QA Testing page. Applies to all agent work."
+description: "DEPRECATED — Superseded by agent-handoff.instructions.md. Agents should write handoff files instead of directly editing QA/Capability/Architecture pages. The Librarian batch-processes handoffs."
 applyTo: "nest/src/**, src/pages/**, src/components/**, src/data/**"
 ---
 
-# Agent QA Test Recording Rule
+# Agent QA Test Recording Rule — DEPRECATED
 
-When you implement a feature, fix a bug, or run a test, you MUST add a structured entry to the QA checklist at `src/data/qa-checklist.js`.
+**⚠️ This rule has been superseded by `agent-handoff.instructions.md`.**
 
-## When to Add Entries
+Do NOT directly edit `qa-checklist.js`, `CapabilityMapPage.jsx`, or `architecture-framework.data.js`. Instead, write a handoff file to `.github/handoffs/` as described in `agent-handoff.instructions.md`. The Librarian agent will batch-process all handoffs and update these pages.
 
-- **Feature complete**: after building a new endpoint, directive, protocol, or page
-- **Bug fixed**: after fixing a bug — add a regression test entry
-- **Test executed**: after running a manual or automated test with observable results
-- **Integration verified**: after confirming two systems work together
+## Legacy reference (for handoff format)
 
-## Entry Format
+When writing the QA section of your handoff, use this format:
 
 ```javascript
 {

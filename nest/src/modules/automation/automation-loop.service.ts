@@ -29,6 +29,8 @@ import { TradeRecorderService } from '../trading/trade-recorder.service';
 import { DuplicateGuardService } from '../trading/duplicate-guard.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 import { MarketDataService } from '../market-data/market-data.service';
+import { BarRefreshService } from '../market-data/bar-refresh.service';
+import { AuditLogService } from './audit-log.service';
 import { PROTOCOL_REGISTRY } from '../directives/directive-groups';
 
 // ── Protocol-aware thresholds by trading style ──
@@ -101,6 +103,7 @@ export interface ScoringStrategy {
   slPct: number;
   tpPct: number;
   maxPyramidTiers: number;
+  slTpInheritance: string;  // 'inherit' | 'independent' | 'tighten'
   enabled: boolean;
   tradingEnabled: boolean;
 }
@@ -143,6 +146,10 @@ export class AutomationLoopService implements OnModuleInit {
   private lastAnyTradeAt: number = 0;
   private lastTradeTime = new Map<string, number>();
 
+  /** Tracks repeated errors across ticks to suppress duplicate logging.
+   *  Key = `${strategyId}:${symbol}:${errorMessage}` */
+  private suppressedErrors = new Map<string, { lastTick: number; count: number; firstSeenAt: Date }>();
+
   state: LoopState = {
     loopEnabled: false,
     tickIntervalMs: 300000,
@@ -173,6 +180,8 @@ export class AutomationLoopService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly protocolGating: ProtocolGatingService,
     private readonly marketData: MarketDataService,
+    private readonly barRefresh: BarRefreshService,
+    private readonly auditLog: AuditLogService,
   ) {
     this.initBrokerStates();
     // loadScoringStrategies() is deferred to onModuleInit (needs DB connection)
@@ -222,6 +231,7 @@ export class AutomationLoopService implements OnModuleInit {
       }
     } catch (e) { this.logger.warn(`Failed to patch strategies: ${(e as Error).message}`); }
     await this.loadScoringStrategies();
+    this.barRefresh.start(300_000);  // Refresh marketBar data every 5 min
     this.start();
   }
 
@@ -319,6 +329,7 @@ export class AutomationLoopService implements OnModuleInit {
             slPct: r.slPct,
             tpPct: r.tpPct,
             maxPyramidTiers: (r as any).maxPyramidTiers ?? 1,
+            slTpInheritance: (r as any).slTpInheritance ?? 'inherit',
             enabled: r.enabled,
             tradingEnabled: r.tradingEnabled,
           });
@@ -345,6 +356,7 @@ export class AutomationLoopService implements OnModuleInit {
           mode: strat.mode, tradeThreshold: strat.tradeThreshold,
           baseSize: strat.baseSize, slPct: strat.slPct, tpPct: strat.tpPct,
           maxPyramidTiers: strat.maxPyramidTiers ?? 1,
+          slTpInheritance: strat.slTpInheritance ?? 'inherit',
           enabled: strat.enabled, tradingEnabled: strat.tradingEnabled,
         },
         update: {
@@ -354,6 +366,7 @@ export class AutomationLoopService implements OnModuleInit {
           mode: strat.mode, tradeThreshold: strat.tradeThreshold,
           baseSize: strat.baseSize, slPct: strat.slPct, tpPct: strat.tpPct,
           maxPyramidTiers: strat.maxPyramidTiers ?? 1,
+          slTpInheritance: strat.slTpInheritance ?? 'inherit',
           enabled: strat.enabled, tradingEnabled: strat.tradingEnabled,
         },
       });
@@ -414,6 +427,7 @@ export class AutomationLoopService implements OnModuleInit {
     this.state.tickCount++;
     this.state.lastTickAt = new Date().toISOString();
     const decisions: TickDecision[] = [];
+    this.auditLog.logTickStart(this.state.tickCount);
 
     try {
       // 1. Check Timeline
@@ -533,12 +547,16 @@ export class AutomationLoopService implements OnModuleInit {
           // Use gated protocol scoring per symbol instead of flat rankAll()
           let scoredCount = 0;
           for (const sym of wlSymbols) {
+            try {
             // Get symbol from DB for bar fetching
             const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: sym } });
             if (!dbSym) continue;
 
             const bars = await this.marketData.getBars(dbSym.id, '5m', 100);
             if (!bars || bars.length < 20) continue;
+
+            this.auditLog.logBarsFetched(this.state.tickCount, sym, bars.length,
+              bars[bars.length - 1]?.timestamp?.toISOString?.() ?? null);
 
             // Score with LONG protocol
             const longGated = await this.protocolGating.scoreWithGating(sym, bars, strat.protocolId);
@@ -587,9 +605,16 @@ export class AutomationLoopService implements OnModuleInit {
               composite: chosenComposite, signal: side,
             });
 
+            this.auditLog.logScored(this.state.tickCount, strat.id, sym,
+              longGated.composite, shortGated?.composite ?? null,
+              side, chosenComposite, adjScore >= strat.tradeThreshold);
+
             // Dispatch if trading enabled
             if ((strat.mode === 'auto' || strat.mode === 'semi-auto') && this.state.brokerStates[strat.brokerId]?.tradingEnabled) {
-              if (this.lastAnyTradeAt && (Date.now() - this.lastAnyTradeAt) < 60000) continue;
+              if (this.lastAnyTradeAt && (Date.now() - this.lastAnyTradeAt) < 60000) {
+                this.auditLog.logSkip(this.state.tickCount, strat.id, sym, 'Cooldown active (60s between trades)');
+                continue;
+              }
 
               // HOLD signals are never actionable — skip dispatch
               if (side === 'HOLD') continue;
@@ -598,6 +623,7 @@ export class AutomationLoopService implements OnModuleInit {
               // Duplicate guard — block if position already open
               const dupCheck = await this.duplicateGuard.checkDuplicate(sym, strat.brokerId, strat.protocolId);
               if (dupCheck.blocked) {
+                this.auditLog.logBlocked(this.state.tickCount, strat.id, sym, dupCheck.reason || 'Duplicate position');
                 decisions.push({ timestamp: new Date().toISOString(), strategyId: strat.id, symbol: sym, brokerId: strat.brokerId, decision: 'BLOCKED', reason: dupCheck.reason || 'Duplicate position', composite: chosenComposite, signal: side });
                 continue;
               }
@@ -605,8 +631,10 @@ export class AutomationLoopService implements OnModuleInit {
               const broker = this.adapterFactory.create(strat.brokerId);
               if (!broker?.placeOrder) continue;
 
-              const sl = side === 'BUY' ? lastPrice * (1 - strat.slPct/100) : lastPrice * (1 + strat.slPct/100);
-              const tp = side === 'BUY' ? lastPrice * (1 + strat.tpPct/100) : lastPrice * (1 - strat.tpPct/100);
+              // Uses bar close price — now fresh via BarRefreshService pipeline
+              const entryPrice = lastPrice;
+              const sl = side === 'BUY' ? entryPrice * (1 - strat.slPct/100) : entryPrice * (1 + strat.slPct/100);
+              const tp = side === 'BUY' ? entryPrice * (1 + strat.tpPct/100) : entryPrice * (1 - strat.tpPct/100);
 
               if (strat.mode === 'semi-auto') {
                 const aid = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
@@ -618,16 +646,55 @@ export class AutomationLoopService implements OnModuleInit {
                 });
                 decisions.push({ timestamp: new Date().toISOString(), strategyId: strat.id, symbol: sym, brokerId: strat.brokerId, decision: 'QUEUED', reason: 'Awaiting confirmation', composite: chosenComposite, signal: side, actionId: aid });
               } else {
+                this.auditLog.logDispatch(this.state.tickCount, strat.id, sym, side, strat.baseSize, sl, tp, entryPrice);
                 const result = await broker.placeOrder({
                   symbol: sym, side: side as 'BUY'|'SELL', quantity: strat.baseSize, sl, tp,
                   comment: `TCS ${strat.name} | ${chosenComposite}%`,
                 });
+                this.auditLog.logOrderResult(this.state.tickCount, strat.id, sym,
+                  result.success, result.ticket as number|undefined,
+                  result.error, result.price);
                 if (result.success) {
                   this.lastAnyTradeAt = Date.now();
                   try { this.tradeRecorder.record({ symbol: sym, side: side.toLowerCase(), quantity: strat.baseSize, entryPrice: result.price||lastPrice||0, pnl:0, provider: strat.brokerId, status:'open', origin:'strategy', scoringStrategyId: strat.id } as any); } catch {}
                 }
                 decisions.push({ timestamp: new Date().toISOString(), strategyId: strat.id, symbol: sym, brokerId: strat.brokerId, decision: result.success?'EXECUTED':'FAILED', reason: result.success?`Ticket ${result.ticket}`:(result.error||'Unknown'), composite: chosenComposite, signal: side, ticket: result.ticket, price: result.price, quantity: strat.baseSize });
               }
+            }
+            } catch (symbolErr) {
+              // ── Duplicate error suppression (#378) ──
+              const errMsg = (symbolErr as Error).message?.substring(0, 200) || 'Unknown error';
+              const errorKey = `${strat.id}:${sym}:${errMsg}`;
+              const prev = this.suppressedErrors.get(errorKey);
+
+              if (prev && prev.lastTick === this.state.tickCount - 1) {
+                // Same error on consecutive tick — suppress, just increment counter
+                prev.lastTick = this.state.tickCount;
+                prev.count++;
+              } else if (prev && prev.lastTick < this.state.tickCount - 1) {
+                // Error reappeared after a gap — log the repeat count and reset
+                const ago = Math.round((Date.now() - prev.firstSeenAt.getTime()) / 1000);
+                this.logger.warn(
+                  `${strat.id}:${sym}: ${errMsg} (×${prev.count} since ${prev.firstSeenAt.toISOString().substring(11, 19)}, silenced for ${ago}s)`
+                );
+                prev.lastTick = this.state.tickCount;
+                prev.count = 1;
+                prev.firstSeenAt = new Date();
+              } else {
+                // First occurrence — log it and track
+                this.logger.warn(`${strat.id}:${sym}: ${errMsg}`);
+                this.suppressedErrors.set(errorKey, { lastTick: this.state.tickCount, count: 1, firstSeenAt: new Date() });
+              }
+
+              // Always push a FAILED decision for DB tracking
+              decisions.push({
+                timestamp: new Date().toISOString(),
+                strategyId: strat.id, symbol: sym, brokerId: strat.brokerId,
+                decision: 'FAILED',
+                reason: errMsg,
+                composite: 0,
+                signal: 'HOLD',
+              });
             }
           }
           if (scoredCount > 0) this.logger.log(`  Watchlist "${strat.watchlistName}" (protocol: ${strat.protocolId}): ${scoredCount}/${wlSymbols.length} scored`);
@@ -654,6 +721,9 @@ export class AutomationLoopService implements OnModuleInit {
 
     // Persist decisions to DB so they survive restarts
     this.persistDecisions(decisions, this.state.tickCount);
+
+    // Flush audit event buffer (best-effort, noiseless on failure)
+    this.auditLog.flush().catch(() => {});
 
     this.logger.log(`Tick #${this.state.tickCount} completed in ${this.state.lastTickMs}ms — ${decisions.length} decisions`);
     return decisions;

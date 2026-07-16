@@ -69,11 +69,6 @@ export const PLUGIN_TAB_SKELETONS = {
     subtitle: 'Directive configuration and weighting editor for score behavior control.',
     domain: 'Scoring / Directives',
   },
-  'directives-status': {
-    title: 'Directive Development Status',
-    subtitle: 'Coverage and implementation maturity by directive.',
-    domain: 'Scoring / Directives',
-  },
   'create-scoring-strategies': {
     title: 'Create Scoring Strategies',
     subtitle: 'Compose new strategy profiles from directive bundles and constraints.',
@@ -210,7 +205,7 @@ export const PLUGIN_TAB_SKELETONS = {
     domain: 'Watchlists / Core',
   },
   'user-watchlists': {
-    title: 'User Watchlists',
+    title: 'Watchlists',
     subtitle: 'Operator-defined watchlists with intent metadata and scope controls.',
     domain: 'Watchlists / User',
   },

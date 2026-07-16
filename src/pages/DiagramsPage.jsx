@@ -355,273 +355,255 @@ const DIAGRAMS = [
   {
     id: 'exit-signals',
     label: 'Exit Signal System',
-    desc: 'Four exit-focused directives run alongside entry scores: momentum-exhaustion (P65), target-achieved (P60), regime-shift-exit (P80), time-stop (P50). Exit urgency feeds into the scoring pipeline for position management.',
+    desc: '5 exit-focused directives contribute scores to the composite — they do NOT trigger position closes automatically. Exit monitoring is planned but not yet automated. These directives run alongside entry directives in the same scoring pipeline.',
     code: `flowchart TB
-    subgraph Market["Market Data"]
-        A[Price]
+    subgraph Market["Market Data (same DirectiveInput)"]
+        A[Price Bars<br/>closes, highs, lows]
         B[Volume]
-        C[ATR]
-        D[RSI]
-        E[Position Age]
+        C[ATR 14-period]
     end
-    subgraph ExitDirectives["Exit Directives"]
-        F[momentum-exhaustion<br/>P65]
-        G[target-achieved<br/>P60]
-        H[regime-shift-exit<br/>P80]
-        I[time-stop<br/>P50]
+    subgraph ExitDirectives["Exit Directives (5)"]
+        F[momentum-exhaustion<br/>P65 maxScore=100<br/>bias: bullish]
+        G[target-achieved<br/>P60 maxScore=100<br/>bias: bullish]
+        H[regime-shift-exit<br/>P80 maxScore=100<br/>bias: neutral]
+        I[time-stop<br/>P50 maxScore=100<br/>bias: neutral]
+        J[chandelier-exit<br/>P64 maxScore=100<br/>bias: neutral]
     end
-    subgraph Logic["Exit Logic"]
-        J{RSI > 70?}
-        K{Volume ↓?}
-        L{Price at<br/>1.5x ATR?}
-        M{Entropy<br/>spike?}
-        N{Momentum<br/>decay?}
+    subgraph Logic["Scoring Logic"]
+        K[RSI >= 70 + vol declining<br/>score 65-95]
+        L[Price > swingLow + 1.5xATR<br/>score 60-100]
+        M[Entropy spike > 25%<br/>score 70-100]
+        N[Momentum decay > 2%<br/>score 40-80]
+        O[Price below highest22 - 3xATR<br/>score 25 bearish]
     end
-    subgraph Output["Exit Output"]
-        O[Exit Urgency Score]
-        P[Signal Classification]
-        Q{Trigger?}
-        R[Close Position]
-        S[Hold + Monitor]
+    subgraph Output["Output (scores only)"]
+        P[Scores feed into<br/>composite via protocol groups]
+        Q[signalClass: bullish/bearish/neutral]
+        R[No automated close<br/>planned, not built]
     end
-    A --> J
+    A --> K --> F
     B --> K
     A --> L
     C --> L
-    A --> M
-    D --> J
-    E --> N
-    J --> F
-    K --> F
     L --> G
-    M --> H
-    N --> I
-    F --> O
-    G --> O
-    H --> O
-    I --> O
-    O --> Q
-    Q -->|urgency > threshold| R
-    Q -->|below threshold| S`,
+    A --> M --> H
+    A --> N --> I
+    A --> O
+    C --> O
+    O --> J
+    F --> P
+    G --> P
+    H --> P
+    I --> P
+    J --> P
+    P --> Q
+    Q -.-> R
+    style R fill:#1a1a2e,stroke:#f59e0b,stroke-dasharray:5 5,color:#f59e0b`,
   },
   {
     id: 'alert-center',
     label: 'Alert Center Architecture',
-    desc: 'Centralized alert system with 8 pre-configured alert types, 4 severity levels (critical/high/warning/info), lifecycle management (active→acknowledged→snoozed→dismissed), and 10s frontend polling.',
-    code: `flowchart LR
-    subgraph Sources["Alert Sources"]
-        A[MT5 Bridge]
-        B[API Rate Limits]
-        C[Data Staleness]
-        D[Signal Quality]
-        E[Backend Health]
-        F[Database]
-        G[Strategy Errors]
-        H[Stop-Loss]
+    desc: 'AlertTriggerService polls 9 conditions every 60s with per-trigger cooldowns. AlertsService stores up to 200 alerts in-memory (no DB). 8 pre-configured AlertConfigs with throttle settings. Frontend polls /api/alerts/active every 30s via TanStack Query. 3 categories: system, data, trading.',
+    code: `flowchart TB
+    subgraph Triggers["AlertTriggerService (60s poll)"]
+        A[mt5-disconnected<br/>critical · 120s cooldown]
+        B[provider-degraded<br/>high · 600s cooldown]
+        C[data-staleness<br/>warning · 600s cooldown]
+        D[position-pnl<br/>warning · 300s cooldown]
+        E[margin-utilization<br/>high · 300s cooldown]
+        F[market-close<br/>info · 900s cooldown]
+        G[weekend-gap-risk<br/>warning · 3600s cooldown]
+        H[earnings-proximity<br/>info · 7200s cooldown]
+        I[swap-accrual<br/>warning · 3600s cooldown]
     end
-    subgraph Engine["Alert Engine"]
-        I[AlertService]
-        J[Severity Classifier]
-        K[Lifecycle Manager]
+    subgraph Service["AlertsService (in-memory)"]
+        J[addAlert]
+        K[200 alert max]
+        L[8 AlertConfigs<br/>channels + throttle]
     end
-    subgraph Severity["Severity Levels"]
-        L[🔴 critical]
-        M[🟠 high]
-        N[🟡 warning]
-        O[🔵 info]
+    subgraph Severity["4 Severity Levels"]
+        M[🔴 critical]
+        N[🟠 high]
+        O[🟡 warning]
+        P[🔵 info]
     end
-    subgraph Lifecycle["Lifecycle States"]
-        P[active]
-        Q[acknowledged]
-        R[snoozed<br/>15min]
+    subgraph Lifecycle["Lifecycle"]
+        Q[active]
+        R[acknowledged]
         S[dismissed]
-        T[(History Log)]
+        T[snoozed<br/>configurable minutes]
     end
-    subgraph UI["Frontend"]
-        U[Alert Center Page]
-        V[Badge Counter]
-        W[10s Polling]
+    subgraph API["Controller /api/alerts"]
+        U[GET /active]
+        V[GET /history]
+        W[GET /count]
+        X[POST /:id/acknowledge]
+        Y[POST /:id/dismiss]
+        Z[POST /:id/snooze]
     end
-    A --> I
-    B --> I
-    C --> I
-    D --> I
-    E --> I
-    F --> I
-    G --> I
-    H --> I
-    I --> J
-    J --> L
-    J --> M
-    J --> N
-    J --> O
-    I --> K
-    K --> P
-    P --> Q
-    P --> R
-    Q --> S
-    R --> P
-    P --> T
+    subgraph UI["Frontend (30s refetch)"]
+        AA[AlertCenterPage]
+        AB[Badge Counter]
+    end
+    A & B & C & D & E & F & G & H & I --> J
+    J --> K
+    J --> M & N & O & P
+    Q --> R
     Q --> T
-    S --> T
-    I --> U
-    U --> V
-    W --> U`,
+    T -->|expires| Q
+    R --> S
+    U --> AA
+    W --> AB
+    style Triggers fill:#1a1a2e,stroke:#ef4444,color:#e5e7eb
+    style Service fill:#1a1a2e,stroke:#3b82f6,color:#e5e7eb`,
   },
   {
     id: 'calibration',
     label: 'Calibration Pipeline',
-    desc: 'Symbol-specific weight overrides applied between directive calculation and aggregation. 16 seeded calibrations (DOGEUSD, XAUUSD, NVDA, BTCUSD, EURUSD, TECH100) with weightMultiplier, decayModifier, and volatilityAdjustment.',
+    desc: 'Symbol-specific weight overrides applied in ScoringService between directive calculation and aggregation. 16 seeded calibrations (DOGEUSD, XAUUSD, NVDA, BTCUSD, EURUSD, TECH100). Only weightMultiplier is applied (decayModifier and volatilityAdjustment are stored but not yet used in scoring logic). Formula: adjustedScore = min(100, round(raw × multiplier)).',
     code: `flowchart TB
     subgraph Input["Raw Directive Scores"]
-        A[news-sentiment]
-        B[rsi-oversold]
-        C[macd-crossover]
-        D[volume-confirmation]
+        A[news-sentiment: 45]
+        B[rsi-oversold: 72]
+        C[volume-surge: 60]
+        D[earnings-proximity: 30]
     end
-    subgraph Calibration["Calibration Service"]
+    subgraph Load["CalibrationService (OnModuleInit)"]
         E[(SymbolCalibration<br/>DB Table)]
-        F[Memory Cache<br/>startup load]
-        G[CalibrationService<br/>applyCalibrations]
+        F[Memory Cache<br/>Map symbol:directiveId → multiplier]
     end
-    subgraph Adjust["Adjustment Factors"]
-        H[weightMultiplier<br/>e.g. 3.0x for DOGE]
-        I[decayModifier<br/>time-based reduction]
-        J[volatilityAdjustment<br/>regime amplification]
+    subgraph Apply["applyCalibrations(symbol, results)"]
+        G[Lookup multiplier<br/>flatCache.get symbol:directiveId]
+        H[adjusted = min 100<br/>round raw × multiplier]
     end
-    subgraph Output["Adjusted Scores"]
-        K[adjustedScore =<br/>raw x weight x 1+vol]
-        L[(Audit Trail<br/>raw + adjusted)]
-        M[Weighted Aggregation]
+    subgraph Seeded["16 Seeded Calibrations"]
+        I[DOGEUSD: news-sentiment 3.0x<br/>volume-surge 1.5x · panic-exhaustion 2.0x]
+        J[XAUUSD: news-sentiment 1.5x<br/>rsi-oversold 0.7x]
+        K[NVDA: earnings-proximity 2.5x<br/>momentum-roc 1.3x · volume 1.2x · news 1.8x]
+        L[BTCUSD: session-timing 0.6x<br/>volume-surge 1.4x · entropy 1.2x]
+        M[EURUSD: session-timing 1.3x<br/>ema-structure 1.1x]
+        N[TECH100: momentum-roc 1.3x<br/>volume-surge 1.2x]
     end
-    A --> G
-    B --> G
-    C --> G
-    D --> G
+    subgraph Output["Output"]
+        O[adjustedScores Map]
+        P[applied Array<br/>directiveId + multiplier + reason]
+        Q[Fed into ScoringService<br/>breakdown building]
+    end
+    subgraph Planned["Stored but not yet used"]
+        R[decayModifier]
+        S[volatilityAdjustment]
+    end
     E --> F
+    A & B & C & D --> G
     F --> G
     G --> H
-    G --> I
-    G --> J
-    H --> K
-    I --> K
-    J --> K
-    K --> L
-    K --> M`,
+    H --> O
+    H --> P
+    O --> Q
+    style Planned fill:#1a1a2e,stroke:#f59e0b,stroke-dasharray:5 5,color:#f59e0b`,
   },
   {
     id: 'scoring-gating',
     label: 'Scoring with Protocol Gating',
-    desc: 'Multiplicative risk gating: Risk directives gate Technical + Sentiment scores multiplicatively (not additively). Protocol maxPossibleScore = sum of directive maxScores. No artificial 100-cap — scores are unbounded within directive ranges.',
+    desc: 'ProtocolGatingService.scoreWithGating(): Run all directives → group by protocol → compute group % (rawSum/maxSum×100) → weighted combine (Tech×0.40 + Sent×0.35) → RiskGatingEngine applies tiered rules (hard gates veto, soft modifiers compound, regime overrides). Floor at 0.5× cumulative. Output: composite 0-100, signal BUY/HOLD/SELL, rarity band.',
     code: `flowchart TB
-    subgraph Directives["Directive Categories"]
-        A[Technical<br/>10 directives]
-        B[Sentiment<br/>7 directives]
-        C[Risk<br/>6 directives]
+    subgraph Directives["1. Run All Directives"]
+        A[DirectivesService.runAll]
+        B[Activation Gate filters]
+        C[Time window checks]
     end
-    subgraph Scoring["Per-Directive Scoring"]
-        D[calculate()]
-        E[maxScore declared]
-        F[confidence + signalClass]
+    subgraph Groups["2. Group by Protocol"]
+        D[Technical group<br/>groupPct = rawSum/maxSum × 100]
+        E[Sentiment group<br/>groupPct = rawSum/maxSum × 100]
+        F[Risk group<br/>breakouts extracted]
     end
-    subgraph Calibration["Calibration Overrides"]
-        G[Symbol weights]
-        H[Decay modifiers]
-        I[Volatility adjustments]
+    subgraph Combine["3. Weighted Combine"]
+        G[rawBeforeRisk =<br/>tech% × 0.40 + sent% × 0.35]
     end
-    subgraph Gate["Protocol Risk Gating"]
-        J{Tech Score}
-        K{Sentiment Score}
-        L{Risk Gate}
-        M[Multiplicative<br/>Tech × Risk]
-        N[Multiplicative<br/>Sent × Risk]
+    subgraph RiskEngine["4. RiskGatingEngine.apply()"]
+        H{Hard Gate?<br/>budget-gate · position-concentration<br/>· liquidity-check}
+        I[Soft Modifiers<br/>correlation-drag · dilution-impact<br/>· volatility-regime]
+        J[Regime Override<br/>dxy-regime → directional bias]
+        K[Cascading multiply<br/>floor at 0.5×]
     end
-    subgraph Output["Final Output"]
-        O[totalScore =<br/>gatedTech + gatedSent]
-        P[maxPossibleScore]
-        Q[Normalized %]
-        R{Entry/Watch<br/>Threshold}
+    subgraph Output["5. Output"]
+        L[composite = clamp 0-100]
+        M{signal?}
+        N[🟢 BUY ≥ 65]
+        O[🟡 HOLD ≥ 35]
+        P[🔴 SELL < 35 SHORT_ONLY]
+        Q[Rarity Band<br/>from ScoreSnapshot history]
     end
-    A --> J
-    B --> K
-    C --> L
-    J --> M
-    K --> N
+    A --> B --> C
+    C --> D & E & F
+    D --> G
+    E --> G
+    F --> H
+    G --> H
+    H -->|severity ≥ 0.8| VETO[score = 0<br/>HARD GATE]
+    H -->|pass| I
+    I --> K
+    J --> K
+    K --> L
     L --> M
-    L --> N
-    M --> O
-    N --> O
-    D --> O
-    E --> P
-    G --> M
-    H --> M
-    I --> M
-    O --> Q
-    P --> Q
-    Q --> R`,
+    M --> N & O & P
+    L --> Q
+    style VETO fill:#ef4444,color:#fff
+    style RiskEngine fill:#1a1a2e,stroke:#ef4444,color:#e5e7eb
+    style N fill:#22c55e,color:#000
+    style O fill:#f59e0b,color:#000
+    style P fill:#ef4444,color:#fff`,
   },
   {
     id: 'provider-adapters',
     label: 'Provider Adapter Architecture',
-    desc: '10 providers integrated through a factory+adapter pattern: Alpaca, Finnhub, Yahoo Finance, Polygon, Twelve Data, FMP, Trading212, FRED, ECB, MT5 Bridge. Freshness checks, queue processing, normalization, and health monitoring per adapter.',
+    desc: '8 registered adapters via AdapterFactory (Binance, Trading212, MT5, Polygon, Finnhub [disabled], FMP, Twelve Data, Yahoo). Rate-limit-aware selection picks highest-headroom provider. RateLimitGovernor + ProviderDegradationService + CryptoProviderRouter. FRED/ECB/Alpaca adapters exist as files but are not registered.',
     code: `flowchart TB
-    subgraph Providers["External Providers"]
-        A[Alpaca]
-        B[Finnhub]
-        C[Yahoo Finance]
-        D[Polygon]
-        E[Twelve Data]
-        F[FMP]
-        G[Trading212]
-        H[FRED]
-        I[ECB]
-        J[MT5 Bridge]
+    subgraph Registered["Registered Adapters (8)"]
+        A[Binance pri=15<br/>crypto primary, no auth]
+        B[Trading212 pri=30<br/>quotes, candles, trades]
+        C[MT5 pri=40<br/>quotes, candles, trades]
+        D[Polygon pri=45<br/>quotes, candles, profiles]
+        E[Finnhub pri=50<br/>DISABLED — key expires]
+        F[FMP pri=50<br/>quotes, candles, fundamentals]
+        G[Twelve Data pri=55<br/>quotes, candles]
+        H[Yahoo pri=60<br/>no auth, quotes, candles]
     end
-    subgraph Factory["Provider Factory"]
-        K[ProviderRegistry]
-        L[Capability Matrix]
-        M[Credential Store]
+    subgraph Unregistered["Adapter Files (not registered)"]
+        I[Alpaca]
+        J[FRED]
+        K[ECB]
     end
-    subgraph Pipeline["Request Pipeline"]
-        N[Freshness Check]
-        O[Rate Limit Guard]
-        P[Queue Processor]
-        Q[Adapter Normalizer]
-        R[(Stored Data)]
+    subgraph Factory["AdapterFactory"]
+        L[register id, ctor, config]
+        M[create id → cached instance]
+        N[getActive preferredId?<br/>rate-limit-aware selection]
+        O[getBrokerageAdapters]
     end
-    subgraph Health["Health Monitoring"]
-        S[Health Checker]
-        T[(Health State)]
-        U[API /providers/health]
+    subgraph RateLimit["Rate Limiting"]
+        P[RateLimitTracker<br/>per-adapter state]
+        Q[RateLimitGovernor<br/>global coordination]
+        R[Skip if tripped or < 5 remaining]
+        S[Sort by remaining DESC]
     end
-    subgraph UI["Frontend"]
-        V[Provider Status Page]
-        W[API Activity Log]
+    subgraph Degradation["ProviderDegradationService"]
+        T[Track provider status<br/>healthy · degraded · failed]
+        U[Notify on state change]
     end
-    A --> K
-    B --> K
-    C --> K
-    D --> K
-    E --> K
-    F --> K
-    G --> K
-    H --> K
-    I --> K
-    J --> K
-    K --> L
-    K --> M
-    K --> N
-    N -->|stale| O
-    N -->|fresh| R
-    O -->|ok| P
-    O -->|blocked| S
-    P --> Q
-    Q --> R
-    K --> S
-    S --> T
+    subgraph API["Controller /api/providers"]
+        V[GET /health]
+        W[GET /rate-limits]
+        X[GET /degradation]
+        Y[GET /governor]
+        Z[GET /test/:provider/:symbol]
+    end
+    A & B & C & D & E & F & G & H --> L
+    L --> M --> N
+    N --> P --> R --> S
+    Q --> P
     T --> U
-    U --> V
-    R --> W`,
+    style E fill:#ef4444,color:#fff
+    style Unregistered fill:#1a1a2e,stroke:#f59e0b,stroke-dasharray:5 5,color:#f59e0b`,
   },
   {
     id: 'automation-orchestration',
@@ -1297,6 +1279,47 @@ const DIAGRAMS = [
     style T5 fill:#f59e0b,color:#000
     style T6 fill:#ef4444,color:#fff
     style T7 fill:#64748b,color:#fff`,
+  },
+  {
+    id: 'adaptive-loop-timing',
+    label: 'Adaptive Loop Timing',
+    desc: 'Automation loop interval adapts to the fastest active protocol. Speed protocols (5s–30s bars) drive 15–30s ticks on a subset of symbols. Swing protocols (1h–1d bars) run at 5min on all symbols. Event-driven execution via webhooks provides an alternative to polling for price-threshold and candle-close triggers.',
+    code: `flowchart TD
+    subgraph Protocols["Active Protocols"]
+        P1["speed-equity-v1<br/>5s bars ⚡"]
+        P2["btc-scalp-v1<br/>30s bars ⚡"]
+        P3["built-in-default<br/>15m bars 🕐"]
+    end
+
+    Protocols --> Check{"Fastest active<br/>protocol?"}
+
+    Check -->|"5s–30s bars"| Fast["⏱ Fast Loop: 15–30s<br/>Score speed symbols only<br/>4–10 symbols, 8–12 directives"]
+    Check -->|"15m+ bars only"| Slow["⏱ Standard: 5min<br/>Score all symbols<br/>All 100 directives"]
+
+    Fast --> SpeedLoop["Speed Execution Loop"]
+    Slow --> MainLoop["Main Automation Loop"]
+
+    SpeedLoop --> Execute["Execute with tight SL/TP<br/>$1–$10 profit targets<br/>60s inter-trade throttle"]
+
+    subgraph EventDriven["Event-Driven (Webhook)"]
+        W1["Price threshold hit"]
+        W2["Candle close"]
+        W3["News event"]
+    end
+
+    EventDriven -->|"POST /api/webhooks/trading-signal"| SpeedLoop
+
+    style P1 fill:#ef4444,color:#fff
+    style P2 fill:#f59e0b,color:#000
+    style P3 fill:#22c55e,color:#000
+    style Fast fill:#7c3aed,color:#fff
+    style Slow fill:#475569,color:#e5e7eb
+    style SpeedLoop fill:#6366f1,color:#fff
+    style MainLoop fill:#475569,color:#e5e7eb
+    style Execute fill:#22c55e,color:#000
+    style W1 fill:#f59e0b,color:#000
+    style W2 fill:#f59e0b,color:#000
+    style W3 fill:#f59e0b,color:#000`,
   },
 ];
 

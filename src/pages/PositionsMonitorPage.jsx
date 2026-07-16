@@ -340,7 +340,7 @@ export default function PositionsMonitorPage() {
 
         <div className="pm-source-filter">
           <span>Source:</span>
-          {['all', 'MT5', 'Trading212'].map((s) => (
+          {['all', 'MT5', 'Trading212', 'T212 Demo'].map((s) => (
             <button key={s} className={`pm-source-chip ${sourceFilter === s ? 'pm-active' : ''}`} onClick={() => setSourceFilter(s)}>{s}</button>
           ))}
         </div>

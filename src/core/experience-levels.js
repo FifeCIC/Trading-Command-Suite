@@ -33,7 +33,6 @@ export const EXPERIENCE_MATRIX = {
     // Scoring
     'directives-manager':    { beginner: false, experienced: true,  expert: true },
     'configure-directives':  { beginner: false, experienced: false, expert: true },
-    'directives-status':     { beginner: false, experienced: true,  expert: true },
     'live-ordering-stack':   { beginner: false, experienced: false, expert: true },
     'sees-advanced':         { beginner: false, experienced: false, expert: true },
     'signals-workbench':     { beginner: false, experienced: true,  expert: true },

@@ -1,3 +1,4 @@
-// Prisma 5 uses schema.prisma datasource and package.json seed config.
-// This file kept as a no-op for future Prisma 7 migration.
+// Prisma 7 uses schema.prisma datasource with env("DATABASE_URL").
+// The url property is kept in schema.prisma for backward compatibility.
+// Run `npx prisma db push` from the nest/ directory.
 export {}

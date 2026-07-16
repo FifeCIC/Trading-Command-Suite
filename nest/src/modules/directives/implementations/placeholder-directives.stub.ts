@@ -31,6 +31,7 @@ function stubResult(directiveId: string, phpFile?: string): DirectiveResult {
       score: 0,
     confidence: 0,
     reason: `[STUB] ${directiveId}: Not yet implemented. ${src}.`,
+    metadata: { performance: 'stub', status: 'underperforming', stubbedAt: '2026-06-10' },
   };
 }
 

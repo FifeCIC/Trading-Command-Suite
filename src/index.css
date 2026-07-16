@@ -102,6 +102,20 @@ html[data-hide-page-subtitle='true'] .po-subtitle { display: none; }
   }
 }
 
+/* ── Accessibility: Font Size Scaling (#357) ──────────────── */
+:root[data-font-scale='small'] {
+  font-size: 14px;
+}
+:root[data-font-scale='normal'] {
+  font-size: 16px;
+}
+:root[data-font-scale='large'] {
+  font-size: 18px;
+}
+:root[data-font-scale='x-large'] {
+  font-size: 20px;
+}
+
 /* ── Accessibility: High Contrast Mode ────────────────────── */
 :root[data-high-contrast='true'] {
   --ink: #ffffff;
@@ -1295,6 +1309,61 @@ button.nav-active {
 .dev-tag-list span {
   color: #9ca3af;
   font-size: 0.85rem;
+}
+
+/* ── Dev Overlay stat rows ── */
+.dev-admin-section {
+  margin-bottom: 0.85rem;
+}
+.dev-section-title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  margin: 0 0 0.5rem;
+}
+.dev-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.78rem;
+}
+.dev-stat-label {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+.dev-stat-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.dev-stat-value.muted { color: var(--ink-soft); }
+.dev-stat-value.ok { color: #22c55e; }
+.dev-stat-value.error { color: #ef4444; }
+
+.dev-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+}
+.dev-action-btn {
+  padding: 0.32rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  text-align: left;
+}
+.dev-action-btn:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
 
 .app-footer {

@@ -106,12 +106,9 @@ import {
   MovingAveragesDirective,
   // Volatility
   VolatilityToolsDirective,
-  // Candlestick Patterns (now real implementations)
+  // Patterns (real implementation in stub file)
   PinBarPatternDirective,
-  // Macro / Regime
-  // CadUsdOilCorrelationDirective — now real implementation (see cad-usd-oil-correlation.directive.ts)
   // Temporal / Calendar
-  MondayEffectDirective,
   FridayPositioningDirective,
   MidweekMomentumDirective,
   AdvancedWeeklyRhythmDirective,
@@ -232,7 +229,7 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     Mt5HaramiDirective,
     Mt5StarDojiDirective,
     Mt5HammerDirective,
-    // Stubs — Patterns
+    // Patterns (real math — PinBarPatternDirective lives in placeholder-directives.stub.ts)
     PinBarPatternDirective,
     // Implemented — Macro
     VixRegimeDirective,
@@ -260,7 +257,6 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     GoldMacroCorrelationDirective,
     CadUsdOilCorrelationDirective,
     // Stubs — Temporal
-    MondayEffectDirective,
     FridayPositioningDirective,
     MidweekMomentumDirective,
     AdvancedWeeklyRhythmDirective,
@@ -413,16 +409,14 @@ export class DirectivesModule implements OnModuleInit {
     private readonly mt5Harami: Mt5HaramiDirective,
     private readonly mt5StarDoji: Mt5StarDojiDirective,
     private readonly mt5Hammer: Mt5HammerDirective,
-    // Stubs — Patterns
+    // Patterns (real math, in stub file)
     private readonly pinBar: PinBarPatternDirective,
-    // Implemented — Macro
+    // Stubs — Temporal
     private readonly vixRegime: VixRegimeDirective,
     private readonly dxyRegime: DxyRegimeDirective,
     private readonly goldMacro: GoldMacroCorrelationDirective,
     private readonly cadUsdOil: CadUsdOilCorrelationDirective,
-    // Stubs — Macro
     // Stubs — Temporal
-    private readonly mondayEffect: MondayEffectDirective,
     private readonly mondayEffectReal: MondayEffectRealDirective,
     private readonly fridayPos: FridayPositioningDirective,
     private readonly midweek: MidweekMomentumDirective,
@@ -546,7 +540,8 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.mt5Harami);
     this.directivesService.register(this.mt5StarDoji);
     this.directivesService.register(this.mt5Hammer);
-    // Stubs — Patterns
+    // Real candlestick patterns registered above
+    // PinBar (real math, in stub file)
     this.directivesService.register(this.pinBar);
     // Implemented — Macro
     this.directivesService.register(this.vixRegime);

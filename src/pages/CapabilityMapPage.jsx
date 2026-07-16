@@ -449,14 +449,53 @@ export default function CapabilityMapPage() {
     refetchOnWindowFocus: true,
   });
 
+  // ── DB-backed capabilities (primary source when available) ──
+  const capabilitiesQuery = useQuery({
+    queryKey: ['capability-map', 'db-capabilities'],
+    queryFn: () => apiGet('/api/capabilities').catch(() => []),
+    refetchInterval: 120_000,
+    staleTime: 60_000,
+  });
+  const dbCapabilities = Array.isArray(capabilitiesQuery.data) ? capabilitiesQuery.data : [];
+
   const directives = directivesQuery.data;
   const provData = providerHealthQuery.data;
   const providers = Array.isArray(provData?.providers) ? provData.providers : Array.isArray(provData) ? provData : [];
 
-  const allRows = useMemo(
-    () => buildCapabilityRows(directives, providers),
-    [directives, providers]
-  );
+  const allRows = useMemo(() => {
+    const localRows = buildCapabilityRows(directives, providers);
+    
+    // If DB capabilities are available, merge them with locally-built rows
+    if (dbCapabilities.length > 0) {
+      const dbMap = new Map(dbCapabilities.map(c => [c.name, c]));
+      const localNames = new Set(localRows.map(r => r.name));
+      
+      // Convert DB capabilities to row format
+      const dbRows = dbCapabilities.map(c => ({
+        name: c.name,
+        category: c.category,
+        area: c.area,
+        type: c.type,
+        status: c.status,
+        notes: c.notes || '',
+        dataPersistence: c.dataPersistence || 'ephemeral',
+        uiSurfaces: c.uiSurfaces || 0,
+        pipelineIntegration: c.pipelineIntegration || 'none',
+        devCompletion: c.devCompletion || 'partial',
+      }));
+      
+      // Add locally-built rows that don't exist in DB
+      for (const row of localRows) {
+        if (!dbMap.has(row.name)) {
+          dbRows.push(row);
+        }
+      }
+      
+      return dbRows;
+    }
+    
+    return localRows;
+  }, [directives, providers, dbCapabilities]);
 
   const categories = [...new Set(allRows.map((r) => r.category))].sort();
 
@@ -481,7 +520,7 @@ export default function CapabilityMapPage() {
       <motion.header className="cm-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <h1>🗺️ Capability Map</h1>
         <p className="cm-subtitle">
-          Unified inventory of all capabilities across the Trading Command Suite — pages, directives, providers, APIs, backend services, and frontend features. All statuses are <strong>ALPHA</strong> until strengthened and promoted to BETA.
+          Unified inventory of {allRows.length} capabilities — {dbCapabilities.length > 0 ? `${dbCapabilities.length} from DB` : 'built from live system scan'}. New capabilities added via POST /api/capabilities.
         </p>
       </motion.header>
 

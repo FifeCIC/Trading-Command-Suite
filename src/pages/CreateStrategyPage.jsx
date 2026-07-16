@@ -74,6 +74,8 @@ export default function CreateStrategyPage() {
   const [tpPct, setTpPct] = useState('2.0');
   const [minComposite, setMinComposite] = useState('60');
   const [maxPyramidTiers, setMaxPyramidTiers] = useState('1');
+  const [slTpInheritance, setSlTpInheritance] = useState('inherit');
+  const [maxPositions, setMaxPositions] = useState('1');
 
   // ── Data sources ──
   const [protocols, setProtocols] = useState([]);
@@ -191,6 +193,8 @@ export default function CreateStrategyPage() {
         tpPct: parseFloat(tpPct) || 1.0,
         minComposite: parseInt(minComposite) || 60,
         maxPyramidTiers: parseInt(maxPyramidTiers) || 1,
+        slTpInheritance,
+        maxPositions: parseInt(maxPositions) || 1,
         active: true,
       };
 
@@ -338,6 +342,8 @@ export default function CreateStrategyPage() {
                   setTpPct(String(strat.tpPct || 1.0));
                   setMinComposite(String(strat.tradeThreshold || 60));
                   setMaxPyramidTiers(String(strat.maxPyramidTiers ?? 1));
+                  setSlTpInheritance(strat.slTpInheritance || 'inherit');
+                  setMaxPositions(String(strat.maxPositions ?? 1));
                   if (!name.trim()) setName(strat.name || '');
                 }
               }}
@@ -430,6 +436,26 @@ export default function CreateStrategyPage() {
               <option value="0">Unlimited — keep adding while signal stays strong</option>
             </select>
             <span className="ff-hint">How many additional entries can be stacked onto a winning position. Default: 1 (no pyramid).</span>
+          </label>
+          <label className="ff-field">
+            <span className="ff-label">SL/TP Inheritance (Pyramid)</span>
+            <select className="ff-select" value={slTpInheritance} onChange={e => setSlTpInheritance(e.target.value)}>
+              <option value="inherit">Inherit parent — share same SL/TP as original position</option>
+              <option value="independent">Independent — each tier gets its own SL/TP</option>
+              <option value="tighten">Tighten — each subsequent tier uses tighter SL/TP</option>
+            </select>
+            <span className="ff-hint">How pyramid entries handle Stop Loss and Take Profit relative to the original position.</span>
+          </label>
+          <label className="ff-field">
+            <span className="ff-label">Max Concurrent Positions</span>
+            <select className="ff-select" value={maxPositions} onChange={e => setMaxPositions(e.target.value)}>
+              <option value="1">1 — One position per strategy (default)</option>
+              <option value="2">2 — Up to 2 concurrent positions</option>
+              <option value="3">3 — Up to 3 concurrent positions</option>
+              <option value="5">5 — Up to 5 concurrent positions</option>
+              <option value="10">10 — Up to 10 concurrent positions</option>
+            </select>
+            <span className="ff-hint">How many positions this strategy can open simultaneously across different symbols. Default: 1 (single position).</span>
           </label>
         </fieldset>
 

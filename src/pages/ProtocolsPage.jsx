@@ -84,7 +84,10 @@ export default function ProtocolsPage() {
                 className={`protocols-item ${selectedProto?.id === p.id ? 'active' : ''}`}
                 onClick={() => setSelected(p)}
               >
-                <div className="protocols-item-name">{p.name}</div>
+                <div className="protocols-item-name">
+                  {p.name}
+                  <span className={`protocols-item-conn ${p.isFullyConnected ? 'connected' : p.connectionCount > 0 ? 'partial' : 'none'}`} title={p.isFullyConnected ? 'Fully connected — trading enabled' : p.connectionCount > 0 ? `${p.connectionCount} strategy(s), monitoring only` : 'No scoring strategies linked'} />
+                </div>
                 <div className="protocols-item-meta">
                   <span className="protocols-source" style={{ background: SOURCE_COLORS[p.source] || '#888' }}>
                     {SOURCE_LABELS[p.source] || p.source}
@@ -165,7 +168,48 @@ export default function ProtocolsPage() {
               </div>
             </div>
 
-            {/* ── Directive Groups ── */}
+            {/* ── META.Stack Connections ── */}
+            <div className="protocols-connections">
+              <h3>META.Stack Connections</h3>
+              
+              {/* Watchlists */}
+              <div className="protocols-conn-row">
+                <span className="protocols-conn-label">Watchlists</span>
+                <span className="protocols-conn-value">
+                  {selectedProto.linkedWatchlists?.length > 0
+                    ? selectedProto.linkedWatchlists.map((w, i) => (
+                        <span key={i} className="protocols-conn-chip" title={`Protocol scores symbols from '${w}' watchlist`}>👁 {w}</span>
+                      ))
+                    : <span className="protocols-conn-none" title="No watchlist linked — protocol may not be scoped to specific symbols">⚠ Not linked to any watchlist</span>
+                  }
+                </span>
+              </div>
+
+              {/* Scoring Strategies */}
+              <div className="protocols-conn-row">
+                <span className="protocols-conn-label">Strategies</span>
+                <span className="protocols-conn-value">
+                  {selectedProto.linkedStrategies?.length > 0
+                    ? selectedProto.linkedStrategies.map((s, i) => (
+                        <span key={i} className={`protocols-conn-chip ${s.trading ? 'protocols-conn-trading' : ''}`} title={s.trading ? `Strategy '${s.name}' → watchlist '${s.watchlist}' — trading enabled` : `Strategy '${s.name}' → watchlist '${s.watchlist}' (monitoring only)`}>
+                          {s.trading ? '⚡' : '📋'} {s.name}
+                        </span>
+                      ))
+                    : <span className="protocols-conn-none">Not used by any scoring strategy</span>
+                  }
+                </span>
+              </div>
+
+              {/* Connection summary */}
+              <div className="protocols-conn-summary">
+                {selectedProto.isFullyConnected
+                  ? <span className="protocols-conn-ok">✅ Fully connected — protocol has active trading strategies</span>
+                  : selectedProto.connectionCount > 0
+                    ? <span className="protocols-conn-partial">🔗 Partially connected — {selectedProto.connectionCount} strategy(s), no active trading</span>
+                    : <span className="protocols-conn-none">⚪ Isolated — protocol is not part of any META.Stack</span>
+                }
+              </div>
+            </div>
             {selectedProto.groups && selectedProto.groups.length > 0 && (
               <div className="protocols-groups">
                 <h3>Directive Groups</h3>

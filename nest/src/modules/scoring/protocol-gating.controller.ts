@@ -104,6 +104,42 @@ export class ProtocolGatingController {
       // DB might not be available — skip
     }
 
+    // ── Enrich with linkage data ──
+    try {
+      const scoringStrategies = await this.prisma.scoringStrategy.findMany({
+        where: { enabled: true },
+        select: { id: true, name: true, protocolId: true, watchlistName: true, tradingEnabled: true },
+      });
+
+      // Build lookup maps
+      const strategiesByProtocol: Record<string, Array<{ id: string; name: string; watchlist: string; trading: boolean }>> = {};
+      const watchlistsByProtocol: Record<string, Set<string>> = {};
+
+      for (const ss of scoringStrategies) {
+        const pid = ss.protocolId;
+        if (!strategiesByProtocol[pid]) strategiesByProtocol[pid] = [];
+        strategiesByProtocol[pid].push({ id: ss.id, name: ss.name, watchlist: ss.watchlistName, trading: ss.tradingEnabled });
+
+        if (!watchlistsByProtocol[pid]) watchlistsByProtocol[pid] = new Set();
+        if (ss.watchlistName) watchlistsByProtocol[pid].add(ss.watchlistName);
+      }
+
+      // Attach to each protocol
+      for (const proto of protocols) {
+        const linkedStrategies = strategiesByProtocol[proto.id] || [];
+        const linkedWatchlists = watchlistsByProtocol[proto.id]
+          ? [...watchlistsByProtocol[proto.id]]
+          : [];
+
+        (proto as any).linkedWatchlists = linkedWatchlists;
+        (proto as any).linkedStrategies = linkedStrategies;
+        (proto as any).connectionCount = linkedStrategies.length;
+        (proto as any).isFullyConnected = linkedStrategies.length > 0 && linkedStrategies.some(s => s.trading);
+      }
+    } catch {
+      // Enrichment is best-effort
+    }
+
     return { protocols, count: protocols.length };
   }
 

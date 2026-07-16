@@ -68,6 +68,21 @@ var GLOBAL_PREFERENCES = [
     field: 'highContrastText',
     defaultValue: false,
   },
+  {
+    id: 'fontScale',
+    label: '🔤 Font Size',
+    description: 'Scale all text across the application. Choose a size that works best for your display and reading comfort.',
+    type: 'radio',
+    key: 'tcs:preferences',
+    field: 'fontScale',
+    defaultValue: 'normal',
+    options: [
+      { value: 'small', label: 'Small', desc: 'Compact — fits more data on screen. Best for high-resolution displays.' },
+      { value: 'normal', label: 'Normal', desc: 'Default size — balanced for most screens and workflows.' },
+      { value: 'large', label: 'Large', desc: 'Easier to read — more comfortable for extended use.' },
+      { value: 'x-large', label: 'X-Large', desc: 'Maximum readability — ideal for accessibility or large monitors.' },
+    ],
+  },
 ];
 
 /** Registry of option definitions keyed by view ID */
@@ -176,9 +191,10 @@ const OPTIONS_REGISTRY = {
   },
 };
 
-export default function ScreenOptions({ activeView, onSettingsChange, isOpen, onToggle, isBookmarked, onToggleBookmark }) {
+export default function ScreenOptions({ activeView, onSettingsChange, isOpen, onToggle, isBookmarked, onToggleBookmark, statusLevel, isMt5Online, isApiOnline, isDbOnline }) {
   var prefs = usePreferences();
   var registry = activeView ? OPTIONS_REGISTRY[activeView] : null;
+  var [calcOpen, setCalcOpen] = useState(false);
 
   // Read current global preference values
   var displayMode = prefs.displayMode || 'focused';
@@ -186,6 +202,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   var hidePageTitle = prefs.hidePageTitle === true;
   var hidePageSubtitle = prefs.hidePageSubtitle === true;
   var highContrastText = prefs.highContrastText === true;
+  var fontScale = prefs.fontScale || 'normal';
 
   // Read view-specific values from localStorage
   var [values, setValues] = useState(function () {
@@ -238,7 +255,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   }, [isOpen, onToggle]);
 
   // Build global section state for rendering
-  var globalValueMap = { displayMode: displayMode, experienceLevel: experienceLevel, hidePageTitle: hidePageTitle, hidePageSubtitle: hidePageSubtitle, highContrastText: highContrastText };
+  var globalValueMap = { displayMode: displayMode, experienceLevel: experienceLevel, hidePageTitle: hidePageTitle, hidePageSubtitle: hidePageSubtitle, highContrastText: highContrastText, fontScale: fontScale };
   var hasGlobalSections = true; // always show global section
   var hasViewSections = registry && registry.sections.length > 0;
 
@@ -248,10 +265,26 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
     document.documentElement.dataset.hidePageSubtitle = hidePageSubtitle ? 'true' : 'false';
   }, [hidePageTitle, hidePageSubtitle]);
 
+  // Apply font scale preference to the document so CSS can respond
+  useEffect(function () {
+    document.documentElement.setAttribute('data-font-scale', fontScale || 'normal');
+  }, [fontScale]);
+
   return (
     <>
       {/* Sticky buttons */}
       <div className="so-sticky-btns">
+        {statusLevel && (
+          <button
+            className="so-gear-btn"
+            onClick={() => window.location.href = '/status/status'}
+            title={`Bridge: ${isMt5Online ? 'Connected' : 'Offline'} | API: ${isApiOnline ? 'Online' : 'Offline'} | DB: ${isDbOnline ? 'Connected' : 'Offline'}`}
+            aria-label="System status"
+            style={{ color: statusLevel === 'online' ? '#22c55e' : statusLevel === 'warn' ? '#f59e0b' : '#ef4444' }}
+          >
+            !
+          </button>
+        )}
         <button
           className={`so-gear-btn ${isBookmarked ? 'so-bookmarked' : ''}`}
           onClick={onToggleBookmark}
@@ -259,6 +292,14 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
           aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark this page'}
         >
           {isBookmarked ? '⭐' : '☆'}
+        </button>
+        <button
+          className={`so-gear-btn ${calcOpen ? 'so-gear-active' : ''}`}
+          onClick={() => setCalcOpen((v) => !v)}
+          title="Quick Calculators"
+          aria-label="Open Calculators"
+        >
+          C
         </button>
         <button
           className={`so-gear-btn ${isOpen ? 'so-gear-active' : ''}`}
@@ -402,6 +443,115 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
           </>
         )}
       </AnimatePresence>
+
+      {/* ── Calculators Panel ── */}
+      <AnimatePresence>
+        {calcOpen && (
+          <>
+            <motion.div
+              className="so-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setCalcOpen(false)}
+            />
+            <motion.div
+              className="so-panel"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            >
+              <div className="so-header">
+                <h2 className="so-title">Quick Calculators</h2>
+                <button className="so-close-btn" onClick={() => setCalcOpen(false)} aria-label="Close calculators">✕</button>
+              </div>
+              <div className="so-body" style={{ padding: '16px 20px', overflowY: 'auto' }}>
+                <CalcPanel />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
+  );
+}
+
+/** ── Embedded calculator panel ── */
+function CalcPanel() {
+  var [account, setAccount] = useState(10000);
+  var [riskPct, setRiskPct] = useState(2);
+  var [entry, setEntry] = useState(100);
+  var [stopLoss, setStopLoss] = useState(95);
+  var [tpEntry, setTpEntry] = useState(100);
+  var [tpSl, setTpSl] = useState(95);
+  var [tpTp, setTpTp] = useState(115);
+
+  var riskAmount = account * (riskPct / 100);
+  var riskPerShare = Math.abs(entry - stopLoss);
+  var maxShares = riskPerShare > 0 ? Math.floor(riskAmount / riskPerShare) : 0;
+  var totalValue = maxShares * entry;
+
+  var rrRisk = Math.abs(tpEntry - tpSl);
+  var rrReward = Math.abs(tpTp - tpEntry);
+  var rrRatio = rrRisk > 0 ? rrReward / rrRisk : 0;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {/* Position Size */}
+      <div>
+        <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.5rem', color: 'var(--ink)' }}>Position Size</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <CalcInput label="Account ($)" value={account} onChange={setAccount} />
+          <CalcInput label="Risk %" value={riskPct} onChange={setRiskPct} step="0.1" />
+          <CalcInput label="Entry ($)" value={entry} onChange={setEntry} step="0.01" />
+          <CalcInput label="Stop Loss ($)" value={stopLoss} onChange={setStopLoss} step="0.01" />
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+            <CalcResult label="Max Shares" value={maxShares} />
+            <CalcResult label="Position $" value={`$${totalValue.toFixed(0)}`} />
+            <CalcResult label="Risk $" value={`$${riskAmount.toFixed(0)}`} />
+          </div>
+        </div>
+      </div>
+
+      {/* Risk/Reward */}
+      <div>
+        <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.5rem', color: 'var(--ink)' }}>Risk / Reward</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <CalcInput label="Entry ($)" value={tpEntry} onChange={setTpEntry} step="0.01" />
+          <CalcInput label="Stop Loss ($)" value={tpSl} onChange={setTpSl} step="0.01" />
+          <CalcInput label="Take Profit ($)" value={tpTp} onChange={setTpTp} step="0.01" />
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+            <CalcResult label="Risk" value={`$${rrRisk.toFixed(1)}`} />
+            <CalcResult label="Reward" value={`$${rrReward.toFixed(1)}`} />
+            <CalcResult label="R:R" value={`1:${rrRatio.toFixed(1)}`} highlight />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CalcInput({ label, value, onChange, step }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <label style={{ fontSize: '0.72rem', color: 'var(--ink-soft)', minWidth: '90px', textTransform: 'uppercase' }}>{label}</label>
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value) || 0)}
+        step={step}
+        style={{ flex: 1, padding: '5px 8px', border: '1px solid var(--line)', borderRadius: '4px', background: 'var(--bg)', color: 'var(--ink)', fontSize: '0.82rem', fontFamily: 'inherit' }}
+      />
+    </div>
+  );
+}
+
+function CalcResult({ label, value, highlight }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--bg)', padding: '6px 10px', borderRadius: '4px', flex: 1 }}>
+      <span style={{ fontSize: '0.6rem', color: 'var(--ink-soft)', textTransform: 'uppercase' }}>{label}</span>
+      <strong style={{ fontSize: '0.82rem', color: highlight ? 'var(--accent)' : 'var(--ink)' }}>{value}</strong>
+    </div>
   );
 }

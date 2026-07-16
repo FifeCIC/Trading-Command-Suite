@@ -405,6 +405,98 @@
 .dash-stat-value.ok { color: #22c55e; }
 .dash-stat-value.err { color: #ef4444; }
 
+.dash-pnl-broker { border-top: 1px solid var(--line); margin-top: 0.5rem; padding-top: 0.5rem; display: flex; gap: 1.25rem; }
+.dash-pnl-broker-item { display: flex; align-items: center; gap: 0.5rem; }
+.dash-pnl-broker-label { font-size: 0.7rem; color: var(--ink-soft); text-transform: uppercase; min-width: 30px; }
+.dash-pnl-broker-value { font-size: 0.85rem; font-weight: 700; }
+.dash-pnl-broker-value.ok { color: #22c55e; }
+.dash-pnl-broker-value.err { color: #ef4444; }
+.dash-pnl-broker-detail { font-size: 0.65rem; color: var(--ink-soft); }
+
+/* ── P&L by Broker Card ─────────────────────────────────── */
+.dash-broker-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.dash-broker-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+  flex-wrap: wrap;
+}
+.dash-broker-row:last-of-type { border-bottom: none; }
+.dash-broker-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 140px;
+}
+.dash-broker-icon { font-size: 1rem; }
+.dash-broker-name { font-weight: 600; font-size: 0.82rem; color: #e2e8f0; }
+.dash-broker-badge {
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+}
+.dash-broker-badge.badge-live { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+.dash-broker-badge.badge-demo { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.dash-broker-badge.badge-isa { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+.dash-broker-badge.badge-off { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.dash-broker-metrics {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  flex: 1;
+  justify-content: flex-end;
+}
+.dash-broker-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  min-width: 70px;
+}
+.dash-broker-mlabel {
+  font-size: 0.6rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.dash-broker-mval {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+.dash-broker-mval.ok { color: #22c55e; }
+.dash-broker-mval.err { color: #ef4444; }
+.dash-broker-sub {
+  font-size: 0.6rem;
+  color: #64748b;
+}
+.dash-broker-pnl .dash-broker-mval { font-size: 0.88rem; }
+
+/* Total row */
+.dash-broker-total {
+  background: rgba(59, 130, 246, 0.06);
+  margin: 0 -0.5rem;
+  padding: 0.6rem 0.5rem;
+  border-radius: 6px;
+  border-bottom: none;
+}
+.dash-broker-total-val { font-size: 0.95rem !important; }
+
+@media (max-width: 640px) {
+  .dash-broker-row { flex-direction: column; align-items: flex-start; gap: 0.4rem; }
+  .dash-broker-metrics { justify-content: flex-start; }
+  .dash-broker-metric { align-items: flex-start; }
+}
+
 .dash-hint { font-size: 0.78rem; color: #64748b; margin: 0.25rem 0 0; }
 .dash-link {
   background: none; border: none; color: var(--accent, #0ea5a6);

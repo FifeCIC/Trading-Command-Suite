@@ -1,8 +1,27 @@
-import { Fragment, useMemo, useState } from 'react'
+import { Fragment, useMemo, useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
 import LoadingSkeleton from '../components/LoadingSkeleton'
 import './directives-manager.css'
+
+const CATEGORY_COLORS = {
+  'Technical Analysis':       { color: '#3b82f6', bg: '#3b82f618' },
+  'Market Context':           { color: '#8b5cf6', bg: '#8b5cf618' },
+  'Sentiment & Fundamentals': { color: '#f59e0b', bg: '#f59e0b18' },
+  'Risk & Structural':        { color: '#ef4444', bg: '#ef444418' },
+  'Exit Signals':             { color: '#ec4899', bg: '#ec489918' },
+  'Strategy Composites':      { color: '#10b981', bg: '#10b98118' },
+  'Other':                    { color: '#64748b', bg: '#64748b18' },
+};
+
+const COMPLEXITY_COLORS = {
+  'Basic':    '#94a3b8',
+  'Simple':   '#22c55e',
+  'Moderate': '#3b82f6',
+  'Complex':  '#f59e0b',
+  'Advanced': '#ef4444',
+  'Expert':   '#8b5cf6',
+};
 
 /** Map API directive shape into the manager's expected fields. */
 function hydrateFromApi(raw) {
@@ -32,6 +51,8 @@ function hydrateFromApi(raw) {
     avgScore: raw.avgScore ?? null,
     runs: raw.runs ?? null,
     bias: raw.bias ?? null,
+    classification: raw.classification ?? 'unknown',
+    performance: raw.performance ?? 'unknown',
   }
 }
 
@@ -85,22 +106,17 @@ export default function DirectivesManagerPage() {
     toggleMutation.mutate({ id, active: !currentActive })
   }
 
-  const filterable = useMemo(() => {
-    if (allDirectives.length === 0) return []
-    return allDirectives
-  }, [allDirectives])
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return filterable
+    if (!q) return allDirectives
 
-    return filterable.filter((item) => {
+    return allDirectives.filter((item) => {
       return [item.code, item.name, item.category, item.summary]
         .join(' ')
         .toLowerCase()
         .includes(q)
     })
-  }, [filterable, query])
+  }, [allDirectives, query])
 
   const selected = useMemo(() => {
     const first = filtered[0] ?? null
@@ -108,7 +124,7 @@ export default function DirectivesManagerPage() {
   }, [filtered, selectedId])
 
   // Set initial selectedId once data loads
-  useMemo(() => {
+  useEffect(() => {
     if (!selectedId && filtered.length > 0) {
       setSelectedId(filtered[0].id)
     }
@@ -161,7 +177,7 @@ export default function DirectivesManagerPage() {
         <section className="directives-toolbar">
           <div className="directives-toolbar-row">
             <label htmlFor="directive-search">Search</label>
-            <input id="directive-search" type="search" placeholder="Search directives…" disabled />
+            <input id="directive-search" type="search" placeholder="Search directives…" value={query} onChange={(e) => setQuery(e.target.value)} disabled />
           </div>
           <div className="directives-toolbar-stats" role="status">
             <span>Failed to load directives. Is the API running?</span>
@@ -207,6 +223,7 @@ export default function DirectivesManagerPage() {
                 <th>Directive</th>
                 <th>Category</th>
                 <th>Status</th>
+                <th>Class</th>
                 <th>Complexity</th>
                 <th>AVG Score</th>
                 <th>RUNS</th>
@@ -240,11 +257,16 @@ export default function DirectivesManagerPage() {
                           <span className="directive-chevron" aria-hidden="true">{expanded ? '▾' : '▸'}</span>
                           <span>
                             <strong>{item.name}</strong>
-                            <small>{item.code}</small>
+                            <small style={{ color: '#60a5fa', fontFamily: 'monospace' }}>{item.code}</small>
                           </span>
                         </span>
                       </td>
-                      <td>{item.category}</td>
+                      <td>
+                        {(() => {
+                          const cat = CATEGORY_COLORS[item.category] || CATEGORY_COLORS.Other;
+                          return <span style={{ color: cat.color, background: cat.bg, padding: '2px 8px', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 600 }}>{item.category}</span>;
+                        })()}
+                      </td>
                       <td>
                         <span
                           className={`directive-chip tone-${statusTone}`}
@@ -255,8 +277,21 @@ export default function DirectivesManagerPage() {
                           {item.status}
                         </span>
                       </td>
-                      <td>{item.complexity}</td>
-                      <td style={{ fontWeight: 700, color: 'var(--accent)' }}>{item.avgScore ?? '—'}</td>
+                      <td>
+                        {item.classification === 'stub' ? (
+                          <span style={{ color: '#f59e0b', fontSize: '0.72rem', fontWeight: 700, background: '#f59e0b18', padding: '1px 6px', borderRadius: '3px' }} title="Placeholder — real implementation pending">STUB</span>
+                        ) : item.classification === 'active' ? (
+                          <span style={{ color: '#22c55e', fontSize: '0.72rem', fontWeight: 700, background: '#22c55e18', padding: '1px 6px', borderRadius: '3px' }} title="Actively scoring">LIVE</span>
+                        ) : (
+                          <span style={{ color: '#64748b', fontSize: '0.72rem' }} title="Not yet scored">—</span>
+                        )}
+                      </td>
+                      <td style={{ color: COMPLEXITY_COLORS[item.complexity] || '#94a3b8' }}>
+                        <span style={{ border: `1px solid ${COMPLEXITY_COLORS[item.complexity] || '#94a3b8'}`, padding: '2px 8px', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 600 }}>
+                          {item.complexity}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: 700, color: (item.avgScore ?? 0) > 60 ? '#22c55e' : (item.avgScore ?? 0) < 40 ? '#ef4444' : 'var(--ink)' }}>{item.avgScore ?? '—'}</td>
                       <td>{item.runs ?? '—'}</td>
                       <td style={{ fontWeight: 700, color: (item.bias ?? 0) > 0 ? '#22c55e' : (item.bias ?? 0) < 0 ? '#ef4444' : 'var(--ink-soft)' }}>{item.bias ?? '—'}</td>
                       <td style={{ color: item.protocolCount > 0 ? 'var(--accent)' : 'var(--ink-soft)' }}>
@@ -313,7 +348,7 @@ export default function DirectivesManagerPage() {
             <>
               <header className="directive-detail-header">
                 <div className="directive-detail-header-row">
-                  <h2 style={{color:'var(--accent)', fontSize:'1.05rem'}}>{selected.name}</h2>
+                  <h2 style={{color:'var(--accent)', fontSize:'1.05rem', textShadow: '0 0 12px rgba(59,130,246,0.4)'}}>{selected.name}</h2>
                   <span className={`directive-chip tone-${toneForStatus(selected.status)}`}>{selected.status}</span>
                 </div>
               </header>
@@ -348,7 +383,9 @@ export default function DirectivesManagerPage() {
                 <div className="directive-detail-test-results">
                   <span>Last run: {selected.lastReview}</span>
                   <span>Coverage: {selected.testCoverage}%</span>
-                  <button type="button" className="directive-detail-btn directive-btn-test">Run Test</button>
+                  {(selected.testCoverage > 0 || selected.lastReview !== '—') && (
+                    <button type="button" className="directive-detail-btn directive-btn-test">Run Test</button>
+                  )}
                 </div>
               </section>
 

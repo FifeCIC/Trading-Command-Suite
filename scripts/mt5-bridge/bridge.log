@@ -22438,3 +22438,564 @@
 2026-07-15 01:03:20,581 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T01:03:20.581004", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
 2026-07-15 01:08:20,509 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T01:08:20.509602", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
 2026-07-15 01:08:20,590 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T01:08:20.590908", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 01:13:20,538 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T01:13:20.538086", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 01:13:20,617 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T01:13:20.617457", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 01:18:20,631 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T01:18:20.631621", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 01:18:20,737 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T01:18:20.737481", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 01:18:21,000 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T01:18:21.000516", "action": "order_placed", "ticket": 152338722983, "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "price": 1.33968, "clientOrderId": null}
+2026-07-15 11:27:45,330 [INFO] MetaTrader5 package loaded
+2026-07-15 11:27:45,332 [INFO] Connecting to MT5 at startup...
+2026-07-15 11:27:45,332 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-15 11:27:45,356 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1352.04
+2026-07-15 11:27:45,356 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-15 11:27:45,390 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-15 11:50:37,710 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-15 11:50:37,738 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1352.04
+2026-07-15 11:50:38,740 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-15 11:50:38,749 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1352.04
+2026-07-15 11:54:58,016 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T11:54:58.002813", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 11:54:58,349 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T11:54:58.349314", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 11:54:59,296 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T11:54:59.296392", "action": "order_placed", "ticket": 152341368087, "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "price": 1.33942, "clientOrderId": null}
+2026-07-15 12:00:04,259 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:00:04.259709", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 12:00:04,424 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:00:04.424567", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 12:00:04,970 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:00:04.970346", "action": "order_placed", "ticket": 152341392730, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.14165, "clientOrderId": null}
+2026-07-15 12:08:38,972 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:08:38.972100", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 12:08:39,049 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:08:39.049058", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 12:08:39,151 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:08:39.151163", "action": "order_placed", "ticket": 152341443718, "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "price": 1.34006, "clientOrderId": null}
+2026-07-15 12:13:39,149 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:13:39.149663", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 12:13:39,221 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:13:39.221163", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 12:13:39,367 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:13:39.367905", "action": "order_placed", "ticket": 152341468722, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.14178, "clientOrderId": null}
+2026-07-15 12:16:44,476 [INFO] MetaTrader5 package loaded
+2026-07-15 12:16:44,476 [INFO] Connecting to MT5 at startup...
+2026-07-15 12:16:44,477 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-15 12:16:44,515 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1352.04
+2026-07-15 12:16:44,516 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-15 12:16:44,529 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-15 12:21:48,694 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:21:48.694675", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 12:21:48,784 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:21:48.784600", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 12:21:48,908 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:21:48.907987", "action": "order_placed", "ticket": 152341508450, "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "price": 1.33988, "clientOrderId": null}
+2026-07-15 12:24:34,253 [INFO] MetaTrader5 package loaded
+2026-07-15 12:24:34,254 [INFO] Connecting to MT5 at startup...
+2026-07-15 12:24:34,255 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-15 12:24:34,276 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1352.04
+2026-07-15 12:24:34,277 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-15 12:24:34,286 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-15 12:27:17,913 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:27:17,949 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:27:18,160 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:27:27,878 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:27:37,877 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:27:47,880 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:27:57,876 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:28:07,877 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:28:17,890 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:28:27,875 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:28:37,877 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:28:47,875 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:28:57,877 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:29:07,884 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:29:17,878 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:29:27,877 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:29:37,913 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:29:37,954 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:29:37.954559", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 12:29:38,049 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:29:38.048968", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 12:29:38,202 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:29:38.202809", "action": "order_placed", "ticket": 152341539839, "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "price": 1.33972, "clientOrderId": null}
+2026-07-15 12:29:47,882 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:29:57,878 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:30:07,883 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:30:17,882 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:30:27,877 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:30:37,879 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:30:47,887 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:30:57,883 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:31:07,886 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:31:17,889 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:31:27,886 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:31:37,886 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:31:47,877 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:31:57,884 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:32:07,885 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:32:17,885 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:32:27,887 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:32:37,884 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:32:47,883 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:32:57,886 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:33:07,887 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:33:17,883 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:33:27,882 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:33:37,876 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:33:47,883 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:33:57,882 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:34:07,882 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:34:17,887 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:39:18,052 [INFO] MetaTrader5 package loaded
+2026-07-15 12:39:18,055 [INFO] Connecting to MT5 at startup...
+2026-07-15 12:39:18,055 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-15 12:39:18,128 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1352.04
+2026-07-15 12:39:18,134 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-15 12:39:18,186 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-15 12:40:53,705 [INFO] MetaTrader5 package loaded
+2026-07-15 12:40:53,706 [INFO] Connecting to MT5 at startup...
+2026-07-15 12:40:53,706 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-15 12:40:53,724 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1352.04
+2026-07-15 12:40:53,725 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-15 12:40:53,734 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-15 12:41:02,277 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:41:02,320 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:41:02,338 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:41:12,255 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:41:22,247 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:41:32,259 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:41:42,251 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:41:52,251 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:42:02,263 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:42:12,254 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-15 12:45:59,516 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:45:59.516361", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 12:45:59,612 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:45:59.612569", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 12:45:59,736 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T12:45:59.736789", "action": "order_placed", "ticket": 152341636438, "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "price": 1.34033, "clientOrderId": null}
+2026-07-15 14:28:22,645 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:28:22.645331", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:28:22,784 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:28:22.783999", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:28:22,876 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:28:22.876591", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-15 14:28:22,970 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:28:22.970565", "action": "order_failed", "symbol": "EURUSD", "type": "buy", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-15 14:33:22,592 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:33:22.592296", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:33:22,696 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:33:22.696676", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:33:22,794 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:33:22.794504", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:33:22,914 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:33:22.914376", "action": "order_placed", "ticket": 152342652401, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.14268, "clientOrderId": null}
+2026-07-15 14:38:22,492 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:38:22.492004", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:38:22,590 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:38:22.590697", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:38:22,698 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:38:22.697949", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:43:22,428 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:43:22.428069", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:43:22,503 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:43:22.503525", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:43:22,577 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:43:22.577452", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:48:22,841 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:48:22.841450", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:48:22,992 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:48:22.991960", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:48:23,109 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:48:23.109213", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:53:22,357 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:53:22.357853", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:53:22,432 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:53:22.432153", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:53:22,502 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:53:22.502887", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:58:22,391 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:58:22.391766", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:58:22,467 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:58:22.467670", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 14:58:22,536 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T14:58:22.536688", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:03:22,367 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:03:22.367308", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:03:22,439 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:03:22.439402", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:03:22,508 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:03:22.508843", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:08:22,378 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:08:22.378819", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:08:22,457 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:08:22.457591", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:08:22,524 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:08:22.524361", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:13:22,406 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:13:22.406211", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:13:22,478 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:13:22.478726", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:13:22,553 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:13:22.553184", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:18:22,411 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:18:22.411097", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:18:22,483 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:18:22.483694", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:18:22,554 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:18:22.554186", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:23:22,408 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:23:22.408689", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:23:22,481 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:23:22.481420", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:23:22,548 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:23:22.548915", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:28:22,491 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:28:22.491928", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:28:22,578 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:28:22.578009", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:28:22,669 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:28:22.669431", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:33:22,473 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:33:22.473302", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:33:22,545 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:33:22.545895", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:33:22,618 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:33:22.618108", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:38:22,506 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:38:22.506117", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:38:22,584 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:38:22.584387", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:38:22,669 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:38:22.669943", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:38:23,020 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:38:23.020887", "action": "order_placed", "ticket": 152343114780, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.14364, "clientOrderId": null}
+2026-07-15 15:43:22,531 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:43:22.531117", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:43:22,605 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:43:22.605925", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:43:22,693 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:43:22.693069", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:48:22,859 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:48:22.859635", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:48:22,936 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:48:22.936579", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:48:23,019 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:48:23.019064", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:53:22,505 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:53:22.505671", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:53:22,581 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:53:22.581405", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:53:22,667 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:53:22.667415", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:58:22,638 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:58:22.638198", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:58:22,734 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:58:22.734629", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 15:58:22,811 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T15:58:22.811579", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:03:22,610 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:03:22.610210", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:03:22,690 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:03:22.690637", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:03:22,781 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:03:22.781929", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:08:22,671 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:08:22.671629", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:08:22,757 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:08:22.757099", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:08:22,839 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:08:22.839742", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:13:22,710 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:13:22.710827", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:13:22,788 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:13:22.788622", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:13:22,874 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:13:22.874796", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:18:22,936 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:18:22.936421", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:18:23,060 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:18:23.060903", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:18:23,150 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:18:23.150688", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:23:22,819 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:23:22.818973", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:23:22,917 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:23:22.917491", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:23:23,000 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:23:23.000920", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:28:22,917 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:28:22.917489", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:28:23,006 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:28:23.006288", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:28:23,092 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:28:23.092204", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:33:22,885 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:33:22.885022", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:33:22,997 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:33:22.997841", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:33:23,080 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:33:23.080057", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:38:22,929 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:38:22.929443", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:38:23,035 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:38:23.035130", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:38:23,119 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:38:23.119056", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:38:23,239 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:38:23.239168", "action": "order_placed", "ticket": 152343569209, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.1433200000000001, "clientOrderId": null}
+2026-07-15 16:43:23,045 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:43:23.045530", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:43:23,144 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:43:23.144330", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:43:23,240 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:43:23.240018", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:48:23,311 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:48:23.311783", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:48:23,408 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:48:23.408739", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:48:23,500 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:48:23.500006", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:53:26,550 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:53:26.550599", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:53:27,151 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:53:27.151195", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:53:27,311 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:53:27.311403", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:58:22,986 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:58:22.986077", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:58:23,083 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:58:23.083136", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 16:58:23,187 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T16:58:23.187887", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:03:22,960 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:03:22.960677", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:03:23,030 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:03:23.029976", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:03:23,115 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:03:23.115699", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:08:22,992 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:08:22.992577", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:08:23,071 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:08:23.071736", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:08:23,147 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:08:23.147763", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:13:22,988 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:13:22.988953", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:13:23,063 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:13:23.063761", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:13:23,139 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:13:23.139015", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:18:33,440 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:18:33.440494", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:18:33,565 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:18:33.565880", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:18:33,683 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:18:33.683587", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:23:23,765 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:23:23.764964", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:23:23,845 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:23:23.845940", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:23:23,926 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:23:23.926673", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:28:27,375 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:28:27.375486", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:28:27,512 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:28:27.511969", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:28:27,616 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:28:27.616574", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:32:52,386 [INFO] MetaTrader5 package loaded
+2026-07-15 17:32:52,386 [INFO] Connecting to MT5 at startup...
+2026-07-15 17:32:52,386 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-15 17:32:52,584 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1362.5
+2026-07-15 17:32:52,585 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-15 17:32:52,643 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-15 17:33:43,187 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:33:43.187532", "action": "order_placed", "ticket": 152343919729, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.1436600000000001, "clientOrderId": null}
+2026-07-15 17:38:25,870 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:38:25.870607", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:38:25,976 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:38:25.976562", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:38:26,068 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:38:26.068028", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:38:26,455 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:38:26.455034", "action": "order_placed", "ticket": 152343966452, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.14356, "clientOrderId": null}
+2026-07-15 17:43:25,965 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:43:25.965839", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:43:26,065 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:43:26.065891", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:43:26,149 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:43:26.149337", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:48:27,567 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:48:27.567667", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:48:27,684 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:48:27.684897", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:48:27,843 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:48:27.843713", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:53:25,706 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:53:25.706542", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:53:25,784 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:53:25.784714", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:53:25,864 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:53:25.864187", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:58:27,062 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:58:27.061915", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:58:27,199 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:58:27.199713", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 17:58:27,287 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T17:58:27.287421", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:03:25,812 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:03:25.811981", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:03:25,899 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:03:25.899393", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:03:25,981 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:03:25.981437", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:08:25,816 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:08:25.816519", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:08:25,902 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:08:25.902208", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:08:25,986 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:08:25.986431", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:13:25,819 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:13:25.818964", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:13:25,904 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:13:25.904139", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:13:25,987 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:13:25.987273", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:18:25,848 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:18:25.848077", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:18:25,935 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:18:25.935041", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:18:26,016 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:18:26.016835", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:23:25,836 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:23:25.836414", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:23:25,920 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:23:25.920155", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:23:26,002 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:23:26.002677", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:28:25,882 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:28:25.882802", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:28:25,972 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:28:25.972855", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:28:26,060 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:28:26.060246", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:33:25,816 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:33:25.816319", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:33:25,892 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:33:25.892494", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:33:25,967 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:33:25.967575", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:38:25,828 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:38:25.828827", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:38:25,902 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:38:25.902619", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:38:25,979 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:38:25.979468", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:43:25,828 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:43:25.828944", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:43:25,906 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:43:25.906157", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:43:25,986 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:43:25.986491", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:43:26,096 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:43:26.096915", "action": "order_placed", "ticket": 152344406459, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.14706, "clientOrderId": null}
+2026-07-15 18:48:25,830 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:48:25.830689", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:48:25,908 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:48:25.908379", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:48:25,985 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:48:25.985652", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:53:25,833 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:53:25.833604", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:53:25,909 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:53:25.909061", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:53:25,982 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:53:25.982670", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:58:27,473 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:58:27.473657", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:58:27,637 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:58:27.637676", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 18:58:27,795 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T18:58:27.795481", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:03:25,907 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:03:25.907609", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:03:25,986 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:03:25.986483", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:03:26,063 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:03:26.063048", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:08:25,855 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:08:25.855399", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:08:25,932 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:08:25.932878", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:08:26,007 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:08:26.007325", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:13:25,897 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:13:25.897267", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:13:25,982 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:13:25.982782", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:13:26,064 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:13:26.064759", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:18:25,911 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:18:25.911449", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:18:25,997 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:18:25.997597", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:18:26,085 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:18:26.085051", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:23:27,831 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:23:27.831276", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:23:29,590 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:23:29.590258", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:23:30,403 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:23:30.403324", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:28:26,129 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:28:26.129171", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:28:26,220 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:28:26.220105", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:28:26,304 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:28:26.304098", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:33:26,131 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:33:26.131288", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:33:26,222 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:33:26.222581", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:33:26,304 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:33:26.304111", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:38:26,132 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:38:26.132042", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:38:26,230 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:38:26.230099", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:38:26,312 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:38:26.312594", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:43:26,139 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:43:26.139419", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:43:26,238 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:43:26.238104", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:43:26,322 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:43:26.321959", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:43:26,438 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:43:26.438622", "action": "order_placed", "ticket": 152344753117, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.14743, "clientOrderId": null}
+2026-07-15 19:48:26,141 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:48:26.141685", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:48:26,233 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:48:26.233334", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:48:26,311 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:48:26.311430", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:53:26,151 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:53:26.151891", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:53:26,248 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:53:26.247973", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:53:26,326 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:53:26.326679", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:58:26,162 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:58:26.162187", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:58:26,254 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:58:26.254126", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 19:58:26,335 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T19:58:26.335122", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:03:26,249 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:03:26.249395", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:03:26,373 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:03:26.373915", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:03:26,487 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:03:26.487882", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:08:38,200 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:08:38.200230", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:08:38,387 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:08:38.387267", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:08:38,558 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:08:38.558703", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:13:58,256 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:13:58.255972", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:13:58,994 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:13:58.993928", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:14:00,378 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:14:00.378212", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:18:26,818 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:18:26.818173", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:18:26,908 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:18:26.908303", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:18:26,991 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:18:26.991564", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:23:28,989 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:23:28.989146", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:23:29,170 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:23:29.170512", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:23:29,326 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:23:29.326196", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:28:27,063 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:28:27.063829", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:28:27,201 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:28:27.201683", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:28:27,316 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:28:27.316771", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:33:27,078 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:33:27.078594", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:33:27,192 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:33:27.192673", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:33:27,310 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:33:27.310676", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:38:26,673 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:38:26.673899", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:38:26,757 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:38:26.757127", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:38:26,839 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:38:26.839123", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:43:26,651 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:43:26.651184", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:43:26,734 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:43:26.734315", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:43:26,822 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:43:26.822092", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:43:26,927 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:43:26.926993", "action": "order_placed", "ticket": 152344978999, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.1463700000000001, "clientOrderId": null}
+2026-07-15 20:48:26,978 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:48:26.978109", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:48:27,084 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:48:27.084374", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:48:27,222 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:48:27.221960", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:53:26,688 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:53:26.688242", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:53:26,793 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:53:26.793478", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:53:26,891 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:53:26.891758", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:58:26,696 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:58:26.696313", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:58:26,797 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:58:26.797691", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 20:58:26,917 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T20:58:26.917494", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:03:26,964 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:03:26.964785", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:03:27,063 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:03:27.063363", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:03:27,160 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:03:27.160018", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:08:29,533 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:08:29.533916", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:08:29,692 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:08:29.692363", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:08:29,833 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:08:29.832911", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:13:26,510 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:13:26.510931", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:13:26,590 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:13:26.590098", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:13:26,669 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:13:26.669236", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:18:26,493 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:18:26.493302", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:18:26,569 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:18:26.569671", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:18:26,657 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:18:26.657004", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:23:26,658 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:23:26.657961", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:23:26,749 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:23:26.749684", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:23:26,863 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:23:26.863604", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:28:26,527 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:28:26.527506", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:28:26,617 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:28:26.617413", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:28:26,701 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:28:26.701703", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:33:33,298 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:33:33.298239", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:33:33,693 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:33:33.693912", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:33:34,179 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:33:34.179771", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:37:37,357 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:37:37.357287", "action": "order_placed", "ticket": 152345066612, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.14625, "clientOrderId": null}
+2026-07-15 21:37:46,821 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:37:46.820961", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:37:46,919 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:37:46.919234", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:37:47,016 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:37:47.016799", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:43:12,997 [INFO] MetaTrader5 package loaded
+2026-07-15 21:43:12,998 [INFO] Connecting to MT5 at startup...
+2026-07-15 21:43:12,998 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-15 21:43:13,029 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1378.14
+2026-07-15 21:43:13,029 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-15 21:43:13,048 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-15 21:50:32,061 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:50:32.061043", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:50:32,159 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:50:32.159211", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:50:32,259 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:50:32.259455", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:50:32,383 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:50:32.383262", "action": "order_placed", "ticket": 152345076462, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.14633, "clientOrderId": null}
+2026-07-15 21:54:50,241 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:54:50.241323", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:54:50,327 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:54:50.327639", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:54:50,411 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:54:50.411454", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:59:50,373 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:59:50.373436", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:59:50,471 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:59:50.471309", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 21:59:50,569 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T21:59:50.569725", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:04:50,301 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:04:50.301200", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:04:50,402 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:04:50.402535", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:04:50,494 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:04:50.494200", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:09:50,307 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:09:50.307172", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:09:50,409 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:09:50.409117", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:09:50,503 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:09:50.503609", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:14:50,303 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:14:50.303678", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:14:50,409 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:14:50.409041", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:14:50,525 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:14:50.525062", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:19:50,316 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:19:50.316333", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:19:50,411 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:19:50.411877", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:19:50,503 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:19:50.502935", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:24:50,293 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:24:50.293377", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:24:50,388 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:24:50.388082", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:24:50,505 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:24:50.505765", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:29:50,284 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:29:50.284513", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:29:50,381 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:29:50.381857", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:29:50,468 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:29:50.468510", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:34:53,961 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:34:53.961348", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:34:54,066 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:34:54.066882", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:34:54,206 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:34:54.206151", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:39:50,272 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:39:50.272881", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:39:50,370 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:39:50.370757", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:39:50,476 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:39:50.476815", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:44:50,270 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:44:50.270163", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:44:50,363 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:44:50.363372", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:44:50,453 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:44:50.453708", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:49:50,214 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:49:50.214069", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:49:50,312 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:49:50.312748", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:49:50,425 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:49:50.425173", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:54:50,320 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:54:50.320132", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:54:50,424 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:54:50.424688", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:54:50,505 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:54:50.505619", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:54:50,616 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:54:50.616917", "action": "order_placed", "ticket": 152345108038, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.14665, "clientOrderId": null}
+2026-07-15 22:59:50,361 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:59:50.361306", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:59:50,454 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:59:50.454099", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 22:59:50,551 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T22:59:50.551033", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:04:50,306 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:04:50.306372", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:04:50,399 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:04:50.399333", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:04:50,487 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:04:50.487143", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:09:50,322 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:09:50.322535", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:09:50,422 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:09:50.422018", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:09:50,510 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:09:50.510757", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:14:50,429 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:14:50.429153", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:14:50,524 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:14:50.524123", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:14:50,618 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:14:50.618257", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:19:51,849 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:19:51.849314", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:19:51,987 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:19:51.987662", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:19:52,083 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:19:52.083298", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:24:50,388 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:24:50.388431", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:24:50,483 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:24:50.483325", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:24:50,576 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:24:50.575983", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:29:58,058 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:29:58.058378", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:29:58,186 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:29:58.186736", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:29:58,294 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:29:58.294936", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:34:52,578 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:34:52.578601", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:34:52,673 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:34:52.673560", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:34:52,765 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:34:52.765798", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:39:54,114 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:39:54.113992", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:39:54,231 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:39:54.231913", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:39:54,360 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:39:54.360381", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:44:55,104 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:44:55.104518", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:44:55,290 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:44:55.290048", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:44:55,439 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:44:55.439478", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:45:04,974 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:45:04.974674", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:45:05,088 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:45:05.088768", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:45:05,209 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:45:05.209260", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:51:11,621 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:51:11.621644", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:51:11,624 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:51:11.624219", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:51:11,750 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:51:11.750292", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:51:11,756 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:51:11.756042", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:51:11,896 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:51:11.896490", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:51:11,899 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:51:11.899433", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:55:24,128 [INFO] MetaTrader5 package loaded
+2026-07-15 23:55:24,128 [INFO] Connecting to MT5 at startup...
+2026-07-15 23:55:24,128 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-15 23:55:24,170 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1378.14
+2026-07-15 23:55:24,170 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-15 23:55:24,178 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-15 23:55:57,013 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:55:57.013087", "action": "order_placed", "ticket": 152345226654, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.1466, "clientOrderId": null}
+2026-07-15 23:56:02,244 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:56:02.244604", "action": "order_placed", "ticket": 152345226744, "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "price": 1.35381, "clientOrderId": null}
+2026-07-15 23:56:06,538 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:56:06.538330", "action": "order_placed", "ticket": 152345226867, "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "price": 1.35379, "clientOrderId": null}
+2026-07-15 23:56:13,578 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:56:13.578462", "action": "order_placed", "ticket": 152345227005, "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "price": 1.3538000000000001, "clientOrderId": null}
+2026-07-15 23:56:36,342 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:56:36.342806", "action": "order_placed", "ticket": 152345227392, "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "price": 4060.24, "clientOrderId": null}
+2026-07-15 23:57:57,775 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:57:57.775776", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:57:57,885 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:57:57.885691", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:57:57,973 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:57:57.972966", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-15 23:57:58,086 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:57:58.086054", "action": "order_placed", "ticket": 152345230853, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.14661, "clientOrderId": null}
+2026-07-15 23:59:10,733 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:59:10.733354", "action": "order_placed", "ticket": 152345232761, "symbol": "USDCAD", "type": "buy", "volume": 0.01, "price": 1.4041000000000001, "clientOrderId": null}
+2026-07-15 23:59:20,735 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-15T23:59:20.735851", "action": "order_placed", "ticket": 152345232877, "symbol": "USDCAD", "type": "buy", "volume": 0.01, "price": 1.40411, "clientOrderId": null}
+2026-07-16 00:00:51,292 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:00:51.291961", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 00:00:51,440 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:00:51.440336", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 00:00:51,582 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:00:51.582632", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 00:00:51,754 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:00:51.754518", "action": "order_placed", "ticket": 152345236650, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.14675, "clientOrderId": null}
+2026-07-16 00:05:45,185 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:05:45.185671", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 00:05:48,025 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:05:48.025020", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 00:05:49,384 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:05:49.384695", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 00:11:24,502 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:11:24.502816", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 00:11:25,444 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:11:25.444864", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 00:11:27,462 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:11:27.462301", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 00:20:24,334 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:20:24.334376", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-16 00:20:24,546 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:20:24.545978", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-16 00:20:24,748 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:20:24.748302", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-16 00:20:24,908 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:20:24.908467", "action": "order_failed", "symbol": "EURUSD", "type": "buy", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-16 00:25:15,906 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:25:15.906007", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-16 00:25:16,001 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:25:16.001027", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-16 00:25:16,091 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:25:16.091306", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-16 00:25:16,179 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:25:16.179601", "action": "order_failed", "symbol": "EURUSD", "type": "buy", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-16 00:30:15,949 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:30:15.949699", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-16 00:30:16,050 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:30:16.050235", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-16 00:30:16,160 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:30:16.160183", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-16 00:30:16,277 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:30:16.277731", "action": "order_failed", "symbol": "EURUSD", "type": "buy", "volume": 0.01, "error": "Request rejected due to absence of network connection", "clientOrderId": null}
+2026-07-16 00:56:21,350 [INFO] MetaTrader5 package loaded
+2026-07-16 00:56:21,351 [INFO] Connecting to MT5 at startup...
+2026-07-16 00:56:21,351 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-16 00:56:24,633 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1378.54
+2026-07-16 00:56:24,633 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-16 00:56:24,649 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-16 00:57:03,430 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:57:03.430092", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 00:57:03,564 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:57:03.564140", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 00:57:03,685 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:57:03.685826", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 00:57:03,833 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T00:57:03.833577", "action": "order_placed", "ticket": 152345339453, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.14696, "clientOrderId": null}
+2026-07-16 01:00:41,928 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T01:00:41.928788", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 01:00:42,105 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T01:00:42.105131", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 01:00:42,253 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T01:00:42.253621", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 01:00:42,444 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T01:00:42.444209", "action": "order_placed", "ticket": 152345347270, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.14702, "clientOrderId": null}
+2026-07-16 01:02:43,626 [INFO] MetaTrader5 package loaded
+2026-07-16 01:02:43,628 [INFO] Connecting to MT5 at startup...
+2026-07-16 01:02:43,629 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-16 01:02:43,651 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1378.54
+2026-07-16 01:02:43,652 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-16 01:02:43,664 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-16 01:06:33,439 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T01:06:33.439411", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 01:06:33,545 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T01:06:33.545472", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 01:06:33,651 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T01:06:33.651449", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 01:06:33,825 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T01:06:33.825093", "action": "order_placed", "ticket": 152345362575, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.14706, "clientOrderId": null}
+2026-07-16 01:10:52,594 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T01:10:52.594032", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 01:10:53,673 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T01:10:53.673779", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 01:10:54,489 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T01:10:54.489693", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 01:16:23,069 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T01:16:23.069736", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 01:16:23,178 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T01:16:23.178118", "action": "order_failed", "symbol": "USDCAD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 01:16:23,275 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T01:16:23.274976", "action": "order_failed", "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "error": "Invalid stops", "clientOrderId": null}
+2026-07-16 01:16:23,408 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T01:16:23.408222", "action": "order_placed", "ticket": 152345387839, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.14734, "clientOrderId": null}
+2026-07-16 01:19:42,236 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T01:19:42.236853", "action": "order_placed", "ticket": 152345395536, "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "price": 4057.05, "clientOrderId": null}
+2026-07-16 01:24:10,611 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T01:24:10.610903", "action": "order_placed", "ticket": 152345407684, "symbol": "USDCAD", "type": "buy", "volume": 0.01, "price": 1.4039, "clientOrderId": null}
+2026-07-16 01:32:41,570 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-16 01:32:43,132 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-16 01:43:06,050 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-16 01:43:06,579 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-16 01:43:06,641 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-16 01:43:06,667 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-16 01:45:13,003 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-16 01:46:17,078 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-16 01:47:44,573 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-16 01:47:46,578 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-16 01:47:55,947 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine

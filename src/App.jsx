@@ -79,6 +79,7 @@ import StrategyWizardPage from './pages/StrategyWizardPage';
 import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
 import SymbolDetailPage from './pages/SymbolDetailPage';
 import SymbolPage from './pages/SymbolPage';
+import SymbolFocusPage from './pages/SymbolFocusPage';
 import SpeedTradingPage from './pages/SpeedTradingPage';
 import SpeedScannerPage from './pages/SpeedScannerPage';
 import BtcSpeedTradingPage from './pages/BtcSpeedTradingPage';
@@ -106,7 +107,6 @@ import ComponentLabPage from './pages/ComponentLabPage';
 import ResponsiveLayoutLabPage from './pages/ResponsiveLayoutLabPage';
 import ChartsLabPage from './pages/ChartsLabPage';
 import UserWatchlistsPage from './pages/UserWatchlistsPage';
-import CreateWatchlistPage from './pages/CreateWatchlistPage';
 import FeatureLabPage from './pages/FeatureLabPage';
 import LabLandingPage from './pages/LabLandingPage';
 import LabPage from './pages/LabPage';
@@ -356,6 +356,7 @@ function AppShell() {
       const prefs = raw ? JSON.parse(raw) : {};
       document.documentElement.setAttribute('data-page-transitions', prefs.pageTransitions !== false ? 'true' : 'false');
       document.documentElement.setAttribute('data-high-contrast', prefs.highContrastText === true ? 'true' : 'false');
+      document.documentElement.setAttribute('data-font-scale', prefs.fontScale || 'normal');
     } catch { /* preference not yet saved */ }
   }, []);
 
@@ -367,6 +368,7 @@ function AppShell() {
         const prefs = raw ? JSON.parse(raw) : {};
         document.documentElement.setAttribute('data-high-contrast', prefs.highContrastText === true ? 'true' : 'false');
         document.documentElement.setAttribute('data-page-transitions', prefs.pageTransitions !== false ? 'true' : 'false');
+        document.documentElement.setAttribute('data-font-scale', prefs.fontScale || 'normal');
       } catch { /* ignore */ }
     };
     window.addEventListener('storage', onStorage);
@@ -816,13 +818,6 @@ function AppShell() {
           >
             {devOverlayOpen ? 'Hide' : 'Show'} Dev Overlay
           </button>
-          <DevOverlay
-            healthQuery={healthQuery}
-            availableAdapters={availableAdapters}
-            analyticsSnapshot={analyticsSnapshot}
-            performanceSnapshot={performanceSnapshot}
-            onDownloadRuntimeReport={onDownloadRuntimeReport}
-          />
         </div>
 
         {primaryArea === 'settings' && (
@@ -933,22 +928,14 @@ function AppShell() {
 
       {devOverlayOpen && (
         <aside className="right-rail" aria-label="Admin and status">
-          <h2>Admin + Status</h2>
-          <AccordionBlock title="Server" defaultOpen={true}>
-            {healthQuery.isLoading && <p>Checking...</p>}
-            {healthQuery.error && <p className="error">Offline</p>}
-            {healthQuery.data && <p className="ok">Online: {healthQuery.data.version || 'unknown'}</p>}
-            <p className="muted">Adapters: {availableAdapters.length}</p>
-            <p className="muted">Analytics queue: {analyticsSnapshot.queueLength}</p>
-            <p className="muted">Perf samples: {performanceSnapshot.samples}</p>
-          </AccordionBlock>
-
-          <div className="rail-block">
-            <p className="muted">Actions</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              <button type="button" onClick={onDownloadRuntimeReport} style={{ padding: '0.4rem 0.6rem', fontSize: '0.82rem' }}>Export Report</button>
-            </div>
-          </div>
+          <h2>Dev Tools</h2>
+          <DevOverlay
+            healthQuery={healthQuery}
+            availableAdapters={availableAdapters}
+            analyticsSnapshot={analyticsSnapshot}
+            performanceSnapshot={performanceSnapshot}
+            onDownloadRuntimeReport={onDownloadRuntimeReport}
+          />
         </aside>
       )}
 
@@ -1034,6 +1021,10 @@ function AppShell() {
         onToggle={() => setScreenOptionsOpen((v) => !v)}
         isBookmarked={bookmarks.some((b) => b.id === `${primaryArea}/${secondaryView}`)}
         onToggleBookmark={() => toggleBookmark(primaryArea, secondaryView)}
+        statusLevel={statusLevel}
+        isMt5Online={isMt5Online}
+        isApiOnline={isApiOnline}
+        isDbOnline={isDbOnline}
       />
     </div>
   );
@@ -1046,6 +1037,7 @@ export default function App() {
         <Routes>
           <Route path="/research/symbol/:symbolId" element={<AppShell />} />
           <Route path="/trading/symbol/:ticker" element={<SymbolPage />} />
+          <Route path="/symbol/:ticker" element={<SymbolFocusPage />} />
           <Route path="/:area/:view" element={<AppShell />} />
           <Route path="/:area" element={<AppShell />} />
           <Route path="/" element={<HomeDashboard />} />

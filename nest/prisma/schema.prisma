@@ -123,6 +123,7 @@ model MarketBar {
   @@index([symbolId, timeframe, timestamp])
   @@index([provider, importedAt])
   @@index([recordingSessionId])
+  @@unique([symbolId, timeframe, timestamp])
 }
 
 model ImportRun {
@@ -1019,6 +1020,7 @@ model ScoringStrategy {
   slPct           Float    @default(1.0)
   tpPct           Float    @default(1.0)
   maxPyramidTiers Int      @default(1)
+  slTpInheritance String   @default("inherit") @db.VarChar(20)
   enabled         Boolean  @default(true)
   tradingEnabled  Boolean  @default(false)
   activatedAt     DateTime?
@@ -1091,6 +1093,24 @@ model AutomationConfig {
   maxLossPerTrade       Float    @default(50.0)
 
   updatedAt             DateTime @updatedAt
+}
+
+// ─── Bridge Event Logging (#378) ──────────────────────────
+// Audit trail for MT5/T212 bridge state changes.
+// Written every time the adapter detects a state transition.
+
+model BridgeEvent {
+  id           String   @id @default(uuid()) @db.VarChar(36)
+  eventType    String   @db.VarChar(30)   // connected | disconnected | error | reconnected
+  account      String?  @db.VarChar(50)
+  server       String?  @db.VarChar(100)
+  balance      Float?
+  errorMessage String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  @@map("bridge_event")
+  @@index([eventType, createdAt])
+  @@index([createdAt])
 }
 
 model StockInvestigation {
@@ -1308,4 +1328,92 @@ model DecisionLog {
   @@index([timestamp])
   @@index([strategyId, timestamp])
   @@index([symbol, timestamp])
+}
+
+// ── Audit trail ──────────────────────────────────────────
+// Step-by-step trace of every decision point in the
+// automation tick loop. Queryable for diagnostics.
+
+model AutomationEvent {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  timestamp   DateTime @default(now())
+  tickNumber  Int
+  strategyId  String?  @db.VarChar(36)
+  symbol      String?  @db.VarChar(20)
+  step        String   @db.VarChar(60)   // e.g. 'tick_start', 'bars_fetched', 'scored', 'gated', 'dispatch', 'order_sent', 'order_result'
+  decision    String?  @db.VarChar(20)    // BUY, SELL, HOLD, SKIP, EXECUTED, FAILED, BLOCKED
+  detail      String?  @db.Text           // JSON payload with step-specific data
+  durationMs  Int?
+
+  @@map("automation_event")
+  @@index([tickNumber])
+  @@index([strategyId, tickNumber])
+  @@index([symbol, timestamp])
+  @@index([step, timestamp])
+}
+
+// ── Architecture Framework ───────────────────────────────
+// DB-backed architecture knowledge base replacing the 600KB
+// static .data.js file. Agents query via /api/architecture/*
+// instead of reading the full file into context.
+
+model ArchitectureSection {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  sectionKey  String   @unique @db.VarChar(50)
+  title       String   @db.VarChar(200)
+  description String?  @db.Text
+  sortOrder   Int      @default(0)
+  entries     ArchitectureEntry[]
+  updatedAt   DateTime @updatedAt
+
+  @@map("architecture_section")
+}
+
+model ArchitectureEntry {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  sectionId   String   @db.VarChar(36)
+  section     ArchitectureSection @relation(fields: [sectionId], references: [id])
+  sortOrder   Int      @default(0)
+  content     String   @db.Text
+  status      String   @default("active") @db.VarChar(20)
+  tags        String?  @db.VarChar(500)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  revisions   ArchitectureRevision[]
+
+  @@index([sectionId])
+  @@index([status])
+  @@map("architecture_entry")
+}
+
+model ArchitectureRevision {
+  id              String   @id @default(uuid()) @db.VarChar(36)
+  entryId         String   @db.VarChar(36)
+  entry           ArchitectureEntry @relation(fields: [entryId], references: [id])
+  previousContent String   @db.Text
+  changedBy       String   @default("agent") @db.VarChar(20)
+  changedAt       DateTime @default(now())
+
+  @@index([entryId])
+  @@map("architecture_revision")
+}
+model Capability {
+  id                   String   @id @default(uuid()) @db.VarChar(36)
+  name                 String   @db.VarChar(200)
+  category             String   @default("General") @db.VarChar(100)
+  area                 String   @default("Backend") @db.VarChar(100)
+  type                 String   @default("Service") @db.VarChar(50)
+  status               String   @default("ALPHA") @db.VarChar(30)
+  notes                String?  @db.Text
+  dataPersistence      String   @default("ephemeral") @db.VarChar(30)
+  uiSurfaces           Int      @default(0)
+  pipelineIntegration  String   @default("none") @db.VarChar(30)
+  devCompletion        String   @default("partial") @db.VarChar(30)
+  sortOrder            Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([category])
+  @@index([area])
+  @@map("capability")
 }

@@ -27,6 +27,7 @@ const DEFAULTS = {
   pageTransitions: true,       // View Transitions API page morphing
   keyboardShortcutsHelp: true, // Show keyboard shortcuts helper
   highContrastText: false,     // Boost text contrast for accessibility
+  fontScale: 'normal',         // Font size scaling: 'small' | 'normal' | 'large' | 'x-large'
   // Performance
   pollingInterval: 30,
   chartAnimation: true,

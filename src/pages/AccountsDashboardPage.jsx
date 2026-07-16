@@ -155,6 +155,7 @@ export default function AccountsDashboardPage() {
                   </div>
                   <div className="ad-card-footer">
                     <span className="ad-card-type">Live</span>
+                    {acc.leverage && <span className="ad-card-server">1:{acc.leverage}</span>}
                     {acc.server && <span className="ad-card-server">{acc.server}</span>}
                   </div>
                 </div>
@@ -177,7 +178,8 @@ export default function AccountsDashboardPage() {
                 </div>
               </div>
 
-              {/* T212 ISA */}
+              {/* T212 ISA — only shown when connected or has value */}
+              {(isa.status === 'connected' || isaSummary.totalValueGbp > 0) && (
               <div className="ad-card ad-card--isa">
                 <div className="ad-card-header">
                   <span className="ad-provider">T212</span>
@@ -193,6 +195,7 @@ export default function AccountsDashboardPage() {
                   <span className="ad-card-positions">{isaSummary.positionCount ?? 0} positions</span>
                 </div>
               </div>
+              )}
 
               {liveMT5.length === 0 && t212Account.total == null && (
                 <EmptyState icon="💼" title="No live accounts connected" description="Start MT5 bridge or configure Trading212 credentials." />
@@ -200,6 +203,8 @@ export default function AccountsDashboardPage() {
             </div>
           </section>
 
+          {/* ISA Panel — only shown when ISA data is meaningful */}
+          {(isa.status === 'connected' || isaSummary.totalValueGbp > 0) && (
           <section className="tp-card ad-isa-panel">
             <div className="ad-isa-head">
               <h2>Stocks ISA</h2>
@@ -232,6 +237,7 @@ export default function AccountsDashboardPage() {
               </div>
             )}
           </section>
+          )}
 
           {/* Demo Accounts */}
           <section className="tp-card">
@@ -240,7 +246,7 @@ export default function AccountsDashboardPage() {
               className="ad-toggle-btn"
               onClick={() => setShowDemo(!showDemo)}
             >
-              {showDemo ? '▾' : '▸'} Demo Accounts ({demoMT5.length})
+              {showDemo ? '▾' : '▸'} 📄 Demo Accounts ({demoMT5.length})
             </button>
             {showDemo && (
               <div className="ad-grid" style={{ marginTop: '0.5rem' }}>
@@ -251,12 +257,13 @@ export default function AccountsDashboardPage() {
                       <span className="ad-status-dot">{statusDot(acc)}</span>
                     </div>
                     <div className="ad-card-body">
-                      <span className="ad-card-name">{acc.name || acc.broker || `Demo ${acc.login}`}</span>
+                      <span className="ad-card-name">📄 {acc.name || acc.broker || `Demo ${acc.login}`}</span>
                       <span className="ad-card-balance">{formatCurrency(acc.balance ?? acc.equity, acc.currency)}</span>
                       {acc.currency && <span className="ad-card-currency">{acc.currency}</span>}
                     </div>
                     <div className="ad-card-footer">
                       <span className="ad-card-type">Demo</span>
+                      {acc.leverage && <span className="ad-card-server">1:{acc.leverage}</span>}
                       {acc.server && <span className="ad-card-server">{acc.server}</span>}
                     </div>
                   </div>

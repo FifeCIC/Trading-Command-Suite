@@ -26,6 +26,7 @@ import {
   ProviderQuote,
 } from '../interfaces/provider-adapter.interface';
 import { NotificationService } from '../../notifications/notifications.service';
+import { BridgeEventService } from '../bridge-event.service';
 
 interface BridgeQuoteResponse {
   symbol: string;
@@ -68,8 +69,11 @@ export class Mt5Adapter implements IProviderAdapter {
   tripped = false;
   private trippedAt: number | null = null;
 
+  private lastBridgeState: 'connected' | 'disconnected' | 'unknown' = 'unknown';
+
   constructor(
     private readonly notifications?: NotificationService,
+    private readonly bridgeEvents?: BridgeEventService,
   ) {
     this.bridgeUrl = process.env.MT5_BRIDGE_URL || 'http://localhost:5000';
   }
@@ -80,11 +84,12 @@ export class Mt5Adapter implements IProviderAdapter {
 
   private async bridgeGet<T>(path: string): Promise<T | null> {
     if (this.tripped) {
-      const cooldownMs = 120_000; // 2 min circuit breaker
+      const cooldownMs = 60_000; // 1 min circuit breaker
       if (this.trippedAt && Date.now() - this.trippedAt >= cooldownMs) {
         this.tripped = false;
         this.consecutiveErrors = 0;
         this.logger.log('MT5 circuit breaker released after cooldown');
+        this.logBridgeEvent('reconnected', 'Circuit breaker released');
         this.notifications?.send({
           title: '✅ MT5 Bridge Reconnected',
           body: 'Circuit breaker released — MT5 bridge is responding again.',
@@ -103,31 +108,57 @@ export class Mt5Adapter implements IProviderAdapter {
       });
       if (!res.ok) {
         this.consecutiveErrors++;
-        if (this.consecutiveErrors >= 5) {
-          this.tripped = true;
-          this.trippedAt = Date.now();
-          this.logger.warn('MT5 bridge circuit breaker TRIPPED (5 consecutive errors)');
-          this.notifications?.send({
-            title: '🚨 MT5 Bridge Disconnected',
-            body: 'Circuit breaker tripped — 5 consecutive errors. Trading via MT5 is unavailable until the bridge recovers.',
-            event: 'provider-degraded',
-          }).catch(() => {});
+        if (this.consecutiveErrors >= 10) {
+          this.tripBreaker(`HTTP ${res.status} from bridge`);
         }
+        this.logBridgeState('disconnected', `HTTP ${res.status}`);
         return null;
       }
       this.consecutiveErrors = 0;
+      this.logBridgeState('connected');
       return (await res.json()) as T;
     } catch (error: unknown) {
       const err = error as Error;
-      this.consecutiveErrors++;
-      if (this.consecutiveErrors >= 5) {
-        this.tripped = true;
-        this.trippedAt = Date.now();
-        this.logger.warn(`MT5 bridge circuit breaker TRIPPED: ${err.message}`);
+      const isTransient = err.message?.includes('fetch failed') || err.message?.includes('ECONNREFUSED') || err.message?.includes('Connection refused');
+      // Only count non-transient errors (timeouts, etc.) toward circuit breaker
+      if (!isTransient) {
+        this.consecutiveErrors++;
       }
+      if (this.consecutiveErrors >= 10) {
+        this.tripBreaker(err.message);
+      }
+      this.logBridgeState('disconnected', err.message);
       this.logger.warn(`MT5 bridge request failed: ${err.message}`);
       return null;
     }
+  }
+
+  private tripBreaker(reason: string): void {
+    this.tripped = true;
+    this.trippedAt = Date.now();
+    this.logger.warn(`MT5 bridge circuit breaker TRIPPED (10 errors): ${reason}`);
+    this.logBridgeEvent('disconnected', reason);
+    this.notifications?.send({
+      title: '🚨 MT5 Bridge Disconnected',
+      body: `Circuit breaker tripped — ${reason}. Trading via MT5 is unavailable until the bridge recovers.`,
+      event: 'provider-degraded',
+    }).catch(() => {});
+  }
+
+  private logBridgeState(state: 'connected' | 'disconnected', errorMessage?: string): void {
+    if (this.lastBridgeState !== state) {
+      this.lastBridgeState = state;
+      this.logBridgeEvent(state, errorMessage);
+    }
+  }
+
+  private logBridgeEvent(eventType: string, errorMessage?: string): void {
+    this.bridgeEvents?.log({
+      eventType,
+      account: process.env.MT5_ACCOUNT || undefined,
+      server: process.env.MT5_SERVER || undefined,
+      errorMessage: errorMessage?.substring(0, 500),
+    }).catch(() => {});
   }
 
   async getQuote(symbol: string): Promise<ProviderQuote | null> {
@@ -172,6 +203,8 @@ export class Mt5Adapter implements IProviderAdapter {
     if (!data) return false;
     return data.connected === true;
   }
+
+
 
   /** Reset circuit breaker manually (e.g., after bridge restart). */
   resetCircuitBreaker(): void {
@@ -233,7 +266,7 @@ export class Mt5Adapter implements IProviderAdapter {
       comment: safeComment,
     };
 
-    this.logger.log(`MT5 order: ${body.type} ${body.symbol} ×${body.volume} [url=${this.bridgeUrl} tripped=${this.tripped} errors=${this.consecutiveErrors}]`);
+    this.logger.log(`MT5 order: ${body.type} ${body.symbol} ×${body.volume} sl=${body.sl} tp=${body.tp} [tripped=${this.tripped}]`);
     const data = await this.bridgePost<any>('/order', body);
 
     if (!data) {
@@ -251,10 +284,11 @@ export class Mt5Adapter implements IProviderAdapter {
 
   private async bridgePost<T>(path: string, body: unknown): Promise<T | null> {
     if (this.tripped) {
-      const cooldownMs = 120_000;
+      const cooldownMs = 60_000;
       if (this.trippedAt && Date.now() - this.trippedAt >= cooldownMs) {
         this.tripped = false;
         this.consecutiveErrors = 0;
+        this.logBridgeEvent('reconnected', 'Circuit breaker released');
       } else {
         return null;
       }
@@ -269,20 +303,25 @@ export class Mt5Adapter implements IProviderAdapter {
       });
       if (!res.ok) {
         this.consecutiveErrors++;
-        if (this.consecutiveErrors >= 5) {
-          this.tripped = true;
-          this.trippedAt = Date.now();
+        if (this.consecutiveErrors >= 10) {
+          this.tripBreaker(`HTTP ${res.status} from bridge POST`);
         }
+        this.logBridgeState('disconnected', `HTTP ${res.status}`);
         return null;
       }
       this.consecutiveErrors = 0;
+      this.logBridgeState('connected');
       return (await res.json()) as T;
     } catch (err) {
-      this.consecutiveErrors++;
-      if (this.consecutiveErrors >= 5) {
-        this.tripped = true;
-        this.trippedAt = Date.now();
+      const error = err as Error;
+      const isTransient = error.message?.includes('fetch failed') || error.message?.includes('ECONNREFUSED') || error.message?.includes('Connection refused');
+      if (!isTransient) {
+        this.consecutiveErrors++;
       }
+      if (this.consecutiveErrors >= 10) {
+        this.tripBreaker(error.message);
+      }
+      this.logBridgeState('disconnected', error.message);
       return null;
     }
   }

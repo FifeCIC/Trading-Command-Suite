@@ -1,5 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import './calculators.css';
+
+const HISTORY_KEY = 'tcs:calc-history';
+const MAX_HISTORY = 50;
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; }
+}
+function saveHistory(entries) {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(entries.slice(0, MAX_HISTORY))); } catch { /* noop */ }
+}
+
+function useCalculationHistory() {
+  const [history, setHistory] = useState(loadHistory);
+  const addEntry = useCallback((type, inputs, result, note) => {
+    setHistory((prev) => {
+      const next = [{ type, inputs, result, note: note || '', timestamp: Date.now() }, ...prev];
+      saveHistory(next);
+      return next;
+    });
+  }, []);
+  const clearHistory = useCallback(() => { setHistory([]); saveHistory([]); }, []);
+  return { history, addEntry, clearHistory };
+}
 
 function CalculatorCard({ title, children, defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -29,6 +52,20 @@ function InputGroup({ label, value, onChange, type = 'number', placeholder, step
   );
 }
 
+function NoteField({ value, onChange }) {
+  return (
+    <div className="calc-input-group calc-note-field">
+      <label>📝 Note (optional)</label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Why are you running this calculation?"
+      />
+    </div>
+  );
+}
+
 function ResultRow({ label, value, highlight }) {
   return (
     <div className={`calc-result-row${highlight ? ' calc-highlight' : ''}`}>
@@ -40,11 +77,12 @@ function ResultRow({ label, value, highlight }) {
 
 // ── 1. Averaging Down Calculator ──
 
-function AveragingDownCalc() {
+function AveragingDownCalc({ onCalculate }) {
   const [shares, setShares] = useState(100);
   const [avgPrice, setAvgPrice] = useState(50);
   const [marketPrice, setMarketPrice] = useState(40);
   const [targetAvg, setTargetAvg] = useState(45);
+  const [note, setNote] = useState('');
 
   const currentValue = shares * marketPrice;
   const currentCost = shares * avgPrice;
@@ -58,6 +96,10 @@ function AveragingDownCalc() {
     : avgPrice;
   const newTotal = currentValue + additionalCost;
 
+  const handleCalc = () => {
+    onCalculate('Averaging Down', { shares, avgPrice, marketPrice, targetAvg }, { sharesToBuy: sharesNeeded, additionalCost, newAvg, newTotal }, note);
+  };
+
   return (
     <div className="calc-grid">
       <div className="calc-inputs">
@@ -65,6 +107,8 @@ function AveragingDownCalc() {
         <InputGroup label="Avg Price ($)" value={avgPrice} onChange={setAvgPrice} step="0.01" />
         <InputGroup label="Market Price ($)" value={marketPrice} onChange={setMarketPrice} step="0.01" />
         <InputGroup label="Target Avg ($)" value={targetAvg} onChange={setTargetAvg} step="0.01" />
+        <NoteField value={note} onChange={setNote} />
+        <button type="button" className="calc-save-btn" onClick={handleCalc}>💾 Save to History</button>
       </div>
       <div className="calc-results">
         <ResultRow label="Shares to Buy" value={sharesNeeded} highlight />
@@ -89,17 +133,22 @@ function AveragingDownCalc() {
 
 // ── 2. Position Size Calculator ──
 
-function PositionSizeCalc() {
+function PositionSizeCalc({ onCalculate }) {
   const [account, setAccount] = useState(10000);
   const [riskPct, setRiskPct] = useState(2);
   const [entry, setEntry] = useState(100);
   const [stopLoss, setStopLoss] = useState(95);
+  const [note, setNote] = useState('');
 
   const riskAmount = account * (riskPct / 100);
   const riskPerShare = Math.abs(entry - stopLoss);
   const maxShares = riskPerShare > 0 ? Math.floor(riskAmount / riskPerShare) : 0;
   const totalValue = maxShares * entry;
   const reward2r = entry + (entry - stopLoss) * 2;
+
+  const handleCalc = () => {
+    onCalculate('Position Size', { account, riskPct, entry, stopLoss }, { riskAmount, maxShares, totalValue, reward2r }, note);
+  };
 
   return (
     <div className="calc-grid">
@@ -108,6 +157,8 @@ function PositionSizeCalc() {
         <InputGroup label="Risk %" value={riskPct} onChange={setRiskPct} step="0.1" />
         <InputGroup label="Entry Price ($)" value={entry} onChange={setEntry} step="0.01" />
         <InputGroup label="Stop Loss ($)" value={stopLoss} onChange={setStopLoss} step="0.01" />
+        <NoteField value={note} onChange={setNote} />
+        <button type="button" className="calc-save-btn" onClick={handleCalc}>💾 Save to History</button>
       </div>
       <div className="calc-results">
         <ResultRow label="Risk Amount" value={`$${riskAmount.toFixed(2)}`} />
@@ -121,16 +172,21 @@ function PositionSizeCalc() {
 
 // ── 3. P&L Calculator ──
 
-function ProfitLossCalc() {
+function ProfitLossCalc({ onCalculate }) {
   const [entry, setEntry] = useState(100);
   const [exit, setExit] = useState(110);
   const [shares, setShares] = useState(100);
   const [direction, setDirection] = useState('long');
+  const [note, setNote] = useState('');
 
   const pnlPerShare = direction === 'long' ? exit - entry : entry - exit;
   const totalPnl = pnlPerShare * shares;
   const pnlPct = entry > 0 ? (pnlPerShare / entry) * 100 : 0;
   const feeEstimate = Math.abs(totalPnl) * 0.001; // 0.1% fee estimate
+
+  const handleCalc = () => {
+    onCalculate('Profit/Loss', { entry, exit, shares, direction }, { pnlPerShare, totalPnl, pnlPct, feeEstimate, netPnl: totalPnl - feeEstimate }, note);
+  };
 
   return (
     <div className="calc-grid">
@@ -145,6 +201,8 @@ function ProfitLossCalc() {
             <option value="short">Short</option>
           </select>
         </div>
+        <NoteField value={note} onChange={setNote} />
+        <button type="button" className="calc-save-btn" onClick={handleCalc}>💾 Save to History</button>
       </div>
       <div className="calc-results">
         <ResultRow label="P&L per Share" value={`$${pnlPerShare.toFixed(2)}`} />
@@ -159,15 +217,20 @@ function ProfitLossCalc() {
 
 // ── 4. Risk/Reward Calculator ──
 
-function RiskRewardCalc() {
+function RiskRewardCalc({ onCalculate }) {
   const [entry, setEntry] = useState(100);
   const [stopLoss, setStopLoss] = useState(95);
   const [takeProfit, setTakeProfit] = useState(115);
+  const [note, setNote] = useState('');
 
   const risk = Math.abs(entry - stopLoss);
   const reward = Math.abs(takeProfit - entry);
   const rrRatio = risk > 0 ? reward / risk : 0;
   const breakevenWR = rrRatio > 0 ? (1 / (1 + rrRatio)) * 100 : 0;
+
+  const handleCalc = () => {
+    onCalculate('Risk/Reward', { entry, stopLoss, takeProfit }, { risk, reward, rrRatio, breakevenWR }, note);
+  };
 
   return (
     <div className="calc-grid">
@@ -175,6 +238,8 @@ function RiskRewardCalc() {
         <InputGroup label="Entry ($)" value={entry} onChange={setEntry} step="0.01" />
         <InputGroup label="Stop Loss ($)" value={stopLoss} onChange={setStopLoss} step="0.01" />
         <InputGroup label="Take Profit ($)" value={takeProfit} onChange={setTakeProfit} step="0.01" />
+        <NoteField value={note} onChange={setNote} />
+        <button type="button" className="calc-save-btn" onClick={handleCalc}>💾 Save to History</button>
       </div>
       <div className="calc-results">
         <ResultRow label="Risk" value={`$${risk.toFixed(2)} (${entry > 0 ? ((risk / entry) * 100).toFixed(1) : 0}%)`} />
@@ -189,6 +254,8 @@ function RiskRewardCalc() {
 // ── Page ──
 
 export default function CalculatorsPage() {
+  const { history, addEntry, clearHistory } = useCalculationHistory();
+
   return (
     <div className="calc-page">
       <header className="calc-header">
@@ -196,17 +263,46 @@ export default function CalculatorsPage() {
         <p>Manual trading tools — position sizing, averaging down, P&L, and risk/reward.</p>
       </header>
       <CalculatorCard title="Averaging Down Calculator">
-        <AveragingDownCalc />
+        <AveragingDownCalc onCalculate={addEntry} />
       </CalculatorCard>
       <CalculatorCard title="Position Size Calculator">
-        <PositionSizeCalc />
+        <PositionSizeCalc onCalculate={addEntry} />
       </CalculatorCard>
       <CalculatorCard title="Profit / Loss Calculator">
-        <ProfitLossCalc />
+        <ProfitLossCalc onCalculate={addEntry} />
       </CalculatorCard>
       <CalculatorCard title="Risk / Reward Calculator" defaultOpen={false}>
-        <RiskRewardCalc />
+        <RiskRewardCalc onCalculate={addEntry} />
       </CalculatorCard>
+
+      {/* ── Calculation History ── */}
+      {history.length > 0 && (
+        <section className="calc-history">
+          <div className="calc-history-header">
+            <h2>📋 Recent Calculations</h2>
+            <button type="button" className="calc-clear-btn" onClick={clearHistory}>Clear All</button>
+          </div>
+          <div className="calc-history-list">
+            {history.map((entry, i) => (
+              <div key={i} className="calc-history-item">
+                <div className="calc-history-meta">
+                  <span className="calc-history-type">{entry.type}</span>
+                  <span className="calc-history-time">{new Date(entry.timestamp).toLocaleString()}</span>
+                </div>
+                {entry.note && <p className="calc-history-note">📝 {entry.note}</p>}
+                <div className="calc-history-results">
+                  {Object.entries(entry.result).map(([k, v]) => (
+                    <span key={k} className="calc-history-val">
+                      <small>{k.replace(/([A-Z])/g, ' $1').trim()}</small>
+                      <strong>{typeof v === 'number' ? (Number.isInteger(v) ? v : v.toFixed(2)) : v}</strong>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

@@ -364,6 +364,7 @@ export class AutomationController {
     tradeThreshold?: number; baseSize?: number;
     slPct?: number; tpPct?: number;
     maxPyramidTiers?: number;
+    slTpInheritance?: string;
   }) {
     const id = `ss-${Date.now()}`;
     const strat = {
@@ -379,6 +380,7 @@ export class AutomationController {
       slPct: body.slPct ?? 1.0,
       tpPct: body.tpPct ?? 1.5,
       maxPyramidTiers: body.maxPyramidTiers ?? 1,
+      slTpInheritance: body.slTpInheritance ?? 'inherit',
       enabled: true,
       tradingEnabled: false,
     };

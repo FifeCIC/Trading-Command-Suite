@@ -21,6 +21,7 @@ import { RateLimitGovernor } from './rate-limit-governor.service';
 import { ProviderDegradationService } from './provider-degradation.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { NotificationService } from '../notifications/notifications.service';
+import { BridgeEventService } from './bridge-event.service';
 
 @Module({
   imports: [DatabaseModule, NotificationsModule],
@@ -33,6 +34,7 @@ import { NotificationService } from '../notifications/notifications.service';
     ProviderDegradationService,
     CryptoProviderRouter,
     Mt5ConnectionManager,
+    BridgeEventService,
     AlpacaAdapter,
     AlphaVantageAdapter,
     Trading212Adapter,
@@ -44,7 +46,7 @@ import { NotificationService } from '../notifications/notifications.service';
     FmpAdapter,
     BinanceAdapter,
   ],
-  exports: [ProvidersService, AdapterFactory, FinnhubAdapter, FmpAdapter, Mt5Adapter, AlphaVantageAdapter, RateLimitGovernor, ProviderDegradationService, CryptoProviderRouter, BinanceAdapter, Mt5ConnectionManager],
+  exports: [ProvidersService, AdapterFactory, FinnhubAdapter, FmpAdapter, Mt5Adapter, AlphaVantageAdapter, RateLimitGovernor, ProviderDegradationService, CryptoProviderRouter, BinanceAdapter, Mt5ConnectionManager, BridgeEventService],
 })
 export class ProvidersModule implements OnModuleInit {
   constructor(

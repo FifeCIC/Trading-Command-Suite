@@ -147,7 +147,6 @@ import CandlePatternsGuidePage from '../pages/CandlePatternsGuidePage.jsx';
 
 // ── Watchlists ──
 import UserWatchlistsPage from '../pages/UserWatchlistsPage.jsx';
-import CreateWatchlistPage from '../pages/CreateWatchlistPage.jsx';
 
 // ── Other ──
 import AlgorithmLabPage from '../pages/AlgorithmLabPage.jsx';
@@ -301,7 +300,7 @@ export const VIEW_COMPONENTS = {
 
   // Watchlists
   'user-watchlists': UserWatchlistsPage,
-  'create-watchlist': CreateWatchlistPage,
+  'create-watchlist': UserWatchlistsPage,
 
   // Other
   'theme-packs': ThemePage,

@@ -246,7 +246,7 @@ export default function ActiveSymbolsPage() {
                     <td>
                       <input type="checkbox" checked={selectedIds.has(sym.id)} onChange={() => toggleSelect(sym.id)} />
                     </td>
-                    <td><strong>{sym.ticker}</strong></td>
+                    <td><strong style={{ color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => navigate(`/research/symbol/${sym.ticker}`)} title={`Research ${sym.ticker}`}>{sym.ticker}</strong></td>
                     <td>{sym.name !== sym.ticker ? sym.name : <span style={{ color: 'var(--ink-soft)', fontStyle: 'italic' }}>—</span>}</td>
                     <td>
                       {hasOpenTrade ? (

@@ -12,6 +12,7 @@ import { MultiProtocolRankingService } from './multi-protocol-ranking.service';
 import { TimelineService } from './timeline.service';
 import { AutomationLoopService } from './automation-loop.service';
 import { StopGuardianService } from './stop-guardian.service';
+import { AuditLogService } from './audit-log.service';
 import { AutomationController } from './automation.controller';
 import { StopGuardianController } from './stop-guardian.controller';
 import { TimelineController } from './timeline.controller';
@@ -28,6 +29,7 @@ import { TimelineController } from './timeline.controller';
     TimelineService,
     AutomationLoopService,
     StopGuardianService,
+    AuditLogService,
   ],
   exports: [
     SymbolDataCacheService,
@@ -37,6 +39,7 @@ import { TimelineController } from './timeline.controller';
     TimelineService,
     AutomationLoopService,
     StopGuardianService,
+    AuditLogService,
   ],
 })
 export class AutomationModule {}

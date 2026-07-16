@@ -72,7 +72,7 @@ export function useDataFreshness({ symbols = [], enabled = true } = {}) {
     // Delay by 500ms to let critical data load first
     const timer = setTimeout(run, 500);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [enabled, ...symbols]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [enabled, symbols]);
 
   return {
     checking,

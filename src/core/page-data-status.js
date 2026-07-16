@@ -32,7 +32,6 @@ export const PAGE_DATA_STATUS = {
   'directives-manager': { status: 'live', source: 'DB + Directive Registry' },
   'scoring-overview': { status: 'live', source: 'DB + Directive Registry' },
   'configure-directives': { status: 'live', source: 'DB' },
-  'directives-status': { status: 'live', source: 'DB' },
   'sees-live-stack': { status: 'live', source: 'DB + Directive Engine' },
   'sees-arena': { status: 'live', source: 'Multi-stack comparison' },
   'predictive-sees': { status: 'live', source: 'Directional bias engine' },

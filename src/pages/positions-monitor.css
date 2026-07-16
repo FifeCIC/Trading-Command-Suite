@@ -84,8 +84,8 @@
 .pm-pos-card {
   background: var(--color-panel);
   border: 1px solid var(--color-border);
-  border-radius: 10px;
-  padding: 14px 16px;
+  border-radius: 8px;
+  padding: 10px 14px;
 }
 
 /* Win/loss left border */
@@ -119,12 +119,12 @@
 
 .pm-pos-pnl {
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .pm-pos-pnl-pct {
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   opacity: 0.85;
 }
 
@@ -147,25 +147,27 @@
 
 .pm-pos-details {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 8px;
-  margin-bottom: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 4px 6px;
+  margin-bottom: 8px;
 }
 
 .pm-pos-details div {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 4px;
 }
 
 .pm-pos-details span:first-child {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: var(--color-muted);
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .pm-pos-details span:last-child {
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   font-weight: 500;
 }
 

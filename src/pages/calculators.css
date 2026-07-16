@@ -186,3 +186,114 @@
   font-size: 0.65rem;
   color: #475569;
 }
+
+/* ── Note field ── */
+.calc-note-field input {
+  border-style: dashed;
+  font-size: 0.82rem;
+}
+.calc-note-field input::placeholder {
+  color: #475569;
+  font-style: italic;
+}
+
+/* ── Save button ── */
+.calc-save-btn {
+  margin-top: 4px;
+  padding: 8px 14px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: rgba(59,130,246,0.1);
+  color: #60a5fa;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.calc-save-btn:hover {
+  background: rgba(59,130,246,0.2);
+}
+
+/* ── History ── */
+.calc-history {
+  margin-top: 24px;
+  border-top: 1px solid #2d3040;
+  padding-top: 20px;
+}
+.calc-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.calc-history-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.calc-clear-btn {
+  padding: 5px 12px;
+  border: 1px solid #334155;
+  border-radius: 5px;
+  background: none;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.calc-clear-btn:hover { color: #ef4444; border-color: #ef4444; }
+
+.calc-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.calc-history-item {
+  background: #111318;
+  border: 1px solid #2d3040;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.calc-history-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.calc-history-type {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #60a5fa;
+}
+.calc-history-time {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+.calc-history-note {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin: 0 0 6px;
+  font-style: italic;
+}
+.calc-history-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.calc-history-val {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: #1a1d2e;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.calc-history-val small {
+  font-size: 0.6rem;
+  color: #64748b;
+  text-transform: uppercase;
+}
+.calc-history-val strong {
+  font-size: 0.82rem;
+  color: #e2e8f0;
+}

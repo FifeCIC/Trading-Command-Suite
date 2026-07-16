@@ -141,8 +141,21 @@ export class DirectivesController {
       }
     }
 
+    // Known stub directive IDs — placeholders awaiting real implementation
+    const STUB_IDS = new Set([
+      'moving-averages', 'volatility-tools', 'friday-positioning', 'midweek-momentum',
+      'advanced-weekly-rhythm', 'spy-options-expiry', 'spy-month-end-rebalancing',
+      'spy-qqq-relative-strength', 'nvda-earnings-momentum', 'tsla-sentiment-amplifier',
+      'dividend-yield-attractive', 'time-based-support', 'isa-reset', 'portfolio-performance',
+      'basic-weekly-rhythm', 'intraday-u-pattern', 'institutional-timing', 'macd',
+      'adaptive-risk-monitor', 'analyst-adjustments', 'conviction-growth',
+      'earnings-implementation', 'earnings-whispers', 'like-zacks', 'mean-reversion',
+      'resistance-levels-strategy', 'sp500-regime', 'vix-strategy', 'weekly-rhythm-strategy',
+    ]);
+
     return directives.map((d) => {
       const st = statMap.get(d.id);
+      const isStub = STUB_IDS.has(d.id);
       return {
       id: d.id,
       name: d.name,
@@ -152,9 +165,12 @@ export class DirectivesController {
       protocolCount: protocolCounts.get(d.id) ?? 0,
       complexity: complexityMap[d.id] ?? { level: 1, label: 'Basic', factors: [] },
       active: dbStatuses.has(d.id) ? dbStatuses.get(d.id) : true,
+      // ── Performance classification (from #283 audit) ──
+      classification: isStub ? 'stub' : (st?.count ? 'active' : 'untested'),
+      performance: isStub ? 'underperforming' : (st?.count ? (st.totalScore / st.count >= 50 ? 'healthy' : 'weak') : 'unknown'),
       // ── Merged stats ──
-      avgScore: st ? Math.round(st.totalScore / st.count) : null,
-      runs: st ? st.count : null,
+      avgScore: st?.count ? Math.round(st.totalScore / st.count) : null,
+      runs: st?.count ?? null,
       bias: st ? (st.bullishCount > st.bearishCount ? 'bullish' : st.bearishCount > st.bullishCount ? 'bearish' : 'neutral') : null,
     };
     });

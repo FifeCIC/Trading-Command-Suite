@@ -4,7 +4,7 @@ description: "Update the Architecture Framework page (/builder/architecture-fram
 ---
 # Update Architecture Framework
 
-> ⚠️ **This skill is for the LIBRARIAN agent only.** Feature-development agents should NOT use this skill. Instead, create a closed GitHub Issue with the `revision-log` label summarizing the change. The Librarian curates `architecture-framework.data.js` periodically from those issues.
+> ⚠️ **This skill is for the LIBRARIAN agent only.** Feature-development agents should NOT use this skill. Instead, write a handoff file to `.github/handoffs/` (see `agent-handoff.instructions.md`). The Librarian batch-processes handoffs and updates `architecture-framework.data.js` in one pass.
 
 ## When to Use (Librarian only)
 
@@ -19,7 +19,21 @@ Trigger this skill after:
 
 ## Files to Update
 
-### 1. `src/pages/architecture-framework.data.js` — Static content
+Start by reading all unprocessed handoff files from `.github/handoffs/` (excluding `README.md` and files in `processed/`). Extract the Architecture Framework entries from each.
+
+Then update:
+
+### 1. `src/core/architecture-reference.js` — AI-agent-readable system map
+
+> Prefer this over the full AF data file for most changes. It's ~15K tokens vs ~38K.
+
+| Section | What to update |
+|---|---|
+| `CURRENT_SLICE` | Add a one-line bullet from the handoff's Architecture Framework Entry summary |
+| `CURRENT_ROUTE_CONTRACTS` | Add each new endpoint with route, method, permission, owner, contract description, status |
+| `CONTRACT_REGISTER_LAST_UPDATED` | Bump the date |
+
+### 2. `src/pages/architecture-framework.data.js` — Human-facing UI page (if the change is architecture-wide)
 
 | Section | What to update |
 |---|---|
@@ -42,7 +56,7 @@ Trigger this skill after:
 | New SectionBlock | Add a `{visibleIds.has('id') && (<SectionBlock id="id" ...><CardGrid /></SectionBlock>)}` block after existing sections |
 | New live query | Add a `useQuery` call if a new live-status API endpoint was added |
 
-### 3. `src/pages/architecture-framework.css` — Styles
+### 3. `src/pages/architecture-framework.css` — Styles (rarely needed)
 
 - Add CSS variables to the `.architecture-framework-theme` block if new semantic colors are needed
 - Add new class selectors for any new component patterns
@@ -94,7 +108,8 @@ export const YOUR_DATA_CONSTANT = [
 ## Verification
 
 1. Run `npm --prefix c:/wamp64/www/trading-command-suite run build` — must pass
-2. Load `http://localhost:5188/builder/architecture-framework` and confirm the new section appears in the index
-3. Verify search terms match what a developer would type
-4. Mark the relevant section(s) as verified using the drift-detection ✓ buttons on the page
-5. Update `REVISION_LOG` with the date and a brief summary
+2. Move processed handoff files from `.github/handoffs/` to `.github/handoffs/processed/`
+3. Load `http://localhost:5188/builder/architecture-framework` and confirm the new section appears in the index
+4. Verify search terms match what a developer would type
+5. Mark the relevant section(s) as verified using the drift-detection ✓ buttons on the page
+6. Update `REVISION_LOG` with the date and a brief summary

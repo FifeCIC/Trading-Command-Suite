@@ -59,6 +59,7 @@ export class Mt5Controller {
       bridgeHealth: healthData,
       adapterName: adapter.name,
       circuitBreakerTripped: (adapter as any).tripped === true,
+      bridgeCircuitBreaker: healthData?.circuitBreaker ?? null,
       consecutiveErrors: (adapter as any).consecutiveErrors ?? 0,
       mt5PackageAvailable: healthData?.mt5Package ?? null,
       mt5LoggedIn: healthData?.connected ?? false,
@@ -66,6 +67,11 @@ export class Mt5Controller {
       server: healthData?.server ?? null,
       balance: healthData?.balance ?? null,
       equity: healthData?.equity ?? null,
+      leverage: healthData?.leverage ?? null,
+      margin: healthData?.margin ?? null,
+      marginFree: healthData?.marginFree ?? null,
+      marginLevel: healthData?.marginLevel ?? null,
+      autoTrading: healthData?.autoTrading ?? null,
       lastQuote: quote
         ? {
             symbol: quote.symbol,

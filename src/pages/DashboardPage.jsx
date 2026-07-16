@@ -42,6 +42,45 @@ export default function DashboardPage() {
   const totalPnl = positions.reduce((s, p) => s + (p.profit || 0), 0);
   const posCount = positions.length;
 
+  // Trading212 portfolio for P&L breakdown
+  const t212Query = useQuery({
+    queryKey: ['dash-t212'],
+    queryFn: () => apiGet('/api/portfolio?source=trading212').catch(() => ({ positions: [] })),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const t212Positions = t212Query.data?.positions || [];
+  const t212Account = t212Query.data?.account || {};
+
+  // Stocks ISA for per-broker breakdown
+  const isaQuery = useQuery({
+    queryKey: ['dash-isa'],
+    queryFn: () => apiGet('/api/isa/dashboard').catch(() => ({})),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const isaData = isaQuery.data || {};
+  const isaSummary = isaData.summary || {};
+
+  // ── P&L by Broker ──
+  const pnlByBroker = (() => {
+    const mt5Pnl = positions.reduce((s, p) => s + (p.profit || 0), 0);
+    const mt5Winners = positions.filter(p => (p.profit || 0) > 0).length;
+    const mt5Losers = positions.filter(p => (p.profit || 0) < 0).length;
+    const t212Pnl = t212Positions.reduce((s, p) => s + (p.pnl || 0), 0);
+    const t212Winners = t212Positions.filter(p => (p.pnl || 0) > 0).length;
+    const t212Losers = t212Positions.filter(p => (p.pnl || 0) < 0).length;
+    const isaValue = isaSummary.totalValueGbp || 0;
+    const isaPnl = isaSummary.totalPnl !== undefined ? isaSummary.totalPnl : (isaSummary.unrealizedPnl || 0);
+    const isaPosCount = isaSummary.positionCount || 0;
+    return {
+      mt5: { pnl: mt5Pnl, winners: mt5Winners, losers: mt5Losers, count: positions.length, balance: balance, equity: equity },
+      t212: { pnl: t212Pnl, winners: t212Winners, losers: t212Losers, count: t212Positions.length, balance: t212Account.balance, equity: t212Account.equity },
+      isa: { pnl: isaPnl, value: isaValue, count: isaPosCount },
+    };
+  })();
+  const grandTotalPnl = pnlByBroker.mt5.pnl + pnlByBroker.t212.pnl + pnlByBroker.isa.pnl;
+
   // Hot Picks widget
   const hotPicksQuery = useQuery({
     queryKey: ['dash-hot-picks'],
@@ -50,6 +89,8 @@ export default function DashboardPage() {
     staleTime: 30_000,
   });
   const hotPicks = hotPicksQuery.data?.ranked ?? [];
+
+  const statusLevel = diagQuery.isLoading ? null : mt5Connected ? 'online' : 'offline';
 
   const areas = Object.entries(NAV_TREE)
     .filter(([id]) => id !== 'dashboard') // exclude self
@@ -104,6 +145,120 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* ── P&L by Broker ── */}
+          <div className="dash-card">
+            <h3>💼 P&amp;L by Broker</h3>
+            <div className="dash-broker-grid">
+              {/* MT5 */}
+              <div className="dash-broker-row">
+                <div className="dash-broker-head">
+                  <span className="dash-broker-icon">📡</span>
+                  <span className="dash-broker-name">MT5</span>
+                  <span className={`dash-broker-badge ${mt5Connected ? 'badge-live' : 'badge-off'}`}>
+                    {mt5Connected ? 'DEMO' : 'OFFLINE'}
+                  </span>
+                </div>
+                <div className="dash-broker-metrics">
+                  <div className="dash-broker-metric">
+                    <span className="dash-broker-mlabel">Balance</span>
+                    <span className="dash-broker-mval">${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="dash-broker-metric">
+                    <span className="dash-broker-mlabel">Equity</span>
+                    <span className="dash-broker-mval">${equity.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="dash-broker-metric">
+                    <span className="dash-broker-mlabel">Positions</span>
+                    <span className="dash-broker-mval">{pnlByBroker.mt5.count}</span>
+                  </div>
+                  <div className="dash-broker-metric dash-broker-pnl">
+                    <span className="dash-broker-mlabel">P&amp;L</span>
+                    <span className={`dash-broker-mval ${pnlByBroker.mt5.pnl >= 0 ? 'ok' : 'err'}`}>
+                      {pnlByBroker.mt5.pnl >= 0 ? '+' : ''}{pnlByBroker.mt5.pnl.toFixed(2)}
+                    </span>
+                    <span className="dash-broker-sub">{pnlByBroker.mt5.winners}W / {pnlByBroker.mt5.losers}L</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Trading212 */}
+              <div className="dash-broker-row">
+                <div className="dash-broker-head">
+                  <span className="dash-broker-icon">🏦</span>
+                  <span className="dash-broker-name">Trading 212</span>
+                  <span className="dash-broker-badge badge-demo">GIA</span>
+                </div>
+                <div className="dash-broker-metrics">
+                  <div className="dash-broker-metric">
+                    <span className="dash-broker-mlabel">Balance</span>
+                    <span className="dash-broker-mval">
+                      {pnlByBroker.t212.balance != null ? `$${pnlByBroker.t212.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+                    </span>
+                  </div>
+                  <div className="dash-broker-metric">
+                    <span className="dash-broker-mlabel">Equity</span>
+                    <span className="dash-broker-mval">
+                      {pnlByBroker.t212.equity != null ? `$${pnlByBroker.t212.equity.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+                    </span>
+                  </div>
+                  <div className="dash-broker-metric">
+                    <span className="dash-broker-mlabel">Positions</span>
+                    <span className="dash-broker-mval">{pnlByBroker.t212.count}</span>
+                  </div>
+                  <div className="dash-broker-metric dash-broker-pnl">
+                    <span className="dash-broker-mlabel">P&amp;L</span>
+                    <span className={`dash-broker-mval ${pnlByBroker.t212.pnl >= 0 ? 'ok' : 'err'}`}>
+                      {pnlByBroker.t212.pnl >= 0 ? '+' : ''}{pnlByBroker.t212.pnl.toFixed(2)}
+                    </span>
+                    <span className="dash-broker-sub">{pnlByBroker.t212.winners}W / {pnlByBroker.t212.losers}L</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stocks ISA */}
+              <div className="dash-broker-row">
+                <div className="dash-broker-head">
+                  <span className="dash-broker-icon">🏛️</span>
+                  <span className="dash-broker-name">Stocks ISA</span>
+                  <span className="dash-broker-badge badge-isa">ISA</span>
+                </div>
+                <div className="dash-broker-metrics">
+                  <div className="dash-broker-metric">
+                    <span className="dash-broker-mlabel">Value</span>
+                    <span className="dash-broker-mval">
+                      {pnlByBroker.isa.value > 0 ? `£${pnlByBroker.isa.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+                    </span>
+                  </div>
+                  <div className="dash-broker-metric">
+                    <span className="dash-broker-mlabel">Positions</span>
+                    <span className="dash-broker-mval">{pnlByBroker.isa.count}</span>
+                  </div>
+                  <div className="dash-broker-metric dash-broker-pnl">
+                    <span className="dash-broker-mlabel">P&amp;L</span>
+                    <span className={`dash-broker-mval ${pnlByBroker.isa.pnl >= 0 ? 'ok' : 'err'}`}>
+                      {pnlByBroker.isa.pnl >= 0 ? '+' : ''}{pnlByBroker.isa.pnl.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Total Row */}
+              <div className="dash-broker-row dash-broker-total">
+                <div className="dash-broker-head">
+                  <span className="dash-broker-name">All Brokers</span>
+                </div>
+                <div className="dash-broker-metrics">
+                  <div className="dash-broker-metric">
+                    <span className="dash-broker-mlabel">Total P&amp;L</span>
+                    <span className={`dash-broker-mval dash-broker-total-val ${grandTotalPnl >= 0 ? 'ok' : 'err'}`}>
+                      {grandTotalPnl >= 0 ? '+' : ''}{grandTotalPnl.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {posCount > 0 && (
             <div className="dash-card">
               <h3>📈 Open Positions</h3>
@@ -138,6 +293,32 @@ export default function DashboardPage() {
           {!mt5Connected && (
             <div className="dash-card"><h3>📈 Open Positions</h3><p className="dash-hint">MT5 bridge offline — connect to see positions.</p></div>
           )}
+
+          {/* ── Worst-Case Risk Snapshot ── */}
+          {posCount > 0 && (() => {
+            const worst = [...positions].sort((a, b) => (a.profit || 0) - (b.profit || 0))[0];
+            const losersCount = positions.filter(p => (p.profit || 0) < 0).length;
+            const totalLoss = positions.filter(p => (p.profit || 0) < 0).reduce((s, p) => s + (p.profit || 0), 0);
+            return worst && (worst.profit || 0) < 0 ? (
+              <div className="dash-card dash-worst-case">
+                <h3>⚠️ Worst-Case Monitor</h3>
+                <div className="dash-card-stats">
+                  <div className="dash-stat">
+                    <span className="dash-stat-label">Biggest Loser</span>
+                    <span className="dash-stat-value err">{worst.symbol} {worst.profit?.toFixed(2)}</span>
+                  </div>
+                  <div className="dash-stat">
+                    <span className="dash-stat-label">Losing Positions</span>
+                    <span className="dash-stat-value err">{losersCount} of {posCount}</span>
+                  </div>
+                  <div className="dash-stat">
+                    <span className="dash-stat-label">Total at Risk</span>
+                    <span className="dash-stat-value err">{totalLoss.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            ) : null;
+          })()}
         </div>
 
         <div className="dash-col dash-col-side">
@@ -245,6 +426,10 @@ export default function DashboardPage() {
         onToggle={() => setScreenOptionsOpen((v) => !v)}
         isBookmarked={false}
         onToggleBookmark={() => {}}
+        statusLevel={statusLevel}
+        isMt5Online={mt5Connected}
+        isApiOnline={!diagQuery.isError}
+        isDbOnline={!diagQuery.isError}
       />
     </div>
   );

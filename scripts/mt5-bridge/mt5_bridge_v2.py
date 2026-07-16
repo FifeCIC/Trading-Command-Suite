@@ -53,6 +53,14 @@ MAX_OPEN_POSITIONS = int(os.environ.get('MT5_MAX_OPEN_POSITIONS', '10'))        
 recent_orders = {}  # key: clientOrderId → {ticket, symbol, volume, time, status}
 IDEMPOTENCY_WINDOW_SEC = 60  # deduplication window
 
+# ─── Circuit Breaker ──────────────────────────────────────
+
+CIRCUIT_BREAKER_THRESHOLD = int(os.environ.get('MT5_CIRCUIT_BREAKER_THRESHOLD', '10'))  # failures before trip
+CIRCUIT_BREAKER_COOLDOWN = int(os.environ.get('MT5_CIRCUIT_BREAKER_COOLDOWN', '300'))    # seconds to stay open
+circuit_state = 'closed'       # closed | open | half-open
+circuit_failures = 0
+circuit_opened_at = None       # timestamp when tripped
+
 def is_duplicate_order(client_order_id):
     """Check if a clientOrderId was already used in the idempotency window."""
     if not client_order_id:
@@ -179,19 +187,52 @@ def timeframe_to_mt5(tf):
                '1d': mt5.TIMEFRAME_D1,'1w': mt5.TIMEFRAME_W1,'1mn': mt5.TIMEFRAME_MN1}
     return mapping.get(tf.lower(), mt5.TIMEFRAME_H1)
 
+def check_circuit_breaker():
+    """Returns True if circuit is open (requests blocked). Handles auto-reset."""
+    global circuit_state, circuit_failures, circuit_opened_at
+    if circuit_state == 'open':
+        if circuit_opened_at and (time.time() - circuit_opened_at) >= CIRCUIT_BREAKER_COOLDOWN:
+            circuit_state = 'half-open'
+            logger.info('Circuit breaker: half-open (cooldown expired, testing connection)')
+            return False  # allow one attempt
+        return True  # still blocking
+    return False
+
+def trip_circuit_breaker():
+    """Trip the circuit breaker after threshold failures."""
+    global circuit_state, circuit_failures, circuit_opened_at
+    circuit_failures += 1
+    if circuit_failures >= CIRCUIT_BREAKER_THRESHOLD and circuit_state != 'open':
+        circuit_state = 'open'
+        circuit_opened_at = time.time()
+        logger.warning(f'Circuit breaker TRIPPED: {circuit_failures} consecutive failures, blocking for {CIRCUIT_BREAKER_COOLDOWN}s')
+
+def reset_circuit_breaker():
+    """Reset circuit breaker after successful connection."""
+    global circuit_state, circuit_failures, circuit_opened_at
+    if circuit_state != 'closed':
+        logger.info('Circuit breaker: reset (connection restored)')
+    circuit_state = 'closed'
+    circuit_failures = 0
+    circuit_opened_at = None
+
 def connect_mt5():
     """Initialize MT5 connection — called at startup and on /reconnect."""
     global connection_errors
+    if check_circuit_breaker():
+        return False, 'Circuit breaker open — too many connection failures, cooling down'
     account, password, server, active = get_active_credentials()
     logger.info(f'Initializing MT5: server={server}, account={account} (account #{active})')
     initialized = mt5.initialize(login=int(account), password=password, server=server)
     if initialized:
         connection_errors = 0
+        reset_circuit_breaker()
         info = mt5.account_info()
         logger.info(f'MT5 connected: {info.login} @ {info.server}, balance={info.balance}')
         return True, None
     error = mt5.last_error()
     connection_errors += 1
+    trip_circuit_breaker()
     logger.error(f'MT5 initialization failed: {error}')
     return False, str(error)
 
@@ -251,6 +292,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     'balance': float(acc.balance) if acc else None,
                     'equity': float(acc.equity) if acc else None,
                     'connectionErrors': connection_errors,
+                    'circuitBreaker': {'state': circuit_state, 'failures': circuit_failures, 'threshold': CIRCUIT_BREAKER_THRESHOLD, 'cooldown': CIRCUIT_BREAKER_COOLDOWN},
                 })
 
             # /quote?symbol=X
