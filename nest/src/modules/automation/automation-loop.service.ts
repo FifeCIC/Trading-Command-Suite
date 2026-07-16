@@ -28,6 +28,8 @@ import { TradingStrategyService } from '../trading/trading-strategy.service';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
 import { DuplicateGuardService } from '../trading/duplicate-guard.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
+import { GlobalDiversificationService } from '../diversification/global-diversification.service';
+import { DirectivesService } from '../directives/directives.service';
 import { MarketDataService } from '../market-data/market-data.service';
 import { BarRefreshService } from '../market-data/bar-refresh.service';
 import { AuditLogService } from './audit-log.service';
@@ -145,14 +147,20 @@ export class AutomationLoopService implements OnModuleInit {
   private timer: ReturnType<typeof setInterval> | null = null;
   private lastAnyTradeAt: number = 0;
   private lastTradeTime = new Map<string, number>();
+  /** Per-symbol trade cooldown — allows multiple symbols to trade per tick. */
+  private lastSymbolTrade = new Map<string, number>();
 
   /** Tracks repeated errors across ticks to suppress duplicate logging.
    *  Key = `${strategyId}:${symbol}:${errorMessage}` */
   private suppressedErrors = new Map<string, { lastTick: number; count: number; firstSeenAt: Date }>();
 
+  /** Per-tick cache of protocol-gated scores. Key = `${symbol}|${protocolId}`.
+   *  Populated by step 3b, consumed by step 4 to avoid redundant directive execution. */
+  private gatedScoreCache = new Map<string, import('../scoring/protocol-gating.service').GatedScore>();
+
   state: LoopState = {
     loopEnabled: false,
-    tickIntervalMs: 300000,
+    tickIntervalMs: 120000,  // 2 min — fast enough for intraday, slow enough to avoid rate limits
     lastTickAt: null,
     nextTickAt: null,
     tickCount: 0,
@@ -179,9 +187,11 @@ export class AutomationLoopService implements OnModuleInit {
     private readonly scoringLog: ScoringLogService,
     private readonly prisma: PrismaService,
     private readonly protocolGating: ProtocolGatingService,
+    private readonly diversification: GlobalDiversificationService,
     private readonly marketData: MarketDataService,
     private readonly barRefresh: BarRefreshService,
     private readonly auditLog: AuditLogService,
+    private readonly directivesService: DirectivesService,
   ) {
     this.initBrokerStates();
     // loadScoringStrategies() is deferred to onModuleInit (needs DB connection)
@@ -396,6 +406,8 @@ export class AutomationLoopService implements OnModuleInit {
     this.timer = setInterval(() => this.tick(), this.state.tickIntervalMs);
     this.state.nextTickAt = new Date(Date.now() + this.state.tickIntervalMs).toISOString();
     this.logger.log(`Automation loop started — interval ${this.state.tickIntervalMs}ms`);
+    // Fire an immediate tick so we don't wait 5 min after restart
+    this.tick().catch(err => this.logger.error(`Initial tick failed: ${(err as Error).message}`));
     return { started: true, message: `Loop started — ${this.state.tickIntervalMs}ms interval` };
   }
 
@@ -427,6 +439,8 @@ export class AutomationLoopService implements OnModuleInit {
     this.state.tickCount++;
     this.state.lastTickAt = new Date().toISOString();
     const decisions: TickDecision[] = [];
+    this.directivesService.clearTickCache();
+    this.gatedScoreCache.clear();
     this.auditLog.logTickStart(this.state.tickCount);
 
     try {
@@ -475,10 +489,11 @@ export class AutomationLoopService implements OnModuleInit {
         return decisions;
       }
 
-      // 3. Score all symbols via ScoringService.rankAll()
+      // 3. Score only strategy-relevant symbols via ScoringService.rankAll()
+      //    Pass symbolFilter to avoid wasting time on non-tradeable DB symbols (AAPL, 3LNVl, etc.)
       let scoreMap = new Map<string, any>();
       try {
-        const ranked = await this.scoringService.rankAll(undefined, allSymbols.length + 10);
+        const ranked = await this.scoringService.rankAll(undefined, strategySymbols.length + 10, strategySymbols);
         if (ranked?.ranked) {
           for (const entry of ranked.ranked) {
             scoreMap.set(entry.ticker, entry);
@@ -537,18 +552,29 @@ export class AutomationLoopService implements OnModuleInit {
         this.logger.error(`Scoring failed: ${(err as Error).message}`);
       }
 
+      // ── Helper: get or compute a gated score for a symbol+protocol pair ──
+      const getGatedScore = async (sym: string, protocolId: string, bars: any[]): Promise<any> => {
+        const cacheKey = `${sym}|${protocolId}`;
+        const cached = this.gatedScoreCache.get(cacheKey);
+        if (cached) return cached;
+        const result = await this.protocolGating.scoreWithGating(sym, bars, protocolId);
+        if (result && result.composite !== undefined) {
+          this.gatedScoreCache.set(cacheKey, result);
+        }
+        return result;
+      };
+
       // 3b. Score watchlist symbols for each enabled scoring strategy using protocol gating
+      //     Results are cached in gatedScoreCache for reuse by step 4.
       for (const strat of this.scoringStrategies) {
         if (!strat.enabled) continue;
         const wlSymbols = readWatchlist(strat.watchlistName);
         if (!wlSymbols || wlSymbols.length === 0) continue;
 
         try {
-          // Use gated protocol scoring per symbol instead of flat rankAll()
           let scoredCount = 0;
           for (const sym of wlSymbols) {
             try {
-            // Get symbol from DB for bar fetching
             const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: sym } });
             if (!dbSym) continue;
 
@@ -558,17 +584,16 @@ export class AutomationLoopService implements OnModuleInit {
             this.auditLog.logBarsFetched(this.state.tickCount, sym, bars.length,
               bars[bars.length - 1]?.timestamp?.toISOString?.() ?? null);
 
-            // Score with LONG protocol
-            const longGated = await this.protocolGating.scoreWithGating(sym, bars, strat.protocolId);
+            // Score with LONG protocol (cached for step 4 reuse)
+            const longGated = await getGatedScore(sym, strat.protocolId, bars);
             if (!longGated || longGated.composite === undefined) continue;
 
-            // If dual-protocol, score SHORT side too and compare
             let shortGated: any = null;
             let side: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
             let chosenComposite = longGated.composite;
 
             if (strat.shortProtocolId) {
-              shortGated = await this.protocolGating.scoreWithGating(sym, bars, strat.shortProtocolId);
+              shortGated = await getGatedScore(sym, strat.shortProtocolId, bars);
               const longScore = longGated.composite;
               const shortScore = shortGated?.composite ?? 0;
 
@@ -579,12 +604,10 @@ export class AutomationLoopService implements OnModuleInit {
                 side = 'SELL';
                 chosenComposite = shortScore;
               } else {
-                // Both low or too close — HOLD
                 side = 'HOLD';
                 chosenComposite = Math.max(longScore, shortScore);
               }
             } else {
-              // Single protocol — use its signal
               side = longGated.signal as 'BUY' | 'SELL' | 'HOLD';
             }
 
@@ -611,16 +634,21 @@ export class AutomationLoopService implements OnModuleInit {
 
             // Dispatch if trading enabled
             if ((strat.mode === 'auto' || strat.mode === 'semi-auto') && this.state.brokerStates[strat.brokerId]?.tradingEnabled) {
-              if (this.lastAnyTradeAt && (Date.now() - this.lastAnyTradeAt) < 60000) {
-                this.auditLog.logSkip(this.state.tickCount, strat.id, sym, 'Cooldown active (60s between trades)');
+              // Per-symbol cooldown (60s) — allows multiple symbols to trade per tick
+              const lastSymTrade = this.lastSymbolTrade.get(sym);
+              if (lastSymTrade && (Date.now() - lastSymTrade) < 60000) {
+                this.auditLog.logSkip(this.state.tickCount, strat.id, sym, `Cooldown active (${sym} traded ${Math.round((Date.now()-lastSymTrade)/1000)}s ago)`);
+                continue;
+              }
+              // Short global safety (3s) — prevents true race-condition duplicates
+              if (this.lastAnyTradeAt && (Date.now() - this.lastAnyTradeAt) < 3000) {
+                this.auditLog.logSkip(this.state.tickCount, strat.id, sym, 'Global safety cooldown (3s)');
                 continue;
               }
 
-              // HOLD signals are never actionable — skip dispatch
               if (side === 'HOLD') continue;
               const lastPrice = bars[bars.length - 1]?.close || 0;
 
-              // Duplicate guard — block if position already open
               const dupCheck = await this.duplicateGuard.checkDuplicate(sym, strat.brokerId, strat.protocolId);
               if (dupCheck.blocked) {
                 this.auditLog.logBlocked(this.state.tickCount, strat.id, sym, dupCheck.reason || 'Duplicate position');
@@ -631,7 +659,6 @@ export class AutomationLoopService implements OnModuleInit {
               const broker = this.adapterFactory.create(strat.brokerId);
               if (!broker?.placeOrder) continue;
 
-              // Uses bar close price — now fresh via BarRefreshService pipeline
               const entryPrice = lastPrice;
               const sl = side === 'BUY' ? entryPrice * (1 - strat.slPct/100) : entryPrice * (1 + strat.slPct/100);
               const tp = side === 'BUY' ? entryPrice * (1 + strat.tpPct/100) : entryPrice * (1 - strat.tpPct/100);
@@ -656,6 +683,7 @@ export class AutomationLoopService implements OnModuleInit {
                   result.error, result.price);
                 if (result.success) {
                   this.lastAnyTradeAt = Date.now();
+                  this.lastSymbolTrade.set(sym, Date.now());
                   try { this.tradeRecorder.record({ symbol: sym, side: side.toLowerCase(), quantity: strat.baseSize, entryPrice: result.price||lastPrice||0, pnl:0, provider: strat.brokerId, status:'open', origin:'strategy', scoringStrategyId: strat.id } as any); } catch {}
                 }
                 decisions.push({ timestamp: new Date().toISOString(), strategyId: strat.id, symbol: sym, brokerId: strat.brokerId, decision: result.success?'EXECUTED':'FAILED', reason: result.success?`Ticket ${result.ticket}`:(result.error||'Unknown'), composite: chosenComposite, signal: side, ticket: result.ticket, price: result.price, quantity: strat.baseSize });
@@ -668,11 +696,9 @@ export class AutomationLoopService implements OnModuleInit {
               const prev = this.suppressedErrors.get(errorKey);
 
               if (prev && prev.lastTick === this.state.tickCount - 1) {
-                // Same error on consecutive tick — suppress, just increment counter
                 prev.lastTick = this.state.tickCount;
                 prev.count++;
               } else if (prev && prev.lastTick < this.state.tickCount - 1) {
-                // Error reappeared after a gap — log the repeat count and reset
                 const ago = Math.round((Date.now() - prev.firstSeenAt.getTime()) / 1000);
                 this.logger.warn(
                   `${strat.id}:${sym}: ${errMsg} (×${prev.count} since ${prev.firstSeenAt.toISOString().substring(11, 19)}, silenced for ${ago}s)`
@@ -681,12 +707,10 @@ export class AutomationLoopService implements OnModuleInit {
                 prev.count = 1;
                 prev.firstSeenAt = new Date();
               } else {
-                // First occurrence — log it and track
                 this.logger.warn(`${strat.id}:${sym}: ${errMsg}`);
                 this.suppressedErrors.set(errorKey, { lastTick: this.state.tickCount, count: 1, firstSeenAt: new Date() });
               }
 
-              // Always push a FAILED decision for DB tracking
               decisions.push({
                 timestamp: new Date().toISOString(),
                 strategyId: strat.id, symbol: sym, brokerId: strat.brokerId,
@@ -703,10 +727,29 @@ export class AutomationLoopService implements OnModuleInit {
         }
       }
 
-      // 4. Evaluate active strategies (pass scoreMap for fallback when no position)
+      // 4. Evaluate active strategies — grouped by symbol to avoid redundant bar fetches & scoring.
+      //    Uses gatedScoreCache populated by step 3b for any symbol+protocol already scored.
+      const strategyIdsBySymbol = new Map<string, string[]>();
       for (const strategyId of this.state.activeStrategyIds) {
-        const strategyDecision = await this.evaluateStrategy(strategyId, allPositions, scoreMap);
-        if (strategyDecision) decisions.push(strategyDecision);
+        try {
+          const s = await this.strategyService.findOne(strategyId);
+          if (!s || !s.active) continue;
+          const sym = s.symbol;
+          if (!strategyIdsBySymbol.has(sym)) strategyIdsBySymbol.set(sym, []);
+          strategyIdsBySymbol.get(sym)!.push(strategyId);
+        } catch { /* strategy may have been deleted */ }
+      }
+
+      for (const [sym, strategyIds] of strategyIdsBySymbol) {
+        // Fetch bars once per symbol
+        const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: sym } });
+        const bars = dbSym ? await this.marketData.getBars(dbSym.id, '5m', 100) : null;
+        const hasBars = bars && bars.length >= 20;
+
+        for (const strategyId of strategyIds) {
+          const strategyDecision = await this.evaluateStrategy(strategyId, allPositions, scoreMap, hasBars ? bars : null);
+          if (strategyDecision) decisions.push(strategyDecision);
+        }
       }
 
     } catch (err) {
@@ -729,7 +772,12 @@ export class AutomationLoopService implements OnModuleInit {
     return decisions;
   }
 
-  private async evaluateStrategy(strategyId: string, positions: any[], scoreMap: Map<string, any>): Promise<TickDecision | null> {
+  private async evaluateStrategy(
+    strategyId: string,
+    positions: any[],
+    scoreMap: Map<string, any>,
+    preFetchedBars?: any[] | null,
+  ): Promise<TickDecision | null> {
     try {
       const strategy = await this.strategyService.findOne(strategyId);
       if (!strategy || !strategy.active) return null;
@@ -746,6 +794,27 @@ export class AutomationLoopService implements OnModuleInit {
         };
       }
 
+      // ── Helper: get bars (pre-fetched or fetch now) ──
+      const getBars = async (): Promise<any[] | null> => {
+        if (preFetchedBars && preFetchedBars.length >= 20) return preFetchedBars;
+        const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: strategy.symbol } });
+        if (!dbSym) return null;
+        const bars = await this.marketData.getBars(dbSym.id, strategy.timeframe || '5m', 100);
+        return bars && bars.length >= 20 ? bars : null;
+      };
+
+      // ── Helper: get gated score from cache or compute ──
+      const getGated = async (protocolId: string, bars: any[]): Promise<any> => {
+        const cacheKey = `${strategy.symbol}|${protocolId}`;
+        const cached = this.gatedScoreCache.get(cacheKey);
+        if (cached) return cached;
+        const result = await this.protocolGating.scoreWithGating(strategy.symbol, bars, protocolId);
+        if (result && result.composite !== undefined) {
+          this.gatedScoreCache.set(cacheKey, result);
+        }
+        return result;
+      };
+
       // Find scored position first, fall back to scoreMap
       const pos = positions.find(p =>
         p.symbol === strategy.symbol && p.brokerId === (strategy.brokerId || 'mt5')
@@ -757,22 +826,20 @@ export class AutomationLoopService implements OnModuleInit {
         if (lookupScore && lookupScore.score !== null && lookupScore.score !== undefined) {
           const adjScore = lookupScore.score * this.state.globalRiskMultiplier;
           const brokerState = this.state.brokerStates[strategy.brokerId || 'mt5'];
-          // Strategy's own minComposite takes priority over broker default
           const threshold = strategy.minComposite ?? brokerState?.tradeThreshold ?? getStyleThreshold(strategy.protocolId);
           const passed = adjScore >= threshold;
           
-          // ── Score with protocol-gating (direction-aware, no SELL bias) ──
+          // ── Score with protocol-gating (uses cache) ──
           try {
-            const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: strategy.symbol } });
-            const bars = dbSym ? await this.marketData.getBars(dbSym.id, strategy.timeframe || '5m', 100) : null;
-            if (bars && bars.length >= 20) {
-              const longGated = await this.protocolGating.scoreWithGating(strategy.symbol, bars, strategy.protocolId);
+            const bars = await getBars();
+            if (bars) {
+              const longGated = await getGated(strategy.protocolId, bars);
               let shortGated: any = null;
               let side: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
               let chosenComposite = longGated?.composite ?? 0;
 
               if ((strategy as any).shortProtocolId) {
-                shortGated = await this.protocolGating.scoreWithGating(strategy.symbol, bars, (strategy as any).shortProtocolId);
+                shortGated = await getGated((strategy as any).shortProtocolId, bars);
                 const longScore = longGated?.composite ?? 0;
                 const shortScore = shortGated?.composite ?? 0;
                 if (longScore > shortScore && longScore >= (strategy.minComposite ?? 3)) {
@@ -788,7 +855,30 @@ export class AutomationLoopService implements OnModuleInit {
               // ── Auto-execute when no existing position ──
               if (side !== 'HOLD' && strategy.mode === 'auto') {
                 const bs = this.state.brokerStates[strategy.brokerId || 'mt5'];
-                if (bs?.tradingEnabled && (!this.lastAnyTradeAt || Date.now() - this.lastAnyTradeAt >= 60000)) {
+                // Per-symbol cooldown (60s) + short global safety (3s)
+                const lastSymTrade = this.lastSymbolTrade.get(strategy.symbol);
+                const symCooldown = lastSymTrade && (Date.now() - lastSymTrade) < 60000;
+                const globalSafety = this.lastAnyTradeAt && (Date.now() - this.lastAnyTradeAt) < 3000;
+                if (bs?.tradingEnabled && !symCooldown && !globalSafety) {
+                  // ── Global Diversification Check (#382) ──
+                  const divCheck = await this.diversification.checkPreTrade(
+                    strategy.symbol,
+                    strategy.brokerId || 'mt5',
+                  );
+                  if (divCheck.blocked) {
+                    return {
+                      timestamp: new Date().toISOString(),
+                      strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
+                      decision: 'BLOCKED',
+                      reason: `Diversification: ${divCheck.reason}`,
+                      composite: chosenComposite,
+                      signal: side,
+                    };
+                  }
+                  if (divCheck.severity === 'warn') {
+                    this.logger.warn(`Diversification: ${divCheck.reason}`);
+                  }
+
                   const broker = this.adapterFactory.create(strategy.brokerId || 'mt5');
                   if (broker?.placeOrder) {
                     let size = (strategy as any).baseSize || 0.01;
@@ -807,6 +897,7 @@ export class AutomationLoopService implements OnModuleInit {
                     });
                     if (orderResult.success) {
                       this.lastAnyTradeAt = Date.now();
+                      this.lastSymbolTrade.set(strategy.symbol, Date.now());
                       this.lastTradeTime.set(strategyId, Date.now());
                       try { this.tradeRecorder.record({ symbol: strategy.symbol, side: side.toLowerCase(), quantity: size, entryPrice: orderResult.price || entryPrice, pnl: 0, provider: strategy.brokerId || 'mt5', status: 'open', origin: 'strategy', scoringStrategyId: strategyId } as any); } catch {}
                     }
@@ -839,18 +930,17 @@ export class AutomationLoopService implements OnModuleInit {
             this.logger.debug(`Protocol-gating failed for ${strategy.symbol}, using scoreMap fallback: ${(err as Error).message}`);
           }
         }
-        // No scoreMap entry — use protocol-gating (forex symbols etc.)
+        // No scoreMap entry — use protocol-gating with cache
         try {
-          const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: strategy.symbol } });
-          const bars = dbSym ? await this.marketData.getBars(dbSym.id, strategy.timeframe || '5m', 100) : null;
-          if (bars && bars.length >= 20) {
-            const longGated = await this.protocolGating.scoreWithGating(strategy.symbol, bars, strategy.protocolId);
+          const bars = await getBars();
+          if (bars) {
+            const longGated = await getGated(strategy.protocolId, bars);
             let shortGated: any = null;
             let side: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
             let chosenComposite = longGated?.composite ?? 0;
 
             if ((strategy as any).shortProtocolId) {
-              shortGated = await this.protocolGating.scoreWithGating(strategy.symbol, bars, (strategy as any).shortProtocolId);
+              shortGated = await getGated((strategy as any).shortProtocolId, bars);
               const longScore = longGated?.composite ?? 0;
               const shortScore = shortGated?.composite ?? 0;
               if (longScore > shortScore && longScore >= (strategy.minComposite ?? 3)) {
@@ -869,7 +959,10 @@ export class AutomationLoopService implements OnModuleInit {
             // ── Auto-execute ──
             if (side !== 'HOLD' && strategy.mode === 'auto') {
               const bs = this.state.brokerStates[strategy.brokerId || 'mt5'];
-              if (bs?.tradingEnabled && (!this.lastAnyTradeAt || Date.now() - this.lastAnyTradeAt >= 60000)) {
+              const lastSymTrade = this.lastSymbolTrade.get(strategy.symbol);
+              const symCooldown = lastSymTrade && (Date.now() - lastSymTrade) < 60000;
+              const globalSafety = this.lastAnyTradeAt && (Date.now() - this.lastAnyTradeAt) < 3000;
+              if (bs?.tradingEnabled && !symCooldown && !globalSafety) {
                 const broker = this.adapterFactory.create(strategy.brokerId || 'mt5');
                 if (broker?.placeOrder) {
                   let size = (strategy as any).baseSize || 0.01;
@@ -885,6 +978,7 @@ export class AutomationLoopService implements OnModuleInit {
                   });
                   if (orderResult.success) {
                     this.lastAnyTradeAt = Date.now();
+                    this.lastSymbolTrade.set(strategy.symbol, Date.now());
                     this.lastTradeTime.set(strategyId, Date.now());
                     try { this.tradeRecorder.record({ symbol: strategy.symbol, side: side.toLowerCase(), quantity: size, entryPrice: orderResult.price || entryPrice, pnl: 0, provider: strategy.brokerId || 'mt5', status: 'open', origin: 'strategy', scoringStrategyId: strategyId } as any); } catch {}
                   }
@@ -1019,7 +1113,6 @@ export class AutomationLoopService implements OnModuleInit {
       }
 
       if (strategy.mode === 'auto') {
-        // Safety: max 1 trade per tick
         const brokerState = this.state.brokerStates[strategy.brokerId || 'mt5'];
         if (!brokerState?.tradingEnabled) {
           return {
@@ -1030,12 +1123,21 @@ export class AutomationLoopService implements OnModuleInit {
           };
         }
 
-        // Safety: min 60s between any trades
-        if (this.lastAnyTradeAt && (Date.now() - this.lastAnyTradeAt) < 60000) {
+        // Per-symbol cooldown (60s) + short global safety (3s)
+        const lastSymTrade = this.lastSymbolTrade.get(strategy.symbol);
+        if (lastSymTrade && (Date.now() - lastSymTrade) < 60000) {
           return {
             timestamp: new Date().toISOString(),
             strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-            decision: 'SKIP', reason: 'Min 60s between trades',
+            decision: 'SKIP', reason: `${strategy.symbol} traded ${Math.round((Date.now()-lastSymTrade)/1000)}s ago`,
+            composite: evalResult.composite, signal: evalResult.signal,
+          };
+        }
+        if (this.lastAnyTradeAt && (Date.now() - this.lastAnyTradeAt) < 3000) {
+          return {
+            timestamp: new Date().toISOString(),
+            strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
+            decision: 'SKIP', reason: 'Global safety cooldown (3s)',
             composite: evalResult.composite, signal: evalResult.signal,
           };
         }
@@ -1062,6 +1164,7 @@ export class AutomationLoopService implements OnModuleInit {
 
         this.lastTradeTime.set(strategyId, Date.now());
         this.lastAnyTradeAt = Date.now();
+        this.lastSymbolTrade.set(strategy.symbol, Date.now());
 
         // Record trade
         if (result.success) {

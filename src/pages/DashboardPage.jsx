@@ -90,6 +90,18 @@ export default function DashboardPage() {
   });
   const hotPicks = hotPicksQuery.data?.ranked ?? [];
 
+  // ── Diversification ──
+  const divQuery = useQuery({
+    queryKey: ['dash-diversification'],
+    queryFn: () => apiGet('/api/diversification/summary').catch(() => null),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const divSummary = divQuery.data || {};
+  const crossBrokerDupes = divSummary.crossBrokerDuplicates || [];
+  const divWarnings = divSummary.warnings || [];
+  const divMode = (divSummary.settings || {})['diversification.mode'] || 'warn';
+
   const statusLevel = diagQuery.isLoading ? null : mt5Connected ? 'online' : 'offline';
 
   const areas = Object.entries(NAV_TREE)
@@ -257,6 +269,38 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* ── Diversification Card ── */}
+          <div className="dash-card">
+            <h3>
+              🌐 Diversification
+              <span className={`dash-div-mode-badge ${divMode === 'strict' ? 'mode-strict' : divMode === 'warn' ? 'mode-warn' : 'mode-off'}`}>
+                {divMode.toUpperCase()}
+              </span>
+            </h3>
+            {crossBrokerDupes.length > 0 ? (
+              <div className="dash-div-dupes">
+                <p className="dash-div-warn">⚠️ {crossBrokerDupes.length} symbol(s) held across multiple brokers:</p>
+                {crossBrokerDupes.map((d) => (
+                  <div key={d.symbol} className="dash-div-dupe-row">
+                    <span className="dash-div-dupe-symbol">{d.symbol}</span>
+                    <span className="dash-div-dupe-brokers">{d.brokers.join(' + ')}</span>
+                    <span className="dash-div-dupe-val">£{d.totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="dash-div-clean">✅ No cross-broker duplicates — good diversification.</p>
+            )}
+            {divWarnings.length > 0 && (
+              <div className="dash-div-warnings">
+                {divWarnings.slice(0, 2).map((w, i) => (
+                  <p key={i} className="dash-div-warn-msg">⚠️ {w}</p>
+                ))}
+              </div>
+            )}
+            <a href="/allocator" className="dash-div-link">View Strategy Allocator →</a>
           </div>
 
           {posCount > 0 && (

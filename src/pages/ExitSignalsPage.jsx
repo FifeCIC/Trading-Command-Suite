@@ -63,8 +63,8 @@ export default function ExitSignalsPage() {
           </p>
         </div>
         {summary && (summary.critical > 0 || summary.high > 0) && (
-          <Notice level="critical" title="Positions need attention">
-            {summary.critical + summary.high} position{summary.critical + summary.high > 1 ? 's' : ''} flagged — {summary.critical} critical, {summary.high} high urgency.
+          <Notice level="critical">
+            <strong>Positions need attention</strong> — {summary.critical + summary.high} position{summary.critical + summary.high > 1 ? 's' : ''} flagged ({summary.critical} critical, {summary.high} high urgency).
           </Notice>
         )}
       </motion.header>
@@ -160,9 +160,12 @@ export default function ExitSignalsPage() {
 
                         {/* ── Source + Broker info ── */}
                         <div className="es-source-row">
-                          {sig.source && <span className="es-source-badge">📦 {sig.source}</span>}
-                          {sig.broker && <span className="es-source-badge">🏦 {sig.broker}</span>}
-                          {!sig.source && !sig.broker && <span className="es-source-badge">— No broker info</span>}
+                          <span className={`es-source-badge ${sig.source ? 'es-source-app' : 'es-source-missing'}`}>
+                            📦 {sig.source || 'Unknown Source'}
+                          </span>
+                          <span className={`es-source-badge ${sig.broker ? 'es-source-broker' : 'es-source-missing'}`}>
+                            🏦 {sig.broker || 'Unknown Broker'}
+                          </span>
                         </div>
 
                         {sig.reasons && sig.reasons.length > 0 && (
@@ -175,7 +178,7 @@ export default function ExitSignalsPage() {
                           </div>
                         )}
 
-                        <div style={{ display:'flex', gap:'0.5rem', marginTop:'0.25rem' }}>
+                        <div className="es-actions-row">
                           {sig.urgency === 'CRITICAL' || sig.urgency === 'HIGH' ? (
                             <button type="button" className="es-action">
                               {sig.urgency === 'CRITICAL' ? 'Exit Now' : 'Review Exit'}

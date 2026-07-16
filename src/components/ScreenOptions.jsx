@@ -83,6 +83,20 @@ var GLOBAL_PREFERENCES = [
       { value: 'x-large', label: 'X-Large', desc: 'Maximum readability — ideal for accessibility or large monitors.' },
     ],
   },
+  {
+    id: 'focusIndicatorStyle',
+    label: '⌖ Focus Indicator',
+    description: 'Choose how keyboard focus rings appear. Strong is the default 2px accent outline. Subtle uses a 1px dashed outline. None hides focus indicators entirely (not recommended for accessibility).',
+    type: 'radio',
+    key: 'tcs:preferences',
+    field: 'focusIndicatorStyle',
+    defaultValue: 'strong',
+    options: [
+      { value: 'strong', label: 'Strong', desc: '2px solid accent outline — high visibility, recommended for keyboard users.' },
+      { value: 'subtle', label: 'Subtle', desc: '1px dashed outline — visible but less prominent.' },
+      { value: 'none', label: 'None', desc: 'No focus ring — not recommended. Use only if you rely on other feedback.' },
+    ],
+  },
 ];
 
 /** Registry of option definitions keyed by view ID */
@@ -203,6 +217,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   var hidePageSubtitle = prefs.hidePageSubtitle === true;
   var highContrastText = prefs.highContrastText === true;
   var fontScale = prefs.fontScale || 'normal';
+  var focusIndicatorStyle = prefs.focusIndicatorStyle || 'strong';
 
   // Read view-specific values from localStorage
   var [values, setValues] = useState(function () {
@@ -255,7 +270,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   }, [isOpen, onToggle]);
 
   // Build global section state for rendering
-  var globalValueMap = { displayMode: displayMode, experienceLevel: experienceLevel, hidePageTitle: hidePageTitle, hidePageSubtitle: hidePageSubtitle, highContrastText: highContrastText, fontScale: fontScale };
+  var globalValueMap = { displayMode: displayMode, experienceLevel: experienceLevel, hidePageTitle: hidePageTitle, hidePageSubtitle: hidePageSubtitle, highContrastText: highContrastText, fontScale: fontScale, focusIndicatorStyle: focusIndicatorStyle };
   var hasGlobalSections = true; // always show global section
   var hasViewSections = registry && registry.sections.length > 0;
 
@@ -269,6 +284,11 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   useEffect(function () {
     document.documentElement.setAttribute('data-font-scale', fontScale || 'normal');
   }, [fontScale]);
+
+  // Apply focus indicator style preference to the document so CSS can respond
+  useEffect(function () {
+    document.documentElement.setAttribute('data-focus-indicator-style', focusIndicatorStyle || 'strong');
+  }, [focusIndicatorStyle]);
 
   return (
     <>

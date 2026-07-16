@@ -145,7 +145,7 @@ export class ScoringService implements OnModuleInit {
     }
   }
 
-  async rankAll(strategyId?: string, limit = 20): Promise<RankedResult> {
+  async rankAll(strategyId?: string, limit = 20, symbolFilter?: string[]): Promise<RankedResult> {
     const modeInfo = this.modeService.getModeInfo();
 
     // Strategy weights are now derived from each directive's maxScore.
@@ -207,8 +207,13 @@ export class ScoringService implements OnModuleInit {
       return { ...base, degradation, summary: { symbolsWithData: 0, symbolsWithoutData: 0, totalSymbols: 0 }, ranked: [] };
     }
 
+    const symbolWhere: any = { active: true };
+    if (symbolFilter && symbolFilter.length > 0) {
+      symbolWhere.ticker = { in: symbolFilter };
+    }
+
     const symbols = await this.prisma.symbol.findMany({
-      where: { active: true },
+      where: symbolWhere,
       select: { id: true, ticker: true, name: true },
       take: limit,
     });

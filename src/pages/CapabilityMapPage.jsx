@@ -126,6 +126,13 @@ const KNOWN_FEATURES = {
   'Protocol Direction Mode (LONG/SHORT)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Directive Direction Bias Filtering': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Dual-Protocol Scoring (LONG vs SHORT)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  // 2026-07-15/16 — Bridge, UI, Diversification, Symbol Focus
+  'Bridge Event Logging (circuit breaker)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'Font Size Scaling Preference': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Per-Broker P&L Dashboard': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Duplicate Error Suppression': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'Global Diversification System': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Symbol Focus Page': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
   'Pipeline Graph (NodeMapper)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
   'Design Token System (#252)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
   'EmptyState Component (#255)': { dataPersistence: 'localStorage', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
@@ -226,6 +233,9 @@ function buildCapabilityRows(directives, providers) {
     { name: 'Alerts (triggers + service)', count: 4 },
     { name: 'Trading (strategies + duplicate)', count: 3 },
     { name: 'M.E.T.A. (ratings + signature)', count: 3 },
+    { name: 'Diversification (global)', count: 4 },
+    { name: 'Symbol Focus (single ticker)', count: 1 },
+    { name: 'Bridge Events (MT5)', count: 1 },
   ].forEach((mod) => {
     const known = KNOWN_FEATURES[mod.name] || {};
     rows.push({

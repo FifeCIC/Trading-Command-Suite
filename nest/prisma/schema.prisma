@@ -1417,3 +1417,16 @@ model Capability {
   @@index([area])
   @@map("capability")
 }
+
+// ─── Global Diversification ──────────────────────────────
+// Cross-broker diversification settings and duplicate detection.
+// Controls whether the app allows the same symbol across brokers,
+// per-broker allocation percentages, and global exposure limits.
+
+model GlobalSetting {
+  key       String   @id @db.VarChar(100)
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@map("global_setting")
+}

@@ -48,50 +48,50 @@ const DIAGRAMS = [
   {
     id: 'sees-trading',
     label: 'M.E.T.A. Stack Trading Lifecycle',
-    desc: 'M.E.T.A. Stack orchestrates the full trading lifecycle. Automation tick: Timeline risk check → fetch bars → dual-protocol gated scoring via SEES (LONG vs SHORT) → threshold + cooldown + duplicate guard → mode dispatch (manual/semi-auto/auto) → broker execution via AdapterFactory → trade recording. Monitoring and feedback loops are planned but not yet automated.',
+    desc: 'M.E.T.A. Stack orchestrates the full trading lifecycle. Automation tick: Timeline risk check → fetch bars → per-tick directive memoization cache (100 directives scored once per symbol, reused across rankAll + protocol-gating + evaluateStrategy) → dual-protocol gated scoring via SEES (LONG vs SHORT) → threshold + cooldown + duplicate guard → mode dispatch (manual/semi-auto/auto) → broker execution via AdapterFactory → trade recording. Monitoring and feedback loops are planned but not yet automated.',
     code: `flowchart TB
-    subgraph Tick["1. Automation Tick (5min default)"]
-        A[Timeline Check] --> B[Global Risk Multiplier]
-        B --> C[Fetch Bars per Symbol]
+    subgraph Tick["1. Automation Tick (5min)"] 
+        A[clearTickCache] --> B[Timeline Risk Check]
+        B --> C[Global Risk Multiplier]
+        C --> D[Fetch Bars per Symbol]
     end
-    subgraph SEES["2. SEES Scoring Engine"]
-        C --> D[LONG Protocol<br/>scoreWithGating]
-        C --> E[SHORT Protocol<br/>scoreWithGating]
-        D --> F{longScore > shortScore?}
-        E --> F
-        F -->|long wins| G[BUY signal]
-        F -->|short wins| H[SELL signal]
-        F -->|both low| I[HOLD]
+    subgraph Cache["2. Directive Memoization #408"]
+        D --> E[directivesService.runAll<br/>100 directives per symbol]
+        E --> F[Tick-scoped Map cache<br/>key: symbol + bar-signature]
+        F --> G[Subsequent callers get<br/>cached result — no re-execution]
     end
-    subgraph Gates["3. M.E.T.A. Safety Gates"]
-        G --> J{Score >= Threshold?}
-        H --> J
-        J -->|No| K[SKIP]
-        J -->|Yes| L{Cooldown active?}
-        L -->|Yes| K
-        L -->|No| M{Duplicate position?}
-        M -->|Yes| N[BLOCKED]
-        M -->|No| O{Mode?}
+    subgraph SEES["3. SEES Scoring Engine"]
+        G --> H[rankAll: global ranking]
+        G --> I[protocol-gating scoreWithGating<br/>Groups directives per protocol]
+        G --> J[evaluateStrategy<br/>Reuses cached directive results]
+        I --> K{LONG vs SHORT?}
+        H --> K
+        K -->|long wins| L[BUY signal]
+        K -->|short wins| M[SELL signal]
+        K -->|both low| N[HOLD]
     end
-    subgraph Dispatch["4. Mode Dispatch"]
-        O -->|manual| P[LOG only]
-        O -->|semi-auto| Q[QUEUED<br/>await confirm]
-        O -->|auto| R[Execute]
+    subgraph Gates["4. M.E.T.A. Safety Gates"]
+        L --> O{Score >= Threshold?}
+        M --> O
+        O -->|No| P[SKIP]
+        O -->|Yes| Q{Cooldown active?}
+        Q -->|Yes| P
+        Q -->|No| R{Duplicate position?}
+        R -->|Yes| S[BLOCKED]
+        R -->|No| T{Mode?}
     end
-    subgraph Execution["5. Broker Execution"]
-        R --> S[AdapterFactory<br/>MT5 or T212]
-        S --> T[placeOrder<br/>symbol, side, size, SL, TP]
-        T --> U[Trade Recorded<br/>scoringStrategyId]
+    subgraph Dispatch["5. Mode Dispatch"]
+        T -->|manual| U[LOG only]
+        T -->|semi-auto| V[QUEUED<br/>await confirm]
+        T -->|auto| W[Execute]
     end
-    subgraph Planned["6. Planned (not yet automated)"]
-        V[Position Monitor]
-        W[Exit Signal Check]
-        X[Feedback Loop]
+    subgraph Execution["6. Broker Execution"]
+        W --> X[AdapterFactory<br/>MT5 or T212]
+        X --> Y[placeOrder]
+        Y --> Z[Trade Recorded]
     end
-    U -.-> V
-    V -.-> W
-    W -.-> X
-    style Planned fill:#1a1a2e,stroke:#f59e0b,stroke-dasharray:5 5,color:#f59e0b`,
+    style Cache fill:#0f3460,stroke:#e94560,color:#e94560
+    style SEES fill:#16213e,stroke:#0f3460`,
   },
   {
     id: 'sees-automation',
@@ -669,182 +669,268 @@ const DIAGRAMS = [
   {
     id: 'speed-scanner',
     label: 'Speed Trading — Best Symbol Scanner',
-    desc: 'Real-time batch scanner: every 5s, all Tier A/B symbols are scored against their best protocol. Results ranked and displayed on Speed Trading page. Auto-Switch mode automatically changes the active symbol to the highest-scoring opportunity.',
+    desc: 'On-demand batch scanner via POST /api/speed/scan. 23 default symbols scored against their mapped protocol (60+ symbol→protocol entries in SYMBOL_PROTOCOL_MAP). Includes MicroTrendDetector analysis and seasonal affinity multiplier. Route-to-trade supports quick-trade (confirm), one-click (execute), and automation (create strategy) modes.',
     code: `flowchart TB
-    subgraph Trigger["Scan Trigger"]
-        A[Every 5 seconds]
-        B[Manual refresh]
+    subgraph Trigger["Scan Trigger (on-demand)"]
+        A[POST /api/speed/scan]
+        B[Frontend button / interval]
     end
-    subgraph Symbols["Tier A/B Symbols"]
-        C[XAUUSD]
-        D[BTCUSD]
-        E[EURUSD]
-        F[GBPUSD]
-        G[USDJPY]
-        H[USOIL]
-        I[SPX500]
-        J[TECH100]
-        K[ETHUSD]
-        L[...more]
+    subgraph Symbols["DEFAULT_SPEED_SYMBOLS (23)"]
+        C[XAUUSD · BTCUSD · EURUSD · GBPUSD]
+        D[USDJPY · USOIL · ETHUSD · SPX500]
+        E[TECH100 · VIX · AUDUSD · NZDUSD]
+        F[USDCAD · USDCHF · SPY · QQQ]
+        G[TSLA · DOGEUSD · DJI30 · UK100...]
     end
-    subgraph Scanner["SpeedScanService"]
-        M[Symbol→Protocol Map]
-        N[Batch Fetch Bars]
-        O[ProtocolGatingService.scoreWithGating]
-        P[Rank by Composite DESC]
+    subgraph Scanner["SpeedScanService.scan()"]
+        H[SYMBOL_PROTOCOL_MAP<br/>60+ symbol→protocol entries]
+        I[Fetch bars per symbol<br/>5s → fallback 1d]
+        J[Higher TF bars<br/>1d · 1h · 15m]
+        K[ProtocolGatingService.scoreWithGating]
+        L[SeasonalAffinityService<br/>multiply composite]
+        M[MicroTrendDetector.analyze<br/>ADX · clarity · direction · patterns]
+        N[Rank by composite DESC]
     end
-    subgraph Output["Scan Result"]
-        Q[🥇 XAUUSD 78 bullish]
-        R[🥈 BTCUSD 72 bullish]
-        S[🥉 EURUSD 55 neutral]
-        T[⛔ USOIL GATED]
+    subgraph Output["ScanResult"]
+        O[topPick + topPickTrend]
+        P[nextBestSymbol]
+        Q[scan: SymbolScore array]
+        R[skipped: reason per symbol]
     end
-    subgraph UI["Speed Trading Page"]
-        U[Best Opportunities Panel]
-        V[Auto-Switch Toggle]
-        W[Switch active symbol]
+    subgraph Trade["Route-to-Trade (POST /api/speed/trade)"]
+        S[quick-trade → confirm UI]
+        T[one-click → MT5 execute]
+        U[automation → create TradingStrategy]
     end
-    A --> M
-    B --> M
-    C & D & E & F & G & H & I & J & K & L --> N
-    N --> O --> P
-    P --> Q & R & S & T
-    Q & R & S & T --> U
-    U --> V --> W`,
+    A --> H
+    B --> A
+    C & D & E & F & G --> I
+    I --> J --> K
+    K --> L --> M --> N
+    N --> O & P & Q & R
+    O --> S & T & U
+    style Trade fill:#1a1a2e,stroke:#22c55e,color:#e5e7eb`,
   },
   {
     id: 'protocol-calendar',
     label: 'Protocol Calendar — Seasonal Prioritization',
-    desc: 'Calendar-driven protocol prioritization: each protocol has seasonal affinity weights. SEES boosts protocols that historically perform well in the current month/season, and deprioritizes those that underperform. Powers the Speed Trading auto-switch intelligence.',
-    code: `flowchart LR
-    subgraph Input["Calendar Check"]
-        A[Today: June 24]
-        B[Current month: June]
-        C[Current season: Summer]
+    desc: 'SeasonalAffinityService applies date-driven weight adjustments to protocol composite scores. Each protocol declares a seasonalAffinity with monthly weights (0-11) and optional dateRanges (take precedence). Formula: adjustedScore = baseScore × (1 + weight). Weight range: -1.0 to +1.0. Used by ScoringService.rankAll() and SpeedScanService.scan(). 20+ protocols have seasonal affinity defined across 32 total protocols.',
+    code: `flowchart TB
+    subgraph Input["Date Input"]
+        A[Current Date]
+        B[month: 0-11]
+        C[day: 1-31]
     end
-    subgraph Affinity["Protocol Seasonal Affinity"]
-        D[btc-scalp-v1: 0%]
-        E[spy-day-v1: +15% — summer chop, earnings lull]
-        F[pandemic-v1: 0%]
-        G[oil-speed-v1: +10% — hurricane season]
-        H[leverage-v2 short: +5% — summer weakness]
-        I[momentum-stock-v1: -10% — summer doldrums]
+    subgraph Lookup["SeasonalAffinityService.getAffinity()"]
+        D[PROTOCOL_REGISTRY lookup]
+        E{dateRanges defined?}
+        F{Date in range?}
+        G[Use dateRange weight<br/>takes precedence]
+        H[Use monthly weight<br/>affinity.monthly month]
+        I[No affinity defined<br/>weight = 0]
     end
-    subgraph Result["SEES Prioritization"]
-        J[spy-day-v1]
-        K[oil-speed-v1]
-        L[leverage-v2 short]
+    subgraph Formula["Multiplier Calculation"]
+        J[multiplier = 1.0 + weight]
+        K[adjustedScore =<br/>baseScore × multiplier]
     end
-    A & B & C --> D & E & F & G & H & I
-    D & E & F & G & H & I --> J & K & L`,
+    subgraph DateRanges["Date Range Overrides (examples)"]
+        L[Santa Claus Rally<br/>Dec 24 → Jan 2: +0.20]
+        M[Pre-halving rally<br/>Apr 15 → Jun 15: +0.10]
+        N[Summer driving season<br/>Jun 1 → Sep 30: +0.10]
+        O[Sep/Oct vol season<br/>Sep 1 → Oct 31: +0.15]
+        P[Chinese New Year<br/>Jan 20 → Feb 15: −0.10]
+    end
+    subgraph Monthly["Monthly Weights (June examples)"]
+        Q[oil-speed-v1: +0.15]
+        R[spy-day-v1: −0.10]
+        S[btc-scalp-v1: −0.05]
+        T[momentum-stock-v1: −0.10]
+        U[xau-speed-v1: −0.10]
+        V[leverage-v2: −0.10]
+    end
+    subgraph Consumers["Consumers"]
+        W[ScoringService.rankAll<br/>seasonal weight on composite]
+        X[SpeedScanService.scan<br/>seasonal weight on scan results]
+    end
+    A --> B & C
+    B --> D
+    C --> D
+    D --> E
+    E -->|yes| F
+    E -->|no| H
+    F -->|yes| G
+    F -->|no| H
+    D -->|no seasonalAffinity| I
+    G --> J
+    H --> J
+    I --> J
+    J --> K
+    K --> W & X
+    style DateRanges fill:#1a1a2e,stroke:#8b5cf6,color:#e5e7eb
+    style Formula fill:#1a1a2e,stroke:#22c55e,color:#e5e7eb
+    style I fill:#64748b,color:#fff`,
   },
   {
     id: 'seasonality-heatmap',
     label: 'Seasonality Heatmap — Hour x Day Win Rates',
-    desc: 'Heatmap showing historical bullish/bearish bias for each hour of each day. Computed from MT5 data. Dark green = 70%+ bullish. Red = 70%+ bearish. The active hour is highlighted. Feeds into session-timing-filter directive.',
-    code: `flowchart LR
-    subgraph Data["Historical Data"]
-        A[MT5 1m candles]
-        B[20,000+ bars per symbol]
+    desc: 'SeasonalityService computes a 7×24 grid of bullish win rates from MT5 1m candles (2000 bar limit). Fetches via NestJS proxy to MT5 bridge. Frontend: SeasonalityHeatmapPage at /analysis/seasonality-heatmap with TanStack Query, color-coded grid, tooltip, and legend. Note: session-timing-filter directive is independent — it uses hardcoded session quality values, not this heatmap data.',
+    code: `flowchart TB
+    subgraph Data["Data Source"]
+        A[GET /api/trading/mt5/candles<br/>symbol + timeframe=1m + limit=2000]
+        B[NestJS proxy → MT5 Bridge :5001]
     end
-    subgraph Compute["Seasonality Engine"]
-        C[Group by hour x day]
-        D[Calculate win rate]
-        E[Apply confidence threshold]
+    subgraph Compute["SeasonalityService.compute()"]
+        C[Parse bar timestamps]
+        D[Group by UTC day 0-6<br/>× UTC hour 0-23]
+        E[Count bullish: close > open]
+        F[Win rate = bullish / samples<br/>per cell, rounded to 2dp]
     end
-    subgraph Output["Heatmap 7x24 Grid"]
-        F[Mon 00: green]
-        G[Tue 14: red]
-        H[Thu 21: green — 68%]
-        I[Sat 03: no data]
+    subgraph Output["SeasonalityResult"]
+        G[heatmap: number 7x24<br/>0.0 to 1.0 per cell]
+        H[samples: number 7x24<br/>count per cell]
+        I[totalBars + computedAt]
     end
-    subgraph Integration["Directive Feed"]
-        J[session-timing-filter]
-        K[Chart background zones]
+    subgraph API["Controller"]
+        J[GET /api/speed/seasonality/:symbol]
     end
-    A --> C --> D --> E
-    E --> F & G & H & I
-    H --> J --> K`,
+    subgraph UI["SeasonalityHeatmapPage"]
+        K[Symbol input + Analyse button]
+        L[7×24 color grid<br/>green >=70% · red <=30%]
+        M[Tooltip: day, hour, %, samples]
+        N[Best/Worst cell summary]
+        O[Legend: bearish → bullish]
+    end
+    subgraph Independent["Separate System"]
+        P[session-timing-filter directive<br/>hardcoded session quality<br/>US=0.9 London=0.8 Asian=0.4]
+    end
+    A --> B --> C
+    C --> D --> E --> F
+    F --> G & H & I
+    G --> J --> K
+    K --> L & M & N & O
+    style Independent fill:#1a1a2e,stroke:#64748b,stroke-dasharray:5 5,color:#94a3b8`,
   },
   {
     id: 'provider-failover',
     label: 'Provider Failover & Rate Limiting',
-    desc: 'AdapterFactory rate-limit-aware provider selection, failover chain, and circuit breaker logic across all 9 registered providers.',
+    desc: 'AdapterFactory.getActive() uses rate-limit-aware selection across 8 registered providers (Finnhub disabled). RateLimitTracker per adapter: circuit breaker trips after 3 consecutive 429s for 2min cooldown. isUsable() = !tripped && remaining > 0. Selection: collect usable instances → sort by remaining DESC → pick highest headroom. Only falls back to failoverPriority order when no instances are cached.',
     code: `flowchart TB
-    subgraph Request["Incoming Data Request"]
-        A[getActive preferredId?]
+    subgraph Request["getActive(preferredId?)"]
+        A[Incoming data request]
     end
-    subgraph Selection["Rate-Limit-Aware Selection"]
-        B{Preferred provider available?}
-        B -->|Yes| C[Use preferred]
-        B -->|No| D[Scan all active instances]
-        D --> E{Rate limit remaining?}
-        E -->|Tripped / <5 calls| F[Skip provider]
-        E -->|OK| G[Add to candidates]
-        G --> H[Sort by remaining calls DESC]
-        H --> I[Pick highest headroom]
+    subgraph Preferred["1. Preferred Check"]
+        B{preferredId provided?}
+        C[create preferredId]
+        D{Instance created?}
     end
-    subgraph Failover["Failover Chain by Priority"]
-        J[1. Alpaca pri=10]
-        K[2. Alpha Vantage pri=20]
-        L[3. Trading212 pri=30]
-        M[4. MT5 pri=40]
-        N[5. Polygon pri=45]
-        O[6. Finnhub pri=50]
-        P[7. FMP pri=50]
-        Q[8. Twelve Data pri=55]
-        R[9. Yahoo Finance pri=60]
+    subgraph Selection["2. Rate-Limit-Aware Selection"]
+        E[Scan all cached instances]
+        F{tracker.isUsable?<br/>!tripped AND remaining > 0}
+        G[Skip provider]
+        H[Add to candidates<br/>with remaining count]
+        I[Sort candidates by<br/>remaining DESC]
+        J[Pick highest headroom]
     end
-    subgraph Outcome["Result"]
-        S[Return best adapter]
-        T[Log provider switch]
+    subgraph Fallback["3. Registry Priority Fallback"]
+        K[No cached instances usable]
+        L[Sort registry by<br/>failoverPriority ASC]
+        M[Try create in order<br/>until one succeeds]
+    end
+    subgraph CircuitBreaker["RateLimitTracker"]
+        N[recordResponse status, headers]
+        O{status === 429?}
+        P[consecutive429s++]
+        Q{>= 3 consecutive?}
+        R[TRIP for 2min<br/>tripped=true]
+        S[Reset consecutive429s]
+        T[Parse ratelimit-remaining header]
+    end
+    subgraph Registered["8 Registered (failoverPriority)"]
+        U[Binance pri=15]
+        V[Trading212 pri=30]
+        W[MT5 pri=40]
+        X[Polygon pri=45]
+        Y[Finnhub pri=50 DISABLED]
+        Z[FMP pri=50]
+        AA[TwelveData pri=55]
+        AB[Yahoo pri=60]
     end
     A --> B
-    I --> S --> T
-    F --> J
-    J --> K --> L --> M --> N --> O --> P --> Q --> R
-    R -->|Last resort| S`,
+    B -->|yes| C --> D
+    D -->|yes| RETURN[Return adapter]
+    D -->|no| E
+    B -->|no| E
+    E --> F
+    F -->|no| G
+    F -->|yes| H
+    H --> I --> J --> RETURN
+    G -.->|all skipped| K
+    K --> L --> M --> RETURN
+    N --> O
+    O -->|yes| P --> Q
+    Q -->|yes| R
+    Q -->|no| G
+    O -->|no| S --> T
+    style R fill:#ef4444,color:#fff
+    style Y fill:#ef4444,color:#fff
+    style RETURN fill:#22c55e,color:#000
+    style CircuitBreaker fill:#1a1a2e,stroke:#f59e0b,color:#e5e7eb`,
   },
   {
     id: 't212-portfolio-flow',
     label: 'Trading212 Portfolio Data Flow',
-    desc: 'How portfolio data flows from Trading212 API through import, normalization, storage, scoring, to the React UI.',
-    code: `flowchart LR
-    subgraph External["External API"]
-        A[Trading212<br/>live.trading212.com]
+    desc: 'Trading212ImportService fetches positions from live.trading212.com/api/v0 (equity/portfolio + equity/account/cash). Ticker normalization via cleanT212Ticker() (strips _US_EQ, _EQ, handles modifiers). Positions persisted to Position table (delete stale + insert fresh). Separate /scores endpoint integrates with ScoringService. Frontend PortfolioPage queries /api/portfolio/trading212/mode, /api/portfolio/holdings, /api/portfolio/scores. Also supports order execution (buy/sell/cancel) with pre-trade safety gates.',
+    code: `flowchart TB
+    subgraph External["Trading212 API"]
+        A[GET equity/account/cash<br/>balance, free, invested, ppl]
+        B[GET equity/portfolio<br/>positions array]
+        C[GET equity/orders<br/>filled orders for history]
     end
-    subgraph Import["Import Layer"]
-        B[PortfolioController<br/>POST /import]
-        C[Trading212ImportService]
-        D[PortfolioService<br/>getPortfolio]
+    subgraph Controller["Trading212PortfolioController<br/>/api/portfolio/trading212"]
+        D[POST /import]
+        E[GET /validate]
+        F[GET /history?days=N]
+        G[POST /orders/buy]
+        H[POST /orders/sell]
+        I[POST /close-profitable]
+        J[GET /mode]
     end
-    subgraph Transform["Transform"]
-        E[Ticker Clean<br/>strip _US_EQ, _EQ]
-        F[Position Normalize<br/>value, P&L, allocation]
-        G[Symbol DB Upsert]
+    subgraph Service["Trading212ImportService"]
+        K[importPortfolio]
+        L[cleanT212Ticker<br/>strip _US_EQ, _EQ, modifiers]
+        M[Upsert Symbol in DB]
+        N[Delete stale Position rows<br/>provider=trading212]
+        O[Insert fresh positions]
     end
-    subgraph Scoring["Scoring Pipeline"]
-        H[ScoringService.rankAll]
-        I[getPortfolioScores]
-        J[Score Map by Ticker]
+    subgraph Execution["Order Execution"]
+        P[validatePreTrade<br/>account + position + funds gates]
+        Q[Trading212Adapter<br/>placeMarketOrder / placeLimitOrder]
+        R[TradeRecorderService<br/>audit trail to DB]
     end
-    subgraph UI["React Frontend"]
-        K[AccountsDashboardPage]
-        L[Portfolio Summary]
-        M[Position Table]
-        N[Score Signals]
+    subgraph Scoring["Portfolio Scoring"]
+        S[GET /api/portfolio/scores]
+        T[PortfolioService.getPortfolioScores]
+        U[ScoringService integration]
     end
-    A -->|equity/portfolio| B
-    A -->|equity/account/cash| B
-    B --> C --> D
-    D --> E --> F
-    D --> G
-    F --> I --> H --> J
+    subgraph UI["Frontend (PortfolioPage)"]
+        V[GET /api/portfolio/trading212/mode]
+        W[GET /api/portfolio/holdings]
+        X[GET /api/portfolio/scores]
+        Y[Position table + P&L + signals]
+    end
+    A --> K
+    B --> K
+    C --> F
     D --> K
-    I --> K
-    K --> L
-    K --> M
-    K --> N`,
+    K --> L --> M
+    K --> N --> O
+    G --> P --> Q --> R
+    H --> P
+    I --> Q
+    S --> T --> U
+    V & W & X --> Y
+    style Execution fill:#1a1a2e,stroke:#22c55e,color:#e5e7eb
+    style External fill:#1a1a2e,stroke:#3b82f6,color:#e5e7eb`,
   },
   {
     id: 'earnings-pipeline',

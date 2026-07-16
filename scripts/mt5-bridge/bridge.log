@@ -22999,3 +22999,69 @@
 2026-07-16 01:47:44,573 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
 2026-07-16 01:47:46,578 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
 2026-07-16 01:47:55,947 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-16 01:48:31,529 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-16 02:28:09,918 [INFO] MetaTrader5 package loaded
+2026-07-16 02:28:09,920 [INFO] Connecting to MT5 at startup...
+2026-07-16 02:28:09,920 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-16 02:28:09,999 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1383.15
+2026-07-16 02:28:09,999 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-16 02:28:10,054 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-16 02:29:30,471 [INFO] MetaTrader5 package loaded
+2026-07-16 02:29:30,472 [INFO] Connecting to MT5 at startup...
+2026-07-16 02:29:30,474 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-16 02:29:30,496 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1383.15
+2026-07-16 02:29:30,497 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-16 02:29:30,509 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-16 02:34:31,583 [INFO] MetaTrader5 package loaded
+2026-07-16 02:34:31,583 [INFO] Connecting to MT5 at startup...
+2026-07-16 02:34:31,584 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-16 02:34:31,600 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1383.15
+2026-07-16 02:34:31,601 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-16 02:34:31,631 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-16 02:35:46,966 [INFO] MetaTrader5 package loaded
+2026-07-16 02:35:46,967 [INFO] Connecting to MT5 at startup...
+2026-07-16 02:35:46,967 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-16 02:35:46,987 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1383.15
+2026-07-16 02:35:46,988 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-16 02:35:46,996 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-16 02:40:55,069 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T02:40:55.056282", "action": "order_placed", "ticket": 152345655187, "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "price": 4044.78, "clientOrderId": null}
+2026-07-16 02:42:30,758 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T02:42:30.758707", "action": "order_placed", "ticket": 152345660034, "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "price": 1.35282, "clientOrderId": null}
+2026-07-16 02:46:11,247 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:46:11,287 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:46:11,367 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:46:21,271 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:46:31,267 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:46:41,269 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:46:51,280 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:47:01,261 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:47:11,257 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:47:21,277 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:47:30,124 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T02:47:30.124276", "action": "order_placed", "ticket": 152345672276, "symbol": "EURUSD", "type": "buy", "volume": 0.01, "price": 1.14672, "clientOrderId": null}
+2026-07-16 02:47:31,264 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:47:41,256 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:47:51,353 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:48:01,257 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:48:11,303 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:48:21,274 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:48:31,255 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:48:41,258 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:48:51,252 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:49:01,255 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:49:11,249 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:49:21,261 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:49:31,265 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:49:41,254 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:49:51,285 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:50:01,255 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:50:01,477 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:50:11,467 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:50:21,675 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:50:31,474 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:50:41,458 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-07-16 02:52:43,987 [INFO] MetaTrader5 package loaded
+2026-07-16 02:52:43,987 [INFO] Connecting to MT5 at startup...
+2026-07-16 02:52:43,987 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #3)
+2026-07-16 02:52:44,013 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1384.21
+2026-07-16 02:52:44,013 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-07-16 02:52:44,026 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-16 02:53:03,447 [INFO] [TRADE JOURNAL] {"timestamp": "2026-07-16T02:53:03.447181", "action": "order_placed", "ticket": 152345688124, "symbol": "USDCAD", "type": "buy", "volume": 0.01, "price": 1.40475, "clientOrderId": null}

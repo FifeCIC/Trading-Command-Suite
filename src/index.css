@@ -130,9 +130,17 @@ html[data-hide-page-subtitle='true'] .po-subtitle { display: none; }
 }
 
 /* ── Accessibility: Global focus-visible ─────────────────── */
-:focus-visible {
+:root[data-focus-indicator-style="strong"] :focus-visible,
+:root:not([data-focus-indicator-style]) :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+:root[data-focus-indicator-style="subtle"] :focus-visible {
+  outline: 1px dashed var(--accent);
+  outline-offset: 1px;
+}
+:root[data-focus-indicator-style="none"] :focus-visible {
+  outline: none;
 }
 :focus:not(:focus-visible) {
   outline: none;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import AccountSummary from '../components/mt5/AccountSummary';
 import PositionsTable from '../components/mt5/PositionsTable';
 import OrderForm from '../components/mt5/OrderForm';
@@ -45,6 +45,20 @@ export default function Mt5TradingPage() {
   // ── Live Safety ──
   const [liveWarningAcknowledged, setLiveWarningAcknowledged] = useState(false);
 
+  // ── Connection Tracking ──
+  const wasEverConnected = useRef(false);
+  const [offlineReason, setOfflineReason] = useState('initial'); // 'initial' | 'lost' | 'error'
+
+  // Track connection transitions
+  useEffect(() => {
+    if (connected) {
+      wasEverConnected.current = true;
+      setOfflineReason('initial');
+    } else if (!loading && wasEverConnected.current) {
+      setOfflineReason('lost');
+    }
+  }, [connected, loading]);
+
   // ── Fetch Accounts ──
   const fetchAccounts = useCallback(async () => {
     try {
@@ -59,14 +73,15 @@ export default function Mt5TradingPage() {
     try {
       const diagRes = await fetch('/api/providers/mt5/diagnostics');
       const diag = await diagRes.json();
-      setConnected(diag.connected);
+      const isConnected = diag.connected === true;
+      setConnected(isConnected);
       setAccount(diag.account
         ? { ...diag.account, balance: diag.balance, equity: diag.equity, server: diag.server }
         : null);
       if (diag.lastQuote) setQuote(diag.lastQuote);
       if (diag.activeAccount) setActiveAccountNum(diag.activeAccount);
 
-      if (diag.connected) {
+      if (isConnected) {
         const [posRes, histRes] = await Promise.all([
           fetch('/api/providers/mt5/positions'),
           fetch('/api/providers/mt5/history'),
@@ -76,11 +91,17 @@ export default function Mt5TradingPage() {
         setPositions(Array.isArray(posData.positions) ? posData.positions : posData || []);
         setHistory(Array.isArray(histData.orders) ? histData.orders : histData || []);
       } else {
+        // Bridge responded but is not connected — clear stale data
         setPositions([]);
         setHistory([]);
       }
       setError('');
     } catch {
+      // Bridge unreachable — force offline state, clear stale data
+      setConnected(false);
+      setPositions([]);
+      setHistory([]);
+      setAccount(null);
       setError('MT5 bridge unreachable — start the Python bridge from Server Controls');
     } finally {
       setLoading(false);
@@ -258,22 +279,44 @@ export default function Mt5TradingPage() {
     );
   }
 
-  // ── Offline State (after initial load attempt fails) ──
+  // ── Offline State (after initial load attempt fails, or connection lost) ──
   if (!connected) {
+    const isReconnecting = offlineReason === 'lost';
     return (
       <div className="mt5u-page">
-        <div className="mt5u-offline-full">
-          <div className="mt5u-offline-icon">🔌</div>
-          <h2>MT5 Bridge Offline</h2>
-          <p>Start <code>mt5_bridge.py</code> from Server Controls to connect.</p>
+        <div className={`mt5u-offline-full ${isReconnecting ? 'mt5u-offline-reconnecting' : ''}`}>
+          <div className="mt5u-offline-icon">{isReconnecting ? '🔌' : '📡'}</div>
+          <h2>{isReconnecting ? 'Connection Lost' : 'MT5 Bridge Offline'}</h2>
+          <p>
+            {isReconnecting
+              ? 'The MT5 bridge connection was lost. All trading panels have been suspended.'
+              : 'Start the MT5 bridge to enable trading.'}
+          </p>
+          <div className="mt5u-offline-steps">
+            <div className="mt5u-offline-step">
+              <span className="mt5u-offline-step-num">1</span>
+              <span>Run <code>mt5_bridge.py</code> or use Server Controls</span>
+            </div>
+            <div className="mt5u-offline-step">
+              <span className="mt5u-offline-step-num">2</span>
+              <span>Ensure MetaTrader 5 is logged in to your account</span>
+            </div>
+            <div className="mt5u-offline-step">
+              <span className="mt5u-offline-step-num">3</span>
+              <span>Click <strong>Retry Connection</strong> below</span>
+            </div>
+          </div>
           <button
             type="button"
             className="mt5u-offline-retry"
-            onClick={() => { setLoading(true); refreshAll(); }}
+            onClick={() => { setLoading(true); setError(''); refreshAll(); }}
           >
-            Retry Connection
+            {isReconnecting ? 'Reconnect to Bridge' : 'Retry Connection'}
           </button>
           {error && <p className="mt5u-offline-error">{error}</p>}
+          <p className="mt5u-offline-hint">
+            Tip: Check Server Controls → MT5 Bridge status, or run <code>python mt5_bridge.py</code> in a terminal.
+          </p>
         </div>
       </div>
     );

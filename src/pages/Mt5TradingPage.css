@@ -67,13 +67,25 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  min-height: 50vh;
+  min-height: 60vh;
   padding: 3rem 2rem;
+  animation: mt5u-fade-in 0.3s ease;
 }
-.mt5u-offline-icon { font-size: 3rem; margin-bottom: 1rem; }
+@keyframes mt5u-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.mt5u-offline-reconnecting .mt5u-offline-icon {
+  animation: mt5u-pulse-reconnect 2s ease-in-out infinite;
+}
+@keyframes mt5u-pulse-reconnect {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.08); }
+}
+.mt5u-offline-icon { font-size: 3.5rem; margin-bottom: 1rem; }
 .mt5u-offline-full h2 { font-size: 1.4rem; color: #f1f5f9; margin: 0 0 0.5rem; }
-.mt5u-offline-full p { color: #94a3b8; font-size: 0.95rem; margin: 0 0 1.5rem; }
-.mt5u-offline-full code { background: #1e1e2e; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.85rem; }
+.mt5u-offline-full > p { color: #94a3b8; font-size: 0.95rem; margin: 0 0 1.25rem; max-width: 480px; }
+.mt5u-offline-full code { background: #1e1e2e; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.85rem; color: #a5b4fc; }
 .mt5u-offline-retry {
   padding: 0.6rem 1.5rem;
   background: #3b82f6;
@@ -85,9 +97,46 @@
   cursor: pointer;
   transition: background 0.15s;
   font-family: inherit;
+  margin-top: 0.5rem;
 }
 .mt5u-offline-retry:hover { background: #2563eb; }
-.mt5u-offline-error { color: #ef4444; font-size: 0.85rem; margin-top: 1rem; }
+.mt5u-offline-error { color: #ef4444; font-size: 0.85rem; margin-top: 0.75rem; max-width: 480px; }
+.mt5u-offline-hint { color: #64748b; font-size: 0.78rem; margin-top: 1rem; }
+
+/* ── Offline Steps ── */
+.mt5u-offline-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  text-align: left;
+  width: 100%;
+  max-width: 380px;
+}
+.mt5u-offline-step {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  padding: 0.4rem 0.6rem;
+  background: rgba(30, 30, 46, 0.6);
+  border-radius: 6px;
+  border: 1px solid rgba(51, 65, 85, 0.3);
+}
+.mt5u-offline-step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
 
 /* ── Old Offline Banner (deprecated, now uses full-page state) ── */
 .mt5u-offline { display: none; }

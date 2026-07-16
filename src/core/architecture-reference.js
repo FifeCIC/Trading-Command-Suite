@@ -11,7 +11,7 @@
  * Token budget: ~23K (vs ~38K for full Architecture Framework)
  * 
  * @generated — extracted from architecture-framework.data.js
- * @updated 2026-07-14
+ * @updated 2026-07-16
  */
 export const STATUS_SNAPSHOT = [
   'This page is the implementation front door for architecture-sensitive work.',
@@ -199,10 +199,18 @@ export const CURRENT_SLICE = [
   'Protocol Direction Mode — directionMode field on PROTOCOL_REGISTRY entries: LONG_ONLY | SHORT_ONLY | BOTH. Each protocol declares its trading direction at the registry level. 3 SHORT_ONLY protocols: default-short, built-in-short, mt5-technical-short. SHORT_ONLY protocols use SHORT_DIRECTIVE_GROUPS (bearish-technical, bearish-sentiment, short-risk). LONG_ONLY is the implicit default for all other protocols.',
   'Directive Direction Bias — 6 directives carry directionBias: 4 bullish (momentum-exhaustion, target-achieved, volume-surge, vwap), 2 bearish (cci, williams-r). LONG_ONLY protocols exclude bearish directives; SHORT_ONLY protocols exclude bullish directives. Neutral directives run in both.',
   'Dual-Protocol Scoring — ScoringStrategy.shortProtocolId enables dual-direction scoring in the automation loop. The loop scores with both LONG and SHORT protocols, compares scores, and auto-selects the winning direction (BUY vs SELL). If both scores are below threshold, result is HOLD.',
+  // ── Sprint 2026-07-15/16 — Bridge, UI, Diversification, Symbol Focus ──
+  'MT5 Bridge Circuit Breaker — Breaker thresholds tuned: 5→10 consecutive errors, 120s→60s cooldown. Transient errors (connection-refused, ECONNREFUSED) skipped from breaker count. New BridgeEvent model + BridgeEventService logs state transitions (connected↔disconnected) with event_type, account, server, balance, error_message.',
+  'Font Size Scaling Preference — New 🔤 Font Size radio in Screen Options (Small/Normal/Large/X-Large). Applies data-font-scale attribute to &lt;html&gt;, CSS maps to root font-size (14px/16px/18px/20px). Scales ALL rem-based text proportionally.',
+  'Per-Broker P&L Dashboard — Dedicated "💼 P&L by Broker" card on Dashboard showing MT5, Trading212, and Stocks ISA individually with Balance, Equity, Positions, P&L, W/L ratio. Grand Total row. ISA shown in £ (GBP). Always visible (shows $0.00 when no data).',
+  'Duplicate Error Suppression — Per-symbol try/catch in automation watchlist scoring. Cross-tick error dedup via suppressedErrors Map tracking {lastTick, count, firstSeenAt} per error key (strategyId:symbol:errorMessage). First occurrence logs normally; consecutive repeats are suppressed with periodic summary (e.g. "×12 since 14:30:00"). Always pushes FAILED decision to decision_log for audit trail.',
+  'Global Diversification System — Full-stack cross-broker diversification: GlobalSetting DB model (key-value in global_setting table), GlobalDiversificationService aggregates positions across ALL brokers, detects cross-broker duplicates, calculates global exposure, performs pre-trade checks. REST API at /api/diversification/*. Automation loop integration (check before placeOrder). Global Allocator page at /allocator with strategy allocation view, duplicate warnings, mode selector. Dashboard card.',
+  'Live Ordering Stack Crash Fix — Verified and closed #319: Live Ordering Stack page no longer crashes with style prop error. Comprehensive audit of 250+ style props across src/ found zero string-based style props. Page renders correctly in table/card views, handles empty watchlists, missing data, and API errors with proper .catch() guards on all 5 queries.',
+  'Symbol Focus Page — New standalone page at /symbol/:ticker showing full trading pipeline for one ticker. Backend GET /api/symbols/:ticker/focus aggregates protocols, scoring strategies, trading strategies, recent decisions (decision_log), and trade outcomes (strategy_evaluation). Frontend SymbolFocusPage.jsx with two-column layout: left = protocols + strategies, right = live activity + trade outcomes. 10-second polling with pulse indicator. Mode badges (AUTO/SEMI/MANUAL), color-coded decision log (SCORED/EXECUTED/FAILED/BLOCKED). "Not scored" banner when inactive.',
 ]
 
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-14'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-16'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -483,6 +491,54 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated operator access',
     owner: 'Scoring controller',
     contract: 'Checks whether a MetaStack component fingerprint (protocol, watchlist symbols, broker, thresholds, SL/TP) has changed since last persisted. Used by UI to warn when performance history may be stale.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/diversification/summary',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Diversification controller',
+    contract: 'Global diversification summary: aggregated positions across all brokers, cross-broker duplicates, total exposure, per-symbol allocations. Used by Global Allocator page and Dashboard card.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/diversification/settings',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Diversification controller',
+    contract: 'Returns global diversification settings from GlobalSetting table: mode (off/warn/block), max-exposure-per-symbol, max-exposure-per-broker.',
+    status: 'active',
+  },
+  {
+    route: 'PUT /api/diversification/settings',
+    method: 'PUT',
+    permission: 'Authenticated operator access',
+    owner: 'Diversification controller',
+    contract: 'Updates global diversification settings. Accepts partial update body. Persists to global_setting table.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/diversification/pre-trade',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Diversification controller',
+    contract: 'Pre-trade diversification check for a symbol: returns diversification.granted (boolean) and diversification.blockingReasons[] if the trade would exceed limits. Query: ?symbol=NVDA&broker=mt5.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/symbols/:ticker/focus',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Symbols controller',
+    contract: 'Full trading pipeline focus for a single ticker. Aggregates protocols, scoring strategies, trading strategies, recent decision_log entries, strategy_evaluation outcomes. Resolves watchlist JSON files to determine which scoring strategies include the symbol. Returns protocol metadata from PROTOCOL_REGISTRY.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/providers/mt5/bridge-events',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'MT5 provider controller',
+    contract: 'Returns MT5 bridge state transition history from bridge_event table. Filters by event_type (connected/disconnected/error). Used by Bridge Reliability monitoring.',
     status: 'active',
   },
   {

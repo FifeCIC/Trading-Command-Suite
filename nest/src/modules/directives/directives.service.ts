@@ -77,8 +77,24 @@ export class DirectivesService {
     }
   }
 
+  /** Per-tick memoization cache: symbol+bars-signature → results */
+  private tickCache = new Map<string, Map<string, DirectiveResult>>();
+
+  /** Clear the per-tick cache. Call at start of each automation tick. */
+  clearTickCache(): void {
+    this.tickCache.clear();
+  }
+
   /** Run all registered directives against the same input, with activation gates. Supports async directives. */
   async runAll(input: DirectiveInput): Promise<Map<string, DirectiveResult>> {
+    // ── Per-tick memoization (#408) ──
+    // Directives scoring is deterministic for a given (symbol, bars) combo.
+    // Multiple callers (rankAll, protocol-gating, evaluateStrategy) ask for
+    // the same symbol in the same tick. Cache the result per symbol.
+    const cacheKey = `${input.symbol}|${input.bars?.[input.bars.length - 1]?.timestamp?.getTime?.() ?? 0}|${input.bars?.length ?? 0}`;
+    const cached = this.tickCache.get(cacheKey);
+    if (cached) return cached;
+
     const results = new Map<string, DirectiveResult>();
 
     // ── Step 1: Run condition detector ──
@@ -160,6 +176,7 @@ export class DirectivesService {
       }
     }
 
+    this.tickCache.set(cacheKey, results);
     return results;
   }
 

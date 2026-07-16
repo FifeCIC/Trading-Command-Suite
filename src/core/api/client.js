@@ -47,6 +47,18 @@ export async function apiPatch(path, body) {
   return response.json();
 }
 
+export async function apiPut(path, body) {
+  const response = await fetch(apiUrl(path), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new Error(`Request failed with ${response.status}`);
+  }
+  return response.json();
+}
+
 export async function apiDelete(path) {
   const response = await fetch(apiUrl(path), {
     method: 'DELETE',

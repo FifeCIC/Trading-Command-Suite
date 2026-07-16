@@ -80,6 +80,7 @@ import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
 import SymbolDetailPage from './pages/SymbolDetailPage';
 import SymbolPage from './pages/SymbolPage';
 import SymbolFocusPage from './pages/SymbolFocusPage';
+import GlobalAllocatorPage from './pages/GlobalAllocatorPage';
 import SpeedTradingPage from './pages/SpeedTradingPage';
 import SpeedScannerPage from './pages/SpeedScannerPage';
 import BtcSpeedTradingPage from './pages/BtcSpeedTradingPage';
@@ -357,6 +358,7 @@ function AppShell() {
       document.documentElement.setAttribute('data-page-transitions', prefs.pageTransitions !== false ? 'true' : 'false');
       document.documentElement.setAttribute('data-high-contrast', prefs.highContrastText === true ? 'true' : 'false');
       document.documentElement.setAttribute('data-font-scale', prefs.fontScale || 'normal');
+      document.documentElement.setAttribute('data-focus-indicator-style', prefs.focusIndicatorStyle || 'strong');
     } catch { /* preference not yet saved */ }
   }, []);
 
@@ -369,6 +371,7 @@ function AppShell() {
         document.documentElement.setAttribute('data-high-contrast', prefs.highContrastText === true ? 'true' : 'false');
         document.documentElement.setAttribute('data-page-transitions', prefs.pageTransitions !== false ? 'true' : 'false');
         document.documentElement.setAttribute('data-font-scale', prefs.fontScale || 'normal');
+        document.documentElement.setAttribute('data-focus-indicator-style', prefs.focusIndicatorStyle || 'strong');
       } catch { /* ignore */ }
     };
     window.addEventListener('storage', onStorage);
@@ -1038,6 +1041,7 @@ export default function App() {
           <Route path="/research/symbol/:symbolId" element={<AppShell />} />
           <Route path="/trading/symbol/:ticker" element={<SymbolPage />} />
           <Route path="/symbol/:ticker" element={<SymbolFocusPage />} />
+          <Route path="/allocator" element={<GlobalAllocatorPage />} />
           <Route path="/:area/:view" element={<AppShell />} />
           <Route path="/:area" element={<AppShell />} />
           <Route path="/" element={<HomeDashboard />} />

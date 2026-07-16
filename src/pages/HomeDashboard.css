@@ -491,6 +491,88 @@
 }
 .dash-broker-total-val { font-size: 0.95rem !important; }
 
+/* ── Diversification Card ───────────────────────────────── */
+
+.dash-div-mode-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+.mode-strict { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.mode-warn { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+.mode-off { background: rgba(107, 114, 128, 0.15); color: #9ca3af; }
+
+.dash-div-dupes {
+  margin: 0.5rem 0;
+}
+
+.dash-div-warn {
+  font-size: 0.82rem;
+  color: #f59e0b;
+  margin: 0 0 0.5rem;
+}
+
+.dash-div-dupe-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  border-radius: 4px;
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+}
+
+.dash-div-dupe-symbol {
+  font-weight: 700;
+  color: #f59e0b;
+}
+
+.dash-div-dupe-brokers {
+  color: var(--text-secondary, #888);
+  flex: 1;
+}
+
+.dash-div-dupe-val {
+  color: var(--text-secondary, #888);
+  white-space: nowrap;
+}
+
+.dash-div-clean {
+  color: #10b981;
+  font-size: 0.82rem;
+  margin: 0.25rem 0;
+}
+
+.dash-div-warnings {
+  margin-top: 0.5rem;
+}
+
+.dash-div-warn-msg {
+  font-size: 0.78rem;
+  color: #f59e0b;
+  margin: 0.15rem 0;
+}
+
+.dash-div-link {
+  display: inline-block;
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--accent, #0ea5a6);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.dash-div-link:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 640px) {
   .dash-broker-row { flex-direction: column; align-items: flex-start; gap: 0.4rem; }
   .dash-broker-metrics { justify-content: flex-start; }
