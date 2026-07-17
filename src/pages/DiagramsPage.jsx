@@ -96,7 +96,7 @@ const DIAGRAMS = [
   {
     id: 'sees-automation',
     label: 'M.E.T.A. Stack â€” Setup to Execution',
-    desc: 'End-to-end user journey through the M.E.T.A. Stack (Modular Expert Trading Architecture). Setup: providers â†’ watchlists â†’ protocols. Automation: ScoringStrategy pairs a watchlist+protocol, the loop ticks and invokes SEES for scoring only. Decision and execution are M.E.T.A. responsibilities.',
+    desc: 'End-to-end user journey through the M.E.T.A. Stack (Modular Expert Trading Architecture). Setup: providers → watchlists → protocols → ScoringStrategy. Automation: the loop invokes SEES for scoring, then evaluates TradingStrategies (each REQUIRES a linked ScoringStrategy via FK). Decision and execution are M.E.T.A. responsibilities. 42 protocols, 7 ScoringStrategies, 35 TradingStrategies — all linked.',
     code: `flowchart TB
     subgraph SETUP["1. SETUP (User)"]
         A1["Configure Providers"] --> A2["Import Market Data"]

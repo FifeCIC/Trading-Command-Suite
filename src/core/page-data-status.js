@@ -142,6 +142,12 @@ export const PAGE_DATA_STATUS = {
   'settings-education': { status: 'mock', note: 'Not yet built' },
   'theme-packs': { status: 'live', source: 'Theme system + CSS vars' },
   'user-preferences': { status: 'live', source: 'Zustand + localStorage' },
+  'global-allocator': { status: 'live', source: '/api/diversification/*' },
+  'symbol-focus': { status: 'live', source: '/api/symbols/:ticker/focus' },
+  'ab-testing': { status: 'partial', source: 'Client-side comparison via POST /api/scoring/gated/batch' },
+  'ai-costs': { status: 'partial', note: 'Frontend ready, backend pending' },
+  'ai-logs': { status: 'partial', note: 'Frontend ready, backend pending' },
+  'decision-trail': { status: 'partial', note: 'Frontend ready, depends on #350 Decision-Trail storage' },
 };
 
 /**

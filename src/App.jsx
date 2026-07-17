@@ -35,12 +35,14 @@ import ApiActivityPage from './pages/ApiActivityPage';
 import ApiEndpointsPage from './pages/ApiEndpointsPage';
 import DatabaseTablesPage from './pages/DatabaseTablesPage';
 import BacktestDataPage from './pages/BacktestDataPage';
+import DailySummaryReportPage from './pages/DailySummaryReportPage';
 import DataAreaLandingPage from './pages/DataAreaLandingPage';
 import DiagramsPage from './pages/DiagramsPage';
 import DataStatusPage from './pages/DataStatusPage';
 import DataElementsPage from './pages/DataElementsPage';
 import DecoderPage from './pages/DecoderPage';
 import DailyBriefingPage from './pages/DailyBriefingPage';
+import DecisionTrailPage from './pages/DecisionTrailPage';
 import DirectivesManagerPage from './pages/DirectivesManagerPage';
 import ScoringRunsPage from './pages/ScoringRunsPage';
 import ScoringActivityLogsPage from './pages/ScoringActivityLogsPage';
@@ -54,6 +56,7 @@ import ResearchOverviewPage from './pages/ResearchOverviewPage';
 import PlatformComparisonsPage from './pages/PlatformComparisonsPage';
 import PluginTabSkeletonPage from './pages/PluginTabSkeletonPage';
 import TradingStrategiesPage from './pages/TradingStrategiesPage';
+import StrategyDashboardPage from './pages/StrategyDashboardPage';
 import StrategyComparisonPage from './pages/StrategyComparisonPage';
 import RiskControlsPage from './pages/RiskControlsPage';
 import CacheMonitorPage from './pages/CacheMonitorPage';
@@ -62,6 +65,7 @@ import LiveOrderingStackPage from './pages/LiveOrderingStackPage';
 import SeesArenaPage from './pages/SeesArenaPage';
 import ABTestingPage from './pages/ABTestingPage';
 import AICostsPage from './pages/AICostsPage';
+import AILogViewerPage from './pages/AILogViewerPage';
 import AlgorithmLabPage from './pages/AlgorithmLabPage';
 import PerformanceLabPage from './pages/PerformanceLabPage';
 import AlertCenterPage from './pages/AlertCenterPage';
@@ -366,6 +370,7 @@ function AppShell() {
       document.documentElement.setAttribute('data-colorblind', prefs.colorBlindMode === true ? 'true' : 'false');
       document.documentElement.setAttribute('data-font-scale', prefs.fontScale || 'normal');
       document.documentElement.setAttribute('data-focus-indicator-style', prefs.focusIndicatorStyle || 'strong');
+      document.documentElement.setAttribute('data-layout-size', prefs.layoutSize || 'normal');
     } catch { /* preference not yet saved */ }
   }, []);
 
@@ -380,6 +385,7 @@ function AppShell() {
         document.documentElement.setAttribute('data-page-transitions', prefs.pageTransitions !== false ? 'true' : 'false');
         document.documentElement.setAttribute('data-font-scale', prefs.fontScale || 'normal');
         document.documentElement.setAttribute('data-focus-indicator-style', prefs.focusIndicatorStyle || 'strong');
+        document.documentElement.setAttribute('data-layout-size', prefs.layoutSize || 'normal');
       } catch { /* ignore */ }
     };
     window.addEventListener('storage', onStorage);

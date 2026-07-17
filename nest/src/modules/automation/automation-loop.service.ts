@@ -435,56 +435,52 @@ export class AutomationLoopService implements OnModuleInit {
       if (!this.prisma.isAvailable) return;
       let rows = await this.prisma.scoringStrategy.findMany({ orderBy: { createdAt: 'asc' } });
 
-      // Auto-create scoring strategies from trading strategies if DB is empty
-      if (rows.length === 0) {
-        const strategies = await this.strategyService.findAll();
-        const activeStrats = strategies.filter((s: any) => s.active);
-        const uniqueProtocols = new Map<string, any>();
+      // ── Auto-create ScoringStrategies for any protocol used by a TradingStrategy that lacks one ──
+      const strategies = await this.strategyService.findAll();
+      const activeStrats = strategies.filter((s: any) => s.active);
+      const uniqueProtocols = new Map<string, any>();
 
-        for (const strat of activeStrats) {
-          if (!strat.protocolId) continue;
-          if (!uniqueProtocols.has(strat.protocolId)) {
-            uniqueProtocols.set(strat.protocolId, strat);
+      for (const strat of activeStrats) {
+        if (!strat.protocolId) continue;
+        if (!uniqueProtocols.has(strat.protocolId)) {
+          uniqueProtocols.set(strat.protocolId, strat);
+        }
+      }
+
+      let created = 0;
+      for (const [protocolId, strat] of uniqueProtocols) {
+        const ssId = `auto-${protocolId}`;
+        const exists = rows.find((r: any) => r.id === ssId || r.protocolId === protocolId);
+        if (!exists) {
+          try {
+            await this.prisma.scoringStrategy.upsert({
+              where: { id: ssId },
+              create: {
+                id: ssId,
+                name: `${protocolId} — Auto`,
+                protocolId,
+                watchlistName: 'default',
+                brokerId: strat.brokerId || 'mt5',
+                mode: 'semi-auto',
+                tradeThreshold: strat.minComposite || getStyleThreshold(this.protocolDb.getCached(protocolId)?.tradingStyle),
+                baseSize: strat.baseSize ?? 0.01,
+                slPct: strat.slPct ?? 1.0,
+                tpPct: strat.tpPct ?? 1.0,
+                enabled: true,
+                tradingEnabled: false,
+              },
+              update: {},
+            });
+            created++;
+          } catch (err) {
+            this.logger.warn(`Failed to auto-create ScoringStrategy for ${protocolId}: ${(err as Error).message}`);
           }
         }
+      }
 
-        if (uniqueProtocols.size > 0) {
-          this.logger.log(`No scoring strategies found — auto-creating from ${uniqueProtocols.size} unique protocols`);
-
-          for (const [protocolId, strat] of uniqueProtocols) {
-            try {
-              await this.prisma.scoringStrategy.upsert({
-                where: { id: `auto-${protocolId}` },
-                create: {
-                  id: `auto-${protocolId}`,
-                  name: `${protocolId} — Auto`,
-                  protocolId,
-                  watchlistName: 'default',
-                  brokerId: strat.brokerId || 'mt5',
-                  mode: 'semi-auto',
-                  tradeThreshold: strat.minComposite || getStyleThreshold(this.protocolDb.getCached(protocolId)?.tradingStyle),
-                  baseSize: strat.baseSize ?? 0.01,
-                  slPct: strat.slPct ?? 1.0,
-                  tpPct: strat.tpPct ?? 1.0,
-                  enabled: true,
-                  tradingEnabled: false,
-                },
-                update: {
-                  name: `${protocolId} — Auto`,
-                  watchlistName: 'default',
-                  brokerId: strat.brokerId || 'mt5',
-                  tradeThreshold: strat.minComposite || getStyleThreshold(this.protocolDb.getCached(protocolId)?.tradingStyle),
-                },
-              });
-              this.logger.log(`  Created scoring strategy for protocol: ${protocolId}`);
-            } catch (err) {
-              this.logger.warn(`  Failed to create scoring strategy for ${protocolId}: ${(err as Error).message}`);
-            }
-          }
-
-          // Reload after creation
-          rows = await this.prisma.scoringStrategy.findMany({ orderBy: { createdAt: 'asc' } });
-        }
+      if (created > 0) {
+        this.logger.log(`Auto-created ${created} ScoringStrategies for unlinked protocols`);
+        rows = await this.prisma.scoringStrategy.findMany({ orderBy: { createdAt: 'asc' } });
       }
 
       // Map and deduplicate: one strategy per protocolId
@@ -904,37 +900,61 @@ export class AutomationLoopService implements OnModuleInit {
         };
       }
 
-      // ── Resolve effective params from ScoringStrategy (Phase D.2) ──
-      // Prefer linked ScoringStrategy values; fall back to TradingStrategy's own fields.
+      // ── Require ScoringStrategy FK (Phase D.2 enforced) ──
+      // TradingStrategy MUST link to a ScoringStrategy to trade.
+      // Deprecated fields (protocolId, slPct, tpPct, baseSize) on TradingStrategy are no longer used.
       const scoringStrategyId = (strategy as any).scoringStrategyId as string | undefined;
-      let effectiveProtocolId = strategy.protocolId;
-      let effectiveShortProtocolId = (strategy as any).shortProtocolId as string | undefined;
-      let effectiveBaseSize = (strategy as any).baseSize || 0.01;
-      let effectiveSlPct = (strategy as any).slPct || 1.0;
-      let effectiveTpPct = (strategy as any).tpPct || 1.0;
+      if (!scoringStrategyId) {
+        return {
+          timestamp: new Date().toISOString(),
+          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
+          decision: 'SKIP', reason: 'No ScoringStrategy linked — cannot trade',
+          composite: 0,
+        };
+      }
 
-      if (scoringStrategyId && this.prisma.isAvailable) {
+      // Fetch ScoringStrategy params (no fallback to deprecated TradingStrategy fields)
+      let effectiveProtocolId = '';
+      let effectiveShortProtocolId: string | undefined;
+      let effectiveBaseSize = 0.01;
+      let effectiveSlPct = 1.0;
+      let effectiveTpPct = 1.0;
+
+      if (this.prisma.isAvailable) {
         try {
           const ss = await (this.prisma as any).scoringStrategy.findUnique({
             where: { id: scoringStrategyId },
             select: { protocolId: true, shortProtocolId: true, baseSize: true, slPct: true, tpPct: true },
           });
           if (ss) {
-            effectiveProtocolId = ss.protocolId || effectiveProtocolId;
-            effectiveShortProtocolId = ss.shortProtocolId || effectiveShortProtocolId;
-            effectiveBaseSize = ss.baseSize ?? effectiveBaseSize;
-            effectiveSlPct = ss.slPct ?? effectiveSlPct;
-            effectiveTpPct = ss.tpPct ?? effectiveTpPct;
+            effectiveProtocolId = ss.protocolId;
+            effectiveShortProtocolId = ss.shortProtocolId || undefined;
+            effectiveBaseSize = ss.baseSize ?? 0.01;
+            effectiveSlPct = ss.slPct ?? 1.0;
+            effectiveTpPct = ss.tpPct ?? 1.0;
           }
-        } catch { /* use TradingStrategy defaults */ }
+        } catch { /* use defaults */ }
+      }
+
+      if (!effectiveProtocolId) {
+        return {
+          timestamp: new Date().toISOString(),
+          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
+          decision: 'SKIP', reason: 'ScoringStrategy has no protocolId — cannot score',
+          composite: 0,
+        };
       }
 
       // ── Helper: get bars (pre-fetched or fetch now) ──
+      // Timeframe resolved from Protocol → ScoringStrategy (Phase D.2). Protocol.recommendedTimeframe
+      // is the authority — directive suitability is validated against it. Falls back to strategy.timeframe.
+      const protocolConfig = this.protocolDb.getCached(effectiveProtocolId);
+      const effectiveTimeframe = protocolConfig?.recommendedTimeframe || strategy.timeframe || '5m';
       const getBars = async (): Promise<any[] | null> => {
         if (preFetchedBars && preFetchedBars.length >= 20) return preFetchedBars;
         const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: strategy.symbol } });
         if (!dbSym) return null;
-        const bars = await this.marketData.getBars(dbSym.id, strategy.timeframe || '5m', 100);
+        const bars = await this.marketData.getBars(dbSym.id, effectiveTimeframe, 100);
         return bars && bars.length >= 20 ? bars : null;
       };
 
@@ -963,17 +983,17 @@ export class AutomationLoopService implements OnModuleInit {
         if (lookupScore && lookupScore.score !== null && lookupScore.score !== undefined) {
           const adjScore = lookupScore.score * this.state.globalRiskMultiplier;
           const brokerState = this.state.brokerStates[strategy.brokerId || 'mt5'];
-          const threshold = strategy.minComposite ?? brokerState?.tradeThreshold ?? getStyleThreshold(this.protocolDb.getCached(strategy.protocolId || '')?.tradingStyle);
+          const threshold = strategy.minComposite ?? brokerState?.tradeThreshold ?? getStyleThreshold(this.protocolDb.getCached(effectiveProtocolId)?.tradingStyle);
           const passed = adjScore >= threshold;
           
           // ── Score with protocol-gating (uses cache) ──
           try {
             const bars = await getBars();
             if (bars) {
-              const longGated = await getGated((strategy.protocolId || effectiveProtocolId)!, bars);
+              const longGated = await getGated(effectiveProtocolId, bars);
               let shortGated: any = null;
-              if ((strategy as any).shortProtocolId) {
-                shortGated = await getGated((strategy as any).shortProtocolId, bars);
+              if (effectiveShortProtocolId) {
+                shortGated = await getGated(effectiveShortProtocolId, bars);
               }
               const { side, composite: chosenComposite } = compareProtocolPair(
                 longGated, shortGated, (strategy.minComposite ?? 3),
@@ -995,7 +1015,7 @@ export class AutomationLoopService implements OnModuleInit {
                     tpPct: effectiveTpPct,
                     entryPrice: bars[bars.length - 1]?.close || 0,
                     mode: strategy.mode,
-                    protocolId: effectiveProtocolId || strategy.protocolId || '',
+                    protocolId: effectiveProtocolId,
                     decisions: [],  // result handled via returned decision below
                   });
                 }
@@ -1006,7 +1026,7 @@ export class AutomationLoopService implements OnModuleInit {
                 strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
                 decision: side !== 'HOLD' ? 'SCORED' : 'SKIP',
                 reason: side !== 'HOLD'
-                  ? `Gated: ${strategy.protocolId}` + (shortGated ? ` vs ${(strategy as any).shortProtocolId}` : '') + ` → ${side} (${chosenComposite})`
+                  ? `Gated: ${effectiveProtocolId}` + (shortGated ? ` vs ${effectiveShortProtocolId || ''}` : '') + ` → ${side} (${chosenComposite})`
                   : `Gated: both sides low → HOLD`,
                 composite: chosenComposite, signal: side,
               };
@@ -1047,7 +1067,7 @@ export class AutomationLoopService implements OnModuleInit {
                   tpPct: effectiveTpPct,
                   entryPrice: bars[bars.length - 1]?.close || 0,
                   mode: strategy.mode,
-                  protocolId: effectiveProtocolId || strategy.protocolId || '',
+                  protocolId: effectiveProtocolId,
                   decisions: [],
                 });
               }
@@ -1058,7 +1078,7 @@ export class AutomationLoopService implements OnModuleInit {
               strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
               decision: side !== 'HOLD' ? 'SCORED' : 'SKIP',
               reason: side !== 'HOLD'
-                ? `Gated: ${strategy.protocolId}` + (shortGated ? ` vs ${(strategy as any).shortProtocolId}` : '') + ` → ${side} (${chosenComposite})`
+                ? `Gated: ${effectiveProtocolId}` + (shortGated ? ` vs ${effectiveShortProtocolId || ''}` : '') + ` → ${side} (${chosenComposite})`
                 : `Gated: both sides low → HOLD`,
               composite: chosenComposite, signal: side,
             };
@@ -1092,7 +1112,7 @@ export class AutomationLoopService implements OnModuleInit {
       // When a position already exists, check if we can stack additional entries
       // if the position is in profit, SL is set, and maxPyramidTiers allows it.
       const scoringStrategy = this.scoringStrategies.find(
-        (s: any) => s.protocolId === strategy.protocolId
+        (s: any) => s.protocolId === effectiveProtocolId
       );
       const pyramidTiers = (scoringStrategy as any)?.maxPyramidTiers ?? 1;
       const isPositionInProfit = (pos as any).profit > 0;
@@ -1157,7 +1177,7 @@ export class AutomationLoopService implements OnModuleInit {
         tpPct: strategy.tpPct ?? 1.0,
         entryPrice: (pos as any).currentPrice ?? 0,
         mode: strategy.mode,
-        protocolId: strategy.protocolId || '',
+        protocolId: effectiveProtocolId,
         decisions: [],
       });
 
@@ -1192,8 +1212,8 @@ export class AutomationLoopService implements OnModuleInit {
         };
       }
 
-      // Compute position size from strategy config
-      let size = (strategy as any).baseSize || 0.01;
+      // Compute position size from ScoringStrategy config
+      let size = effectiveBaseSize;
       if ((strategy as any).useRaritySizing && evalResult.rarity) {
         size *= (evalResult.rarity.sizeMultiplier || 1);
       }
@@ -1202,9 +1222,9 @@ export class AutomationLoopService implements OnModuleInit {
       }
       size = Math.round(size * 10000) / 10000;
 
-      // Compute SL/TP prices (approximate — actual fill price unknown)
-      const slPct = (strategy as any).slPct || 1.0;
-      const tpPct = (strategy as any).tpPct || 1.0;
+      // Compute SL/TP prices from ScoringStrategy
+      const slPct = effectiveSlPct;
+      const tpPct = effectiveTpPct;
       const slPrice = evalResult.signal === 'BUY' ? pos.currentPrice * (1 - slPct / 100) : pos.currentPrice * (1 + slPct / 100);
       const tpPrice = evalResult.signal === 'BUY' ? pos.currentPrice * (1 + tpPct / 100) : pos.currentPrice * (1 - tpPct / 100);
 
@@ -1280,7 +1300,9 @@ export class AutomationLoopService implements OnModuleInit {
             composite: evalResult.composite ?? 0, signal: evalResult.signal,
           };
         }
-        if (!broker.placeOrder) {
+        // TS doesn't narrow after `if (!broker)` due to create() return type
+        const b = broker!;
+        if (!b.placeOrder) {
           return {
             timestamp: new Date().toISOString(),
             strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
@@ -1289,7 +1311,7 @@ export class AutomationLoopService implements OnModuleInit {
           };
         }
 
-        const result = await broker.placeOrder({
+        const result = await b.placeOrder!({
           symbol: strategy.symbol,
           side: evalResult.signal as 'BUY' | 'SELL',
           quantity: size,

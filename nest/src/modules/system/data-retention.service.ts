@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
+import { Prisma } from '@prisma/client';
 
 /** Table configuration for pruning — each table has its own date column and retention. */
 const TABLE_CONFIG: Record<string, { dateCol: string; defaultDays: number; envKey: string; label: string }> = {
-  directiveoutcome:     { dateCol: 'predictedAt',  defaultDays: 30,  envKey: 'DATA_RETENTION_DIRECTIVE_DAYS',  label: 'Directive Outcomes' },
+  directiveoutcome:     { dateCol: 'predictedAt',  defaultDays: 7,   envKey: 'DATA_RETENTION_DIRECTIVE_DAYS',  label: 'Directive Outcomes' },
   score_snapshot:       { dateCol: 'snappedAt',    defaultDays: 90,  envKey: 'DATA_RETENTION_SNAPSHOT_DAYS',   label: 'Score Snapshots' },
   marketbar:            { dateCol: 'timestamp',    defaultDays: 60,  envKey: 'DATA_RETENTION_BARS_DAYS',       label: 'Market Bars' },
   strategy_evaluation:  { dateCol: 'evaluatedAt',  defaultDays: 90,  envKey: 'DATA_RETENTION_EVAL_DAYS',       label: 'Strategy Evaluations' },
@@ -56,11 +57,11 @@ export class DataRetentionService {
     let totalDeleted = 0;
 
     try {
+      const cutoffStr = cutoff.toISOString().slice(0, 19).replace('T', ' ');
       // eslint-disable-next-line no-constant-condition
       while (true) {
         const result = await this.prisma.$executeRawUnsafe(
-          `DELETE FROM \`${table}\` WHERE \`${config.dateCol}\` < ? LIMIT ?`,
-          cutoff, batchSize,
+          `DELETE FROM \`${table}\` WHERE \`${config.dateCol}\` < '${cutoffStr}' LIMIT ${batchSize}`
         );
         if (result === 0) break;
         totalDeleted += result;

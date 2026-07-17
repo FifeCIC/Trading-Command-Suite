@@ -29,6 +29,7 @@ const DEFAULTS = {
   highContrastText: false,     // Boost text contrast for accessibility
   fontScale: 'normal',         // Font size scaling: 'small' | 'normal' | 'large' | 'x-large'
   focusIndicatorStyle: 'strong', // Focus ring: 'strong' | 'subtle' | 'none'
+  layoutSize: 'normal',         // Content width: 'compact' | 'normal' | 'wide' | 'full'
   colorBlindMode: false,         // WCAG 1.4.1 — adds shape/pattern indicators alongside color (#358)
   // Performance
   pollingInterval: 30,

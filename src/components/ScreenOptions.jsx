@@ -106,6 +106,21 @@ var GLOBAL_PREFERENCES = [
       { value: 'none', label: 'None', desc: 'No focus ring — not recommended. Use only if you rely on other feedback.' },
     ],
   },
+  {
+    id: 'layoutSize',
+    label: '📐 Layout Size',
+    description: 'Control how wide pages render. Compact is narrower for focused reading. Full uses the entire screen width.',
+    type: 'radio',
+    key: 'tcs:preferences',
+    field: 'layoutSize',
+    defaultValue: 'normal',
+    options: [
+      { value: 'compact', label: 'Compact', desc: 'Narrower max-width (~720px) — focused reading, less eye movement.' },
+      { value: 'normal', label: 'Normal', desc: 'Default max-width (~960px) — balanced for most screens.' },
+      { value: 'wide', label: 'Wide', desc: 'Wider max-width (~1200px) — fits more data columns on screen.' },
+      { value: 'full', label: 'Full Width', desc: 'No max-width constraint — uses entire browser window.' },
+    ],
+  },
 ];
 
 /** Registry of option definitions keyed by view ID */
@@ -228,6 +243,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   var colorBlindMode = prefs.colorBlindMode === true;
   var fontScale = prefs.fontScale || 'normal';
   var focusIndicatorStyle = prefs.focusIndicatorStyle || 'strong';
+  var layoutSize = prefs.layoutSize || 'normal';
 
   // Read view-specific values from localStorage
   var [values, setValues] = useState(function () {
@@ -299,6 +315,11 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   useEffect(function () {
     document.documentElement.setAttribute('data-focus-indicator-style', focusIndicatorStyle || 'strong');
   }, [focusIndicatorStyle]);
+
+  // Apply layout size preference to the document so CSS can respond
+  useEffect(function () {
+    document.documentElement.setAttribute('data-layout-size', layoutSize || 'normal');
+  }, [layoutSize]);
 
   // Apply color-blind mode preference to the document so CSS can respond
   useEffect(function () {

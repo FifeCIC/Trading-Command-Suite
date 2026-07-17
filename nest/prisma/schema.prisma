@@ -944,20 +944,22 @@ model TradingStrategy {
   id            String   @id @default(uuid()) @db.VarChar(36)
   name          String   @db.VarChar(200)
   description   String?  @db.Text
-  // ⬇ Deprecated (Phase D.2): prefer ScoringStrategy via scoringStrategyId FK
-  protocolId    String?  @db.VarChar(36)    // ← use ScoringStrategy.protocolId
-  shortProtocolId String? @db.VarChar(36)   // ← use ScoringStrategy.shortProtocolId
-  scoringStrategyId String? @db.VarChar(36) // FK → ScoringStrategy — primary source of truth
+  // ⬇ DEPRECATED (Phase D.2): All values now sourced from ScoringStrategy via scoringStrategyId FK.
+  //   These fields remain in the DB for backward compatibility but are NOT read by the automation loop.
+  //   Remove after full migration window (all TradingStrategies linked to ScoringStrategies).
+  protocolId    String?  @db.VarChar(36)
+  shortProtocolId String? @db.VarChar(36)
+  scoringStrategyId String? @db.VarChar(36) // FK → ScoringStrategy — REQUIRED for trading
   symbol        String   @db.VarChar(20)
   brokerId      String   @default("mt5") @db.VarChar(50)
-  timeframe     String   @db.VarChar(10)   @default("5m")
+  timeframe     String   @db.VarChar(10)   @default("5m")  // ⬇ DEPRECATED: use Protocol.recommendedTimeframe via ScoringStrategy FK
   minComposite  Float    @default(65)
   minRarityBand String?  @db.VarChar(20)
   requireDirection String? @db.VarChar(10)
-  // ⬇ Deprecated: prefer ScoringStrategy values via FK
-  slPct         Float?   @default(1.0)     // ← use ScoringStrategy.slPct
-  tpPct         Float?   @default(1.0)     // ← use ScoringStrategy.tpPct
-  baseSize      Float?   @default(0.01)    // ← use ScoringStrategy.baseSize
+  // ⬇ DEPRECATED: prefer ScoringStrategy values via FK
+  slPct         Float?   @default(1.0)
+  tpPct         Float?   @default(1.0)
+  baseSize      Float?   @default(0.01)
   useRaritySizing Boolean @default(true)
   maxSize       Float?
   maxPositions  Int      @default(1)

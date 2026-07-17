@@ -16,6 +16,7 @@
 // ── Trading ──
 import HomeDashboardPage from '../pages/HomeDashboardPage.jsx';
 import TradingStrategiesPage from '../pages/TradingStrategiesPage.jsx';
+import StrategyDashboardPage from '../pages/StrategyDashboardPage.jsx';
 import StrategyComparisonPage from '../pages/StrategyComparisonPage.jsx';
 import TradeJournalPage from '../pages/TradeJournalPage.jsx';
 import TradingPlansPage from '../pages/TradingPlansPage.jsx';
@@ -152,9 +153,11 @@ import UserWatchlistsPage from '../pages/UserWatchlistsPage.jsx';
 // ── Other ──
 import ABTestingPage from '../pages/ABTestingPage.jsx';
 import AICostsPage from '../pages/AICostsPage.jsx';
+import AILogViewerPage from '../pages/AILogViewerPage.jsx';
 import AlgorithmLabPage from '../pages/AlgorithmLabPage.jsx';
 import AlertCenterPage from '../pages/AlertCenterPage.jsx';
 import DailyBriefingPage from '../pages/DailyBriefingPage.jsx';
+import DailySummaryReportPage from '../pages/DailySummaryReportPage.jsx';
 import RiskControlsPage from '../pages/RiskControlsPage.jsx';
 import ThemePage from '../pages/ThemePage.jsx';
 import ScoringOverviewPage from '../pages/ScoringOverviewPage.jsx';
@@ -294,8 +297,11 @@ export const VIEW_COMPONENTS = {
   'triple-screen': TripleScreenPage,
   'hot-stock-picks': HotStockPicksPage,
   'daily-briefing': DailyBriefingPage,
+  'decision-trail': DecisionTrailPage,
   'ab-testing': ABTestingPage,
   'ai-costs': AICostsPage,
+  'ai-logs': AILogViewerPage,
+  'daily-summary-report': DailySummaryReportPage,
   'metastack-display': MetaStackDisplayPage,
   'portfolio-lab': PortfolioLabPage,
   'scoring-debug-lab': ScoringDebugLab,

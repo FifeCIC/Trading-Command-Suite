@@ -228,10 +228,16 @@ export const CURRENT_SLICE = [
   'Tap Target Audit (#362) — WCAG 2.5.5 audit via Chrome DevTools across 3 pages. Global min-height:44px on buttons/inputs, 24×24px checkboxes. 15+ CSS files updated. Violations reduced from 386 to 2 (breadcrumbs, WCAG "Inline" exempt).',
   'Weight Strategy Selection (#392) — ScoringStrategy.weightStrategy field (group-weighted | maxscore-weighted). Documented both systems in directive-groups.ts. scoreWithGating() accepts weightStrategy param, composite logic handles both modes. Default: group-weighted.',
   'Dashboard Recent Trades (#324) — Dashboard queries /api/providers/mt5/history?limit=5 to render last 5 completed trades below open positions table. Each row shows symbol, type (BUY/SELL with green/red), volume, price, P&L, and timestamp. Only visible when MT5 bridge is connected. Files: DashboardPage.jsx, HomeDashboard.css.',
+  // ── Sprint 2026-07-17 — Architecture, Decision Trail, A/B Testing, AI ──
+  'Architecture Framework API Wiring (#366) — ArchitectureFrameworkPage now queries GET /api/architecture/index (DB-backed). Status bar chip shows "Arch API: N sections" (green online) or "static" (grey fallback). 30s auto-refresh. All static imports preserved as rendering fallback. Files: ArchitectureFrameworkPage.jsx.',
+  'Decision Trail Browser (#351) — New page at /automation/decision-trail. 6-stage pipeline completeness bar (Scoring→Comparison→Decision→Execution→SL Tracking→Close) color-coded by percentage. Filterable trail list by symbol with expandable timeline, connected green/grey stage nodes, and incompleteness warnings. Depends on #350 for live data. Queries /api/trails and /api/trails/incomplete. Files: DecisionTrailPage.jsx, decision-trail.css.',
+  'A/B Protocol Testing (#373) — New page at /lab/ab-testing. Runs two protocols against same watchlist via POST /api/scoring/gated/batch. Signal Comparison table with Match/Diverge badges, agreement rate card, direction bias bar (both-bullish/A-only/B-only/both-bearish), and Directive Analysis divergence cards. 30s auto-refresh. Files: ABTestingPage.jsx, ab-testing.css.',
+  'AI Cost Monitoring (#371) — New page at /lab/ai-costs. Tracks DeepSeek usage via /api/ai/usage and /api/ai/usage/breakdown (pending backend). Four summary cards (total cost, avg/call, cost vs P&L, projected monthly). Cost-by-feature breakdown bars, budget cap fill gauge, per-feature toggles. 60s auto-refresh. Files: AICostsPage.jsx, ai-costs.css.',
+  'AI Log Viewer (#375) — New page at /status/ai-logs. Queries /api/ai/logs with provider (deepseek/gemini) and feature filters (pending backend). Expandable log rows with full prompt/response in styled code blocks. Cost summary cards, provider badges, token counts. 30s auto-refresh. Files: AILogViewerPage.jsx, ai-log-viewer.css.',
 ]
 
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-17'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-17 (handoff batch #2)'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {

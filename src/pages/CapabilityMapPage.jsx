@@ -159,6 +159,7 @@ const KNOWN_FEATURES = {
   // 2026-07-17 — A/B Testing, AI Costs, Dashboard
   'A/B Protocol Testing': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
   'AI Cost Monitoring': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+  'AI Log Viewer': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
   'Dashboard Recent Trades': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
 };
 

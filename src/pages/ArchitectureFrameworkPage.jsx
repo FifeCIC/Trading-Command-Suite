@@ -322,6 +322,17 @@ export default function ArchitectureFrameworkPage() {
     refetchOnWindowFocus: true,
   })
 
+  // ── Architecture DB API ──
+  const archApiQuery = useQuery({
+    queryKey: ['architecture', 'db-api'],
+    queryFn: () => apiGet('/api/architecture/index'),
+    refetchInterval: autoRefreshEnabled ? LIVE_REFRESH_INTERVAL_MS : false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+  })
+  const archApiData = archApiQuery.data
+  const archApiOnline = Array.isArray(archApiData) && archApiData.length > 0
+
   const providerHealthData = providerHealthQuery.data ?? EMPTY_OBJ
   const importRunsData = importRunsQuery.data ?? EMPTY_OBJ
   const systemHealthData = systemHealthQuery.data ?? EMPTY_OBJ
@@ -495,6 +506,13 @@ export default function ArchitectureFrameworkPage() {
             <StatusChip
               label={alertsCountQuery.isLoading ? '…' : `${alertsCountData.active ?? '?'}`}
               tone={alertsCountData.critical > 0 ? 'error' : alertsCountData.active > 0 ? 'warn' : 'ok'}
+            />
+          </span>
+          <span className="architecture-status-item">
+            Arch API:{' '}
+            <StatusChip
+              label={archApiQuery.isLoading ? '…' : archApiOnline ? `${archApiData.length} sections` : 'static'}
+              tone={archApiOnline ? 'ok' : 'neutral'}
             />
           </span>
           <span className="architecture-status-item">

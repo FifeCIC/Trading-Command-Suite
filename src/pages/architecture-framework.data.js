@@ -171,6 +171,10 @@ export const CURRENT_SLICE = [
   'Data Retention Service — DataRetentionService with API endpoint POST /api/system/data-retention/prune-directives?days=30. Batch-deletes directiveoutcome rows older than N days in 5K-row chunks. GET /api/system/data-retention/stats returns table row counts and date ranges. Registered in SystemModule. ✅',
   'Protocol-Gating Completion — evaluateStrategy both scoreMap and no-scoreMap fallback paths now use protocolGating.scoreWithGating() with dual-protocol comparison. Old gateScore() (with SELL bias) bypassed. HOLD signals correctly skip execution. Single-protocol strategies use protocol signal; dual-protocol compares LONG vs SHORT. ✅',
   'Scoring Debug Lab — new page at /lab/scoring-debug-lab. Head-to-head LONG vs SHORT protocol comparison with raw totals, directive breakdowns, risk gate info, and winner badge. Registered in nav-tree + view-routes + App.jsx. ✅',
+  'A/B Protocol Testing (#373) — New page at /lab/ab-testing. Runs two protocols against the same watchlist symbols via POST /api/scoring/gated/batch. Computes agreement rate, direction bias (both-bullish, A-only, B-only, both-bearish), and per-symbol score deltas. Three views: Signal Comparison (table), Directive Analysis (divergence cards), Outcome Tracking (placeholder). 30s auto-refresh. Files: ABTestingPage.jsx, ab-testing.css. ✅',
+  'AI Cost Monitoring (#371) — New page at /lab/ai-costs. Tracks DeepSeek usage via /api/ai/usage and /api/ai/usage/breakdown (pending backend). Four summary cards (total cost, avg/call, cost vs P&L, projected monthly). Cost-by-feature breakdown with colored bars. Budget cap with visual fill gauge. Per-feature toggle switches. Today/Week/Month period selector. 60s auto-refresh. Falls back gracefully to zero/defaults. Files: AICostsPage.jsx, ai-costs.css. ✅',
+  'AI Log Viewer (#375) — New page at /status/ai-logs. Queries /api/ai/logs with provider (deepseek/gemini) and feature filters. Expandable log rows with full prompt/response in styled code blocks. Cost summary cards: total requests, tokens, cost, avg latency. Log rows show provider badge, feature, model, tokens, estimated cost, status, timestamp. 30s auto-refresh. Falls back gracefully. Files: AILogViewerPage.jsx, ai-log-viewer.css. ✅',
+  'Dashboard Recent Trades (#324) — Dashboard queries /api/providers/mt5/history?limit=5 to render last 5 completed trades below open positions table. Each row shows symbol, type (BUY/SELL with green/red), volume, price, P&L, and timestamp. Only visible when MT5 bridge is connected. Files: DashboardPage.jsx, HomeDashboard.css. ✅',
 ]
 
 export const DECISION_WORKFLOW = [
@@ -439,9 +443,49 @@ export const CONTRACT_CARDS = [
   },
 ]
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-04'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-17'
 
 export const CURRENT_ROUTE_CONTRACTS = [
+  {
+    route: 'POST /api/scoring/gated/batch',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'ScoringController',
+    contract: 'Batch scores one or more symbols against selected protocols. Used by A/B Protocol Testing page. Body: { symbols: string[], protocolIds: string[], shortProtocolId?: string }. Returns per-symbol scores, signals, deltas per protocol pair.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/ai/usage',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'AiController (planned)',
+    contract: 'Returns aggregated DeepSeek API usage and cost data. Used by AI Cost Monitoring page. Response: { totalCost, avgCostPerCall, totalCalls, costVsPnl, projectedMonthly }. Pending backend deployment.',
+    status: 'planned',
+  },
+  {
+    route: 'GET /api/ai/usage/breakdown',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'AiController (planned)',
+    contract: 'Returns cost breakdown by feature area. Used by AI Cost Monitoring page. Response: { features: [{ name, cost, calls, percentage }] }. Pending backend deployment.',
+    status: 'planned',
+  },
+  {
+    route: 'GET /api/ai/logs',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'AiController (planned)',
+    contract: 'Returns AI request/response logs with pagination. Query params: provider (deepseek|gemini), feature, limit, offset. Used by AI Log Viewer page. Response: { logs: [{ id, provider, feature, model, prompt, response, tokens, cost, latency, status, timestamp }], totals: { requests, tokens, cost } }. Pending backend deployment.',
+    status: 'planned',
+  },
+  {
+    route: 'GET /api/providers/mt5/history',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'Mt5Controller',
+    contract: 'Returns recent MT5 trade history. Used by Dashboard Recent Trades. Query param: limit (default 5). Returns ordered array of completed trades with symbol, type, volume, price, profit, time.',
+    status: 'active',
+  },
   {
     route: 'POST /earnings/import',
     method: 'POST',
@@ -1434,6 +1478,7 @@ export const KNOWN_GAPS = [
 ]
 
 export const REVISION_LOG = [
+  '2026-07-17: A/B Protocol Testing (#373) + AI Cost Monitoring (#371) + AI Log Viewer (#375) + Dashboard Recent Trades (#324) — 4 new pages added. A/B Testing: dual-protocol comparison with agreement rate, direction bias, divergence cards. AI Costs: DeepSeek usage dashboard with budget controls, per-feature breakdown, cost-vs-P&L ratio. Dashboard: recent trades table sourced from MT5 history. All registered in nav-tree + view-routes + App.jsx.',
   '2026-07-16: META.Stack Architecture Refactor (Epic #398) — 2-phase sprint completed. Phase A (Schema Foundation): 4 new DB models (Protocol, ProtocolDirectiveGroup, ProtocolDirectiveEntry, SymbolProtocolAssignment) seeded from PROTOCOL_REGISTRY — 37 protocols, 111 directive groups, 542 directive entries. FK chain established: Watchlist→ScoringStrategy (watchlistId), ScoringStrategy→TradingStrategy (scoringStrategyId). ScoringStrategyProtocol join table for multi-protocol support (19 links). DB-first readWatchlist() with JSON fallback (13 watchlists seeded). Phase B (Pipeline Refactor): Removed trade dispatch from step 3b — scoring strategies only produce scores via gatedScoreCache; step 4 TradingStrategy evaluation consumes cached scores through shared dispatchTrade(). Only active protocol directives run (#389). EURUSD fetch conditional on protocol needs (#394). Dual-protocol comparison extracted to compareProtocolPair() (#393). 7 issues closed. Zero disruption to running trades.',
   '2026-07-16: Directive memoization (#408) — directivesService.runAll() now caches results per (symbol, bar-signature) for the duration of a tick. Three callers (rankAll, protocol-gating scoreWithGating, evaluateStrategy) previously ran 100 directives redundantly ~7,100 times per tick. Now computed once per symbol, reused across callers. Tick time dropped from 1,500–3,600ms to ~417ms with 11 strategies. clearTickCache() called at tick start. Also: expanded to 11 active auto-trading META.Stacks (EURUSD, GBPUSD, USDCAD, XAUUSD, USDJPY, US500, AUDUSD, NZDUSD, USDCHF, UK100, US30). BarRefreshService now inserts synthetic current bars from live quotes when MT5 historical candles are stale. AutomationEvent audit log table deployed.',
   '2026-07-15: Architecture Framework update — decision_log table, data retention service, dual-protocol completion, contract register entries added. KNOWN_GAPS expanded with data growth/evaporation findings (11.2M directiveoutcome, insider-activity noise, bridge logging gap, empty tables).',

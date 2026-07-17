@@ -1,0 +1,255 @@
+/* Decision Trail Browser */
+
+.dt-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.dt-header { margin-bottom: 20px; }
+.dt-header h1 { font-size: 1.5rem; font-weight: 700; color: #f1f5f9; margin: 0 0 4px; }
+.dt-subtitle { color: #64748b; font-size: 0.82rem; margin: 0; }
+
+/* Completeness bar */
+.dt-completeness-bar {
+  background: #1a1d2e;
+  border: 1px solid #2d3040;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.dt-completeness-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.dt-completeness-track {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.dt-completeness-node {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  border-radius: 6px;
+  min-width: 50px;
+  transition: background 0.3s;
+}
+
+.dt-completeness-icon { font-size: 0.75rem; }
+.dt-completeness-pct {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.dt-completeness-summary {
+  font-size: 0.68rem;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+/* Filters */
+.dt-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 16px;
+  background: #1a1d2e;
+  border: 1px solid #2d3040;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.dt-filter-group { display: flex; flex-direction: column; gap: 4px; }
+.dt-filter-group label {
+  font-size: 0.65rem; font-weight: 600; color: #64748b;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+
+.dt-input {
+  padding: 6px 10px; border-radius: 6px;
+  border: 1px solid #2d3040; background: #111318;
+  color: #e2e8f0; font-size: 0.82rem; width: 160px;
+}
+
+.dt-refresh-btn {
+  padding: 6px 14px; border-radius: 6px;
+  border: 1px solid #2d3040; background: #111318;
+  color: #94a3b8; font-size: 0.78rem; cursor: pointer;
+  transition: all 0.15s; margin-left: auto;
+}
+.dt-refresh-btn:hover { color: #e2e8f0; border-color: var(--accent); }
+
+/* Empty */
+.dt-empty { text-align: center; padding: 40px 20px; }
+.dt-empty p { color: #64748b; font-size: 0.9rem; margin: 0; }
+.dt-empty-hint { font-size: 0.75rem !important; margin-top: 6px !important; }
+
+/* Trail list */
+.dt-list { display: flex; flex-direction: column; gap: 0.4rem; }
+
+.dt-trail-card {
+  background: #1a1d2e;
+  border: 1px solid #2d3040;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.dt-trail-card:hover { border-color: #475569; }
+.dt-trail-card.expanded { border-color: var(--accent); }
+.dt-trail-card.complete { border-left: 3px solid #22c55e; }
+.dt-trail-card.incomplete { border-left: 3px solid #f59e0b; }
+
+.dt-trail-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.dt-trail-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 160px;
+}
+
+.dt-trail-symbol { font-weight: 700; color: #e2e8f0; font-size: 0.88rem; }
+.dt-trail-direction {
+  padding: 1px 6px; border-radius: 3px;
+  font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+}
+.dt-trail-direction.buy { background: rgba(34,197,94,0.1); color: #22c55e; }
+.dt-trail-direction.sell { background: rgba(239,68,68,0.1); color: #ef4444; }
+.dt-trail-pnl { font-weight: 700; font-size: 0.78rem; }
+
+/* Mini stages */
+.dt-mini-stages {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+}
+
+.dt-mini-stage {
+  width: 22px; height: 22px;
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem;
+  transition: all 0.15s;
+}
+
+.dt-mini-stage.present { background: rgba(34,197,94,0.1); color: #22c55e; }
+.dt-mini-stage.missing { background: rgba(100,116,139,0.05); color: #475569; }
+
+.dt-trail-info {
+  display: flex; flex-direction: column; align-items: flex-end;
+  gap: 1px; flex-shrink: 0;
+  font-size: 0.68rem; color: #64748b;
+}
+.dt-trail-time { font-size: 0.62rem; }
+
+.dt-trail-chevron { color: #64748b; font-size: 0.7rem; width: 14px; text-align: center; }
+
+/* Timeline */
+.dt-timeline {
+  padding: 0 14px 14px;
+  border-top: 1px solid #2d3040;
+}
+
+.dt-timeline-track {
+  display: flex;
+  align-items: flex-start;
+  padding: 14px 0 0;
+  gap: 0;
+}
+
+.dt-timeline-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+}
+
+.dt-timeline-dot {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.55rem; font-weight: 700;
+  z-index: 1;
+  margin-bottom: 4px;
+}
+.dt-timeline-dot.present { background: #22c55e; color: #fff; }
+.dt-timeline-dot.missing { background: #334155; color: #64748b; }
+
+.dt-timeline-line {
+  position: absolute;
+  top: 10px;
+  left: calc(50% + 12px);
+  width: calc(100% - 24px);
+  height: 2px;
+}
+.dt-timeline-line.present { background: #22c55e; }
+.dt-timeline-line.missing { background: #2d3040; }
+
+.dt-timeline-label { font-size: 0.75rem; margin-top: 4px; }
+.dt-timeline-text {
+  font-size: 0.6rem; font-weight: 700; color: #94a3b8;
+  text-transform: uppercase; letter-spacing: 0.03em; margin-top: 2px;
+}
+.dt-timeline-desc { font-size: 0.55rem; color: #64748b; text-align: center; margin-top: 1px; }
+
+/* Trail data */
+.dt-trail-data {
+  margin-top: 12px;
+  background: #111318;
+  border: 1px solid #2d3040;
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.dt-data-row {
+  display: flex; flex-direction: column; gap: 1px;
+}
+.dt-data-row span { font-size: 0.6rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.03em; }
+.dt-data-row strong { font-size: 0.82rem; color: #e2e8f0; }
+.dt-reason { color: #f59e0b !important; font-size: 0.75rem !important; font-weight: 500 !important; }
+
+.dt-incomplete-banner {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.2);
+  color: #f59e0b;
+  font-size: 0.72rem;
+}
+
+/* Footer */
+.dt-footer {
+  text-align: center; font-size: 0.7rem; color: #475569; margin-top: 12px;
+}
+.dt-refresh-link {
+  background: none; border: none;
+  color: var(--accent); cursor: pointer; font-size: 0.7rem; text-decoration: underline;
+}
