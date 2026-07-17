@@ -57,6 +57,7 @@ model Directive {
   weight     Float
   config     Json
   active     Boolean   @default(true)
+  nature     String?   @db.VarChar(30)
   parentId   String?   @db.VarChar(36)
   isDefault  Boolean   @default(true)
   forkReason String?   @db.VarChar(500)
@@ -435,6 +436,18 @@ model MarketSnapshot {
 
   @@index([symbol])
   @@index([starred, createdAt])
+}
+
+model AppSetting {
+  id    String @id @db.VarChar(100)
+  value Json
+}
+
+model FeatureFlag {
+  id          String   @id @db.VarChar(100)
+  enabled     Boolean  @default(false)
+  description String?  @db.VarChar(500)
+  updatedAt   DateTime @updatedAt
 }
 
 // ── Chart Snapshot ────────────────────────────────────────
@@ -869,6 +882,7 @@ model ScoreSnapshot {
   @@index([symbol, snappedAt])
 }
 
+
 model UserStar {
   id        String   @id @default(uuid()) @db.VarChar(36)
   userId    String   @default("default") @db.VarChar(36)
@@ -1125,6 +1139,18 @@ model AutomationConfig {
   maxLossPerTrade       Float    @default(50.0)
 
   updatedAt             DateTime @updatedAt
+}
+
+// ─── Automation Safety Rules ──────────────────────────────
+// Global safety rules — hard limits no strategy can bypass.
+
+model AutomationRule {
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(200)
+  description String?  @db.Text
+  config      Json
+  enabled     Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
 }
 
 // ─── Bridge Event Logging (#378) ──────────────────────────
@@ -1536,4 +1562,24 @@ model SymbolProtocolAssignment {
   @@unique([symbol, protocolId])
   @@index([symbol])
   @@map("symbol_protocol_assignment")
+}
+
+// ── Pending Actions (#352) ────────────────────────────────
+// Persists semi-auto queued trades across NestJS restarts.
+
+model PendingAction {
+  id          String   @id @db.VarChar(36)
+  strategyId  String   @db.VarChar(36)
+  symbol      String   @db.VarChar(20)
+  brokerId    String   @db.VarChar(50)
+  side        String   @db.VarChar(10)
+  quantity    Float
+  composite   Float
+  createdAt   DateTime
+  expiresAt   DateTime
+  status      String   @default("pending") @db.VarChar(20)
+
+  @@map("pending_action")
+  @@index([strategyId])
+  @@index([status])
 }

@@ -16,8 +16,19 @@ export default function AddSymbolPage() {
     if (q.length < 1) { setResults([]); return; }
     setSearching(true);
     try {
-      const data = await apiGet(`/api/symbols?search=${encodeURIComponent(q)}`);
-      const list = Array.isArray(data?.symbols) ? data.symbols : [];
+      const data = await apiGet(`/api/symbols?search=${encodeURIComponent(q)}&limit=10`);
+      const list = (Array.isArray(data?.symbols) ? data.symbols : [])
+        .map(s => ({ ...s, inDb: true }))
+        // Sort: exact match first → starts with → contains
+        .sort((a, b) => {
+          const aExact = a.ticker.toUpperCase() === q.toUpperCase() ? 0 : 1;
+          const bExact = b.ticker.toUpperCase() === q.toUpperCase() ? 0 : 1;
+          if (aExact !== bExact) return aExact - bExact;
+          const aStarts = a.ticker.toUpperCase().startsWith(q.toUpperCase()) ? 0 : 1;
+          const bStarts = b.ticker.toUpperCase().startsWith(q.toUpperCase()) ? 0 : 1;
+          return aStarts - bStarts;
+        })
+        .slice(0, 5);
       setResults(list);
     } catch {
       setResults([]);
@@ -87,37 +98,46 @@ export default function AddSymbolPage() {
       </header>
 
       <section className="tp-card">
-        <div className="tp-control" style={{ position: 'relative' }}>
-          <label htmlFor="symbol-search">Search by ticker or name</label>
-          <input
-            id="symbol-search"
-            type="text"
-            value={query}
-            onChange={handleSearchChange}
-            placeholder="e.g. AAPL, NVDA, EURUSD..."
-            autoFocus
-            style={{ width: '100%' }}
-          />
-          {searching && <span style={{ fontSize: '0.78rem', color: 'var(--ink-soft)' }}>Searching...</span>}
+        <div className="tp-control as-search-row">
+          <div className="as-search-input-wrap">
+            <label htmlFor="symbol-search">Search by ticker or name</label>
+            <input
+              id="symbol-search"
+              type="text"
+              value={query}
+              onChange={handleSearchChange}
+              placeholder="e.g. AAPL, NVDA, EURUSD..."
+              autoFocus
+            />
+            {searching && <span className="as-searching">Searching...</span>}
+          </div>
 
+          {/* Results panel — appears to the right, max 5 items */}
           {results.length > 0 && !selected && (
-            <ul className="as-autocomplete">
-              {results.map((sym) => (
-                <li key={sym.id}>
-                  <button type="button" onClick={() => selectSymbol(sym)}>
-                    <strong>{sym.ticker}</strong>
-                    <span>{sym.name}</span>
-                    <small>{sym.exchange} · {sym.type}</small>
-                  </button>
-                </li>
+            <div className="as-results-panel">
+              <div className="as-results-header">Top matches</div>
+              {results.slice(0, 5).map((sym) => (
+                <button
+                  key={sym.id}
+                  type="button"
+                  className={`as-result-item${query.length >= 4 ? ' as-result-item--detail' : ''}`}
+                  onClick={() => selectSymbol(sym)}
+                >
+                  <span className="as-result-ticker">
+                    {sym.ticker}
+                    {sym.inDb && <span className="as-in-db" title="Already in database">✓ DB</span>}
+                  </span>
+                  {query.length >= 4 && (
+                    <span className="as-result-name">{sym.name}</span>
+                  )}
+                  <span className="as-result-meta">{sym.exchange || '—'} · {sym.type || '—'}</span>
+                </button>
               ))}
-            </ul>
+            </div>
           )}
 
           {query.length >= 1 && results.length === 0 && !searching && !selected && (
-            <p style={{ color: 'var(--ink-soft)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
-              No symbols found for "{query}". You can add it manually below.
-            </p>
+            <p className="as-no-results">No symbols found for "{query}".</p>
           )}
         </div>
       </section>

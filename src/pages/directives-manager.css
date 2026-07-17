@@ -74,7 +74,7 @@
 .directives-table-wrap {
   border: 1px solid var(--line);
   border-radius: 10px;
-  overflow: hidden;
+  overflow-x: auto;
   background: var(--panel);
 }
 
@@ -85,21 +85,22 @@
 
 .directives-table thead th {
   text-align: left;
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--ink-soft);
   border-bottom: 1px solid var(--line);
-  padding: 0.55rem 0.75rem;
+  padding: 0.45rem 0.5rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .directives-table td {
   border-bottom: 1px solid var(--line);
-  padding: 0.5rem 0.75rem;
+  padding: 0.4rem 0.5rem;
   vertical-align: top;
   color: var(--ink);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 
 .directive-row {

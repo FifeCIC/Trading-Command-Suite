@@ -60,6 +60,8 @@ import { SpeedMomentumDirective } from './implementations/speed-momentum.directi
 import { MultiTimeframeTrendDirective } from './implementations/multi-timeframe-trend.directive';
 import { MicroSrLevelsDirective } from './implementations/micro-sr-levels.directive';
 import { ConfluenceReversalComboDirective } from './implementations/confluence-reversal.directive';
+import { ZigZagSwingDetectorDirective } from './implementations/zigzag-swing-detector.directive';
+import { FibonacciLevelsDirective } from './implementations/fibonacci-levels.directive';
 import { NewsSentimentPositiveDirective } from './implementations/news-sentiment.directive';
 import { EarningsProximityDirective } from './implementations/earnings-proximity.directive';
 import { VixRegimeDirective } from './implementations/vix-regime.directive';
@@ -293,6 +295,9 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     // Implemented — Composite
     PriceActionDirective,
     ConfluenceReversalComboDirective,
+    // Implemented — ZigZag (#284)
+    ZigZagSwingDetectorDirective,
+    FibonacciLevelsDirective,
     // Implemented — Risk
     SupportResistanceLevelsDirective,
     OverheadSupplyPressureDirective,
@@ -442,6 +447,8 @@ export class DirectivesModule implements OnModuleInit {
     // Implemented — Composite
     private readonly priceAction: PriceActionDirective,
     private readonly confluence: ConfluenceReversalComboDirective,
+    private readonly zigzag: ZigZagSwingDetectorDirective,
+    private readonly fibLevels: FibonacciLevelsDirective,
     // Implemented — Risk
     private readonly supportResist: SupportResistanceLevelsDirective,
     private readonly overheadSupply: OverheadSupplyPressureDirective,
@@ -485,7 +492,7 @@ export class DirectivesModule implements OnModuleInit {
     private readonly rolloverRisk: RolloverRiskDirective,
   ) {}
 
-  onModuleInit() {
+  async onModuleInit() {
     // Implemented
     this.directivesService.register(this.rsi);
     this.directivesService.register(this.macd);
@@ -575,6 +582,8 @@ export class DirectivesModule implements OnModuleInit {
     // Implemented — Composite
     this.directivesService.register(this.priceAction);
     this.directivesService.register(this.confluence);
+    this.directivesService.register(this.zigzag);
+    this.directivesService.register(this.fibLevels);
     // Implemented — Risk
     this.directivesService.register(this.supportResist);
     this.directivesService.register(this.overheadSupply);
@@ -618,5 +627,8 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.insiderActivity);
     this.directivesService.register(this.dilutionImpact);
     this.directivesService.register(this.rolloverRisk);
+
+    // ── Load DB active-status cache for runtime stubbing (#288) ──
+    await this.directivesService.refreshActiveStatuses();
   }
 }

@@ -90,7 +90,7 @@ export default function MultiStrategyComparisonPage() {
 
   const strategiesQuery = useQuery({
     queryKey: ['strategies-list'],
-    queryFn: () => apiGet('/api/strategies'),
+    queryFn: () => apiGet('/api/trading/strategies'),
     staleTime: 120_000,
   });
 

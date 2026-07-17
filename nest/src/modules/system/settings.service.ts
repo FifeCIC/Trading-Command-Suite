@@ -1,67 +1,76 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../../database/prisma.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
 export interface AppSettings {
-  earnings: {
-    importHorizonMonths: number;
-    autoRefreshDays: number;
-  };
-  correlation: {
-    refreshMinutes: number;
-    warningThreshold: number;
-  };
-  seasonality: {
-    weightMultiplier: number;
-  };
-  analyst: {
-    refreshHours: number;
-  };
-  data: {
-    stalenessHours: number;
-  };
+  earnings: { importHorizonMonths: number; autoRefreshDays: number };
+  correlation: { refreshMinutes: number; warningThreshold: number };
+  seasonality: { weightMultiplier: number };
+  analyst: { refreshHours: number };
+  data: { stalenessHours: number };
 }
 
 const DEFAULTS: AppSettings = {
   earnings: { importHorizonMonths: 3, autoRefreshDays: 7 },
   correlation: { refreshMinutes: 360, warningThreshold: 0.7 },
   seasonality: { weightMultiplier: 1.0 },
-  analyst: { refreshHours: 24, },
+  analyst: { refreshHours: 24 },
   data: { stalenessHours: 24 },
 };
+
+const SETTING_KEY = 'app';
 
 @Injectable()
 export class SettingsService {
   private readonly logger = new Logger(SettingsService.name);
-  private readonly filePath: string;
+  private readonly filePath = path.join(process.cwd(), 'app-settings.json');
 
-  constructor() {
-    this.filePath = path.join(process.cwd(), 'app-settings.json');
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
-  get(): AppSettings {
+  async get(): Promise<AppSettings> {
+    try {
+      if (this.prisma.isAvailable) {
+        const row = await this.prisma.appSetting.findUnique({ where: { id: SETTING_KEY } });
+        if (row) return { ...DEFAULTS, ...(row.value as any) };
+      }
+    } catch (err) {
+      this.logger.warn(`DB settings read failed: ${(err as Error).message}`);
+    }
+    // Fallback: read from legacy JSON file, then migrate to DB
     try {
       if (fs.existsSync(this.filePath)) {
         const raw = fs.readFileSync(this.filePath, 'utf-8');
-        return { ...DEFAULTS, ...JSON.parse(raw) };
+        const data = { ...DEFAULTS, ...JSON.parse(raw) };
+        await this.saveToDb(data).catch(() => {});
+        return data;
       }
-    } catch (err) {
-      this.logger.warn(`Failed to read settings, using defaults: ${(err as Error).message}`);
-    }
+    } catch {}
     return { ...DEFAULTS };
   }
 
-  update(partial: Partial<AppSettings>): AppSettings {
-    const current = this.get();
+  async update(partial: Partial<AppSettings>): Promise<AppSettings> {
+    const current = await this.get();
     const merged = this.deepMerge(current, partial);
-    fs.writeFileSync(this.filePath, JSON.stringify(merged, null, 2));
+    await this.saveToDb(merged);
+    try { fs.writeFileSync(this.filePath, JSON.stringify(merged, null, 2)); } catch {}
     this.logger.log('Settings updated');
     return merged;
   }
 
-  reset(): AppSettings {
-    if (fs.existsSync(this.filePath)) fs.unlinkSync(this.filePath);
+  async reset(): Promise<AppSettings> {
+    try { if (this.prisma.isAvailable) await this.prisma.appSetting.delete({ where: { id: SETTING_KEY } }).catch(() => {}); } catch {}
+    try { if (fs.existsSync(this.filePath)) fs.unlinkSync(this.filePath); } catch {}
     return { ...DEFAULTS };
+  }
+
+  private async saveToDb(data: AppSettings): Promise<void> {
+    if (!this.prisma.isAvailable) return;
+    await this.prisma.appSetting.upsert({
+      where: { id: SETTING_KEY },
+      update: { value: data as any },
+      create: { id: SETTING_KEY, value: data as any },
+    });
   }
 
   private deepMerge<T extends Record<string, any>>(target: T, source: Partial<T>): T {

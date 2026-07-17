@@ -1,6 +1,7 @@
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
 const STORAGE_KEY = 'tcs:preferences';
+const API = '/api/preferences';
 
 const DEFAULTS = {
   defaultSignalSymbols: '',
@@ -62,6 +63,15 @@ function save(prefs) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); } catch { /* noop */ }
 }
 
+/** Push a single key to server (fire-and-forget) */
+function pushKey(key, value) {
+  fetch(API, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, value }),
+  }).catch(() => {});
+}
+
 let listeners = [];
 function subscribe(cb) {
   listeners.push(cb);
@@ -82,20 +92,35 @@ function getSnapshot() {
 export function usePreferences() {
   const prefs = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
+  // Hydrate from server on mount
+  useEffect(() => {
+    fetch(API).then(r => r.json()).then(remote => {
+      if (remote && typeof remote === 'object' && Object.keys(remote).length) {
+        const merged = { ...DEFAULTS, ...load(), ...remote };
+        save(merged);
+        notify();
+      }
+    }).catch(() => {});
+  }, []);
+
   const set = useCallback((key, value) => {
     const next = { ...load(), [key]: value };
     save(next);
+    pushKey(key, value);
     notify();
   }, []);
 
   const setMany = useCallback((updates) => {
     const next = { ...load(), ...updates };
     save(next);
+    for (const [k, v] of Object.entries(updates)) pushKey(k, v);
     notify();
   }, []);
 
   const reset = useCallback(() => {
     save({ ...DEFAULTS });
+    // Push all defaults to server
+    for (const [k, v] of Object.entries(DEFAULTS)) pushKey(k, v);
     notify();
   }, []);
 

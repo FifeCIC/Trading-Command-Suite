@@ -18,6 +18,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
 import QA_CHECKLIST from '../data/qa-checklist';
+import CenterPicker from '../components/CenterPicker';
 import './qa-testing.css';
 
 const STORAGE_KEY = 'tcs-qa-testing-state';
@@ -125,11 +126,15 @@ export default function QATestingPage() {
 
       {/* ── Filters ── */}
       <div className="qa-filters">
-        <div className="qa-filter-group">
+        <div className="qa-filter-group qa-filter-area">
           <span className="qa-filter-label">Area:</span>
-          {AREAS.map(a => (
-            <button key={a} className={`qa-filter-btn ${areaFilter === a ? 'active' : ''}`} onClick={() => setAreaFilter(a)}>{a}</button>
-          ))}
+          <CenterPicker
+            items={AREAS.map(a => ({ id: a, label: a }))}
+            value={areaFilter}
+            onChange={setAreaFilter}
+            visibleCount={5}
+            className="cp-compact"
+          />
         </div>
         <div className="qa-filter-group">
           <span className="qa-filter-label">Priority:</span>

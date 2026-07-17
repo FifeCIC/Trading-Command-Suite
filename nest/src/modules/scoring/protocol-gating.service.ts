@@ -75,7 +75,7 @@ export interface RarityInfo {
 export interface GatedScore {
   symbol: string;
   composite: number;
-  signal: 'BUY' | 'HOLD' | 'SELL';
+  signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
   subScores: Record<string, number>;
   subRawTotals: Record<string, number>;
   subMaxTotals: Record<string, number>;
@@ -336,13 +336,18 @@ export class ProtocolGatingService {
       : Math.round(Math.max(0, Math.min(100, riskResult.finalScore)));
 
     // directionMode is extracted earlier — see protocol selection above
-    let signal: 'BUY' | 'HOLD' | 'SELL';
-    if (composite >= ENTRY_THRESHOLD) {
-      signal = 'BUY';
+    // #337: Strong Buy/Sell thresholds from scoring history
+    const STRONG_THRESHOLD = 80; // >= 80% of max possible → strong signal
+    let signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
+    const isLongDirection = directionMode !== 'SHORT_ONLY';
+
+    if (composite >= STRONG_THRESHOLD) {
+      signal = isLongDirection ? 'STRONG_BUY' : 'STRONG_SELL';
+    } else if (composite >= ENTRY_THRESHOLD) {
+      signal = isLongDirection ? 'BUY' : 'SELL';
     } else if (composite >= HOLD_FLOOR) {
       signal = 'HOLD';
     } else {
-      // Low composite: directionMode determines HOLD vs SELL
       signal = directionMode === 'LONG_ONLY' ? 'HOLD' : 'SELL';
     }
 

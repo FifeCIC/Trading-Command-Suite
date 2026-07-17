@@ -197,4 +197,19 @@ export interface IDirective {
    * Async directives may fetch external data (Finnhub, etc).
    */
   calculate(input: DirectiveInput): DirectiveResult | Promise<DirectiveResult>;
+
+  /**
+   * Meta-directive support (#369). When set, this directive consumes peer directive
+   * results instead of raw market data. Dependencies must be scored first in the tick.
+   */
+  readonly dependsOn?: string[];
+
+  /** How to combine dependency results. 'AND' (all must fire), 'OR' (any), 'WEIGHTED'. */
+  readonly combineRule?: 'AND' | 'OR' | 'WEIGHTED';
+
+  /**
+   * Optional meta-directive calculation. Receives dependency results + market data.
+   * If not set, regular calculate() is used.
+   */
+  calculateWithPeers?(peerResults: Map<string, DirectiveResult>, input: DirectiveInput): DirectiveResult | Promise<DirectiveResult>;
 }

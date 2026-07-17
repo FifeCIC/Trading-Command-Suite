@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // ── Global Safety Rules ────────────────────────────────────
-// These are hard limits — no strategy can bypass them.
+
+const API = '/api/automation/rules';
 
 const DEFAULT_RULES = [
   {
@@ -28,21 +29,28 @@ const DEFAULT_RULES = [
 ];
 
 export default function AutomationRulesPage() {
-  const [rules, setRules] = useState(() => {
-    try {
-      const saved = localStorage.getItem('tcs:automation-rules');
-      return saved ? JSON.parse(saved) : DEFAULT_RULES;
-    } catch {
-      return DEFAULT_RULES;
-    }
-  });
+  const [rules, setRules] = useState(DEFAULT_RULES);
 
-  function toggleRule(id) {
-    setRules((prev) => {
-      const next = prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r));
-      localStorage.setItem('tcs:automation-rules', JSON.stringify(next));
-      return next;
-    });
+  useEffect(() => {
+    fetch(API).then(r => r.json()).then(data => {
+      if (Array.isArray(data) && data.length) setRules(data);
+    }).catch(() => {});
+  }, []);
+
+  async function toggleRule(id) {
+    const rule = rules.find(r => r.id === id);
+    if (!rule) return;
+    const nextEnabled = !rule.enabled;
+    setRules(prev => prev.map(r => r.id === id ? { ...r, enabled: nextEnabled } : r));
+    try {
+      await fetch(`${API}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: nextEnabled }),
+      });
+    } catch {
+      setRules(prev => prev.map(r => r.id === id ? { ...r, enabled: !nextEnabled } : r));
+    }
   }
 
   return (

@@ -593,54 +593,122 @@
   }
 }
 
-/* ── Add Symbol Autocomplete ──────────────────────────────── */
+/* ── Add Symbol Search (side panel) ──────────────────────── */
 
-.as-autocomplete {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 10;
+.as-search-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.as-search-input-wrap {
+  flex: 0 0 300px;
+  min-width: 220px;
+}
+
+.as-search-input-wrap input {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--line, #334155);
+  border-radius: 6px;
+  background: var(--bg, #0f172a);
+  color: var(--ink, #e2e8f0);
+  font-size: 0.9rem;
+}
+
+.as-searching {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ink-soft, #64748b);
+  margin-top: 0.3rem;
+}
+
+.as-no-results {
+  color: var(--ink-soft, #64748b);
+  font-size: 0.82rem;
+  padding-top: 0.3rem;
+}
+
+.as-results-panel {
+  flex: 1;
+  min-width: 200px;
+  max-width: 400px;
   background: var(--panel, #1e293b);
   border: 1px solid var(--line, #334155);
-  border-radius: 8px;
-  margin-top: 2px;
-  max-height: 260px;
-  overflow-y: auto;
-  list-style: none;
-  padding: 0;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
-.as-autocomplete li {
+.as-results-header {
+  font-size: 0.72rem;
+  color: var(--ink-soft, #64748b);
+  padding: 0.4rem 0.65rem;
   border-bottom: 1px solid var(--line, #334155);
+  background: var(--bg, #0f172a);
 }
 
-.as-autocomplete li:last-child {
+.as-result-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line, #334155);
+  color: var(--ink, #e2e8f0);
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.82rem;
+  transition: background 0.12s;
+}
+
+.as-result-item:hover {
+  background: rgba(14, 165, 166, 0.08);
+}
+
+.as-result-item:last-child {
   border-bottom: none;
 }
 
-.as-autocomplete button {
-  display: grid;
-  grid-template-columns: 1fr 2fr auto;
-  gap: 0.5rem;
-  align-items: center;
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  background: transparent;
-  border: none;
-  color: var(--ink, #e2e8f0);
-  font-size: 0.85rem;
-  cursor: pointer;
-  text-align: left;
+.as-result-ticker {
+  font-weight: 700;
+  font-size: 0.92rem;
+  min-width: 70px;
 }
 
-.as-autocomplete button:hover {
-  background: rgba(14, 165, 166, 0.1);
+.as-in-db {
+  display: inline-block;
+  background: color-mix(in srgb, var(--accent, #0ea5a6) 20%, transparent);
+  color: var(--accent, #0ea5a6);
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  margin-left: 0.3rem;
+  vertical-align: middle;
 }
 
-.as-autocomplete small {
+.as-result-name {
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.78rem;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.as-result-meta {
+  color: var(--ink-faint, #64748b);
+  font-size: 0.68rem;
+}
+
+.as-results-more {
+  font-size: 0.7rem;
   color: var(--ink-soft, #64748b);
-  font-size: 0.72rem;
+  padding: 0.4rem 0.65rem;
+  border-top: 1px solid var(--line, #334155);
 }
 
 /* ── Backtest priority rows ─────────────────────────────── */

@@ -9,12 +9,12 @@ export class SettingsController {
   constructor(private readonly settings: SettingsService) {}
 
   @Get()
-  getSettings(): AppSettings {
+  async getSettings(): Promise<AppSettings> {
     return this.settings.get();
   }
 
   @Put()
-  updateSettings(@Body() body: Partial<AppSettings>): AppSettings {
+  async updateSettings(@Body() body: Partial<AppSettings>): Promise<AppSettings> {
     this.logger.log(`Settings updated: ${Object.keys(body).join(', ')}`);
     return this.settings.update(body);
   }

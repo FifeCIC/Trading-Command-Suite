@@ -19,6 +19,17 @@
 /* Filters */
 .qa-filters { display: flex; gap: 1.25rem; margin-bottom: 1rem; flex-wrap: wrap; }
 .qa-filter-group { display: flex; align-items: center; gap: 0.35rem; }
+.qa-filter-area {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-width: 180px;
+  max-width: 240px;
+}
+.qa-filter-area .qa-filter-label {
+  padding-top: 0.4rem;
+  flex-shrink: 0;
+}
 .qa-filter-label { font-size: 0.82rem; text-transform: uppercase; color: var(--ink-soft, #94a3b8); font-weight: 600; }
 .qa-filter-btn { padding: 0.3rem 0.7rem; border-radius: 5px; border: 1px solid var(--line, #334155); background: transparent; color: var(--ink-soft, #94a3b8); font-size: 0.82rem; cursor: pointer; font-family: inherit; transition: all 0.15s; }
 .qa-filter-btn.active { border-color: #6366f1; color: #6366f1; background: rgba(99,102,241,0.1); }

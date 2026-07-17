@@ -16,6 +16,7 @@ import { motion } from 'motion/react';
 import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import Notice from '../components/Notice';
+import ProtocolPicker from '../components/ProtocolPicker';
 import './ab-testing.css';
 
 const SIGNAL_COLORS = { BUY: '#22c55e', SELL: '#ef4444', HOLD: '#f59e0b', unknown: '#64748b' };
@@ -168,22 +169,25 @@ export default function ABTestingPage() {
         <div className="ab-vs">
           <div className="ab-selector-group">
             <label>Protocol A</label>
-            <select value={protoA} onChange={e => setProtoA(e.target.value)} className="ab-select">
-              <option value="">Select protocol…</option>
-              {protocols.map(p => (
-                <option key={p.id} value={p.id}>{p.name || p.id}</option>
-              ))}
-            </select>
+            <ProtocolPicker
+              className="ab-select"
+              value={protoA}
+              onChange={setProtoA}
+              protocols={protocols}
+              placeholder="Select protocol…"
+            />
           </div>
           <span className="ab-vs-label">vs</span>
           <div className="ab-selector-group">
             <label>Protocol B</label>
-            <select value={protoB} onChange={e => setProtoB(e.target.value)} className="ab-select">
-              <option value="">Select protocol…</option>
-              {protocols.map(p => (
-                <option key={p.id} value={p.id} disabled={p.id === protoA}>{p.name || p.id}</option>
-              ))}
-            </select>
+            <ProtocolPicker
+              className="ab-select"
+              value={protoB}
+              onChange={setProtoB}
+              protocols={protocols}
+              placeholder="Select protocol…"
+              filterFn={(p) => p.id !== protoA}
+            />
           </div>
         </div>
       </div>

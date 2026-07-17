@@ -1,0 +1,129 @@
+/* ── CenterPicker — Vertical wheel picker ── */
+
+.cp-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  user-select: none;
+  width: 100%;
+}
+
+/* ── Viewport (the window that shows items) ── */
+.cp-v-viewport {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--line, #334155);
+}
+
+/* ── Track (scroll container) ── */
+.cp-v-track {
+  height: 100%;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  display: flex;
+  flex-direction: column;
+}
+.cp-v-track::-webkit-scrollbar { display: none; }
+
+/* ── Items ── */
+.cp-v-item {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  scroll-snap-align: center;
+  transition: opacity 0.2s;
+}
+
+.cp-v-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft, #64748b);
+  transition: color 0.2s, font-size 0.2s, text-shadow 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: center;
+  padding: 0 0.5rem;
+}
+
+/* ── Active (center) item ── */
+.cp-v-active .cp-v-label {
+  color: var(--accent, #22d3ee);
+  font-size: 1.08rem;
+  font-weight: 700;
+  text-shadow: 0 0 14px color-mix(in srgb, var(--accent, #22d3ee) 35%, transparent);
+}
+
+/* ── Center indicator line ── */
+.cp-v-indicator {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 50%;
+  height: 2px;
+  background: var(--accent, #22d3ee);
+  opacity: 0.15;
+  pointer-events: none;
+  border-radius: 1px;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+/* ── Fade gradients (top & bottom edges) ── */
+.cp-v-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 38%;
+  pointer-events: none;
+  z-index: 2;
+}
+.cp-v-fade-top {
+  top: 0;
+  background: linear-gradient(to bottom, rgba(10,15,26,0.7) 20%, transparent);
+}
+.cp-v-fade-bot {
+  bottom: 0;
+  background: linear-gradient(to top, rgba(10,15,26,0.7) 20%, transparent);
+}
+
+/* ── Arrows ── */
+.cp-v-arrow {
+  flex-shrink: 0;
+  width: 100%;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--ink-soft, #64748b);
+  font-size: 0.6rem;
+  cursor: pointer;
+  transition: color 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+.cp-v-arrow:hover:not(:disabled) {
+  color: var(--accent, #22d3ee);
+}
+.cp-v-arrow:disabled {
+  opacity: 0.15;
+  cursor: default;
+}
+
+/* ── Compact variant ── */
+.cp-vertical.cp-compact .cp-v-viewport { height: 140px; }
+

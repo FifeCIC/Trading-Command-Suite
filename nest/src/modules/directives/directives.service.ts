@@ -31,6 +31,8 @@ export class DirectivesService {
   private readonly logger = new Logger(DirectivesService.name);
   private readonly registry = new Map<string, IDirective>();
   private lastConditionVector: ConditionVector | null = null;
+  /** DB-sourced active status cache — refreshed on module init. false = stubbed. */
+  private dbActiveStatuses = new Map<string, boolean>();
 
   constructor(
     private readonly conditionDetector: ConditionDetectorService,
@@ -109,6 +111,21 @@ export class DirectivesService {
       // Skip directives not in the active protocol if a filter is provided.
       if (directiveFilter && !directiveFilter.has(id)) continue;
 
+      // ── DB active-status check (#288) ──
+      // Directives marked inactive in the DB are "stubbed" — they return
+      // a zero-score result without running their calculation. This allows
+      // underperforming directives to be silenced without deleting code.
+      if (this.dbActiveStatuses.has(id) && !this.dbActiveStatuses.get(id)) {
+        results.set(id, {
+          score: 0,
+          confidence: 0,
+          reason: `[STUBBED] ${id}: Marked inactive — under review from audit #283.`,
+          signalClass: 'neutral',
+          metadata: { performance: 'underperforming', status: 'stubbed', stubbedAt: '2026-07-17' },
+        });
+        continue;
+      }
+
       try {
         // ── Time-gate check (activeWindow) ──
         if (directive.activeWindow) {
@@ -180,6 +197,53 @@ export class DirectivesService {
           confidence: 0,
           reason: `Error: ${String(error)}`,
         });
+      }
+    }
+
+    // ── Meta-directive pass (#369) ──
+    // Run directives that depend on other directives' outputs AFTER all
+    // regular directives have been scored.
+    for (const [id, directive] of this.registry) {
+      if (!directive.dependsOn?.length) continue;
+      // Skip if already filtered out by protocol scope
+      if (directiveFilter && !directiveFilter.has(id)) continue;
+
+      // Check gate conditions (same as regular directives)
+      if (this.dbActiveStatuses.has(id) && !this.dbActiveStatuses.get(id)) continue;
+
+      try {
+        let result: DirectiveResult;
+        if (directive.calculateWithPeers) {
+          result = await directive.calculateWithPeers(results, input);
+        } else {
+          // Default meta-directive behavior: combine dependency results
+          const depResults = directive.dependsOn
+            .map(did => results.get(did))
+            .filter(Boolean) as DirectiveResult[];
+          
+          if (depResults.length === 0) {
+            result = { score: 0, confidence: 0, reason: `Meta: no dependency results available`, signalClass: 'neutral' };
+          } else {
+            const avgScore = depResults.reduce((s, r) => s + r.score, 0) / depResults.length;
+            const allBullish = depResults.every(r => r.signalClass === 'bullish');
+            const allBearish = depResults.every(r => r.signalClass === 'bearish');
+            const rule = directive.combineRule || 'AND';
+            
+            if (rule === 'AND' && allBullish) {
+              result = { score: Math.min(avgScore * 1.5, directive.maxScore), confidence: 0.8, reason: `Meta (AND): ${depResults.length} bullish dependencies`, signalClass: 'bullish' };
+            } else if (rule === 'AND' && allBearish) {
+              result = { score: Math.min(avgScore * 1.5, directive.maxScore), confidence: 0.8, reason: `Meta (AND): ${depResults.length} bearish dependencies`, signalClass: 'bearish' };
+            } else if (rule === 'OR') {
+              const best = depResults.reduce((a, b) => a.score > b.score ? a : b);
+              result = { score: Math.min(best.score * 1.3, directive.maxScore), confidence: 0.7, reason: `Meta (OR): best from ${depResults.length} deps`, signalClass: best.signalClass };
+            } else {
+              result = { score: Math.min(avgScore, directive.maxScore), confidence: 0.6, reason: `Meta (${rule}): avg of ${depResults.length} dependencies`, signalClass: 'neutral' };
+            }
+          }
+        }
+        results.set(id, result);
+      } catch (err) {
+        results.set(id, { score: 0, confidence: 0, reason: `Meta error: ${String(err)}` });
       }
     }
 
@@ -433,14 +497,16 @@ export class DirectivesService {
    * Upsert a directive's active status in the DB.
    * Enables runtime toggling without restarting the server.
    */
-  async upsertDirective(id: string, active: boolean) {
+  async upsertDirective(id: string, active: boolean, nature?: string) {
     if (!this.prisma.isAvailable) return null;
 
     const existing = await this.prisma.directive.findUnique({ where: { id } });
     if (existing) {
+      const updateData: any = { active, updatedAt: new Date() };
+      if (nature !== undefined) updateData.nature = nature;
       return this.prisma.directive.update({
         where: { id },
-        data: { active, updatedAt: new Date() },
+        data: updateData,
       });
     }
 
@@ -462,13 +528,19 @@ export class DirectivesService {
   /**
    * Get recent scores with breakdown data for stats computation.
    */
-  async getRecentScores(limit = 200) {
+  /**
+   * Get recent scores with breakdown data for stats computation.
+   * Defaults to last 24 hours to keep averages relevant.
+   */
+  async getRecentScores(limit = 500, hoursBack = 24) {
     if (!this.prisma.isAvailable) return [];
+    const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
     const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Score query timed out')), 5000),
+      setTimeout(() => reject(new Error('Score query timed out')), 8000),
     );
     return Promise.race([
       this.prisma.score.findMany({
+        where: { timestamp: { gte: since } },
         orderBy: { timestamp: 'desc' },
         take: limit,
         select: { breakdown: true, strategyId: true, timestamp: true },
@@ -478,14 +550,64 @@ export class DirectivesService {
   }
 
   /**
+   * Get total run count per directive from all Score records.
+   * Used as fallback when recent-scores aggregation returns empty.
+   * Queries the last 7 days and counts unique score rows where each
+   * directive appears in the breakdown JSON.
+   */
+  async getDirectiveRunCounts(): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    if (!this.prisma.isAvailable) return counts;
+    try {
+      // Load breakdowns from last 7 days (capped at 2000 rows for perf)
+      const rows = await this.prisma.score.findMany({
+        where: { timestamp: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
+        orderBy: { timestamp: 'desc' },
+        take: 2000,
+        select: { breakdown: true },
+      });
+      for (const row of rows) {
+        const breakdown = row.breakdown as Record<string, unknown>;
+        if (!breakdown || typeof breakdown !== 'object') continue;
+        for (const key of Object.keys(breakdown)) {
+          counts.set(key, (counts.get(key) || 0) + 1);
+        }
+      }
+    } catch (err) {
+      this.logger.warn(`getDirectiveRunCounts failed: ${(err as Error).message}`);
+    }
+    return counts;
+  }
+
+  /**
    * Get all DB directive records for active-status lookup.
    */
   async getDbStatuses() {
     if (!this.prisma.isAvailable) return [];
     return this.prisma.directive.findMany({
-      select: { id: true, active: true },
+      select: { id: true, active: true, nature: true },
       where: { isDefault: true },
     });
+  }
+
+  /**
+   * Refresh the in-memory active-status cache from the DB.
+   * Called once at module init — directive stubbing is a manual operation,
+   * so real-time sync is unnecessary. The cache avoids a DB query on every tick.
+   */
+  async refreshActiveStatuses(): Promise<void> {
+    if (!this.prisma.isAvailable) return;
+    try {
+      const statuses = await this.getDbStatuses();
+      this.dbActiveStatuses.clear();
+      for (const s of statuses) {
+        this.dbActiveStatuses.set(s.id, s.active);
+      }
+      const inactiveCount = [...this.dbActiveStatuses.values()].filter((v) => !v).length;
+      this.logger.log(`Active status cache refreshed: ${statuses.length} directives, ${inactiveCount} inactive`);
+    } catch (err) {
+      this.logger.warn(`Failed to refresh active statuses: ${(err as Error).message}`);
+    }
   }
 
   /**

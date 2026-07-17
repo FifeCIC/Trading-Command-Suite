@@ -16,12 +16,16 @@ import { DataRetentionService } from './data-retention.service';
 import { DataRetentionController } from './data-retention.controller';
 import { SystemHealthService } from './system-health.service';
 import { SystemHealthController } from './system-health.controller';
+import { BacktestArchiveService } from './backtest-archive.service';
+import { BacktestArchiveController } from './backtest-archive.controller';
+import { PreferencesController } from './preferences.controller';
+import { AutomationRulesController } from './automation-rules.controller';
 
 @Global()
 @Module({
   imports: [ProvidersModule],
-  providers: [SystemLogService, ProcessManagerService, SettingsService, ScoringLogService, MetricsMiddleware, DataRetentionService, SystemHealthService],
-  controllers: [SystemLogController, ProcessManagerController, DataFreshnessController, ArchitectureManifestController, DatabaseStatsController, SettingsController, ScoringLogController, DataRetentionController, SystemHealthController],
+  providers: [SystemLogService, ProcessManagerService, SettingsService, ScoringLogService, MetricsMiddleware, DataRetentionService, SystemHealthService, BacktestArchiveService],
+  controllers: [SystemLogController, ProcessManagerController, DataFreshnessController, ArchitectureManifestController, DatabaseStatsController, SettingsController, ScoringLogController, DataRetentionController, SystemHealthController, BacktestArchiveController, PreferencesController, AutomationRulesController],
   exports: [SystemLogService, ProcessManagerService, SettingsService, ScoringLogService, MetricsMiddleware, DataRetentionService],
 })
 export class SystemModule {}

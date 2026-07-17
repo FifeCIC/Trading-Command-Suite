@@ -18,12 +18,14 @@ export class DirectivesController {
   async list() {
     const directives = this.directivesService.list();
 
-    // Load active-status from DB
+    // Load active-status + nature from DB
     const dbStatuses = new Map<string, boolean>();
+    const dbNatures = new Map<string, string>();
     try {
       const dbDirectives = await this.directivesService.getDbStatuses();
       for (const d of dbDirectives) {
         dbStatuses.set(d.id, d.active);
+        if (d.nature) dbNatures.set(d.id, d.nature);
       }
     } catch { /* DB might not be available */ }
 
@@ -145,6 +147,17 @@ export class DirectivesController {
       }
     }
 
+    // ── Fallback: if no recent scores found, query total run counts ──
+    if (recentScores.length === 0) {
+      const runCounts = await this.directivesService.getDirectiveRunCounts().catch(() => new Map());
+      for (const [dirId, count] of runCounts) {
+        if (!statMap.has(dirId)) {
+          statMap.set(dirId, { totalScore: 0, count: 0, bullishCount: 0, bearishCount: 0, protocols: new Set() });
+        }
+        statMap.get(dirId)!.count += count;
+      }
+    }
+
     // Known stub directive IDs — placeholders awaiting real implementation
     const STUB_IDS = new Set([
       'moving-averages', 'volatility-tools', 'friday-positioning', 'midweek-momentum',
@@ -157,9 +170,66 @@ export class DirectivesController {
       'resistance-levels-strategy', 'sp500-regime', 'vix-strategy', 'weekly-rhythm-strategy',
     ]);
 
+    // ── Directive Nature Classification (#289) ──
+    // Default nature map — used as fallback when DB has no value.
+    // The DB `nature` column takes precedence if set.
+    const DEFAULT_NATURE: Record<string, string> = {
+      // Predictive — expected to generate directional signals
+      'rsi-oversold': 'predictive', 'macd-crossover': 'predictive', 'ema-structure': 'predictive',
+      'atr-dip': 'predictive', 'volume-confirmation': 'predictive', 'mfi': 'predictive',
+      'adx': 'predictive', 'stochastic': 'predictive', 'rsi-overbought': 'predictive',
+      'momentum-continuation-combo': 'predictive', 'speed-momentum': 'predictive',
+      'multi-timeframe-trend': 'predictive', 'micro-sr-levels': 'predictive',
+      'price-above-sma': 'predictive', 'ma-crossover': 'predictive', 'bollinger-bands': 'predictive',
+      'cci': 'predictive', 'bollinger-band-squeeze': 'predictive', 'obv': 'predictive',
+      'volume-rhythm': 'predictive', 'vwap': 'predictive', 'volume-surge': 'predictive',
+      'rsi-divergence': 'predictive', 'macd-divergence': 'predictive', 'obv-divergence': 'predictive',
+      'vwap-confluence-simple': 'predictive', 'vwap-confluence-bands': 'predictive',
+      'mtf-confluence-conservative': 'predictive', 'mtf-confluence-weighted': 'predictive',
+      'gap-scanner': 'predictive', 'doji-pattern': 'predictive', 'hammer-pattern': 'predictive',
+      'engulfing-pattern': 'predictive', 'three-soldiers-pattern': 'predictive',
+      'pin-bar-pattern': 'predictive', 'price-action': 'predictive',
+      'confluence-reversal-combo': 'predictive', 'support-resistance-levels': 'predictive',
+      'overhead-supply-pressure': 'predictive', 'volatility-envelope': 'predictive',
+      'wick-filter': 'predictive', 'zigzag-swing-detector': 'predictive',
+      'fibonacci-levels': 'predictive',
+      // MT5 ported
+      'mt5-engulfing': 'predictive', 'mt5-harami': 'predictive', 'mt5-star-doji': 'predictive',
+      'mt5-hammer': 'predictive', 'williams-r': 'predictive', 'awesome-oscillator': 'predictive',
+      'force-index': 'predictive', 'chaikin-money-flow': 'predictive', 'donchian-breakout': 'predictive',
+      'keltner-channel': 'predictive', 'supertrend': 'predictive', 'parabolic-sar': 'predictive',
+      'adx-di-crossover': 'predictive', 'bollinger-pct-b': 'predictive', 'atr-trailing-stop': 'predictive',
+      'momentum-roc': 'predictive', 'demarker': 'predictive', 'accumulation-dist': 'predictive',
+      'bulls-power': 'predictive', 'bears-power': 'predictive', 'ease-of-movement': 'predictive',
+      'ichimoku-cloud': 'predictive',
+      // Risk gates — block/reduce, don't generate bullish signals
+      'budget-gate': 'risk-gate', 'liquidity-check': 'risk-gate', 'rollover-risk': 'risk-gate',
+      'position-size-kelly': 'risk-gate', 'position-size-confidence': 'risk-gate',
+      'panic-exhaustion-absorption': 'risk-gate', 'dilution-impact': 'risk-gate',
+      // Exit signals — fire when it's time to exit, not entry
+      'momentum-exhaustion': 'exit', 'target-achieved': 'exit', 'regime-shift-exit': 'exit',
+      'time-stop': 'exit',
+      // Calendar / temporal — time-based, not price-based
+      'monday-effect': 'calendar', 'friday-drift': 'calendar', 'turnaround-tuesday': 'calendar',
+      'session-open-effect': 'calendar', 'santa-claus-rally': 'calendar',
+      'january-effect': 'calendar', 'sell-in-may': 'calendar', 'september-slump': 'calendar',
+      'october-relief': 'calendar', 'opex-gamma': 'calendar', 'triple-witching': 'calendar',
+      'election-cycle': 'calendar', 'crypto-weekend-effect': 'calendar',
+      // Macro regime — describe market conditions, not tradable signals
+      'vix-regime': 'regime', 'dxy-regime': 'regime', 'market-regime': 'regime',
+      // Symbol-specific — designed for one symbol, won't fire on SPY
+      'gold-macro-correlation': 'symbol-specific', 'cad-usd-oil-correlation': 'symbol-specific',
+      'btc-halving-cycle': 'symbol-specific', 'crypto-fear-greed': 'symbol-specific',
+      // Data-gated — require external data that may not be present
+      'news-sentiment-positive': 'data-gated', 'earnings-proximity': 'data-gated',
+      'earnings-momentum': 'data-gated', 'social-buzz': 'data-gated',
+      'insider-activity': 'data-gated',
+    };
+
     return directives.map((d) => {
       const st = statMap.get(d.id);
       const isStub = STUB_IDS.has(d.id);
+      const dbActive = dbStatuses.has(d.id) ? dbStatuses.get(d.id) : true;
       return {
       id: d.id,
       name: d.name,
@@ -168,10 +238,12 @@ export class DirectivesController {
       priority: d.priority ?? 50,
       protocolCount: protocolCounts.get(d.id) ?? 0,
       complexity: complexityMap[d.id] ?? { level: 1, label: 'Basic', factors: [] },
-      active: dbStatuses.has(d.id) ? dbStatuses.get(d.id) : true,
-      // ── Performance classification (from #283 audit) ──
-      classification: isStub ? 'stub' : (st?.count ? 'active' : 'untested'),
-      performance: isStub ? 'underperforming' : (st?.count ? (st.totalScore / st.count >= 50 ? 'healthy' : 'weak') : 'unknown'),
+      active: dbActive,
+      // ── Performance classification (from #283 audit + DB stubbing #288) ──
+      classification: (!dbActive || isStub) ? 'stub' : (st?.count ? 'active' : 'untested'),
+      performance: (!dbActive || isStub) ? 'underperforming' : (st?.count ? (st.totalScore / st.count >= 50 ? 'healthy' : 'weak') : 'unknown'),
+      // ── Directive nature (#289) — DB value first, fallback to defaults ──
+      nature: dbNatures.get(d.id) || DEFAULT_NATURE[d.id] || 'predictive',
       // ── Merged stats ──
       avgScore: st?.count ? Math.round(st.totalScore / st.count) : null,
       runs: st?.count ?? null,
@@ -240,14 +312,14 @@ export class DirectivesController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Toggle a directive active/inactive' })
+  @ApiOperation({ summary: 'Toggle a directive active/inactive and set nature' })
   async toggleDirective(
     @Param('id') id: string,
-    @Body() body: { active: boolean },
+    @Body() body: { active: boolean; nature?: string },
   ) {
     // Find or create DB Directive row, then toggle
-    const directive = await this.directivesService.upsertDirective(id, body.active);
-    return { id, active: body.active, persisted: true };
+    const directive = await this.directivesService.upsertDirective(id, body.active, body.nature);
+    return { id, active: body.active, nature: body.nature, persisted: true };
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━

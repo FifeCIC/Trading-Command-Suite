@@ -279,4 +279,59 @@ export class ImportJobsService {
       };
     }
   }
+
+  /**
+   * Import raw OHLCV bars for a symbol with deduplication.
+   * Auto-registers the symbol if not found. Skips duplicate (symbol+timeframe+timestamp) bars.
+   *
+   * @see #272 — Flexible bar import endpoint
+   */
+  async importBars(
+    ticker: string, timeframe: string, provider: string,
+    bars: Array<{ timestamp: string; open: number; high: number; low: number; close: number; volume?: number }>,
+  ) {
+    const sym = ticker.toUpperCase();
+
+    // 1. Find or create symbol
+    let symbol = await this.prisma.symbol.findFirst({ where: { ticker: sym } });
+    if (!symbol) {
+      symbol = await this.prisma.symbol.create({
+        data: { ticker: sym, name: sym, type: 'stock', active: true, exchange: provider },
+      });
+      this.logger.log(`Auto-registered symbol: ${sym}`);
+    }
+
+    // 2. Insert bars with skipDuplicates
+    let imported = 0;
+    let skipped = 0;
+
+    for (const bar of bars) {
+      try {
+        await this.prisma.marketBar.create({
+          data: {
+            symbolId: symbol.id,
+            timeframe,
+            timestamp: new Date(bar.timestamp),
+            open: bar.open,
+            high: bar.high,
+            low: bar.low,
+            close: bar.close,
+            volume: bar.volume || 0,
+            provider,
+          },
+        });
+        imported++;
+      } catch (err: any) {
+        // Duplicate key (symbolId + timeframe + timestamp) — skip
+        if (err.code === 'P2002') {
+          skipped++;
+        } else {
+          this.logger.warn(`Bar insert failed for ${sym} ${bar.timestamp}: ${err.message}`);
+        }
+      }
+    }
+
+    this.logger.log(`Bars imported: ${sym} ${timeframe} — ${imported} new, ${skipped} skipped (${provider})`);
+    return { imported, skipped, symbol: sym, timeframe, provider };
+  }
 }

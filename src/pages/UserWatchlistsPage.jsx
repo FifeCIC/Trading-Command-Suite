@@ -283,18 +283,25 @@ export default function UserWatchlistsPage() {
                   )}
                 </div>
                 <div className="wl-symbols-grid">
-                  {symbols.map(s => (
-                    <a
-                      key={s.ticker || s.symbol}
-                      href={`/research/symbol/${s.ticker || s.symbol}`}
-                      className="wl-symbol-chip"
-                    >
-                      {s.ticker || s.symbol}
-                      {s.name && s.name !== (s.ticker || s.symbol) && (
-                        <span className="wl-symbol-name">{s.name}</span>
-                      )}
-                    </a>
-                  ))}
+                  {symbols.map(s => {
+                    // Handle both object {ticker, name} and plain string formats
+                    const ticker = typeof s === 'string' ? s : (s.ticker || s.symbol || s.name || '');
+                    const displayName = typeof s === 'string' ? s : (s.name || s.ticker || s.symbol || '');
+                    // Clean Trading212 IDs like "RBLX_US_EQ" → "RBLX"
+                    const cleanTicker = ticker.includes('_') ? ticker.split('_')[0] : ticker;
+                    return (
+                      <a
+                        key={ticker || Math.random()}
+                        href={`/research/symbol/${cleanTicker}`}
+                        className="wl-symbol-chip"
+                      >
+                        {cleanTicker}
+                        {displayName && displayName !== cleanTicker && (
+                          <span className="wl-symbol-name">{displayName}</span>
+                        )}
+                      </a>
+                    );
+                  })}
                 </div>
                 {symbols.length === 0 && selectedId && (
                   <p className="wl-hint">No symbol data available for this list.</p>

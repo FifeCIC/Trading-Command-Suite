@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import { usePreferences } from '../core/hooks/usePreferences';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
+import ProtocolPicker from '../components/ProtocolPicker';
 import './signals-workbench.css';
 
 const SIGNAL_COLORS = { BUY: '#22c55e', SELL: '#ef4444', HOLD: '#94a3b8' };
@@ -61,12 +62,6 @@ export default function SignalsWorkbenchPage() {
     },
   });
 
-  const protocolsQuery = useQuery({
-    queryKey: ['protocols'],
-    queryFn: () => apiGet('/api/scoring/gated/protocols'),
-    staleTime: 60000,
-  });
-
   const ladderData = qc.getQueryData(['signals-ladder']) || ladderMutation.data;
   const envelopes = ladderData?.envelopes || [];
   const topConflicts = ladderData?.topConflicts || [];
@@ -117,12 +112,12 @@ export default function SignalsWorkbenchPage() {
           onChange={(e) => setSymbolInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleRun()}
         />
-        <select className="sw-protocol-select" value={protocolId} onChange={(e) => setProtocolId(e.target.value)}>
-          <option value="">Default directives</option>
-          {(protocolsQuery.data?.protocols || []).map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+        <ProtocolPicker
+          className="sw-protocol-select"
+          value={protocolId}
+          onChange={setProtocolId}
+          placeholder="Default directives"
+        />
         <button className="sw-run-btn" onClick={handleRun} disabled={ladderMutation.isPending}>
           {ladderMutation.isPending ? '⏳ Scoring...' : '▶ Run Signal Scan'}
         </button>

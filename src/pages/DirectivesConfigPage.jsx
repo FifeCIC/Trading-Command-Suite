@@ -12,22 +12,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
+import ProtocolPicker from '../components/ProtocolPicker';
 import './directives-config.css';
 
 export default function DirectivesConfigPage() {
   const [selectedStrategy, setSelectedStrategy] = useState(null);
   const queryClient = useQueryClient();
 
-  // Fetch saved strategies
-  const strategiesQuery = useQuery({
-    queryKey: ['strategies', 'saved'],
-    queryFn: () => apiGet('/api/strategies/saved'),
-    staleTime: 30_000,
-  });
-
-  const strategies = strategiesQuery.data?.strategies || [];
-
-  // Fetch directives for selected strategy
+  // Fetch directives for selected protocol
   const directivesQuery = useQuery({
     queryKey: ['strategy-directives', selectedStrategy],
     queryFn: () => apiGet(`/api/strategies/${selectedStrategy}/directives`),
@@ -61,34 +53,23 @@ export default function DirectivesConfigPage() {
       <header className="dc-header">
         <div>
           <h1>Protocol Editor</h1>
-          <p>Select a protocol (strategy), then enable/disable its individual directives. Changes persist to the database.</p>
+          <p>Select a protocol, then enable/disable its individual directives. Changes persist to the database.</p>
         </div>
         <div className="dc-header-actions">
-          <select
+          <ProtocolPicker
             className="pf-source-select"
             value={selectedStrategy || ''}
-            onChange={(e) => setSelectedStrategy(e.target.value || null)}
+            onChange={(id) => setSelectedStrategy(id || null)}
             style={{ minWidth: 220 }}
-          >
-            <option value="">— Select a strategy —</option>
-            {strategies.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
+          />
         </div>
       </header>
 
-      {strategiesQuery.isLoading && <LoadingSkeleton variant="card" count={3} />}
-
-      {!selectedStrategy && !strategiesQuery.isLoading && (
+      {!selectedStrategy && (
         <EmptyState
           icon="📋"
-          title="No strategy selected"
-          description={strategies.length === 0
-            ? 'No strategies found in the database. Run the strategy seeder or create one in Strategy Builder.'
-            : 'Select a strategy above to configure its directives.'}
-          actionLabel={strategies.length === 0 ? 'Create Strategy' : undefined}
-          actionHref={strategies.length === 0 ? '/strategies/create-strategy' : undefined}
+          title="No protocol selected"
+          description="Select a protocol above to configure its directives."
         />
       )}
 
@@ -98,7 +79,7 @@ export default function DirectivesConfigPage() {
         <EmptyState
           icon="📝"
           title="No directives configured"
-          description={`"${strategyName}" has no directives linked. Directives are assigned when the strategy is created.`}
+          description={`"${strategyName}" has no directives linked. Directives are assigned when the protocol is created.`}
         />
       )}
 
@@ -106,7 +87,7 @@ export default function DirectivesConfigPage() {
         <>
           <div className="dc-stats">
             <span>{activeCount}/{directives.length} active</span>
-            <span className="dc-strategy-name">Strategy: {strategyName}</span>
+            <span className="dc-strategy-name">Protocol: {strategyName}</span>
           </div>
 
           <div className="dc-cards">

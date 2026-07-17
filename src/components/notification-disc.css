@@ -1,34 +1,37 @@
-/* Notification Disc — floating bell in top-right corner */
+/* Notification Disc — floating bell in bottom-right stack */
 
 .notif-disc {
   position: fixed;
-  top: 10px;
-  right: 80px;
+  bottom: 4rem;
+  right: 1rem;
   z-index: 200;
 }
 
 /* Bell button */
 .notif-bell {
   position: relative;
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: #1a1d2e;
-  border: 1px solid #2d3040;
-  color: #94a3b8;
-  font-size: 1rem;
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.9rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: border-color 0.15s, color 0.15s, transform 0.15s;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  padding: 0;
 }
 
 .notif-bell:hover,
 .notif-bell.active {
   border-color: var(--accent, #14b8b9);
-  color: #e2e8f0;
-  background: #232840;
+  color: var(--accent, #14b8b9);
+  transform: scale(1.08);
+  background: var(--panel, #1e293b);
 }
 
 .notif-bell.has-critical {
@@ -59,6 +62,13 @@
   line-height: 1;
 }
 
+/* SVG bell icon */
+.notif-svg-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
 /* Backdrop */
 .notif-backdrop {
   position: fixed;
@@ -69,7 +79,7 @@
 /* Dropdown */
 .notif-dropdown {
   position: absolute;
-  top: calc(100% + 8px);
+  bottom: calc(100% + 8px);
   right: 0;
   width: 360px;
   max-height: 480px;

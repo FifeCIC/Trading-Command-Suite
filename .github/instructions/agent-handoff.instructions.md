@@ -9,19 +9,29 @@ When you complete ANY code change (feature, bug fix, refactor, test, documentati
 
 **Do not make decisions about whether the change is "big enough."** Every change gets a handoff. The Librarian decides what to batch and when.
 
-## Claiming an Issue (preventing duplicate work)
+## ⚠️ GitHub CLI — Use the wrapper script
+
+Running `gh` directly in PowerShell produces hundreds of lines of cosmetic parser errors (harmless but noisy). **Use the wrapper script instead** — it filters out the noise:
+
+```powershell
+pwsh -File scripts\gh-wrapper.ps1 <gh args>
+```
+
+Use the wrapper for ALL gh operations: issue create, issue close, issue comment, issue view, etc.
+
+### Claiming an Issue (preventing duplicate work)
 
 Before starting work on a GitHub issue, you MUST check if another agent has already claimed it:
 
 ```powershell
-gh issue view {number} --repo FifeCIC/Trading-Command-Suite --json comments --jq '[.comments[].body] | any(contains("🤖 Claimed by"))'
+pwsh -File scripts\gh-wrapper.ps1 issue view {number} --repo FifeCIC/Trading-Command-Suite --json comments --jq '[.comments[].body] | any(contains("🤖 Claimed by"))'
 ```
 
 - If the output is `true`, **pick a different issue** — that one is already being worked on.
 - If the output is `false`, **claim it immediately** by commenting on the issue:
 
 ```powershell
-gh issue comment {number} --repo FifeCIC/Trading-Command-Suite --body "🤖 Claimed by {agent-name} — started work on {date} {time} UTC"
+pwsh -File scripts\gh-wrapper.ps1 issue comment {number} --repo FifeCIC/Trading-Command-Suite --body "🤖 Claimed by {agent-name} — started work on {date} {time} UTC"
 ```
 
 Replace `{agent-name}` with the name of the current agent (e.g. `TCS-Dev`, `Librarian`, `Ivy`).

@@ -1,0 +1,105 @@
+/* ── Trading212 Portfolio Page ── */
+
+.t212p-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  color: var(--ink, #e2e8f0);
+}
+
+.t212p-header { margin-bottom: 1.5rem; }
+.t212p-header h1 { margin: 0 0 0.3rem; font-size: 1.4rem; }
+.t212p-subtitle { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; margin: 0; }
+
+.t212p-mode { font-weight: 700; }
+.t212p-mode--live { color: #22c55e; }
+.t212p-mode--demo { color: #f59e0b; }
+
+/* ── Sections ── */
+.t212p-section {
+  margin-bottom: 1.5rem;
+}
+.t212p-section h2 {
+  font-size: 1rem;
+  margin: 0 0 0.6rem;
+  color: var(--accent, #22d3ee);
+}
+
+/* ── Summary Grid ── */
+.t212p-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.6rem;
+}
+.t212p-stat {
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.t212p-stat-label {
+  font-size: 0.7rem;
+  color: var(--ink-soft, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.t212p-stat-value {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* ── Controls ── */
+.t212p-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.t212p-hint { font-size: 0.78rem; color: var(--ink-soft, #64748b); }
+
+.t212p-sync-result {
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.25);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: #22c55e;
+}
+.t212p-sync-err {
+  background: rgba(239,68,68,0.1);
+  border-color: rgba(239,68,68,0.25);
+  color: #ef4444;
+}
+
+/* ── Table ── */
+.t212p-table-wrap { overflow-x: auto; }
+.t212p-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.t212p-table th {
+  text-align: left;
+  padding: 0.45rem 0.6rem;
+  color: var(--ink-soft, #64748b);
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--line, #334155);
+}
+.t212p-table td {
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.t212p-symbol { font-weight: 600; font-family: monospace; font-size: 0.85rem; }
+.t212p-profit { color: #22c55e; }
+.t212p-loss   { color: #ef4444; }
+.t212p-empty {
+  color: var(--ink-soft, #64748b);
+  font-size: 0.85rem;
+  font-style: italic;
+}

@@ -23,6 +23,22 @@ Write-Host "`n  Stopping existing services…" -ForegroundColor DarkGray
 }
 Start-Sleep -Seconds 2
 
+# ── Build NestJS (always fresh) ────────────────────────────
+
+Write-Host "  Building NestJS (tsc)…" -ForegroundColor Cyan
+Push-Location "$ROOT\nest"
+$buildOutput = cmd /c "npx tsc -p tsconfig.build.json 2>&1" 
+$buildExit = $LASTEXITCODE
+Pop-Location
+if ($buildExit -ne 0) {
+    Write-Host "  ❌ NestJS BUILD FAILED" -ForegroundColor Red
+    Write-Host $buildOutput -ForegroundColor Red
+    Write-Host "`n  Launch aborted — fix compilation errors first." -ForegroundColor Red
+    Write-Host "  Run: npm --prefix $ROOT\nest run build`n"
+    exit 1
+}
+Write-Host "    Build OK ($buildExit)" -ForegroundColor DarkGray
+
 # ── Start MT5 Bridge ────────────────────────────────────────
 
 Write-Host "  Starting MT5 Bridge (port 5000)…" -ForegroundColor Yellow
@@ -38,12 +54,14 @@ Write-Host "    PID $($mt5.Id)" -ForegroundColor DarkGray
 
 Write-Host "  Starting NestJS API (port 3201)…" -ForegroundColor Cyan
 $env:DATABASE_URL = 'mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs'
+$nestLog = "$env:TEMP\nest-api.log"
+$nestErr = "$env:TEMP\nest-api-err.log"
 $nest = Start-Process -FilePath "node" `
     -ArgumentList "$ROOT\nest\dist\src\main.js" `
     -WorkingDirectory "$ROOT\nest" `
     -PassThru -NoNewWindow `
-    -RedirectStandardOutput "$env:TEMP\nest-api.log" `
-    -RedirectStandardError "$env:TEMP\nest-api-err.log"
+    -RedirectStandardOutput $nestLog `
+    -RedirectStandardError $nestErr
 Write-Host "    PID $($nest.Id)" -ForegroundColor DarkGray
 
 # ── Start Vite Frontend ─────────────────────────────────────
@@ -95,11 +113,18 @@ if ($allUp) {
     Write-Host ""
     if (-not $SkipFrontend) {
         Write-Host "  App: http://localhost:5173" -ForegroundColor White
+        Write-Host "  API health: http://localhost:3201/api/health" -ForegroundColor DarkGray
     }
 } else {
     Write-Host "  Some services didn't start:" -ForegroundColor Red
     foreach ($svc in $down) {
         Write-Host "    $($svc.Name) on port $($svc.Port) — check $env:TEMP\$($svc.Name -replace ' ','-').log" -ForegroundColor Red
+    }
+    # Show NestJS error log inline if it failed
+    if ($down | Where-Object { $_.Name -eq 'NestJS API' }) {
+        Write-Host "`n  ── NestJS error log (last 30 lines) ──" -ForegroundColor DarkGray
+        Get-Content "$env:TEMP\nest-api-err.log" -Tail 30 -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
+        Write-Host "  ───────────────────────────────────" -ForegroundColor DarkGray
     }
 }
 Write-Host ""

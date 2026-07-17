@@ -406,6 +406,8 @@ export class AutomationLoopService implements OnModuleInit {
       }
     } catch (e) { this.logger.warn(`Failed to patch strategies: ${(e as Error).message}`); }
     await this.loadScoringStrategies();
+    await this.restorePendingActions();
+    await this.restoreThrottleState();
     this.barRefresh.start(300_000);  // Refresh marketBar data every 5 min
     this.start();
   }
@@ -556,6 +558,94 @@ export class AutomationLoopService implements OnModuleInit {
       await this.prisma.scoringStrategy.delete({ where: { id } });
     } catch (err) {
       this.logger.warn(`Failed to delete scoring strategy ${id}: ${(err as Error).message}`);
+    }
+  }
+
+  // ── State Persistence (#352) ──────────────────────────
+
+  /** Persist a pending action to DB so it survives restarts. */
+  private async persistPendingAction(action: PendingAction): Promise<void> {
+    if (!this.prisma.isAvailable) return;
+    try {
+      await (this.prisma as any).pendingAction.create({
+        data: {
+          id: action.id, strategyId: action.strategyId, symbol: action.symbol,
+          brokerId: action.brokerId, side: action.side, quantity: action.quantity,
+          composite: action.composite, createdAt: new Date(action.createdAt),
+          expiresAt: new Date(action.expiresAt), status: 'pending',
+        },
+      });
+    } catch (err) {
+      this.logger.warn(`Failed to persist pending action: ${(err as Error).message}`);
+    }
+  }
+
+  /** Remove a pending action from DB (when executed or expired). */
+  private async removePendingAction(id: string): Promise<void> {
+    if (!this.prisma.isAvailable) return;
+    try {
+      await (this.prisma as any).pendingAction.update({
+        where: { id }, data: { status: 'executed' },
+      });
+    } catch { /* may not exist */ }
+  }
+
+  /** Restore pending actions from DB on startup. */
+  private async restorePendingActions(): Promise<void> {
+    if (!this.prisma.isAvailable) return;
+    try {
+      const rows = await (this.prisma as any).pendingAction.findMany({
+        where: { status: 'pending', expiresAt: { gt: new Date() } },
+      });
+      for (const r of rows) {
+        this.state.pendingActions.push({
+          id: r.id, strategyId: r.strategyId, symbol: r.symbol,
+          brokerId: r.brokerId, side: r.side, quantity: r.quantity,
+          composite: r.composite, createdAt: r.createdAt.toISOString(),
+          expiresAt: r.expiresAt.toISOString(),
+        });
+      }
+      if (rows.length > 0) {
+        this.logger.log(`Restored ${rows.length} pending actions from DB`);
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to restore pending actions: ${(err as Error).message}`);
+    }
+  }
+
+  /** Restore throttle state from decision_log on startup. */
+  private async restoreThrottleState(): Promise<void> {
+    if (!this.prisma.isAvailable) return;
+    try {
+      // Restore lastAnyTradeAt from most recent EXECUTED decision
+      const lastExec = await (this.prisma as any).decisionLog.findFirst({
+        where: { decision: 'EXECUTED' },
+        orderBy: { timestamp: 'desc' },
+        select: { timestamp: true },
+      });
+      if (lastExec) {
+        this.lastAnyTradeAt = new Date(lastExec.timestamp).getTime();
+      }
+
+      // Restore per-symbol last trade times
+      const recentTrades = await (this.prisma as any).decisionLog.findMany({
+        where: { decision: 'EXECUTED' },
+        orderBy: { timestamp: 'desc' },
+        select: { symbol: true, timestamp: true },
+        take: 100,
+      });
+      const seen = new Set<string>();
+      for (const t of recentTrades) {
+        if (!seen.has(t.symbol)) {
+          seen.add(t.symbol);
+          this.lastSymbolTrade.set(t.symbol, new Date(t.timestamp).getTime());
+        }
+      }
+      if (seen.size > 0) {
+        this.logger.log(`Restored throttle state: lastAnyTradeAt=${this.lastAnyTradeAt ? new Date(this.lastAnyTradeAt).toISOString() : 'none'}, ${seen.size} symbols`);
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to restore throttle state: ${(err as Error).message}`);
     }
   }
 
@@ -1241,7 +1331,7 @@ export class AutomationLoopService implements OnModuleInit {
 
       if (strategy.mode === 'semi-auto') {
         const actionId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        this.state.pendingActions.push({
+        const action: PendingAction = {
           id: actionId, strategyId, symbol: strategy.symbol,
           brokerId: strategy.brokerId || 'mt5',
           side: evalResult.signal || 'BUY',
@@ -1249,8 +1339,9 @@ export class AutomationLoopService implements OnModuleInit {
           composite: evalResult.composite ?? 0,
           createdAt: new Date().toISOString(),
           expiresAt: new Date(Date.now() + 5 * 60000).toISOString(),
-          evaluationId: evalResult.evaluationId,
-        });
+        };
+        this.state.pendingActions.push(action);
+        this.persistPendingAction(action).catch(() => {});
         return {
           timestamp: new Date().toISOString(),
           strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',

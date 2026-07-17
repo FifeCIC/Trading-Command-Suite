@@ -21,6 +21,15 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Catch module-load errors before React mounts — prevents white screen
+      window.addEventListener('error', function(e) {
+        var root = document.getElementById('root');
+        if (root && !root.children.length) {
+          root.innerHTML = '<div style="background:#2d0000;border:2px solid #f44;border-radius:8px;padding:1.5rem;margin:2rem;font-family:monospace;color:#f66"><h2 style="margin:0 0 .5rem">App Failed to Load</h2><p style="margin:0 0 .5rem;color:#f88">' + (e.error?.message || e.message || 'Unknown error') + '</p><pre style="font-size:.7rem;color:#f99;overflow:auto;max-height:150px">' + ((e.error?.stack||'').slice(0,800)) + '</pre><p style="margin:.5rem 0 0;font-size:.8rem;color:#f88">Check browser console (F12) for full stack trace.</p></div>';
+        }
+      });
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

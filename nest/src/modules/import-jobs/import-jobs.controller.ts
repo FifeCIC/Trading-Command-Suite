@@ -85,4 +85,24 @@ export class ImportJobsController {
   async orchestratePortfolio() {
     return this.orchestrator.ensurePortfolioFresh();
   }
+
+  /**
+   * POST /api/imports/bars — Flexible bar import with symbol auto-registration.
+   * Accepts raw OHLCV bars with symbol, timeframe, and provider metadata.
+   * Deduplicates by (symbolId, timeframe, timestamp).
+   *
+   * @see #272 — Flexible bar import endpoint
+   */
+  @Post('bars')
+  async importBars(@Body() body: {
+    symbol: string; timeframe: string; provider?: string;
+    bars: Array<{ timestamp: string; open: number; high: number; low: number; close: number; volume?: number }>;
+  }) {
+    if (!body.symbol || !body.timeframe || !body.bars?.length) {
+      return { error: 'symbol, timeframe, and bars[] are required' };
+    }
+    return this.importJobsService.importBars(
+      body.symbol, body.timeframe, body.provider || 'manual', body.bars,
+    );
+  }
 }

@@ -31,6 +31,15 @@ export const NAV_TREE = {
     label: 'QA',
     views: [
       { id: 'qa-testing', label: 'QA Checklist', icon: '🧪' },
+    ],
+  },
+  // ── Trading212 Integration (Phase 1: visible when provider is activated) ──
+  trading212: {
+    label: 'Trading212',
+    views: [
+      { id: 't212-portfolio', label: 'Portfolio', icon: '🏦' },
+      { id: 't212-isa', label: 'Stocks ISA', icon: '🏛️' },
+      { id: 't212-cfd', label: 'CFD', icon: '📉' },
       { id: 'order-testing', label: 'Order Testing', icon: '🧪' },
     ],
   },
@@ -140,6 +149,7 @@ export const NAV_TREE = {
       { id: 'charts-lab', label: 'Charts Lab', icon: '📊' },
       { id: 'snapshot-replay', label: 'Snapshot Replay', icon: '⏮' },
       { id: 'metastack-display', label: 'M.E.T.A. Display', icon: '📐' },
+      { id: 'metastack-performance', label: 'MetaStack Performance', icon: '📊' },
       { id: 'scoring-overview', label: 'Theme Example: Scoring Overview', icon: '🎨' },
       { id: 'scoring-debug-lab', label: 'Scoring Debug (Dual Protocol)', icon: '🔬' },
       { id: 'mt5-trading', label: 'MT5 Trading (Lab)', icon: '🔬' },
@@ -166,6 +176,7 @@ export const NAV_TREE = {
   planner: {
     label: 'Planner',
     views: [
+      { id: 'allocator', label: 'Strategy Allocator', icon: '📊' },
       { id: 'personal-finances', label: 'Personal Finances', icon: '💰' },
       { id: 'trading-styles', label: 'Trading Styles', icon: '🎨' },
       { id: 'objectives', label: 'Objectives', icon: '🎯' },

@@ -247,7 +247,10 @@ function AppShell() {
 
   const healthQuery = useQuery({
     queryKey: ['health'],
-    queryFn: () => apiGet('/api/version')
+    queryFn: () => apiGet('/api/version'),
+    retry: false,
+    staleTime: 10_000,
+    refetchInterval: 30_000,
   });
 
   const apiActivitySummaryQuery = useQuery({
@@ -703,16 +706,36 @@ function AppShell() {
         <div className="topbar-row topbar-row-main">
           <TickerBar />
           <nav className="topbar-area-nav" aria-label="Main navigation">
-            {QUICK_MENU.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={primaryArea === item.id ? 'nav-active' : ''}
-                onClick={() => item.id === 'dashboard' ? navigate('/dashboard') : onPrimarySelect(item.id)}
-              >
-                {item.label}
-              </button>
-            ))}
+            {/* Platform-specific pages (Trading212, etc.) — left of separator */}
+            {Object.entries(NAV_TREE)
+              .filter(([id]) => ['trading212'].includes(id))
+              .map(([id, area]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={primaryArea === id ? 'nav-active' : ''}
+                  onClick={() => onPrimarySelect(id)}
+                  title={area.label}
+                >
+                  {area.label}
+                </button>
+              ))}
+            {/* Separator between platform pages and main app */}
+            <span className="topbar-nav-sep" aria-hidden="true" />
+            {/* Main app navigation */}
+            {Object.entries(NAV_TREE)
+              .filter(([id]) => id !== 'dashboard' && !['trading212'].includes(id))
+              .map(([id, area]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={primaryArea === id ? 'nav-active' : ''}
+                  onClick={() => id === 'dashboard' ? navigate('/dashboard') : onPrimarySelect(id)}
+                  title={area.label}
+                >
+                  {area.label}
+                </button>
+              ))}
           </nav>
 
           <div className="topbar-status-cluster">
@@ -746,14 +769,6 @@ function AppShell() {
       <aside className={`left-rail${mobileNavOpen ? ' left-rail--open' : ''}`} aria-label="Section navigation">
         <div className="left-rail-header">
           <h2>{NAV_TREE[primaryArea]?.label || primaryArea}</h2>
-          <button
-            type="button"
-            className="rail-collapse-toggle"
-            onClick={() => setLeftCollapsed(v => !v)}
-            title={leftCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {leftCollapsed ? '▸' : '◂'}
-          </button>
           <button
             type="button"
             className="mobile-nav-close"
@@ -932,6 +947,14 @@ function AppShell() {
             </div>
           </>
         )}
+        <button
+          type="button"
+          className="rail-collapse-toggle"
+          onClick={() => setLeftCollapsed(v => !v)}
+          title={leftCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {leftCollapsed ? '▸' : '◂'}
+        </button>
       </aside>
 
       <main id="main-content" className="main-stage" {...withDevTag('main.stage', { area: secondaryView })}>
@@ -1058,7 +1081,6 @@ export default function App() {
           <Route path="/research/symbol/:symbolId" element={<AppShell />} />
           <Route path="/trading/symbol/:ticker" element={<SymbolPage />} />
           <Route path="/symbol/:ticker" element={<SymbolFocusPage />} />
-          <Route path="/allocator" element={<GlobalAllocatorPage />} />
           <Route path="/settings/data-management" element={<DataManagementPage />} />
           <Route path="/lab/top-movers" element={<TopMoversPage />} />
           <Route path="/settings/health-check" element={<SystemHealthPage />} />

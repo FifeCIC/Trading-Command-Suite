@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { NAV_TREE } from '../core/nav-tree';
 import ScreenOptions from '../components/ScreenOptions';
+import CopyViewData from '../components/CopyViewData';
 import './HomeDashboard.css'; // reuses nav-card styles
 
 const AREA_ICONS = {
@@ -130,7 +131,7 @@ export default function DashboardPage() {
   const newsDown = newsProviders.filter(p => p.status !== 'healthy' && p.status !== 'degraded' && p.status !== 'unknown').length;
 
   const areas = Object.entries(NAV_TREE)
-    .filter(([id]) => id !== 'dashboard') // exclude self
+    .filter(([id]) => id !== 'dashboard')
     .map(([id, area]) => ({
       id,
       label: area.label,
@@ -144,9 +145,34 @@ export default function DashboardPage() {
 
   return (
     <main id="main-content" className="nav-dashboard" aria-live="polite" aria-atomic="true">
-      {/* ── Top-Left Logo Bar ── */}
+      {/* ── Top Bar with Logo + Nav ── */}
       <div className="nd-topbar">
         <img src="/tcs-logo.png" alt="Trading Command Suite" className="nd-topbar-logo" />
+        <nav className="nd-topbar-nav" aria-label="Main navigation">
+          {areas.filter(a => ['trading212'].includes(a.id)).map((area) => (
+            <button
+              key={area.id}
+              type="button"
+              className="nd-topbar-btn"
+              onClick={() => navigate(`/${area.id}/${area.firstView}`)}
+              title={area.label}
+            >
+              {area.label}
+            </button>
+          ))}
+          <span className="nd-topbar-sep" aria-hidden="true" />
+          {areas.filter(a => !['trading212'].includes(a.id)).map((area) => (
+            <button
+              key={area.id}
+              type="button"
+              className="nd-topbar-btn"
+              onClick={() => navigate(`/${area.id}/${area.firstView}`)}
+              title={area.label}
+            >
+              {area.label}
+            </button>
+          ))}
+        </nav>
       </div>
 
       {/* ── Dashboard 2-Column Grid ── */}
@@ -297,7 +323,7 @@ export default function DashboardPage() {
           </div>
 
           {/* ── Diversification Card ── */}
-          <div className="dash-card">
+          <div className="dash-card dash-card-compact">
             <h3>
               🌐 Diversification
               <span className={`dash-div-mode-badge ${divMode === 'strict' ? 'mode-strict' : divMode === 'warn' ? 'mode-warn' : 'mode-off'}`}>
@@ -325,7 +351,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             )}
-            <a href="/allocator" className="dash-div-link">View Strategy Allocator →</a>
+            <a href="/planner/allocator" className="dash-div-link">View Strategy Allocator →</a>
           </div>
 
           {posCount > 0 && (
@@ -508,42 +534,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-
-      {/* ── Trading Workflow ── */}
-      <section className="nd-section nd-workflow">
-        <h2 className="nd-section-label">🧪 Trading Workflow</h2>
-        <div className="nd-nav-grid nd-nav-grid-primary">
-          {workflowAreas.map((area) => (
-            <button
-              key={area.id}
-              className="nd-nav-card nd-nav-card-primary"
-              onClick={() => navigate(`/${area.id}/${area.firstView}`)}
-            >
-              <span className="nd-nav-icon">{area.icon}</span>
-              <span className="nd-nav-label">{area.label}</span>
-              <span className="nd-nav-count">{area.viewCount} views</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Supporting Areas ── */}
-      <section className="nd-section nd-supporting">
-        <h2 className="nd-section-label">🔧 Supporting Areas</h2>
-        <div className="nd-nav-grid nd-nav-grid-secondary">
-          {supportingAreas.map((area) => (
-            <button
-              key={area.id}
-              className="nd-nav-card nd-nav-card-secondary"
-              onClick={() => navigate(`/${area.id}/${area.firstView}`)}
-            >
-              <span className="nd-nav-icon">{area.icon}</span>
-              <span className="nd-nav-label">{area.label}</span>
-              <span className="nd-nav-count">{area.viewCount} views</span>
-            </button>
-          ))}
-        </div>
-      </section>
       <ScreenOptions
         activeView={null}
         isOpen={screenOptionsOpen}
@@ -555,6 +545,29 @@ export default function DashboardPage() {
         isApiOnline={!diagQuery.isError}
         isDbOnline={!diagQuery.isError}
       />
+      <CopyViewData getMarkdown={() => {
+        const lines = [
+          `# Trading Command Suite — Dashboard`,
+          `> ${new Date().toISOString()}`,
+          '',
+          '## Portfolio',
+          `- **Mode:** ${diag?.mode || 'unknown'}`,
+          `- **Balance:** ${diag?.balance != null ? '$' + diag.balance.toFixed(2) : '—'}`,
+          `- **Equity:** ${diag?.equity != null ? '$' + diag.equity.toFixed(2) : '—'}`,
+          `- **Open Positions:** ${positions.length}`,
+          `- **Total P&L:** ${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}`,
+          '',
+          '## Positions',
+          ...(positions.length > 0
+            ? positions.map(p => `- **${p.symbol}** ${p.type || 'BUY'} ×${p.volume} @ ${p.openPrice || '?'} → ${p.currentPrice || '?'} | P&L: ${(p.profit >= 0 ? '+' : '') + (p.profit || 0).toFixed(2)}`)
+            : ['- No open positions']),
+        ];
+        if (t212Positions && t212Positions.length > 0) {
+          lines.push('', '## Trading212 Positions');
+          t212Positions.forEach(p => lines.push(`- **${p.ticker || p.symbol}** | P&L: ${(p.pnl >= 0 ? '+' : '') + (p.pnl || 0).toFixed(2)}`));
+        }
+        return lines.join('\n');
+      }} />
     </main>
   );
 }

@@ -1,6 +1,5 @@
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useUiStore } from '../stores/useUiStore';
-import { findTaggedElements } from '../dev-runtime/tags';
 import { formatViewMeta } from '../core/view-meta';
 
 /**
@@ -19,11 +18,6 @@ export default function DevOverlay({
   const open = useUiStore((state) => state.devOverlayOpen);
   const [inspectMode, setInspectMode] = useState(false);
   const [copiedMsg, setCopiedMsg] = useState('');
-
-  const tags = useMemo(() => {
-    if (!open) return [];
-    return findTaggedElements();
-  }, [open]);
 
   // ── Copy View Info ──
   const handleCopyViewInfo = useCallback(() => {
@@ -63,13 +57,25 @@ export default function DevOverlay({
       e.stopPropagation();
       
       // Copy element snippet
-      const clone = hoveredEl.cloneNode(false);
-      const snippet = hoveredEl.outerHTML.replace(hoveredEl.innerHTML, '...');
       const tag = hoveredEl.tagName.toLowerCase();
       const id = hoveredEl.id ? `#${hoveredEl.id}` : '';
       const classes = hoveredEl.className && typeof hoveredEl.className === 'string'
         ? `.${hoveredEl.className.split(' ').filter(Boolean).join('.')}`
         : '';
+      
+      // Preserve meaningful text — truncate only long content
+      const rawText = (hoveredEl.textContent || '').trim().replace(/\s+/g, ' ');
+      const displayText = rawText.length > 80
+        ? rawText.slice(0, 77) + '…'
+        : rawText;
+      const innerPreview = displayText
+        ? displayText
+        : (hoveredEl.children.length > 0 ? `[${hoveredEl.children.length} children]` : '');
+      
+      const snippet = hoveredEl.outerHTML.replace(
+        hoveredEl.innerHTML,
+        innerPreview || '…'
+      );
       
       const info = `Element:  <${tag}${id}${classes}>
 Snippet:  ${snippet}
@@ -191,27 +197,6 @@ Source:   ${window.location.pathname}`;
             </span>
           )}
         </div>
-
-      {/* ── Tagged elements (secondary) ── */}
-      {tags.length > 0 && (
-        <section className="dev-tags-section">
-          <h3 className="dev-section-title">Runtime Tags</h3>
-          <ul className="dev-tag-list">
-            {tags.map((item, index) => (
-              <li key={`${item.tag}-${index}`}>
-                <strong>{item.tag}</strong>
-                <span>{item.meta}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {tags.length === 0 && (
-        <p className="muted" style={{ fontSize: 11, marginTop: 8 }}>
-          No tagged elements detected.
-        </p>
-      )}
     </div>
   );
 }

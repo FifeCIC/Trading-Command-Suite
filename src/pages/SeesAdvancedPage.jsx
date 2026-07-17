@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { apiGet, apiPost } from '../core/api/client'
 import { exportCsv } from '../utils/exportCsv'
 import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts'
+import ProtocolPicker from '../components/ProtocolPicker'
 import './sees-live-stack.css'
 
 const AUTO_INTERVAL_MS = 4000
@@ -151,9 +152,11 @@ export default function SeesAdvancedPage() {
         </div>
         <div className="va-field">
           <label>Protocol</label>
-          <select value={protocolId} onChange={(e) => setProtocolId(e.target.value)}>
-            {protocols.map((p) => <option key={p.id} value={p.id}>{p.name || p.id}</option>)}
-          </select>
+          <ProtocolPicker
+            value={protocolId}
+            onChange={setProtocolId}
+            protocols={protocols}
+          />
         </div>
         <button type="button" className="btn btn-primary" onClick={mutateSymbols}>Refresh</button>
         <button type="button" className="btn" onClick={() => setIsAutoSorting((v) => !v)}>

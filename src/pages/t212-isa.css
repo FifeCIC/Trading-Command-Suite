@@ -1,0 +1,120 @@
+/* ── Trading212 Stocks ISA Page ── */
+
+.t212i-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  color: var(--ink, #e2e8f0);
+}
+
+.t212i-loading { color: var(--ink-soft, #94a3b8); text-align: center; padding: 3rem; }
+
+.t212i-header { margin-bottom: 1.5rem; }
+.t212i-header h1 { margin: 0 0 0.3rem; font-size: 1.4rem; }
+.t212i-subtitle { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; margin: 0; }
+
+/* ── Sections ── */
+.t212i-section { margin-bottom: 1.5rem; }
+.t212i-section h2 { font-size: 1rem; margin: 0 0 0.6rem; color: var(--accent, #22d3ee); }
+
+/* ── Allowance Bar ── */
+.t212i-allowance-bar {
+  height: 28px;
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+.t212i-allowance-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  min-width: 0;
+  transition: width 0.5s ease;
+}
+
+.t212i-allowance-stats {
+  display: flex;
+  gap: 1.25rem;
+}
+
+/* ── Stats ── */
+.t212i-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.6rem;
+}
+.t212i-stat {
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.t212i-stat-label {
+  font-size: 0.68rem;
+  color: var(--ink-soft, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.t212i-stat-value { font-size: 0.95rem; font-weight: 700; }
+.t212i-stat-small { font-size: 0.78rem; font-weight: 400; color: var(--ink-soft); }
+
+.t212i-profit { color: #22c55e; }
+.t212i-loss   { color: #ef4444; }
+
+/* ── FX Card ── */
+.t212i-fx-card {
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.85rem;
+}
+.t212i-fx-card p { margin: 0 0 0.4rem; }
+.t212i-fx-stats { display: flex; gap: 1.25rem; font-size: 0.82rem; }
+
+/* ── Warnings ── */
+.t212i-warnings { display: flex; flex-direction: column; gap: 0.35rem; }
+.t212i-warning {
+  padding: 0.4rem 0.75rem;
+  background: rgba(245,158,11,0.1);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: #f59e0b;
+}
+
+/* ── Table ── */
+.t212i-table-wrap { overflow-x: auto; }
+.t212i-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.t212i-table th {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  color: var(--ink-soft, #64748b);
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--line, #334155);
+}
+.t212i-table td {
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.t212i-symbol { font-weight: 600; font-family: monospace; font-size: 0.85rem; }
+.t212i-empty { color: var(--ink-soft, #64748b); font-size: 0.85rem; font-style: italic; }

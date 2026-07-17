@@ -75,6 +75,9 @@ import GoldSpeedTradingPage from '../pages/GoldSpeedTradingPage.jsx';
 // ── Portfolio / Trading212 ──
 import Mt5TradingPage from '../pages/Mt5TradingPage.jsx';
 import Mt5StatusPage from '../pages/Mt5StatusPage.jsx';
+import T212PortfolioPage from '../pages/T212PortfolioPage.jsx';
+import T212ISAPage from '../pages/T212ISAPage.jsx';
+import T212CFDPage from '../pages/T212CFDPage.jsx';
 
 // ── Data ──
 import DataAreaLandingPage from '../pages/DataAreaLandingPage.jsx';
@@ -116,6 +119,7 @@ import ServerControlsPage from '../pages/ServerControlsPage.jsx';
 import ReportsPage from '../pages/ReportsPage.jsx';
 import CapabilityMapPage from '../pages/CapabilityMapPage.jsx';
 import QATestingPage from '../pages/QATestingPage.jsx';
+import DecisionTrailPage from '../pages/DecisionTrailPage.jsx';
 import SymbolPage from '../pages/SymbolPage.jsx';
 import ArchitectureFrameworkPage from '../pages/ArchitectureFrameworkPage.jsx';
 import DiagramsPage from '../pages/DiagramsPage.jsx';
@@ -139,6 +143,7 @@ import PerformanceLabPage from '../pages/PerformanceLabPage.jsx';
 import SnapshotReplayPage from '../pages/SnapshotReplayPage.jsx';
 import TripleScreenPage from '../pages/TripleScreenPage.jsx';
 import HotStockPicksPage from '../pages/HotStockPicksPage.jsx';
+import MetaStackPerformancePage from '../pages/MetaStackPerformancePage.jsx';
 import MetaStackDisplayPage from '../pages/MetaStackDisplayPage.jsx';
 import PortfolioLabPage from '../pages/PortfolioLabPage.jsx';
 import ScoringDebugLab from '../pages/ScoringDebugLab.jsx';
@@ -165,6 +170,7 @@ import SnapshotLibraryPage from '../pages/SnapshotLibraryPage.jsx';
 import PersonalFinancesPage from '../pages/PersonalFinancesPage.jsx';
 import TradingStylesPage from '../pages/TradingStylesPage.jsx';
 import ObjectivesPage from '../pages/ObjectivesPage.jsx';
+import GlobalAllocatorPage from '../pages/GlobalAllocatorPage.jsx';
 import HomeDashboard from '../pages/HomeDashboard.jsx';
 
 // ── MAP ──────────────────────────────────────────────────────────────────────
@@ -178,6 +184,9 @@ export const VIEW_COMPONENTS = {
   'calculators': CalculatorsPage,
   'accounts-dashboard': AccountsDashboardPage,
   'order-testing': OrderTestingPage,
+  't212-portfolio': T212PortfolioPage,
+  't212-isa': T212ISAPage,
+  't212-cfd': T212CFDPage,
   'timeline': TradingTimelinePage,
   'portfolio-overview': PortfolioPage,
   'portfolio-events': PortfolioEventsPage,
@@ -303,6 +312,7 @@ export const VIEW_COMPONENTS = {
   'ai-logs': AILogViewerPage,
   'daily-summary-report': DailySummaryReportPage,
   'metastack-display': MetaStackDisplayPage,
+  'metastack-performance': MetaStackPerformancePage,
   'portfolio-lab': PortfolioLabPage,
   'scoring-debug-lab': ScoringDebugLab,
   'snapshots': SnapshotLibraryPage,
@@ -320,4 +330,5 @@ export const VIEW_COMPONENTS = {
   'personal-finances': PersonalFinancesPage,
   'trading-styles': TradingStylesPage,
   'objectives': ObjectivesPage,
+  'allocator': GlobalAllocatorPage,
 };

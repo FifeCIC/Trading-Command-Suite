@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiPatch } from '../core/api/client';
 import { exportCsv } from '../utils/exportCsv';
+import CopyViewData from '../components/CopyViewData';
 import './trading-platforms.css';
 
 const SYMBOL_TYPES = ['stock', 'crypto', 'forex'];
@@ -25,8 +26,9 @@ export default function ActiveSymbolsPage() {
   const [filterActive, setFilterActive] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [search, setSearch] = useState('');
-  const [sortKey, setSortKey] = useState('ticker');
+  const [sortKey, setSortKey] = useState('name');
   const [sortDir, setSortDir] = useState('asc');
+  const NUMERIC_SORT_KEYS = new Set(['openTradeCount', 'pnl']);
   const [error, setError] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [creatingWatchlist, setCreatingWatchlist] = useState(false);
@@ -99,7 +101,26 @@ export default function ActiveSymbolsPage() {
       const q = search.toLowerCase();
       list = list.filter((s) => s.ticker.toLowerCase().includes(q) || s.name.toLowerCase().includes(q));
     }
+    // Compute derived sort fields before sorting
+    list = list.map((s) => {
+      const posData = positionBySymbol[(s.ticker || '').toUpperCase()];
+      return {
+        ...s,
+        openTradeCount: posData?.count ?? 0,
+        pnl: posData?.totalPnl ?? null,
+      };
+    });
+
     list.sort((a, b) => {
+      if (NUMERIC_SORT_KEYS.has(sortKey)) {
+        const aVal = a[sortKey];
+        const bVal = b[sortKey];
+        // Push nulls to the end
+        if (aVal == null && bVal == null) return 0;
+        if (aVal == null) return 1;
+        if (bVal == null) return -1;
+        return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
+      }
       const aVal = (a[sortKey] ?? '').toString().toLowerCase();
       const bVal = (b[sortKey] ?? '').toString().toLowerCase();
       return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
@@ -281,8 +302,8 @@ export default function ActiveSymbolsPage() {
                   <input type="checkbox" checked={selectedIds.size === filtered.length && filtered.length > 0} onChange={toggleSelectAll} />
                 </th>
                 <th onClick={() => toggleSort('name')} style={{ cursor: 'pointer' }}>Name{sortIcon('name')}</th>
-                {cols.openTrade && <th>Open Trade</th>}
-                {cols.pnl && <th>P/L</th>}
+                {cols.openTrade && <th onClick={() => toggleSort('openTradeCount')} style={{ cursor: 'pointer' }}>Open Trade{sortIcon('openTradeCount')}</th>}
+                {cols.pnl && <th onClick={() => toggleSort('pnl')} style={{ cursor: 'pointer' }}>P/L{sortIcon('pnl')}</th>}
                 {cols.protocols && <th>Protocols</th>}
                 {cols.exchange && <th onClick={() => toggleSort('exchange')} style={{ cursor: 'pointer' }}>Exchange{sortIcon('exchange')}</th>}
                 {cols.type && <th onClick={() => toggleSort('type')} style={{ cursor: 'pointer' }}>Type{sortIcon('type')}</th>}
@@ -367,6 +388,22 @@ export default function ActiveSymbolsPage() {
           </table>
         </div>
       </section>
+      <CopyViewData getMarkdown={() => {
+        const lines = [
+          `# Active Symbols`,
+          `> ${new Date().toISOString()}`,
+          `> ${filtered.length} symbols · ${activeCount} active · ${inactiveCount} inactive`,
+          '',
+          '| Symbol | Type | Open Trade | P/L |',
+          '|--------|------|------------|-----|',
+        ];
+        filtered.slice(0, 50).forEach(s => {
+          const p = positionBySymbol[(s.ticker || '').toUpperCase()];
+          const pnl = p?.totalPnl != null ? `${p.totalPnl >= 0 ? '+' : ''}${p.totalPnl.toFixed(2)}` : '—';
+          lines.push(`| ${s.ticker || s.symbol} | ${s.type || '—'} | ${p?.count || 0} | ${pnl} |`);
+        });
+        return lines.join('\n');
+      }} />
     </div>
   );
 }

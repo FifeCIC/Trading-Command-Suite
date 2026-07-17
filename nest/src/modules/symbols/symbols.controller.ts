@@ -54,10 +54,10 @@ export class SymbolsController {
   @UseInterceptors(new PaginationInterceptor('symbols'))
   @ApiOperation({ summary: 'List all symbols. Use ?tag= to filter by tag.' })
   @ApiOkResponse({ description: 'All symbols' })
-  async findAll(@Query('tag') tag?: string) {
+  async findAll(@Query('tag') tag?: string, @Query('search') search?: string) {
     const symbols = tag
       ? await this.symbolsService.findByTag(tag)
-      : await this.symbolsService.findAll();
+      : await this.symbolsService.findAll(search);
     return { ...this.modeMeta(), symbols };
   }
 

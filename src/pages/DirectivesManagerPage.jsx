@@ -290,7 +290,7 @@ export default function DirectivesManagerPage() {
                       </td>
                       <td style={{ fontWeight: 700, color: (item.avgScore ?? 0) > 60 ? '#22c55e' : (item.avgScore ?? 0) < 40 ? '#ef4444' : 'var(--ink)' }}>{item.avgScore ?? '—'}</td>
                       <td>{item.runs ?? '—'}</td>
-                      <td style={{ fontWeight: 700, color: (item.bias ?? 0) > 0 ? '#22c55e' : (item.bias ?? 0) < 0 ? '#ef4444' : 'var(--ink-soft)' }}>{item.bias ?? '—'}</td>
+                      <td style={{ fontWeight: 700, color: item.bias === 'bullish' ? '#22c55e' : item.bias === 'bearish' ? '#ef4444' : 'var(--ink-soft)' }}>{item.bias ?? '—'}</td>
                       <td style={{ color: item.protocolCount > 0 ? 'var(--accent)' : 'var(--ink-soft)' }}>
                         {item.protocolCount || '—'}
                       </td>

@@ -144,7 +144,7 @@ export default function SeesArenaPage() {
       <header className="sa-header">
         <div>
           <h1>SEES Arena</h1>
-          <p className="sa-subtitle">Multi-protocol scoring comparison — see how different strategies rate your symbols.</p>
+          <p className="sa-subtitle">Multi-protocol scoring comparison — see how different strategies rate your symbols. Only selected protocols run — data-insufficient ones (⚠️) are automatically excluded.</p>
         </div>
       </header>
 

@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'TRADINGCS_FEATURE_FLAGS';
+const API = '/api/feature-flags';
 
 const DEFAULTS = {
   scoringPipeline: true,
@@ -23,6 +24,15 @@ function save(flags) {
   } catch { /* quota exceeded — ignore */ }
 }
 
+/** Push a flag change to server */
+function pushFlag(name, enabled) {
+  fetch(`${API}/${name}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled }),
+  }).catch(() => {});
+}
+
 let state = load();
 
 const listeners = new Set();
@@ -30,6 +40,17 @@ const listeners = new Set();
 function notify() {
   listeners.forEach((fn) => fn(state));
 }
+
+/** Hydrate from server on init */
+fetch(API).then(r => r.json()).then(flags => {
+  if (Array.isArray(flags) && flags.length) {
+    const map = {};
+    for (const f of flags) map[f.id] = f.enabled;
+    state = { ...DEFAULTS, ...map };
+    save(state);
+    notify();
+  }
+}).catch(() => {});
 
 export const featureFlags = {
   /** Get current flags snapshot */
@@ -46,6 +67,7 @@ export const featureFlags = {
   enable(name) {
     state = { ...state, [name]: true };
     save(state);
+    pushFlag(name, true);
     notify();
   },
 
@@ -53,13 +75,16 @@ export const featureFlags = {
   disable(name) {
     state = { ...state, [name]: false };
     save(state);
+    pushFlag(name, false);
     notify();
   },
 
   /** Toggle a flag */
   toggle(name) {
-    state = { ...state, [name]: !state[name] };
+    const next = !state[name];
+    state = { ...state, [name]: next };
     save(state);
+    pushFlag(name, next);
     notify();
   },
 
@@ -67,6 +92,7 @@ export const featureFlags = {
   reset() {
     state = { ...DEFAULTS };
     save(state);
+    for (const [k, v] of Object.entries(DEFAULTS)) pushFlag(k, v);
     notify();
   },
 

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
+import { BacktestArchiveService } from './backtest-archive.service';
 import { Prisma } from '@prisma/client';
 
 /** Table configuration for pruning — each table has its own date column and retention. */
@@ -24,7 +25,10 @@ const TABLE_CONFIG: Record<string, { dateCol: string; defaultDays: number; envKe
 export class DataRetentionService {
   private readonly logger = new Logger(DataRetentionService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly archive: BacktestArchiveService,
+  ) {}
 
   /** Scheduled daily prune — runs at 3 AM for all tables. */
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
@@ -58,6 +62,12 @@ export class DataRetentionService {
 
     try {
       const cutoffStr = cutoff.toISOString().slice(0, 19).replace('T', ' ');
+
+      // ── Archive before pruning (#354) — best-effort, don't block prune ──
+      if (table === 'directiveoutcome') {
+        this.archive.exportAndPrune(table, config.dateCol, days).catch(() => {});
+      }
+
       // eslint-disable-next-line no-constant-condition
       while (true) {
         const result = await this.prisma.$executeRawUnsafe(

@@ -25,7 +25,7 @@ const SIGNALS_WORKBENCH_STRATEGY_ID = 'signals-workbench';
 export interface SignalEnvelope {
   symbol: string;
   composite: number;
-  signal: 'BUY' | 'HOLD' | 'SELL';
+  signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
   confidence: number;            // 0-100 confidence score
   rarity: string | null;         // e.g. "Exceptional", "Strong"
   rarityColor: string | null;

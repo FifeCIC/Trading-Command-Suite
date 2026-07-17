@@ -402,10 +402,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                   {GLOBAL_PREFERENCES.map(function (section) {
                     return (
                       <div key={section.id} className="so-section">
-                        <h3 className="so-section-title">{section.label}</h3>
-                        {section.description && (
-                          <p className="so-section-desc">{section.description}</p>
-                        )}
+                        <h3 className="so-section-title" title={section.description}>{section.label}</h3>
                         {section.type === 'radio' && (
                           <div className="so-radio-group">
                             {section.options.map(function (opt) {
@@ -414,6 +411,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                                 <label
                                   key={opt.value}
                                   className={'so-radio-option' + (currentValue === opt.value ? ' so-radio-selected' : '')}
+                                  title={opt.desc}
                                 >
                                   <input
                                     type="radio"
@@ -435,7 +433,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                           <label className="so-checkbox-option">
                             <input
                               type="checkbox"
-                              checked={globalValueMap[section.field] === true}
+                              defaultChecked={globalValueMap[section.field] === true}
                               onChange={function (e) { handleGlobalChange(section.field, e.target.checked); }}
                             />
                             <span>{section.description || section.label}</span>
@@ -453,10 +451,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                     {registry.sections.map(function (section) {
                       return (
                         <div key={section.id} className="so-section">
-                          <h3 className="so-section-title">{section.label}</h3>
-                          {section.description && (
-                            <p className="so-section-desc">{section.description}</p>
-                          )}
+                          <h3 className="so-section-title" title={section.description}>{section.label}</h3>
                           {section.type === 'radio' && (
                             <div className="so-radio-group">
                               {section.options.map(function (opt) {
@@ -464,6 +459,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                                   <label
                                     key={opt.value}
                                     className={'so-radio-option' + (values[section.key] === opt.value ? ' so-radio-selected' : '')}
+                                    title={opt.desc}
                                   >
                                     <input
                                       type="radio"

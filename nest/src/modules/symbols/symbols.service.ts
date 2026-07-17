@@ -36,15 +36,24 @@ export class SymbolsService {
     return this.prisma.symbol.create({ data });
   }
 
-  async findAll(): Promise<Symbol[]> {
+  async findAll(search?: string): Promise<Symbol[]> {
     if (!this.prisma.isAvailable) {
       this.logger.warn('Database unavailable — returning empty symbol list.');
       return [];
     }
 
     try {
+      const where: Prisma.SymbolWhereInput = {};
+      if (search && search.trim().length > 0) {
+        where.OR = [
+          { ticker: { contains: search.trim() } },
+          { name: { contains: search.trim() } },
+        ];
+      }
       return await this.prisma.symbol.findMany({
+        where,
         orderBy: [{ ticker: 'asc' }],
+        take: search ? 10 : undefined,
       });
     } catch (error) {
       this.logger.warn(
