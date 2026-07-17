@@ -11,7 +11,7 @@
  * Token budget: ~23K (vs ~38K for full Architecture Framework)
  * 
  * @generated — extracted from architecture-framework.data.js
- * @updated 2026-07-16
+ * @updated 2026-07-17
  */
 export const STATUS_SNAPSHOT = [
   'This page is the implementation front door for architecture-sensitive work.',
@@ -207,10 +207,31 @@ export const CURRENT_SLICE = [
   'Global Diversification System — Full-stack cross-broker diversification: GlobalSetting DB model (key-value in global_setting table), GlobalDiversificationService aggregates positions across ALL brokers, detects cross-broker duplicates, calculates global exposure, performs pre-trade checks. REST API at /api/diversification/*. Automation loop integration (check before placeOrder). Global Allocator page at /allocator with strategy allocation view, duplicate warnings, mode selector. Dashboard card.',
   'Live Ordering Stack Crash Fix — Verified and closed #319: Live Ordering Stack page no longer crashes with style prop error. Comprehensive audit of 250+ style props across src/ found zero string-based style props. Page renders correctly in table/card views, handles empty watchlists, missing data, and API errors with proper .catch() guards on all 5 queries.',
   'Symbol Focus Page — New standalone page at /symbol/:ticker showing full trading pipeline for one ticker. Backend GET /api/symbols/:ticker/focus aggregates protocols, scoring strategies, trading strategies, recent decisions (decision_log), and trade outcomes (strategy_evaluation). Frontend SymbolFocusPage.jsx with two-column layout: left = protocols + strategies, right = live activity + trade outcomes. 10-second polling with pulse indicator. Mode badges (AUTO/SEMI/MANUAL), color-coded decision log (SCORED/EXECUTED/FAILED/BLOCKED). "Not scored" banner when inactive.',
+  // ── Sprint 2026-07-16 — Accessibility, UX, Data, Scoping ──
+  'Active Symbols Company Names (#305) — ActiveSymbolsPage shows company name as primary identifier with ticker as monospace subtitle. Column visibility toggles for Open Trade, P/L, Protocols, Exchange, Type. Persisted to localStorage.',
+  'Calculator Screen Options (#376) — Floating gear button on Calculators page with show/hide toggles for each calculator (Averaging Down, Position Size, Profit/Loss, Risk/Reward). Visibility persisted to localStorage. History storage (max 50, with notes).',
+  'Color-Blind Friendly Mode (#358) — WCAG 1.4.1 redundant cue preference. Toggles data-colorblind attribute on :root via Screen Options. CSS adds shape indicators (▲/▼, +/-, stripe fills) alongside colors. No backend changes.',
+  'Conditional EURUSD Fetch (#394) — scoreWithGating() checks if active protocol uses DXY-dependent directives before fetching EURUSD from MT5. Stock-only protocols skip the fetch entirely. Saves unnecessary MT5 calls per tick.',
+  'Daily Briefing (#368 A+B) — New page at /lab/daily-briefing with morning/evening modes. Consumes 5 APIs: timeline, MT5 diagnostics, MT5 positions, scoring/ranked, watchlists. Morning: calendar events + overnight gainers/losers. Evening: P&L table + tomorrow preview. Priority triage: invested > watchlist > other. 60s auto-refresh.',
+  'Data Quick Wins (#356) — Scheduled daily cron (3 AM) for directive outcome pruning in DataRetentionService. MT5 adapter placeOrder() now writes every order attempt to Order table (success + failure), complementing existing decision_log persistence.',
+  'Exit Signals UX (#321) — Text sizes increased, visual hierarchy with color-accented group headers (red/orange/blue/green/gray), source/broker badges always visible, Notice component fixed (invalid title prop removed), card hover shadow, wider min card width 320px.',
+  'Focus Indicator Preference (#359) — Radio preference in Screen Options: Strong (2px solid accent), Subtle (1px dashed), None. Follows fontScale pattern. Applied via data-focus-indicator-style attribute on &lt;html&gt; targeting :focus-visible.',
+  'Forex Cross-Pair Auto Strategies (#380) — 5 new auto strategies: EURJPY, GBPJPY, AUDJPY, EURGBP, EURCHF. Each uses built-in-default + built-in-short, 0.01 base, 0.3% SL/TP, 5m, auto mode, active. Total forex auto strategies now 13.',
+  'Keyboard Navigation Skip Link (#360) — Skip-to-main-content link at BrowserRouter root. Tab-first visible. DevOverlay Escape key handler exits inspect mode before closing. CSS hidden-until-focused pattern.',
+  'MT5 Trading Offline Fix (#313) — catch block now sets connected=false, clears stale positions/history/account. wasEverConnected ref distinguishes first-visit from connection-loss. Enhanced offline UI with step-by-step reconnect instructions and pulse animation.',
+  'News Sentiment Status + Protocol Type Badges (#367 A+C) — Dashboard News & Sentiment card with Finnhub/FMP status dots. ProtocolsPage type classifier: News-Reactive, Analyst-Driven, Insider-Aware, Macro-Driven, Technical-Only. Color-coded badges.',
+  'Notification Disc (#378 Part 4) — Floating bell icon (fixed top-right, z-index 200) aggregating notifications from /api/providers/health and /api/automation/status. 4 types: provider degraded, automation errors, bridge offline, API key warnings. Severity colors, dismiss, "Clear all". Unread badge with red pulse for critical.',
+  'Protocol Comparison Refactor (#393) — Triplicated dual-protocol LONG vs SHORT comparison logic extracted into single compareProtocolPair() function. 3 call sites now share implementation. Any future comparison changes need one edit.',
+  'Protocol Name Resolution (#395) — 3-tier lookup for protocol/watchlist/broker names: live API data → hardcoded overrides → slug-to-title auto-conversion with smart acronym detection (MT5, BTC, CAD, RSI). All 32 protocol IDs resolve to readable names.',
+  'Protocol-Scoped Directive Execution (#389) — runAll() accepts optional directiveFilter: Set&lt;string&gt;. scoreWithGating() collects directive IDs from protocol groups and passes filter. Only ~16 directives run per symbol instead of all 100+. Same scores, fewer executions.',
+  'Screen Reader Live Regions (#361) — aria-live="polite" aria-atomic="true" on MarketTape, Dashboard, PositionsMonitor, SpeedScanner, HomeDashboard. Global aria-live="assertive" role="alert" div in App.jsx for critical notifications. sr-only-alert CSS class.',
+  'Tap Target Audit (#362) — WCAG 2.5.5 audit via Chrome DevTools across 3 pages. Global min-height:44px on buttons/inputs, 24×24px checkboxes. 15+ CSS files updated. Violations reduced from 386 to 2 (breadcrumbs, WCAG "Inline" exempt).',
+  'Weight Strategy Selection (#392) — ScoringStrategy.weightStrategy field (group-weighted | maxscore-weighted). Documented both systems in directive-groups.ts. scoreWithGating() accepts weightStrategy param, composite logic handles both modes. Default: group-weighted.',
+  'Dashboard Recent Trades (#324) — Dashboard queries /api/providers/mt5/history?limit=5 to render last 5 completed trades below open positions table. Each row shows symbol, type (BUY/SELL with green/red), volume, price, P&L, and timestamp. Only visible when MT5 bridge is connected. Files: DashboardPage.jsx, HomeDashboard.css.',
 ]
 
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-16'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-17'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {

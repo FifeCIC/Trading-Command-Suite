@@ -222,8 +222,9 @@ export class StackPerformanceService {
           effectivenessRate: Math.round(effectivenessRate * 100) / 100,
           profitFactor: Math.round(profitFactor * 100) / 100,
           winRate: Math.round(winRate * 10000) / 10000,
-          sharpeApprox: 0, // placeholder for future
+          sharpeApprox: 0,
           rating,
+          fingerprint,
           computedAt: new Date(),
         },
         update: {
@@ -243,6 +244,7 @@ export class StackPerformanceService {
           profitFactor: Math.round(profitFactor * 100) / 100,
           winRate: Math.round(winRate * 10000) / 10000,
           rating,
+          fingerprint,
           computedAt: new Date(),
         },
       });
@@ -253,10 +255,10 @@ export class StackPerformanceService {
     // Check if fingerprint changed from last persisted rating
     const lastPersisted = await this.prisma.stackPerformance.findUnique({
       where: { scoringStrategyId },
-      select: { rating: true },
+      select: { fingerprint: true },
     }).catch(() => null);
     const fingerprintChanged = lastPersisted
-      ? false // We just updated it, so it matches now
+      ? lastPersisted.fingerprint !== fingerprint
       : false;
 
     return {

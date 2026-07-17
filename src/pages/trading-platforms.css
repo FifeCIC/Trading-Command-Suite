@@ -666,3 +666,72 @@
   letter-spacing: 0.06em;
   color: var(--ink-soft, #64748b);
 }
+
+/* ── Broker Platform Comparison ──────────────────────────── */
+
+.pc-broker-category {
+  margin-bottom: 1.25rem;
+}
+.pc-broker-category h3 {
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+.pc-broker-value {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  display: block;
+}
+
+.pc-section h2 {
+  font-size: 1.15rem;
+  margin: 0 0 0.25rem;
+  color: var(--ink);
+}
+.pc-section .tp-hint {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+}
+
+.pc-scroll-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.pc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  min-width: 600px;
+}
+.pc-table th {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.pc-table td {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid rgba(51,65,85,0.3);
+  vertical-align: top;
+}
+.pc-sticky-col {
+  position: sticky;
+  left: 0;
+  background: var(--panel);
+  z-index: 1;
+  min-width: 150px;
+}
+.pc-provider-head {
+  color: var(--accent) !important;
+  font-weight: 700;
+}
+.pc-cell--ok { color: #22c55e; }
+.pc-cell--warn { color: #ef4444; }
+.pc-cell--neutral { color: var(--ink-soft); }

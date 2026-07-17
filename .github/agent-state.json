@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "claimedIssue": {
+    "number": null,
+    "title": null,
+    "claimedBy": null,
+    "claimSession": null,
+    "claimTimestamp": null,
+    "lastHeartbeat": null
+  },
+  "serverOps": {
+    "restartingVite": false,
+    "restartingNest": false,
+    "restartingMt5": false,
+    "opStartedAt": null,
+    "opSession": null
+  },
+  "issueCache": {
+    "entryCount": 0,
+    "lastPruned": null,
+    "totalTokensSaved": 0
+  },
+  "issueSnapshot": {
+    "updatedAt": "2026-07-16T23:38:00.143Z",
+    "count": 50
+  }
+}

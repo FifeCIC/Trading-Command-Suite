@@ -6,6 +6,27 @@ const API = 'http://localhost:3201/api/scoring/gated/protocols';
 const SOURCE_LABELS = { code: 'System', database: 'Database' };
 const SOURCE_COLORS = { code: '#8b5cf6', database: '#3b82f6' };
 
+/** Classify a protocol by its directive/data dependencies */
+function getProtocolType(proto) {
+  const id = (proto.id || '').toLowerCase();
+  const name = (proto.name || '').toLowerCase();
+  const combined = id + ' ' + name;
+
+  if (/news|sentiment|social/i.test(combined)) {
+    return { label: 'News-Reactive', color: '#f59e0b', icon: '📰' };
+  }
+  if (/analyst|earnings|whisper/i.test(combined)) {
+    return { label: 'Analyst-Driven', color: '#3b82f6', icon: '📊' };
+  }
+  if (/insider|congress/i.test(combined)) {
+    return { label: 'Insider-Aware', color: '#a855f7', icon: '🔍' };
+  }
+  if (/macro|dxy|oil|gold|commodity/i.test(combined)) {
+    return { label: 'Macro-Driven', color: '#14b8a6', icon: '🌍' };
+  }
+  return { label: 'Technical-Only', color: '#64748b', icon: '📈' };
+}
+
 export default function ProtocolsPage() {
   const [protocols, setProtocols] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -92,6 +113,9 @@ export default function ProtocolsPage() {
                   <span className="protocols-source" style={{ background: SOURCE_COLORS[p.source] || '#888' }}>
                     {SOURCE_LABELS[p.source] || p.source}
                   </span>
+                  <span className="protocols-type-mini" style={{ color: getProtocolType(p).color, borderColor: getProtocolType(p).color }}>
+                    {getProtocolType(p).label}
+                  </span>
                   <span>{p.directiveCount} directives</span>
                 </div>
               </li>
@@ -111,6 +135,14 @@ export default function ProtocolsPage() {
               >
                 {SOURCE_LABELS[selectedProto.source] || selectedProto.source}
               </span>
+              {(() => {
+                const pt = getProtocolType(selectedProto);
+                return (
+                  <span className="protocols-type-badge" style={{ background: pt.color }}>
+                    {pt.icon} {pt.label}
+                  </span>
+                );
+              })()}
             </div>
 
             <p className="protocols-description">{selectedProto.description}</p>

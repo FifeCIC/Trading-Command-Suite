@@ -9,6 +9,7 @@ import { SpeedScanService } from './speed-scan.service';
 import { Mt5Adapter } from '../providers/adapters/mt5.adapter';
 import { TickRecorderService } from './tick-recorder.service';
 import { PrismaService } from '../../database/prisma.service';
+import { ProtocolDbService } from './protocol-db.service';
 
 class ScanRequestDto {
   @IsOptional() @IsArray() @IsString({ each: true }) symbols?: string[];
@@ -24,6 +25,7 @@ export class SpeedScanController {
     private readonly mt5: Mt5Adapter,
     private readonly recorder: TickRecorderService,
     private readonly prisma: PrismaService,
+    private readonly protocolDb: ProtocolDbService,
   ) {}
 
   @Post('scan')
@@ -144,15 +146,13 @@ export class SpeedScanController {
 
     let defaults = STYLE_DEFAULTS.swing;
     if (protocolId) {
-      try {
-        const { PROTOCOL_REGISTRY } = require('../directives/directive-groups');
-        const style = PROTOCOL_REGISTRY[protocolId]?.tradingStyle?.toLowerCase() || '';
+      const config = await this.protocolDb.findBySlug(protocolId);
+      const style = config?.tradingStyle?.toLowerCase() || '';
         if (style.includes('scalp') || style.includes('tick')) defaults = STYLE_DEFAULTS.scalp;
         else if (style.includes('speed')) defaults = STYLE_DEFAULTS.speed;
         else if (style.includes('day')) defaults = STYLE_DEFAULTS['day-trade'];
         else if (style.includes('swing')) defaults = STYLE_DEFAULTS.swing;
         else if (style.includes('position')) defaults = STYLE_DEFAULTS.position;
-      } catch { /* keep defaults */ }
     }
 
     const finalSize = size ?? defaults.size;

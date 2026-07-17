@@ -7,6 +7,7 @@ import DevOverlay from './components/DevOverlay';
 import ErrorBoundary from './components/ErrorBoundary';
 import TickerBar from './components/TickerBar';
 import MarketTape from './components/MarketTape';
+import NotificationDisc from './components/NotificationDisc';
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp';
 
 import { apiGet } from './core/api/client';
@@ -39,6 +40,7 @@ import DiagramsPage from './pages/DiagramsPage';
 import DataStatusPage from './pages/DataStatusPage';
 import DataElementsPage from './pages/DataElementsPage';
 import DecoderPage from './pages/DecoderPage';
+import DailyBriefingPage from './pages/DailyBriefingPage';
 import DirectivesManagerPage from './pages/DirectivesManagerPage';
 import ScoringRunsPage from './pages/ScoringRunsPage';
 import ScoringActivityLogsPage from './pages/ScoringActivityLogsPage';
@@ -54,11 +56,12 @@ import PluginTabSkeletonPage from './pages/PluginTabSkeletonPage';
 import TradingStrategiesPage from './pages/TradingStrategiesPage';
 import StrategyComparisonPage from './pages/StrategyComparisonPage';
 import RiskControlsPage from './pages/RiskControlsPage';
-import HomeDashboardPage from './pages/HomeDashboardPage';
 import CacheMonitorPage from './pages/CacheMonitorPage';
 import PositionsMonitorPage from './pages/PositionsMonitorPage';
 import LiveOrderingStackPage from './pages/LiveOrderingStackPage';
 import SeesArenaPage from './pages/SeesArenaPage';
+import ABTestingPage from './pages/ABTestingPage';
+import AICostsPage from './pages/AICostsPage';
 import AlgorithmLabPage from './pages/AlgorithmLabPage';
 import PerformanceLabPage from './pages/PerformanceLabPage';
 import AlertCenterPage from './pages/AlertCenterPage';
@@ -81,6 +84,9 @@ import SymbolDetailPage from './pages/SymbolDetailPage';
 import SymbolPage from './pages/SymbolPage';
 import SymbolFocusPage from './pages/SymbolFocusPage';
 import GlobalAllocatorPage from './pages/GlobalAllocatorPage';
+import DataManagementPage from './pages/DataManagementPage';
+import TopMoversPage from './pages/TopMoversPage';
+import SystemHealthPage from './pages/SystemHealthPage';
 import SpeedTradingPage from './pages/SpeedTradingPage';
 import SpeedScannerPage from './pages/SpeedScannerPage';
 import BtcSpeedTradingPage from './pages/BtcSpeedTradingPage';
@@ -357,6 +363,7 @@ function AppShell() {
       const prefs = raw ? JSON.parse(raw) : {};
       document.documentElement.setAttribute('data-page-transitions', prefs.pageTransitions !== false ? 'true' : 'false');
       document.documentElement.setAttribute('data-high-contrast', prefs.highContrastText === true ? 'true' : 'false');
+      document.documentElement.setAttribute('data-colorblind', prefs.colorBlindMode === true ? 'true' : 'false');
       document.documentElement.setAttribute('data-font-scale', prefs.fontScale || 'normal');
       document.documentElement.setAttribute('data-focus-indicator-style', prefs.focusIndicatorStyle || 'strong');
     } catch { /* preference not yet saved */ }
@@ -369,6 +376,7 @@ function AppShell() {
         const raw = localStorage.getItem('tcs:preferences');
         const prefs = raw ? JSON.parse(raw) : {};
         document.documentElement.setAttribute('data-high-contrast', prefs.highContrastText === true ? 'true' : 'false');
+        document.documentElement.setAttribute('data-colorblind', prefs.colorBlindMode === true ? 'true' : 'false');
         document.documentElement.setAttribute('data-page-transitions', prefs.pageTransitions !== false ? 'true' : 'false');
         document.documentElement.setAttribute('data-font-scale', prefs.fontScale || 'normal');
         document.documentElement.setAttribute('data-focus-indicator-style', prefs.focusIndicatorStyle || 'strong');
@@ -1038,12 +1046,17 @@ export default function App() {
   return (
     <BrowserRouter>
       <a href="#main-content" className="skip-link">Skip to main content</a>
+      <NotificationDisc />
       <ErrorBoundary message="The application encountered a critical error.">
         <Routes>
           <Route path="/research/symbol/:symbolId" element={<AppShell />} />
           <Route path="/trading/symbol/:ticker" element={<SymbolPage />} />
           <Route path="/symbol/:ticker" element={<SymbolFocusPage />} />
           <Route path="/allocator" element={<GlobalAllocatorPage />} />
+          <Route path="/settings/data-management" element={<DataManagementPage />} />
+          <Route path="/lab/top-movers" element={<TopMoversPage />} />
+          <Route path="/settings/health-check" element={<SystemHealthPage />} />
+          <Route path="/lab/platform-comparisons" element={<PlatformComparisonsPage />} />
           <Route path="/:area/:view" element={<AppShell />} />
           <Route path="/:area" element={<AppShell />} />
           <Route path="/" element={<HomeDashboard />} />

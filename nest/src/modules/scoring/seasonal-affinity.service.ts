@@ -13,7 +13,8 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { PROTOCOL_REGISTRY, SeasonalAffinity, DateRangeOverride } from '../directives/directive-groups';
+import { SeasonalAffinity, DateRangeOverride } from '../directives/directive-groups';
+import { ProtocolDbService } from './protocol-db.service';
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -31,21 +32,14 @@ export interface AffinityResult {
 export class SeasonalAffinityService {
   private readonly logger = new Logger(SeasonalAffinityService.name);
 
-  /**
-   * Get the seasonal affinity weight for a given protocol on a given date.
-   * If no date is provided, uses the current date.
-   *
-   * Returns weight in range [-1.0, +1.0]:
-   *   +1.0 = strongly favorable (e.g., +100% boost)
-   *    0.0 = neutral
-   *   -1.0 = strongly unfavorable (e.g., complete suppression)
-   */
+  constructor(private readonly protocolDb: ProtocolDbService) {}
+
   getAffinity(protocolId: string, date?: Date): AffinityResult {
     const now = date ?? new Date();
-    const month = now.getMonth(); // 0-11
-    const day = now.getDate();    // 1-31
+    const month = now.getMonth();
+    const day = now.getDate();
 
-    const protocol = PROTOCOL_REGISTRY[protocolId];
+    const protocol = this.protocolDb.getCached(protocolId);
     if (!protocol?.seasonalAffinity) {
       return { weight: 0, source: 'none', month, day };
     }
@@ -121,7 +115,7 @@ export class SeasonalAffinityService {
   getAllAffinities(date?: Date): Array<{ protocolId: string; name: string } & AffinityResult> {
     const results: Array<{ protocolId: string; name: string } & AffinityResult> = [];
 
-    for (const [protocolId, protocol] of Object.entries(PROTOCOL_REGISTRY)) {
+    for (const [protocolId, protocol] of Object.entries(this.protocolDb.getAllCached()) as [string, any][]) {
       if (protocol.seasonalAffinity) {
         const affinity = this.getAffinity(protocolId, date);
         results.push({

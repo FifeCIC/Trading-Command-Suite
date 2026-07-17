@@ -7,15 +7,13 @@ import { RiskService } from '../risk/risk.service';
 import { NotificationService } from '../notifications/notifications.service';
 import {
   DIRECTIVE_GROUPS,
-  BTC_SPEED_GROUPS,
-  PROTOCOL_REGISTRY,
 } from '../directives/directive-groups';
 import { DirectiveInput, MarketBar } from '../directives/interfaces/directive.interface';
 
 export interface StrategySummary {
   id: string;
   name: string;
-  protocolId: string;
+  protocolId: string | null;  // Deprecated — use ScoringStrategy via scoringStrategyId FK
   shortProtocolId?: string | null;
   symbol: string;
   timeframe: string;
@@ -23,9 +21,9 @@ export interface StrategySummary {
   active: boolean;
   brokerId?: string;
   minComposite?: number;
-  baseSize?: number;
-  slPct?: number;
-  tpPct?: number;
+  baseSize?: number | null;  // Deprecated — use ScoringStrategy
+  slPct?: number | null;     // Deprecated — use ScoringStrategy
+  tpPct?: number | null;     // Deprecated — use ScoringStrategy
   cooldownMinutes?: number;
   maxPositions?: number;
   lastEvaluatedAt: string | null;
@@ -200,8 +198,8 @@ export class TradingStrategyService {
       }));
     }
 
-    // Gated scoring
-    const groups = PROTOCOL_REGISTRY[protocolId]?.groups ?? DIRECTIVE_GROUPS;
+    // Gated scoring — uses default directive groups (protocol-specific groups resolved at ScoringStrategy level)
+    const groups = DIRECTIVE_GROUPS;
     const { composite, signal, rarity } = await this.gateScore(symbol, bars, groups);
 
     // Direction check
@@ -288,7 +286,7 @@ export class TradingStrategyService {
     }
 
     // Compute position size with regime adaptation
-    let size = strategy.baseSize;
+    let size = strategy.baseSize ?? 0.01;
     if (strategy.useRaritySizing && evalResult.rarity) {
       size *= evalResult.rarity.sizeMultiplier;
     }
@@ -339,8 +337,8 @@ export class TradingStrategyService {
 
     // Auto / semi-auto: place bracket order with trailing stop
     const entryPrice = 0; // Market order — MT5 fills at best available
-    const slPct = strategy.slPct / 100; // Convert from percentage to decimal
-    const tpPct = strategy.tpPct / 100;
+    const slPct = (strategy.slPct ?? 1.0) / 100;
+    const tpPct = (strategy.tpPct ?? 1.0) / 100;
 
     // ── Pre-Flight Safety Gates (Issue #28) ──────────────
     const safetyCheck = await this.runSafetyGates(strategy, size);

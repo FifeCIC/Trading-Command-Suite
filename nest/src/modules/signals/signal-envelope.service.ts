@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ProtocolGatingService, GatedScore, DirectiveBreakout } from '../scoring/protocol-gating.service';
+import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { MarketDataService } from '../market-data/market-data.service';
 import { ScoreHistoryService } from '../scoring/score-history.service';
 
@@ -86,6 +87,7 @@ export class SignalEnvelopeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly protocolGating: ProtocolGatingService,
+    private readonly protocolDb: ProtocolDbService,
     private readonly marketData: MarketDataService,
     private readonly scoreHistory: ScoreHistoryService,
   ) {}
@@ -412,13 +414,7 @@ export class SignalEnvelopeService {
   }
 
   private getProtocolName(protocolId: string): string {
-    // Lazy import to avoid circular dependency
-    try {
-      const { PROTOCOL_REGISTRY } = require('../directives/directive-groups');
-      return PROTOCOL_REGISTRY[protocolId]?.name ?? protocolId;
-    } catch {
-      return protocolId;
-    }
+    return this.protocolDb.getCached(protocolId)?.name ?? protocolId;
   }
 
   private emptyEnvelope(symbol: string): SignalEnvelope {

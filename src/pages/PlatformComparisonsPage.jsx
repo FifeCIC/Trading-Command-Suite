@@ -134,6 +134,52 @@ export default function PlatformComparisonsPage() {
           </table>
         </section>
       )}
+
+      {/* ── Broker Trading Platforms Matrix ── */}
+      {seed.brokerPlatforms && (
+        <section className="tp-card pc-section">
+          <h2>🏦 Trading Brokers & Execution Platforms</h2>
+          <p className="tp-hint">
+            Comparison of connected trading accounts — MT5, Trading212 GIA, and Stocks ISA.
+            Data sourced from broker documentation and live account testing.
+          </p>
+
+          {seed.brokerPlatforms.categories.map((cat) => (
+            <div key={cat.id} className="pc-broker-category">
+              <h3>{cat.title}</h3>
+              <div className="pc-scroll-wrap">
+                <table className="pc-table">
+                  <thead>
+                    <tr>
+                      <th className="pc-sticky-col">Specification</th>
+                      {seed.brokerPlatforms.providers.map((pid) => {
+                        const labels = { mt5: '📡 MT5', trading212: '🏦 T212 GIA', isa: '🏛️ ISA' };
+                        return <th key={pid} className="pc-provider-head">{labels[pid] || pid}</th>;
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cat.fields.map((field) => (
+                      <tr key={field.id}>
+                        <td className="pc-sticky-col pc-field-cell">{field.label}</td>
+                        {seed.brokerPlatforms.providers.map((pid) => {
+                          const value = seed.brokerPlatforms.data[pid]?.[field.id] || '\u2014';
+                          const tone = toneForValue(value);
+                          return (
+                            <td key={`${pid}-${field.id}`} className={`pc-cell pc-cell--${tone}`}>
+                              <span className="pc-broker-value">{value}</span>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
     </div>
   );
 }

@@ -7,13 +7,12 @@ import {
 } from '../directives/interfaces/directive.interface';
 import {
   DIRECTIVE_GROUPS,
-  BTC_SPEED_GROUPS,
-  PROTOCOL_REGISTRY,
   DirectiveGroup,
 } from '../directives/directive-groups';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { MacroSnapshotService } from './macro-snapshot.service';
 import { EurUsdCacheService } from './eurusd-cache.service';
+import { ProtocolDbService } from './protocol-db.service';
 import { isScoringDemo } from '../../config/scoring-mode';
 import {
   RiskGatingEngine,
@@ -163,6 +162,7 @@ export class ProtocolGatingService {
     private readonly adapterFactory: AdapterFactory,
     private readonly macroSnapshot: MacroSnapshotService,
     private readonly eurusdCache: EurUsdCacheService,
+    private readonly protocolDb: ProtocolDbService,
   ) {}
 
   /**
@@ -190,8 +190,8 @@ export class ProtocolGatingService {
     },
     weightStrategy: 'group-weighted' | 'maxscore-weighted' = 'group-weighted',
   ): Promise<GatedScore> {
-    // Select protocol groups first — needed to determine if EURUSD fetch is required
-    const protocolConfig = protocolId ? PROTOCOL_REGISTRY[protocolId] : null;
+    // Select protocol groups first — DB-first with hardcoded fallback (#388)
+    const protocolConfig = protocolId ? (await this.protocolDb.findBySlug(protocolId)) : null;
     const activeGroups = protocolId
       ? (protocolConfig?.groups ?? DIRECTIVE_GROUPS)
       : DIRECTIVE_GROUPS;

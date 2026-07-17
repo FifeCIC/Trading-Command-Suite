@@ -3,7 +3,7 @@ import { ProtocolGatingService, GatedScore } from './protocol-gating.service';
 import { PrismaService } from '../../database/prisma.service';
 import { MarketDataService } from '../market-data/market-data.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
-import { PROTOCOL_REGISTRY } from '../directives/directive-groups';
+import { ProtocolDbService } from './protocol-db.service';
 
 @Controller('scoring/gated')
 export class ProtocolGatingController {
@@ -14,6 +14,7 @@ export class ProtocolGatingController {
     private readonly marketData: MarketDataService,
     private readonly portfolio: PortfolioService,
     private readonly prisma: PrismaService,
+    private readonly protocolDb: ProtocolDbService,
   ) {}
 
   /**
@@ -45,8 +46,9 @@ export class ProtocolGatingController {
       idealFor?: string;
     }> = [];
 
-    // Code-registered protocols (from directive-groups.ts)
-    for (const [id, proto] of Object.entries(PROTOCOL_REGISTRY)) {
+    // Code-registered protocols (from DB-backed ProtocolDbService)
+    const allProtocols = this.protocolDb.getAllCached();
+    for (const [id, proto] of Object.entries(allProtocols)) {
       const groups = proto.groups.map((g) => ({
         id: g.id,
         name: g.name,

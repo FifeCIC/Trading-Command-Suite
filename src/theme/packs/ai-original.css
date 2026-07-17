@@ -61,6 +61,12 @@
   background: var(--bg-elev);
 }
 
+/* Keep topbar nav compact — prevents header wrapping to 3 rows */
+[data-theme-pack='ai-original'] .topbar-area-nav button {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+}
+
 [data-theme-pack='ai-original'] .nav-area a.active,
 [data-theme-pack='ai-original'] nav a.active,
 [data-theme-pack='ai-original'] .nav-active {

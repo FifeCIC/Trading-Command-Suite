@@ -1,7 +1,7 @@
 # Accessibility & Usability Policy — Trading Command Suite
 
 **Target:** WCAG 2.2 Level AA (Level AAA where achievable without design compromise)
-**Last reviewed:** 2026-07-14
+**Last reviewed:** 2026-07-16
 
 ---
 
@@ -34,10 +34,12 @@ All accessible via the ⚙ Screen Options panel on every page:
 | Hide Page Title | `hidePageTitle` | `false` | Reduces visual noise |
 | Hide Page Subtitle | `hidePageSubtitle` | `false` | Reduces visual noise |
 
+**Implemented:**
+- ✅ Font size scaling (small/normal/large/x-large) — #357
+- ✅ Color-blind friendly mode (pattern indicators alongside red/green) — #358
+- ✅ Focus indicator style (subtle/strong/none) — #360
+
 **Planned** (see GitHub issues):
-- Font size scaling (small/normal/large/x-large)
-- Color-blind friendly mode (pattern indicators alongside red/green)
-- Focus indicator style (subtle/strong/none)
 - Screen reader verbosity (minimal/standard/verbose for live data)
 
 ---

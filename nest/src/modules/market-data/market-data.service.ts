@@ -74,7 +74,91 @@ export class MarketDataService {
       orderBy: [{ timestamp: 'desc' }],
       take: count,
     });
-    // Reverse to oldest→newest per DirectiveInput contract
     return bars.reverse();
+  }
+
+  /** Get top price movers across all active symbols for a given lookback period. */
+  async getTopMovers(lookback: string = '15m', limit: number = 20) {
+    // Fetch all active symbols
+    const symbols = await this.prisma.symbol.findMany({
+      where: { active: true },
+      select: { id: true, ticker: true, name: true, type: true, exchange: true },
+    });
+    if (!symbols.length) return { gainers: [], losers: [], lookback, totalSymbols: 0 };
+
+    const now = new Date();
+    const lookbackMs = this.parseLookbackMs(lookback);
+    const cutoff = new Date(now.getTime() - lookbackMs);
+    // Give a 2-minute window for the "lookback-ago" bar
+    const windowStart = new Date(cutoff.getTime() - 120_000);
+    const windowEnd = new Date(cutoff.getTime() + 120_000);
+
+    const movers: Array<{
+      symbolId: string; ticker: string; name: string; type: string; exchange: string;
+      changePct: number; latestPrice: number; previousPrice: number;
+      latestTime: string; volumeSpike: boolean;
+    }> = [];
+
+    for (const sym of symbols) {
+      try {
+        // Get latest bar
+        const latest = await this.prisma.marketBar.findFirst({
+          where: { symbolId: sym.id, timeframe: lookback },
+          orderBy: { timestamp: 'desc' },
+          select: { close: true, volume: true, timestamp: true },
+        });
+        if (!latest || !latest.close) continue;
+
+        // Get bar closest to the lookback cutoff
+        const previous = await this.prisma.marketBar.findFirst({
+          where: {
+            symbolId: sym.id,
+            timeframe: lookback,
+            timestamp: { gte: windowStart, lte: windowEnd },
+          },
+          orderBy: { timestamp: 'asc' },
+          select: { close: true, volume: true },
+        });
+
+        if (previous && previous.close && previous.close > 0) {
+          const changePct = ((latest.close - previous.close) / previous.close) * 100;
+          // Volume spike: latest volume > 2x previous
+          const volumeSpike = latest.volume && previous.volume && latest.volume > previous.volume * 2;
+
+          if (Math.abs(changePct) > 0.01) { // filter out flat symbols
+            movers.push({
+              symbolId: sym.id,
+              ticker: sym.ticker,
+              name: sym.name,
+              type: sym.type,
+              exchange: sym.exchange,
+              changePct: Math.round(changePct * 100) / 100,
+              latestPrice: Math.round(latest.close * 100000) / 100000,
+              previousPrice: Math.round(previous.close * 100000) / 100000,
+              latestTime: latest.timestamp.toISOString(),
+              volumeSpike: !!volumeSpike,
+            });
+          }
+        }
+      } catch { /* skip symbols with no data */ }
+    }
+
+    // Sort: highest change first for gainers, lowest first for losers
+    const sorted = movers.sort((a, b) => b.changePct - a.changePct);
+    const gainers = sorted.filter(m => m.changePct > 0).slice(0, limit);
+    const losers = sorted.filter(m => m.changePct < 0).reverse().slice(0, limit);
+
+    return { gainers, losers, lookback, totalSymbols: symbols.length, matchedSymbols: movers.length };
+  }
+
+  private parseLookbackMs(lookback: string): number {
+    const match = lookback.match(/^(\d+)(m|h|d)$/);
+    if (!match) return 15 * 60_000;
+    const value = parseInt(match[1]);
+    const unit = match[2];
+    if (unit === 'm') return value * 60_000;
+    if (unit === 'h') return value * 3600_000;
+    if (unit === 'd') return value * 86400_000;
+    return 15 * 60_000;
   }
 }

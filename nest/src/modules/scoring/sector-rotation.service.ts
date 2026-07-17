@@ -8,7 +8,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ProtocolGatingService } from './protocol-gating.service';
-import { PROTOCOL_REGISTRY } from '../directives/directive-groups';
+import { ProtocolDbService } from './protocol-db.service';
 
 const SECTOR_ETFS = [
   { etf: 'XLK', name: 'Technology', protocols: ['spy-speed-v1', 'momentum-stock-v1', 'qqq-speed-v1', 'leverage-v2'] as string[] },
@@ -46,13 +46,14 @@ export class SectorRotationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly protocolGating: ProtocolGatingService,
+    private readonly protocolDb: ProtocolDbService,
   ) {}
 
   async getRotation(): Promise<SectorRotationResult> {
     const protocolMap: Record<string, { name: string; description: string }> = {};
 
-    // Build protocol map from registry
-    for (const [id, reg] of Object.entries(PROTOCOL_REGISTRY)) {
+    // Build protocol map from DB-backed cache
+    for (const [id, reg] of Object.entries(this.protocolDb.getAllCached())) {
       protocolMap[id] = { name: reg.name, description: reg.description };
     }
 
@@ -119,7 +120,7 @@ export class SectorRotationService {
         let bestProtocol: SectorRotationResult['sectors'][0]['bestProtocol'] = null;
 
         // Filter to protocols that exist in registry
-        const validProtocols = sec.protocols.filter((p) => PROTOCOL_REGISTRY[p]);
+        const validProtocols = sec.protocols.filter((p) => this.protocolDb.getCached(p));
 
         for (const pid of validProtocols) {
           try {
@@ -127,13 +128,13 @@ export class SectorRotationService {
             const score = gated.riskGate?.hardGateTriggered ? 0 : gated.composite;
             protocolScores.push({
               protocolId: pid,
-              protocolName: PROTOCOL_REGISTRY[pid]?.name || pid,
+              protocolName: this.protocolDb.getCached(pid)?.name || pid,
               score,
               signal: gated.signal,
             });
 
             if (!bestProtocol || score > bestProtocol.score) {
-              bestProtocol = { id: pid, name: PROTOCOL_REGISTRY[pid]?.name || pid, score };
+              bestProtocol = { id: pid, name: this.protocolDb.getCached(pid)?.name || pid, score };
             }
           } catch {
             // Skip failed protocols

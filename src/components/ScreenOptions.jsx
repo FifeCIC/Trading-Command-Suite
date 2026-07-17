@@ -69,6 +69,15 @@ var GLOBAL_PREFERENCES = [
     defaultValue: false,
   },
   {
+    id: 'colorBlindMode',
+    label: '🎨 Color-Blind Friendly',
+    description: 'Adds shape indicators (+/- signs, arrows, pattern fills) alongside color coding. Does not remove colors — adds redundant cues per WCAG 1.4.1.',
+    type: 'checkbox',
+    key: 'tcs:preferences',
+    field: 'colorBlindMode',
+    defaultValue: false,
+  },
+  {
     id: 'fontScale',
     label: '🔤 Font Size',
     description: 'Scale all text across the application. Choose a size that works best for your display and reading comfort.',
@@ -216,6 +225,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   var hidePageTitle = prefs.hidePageTitle === true;
   var hidePageSubtitle = prefs.hidePageSubtitle === true;
   var highContrastText = prefs.highContrastText === true;
+  var colorBlindMode = prefs.colorBlindMode === true;
   var fontScale = prefs.fontScale || 'normal';
   var focusIndicatorStyle = prefs.focusIndicatorStyle || 'strong';
 
@@ -270,7 +280,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   }, [isOpen, onToggle]);
 
   // Build global section state for rendering
-  var globalValueMap = { displayMode: displayMode, experienceLevel: experienceLevel, hidePageTitle: hidePageTitle, hidePageSubtitle: hidePageSubtitle, highContrastText: highContrastText, fontScale: fontScale, focusIndicatorStyle: focusIndicatorStyle };
+  var globalValueMap = { displayMode: displayMode, experienceLevel: experienceLevel, hidePageTitle: hidePageTitle, hidePageSubtitle: hidePageSubtitle, highContrastText: highContrastText, colorBlindMode: colorBlindMode, fontScale: fontScale, focusIndicatorStyle: focusIndicatorStyle };
   var hasGlobalSections = true; // always show global section
   var hasViewSections = registry && registry.sections.length > 0;
 
@@ -289,6 +299,11 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   useEffect(function () {
     document.documentElement.setAttribute('data-focus-indicator-style', focusIndicatorStyle || 'strong');
   }, [focusIndicatorStyle]);
+
+  // Apply color-blind mode preference to the document so CSS can respond
+  useEffect(function () {
+    document.documentElement.setAttribute('data-colorblind', colorBlindMode ? 'true' : 'false');
+  }, [colorBlindMode]);
 
   return (
     <>

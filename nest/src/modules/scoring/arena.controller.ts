@@ -20,7 +20,7 @@ import { ScoringService } from './scoring.service';
 import { StrategyCompetitionService } from './strategy-competition.service';
 import { ProtocolGatingService } from './protocol-gating.service';
 import { ProtocolConsensusService } from './protocol-consensus.service';
-import { PROTOCOL_REGISTRY } from '../directives/directive-groups';
+import { ProtocolDbService } from './protocol-db.service';
 import { PrismaService } from '../../database/prisma.service';
 
 interface ArenaSymbol {
@@ -129,7 +129,7 @@ export class ArenaController {
   private getActiveStrategies() {
     return this.TRADING_STRATEGIES.map((s) => ({
       ...s,
-      _validProtocols: s.protocolIds.filter((pid) => PROTOCOL_REGISTRY[pid]),
+      _validProtocols: s.protocolIds.filter((pid) => this.protocolDb.getCached(pid)),
     })).filter((s) => s._validProtocols.length > 0);
   }
 
@@ -138,6 +138,7 @@ export class ArenaController {
     private readonly competitionService: StrategyCompetitionService,
     private readonly protocolGating: ProtocolGatingService,
     private readonly consensusService: ProtocolConsensusService,
+    private readonly protocolDb: ProtocolDbService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -266,7 +267,7 @@ export class ArenaController {
         category: s.category,
         protocolCount: s._validProtocols.length,
       })),
-      protocols: Object.entries(PROTOCOL_REGISTRY).map(([id, p]) => ({
+      protocols: Object.entries(this.protocolDb.getAllCached()).map(([id, p]) => ({
         id,
         name: p.name,
         description: p.description,
@@ -295,8 +296,8 @@ export class ArenaController {
 
     // Resolve protocols — default to all registered
     const protocolIds = body?.protocols?.length
-      ? body.protocols.filter((p) => PROTOCOL_REGISTRY[p])
-      : Object.keys(PROTOCOL_REGISTRY).filter((p) => p !== 'default');
+      ? body.protocols.filter((p) => this.protocolDb.getCached(p))
+      : Object.keys(this.protocolDb.getAllCached()).filter((p) => p !== 'default');
 
     if (protocolIds.length === 0) {
       return { error: 'No valid protocols', comparison: [] };
@@ -352,7 +353,7 @@ export class ArenaController {
       const protocolScores: typeof comparison[0]['protocolScores'] = [];
 
       for (const protocolId of protocolIds) {
-        const reg = PROTOCOL_REGISTRY[protocolId];
+        const reg = this.protocolDb.getCached(protocolId);
         if (!reg) continue;
 
         try {
@@ -434,11 +435,11 @@ export class ArenaController {
         protocolIds.map((id) => [
           id,
           {
-            name: PROTOCOL_REGISTRY[id]?.name || id,
-            description: PROTOCOL_REGISTRY[id]?.description || '',
-            tradingStyle: PROTOCOL_REGISTRY[id]?.tradingStyle,
-            recommendedTimeframe: PROTOCOL_REGISTRY[id]?.recommendedTimeframe,
-            idealFor: PROTOCOL_REGISTRY[id]?.idealFor,
+            name: this.protocolDb.getCached(id)?.name || id,
+            description: this.protocolDb.getCached(id)?.description || '',
+            tradingStyle: this.protocolDb.getCached(id)?.tradingStyle,
+            recommendedTimeframe: this.protocolDb.getCached(id)?.recommendedTimeframe,
+            idealFor: this.protocolDb.getCached(id)?.idealFor,
           },
         ]),
       ),

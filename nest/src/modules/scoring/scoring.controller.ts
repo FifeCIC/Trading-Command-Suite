@@ -19,6 +19,7 @@ import { OutcomeTrackerService } from './outcome-tracker.service';
 import { SectorRotationService } from './sector-rotation.service';
 import { SeasonalAffinityService } from './seasonal-affinity.service';
 import { StackPerformanceService } from './stack-performance.service';
+import { ProtocolDbService } from './protocol-db.service';
 import { ProviderDegradationService } from '../providers/provider-degradation.service';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
 
@@ -35,6 +36,7 @@ export class ScoringController {
     private readonly degradationService: ProviderDegradationService,
     private readonly seasonalAffinity: SeasonalAffinityService,
     private readonly stackPerformance: StackPerformanceService,
+    private readonly protocolDb: ProtocolDbService,
   ) {}
 
   @Get('ranked')
@@ -252,7 +254,7 @@ export class ScoringController {
   @Get('seasonal/current')
   @UseInterceptors(new CacheInterceptor(300000))
   async getSeasonalWeights() {
-    const { PROTOCOL_REGISTRY } = await import('../directives/directive-groups.js');
+    const allProtocols = this.protocolDb.getAllCached();
     const weights: Array<{
       protocolId: string;
       protocolName: string;
@@ -263,7 +265,7 @@ export class ScoringController {
       day: number;
     }> = [];
 
-    for (const [id, proto] of Object.entries(PROTOCOL_REGISTRY) as [string, { name: string }][]) {
+    for (const [id, proto] of Object.entries(allProtocols) as [string, { name: string }][]) {
       const affinity = this.seasonalAffinity.getAffinity(id);
       weights.push({
         protocolId: id,

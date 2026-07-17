@@ -1,6 +1,6 @@
 ---
 description: "Trading Command Suite librarian — maintains documentation, architecture records, GitHub issues, and the DOCUMENTATION-INDEX. Use when: updating docs after implementation, creating GitHub Issues, updating the Architecture Framework, maintaining the Capability Map, or syncing prompts to issues."
-tools: [read, search, write]
+tools: [vscode, execute, read, agent, GitHub.vscode-pull-request-github, ms-azuretools.vscode-containers, ms-python.python, edit, search, web, 'chrome-devtools/*', browser, 'pylance-mcp-server/*', todo]
 user-invocable: true
 argument-hint: "What documentation needs updating?"
 ---

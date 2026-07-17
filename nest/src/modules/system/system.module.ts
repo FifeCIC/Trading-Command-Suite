@@ -14,12 +14,14 @@ import { MetricsMiddleware } from '../../common/middleware/metrics.middleware';
 import { ProvidersModule } from '../providers/providers.module';
 import { DataRetentionService } from './data-retention.service';
 import { DataRetentionController } from './data-retention.controller';
+import { SystemHealthService } from './system-health.service';
+import { SystemHealthController } from './system-health.controller';
 
 @Global()
 @Module({
   imports: [ProvidersModule],
-  providers: [SystemLogService, ProcessManagerService, SettingsService, ScoringLogService, MetricsMiddleware, DataRetentionService],
-  controllers: [SystemLogController, ProcessManagerController, DataFreshnessController, ArchitectureManifestController, DatabaseStatsController, SettingsController, ScoringLogController, DataRetentionController],
+  providers: [SystemLogService, ProcessManagerService, SettingsService, ScoringLogService, MetricsMiddleware, DataRetentionService, SystemHealthService],
+  controllers: [SystemLogController, ProcessManagerController, DataFreshnessController, ArchitectureManifestController, DatabaseStatsController, SettingsController, ScoringLogController, DataRetentionController, SystemHealthController],
   exports: [SystemLogService, ProcessManagerService, SettingsService, ScoringLogService, MetricsMiddleware, DataRetentionService],
 })
 export class SystemModule {}

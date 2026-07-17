@@ -4653,5 +4653,189 @@
         "quote"
       ]
     }
-  ]
+  ],
+  "brokerPlatforms": {
+    "title": "Trading Brokers & Execution Platforms",
+    "providers": ["mt5", "trading212", "isa"],
+    "categories": [
+      {
+        "id": "account_specs",
+        "title": "Account Specifications",
+        "fields": [
+          { "id": "account_type", "label": "Account Type" },
+          { "id": "currency", "label": "Base Currency" },
+          { "id": "min_deposit", "label": "Minimum Deposit" },
+          { "id": "max_leverage", "label": "Maximum Leverage" },
+          { "id": "margin_call_level", "label": "Margin Call Level" },
+          { "id": "stop_out_level", "label": "Stop-Out Level" },
+          { "id": "demo_available", "label": "Demo Account" },
+          { "id": "demo_reset", "label": "Demo Reset Schedule" },
+          { "id": "isa_eligible", "label": "ISA Eligible" }
+        ]
+      },
+      {
+        "id": "trading_costs",
+        "title": "Trading Costs",
+        "fields": [
+          { "id": "spread_eurusd", "label": "Spread (EUR/USD)" },
+          { "id": "commission", "label": "Commission" },
+          { "id": "swap_long", "label": "Swap (Long)" },
+          { "id": "swap_short", "label": "Swap (Short)" },
+          { "id": "weekend_swap", "label": "Weekend Swap (Wed→Mon)" },
+          { "id": "inactivity_fee", "label": "Inactivity Fee" }
+        ]
+      },
+      {
+        "id": "execution",
+        "title": "Order Execution",
+        "fields": [
+          { "id": "execution_type", "label": "Execution Type" },
+          { "id": "min_lot", "label": "Minimum Lot Size" },
+          { "id": "max_lot", "label": "Maximum Lot Size" },
+          { "id": "max_positions", "label": "Max Concurrent Positions" },
+          { "id": "max_pending", "label": "Max Pending Orders" },
+          { "id": "order_types", "label": "Order Types" },
+          { "id": "hedging_allowed", "label": "Hedging Allowed" },
+          { "id": "api_trading", "label": "API / Auto Trading" }
+        ]
+      },
+      {
+        "id": "instruments",
+        "title": "Available Instruments",
+        "fields": [
+          { "id": "forex_pairs", "label": "Forex Pairs" },
+          { "id": "indices", "label": "Stock Indices" },
+          { "id": "commodities", "label": "Commodities" },
+          { "id": "stocks", "label": "Individual Stocks" },
+          { "id": "etfs", "label": "ETFs" },
+          { "id": "crypto", "label": "Cryptocurrency" }
+        ]
+      },
+      {
+        "id": "limits",
+        "title": "Limits & Constraints",
+        "fields": [
+          { "id": "daily_loss_limit", "label": "Daily Loss Limit" },
+          { "id": "max_drawdown", "label": "Max Drawdown (Auto-Close)" },
+          { "id": "max_trade_value", "label": "Max Single Trade Value" },
+          { "id": "max_portfolio_value", "label": "Max Portfolio Value" },
+          { "id": "negative_balance_protection", "label": "Negative Balance Protection" },
+          { "id": "dormancy_period", "label": "Account Dormancy Period" }
+        ]
+      }
+    ],
+    "data": {
+      "mt5": {
+        "account_type": "Demo (MetaQuotes-Demo)",
+        "currency": "GBP",
+        "min_deposit": "N/A (Demo)",
+        "max_leverage": "1:500 (Demo)",
+        "margin_call_level": "100%",
+        "stop_out_level": "30%",
+        "demo_available": "Yes",
+        "demo_reset": "Manual — request new demo account from broker",
+        "isa_eligible": "No",
+        "spread_eurusd": "0.1–0.3 pips (variable)",
+        "commission": "None (spread-only)",
+        "swap_long": "Varies by symbol (approx −0.5 to −2.0 pts/day)",
+        "swap_short": "Varies by symbol (approx −0.3 to −1.5 pts/day)",
+        "weekend_swap": "Triple swap applied Wednesday→Thursday (covers Sat+Sun)",
+        "inactivity_fee": "None (Demo)",
+        "execution_type": "Market Execution",
+        "min_lot": "0.01",
+        "max_lot": "100",
+        "max_positions": "Unlimited (Demo)",
+        "max_pending": "Unlimited (Demo)",
+        "order_types": "Market, Limit, Stop, Stop-Limit, OCO",
+        "hedging_allowed": "Yes",
+        "api_trading": "Yes — via TCS Python bridge (port 5000)",
+        "forex_pairs": "50+",
+        "indices": "15+ (UK100, US30, US500, etc.)",
+        "commodities": "10+ (XAUUSD, XAGUSD, UKOIL, USOIL)",
+        "stocks": "Limited — CFD only",
+        "etfs": "Limited",
+        "crypto": "BTC, ETH (CFD)",
+        "daily_loss_limit": "None (Demo)",
+        "max_drawdown": "None (Demo)",
+        "max_trade_value": "None (Demo)",
+        "max_portfolio_value": "None (Demo)",
+        "negative_balance_protection": "Yes (retail client protection)",
+        "dormancy_period": "90 days (Demo)"
+      },
+      "trading212": {
+        "account_type": "GIA (General Investment Account)",
+        "currency": "USD",
+        "min_deposit": "$1",
+        "max_leverage": "1:30 (retail) / 1:500 (professional)",
+        "margin_call_level": "100%",
+        "stop_out_level": "50%",
+        "demo_available": "Yes — Demo mode via API",
+        "demo_reset": "Manual — contact support or create new demo account",
+        "isa_eligible": "Separate ISA account available",
+        "spread_eurusd": "0.8–1.5 pips (variable)",
+        "commission": "None (commission-free, spread-only)",
+        "swap_long": "LIBOR + 2.5% (approx −0.8 to −3.0 pts/day)",
+        "swap_short": "LIBOR − 2.5% (approx −0.5 to −1.8 pts/day)",
+        "weekend_swap": "Triple swap applied Wednesday→Thursday (covers Sat+Sun)",
+        "inactivity_fee": "None",
+        "execution_type": "Market Execution (OTC)",
+        "min_lot": "0.01 (Forex) / 1 share (Stocks)",
+        "max_lot": "50 (Forex)",
+        "max_positions": "500 (GIA) / Unlimited (Demo)",
+        "max_pending": "50",
+        "order_types": "Market, Limit, Stop, Stop-Limit",
+        "hedging_allowed": "Yes (separate positions)",
+        "api_trading": "Yes — REST API (live.trading212.com)",
+        "forex_pairs": "40+",
+        "indices": "20+",
+        "commodities": "15+",
+        "stocks": "10,000+ (US, UK, EU)",
+        "etfs": "2,000+",
+        "crypto": "BTC, ETH, XRP (CFD)",
+        "daily_loss_limit": "None (user-configurable)",
+        "max_drawdown": "None (user-configurable)",
+        "max_trade_value": "None (account balance limited)",
+        "max_portfolio_value": "None",
+        "negative_balance_protection": "Yes (retail client protection)",
+        "dormancy_period": "12 months"
+      },
+      "isa": {
+        "account_type": "Stocks & Shares ISA",
+        "currency": "GBP",
+        "min_deposit": "£1",
+        "max_leverage": "None (no leverage on ISA)",
+        "margin_call_level": "N/A (cash account)",
+        "stop_out_level": "N/A (cash account)",
+        "demo_available": "No",
+        "demo_reset": "N/A",
+        "isa_eligible": "Yes — tax-free wrapper (£20,000 annual allowance)",
+        "spread_eurusd": "N/A (stocks only, no forex)",
+        "commission": "None (commission-free)",
+        "swap_long": "N/A (no overnight financing on stocks)",
+        "swap_short": "N/A",
+        "weekend_swap": "N/A",
+        "inactivity_fee": "None",
+        "execution_type": "Market Execution (OTC)",
+        "min_lot": "1 share",
+        "max_lot": "N/A (depends on stock liquidity)",
+        "max_positions": "No hard limit (ISA wrapper)",
+        "max_pending": "50",
+        "order_types": "Market, Limit, Stop",
+        "hedging_allowed": "No (ISA regulations)",
+        "api_trading": "Yes — Trading212 ISA API (separate credentials)",
+        "forex_pairs": "None",
+        "indices": "None (ETF equivalents available)",
+        "commodities": "None (ETF equivalents available)",
+        "stocks": "5,000+ (UK, US, EU — ISA-eligible only)",
+        "etfs": "1,500+",
+        "crypto": "None",
+        "daily_loss_limit": "None",
+        "max_drawdown": "None (cash account)",
+        "max_trade_value": "None (cash balance limited)",
+        "max_portfolio_value": "£20,000 annual allowance (ISA limit)",
+        "negative_balance_protection": "Yes (cash account — cannot go negative)",
+        "dormancy_period": "12 months"
+      }
+    }
+  }
 }

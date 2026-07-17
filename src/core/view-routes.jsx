@@ -38,6 +38,7 @@ import ExitSignalsPage from '../pages/ExitSignalsPage.jsx';
 import ScoringRunsPage from '../pages/ScoringRunsPage.jsx';
 import ScoringActivityLogsPage from '../pages/ScoringActivityLogsPage.jsx';
 import ProtocolsPage from '../pages/ProtocolsPage.jsx';
+import CreateProtocolsPage from '../pages/CreateProtocolsPage.jsx';
 import StrategyBuilderPage from '../pages/StrategyBuilderPage.jsx';
 import StrategyWizardPage from '../pages/StrategyWizardPage.jsx';
 
@@ -149,8 +150,11 @@ import CandlePatternsGuidePage from '../pages/CandlePatternsGuidePage.jsx';
 import UserWatchlistsPage from '../pages/UserWatchlistsPage.jsx';
 
 // ── Other ──
+import ABTestingPage from '../pages/ABTestingPage.jsx';
+import AICostsPage from '../pages/AICostsPage.jsx';
 import AlgorithmLabPage from '../pages/AlgorithmLabPage.jsx';
 import AlertCenterPage from '../pages/AlertCenterPage.jsx';
+import DailyBriefingPage from '../pages/DailyBriefingPage.jsx';
 import RiskControlsPage from '../pages/RiskControlsPage.jsx';
 import ThemePage from '../pages/ThemePage.jsx';
 import ScoringOverviewPage from '../pages/ScoringOverviewPage.jsx';
@@ -190,7 +194,7 @@ export const VIEW_COMPONENTS = {
   'scoring-runs': ScoringRunsPage,
   'scoring-activity-logs': ScoringActivityLogsPage,
   'protocols': ProtocolsPage,
-  'create-protocols': StrategyBuilderPage,   // aliased
+  'create-protocols': CreateProtocolsPage,
   'strategy-wizard': StrategyWizardPage,
   'scoring-overview': ScoringOverviewPage,
   'algorithm-lab': AlgorithmLabPage,
@@ -289,6 +293,9 @@ export const VIEW_COMPONENTS = {
   'snapshot-replay': SnapshotReplayPage,
   'triple-screen': TripleScreenPage,
   'hot-stock-picks': HotStockPicksPage,
+  'daily-briefing': DailyBriefingPage,
+  'ab-testing': ABTestingPage,
+  'ai-costs': AICostsPage,
   'metastack-display': MetaStackDisplayPage,
   'portfolio-lab': PortfolioLabPage,
   'scoring-debug-lab': ScoringDebugLab,

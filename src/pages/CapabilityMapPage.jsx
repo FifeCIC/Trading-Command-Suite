@@ -133,9 +133,33 @@ const KNOWN_FEATURES = {
   'Duplicate Error Suppression': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
   'Global Diversification System': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'both', devCompletion: 'complete' },
   'Symbol Focus Page': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  // 2026-07-16 — Accessibility, UX, Data, Scoping
+  'Active Symbols Company Names (#305)': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Calculator Screen Options (#376)': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Color-Blind Friendly Mode (#358)': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Conditional EURUSD Fetch (#394)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Daily Briefing (#368)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+  'Data Quick Wins (#356)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Exit Signals UX (#321)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Focus Indicator Preference (#359)': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Forex Cross-Pair Auto Strategies (#380)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Keyboard Navigation Skip Link (#360)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'MT5 Trading Offline Fix (#313)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'News Sentiment + Protocol Badges (#367)': { dataPersistence: 'ephemeral', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+  'Notification Disc (#378)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+  'Protocol Comparison Refactor (#393)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Protocol Name Resolution (#395)': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Protocol-Scoped Directives (#389)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Screen Reader Live Regions (#361)': { dataPersistence: 'ephemeral', uiSurfaces: 5, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Tap Target Audit (#362)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Weight Strategy Selection (#392)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Pipeline Graph (NodeMapper)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
   'Design Token System (#252)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
   'EmptyState Component (#255)': { dataPersistence: 'localStorage', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // 2026-07-17 — A/B Testing, AI Costs, Dashboard
+  'A/B Protocol Testing': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+  'AI Cost Monitoring': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+  'Dashboard Recent Trades': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
 };
 
 // ── Build unified capability rows ──
@@ -236,6 +260,7 @@ function buildCapabilityRows(directives, providers) {
     { name: 'Diversification (global)', count: 4 },
     { name: 'Symbol Focus (single ticker)', count: 1 },
     { name: 'Bridge Events (MT5)', count: 1 },
+    { name: 'Daily Briefing (morning/evening)', count: 1 },
   ].forEach((mod) => {
     const known = KNOWN_FEATURES[mod.name] || {};
     rows.push({

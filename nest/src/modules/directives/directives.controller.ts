@@ -1,6 +1,10 @@
 import { Controller, Get, Patch, Post, Delete, Param, Query, Body } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { DirectivesService } from './directives.service';
+// LAST REMAINING CONSUMER: PROTOCOL_REGISTRY used only for design-time category enrichment
+// in the directive listing UI. FALLBACK_CATEGORIES (below) provides full coverage for all
+// known directives. This import can be removed once ProtocolDbService is available in
+// DirectivesModule (requires resolving ScoringModule↔DirectivesModule import cycle).
 import { PROTOCOL_REGISTRY } from './directive-groups';
 
 @ApiTags('directives')

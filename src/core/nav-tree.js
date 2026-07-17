@@ -148,6 +148,9 @@ export const NAV_TREE = {
       { id: 'timeline', label: 'Timeline (Lab)', icon: '📅' },
       { id: 'triple-screen', label: 'Triple-Screen Cockpit', icon: '🖥️' },
       { id: 'hot-stock-picks', label: 'Hot Stock Picks', icon: '🔥' },
+      { id: 'daily-briefing', label: 'Daily Briefing', icon: '📋' },
+      { id: 'ab-testing', label: 'A/B Protocol Testing', icon: '⚖️' },
+      { id: 'ai-costs', label: 'AI Costs', icon: '🤖' },
     ],
   },
   wizard: {

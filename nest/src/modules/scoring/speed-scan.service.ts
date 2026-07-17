@@ -60,89 +60,44 @@ export interface ScanResult {
   scanMs: number;
 }
 
-/** Map symbols to their best speed trading protocol */
+/** Map symbols to their best speed trading protocol — DB-first with hardcoded fallback. */
 const SYMBOL_PROTOCOL_MAP: Record<string, string> = {
-  // Crypto (both XTrend and DB naming)
-  BTCUSD: 'btc-scalp-v1',
-  'BTC-USD': 'btc-scalp-v1',
-  ETHUSD: 'btc-scalp-v1',
-  'ETH-USD': 'btc-scalp-v1',
-  SOLUSD: 'btc-scalp-v1',
-  // Gold & Metals
-  XAUUSD: 'xau-speed-v1',
-  XAGUSD: 'xau-speed-v1',
-  // Oil & Energy
-  USOIL: 'oil-speed-v1',
-  UKOIL: 'oil-speed-v1',
-  NATGAS: 'oil-speed-v1',
-  // SPY / SPX
-  SPX500: 'spy-speed-v1',
-  SPY: 'spy-speed-v1',
-  US500: 'spy-speed-v1',
-  // QQQ / Nasdaq
-  TECH100: 'qqq-speed-v1',
-  US100: 'qqq-speed-v1',
-  QQQ: 'qqq-speed-v1',
-  // VIX
+  // Kept as fallback for bootstrap / DB-unavailable scenarios.
+  // The DB table symbol_protocol_assignment is the primary source.
+  BTCUSD: 'btc-scalp-v1',  'BTC-USD': 'btc-scalp-v1',
+  ETHUSD: 'btc-scalp-v1',  'ETH-USD': 'btc-scalp-v1',
+  XAUUSD: 'xau-speed-v1',  XAGUSD: 'xau-speed-v1',
+  USOIL: 'oil-speed-v1',   UKOIL: 'oil-speed-v1',
+  SPX500: 'spy-speed-v1',  SPY: 'spy-speed-v1', US500: 'spy-speed-v1',
+  TECH100: 'qqq-speed-v1', QQQ: 'qqq-speed-v1',
   VIX: 'vix-spike-v1',
-  // Forex Majors
-  EURUSD: 'forex-session-v1',
-  GBPUSD: 'forex-session-v1',
-  USDJPY: 'forex-session-v1',
-  AUDUSD: 'forex-session-v1',
-  USDCHF: 'forex-session-v1',
-  NZDUSD: 'forex-session-v1',
-  // CAD Sniper — all 5 CAD crosses
-  USDCAD: 'cad-sniper-v1',
-  EURCAD: 'cad-sniper-v1',
-  GBPCAD: 'cad-sniper-v1',
-  AUDCAD: 'cad-sniper-v1',
-  NZDCAD: 'cad-sniper-v1',
-  // Indices
-  DJI30: 'dow-speed-v1',
-  US30: 'dow-speed-v1',
-  UK100: 'ftse-speed-v1',
-  JPN225: 'nikkei-speed-v1',
-  EUSTX50: 'euro-stoxx-v1',
-  CHINA50: 'china-speed-v1',
-  // Stocks
-  TSLA: 'tsla-speed-v1',
-  NVDA: 'momentum-stock-v1',
-  MSTR: 'momentum-stock-v1',
-  PLTR: 'momentum-stock-v1',
-  AVGO: 'momentum-stock-v1',
-  COIN: 'momentum-stock-v1',
-  MARA: 'momentum-stock-v1',
-  RIOT: 'momentum-stock-v1',
-  HOOD: 'momentum-stock-v1',
-  RKLB: 'momentum-stock-v1',
-  ASTS: 'momentum-stock-v1',
-  SOFI: 'momentum-stock-v1',
-  // Pandemic / Health Crisis
-  PFE: 'pandemic-v1',
-  MRNA: 'pandemic-v1',
-  BNTX: 'pandemic-v1',
-  MRK: 'pandemic-v1',
-  HOLX: 'pandemic-v1',
-  DHR: 'pandemic-v1',
-  CVS: 'pandemic-v1',
-  UNH: 'pandemic-v1',
-  ECL: 'pandemic-v1',
-  BAH: 'pandemic-v1',
-  EBS: 'pandemic-v1',
-  TDOC: 'pandemic-v1',
-  CODX: 'pandemic-v1',
-  SNGX: 'pandemic-v1',
-  // Meme / Crypto
-  DOGEUSD: 'doge-speed-v1',
+  EURUSD: 'forex-session-v1', GBPUSD: 'forex-session-v1', USDJPY: 'forex-session-v1',
+  AUDUSD: 'forex-session-v1', USDCHF: 'forex-session-v1', NZDUSD: 'forex-session-v1',
+  USDCAD: 'cad-sniper-v1', US30: 'dow-speed-v1', DJI30: 'dow-speed-v1',
+  UK100: 'ftse-speed-v1', JPN225: 'nikkei-speed-v1', EUSTX50: 'euro-stoxx-v1',
 };
 
 /**
- * Resolve protocol for a symbol.
- * Checks static map first, then pattern-matches leverage products (3xxx prefix or known short ETFs).
+ * Resolve protocol for a symbol — DB-first with hardcoded fallback.
+ * Queries symbol_protocol_assignment table; falls back to static map for bootstrap.
  */
-function getProtocolForSymbol(symbol: string): string {
+async function resolveProtocolForSymbol(symbol: string, prisma: any): Promise<string> {
+  // Try DB first
+  try {
+    if (prisma.isAvailable) {
+      const assignment = await prisma.symbolProtocolAssignment.findFirst({
+        where: { symbol },
+        orderBy: { priority: 'asc' },
+        select: { protocolId: true },
+      });
+      if (assignment) return assignment.protocolId;
+    }
+  } catch { /* DB may not have table yet */ }
+
+  // Fall back to hardcoded map
   if (SYMBOL_PROTOCOL_MAP[symbol]) return SYMBOL_PROTOCOL_MAP[symbol];
+
+  // Pattern-match leverage products
   if (/^3[A-Z]{2,3}$/.test(symbol) || /^[A-Z]{2,3}3$/.test(symbol) ||
       ['TECS','SQQQ','SPXS','SOXS','FNGD','YANG','SRTY'].includes(symbol)) {
     return 'leverage-v2';
@@ -213,7 +168,7 @@ export class SpeedScanService {
           this.marketData.getBars(symId, '15m', 30).catch(() => null),
         ]);
 
-        const protocol = getProtocolForSymbol(symbol);
+        const protocol = await resolveProtocolForSymbol(symbol, this.prisma);
         const score = await this.protocolGating.scoreWithGating(
           symbol,
           marketBars as any,

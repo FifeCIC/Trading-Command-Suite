@@ -128,6 +128,7 @@ export const PAGE_DATA_STATUS = {
   // ── Lab ──
   'lab': { status: 'live', source: 'Self-contained sandbox' },
   'lab-landing': { status: 'live', source: 'Static content' },
+  'daily-briefing': { status: 'live', source: '5 APIs (timeline, MT5, scoring, watchlists)' },
   'feature-lab': { status: 'live', source: 'Self-contained demos' },
   'theme-lab': { status: 'live', source: 'Self-contained demos' },
   'theme-lab-motion': { status: 'live', source: 'Self-contained demos' },

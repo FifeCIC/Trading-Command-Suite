@@ -90,6 +90,16 @@ export default function DashboardPage() {
   });
   const hotPicks = hotPicksQuery.data?.ranked ?? [];
 
+  // ── Recent trade history ──
+  const historyQuery = useQuery({
+    queryKey: ['dash-history'],
+    queryFn: () => apiGet('/api/providers/mt5/history?limit=5').catch(() => ({ deals: [] })),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+    enabled: mt5Connected,
+  });
+  const recentTrades = historyQuery.data?.deals || historyQuery.data || [];
+
   // ── Diversification ──
   const divQuery = useQuery({
     queryKey: ['dash-diversification'],
@@ -103,6 +113,21 @@ export default function DashboardPage() {
   const divMode = (divSummary.settings || {})['diversification.mode'] || 'warn';
 
   const statusLevel = diagQuery.isLoading ? null : mt5Connected ? 'online' : 'offline';
+
+  // ── Provider health for news/sentiment status ──
+  const providersQuery = useQuery({
+    queryKey: ['dash-providers'],
+    queryFn: () => apiGet('/api/providers/health').catch(() => null),
+    refetchInterval: 120_000,
+    staleTime: 60_000,
+  });
+  const allProviders = providersQuery.data?.providers || [];
+  const newsProviders = allProviders.filter(p =>
+    ['finnhub', 'fmp'].includes(p.provider)
+  );
+  const newsHealthy = newsProviders.filter(p => p.status === 'healthy').length;
+  const newsDegraded = newsProviders.filter(p => p.status === 'degraded' || p.status === 'unknown').length;
+  const newsDown = newsProviders.filter(p => p.status !== 'healthy' && p.status !== 'degraded' && p.status !== 'unknown').length;
 
   const areas = Object.entries(NAV_TREE)
     .filter(([id]) => id !== 'dashboard') // exclude self
@@ -338,6 +363,32 @@ export default function DashboardPage() {
             <div className="dash-card"><h3>📈 Open Positions</h3><p className="dash-hint">MT5 bridge offline — connect to see positions.</p></div>
           )}
 
+          {/* ── Recent Trade Activity ── */}
+          {recentTrades.length > 0 && (
+            <div className="dash-card">
+              <h3>🔄 Recent Trades</h3>
+              <div className="dash-table-wrap">
+                <table className="dash-table">
+                  <thead><tr><th>Symbol</th><th>Type</th><th>Vol</th><th>Price</th><th>P&amp;L</th><th>Time</th></tr></thead>
+                  <tbody>
+                    {recentTrades.slice(0, 5).map((t, i) => (
+                      <tr key={t.ticket || i}>
+                        <td><strong>{t.symbol}</strong></td>
+                        <td className={t.type === 'buy' || t.type === 'BUY' ? 'dash-buy' : 'dash-sell'}>{(t.type || '').toUpperCase()}</td>
+                        <td>{t.volume}</td>
+                        <td>{t.price?.toFixed(2) || '—'}</td>
+                        <td className={(t.profit || 0) >= 0 ? 'dash-profit' : 'dash-loss'}>
+                          {(t.profit || 0) >= 0 ? '+' : ''}{(t.profit || 0).toFixed(2)}
+                        </td>
+                        <td className="dash-time">{t.time ? new Date(t.time).toLocaleTimeString() : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* ── Worst-Case Risk Snapshot ── */}
           {posCount > 0 && (() => {
             const worst = [...positions].sort((a, b) => (a.profit || 0) - (b.profit || 0))[0];
@@ -389,6 +440,35 @@ export default function DashboardPage() {
           <div className="dash-card">
             <h3>🔧 Dev Updates</h3>
             <p className="dash-hint">Release notes and community updates coming soon — pending TCS website and social presence.</p>
+          </div>
+
+          <div className="dash-card">
+            <h3>📰 News &amp; Sentiment</h3>
+            {newsProviders.length === 0 ? (
+              <p className="dash-hint">No news providers configured.</p>
+            ) : (
+              <div className="dash-news-list">
+                {newsProviders.map((p) => {
+                  const statusColor = p.status === 'healthy' ? '#22c55e' : p.status === 'degraded' ? '#f59e0b' : '#ef4444';
+                  const statusIcon = p.status === 'healthy' ? '●' : p.status === 'degraded' || p.status === 'unknown' ? '◐' : '○';
+                  return (
+                    <div key={p.provider} className="dash-news-row">
+                      <span className="dash-news-dot" style={{ color: statusColor }}>{statusIcon}</span>
+                      <span className="dash-news-name">{p.displayName}</span>
+                      <span className="dash-news-status" style={{ color: statusColor }}>
+                        {p.status === 'healthy' ? 'Active' : p.status === 'unknown' ? 'Unverified' : p.status}
+                      </span>
+                    </div>
+                  );
+                })}
+                <p className="dash-news-summary">
+                  {newsHealthy > 0 && `${newsHealthy} active`}
+                  {newsDegraded > 0 && `${newsHealthy > 0 ? ', ' : ''}${newsDegraded} unverified`}
+                  {newsDown > 0 && `${newsHealthy + newsDegraded > 0 ? ', ' : ''}${newsDown} down`}
+                  {newsHealthy === 0 && newsDegraded === 0 && 'No data sources available'}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* ── Hot Picks Widget ── */}

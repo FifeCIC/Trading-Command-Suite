@@ -21,10 +21,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ScoringService } from './scoring.service';
 import { ProtocolGatingService } from './protocol-gating.service';
-import {
-  PROTOCOL_REGISTRY,
-  DirectiveGroup,
-} from '../directives/directive-groups';
+import { ProtocolDbService } from './protocol-db.service';
+import { DirectiveGroup } from '../directives/directive-groups';
 
 export interface ProtocolVote {
   protocolId: string;
@@ -66,6 +64,7 @@ export class ProtocolConsensusService {
     private readonly prisma: PrismaService,
     private readonly scoringService: ScoringService,
     private readonly protocolGating: ProtocolGatingService,
+    private readonly protocolDb: ProtocolDbService,
   ) {}
 
   /**
@@ -77,7 +76,7 @@ export class ProtocolConsensusService {
       return this.emptyResult(symbol, `Symbol ${symbol} not found in database`);
     }
 
-    const protocolIds = Object.keys(PROTOCOL_REGISTRY);
+    const protocolIds = Object.keys(this.protocolDb.getAllCached());
     const votes: ProtocolVote[] = [];
 
     // ── Score through each protocol ──
@@ -108,10 +107,11 @@ export class ProtocolConsensusService {
             result.composite >= 65 ? 'bullish' :
             result.composite < 35 ? 'bearish' : 'neutral';
 
+          const config = await this.protocolDb.findBySlug(protocolId);
           votes.push({
             protocolId,
-            protocolName: PROTOCOL_REGISTRY[protocolId]?.name || protocolId,
-            tradingStyle: PROTOCOL_REGISTRY[protocolId]?.tradingStyle,
+            protocolName: config?.name || protocolId,
+            tradingStyle: config?.tradingStyle,
             score: result.composite,
             signal,
             confidence: (result as any).confidence ?? 0.5,

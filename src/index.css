@@ -129,6 +129,97 @@ html[data-hide-page-subtitle='true'] .po-subtitle { display: none; }
   --line: #2a2a2a;
 }
 
+/* ── Accessibility: Color-Blind Friendly Mode (#358) ─────── */
+/* WCAG 1.4.1 — adds shape/pattern indicators alongside color.
+   Does NOT remove colors — adds redundant cues so information
+   is distinguishable without relying on color perception alone. */
+
+/* Profit/green indicators get a triangle ▲ prefix via pseudo-element */
+:root[data-colorblind='true'] [class*='profit']::before,
+:root[data-colorblind='true'] [class*='up']::before,
+:root[data-colorblind='true'] [class*='buy']::before,
+:root[data-colorblind='true'] [class*='positive']::before,
+:root[data-colorblind='true'] [class*='bull']::before,
+:root[data-colorblind='true'] [class*='win']::before {
+  content: '▲\00a0';
+  font-size: 0.75em;
+}
+
+/* Loss/red indicators get a triangle ▼ prefix via pseudo-element */
+:root[data-colorblind='true'] [class*='loss']::before,
+:root[data-colorblind='true'] [class*='down']::before,
+:root[data-colorblind='true'] [class*='sell']::before,
+:root[data-colorblind='true'] [class*='negative']::before,
+:root[data-colorblind='true'] [class*='bear']::before,
+:root[data-colorblind='true'] [class*='lose']::before {
+  content: '▼\00a0';
+  font-size: 0.75em;
+}
+
+/* P&L inline spans — prepend + or - via content */
+:root[data-colorblind='true'] .pm-profit::before,
+:root[data-colorblind='true'] [class*='mt5-profit']::before,
+:root[data-colorblind='true'] .pf-positive::before {
+  content: '+';
+  font-weight: 700;
+}
+:root[data-colorblind='true'] .pm-loss::before,
+:root[data-colorblind='true'] [class*='mt5-loss']::before,
+:root[data-colorblind='true'] .pf-negative::before {
+  content: '−';
+  font-weight: 700;
+}
+
+/* Badge pattern fills — stripes for sell/loss/bearish */
+:root[data-colorblind='true'] .app-badge--failed,
+:root[data-colorblind='true'] [class*='sell'].app-badge,
+:root[data-colorblind='true'] [class*='bearish'].app-badge {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 3px,
+    rgba(248,113,113,0.15) 3px,
+    rgba(248,113,113,0.15) 6px
+  ) !important;
+}
+
+/* Badge pattern fills — solid for buy/profit/bullish */
+:root[data-colorblind='true'] .app-badge--passed,
+:root[data-colorblind='true'] [class*='buy'].app-badge,
+:root[data-colorblind='true'] [class*='bullish'].app-badge {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(34,197,94,0.1) 2px,
+    rgba(34,197,94,0.1) 4px
+  ) !important;
+}
+
+/* Status border patterns — dashed for loss, solid for profit */
+:root[data-colorblind='true'] .pm-lose {
+  border-left-style: dashed !important;
+}
+:root[data-colorblind='true'] .pm-win {
+  border-left-style: double !important;
+}
+
+/* Buttons — add text labels to buy/sell buttons */
+:root[data-colorblind='true'] [class*='btn-buy']::after,
+:root[data-colorblind='true'] [class*='buy-btn']::after {
+  content: '\00a0(BUY)';
+  font-weight: 700;
+  font-size: 0.75em;
+  opacity: 0.8;
+}
+:root[data-colorblind='true'] [class*='btn-sell']::after,
+:root[data-colorblind='true'] [class*='sell-btn']::after {
+  content: '\00a0(SELL)';
+  font-weight: 700;
+  font-size: 0.75em;
+  opacity: 0.8;
+}
+
 /* ── Accessibility: Global focus-visible ─────────────────── */
 :root[data-focus-indicator-style="strong"] :focus-visible,
 :root:not([data-focus-indicator-style]) :focus-visible {

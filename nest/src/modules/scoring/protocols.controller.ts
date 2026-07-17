@@ -7,7 +7,7 @@
  * GET /api/scoring/protocols/:id — single protocol detail with version history
  */
 
-import { Controller, Get, Param, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Put, Param, Body, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DirectivesService } from '../directives/directives.service';
 import { ScoringSchedulerService } from './scoring-scheduler.service';
@@ -88,33 +88,39 @@ export class ProtocolsController {
 
     if (this.prisma.isAvailable) {
       try {
-        const strategies = await this.prisma.strategy.findMany({
-          include: { directives: true },
+        // Phase D.3: Read from Protocol DB model (replaces hardcoded PROTOCOL_REGISTRY)
+        const dbProtocols = await (this.prisma as any).protocol.findMany({
+          include: {
+            directiveGroups: {
+              include: { directives: true },
+            },
+          },
           orderBy: { name: 'asc' },
         });
 
-        for (const s of strategies) {
-          // Compute maxPossibleScore from directive maxScores
+        for (const p of dbProtocols) {
+          let directiveCount = 0;
           let maxPossibleScore = 0;
-          for (const d of s.directives) {
-            if (d.active) {
-              const impl = this.directivesService.get(d.type);
-              maxPossibleScore += impl?.maxScore ?? 100;
+          for (const dg of p.directiveGroups) {
+            for (const de of dg.directives) {
+              const impl = this.directivesService.get(de.directiveId);
+              maxPossibleScore += impl?.maxScore ?? de.maxScore ?? 100;
+              directiveCount++;
             }
           }
 
           protocols.push({
-            id: s.id,
-            name: s.name,
-            description: s.description,
-            active: s.active,
-            directiveCount: s.directives.filter((d) => d.active).length,
+            id: p.slug,
+            name: p.name,
+            description: p.description,
+            active: true,
+            directiveCount,
             maxPossibleScore,
-            lastRunAt: null, // populated by scheduler when it tracks runs
+            lastRunAt: null,
             lastRunDurationMs: null,
             lastRunSymbols: 0,
-            status: s.active ? 'idle' : 'disabled',
-            createdAt: s.createdAt.toISOString(),
+            status: 'idle' as const,
+            createdAt: p.createdAt?.toISOString() ?? new Date().toISOString(),
           });
         }
       } catch (err) {
@@ -206,5 +212,109 @@ export class ProtocolsController {
     const versionHistory: Array<{ version: string; changedAt: string; changes: string }> = [];
 
     return { protocol, directives: directiveList, versionHistory };
+  }
+
+  /**
+   * POST /api/scoring/protocols
+   * Create or update a protocol. Uses upsert — idempotent.
+   */
+  @Post()
+  async upsertProtocol(@Body() body: {
+    slug: string;
+    name: string;
+    description?: string;
+    directionMode?: string;
+    tradingStyle?: string;
+    groups?: Array<{
+      groupId: string;
+      name: string;
+      description?: string;
+      weight: number;
+      isRiskGate: boolean;
+      minMultiplier: number;
+      maxMultiplier: number;
+      directiveIds: string[];
+      directiveMaxScores?: Record<string, number>;
+    }>;
+  }): Promise<{ success: boolean; protocolId?: string; error?: string }> {
+    if (!this.prisma.isAvailable) {
+      return { success: false, error: 'Database not available' };
+    }
+    try {
+      const existing = await (this.prisma as any).protocol.findUnique({ where: { slug: body.slug } });
+
+      let protocolId: string;
+      if (existing) {
+        await (this.prisma as any).protocol.update({
+          where: { slug: body.slug },
+          data: {
+            name: body.name,
+            description: body.description ?? existing.description,
+            directionMode: body.directionMode ?? existing.directionMode,
+            tradingStyle: body.tradingStyle ?? existing.tradingStyle,
+          },
+        });
+        protocolId = existing.id;
+      } else {
+        const created = await (this.prisma as any).protocol.create({
+          data: {
+            slug: body.slug,
+            name: body.name,
+            description: body.description ?? null,
+            directionMode: body.directionMode ?? 'LONG_ONLY',
+            tradingStyle: body.tradingStyle ?? null,
+          },
+        });
+        protocolId = created.id;
+      }
+
+      // Upsert directive groups if provided
+      if (body.groups && body.groups.length > 0) {
+        for (let i = 0; i < body.groups.length; i++) {
+          const g = body.groups[i];
+          const dg = await (this.prisma as any).protocolDirectiveGroup.upsert({
+            where: { protocolId_groupId: { protocolId, groupId: g.groupId } },
+            create: {
+              protocolId,
+              groupId: g.groupId,
+              name: g.name,
+              description: g.description ?? null,
+              weight: g.weight,
+              isRiskGate: g.isRiskGate,
+              minMultiplier: g.minMultiplier,
+              maxMultiplier: g.maxMultiplier,
+              sortOrder: i,
+            },
+            update: {
+              name: g.name,
+              description: g.description ?? null,
+              weight: g.weight,
+              isRiskGate: g.isRiskGate,
+              minMultiplier: g.minMultiplier,
+              maxMultiplier: g.maxMultiplier,
+              sortOrder: i,
+            },
+          });
+
+          // Delete old directive entries, re-insert
+          await (this.prisma as any).protocolDirectiveEntry.deleteMany({ where: { groupId: dg.id } });
+          for (const directiveId of g.directiveIds) {
+            await (this.prisma as any).protocolDirectiveEntry.create({
+              data: {
+                groupId: dg.id,
+                directiveId,
+                maxScore: g.directiveMaxScores?.[directiveId] ?? 100,
+              },
+            });
+          }
+        }
+      }
+
+      this.logger.log(`Protocol "${body.slug}" upserted successfully`);
+      return { success: true, protocolId };
+    } catch (err) {
+      this.logger.error(`Protocol upsert failed: ${String(err)}`);
+      return { success: false, error: String(err) };
+    }
   }
 }

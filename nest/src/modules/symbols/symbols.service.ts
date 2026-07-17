@@ -287,8 +287,13 @@ export class SymbolsService {
       take: 20,
     }) as any[];
 
-    // ── 5. Protocol registry info for each protocol ──
-    const { PROTOCOL_REGISTRY } = await import('../directives/directive-groups.js');
+    // Protocol info — lazy import to avoid cross-module dependency
+    let PROTOCOL_REGISTRY: Record<string, any> = {};
+    try {
+      const mod = await import('../directives/directive-groups.js');
+      PROTOCOL_REGISTRY = mod.PROTOCOL_REGISTRY || {};
+    } catch { /* fallback to empty */ }
+
     const protocolIds = new Set<string>();
     scoringForSymbol.forEach((s: any) => { protocolIds.add(s.protocolId); if (s.shortProtocolId) protocolIds.add(s.shortProtocolId); });
     tradingStrategies.forEach((s: any) => { protocolIds.add(s.protocolId); if (s.shortProtocolId) protocolIds.add(s.shortProtocolId); });

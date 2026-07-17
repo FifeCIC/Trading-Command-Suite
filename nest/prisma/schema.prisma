@@ -572,6 +572,8 @@ model Watchlist {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   importedAt  DateTime?
+
+  scoringStrategies ScoringStrategy[]
 }
 
 model CronMeta {
@@ -942,18 +944,20 @@ model TradingStrategy {
   id            String   @id @default(uuid()) @db.VarChar(36)
   name          String   @db.VarChar(200)
   description   String?  @db.Text
-  protocolId    String   @db.VarChar(36)
-  shortProtocolId String? @db.VarChar(36)
-  scoringStrategyId String? @db.VarChar(36)  // Phase A.2: FK to ScoringStrategy — nullable during transition
+  // ⬇ Deprecated (Phase D.2): prefer ScoringStrategy via scoringStrategyId FK
+  protocolId    String?  @db.VarChar(36)    // ← use ScoringStrategy.protocolId
+  shortProtocolId String? @db.VarChar(36)   // ← use ScoringStrategy.shortProtocolId
+  scoringStrategyId String? @db.VarChar(36) // FK → ScoringStrategy — primary source of truth
   symbol        String   @db.VarChar(20)
   brokerId      String   @default("mt5") @db.VarChar(50)
   timeframe     String   @db.VarChar(10)   @default("5m")
   minComposite  Float    @default(65)
   minRarityBand String?  @db.VarChar(20)
   requireDirection String? @db.VarChar(10)
-  slPct         Float    @default(1.0)
-  tpPct         Float    @default(1.0)
-  baseSize      Float    @default(0.01)
+  // ⬇ Deprecated: prefer ScoringStrategy values via FK
+  slPct         Float?   @default(1.0)     // ← use ScoringStrategy.slPct
+  tpPct         Float?   @default(1.0)     // ← use ScoringStrategy.tpPct
+  baseSize      Float?   @default(0.01)    // ← use ScoringStrategy.baseSize
   useRaritySizing Boolean @default(true)
   maxSize       Float?
   maxPositions  Int      @default(1)
@@ -1016,6 +1020,7 @@ model ScoringStrategy {
   protocolId      String   @db.VarChar(100)
   shortProtocolId String?  @db.VarChar(100)
   watchlistName   String   @db.VarChar(100)
+  watchlistId     String?  @db.VarChar(36)  // Phase A.3: FK to Watchlist — nullable during transition
   brokerId        String   @default("mt5") @db.VarChar(50)
   mode            String   @default("manual") @db.VarChar(20)
   tradeThreshold  Float    @default(60)
@@ -1024,16 +1029,35 @@ model ScoringStrategy {
   tpPct           Float    @default(1.0)
   maxPyramidTiers Int      @default(1)
   slTpInheritance String   @default("inherit") @db.VarChar(20)
-  weightStrategy  String   @default("group-weighted") @db.VarChar(20)  // group-weighted | maxscore-weighted
+  weightStrategy  String   @default("group-weighted") @db.VarChar(20)
   enabled         Boolean  @default(true)
   tradingEnabled  Boolean  @default(false)
   activatedAt     DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  watchlist         Watchlist?               @relation(fields: [watchlistId], references: [id])
   tradingStrategies TradingStrategy[]
+  protocolLinks     ScoringStrategyProtocol[]
 
+  @@index([watchlistId])
   @@map("scoring_strategy")
+}
+
+// ── Scoring Strategy ↔ Protocol join table (Phase A.3) ──
+// Enables multi-protocol scoring strategies.
+// Replaces the single protocolId + shortProtocolId on ScoringStrategy.
+model ScoringStrategyProtocol {
+  id                String   @id @default(uuid()) @db.VarChar(36)
+  scoringStrategyId String   @db.VarChar(36)
+  protocolSlug      String   @db.VarChar(100)  // references Protocol.slug
+  role              String   @default("primary") @db.VarChar(20)  // primary | secondary | correlation
+  sortOrder         Int      @default(0)
+
+  scoringStrategy   ScoringStrategy @relation(fields: [scoringStrategyId], references: [id], onDelete: Cascade)
+
+  @@unique([scoringStrategyId, protocolSlug])
+  @@map("scoring_strategy_protocol")
 }
 
 model SymbolProtocolAffinity {

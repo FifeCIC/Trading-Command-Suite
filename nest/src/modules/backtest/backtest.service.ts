@@ -6,9 +6,9 @@ import { DirectiveInput, DirectiveResult, MarketBar } from '../directives/interf
 import {
   DIRECTIVE_GROUPS,
   BTC_SPEED_GROUPS,
-  PROTOCOL_REGISTRY,
   DirectiveGroup,
 } from '../directives/directive-groups';
+import { ProtocolDbService } from '../scoring/protocol-db.service';
 
 export interface BacktestRunRequest {
   symbol: string;
@@ -123,6 +123,7 @@ export class BacktestService {
     private readonly prisma: PrismaService,
     private readonly directivesService: DirectivesService,
     private readonly scoringService: ScoringService,
+    private readonly protocolDb: ProtocolDbService,
   ) {}
 
   async run(request: BacktestRunRequest): Promise<BacktestResult> {
@@ -239,7 +240,7 @@ export class BacktestService {
         } else {
           // Fallback to inline protocol-gated scoring
           const groups = protocolId
-            ? (PROTOCOL_REGISTRY[protocolId]?.groups ?? DIRECTIVE_GROUPS)
+            ? (this.protocolDb.getCached(protocolId)?.groups ?? DIRECTIVE_GROUPS)
             : DIRECTIVE_GROUPS;
           const result = await this.fullScore(symbol, window, groups);
           composite = result.composite;
@@ -248,7 +249,7 @@ export class BacktestService {
       } catch {
         // ScoringService failed — fall back to inline scoring
         const groups = protocolId
-          ? (PROTOCOL_REGISTRY[protocolId]?.groups ?? DIRECTIVE_GROUPS)
+          ? (this.protocolDb.getCached(protocolId)?.groups ?? DIRECTIVE_GROUPS)
           : DIRECTIVE_GROUPS;
         const result = await this.fullScore(symbol, window, groups);
         composite = result.composite;
@@ -259,7 +260,7 @@ export class BacktestService {
       if (request.weights && Object.keys(request.weights).length > 0) {
         // Weight overrides applied via fullScore fallback for precision
         const groups = protocolId
-          ? (PROTOCOL_REGISTRY[protocolId]?.groups ?? DIRECTIVE_GROUPS)
+          ? (this.protocolDb.getCached(protocolId)?.groups ?? DIRECTIVE_GROUPS)
           : DIRECTIVE_GROUPS;
         const result = await this.fullScore(symbol, window, groups, request.weights);
         composite = result.composite;

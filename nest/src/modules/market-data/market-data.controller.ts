@@ -160,6 +160,14 @@ export class MarketDataController {
     return { results, checkedAt: new Date().toISOString() };
   }
 
+  @Get('top-movers')
+  async getTopMovers(@Query('lookback') lookback?: string, @Query('limit') limit?: string) {
+    return this.marketDataService.getTopMovers(
+      lookback || '15m',
+      limit ? parseInt(limit) : 20,
+    );
+  }
+
   @Post('refresh')
   @ApiOperation({ summary: 'Refresh prices for specified symbols via provider chain' })
   async refreshSymbols(@Body() body: { symbols: string[] }) {
