@@ -82,3 +82,12 @@
 {"timestamp":"2026-07-21T00:45:45.759Z","category":"signal","level":"info","message":"USDJPY: defensive @ 2391 (50%)","data":{"symbol":"USDJPY","composite":2391,"signal":"defensive","confidence":50}}
 {"timestamp":"2026-07-21T00:45:45.760Z","category":"signal","level":"info","message":"GBPUSD: defensive @ 2335 (50%)","data":{"symbol":"GBPUSD","composite":2335,"signal":"defensive","confidence":50}}
 {"timestamp":"2026-07-21T00:45:45.761Z","category":"signal","level":"info","message":"AUDUSD: defensive @ 2667 (50%)","data":{"symbol":"AUDUSD","composite":2667,"signal":"defensive","confidence":50}}
+{"timestamp":"2026-07-21T01:04:21.208Z","category":"scoring_run","level":"info","message":"5 symbols scored (avg 2363.2)","data":{"symbolsScored":5,"avgScore":2363.2,"topSymbol":"USDJPY","topScore":2391,"durationMs":214693}}
+{"timestamp":"2026-07-21T01:04:21.228Z","category":"signal","level":"info","message":"USDJPY: defensive @ 2391 (50%)","data":{"symbol":"USDJPY","composite":2391,"signal":"defensive","confidence":50}}
+{"timestamp":"2026-07-21T01:04:21.228Z","category":"signal","level":"info","message":"GBPUSD: defensive @ 2335 (50%)","data":{"symbol":"GBPUSD","composite":2335,"signal":"defensive","confidence":50}}
+{"timestamp":"2026-07-21T01:04:21.229Z","category":"signal","level":"info","message":"AUDUSD: defensive @ 2667 (50%)","data":{"symbol":"AUDUSD","composite":2667,"signal":"defensive","confidence":50}}
+{"timestamp":"2026-07-21T01:04:21.233Z","category":"scoring_run","level":"info","message":"5 symbols scored (avg 2393.2)","data":{"symbolsScored":5,"avgScore":2393.2,"topSymbol":"USDJPY","topScore":2421,"durationMs":94705}}
+{"timestamp":"2026-07-21T01:04:21.233Z","category":"signal","level":"info","message":"USDJPY: defensive @ 2421 (50%)","data":{"symbol":"USDJPY","composite":2421,"signal":"defensive","confidence":50}}
+{"timestamp":"2026-07-21T01:04:21.233Z","category":"signal","level":"info","message":"GBPUSD: defensive @ 2365 (50%)","data":{"symbol":"GBPUSD","composite":2365,"signal":"defensive","confidence":50}}
+{"timestamp":"2026-07-21T01:04:21.234Z","category":"signal","level":"info","message":"AUDUSD: defensive @ 2697 (50%)","data":{"symbol":"AUDUSD","composite":2697,"signal":"defensive","confidence":50}}
+{"timestamp":"2026-07-21T01:04:47.435Z","category":"scoring_run","level":"info","message":"0 symbols scored (avg 0.0)","data":{"symbolsScored":0,"avgScore":0,"durationMs":908}}

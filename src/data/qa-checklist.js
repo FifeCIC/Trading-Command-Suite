@@ -1424,6 +1424,84 @@ const QA_CHECKLIST = [
     priority: 'high',
     versionNote: '2026-07-18 — tiered news import system, 5 tiers with independent limits',
   },
+
+  // ═══════════════════════════════════════════════════
+  // DATA / BAR REFRESH (2026-07-18)
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-data-005',
+    area: 'Data',
+    system: 'BarRefresh Live/Record Mode',
+    name: 'Live refresh uses reduced bar limit, record mode on-demand',
+    procedure: 'GET /api/market-data/bars/refresh/status — verify liveLimit=10, recordLimit=100. Check NestJS logs for live refresh: "LIVE bar refresh every 300s (limit=10 bars)". POST /api/market-data/bars/record — triggers bulk fetch, verify logs show "RECORD refresh: N symbols, limit=100 bars". Set BAR_REFRESH_LIVE_LIMIT=5 env → restart → verify status shows liveLimit=5.',
+    expected: 'Live cycles fetch 10 bars/symbol (not 100). Record mode uses 100 bars. Start/stop toggles the timer. Status endpoint reflects current state.',
+    category: 'API',
+    priority: 'high',
+    versionNote: '2026-07-18 — BarRefresh live/record split, tier-based symbol resolution',
+  },
+  {
+    id: 'qa-data-006',
+    area: 'Data',
+    system: 'Symbol Enrichment',
+    name: 'Profile enrichment resolves company names from providers',
+    procedure: 'POST /api/symbols/enrich {"ticker":"MSFT"} → verify response shows name: "Microsoft Corp". Check GET /api/symbols?search=MSFT → name field shows company name, not ticker. For orchestrator path: trigger /api/data/ensure-fresh for a symbol with name=ticker → verify name updates.',
+    expected: 'Finnhub/FMP/Yahoo/Alpaca provide real company names; MT5 bridge provides instrument descriptions; Trading212 CFD codes (3XXX) expected to remain as-is since they are not real tickers.',
+    category: 'API',
+    priority: 'medium',
+    versionNote: '2026-07-18 — SymbolNameEnricherService wired into DataImportOrchestrator',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // SCORING (2026-07-18)
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-scr-023',
+    area: 'Scoring',
+    system: 'OutcomeTracker Dedup',
+    name: 'Outcome dedup reduces writes on repeat scoring runs',
+    procedure: 'Trigger scoring twice within 5 minutes. Check NestJS logs — first run shows "Recorded N directive outcomes", second run shows "Dedup: N/N outcomes skipped" (all filtered). Check DirectiveOutcome table — no duplicate directive+symbol rows within the same 5-min window.',
+    expected: 'Second scoring run within 5 min produces 0 new DirectiveOutcome records for same symbols. Zero-score directives excluded. Set OUTCOME_TRACKING_ENABLED=false env var → no outcomes recorded at all.',
+    category: 'Integration',
+    priority: 'high',
+    versionNote: '2026-07-18 — OutcomeTracker time-window dedup reduces ~4,500→~1,000 writes',
+  },
+  {
+    id: 'qa-scr-024',
+    area: 'Scoring',
+    system: 'Configure Directives (Protocol Directive Editor)',
+    name: 'Directive toggles work per protocol via grouped interface',
+    procedure: 'Navigate to /scoring/configure-directives. Select a protocol (e.g., btc-speed-v1). Verify grouped display with category headers (technical, sentiment, risk) and risk gate badges. Toggle a directive off via PATCH endpoint — verify it disappears from active list.',
+    expected: 'Directives grouped by category with risk gate flags. Toggle works immediately. GET /api/scoring/protocols/:slug/directives reflects state change. Active field persisted in ProtocolDirectiveEntry.',
+    category: 'API',
+    priority: 'high',
+    versionNote: '2026-07-18 — #418 Configure Directives fix: new protocols endpoints, grouped display',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // SNAPSHOT COMPARISON (2026-07-18)
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-ui-023',
+    area: 'UI',
+    system: 'Snapshot Library Comparison',
+    name: 'Date-range comparison shows full side-by-side with delta detection',
+    procedure: 'Navigate to /builder/snapshot-library. Import two snapshots for the same symbol on different dates. Use the comparison feature. Verify price cards, score cards, signal badges with changed detection, sub-score breakdowns, biggest directive mover, news count, and seasonality shift.',
+    expected: 'Side-by-side comparison shows all metrics. Changed values highlighted with delta indicators. News summaries for both dates. Biggest directive mover identified.',
+    category: 'Feature',
+    priority: 'medium',
+    versionNote: '2026-07-18 — #69 SnapshotLibraryPage wired to SnapshotComparisonService',
+  },
+  {
+    id: 'qa-ui-024',
+    area: 'UI',
+    system: 'Gold Speed Chart',
+    name: 'Gold Speed chart shows offline state when MT5 bridge unreachable',
+    procedure: 'Stop MT5 bridge. Navigate to /trading/gold-speed. Verify centered offline state with launch instructions, fallback badge, and live price stream. Restart MT5 bridge — verify candle chart renders normally.',
+    expected: 'Offline state: icon + explanation + steps to launch bridge + fallback badge + live price. Online state: full candle chart. No indefinite "Loading..." spinner.',
+    category: 'UI',
+    priority: 'medium',
+    versionNote: '2026-07-18 — #226 Gold Speed chart offline state',
+  },
 ];
 
 export default QA_CHECKLIST;

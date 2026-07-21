@@ -166,6 +166,13 @@ const KNOWN_FEATURES = {
   'News Import Tier System': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'partial' },
   'Gold Speed Chart Offline State': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
   'Snapshot Date-Range Comparison': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  // 2026-07-18 — Bar Refresh, Outcome Dedup, Symbol Enrichment, Directives Config
+  'BarRefresh Live vs Record Mode': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'OutcomeTracker Time-Window Deduplication': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Symbol Company Name Enrichment': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Protocol Directive Editor (Configure Directives)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  // 2026-07-17 — Decision Trail Browser
+  'Decision Trail Browser': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
 };
 
 // ── Build unified capability rows ──
