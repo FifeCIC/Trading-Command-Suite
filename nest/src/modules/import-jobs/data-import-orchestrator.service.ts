@@ -11,7 +11,7 @@
  *  - marketBar  → ImportJobsService (MT5/AV/T212/Yahoo)
  *  - earnings   → EarningsService (Alpha Vantage)
  *  - news       → NewsImportService (Finnhub, cron every 6h)
- *  - profile    → Symbol table (no import needed — metadata)
+ *  - profile    → SymbolNameEnricherService (company name from provider getProfile())
  *  - price      → PriceRefreshService (provider chain live quotes)
  */
 
@@ -20,6 +20,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { FreshnessService } from '../market-data/freshness.service';
 import { PriceRefreshService } from '../market-data/price-refresh.service';
 import { ImportJobsService } from '../import-jobs/import-jobs.service';
+import { SymbolNameEnricherService } from '../symbols/symbol-name-enricher.service';
 
 export interface ImportAction {
   dataType: string;
@@ -48,6 +49,7 @@ export class DataImportOrchestrator {
     private readonly freshness: FreshnessService,
     private readonly priceRefresh: PriceRefreshService,
     private readonly importJobs: ImportJobsService,
+    private readonly enricher: SymbolNameEnricherService,
   ) {}
 
   /**
@@ -62,6 +64,7 @@ export class DataImportOrchestrator {
       skipEarnings?: boolean;
       skipNews?: boolean;
       skipPrices?: boolean;
+      skipProfile?: boolean;
     },
   ): Promise<OrchestrationResult> {
     const start = Date.now();
@@ -107,8 +110,27 @@ export class DataImportOrchestrator {
           }
           case 'news': {
             if (options?.skipNews) break;
-            // News is cron-driven every 6h — mark as skipped
-            actions.push({ dataType: type, status: 'skipped', recordsAffected: 0, durationMs: 0, source: 'cron', error: 'News auto-imports every 6h via cron' });
+            // News is cron-driven — mark as skipped
+            actions.push({ dataType: type, status: 'skipped', recordsAffected: 0, durationMs: 0, source: 'cron', error: 'News auto-imports via tiered cron (see NewsImportService)' });
+            break;
+          }
+          case 'profile': {
+            if (options?.skipProfile) break;
+            if (!ticker) {
+              // Resolve ticker from symbolId
+              const sym = await this.prisma.symbol.findUnique({ where: { id: symbolId }, select: { ticker: true } });
+              ticker = sym?.ticker;
+            }
+            if (ticker) {
+              const name = await this.enricher.enrichOne(ticker);
+              if (name) {
+                actions.push({ dataType: type, status: 'imported', recordsAffected: 1, durationMs: Date.now() - typeStart, source: 'provider' });
+              } else {
+                actions.push({ dataType: type, status: 'skipped', recordsAffected: 0, durationMs: Date.now() - typeStart, source: 'none', error: 'All providers failed to resolve name' });
+              }
+            } else {
+              actions.push({ dataType: type, status: 'skipped', recordsAffected: 0, durationMs: 0, source: 'unknown', error: 'No ticker available for enrichment' });
+            }
             break;
           }
           default: {

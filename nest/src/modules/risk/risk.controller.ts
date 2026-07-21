@@ -117,17 +117,17 @@ export class RiskController {
       const totalPnlFromPositions = (pnlAgg as any)?._sum?.pnl ?? 0;
 
       // Check recent trades for P&L
-      const recentTrades = await this.prisma.trade.findMany({
+      const recentTrades: any[] = await this.prisma.trade.findMany({
         orderBy: { closedAt: 'desc' },
         take: 50,
         select: { pnl: true, closedAt: true },
-      }).catch(() => []);
+      }).catch(() => [] as any[]);
 
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
-      const todayTrades = recentTrades.filter(t => t.closedAt && new Date(t.closedAt) >= todayStart);
-      const dailyPnl = todayTrades.reduce((s, t) => s + (t.pnl || 0), 0);
-      const tradeTotalPnl = recentTrades.reduce((s, t) => s + (t.pnl || 0), 0);
+      const todayTrades = recentTrades.filter((t: any) => t.closedAt && new Date(t.closedAt) >= todayStart);
+      const dailyPnl = todayTrades.reduce((s: number, t: any) => s + (t.pnl || 0), 0);
+      const tradeTotalPnl = recentTrades.reduce((s: number, t: any) => s + (t.pnl || 0), 0);
 
       // Estimate drawdown from trade history
       const drawdown = this.computeDrawdown(recentTrades);

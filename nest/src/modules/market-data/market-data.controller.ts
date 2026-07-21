@@ -6,6 +6,7 @@ import { CheckFreshnessDto } from './dto/check-freshness.dto';
 import { FreshnessService } from './freshness.service';
 import { PriceRefreshService } from './price-refresh.service';
 import { MarketDataService } from './market-data.service';
+import { BarRefreshService } from './bar-refresh.service';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
 
 @ApiTags('market-data')
@@ -17,6 +18,7 @@ export class MarketDataController {
     private readonly priceRefresh: PriceRefreshService,
     private readonly importJobsService: ImportJobsService,
     private readonly modeService: ModeService,
+    private readonly barRefresh: BarRefreshService,
   ) {}
 
   private modeMeta() {
@@ -174,6 +176,35 @@ export class MarketDataController {
     const symbols = body.symbols || [];
     if (symbols.length === 0) return { refreshed: [] };
     const result = await this.priceRefresh.refreshPrices(symbols);
+    return { ...result, timestamp: new Date().toISOString() };
+  }
+
+  // ── Bar Refresh Control ─────────────────────────────────
+
+  @Get('bars/refresh/status')
+  @ApiOperation({ summary: 'Get bar refresh service status (running, mode, limits)' })
+  async barRefreshStatus() {
+    return this.barRefresh.getStatus();
+  }
+
+  @Post('bars/refresh/start')
+  @ApiOperation({ summary: 'Start periodic live bar refresh' })
+  async barRefreshStart(@Body() body?: { intervalMs?: number }) {
+    this.barRefresh.start(body?.intervalMs);
+    return { ...this.barRefresh.getStatus(), message: 'Bar refresh started' };
+  }
+
+  @Post('bars/refresh/stop')
+  @ApiOperation({ summary: 'Stop periodic bar refresh' })
+  async barRefreshStop() {
+    this.barRefresh.stop();
+    return { ...this.barRefresh.getStatus(), message: 'Bar refresh stopped' };
+  }
+
+  @Post('bars/record')
+  @ApiOperation({ summary: 'Record bars for backtesting (on-demand bulk fetch)' })
+  async barRecord(@Body() body?: { symbols?: string[] }) {
+    const result = await this.barRefresh.recordBars(body?.symbols);
     return { ...result, timestamp: new Date().toISOString() };
   }
 }

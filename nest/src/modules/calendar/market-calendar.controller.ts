@@ -1,6 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { MarketCalendarService, type MarketStatus, HolidayEntry, SessionInfo } from './market-calendar.service';
+import { MarketCalendarService, type MarketStatus, HolidayEntry } from './market-calendar.service';
+import type { SessionInfo } from './market-calendar.service';
 
 @ApiTags('calendar')
 @Controller('calendar')

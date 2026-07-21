@@ -386,6 +386,7 @@ model NewsArticle {
 model NewsImportRun {
   id           String   @id @default(uuid()) @db.VarChar(36)
   status       String   @default("running") @db.VarChar(50)
+  tierId       String?  @db.VarChar(50)
   symbolsCount Int      @default(0)
   fetched      Int      @default(0)
   newArticles  Int      @default(0)
@@ -396,6 +397,7 @@ model NewsImportRun {
   completedAt  DateTime?
 
   @@index([startedAt])
+  @@index([tierId, startedAt])
 }
 
 model DirectiveOutcome {
@@ -1542,6 +1544,7 @@ model ProtocolDirectiveEntry {
   groupId      String   @db.VarChar(36)
   directiveId  String   @db.VarChar(100)  // matches directive registry ID
   maxScore     Int      @default(100)     // per-directive maxScore override
+  active       Boolean  @default(true)    // toggle on/off from Configure Directives page
 
   group        ProtocolDirectiveGroup      @relation(fields: [groupId], references: [id], onDelete: Cascade)
 

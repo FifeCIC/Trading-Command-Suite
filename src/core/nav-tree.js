@@ -57,7 +57,7 @@ export const NAV_TREE = {
       { id: 'directives-manager', label: 'Directives', icon: '◆' },
       { id: 'configure-directives', label: 'Protocol Editor', icon: '⚙' },
       { id: 'live-ordering-stack', label: 'Live Ordering Stack', icon: '◉' },
-      { id: 'signals-workbench', label: 'Signals Ladder', icon: '◈' },
+      { id: 'signals-workbench', label: 'Scoring Workbench', icon: '◈' },
       { id: 'exit-signals', label: 'Exit Signals', icon: '🚪' },
       { id: 'sees-arena', label: 'SEES Arena', icon: '◆' },
       { id: 'protocols', label: 'Protocols 📋', icon: '📋' },

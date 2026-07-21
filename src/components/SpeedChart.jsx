@@ -282,15 +282,40 @@ export default function SpeedChart({ symbol, timeframe, chartMode, scanScore, ch
     </div>
   ) : null;
 
+  // ── Offline / empty state ──
+  const showOffline = dataError && bars.length === 0;
+
   return (
     <div className="st-chart-container">
-      {dataError && (
-        <div className="st-chart-error">MT5: {dataError}</div>
-      )}
-      {legend}
-      <div ref={containerRef} className="st-chart-canvas" />
-      {!bars.length && !dataError && (
-        <div className="st-chart-loading">Loading {symbol} {timeframe}…</div>
+      {showOffline ? (
+        <div className="st-chart-offline">
+          <div className="st-chart-offline-icon">📡</div>
+          <h3>MT5 Bridge Offline</h3>
+          <p>The live chart requires the MT5 bridge (port 5000) to be running.</p>
+          <div className="st-chart-offline-hint">
+            <span>Start the stack: <code>pwsh -File scripts\tcs-launch.ps1</code></span>
+          </div>
+          <div className="st-chart-offline-fallback">
+            <span className="st-chart-offline-badge">Fallback</span>
+            <span>Showing price stream & scoring data without candles</span>
+          </div>
+          {lastPrice && (
+            <div className="st-chart-offline-price">
+              <span className="st-chart-offline-bid">${lastPrice.bid?.toFixed(symbol.includes('JPY') ? 3 : symbol.includes('XAU') ? 2 : 5) || '—'}</span>
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {dataError && (
+            <div className="st-chart-error">MT5: {dataError}</div>
+          )}
+          {legend}
+          <div ref={containerRef} className="st-chart-canvas" />
+          {!bars.length && !dataError && (
+            <div className="st-chart-loading">Loading {symbol} {timeframe}…</div>
+          )}
+        </>
       )}
       {/* Hover tooltip */}
       {hoverInfo && chartMode === 'candles' && (

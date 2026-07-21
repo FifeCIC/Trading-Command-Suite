@@ -7,6 +7,8 @@ import { QueueConfigService } from './config/queue-config.service';
 import { LoggingValidationPipe } from './common/pipes/validation.pipe';
 import { PrismaService } from './database/prisma.service';
 import { ApiActivityService } from './modules/api-activity/api-activity.service';
+import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
+import { SlowRequestInterceptor } from './common/interceptors/slow-request.interceptor';
 
 const logger = new Logger('Bootstrap');
 
@@ -75,6 +77,7 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new LoggingValidationPipe());
+  app.useGlobalInterceptors(new SlowRequestInterceptor(), new TimeoutInterceptor());
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Trader Core API')

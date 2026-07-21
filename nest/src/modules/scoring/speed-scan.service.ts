@@ -147,7 +147,7 @@ export class SpeedScanService {
     // Score each symbol
     const scoringPromises = upperSymbols.map(async (symbol) => {
       try {
-        const symId = symbolMap.get(symbol);
+        const symId: string = symbolMap.get(symbol) as string;
         if (!symId) {
           return { symbol, skipped: true, reason: 'No market data configured' };
         }

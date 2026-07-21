@@ -115,6 +115,7 @@ import SystemLogPage from '../pages/SystemLogPage.jsx';
 import SetupWizardPage from '../pages/SetupWizardPage.jsx';
 import FaqPage from '../pages/FaqPage.jsx';
 import SettingsPage from '../pages/SettingsPage.jsx';
+import SettingsDatabasePage from '../pages/SettingsDatabasePage.jsx';
 import ServerControlsPage from '../pages/ServerControlsPage.jsx';
 import ReportsPage from '../pages/ReportsPage.jsx';
 import CapabilityMapPage from '../pages/CapabilityMapPage.jsx';
@@ -278,6 +279,7 @@ export const VIEW_COMPONENTS = {
   'setup': SetupWizardPage,
   'faq': FaqPage,
   'settings': SettingsPage,
+  'settings-database': SettingsDatabasePage,
   'server-controls': ServerControlsPage,
   'reports': ReportsPage,
   'capability-map': CapabilityMapPage,

@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import { usePreferences } from '../core/hooks/usePreferences';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -22,6 +22,34 @@ export default function SignalsWorkbenchPage() {
   const [protocolId, setProtocolId] = useState(prefs.defaultProtocol || '');
   const [expandedSymbol, setExpandedSymbol] = useState(null);
   const [viewMode, setViewMode] = useState('ladder');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const inputRef = useRef(null);
+
+  // Symbol search for autocomplete
+  const symbolsQuery = useQuery({
+    queryKey: ['symbols-all'],
+    queryFn: () => apiGet('/api/symbols'),
+    staleTime: 60_000,
+  });
+  const allSymbols = symbolsQuery.data?.symbols ?? [];
+
+  // Find matching symbols for the current partial entry
+  const suggestions = useMemo(() => {
+    const parts = symbolInput.split(/[,\s]+/);
+    const partial = parts[parts.length - 1].trim().toUpperCase();
+    if (!partial || partial.length === 0) return [];
+    return allSymbols
+      .filter(s => s.ticker.toUpperCase().startsWith(partial) && !parts.slice(0, -1).includes(s.ticker))
+      .slice(0, 8);
+  }, [symbolInput, allSymbols]);
+
+  const insertSymbol = useCallback((ticker) => {
+    const parts = symbolInput.split(/[,\s]+/).filter(Boolean);
+    parts[parts.length - 1] = ticker;
+    setSymbolInput(parts.join(', ') + (parts.length > 0 ? ', ' : ''));
+    setShowSuggestions(false);
+    inputRef.current?.focus();
+  }, [symbolInput]);
   const [sessionRuns, setSessionRuns] = useState(() => {
     try { return JSON.parse(localStorage.getItem('sw-session-runs') || '[]'); }
     catch { return []; }
@@ -92,9 +120,9 @@ export default function SignalsWorkbenchPage() {
     <div className="sw-page">
       <motion.header className="sw-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div>
-          <h1>Signals Ladder</h1>
+          <h1>Scoring Workbench</h1>
           <p className="sw-subtitle">
-            Ranked signal comparison across protocols. Identifies the strongest entries by composite score.
+            Manual scoring tool — enter tickers for detailed directive breakdown and signal ranking.
           </p>
         </div>
         <span className="sw-clock">
@@ -104,14 +132,41 @@ export default function SignalsWorkbenchPage() {
 
       {/* ── Controls ── */}
       <motion.div className="sw-controls" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }}>
-        <input
-          type="text"
-          className="sw-symbol-input"
-          placeholder="AAPL, NVDA, MSFT..."
-          value={symbolInput}
-          onChange={(e) => setSymbolInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleRun()}
-        />
+        <div style={{ position: 'relative', flex: 1 }}>
+          <input
+            ref={inputRef}
+            type="text"
+            className="sw-symbol-input"
+            placeholder="AAPL, NVDA, MSFT..."
+            value={symbolInput}
+            onChange={(e) => { setSymbolInput(e.target.value); setShowSuggestions(true); }}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+            onKeyDown={(e) => e.key === 'Enter' && handleRun()}
+          />
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="sw-suggestions" style={{
+              position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+              background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: '0 0 8px 8px',
+              maxHeight: 200, overflowY: 'auto', boxShadow: 'var(--shadow-card)',
+            }}>
+              {suggestions.map(s => (
+                <div
+                  key={s.ticker}
+                  onMouseDown={(e) => { e.preventDefault(); insertSymbol(s.ticker); }}
+                  style={{
+                    padding: '0.4rem 0.75rem', cursor: 'pointer', fontSize: '0.85rem',
+                    borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between',
+                  }}
+                  className="sw-suggestion-item"
+                >
+                  <span style={{ fontWeight: 600 }}>{s.ticker}</span>
+                  <span style={{ color: 'var(--ink-soft)', fontSize: '0.75rem' }}>{s.name || s.exchange}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         <ProtocolPicker
           className="sw-protocol-select"
           value={protocolId}
@@ -168,6 +223,11 @@ export default function SignalsWorkbenchPage() {
                 <span className="sw-env-symbol">{env.symbol}</span>
                 <span className="sw-env-composite" style={{ color: SIGNAL_COLORS[env.signal] }}>
                   {env.composite.toFixed(0)}
+                  {env.maxPossible > 0 && (
+                    <span style={{ fontSize: '0.65rem', opacity: 0.7, marginLeft: 2 }}>
+                      /{env.maxPossible} ({Math.round(env.composite / env.maxPossible * 100)}%)
+                    </span>
+                  )}
                 </span>
                 <span
                   className="sw-env-signal"

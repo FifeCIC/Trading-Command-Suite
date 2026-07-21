@@ -220,20 +220,107 @@ export default function SnapshotLibraryPage() {
           </div>
         </div>
 
-        {compResult && !compResult.error && (
-          <motion.div className="sl-compare-result" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <div className="sl-compare-header">
-              <span>{compResult.symbol}</span>
-              <span>→</span>
-              <span>Composite delta: <strong style={{ color: compResult.compositeDelta >= 0 ? '#22c55e' : '#ef4444' }}>{compResult.compositeDelta >= 0 ? '+' : ''}{compResult.compositeDelta}</strong></span>
-            </div>
-            {compResult.newsAttribution && (
-              <div className="sl-compare-news">
-                <span>News: {compResult.newsAttribution.headline}</span>
+        {compResult && !compResult.error && (() => {
+          const r = compResult;
+          const d = r.delta || {};
+          const a = r.snapA || {};
+          const b = r.snapB || {};
+          return (
+            <motion.div className="sl-compare-result" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <div className="sl-compare-header">
+                <span className="sl-cmp-symbol">{r.symbol}</span>
+                <span className="sl-cmp-date-range">{a.date || 'A'} → {b.date || 'B'}</span>
               </div>
-            )}
-          </motion.div>
-        )}
+
+              {/* Price */}
+              <div className="sl-cmp-metrics">
+                <div className="sl-cmp-card">
+                  <span className="sl-cmp-label">Price</span>
+                  <span className="sl-cmp-val">${a.closestBar?.close?.toFixed(2) || '—'}</span>
+                  <span className="sl-cmp-arrow">→</span>
+                  <span className="sl-cmp-val">${b.closestBar?.close?.toFixed(2) || '—'}</span>
+                  <span className={`sl-cmp-delta ${d.priceChange >= 0 ? 'pos' : 'neg'}`}>
+                    {d.priceChangePct != null ? `${d.priceChangePct >= 0 ? '+' : ''}${d.priceChangePct}%` : '—'}
+                  </span>
+                </div>
+
+                {/* Composite Score */}
+                <div className="sl-cmp-card">
+                  <span className="sl-cmp-label">Score</span>
+                  <span className="sl-cmp-val">{a.scoring?.composite?.toFixed(0) || '—'}</span>
+                  <span className="sl-cmp-arrow">→</span>
+                  <span className="sl-cmp-val">{b.scoring?.composite?.toFixed(0) || '—'}</span>
+                  <span className={`sl-cmp-delta ${d.compositeChange >= 0 ? 'pos' : 'neg'}`}>
+                    {d.compositeChange >= 0 ? '+' : ''}{d.compositeChange}
+                  </span>
+                </div>
+
+                {/* Signal */}
+                <div className="sl-cmp-card">
+                  <span className="sl-cmp-label">Signal</span>
+                  <span className={`sl-cmp-signal ${(d.signalA || '').toLowerCase()}`}>{d.signalA || '—'}</span>
+                  <span className="sl-cmp-arrow">→</span>
+                  <span className={`sl-cmp-signal ${(d.signalB || '').toLowerCase()}`}>{d.signalB || '—'}</span>
+                  {d.signalChanged && <span className="sl-cmp-flip">⬡ Changed</span>}
+                </div>
+
+                {/* Sub-scores */}
+                {a.scoring?.subScores && b.scoring?.subScores && (
+                  <div className="sl-cmp-card sl-cmp-card-wide">
+                    <span className="sl-cmp-label">Sub-Scores</span>
+                    <div className="sl-cmp-subs">
+                      <span className="sl-cmp-sub">Technical: {a.scoring.subScores.technical?.toFixed(0) || '—'} → {b.scoring.subScores.technical?.toFixed(0) || '—'}</span>
+                      <span className="sl-cmp-sub">Sentiment: {a.scoring.subScores.sentiment?.toFixed(0) || '—'} → {b.scoring.subScores.sentiment?.toFixed(0) || '—'}</span>
+                      <span className="sl-cmp-sub">Risk: {a.scoring.subScores.risk?.toFixed(0) || '—'} → {b.scoring.subScores.risk?.toFixed(0) || '—'}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Delta details */}
+              <div className="sl-cmp-details">
+                {d.biggestDirectiveMover && (
+                  <div className="sl-cmp-detail-row">
+                    <span className="sl-cmp-detail-label">Biggest directive mover</span>
+                    <span>{d.biggestDirectiveMover.id} ({d.biggestDirectiveMover.delta >= 0 ? '+' : ''}{d.biggestDirectiveMover.delta})</span>
+                  </div>
+                )}
+                {d.newsBetween != null && (
+                  <div className="sl-cmp-detail-row">
+                    <span className="sl-cmp-detail-label">News between dates</span>
+                    <span>{d.newsBetween} article{d.newsBetween !== 1 ? 's' : ''}</span>
+                  </div>
+                )}
+                {d.seasonalityShift && (
+                  <div className="sl-cmp-detail-row">
+                    <span className="sl-cmp-detail-label">Seasonality shift</span>
+                    <span>{d.seasonalityShift}</span>
+                  </div>
+                )}
+                {a.newsSummary?.length > 0 && (
+                  <div className="sl-cmp-detail-row sl-cmp-news">
+                    <span className="sl-cmp-detail-label">News at Date A</span>
+                    <div className="sl-cmp-news-list">
+                      {a.newsSummary.slice(0, 3).map((n, i) => (
+                        <div key={i} className="sl-cmp-news-item">{n.headline}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {b.newsSummary?.length > 0 && (
+                  <div className="sl-cmp-detail-row sl-cmp-news">
+                    <span className="sl-cmp-detail-label">News at Date B</span>
+                    <div className="sl-cmp-news-list">
+                      {b.newsSummary.slice(0, 3).map((n, i) => (
+                        <div key={i} className="sl-cmp-news-item">{n.headline}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          );
+        })()}
         {compResult?.error && <p className="sl-error">{compResult.error}</p>}
       </motion.div>
     </div>

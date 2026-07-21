@@ -853,154 +853,6 @@ button.nav-active {
 
 /* ── Ticker Bar ─────────────────────────────────────────── */
 
-.ticker-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  max-width: 360px;
-  min-width: 200px;
-  flex-shrink: 0;
-  opacity: 0;
-  transform: translateY(-6px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.ticker-bar.ticker-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.ticker-bar--empty {
-  opacity: 0.5;
-  transform: translateY(0);
-}
-
-.ticker-icon {
-  font-size: 0.7rem;
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-.ticker-src-sees  { color: #22c55e; }
-.ticker-src-trading { color: #3b82f6; }
-.ticker-src-alert { color: #ef4444; }
-.ticker-src-system { color: var(--ink-soft); }
-
-.ticker-msg {
-  font-size: 0.75rem;
-  color: var(--ink-soft);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ── Ticker hover popup ────────────────────────────────── */
-
-.ticker-bar {
-  position: relative;
-}
-
-.ticker-popup {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  width: 380px;
-  max-width: calc(100vw - 2rem);
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  padding: 0.85rem 1rem;
-  z-index: 50;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-4px);
-  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
-  pointer-events: none;
-}
-
-.ticker-bar:hover .ticker-popup {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.ticker-popup-header {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin-bottom: 0.45rem;
-}
-
-.ticker-popup-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.ticker-popup-source {
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ink-soft);
-  flex: 1;
-}
-
-.ticker-popup-time {
-  font-size: 0.68rem;
-  color: var(--ink-soft);
-  opacity: 0.7;
-}
-
-.ticker-popup-body {
-  font-size: 0.82rem;
-  color: var(--ink);
-  margin: 0 0 0.6rem;
-  line-height: 1.45;
-}
-
-.ticker-popup-history {
-  border-top: 1px solid var(--line);
-  padding-top: 0.55rem;
-}
-
-.ticker-popup-history-label {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-soft);
-  opacity: 0.6;
-  display: block;
-  margin-bottom: 0.4rem;
-}
-
-.ticker-popup-row {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.2rem 0;
-  font-size: 0.72rem;
-}
-
-.ticker-popup-row-msg {
-  color: var(--ink-soft);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-  min-width: 0;
-}
-
-.ticker-popup-row-time {
-  color: var(--ink-soft);
-  opacity: 0.5;
-  font-size: 0.65rem;
-  flex-shrink: 0;
-}
-
 .topbar-row-main {
   display: flex;
   align-items: center;
@@ -1022,8 +874,8 @@ button.nav-active {
   border: 1px solid transparent;
   border-radius: 5px;
   color: var(--ink-soft);
-  font-size: 0.72rem;
-  padding: 0.25rem 0.55rem;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.6rem;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s;
@@ -1243,6 +1095,7 @@ button.nav-active {
 .main-stage {
   grid-area: main;
   min-height: 70vh;
+  position: relative; /* anchor for LastUpdated badge */
 }
 
 .right-rail {

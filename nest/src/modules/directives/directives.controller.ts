@@ -18,14 +18,20 @@ export class DirectivesController {
   async list() {
     const directives = this.directivesService.list();
 
-    // Load active-status + nature from DB
+    // Load active-status + nature from DB (with deadline to avoid DB-lock stalls)
     const dbStatuses = new Map<string, boolean>();
     const dbNatures = new Map<string, string>();
     try {
-      const dbDirectives = await this.directivesService.getDbStatuses();
-      for (const d of dbDirectives) {
-        dbStatuses.set(d.id, d.active);
-        if (d.nature) dbNatures.set(d.id, d.nature);
+      const DB_DEADLINE_MS = 3000;
+      const dbResult = await Promise.race([
+        this.directivesService.getDbStatuses(),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), DB_DEADLINE_MS)),
+      ]);
+      if (dbResult) {
+        for (const d of dbResult) {
+          dbStatuses.set(d.id, d.active);
+          if (d.nature) dbNatures.set(d.id, d.nature);
+        }
       }
     } catch { /* DB might not be available */ }
 
@@ -130,33 +136,44 @@ export class DirectivesController {
     }
 
     // ── Merge stats from Score history ──
-    const recentScores = await this.directivesService.getRecentScores(200).catch(() => []);
-    const statMap = new Map<string, { totalScore: number; count: number; bullishCount: number; bearishCount: number; protocols: Set<string> }>();
-    for (const s of recentScores) {
-      const breakdown = (s as any).breakdown || {};
-      for (const [dirId, dirScore] of Object.entries(breakdown)) {
-        if (!statMap.has(dirId)) {
-          statMap.set(dirId, { totalScore: 0, count: 0, bullishCount: 0, bearishCount: 0, protocols: new Set() });
+    // Short deadline — Score queries may be slow/locked. Return directives immediately
+    // without stats rather than blocking. Stats are available via GET /api/directives/stats.
+    const STATS_DEADLINE_MS = 3000;
+    const statsResult = await Promise.race([
+      (async () => {
+        const recentScores = await this.directivesService.getRecentScores(200).catch(() => []);
+        const statMap = new Map<string, { totalScore: number; count: number; bullishCount: number; bearishCount: number; protocols: Set<string> }>();
+        for (const s of recentScores) {
+          const breakdown = (s as any).breakdown || {};
+          for (const [dirId, dirScore] of Object.entries(breakdown)) {
+            if (!statMap.has(dirId)) {
+              statMap.set(dirId, { totalScore: 0, count: 0, bullishCount: 0, bearishCount: 0, protocols: new Set() });
+            }
+            const st = statMap.get(dirId)!;
+            st.totalScore += dirScore as number;
+            st.count++;
+            if ((dirScore as number) >= 50) st.bullishCount++;
+            else if ((dirScore as number) < 30) st.bearishCount++;
+            if ((s as any).strategyId) st.protocols.add((s as any).strategyId);
+          }
         }
-        const st = statMap.get(dirId)!;
-        st.totalScore += dirScore as number;
-        st.count++;
-        if ((dirScore as number) >= 50) st.bullishCount++;
-        else if ((dirScore as number) < 30) st.bearishCount++;
-        if ((s as any).strategyId) st.protocols.add((s as any).strategyId);
-      }
-    }
 
-    // ── Fallback: if no recent scores found, query total run counts ──
-    if (recentScores.length === 0) {
-      const runCounts = await this.directivesService.getDirectiveRunCounts().catch(() => new Map());
-      for (const [dirId, count] of runCounts) {
-        if (!statMap.has(dirId)) {
-          statMap.set(dirId, { totalScore: 0, count: 0, bullishCount: 0, bearishCount: 0, protocols: new Set() });
+        // ── Fallback: if no recent scores found, query total run counts ──
+        if (recentScores.length === 0) {
+          const runCounts = await this.directivesService.getDirectiveRunCounts().catch(() => new Map());
+          for (const [dirId, count] of runCounts) {
+            if (!statMap.has(dirId)) {
+              statMap.set(dirId, { totalScore: 0, count: 0, bullishCount: 0, bearishCount: 0, protocols: new Set() });
+            }
+            statMap.get(dirId)!.count += count;
+          }
         }
-        statMap.get(dirId)!.count += count;
-      }
-    }
+        return statMap;
+      })(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), STATS_DEADLINE_MS)),
+    ]);
+
+    const statMap = statsResult ?? new Map<string, { totalScore: number; count: number; bullishCount: number; bearishCount: number; protocols: Set<string> }>();
 
     // Known stub directive IDs — placeholders awaiting real implementation
     const STUB_IDS = new Set([

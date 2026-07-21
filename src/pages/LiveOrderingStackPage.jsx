@@ -408,7 +408,7 @@ export default function LiveOrderingStackPage() {
       </div>
 
       {/* ── Live Ordering Stack table ── */}
-      <section className="so-panel los-stack-panel">
+      <div className="los-stack-section">
         <div className="los-stack-header">
           <h2>Ordering Stack</h2>
           {autoRefresh && <span className="los-live-badge">LIVE</span>}
@@ -475,7 +475,7 @@ export default function LiveOrderingStackPage() {
         {scoreQuery.isFetching && autoRefresh && (
           <p className="los-refreshing">Refreshing…</p>
         )}
-      </section>
+      </div>
 
       {/* ── Card View ── */}
       {viewMode === 'cards' && scored.length > 0 && (

@@ -197,6 +197,33 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
+/* ── Themed buttons for Active Symbols ── */
+.trading-platforms-page .btn {
+  border-color: var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  transition: border-color 0.15s, color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.trading-platforms-page .btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.trading-platforms-page .btn-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.trading-platforms-page .btn-primary:hover {
+  background: color-mix(in srgb, var(--accent) 80%, #000);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
 .tp-provider-pill {
   padding: 0.25rem 0.55rem;
   border: 1px solid var(--line);

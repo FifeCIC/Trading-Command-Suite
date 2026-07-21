@@ -75,10 +75,20 @@ export default function ScoringActivityLogsPage() {
     queryKey: ['scoring', 'runs'],
     queryFn: () => apiGet('/api/scoring/runs'),
     refetchInterval: 30000,
+    retry: 1,
   });
 
-  const apiOnline = !runsQuery.isError;
+  // Use actual health check for online/offline — NOT a guess from a single endpoint failure
+  const healthQuery = useQuery({
+    queryKey: ['health'],
+    queryFn: () => apiGet('/api/version'),
+    staleTime: 15_000,
+    retry: 1,
+  });
+  const apiOnline = !!healthQuery.data?.version;
+
   const runs = runsQuery.data?.runs ?? [];
+  const runsFailed = runsQuery.isError;
 
   // Sort runs
   const sortedRuns = useMemo(() => {
@@ -125,6 +135,18 @@ export default function ScoringActivityLogsPage() {
       </motion.header>
 
       {!apiOnline && <ApiOfflineBanner />}
+      {apiOnline && runsFailed && (
+        <div className="api-offline-banner" style={{ borderColor: '#f59e0b' }}>
+          <div className="api-offline-banner-icon">⏳</div>
+          <div className="api-offline-banner-body">
+            <strong className="api-offline-banner-title">Scoring data is taking too long</strong>
+            <p className="api-offline-banner-text">
+              The /api/scoring/runs endpoint did not respond in time. The API is online but this query timed out.
+              It will retry automatically.
+            </p>
+          </div>
+        </div>
+      )}
       {isLoading && <LoadingSkeleton variant="text" lines={6} />}
 
       {isEmpty && (

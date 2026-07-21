@@ -6,7 +6,7 @@ Agent-to-Librarian handoff files. Each file is a completed unit of work that nee
 
 1. **Every agent** writes a handoff file when completing work (mandatory via `agent-handoff.instructions.md`)
 2. **The Librarian** reads all unprocessed handoffs and batch-updates the three documentation pages
-3. **After processing**, the Librarian moves files to `processed/`
+3. **After processing**, the Librarian deletes the handoff file (git history preserves it if ever needed)
 
 ## Format
 

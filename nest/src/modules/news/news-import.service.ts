@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
+import { SettingsService, type NewsImportSettings, type NewsTierConfig } from '../system/settings.service';
 
 /**
  * News Import Service
@@ -83,12 +84,26 @@ const KEY_PEOPLE_PATTERNS: RegExp[] = [
   /satya nadella/i, /brian armstrong/i,
 ];
 
-// ── Giant Symbols (always tracked) ──
+// ── Tier-Based Symbol Lists ──
+// Replaces the hardcoded GIANT_SYMBOLS constant.
+// Symbols are now resolved per-tier based on positions, protocols, and config.
 
-const GIANT_SYMBOLS = [
-  'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA',
-  'BRK.B', 'JPM', 'V', 'JNJ', 'WMT', 'MA', 'PG', 'UNH',
-  'HD', 'DIS', 'BAC', 'XOM', 'NFLX', 'ADBE', 'CRM', 'AMD',
+/** Macro/global market proxy symbols — always relevant regardless of positions. */
+const MACRO_SYMBOLS = [
+  'SPY', 'QQQ', 'IWM', 'DIA',        // US equity indices
+  'TLT', 'SHY', 'LQD', 'HYG',        // bonds / credit
+  'GLD', 'SLV', 'USO', 'UNG',        // commodities
+  'UUP', 'FXY',                       // currencies
+  'VIX',                              // volatility
+];
+
+/** Sector-representative symbols for broad sector coverage. */
+const SECTOR_SYMBOLS = [
+  'XLK', 'XLF', 'XLE', 'XLV', 'XLI', // tech, financials, energy, healthcare, industrials
+  'XLY', 'XLP', 'XLB', 'XLU', 'XLRE', // consumer disc, staples, materials, utilities, real estate
+  'SMH', 'SOXX',                      // semiconductors
+  'IBB', 'XBI',                       // biotech
+  'KRE', 'XLF',                       // regional banks / financials (XLF intentional overlap)
 ];
 
 // ── Known ticker pattern for headline scanning ──
@@ -112,92 +127,331 @@ const FLUFF_KEYWORDS = [
 export class NewsImportService {
   private readonly logger = new Logger(NewsImportService.name);
 
+  /** Tracks the last run time per tier ID (in-memory, resets on restart). */
+  private readonly tierLastRun = new Map<string, Date>();
+
+  /** Tracks today's article count per tier (in-memory, resets on restart). */
+  private readonly tierDailyCounts = new Map<string, number>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly adapterFactory: AdapterFactory,
+    private readonly settingsService: SettingsService,
   ) {}
 
   // ── Public API ──
 
   /**
-   * Scheduled news import — runs every 6 hours.
-   * Covers all tracked symbols (active + positions + starred + giants).
+   * Tiered news import dispatcher — runs every hour.
+   * Checks which tiers are due and dispatches them with budget enforcement.
+   *
+   * Tier schedule (configurable via Settings):
+   *   Tier 1 (positions):        Every 2h  — max 30/day
+   *   Tier 2 (active-protocols): Every 4h  — max 20/day
+   *   Tier 3 (macro):            Every 6h  — max 15/day
+   *   Tier 4 (sector):           Every 6h  — max 15/day
+   *   Tier 5 (other):            Daily     — max 20/day (disabled by default)
    */
-  @Cron('0 */6 * * *', { name: 'news-import' })
+  @Cron('0 * * * *', { name: 'news-import-tiered' })
   async scheduledImport() {
-    this.logger.log('Scheduled news import starting...');
-    try {
-      const result = await this.runImport();
-      this.logger.log(
-        `Scheduled import done: ${result.symbolsCount} symbols, ${result.newArticles} new articles`,
+    const config = await this.getTierConfig();
+
+    // Check daily budget before doing anything
+    const usedToday = await this.getDailyArticleCount();
+    if (usedToday >= config.dailyLimit) {
+      this.logger.warn(`Daily news budget exhausted: ${usedToday}/${config.dailyLimit} — skipping all tiers`);
+      return;
+    }
+
+    const remaining = config.dailyLimit - usedToday;
+    this.logger.log(`News tier dispatch: used ${usedToday}/${config.dailyLimit}, ${remaining} remaining`);
+
+    for (const tier of config.tiers) {
+      if (!tier.enabled) continue;
+      if (tier.maxPerDay <= 0) continue;
+
+      // Check if tier is due
+      const lastRun = this.tierLastRun.get(tier.id);
+      if (lastRun) {
+        const elapsedMin = (Date.now() - lastRun.getTime()) / 60_000;
+        if (elapsedMin < tier.intervalMin) continue;
+      }
+
+      // Check tier budget (proportional share of daily limit)
+      const tierUsedToday = await this.getDailyArticleCount(tier.id);
+      if (tierUsedToday >= tier.maxPerDay) {
+        this.logger.debug(`Tier "${tier.id}" daily budget exhausted: ${tierUsedToday}/${tier.maxPerDay}`);
+        continue;
+      }
+
+      const tierRemaining = Math.min(tier.maxPerDay - tierUsedToday, remaining);
+      if (tierRemaining <= 0) continue;
+
+      this.logger.log(`Dispatching tier "${tier.id}": ${tierRemaining} article slots, ${tier.intervalMin}m interval`);
+      this.tierLastRun.set(tier.id, new Date());
+
+      // Fire and forget (don't block other tiers)
+      this.runTierImport(tier).catch((err) =>
+        this.logger.error(`Tier "${tier.id}" import failed: ${(err as Error).message}`),
       );
-    } catch (err) {
-      this.logger.error(`Scheduled news import failed: ${(err as Error).message}`);
     }
   }
 
   /**
-   * Resolve the full set of symbols that should be tracked for news.
-   * Priority order: active symbols + position symbols + starred + giants.
-   * Returns deduplicated, uppercase array.
+   * Import news for a single tier.
    */
-  async resolveTrackedSymbols(): Promise<string[]> {
+  async runTierImport(tier: NewsTierConfig): Promise<any> {
+    const symbols = await this.resolveTierSymbols(tier.id);
+    if (!symbols.length) {
+      this.logger.debug(`Tier "${tier.id}": no symbols to fetch`);
+      return null;
+    }
+
+    // Cap symbols if needed to stay within tier budget
+    // (We import all matching symbols but the article budget is the real gate)
+    this.logger.log(`Tier "${tier.id}": fetching news for ${symbols.length} symbols`);
+    return this.runImport(symbols, tier.id);
+  }
+
+  /**
+   * Resolve symbols for a specific priority tier.
+   */
+  async resolveTierSymbols(tierId: string): Promise<string[]> {
     const set = new Set<string>();
 
-    // 1. Giants (always tracked)
-    for (const s of GIANT_SYMBOLS) set.add(s);
-
-    // 2. Active symbols from DB
-    try {
-      const active = await this.prisma.symbol.findMany({
-        where: { active: true },
-        select: { ticker: true },
-      });
-      for (const s of active) set.add(s.ticker.toUpperCase());
-    } catch (err) {
-      this.logger.warn(`Could not load active symbols: ${(err as Error).message}`);
-    }
-
-    // 3. Symbols with open positions
-    try {
-      const positions = await this.prisma.position.findMany({
-        select: { symbol: true },
-        distinct: ['symbol'],
-      });
-      for (const p of positions) set.add(p.symbol.toUpperCase());
-    } catch (err) {
-      this.logger.warn(`Could not load position symbols: ${(err as Error).message}`);
-    }
-
-    // 4. Starred symbols from watchlists
-    try {
-      const watchlists = await this.prisma.watchlist.findMany({
-        select: { symbols: true },
-      });
-      for (const w of watchlists) {
-        const syms = (w.symbols as any[]) || [];
-        for (const s of syms) {
-          if (typeof s === 'string') set.add(s.toUpperCase());
-          if (typeof s === 'object' && s?.ticker) set.add(s.ticker.toUpperCase());
+    switch (tierId) {
+      case 'positions': {
+        // Tier 1: Open positions only — highest priority
+        try {
+          const positions = await this.prisma.position.findMany({
+            select: { symbol: true },
+            distinct: ['symbol'],
+          });
+          for (const p of positions) set.add(p.symbol.toUpperCase());
+        } catch (err) {
+          this.logger.warn(`Tier positions: could not load position symbols: ${(err as Error).message}`);
         }
+        break;
       }
-    } catch (err) {
-      this.logger.warn(`Could not load watchlist symbols: ${(err as Error).message}`);
+
+      case 'active-protocols': {
+        // Tier 2: Symbols assigned to active protocols + starred watchlist symbols
+        try {
+          const assignments = await (this.prisma as any).symbolProtocolAssignment.findMany({
+            select: { symbol: true },
+            distinct: ['symbol'],
+          });
+          for (const a of assignments) set.add(a.symbol.toUpperCase());
+        } catch {
+          // Table may not exist yet — fall back to active symbols
+        }
+
+        // Also include starred watchlist symbols
+        try {
+          const watchlists = await this.prisma.watchlist.findMany({
+            select: { symbols: true },
+          });
+          for (const w of watchlists) {
+            const syms = (w.symbols as any[]) || [];
+            for (const s of syms) {
+              if (typeof s === 'string') set.add(s.toUpperCase());
+              if (typeof s === 'object' && s?.ticker) set.add(s.ticker.toUpperCase());
+            }
+          }
+        } catch {
+          // No watchlists
+        }
+
+        // Remove position symbols (they're handled by Tier 1)
+        try {
+          const positions = await this.prisma.position.findMany({
+            select: { symbol: true },
+            distinct: ['symbol'],
+          });
+          for (const p of positions) set.delete(p.symbol.toUpperCase());
+        } catch {
+          // ok
+        }
+        break;
+      }
+
+      case 'macro': {
+        // Tier 3: Macro/global market proxy symbols
+        for (const s of MACRO_SYMBOLS) set.add(s);
+        break;
+      }
+
+      case 'sector': {
+        // Tier 4: Sector-representative ETFs
+        for (const s of SECTOR_SYMBOLS) set.add(s);
+        break;
+      }
+
+      case 'other': {
+        // Tier 5: Everything else — active DB symbols not covered by higher tiers
+        try {
+          const active = await this.prisma.symbol.findMany({
+            where: { active: true },
+            select: { ticker: true },
+          });
+          for (const s of active) set.add(s.ticker.toUpperCase());
+        } catch {
+          // No active symbols
+        }
+
+        // Remove any symbols already covered by higher tiers
+        try {
+          const positions = await this.prisma.position.findMany({
+            select: { symbol: true },
+            distinct: ['symbol'],
+          });
+          for (const p of positions) set.delete(p.symbol.toUpperCase());
+        } catch { /* ok */ }
+        for (const s of MACRO_SYMBOLS) set.delete(s);
+        for (const s of SECTOR_SYMBOLS) set.delete(s);
+        break;
+      }
+
+      default:
+        return [];
     }
 
     return Array.from(set).sort();
   }
 
   /**
+   * Resolve the full legacy set of symbols (kept for backward-compat with manual import).
+   * This is the old monolith — tier system replaces it for scheduled runs.
+   */
+  async resolveTrackedSymbols(): Promise<string[]> {
+    const set = new Set<string>();
+
+    // Combine all tier symbols
+    for (const tierId of ['positions', 'active-protocols', 'macro', 'sector', 'other']) {
+      const symbols = await this.resolveTierSymbols(tierId);
+      for (const s of symbols) set.add(s);
+    }
+
+    // Always include macro + sector as floor
+    for (const s of MACRO_SYMBOLS) set.add(s);
+    for (const s of SECTOR_SYMBOLS) set.add(s);
+
+    return Array.from(set).sort();
+  }
+
+  /**
+   * Get today's article import count, optionally scoped to a tier.
+   * Tier-level counts use in-memory tracking (resets on restart).
+   * Global count queries the DB.
+   */
+  async getDailyArticleCount(tierId?: string): Promise<number> {
+    if (tierId) {
+      // In-memory tier tracking (resets on restart — acceptable for rate limiting)
+      return this.tierDailyCounts.get(tierId) || 0;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    try {
+      const runs = await this.prisma.newsImportRun.findMany({
+        where: {
+          status: 'completed',
+          startedAt: { gte: today },
+        },
+        select: { newArticles: true },
+      });
+      return runs.reduce((sum, r) => sum + r.newArticles, 0);
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * Increment the in-memory daily article counter for a tier.
+   */
+  private bumpTierCount(tierId: string, count: number): void {
+    const current = this.tierDailyCounts.get(tierId) || 0;
+    this.tierDailyCounts.set(tierId, current + count);
+  }
+
+  /**
+   * Get the current tier configuration, merged from settings with defaults.
+   */
+  async getTierConfig(): Promise<NewsImportSettings> {
+    try {
+      const settings = await this.settingsService.get();
+      return settings.newsImport;
+    } catch {
+      // Fallback defaults if settings unavailable
+      return {
+        dailyLimit: 100,
+        tiers: [
+          { id: 'positions', enabled: true, maxPerDay: 30, intervalMin: 120 },
+          { id: 'active-protocols', enabled: true, maxPerDay: 20, intervalMin: 240 },
+          { id: 'macro', enabled: true, maxPerDay: 15, intervalMin: 360 },
+          { id: 'sector', enabled: true, maxPerDay: 15, intervalMin: 360 },
+          { id: 'other', enabled: false, maxPerDay: 20, intervalMin: 1440 },
+        ],
+      };
+    }
+  }
+
+  /**
+   * Get comprehensive import stats for the dashboard.
+   */
+  async getNewsStats(): Promise<{
+    today: { articles: number; limit: number; remaining: number };
+    byTier: Record<string, { articles: number; limit: number; lastRun: string | null }>;
+    totalStored: number;
+    lastRun: any;
+  }> {
+    const config = await this.getTierConfig();
+    const todayArticles = await this.getDailyArticleCount();
+
+    // Per-tier stats
+    const byTier: Record<string, any> = {};
+    for (const tier of config.tiers) {
+      const tierArticles = await this.getDailyArticleCount(tier.id);
+      const lastRun = this.tierLastRun.get(tier.id);
+      byTier[tier.id] = {
+        articles: tierArticles,
+        limit: tier.maxPerDay,
+        lastRun: lastRun?.toISOString() || null,
+      };
+    }
+
+    // Total stored articles
+    let totalStored = 0;
+    try {
+      totalStored = await this.prisma.newsArticle.count();
+    } catch { /* ignore */ }
+
+    const lastRun = await this.getLastImportRun();
+
+    return {
+      today: {
+        articles: todayArticles,
+        limit: config.dailyLimit,
+        remaining: Math.max(0, config.dailyLimit - todayArticles),
+      },
+      byTier,
+      totalStored,
+      lastRun,
+    };
+  }
+
+  /**
    * Run a full import cycle for the given symbols (or resolve tracked if none provided).
    * Returns the import run record.
    */
-  async runImport(symbols?: string[]): Promise<any> {
+  async runImport(symbols?: string[], tierId?: string): Promise<any> {
     const targetSymbols = symbols?.length ? symbols : await this.resolveTrackedSymbols();
 
     const run = await this.prisma.newsImportRun.create({
       data: {
         status: 'running',
+        tierId: tierId || null,
         symbolsCount: targetSymbols.length,
         startedAt: new Date(),
       },
@@ -277,6 +531,11 @@ export class NewsImportService {
     this.logger.log(
       `News import complete: ${targetSymbols.length} symbols, ${fetched} fetched, ${newArticles} new, ${duplicates} dupes, ${errors} errors`,
     );
+
+    // Bump tier daily count
+    if (tierId) {
+      this.bumpTierCount(tierId, newArticles);
+    }
 
     return this.prisma.newsImportRun.findUnique({ where: { id: run.id } });
   }

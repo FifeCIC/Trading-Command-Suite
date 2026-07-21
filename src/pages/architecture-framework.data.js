@@ -175,6 +175,9 @@ export const CURRENT_SLICE = [
   'AI Cost Monitoring (#371) — New page at /lab/ai-costs. Tracks DeepSeek usage via /api/ai/usage and /api/ai/usage/breakdown (pending backend). Four summary cards (total cost, avg/call, cost vs P&L, projected monthly). Cost-by-feature breakdown with colored bars. Budget cap with visual fill gauge. Per-feature toggle switches. Today/Week/Month period selector. 60s auto-refresh. Falls back gracefully to zero/defaults. Files: AICostsPage.jsx, ai-costs.css. ✅',
   'AI Log Viewer (#375) — New page at /status/ai-logs. Queries /api/ai/logs with provider (deepseek/gemini) and feature filters. Expandable log rows with full prompt/response in styled code blocks. Cost summary cards: total requests, tokens, cost, avg latency. Log rows show provider badge, feature, model, tokens, estimated cost, status, timestamp. 30s auto-refresh. Falls back gracefully. Files: AILogViewerPage.jsx, ai-log-viewer.css. ✅',
   'Dashboard Recent Trades (#324) — Dashboard queries /api/providers/mt5/history?limit=5 to render last 5 completed trades below open positions table. Each row shows symbol, type (BUY/SELL with green/red), volume, price, P&L, and timestamp. Only visible when MT5 bridge is connected. Files: DashboardPage.jsx, HomeDashboard.css. ✅',
+  'Gold Speed Chart Offline State (#226) — SpeedChart.jsx now shows a centered offline state with launch instructions, fallback badge, and live price stream when MT5 bridge is unreachable. Candle chart renders normally when MT5 is connected. Files: SpeedChart.jsx, speed-trading.css. ✅',
+  'News Import Tier System — Tiered priority model (positions→protocols→macro→sector→other) replaces old monolithic GIANT_SYMBOLS approach. Each tier has independent maxPerDay and intervalMin, configurable via PUT /api/system/settings { newsImport: {...} }. Hourly cron dispatches only due tiers. Daily budget (default 100 articles) enforced globally. Endpoints: GET /api/news/stats (dashboard), GET /api/news/tracked-symbols (resolves per-tier). Files: news-import.service.ts, settings.service.ts, news.controller.ts. ✅',
+  'Snapshot Date-Range Comparison (#69) — Snapshot Library fully wired to SnapshotComparisonService. Side-by-side comparison: price cards, score cards, signal badges with changed detection, sub-score breakdowns, biggest directive mover, news count, seasonality shift, and news summaries. Files: SnapshotLibraryPage.jsx, snapshot-library.css. ✅',
 ]
 
 export const DECISION_WORKFLOW = [
@@ -443,7 +446,7 @@ export const CONTRACT_CARDS = [
   },
 ]
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-17'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-18'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -940,6 +943,38 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated operator access',
     owner: 'Backtest controller',
     contract: 'Returns chart-ready OHLCV with RSI/MACD/EMA overlays for symbol+timeframe.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/scoring/protocols/:slug/directives',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'ProtocolsController',
+    contract: 'Returns grouped directives with enriched registry info (name, maxScore, description, active). Groups by category (technical, sentiment, risk, etc.) with risk gate flags. Used by DirectivesConfigPage.',
+    status: 'active',
+  },
+  {
+    route: 'PATCH /api/scoring/protocols/:slug/directives/:directiveId',
+    method: 'PATCH',
+    permission: 'Authenticated operator access',
+    owner: 'ProtocolsController',
+    contract: 'Toggles active state on ProtocolDirectiveEntry. Accepts { active: boolean } and optional { maxScore: number }. Used by DirectivesConfigPage directive toggles.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/news/stats',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'NewsController',
+    contract: 'Returns daily budget, per-tier counts, and last run info for tiered news import. Used by future news settings dashboard.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/news/tracked-symbols',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'NewsController',
+    contract: 'Resolves per-tier symbol lists for the tiered news import system. Returns symbols grouped by tier (positions, protocols, macro, sector, other).',
     status: 'active',
   },
 ]

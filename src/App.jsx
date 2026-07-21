@@ -5,9 +5,7 @@ import { analytics, trackAppView, trackSupportClick } from './analytics';
 import Breadcrumbs from './components/Breadcrumbs';
 import DevOverlay from './components/DevOverlay';
 import ErrorBoundary from './components/ErrorBoundary';
-import TickerBar from './components/TickerBar';
 import MarketTape from './components/MarketTape';
-import NotificationDisc from './components/NotificationDisc';
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp';
 
 import { apiGet } from './core/api/client';
@@ -140,7 +138,6 @@ import ScreenOptions from './components/ScreenOptions';
 
 import { useNetworkStatus } from './utils/networkStatus';
 import { useUiStore } from './stores/useUiStore';
-import { useTickerStore } from './stores/useTickerStore';
 import { useThemeRuntime } from './theme/useThemeRuntime';
 import './theme/packs/ai-original.css';
 import './theme/packs/scifi.css';
@@ -189,6 +186,26 @@ function ContentCard({ title, children }) {
   );
 }
 
+/**
+ * AppShell — Layout wrapper with sidebar, header breadcrumbs, footer, and ScreenOptions.
+ *
+ * Route param mapping:
+ *   /:area/:view          → {area, view}          → primaryArea=area, secondaryView=view
+ *   /research/symbol/:id  → {symbolId}            → primaryArea='research', secondaryView='symbol-detail'
+ *   /symbol/:ticker       → standalone (SymbolFocusPage, no AppShell)
+ *
+ * Content rendering (renderMainContent, line ~484):
+ *   Looks up VIEW_COMPONENTS[secondaryView] from core/view-routes.jsx (line ~148).
+ *   Falls back to plugin skeletons, then inline views (demos, analytics).
+ *   Does NOT use React Router <Outlet> — content is rendered inline.
+ *
+ * Sidebar (line ~896): Navigation rail with primaryArea-based view list.
+ * ScreenOptions (line ~1030): Floating disc group with per-view settings.
+ * Bookmark state: Derived from primaryArea/secondaryView pair.
+ *
+ * SEE ALSO: Route table at line ~1050, renderMainContent at line ~484,
+ *           VIEW_COMPONENTS at core/view-routes.jsx.
+ */
 function AppShell() {
   const { area, view, symbolId } = useParams();
   const location = useLocation();
@@ -278,21 +295,9 @@ function AppShell() {
       details
     };
     setActivityLog((prev) => [item, ...prev].slice(0, 24));
-
-    // Mirror select events to the header ticker
-    const tickerMap = {
-      SEES_RUN: { msg: `SEES scoring run: ${details}`, src: 'sees' },
-      SEES_SIGNAL: { msg: `Entry signal: ${details}`, src: 'sees' },
-      TRADE: { msg: `Trade: ${details}`, src: 'trading' },
-      ALERT: { msg: details, src: 'alert' },
-      RISK: { msg: `Risk: ${details}`, src: 'alert' },
-    };
-    const mapped = tickerMap[type];
-    if (mapped) {
-      useTickerStore.getState().push(mapped.msg, mapped.src);
-    }
   }
 
+  // ── Track app view on mount ──
   const autoStartAttempted = useRef(false);
 
   useEffect(() => {
@@ -350,7 +355,8 @@ function AppShell() {
   useEffect(() => {
     const views = NAV_STRUCTURE[primaryArea] || [];
     const hasCurrentView = views.some((item) => item.id === secondaryView);
-    if (!hasCurrentView) {
+    const hasComponent = !!VIEW_COMPONENTS[secondaryView];
+    if (!hasCurrentView && !hasComponent) {
       const firstView = views[0]?.id;
       if (firstView) {
         navigate(`/${primaryArea}/${firstView}`, { replace: true });
@@ -416,17 +422,6 @@ function AppShell() {
             const key = `${latest.timestamp}-${latest.event}-${latest.protocolId}`;
             if (key !== lastSeenScoreEvent) {
               lastSeenScoreEvent = key;
-              const label = latest.protocolName || latest.protocolId;
-              if (latest.event === 'completed') {
-                useTickerStore.getState().push(
-                  `SEES: ${label} scored ${latest.symbolsScored ?? '?'} symbols (${latest.durationMs ? (latest.durationMs / 1000).toFixed(1) + 's' : 'done'})`,
-                  'sees'
-                );
-              } else if (latest.event === 'failed') {
-                useTickerStore.getState().push(`SEES: ${label} failed — ${latest.error || 'unknown error'}`, 'sees');
-              } else if (latest.event === 'started') {
-                useTickerStore.getState().push(`SEES: ${label} started`, 'sees');
-              }
             }
           }
         }
@@ -442,10 +437,6 @@ function AppShell() {
             const latest = active[0];
             if (latest.id !== lastSeenAlertId) {
               lastSeenAlertId = latest.id;
-              useTickerStore.getState().push(
-                `${latest.severity === 'critical' ? '⚠ ' : ''}${latest.title || latest.message}`,
-                'alert'
-              );
             }
           }
         }
@@ -704,7 +695,6 @@ function AppShell() {
 
       <header className="topbar topbar-omni">
         <div className="topbar-row topbar-row-main">
-          <TickerBar />
           <nav className="topbar-area-nav" aria-label="Main navigation">
             {/* Platform-specific pages (Trading212, etc.) — left of separator */}
             {Object.entries(NAV_TREE)
@@ -1075,7 +1065,6 @@ export default function App() {
   return (
     <BrowserRouter>
       <a href="#main-content" className="skip-link">Skip to main content</a>
-      <NotificationDisc />
       <ErrorBoundary message="The application encountered a critical error.">
         <Routes>
           <Route path="/research/symbol/:symbolId" element={<AppShell />} />

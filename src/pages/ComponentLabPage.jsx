@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, createContext, useContext } from 'react
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import DetachableWidget from '../components/DetachableWidget';
+import CenterPicker from '../components/CenterPicker';
 import './component-lab.css';
 
 // ── Widget Scale Context ──
@@ -435,6 +436,46 @@ function MiniChartWidget() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// CenterPicker Widget — experimental vertical wheel picker
+// ═══════════════════════════════════════════════════════════
+
+function CenterPickerWidget() {
+  const scale = useWidgetScale();
+  const [selected, setSelected] = useState('scoring');
+
+  const PICKER_ITEMS = [
+    { id: 'scoring', label: 'Scoring Pipeline' },
+    { id: 'automation', label: 'Automation' },
+    { id: 'trading', label: 'Trading' },
+    { id: 'risk', label: 'Risk' },
+    { id: 'data', label: 'Data' },
+    { id: 'backtesting', label: 'Backtesting' },
+    { id: 'ui', label: 'UI' },
+    { id: 'broker', label: 'Broker' },
+    { id: 'alerts', label: 'Alerts' },
+  ];
+
+  return (
+    <DetachableWidget
+      title="CenterPicker"
+      size="sm"
+      contentScale={scale}
+      colorAccent="#a855f7"
+      badge={selected}
+      subtitle="Vertical wheel picker"
+    >
+      <CenterPicker
+        items={PICKER_ITEMS}
+        value={selected}
+        onChange={setSelected}
+        visibleCount={5}
+        className="cp-compact"
+      />
+    </DetachableWidget>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
 // Page
 // ═══════════════════════════════════════════════════════════
 
@@ -547,6 +588,7 @@ defaultMinimized boolean     Start minimized`}</pre>
           <PositionSummaryWidget />
           <SystemHealthWidget />
           <MiniChartWidget />
+          <CenterPickerWidget />
         </div>
       </section>
 

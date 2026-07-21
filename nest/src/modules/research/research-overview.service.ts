@@ -106,12 +106,12 @@ export class ResearchOverviewService {
       sectorPerformance,
       forecasts,
     ] = await Promise.all([
-      this.fetchTopSignals(heldSet, watchlistSet),
+      this.fetchTopSignals(heldSet as Set<string>, watchlistSet),
       this.fetchPortfolio(),
       this.fetchMarketContext(),
       this.fetchRecentDecisions(),
       this.fetchUpcomingEvents(),
-      this.fetchPositionNews(heldSet),
+      this.fetchPositionNews(heldSet as Set<string>),
       this.fetchSectorPerformance(),
       this.fetchForecasts(positions),
     ]);

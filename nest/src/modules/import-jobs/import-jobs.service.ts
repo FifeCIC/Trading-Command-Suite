@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ModeService } from '../../config/mode.service';
 import { AdapterFactory } from '../providers/adapter-factory';
+import { SymbolNameEnricherService } from '../symbols/symbol-name-enricher.service';
 
 type EnqueueImportInput = {
   symbolId: string;
@@ -18,6 +19,7 @@ export class ImportJobsService {
     private readonly prisma: PrismaService,
     private readonly modeService: ModeService,
     private readonly adapterFactory: AdapterFactory,
+    private readonly enricher: SymbolNameEnricherService,
   ) {}
 
   /**
@@ -176,6 +178,8 @@ export class ImportJobsService {
             data: { ticker: ticker.toUpperCase(), name: ticker, exchange: 'Yahoo', type: 'stock', active: true },
           });
           this.logger.log(`Auto-registered symbol: ${ticker}`);
+          // Fire-and-forget: enrich company name from providers
+          this.enricher.enrichOne(ticker).catch(() => {});
         }
 
         const result = await this.importRealBars(sym.id, timeframe, limit);
@@ -299,6 +303,8 @@ export class ImportJobsService {
         data: { ticker: sym, name: sym, type: 'stock', active: true, exchange: provider },
       });
       this.logger.log(`Auto-registered symbol: ${sym}`);
+      // Fire-and-forget: enrich company name from providers
+      this.enricher.enrichOne(sym).catch(() => {});
     }
 
     // 2. Insert bars with skipDuplicates

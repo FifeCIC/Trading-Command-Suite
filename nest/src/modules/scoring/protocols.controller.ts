@@ -7,10 +7,11 @@
  * GET /api/scoring/protocols/:id — single protocol detail with version history
  */
 
-import { Controller, Get, Post, Put, Param, Body, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Param, Body, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DirectivesService } from '../directives/directives.service';
 import { ScoringSchedulerService } from './scoring-scheduler.service';
+import { resolveDirectiveCatalog } from '../strategies/strategies.controller';
 
 interface ProtocolSummary {
   id: string;
@@ -314,6 +315,163 @@ export class ProtocolsController {
       return { success: true, protocolId };
     } catch (err) {
       this.logger.error(`Protocol upsert failed: ${String(err)}`);
+      return { success: false, error: String(err) };
+    }
+  }
+
+  /**
+   * GET /api/scoring/protocols/:slug/directives
+   * Returns grouped directives for a protocol, enriched with directive registry info.
+   * Replaces the broken /api/strategies/:id/directives for protocol-backed strategies.
+   */
+  @Get(':slug/directives')
+  async getProtocolDirectives(@Param('slug') slug: string) {
+    if (!this.prisma.isAvailable) {
+      return { protocol: null, groups: [] };
+    }
+
+    try {
+      const protocol = await (this.prisma as any).protocol.findUnique({
+        where: { slug },
+        include: {
+          directiveGroups: {
+            orderBy: { sortOrder: 'asc' },
+            include: {
+              directives: true,
+            },
+          },
+        },
+      });
+
+      if (!protocol) {
+        // Fall back to resolveDirectiveCatalog for non-DB protocols
+        const catalog = await resolveDirectiveCatalog({ identifier: slug, prisma: this.prisma as any });
+        if (!catalog.directives.length) {
+          return { protocol: null, groups: [] };
+        }
+        // Return flat structure as a single group
+        return {
+          protocol: {
+            slug,
+            name: catalog.strategyName,
+            directionMode: 'LONG_ONLY',
+          },
+          groups: [{
+            groupId: 'all',
+            name: 'All Directives',
+            weight: 1.0,
+            isRiskGate: false,
+            directives: catalog.directives.map((d: any) => {
+              const impl = this.directivesService.get(d.id);
+              return {
+                id: d.id,
+                name: impl?.name ?? d.name,
+                maxScore: impl?.maxScore ?? d.weight ?? 100,
+                description: impl?.description ?? '',
+                active: d.active ?? true,
+              };
+            }),
+          }],
+        };
+      }
+
+      const groups = protocol.directiveGroups.map((dg: any) => ({
+        groupId: dg.groupId,
+        name: dg.name,
+        description: dg.description,
+        weight: dg.weight,
+        isRiskGate: dg.isRiskGate,
+        minMultiplier: dg.minMultiplier,
+        maxMultiplier: dg.maxMultiplier,
+        directives: (dg.directives || []).map((de: any) => {
+          const impl = this.directivesService.get(de.directiveId);
+          return {
+            id: de.directiveId,
+            name: impl?.name ?? de.directiveId,
+            maxScore: impl?.maxScore ?? de.maxScore ?? 100,
+            description: impl?.description ?? '',
+            active: de.active ?? true,
+          };
+        }),
+      }));
+
+      return {
+        protocol: {
+          slug: protocol.slug,
+          name: protocol.name,
+          directionMode: protocol.directionMode,
+          description: protocol.description,
+        },
+        groups,
+      };
+    } catch (err) {
+      this.logger.error(`Failed to load directives for protocol ${slug}: ${String(err)}`);
+      return { protocol: null, groups: [], error: String(err) };
+    }
+  }
+
+  /**
+   * PATCH /api/scoring/protocols/:slug/directives/:directiveId
+   * Toggle a directive's active state in a protocol's directive groups.
+   */
+  @Patch(':slug/directives/:directiveId')
+  async updateProtocolDirective(
+    @Param('slug') slug: string,
+    @Param('directiveId') directiveId: string,
+    @Body() body: { active?: boolean; maxScore?: number },
+  ) {
+    if (!this.prisma.isAvailable) {
+      return { success: false, error: 'Database not available' };
+    }
+
+    try {
+      const protocol = await (this.prisma as any).protocol.findUnique({
+        where: { slug },
+      });
+
+      if (!protocol) {
+        return { success: false, error: `Protocol "${slug}" not found` };
+      }
+
+      // Find the directive entry across all groups of this protocol
+      const entry = await (this.prisma as any).protocolDirectiveEntry.findFirst({
+        where: {
+          directiveId,
+          group: { protocolId: protocol.id },
+        },
+        include: { group: true },
+      });
+
+      if (!entry) {
+        // Directive not linked to this protocol — return an informative error
+        return {
+          success: false,
+          error: `Directive "${directiveId}" is not linked to protocol "${slug}". It may need to be added via the protocol upsert endpoint.`,
+        };
+      }
+
+      const updateData: any = {};
+      if (body.active !== undefined) {
+        updateData.active = body.active;
+      }
+      if (body.maxScore !== undefined) {
+        updateData.maxScore = body.maxScore;
+      }
+
+      await (this.prisma as any).protocolDirectiveEntry.update({
+        where: { id: entry.id },
+        data: updateData,
+      });
+
+      return {
+        success: true,
+        directiveId,
+        protocolSlug: slug,
+        active: body.active !== undefined ? body.active : entry.active,
+        maxScore: body.maxScore !== undefined ? body.maxScore : entry.maxScore,
+      };
+    } catch (err) {
+      this.logger.error(`Failed to update directive ${directiveId} for protocol ${slug}: ${String(err)}`);
       return { success: false, error: String(err) };
     }
   }

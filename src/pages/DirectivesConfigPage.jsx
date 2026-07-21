@@ -1,8 +1,8 @@
 /**
  * DirectivesConfigPage
  * ====================
- * Per-strategy directive configuration. Pick a strategy, toggle its directives
- * on/off, and adjust weights. Changes persist to the database via PATCH.
+ * Protocol directive configuration. Pick a protocol, view its grouped directives,
+ * and toggle them on/off. Changes persist to the database via PATCH.
  *
  * Route: /scoring/configure-directives
  */
@@ -16,29 +16,34 @@ import ProtocolPicker from '../components/ProtocolPicker';
 import './directives-config.css';
 
 export default function DirectivesConfigPage() {
-  const [selectedStrategy, setSelectedStrategy] = useState(null);
+  const [selectedProtocol, setSelectedProtocol] = useState(null);
   const queryClient = useQueryClient();
 
   // Fetch directives for selected protocol
   const directivesQuery = useQuery({
-    queryKey: ['strategy-directives', selectedStrategy],
-    queryFn: () => apiGet(`/api/strategies/${selectedStrategy}/directives`),
-    enabled: !!selectedStrategy,
+    queryKey: ['protocol-directives', selectedProtocol],
+    queryFn: () => apiGet(`/api/scoring/protocols/${selectedProtocol}/directives`),
+    enabled: !!selectedProtocol,
     staleTime: 15_000,
   });
 
-  const strategyName = directivesQuery.data?.strategyName || '';
-  const directives = directivesQuery.data?.directives || [];
+  const protocol = directivesQuery.data?.protocol || null;
+  const groups = directivesQuery.data?.groups || [];
+
+  // Flatten groups into a single directives array for display
+  const directives = groups.flatMap((g) =>
+    (g.directives || []).map((d) => ({ ...d, groupId: g.groupId, groupName: g.name, isRiskGate: g.isRiskGate }))
+  );
 
   // Toggle directive mutation
   const toggleMutation = useMutation({
     mutationFn: ({ directiveId, active }) =>
-      apiGet(`/api/strategies/${selectedStrategy}/directives/${directiveId}`, {
+      apiGet(`/api/scoring/protocols/${selectedProtocol}/directives/${directiveId}`, {
         method: 'PATCH',
         body: JSON.stringify({ active }),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['strategy-directives', selectedStrategy] });
+      queryClient.invalidateQueries({ queryKey: ['protocol-directives', selectedProtocol] });
     },
   });
 
@@ -52,20 +57,20 @@ export default function DirectivesConfigPage() {
     <div className="dc-page">
       <header className="dc-header">
         <div>
-          <h1>Protocol Editor</h1>
-          <p>Select a protocol, then enable/disable its individual directives. Changes persist to the database.</p>
+          <h1>Protocol Directive Editor</h1>
+          <p>Select a protocol, then enable/disable its individual directives grouped by category. Changes persist to the database.</p>
         </div>
         <div className="dc-header-actions">
           <ProtocolPicker
             className="pf-source-select"
-            value={selectedStrategy || ''}
-            onChange={(id) => setSelectedStrategy(id || null)}
+            value={selectedProtocol || ''}
+            onChange={(id) => setSelectedProtocol(id || null)}
             style={{ minWidth: 220 }}
           />
         </div>
       </header>
 
-      {!selectedStrategy && (
+      {!selectedProtocol && (
         <EmptyState
           icon="📋"
           title="No protocol selected"
@@ -73,56 +78,75 @@ export default function DirectivesConfigPage() {
         />
       )}
 
-      {selectedStrategy && directivesQuery.isLoading && <LoadingSkeleton variant="card" count={4} />}
+      {selectedProtocol && directivesQuery.isLoading && <LoadingSkeleton variant="card" count={4} />}
 
-      {selectedStrategy && !directivesQuery.isLoading && directives.length === 0 && (
+      {selectedProtocol && !directivesQuery.isLoading && directives.length === 0 && (
         <EmptyState
           icon="📝"
           title="No directives configured"
-          description={`"${strategyName}" has no directives linked. Directives are assigned when the protocol is created.`}
+          description={`"${protocol?.name || selectedProtocol}" has no directives linked. Directives are assigned when the protocol is created.`}
         />
       )}
 
-      {selectedStrategy && directives.length > 0 && (
+      {selectedProtocol && directives.length > 0 && (
         <>
           <div className="dc-stats">
             <span>{activeCount}/{directives.length} active</span>
-            <span className="dc-strategy-name">Protocol: {strategyName}</span>
+            <span className="dc-strategy-name">Protocol: {protocol?.name || selectedProtocol}</span>
           </div>
 
-          <div className="dc-cards">
-            {directives.map((d) => (
-              <article key={d.id} className={`dc-card ${!d.active ? 'dc-card--disabled' : ''}`}>
-                <div className="dc-card-header">
-                  <div className="dc-card-title">
-                    <h3>{d.name}</h3>
-                    <code className="dc-id">{d.type || d.id}</code>
-                    {d.isFork && <span className="dc-badge dc-badge--fork">Fork</span>}
-                    {d.isDefault && <span className="dc-badge dc-badge--default">Default</span>}
-                  </div>
-                  <label className="dc-toggle">
-                    <input
-                      type="checkbox"
-                      checked={d.active}
-                      onChange={() => handleToggle(d.id, d.active)}
-                    />
-                    <span className="dc-toggle-track">
-                      <span className="dc-toggle-thumb" />
-                    </span>
-                    <span className="dc-toggle-label">{d.active ? 'Enabled' : 'Disabled'}</span>
-                  </label>
-                </div>
+          {groups.map((group) => {
+            const groupDirectives = (group.directives || []).map((d) => ({
+              ...d,
+              groupId: group.groupId,
+              groupName: group.name,
+              isRiskGate: group.isRiskGate,
+            }));
 
-                <div className="dc-weight-row">
-                  <span className="dc-weight-label">Weight: <strong>{d.active ? (d.weight ?? 0) : 0}%</strong></span>
-                  {d.forkReason && <span className="dc-canonical-hint">Fork: {d.forkReason}</span>}
+            if (groupDirectives.length === 0) return null;
+
+            return (
+              <div key={group.groupId} className="dc-group">
+                <h2 className="dc-group-title">
+                  {group.name}
+                  {group.isRiskGate && <span className="dc-badge dc-badge--risk">Risk Gate</span>}
+                  {group.description && <span className="dc-group-desc">{group.description}</span>}
+                </h2>
+
+                <div className="dc-cards">
+                  {groupDirectives.map((d) => (
+                    <article key={d.id} className={`dc-card ${!d.active ? 'dc-card--disabled' : ''}`}>
+                      <div className="dc-card-header">
+                        <div className="dc-card-title">
+                          <h3>{d.name}</h3>
+                          <code className="dc-id">{d.id}</code>
+                        </div>
+                        <label className="dc-toggle">
+                          <input
+                            type="checkbox"
+                            checked={d.active}
+                            onChange={() => handleToggle(d.id, d.active)}
+                          />
+                          <span className="dc-toggle-track">
+                            <span className="dc-toggle-thumb" />
+                          </span>
+                          <span className="dc-toggle-label">{d.active ? 'Enabled' : 'Disabled'}</span>
+                        </label>
+                      </div>
+
+                      <div className="dc-weight-row">
+                        <span className="dc-weight-label">Max Score: <strong>{d.maxScore ?? 100}</strong></span>
+                        {d.description && <span className="dc-canonical-hint">{d.description}</span>}
+                      </div>
+                    </article>
+                  ))}
                 </div>
-              </article>
-            ))}
-          </div>
+              </div>
+            );
+          })}
 
           <p className="dc-hint">
-            Toggling directives on/off immediately affects scoring for this strategy. Weight adjustments coming in a future update.
+            Toggling directives on/off affects scoring for this protocol. The directive will be skipped during scoring when disabled.
           </p>
         </>
       )}

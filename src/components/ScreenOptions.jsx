@@ -6,10 +6,13 @@
  * #249 — Screen Options overlay + sticky options button
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '../core/api/client';
 import { usePreferences } from '../core/hooks/usePreferences';
 import EmptyState from './EmptyState';
+import './notification-disc.css';
 import './screen-options.css';
 
 /** Global preferences shown on ALL views */
@@ -233,6 +236,44 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   var prefs = usePreferences();
   var registry = activeView ? OPTIONS_REGISTRY[activeView] : null;
   var [calcOpen, setCalcOpen] = useState(false);
+  var [notifOpen, setNotifOpen] = useState(false);
+  var [dismissed, setDismissed] = useState(new Set());
+
+  // ── Notification data ──
+  var healthQuery = useQuery({
+    queryKey: ['so-notif-health'],
+    queryFn: () => apiGet('/api/providers/health').catch(() => null),
+    refetchInterval: 60_000,
+  });
+  var autoQuery = useQuery({
+    queryKey: ['so-notif-auto'],
+    queryFn: () => apiGet('/api/automation/status').catch(() => null),
+    refetchInterval: 30_000,
+  });
+
+  var notifications = useMemo(() => {
+    var items = [];
+    var now = new Date().toISOString();
+    var providers = healthQuery.data?.providers || [];
+    providers.forEach(function(p) {
+      if (p.status === 'degraded') {
+        items.push({ id: 'prov-' + p.provider + '-degraded', severity: 'warning', title: p.displayName + ' degraded', detail: p.message || 'Provider performance degraded', timestamp: p.checkedAt || now });
+      }
+      if (p.status === 'error' || p.status === 'unreachable') {
+        items.push({ id: 'prov-' + p.provider + '-down', severity: 'critical', title: p.displayName + ' unreachable', detail: p.message || 'Provider is not responding', timestamp: p.checkedAt || now });
+      }
+    });
+    var decisions = autoQuery.data?.recentDecisions || [];
+    var errs = decisions.filter(function(d) { return d.decision === 'ERROR' || d.decision === 'BLOCKED'; });
+    if (errs.length > 0) {
+      items.push({ id: 'auto-recent-errors', severity: 'warning', title: errs.length + ' automation error' + (errs.length > 1 ? 's' : ''), detail: errs.slice(0, 3).map(function(d) { return d.symbol + ': ' + d.reason; }).join('; '), timestamp: now });
+    }
+    return items;
+  }, [healthQuery.data, autoQuery.data]);
+
+  var visible = notifications.filter(function(n) { return !dismissed.has(n.id); });
+  var criticalCount = visible.filter(function(n) { return n.severity === 'critical'; }).length;
+  var totalUnread = visible.length;
 
   // Read current global preference values
   var displayMode = prefs.displayMode || 'focused';
@@ -365,6 +406,38 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
         >
           ⚙
         </button>
+        <div className="notif-disc">
+          <button
+            type="button"
+            className={`notif-bell ${notifOpen ? 'active' : ''} ${criticalCount > 0 ? 'has-critical' : ''}`}
+            onClick={function() { setNotifOpen(function(v) { return !v; }); }}
+            aria-label={'Notifications - ' + totalUnread + ' unread'}
+            title={totalUnread + ' notification' + (totalUnread !== 1 ? 's' : '')}
+          >
+            <svg className="notif-svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+            {totalUnread > 0 && (
+              <span className="notif-badge">{totalUnread}</span>
+            )}
+          </button>
+          {notifOpen && (
+            <>
+              <div className="notif-backdrop" onClick={function() { setNotifOpen(false); }} />
+              <div className="notif-dropdown">
+                <div className="notif-header">
+                  <h3>Notifications</h3>
+                </div>
+                {visible.length === 0 ? (
+                  <p className="notif-empty">All clear - no notifications.</p>
+                ) : (
+                  <div className="notif-list">{visible.length} notification(s)</div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Overlay */}

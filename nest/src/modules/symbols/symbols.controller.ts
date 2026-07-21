@@ -18,6 +18,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { CreateSymbolDto } from './dto/create-symbol.dto';
 import { UpdateSymbolDto } from './dto/update-symbol.dto';
 import { SymbolsService } from './symbols.service';
+import { SymbolNameEnricherService } from './symbol-name-enricher.service';
 
 @ApiTags('symbols')
 @Controller('symbols')
@@ -26,6 +27,7 @@ export class SymbolsController {
     private readonly symbolsService: SymbolsService,
     private readonly modeService: ModeService,
     private readonly prisma: PrismaService,
+    private readonly enricher: SymbolNameEnricherService,
   ) {}
 
   private readonly logger = new Logger(SymbolsController.name);
@@ -48,6 +50,17 @@ export class SymbolsController {
   async create(@Body() dto: CreateSymbolDto) {
     const symbol = await this.symbolsService.create(dto);
     return { ...this.modeMeta(), symbol };
+  }
+
+  @Post('enrich')
+  @ApiOperation({ summary: 'Enrich symbol names from providers (MT5, Yahoo, Alpaca)' })
+  async enrich(@Body() body?: { ticker?: string }) {
+    if (body?.ticker) {
+      const name = await this.enricher.enrichOne(body.ticker);
+      return { ...this.modeMeta(), ticker: body.ticker.toUpperCase(), name };
+    }
+    const result = await this.enricher.enrichAll();
+    return { ...this.modeMeta(), ...result };
   }
 
   @Get()

@@ -162,6 +162,10 @@ const KNOWN_FEATURES = {
   'AI Cost Monitoring': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
   'AI Log Viewer': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
   'Dashboard Recent Trades': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  // 2026-07-18 — News Import, Gold Speed Chart, Snapshot Comparison
+  'News Import Tier System': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'partial' },
+  'Gold Speed Chart Offline State': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Snapshot Date-Range Comparison': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
 };
 
 // ── Build unified capability rows ──

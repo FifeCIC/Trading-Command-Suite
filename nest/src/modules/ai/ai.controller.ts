@@ -60,7 +60,7 @@ export class AIController {
     const systemPrompt = `You are a portfolio restructuring advisor for an active trader. Your job is to analyze their positions and recommend specific actions.
 
 CONTEXT:
-- The trader uses SEES (Scoring Engine Evaluation System) which scores positions 0-1500+ based on technical, sentiment, and risk directives.
+- The trader uses SEES (Scoring Engine Execution System) which scores positions 0-1500+ based on technical, sentiment, and risk directives.
 - Scores >800 = strong buy conviction. Scores 500-800 = buy. 200-500 = hold. <200 = weak. 0 = no data (dead position).
 - The trader wants ACTIONS, not just observations. Every suggestion should be concrete.
 - Loss avoidance is preferred — don't recommend selling positions with large losses unless the outlook is truly hopeless.

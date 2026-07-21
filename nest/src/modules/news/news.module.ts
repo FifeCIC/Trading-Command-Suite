@@ -3,9 +3,10 @@ import { NewsController } from './news.controller';
 import { NewsCollectorService } from './news-collector.service';
 import { NewsImportService } from './news-import.service';
 import { ProvidersModule } from '../providers/providers.module';
+import { SystemModule } from '../system/system.module';
 
 @Module({
-  imports: [ProvidersModule],
+  imports: [ProvidersModule, SystemModule],
   controllers: [NewsController],
   providers: [NewsCollectorService, NewsImportService],
   exports: [NewsCollectorService, NewsImportService],

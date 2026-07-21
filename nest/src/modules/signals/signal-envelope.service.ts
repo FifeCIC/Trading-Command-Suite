@@ -25,6 +25,7 @@ const SIGNALS_WORKBENCH_STRATEGY_ID = 'signals-workbench';
 export interface SignalEnvelope {
   symbol: string;
   composite: number;
+  maxPossible: number;           // max achievable score for this envelope
   signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
   confidence: number;            // 0-100 confidence score
   rarity: string | null;         // e.g. "Exceptional", "Strong"
@@ -204,6 +205,7 @@ export class SignalEnvelopeService {
     return {
       symbol,
       composite: gated.composite,
+      maxPossible: Object.values(gated.subMaxTotals).reduce((s, v) => s + v, 0),
       signal: gated.signal,
       confidence,
       rarity: gated.rarity?.label ?? null,
@@ -421,6 +423,7 @@ export class SignalEnvelopeService {
     return {
       symbol,
       composite: 50,
+      maxPossible: 100,
       signal: 'HOLD',
       confidence: 0,
       rarity: null,

@@ -503,8 +503,9 @@
   letter-spacing: 0.03em;
 }
 .los-auto-btn.active { background: var(--color-profit); color: #fff; border-color: var(--color-profit); }
+.los-stack-section { margin-top: 0.25rem; }
 .los-stack-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
-.los-stack-header h2 { margin: 0; }
+.los-stack-header h2 { margin: 0; font-size: 0.9rem; color: var(--ink); }
 .los-live-badge {
   font-size: 0.6rem; background: var(--color-profit); color: #fff;
   padding: 2px 8px; border-radius: 10px; font-weight: 700;

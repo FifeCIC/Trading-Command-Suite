@@ -8,6 +8,79 @@ import {
   DataAvailability,
 } from './strategy-prerequisites';
 
+function formatDirectiveName(directiveId: string): string {
+  return directiveId
+    .split('-')
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ');
+}
+
+export async function resolveDirectiveCatalog({
+  identifier,
+  prisma,
+}: {
+  identifier: string;
+  prisma: PrismaService;
+}): Promise<{ strategyId: string; strategyName: string; directives: Array<{ id: string; name: string; type: string; weight: number; active: boolean; parentId: string | null; isDefault: boolean; forkReason: string | null }> }> {
+  const strategy = await prisma.strategy.findUnique({
+    where: { id: identifier },
+    include: { directives: true },
+  });
+
+  if (strategy) {
+    return {
+      strategyId: strategy.id,
+      strategyName: strategy.name,
+      directives: (strategy.directives || []).map((directive: any) => ({
+        id: directive.id,
+        name: directive.name,
+        type: directive.type,
+        weight: directive.weight,
+        active: directive.active,
+        parentId: directive.parentId,
+        isDefault: directive.isDefault,
+        forkReason: directive.forkReason,
+      })),
+    };
+  }
+
+  const protocol = await (prisma as any).protocol.findUnique({
+    where: { slug: identifier },
+    include: {
+      directiveGroups: {
+        orderBy: { sortOrder: 'asc' },
+        include: { directives: true },
+      },
+    },
+  });
+
+  if (protocol) {
+    const directives = (protocol.directiveGroups || []).flatMap((group: any) => (group.directives || []).map((entry: any) => ({
+      id: entry.directiveId,
+      name: formatDirectiveName(entry.directiveId),
+      type: entry.directiveId,
+      weight: entry.maxScore ?? 100,
+      active: entry.active ?? true,
+      parentId: null,
+      isDefault: true,
+      forkReason: null,
+    })));
+
+    return {
+      strategyId: protocol.id,
+      strategyName: protocol.name,
+      directives,
+    };
+  }
+
+  return {
+    strategyId: identifier,
+    strategyName: identifier,
+    directives: [],
+  };
+}
+
 @Controller('strategies')
 export class StrategiesController {
   private readonly logger = new Logger(StrategiesController.name);
@@ -194,67 +267,23 @@ export class StrategiesController {
   async getStrategyDirectives(@Param('id') id: string) {
     if (!this.prisma.isAvailable) return { directives: [] };
 
-    const strategy = await this.prisma.strategy.findUnique({
-      where: { id },
-      include: { directives: true },
+    const catalog = await resolveDirectiveCatalog({
+      identifier: id,
+      prisma: this.prisma,
     });
-    if (!strategy) return { error: 'Strategy not found' };
 
-    // Strategy.directives are the DB-linked Directive rows
-    // Also check strategy.config.weights for weight overrides
-    const config = strategy.config as any;
-    const weights = config?.weights ?? {};
-
-    // Get all directives linked to this strategy via DB relation
-    const dbDirectives = strategy.directives || [];
-
-    // If DB directives exist, use them. Otherwise, resolve from config weights.
-    if (dbDirectives.length > 0) {
+    if (!catalog.directives.length) {
       return {
-        strategyId: id,
-        strategyName: strategy.name,
-        directives: dbDirectives.map((d) => ({
-          id: d.id,
-          name: d.name,
-          type: d.type,
-          weight: d.weight,
-          active: d.active,
-          parentId: d.parentId,
-          isDefault: d.isDefault,
-          forkReason: d.forkReason,
-        })),
+        strategyId: catalog.strategyId,
+        strategyName: catalog.strategyName,
+        directives: [],
       };
     }
 
-    // Fallback: resolve from config weights (legacy)
-    const directiveIds = Object.keys(weights);
-    if (directiveIds.length === 0) {
-      return { strategyId: id, strategyName: strategy.name, directives: [] };
-    }
-
-    const resolved = await Promise.all(
-      directiveIds.map(async (directiveId) => {
-        const original = await this.prisma.directive.findUnique({
-          where: { id: directiveId === 'rsi-overbought' ? 'rsi-overbought' : directiveId },
-        });
-        if (!original) return null;
-        return {
-          id: original.id,
-          name: original.name,
-          type: original.type,
-          weight: weights[directiveId] ?? original.weight,
-          active: original.active,
-          parentId: original.parentId,
-          isDefault: original.isDefault,
-          forkReason: null as string | null,
-        };
-      }),
-    );
-
     return {
-      strategyId: id,
-      strategyName: strategy.name,
-      directives: resolved.filter(Boolean),
+      strategyId: catalog.strategyId,
+      strategyName: catalog.strategyName,
+      directives: catalog.directives,
     };
   }
 

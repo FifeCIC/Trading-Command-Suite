@@ -137,4 +137,6 @@ When processing handoffs, the Librarian invokes the `update-architecture-framewo
 - Updating `src/core/architecture-reference.js` (AI-readable system map)
 - Updating `src/pages/architecture-framework.data.js` (human-facing UI page)
 - Adding route contracts, SLICE entries, and database schema changes
-- Moving processed handoffs to `.github/handoffs/processed/`
+- Deleting processed handoff files (git history preserves them if ever needed)
+
+The `processed/` subdirectory is **not used** — the Librarian deletes handoffs after processing. Git history is the permanent record.

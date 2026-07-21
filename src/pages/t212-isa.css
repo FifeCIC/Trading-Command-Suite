@@ -118,3 +118,32 @@
 }
 .t212i-symbol { font-weight: 600; font-family: monospace; font-size: 0.85rem; }
 .t212i-empty { color: var(--ink-soft, #64748b); font-size: 0.85rem; font-style: italic; }
+
+/* ── Placeholder (not connected state) ── */
+.t212i-placeholder {
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+}
+.t212i-placeholder-icon { font-size: 3rem; margin-bottom: 0.75rem; }
+.t212i-placeholder h2 { margin: 0 0 0.75rem; font-size: 1.15rem; color: var(--ink, #e2e8f0); }
+.t212i-placeholder p { color: var(--ink-soft, #94a3b8); font-size: 0.88rem; line-height: 1.5; margin: 0 0 0.75rem; }
+
+.t212i-feature-list {
+  text-align: left;
+  max-width: 400px;
+  margin: 0 auto 0.5rem;
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+.t212i-feature-list li { margin-bottom: 0.2rem; }
+
+.t212i-note {
+  font-size: 0.75rem;
+  color: var(--ink-softer, #64748b);
+  font-style: italic;
+  margin-top: 0.75rem;
+}

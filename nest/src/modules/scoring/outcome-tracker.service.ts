@@ -1,15 +1,35 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 
+// ── Configuration ────────────────────────────────────────────
+// Set OUTCOME_TRACKING_ENABLED=false to disable all outcome recording.
+// OUTCOME_TRACKING_DEDUP_WINDOW_MS controls the dedup window (default 5 min).
+// These can be overridden via environment variables for production tuning.
+
+const OUTCOME_TRACKING_ENABLED =
+  process.env.OUTCOME_TRACKING_ENABLED !== 'false'; // default true
+const OUTCOME_TRACKING_DEDUP_WINDOW_MS = process.env.OUTCOME_TRACKING_DEDUP_WINDOW_MS
+  ? parseInt(process.env.OUTCOME_TRACKING_DEDUP_WINDOW_MS, 10)
+  : 300_000; // 5 minutes
+
+type DedupKey = string; // `${directiveId}::${symbol}`
+
 @Injectable()
 export class OutcomeTrackerService {
   private readonly logger = new Logger(OutcomeTrackerService.name);
+
+  /** Tracks last recorded timestamp per directive+symbol for dedup. */
+  private readonly lastRecorded = new Map<DedupKey, number>();
 
   constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Store DirectiveOutcome records after a scoring run.
    * Called from the scoring pipeline after directives produce scores.
+   *
+   * Deduplication: directive+symbol combos are only recorded once per
+   * OUTCOME_TRACKING_DEDUP_WINDOW_MS (default 5 min). Zero/null scores
+   * are skipped since they carry no signal to track.
    */
   async recordOutcomes(
     outcomes: {
@@ -24,11 +44,47 @@ export class OutcomeTrackerService {
       priceAtPredict: number;
     }[],
   ): Promise<number> {
+    if (!OUTCOME_TRACKING_ENABLED) {
+      this.logger.debug('Outcome tracking disabled — skipping');
+      return 0;
+    }
+
     if (!this.prisma.isAvailable || outcomes.length === 0) return 0;
+
+    const now = Date.now();
+    const windowMs = OUTCOME_TRACKING_DEDUP_WINDOW_MS;
+
+    // Filter: skip zero/null scores + deduplicate within time window
+    const deduped = outcomes.filter((o) => {
+      // Skip zero/null scores — no signal to track
+      if (o.score == null || o.score === 0) return false;
+
+      const key: DedupKey = `${o.directiveId}::${o.symbol}`;
+      const lastTs = this.lastRecorded.get(key);
+
+      // If recorded within dedup window, skip
+      if (lastTs !== undefined && (now - lastTs) < windowMs) {
+        return false;
+      }
+
+      // Mark as recorded (will be updated after successful DB write)
+      this.lastRecorded.set(key, now);
+      return true;
+    });
+
+    if (deduped.length === 0) {
+      this.logger.debug(`All ${outcomes.length} outcomes filtered (dedup/zero-score)`);
+      return 0;
+    }
+
+    const skipped = outcomes.length - deduped.length;
+    if (skipped > 0) {
+      this.logger.debug(`Dedup: ${skipped}/${outcomes.length} outcomes skipped (within ${windowMs / 1000}s window or zero-score)`);
+    }
 
     try {
       const created = await this.prisma.directiveOutcome.createMany({
-        data: outcomes.map((o) => ({
+        data: deduped.map((o) => ({
           directiveId: o.directiveId,
           symbol: o.symbol,
           strategyId: o.strategyId ?? null,
@@ -41,7 +97,7 @@ export class OutcomeTrackerService {
         })),
         skipDuplicates: true,
       });
-      this.logger.log(`Recorded ${created.count} directive outcomes`);
+      this.logger.log(`Recorded ${created.count} directive outcomes (${skipped} deduped)`);
       return created.count;
     } catch (err) {
       this.logger.error(`Failed to record outcomes: ${(err as Error).message}`);

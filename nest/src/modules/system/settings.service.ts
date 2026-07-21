@@ -3,13 +3,37 @@ import { PrismaService } from '../../database/prisma.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
+export interface NewsTierConfig {
+  id: string;
+  enabled: boolean;
+  maxPerDay: number;
+  intervalMin: number;
+}
+
+export interface NewsImportSettings {
+  dailyLimit: number;
+  tiers: NewsTierConfig[];
+}
+
 export interface AppSettings {
   earnings: { importHorizonMonths: number; autoRefreshDays: number };
   correlation: { refreshMinutes: number; warningThreshold: number };
   seasonality: { weightMultiplier: number };
   analyst: { refreshHours: number };
   data: { stalenessHours: number };
+  newsImport: NewsImportSettings;
 }
+
+const NEWS_IMPORT_DEFAULTS: NewsImportSettings = {
+  dailyLimit: 100,
+  tiers: [
+    { id: 'positions', enabled: true, maxPerDay: 30, intervalMin: 120 },
+    { id: 'active-protocols', enabled: true, maxPerDay: 20, intervalMin: 240 },
+    { id: 'macro', enabled: true, maxPerDay: 15, intervalMin: 360 },
+    { id: 'sector', enabled: true, maxPerDay: 15, intervalMin: 360 },
+    { id: 'other', enabled: false, maxPerDay: 20, intervalMin: 1440 },
+  ],
+};
 
 const DEFAULTS: AppSettings = {
   earnings: { importHorizonMonths: 3, autoRefreshDays: 7 },
@@ -17,6 +41,7 @@ const DEFAULTS: AppSettings = {
   seasonality: { weightMultiplier: 1.0 },
   analyst: { refreshHours: 24 },
   data: { stalenessHours: 24 },
+  newsImport: NEWS_IMPORT_DEFAULTS,
 };
 
 const SETTING_KEY = 'app';

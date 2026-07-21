@@ -1409,6 +1409,21 @@ const QA_CHECKLIST = [
     priority: 'medium',
     versionNote: '2026-07-17 — #351 decision trail browser',
   },
+
+  // ═══════════════════════════════════════════════════
+  // DATA / NEWS IMPORT (2026-07-18)
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-news-001',
+    area: 'Data',
+    system: 'News Import Tier System',
+    name: 'Tiered news import respects daily budget and tier intervals',
+    procedure: 'GET /api/news/stats — verify today.limit=100, 5 tiers present with individual limits. Wait for next hourly cron tick — verify only due tiers fire. Check GET /api/news/stats shows tier counts incrementing. Manually POST /api/news/import/run — verify legacy full import still works.',
+    expected: 'Cron no longer floods 2K+ articles at once; tiers dispatch on their configured intervals; daily budget halts all imports when exhausted; per-tier limits enforced in-memory.',
+    category: 'API',
+    priority: 'high',
+    versionNote: '2026-07-18 — tiered news import system, 5 tiers with independent limits',
+  },
 ];
 
 export default QA_CHECKLIST;

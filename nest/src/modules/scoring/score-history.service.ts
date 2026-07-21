@@ -219,8 +219,15 @@ export class ScoreHistoryService {
       if (matchingStrategies.length > 0) where.OR.push(strategyNameFilter);
     }
 
+    // Only fetch scores from the last 7 days — prevents full-table scan of 181K+ rows
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const baseWhere: any = { timestamp: { gte: sevenDaysAgo } };
+    if (Object.keys(where).length > 0) {
+      baseWhere.AND = [where];
+    }
+
     scores = await this.prisma.score.findMany({
-      where: Object.keys(where).length > 0 ? where : undefined,
+      where: baseWhere,
       orderBy: { timestamp: 'desc' },
       take: 1000,
       include: { symbol: { select: { ticker: true } } },
@@ -231,14 +238,14 @@ export class ScoreHistoryService {
     }
 
     // Resolve strategy names
-    const strategyIds = [...new Set(scores.map((s) => s.strategyId).filter(Boolean))];
+    const strategyIds = [...new Set(scores.map((s: any) => s.strategyId).filter(Boolean))] as string[];
     const strategies = strategyIds.length > 0
       ? await this.prisma.strategy.findMany({
           where: { id: { in: strategyIds } },
           select: { id: true, name: true },
         })
       : [];
-    const nameMap = new Map(strategies.map((s) => [s.id, s.name]));
+    const nameMap = new Map((strategies as any[]).map((s: any) => [s.id, s.name]));
 
     // Group by minute + strategyId (each unique run)
     const groups = new Map<string, typeof scores>();
@@ -294,7 +301,7 @@ export class ScoreHistoryService {
     const offset = (page - 1) * pageSize;
     const runs = allRuns.slice(offset, offset + pageSize);
 
-    return { runs, total, page, pageSize, totalPages, queryTimeMs: Date.now() - startTime };
+    return { runs: runs as any, total, page, pageSize, totalPages, queryTimeMs: Date.now() - startTime };
   }
 
   /**
@@ -389,11 +396,11 @@ export class ScoreHistoryService {
     const symbols = symbolIds.length > 0
       ? await this.prisma.symbol.findMany({ where: { id: { in: symbolIds } }, select: { id: true, ticker: true } }).catch(() => [])
       : [];
-    const tickerMap = new Map(symbols.map((s) => [s.id, s.ticker]));
+    const tickerMap = new Map((symbols as any[]).map((s: any) => [s.id, s.ticker]));
 
     return Array.from(symbolMap.values())
-      .map((entry) => {
-        const ticker = tickerMap.get(entry.symbolId) || entry.symbolId.slice(0, 8);
+      .map((entry: any) => {
+        const ticker: string = tickerMap.get(entry.symbolId) || entry.symbolId.slice(0, 8);
         const signal = entry.latestScore >= 60 ? 'entry' : entry.latestScore >= 40 ? 'watch' : 'defensive';
         return {
           symbolId: entry.symbolId, ticker,

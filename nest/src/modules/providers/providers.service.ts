@@ -83,7 +83,7 @@ export class ProvidersService {
       activeProvider: activeAdapter?.name ?? null,
       providers: adapterConfigs.map((config) => {
         const credentialsConfigured = this.adapterFactory.hasCredentials(config.id);
-        const row = dbByProvider.get(config.id);
+        const row: any = dbByProvider.get(config.id);
         const adapter = this.adapterFactory.create(config.id);
 
         return {

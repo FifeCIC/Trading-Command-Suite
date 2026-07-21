@@ -1,6 +1,27 @@
 import { env } from '../config/env';
 
 const baseUrl = env.VITE_API_BASE_URL.replace(/\/$/, '');
+const DEFAULT_TIMEOUT_MS = 28_000; // just below the 30s server timeout
+
+/** Fetch with timeout — prevents "Loading..." from sticking forever */
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    if (!res.ok) {
+      throw new Error(`Request failed with ${res.status}`);
+    }
+    return res.json();
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error(`Request timed out after ${DEFAULT_TIMEOUT_MS / 1000}s`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export function apiUrl(path = '') {
   if (!path) {
@@ -15,56 +36,33 @@ export function apiUrl(path = '') {
 }
 
 export async function apiGet(path) {
-  const response = await fetch(apiUrl(path));
-  if (!response.ok) {
-    throw new Error(`Request failed with ${response.status}`);
-  }
-
-  return response.json();
+  return fetchWithTimeout(apiUrl(path));
 }
 
 export async function apiPost(path, body) {
-  const response = await fetch(apiUrl(path), {
+  return fetchWithTimeout(apiUrl(path), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!response.ok) {
-    throw new Error(`Request failed with ${response.status}`);
-  }
-  return response.json();
 }
 
 export async function apiPatch(path, body) {
-  const response = await fetch(apiUrl(path), {
+  return fetchWithTimeout(apiUrl(path), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!response.ok) {
-    throw new Error(`Request failed with ${response.status}`);
-  }
-  return response.json();
 }
 
 export async function apiPut(path, body) {
-  const response = await fetch(apiUrl(path), {
+  return fetchWithTimeout(apiUrl(path), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!response.ok) {
-    throw new Error(`Request failed with ${response.status}`);
-  }
-  return response.json();
 }
 
 export async function apiDelete(path) {
-  const response = await fetch(apiUrl(path), {
-    method: 'DELETE',
-  });
-  if (!response.ok) {
-    throw new Error(`Request failed with ${response.status}`);
-  }
-  return response.json();
+  return fetchWithTimeout(apiUrl(path), { method: 'DELETE' });
 }

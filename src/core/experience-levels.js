@@ -120,7 +120,7 @@ export const EXPERIENCE_MATRIX = {
     'automation.startStop':      { beginner: false, experienced: true,  expert: true },
     'automation.emergencyStop':  { beginner: true,  experienced: true,  expert: true },
     'automation.configBroker':   { beginner: false, experienced: false, expert: true },
-    // Signals Workbench
+    // Scoring Workbench
     'signals.editProtocol':      { beginner: false, experienced: false, expert: true },
     'signals.customWatchlist':   { beginner: false, experienced: true,  expert: true },
     // Scoring Overview

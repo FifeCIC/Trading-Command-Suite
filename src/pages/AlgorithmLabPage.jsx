@@ -129,7 +129,7 @@ export default function AlgorithmLabPage() {
                 how much.
               </li>
               <li>
-                <strong>SEES</strong> (Scoring Engine) ranks all symbols by their
+                <strong>SEES</strong> (Scoring Engine Execution System) ranks all symbols by their
                 aggregate scores and produces BUY / SELL / HOLD signals.
               </li>
             </ol>

@@ -242,29 +242,11 @@ export default function ActiveSymbolsPage() {
           >
             Export CSV
           </button>
-          {selectedIds.size > 0 && (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleCreateWatchlist}
-              disabled={creatingWatchlist}
-              style={{ padding: '6px 14px', fontWeight: 600, fontSize: '0.82rem', background: 'var(--accent)', color: '#fff' }}
-            >
-              {creatingWatchlist ? 'Creating...' : `📋 Create Watchlist (${selectedIds.size})`}
-            </button>
-          )}
-        </div>
-      </section>
-
-      <section className="tp-card tp-comparison-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-          <h3 style={{ margin: 0 }}>Symbols ({filtered.length})</h3>
           <div style={{ position: 'relative' }}>
             <button
               type="button"
               className="btn"
               onClick={() => setShowColOptions((v) => !v)}
-              style={{ padding: '4px 12px', fontSize: '0.78rem' }}
             >
               ⚙ Columns
             </button>

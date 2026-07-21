@@ -140,6 +140,13 @@ export class NewsController {
     return { symbols, count: symbols.length };
   }
 
+  // ── Stats (daily budget, tier status) ──
+
+  @Get('stats')
+  async getStats() {
+    return this.importService.getNewsStats();
+  }
+
   // ── Helpers ──
 
   private mapSentiment(val: any): string {

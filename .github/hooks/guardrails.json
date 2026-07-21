@@ -10,7 +10,7 @@
     "PreToolUse": [
       {
         "type": "command",
-        "command": "powershell -NoProfile -Command \"try { $raw = [Console]::In.ReadToEnd(); if ($raw) { $j = $raw | ConvertFrom-Json; $tool = $j.tool_name; if ($tool -eq 'run_in_terminal') { $cmd = [string]($j.tool_input.command); if ($cmd -match 'npm install') { Write-Output '::BUNDLE-GUARD:: Check bundle budget after installing (npm run build:guard).' } } } } catch {} exit 0\"",
+        "command": "powershell -NoProfile -Command \"try { `$raw = [Console]::In.ReadToEnd(); if (`$raw) { `$j = `$raw | ConvertFrom-Json; `$tool = `$j.tool_name; if (`$tool -eq 'run_in_terminal') { `$cmd = [string](`$j.tool_input.command); if (`$cmd -match 'npm install') { Write-Output '::BUNDLE-GUARD:: Check bundle budget after installing (npm run build:guard).' } } } } catch {} exit 0\"",
         "timeout": 5
       }
     ]

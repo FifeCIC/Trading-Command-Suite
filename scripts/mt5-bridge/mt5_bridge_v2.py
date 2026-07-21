@@ -391,7 +391,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     mt5.symbol_select(sym, True)
                     info = mt5.symbol_info(sym)
                 if not info: return json_response(self, {'error': f'{sym} not available'}, 404)
-                return json_response(self, {'name': info.name, 'digits': info.digits, 'contractSize': info.trade_contract_size,
+                return json_response(self, {'name': info.name, 'description': info.description,
+                    'digits': info.digits, 'contractSize': info.trade_contract_size,
                     'volumeMin': info.volume_min, 'volumeMax': info.volume_max, 'spread': info.spread,
                     'swapLong': info.swap_long, 'swapShort': info.swap_short, 'swapMode': info.swap_mode})
 

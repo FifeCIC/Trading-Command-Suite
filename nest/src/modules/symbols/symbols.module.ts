@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../database/database.module';
+import { ProvidersModule } from '../providers/providers.module';
 import { SymbolsController } from './symbols.controller';
 import { SymbolsService } from './symbols.service';
+import { SymbolNameEnricherService } from './symbol-name-enricher.service';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, ProvidersModule],
   controllers: [SymbolsController],
-  providers: [SymbolsService],
-  exports: [SymbolsService],
+  providers: [SymbolsService, SymbolNameEnricherService],
+  exports: [SymbolsService, SymbolNameEnricherService],
 })
 export class SymbolsModule {}

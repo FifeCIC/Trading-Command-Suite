@@ -61,6 +61,9 @@ export interface TradeHistorySummary {
 @Injectable()
 export class Trading212ImportService {
   private readonly logger = new Logger(Trading212ImportService.name);
+  // Rate-limiting: minimum 60s between imports to avoid flooding T212 API
+  private lastImportTime = 0;
+  private readonly IMPORT_COOLDOWN_MS = 60_000;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -109,7 +112,15 @@ export class Trading212ImportService {
     account?: T212Account;
     positions?: Array<{ ticker: string; quantity: number; ppl: number; currentPrice: number }>;
     error?: string;
+    cooldown?: boolean;
   }> {
+    const now = Date.now();
+    if (now - this.lastImportTime < this.IMPORT_COOLDOWN_MS) {
+      const remaining = Math.ceil((this.IMPORT_COOLDOWN_MS - (now - this.lastImportTime)) / 1000);
+      return { success: false, positionsImported: 0, symbolsCreated: 0, error: `Cooldown: ${remaining}s remaining`, cooldown: true };
+    }
+    this.lastImportTime = now;
+
     const apiKey = process.env.TRADING212_API_KEY;
     if (!apiKey) return { success: false, positionsImported: 0, symbolsCreated: 0, error: 'No API key' };
 

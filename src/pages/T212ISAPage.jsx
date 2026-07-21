@@ -31,13 +31,53 @@ export default function T212ISAPage() {
   }
 
   const data = isa.data;
-  if (!data || data.status === 'error') {
+  if (!data || data.status === 'error' || data.status === 'not_configured') {
     return (
       <div className="t212i-page">
         <header className="t212i-header">
           <h1>🏛️ Stocks & Shares ISA</h1>
-          <p className="t212i-subtitle">Trading212 ISA account is not connected. Set TRADING212_ISA_* env vars to enable.</p>
+          <p className="t212i-subtitle">Trading212 Stocks & Shares ISA — allowance tracking, positions, and tax-year summary.</p>
         </header>
+        <section className="t212i-section">
+          <div className="t212i-placeholder">
+            <div className="t212i-placeholder-icon">🔒</div>
+            <h2>ISA Account Not Connected</h2>
+            <p>
+              The Stocks &amp; Shares ISA dashboard requires a <strong>live Trading212 account</strong>
+              {' '}with an active ISA subscription. Set <code>TRADING212_ISA_API_KEY</code> in your
+              environment to connect.
+            </p>
+            <p>Once connected, this page will display:</p>
+            <ul className="t212i-feature-list">
+              <li>ISA allowance tracker with remaining contribution headroom</li>
+              <li>Portfolio positions with P&amp;L and currency impact</li>
+              <li>FX impact analysis for foreign-listed holdings</li>
+              <li>Tax-year summary and trading window guidance</li>
+              <li>Real-time account value and cash balance</li>
+            </ul>
+          </div>
+        </section>
+        <section className="t212i-section">
+          <h2>Planned Data Points</h2>
+          <div className="t212i-summary-grid">
+            <div className="t212i-stat">
+              <span className="t212i-stat-label">Allowance Used</span>
+              <span className="t212i-stat-value">—</span>
+            </div>
+            <div className="t212i-stat">
+              <span className="t212i-stat-label">Total Value</span>
+              <span className="t212i-stat-value">—</span>
+            </div>
+            <div className="t212i-stat">
+              <span className="t212i-stat-label">Cash</span>
+              <span className="t212i-stat-value">—</span>
+            </div>
+            <div className="t212i-stat">
+              <span className="t212i-stat-label">Positions</span>
+              <span className="t212i-stat-value">—</span>
+            </div>
+          </div>
+        </section>
       </div>
     );
   }

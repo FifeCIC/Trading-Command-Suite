@@ -131,7 +131,7 @@ export default function SettingsPage() {
         <h2>User Preferences</h2>
         <p className="settings-section-desc">Customize defaults for the new Signals, Risk, and Research features.</p>
 
-        <SettingRow label="Default Signal Symbols" hint="Comma-separated tickers pre-filled in Signals Workbench.">
+        <SettingRow label="Default Signal Symbols" hint="Comma-separated tickers pre-filled in Scoring Workbench.">
           <input
             type="text"
             className="settings-input"
@@ -141,7 +141,7 @@ export default function SettingsPage() {
           />
         </SettingRow>
 
-        <SettingRow label="Default Protocol" hint="Pre-selected protocol in Signals Workbench and SEES pages.">
+        <SettingRow label="Default Protocol" hint="Pre-selected protocol in Scoring Workbench and SEES pages.">
           <input
             type="text"
             className="settings-input"

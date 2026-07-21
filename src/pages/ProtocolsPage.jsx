@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '../core/api/client';
 import './ProtocolsPage.css';
-
-const API = 'http://localhost:3201/api/scoring/gated/protocols';
 
 const SOURCE_LABELS = { code: 'System', database: 'Database' };
 const SOURCE_COLORS = { code: '#8b5cf6', database: '#3b82f6' };
@@ -28,31 +28,24 @@ function getProtocolType(proto) {
 }
 
 export default function ProtocolsPage() {
-  const [protocols, setProtocols] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
-  const [error, setError] = useState(null);
   const [styleFilter, setStyleFilter] = useState('All');
 
-  useEffect(() => { fetchProtocols(); }, []);
+  const protocolsQuery = useQuery({
+    queryKey: ['protocols'],
+    queryFn: () => apiGet('/api/scoring/gated/protocols'),
+    staleTime: 30_000,
+  });
 
-  const fetchProtocols = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(API);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const list = Array.isArray(data.protocols) ? data.protocols : [];
-      setProtocols(list);
-      if (list.length > 0 && !selected) setSelected(list[0]);
-    } catch (e) {
-      console.error('Failed to load protocols', e);
-      setError(e.message);
-      setProtocols([]);
-    }
-    setLoading(false);
-  };
+  const protocols = Array.isArray(protocolsQuery.data?.protocols)
+    ? protocolsQuery.data.protocols
+    : [];
+  const loading = protocolsQuery.isLoading;
+  const error = protocolsQuery.error?.message || null;
+
+  useEffect(() => {
+    if (protocols.length > 0 && !selected) setSelected(protocols[0]);
+  }, [protocols, selected]);
 
   const selectedProto = protocols.find(p => p.id === selected?.id) || protocols[0];
 

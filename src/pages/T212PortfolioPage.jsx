@@ -7,15 +7,17 @@
  * Data: /api/portfolio/trading212/* endpoints
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
+import LastUpdated from '../components/LastUpdated';
 import './t212-portfolio.css';
 
 export default function T212PortfolioPage() {
   const qc = useQueryClient();
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState(null);
+  const [imported, setImported] = useState(false);
 
   const mode = useQuery({
     queryKey: ['t212-mode'],
@@ -46,6 +48,7 @@ export default function T212PortfolioPage() {
     try {
       const res = await apiPost('/api/portfolio/trading212/import');
       setSyncResult(res);
+      if (res.success) setImported(true);
       qc.invalidateQueries({ queryKey: ['t212-account'] });
       qc.invalidateQueries({ queryKey: ['t212-history'] });
     } catch (e) {
@@ -54,20 +57,39 @@ export default function T212PortfolioPage() {
     setSyncing(false);
   }
 
+  // Auto-import on page visit (backend enforces 60s cooldown)
+  useEffect(() => {
+    if (!imported) doImport();
+  }, []);
+
   const summary = account.data?.account;
   const positions = account.data?.positions || [];
   const trades = Array.isArray(history.data) ? history.data : (history.data?.trades || []);
   const currentMode = mode.data?.current || 'demo';
+  const lastUpdated = account.dataUpdatedAt || history.dataUpdatedAt || Date.now();
+
+  // Human-readable mode label: "DEMO" = paper trading account, not mock UI
+  const modeLabel = currentMode === 'live' ? 'LIVE Account' : currentMode === 'demo' ? 'Paper Account' : 'Not Connected';
+  const modeClass = currentMode === 'live' ? 'live' : currentMode === 'demo' ? 'demo' : 'none';
 
   return (
     <div className="t212p-page">
       <header className="t212p-header">
         <h1>🏦 Trading212 Portfolio</h1>
         <p className="t212p-subtitle">
-          Investment account overview — positions, orders, and sync controls.
-          Mode: <strong className={`t212p-mode t212p-mode--${currentMode}`}>{currentMode.toUpperCase()}</strong>
+          Investment account overview — positions, orders, and sync controls.{' '}
+          <strong className={`t212p-mode t212p-mode--${modeClass}`} title={currentMode === 'demo' ? 'Connected to a Trading212 demo (paper) account — not a real money account' : currentMode === 'live' ? 'Connected to a live Trading212 account with real funds' : 'No Trading212 account connected'}>
+            {modeLabel}
+          </strong>
         </p>
+        {currentMode === 'none' && (
+          <p className="t212p-hint" style={{ marginTop: '0.5rem', color: 'var(--ink-soft)', fontStyle: 'italic' }}>
+            Configure TRADING212_API_KEY in your .env file to connect a Trading212 account.
+          </p>
+        )}
       </header>
+
+      <LastUpdated at={lastUpdated} />
 
       {/* ── Account Summary ── */}
       <section className="t212p-section">
@@ -102,22 +124,6 @@ export default function T212PortfolioPage() {
             <span className="t212p-stat-value">{positions.length}</span>
           </div>
         </div>
-      </section>
-
-      {/* ── Controls ── */}
-      <section className="t212p-section">
-        <h2>Controls</h2>
-        <div className="t212p-controls">
-          <button className="btn btn-primary" onClick={doImport} disabled={syncing}>
-            {syncing ? '⟳ Importing…' : '📥 Import Portfolio'}
-          </button>
-          <span className="t212p-hint">Fetches current positions from Trading212 API</span>
-        </div>
-        {syncResult && (
-          <div className={`t212p-sync-result ${syncResult.error ? 't212p-sync-err' : ''}`}>
-            {syncResult.error || `Imported ${syncResult.imported || syncResult.count || 0} positions`}
-          </div>
-        )}
       </section>
 
       {/* ── Positions ── */}
