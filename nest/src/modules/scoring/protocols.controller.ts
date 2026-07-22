@@ -7,7 +7,7 @@
  * GET /api/scoring/protocols/:id — single protocol detail with version history
  */
 
-import { Controller, Get, Post, Put, Patch, Param, Body, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Param, Body, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DirectivesService } from '../directives/directives.service';
 import { ScoringSchedulerService } from './scoring-scheduler.service';
@@ -320,6 +320,29 @@ export class ProtocolsController {
   }
 
   /**
+   * GET /api/scoring/protocols/:slug/usage
+   * Returns whether the protocol is in use by any enabled ScoringStrategy.
+   */
+  @Get(':slug/usage')
+  async getProtocolUsage(@Param('slug') slug: string) {
+    if (!this.prisma.isAvailable) return { inUse: false, strategyIds: [], strategyNames: [] };
+    try {
+      const strategies = await (this.prisma as any).scoringStrategy.findMany({
+        where: { enabled: true, OR: [{ protocolId: slug }, { shortProtocolId: slug }] },
+        select: { id: true, name: true },
+      });
+      return {
+        inUse: strategies.length > 0,
+        strategyIds: strategies.map((s: any) => s.id),
+        strategyNames: strategies.map((s: any) => s.name),
+      };
+    } catch (err) {
+      this.logger.error(`Protocol usage check failed for ${slug}: ${String(err)}`);
+      return { inUse: false, strategyIds: [], strategyNames: [], error: String(err) };
+    }
+  }
+
+  /**
    * GET /api/scoring/protocols/:slug/directives
    * Returns grouped directives for a protocol, enriched with directive registry info.
    * Replaces the broken /api/strategies/:id/directives for protocol-backed strategies.
@@ -414,6 +437,27 @@ export class ProtocolsController {
    * PATCH /api/scoring/protocols/:slug/directives/:directiveId
    * Toggle a directive's active state in a protocol's directive groups.
    */
+  @Delete(':slug/directives/:directiveId')
+  async removeProtocolDirective(
+    @Param('slug') slug: string,
+    @Param('directiveId') directiveId: string,
+  ) {
+    if (!this.prisma.isAvailable) return { success: false, error: 'Database not available' };
+    try {
+      const protocol = await (this.prisma as any).protocol.findUnique({ where: { slug } });
+      if (!protocol) return { success: false, error: `Protocol "${slug}" not found` };
+      const entry = await (this.prisma as any).protocolDirectiveEntry.findFirst({
+        where: { directiveId, group: { protocolId: protocol.id } },
+      });
+      if (!entry) return { success: false, error: `Directive "${directiveId}" not linked to "${slug}"` };
+      await (this.prisma as any).protocolDirectiveEntry.delete({ where: { id: entry.id } });
+      return { success: true, directiveId, protocolSlug: slug, message: 'Directive removed from protocol' };
+    } catch (err) {
+      this.logger.error(`Failed to remove directive ${directiveId} from ${slug}: ${String(err)}`);
+      return { success: false, error: String(err) };
+    }
+  }
+
   @Patch(':slug/directives/:directiveId')
   async updateProtocolDirective(
     @Param('slug') slug: string,

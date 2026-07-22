@@ -92,16 +92,24 @@ export default function SeesArenaPage() {
     );
   }, [protocols, filtersQuery.data?.mt5Connected]);
 
-  // Default active = all protocols that have sufficient data
-  const defaultProtocols = useMemo(
-    () => allProtocolIds.filter((id) => !dataInsufficientIds.has(id)),
-    [allProtocolIds, dataInsufficientIds]
-  );
-
-  const activeProtocols = selectedProtocols || defaultProtocols;
+  // Build protocol lookup map early (needed by defaultProtocols)
   const protocolMap = useMemo(() => {
     const m = {}; for (const p of protocols) m[p.id] = p; return m;
   }, [protocols]);
+
+  // Default active = all protocols that have sufficient data AND are active
+  const defaultProtocols = useMemo(
+    () => allProtocolIds.filter((id) => {
+      if (dataInsufficientIds.has(id)) return false;
+      const proto = protocolMap[id];
+      // Filter out inactive/disabled protocols
+      if (proto && (proto.active === false || proto.status === 'inactive' || proto.status === 'disabled')) return false;
+      return true;
+    }),
+    [allProtocolIds, dataInsufficientIds, protocolMap]
+  );
+
+  const activeProtocols = selectedProtocols || defaultProtocols;
 
   const arenaQuery = useQuery({
     queryKey: ['arena'], queryFn: () => apiGet('/api/scoring/arena'),
@@ -149,11 +157,10 @@ export default function SeesArenaPage() {
       </header>
 
       <div className="sa-tabs">
-        <button className={`sa-tab ${tab === 'compare' ? 'sa-active' : ''}`} onClick={() => setTab('compare')}>Compare Protocols</button>
-        <button className={`sa-tab ${tab === 'stacks' ? 'sa-active' : ''}`} onClick={() => setTab('stacks')}>Strategy Ladders</button>
+        <button className="sa-tab sa-active">Compare Protocols</button>
       </div>
 
-      {tab === 'compare' && (<>
+      <>
         <div className="sa-controls">
           <input type="text" className="sa-symbol-input" placeholder="Symbols: SPY, QQQ, NVDA, XAUUSD..."
             value={symbolsInput} onChange={(e) => setSymbolsInput(e.target.value)} />
@@ -207,7 +214,7 @@ export default function SeesArenaPage() {
                       return (<td key={pid}>
                         <span className={`sa-score-cell ${scoreClass(ps.score, ps.hardGated)}`}
                           title={ps.warnings?.join('; ') || (ps.hardGated ? 'Hard-gated' : '')}>
-                          {ps.hardGated ? '⛔' : ps.score.toFixed(0)}
+                          {ps.hardGated ? '⛔' : `${ps.score.toFixed(0)}%`}
                         </span><br/>
                         <span className={`sa-sig-badge sa-sig-${ps.signal}`}>{ps.signal}</span>
                       </td>);
@@ -255,56 +262,7 @@ export default function SeesArenaPage() {
             <span><span className="sa-div-high">20+</span> High divergence</span>
           </div>
         )}
-      </>)}
-
-      {tab === 'stacks' && (<>
-        {arenaQuery.isLoading && <p className="sa-loading">Loading strategies...</p>}
-        {arenaQuery.data?.stacks?.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.75rem' }}>
-            {arenaQuery.data.stacks.map((stack) => (
-              <div key={stack.strategyId} style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 8, padding: '0.75rem' }}>
-                <div style={{ borderTop: `3px solid ${stack.color}`, paddingTop: '0.5rem', marginBottom: '0.5rem' }}>
-                  <strong style={{ fontSize: '0.82rem' }}>{stack.strategyName}</strong>
-                  {stack.description && (
-                    <span style={{ fontSize: '0.62rem', color: 'var(--ink-soft)', display: 'block', marginTop: 2, lineHeight: 1.4 }}>
-                      {stack.description}
-                    </span>
-                  )}
-                  <span style={{ fontSize: '0.62rem', color: 'var(--ink-soft)', display: 'block', marginTop: 4 }}>
-                    {stack.symbols?.length ?? 0} symbols scored
-                  </span>
-                </div>
-                <div style={{ maxHeight: 350, overflowY: 'auto' }}>
-                  {stack.symbols?.map((s) => (
-                    <div key={s.symbol} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.25rem 0', fontSize: '0.73rem', borderBottom: '1px solid rgba(128,128,128,0.06)' }}>
-                      <span>
-                        <strong>{s.symbol}</strong>
-                        <span style={{ fontSize: '0.6rem', color: 'var(--ink-soft)', marginLeft: 4 }}>
-                          {s.signal === 'BUY' ? '▲' : s.signal === 'SELL' ? '▼' : '◆'}
-                        </span>
-                      </span>
-                      <span className={s.score >= 65 ? 'sa-score-high' : s.score >= 40 ? 'sa-score-med' : 'sa-score-low'}
-                        style={{ fontWeight: 700, padding: '1px 4px', borderRadius: 3 }}>
-                        {s.score.toFixed(0)}
-                      </span>
-                    </div>
-                  ))}
-                  {(!stack.symbols || stack.symbols.length === 0) && (
-                    <span style={{ fontSize: '0.65rem', color: 'var(--ink-soft)' }}>No symbols scored yet — run Compare first or wait for background scoring.</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        {arenaQuery.data && !arenaQuery.data.stacks?.length && (
-          <div className="sa-empty">
-            <p>No trading strategies have scored data yet.</p>
-            <p className="sa-hint">Strategies score symbols using protocol groups. Run a comparison or scoring run to populate stacks.</p>
-          </div>
-        )}
-        {!arenaQuery.data && !arenaQuery.isLoading && <p className="sa-empty">Backend unavailable.</p>}
-      </>)}
+      </>
     </div>
   );
 }

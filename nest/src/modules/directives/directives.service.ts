@@ -560,14 +560,14 @@ export class DirectivesService {
     if (!this.prisma.isAvailable) return counts;
     try {
       const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Run count query timed out')), 3000),
+        setTimeout(() => reject(new Error('Run count query timed out')), 2000),
       );
-      // Load breakdowns from last 7 days (capped at 2000 rows for perf)
+      // Load breakdowns from last 7 days (capped at 500 rows for perf)
       const rows = await Promise.race([
         this.prisma.score.findMany({
           where: { timestamp: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
           orderBy: { timestamp: 'desc' },
-          take: 2000,
+          take: 500,
           select: { breakdown: true },
         }),
         timeout,

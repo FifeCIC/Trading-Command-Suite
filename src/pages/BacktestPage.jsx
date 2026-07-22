@@ -40,7 +40,7 @@ const EXECUTION_PRESETS = {
 
 export default function BacktestPage() {
   const [symbol, setSymbol] = useState('NVDA');
-  const [days, setDays] = useState(365);
+  const [days, setDays] = useState(30);
   const [runId, setRunId] = useState('');
   const [showChart, setShowChart] = useState(false);
   const [newsExclusion, setNewsExclusion] = useState('none');
@@ -123,6 +123,10 @@ export default function BacktestPage() {
         <label>
           Days
           <select value={days} onChange={(e) => setDays(Number(e.target.value))}>
+            <option value={7}>7</option>
+            <option value={14}>14</option>
+            <option value={30}>30</option>
+            <option value={60}>60</option>
             <option value={90}>90</option>
             <option value={180}>180</option>
             <option value={365}>365 (1 year)</option>

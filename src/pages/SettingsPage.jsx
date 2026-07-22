@@ -1,7 +1,7 @@
 import { useUiStore } from '../stores/useUiStore';
 import { usePreferences } from '../core/hooks/usePreferences';
-import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '../core/api/client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiGet, apiPut } from '../core/api/client';
 import './settings.css'
 
 function SettingRow({ label, children, hint }) {
@@ -315,6 +315,8 @@ export default function SettingsPage() {
             <button type="button" className={!prefs.autoStartAutomation ? 'cta' : ''} onClick={() => set('autoStartAutomation', false)}>Off</button>
           </div>
         </SettingRow>
+
+        <AutomationRulesSection />
       </section>
 
       <section className="settings-section">
@@ -330,6 +332,8 @@ export default function SettingsPage() {
           </div>
         </SettingRow>
       </section>
+
+      <HealthChecksSection />
 
       <section className="settings-section">
         <h2>Security</h2>
@@ -350,4 +354,91 @@ export default function SettingsPage() {
       </footer>
     </div>
   )
+}
+
+function HealthChecksSection() {
+  const qc = useQueryClient();
+  const { data: hc } = useQuery({
+    queryKey: ['settings-health-checks'],
+    queryFn: () => apiGet('/api/system/settings/health-checks').catch(() => null),
+    staleTime: 30_000,
+  });
+
+  const toggle = async (key) => {
+    if (!hc) return;
+    const updated = { ...hc, [key]: !hc[key] };
+    await apiPut('/api/system/settings/health-checks', { [key]: !hc[key] });
+    qc.setQueryData(['settings-health-checks'], updated);
+  };
+
+  const setRefresh = async (sec) => {
+    if (!hc) return;
+    const updated = { ...hc, autoRefreshSec: sec };
+    await apiPut('/api/system/settings/health-checks', { autoRefreshSec: sec });
+    qc.setQueryData(['settings-health-checks'], updated);
+  };
+
+  const CHECK_LABELS = {
+    systemVitals: 'System Vitals', dbDiagnostics: 'DB Table Diagnostics', slowQueries: 'Slow Query Detection',
+    apiTrends: 'API Response Trends', providerGrid: 'Provider Health Grid', traceCorrelations: 'Trace Correlations',
+    diskInfo: 'Disk Space Monitor', errorRates: 'Error Rate Tracking', cronHeartbeats: 'Cron Heartbeat Monitor',
+    portStatus: 'Port Status Check',
+  };
+
+  return (
+    <section className="settings-section">
+      <h2>🩺 Health & Diagnostics</h2>
+      <p style={{ fontSize: '0.7rem', color: 'var(--ink-soft)', margin: '0 0 0.5rem' }}>
+        Enable or disable individual health checks. Disabled checks skip their queries entirely — useful for reducing load or silencing known issues.
+      </p>
+      {Object.entries(CHECK_LABELS).map(([key, label]) => (
+        <SettingRow key={key} label={label} hint={`Run ${label.toLowerCase()} check on the Health Dashboard.`}>
+          <div className="inline-actions">
+            <button type="button" className={(hc?.[key] !== false) ? 'cta' : ''} onClick={() => toggle(key)}>
+              {(hc?.[key] !== false) ? 'On' : 'Off'}
+            </button>
+          </div>
+        </SettingRow>
+      ))}
+      <SettingRow label="Auto-Refresh" hint="How often the Health Dashboard refreshes (seconds). Min 5, max 120.">
+        <input type="number" min="5" max="120" step="5" className="settings-input settings-input-sm"
+          value={hc?.autoRefreshSec ?? 15} onChange={e => setRefresh(Math.max(5, parseInt(e.target.value, 10) || 15))} />
+      </SettingRow>
+      <p style={{ fontSize: '0.62rem', color: 'var(--ink-soft)', fontStyle: 'italic', margin: '0.5rem 0 0' }}>
+        See <a href="/status/health-check" style={{ color: 'var(--accent)' }}>Health Dashboard</a> for live diagnostics.
+      </p>
+    </section>
+  );
+}
+
+function AutomationRulesSection() {
+  const { data } = useQuery({
+    queryKey: ['automation-rules-settings'],
+    queryFn: () => apiGet('/api/automation/rules').catch(() => []),
+    staleTime: 60_000,
+  });
+  const rules = Array.isArray(data) ? data : [];
+
+  return (
+    <>
+      <h3 style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--ink-soft)' }}>Automation Rules</h3>
+      {rules.length === 0 ? (
+        <p style={{ fontSize: '0.75rem', color: 'var(--ink-soft)', margin: '0.25rem 0' }}>
+          No automation rules configured. Rules are seeded from the database.
+        </p>
+      ) : (
+        rules.map((rule) => (
+          <SettingRow key={rule.id} label={rule.name} hint={rule.description}>
+            <div className="inline-actions">
+              <button type="button" className={rule.enabled ? 'cta' : ''} onClick={() => {
+                apiGet(`/api/automation/rules/${rule.id}`, { method: 'PUT', body: JSON.stringify({ enabled: !rule.enabled }) });
+              }}>
+                {rule.enabled ? 'On' : 'Off'}
+              </button>
+            </div>
+          </SettingRow>
+        ))
+      )}
+    </>
+  );
 }

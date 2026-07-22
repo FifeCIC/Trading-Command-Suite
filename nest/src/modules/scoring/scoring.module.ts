@@ -6,7 +6,6 @@ import { CalibrationModule } from '../calibration/calibration.module';
 import { MarketDataModule } from '../market-data/market-data.module';
 import { ProvidersModule } from '../providers/providers.module';
 import { PortfolioModule } from '../portfolio/portfolio.module';
-import { AlgorithmLabController } from './algorithm-lab.controller';
 import { ArenaController } from './arena.controller';
 import { ProtocolsController } from './protocols.controller';
 import { ProtocolGatingController } from './protocol-gating.controller';
@@ -38,7 +37,7 @@ import { QuoteGateway } from './quote.gateway';
 
 @Module({
   imports: [DatabaseModule, DirectivesModule, NotificationsModule, CalibrationModule, MarketDataModule, ProvidersModule, forwardRef(() => PortfolioModule)],
-  controllers: [ScoringController, ArenaController, AlgorithmLabController, ProtocolsController, ProtocolGatingController, SpeedScanController, SeasonalityController],
+  controllers: [ScoringController, ArenaController, ProtocolsController, ProtocolGatingController, SpeedScanController, SeasonalityController],
   providers: [ScoringService, ScoreHistoryService, ScoringSchedulerService, AveragingScorer, StrategyCompetitionService, PredictiveScoringService, ProtocolGatingService, ProtocolConsensusService, OutcomeTrackerService, SpeedScanService, SeasonalityService, SeasonalAffinityService, TickRecorderService, TimezoneService, MicroTrendDetector, RiskGatingEngine, SectorRotationService, MacroSnapshotService, EurUsdCacheService, StackPerformanceService, ProtocolDbService, QuoteGateway],
   exports: [ScoringService, ScoreHistoryService, AveragingScorer, StrategyCompetitionService, PredictiveScoringService, ProtocolGatingService, ProtocolConsensusService, OutcomeTrackerService, SpeedScanService, SeasonalityService, SeasonalAffinityService, TickRecorderService, TimezoneService, MicroTrendDetector, RiskGatingEngine, MacroSnapshotService, StackPerformanceService, ProtocolDbService],
 })

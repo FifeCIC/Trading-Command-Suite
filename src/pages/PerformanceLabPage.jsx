@@ -31,8 +31,16 @@ export default function PerformanceLabPage() {
     refetchInterval: 60000,
   });
 
+  // Live MT5 positions for mark-to-market context
+  const mt5Query = useQuery({
+    queryKey: ['mt5-positions'],
+    queryFn: () => apiGet('/api/trading/mt5/positions').catch(() => []),
+    refetchInterval: 30000,
+  });
+
   const data = summaryQuery.data;
   const strategies = strategiesQuery.data?.strategies || [];
+  const mt5Positions = Array.isArray(mt5Query.data) ? mt5Query.data : [];
   const isLoading = summaryQuery.isLoading || strategiesQuery.isLoading;
   const isError = summaryQuery.isError || strategiesQuery.isError;
 
@@ -46,8 +54,8 @@ export default function PerformanceLabPage() {
     <div className="pl-page">
       <header className="pl-header">
         <div>
-          <h1>Strategy Performance</h1>
-          <p className="pl-subtitle">Real trade outcomes from DB — win rate, P&L, drawdown, equity curve. No mock data.</p>
+          <h1>Trading Performance</h1>
+          <p className="pl-subtitle">Real trade outcomes — win rate, P&L, drawdown, and equity curve from closed trades. Open positions show mark-to-market via MT5.</p>
         </div>
         <div className="pl-days">
           {[30, 90, 180, 365].map(d => (
@@ -85,6 +93,37 @@ export default function PerformanceLabPage() {
             <span className="pl-stat-label">Active Strategies</span>
           </div>
         </div>
+      )}
+
+      {/* ── Live MT5 Positions ── */}
+      {mt5Positions.length > 0 && (
+        <section className="pl-section">
+          <h2>Open Positions (MT5)</h2>
+          <div className="pl-strategy-grid">
+            {mt5Positions.map((p, i) => (
+              <div key={p.ticket || i} className="pl-strategy-card">
+                <div className="pl-card-head">
+                  <span className="pl-strategy-name">{p.symbol} {p.type === 0 ? 'BUY' : 'SELL'} ×{p.volume}</span>
+                  <PnlBadge value={p.profit || 0} />
+                </div>
+                <div className="pl-card-stats">
+                  <div className="pl-card-stat">
+                    <span className="pl-cs-val">{p.price_current?.toFixed(4) || '—'}</span>
+                    <span className="pl-cs-label">Current</span>
+                  </div>
+                  <div className="pl-card-stat">
+                    <span className="pl-cs-val">{p.price_open?.toFixed(4) || '—'}</span>
+                    <span className="pl-cs-label">Entry</span>
+                  </div>
+                  <div className="pl-card-stat">
+                    <span className="pl-cs-val">{p.ticket}</span>
+                    <span className="pl-cs-label">Ticket</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* ── Per-Strategy Cards ── */}

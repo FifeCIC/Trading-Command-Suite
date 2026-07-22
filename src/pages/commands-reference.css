@@ -1,0 +1,59 @@
+/* Commands Reference Page */
+
+.cr-page { max-width: 900px; margin: 0 auto; padding: 1.25rem 1.5rem; color: var(--ink); }
+
+.cr-header { margin-bottom: 0.75rem; }
+.cr-header h1 { margin: 0 0 0.15rem; font-size: 1.2rem; }
+.cr-subtitle { color: var(--ink-soft); font-size: 0.73rem; margin: 0; }
+
+/* Filters */
+.cr-filters { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.cr-filter-btn {
+  font-size: 0.68rem; padding: 0.25rem 0.6rem; border: 1px solid var(--line);
+  border-radius: 6px; background: var(--panel); color: var(--ink);
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.cr-filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+.cr-filter-active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Command list */
+.cr-list { display: flex; flex-direction: column; gap: 0.3rem; }
+.cr-item {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  padding: 0.5rem 0.75rem; cursor: pointer; transition: all 0.15s;
+  display: flex; flex-direction: column; gap: 0.2rem;
+}
+.cr-item:hover {
+  border-color: var(--accent);
+  box-shadow: 0 1px 6px rgba(99,102,241,0.08);
+}
+.cr-item-cmd {
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.cr-item-cmd code {
+  flex: 1; font-size: 0.72rem; font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  color: var(--ink); word-break: break-all; line-height: 1.4;
+}
+.cr-copy-icon {
+  font-size: 0.65rem; color: var(--ink-soft); flex-shrink: 0;
+  transition: color 0.15s; min-width: 55px; text-align: right;
+}
+.cr-copied { color: var(--color-profit); font-weight: 600; }
+.cr-item-desc {
+  font-size: 0.65rem; color: var(--ink-soft);
+}
+
+/* Footer */
+.cr-footer {
+  margin-top: 1.5rem; padding-top: 0.75rem; border-top: 1px solid var(--line);
+  font-size: 0.68rem; color: var(--ink-soft); line-height: 1.6;
+}
+.cr-footer code {
+  font-size: 0.65rem; background: rgba(128,128,128,0.1); padding: 1px 5px; border-radius: 3px;
+}
+.cr-footer a { color: var(--accent); }
+
+@media (max-width: 760px) {
+  .cr-page { padding: 0.75rem 0.6rem; }
+  .cr-item-cmd code { font-size: 0.65rem; }
+}

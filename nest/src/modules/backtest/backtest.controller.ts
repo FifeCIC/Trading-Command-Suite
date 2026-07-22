@@ -19,7 +19,12 @@ export class BacktestController {
   @ApiOperation({ summary: 'Run backtest for a symbol over N days' })
   @ApiOkResponse({ description: 'Backtest result with entry signals and stats' })
   async run(@Body() body: BacktestRunRequest) {
-    return this.backtestService.run(body);
+    try {
+      return await this.backtestService.run(body);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { error: true, message: message || 'Backtest failed — check symbol, days range, or data availability' };
+    }
   }
 
   @Get('results/:runId')

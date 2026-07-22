@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
-import Notice from '../components/Notice';
 import './speed-scanner.css';
 
 const SCAN_INTERVALS = [5000, 10000, 15000, 30000, 60000];
@@ -31,6 +30,12 @@ export default function SpeedScannerPage() {
   });
   const [tradeResult, setTradeResult] = useState(null);
   const queryClient = useQueryClient();
+
+  // Read "Include Inactive Protocols" from Screen Options preference
+  const includeInactive = (() => {
+    try { return localStorage.getItem('ss-include-inactive') === 'true'; }
+    catch { return false; }
+  })();
 
   const scanQuery = useQuery({
     queryKey: ['speed', 'scan'],
@@ -88,6 +93,9 @@ export default function SpeedScannerPage() {
     if (filterSignal === 'buy') list = list.filter(s => s.signal === 'buy');
     else if (filterSignal === 'sell') list = list.filter(s => s.signal === 'sell');
 
+    // Filter inactive protocols (unless explicitly included)
+    if (!includeInactive) list = list.filter(s => s.protocolActive !== false);
+
     // Sort
     switch (sortBy) {
       case 'adx': list.sort((a, b) => (b.trend?.adx || 0) - (a.trend?.adx || 0)); break;
@@ -132,15 +140,6 @@ export default function SpeedScannerPage() {
 
       {!apiOnline && <ApiOfflineBanner />}
       {isLoading && <LoadingSkeleton variant="text" lines={8} />}
-
-      {/* Explainer */}
-      {!isLoading && (
-        <Notice level="info" title="How Speed Scanner works">
-          Scores each symbol across all active directives in real-time. <strong>Composite %</strong> = percentage of max possible score. <strong>Trend clarity</strong> is derived from ADX + pattern count. 
-          Recommendations are <strong>trade</strong> (strong signal with clear trend), <strong>caution</strong> (mixed signals), or <strong>pause</strong> (weak/conflicting). 
-          Scores follow the protocol's directional bias — a low composite on a short-biased protocol may still signal SELL. Trust the recommendation over raw composite for direction.
-        </Notice>
-      )}
 
       {/* Summary bar */}
       {!isLoading && (

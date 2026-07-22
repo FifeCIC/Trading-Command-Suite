@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
 import LoadingSkeleton from '../components/LoadingSkeleton'
@@ -64,6 +65,7 @@ function toneForStatus(status) {
 }
 
 export default function DirectivesManagerPage() {
+  const navigate = useNavigate();
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState(null)
   const [expandedRows, setExpandedRows] = useState(() => new Set())
@@ -130,23 +132,8 @@ export default function DirectivesManagerPage() {
     }
   }, [filtered, selectedId])
 
-  function toggleRow(id) {
-    setExpandedRows((previous) => {
-      const next = new Set(previous)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-    selectDirective(id)
-  }
-
   function selectDirective(id) {
     setSelectedId(id)
-    // Single-expand: close all other rows
-    setExpandedRows(new Set([id]))
   }
 
   // Loading state
@@ -222,17 +209,14 @@ export default function DirectivesManagerPage() {
                 <th>Status</th>
                 <th>Class</th>
                 <th>Complexity</th>
-                <th>AVG Score</th>
                 <th>RUNS</th>
                 <th>BIAS</th>
                 <th>Protocols</th>
                 <th>Weighting</th>
-                <th>Tests</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((item) => {
-                const expanded = expandedRows.has(item.id)
                 const selectedRow = selected?.id === item.id
                 const statusTone = toneForStatus(item.status)
 
@@ -240,20 +224,19 @@ export default function DirectivesManagerPage() {
                   <Fragment key={item.id}>
                     <tr
                       className={`directive-row ${selectedRow ? 'is-selected' : ''}`}
-                      onClick={() => {
-                        if (selected?.id === item.id) {
-                          toggleRow(item.id);
-                        } else {
-                          selectDirective(item.id);
-                        }
-                      }}
+                      onClick={() => selectDirective(item.id)}
                       style={{ cursor: 'pointer' }}
                     >
                       <td>
                         <span className="directive-primary">
-                          <span className="directive-chevron" aria-hidden="true">{expanded ? '▾' : '▸'}</span>
                           <span>
-                            <strong>{item.name}</strong>
+                            <a
+                              href={`/scoring/directives/${item.id}`}
+                              onClick={(e) => { e.preventDefault(); navigate(`/scoring/directives/${item.id}`); }}
+                              style={{ color: 'var(--accent)', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600 }}
+                            >
+                              {item.name}
+                            </a>
                             <small style={{ color: '#60a5fa', fontFamily: 'monospace' }}>{item.code}</small>
                           </span>
                         </span>
@@ -288,7 +271,6 @@ export default function DirectivesManagerPage() {
                           {item.complexity}
                         </span>
                       </td>
-                      <td style={{ fontWeight: 700, color: (item.avgScore ?? 0) > 60 ? '#22c55e' : (item.avgScore ?? 0) < 40 ? '#ef4444' : 'var(--ink)' }}>{item.avgScore ?? '—'}</td>
                       <td>{item.runs ?? '—'}</td>
                       <td style={{ fontWeight: 700, color: item.bias === 'bullish' ? '#22c55e' : item.bias === 'bearish' ? '#ef4444' : 'var(--ink-soft)' }}>{item.bias ?? '—'}</td>
                       <td style={{ color: item.protocolCount > 0 ? 'var(--accent)' : 'var(--ink-soft)' }}>
@@ -301,36 +283,7 @@ export default function DirectivesManagerPage() {
                           {item.multiplierEnabled ? ' xmult' : ''}
                         </span>
                       </td>
-                      <td>{item.testCoverage}%</td>
                     </tr>
-                    {expanded && (
-                      <tr className="directive-expand">
-                        <td colSpan={10}>
-                          <div className="directive-expand-grid">
-                            <div>
-                              <h3>Formula</h3>
-                              <p>{item.formula}</p>
-                            </div>
-                            <div>
-                              <h3>Inputs</h3>
-                              <ul>
-                                {item.inputs.map((entry) => (
-                                  <li key={entry}>{entry}</li>
-                                ))}
-                              </ul>
-                            </div>
-                            <div>
-                              <h3>Tests</h3>
-                              <ul>
-                                {item.tests.map((entry) => (
-                                  <li key={entry}>{entry}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
                   </Fragment>
                 )
               })}
@@ -371,14 +324,10 @@ export default function DirectivesManagerPage() {
               </section>
 
               <section className="directive-detail-section">
-                <h3>Test Results</h3>
-                <div className="directive-detail-test-results">
-                  <span>Last run: {selected.lastReview}</span>
-                  <span>Coverage: {selected.testCoverage}%</span>
-                  {(selected.testCoverage > 0 || selected.lastReview !== '—') && (
-                    <button type="button" className="directive-detail-btn directive-btn-test">Run Test</button>
-                  )}
-                </div>
+                <h3>Formula</h3>
+                <p style={{ fontSize: '0.82rem', color: 'var(--ink-soft)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                  {selected.description || selected.formula || 'No formula description available.'}
+                </p>
               </section>
 
               <section className="directive-detail-section">

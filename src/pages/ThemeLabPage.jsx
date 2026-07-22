@@ -6,7 +6,6 @@ const LAB_SECTIONS = [
   { id: 'theme-lab-motion', label: 'Motion Lab', desc: 'Animation library examples — enter/exit, hover, layout, gestures', icon: '◆' },
   { id: 'theme-lab-transitions', label: 'Transitions Lab', desc: 'Page-to-page crossfade via View Transitions API', icon: '⇢' },
   { id: 'theme-lab-scroll', label: 'Scroll Animations', desc: 'Scroll-driven effects — parallax, reveal, header shrink', icon: '⇣' },
-  { id: 'theme-lab-container', label: 'Container Queries', desc: 'Responsive components based on their own size, not viewport. In Development area.', icon: '⊡' },
   { id: 'theme-lab-popover', label: 'Popover API', desc: 'Native browser popovers — tooltips, menus, dialogs. In Development area.', icon: '◉' },
 ];
 
@@ -82,7 +81,7 @@ export default function ThemeLabPage() {
               key={s.id}
               type="button"
               className="tl-lab-card"
-              onClick={() => navigate(s.id === 'theme-lab-container' || s.id === 'theme-lab-popover' ? `/builder/${s.id}` : `/lab/${s.id}`)}
+              onClick={() => navigate(`/lab/${s.id}`)}
             >
               <span className="tl-lab-icon">{s.icon}</span>
               <div className="tl-lab-info">
@@ -379,6 +378,72 @@ export default function ThemeLabPage() {
         <details className="tl-code-block" style={{ marginTop: '1.5rem' }}>
           <summary>CSS Classes Reference</summary>
           <pre className="tl-pre">{FORM_STANDARD_CLASSES}</pre>
+        </details>
+      </section>
+
+      {/* ── Container Queries Demo ─────────────────────────── */}
+      <section className="tl-section" id="container-queries">
+        <h2>⊡ Container Queries</h2>
+        <p className="tl-subtitle">
+          Components that respond to their <strong>own size</strong>, not the viewport. Universally supported (Chrome 105+, Safari 16+, Firefox 110+).
+          Use with <code>@supports (container-type: inline-size)</code> fallback for older browsers.
+        </p>
+
+        <h3 style={{ fontSize: '0.85rem', margin: '1rem 0 0.5rem' }}>Resize Demo</h3>
+        <p style={{ fontSize: '0.75rem', color: 'var(--ink-soft)' }}>Drag the bottom-right corner. Layout changes at 400px and 600px.</p>
+
+        <div style={{
+          containerType: 'inline-size', containerName: 'cq-demo',
+          width: '100%', maxWidth: '700px', minWidth: '250px', resize: 'horizontal', overflow: 'auto',
+          padding: '1rem', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--line)', borderRadius: 10,
+        }}>
+          <div style={{ fontSize: '0.7rem', color: 'var(--ink-soft)', marginBottom: '0.5rem' }}>↔ Drag bottom-right corner</div>
+          <div className="cq-demo-inner" style={{ display: 'grid', gap: '0.5rem' }}>
+            <style>{`
+              @container cq-demo (max-width: 400px) {
+                .cq-demo-inner { grid-template-columns: 1fr; }
+                .cq-card { font-size: 0.72rem; padding: 0.4rem 0.5rem; }
+                .cq-card .cq-card-title { font-size: 0.75rem; }
+                .cq-card .cq-card-meta { display: none; }
+              }
+              @container cq-demo (min-width: 401px) and (max-width: 600px) {
+                .cq-demo-inner { grid-template-columns: 1fr 1fr; }
+                .cq-card { font-size: 0.78rem; padding: 0.6rem 0.75rem; }
+              }
+              @container cq-demo (min-width: 601px) {
+                .cq-demo-inner { grid-template-columns: 1fr 1fr 1fr; }
+                .cq-card { font-size: 0.82rem; padding: 0.75rem 1rem; }
+              }
+            `}</style>
+            {['AAPL $198.32', 'NVDA $129.14', 'TSLA $227.91', 'MSFT $462.75', 'AMD $94.12', 'SPY $548.20'].map((s) => {
+              const [sym, price] = s.split(' ');
+              return (
+                <div key={sym} className="cq-card" style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 8, padding: '0.5rem' }}>
+                  <span className="cq-card-title" style={{ fontWeight: 600 }}>{sym}</span>
+                  <span style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{price}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <details style={{ marginTop: '1rem' }}>
+          <summary style={{ fontSize: '0.78rem', cursor: 'pointer' }}>CSS Pattern</summary>
+          <pre style={{ fontSize: '0.7rem', color: 'var(--ink-soft)', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: 8, overflow: 'auto', marginTop: '0.5rem' }}>
+{`.widget-grid {
+  container-type: inline-size;
+  container-name: widget-grid;
+}
+@container widget-grid (max-width: 400px) {
+  .widget-card { grid-template-columns: 1fr; font-size: 0.75rem; }
+}
+@container widget-grid (min-width: 601px) {
+  .widget-card { grid-template-columns: 1fr 1fr 1fr; font-size: 0.85rem; }
+}
+@supports not (container-type: inline-size) {
+  .widget-card { grid-template-columns: 1fr; }
+}`}
+          </pre>
         </details>
       </section>
     </div>

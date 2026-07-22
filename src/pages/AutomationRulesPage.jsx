@@ -57,7 +57,7 @@ export default function AutomationRulesPage() {
     <div className="pf-page">
       <div className="pf-header">
         <div>
-          <h1>Bot Rules</h1>
+          <h1>Automation Rules</h1>
           <p className="pf-hint" style={{ margin: 0 }}>
             Global safety rails — these are hard limits that no strategy can bypass.
           </p>

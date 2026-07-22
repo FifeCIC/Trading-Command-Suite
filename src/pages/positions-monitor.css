@@ -74,6 +74,17 @@
   text-transform: uppercase;
   font-weight: 600;
 }
+/* MT5 ticket badge */
+.pm-pos-ticket {
+  font-size: 0.58rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(100,116,139,0.1);
+  color: var(--ink-soft);
+  font-family: monospace;
+  font-weight: 500;
+}
+}
 
 /* Position cards */
 .pm-positions {

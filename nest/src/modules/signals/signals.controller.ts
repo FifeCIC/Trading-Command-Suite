@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param, Query, Logger } from '@nestjs/common';
 import { SignalsService } from './signals.service';
 import { SignalEnvelopeService } from './signal-envelope.service';
+import { SignalLadderDto } from './dto/signal-ladder.dto';
 
 @Controller('signals')
 export class SignalsController {
@@ -63,10 +64,12 @@ export class SignalsController {
    *
    * Same as GET ladder but accepts a JSON body with symbols array.
    * Preferred for portfolio-scoped requests.
+   *
+   * Supports single protocol (protocol) or multi-protocol comparison (protocols[]).
    */
   @Post('ladder')
   async postLadder(
-    @Body() body: { symbols: string[]; protocol?: string },
+    @Body() body: SignalLadderDto,
   ) {
     if (!body.symbols || body.symbols.length === 0) {
       return {
@@ -77,6 +80,16 @@ export class SignalsController {
         message: 'No symbols provided.',
       };
     }
+
+    // Multi-protocol comparison mode (#412)
+    if (body.protocols && body.protocols.length > 0) {
+      return this.envelopeService.buildComparisonLadder(
+        body.symbols,
+        body.protocols,
+        true, // resolveSymbolIds for DB-backed validation
+      );
+    }
+
     return this.envelopeService.buildLadder(body.symbols, body.protocol);
   }
 

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { apiGet } from '../core/api/client';
+import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import './HotStockPicksPage.css';
@@ -18,6 +18,7 @@ const DETECTION_FILTERS = [
 
 export default function HotStockPicksPage() {
   const [filter, setFilter] = useState('all');
+  const qc = useQueryClient();
 
   const rankedQuery = useQuery({
     queryKey: ['hot-picks-ranked'],
@@ -25,6 +26,34 @@ export default function HotStockPicksPage() {
     refetchInterval: REFRESH_MS,
     staleTime: 30_000,
   });
+
+  // Active strategies for META.Stack cross-reference
+  const strategiesQuery = useQuery({
+    queryKey: ['hot-picks-strategies'],
+    queryFn: () => apiGet('/api/trading/strategies').catch(() => ({ strategies: [] })),
+    staleTime: 60_000,
+  });
+
+  // Current priority queue
+  const priorityQuery = useQuery({
+    queryKey: ['hot-picks-priority'],
+    queryFn: () => apiGet('/api/automation/priority').catch(() => []),
+    refetchInterval: 15_000,
+  });
+
+  const boostMutation = useMutation({
+    mutationFn: (body) => apiPost('/api/automation/priority', body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hot-picks-priority'] }),
+  });
+
+  const removePriorityMutation = useMutation({
+    mutationFn: ({ scoringStrategyId, symbol }) =>
+      apiGet(`/api/automation/priority?scoringStrategyId=${scoringStrategyId}&symbol=${symbol}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hot-picks-priority'] }),
+  });
+
+  const strategies = strategiesQuery.data?.strategies || [];
+  const priorityQueue = Array.isArray(priorityQuery.data) ? priorityQuery.data : [];
 
   const ranked = rankedQuery.data?.ranked ?? [];
   const isLoading = rankedQuery.isLoading && !rankedQuery.data;
@@ -175,6 +204,24 @@ export default function HotStockPicksPage() {
                     );
                   })}
                 </div>
+
+                {/* Priority boost section */}
+                <PriorityBoost
+                  pick={pick}
+                  strategies={strategies}
+                  priorityQueue={priorityQueue}
+                  onBoost={(strategy) => boostMutation.mutate({
+                    symbol: pick.ticker,
+                    scoringStrategyId: strategy.scoringStrategyId || strategy.id,
+                    strategyName: strategy.name,
+                    composite: pick.score,
+                  })}
+                  onRemove={(entry) => removePriorityMutation.mutate({
+                    scoringStrategyId: entry.scoringStrategyId,
+                    symbol: entry.symbol,
+                  })}
+                  boosting={boostMutation.isPending}
+                />
               </Link>
             );
           })}
@@ -186,6 +233,64 @@ export default function HotStockPicksPage() {
           Prototype · Data from scoring engine · Last updated: {new Date().toLocaleTimeString()}
         </span>
       </footer>
+    </div>
+  );
+}
+
+/** Priority boost UI — shown on each hot pick card */
+function PriorityBoost({ pick, strategies, priorityQueue, onBoost, onRemove, boosting }) {
+  // Find strategies that include this symbol
+  const matchingStrategies = strategies.filter(s =>
+    s.symbol?.toUpperCase() === pick.ticker?.toUpperCase() && s.active
+  );
+
+  // Check if already in priority queue
+  const alreadyBoosted = priorityQueue.filter(e => e.symbol === pick.ticker);
+
+  const handleBoost = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (matchingStrategies.length === 0) return;
+    onBoost(matchingStrategies[0]);
+  };
+
+  const handleRemove = (e, entry) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onRemove(entry);
+  };
+
+  return (
+    <div className="hsp-priority" onClick={e => e.preventDefault()}>
+      {alreadyBoosted.length > 0 ? (
+        <div className="hsp-priority-active">
+          ⚡ Prioritized · expires soon
+          {alreadyBoosted.map(entry => (
+            <button
+              key={entry.scoringStrategyId}
+              className="hsp-priority-remove"
+              onClick={e => handleRemove(e, entry)}
+              title="Remove priority"
+            >
+              ✕
+            </button>
+          ))}
+        </div>
+      ) : matchingStrategies.length > 0 ? (
+        <button
+          className="hsp-boost-btn"
+          onClick={handleBoost}
+          disabled={boosting || priorityQueue.length >= 3}
+          title={priorityQueue.length >= 3 ? 'Priority queue full (max 3)' : `Will execute via ${matchingStrategies[0].name}`}
+        >
+          {boosting ? '⏳' : '⚡'} Boost Priority
+          <span className="hsp-strategy-hint">{matchingStrategies[0].name}</span>
+        </button>
+      ) : (
+        <span className="hsp-no-strategy" title="This symbol is not part of any active trading strategy">
+          📡 Signal only — no strategy linked
+        </span>
+      )}
     </div>
   );
 }

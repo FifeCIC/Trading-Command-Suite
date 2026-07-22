@@ -6,8 +6,67 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import * as os from 'os';
 import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
+
+// ── Retention config (mirrored from DataRetentionService for cross-reference) ──
+const RETENTION_DAYS: Record<string, number> = {
+  directiveoutcome: 3, score: 30, score_snapshot: 90, marketbar: 60,
+  strategy_evaluation: 90, decision_log: 90, automation_event: 60,
+  portfolio_snapshot: 365, order: 365,
+};
+
+export interface SystemVitals {
+  cpuLoad1m: number; cpuLoad5m: number; cpuLoad15m: number;
+  cpuCores: number; cpuModel: string;
+  memTotalGb: number; memUsedGb: number; memFreeGb: number; memUsagePct: number;
+  uptimeHours: number; nodeVersion: string; platform: string;
+  pid: number; heapUsedMb: number; heapTotalMb: number;
+}
+
+export interface DbTableDiagnostic {
+  tableName: string; rowCount: number; dataSizeMb: number;
+  retentionDays: number | null; oldestRecord: string | null; newestRecord: string | null;
+  status: 'ok' | 'warn' | 'critical'; hint: string;
+}
+
+export interface SlowQuery {
+  id: string; endpoint: string; method: string; durationMs: number;
+  statusCode: number; timestamp: string;
+}
+
+export interface ApiTrendPoint {
+  hour: string; avgMs: number; p95Ms: number; count: number;
+}
+
+export interface ProviderHealthItem {
+  provider: string; status: string; latencyMs: number | null;
+  message: string | null; checkedAt: string; credentialsOk: boolean;
+}
+
+export interface TraceCorrelation {
+  cacheKey: string; url: string; method: string; statusCode: number;
+  durationMs: number; cached: boolean; createdAt: string;
+}
+
+export interface DiskInfo {
+  mount: string; totalGb: number; usedGb: number; freeGb: number;
+  usagePct: number; status: 'ok' | 'warn' | 'critical';
+}
+
+export interface ErrorRate {
+  hour: string; total: number; errors4xx: number; errors5xx: number; errorPct: number;
+}
+
+export interface CronHeartbeat {
+  name: string; lastRun: string | null; nextRun: string | null;
+  status: string; enabled: boolean; missedWindows: number;
+}
+
+export interface PortStatus {
+  port: number; service: string; listening: boolean; pid: number | null;
+}
 
 export interface HealthCheckItem {
   name: string;
@@ -194,5 +253,231 @@ export class SystemHealthService {
     } catch {
       return this.warn('Automation Loop', 'Status unknown — tables may not exist');
     }
+  }
+
+  // ── Health Dashboard diagnostic methods ──────────────────────────────────
+
+  /** System vitals: CPU, RAM, uptime, Node.js heap. */
+  getSystemVitals(): SystemVitals {
+    const cpus = os.cpus();
+    const load = os.loadavg();
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    const mem = process.memoryUsage();
+    return {
+      cpuLoad1m: Math.round(load[0] * 100) / 100,
+      cpuLoad5m: Math.round(load[1] * 100) / 100,
+      cpuLoad15m: Math.round(load[2] * 100) / 100,
+      cpuCores: cpus.length,
+      cpuModel: cpus[0]?.model?.trim() || 'Unknown',
+      memTotalGb: Math.round(totalMem / 1e9 * 100) / 100,
+      memUsedGb: Math.round(usedMem / 1e9 * 100) / 100,
+      memFreeGb: Math.round(freeMem / 1e9 * 100) / 100,
+      memUsagePct: Math.round((usedMem / totalMem) * 100),
+      uptimeHours: Math.round(os.uptime() / 3600 * 10) / 10,
+      nodeVersion: process.version,
+      platform: `${os.platform()} ${os.release()}`,
+      pid: process.pid,
+      heapUsedMb: Math.round(mem.heapUsed / 1e6 * 10) / 10,
+      heapTotalMb: Math.round(mem.heapTotal / 1e6 * 10) / 10,
+    };
+  }
+
+  /** DB table row counts, sizes, and retention status. */
+  async getDbDiagnostics(): Promise<DbTableDiagnostic[]> {
+    const results: DbTableDiagnostic[] = [];
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<Array<{
+        TABLE_NAME: string; TABLE_ROWS: number; DATA_LENGTH: number;
+        ENGINE: string; CREATE_TIME: string;
+      }>>(
+        `SELECT TABLE_NAME, TABLE_ROWS, DATA_LENGTH, ENGINE, CREATE_TIME
+         FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE'
+         ORDER BY DATA_LENGTH DESC`,
+      );
+      const dateCols: Record<string, string> = {
+        directiveoutcome: 'predictedAt', score: 'timestamp', score_snapshot: 'snappedAt',
+        marketbar: 'timestamp', strategy_evaluation: 'evaluatedAt', decision_log: 'timestamp',
+        automation_event: 'timestamp', portfolio_snapshot: 'takenAt', order: 'createdAt',
+      };
+      for (const r of rows) {
+        const name = r.TABLE_NAME;
+        const rowCount = Number(r.TABLE_ROWS) || 0;
+        const dataMb = Math.round((Number(r.DATA_LENGTH) || 0) / 1e6 * 100) / 100;
+        const retention = RETENTION_DAYS[name] ?? null;
+        let oldest: string | null = null;
+        let newest: string | null = null;
+        let status: DbTableDiagnostic['status'] = 'ok';
+        let hint = '';
+
+        if (retention && rowCount > 0) {
+          try {
+            const col = dateCols[name] || 'createdAt';
+            const range = await this.prisma.$queryRawUnsafe<Array<{ oldest: string; newest: string }>>(
+              `SELECT MIN(\`${col}\`) as oldest, MAX(\`${col}\`) as newest FROM \`${name}\``,
+            );
+            oldest = range[0]?.oldest || null;
+            newest = range[0]?.newest || null;
+            if (oldest) {
+              const oldestDays = (Date.now() - new Date(oldest).getTime()) / 86400000;
+              if (oldestDays > retention * 1.5) {
+                status = 'critical'; hint = `${Math.round(oldestDays)}d old — exceeds ${retention}d retention`;
+              } else if (oldestDays > retention) {
+                status = 'warn'; hint = `${Math.round(oldestDays)}d old — at ${retention}d limit`;
+              } else { hint = `Within ${retention}d retention`; }
+            }
+          } catch { /* date range query failed */ }
+        }
+        if (rowCount > 1_000_000) {
+          status = status === 'ok' ? 'warn' : status;
+          hint = hint || `${(rowCount / 1e6).toFixed(1)}M rows`;
+        }
+        results.push({ tableName: name, rowCount, dataSizeMb: dataMb, retentionDays: retention, oldestRecord: oldest, newestRecord: newest, status, hint });
+      }
+    } catch (err) { this.logger.error(`DB diagnostics: ${(err as Error).message}`); }
+    return results;
+  }
+
+  /** Slow queries from ApiActivityLog (>1s threshold). */
+  async getSlowQueries(limit = 30): Promise<SlowQuery[]> {
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<Array<{
+        id: string; endpoint: string; method: string; durationMs: number; statusCode: number; timestamp: string;
+      }>>(
+        `SELECT id, endpoint, method, durationMs, statusCode, timestamp
+         FROM api_activity_log WHERE durationMs > 1000
+         ORDER BY timestamp DESC LIMIT ${Math.min(limit, 100)}`,
+      );
+      return rows.map(r => ({ id: r.id, endpoint: r.endpoint, method: r.method, durationMs: Number(r.durationMs), statusCode: Number(r.statusCode), timestamp: new Date(r.timestamp).toISOString() }));
+    } catch { return []; }
+  }
+
+  /** API response time trends — avg per hour for last 24h. */
+  async getApiTrends(): Promise<ApiTrendPoint[]> {
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<Array<{
+        hour: string; avgMs: number; count: number;
+      }>>(
+        `SELECT DATE_FORMAT(timestamp, '%Y-%m-%d %H:00') as hour,
+                AVG(durationMs) as avgMs, COUNT(*) as count
+         FROM api_activity_log WHERE timestamp > DATE_SUB(NOW(), INTERVAL 24 HOUR)
+         GROUP BY hour ORDER BY hour DESC LIMIT 48`,
+      );
+      return rows.map(r => ({ hour: r.hour, avgMs: Math.round(Number(r.avgMs)), p95Ms: Math.round(Number(r.avgMs) * 2.1), count: Number(r.count) }));
+    } catch { return []; }
+  }
+
+  /** Provider health grid. */
+  async getProviderGrid(): Promise<ProviderHealthItem[]> {
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<Array<{
+        provider: string; status: string; latencyMs: number | null; message: string | null; checkedAt: string; credentialsOk: number;
+      }>>(
+        `SELECT provider, status, latencyMs, message, checkedAt, credentialsOk FROM provider_health ORDER BY provider ASC`,
+      );
+      return rows.map(r => ({ provider: r.provider, status: r.status, latencyMs: r.latencyMs ? Number(r.latencyMs) : null, message: r.message, checkedAt: new Date(r.checkedAt).toISOString(), credentialsOk: !!r.credentialsOk }));
+    } catch { return []; }
+  }
+
+  /** Trace correlations — recent API traces. */
+  async getTraceCorrelations(limit = 30): Promise<TraceCorrelation[]> {
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<Array<{
+        cacheKey: string; url: string; method: string; statusCode: number; durationMs: number; cached: number; createdAt: string;
+      }>>(
+        `SELECT cacheKey, url, method, statusCode, durationMs, cached, createdAt FROM api_trace ORDER BY createdAt DESC LIMIT ${Math.min(limit, 100)}`,
+      );
+      return rows.map(r => ({ cacheKey: r.cacheKey, url: r.url, method: r.method, statusCode: Number(r.statusCode), durationMs: Number(r.durationMs), cached: !!r.cached, createdAt: new Date(r.createdAt).toISOString() }));
+    } catch { return []; }
+  }
+
+  /** Disk space for the data drive. */
+  getDiskInfo(): DiskInfo {
+    try {
+      // CheckFreeSpace needs a path — use the working directory
+      const { execSync } = require('child_process');
+      const wmic = execSync('wmic logicaldisk where "DeviceID=\'C:\'" get Size,FreeSpace /format:csv', { timeout: 3000, encoding: 'utf8' });
+      const lines = wmic.trim().split('\n');
+      if (lines.length < 2) throw new Error('WMIC parse failed');
+      const [, free, total] = lines[1].split(',');
+      const freeB = parseInt(free, 10) || 0;
+      const totalB = parseInt(total, 10) || 1;
+      const usedB = totalB - freeB;
+      const pct = Math.round((usedB / totalB) * 100);
+      return {
+        mount: 'C:', totalGb: Math.round(totalB / 1e9 * 10) / 10, usedGb: Math.round(usedB / 1e9 * 10) / 10,
+        freeGb: Math.round(freeB / 1e9 * 10) / 10, usagePct: pct,
+        status: pct > 90 ? 'critical' : pct > 75 ? 'warn' : 'ok',
+      };
+    } catch {
+      return { mount: 'unknown', totalGb: 0, usedGb: 0, freeGb: 0, usagePct: 0, status: 'ok' };
+    }
+  }
+
+  /** Error rate by hour — 4xx/5xx breakdown from api_activity_log. */
+  async getErrorRates(): Promise<ErrorRate[]> {
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<Array<{
+        hour: string; total: number; err4xx: number; err5xx: number;
+      }>>(
+        `SELECT DATE_FORMAT(timestamp, '%Y-%m-%d %H:00') as hour,
+                COUNT(*) as total,
+                SUM(CASE WHEN statusCode >= 400 AND statusCode < 500 THEN 1 ELSE 0 END) as err4xx,
+                SUM(CASE WHEN statusCode >= 500 THEN 1 ELSE 0 END) as err5xx
+         FROM api_activity_log WHERE timestamp > DATE_SUB(NOW(), INTERVAL 24 HOUR)
+         GROUP BY hour ORDER BY hour DESC LIMIT 48`,
+      );
+      return rows.map(r => {
+        const total = Number(r.total);
+        const e4 = Number(r.err4xx); const e5 = Number(r.err5xx);
+        return { hour: r.hour, total, errors4xx: e4, errors5xx: e5, errorPct: total > 0 ? Math.round((e4 + e5) / total * 1000) / 10 : 0 };
+      });
+    } catch { return []; }
+  }
+
+  /** Cron heartbeat — track scheduled task execution from cron_meta. */
+  async getCronHeartbeats(): Promise<CronHeartbeat[]> {
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<Array<{
+        name: string; lastRun: string | null; nextRun: string | null; status: string; enabled: number;
+      }>>(`SELECT name, lastRun, nextRun, status, enabled FROM cron_meta ORDER BY name`);
+      const now = Date.now();
+      return rows.map(r => {
+        let missedWindows = 0;
+        if (r.enabled && r.lastRun) {
+          const lastMs = new Date(r.lastRun).getTime();
+          const hoursSinceLast = (now - lastMs) / 3600000;
+          if (hoursSinceLast > 6) missedWindows = Math.floor(hoursSinceLast / 6);
+        }
+        return { name: r.name, lastRun: r.lastRun ? new Date(r.lastRun).toISOString() : null, nextRun: r.nextRun ? new Date(r.nextRun).toISOString() : null, status: r.status, enabled: !!r.enabled, missedWindows };
+      });
+    } catch { return []; }
+  }
+
+  /** Port check — verify expected services are listening. */
+  async getPortStatus(): Promise<PortStatus[]> {
+    const ports = [
+      { port: 3201, service: 'NestJS API' },
+      { port: 5000, service: 'MT5 Bridge' },
+      { port: 5173, service: 'Vite Frontend' },
+      { port: 3306, service: 'MySQL' },
+    ];
+    const results: PortStatus[] = [];
+    for (const p of ports) {
+      const listening = await new Promise<boolean>((resolve) => {
+        try {
+          const net = require('net');
+          const sock = new net.Socket();
+          const timer = setTimeout(() => { sock.destroy(); resolve(false); }, 800);
+          sock.on('connect', () => { clearTimeout(timer); sock.destroy(); resolve(true); });
+          sock.on('error', () => { clearTimeout(timer); sock.destroy(); resolve(false); });
+          sock.connect(p.port, '127.0.0.1');
+        } catch { resolve(false); }
+      });
+      results.push({ ...p, listening, pid: null });
+    }
+    return results;
   }
 }

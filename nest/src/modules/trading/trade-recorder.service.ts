@@ -22,6 +22,13 @@ export interface TradeRecord {
   status: 'open' | 'closed' | 'rejected';
   origin?: 'user' | 'agent' | 'strategy' | 'system';
   openedAt?: Date;
+  /** MT5 broker fields for traceability */
+  ticket?: number;
+  sl?: number;
+  tp?: number;
+  magic?: number;
+  swap?: number;
+  brokerComment?: string;
 }
 
 @Injectable()
@@ -51,6 +58,13 @@ export class TradeRecorderService {
           origin: trade.origin || 'user',
           openedAt: trade.openedAt || new Date(),
           closedAt: trade.status === 'closed' ? new Date() : null,
+          // MT5 traceability (#446)
+          ticket: trade.ticket ?? null,
+          sl: trade.sl ?? null,
+          tp: trade.tp ?? null,
+          magic: trade.magic ?? null,
+          swap: trade.swap ?? null,
+          brokerComment: trade.brokerComment ?? null,
         },
       });
 

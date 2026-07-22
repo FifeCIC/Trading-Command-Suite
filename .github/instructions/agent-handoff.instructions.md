@@ -9,7 +9,44 @@ When you complete ANY code change (feature, bug fix, refactor, test, documentati
 
 **Do not make decisions about whether the change is "big enough."** Every change gets a handoff. The Librarian decides what to batch and when.
 
-## ⚠️ GitHub CLI — Use the wrapper script
+## ⚠️ Inline Documentation Comments — ALWAYS APPLY
+
+When you edit code, you MUST add a documentation comment if you spent **3+ search/read operations** understanding the pattern before editing. These comments save future agents (and human developers) from re-discovering the same information.
+
+### Comment format — system context blocks
+
+Every function that is part of a larger pipeline should have a header comment showing its position:
+
+```js
+/**
+ * closePosition() — STEP 5 of 6 in the trade lifecycle pipeline.
+ * BEFORE: placeOrder() records the open trade with strategy tag.
+ * AFTER:  tradeRecorder.record() persists the closed trade to DB.
+ * NEXT:   Strategy Comparison page reads closed trades grouped by strategy.
+ *
+ * ⚠️ WARNING: MT5 position comments contain the strategy name.
+ * The comment format is "Strategy Name | Score%". Do NOT change
+ * the split logic without updating placeOrder()'s comment format.
+ */
+```
+
+### What to document
+
+| Situation | Minimum comment |
+|-----------|----------------|
+| Function is part of a pipeline | Which step, what comes before/after |
+| Complex non-obvious logic | Why it works this way, not what it does |
+| Data format contract | The exact format of data crossing a boundary |
+| Known gotcha or fragile point | ⚠️ WARNING with the specific risk |
+| Integration with another system | Which system, which endpoint/file |
+
+### Signal: don't comment the obvious
+
+If the code reads clearly on its own, don't add a comment. Comments are for **non-obvious** system context, not for paraphrasing code.
+
+### After writing the comment
+
+Mention it in your handoff file so the Librarian notes it in the Architecture Framework.
 
 Running `gh` directly in PowerShell produces hundreds of lines of cosmetic parser errors (harmless but noisy). **Use the wrapper script instead** — it filters out the noise:
 

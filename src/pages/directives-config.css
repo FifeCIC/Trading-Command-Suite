@@ -171,6 +171,52 @@
   white-space: nowrap;
 }
 
+/* ── Remove button ── */
+.dc-remove-btn {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.dc-remove-btn:hover:not(:disabled) {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.dc-remove-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Version badge ── */
+.dc-version {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  color: var(--accent);
+  font-size: 0.65rem;
+  font-weight: 700;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+
+/* ── Lock icon ── */
+.dc-lock-icon {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.9rem;
+  text-decoration: none;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
 /* ---- Weight slider ---- */
 
 .dc-weight-row {

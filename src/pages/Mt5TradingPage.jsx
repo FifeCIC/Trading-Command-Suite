@@ -190,10 +190,10 @@ export default function Mt5TradingPage() {
     }
 
     try {
-      const res = await fetch('/api/providers/mt5/order', {
+      const res = await fetch('/api/trading/mt5/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(order),
+        body: JSON.stringify({ ...order, origin: 'user' }),
       });
       const data = await res.json();
       if (data.success) {

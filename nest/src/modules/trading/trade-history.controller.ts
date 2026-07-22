@@ -7,6 +7,7 @@
 import { Controller, Get, Query, Logger } from '@nestjs/common';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
 import { PrismaService } from '../../database/prisma.service';
+import { Mt5TradingService } from './mt5-trading.service';
 
 @Controller('trading')
 export class TradeHistoryController {
@@ -15,6 +16,7 @@ export class TradeHistoryController {
   constructor(
     private readonly tradeRecorder: TradeRecorderService,
     private readonly prisma: PrismaService,
+    private readonly mt5: Mt5TradingService,
   ) {}
 
   /** Get trade history from the audit trail (all providers) */
@@ -132,7 +134,7 @@ export class TradeHistoryController {
       };
     }).sort((a, b) => b.totalPnl - a.totalPnl);
 
-    // ── 2. Live positions from DB (open trades ≤ 7 days old) ──
+    // ── 2. Live positions — DB first, MT5 bridge fallback ──
     const staleThreshold = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const openTrades = await this.prisma.trade.findMany({
       where: { 
@@ -144,23 +146,54 @@ export class TradeHistoryController {
     }).catch(() => []);
 
     const liveByStrategy = new Map<string, any[]>();
-    for (const t of openTrades) {
-      const key = t.strategy || 'manual';
-      if (!liveByStrategy.has(key)) liveByStrategy.set(key, []);
-      liveByStrategy.get(key)!.push({
-        symbol: t.symbol,
-        side: t.side,
-        quantity: t.quantity,
-        entryPrice: t.entryPrice,
-        pnl: t.pnl || 0,
-        openedAt: t.openedAt,
-        provider: t.provider,
-      });
+    let liveSource = 'DB (stale-filtered, ≤7 days)';
+
+    if (openTrades.length > 0) {
+      for (const t of openTrades) {
+        const key = t.strategy || 'manual';
+        if (!liveByStrategy.has(key)) liveByStrategy.set(key, []);
+        liveByStrategy.get(key)!.push({
+          symbol: t.symbol,
+          side: t.side,
+          quantity: t.quantity,
+          entryPrice: t.entryPrice,
+          pnl: t.pnl || 0,
+          openedAt: t.openedAt,
+          provider: t.provider,
+        });
+      }
+    } else {
+      // Fallback: query MT5 bridge directly
+      try {
+        const mt5Positions = await this.mt5.getPositions();
+        for (const p of mt5Positions) {
+          const rawComment = (p.comment || '').replace(/^TCS\s+/, '');
+          const strategyKey = rawComment.replace(/\s+\d+$/, '') || 'unknown';
+          if (!liveByStrategy.has(strategyKey)) liveByStrategy.set(strategyKey, []);
+          liveByStrategy.get(strategyKey)!.push({
+            symbol: p.symbol,
+            side: p.type === 0 ? 'buy' : 'sell',
+            quantity: p.volume,
+            entryPrice: p.price_open,
+            currentPrice: p.price_current,
+            pnl: p.profit || 0,
+            openedAt: new Date(p.time * 1000).toISOString(),
+            ticket: p.ticket,
+            sl: p.sl,
+            tp: p.tp,
+            provider: 'mt5',
+          });
+        }
+        liveSource = 'MT5 bridge (live positions)';
+      } catch (err) {
+        this.logger.warn(`MT5 bridge unavailable for live positions: ${(err as Error).message}`);
+        liveSource = 'MT5 bridge unavailable';
+      }
     }
 
     return {
       generatedAt: new Date().toISOString(),
-      liveSource: 'DB (stale-filtered, ≤7 days). Long-term: wire to MT5/T212 position endpoints.',
+      liveSource,
       showdown,
       livePositions: Array.from(liveByStrategy.entries()).map(([strategy, positions]) => ({
         strategy,

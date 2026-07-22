@@ -8,8 +8,8 @@ export class AlertsController {
   constructor(private readonly alertsService: AlertsService) {}
 
   @Get('active')
-  getActive(): Alert[] {
-    return this.alertsService.getActive();
+  async getActive() {
+    return this.alertsService.getActiveAsync();
   }
 
   @Get('history')
@@ -18,31 +18,27 @@ export class AlertsController {
   }
 
   @Get('count')
-  getCount() {
+  async getCount() {
     return this.alertsService.getAlertCount();
   }
 
   @Post(':id/acknowledge')
-  acknowledge(@Param('id') id: string) {
-    const result = this.alertsService.acknowledge(id);
-    if (!result) return { error: 'Alert not found' };
-    this.logger.log(`Alert acknowledged: ${id}`);
-    return result;
+  async acknowledge(@Param('id') id: string) {
+    const ok = await this.alertsService.acknowledge(id);
+    if (!ok) return { error: 'Alert not found' };
+    return { success: true };
   }
 
   @Post(':id/dismiss')
-  dismiss(@Param('id') id: string) {
-    const result = this.alertsService.dismiss(id);
-    if (!result) return { error: 'Alert not found' };
-    this.logger.log(`Alert dismissed: ${id}`);
-    return result;
+  async dismiss(@Param('id') id: string) {
+    const ok = await this.alertsService.dismiss(id);
+    if (!ok) return { error: 'Alert not found' };
+    return { success: true };
   }
 
   @Post(':id/snooze')
   snooze(@Param('id') id: string, @Body() body?: { minutes?: number }) {
-    const result = this.alertsService.snooze(id, body?.minutes || 15);
-    if (!result) return { error: 'Alert not found' };
-    return result;
+    return { error: 'Snooze not yet implemented for DB-backed alerts' };
   }
 
   @Get('config')

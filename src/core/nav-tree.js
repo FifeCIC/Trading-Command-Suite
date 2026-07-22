@@ -55,12 +55,12 @@ export const NAV_TREE = {
     label: 'Scoring',
     views: [
       { id: 'directives-manager', label: 'Directives', icon: '◆' },
+      { id: 'directive-detail', label: 'Directive Detail', icon: '🔬', hidden: true },
       { id: 'configure-directives', label: 'Protocol Editor', icon: '⚙' },
-      { id: 'live-ordering-stack', label: 'Live Ordering Stack', icon: '◉' },
+      { id: 'live-ordering-stack', label: 'Ladder', icon: '◉' },
       { id: 'signals-workbench', label: 'Scoring Workbench', icon: '◈' },
       { id: 'exit-signals', label: 'Exit Signals', icon: '🚪' },
-      { id: 'sees-arena', label: 'SEES Arena', icon: '◆' },
-      { id: 'protocols', label: 'Protocols 📋', icon: '📋' },
+      { id: 'sees-arena', label: 'SEES Arena', icon: '◆' },      { id: 'strategy-ladders', label: 'Strategy Ladders', icon: '🪜' },      { id: 'protocols', label: 'Protocols 📋', icon: '📋' },
       { id: 'create-protocols', label: 'Create Protocols', icon: '⊞' },
       { id: 'scoring-runs', label: 'Scoring Runs', icon: '◈' },
       { id: 'scoring-activity-logs', label: 'Scoring Activity Logs', icon: '▤' },
@@ -75,6 +75,7 @@ export const NAV_TREE = {
       { id: 'strategy-dashboard', label: 'Strategy Dashboard', icon: '📊' },
       { id: 'create-strategy', label: 'Create Strategy', icon: '⊞' },
       { id: 'strategy-comparison', label: 'Strategy Comparison', icon: '⚖' },
+      { id: 'performance-lab', label: 'Trading Performance', icon: '📊' },
       { id: 'trade-journal', label: 'Trade Journal', icon: '▤' },
       { id: 'trading-plans', label: 'Trading Plans', icon: '📋' },
       { id: 'calculators', label: 'Calculators', icon: '⊞' },
@@ -88,8 +89,7 @@ export const NAV_TREE = {
       { id: 'decision-trail', label: 'Decision Trail', icon: '🔗' },
       { id: 'speed-scanner', label: 'Speed Scanner', icon: '⚡' },
       { id: 'execution-queue', label: 'Execution Queue', icon: '⇢' },
-      { id: 'strategies-compare', label: 'Multi-Strategy Compare', icon: '⇆' },
-      { id: 'automation-rules', label: 'Bot Rules', icon: '⚙' },
+      { id: 'automation-rules', label: 'Automation Rules', icon: '⚙' },
       { id: 'alert-center', label: 'Alert Center', icon: '◈' },
     ],
   },
@@ -98,12 +98,7 @@ export const NAV_TREE = {
     views: [
       { id: 'architecture-framework', label: 'Architecture', icon: '⬡' },
       { id: 'diagrams', label: 'Diagrams', icon: '▦' },
-      { id: 'assets', label: 'Assets', icon: '⊞' },
       // ── Lab (remaining) ──
-      { id: 'theme-lab-container', label: 'Container Queries', icon: '⊡' },
-      { id: 'algorithm-lab', label: 'Algorithm Log', icon: '📐' },
-      { id: 'backtest', label: 'Backtest Engine', icon: '⬡' },
-      { id: 'performance-lab', label: 'Protocol Performance', icon: '📊' },
     ],
   },
   training: {
@@ -112,6 +107,7 @@ export const NAV_TREE = {
       { id: 'candle-patterns', label: 'Pattern Detection', icon: '🕯️' },
       { id: 'candle-patterns-guide', label: 'Candle Patterns', icon: '◉' },
       { id: 'mt5-demo-trading', label: 'MT5 Demo Trading', icon: '🎮' },
+      { id: 'backtest', label: 'Backtest Engine', icon: '⬡' },
     ],
   },
   status: {
@@ -119,6 +115,9 @@ export const NAV_TREE = {
     views: [
       // ── System Health ──
       { id: 'status', label: 'System Status', icon: '◉' },
+      { id: 'health-check', label: 'Health & Diagnostics', icon: '🩺' },
+      { id: 'commands', label: 'Commands Reference', icon: '💻' },
+      { id: 'system-log', label: 'System Log', icon: '📋' },
       // ── Platform ──
       { id: 'platform-api-management', label: 'API Management', icon: '⚙' },
       { id: 'platform-comparisons', label: 'API Comparisons', icon: '▤' },
@@ -165,12 +164,7 @@ export const NAV_TREE = {
       { id: 'ab-testing', label: 'A/B Protocol Testing', icon: '⚖️' },
       { id: 'ai-costs', label: 'AI Costs', icon: '🤖' },
       { id: 'daily-summary-report', label: 'Daily Summary Report', icon: '📋' },
-    ],
-  },
-  wizard: {
-    label: 'Strategy Wizard',
-    views: [
-      { id: 'strategy-wizard', label: 'Build Strategy', icon: '🧙' },
+      { id: 'strategy-wizard', label: 'Strategy Wizard', icon: '🧙' },
     ],
   },
   planner: {

@@ -265,13 +265,12 @@
 /* ── Protocol ID ── */
 
 .protocols-id-section {
-  margin-bottom: 1.5rem;
+  text-align: right;
+  flex-shrink: 0;
 }
-
-.protocols-id-section h3 {
-  font-size: 0.9rem;
-  margin: 0 0 0.5rem 0;
-  color: var(--text-secondary, #94a3b8);
+.protocols-id-section .protocols-id-hint {
+  margin: 0.15rem 0 0;
+  font-size: 0.65rem;
 }
 
 .protocols-id {
@@ -485,6 +484,42 @@
 
 .protocols-directive.variable-max {
   border-color: #8b5cf640;
+}
+
+/* ── Directive Popover ── */
+.protocols-directive.has-popover { position: relative; cursor: help; }
+.protocols-directive-popover {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--accent, #0ea5a6);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  min-width: 220px;
+  max-width: 300px;
+  z-index: 100;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.protocols-directive.has-popover:hover .protocols-directive-popover { display: flex; }
+.protocols-directive-popover strong {
+  color: var(--ink, #e2e8f0);
+  font-size: 0.78rem;
+  display: block;
+}
+.protocols-directive-popover span {
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+.protocols-directive-popover-score {
+  color: var(--accent, #0ea5a6) !important;
+  font-weight: 600;
+  font-size: 0.68rem !important;
 }
 
 /* ── States ── */

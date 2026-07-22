@@ -11,7 +11,7 @@ export default function AccountsDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastSnapshot, setLastSnapshot] = useState(null);
-  const [showDemo, setShowDemo] = useState(false);
+  const [showPractice, setShowPractice] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -186,12 +186,12 @@ export default function AccountsDashboardPage() {
                   <span className="ad-status-dot">{isa.status === 'connected' ? '🟢' : '🟡'}</span>
                 </div>
                 <div className="ad-card-body">
-                  <span className="ad-card-name">Stocks ISA</span>
+                  <span className="ad-card-name">Trading212 Stocks ISA</span>
                   <span className="ad-card-balance">{formatCurrency(isaSummary.totalValueGbp, 'GBP')}</span>
                   <span className="ad-card-currency">GBP only</span>
                 </div>
                 <div className="ad-card-footer">
-                  <span className="ad-card-type">ISA (GBP)</span>
+                  <span className="ad-card-type">Live</span>
                   <span className="ad-card-positions">{isaSummary.positionCount ?? 0} positions</span>
                 </div>
               </div>
@@ -203,11 +203,11 @@ export default function AccountsDashboardPage() {
             </div>
           </section>
 
-          {/* ISA Panel — only shown when ISA data is meaningful */}
+          {/* ISA Panel — detailed metrics */}
           {(isa.status === 'connected' || isaSummary.totalValueGbp > 0) && (
           <section className="tp-card ad-isa-panel">
             <div className="ad-isa-head">
-              <h2>Stocks ISA</h2>
+              <h2>Trading212 Stocks ISA</h2>
               <span className="ad-isa-status">{isa.status === 'connected' ? 'Connected' : 'API key needed'}</span>
             </div>
             <div className="ad-isa-metrics">
@@ -239,16 +239,16 @@ export default function AccountsDashboardPage() {
           </section>
           )}
 
-          {/* Demo Accounts */}
+          {/* Practice Accounts */}
           <section className="tp-card">
             <button
               type="button"
               className="ad-toggle-btn"
-              onClick={() => setShowDemo(!showDemo)}
+              onClick={() => setShowPractice(!showPractice)}
             >
-              {showDemo ? '▾' : '▸'} 📄 Demo Accounts ({demoMT5.length})
+              {showPractice ? '▾' : '▸'} 📄 Practice Accounts ({demoMT5.length})
             </button>
-            {showDemo && (
+            {showPractice && (
               <div className="ad-grid" style={{ marginTop: '0.5rem' }}>
                 {demoMT5.map((acc) => (
                   <div key={acc.login || acc.id} className="ad-card ad-card--demo">
@@ -257,18 +257,18 @@ export default function AccountsDashboardPage() {
                       <span className="ad-status-dot">{statusDot(acc)}</span>
                     </div>
                     <div className="ad-card-body">
-                      <span className="ad-card-name">📄 {acc.name || acc.broker || `Demo ${acc.login}`}</span>
+                      <span className="ad-card-name">📄 {acc.name || acc.broker || `Practice ${acc.login}`}</span>
                       <span className="ad-card-balance">{formatCurrency(acc.balance ?? acc.equity, acc.currency)}</span>
                       {acc.currency && <span className="ad-card-currency">{acc.currency}</span>}
                     </div>
                     <div className="ad-card-footer">
-                      <span className="ad-card-type">Demo</span>
+                      <span className="ad-card-type">Practice</span>
                       {acc.leverage && <span className="ad-card-server">1:{acc.leverage}</span>}
                       {acc.server && <span className="ad-card-server">{acc.server}</span>}
                     </div>
                   </div>
                 ))}
-                {demoMT5.length === 0 && <EmptyState icon="🧪" title="No demo accounts found" />}
+                {demoMT5.length === 0 && <EmptyState icon="🧪" title="No practice accounts found" />}
               </div>
             )}
           </section>
@@ -281,7 +281,7 @@ export default function AccountsDashboardPage() {
               <span className="ad-total-value">{formatCurrency(liveTotal, 'GBP')}</span>
             </div>
             <div className="ad-total-row">
-              <span className="ad-total-label">All Accounts (incl. demo)</span>
+              <span className="ad-total-label">All Accounts (incl. practice)</span>
               <span className="ad-total-value ad-total-all">{formatCurrency(allTotal, 'GBP')}</span>
             </div>
             {sinceLastView && <p className="ad-since-last">{sinceLastView}</p>}

@@ -56,7 +56,11 @@ export default function SeesAdvancedPage() {
     refetchInterval: isAutoSorting ? AUTO_INTERVAL_MS : false,
     enabled: !!watchlistId && !!protocolId && watchlistSymbols.length > 0,
   });
-  const scored = scoreQuery.data ?? [];
+  // Sort by composite descending — safety net with backend sort (#432)
+  const scored = useMemo(
+    () => [...(scoreQuery.data ?? [])].sort((a, b) => (b.composite ?? 0) - (a.composite ?? 0)),
+    [scoreQuery.data],
+  );
 
   const hasData = scored.length > 0;
   const selectedProtocol = protocols.find((p) => p.id === protocolId);

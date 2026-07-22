@@ -30,25 +30,34 @@ export default function DirectivesConfigPage() {
   const protocol = directivesQuery.data?.protocol || null;
   const groups = directivesQuery.data?.groups || [];
 
+  // Protocol usage check — is this protocol referenced by an enabled ScoringStrategy?
+  const usageQuery = useQuery({
+    queryKey: ['protocol-usage', selectedProtocol],
+    queryFn: () => apiGet(`/api/scoring/protocols/${selectedProtocol}/usage`),
+    enabled: !!selectedProtocol,
+    staleTime: 30_000,
+  });
+  const usage = usageQuery.data || null;
+
   // Flatten groups into a single directives array for display
   const directives = groups.flatMap((g) =>
     (g.directives || []).map((d) => ({ ...d, groupId: g.groupId, groupName: g.name, isRiskGate: g.isRiskGate }))
   );
 
-  // Toggle directive mutation
-  const toggleMutation = useMutation({
-    mutationFn: ({ directiveId, active }) =>
+  // Remove directive mutation
+  const removeMutation = useMutation({
+    mutationFn: ({ directiveId }) =>
       apiGet(`/api/scoring/protocols/${selectedProtocol}/directives/${directiveId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ active }),
+        method: 'DELETE',
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['protocol-directives', selectedProtocol] });
     },
   });
 
-  function handleToggle(directiveId, currentActive) {
-    toggleMutation.mutate({ directiveId, active: !currentActive });
+  function handleRemove(directiveId) {
+    if (usage?.inUse) return; // locked — can't remove while strategy is active
+    removeMutation.mutate({ directiveId });
   }
 
   const activeCount = directives.filter((d) => d.active).length;
@@ -58,7 +67,7 @@ export default function DirectivesConfigPage() {
       <header className="dc-header">
         <div>
           <h1>Protocol Directive Editor</h1>
-          <p>Select a protocol, then enable/disable its individual directives grouped by category. Changes persist to the database.</p>
+          <p>Select a protocol to curate its directives, grouped by category. Directives removed from a protocol will not run during scoring.</p>
         </div>
         <div className="dc-header-actions">
           <ProtocolPicker
@@ -92,7 +101,15 @@ export default function DirectivesConfigPage() {
         <>
           <div className="dc-stats">
             <span>{activeCount}/{directives.length} active</span>
-            <span className="dc-strategy-name">Protocol: {protocol?.name || selectedProtocol}</span>
+            <span className="dc-strategy-name">
+              Protocol: {protocol?.name || selectedProtocol}
+              {protocol?.version && <span className="dc-version">v{protocol.version}</span>}
+              {usage?.inUse && (
+                <a href={`/trading/trading-strategies`} className="dc-lock-icon" title={`In use by ${usage.strategyNames?.join(', ') || 'active strategy'} — click to view`}>
+                  🔒
+                </a>
+              )}
+            </span>
           </div>
 
           {groups.map((group) => {
@@ -121,17 +138,14 @@ export default function DirectivesConfigPage() {
                           <h3>{d.name}</h3>
                           <code className="dc-id">{d.id}</code>
                         </div>
-                        <label className="dc-toggle">
-                          <input
-                            type="checkbox"
-                            checked={d.active}
-                            onChange={() => handleToggle(d.id, d.active)}
-                          />
-                          <span className="dc-toggle-track">
-                            <span className="dc-toggle-thumb" />
-                          </span>
-                          <span className="dc-toggle-label">{d.active ? 'Enabled' : 'Disabled'}</span>
-                        </label>
+                        <button
+                          className="dc-remove-btn"
+                          onClick={() => handleRemove(d.id)}
+                          disabled={usage?.inUse}
+                          title={usage?.inUse ? 'Protocol is locked — in use by an active strategy' : 'Remove this directive from the protocol'}
+                        >
+                          Remove
+                        </button>
                       </div>
 
                       <div className="dc-weight-row">
@@ -146,7 +160,7 @@ export default function DirectivesConfigPage() {
           })}
 
           <p className="dc-hint">
-            Toggling directives on/off affects scoring for this protocol. The directive will be skipped during scoring when disabled.
+            Removing a directive prevents it from running during scoring for this protocol. Inactive protocols are hidden from the list.
           </p>
         </>
       )}

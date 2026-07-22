@@ -247,6 +247,29 @@
 .ts-chip-ok { background: rgba(34,197,94,0.12); color: #22c55e; border-color: rgba(34,197,94,0.3); }
 .ts-chip-warn { background: rgba(245,158,11,0.12); color: #f59e0b; border-color: rgba(245,158,11,0.3); }
 
+/* ── TF Column Popover ── */
+.ts-tf-header,
+.ts-tf-cell { position: relative; cursor: help; }
+.ts-tf-popover {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--accent, #0ea5a6);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.72rem;
+  color: var(--ink-soft, #94a3b8);
+  white-space: nowrap;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  font-weight: 400;
+}
+.ts-tf-header:hover .ts-tf-popover,
+.ts-tf-cell:hover .ts-tf-popover { display: block; }
+
 /* ── Sidebar ── */
 .ts-sidebar {
   position: sticky;
@@ -262,7 +285,7 @@
   padding: 1.5rem 1rem;
   text-align: center;
   color: var(--ink-soft);
-  font-size: 0.9rem;
+  font-size: 1.05rem;
 }
 
 .ts-sidebar-detail {
@@ -270,7 +293,7 @@
 }
 
 .ts-sidebar-detail h2 {
-  font-size: 1.15rem;
+  font-size: 1.35rem;
   margin: 0 0 0.7rem;
   color: var(--accent);
 }
@@ -280,7 +303,7 @@
   margin-bottom: 0.75rem;
 }
 .ts-detail-section h3 {
-  font-size: 0.75rem;
+  font-size: 0.88rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink-soft);
@@ -291,12 +314,12 @@
   padding: 0.8rem 0.9rem;
   border: 1px solid var(--line);
   border-radius: 8px;
-  font-size: 0.88rem;
+  font-size: 1.02rem;
   color: var(--ink-soft);
   line-height: 1.55;
 }
 .ts-detail-card strong { color: var(--ink); }
-.ts-detail-card p { margin: 0.35rem 0 0; font-size: 0.82rem; }
+.ts-detail-card p { margin: 0.35rem 0 0; font-size: 0.95rem; }
 
 /* Requirement rows */
 .ts-requirement-row {
@@ -306,12 +329,12 @@
   padding: 0.25rem 0;
 }
 .ts-requirement-row + .ts-requirement-row { border-top: 1px solid rgba(128,128,128,0.06); }
-.ts-req-label { font-size: 0.72rem; color: var(--ink-soft); }
-.ts-req-value { font-size: 0.75rem; font-weight: 600; color: var(--ink); font-family: monospace; }
+.ts-req-label { font-size: 0.84rem; color: var(--ink-soft); }
+.ts-req-value { font-size: 0.88rem; font-weight: 600; color: var(--ink); font-family: monospace; }
 
 /* Intensity badge */
 .ts-intensity-badge {
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   font-weight: 700;
   padding: 0.15rem 0.5rem;
   border-radius: 4px;
@@ -320,7 +343,7 @@
   letter-spacing: 0.04em;
 }
 .ts-intensity-desc {
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   margin-top: 0.3rem !important;
   font-style: italic;
 }
@@ -331,7 +354,7 @@
   padding: 2px 8px;
   border: 1px solid var(--line);
   border-radius: 4px;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--ink);
   margin: 2px 3px 2px 0;
@@ -339,12 +362,12 @@
 
 .ts-no-fallback {
   color: #ef4444;
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   margin-top: 0.3rem !important;
 }
 .ts-has-fallback {
   color: #22c55e;
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   margin-top: 0.3rem !important;
 }
 
@@ -352,12 +375,12 @@
 .ts-checklist {
   margin: 0;
   padding-left: 1.1rem;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   color: var(--ink-soft);
 }
 .ts-checklist li { margin-bottom: 0.15rem; }
 .ts-disable-note {
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   color: var(--ink-soft);
   margin-top: 0.35rem !important;
   font-style: italic;

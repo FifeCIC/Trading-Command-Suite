@@ -22,6 +22,21 @@ export interface AppSettings {
   analyst: { refreshHours: number };
   data: { stalenessHours: number };
   newsImport: NewsImportSettings;
+  healthChecks: HealthChecksConfig;
+}
+
+export interface HealthChecksConfig {
+  systemVitals: boolean;
+  dbDiagnostics: boolean;
+  slowQueries: boolean;
+  apiTrends: boolean;
+  providerGrid: boolean;
+  traceCorrelations: boolean;
+  diskInfo: boolean;
+  errorRates: boolean;
+  cronHeartbeats: boolean;
+  portStatus: boolean;
+  autoRefreshSec: number;
 }
 
 const NEWS_IMPORT_DEFAULTS: NewsImportSettings = {
@@ -42,6 +57,19 @@ const DEFAULTS: AppSettings = {
   analyst: { refreshHours: 24 },
   data: { stalenessHours: 24 },
   newsImport: NEWS_IMPORT_DEFAULTS,
+  healthChecks: {
+    systemVitals: true,
+    dbDiagnostics: true,
+    slowQueries: true,
+    apiTrends: true,
+    providerGrid: true,
+    traceCorrelations: true,
+    diskInfo: true,
+    errorRates: true,
+    cronHeartbeats: true,
+    portStatus: true,
+    autoRefreshSec: 15,
+  },
 };
 
 const SETTING_KEY = 'app';
@@ -87,6 +115,20 @@ export class SettingsService {
     try { if (this.prisma.isAvailable) await this.prisma.appSetting.delete({ where: { id: SETTING_KEY } }).catch(() => {}); } catch {}
     try { if (fs.existsSync(this.filePath)) fs.unlinkSync(this.filePath); } catch {}
     return { ...DEFAULTS };
+  }
+
+  /** Convenience: get only health check config (cached for fast reads). */
+  async getHealthChecks(): Promise<HealthChecksConfig> {
+    const settings = await this.get();
+    return settings.healthChecks || DEFAULTS.healthChecks;
+  }
+
+  /** Convenience: update health check config. */
+  async updateHealthChecks(partial: Partial<HealthChecksConfig>): Promise<HealthChecksConfig> {
+    const settings = await this.get();
+    settings.healthChecks = { ...settings.healthChecks, ...partial };
+    await this.update(settings);
+    return settings.healthChecks;
   }
 
   private async saveToDb(data: AppSettings): Promise<void> {

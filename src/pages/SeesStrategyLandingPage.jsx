@@ -5,10 +5,24 @@
  * Serves as both documentation and a launch point into creating strategies.
  */
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { usePreferences } from '../core/hooks/usePreferences';
 import './sees-strategy-landing.css';
 
 export default function SeesStrategyLandingPage() {
   const navigate = useNavigate();
+  const prefs = usePreferences();
+  const trainingMode = prefs.experienceLevel === 'beginner';
+  const [showConcept, setShowConcept] = useState(false);
+
+  // Static pipeline stages (salvaged from Algorithm Lab)
+  const PIPELINE_STAGES = [
+    { id: 'fetch', label: 'Fetch Data', desc: 'Market bars, news, fundamentals — pulled from providers' },
+    { id: 'score', label: 'Score Directives', desc: 'Each directive evaluates one aspect of the symbol' },
+    { id: 'rank', label: 'Rank Symbols', desc: 'Composite scores sort symbols from best to worst' },
+    { id: 'filter', label: 'Filter Noise', desc: 'Risk gates, dominance rules, and cancellation pairs clean the signal' },
+    { id: 'signal', label: 'Signal Out', desc: 'BUY / SELL / HOLD surfaced to the Live Ordering Stack' },
+  ];
 
   return (
     <main className="ssl-page">
@@ -135,6 +149,52 @@ export default function SeesStrategyLandingPage() {
           <div className="ssl-default-item"><strong>Portfolio Monitor</strong><span>Cross-reference holdings</span></div>
         </div>
       </section>
+
+      {/* ── Pipeline Stages (Training Mode) ── */}
+      {trainingMode && (
+        <section className="ssl-pipeline">
+          <h2>Pipeline Stages</h2>
+          <p className="ssl-section-sub">How a symbol becomes a signal — five stages from raw data to trade decision.</p>
+          <div className="ssl-pipe-wrapper">
+            {PIPELINE_STAGES.map((stage, i) => (
+              <div key={stage.id} className="ssl-pipe-node">
+                <div className="ssl-pipe-icon">
+                  {i === 0 ? '📡' : i === 1 ? '📊' : i === 2 ? '🏆' : i === 3 ? '🔍' : '📢'}
+                </div>
+                <div className="ssl-pipe-label">{stage.label}</div>
+                <div className="ssl-pipe-desc">{stage.desc}</div>
+                {i < PIPELINE_STAGES.length - 1 && <div className="ssl-pipe-arrow">→</div>}
+              </div>
+            ))}
+          </div>
+
+          {/* Concept Explainer */}
+          <div className="ssl-concept">
+            <button
+              type="button"
+              className="ssl-concept-toggle"
+              onClick={() => setShowConcept(!showConcept)}
+            >
+              {showConcept ? '▾' : '▸'} How the Algorithm Works
+            </button>
+            {showConcept && (
+              <div className="ssl-concept-body">
+                <p>
+                  The <strong>"algorithm"</strong> in Trading Command Suite is{' '}
+                  <em>not</em> a single monolithic algorithm. It's a{' '}
+                  <strong>pipeline</strong>:
+                </p>
+                <ol>
+                  <li><strong>Directives</strong> evaluate data — each directive is a focused rule that scores one aspect of a symbol.</li>
+                  <li><strong>Strategy weights</strong> aggregate directive scores into a composite per-symbol score.</li>
+                  <li><strong>SEES</strong> (Scoring Engine Execution System) ranks all symbols and produces BUY / SELL / HOLD signals.</li>
+                </ol>
+                <p>Multiple scoring procedures can run independently on different symbol groups — they are separate pipelines, not one algorithm.</p>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ── CTA ── */}
       <section className="ssl-cta">

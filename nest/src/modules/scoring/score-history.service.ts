@@ -229,7 +229,7 @@ export class ScoreHistoryService {
     scores = await this.prisma.score.findMany({
       where: baseWhere,
       orderBy: { timestamp: 'desc' },
-      take: 1000,
+      take: 200,
       include: { symbol: { select: { ticker: true } } },
     });
 

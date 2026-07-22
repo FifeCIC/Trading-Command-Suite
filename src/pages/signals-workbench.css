@@ -237,3 +237,65 @@
 .sw-sess-sell { color: var(--color-loss); background: rgba(239,68,68,0.1); }
 .sw-sess-hold { color: var(--color-neutral); background: rgba(148,163,184,0.1); }
 .sw-sess-scanned { max-width: 180px; overflow: hidden; text-overflow: ellipsis; color: var(--ink-soft); font-size: 0.7rem; }
+
+/* Symbol Autocomplete wrapper in controls */
+.sw-symbol-autocomplete { flex: 1; min-width: 200px; }
+
+/* Multi-Protocol Comparison Table (#412) */
+.sw-comparison { margin-bottom: 0.5rem; }
+.sw-comp-table-wrap {
+  overflow-x: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.sw-comp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.sw-comp-table th {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-alt, rgba(0,0,0,0.02));
+  white-space: nowrap;
+}
+.sw-comp-table td {
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid rgba(128,128,128,0.06);
+  vertical-align: middle;
+}
+.sw-comp-table tr:hover td { background: rgba(14,165,166,0.03); }
+.sw-comp-symbol { font-weight: 700; min-width: 70px; }
+.sw-comp-cell { display: flex; flex-direction: column; gap: 2px; }
+.sw-comp-composite { font-weight: 800; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.sw-comp-signal {
+  font-size: 0.7rem; font-weight: 700; padding: 0 5px; border-radius: 3px;
+  text-transform: uppercase; letter-spacing: 0.04em; display: inline-block; width: fit-content;
+}
+
+/* Protocol Checklist Section */
+.sw-protocol-checklist-section {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+.sw-checklist-hint {
+  margin: 0.4rem 0 0;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+/* Multi-protocol session run badge */
+.sw-sess-multi {
+  font-size: 0.6rem;
+  color: var(--accent);
+  background: rgba(14,165,166,0.1);
+  padding: 0 4px;
+  border-radius: 3px;
+  margin-left: 2px;
+}

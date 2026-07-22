@@ -42,7 +42,7 @@ export default function StrategyComparisonPage() {
     <div className="sc-page">
       <motion.header className="sc-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div>
-          <h1>Strategy Comparison</h1>
+          <h1>Trading Strategy Comparison</h1>
           <p className="sc-subtitle">Head-to-head trade outcomes — profit is the truth. Compare strategies by actual closed trades.</p>
         </div>
         <span className="sc-clock">{data?.generatedAt ? new Date(data.generatedAt).toLocaleTimeString() : '—'}</span>

@@ -1,0 +1,17 @@
+{
+  "lastUpdated": "2026-07-21T21:19:00.398Z",
+  "totalFiles": 1,
+  "totalRows": 214800,
+  "entries": [
+    {
+      "id": "directiveoutcome-2026-06-14-to-2026-07-14",
+      "table": "directiveoutcome",
+      "dateFrom": "2026-06-14",
+      "dateTo": "2026-07-14",
+      "rowCount": 214800,
+      "fileSize": 8604826,
+      "filePath": "directiveoutcome-2026-06-14-to-2026-07-14.json.gz",
+      "createdAt": "2026-07-21T21:19:00.397Z"
+    }
+  ]
+}

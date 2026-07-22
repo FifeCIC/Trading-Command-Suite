@@ -63,7 +63,6 @@ export const DIRECTIVE_GROUPS: DirectiveGroup[] = [
       'support-resistance-levels',
       'volatility-tools',
       'session-open-effect',
-      'session-open-effect',
     ],
   },
   {
@@ -75,7 +74,6 @@ export const DIRECTIVE_GROUPS: DirectiveGroup[] = [
     minMultiplier: 1.0,
     maxMultiplier: 1.0,
     directiveIds: [
-      'analyst-adjustments',
       'analyst-adjustments',
       'news-sentiment-positive',
       'earnings-proximity',

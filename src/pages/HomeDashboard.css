@@ -480,6 +480,7 @@
   border-radius: 3px;
 }
 .dash-broker-badge.badge-live { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+.dash-broker-badge.badge-practice { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
 .dash-broker-badge.badge-demo { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
 .dash-broker-badge.badge-isa { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
 .dash-broker-badge.badge-off { background: rgba(239, 68, 68, 0.15); color: #f87171; }
@@ -648,6 +649,48 @@
 .dash-session-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .dash-session-status { margin-left: auto; font-size: 0.72rem; font-weight: 600; color: #64748b; }
 .dash-session-open .dash-session-status { color: #22c55e; }
+
+/* ── Session Hover Popover ── */
+.dash-session-hoverable { position: relative; }
+.dash-session-popover {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line, #334155);
+  border-radius: 10px;
+  background: var(--panel, #1e293b);
+  color: var(--ink, #e2e8f0);
+  font-size: 0.78rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  min-width: 200px;
+  z-index: 2000;
+  white-space: nowrap;
+}
+.dash-session-hoverable:hover .dash-session-popover {
+  display: block;
+}
+.dash-session-pop-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--line, #334155);
+  color: var(--accent, #0ea5a6);
+}
+.dash-session-pop-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.15rem 0;
+  color: #94a3b8;
+}
+.dash-session-pop-row span:last-child {
+  color: #e2e8f0;
+  font-weight: 500;
+}
 
 /* ── News & Sentiment Card ──────────────────────────────── */
 .dash-news-list { display: flex; flex-direction: column; gap: 0.35rem; }

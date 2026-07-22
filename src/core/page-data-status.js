@@ -96,13 +96,10 @@ export const PAGE_DATA_STATUS = {
   // ── Development ──
   'architecture-framework': { status: 'live', source: 'Static architecture data' },
   'diagrams': { status: 'live', source: 'Generated diagrams' },
-  'assets': { status: 'mock', note: 'Static listing' },
   'workflow-wizards': { status: 'mock', note: 'Not yet built' },
-  'theme-lab-container': { status: 'live', source: 'Self-contained demo' },
   'theme-lab-popover': { status: 'live', source: 'Self-contained demo' },
-  'algorithm-lab': { status: 'live', source: 'Directive scoring logs' },
   'backtest': { status: 'live', source: 'Backtest engine + DB' },
-  'performance-lab': { status: 'live', source: 'Protocol metrics' },
+  'performance-lab': { status: 'partial', source: 'Trade table + MT5 bridge' },
 
   // ── Training ──
   'candle-patterns': { status: 'live', source: 'Interactive training' },

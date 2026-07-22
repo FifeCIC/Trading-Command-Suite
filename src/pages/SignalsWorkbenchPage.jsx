@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { apiGet, apiPost } from '../core/api/client';
+import { apiPost } from '../core/api/client';
 import { usePreferences } from '../core/hooks/usePreferences';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
-import ProtocolPicker from '../components/ProtocolPicker';
+import SymbolAutocomplete from '../components/SymbolAutocomplete';
+import ProtocolChecklist from '../components/ProtocolChecklist';
 import './signals-workbench.css';
 
 const SIGNAL_COLORS = { BUY: '#22c55e', SELL: '#ef4444', HOLD: '#94a3b8' };
@@ -19,37 +20,11 @@ export default function SignalsWorkbenchPage() {
   const qc = useQueryClient();
   const { prefs } = usePreferences();
   const [symbolInput, setSymbolInput] = useState(prefs.defaultSignalSymbols || '');
-  const [protocolId, setProtocolId] = useState(prefs.defaultProtocol || '');
+  const [selectedProtocols, setSelectedProtocols] = useState([]);
   const [expandedSymbol, setExpandedSymbol] = useState(null);
   const [viewMode, setViewMode] = useState('ladder');
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [resolvedSymbols, setResolvedSymbols] = useState([]);
   const inputRef = useRef(null);
-
-  // Symbol search for autocomplete
-  const symbolsQuery = useQuery({
-    queryKey: ['symbols-all'],
-    queryFn: () => apiGet('/api/symbols'),
-    staleTime: 60_000,
-  });
-  const allSymbols = symbolsQuery.data?.symbols ?? [];
-
-  // Find matching symbols for the current partial entry
-  const suggestions = useMemo(() => {
-    const parts = symbolInput.split(/[,\s]+/);
-    const partial = parts[parts.length - 1].trim().toUpperCase();
-    if (!partial || partial.length === 0) return [];
-    return allSymbols
-      .filter(s => s.ticker.toUpperCase().startsWith(partial) && !parts.slice(0, -1).includes(s.ticker))
-      .slice(0, 8);
-  }, [symbolInput, allSymbols]);
-
-  const insertSymbol = useCallback((ticker) => {
-    const parts = symbolInput.split(/[,\s]+/).filter(Boolean);
-    parts[parts.length - 1] = ticker;
-    setSymbolInput(parts.join(', ') + (parts.length > 0 ? ', ' : ''));
-    setShowSuggestions(false);
-    inputRef.current?.focus();
-  }, [symbolInput]);
   const [sessionRuns, setSessionRuns] = useState(() => {
     try { return JSON.parse(localStorage.getItem('sw-session-runs') || '[]'); }
     catch { return []; }
@@ -61,27 +36,39 @@ export default function SignalsWorkbenchPage() {
     catch { /* localStorage quota */ }
   };
 
+  const isMultiProtocol = selectedProtocols.length > 1;
+
   const ladderMutation = useMutation({
     mutationFn: (payload) => apiPost('/api/signals/ladder', payload),
     onSuccess: (data) => {
       qc.setQueryData(['signals-ladder'], data);
       // Accumulate this scan in the session log
-      if (data.envelopes && data.envelopes.length > 0) {
+      const envelopes = data?.envelopes || [];
+      const protocols = data?.protocols || [];
+      const hasData = envelopes.length > 0 || protocols.length > 0;
+      if (hasData) {
         setSessionRuns(prev => {
+          const protocolNames = protocols.length > 0
+            ? protocols.map(p => p.name || p.id).join(' + ')
+            : (data?.protocolName || 'Default');
+          const buyFromEnvelopes = data?.buyCount ?? 0;
+          const sellFromEnvelopes = data?.sellCount ?? 0;
+          const holdFromEnvelopes = data?.holdCount ?? 0;
           const run = {
             id: Date.now(),
-            timestamp: data.generatedAt || new Date().toISOString(),
-            protocolName: data.protocolName || 'Default',
-            symbolsScanned: data.totalSymbols || 0,
-            buyCount: data.buyCount || 0,
-            sellCount: data.sellCount || 0,
-            holdCount: data.holdCount || 0,
-            avgComposite: data.envelopes.length > 0
-              ? Math.round(data.envelopes.reduce((s, e) => s + e.composite, 0) / data.envelopes.length)
+            timestamp: data?.generatedAt || new Date().toISOString(),
+            protocolName: protocolNames,
+            symbolsScanned: data?.totalSymbols || data?.symbols?.length || envelopes.length,
+            buyCount: buyFromEnvelopes,
+            sellCount: sellFromEnvelopes,
+            holdCount: holdFromEnvelopes,
+            avgComposite: envelopes.length > 0
+              ? Math.round(envelopes.reduce((s, e) => s + e.composite, 0) / envelopes.length)
               : 0,
-            symbols: data.envelopes.map(e => e.symbol).join(', '),
+            symbols: (data?.symbols || envelopes.map(e => e.symbol)).join(', '),
+            multiProtocol: protocols.length > 0,
           };
-          const updated = [...prev, run].slice(-50); // Keep last 50 runs
+          const updated = [...prev, run].slice(-50);
           try { localStorage.setItem('sw-session-runs', JSON.stringify(updated)); }
           catch { /* quota */ }
           return updated;
@@ -100,8 +87,14 @@ export default function SignalsWorkbenchPage() {
       .split(/[,\s]+/)
       .map((s) => s.trim().toUpperCase())
       .filter(Boolean);
-    ladderMutation.mutate({ symbols, protocol: protocolId || undefined });
-  }, [symbolInput, protocolId, ladderMutation]);
+    const payload = { symbols };
+    if (selectedProtocols.length === 1) {
+      payload.protocol = selectedProtocols[0];
+    } else if (selectedProtocols.length > 1) {
+      payload.protocols = selectedProtocols;
+    }
+    ladderMutation.mutate(payload);
+  }, [symbolInput, selectedProtocols, ladderMutation]);
 
   const expandedEnvelope = envelopes.find((e) => e.symbol === expandedSymbol);
 
@@ -111,10 +104,13 @@ export default function SignalsWorkbenchPage() {
     const symbols = symbolInput.split(/[,\s]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
     if (symbols.length === 0) return;
     const timer = setInterval(() => {
-      ladderMutation.mutate({ symbols, protocol: protocolId || undefined });
+      const payload = { symbols };
+      if (selectedProtocols.length === 1) payload.protocol = selectedProtocols[0];
+      else if (selectedProtocols.length > 1) payload.protocols = selectedProtocols;
+      ladderMutation.mutate(payload);
     }, prefs.signalsRefreshInterval);
     return () => clearInterval(timer);
-  }, [prefs.signalsAutoRefresh, prefs.signalsRefreshInterval, symbolInput, protocolId]);
+  }, [prefs.signalsAutoRefresh, prefs.signalsRefreshInterval, symbolInput, selectedProtocols]);
 
   return (
     <div className="sw-page">
@@ -132,46 +128,12 @@ export default function SignalsWorkbenchPage() {
 
       {/* ── Controls ── */}
       <motion.div className="sw-controls" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <input
-            ref={inputRef}
-            type="text"
-            className="sw-symbol-input"
-            placeholder="AAPL, NVDA, MSFT..."
-            value={symbolInput}
-            onChange={(e) => { setSymbolInput(e.target.value); setShowSuggestions(true); }}
-            onFocus={() => setShowSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-            onKeyDown={(e) => e.key === 'Enter' && handleRun()}
-          />
-          {showSuggestions && suggestions.length > 0 && (
-            <div className="sw-suggestions" style={{
-              position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-              background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: '0 0 8px 8px',
-              maxHeight: 200, overflowY: 'auto', boxShadow: 'var(--shadow-card)',
-            }}>
-              {suggestions.map(s => (
-                <div
-                  key={s.ticker}
-                  onMouseDown={(e) => { e.preventDefault(); insertSymbol(s.ticker); }}
-                  style={{
-                    padding: '0.4rem 0.75rem', cursor: 'pointer', fontSize: '0.85rem',
-                    borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between',
-                  }}
-                  className="sw-suggestion-item"
-                >
-                  <span style={{ fontWeight: 600 }}>{s.ticker}</span>
-                  <span style={{ color: 'var(--ink-soft)', fontSize: '0.75rem' }}>{s.name || s.exchange}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <ProtocolPicker
-          className="sw-protocol-select"
-          value={protocolId}
-          onChange={setProtocolId}
-          placeholder="Default directives"
+        <SymbolAutocomplete
+          className="sw-symbol-autocomplete"
+          value={symbolInput}
+          onChange={setSymbolInput}
+          onSymbolsChange={setResolvedSymbols}
+          placeholder="AAPL, NVDA, MSFT..."
         />
         <button className="sw-run-btn" onClick={handleRun} disabled={ladderMutation.isPending}>
           {ladderMutation.isPending ? '⏳ Scoring...' : '▶ Run Signal Scan'}
@@ -180,6 +142,11 @@ export default function SignalsWorkbenchPage() {
           <button className={viewMode === 'ladder' ? 'active' : ''} onClick={() => setViewMode('ladder')}>
             Ladder
           </button>
+          {isMultiProtocol && (
+            <button className={viewMode === 'comparison' ? 'active' : ''} onClick={() => setViewMode('comparison')}>
+              Compare
+            </button>
+          )}
           <button className={viewMode === 'conflicts' ? 'active' : ''} onClick={() => setViewMode('conflicts')}>
             Conflicts{topConflicts.length > 0 ? ` (${topConflicts.length})` : ''}
           </button>
@@ -189,20 +156,68 @@ export default function SignalsWorkbenchPage() {
       {ladderMutation.isError && <ApiOfflineBanner />}
 
       {/* ── Stats Bar ── */}
-      {stats.totalSymbols > 0 && (
+      {((stats.totalSymbols > 0) || (ladderData?.protocols?.length > 0)) && (
         <motion.div className="sw-stats-bar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.08 }}>
-          <span className="sw-stat">{stats.totalSymbols} symbols</span>
-          <span className="sw-stat sw-buy">{stats.buyCount} BUY</span>
-          <span className="sw-stat sw-sell">{stats.sellCount} SELL</span>
-          <span className="sw-stat sw-hold">{stats.holdCount} HOLD</span>
+          <span className="sw-stat">{stats.totalSymbols || ladderData?.symbols?.length || 0} symbols</span>
+          {!isMultiProtocol && (
+            <>
+              <span className="sw-stat sw-buy">{stats.buyCount} BUY</span>
+              <span className="sw-stat sw-sell">{stats.sellCount} SELL</span>
+              <span className="sw-stat sw-hold">{stats.holdCount} HOLD</span>
+            </>
+          )}
           {ladderData?.protocolName && (
             <span className="sw-stat sw-protocol">Protocol: {ladderData.protocolName}</span>
+          )}
+          {isMultiProtocol && ladderData?.protocols && (
+            <span className="sw-stat sw-protocol">Comparing {ladderData.protocols.length} protocols</span>
           )}
         </motion.div>
       )}
 
       {ladderMutation.isPending && (
         <div className="sw-loading-wrap"><LoadingSkeleton variant="card" count={4} /></div>
+      )}
+
+      {/* ── Multi-Protocol Comparison View ── */}
+      {viewMode === 'comparison' && isMultiProtocol && ladderData?.comparison && (
+        <motion.div className="sw-comparison" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <div className="sw-comp-table-wrap">
+            <table className="sw-comp-table">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  {ladderData.protocols.map(p => (
+                    <th key={p.id} title={p.id}>{p.name || p.id}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ladderData.comparison.map(row => (
+                  <tr key={row.symbol}>
+                    <td className="sw-comp-symbol">{row.symbol}</td>
+                    {ladderData.protocols.map(p => {
+                      const s = row.scores?.[p.id];
+                      return (
+                        <td key={p.id} className="sw-comp-cell">
+                          <span className="sw-comp-composite" style={{ color: SIGNAL_COLORS[s?.signal] || '#94a3b8' }}>
+                            {s?.composite?.toFixed?.(0) ?? '—'}
+                          </span>
+                          <span
+                            className="sw-comp-signal"
+                            style={{ background: (SIGNAL_COLORS[s?.signal] || '#94a3b8') + '22', color: SIGNAL_COLORS[s?.signal] || '#94a3b8' }}
+                          >
+                            {s?.signal || '—'}
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
       )}
 
       {/* ── Ladder View ── */}
@@ -417,7 +432,10 @@ export default function SignalsWorkbenchPage() {
                 {sessionRuns.slice().reverse().map(run => (
                   <tr key={run.id}>
                     <td className="sw-sess-time">{new Date(run.timestamp).toLocaleTimeString()}</td>
-                    <td className="sw-sess-protocol">{run.protocolName}</td>
+                    <td className="sw-sess-protocol">
+                      {run.protocolName}
+                      {run.multiProtocol && <span className="sw-sess-multi">multi</span>}
+                    </td>
                     <td className="sw-sess-symbols" title={run.symbols}>{run.symbolsScanned}</td>
                     <td className="sw-sess-avg" style={{ color: run.avgComposite >= 60 ? '#22c55e' : run.avgComposite >= 40 ? '#f59e0b' : '#ef4444' }}>{run.avgComposite}</td>
                     <td className="sw-sess-signals">
@@ -434,15 +452,27 @@ export default function SignalsWorkbenchPage() {
         </motion.div>
       )}
 
+      {/* ── Protocol Checklist (positioned below results per #412) ── */}
+      <motion.div className="sw-protocol-checklist-section" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.18 }}>
+        <ProtocolChecklist
+          selected={selectedProtocols}
+          onChange={setSelectedProtocols}
+          maxHeight={250}
+        />
+        {selectedProtocols.length === 0 && (
+          <p className="sw-checklist-hint">Check protocols above to compare scores side-by-side. Leave unchecked for default scoring.</p>
+        )}
+      </motion.div>
+
       {/* ── Empty State ── */}
-      {!ladderMutation.isPending && envelopes.length === 0 && (
+      {!ladderMutation.isPending && envelopes.length === 0 && (!ladderData?.protocols || ladderData.protocols.length === 0) && (
         <motion.div className="sw-empty-state" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
           <div className="sw-empty-icon">◈</div>
           <h2>No signals yet</h2>
           <p>Enter symbols above and click "Run Signal Scan" to build a live signal ladder with directive drilldown.</p>
           <div className="sw-empty-hints">
             <span>Try: AAPL, NVDA, MSFT</span>
-            <span>or pick a protocol from the dropdown</span>
+            <span>or check protocols below for comparison mode</span>
           </div>
         </motion.div>
       )}

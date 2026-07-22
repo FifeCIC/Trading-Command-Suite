@@ -12,6 +12,52 @@ import { MarketDataService } from '../market-data/market-data.service';
 import { PrismaService } from '../../database/prisma.service';
 import { SeasonalAffinityService } from './seasonal-affinity.service';
 import { MicroTrendDetector, TrendAnalysis } from './micro-trend-detector.service';
+import type { PatternSignal } from './micro-trend-detector.service';
+
+// ── Lightweight candlestick pattern detection ─────────────────────
+// Detects doji, engulfing, hammer, and shooting star patterns from
+// a candle series. Passed to MicroTrendDetector.analyze() so the
+// Pattern column in Speed Scanner is populated with real data.
+
+function detectCandlestickPatterns(bars: Array<{ open: number; high: number; low: number; close: number }>): PatternSignal[] {
+  const patterns: PatternSignal[] = [];
+  if (!bars || bars.length < 3) return patterns;
+
+  for (let i = 1; i < bars.length; i++) {
+    const prev = bars[i - 1];
+    const curr = bars[i];
+    const body = Math.abs(curr.close - curr.open);
+    const range = curr.high - curr.low;
+    if (range === 0) continue;
+
+    const bodyRatio = body / range;
+    const prevBody = Math.abs(prev.close - prev.open);
+
+    // Doji — body < 10% of range
+    if (bodyRatio < 0.1) {
+      patterns.push({ type: 'doji', signal: 'neutral', confidence: 0.6, index: i });
+    }
+    // Hammer — small body at top of candle, long lower wick
+    else if (bodyRatio < 0.35 && (curr.close - curr.low) > range * 0.6 && curr.close > curr.open) {
+      patterns.push({ type: 'hammer', signal: 'bullish', confidence: 0.7, index: i });
+    }
+    // Shooting star — small body at bottom, long upper wick
+    else if (bodyRatio < 0.35 && (curr.high - curr.close) > range * 0.6 && curr.close < curr.open) {
+      patterns.push({ type: 'shooting_star', signal: 'bearish', confidence: 0.7, index: i });
+    }
+    // Bullish engulfing
+    else if (i >= 1 && curr.close > curr.open && prev.close < prev.open &&
+             curr.open <= prev.close && curr.close >= prev.open && prevBody > 0) {
+      patterns.push({ type: 'bullish_engulfing', signal: 'bullish', confidence: 0.8, index: i });
+    }
+    // Bearish engulfing
+    else if (i >= 1 && curr.close < curr.open && prev.close > prev.open &&
+             curr.open >= prev.close && curr.close <= prev.open && prevBody > 0) {
+      patterns.push({ type: 'bearish_engulfing', signal: 'bearish', confidence: 0.8, index: i });
+    }
+  }
+  return patterns;
+}
 
 export interface SymbolScore {
   symbol: string;
@@ -81,28 +127,28 @@ const SYMBOL_PROTOCOL_MAP: Record<string, string> = {
  * Resolve protocol for a symbol — DB-first with hardcoded fallback.
  * Queries symbol_protocol_assignment table; falls back to static map for bootstrap.
  */
-async function resolveProtocolForSymbol(symbol: string, prisma: any): Promise<string> {
-  // Try DB first
+async function resolveProtocolForSymbol(symbol: string, prisma: any): Promise<{ slug: string; active: boolean }> {
+  // Try DB first — join to Protocol table to get the slug (NOT the UUID) + active status
   try {
     if (prisma.isAvailable) {
       const assignment = await prisma.symbolProtocolAssignment.findFirst({
         where: { symbol },
         orderBy: { priority: 'asc' },
-        select: { protocolId: true },
+        include: { protocol: { select: { slug: true, active: true } } },
       });
-      if (assignment) return assignment.protocolId;
+      if (assignment?.protocol?.slug) return { slug: assignment.protocol.slug, active: assignment.protocol.active };
     }
   } catch { /* DB may not have table yet */ }
 
-  // Fall back to hardcoded map
-  if (SYMBOL_PROTOCOL_MAP[symbol]) return SYMBOL_PROTOCOL_MAP[symbol];
+  // Fall back to hardcoded map — all hardcoded protocols are active by default
+  if (SYMBOL_PROTOCOL_MAP[symbol]) return { slug: SYMBOL_PROTOCOL_MAP[symbol], active: true };
 
   // Pattern-match leverage products
   if (/^3[A-Z]{2,3}$/.test(symbol) || /^[A-Z]{2,3}3$/.test(symbol) ||
       ['TECS','SQQQ','SPXS','SOXS','FNGD','YANG','SRTY'].includes(symbol)) {
-    return 'leverage-v2';
+    return { slug: 'leverage-v2', active: true };
   }
-  return 'default';
+  return { slug: 'default', active: true };
 }
 
 /** Default Tier A/B speed trading symbols */
@@ -168,13 +214,25 @@ export class SpeedScanService {
           this.marketData.getBars(symId, '15m', 30).catch(() => null),
         ]);
 
-        const protocol = await resolveProtocolForSymbol(symbol, this.prisma);
+        const { slug: protocol, active: protocolActive } = await resolveProtocolForSymbol(symbol, this.prisma);
         const score = await this.protocolGating.scoreWithGating(
           symbol,
           marketBars as any,
           protocol,
           { dayBars: dayBars ?? undefined, hourBars: hourBars ?? undefined, min15Bars: min15Bars ?? undefined },
         );
+
+        // ── Priority-log if protocol has no watchlist assigned ──
+        if (this.prisma.isAvailable) {
+          try {
+            const linked = await (this.prisma as any).scoringStrategy.findFirst({
+              where: { protocolId: protocol, watchlistId: { not: null }, enabled: true },
+            });
+            if (!linked) {
+              this.logger.warn(`Protocol "${protocol}" has no watchlist-linked scoring strategy — ${symbol} scored without position awareness`);
+            }
+          } catch { /* table may not exist */ }
+        }
 
         // Apply seasonal affinity from protocol-calendar
         const seasonalMultiplier = this.seasonalAffinity.getMultiplier(protocol);
@@ -184,11 +242,14 @@ export class SpeedScanService {
         const trendBars = marketBars.map((b: any) => ({
           open: b.open, high: b.high, low: b.low, close: b.close,
         }));
-        const trendResult = this.trendDetector.analyze(trendBars);
+        // Detect candlestick patterns before trend analysis
+        const detectedPatterns = detectCandlestickPatterns(trendBars);
+        const trendResult = this.trendDetector.analyze(trendBars, detectedPatterns);
 
         return {
           symbol,
           protocol,
+          protocolActive,
           composite: Number(seasonAdjustedComposite.toFixed(1)),
           signal: score.signal,
           gated: score.gatingActive && score.composite < 50,

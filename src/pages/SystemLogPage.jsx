@@ -10,12 +10,32 @@ export default function SystemLogPage() {
     refetchInterval: 15_000,
   });
 
+  const statusQuery = useQuery({
+    queryKey: ['system-log-status'],
+    queryFn: () => apiGet('/api/system/logs/status').catch(() => ({ exists: false, sizeBytes: 0 })),
+    refetchInterval: 60_000,
+  });
+
   const logs = Array.isArray(logQuery.data?.logs) ? logQuery.data.logs : [];
+  const status = statusQuery.data || {};
 
   return (
     <div className="system-log-page">
       <h1>System Log</h1>
       <p className="sl-sub">Recent errors and events from directives, providers, and imports. Auto-refreshes every 15s.</p>
+
+      {/* Log File Status */}
+      <div className="sl-status-bar">
+        <span className="sl-status-item" title="Disk write path">
+          📁 {status.directory || '—'}
+        </span>
+        <span className={`sl-status-item ${status.exists ? 'sl-ok' : 'sl-err'}`}>
+          {status.exists ? '✅' : '❌'} Log file: {status.todayFile || '—'} ({status.sizeBytes ? `${(status.sizeBytes / 1024).toFixed(1)}KB` : '0KB'})
+        </span>
+        <span className="sl-status-item">
+          📋 In-memory: {status.totalInMemory || 0} entries | Queue: {status.queueLength || 0}
+        </span>
+      </div>
 
       {logQuery.isLoading && <p>Loading logs...</p>}
       {logQuery.isError && <p className="sl-error">Failed to load logs. Is the backend running?</p>}

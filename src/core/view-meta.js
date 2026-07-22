@@ -120,7 +120,7 @@ const VIEW_META = {
     api: ['POST /api/speed/scan'],
   },
   '/automation/bot-rules': {
-    label: 'Bot Rules',
+    label: 'Automation Rules',
     file: 'src/pages/AutomationRulesPage.jsx',
     css: 'src/pages/automation-rules.css',
     api: ['GET /api/automation/rules'],
@@ -148,6 +148,18 @@ const VIEW_META = {
     file: 'src/pages/CapabilityMapPage.jsx',
     css: 'src/pages/capability-map.css',
     api: ['GET /api/capabilities', 'GET /api/directives', 'GET /api/providers/health'],
+  },
+  '/status/health-check': {
+    label: 'Health & Diagnostics',
+    file: 'src/pages/HealthDashboardPage.jsx',
+    css: 'src/pages/health-dashboard.css',
+    api: ['GET /api/system/health-dashboard', 'GET /api/system/health-check'],
+  },
+  '/status/commands': {
+    label: 'Commands Reference',
+    file: 'src/pages/CommandsReferencePage.jsx',
+    css: 'src/pages/commands-reference.css',
+    api: [],
   },
   '/builder/architecture-framework': {
     label: 'Architecture Framework',

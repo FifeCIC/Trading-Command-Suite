@@ -150,6 +150,47 @@ export class AutomationController {
 
   // ── Execution Queue endpoints ──────────────────────
 
+  /** GET /api/automation/events — unified log of ALL automated activity */
+  @Get('events')
+  async getEvents(@Query('limit') limit?: string, @Query('type') type?: string) {
+    const take = Math.min(parseInt(limit || '50', 10) || 50, 200);
+
+    // Automation loop ticks
+    const events: any[] = [];
+    try {
+      const ticks = await (this.prisma as any).automationEvent.findMany({
+        orderBy: { timestamp: 'desc' },
+        take: type === 'automation' ? take : Math.ceil(take / 2),
+      });
+      for (const t of ticks) {
+        events.push({
+          id: t.id, type: 'automation', taskName: t.step, status: t.decision || 'info',
+          detail: t.detail?.substring?.(0, 200) || '', symbol: t.symbol, tickNumber: t.tickNumber,
+          timestamp: t.timestamp, durationMs: t.durationMs,
+        });
+      }
+    } catch { /* table may not exist yet */ }
+
+    // Trade decisions
+    try {
+      const decisions = await (this.prisma as any).decisionLog.findMany({
+        orderBy: { timestamp: 'desc' },
+        take: type === 'decision' ? take : Math.ceil(take / 2),
+      });
+      for (const d of decisions) {
+        events.push({
+          id: d.id, type: 'decision', taskName: d.decision, status: d.decision === 'EXECUTED' ? 'success' : d.decision === 'FAILED' ? 'error' : 'info',
+          detail: d.reason?.substring?.(0, 200) || '', symbol: d.symbol, tickNumber: d.tickNumber,
+          timestamp: d.timestamp, composite: d.composite, price: d.price,
+        });
+      }
+    } catch { /* table may not exist yet */ }
+
+    // Sort by timestamp descending
+    events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return { events: events.slice(0, take), total: events.length };
+  }
+
   /** GET /api/automation/queue — current queue state */
   @Get('queue')
   getQueue(): QueueJob[] {
@@ -249,7 +290,29 @@ export class AutomationController {
       pendingActions: loopState.pendingActions,
       activeTimelineEvents: loopState.activeTimelineEvents.slice(0, 20),
       recentDecisions: (loopState.recentDecisions || []).slice(0, 20),
+      priorityQueue: loopState.priorityQueue || [],
     };
+  }
+
+  // ── Hot Stock Priority Queue ──────────────────────────
+
+  /** GET /api/automation/priority — list current priority queue */
+  @Get('priority')
+  getPriorityQueue() {
+    return this.loop.getPriorityQueue();
+  }
+
+  /** POST /api/automation/priority — add a symbol to the priority queue */
+  @Post('priority')
+  addPriority(@Body() body: { symbol: string; scoringStrategyId: string; strategyName: string; composite: number }) {
+    return this.loop.addPriority(body.symbol, body.scoringStrategyId, body.strategyName, body.composite);
+  }
+
+  /** DELETE /api/automation/priority — remove a symbol from the priority queue */
+  @Delete('priority')
+  removePriority(@Query('scoringStrategyId') scoringStrategyId: string, @Query('symbol') symbol: string) {
+    const removed = this.loop.removePriority(scoringStrategyId, symbol);
+    return { removed };
   }
 
   // ── Loop Control ─────────────────────────────────────

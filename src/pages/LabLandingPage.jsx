@@ -40,14 +40,6 @@ const LAB_SECTIONS = [
     status: 'active',
   },
   {
-    id: 'algorithm-lab',
-    label: 'Algorithm Log',
-    icon: '📐',
-    description: 'Directive scoring logs, algorithm debugging, and calculation trace viewer. Located in Development area.',
-    route: '/builder/algorithm-lab',
-    status: 'active',
-  },
-  {
     id: 'backtest',
     label: 'Backtest Engine',
     icon: '⬡',

@@ -23,4 +23,11 @@ export class DataRetentionController {
   async pruneAll() {
     return this.retention.pruneAll();
   }
+
+  /** POST /api/system/data-retention/throttle-scores — cap scores per (symbol, strategy) to N each */
+  @Post('throttle-scores')
+  async throttleScores(@Query('keep') keep?: string) {
+    const deleted = await this.retention.throttleScores(keep ? parseInt(keep) : 100);
+    return { deleted, keepPerGroup: keep ? parseInt(keep) : 100 };
+  }
 }

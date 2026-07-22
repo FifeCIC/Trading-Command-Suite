@@ -94,7 +94,7 @@ export class Mt5TradingService {
       });
       const data = await res.json();
       if (data.success) {
-        // Record successful trade
+        // Record successful trade with MT5 traceability fields (#446)
         this.tradeRecorder.record({
           symbol: params.symbol,
           side,
@@ -104,6 +104,10 @@ export class Mt5TradingService {
           status: 'open',
           origin,
           strategy: params.comment || undefined,
+          ticket: data.ticket as number | undefined,
+          sl: params.sl,
+          tp: params.tp,
+          brokerComment: params.comment,
         });
         return { success: true, ticket: data.ticket, price: data.price };
       }
@@ -134,6 +138,18 @@ export class Mt5TradingService {
     }
   }
 
+  /**
+   * closePosition() — STEP 5 of 6 in the trade lifecycle pipeline.
+   * BEFORE: placeOrder() opens the trade with strategy tag in MT5 comment field.
+   * AFTER:  tradeRecorder.record() persists closed trade to DB with strategy name.
+   * NEXT:   Strategy Comparison page (GET /api/trading/strategy-comparison) groups
+   *         closed trades WHERE strategy IS NOT NULL for per-strategy P&L/win rate.
+   *
+   * ⚠️ WARNING: Strategy name is extracted from MT5 position's comment field.
+   * Comment format: "Strategy Name | Score%". Do NOT change the split('|')[0]
+   * logic without ensuring placeOrder()'s comment format stays aligned.
+   * @see nest/src/modules/trading/mt5-trading.service.ts placeOrder() line ~98
+   */
   async closePosition(ticket: number): Promise<{ success: boolean; error?: string }> {
     try {
       // Snapshot position before closing for audit trail
@@ -147,6 +163,10 @@ export class Mt5TradingService {
       // Record the close in trade history
       if (pos) {
         const posType = String(pos.type) === '0' || (pos as any).type === 'buy' ? 'buy' : 'sell';
+        // Extract strategy name from MT5 comment (format: "Strategy Name | Score%")
+        const strategyFromComment = pos.comment
+          ? pos.comment.split('|')[0]?.trim()
+          : undefined;
         this.tradeRecorder.record({
           symbol: pos.symbol,
           side: posType === 'buy' ? 'sell' : 'buy', // closing side is opposite
@@ -158,6 +178,7 @@ export class Mt5TradingService {
           status: 'closed',
           origin: 'user',
           openedAt: pos.time ? new Date(pos.time * 1000) : undefined,
+          strategy: strategyFromComment,
         });
       }
 

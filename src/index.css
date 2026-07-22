@@ -1673,6 +1673,17 @@ button.nav-active {
 .sl-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--line); font-size: 0.82rem; }
 .sl-row--error { background: color-mix(in srgb, var(--danger) 6%, transparent); }
 .sl-row--warn { background: color-mix(in srgb, #ffaa00 6%, transparent); }
+
+/* Log file status bar */
+.sl-status-bar {
+  display: flex; gap: 1rem; flex-wrap: wrap; padding: 0.5rem 0.75rem;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  margin-bottom: 1rem; font-size: 0.72rem; color: var(--ink-soft);
+  font-family: monospace;
+}
+.sl-status-item { display: inline-flex; align-items: center; gap: 0.25rem; }
+.sl-status-item.sl-ok { color: #22c55e; }
+.sl-status-item.sl-err { color: #ef4444; }
 .sl-time { white-space: nowrap; font-size: 0.78rem; color: var(--ink-soft); font-family: monospace; }
 .sl-chip { display: inline-block; padding: 0.1rem 0.45rem; border-radius: 3px; font-size: 0.68rem; font-weight: 600; text-transform: uppercase; }
 .sl-chip--neutral { background: color-mix(in srgb, var(--line) 75%, var(--panel)); color: var(--ink-soft); }
@@ -2090,7 +2101,6 @@ button.nav-active {
 .sa-rank-strat { font-size: 0.65rem; color: var(--ink-soft); }
 
 /* Algorithm Lab */
-/* Algorithm Lab styles moved to src/pages/AlgorithmLabPage.css */
 
 .dev-footer {
   display: grid;

@@ -97,6 +97,15 @@ function compareProtocolPair(
   };
 }
 
+export interface PriorityQueueEntry {
+  scoringStrategyId: string;
+  symbol: string;
+  strategyName: string;
+  composite: number;
+  createdAt: string;
+  expiresAt: string;
+}
+
 export interface LoopState {
   loopEnabled: boolean;
   tickIntervalMs: number;
@@ -111,6 +120,7 @@ export interface LoopState {
   activeTimelineEvents: any[];
   globalRiskMultiplier: number;
   recentDecisions: TickDecision[];
+  priorityQueue: PriorityQueueEntry[];
 }
 
 export interface BrokerLoopState {
@@ -317,7 +327,17 @@ export class AutomationLoopService implements OnModuleInit {
     if (result.success) {
       this.lastAnyTradeAt = Date.now();
       this.lastSymbolTrade.set(symbol, Date.now());
-      try { this.tradeRecorder.record({ symbol, side: side.toLowerCase(), quantity: baseSize, entryPrice: result.price||entryPrice||0, pnl:0, provider: brokerId, status:'open', origin:'strategy', scoringStrategyId: strategyId } as any); } catch {}
+      try {
+        this.tradeRecorder.record({
+          symbol, side: side.toLowerCase(), quantity: baseSize,
+          entryPrice: result.price || entryPrice || 0, pnl: 0,
+          provider: brokerId, status: 'open', origin: 'strategy',
+          scoringStrategyId: strategyId,
+          ticket: result.ticket as number | undefined,
+          sl, tp,
+          brokerComment: `TCS ${strategyName} | ${composite}%`,
+        } as any);
+      } catch {}
     }
     decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: result.success?'EXECUTED':'FAILED', reason: result.success?`Ticket ${result.ticket}`:(result.error||'Unknown'), composite, signal: side, ticket: result.ticket, price: result.price, quantity: baseSize });
   }
@@ -336,6 +356,7 @@ export class AutomationLoopService implements OnModuleInit {
     activeTimelineEvents: [],
     globalRiskMultiplier: 1.0,
     recentDecisions: [],
+    priorityQueue: [],
   };
 
   /** Scoring strategies: protocol + watchlist pairings */
@@ -677,6 +698,84 @@ export class AutomationLoopService implements OnModuleInit {
     return { stopped: true, message: 'Loop stopped' };
   }
 
+  // ── Hot Stock Priority Queue ─────────────────────────
+
+  /**
+   * Add a symbol/scoring-strategy pair to the priority queue.
+   * The automation loop will evaluate these strategies FIRST on each tick.
+   * Max 3 entries. Expiry: configurable (default 15 minutes).
+   */
+  addPriority(symbol: string, scoringStrategyId: string, strategyName: string, composite: number): { ok: boolean; reason?: string } {
+    // Clean expired entries
+    this.cleanPriorityQueue();
+
+    if (this.state.priorityQueue.length >= 3) {
+      return { ok: false, reason: 'Priority queue full (max 3). Wait for an entry to expire or be consumed.' };
+    }
+
+    const exists = this.state.priorityQueue.find(e => e.scoringStrategyId === scoringStrategyId && e.symbol === symbol);
+    if (exists) {
+      return { ok: false, reason: `${symbol} is already prioritized for this strategy.` };
+    }
+
+    this.state.priorityQueue.push({
+      scoringStrategyId,
+      symbol,
+      strategyName,
+      composite,
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 15 * 60000).toISOString(),
+    });
+
+    this.logger.log(`⚡ Priority boost: ${symbol} via ${strategyName} (composite ${composite})`);
+    return { ok: true };
+  }
+
+  /** Remove a specific priority entry. */
+  removePriority(scoringStrategyId: string, symbol: string): boolean {
+    const before = this.state.priorityQueue.length;
+    this.state.priorityQueue = this.state.priorityQueue.filter(
+      e => !(e.scoringStrategyId === scoringStrategyId && e.symbol === symbol)
+    );
+    return this.state.priorityQueue.length < before;
+  }
+
+  /** Remove all expired priority entries. Returns count of removed entries. */
+  cleanPriorityQueue(): number {
+    const before = this.state.priorityQueue.length;
+    const now = Date.now();
+    const removed: PriorityQueueEntry[] = [];
+    this.state.priorityQueue = this.state.priorityQueue.filter(e => {
+      const expired = new Date(e.expiresAt).getTime() < now;
+      if (expired) removed.push(e);
+      return !expired;
+    });
+    if (removed.length > 0) {
+      this.logger.log(`Priority queue: ${removed.length} entries expired (${removed.map(e => e.symbol).join(', ')})`);
+    }
+    return before - this.state.priorityQueue.length;
+  }
+
+  /** Get current priority queue entries. */
+  getPriorityQueue(): PriorityQueueEntry[] {
+    this.cleanPriorityQueue();
+    return [...this.state.priorityQueue];
+  }
+
+  /** Reorder active strategies so prioritized ones come first. */
+  private getPrioritizedStrategies(activeStrategies: any[]): any[] {
+    if (this.state.priorityQueue.length === 0) return activeStrategies;
+
+    const prioritized = new Set(
+      this.state.priorityQueue.map(e => e.scoringStrategyId)
+    );
+
+    const priorityItems = activeStrategies.filter(s => prioritized.has(s.scoringStrategyId || s.id));
+    const remaining = activeStrategies.filter(s => !prioritized.has(s.scoringStrategyId || s.id));
+
+    return [...priorityItems, ...remaining];
+  }
+
   setIntervalMs(ms: number): void {
     this.state.tickIntervalMs = Math.max(15000, Math.min(3600000, ms)); // 15s - 60m
     if (this.timer) {
@@ -736,6 +835,10 @@ export class AutomationLoopService implements OnModuleInit {
         this.logger.warn(`  Failed to load strategies: ${(err as Error).message}`);
       }
       this.state.activeStrategyIds = activeStrategies.map((s: any) => s.id);
+
+      // ── Priority reorder: put prioritized strategies first ──
+      this.cleanPriorityQueue();
+      activeStrategies = this.getPrioritizedStrategies(activeStrategies);
 
       // Collect symbols from active strategies
       const strategySymbols = [...new Set(activeStrategies.map(s => s.symbol))];

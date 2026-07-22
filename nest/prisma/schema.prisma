@@ -84,6 +84,7 @@ model Score {
 
   @@index([symbolId, timestamp])
   @@index([strategyId, timestamp])
+  @@index([timestamp])
 }
 
 model Signal {
@@ -679,11 +680,19 @@ model Trade {
   openedAt          DateTime @default(now())
   closedAt          DateTime?
   createdAt         DateTime @default(now())
+  // MT5 broker traceability (#446)
+  ticket            Int?     // MT5 position ticket
+  sl                Float?   // Stop-loss price
+  tp                Float?   // Take-profit price
+  magic             Int?     // MT5 magic number
+  swap              Float?   // Accumulated swap
+  brokerComment     String?  @db.VarChar(200) // MT5 position comment
 
   @@index([symbol, openedAt])
   @@index([status])
   @@index([origin, createdAt])
   @@index([scoringStrategyId])
+  @@index([ticket])
 }
 
 model ApiCalls {
@@ -1585,4 +1594,22 @@ model PendingAction {
   @@map("pending_action")
   @@index([strategyId])
   @@index([status])
+}
+
+model Alert {
+  id           String    @id @default(uuid()) @db.VarChar(36)
+  type         String    @db.VarChar(50)    // signal | drawdown | daily | backtest | system
+  title        String    @db.VarChar(200)
+  detail       String?   @db.Text
+  severity     String    @default("info") @db.VarChar(20)  // critical | warning | info | success
+  ticker       String?   @db.VarChar(20)  // optional linked symbol
+  link         String?   @db.VarChar(500) // optional navigation URL
+  acknowledged Boolean   @default(false)
+  dismissed    Boolean   @default(false)
+  snoozedUntil DateTime?
+  createdAt    DateTime  @default(now())
+  readAt       DateTime?
+
+  @@index([type, createdAt])
+  @@index([acknowledged, createdAt])
 }

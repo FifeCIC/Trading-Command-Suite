@@ -182,6 +182,7 @@ export class ScoringController {
   // ── Strategy Competition (Q157) ──
 
   @Get('runs')
+  @UseInterceptors(new CacheInterceptor(15000))
   @ApiOperation({ summary: 'Get scoring runs grouped by time + strategy with search & pagination' })
   getRuns(
     @Query('search') search?: string,

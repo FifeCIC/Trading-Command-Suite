@@ -224,3 +224,80 @@
   color: var(--ink-soft);
   opacity: 0.6;
 }
+
+/* ── Priority Boost ── */
+
+.hsp-priority {
+  margin-top: 0.35rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.hsp-boost-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border: 1px dashed var(--accent);
+  border-radius: 6px;
+  background: rgba(14,165,166,0.06);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.hsp-boost-btn:hover:not(:disabled) {
+  background: rgba(14,165,166,0.15);
+  border-style: solid;
+}
+
+.hsp-boost-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.hsp-strategy-hint {
+  font-size: 0.65rem;
+  color: var(--ink-soft);
+  font-weight: 400;
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}
+
+.hsp-priority-active {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.hsp-priority-remove {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0;
+  line-height: 1;
+  margin-left: auto;
+}
+
+.hsp-priority-remove:hover {
+  color: #ef4444;
+}
+
+.hsp-no-strategy {
+  font-size: 0.68rem;
+  color: var(--ink-soft);
+  font-style: italic;
+  opacity: 0.6;
+}

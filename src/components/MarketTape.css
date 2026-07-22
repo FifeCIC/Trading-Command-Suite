@@ -79,3 +79,62 @@
     100% { transform: translateX(-50%); }
   }
 }
+
+/* ── Preferences Gear ── */
+.mkt-tape-gear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--panel, #1a1d2e);
+  border: 1px solid var(--line, #334155);
+  border-radius: 6px;
+  color: var(--ink-soft, #64748b);
+  font-size: 0.85rem;
+  padding: 2px 8px;
+  cursor: pointer;
+  z-index: 20;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+.mkt-tape-gear:hover { opacity: 1; color: var(--accent, #0ea5a6); }
+
+.mkt-tape-backdrop {
+  position: fixed; inset: 0; z-index: 30;
+  background: rgba(0,0,0,0.2);
+}
+
+.mkt-tape-prefs {
+  position: absolute;
+  right: 8px;
+  top: calc(100% + 4px);
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  z-index: 40;
+  min-width: 200px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.mkt-tape-prefs-title {
+  font-weight: 700;
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--line, #334155);
+  color: var(--accent, #0ea5a6);
+}
+.mkt-tape-pref-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  font-size: 0.78rem;
+  color: var(--ink-soft, #94a3b8);
+  cursor: pointer;
+}
+.mkt-tape-pref-row:hover { color: var(--ink, #e2e8f0); }
+.mkt-tape-pref-row input[type="checkbox"] {
+  accent-color: var(--accent, #0ea5a6);
+  cursor: pointer;
+}

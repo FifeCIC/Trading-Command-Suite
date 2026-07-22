@@ -61,12 +61,15 @@
 .ad-broker-on { border-color: var(--color-profit); color: var(--color-profit); }
 .ad-broker-off { border-color: var(--color-text-dim); color: var(--color-text-dim); }
 
-/* Grid */
+/* Grid — responsive 3-column */
 .ad-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
   min-width: 0;
 }
-@media (max-width: 900px) { .ad-grid { grid-template-columns: 1fr; } }
+@media (max-width: 1200px) { .ad-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 900px)  { .ad-grid { grid-template-columns: 1fr; } }
 .ad-col { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
 
 /* Panels */

@@ -121,62 +121,59 @@ export default function ProtocolsPage() {
         {selectedProto ? (
           <>
             <div className="protocols-header">
-              <h1>{selectedProto.name}</h1>
-              <span
-                className="protocols-source-badge"
-                style={{ background: SOURCE_COLORS[selectedProto.source] || '#888' }}
-              >
-                {SOURCE_LABELS[selectedProto.source] || selectedProto.source}
-              </span>
-              {(() => {
-                const pt = getProtocolType(selectedProto);
-                return (
-                  <span className="protocols-type-badge" style={{ background: pt.color }}>
-                    {pt.icon} {pt.label}
-                  </span>
-                );
-              })()}
+              <div style={{ flex: 1 }}>
+                <h1>{selectedProto.name}</h1>
+                <span
+                  className="protocols-source-badge"
+                  style={{ background: SOURCE_COLORS[selectedProto.source] || '#888' }}
+                >
+                  {SOURCE_LABELS[selectedProto.source] || selectedProto.source}
+                </span>
+                {(() => {
+                  const pt = getProtocolType(selectedProto);
+                  return (
+                    <span className="protocols-type-badge" style={{ background: pt.color }}>
+                      {pt.icon} {pt.label}
+                    </span>
+                  );
+                })()}
+              </div>
+              <div className="protocols-id-section">
+                <code className="protocols-id">{selectedProto.id}</code>
+                <p className="protocols-id-hint">
+                  API: <code>?protocol={selectedProto.id}</code>
+                </p>
+              </div>
             </div>
 
             <p className="protocols-description">{selectedProto.description}</p>
 
-            {/* ── Trading Style Advisory ── */}
-            {(selectedProto.tradingStyle || selectedProto.recommendedTimeframe || selectedProto.avgHoldTime) && (
-              <div className="protocols-advisory">
-                <h3>Trading Style</h3>
-                <div className="protocols-advisory-grid">
-                  {selectedProto.tradingStyle && (
-                    <div className="protocols-advisory-item">
-                      <div className="protocols-advisory-value">{selectedProto.tradingStyle}</div>
-                      <div className="protocols-advisory-label">Style</div>
-                    </div>
-                  )}
-                  {selectedProto.recommendedTimeframe && (
-                    <div className="protocols-advisory-item">
-                      <div className="protocols-advisory-value">{selectedProto.recommendedTimeframe}</div>
-                      <div className="protocols-advisory-label">Timeframe</div>
-                    </div>
-                  )}
-                  {selectedProto.avgHoldTime && (
-                    <div className="protocols-advisory-item">
-                      <div className="protocols-advisory-value">{selectedProto.avgHoldTime}</div>
-                      <div className="protocols-advisory-label">Avg Hold</div>
-                    </div>
-                  )}
-                  {selectedProto.winRateTarget && (
-                    <div className="protocols-advisory-item">
-                      <div className="protocols-advisory-value">{selectedProto.winRateTarget}</div>
-                      <div className="protocols-advisory-label">Target Win Rate</div>
-                    </div>
-                  )}
-                </div>
-                {selectedProto.idealFor && (
-                  <p className="protocols-advisory-ideal">{selectedProto.idealFor}</p>
-                )}
-              </div>
-            )}
-
+            {/* ── Merged Stats Grid ── */}
             <div className="protocols-stats">
+              {selectedProto.tradingStyle && (
+                <div className="protocols-stat">
+                  <div className="protocols-stat-value">{selectedProto.tradingStyle}</div>
+                  <div className="protocols-stat-label">Style</div>
+                </div>
+              )}
+              {selectedProto.recommendedTimeframe && (
+                <div className="protocols-stat">
+                  <div className="protocols-stat-value">{selectedProto.recommendedTimeframe}</div>
+                  <div className="protocols-stat-label">Timeframe</div>
+                </div>
+              )}
+              {selectedProto.avgHoldTime && (
+                <div className="protocols-stat">
+                  <div className="protocols-stat-value">{selectedProto.avgHoldTime}</div>
+                  <div className="protocols-stat-label">Avg Hold</div>
+                </div>
+              )}
+              {selectedProto.winRateTarget && (
+                <div className="protocols-stat">
+                  <div className="protocols-stat-value">{selectedProto.winRateTarget}</div>
+                  <div className="protocols-stat-label">Win Rate</div>
+                </div>
+              )}
               <div className="protocols-stat">
                 <div className="protocols-stat-value">{selectedProto.directiveCount}</div>
                 <div className="protocols-stat-label">Directives</div>
@@ -192,6 +189,9 @@ export default function ProtocolsPage() {
                 <div className="protocols-stat-label">Status</div>
               </div>
             </div>
+            {selectedProto.idealFor && (
+              <p className="protocols-advisory-ideal">{selectedProto.idealFor}</p>
+            )}
 
             {/* ── META.Stack Connections ── */}
             <div className="protocols-connections">
@@ -251,8 +251,15 @@ export default function ProtocolsPage() {
                     </div>
                     <ul className="protocols-directive-list">
                       {group.directives.map(d => (
-                        <li key={d.id} className={`protocols-directive ${d.maxScore !== 100 ? 'variable-max' : ''}`}>
-                          <code className="protocols-directive-id">{d.id}</code>
+                        <li key={d.id} className={`protocols-directive ${d.maxScore !== 100 ? 'variable-max' : ''}${d.description ? ' has-popover' : ''}`}>
+                          <code className="protocols-directive-id">{d.name || d.id}</code>
+                          {d.description && (
+                            <span className="protocols-directive-popover">
+                              <strong>{d.name || d.id}</strong>
+                              <span>{d.description}</span>
+                              <span className="protocols-directive-popover-score">Max: {d.maxScore}</span>
+                            </span>
+                          )}
                           <span className="protocols-directive-max">
                             {d.maxScore !== 100 ? `Max ${d.maxScore}` : '100'}
                           </span>
@@ -263,14 +270,6 @@ export default function ProtocolsPage() {
                 ))}
               </div>
             )}
-
-            <div className="protocols-id-section">
-              <h3>Protocol ID</h3>
-              <code className="protocols-id">{selectedProto.id}</code>
-              <p className="protocols-id-hint">
-                Use this ID in API calls: <code>?protocol={selectedProto.id}</code>
-              </p>
-            </div>
 
             <div className="protocols-usage">
               <h3>API Usage</h3>

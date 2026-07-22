@@ -81,6 +81,22 @@ export interface SignalLadder {
   }>;
 }
 
+/** Multi-protocol comparison result — one ladder per protocol + comparison matrix */
+export interface MultiProtocolLadder {
+  generatedAt: string;
+  symbols: string[];
+  protocols: Array<{
+    id: string;
+    name: string | null;
+    ladder: SignalLadder;
+  }>;
+  /** Comparison matrix: rows = symbols, columns = protocols */
+  comparison: Array<{
+    symbol: string;
+    scores: Record<string, { composite: number; signal: string; symbolId?: string }>;
+  }>;
+}
+
 @Injectable()
 export class SignalEnvelopeService {
   private readonly logger = new Logger(SignalEnvelopeService.name);
@@ -154,6 +170,66 @@ export class SignalEnvelopeService {
   }
 
   /**
+   * Build a multi-protocol comparison ladder.
+   * Runs buildLadder for each protocol and produces a comparison matrix
+   * where rows = symbols and columns = protocols.
+   *
+   * @param symbols - Array of ticker strings
+   * @param protocolIds - Array of protocol slugs to compare
+   * @param resolveSymbolIds - If true, look up DB symbol IDs for each ticker
+   */
+  async buildComparisonLadder(
+    symbols: string[],
+    protocolIds: string[],
+    resolveSymbolIds = false,
+  ): Promise<MultiProtocolLadder> {
+    const protocols: MultiProtocolLadder['protocols'] = [];
+
+    for (const protocolId of protocolIds) {
+      try {
+        const ladder = await this.buildLadder(symbols, protocolId);
+        const name = ladder.protocolName || protocolId;
+        protocols.push({ id: protocolId, name, ladder });
+      } catch (err) {
+        this.logger.warn(`Skipping protocol ${protocolId}: ${(err as Error).message}`);
+      }
+    }
+
+    // Build comparison matrix
+    const symbolIdMap = new Map<string, string>();
+    if (resolveSymbolIds) {
+      const dbSyms = await this.prisma.symbol.findMany({
+        where: { ticker: { in: symbols.map(s => s.toUpperCase()) } },
+        select: { ticker: true, id: true },
+      });
+      for (const s of dbSyms) {
+        symbolIdMap.set(s.ticker, s.id);
+      }
+    }
+
+    const comparison: MultiProtocolLadder['comparison'] = symbols.map(ticker => {
+      const clean = ticker.toUpperCase();
+      const scores: Record<string, { composite: number; signal: string; symbolId?: string }> = {};
+      for (const p of protocols) {
+        const env = p.ladder.envelopes.find(e => e.symbol === clean);
+        scores[p.id] = {
+          composite: env?.composite ?? 0,
+          signal: env?.signal ?? 'HOLD',
+          ...(symbolIdMap.has(clean) ? { symbolId: symbolIdMap.get(clean) } : {}),
+        };
+      }
+      return { symbol: clean, scores };
+    });
+
+    return {
+      generatedAt: new Date().toISOString(),
+      symbols: symbols.map(s => s.toUpperCase()),
+      protocols,
+      comparison,
+    };
+  }
+
+  /**
    * Build a single signal envelope for one symbol.
    */
   async buildEnvelope(
@@ -168,7 +244,7 @@ export class SignalEnvelopeService {
     });
 
     const marketBars = sym
-      ? await this.marketData.getBars(sym.id, '1d', 100)
+      ? await this.marketData.getBars(sym.id, '1d', 200)
       : [];
 
     if (!marketBars || marketBars.length === 0) {

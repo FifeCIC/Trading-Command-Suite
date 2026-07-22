@@ -32,7 +32,8 @@ import CreateStrategyPage from '../pages/CreateStrategyPage.jsx';
 
 // ── Scoring ──
 import DirectivesManagerPage from '../pages/DirectivesManagerPage.jsx';
-import LiveOrderingStackPage from '../pages/LiveOrderingStackPage.jsx';
+import DirectiveDetailPage from '../pages/DirectiveDetailPage.jsx';
+import LadderPage from '../pages/LadderPage.jsx';
 import SeesArenaPage from '../pages/SeesArenaPage.jsx';
 import SignalsWorkbenchPage from '../pages/SignalsWorkbenchPage.jsx';
 import ExitSignalsPage from '../pages/ExitSignalsPage.jsx';
@@ -40,6 +41,7 @@ import ScoringRunsPage from '../pages/ScoringRunsPage.jsx';
 import ScoringActivityLogsPage from '../pages/ScoringActivityLogsPage.jsx';
 import ProtocolsPage from '../pages/ProtocolsPage.jsx';
 import CreateProtocolsPage from '../pages/CreateProtocolsPage.jsx';
+import StrategyLaddersPage from '../pages/StrategyLaddersPage.jsx';
 import StrategyBuilderPage from '../pages/StrategyBuilderPage.jsx';
 import StrategyWizardPage from '../pages/StrategyWizardPage.jsx';
 
@@ -105,13 +107,14 @@ import PlatformComparisonsPage from '../pages/PlatformComparisonsPage.jsx';
 
 // ── Backtest / Strategies ──
 import BacktestPage from '../pages/BacktestPage.jsx';
-import MultiStrategyComparisonPage from '../pages/MultiStrategyComparisonPage.jsx';
 import ScenarioAnalysisPage from '../pages/ScenarioAnalysisPage.jsx';
 import StrategiesPage from '../pages/StrategiesPage.jsx';
 
 // ── Status / System ──
 import SystemStatusPage from '../pages/SystemStatusPage.jsx';
 import SystemLogPage from '../pages/SystemLogPage.jsx';
+import HealthDashboardPage from '../pages/HealthDashboardPage.jsx';
+import CommandsReferencePage from '../pages/CommandsReferencePage.jsx';
 import SetupWizardPage from '../pages/SetupWizardPage.jsx';
 import FaqPage from '../pages/FaqPage.jsx';
 import SettingsPage from '../pages/SettingsPage.jsx';
@@ -132,7 +135,6 @@ import ChartsLabPage from '../pages/ChartsLabPage.jsx';
 import ThemeLabPage from '../pages/ThemeLabPage.jsx';
 import ThemeLabMotion from '../pages/ThemeLabMotion.jsx';
 import ThemeLabTransitions from '../pages/ThemeLabTransitions.jsx';
-import ThemeLabContainer from '../pages/ThemeLabContainer.jsx';
 import ThemeLabScroll from '../pages/ThemeLabScroll.jsx';
 import ThemeLabPopover from '../pages/ThemeLabPopover.jsx';
 import LabLandingPage from '../pages/LabLandingPage.jsx';
@@ -160,7 +162,6 @@ import UserWatchlistsPage from '../pages/UserWatchlistsPage.jsx';
 import ABTestingPage from '../pages/ABTestingPage.jsx';
 import AICostsPage from '../pages/AICostsPage.jsx';
 import AILogViewerPage from '../pages/AILogViewerPage.jsx';
-import AlgorithmLabPage from '../pages/AlgorithmLabPage.jsx';
 import AlertCenterPage from '../pages/AlertCenterPage.jsx';
 import DailyBriefingPage from '../pages/DailyBriefingPage.jsx';
 import DailySummaryReportPage from '../pages/DailySummaryReportPage.jsx';
@@ -200,7 +201,8 @@ export const VIEW_COMPONENTS = {
 
   // Scoring
   'directives-manager': DirectivesManagerPage,
-  'live-ordering-stack': LiveOrderingStackPage,
+  'directive-detail': DirectiveDetailPage,
+  'live-ordering-stack': LadderPage,
   'sees-arena': SeesArenaPage,
   'signals-workbench': SignalsWorkbenchPage,
   'exit-signals': ExitSignalsPage,
@@ -209,8 +211,8 @@ export const VIEW_COMPONENTS = {
   'protocols': ProtocolsPage,
   'create-protocols': CreateProtocolsPage,
   'strategy-wizard': StrategyWizardPage,
+  'strategy-ladders': StrategyLaddersPage,
   'scoring-overview': ScoringOverviewPage,
-  'algorithm-lab': AlgorithmLabPage,
 
   // Automation
   'automation-dashboard': AutomationDashboardPage,
@@ -269,13 +271,14 @@ export const VIEW_COMPONENTS = {
 
   // Backtest / Strategies
   'backtest': BacktestPage,
-  'strategies-compare': MultiStrategyComparisonPage,
   'scenario-analysis': ScenarioAnalysisPage,
   'strategies': TradingStrategiesPage,
 
   // Status / System
   'status': SystemStatusPage,
   'system-log': SystemLogPage,
+  'health-check': HealthDashboardPage,
+  'commands': CommandsReferencePage,
   'setup': SetupWizardPage,
   'faq': FaqPage,
   'settings': SettingsPage,
@@ -294,7 +297,6 @@ export const VIEW_COMPONENTS = {
   'theme-lab': ThemeLabPage,
   'theme-lab-motion': ThemeLabMotion,
   'theme-lab-transitions': ThemeLabTransitions,
-  'theme-lab-container': ThemeLabContainer,
   'theme-lab-scroll': ThemeLabScroll,
   'theme-lab-popover': ThemeLabPopover,
   'lab-landing': LabLandingPage,

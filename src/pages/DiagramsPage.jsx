@@ -48,7 +48,7 @@ const DIAGRAMS = [
   {
     id: 'sees-trading',
     label: 'M.E.T.A. Stack Trading Lifecycle',
-    desc: 'M.E.T.A. Stack orchestrates the full trading lifecycle. Automation tick: Timeline risk check â†’ fetch bars â†’ per-tick directive memoization cache (100 directives scored once per symbol, reused across rankAll + protocol-gating + evaluateStrategy) â†’ dual-protocol gated scoring via SEES (LONG vs SHORT) â†’ threshold + cooldown + duplicate guard â†’ mode dispatch (manual/semi-auto/auto) â†’ broker execution via AdapterFactory â†’ trade recording. Monitoring and feedback loops are planned but not yet automated.',
+    desc: 'M.E.T.A. Stack orchestrates the full trading lifecycle. Automation tick: Priority Queue check (Hot Stock Picks boost) → Timeline risk check → fetch bars → per-tick directive memoization cache → dual-protocol gated scoring via SEES (LONG vs SHORT) → threshold + cooldown + duplicate guard → mode dispatch (manual/semi-auto/auto) → broker execution via AdapterFactory → trade recording. Priority queue allows manual boosting of cross-protocol hot picks to be evaluated FIRST.',
     code: `flowchart TB
     subgraph Tick["1. Automation Tick (5min)"] 
         A[clearTickCache] --> B[Timeline Risk Check]

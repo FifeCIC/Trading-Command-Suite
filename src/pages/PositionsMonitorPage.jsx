@@ -38,6 +38,7 @@ function CFDPosition({ pos, index, onClose, isClosing }) {
         <div className="pm-pos-title">
           <strong>{pos.symbol}</strong>
           <span className="pm-pos-source">{pos.source}</span>
+          {pos.ticket && <span className="pm-pos-ticket" title={`MT5 ticket #${pos.ticket}`}>#{pos.ticket}</span>}
         </div>
         <div className="pm-pos-pnl-group">
           <span className={`pm-pos-pnl ${isProfit ? 'pm-profit' : 'pm-loss'}`}>
@@ -75,7 +76,7 @@ function CFDPosition({ pos, index, onClose, isClosing }) {
       {pos.overnightFee > 0 && (
         <div className="pm-warning">⚠ Overnight fee accruing: ${pos.overnightFee.toFixed(2)}/day</div>
       )}
-      {pos.daysHeld > 7 && (
+      {pos.source === 'MT5' && pos.daysHeld > 7 && (
         <div className="pm-warning">⚠ CFD held {pos.daysHeld} days — consider closing</div>
       )}
       <RiskBar pct={riskPct} label="Risk Exposure" />
@@ -92,6 +93,7 @@ function CFDPosition({ pos, index, onClose, isClosing }) {
           </button>
         )}
         <a className="pm-nav-link" href={`/research/symbol/${pos.symbol}`}>🔍 Details</a>
+        <a className="pm-nav-link" href={`/automation/decision-trail?symbol=${pos.symbol}`} title={`Decision trail for ${pos.symbol}`}>🔗 Trail</a>
       </div>
     </motion.div>
   );
@@ -264,7 +266,7 @@ export default function PositionsMonitorPage() {
 
   // Map Trading212 positions (long-only Invest accounts — direction is always BUY)
   const t212Positions = useMemo(() => (t212Query.data?.positions || []).map((p) => ({
-    symbol: p.ticker || p.symbol,
+    symbol: p.symbol || p.ticker,
     direction: p.direction || p.side || 'BUY',  // T212 Invest is long-only; check for direction field if available
     volume: String(p.shares || p.quantity || '—'),
     leverage: '—',
@@ -277,8 +279,8 @@ export default function PositionsMonitorPage() {
     overnightFee: 0,
     riskPct: Math.abs(p.pnlPct || 0),
     allocation: p.allocation ? p.allocation * 100 : null,
-    ticket: p.ticker || p.symbol,
-    source: p.accountType === 'DEMO' ? 'T212 Demo' : 'Trading212',
+    ticket: p.symbol || p.ticker,
+    source: t212Query.data?.mode === 'demo' ? 'T212 Practice' : 'Trading212',
     currentPrice: p.currentPrice,
     avgCost: p.avgCost,
   })), [t212Query.data]);

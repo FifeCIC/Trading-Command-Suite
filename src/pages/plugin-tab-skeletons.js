@@ -225,7 +225,7 @@ export const PLUGIN_TAB_SKELETONS = {
     domain: 'Automation / Operations',
   },
   'automation-rules': {
-    title: 'Bot Rules',
+    title: 'Automation Rules',
     subtitle: 'Global hard-rules for bots — entry, exit, lock, and safety automation.',
     domain: 'Automation / Rules',
   },
@@ -298,11 +298,6 @@ export const PLUGIN_TAB_SKELETONS = {
     title: 'jQuery UI',
     subtitle: 'Legacy component reference surface for compatibility migration.',
     domain: 'Development / Legacy',
-  },
-  assets: {
-    title: 'Assets',
-    subtitle: 'Asset pipeline inventory and packaging diagnostics.',
-    domain: 'Development / Assets',
   },
   'developer-snippets': {
     title: 'Developer Snippets',

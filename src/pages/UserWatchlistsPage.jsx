@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import './watchlists.css';
 
@@ -52,6 +52,36 @@ export default function UserWatchlistsPage() {
 
   const selectedWl = watchlists?.find(w => w.id === selectedId);
   const symbols = detail?.symbols ?? [];
+
+  // Lock status for selected watchlist
+  const lockQuery = useQuery({
+    queryKey: ['watchlist-lock', selectedId],
+    queryFn: () => apiGet(`/api/watchlists/${selectedId}/lock-status`).catch(() => ({ locked: false })),
+    enabled: !!selectedId && !selectedWl?.isDefault,
+    staleTime: 30_000,
+  });
+  const isLocked = lockQuery.data?.locked || false;
+
+  // Delete watchlist mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id) => apiPost('/api/watchlists/delete', { id }).catch(async () => {
+      // Fallback: use fetch for DELETE
+      await fetch(`/api/watchlists/${id}`, { method: 'DELETE' });
+    }),
+    onSuccess: () => {
+      setSelectedId(null);
+      queryClient.invalidateQueries({ queryKey: ['watchlists'] });
+    },
+  });
+
+  // Remove symbol mutation
+  const removeSymbolMutation = useMutation({
+    mutationFn: ({ watchlistId, ticker }) =>
+      fetch(`/api/watchlists/${watchlistId}/symbols/${ticker}`, { method: 'DELETE' }).then(r => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['watchlist-symbols', selectedId] });
+    },
+  });
 
   // Auto-select the default watchlist on first load
   useEffect(() => {
@@ -121,6 +151,7 @@ export default function UserWatchlistsPage() {
           <div className="wl-list-main">
             <span className="wl-list-name">
               {wl.isDefault && <span className="wl-default-star" title="Default watchlist">★ </span>}
+              {isLocked && selectedId === wl.id && <span className="wl-lock-icon" title="Locked — in use by active strategies">🔒 </span>}
               {cleanLabel(wl.label)}
             </span>
             <span className="wl-list-count">{wl.symbolCount} symbols</span>
@@ -134,6 +165,16 @@ export default function UserWatchlistsPage() {
             <span className="wl-chevron">{selectedId === wl.id ? '▴' : '▾'}</span>
           </div>
         </div>
+        {!wl.isDefault && selectedId === wl.id && (
+          <button
+            className="wl-delete-btn"
+            onClick={(e) => { e.stopPropagation(); if (confirm(`Delete "${cleanLabel(wl.label)}"?`)) deleteMutation.mutate(wl.id); }}
+            disabled={isLocked}
+            title={isLocked ? 'Locked by active strategies' : 'Delete watchlist'}
+          >
+            🗑️
+          </button>
+        )}
 
         <AnimatePresence>
           {selectedId === wl.id && (
@@ -290,16 +331,26 @@ export default function UserWatchlistsPage() {
                     // Clean Trading212 IDs like "RBLX_US_EQ" → "RBLX"
                     const cleanTicker = ticker.includes('_') ? ticker.split('_')[0] : ticker;
                     return (
-                      <a
-                        key={ticker || Math.random()}
-                        href={`/research/symbol/${cleanTicker}`}
-                        className="wl-symbol-chip"
-                      >
-                        {cleanTicker}
-                        {displayName && displayName !== cleanTicker && (
-                          <span className="wl-symbol-name">{displayName}</span>
+                      <div key={ticker || Math.random()} className="wl-symbol-chip-wrap">
+                        <a
+                          href={`/research/symbol/${cleanTicker}`}
+                          className="wl-symbol-chip"
+                        >
+                          {cleanTicker}
+                          {displayName && displayName !== cleanTicker && (
+                            <span className="wl-symbol-name">{displayName}</span>
+                          )}
+                        </a>
+                        {!isLocked && (
+                          <button
+                            className="wl-symbol-remove"
+                            onClick={(e) => { e.preventDefault(); removeSymbolMutation.mutate({ watchlistId: selectedId, ticker: cleanTicker }); }}
+                            title={`Remove ${cleanTicker}`}
+                          >
+                            ✕
+                          </button>
                         )}
-                      </a>
+                      </div>
                     );
                   })}
                 </div>

@@ -1,10 +1,21 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 
 const TYPE_COLORS = { signal: '#4ade80', drawdown: '#f87171', daily: '#fbbf24', backtest: '#60a5fa', system: '#94a3b8' };
 
+// Fallback routes by alert type when no ticker/link is available
+const TYPE_FALLBACKS = {
+  signal: '/scoring/live-ordering-stack',
+  drawdown: '/trading/portfolio-overview',
+  backtest: '/training/backtest',
+  system: '/status/status',
+  daily: '/dashboard',
+};
+
 export default function AlertCenterPage() {
+  const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
   const [readIds, setReadIds] = useState(new Set());
 
@@ -26,6 +37,18 @@ export default function AlertCenterPage() {
   const markRead = (id) => setReadIds((prev) => new Set([...prev, id]));
   const markAllRead = () => setReadIds(new Set(alerts.map((a) => a.id)));
 
+  const handleAlertClick = (alert) => {
+    markRead(alert.id);
+    if (alert.ticker) {
+      navigate(`/research/symbol/${alert.ticker}`);
+    } else if (alert.link) {
+      window.location.href = alert.link;
+    } else {
+      const fallback = TYPE_FALLBACKS[alert.type];
+      if (fallback) navigate(fallback);
+    }
+  };
+
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: 20, color: '#e2e8f0' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -44,7 +67,7 @@ export default function AlertCenterPage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {filtered.map(a => (
-          <div key={a.id} onClick={() => markRead(a.id)}
+          <div key={a.id} onClick={() => handleAlertClick(a)}
             style={{
               background: a.read ? '#1a1d2e' : '#111827', border: `1px solid ${a.read ? '#2d3040' : a.type === 'drawdown' ? '#7f1d1d' : '#1e3a5f'}`,
               borderLeft: `3px solid ${TYPE_COLORS[a.type]}`, borderRadius: 8, padding: '12px 14px', cursor: 'pointer', opacity: a.read ? 0.7 : 1

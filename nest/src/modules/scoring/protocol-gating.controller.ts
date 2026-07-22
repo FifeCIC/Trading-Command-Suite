@@ -4,6 +4,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { MarketDataService } from '../market-data/market-data.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { ProtocolDbService } from './protocol-db.service';
+import { DirectivesService } from '../directives/directives.service';
 
 @Controller('scoring/gated')
 export class ProtocolGatingController {
@@ -15,6 +16,7 @@ export class ProtocolGatingController {
     private readonly portfolio: PortfolioService,
     private readonly prisma: PrismaService,
     private readonly protocolDb: ProtocolDbService,
+    private readonly directivesService: DirectivesService,
   ) {}
 
   /**
@@ -56,10 +58,15 @@ export class ProtocolGatingController {
         weight: g.weight,
         minMultiplier: g.isRiskGate ? g.minMultiplier : undefined,
         maxMultiplier: g.isRiskGate ? g.maxMultiplier : undefined,
-        directives: g.directiveIds.map((did) => ({
-          id: did,
-          maxScore: (g as any).directiveMaxScores?.[did] ?? 100,
-        })),
+        directives: g.directiveIds.map((did) => {
+          const reg = this.directivesService.get(did);
+          return {
+            id: did,
+            name: reg?.name ?? did,
+            description: reg?.description ?? '',
+            maxScore: (g as any).directiveMaxScores?.[did] ?? 100,
+          };
+        }),
       }));
 
       const maxScore = proto.groups.reduce(
@@ -219,7 +226,7 @@ export class ProtocolGatingController {
           where: { ticker: p.symbol },
         });
         const bars = sym
-          ? await this.marketData.getBars(sym.id, '1d', 100)
+          ? await this.marketData.getBars(sym.id, '1d', 200)
           : [];
         return { symbol: p.symbol, bars: bars || [] };
       }),
@@ -244,7 +251,7 @@ export class ProtocolGatingController {
           where: { ticker: ticker.toUpperCase() },
         });
         const bars = sym
-          ? await this.marketData.getBars(sym.id, '1d', 100)
+          ? await this.marketData.getBars(sym.id, '1d', 200)
           : [];
         return { symbol: ticker.toUpperCase(), bars: bars || [] };
       }),

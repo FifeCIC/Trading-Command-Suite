@@ -1,7 +1,7 @@
 {
   "earnings": {
-    "importHorizonMonths": 6,
-    "autoRefreshDays": 7
+    "autoRefreshDays": 7,
+    "importHorizonMonths": 6
   },
   "correlation": {
     "refreshMinutes": 360,
@@ -15,5 +15,53 @@
   },
   "data": {
     "stalenessHours": 24
+  },
+  "newsImport": {
+    "tiers": [
+      {
+        "id": "positions",
+        "enabled": true,
+        "maxPerDay": 30,
+        "intervalMin": 120
+      },
+      {
+        "id": "active-protocols",
+        "enabled": true,
+        "maxPerDay": 20,
+        "intervalMin": 240
+      },
+      {
+        "id": "macro",
+        "enabled": true,
+        "maxPerDay": 15,
+        "intervalMin": 360
+      },
+      {
+        "id": "sector",
+        "enabled": true,
+        "maxPerDay": 15,
+        "intervalMin": 360
+      },
+      {
+        "id": "other",
+        "enabled": false,
+        "maxPerDay": 20,
+        "intervalMin": 1440
+      }
+    ],
+    "dailyLimit": 100
+  },
+  "healthChecks": {
+    "diskInfo": true,
+    "apiTrends": true,
+    "errorRates": true,
+    "portStatus": true,
+    "slowQueries": true,
+    "providerGrid": true,
+    "systemVitals": true,
+    "dbDiagnostics": true,
+    "autoRefreshSec": 15,
+    "cronHeartbeats": true,
+    "traceCorrelations": true
   }
 }

@@ -319,6 +319,16 @@ export default function ActiveSymbolsPage() {
                         {!hasCompanyName && sym.name && (
                           <span style={{ fontSize: '0.75rem', color: 'var(--ink-soft)', fontStyle: 'italic' }}>No company name</span>
                         )}
+                        <span style={{ fontSize: '0.7rem' }}>
+                          <a
+                            href={`/automation/decision-trail?symbol=${sym.ticker}`}
+                            onClick={(e) => { e.preventDefault(); navigate(`/automation/decision-trail?symbol=${sym.ticker}`); }}
+                            title={`Inspect decision trail for ${sym.ticker}`}
+                            style={{ color: 'var(--ink-soft)', textDecoration: 'none' }}
+                          >
+                            🔗 Trail
+                          </a>
+                        </span>
                       </div>
                     </td>
                     {cols.openTrade && (

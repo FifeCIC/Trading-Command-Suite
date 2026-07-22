@@ -119,6 +119,12 @@ export class NewsController {
 
   // ── Categories ──
 
+  @Get('counts')
+  async getSourceCounts() {
+    const counts = await this.importService.getSourceCounts();
+    return { counts, total: Object.values(counts).reduce((a, b) => a + b, 0) };
+  }
+
   @Get('categories')
   async getCategories() {
     const categories = await this.importService.getCategories();

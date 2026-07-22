@@ -2,14 +2,14 @@
  * Decision Trail Browser
  * ======================
  * Visualize the full chain: Scoring → Comparison → Decision → Execution → Monitoring.
- * Filters by symbol, strategy, date range. Expandable timeline view with completeness checks.
+ * Reads from the automation loop's decision_log — the same data that powers
+ * /api/automation/status recentDecisions. No separate storage system.
  *
- * Endpoints (pending #350 Decision-Trail storage):
- *   GET /api/trails?symbol=&strategy=&from=&to=&limit=
- *   GET /api/trails/:tradeTicket
- *   GET /api/trails/incomplete
+ * Supports ?symbol=AAPL for deep-linking from other views.
  */
-import { useState, useMemo } from 'react';
+
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
@@ -27,28 +27,37 @@ const TRAIL_STAGES = [
 ];
 
 export default function DecisionTrailPage() {
-  const [symbolFilter, setSymbolFilter] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSymbol = searchParams.get('symbol') || '';
+  const [symbolFilter, setSymbolFilter] = useState(initialSymbol);
   const [expandedTrail, setExpandedTrail] = useState(null);
 
-  // ── Fetch trails ──
+  // Sync symbol filter to URL param
+  useEffect(() => {
+    if (symbolFilter) {
+      setSearchParams({ symbol: symbolFilter }, { replace: true });
+    } else {
+      setSearchParams({}, { replace: true });
+    }
+  }, [symbolFilter, setSearchParams]);
+
+  // ── Fetch trails from automation loop recent decisions ──
   const trailsQuery = useQuery({
     queryKey: ['trails', symbolFilter],
-    queryFn: () => {
-      let url = '/api/trails?limit=20';
-      if (symbolFilter) url += `&symbol=${symbolFilter}`;
-      return apiGet(url).catch(() => ({ trails: [] }));
+    queryFn: async () => {
+      const data = await apiGet('/api/automation/status').catch(() => ({}));
+      let decisions = data.recentDecisions || [];
+      if (symbolFilter) {
+        decisions = decisions.filter(d =>
+          d.symbol?.toUpperCase().includes(symbolFilter.toUpperCase())
+        );
+      }
+      return { trails: decisions.slice(0, 20) };
     },
     refetchInterval: 30_000,
+    keepPreviousData: true,
   });
   const trails = trailsQuery.data?.trails || [];
-
-  // ── Incomplete trails ──
-  const incompleteQuery = useQuery({
-    queryKey: ['trails-incomplete'],
-    queryFn: () => apiGet('/api/trails/incomplete').catch(() => ({ trails: [] })),
-    refetchInterval: 60_000,
-  });
-  const incomplete = incompleteQuery.data?.trails || [];
 
   // ── Compute completeness stats ──
   const stats = useMemo(() => {
@@ -67,29 +76,16 @@ export default function DecisionTrailPage() {
     return { total: trails.length, complete, missingStages: missing };
   }, [trails]);
 
-  const isLoading = trailsQuery.isLoading;
-
-  if (isLoading) {
-    return (
-      <div className="dt-page">
-        <header className="dt-header"><h1>Decision Trail Browser</h1></header>
-        <LoadingSkeleton variant="card" count={3} />
-      </div>
-    );
-  }
+  const isLoading = trailsQuery.isLoading && !trailsQuery.data;
 
   return (
     <div className="dt-page">
       <header className="dt-header">
         <div>
           <h1>🔗 Decision Trail Browser</h1>
-          <p className="dt-subtitle">Trace the full pipeline: Scoring → Comparison → Decision → Execution → Monitoring</p>
+          <p className="dt-subtitle">Trace the full pipeline: Scoring → Comparison → Decision → Execution → Monitoring. Data from automation loop decision_log — the same decisions shown in /api/automation/status.</p>
         </div>
       </header>
-
-      {!trailsQuery.data && (
-        <Notice level="info">Decision Trail storage not yet deployed — showing empty state. Trails will appear when #350 (Decision-Trail DB) is live.</Notice>
-      )}
 
       {/* Completeness overview */}
       {stats.total > 0 && (
@@ -118,127 +114,96 @@ export default function DecisionTrailPage() {
         </div>
       )}
 
-      {/* Symbol filter */}
+      {/* Symbol filter — stays mounted during loading */}
       <div className="dt-filters">
         <div className="dt-filter-group">
           <label>Symbol</label>
           <input
             type="text"
             value={symbolFilter}
-            onChange={e => setSymbolFilter(e.target.value)}
-            placeholder="Filter by symbol…"
+            onChange={e => setSymbolFilter(e.target.value.toUpperCase())}
+            placeholder="Type a symbol to filter…"
             className="dt-input"
+            autoFocus
           />
         </div>
         <button className="dt-refresh-btn" onClick={() => trailsQuery.refetch()}>⟳ Refresh</button>
       </div>
 
-      {/* Incomplete trails warning */}
-      {incomplete.length > 0 && (
-        <Notice level="warning">{incomplete.length} trail{incomplete.length !== 1 ? 's' : ''} with missing pipeline links — review gaps below.</Notice>
-      )}
-
       {/* Trail list */}
       <div className="dt-list">
-        {trails.length === 0 ? (
+        {isLoading ? (
+          <LoadingSkeleton variant="card" count={3} />
+        ) : trails.length === 0 ? (
           <div className="dt-empty">
-            <p>No decision trails found.</p>
-            <p className="dt-empty-hint">Trails will appear when the Decision-Trail storage system records scoring→execution chains.</p>
+            <p>No decision trails found{initialSymbol ? ` for ${initialSymbol}` : ''}.</p>
+            <p className="dt-empty-hint">Trails appear when the automation loop scores symbols — each tick decision is recorded to decision_log and displayed here as a pipeline trail.</p>
           </div>
         ) : (
           trails.map((trail, i) => {
-            const stages = trail.stages || [];
-            const isExpanded = expandedTrail === (trail.tradeTicket || i);
-            const isComplete = TRAIL_STAGES.every(s => stages.includes(s.id));
+            const isExpanded = expandedTrail === i;
+            const decisionColor = trail.decision === 'EXECUTED' ? '#22c55e' : trail.decision === 'SCORED' ? '#3b82f6' : trail.decision === 'FAILED' ? '#ef4444' : '#f59e0b';
             return (
               <motion.div
-                key={trail.tradeTicket || i}
-                className={`dt-trail-card ${isExpanded ? 'expanded' : ''} ${isComplete ? 'complete' : 'incomplete'}`}
+                key={trail.ticket || trail.timestamp || i}
+                className={`dt-trail-card ${isExpanded ? 'expanded' : ''}`}
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.02 }}
+                style={{ borderLeftColor: decisionColor }}
               >
-                <div className="dt-trail-summary" onClick={() => setExpandedTrail(isExpanded ? null : (trail.tradeTicket || i))}>
+                <div className="dt-trail-summary" onClick={() => setExpandedTrail(isExpanded ? null : i)}>
                   <div className="dt-trail-meta">
                     <span className="dt-trail-symbol">{trail.symbol || '—'}</span>
-                    <span className={`dt-trail-direction ${trail.direction === 'BUY' ? 'buy' : trail.direction === 'SELL' ? 'sell' : ''}`}>
-                      {trail.direction || '—'}
+                    <span className="dt-trail-decision" style={{ background: decisionColor + '22', color: decisionColor }}>
+                      {trail.decision || '—'}
                     </span>
-                    <span className="dt-trail-pnl" style={{ color: (trail.pnl || 0) >= 0 ? '#22c55e' : '#ef4444' }}>
-                      {trail.pnl != null ? `${trail.pnl >= 0 ? '+' : ''}${trail.pnl.toFixed(2)}` : '—'}
+                    <span className="dt-trail-composite" style={{ color: (trail.composite || 0) >= 1500 ? '#22c55e' : (trail.composite || 0) >= 500 ? '#f59e0b' : 'var(--ink-soft)' }}>
+                      {(trail.composite || 0).toFixed(0)}
                     </span>
-                  </div>
-
-                  {/* Mini stage indicators */}
-                  <div className="dt-mini-stages">
-                    {TRAIL_STAGES.map(s => (
-                      <div
-                        key={s.id}
-                        className={`dt-mini-stage ${stages.includes(s.id) ? 'present' : 'missing'}`}
-                        title={`${s.label}: ${stages.includes(s.id) ? 'Present' : 'Missing'}`}
-                      >
-                        {stages.includes(s.id) ? s.icon : '·'}
-                      </div>
-                    ))}
+                    {trail.ticket && <span className="dt-trail-ticket">#{trail.ticket}</span>}
                   </div>
 
                   <div className="dt-trail-info">
-                    <span>{trail.strategy || '—'}</span>
+                    <span className="dt-trail-reason">{trail.reason || trail.signal || '—'}</span>
                     <span className="dt-trail-time">{trail.timestamp ? new Date(trail.timestamp).toLocaleString() : '—'}</span>
                   </div>
 
                   <span className="dt-trail-chevron">{isExpanded ? '▾' : '▸'}</span>
                 </div>
 
-                {/* Expanded timeline */}
+                {/* Expanded detail */}
                 {isExpanded && (
                   <div className="dt-timeline">
-                    <div className="dt-timeline-track">
-                      {TRAIL_STAGES.map((s, idx) => {
-                        const present = stages.includes(s.id);
-                        return (
-                          <div key={s.id} className="dt-timeline-step">
-                            <div className={`dt-timeline-dot ${present ? 'present' : 'missing'}`}>
-                              {present ? '✓' : '·'}
-                            </div>
-                            {idx < TRAIL_STAGES.length - 1 && (
-                              <div className={`dt-timeline-line ${present ? 'present' : 'missing'}`} />
-                            )}
-                            <div className="dt-timeline-label">{s.icon}</div>
-                            <div className="dt-timeline-text">{s.label}</div>
-                            <div className="dt-timeline-desc">{s.desc}</div>
-                          </div>
-                        );
-                      })}
+                    <div className="dt-trail-data">
+                      <div className="dt-data-row">
+                        <span>Decision</span><strong>{trail.decision}</strong>
+                      </div>
+                      <div className="dt-data-row">
+                        <span>Composite</span><strong>{(trail.composite || 0).toFixed(0)}</strong>
+                      </div>
+                      {trail.signal && (
+                        <div className="dt-data-row"><span>Signal</span><strong>{trail.signal}</strong></div>
+                      )}
+                      {trail.reason && (
+                        <div className="dt-data-row"><span>Reason</span><strong className="dt-reason">{trail.reason}</strong></div>
+                      )}
+                      {trail.ticket && (
+                        <div className="dt-data-row"><span>Ticket</span><strong>#{trail.ticket}</strong></div>
+                      )}
+                      {trail.price && (
+                        <div className="dt-data-row"><span>Price</span><strong>{trail.price}</strong></div>
+                      )}
+                      {trail.quantity && (
+                        <div className="dt-data-row"><span>Qty</span><strong>{trail.quantity}</strong></div>
+                      )}
+                      {trail.strategyId && (
+                        <div className="dt-data-row"><span>Strategy</span><strong>{trail.strategyId.slice(0, 12)}…</strong></div>
+                      )}
+                      {trail.brokerId && (
+                        <div className="dt-data-row"><span>Broker</span><strong>{trail.brokerId}</strong></div>
+                      )}
                     </div>
-
-                    {/* Trail data */}
-                    {trail.scoreLong != null && (
-                      <div className="dt-trail-data">
-                        <div className="dt-data-row">
-                          <span>LONG Score</span>
-                          <strong>{trail.scoreLong}</strong>
-                        </div>
-                        <div className="dt-data-row">
-                          <span>SHORT Score</span>
-                          <strong>{trail.scoreShort}</strong>
-                        </div>
-                        {trail.reason && (
-                          <div className="dt-data-row">
-                            <span>Reason</span>
-                            <strong className="dt-reason">{trail.reason}</strong>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {!isComplete && (
-                      <div className="dt-incomplete-banner">
-                        ⚠️ Incomplete trail — {
-                          TRAIL_STAGES.filter(s => !stages.includes(s.id)).map(s => s.label).join(', ')
-                        } missing
-                      </div>
-                    )}
                   </div>
                 )}
               </motion.div>

@@ -5,7 +5,7 @@
  * Existing JSON files migrated on first DB access if needed.
  */
 
-import { Controller, Get, Post, Param, Body, Logger, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Patch, Param, Body, Logger, NotFoundException, ConflictException, HttpCode } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Trading212Adapter } from '../providers/adapters/trading212.adapter';
 import { readFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
@@ -248,5 +248,75 @@ export class WatchlistsController {
       this.logger.error(`Failed to sync T212 portfolio: ${err.message}`);
       return { synced: false, error: err.message };
     }
+  }
+
+  /** GET /api/watchlists/:id/lock-status — whether this watchlist is locked by active strategies */
+  @Get(':id/lock-status')
+  async getLockStatus(@Param('id') id: string) {
+    try {
+      const strategies = await (this.prisma as any).scoringStrategy.findMany({
+        where: { watchlistId: id, enabled: true },
+        select: { id: true, name: true, protocolId: true },
+      });
+      if (strategies.length === 0) return { locked: false, strategies: [] };
+
+      // Check for active positions linked to strategies' protocols
+      const protocolIds = [...new Set(strategies.map((s: any) => s.protocolId).filter(Boolean))];
+      const activePositions = protocolIds.length > 0
+        ? await (this.prisma as any).position.count({ where: { protocolId: { in: protocolIds }, quantity: { gt: 0 } } })
+        : 0;
+
+      const locked = activePositions > 0;
+      return { locked, strategies: strategies.map((s: any) => s.name), activePositions };
+    } catch (err: any) {
+      return { locked: false, error: err.message };
+    }
+  }
+
+  /** DELETE /api/watchlists/:id — delete a watchlist if not locked */
+  @Delete(':id')
+  @HttpCode(200)
+  async deleteWatchlist(@Param('id') id: string) {
+    const wl = await this.prisma.watchlist.findUnique({ where: { id } });
+    if (!wl) throw new NotFoundException(`Watchlist "${id}" not found`);
+
+    // Lock check
+    const strategies = await (this.prisma as any).scoringStrategy.findMany({
+      where: { watchlistId: id, enabled: true },
+      select: { name: true, protocolId: true },
+    });
+    if (strategies.length > 0) {
+      const protocolIds = [...new Set(strategies.map((s: any) => s.protocolId).filter(Boolean))];
+      const activePositions = protocolIds.length > 0
+        ? await (this.prisma as any).position.count({ where: { protocolId: { in: protocolIds }, quantity: { gt: 0 } } })
+        : 0;
+      if (activePositions > 0) {
+        throw new ConflictException(`Watchlist is locked — used by ${strategies.map((s: any) => s.name).join(', ')} with ${activePositions} active positions`);
+      }
+    }
+
+    await this.prisma.watchlist.delete({ where: { id } });
+    return { deleted: true, id };
+  }
+
+  /** DELETE /api/watchlists/:id/symbols/:ticker — remove a single symbol */
+  @Delete(':id/symbols/:ticker')
+  async removeSymbol(@Param('id') id: string, @Param('ticker') ticker: string) {
+    const wl = await this.prisma.watchlist.findUnique({ where: { id } });
+    if (!wl) throw new NotFoundException(`Watchlist "${id}" not found`);
+
+    const symbols = (wl.symbols as any[]) || [];
+    const upperTicker = ticker.toUpperCase();
+    const filtered = symbols.filter((s: any) => (s.ticker || s).toUpperCase() !== upperTicker);
+
+    if (filtered.length === symbols.length) {
+      return { removed: false, message: `Symbol "${upperTicker}" not found in watchlist` };
+    }
+
+    await this.prisma.watchlist.update({
+      where: { id },
+      data: { symbols: filtered as any },
+    });
+    return { removed: true, ticker: upperTicker, remaining: filtered.length };
   }
 }

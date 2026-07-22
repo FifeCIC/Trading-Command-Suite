@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
+import ToggleSwitch from '../components/ToggleSwitch';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './automation-dashboard.css';
 
@@ -148,7 +149,7 @@ export default function AutomationDashboardPage() {
               Object.entries(brokerStates).map(([id, bs]) => {
                 const connected = bs.enabled;
                 const trading = connected && bs.tradingEnabled;
-                const statusLabel = connected ? (trading ? '🟢 Trading Enabled' : '🟡 Monitor Only') : '⚫ Offline';
+                const statusLabel = connected ? (trading ? 'Trading Enabled' : 'Monitor Only') : 'Offline';
                 const badgeColor = connected ? (trading ? '#22c55e' : '#f59e0b') : '#6b7280';
                 const tooltipText = connected
                   ? `${id.toUpperCase()} — ${trading ? 'LIVE TRADING' : 'Monitoring only (trading disabled)'} | Threshold: ${bs.tradeThreshold || 65} | Confirm required: ${bs.requireConfirmation ? 'Yes' : 'No'}`
@@ -204,42 +205,7 @@ export default function AutomationDashboardPage() {
             )}
           </motion.section>
 
-          {/* Active Strategies */}
-          <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <h2 className="ad-panel-title">🎯 Active Strategies</h2>
-            {statusQuery.isLoading && <LoadingSkeleton variant="text" lines={3} />}
-            {strategies.length === 0 ? (
-              <EmptyState icon="🎯" title="No active strategies" description="Create a strategy to start trading or scoring." actionLabel="Create Strategy" actionHref="/strategies/create-strategy" />
-            ) : (
-              <div className="ad-strategy-list">
-                {strategies.map((s) => {
-                  const isTrading = Boolean(s.symbol);
-                  const isScoring = Boolean(s.watchlistName);
-                  const typeLabel = isTrading ? 'Trading' : isScoring ? 'Scoring' : 'Strategy';
-                  const typeColor = isTrading ? '#3b82f6' : isScoring ? '#8b5cf6' : '#94a3b8';
-                  return (
-                  <div key={s.id} className="ad-strategy-card">
-                    <div className="ad-strategy-header">
-                      <span className={`ad-strategy-dot ${s.active ? 'ad-active' : ''}`} />
-                      <strong>{s.name}</strong>
-                      <span className="ad-strategy-type" style={{ background: typeColor + '18', color: typeColor, borderColor: typeColor + '33' }}>{typeLabel}</span>
-                      <span className="ad-strategy-broker">{s.brokerId}</span>
-                    </div>
-                    <div className="ad-strategy-meta">
-                      {isTrading && <><span>{s.symbol}</span> · </>}
-                      <span>{s.protocolId}</span> · <span>{s.mode}</span>
-                      {s.lastComposite != null && <span> · Score: {s.lastComposite}</span>}
-                    </div>
-                  </div>
-                  );
-                })}
-              </div>
-            )}
-          </motion.section>
-        </div>
-
-        <div className="ad-col">
-          {/* Config Panel */}
+          {/* Broker Config */}
           <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
             <h2 className="ad-panel-title">⚙ Broker Config</h2>
             {statusQuery.isLoading ? <LoadingSkeleton variant="text" lines={3} /> : (
@@ -248,27 +214,20 @@ export default function AutomationDashboardPage() {
                   <div key={brokerId} className="ad-config-row">
                     <div className="ad-config-header">
                       <span className="ad-config-broker">{brokerId}</span>
-                      <label className="ad-toggle">
-                        <input
-                          type="checkbox"
-                          checked={bs.enabled}
-                          onChange={() => toggleMutation.mutate({ target: brokerId, enabled: !bs.enabled })}
-                        />
-                        <span className="ad-toggle-slider" />
-                      </label>
+                      <ToggleSwitch
+                        checked={bs.enabled}
+                        onChange={() => toggleMutation.mutate({ target: brokerId, enabled: !bs.enabled })}
+                      />
                     </div>
                     {bs.enabled && (
                       <div className="ad-config-fields">
                         <label className="ad-config-field">
                           <span>Trading</span>
-                          <label className="ad-toggle sm">
-                            <input
-                              type="checkbox"
-                              checked={bs.tradingEnabled}
-                              onChange={() => configMutation.mutate({ brokerId, tradingEnabled: !bs.tradingEnabled })}
-                            />
-                            <span className="ad-toggle-slider" />
-                          </label>
+                          <ToggleSwitch
+                            sm
+                            checked={bs.tradingEnabled}
+                            onChange={() => configMutation.mutate({ brokerId, tradingEnabled: !bs.tradingEnabled })}
+                          />
                         </label>
                         <label className="ad-config-field">
                           <span>Threshold</span>
@@ -281,14 +240,11 @@ export default function AutomationDashboardPage() {
                         </label>
                         <label className="ad-config-field">
                           <span>Confirm</span>
-                          <label className="ad-toggle sm">
-                            <input
-                              type="checkbox"
-                              checked={bs.requireConfirmation}
-                              onChange={() => configMutation.mutate({ brokerId, requireConfirmation: !bs.requireConfirmation })}
-                            />
-                            <span className="ad-toggle-slider" />
-                          </label>
+                          <ToggleSwitch
+                            sm
+                            checked={bs.requireConfirmation}
+                            onChange={() => configMutation.mutate({ brokerId, requireConfirmation: !bs.requireConfirmation })}
+                          />
                         </label>
                       </div>
                     )}
@@ -300,45 +256,9 @@ export default function AutomationDashboardPage() {
               </div>
             )}
           </motion.section>
+        </div>
 
-          {/* Timeline */}
-          <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
-            <h2 className="ad-panel-title">⏱ Timeline {timelineEvents.length > 0 && <span style={{ fontSize: '0.7rem', color: 'var(--ink-soft)', fontWeight: 400 }}>({timelineEvents.length} events)</span>}</h2>
-            {timelineQuery.isLoading && <LoadingSkeleton variant="text" lines={4} />}
-            {timelineQuery.isError && (
-              <EmptyState icon="⏱️" title="Timeline unavailable" description="Backend may be starting up." />
-            )}
-            {!timelineQuery.isLoading && timelineEvents.length === 0 && (
-              <EmptyState icon="⏱️" title="No active events" description="No events in the next 4 hours. Markets may be closed or calm." />
-            )}
-            {timelineEvents.length > 0 && (
-              <div className="ad-timeline-list">
-                {timelineEvents.slice(0, 8).map((ev) => (
-                  <div key={ev.id} className={`ad-timeline-item ${ev.action === 'block' || ev.action === 'reduce' ? 'ad-timeline-danger' : ev.action === 'boost' ? 'ad-timeline-boost' : ''}`}>
-                    <span className="ad-timeline-dot" style={{ background: ev.color || 'var(--accent)' }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="ad-timeline-label">
-                        {ev.icon && <span style={{ marginRight: 4 }}>{ev.icon}</span>}
-                        <strong style={{ fontSize: '0.8rem' }}>{ev.label}</strong>
-                        {ev.riskMultiplier && ev.riskMultiplier !== 1 && (
-                          <span className={`ad-risk-badge ${ev.riskMultiplier < 1 ? 'ad-risk-down' : 'ad-risk-up'}`}>
-                            {ev.riskMultiplier < 1 ? '↓' : '↑'}{Math.abs(1 - ev.riskMultiplier) * 100}%
-                          </span>
-                        )}
-                      </div>
-                      {ev.description && (
-                        <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--ink-soft)' }}>{ev.description}</p>
-                      )}
-                    </div>
-                    <span className="ad-timeline-time" style={{ fontSize: '0.65rem', color: 'var(--ink-soft)', whiteSpace: 'nowrap' }}>
-                      {new Date(ev.startsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </motion.section>
-
+        <div className="ad-col">
           {/* Why Panel */}
           <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
             <h2 className="ad-panel-title">🔍 Why Panel</h2>
@@ -390,6 +310,79 @@ export default function AutomationDashboardPage() {
               )
             ) : (
               <EmptyState icon="👆" title="Select a symbol" description="Click a portfolio score (left column) to see the directive breakdown." />
+            )}
+          </motion.section>
+
+          {/* Timeline */}
+          <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
+            <h2 className="ad-panel-title">⏱ Timeline {timelineEvents.length > 0 && <span style={{ fontSize: '0.7rem', color: 'var(--ink-soft)', fontWeight: 400 }}>({timelineEvents.length} events)</span>}</h2>
+            {timelineQuery.isLoading && <LoadingSkeleton variant="text" lines={4} />}
+            {timelineQuery.isError && (
+              <EmptyState icon="⏱️" title="Timeline unavailable" description="Backend may be starting up." />
+            )}
+            {!timelineQuery.isLoading && timelineEvents.length === 0 && (
+              <EmptyState icon="⏱️" title="No active events" description="No events in the next 4 hours. Markets may be closed or calm." />
+            )}
+            {timelineEvents.length > 0 && (
+              <div className="ad-timeline-list">
+                {timelineEvents.slice(0, 8).map((ev) => (
+                  <div key={ev.id} className={`ad-timeline-item ${ev.action === 'block' || ev.action === 'reduce' ? 'ad-timeline-danger' : ev.action === 'boost' ? 'ad-timeline-boost' : ''}`}>
+                    <span className="ad-timeline-dot" style={{ background: ev.color || 'var(--accent)' }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="ad-timeline-label">
+                        {ev.icon && <span style={{ marginRight: 4 }}>{ev.icon}</span>}
+                        <strong style={{ fontSize: '0.8rem' }}>{ev.label}</strong>
+                        {ev.riskMultiplier && ev.riskMultiplier !== 1 && (
+                          <span className={`ad-risk-badge ${ev.riskMultiplier < 1 ? 'ad-risk-down' : 'ad-risk-up'}`}>
+                            {ev.riskMultiplier < 1 ? '↓' : '↑'}{Math.abs(1 - ev.riskMultiplier) * 100}%
+                          </span>
+                        )}
+                      </div>
+                      {ev.description && (
+                        <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--ink-soft)' }}>{ev.description}</p>
+                      )}
+                    </div>
+                    <span className="ad-timeline-time" style={{ fontSize: '0.65rem', color: 'var(--ink-soft)', whiteSpace: 'nowrap' }}>
+                      {new Date(ev.startsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.section>
+        </div>
+
+        <div className="ad-col">
+          {/* Active Strategies */}
+          <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <h2 className="ad-panel-title">🎯 Active Strategies</h2>
+            {statusQuery.isLoading && <LoadingSkeleton variant="text" lines={3} />}
+            {strategies.length === 0 ? (
+              <EmptyState icon="🎯" title="No active strategies" description="Create a strategy to start trading or scoring." actionLabel="Create Strategy" actionHref="/strategies/create-strategy" />
+            ) : (
+              <div className="ad-strategy-list">
+                {strategies.map((s) => {
+                  const isTrading = Boolean(s.symbol);
+                  const isScoring = Boolean(s.watchlistName);
+                  const typeLabel = isTrading ? 'Trading' : isScoring ? 'Scoring' : 'Strategy';
+                  const typeColor = isTrading ? '#3b82f6' : isScoring ? '#8b5cf6' : '#94a3b8';
+                  return (
+                  <div key={s.id} className="ad-strategy-card">
+                    <div className="ad-strategy-header">
+                      <span className={`ad-strategy-dot ${s.active ? 'ad-active' : ''}`} />
+                      <strong>{s.name}</strong>
+                      <span className="ad-strategy-type" style={{ background: typeColor + '18', color: typeColor, borderColor: typeColor + '33' }}>{typeLabel}</span>
+                      <span className="ad-strategy-broker">{s.brokerId}</span>
+                    </div>
+                    <div className="ad-strategy-meta">
+                      {isTrading && <><span>{s.symbol}</span> · </>}
+                      <span>{s.protocolId}</span> · <span>{s.mode}</span>
+                      {s.lastComposite != null && <span> · Score: {s.lastComposite}</span>}
+                    </div>
+                  </div>
+                  );
+                })}
+              </div>
             )}
           </motion.section>
 

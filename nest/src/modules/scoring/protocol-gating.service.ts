@@ -146,8 +146,8 @@ function protocolNeedsEurUsd(groups: DirectiveGroup[]): boolean {
 
 // ─── Thresholds ──────────────────────────────────────────
 
-const ENTRY_THRESHOLD = 65;
-const HOLD_FLOOR = 35;
+const ENTRY_THRESHOLD = 40;
+const HOLD_FLOOR = 20;
 
 // ─── Service ─────────────────────────────────────────────
 
@@ -399,9 +399,11 @@ export class ProtocolGatingService {
     holdings: Array<{ symbol: string; bars: import('../directives/interfaces/directive.interface').MarketBar[] }>,
     protocolId?: string,
   ): Promise<GatedScore[]> {
-    return Promise.all(
+    const results = await Promise.all(
       holdings.map((h) => this.scoreWithGating(h.symbol, h.bars, protocolId)),
     );
+    // Sort by composite descending for stable ladder display (#432)
+    return results.sort((a, b) => b.composite - a.composite);
   }
 
   /**

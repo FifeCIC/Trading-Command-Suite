@@ -627,6 +627,26 @@ export class NewsImportService {
     return rows;
   }
 
+  /**
+   * Get article counts grouped by source, for dashboard health display.
+   * Returns counts per source name (e.g. { finnhub: 2341, fmp: 0 }).
+   * Only counts articles from the last 30 days.
+   */
+  async getSourceCounts(): Promise<Record<string, number>> {
+    const rows: any[] = await this.prisma.$queryRawUnsafe(
+      `SELECT s.name, COUNT(a.id) as count
+       FROM NewsArticle a
+       JOIN NewsSource s ON a.sourceId = s.id
+       WHERE a.importedAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+       GROUP BY s.name`,
+    );
+    const counts: Record<string, number> = {};
+    for (const row of rows) {
+      counts[row.name] = Number(row.count);
+    }
+    return counts;
+  }
+
   // ── Helpers ──
 
   private classifyCategory(headline: string, summary: string): string {

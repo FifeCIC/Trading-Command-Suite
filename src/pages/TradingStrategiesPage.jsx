@@ -258,7 +258,10 @@ export default function TradingStrategiesPage() {
                 <tr>
                   <th>Symbol</th>
                   <th>Name</th>
-                  <th>TF</th>
+                  <th className="ts-tf-header">
+                    TF
+                    <span className="ts-tf-popover">Timeframe — the chart interval each strategy operates on (e.g. 5m = 5-minute, 1h = 1-hour, 1D = daily)</span>
+                  </th>
                   <th>Pos</th>
                   <th>SL / TP</th>
                   <th>Mode</th>
@@ -274,7 +277,10 @@ export default function TradingStrategiesPage() {
                   >
                     <td className="ts-name">{s.symbol}</td>
                     <td className="ts-name-col">{s.name}</td>
-                    <td>{s.timeframe}</td>
+                    <td className="ts-tf-cell">
+                      {s.timeframe}
+                      <span className="ts-tf-popover">Timeframe: {s.timeframe} — determines how frequently the strategy evaluates signals</span>
+                    </td>
                     <td>
                       {(() => {
                         const sym = (s.symbol || '').toUpperCase();

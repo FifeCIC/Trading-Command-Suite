@@ -50,6 +50,48 @@
   background: rgba(14,165,166,0.1);
 }
 
+/* ── Info Popover ── */
+.so-info-wrap { position: relative; }
+.so-info-popover {
+  position: absolute;
+  right: 52px;
+  bottom: 0;
+  width: 320px;
+  max-width: calc(100vw - 80px);
+  padding: 1rem;
+  border: 1px solid var(--notice-info-border, #0ea5a6);
+  border-radius: 10px;
+  background: var(--notice-info-bg, rgba(14,165,166,0.08));
+  color: var(--notice-info-text, #e2e8f0);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  z-index: 1000;
+}
+.so-info-pop-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--notice-info-border, #0ea5a6);
+  color: var(--accent, #0ea5a6);
+}
+.so-info-pop-text { margin: 0; color: var(--ink-soft, #94a3b8); }
+.so-info-pop-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--ink-soft, #64748b);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.so-info-pop-close:hover { background: rgba(255,255,255,0.08); color: var(--ink, #e2e8f0); }
+
 /* Backdrop */
 .so-backdrop {
   position: fixed;

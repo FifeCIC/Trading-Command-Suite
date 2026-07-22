@@ -32,6 +32,21 @@ export class SystemLogController {
     return { content, lines: content ? content.split('\n').filter(Boolean).length : 0 };
   }
 
+  @Get('logs/status')
+  getLogStatus() {
+    return this.logService.getLogFileStatus();
+  }
+
+  @Get('logs/files')
+  getLogFiles() {
+    return { files: this.logService.getLogFiles() };
+  }
+
+  @Get('logs/categories')
+  getCategories() {
+    return { categories: this.logService.categories };
+  }
+
   @Get('metrics')
   getMetrics() {
     return this.metrics.getMetrics();

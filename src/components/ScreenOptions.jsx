@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { usePreferences } from '../core/hooks/usePreferences';
+import { VIEW_EXPLANATIONS } from '../core/view-explanations';
 import EmptyState from './EmptyState';
 import './notification-disc.css';
 import './screen-options.css';
@@ -124,6 +125,15 @@ var GLOBAL_PREFERENCES = [
       { value: 'full', label: 'Full Width', desc: 'No max-width constraint — uses entire browser window.' },
     ],
   },
+  {
+    id: 'hidePracticeData',
+    label: '🧪 Hide Practice Data',
+    description: 'Hide paper trading and practice account positions across all views. Live account data is always shown.',
+    type: 'checkbox',
+    key: 'tcs:preferences',
+    field: 'hidePracticeData',
+    defaultValue: false,
+  },
 ];
 
 /** Registry of option definitions keyed by view ID */
@@ -158,6 +168,14 @@ const OPTIONS_REGISTRY = {
           { value: 'desktop', label: 'Desktop (1440px)', desc: 'Standard desktop layout' },
           { value: 'laptop', label: 'Laptop (1024px)', desc: 'Compact for smaller screens' },
         ],
+      },
+      {
+        id: 'includeInactive',
+        label: 'Include Inactive Protocols',
+        description: 'Show protocols marked as inactive in the ladder. Default: hidden.',
+        type: 'checkbox',
+        key: 'ss-include-inactive',
+        defaultValue: false,
       },
     ],
   },
@@ -237,7 +255,9 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   var registry = activeView ? OPTIONS_REGISTRY[activeView] : null;
   var [calcOpen, setCalcOpen] = useState(false);
   var [notifOpen, setNotifOpen] = useState(false);
+  var [infoOpen, setInfoOpen] = useState(false);
   var [dismissed, setDismissed] = useState(new Set());
+  var viewExplanation = activeView ? VIEW_EXPLANATIONS[activeView] : null;
 
   // ── Notification data ──
   var healthQuery = useQuery({
@@ -248,6 +268,12 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   var autoQuery = useQuery({
     queryKey: ['so-notif-auto'],
     queryFn: () => apiGet('/api/automation/status').catch(() => null),
+    refetchInterval: 30_000,
+  });
+  // DB-backed alerts (was in-memory, now persisted via #440)
+  var alertsQuery = useQuery({
+    queryKey: ['so-notif-alerts'],
+    queryFn: () => apiGet('/api/alerts/count').catch(() => ({ active: 0, critical: 0 })),
     refetchInterval: 30_000,
   });
 
@@ -273,7 +299,9 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
 
   var visible = notifications.filter(function(n) { return !dismissed.has(n.id); });
   var criticalCount = visible.filter(function(n) { return n.severity === 'critical'; }).length;
-  var totalUnread = visible.length;
+  var alertActive = alertsQuery.data?.active || 0;
+  var alertCritical = alertsQuery.data?.critical || 0;
+  var totalUnread = visible.length + alertActive;
 
   // Read current global preference values
   var displayMode = prefs.displayMode || 'focused';
@@ -282,6 +310,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   var hidePageSubtitle = prefs.hidePageSubtitle === true;
   var highContrastText = prefs.highContrastText === true;
   var colorBlindMode = prefs.colorBlindMode === true;
+  var hidePracticeData = prefs.hidePracticeData === true;
   var fontScale = prefs.fontScale || 'normal';
   var focusIndicatorStyle = prefs.focusIndicatorStyle || 'strong';
   var layoutSize = prefs.layoutSize || 'normal';
@@ -337,7 +366,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   }, [isOpen, onToggle]);
 
   // Build global section state for rendering
-  var globalValueMap = { displayMode: displayMode, experienceLevel: experienceLevel, hidePageTitle: hidePageTitle, hidePageSubtitle: hidePageSubtitle, highContrastText: highContrastText, colorBlindMode: colorBlindMode, fontScale: fontScale, focusIndicatorStyle: focusIndicatorStyle };
+  var globalValueMap = { displayMode: displayMode, experienceLevel: experienceLevel, hidePageTitle: hidePageTitle, hidePageSubtitle: hidePageSubtitle, highContrastText: highContrastText, colorBlindMode: colorBlindMode, hidePracticeData: hidePracticeData, fontScale: fontScale, focusIndicatorStyle: focusIndicatorStyle };
   var hasGlobalSections = true; // always show global section
   var hasViewSections = registry && registry.sections.length > 0;
 
@@ -390,6 +419,25 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
         >
           {isBookmarked ? '⭐' : '☆'}
         </button>
+        {viewExplanation && (
+          <div className="so-info-wrap">
+            <button
+              className={`so-gear-btn so-info-btn ${infoOpen ? 'so-gear-active' : ''}`}
+              onClick={() => setInfoOpen((v) => !v)}
+              title="View explanation"
+              aria-label="View explanation"
+            >
+              ℹ
+            </button>
+            {infoOpen && (
+              <div className="so-info-popover">
+                <div className="so-info-pop-title">About this view</div>
+                <div className="so-info-pop-text">{viewExplanation}</div>
+                <button className="so-info-pop-close" onClick={() => setInfoOpen(false)}>×</button>
+              </div>
+            )}
+          </div>
+        )}
         <button
           className={`so-gear-btn ${calcOpen ? 'so-gear-active' : ''}`}
           onClick={() => setCalcOpen((v) => !v)}

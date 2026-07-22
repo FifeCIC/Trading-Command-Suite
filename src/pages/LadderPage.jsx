@@ -1,8 +1,8 @@
 /**
- * Live Ordering Stack
- * ===================
+ * Ladder
+ * =====
  * The primary SEES scoring view. Pair a Watchlist with a Protocol
- * and get a live-ranked ordering stack of every symbol, refreshed
+ * and get a live-ranked ladder of every symbol, refreshed
  * continuously as market data flows in.
  *
  * Layout clones Scoring Overview's clean card-based design.
@@ -64,120 +64,6 @@ export default function LiveOrderingStackPage() {
   });
   const objectives = Array.isArray(objQuery.data) ? objQuery.data.filter(o => o.status === 'active') : [];
 
-  // ── Smart Pairing Logic ──
-  const pairingScores = useMemo(() => {
-    const scores = new Map(); // key: `${watchlistId}::${protocolId}`, value: { score, reason }
-    
-    for (const wl of watchlists) {
-      const wlSymbols = (wl.symbols || []).map(s => (typeof s === 'string' ? s : s.ticker).toUpperCase());
-      const wlName = (wl.label || '').toLowerCase();
-      const wlId = wl.id;
-      
-      for (const proto of protocols) {
-        const protoName = (proto.name || '').toLowerCase();
-        const protoId = proto.id;
-        let score = 0;
-        const reasons = [];
-        
-        // 1. Name matching: protocol name appears in watchlist label or vice versa
-        if (wlName.includes(protoName) || protoName.includes(wlName)) {
-          score += 30;
-          reasons.push('name match');
-        }
-        
-        // 2. Trading style keywords in watchlist
-        const style = (proto.tradingStyle || '').toLowerCase();
-        if (style && wlName.includes(style)) {
-          score += 20;
-          reasons.push('style match');
-        }
-        
-        // 3. Symbol type matching: crypto protocols should pair with crypto watchlists
-        const isCrypto = wlSymbols.some(s => s.includes('BTC') || s.includes('ETH') || s.includes('XRP') || s.includes('USD') && s.length > 5);
-        const isForex = wlSymbols.some(s => ['EURUSD','GBPUSD','USDJPY','XAUUSD','USDCAD'].includes(s));
-        const isStocks = wlSymbols.some(s => ['AAPL','NVDA','MSFT','TSLA','SPY','QQQ','GOOGL','META'].includes(s));
-        
-        if (protoId.includes('btc') || protoId.includes('crypto')) {
-          if (isCrypto) { score += 25; reasons.push('crypto match'); }
-          else { score -= 20; reasons.push('no crypto symbols'); }
-        }
-        if (protoId.includes('forex') || protoId.includes('dxy')) {
-          if (isForex) { score += 25; reasons.push('forex match'); }
-          else { score -= 15; reasons.push('no forex symbols'); }
-        }
-        if (protoId.includes('tech') || protoId.includes('spy') || protoId.includes('qqq')) {
-          if (isStocks) { score += 25; reasons.push('stock match'); }
-          else { score -= 10; reasons.push('no stock symbols'); }
-        }
-        if (protoId.includes('xau') || protoId.includes('gold')) {
-          if (wlSymbols.includes('XAUUSD')) { score += 25; reasons.push('gold symbol present'); }
-          else { score -= 20; reasons.push('missing XAUUSD'); }
-        }
-        if (protoId.includes('oil') || protoId.includes('crude')) {
-          if (wlSymbols.some(s => s.includes('OIL') || s === 'USOIL' || s === 'XTIUSD')) { score += 25; reasons.push('oil symbol present'); }
-        }
-        
-        // 4. idealFor keyword overlap with symbols
-        const ideal = (proto.idealFor || '').toLowerCase();
-        if (ideal) {
-          const keywordMatch = wlSymbols.some(s => ideal.includes(s.toLowerCase()));
-          if (keywordMatch) { score += 15; reasons.push('ideal match'); }
-        }
-        
-        scores.set(`${wlId}::${protoId}`, { score, reasons });
-      }
-    }
-    return scores;
-  }, [watchlists, protocols]);
-
-  // Compatible watchlists for selected protocol
-  const compatibleWatchlists = useMemo(() => {
-    if (!protocolId) return watchlists;
-    return [...watchlists].sort((a, b) => {
-      const scoreA = pairingScores.get(`${a.id}::${protocolId}`)?.score ?? 0;
-      const scoreB = pairingScores.get(`${b.id}::${protocolId}`)?.score ?? 0;
-      return scoreB - scoreA;
-    });
-  }, [watchlists, protocolId, pairingScores]);
-
-  // Compatible protocols for selected watchlist
-  const compatibleProtocols = useMemo(() => {
-    if (!watchlistId) return protocols;
-    return [...protocols].sort((a, b) => {
-      const scoreA = pairingScores.get(`${watchlistId}::${a.id}`)?.score ?? 0;
-      const scoreB = pairingScores.get(`${watchlistId}::${b.id}`)?.score ?? 0;
-      return scoreB - scoreA;
-    });
-  }, [protocols, watchlistId, pairingScores]);
-
-  // Pairing guidance
-  const pairingGuidance = useMemo(() => {
-    if (!watchlistId || !protocolId) return null;
-    const pair = pairingScores.get(`${watchlistId}::${protocolId}`);
-    if (!pair) return null;
-    if (pair.score >= 40) return { level: 'strong', text: '✅ Strong pairing', reasons: pair.reasons };
-    if (pair.score >= 15) return { level: 'ok', text: '⚡ Acceptable pairing', reasons: pair.reasons };
-    return { level: 'weak', text: '⚠ Weak pairing — consider a different protocol', reasons: pair.reasons };
-  }, [watchlistId, protocolId, pairingScores]);
-
-  // ── Auto-select first watchlist + best matching protocol ──
-  useEffect(() => {
-    if (watchlists.length > 0 && !watchlistId) {
-      const first = watchlists[0];
-      setWatchlistId(first.id);
-      // Use pairing scores to find best protocol
-      if (protocols.length > 0) {
-        let bestProto = protocols[0];
-        let bestScore = -Infinity;
-        for (const p of protocols) {
-          const score = pairingScores.get(`${first.id}::${p.id}`)?.score ?? 0;
-          if (score > bestScore) { bestScore = score; bestProto = p; }
-        }
-        setProtocolId(bestProto.id);
-      }
-    }
-  }, [watchlists, protocols, watchlistId, pairingScores]);
-
   // ── Watchlist symbols ──
   const symbolsQuery = useQuery({
     queryKey: ['los-symbols', watchlistId],
@@ -202,7 +88,11 @@ export default function LiveOrderingStackPage() {
     refetchInterval: autoRefresh ? REFRESH_MS : false,
     enabled: !!watchlistId && !!protocolId && watchlistSymbols.length > 0,
   });
-  const scored = scoreQuery.data ?? [];
+  // Sort by composite descending — belt-and-suspenders with backend sort (#432)
+  const scored = useMemo(
+    () => [...(scoreQuery.data ?? [])].sort((a, b) => (b.composite ?? 0) - (a.composite ?? 0)),
+    [scoreQuery.data],
+  );
 
   // ── Stats ──
   const stats = useMemo(() => {
@@ -219,18 +109,36 @@ export default function LiveOrderingStackPage() {
     return { withData, scoredCount, avgComposite, buyCount, sellCount, holdCount, topSignal, rareCount };
   }, [scored, watchlistSymbols]);
 
-  // ── Data quality: detect uniform placeholder data ──
+  // ── Data quality: detect uniform placeholder or weak data ──
   const dataQualityWarning = useMemo(() => {
     if (scored.length < 2) return null;
     const firstSignal = scored[0]?.signal;
     const allSameSignal = scored.every(r => r.signal === firstSignal);
     const allZeroRisk = scored.every(r => (r.riskMultiplier ?? 0) === 0);
     const allCommonRarity = scored.every(r => !r.rarity || r.rarity.band === 'common');
+    const maxComposite = Math.max(...scored.map(r => r.composite ?? 0));
+    const allWeak = maxComposite < 35 && scored.every(r => r.signal === 'HOLD');
     if (allSameSignal && allZeroRisk && allCommonRarity) {
       return `All ${scored.length} symbols show identical "${firstSignal}" signals with no risk differentiation — scoring pipeline may not have fresh market data.`;
     }
+    if (allWeak) {
+      return `⚠️ All ${scored.length} symbols scored weak (max composite ${maxComposite.toFixed(0)}/100). Market data may be limited — insufficient daily bars or no external sentiment APIs connected.`;
+    }
     return null;
   }, [scored]);
+
+  // ── Pairing guidance — based on REAL batch scoring data ──
+  const pairingGuidance = useMemo(() => {
+    if (!watchlistId || !protocolId) return null;
+    if (scoreQuery.isLoading) return { level: 'info', text: '⏳ Computing scores from live pipeline…', reasons: [] };
+    if (!scoreQuery.data || scored.length === 0) return null;
+    const avg = scored.reduce((s, r) => s + (r.composite ?? 0), 0) / scored.length;
+    const buyPct = scored.filter(r => r.signal === 'BUY').length / scored.length * 100;
+    const reasons = [`${scored.length} symbols`, `avg ${avg.toFixed(0)}`, `${buyPct.toFixed(0)}% BUY`];
+    if (avg >= 70) return { level: 'strong', text: '✅ Strong scoring — high composite across symbols', reasons };
+    if (avg >= 40) return { level: 'ok', text: '⚡ Moderate scoring — mixed signals across symbols', reasons };
+    return { level: 'weak', text: '⚠️ Weak scoring — low composite or few signals. Market data may be unavailable for these symbols.', reasons };
+  }, [watchlistId, protocolId, scored, scoreQuery.isLoading, scoreQuery.data]);
 
   // ── Selected labels ──
   const selectedWatchlist = watchlists.find(w => w.id === watchlistId);
@@ -281,7 +189,7 @@ export default function LiveOrderingStackPage() {
   if (wlQuery.isLoading || protoQuery.isLoading) {
     return (
       <div className="so-page">
-        <header className="so-page-header"><h2>Live Ordering Stack</h2></header>
+        <header className="so-page-header"><h2>Ladder</h2></header>
         <LoadingSkeleton variant="card" count={4} />
         <LoadingSkeleton variant="table" rows={8} cols={5} className="ls-spacer-top" />
       </div>
@@ -293,7 +201,7 @@ export default function LiveOrderingStackPage() {
       {/* ── Header ── */}
       <header className="so-page-header">
         <div>
-          <h1>Live Ordering Stack</h1>
+          <h1>Ladder</h1>
           <p className="so-subtitle">
             {selectedWatchlist?.label ?? 'Select watchlist'} · {selectedProtocol?.name ?? 'Select protocol'}
           </p>
@@ -313,29 +221,21 @@ export default function LiveOrderingStackPage() {
         <label className="los-select-label">
           <span>Watchlist</span>
           <select value={watchlistId} onChange={e => setWatchlistId(e.target.value)} className="los-select">
-            {compatibleWatchlists.map(w => {
-              const score = pairingScores.get(`${w.id}::${protocolId}`)?.score ?? 0;
-              const indicator = !protocolId ? '' : score >= 40 ? ' ★' : score >= 15 ? ' ·' : '';
-              return (
-                <option key={w.id} value={w.id}>
-                  {w.label} ({w.symbolCount ?? '?'}){indicator}
-                </option>
-              );
-            })}
+            {watchlists.map(w => (
+              <option key={w.id} value={w.id}>
+                {w.label} ({w.symbolCount ?? '?'})
+              </option>
+            ))}
           </select>
         </label>
         <label className="los-select-label">
           <span>Protocol</span>
           <select value={protocolId} onChange={e => setProtocolId(e.target.value)} className="los-select">
-            {compatibleProtocols.map(p => {
-              const score = pairingScores.get(`${watchlistId}::${p.id}`)?.score ?? 0;
-              const indicator = !watchlistId ? '' : score >= 40 ? ' ★' : score >= 15 ? ' ·' : '';
-              return (
-                <option key={p.id} value={p.id}>
-                  {p.name ?? p.id}{indicator}
-                </option>
-              );
-            })}
+            {protocols.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.name ?? p.id}
+              </option>
+            ))}
           </select>
         </label>
         <button
@@ -347,9 +247,9 @@ export default function LiveOrderingStackPage() {
         </button>
       </div>
 
-      {/* ── Pairing Guidance ── */}
+      {/* ── Pairing Guidance — based on real scored data ── */}
       {pairingGuidance && (
-        <Notice level={pairingGuidance.level === 'strong' ? 'success' : pairingGuidance.level === 'ok' ? 'warning' : 'critical'}>
+        <Notice level={pairingGuidance.level === 'strong' ? 'success' : pairingGuidance.level === 'ok' ? 'warning' : pairingGuidance.level === 'info' ? 'info' : 'critical'}>
           {pairingGuidance.text}
           {pairingGuidance.reasons.length > 0 && (
             <> — {pairingGuidance.reasons.join(', ')}</>
@@ -407,20 +307,33 @@ export default function LiveOrderingStackPage() {
         </div>
       </div>
 
-      {/* ── Live Ordering Stack table ── */}
+      {/* ── Ladder table ── */}
       <div className="los-stack-section">
         <div className="los-stack-header">
-          <h2>Ordering Stack</h2>
+          <h2>Ladder</h2>
           {autoRefresh && <span className="los-live-badge">LIVE</span>}
           {!autoRefresh && <span className="los-paused-badge">PAUSED</span>}
         </div>
 
         {scored.length === 0 ? (
-          <p className="so-empty">
-            {symbolsQuery.isLoading ? 'Loading symbols…' : 
-             watchlistSymbols.length === 0 ? 'No symbols in this watchlist.' :
-             'No scored data yet. The scoring pipeline may need market data for these symbols.'}
-          </p>
+          <div className="so-empty" style={{ padding: '2rem', textAlign: 'center' }}>
+            {symbolsQuery.isLoading ? (
+              <p>Loading symbols…</p>
+            ) : watchlistSymbols.length === 0 ? (
+              <p>No symbols in this watchlist.</p>
+            ) : (
+              <>
+                <p style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem' }}>🔒 No Scoring Data</p>
+                <p style={{ color: 'var(--ink-soft)', fontSize: '0.85rem', maxWidth: 480, margin: '0 auto' }}>
+                  The Ladder requires active scoring data to display ranked symbols.
+                  Ensure the protocol is active and market data (bars) is available for the symbols in this watchlist.
+                </p>
+                <p style={{ color: 'var(--ink-soft)', fontSize: '0.78rem', marginTop: '0.75rem' }}>
+                  Features that will appear: ranked symbol list with BUY/SELL/HOLD signals, composite scores, and rarity indicators.
+                </p>
+              </>
+            )}
+          </div>
         ) : (
           <div className="los-stack-table-wrap">
             <table className="los-stack-table">

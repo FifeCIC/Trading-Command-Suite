@@ -208,8 +208,16 @@ export class Mt5Controller {
     }
   }
 
+  /**
+   * @deprecated Use POST /api/trading/mt5/order instead.
+   * This legacy endpoint calls the MT5 bridge directly without recording
+   * the trade in the audit trail, decision log, or Trade table.
+   * Orders placed here are invisible to portfolio tracking.
+   * Will be removed in Phase 4 cleanup (#446).
+   */
   @Post('order')
   async placeOrder(@Body() body: { symbol: string; type: string; volume: number; price?: number; sl?: number; tp?: number }) {
+    this.logger.warn(`⚠️ DEPRECATED — direct MT5 order bypassing trade recorder: ${body.type} ${body.volume} ${body.symbol} — use POST /api/trading/mt5/order instead`);
     try {
       const res = await fetch(`${this.BRIDGE_URL}/order`, {
         method: 'POST',

@@ -82,6 +82,11 @@ export default function DashboardPage() {
   })();
   const grandTotalPnl = pnlByBroker.mt5.pnl + pnlByBroker.t212.pnl + pnlByBroker.isa.pnl;
 
+  // ── Broker modes (LIVE vs PRACTICE) ──
+  const mt5Mode = 'practice'; // diag.mode not yet exposed by backend
+  const t212Mode = (t212Query.data?.mode || 'demo') === 'live' ? 'live' : 'practice';
+  const isaMode = 'live'; // ISA accounts are always live
+
   // Hot Picks widget
   const hotPicksQuery = useQuery({
     queryKey: ['dash-hot-picks'],
@@ -115,20 +120,19 @@ export default function DashboardPage() {
 
   const statusLevel = diagQuery.isLoading ? null : mt5Connected ? 'online' : 'offline';
 
-  // ── Provider health for news/sentiment status ──
-  const providersQuery = useQuery({
-    queryKey: ['dash-providers'],
-    queryFn: () => apiGet('/api/providers/health').catch(() => null),
+  // ── News article counts for accurate source status ──
+  const newsCountsQuery = useQuery({
+    queryKey: ['dash-news-counts'],
+    queryFn: () => apiGet('/api/news/counts').catch(() => null),
     refetchInterval: 120_000,
     staleTime: 60_000,
   });
-  const allProviders = providersQuery.data?.providers || [];
-  const newsProviders = allProviders.filter(p =>
-    ['finnhub', 'fmp'].includes(p.provider)
-  );
-  const newsHealthy = newsProviders.filter(p => p.status === 'healthy').length;
-  const newsDegraded = newsProviders.filter(p => p.status === 'degraded' || p.status === 'unknown').length;
-  const newsDown = newsProviders.filter(p => p.status !== 'healthy' && p.status !== 'degraded' && p.status !== 'unknown').length;
+  const newsCounts = newsCountsQuery.data?.counts || {};
+  const newsTotal = newsCountsQuery.data?.total || 0;
+  const newsSources = ['Finnhub', 'FMP'];
+  const newsSourceKeys = ['finnhub', 'fmp'];
+  const newsActiveCount = newsSources.filter((_, i) => (newsCounts[newsSourceKeys[i]] || 0) > 0).length;
+  const newsInactiveCount = newsSources.length - newsActiveCount;
 
   const areas = Object.entries(NAV_TREE)
     .filter(([id]) => id !== 'dashboard')
@@ -179,7 +183,7 @@ export default function DashboardPage() {
       <div className="dash-grid">
         <div className="dash-col dash-col-main">
           <div className="dash-card">
-            <h3>📊 Portfolio Summary</h3>
+            <h3>📊 MT5 Portfolio Summary</h3>
             <div className="dash-card-stats">
               <div className="dash-stat">
                 <span className="dash-stat-label">MT5 Bridge</span>
@@ -212,13 +216,14 @@ export default function DashboardPage() {
           <div className="dash-card">
             <h3>💼 P&amp;L by Broker</h3>
             <div className="dash-broker-grid">
-              {/* MT5 */}
+              {/* MT5 — hide if practice with zero P&L */}
+              {(mt5Mode !== 'practice' || pnlByBroker.mt5.pnl !== 0) && (
               <div className="dash-broker-row">
                 <div className="dash-broker-head">
                   <span className="dash-broker-icon">📡</span>
-                  <span className="dash-broker-name">MT5</span>
-                  <span className={`dash-broker-badge ${mt5Connected ? 'badge-live' : 'badge-off'}`}>
-                    {mt5Connected ? 'DEMO' : 'OFFLINE'}
+                  <span className="dash-broker-name">MetaQuotes (MT5)</span>
+                  <span className={`dash-broker-badge ${mt5Connected ? (mt5Mode === 'live' ? 'badge-live' : 'badge-practice') : 'badge-off'}`}>
+                    {mt5Connected ? (mt5Mode === 'live' ? 'LIVE' : 'PRACTICE') : 'OFFLINE'}
                   </span>
                 </div>
                 <div className="dash-broker-metrics">
@@ -243,13 +248,17 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
+              )}
 
-              {/* Trading212 */}
+              {/* Trading212 — hide if practice with zero P&L */}
+              {(t212Mode !== 'practice' || pnlByBroker.t212.pnl !== 0) && (
               <div className="dash-broker-row">
                 <div className="dash-broker-head">
                   <span className="dash-broker-icon">🏦</span>
-                  <span className="dash-broker-name">Trading 212</span>
-                  <span className="dash-broker-badge badge-demo">GIA</span>
+                  <span className="dash-broker-name">Trading212</span>
+                  <span className={`dash-broker-badge ${t212Mode === 'live' ? 'badge-live' : 'badge-practice'}`}>
+                    {t212Mode === 'live' ? 'LIVE' : 'PRACTICE'}
+                  </span>
                 </div>
                 <div className="dash-broker-metrics">
                   <div className="dash-broker-metric">
@@ -277,13 +286,14 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
+              )}
 
-              {/* Stocks ISA */}
+              {/* Trading212 Stocks ISA — always show (live only) */}
               <div className="dash-broker-row">
                 <div className="dash-broker-head">
                   <span className="dash-broker-icon">🏛️</span>
-                  <span className="dash-broker-name">Stocks ISA</span>
-                  <span className="dash-broker-badge badge-isa">ISA</span>
+                  <span className="dash-broker-name">Trading212 Stocks ISA</span>
+                  <span className="dash-broker-badge badge-live">LIVE</span>
                 </div>
                 <div className="dash-broker-metrics">
                   <div className="dash-broker-metric">
@@ -446,17 +456,48 @@ export default function DashboardPage() {
           <div className="dash-card">
             <h3>🌍 Market Sessions</h3>
             <div className="dash-sessions">
-              {[{ label: 'London', open: 8, close: 16 }, { label: 'New York', open: 9, close: 16 }, { label: 'Tokyo', open: 9, close: 15 }].map((s) => {
+              {[{ label: 'London', open: 8, close: 16, tz: 'GMT/BST' }, { label: 'New York', open: 9, close: 16, tz: 'ET' }, { label: 'Tokyo', open: 9, close: 15, tz: 'JST' }].map((s) => {
                 const now = new Date();
                 const utc = now.getUTCHours();
+                const utcMin = now.getUTCMinutes();
                 const offsets = { London: 1, 'New York': -4, Tokyo: 9 };
                 const local = (utc + offsets[s.label] + 24) % 24;
-                const isOpen = local >= s.open && local < s.close;
+                const localMin = utcMin;
+                const isOpen = (local > s.open || (local === s.open && localMin >= 0)) && local < s.close;
+                const openTime = `${String(s.open).padStart(2, '0')}:00`;
+                const closeTime = `${String(s.close).padStart(2, '0')}:00`;
+                // Calculate time until next open or close
+                const nowTotalMin = local * 60 + localMin;
+                const openTotalMin = s.open * 60;
+                const closeTotalMin = s.close * 60;
+                let nextLabel, nextMins;
+                if (isOpen) {
+                  nextLabel = 'Closes in';
+                  nextMins = closeTotalMin - nowTotalMin;
+                } else {
+                  nextLabel = 'Opens in';
+                  if (nowTotalMin < openTotalMin) {
+                    nextMins = openTotalMin - nowTotalMin;
+                  } else {
+                    // After close today, opens tomorrow
+                    nextMins = (24 * 60 - nowTotalMin) + openTotalMin;
+                  }
+                }
+                const nextH = Math.floor(nextMins / 60);
+                const nextM = nextMins % 60;
+                const nextStr = `${nextH}h ${nextM}m`;
+                const popId = `session-pop-${s.label.replace(/\s/g, '')}`;
                 return (
-                  <div key={s.label} className={`dash-session ${isOpen ? 'dash-session-open' : 'dash-session-closed'}`}>
+                  <div key={s.label} className={`dash-session ${isOpen ? 'dash-session-open' : 'dash-session-closed'} dash-session-hoverable`}>
                     <span className="dash-session-dot" style={{background: isOpen ? '#22c55e' : '#ef4444'}}/>
                     <span>{s.label}</span>
                     <span className="dash-session-status">{isOpen ? 'Open' : 'Closed'}</span>
+                    <div className="dash-session-popover">
+                      <div className="dash-session-pop-title">{s.label} — {isOpen ? 'Open' : 'Closed'}</div>
+                      <div className="dash-session-pop-row"><span>Hours</span><span>{openTime}–{closeTime} ({s.tz})</span></div>
+                      <div className="dash-session-pop-row"><span>GMT Offset</span><span>{offsets[s.label] >= 0 ? `+${offsets[s.label]}` : offsets[s.label]}</span></div>
+                      <div className="dash-session-pop-row"><span>{nextLabel}</span><span>{nextStr}</span></div>
+                    </div>
                   </div>
                 );
               })}
@@ -470,31 +511,29 @@ export default function DashboardPage() {
 
           <div className="dash-card">
             <h3>📰 News &amp; Sentiment</h3>
-            {newsProviders.length === 0 ? (
-              <p className="dash-hint">No news providers configured.</p>
-            ) : (
-              <div className="dash-news-list">
-                {newsProviders.map((p) => {
-                  const statusColor = p.status === 'healthy' ? '#22c55e' : p.status === 'degraded' ? '#f59e0b' : '#ef4444';
-                  const statusIcon = p.status === 'healthy' ? '●' : p.status === 'degraded' || p.status === 'unknown' ? '◐' : '○';
-                  return (
-                    <div key={p.provider} className="dash-news-row">
-                      <span className="dash-news-dot" style={{ color: statusColor }}>{statusIcon}</span>
-                      <span className="dash-news-name">{p.displayName}</span>
-                      <span className="dash-news-status" style={{ color: statusColor }}>
-                        {p.status === 'healthy' ? 'Active' : p.status === 'unknown' ? 'Unverified' : p.status}
-                      </span>
-                    </div>
-                  );
-                })}
-                <p className="dash-news-summary">
-                  {newsHealthy > 0 && `${newsHealthy} active`}
-                  {newsDegraded > 0 && `${newsHealthy > 0 ? ', ' : ''}${newsDegraded} unverified`}
-                  {newsDown > 0 && `${newsHealthy + newsDegraded > 0 ? ', ' : ''}${newsDown} down`}
-                  {newsHealthy === 0 && newsDegraded === 0 && 'No data sources available'}
-                </p>
-              </div>
-            )}
+            <div className="dash-news-list">
+              {newsSources.map((name, i) => {
+                const key = newsSourceKeys[i];
+                const count = newsCounts[key] || 0;
+                const hasArticles = count > 0;
+                const statusColor = hasArticles ? '#22c55e' : '#64748b';
+                const statusIcon = hasArticles ? '●' : '◐';
+                const statusLabel = hasArticles ? `${count.toLocaleString()} articles` : 'Unverified';
+                return (
+                  <div key={key} className="dash-news-row">
+                    <span className="dash-news-dot" style={{ color: statusColor }}>{statusIcon}</span>
+                    <span className="dash-news-name">{name}</span>
+                    <span className="dash-news-status" style={{ color: statusColor }}>{statusLabel}</span>
+                  </div>
+                );
+              })}
+              <p className="dash-news-summary">
+                {newsTotal > 0
+                  ? `${newsTotal.toLocaleString()} total articles across ${newsActiveCount} source${newsActiveCount !== 1 ? 's' : ''}`
+                  : 'No articles imported yet'}
+                {newsInactiveCount > 0 && newsTotal > 0 && ` · ${newsInactiveCount} source${newsInactiveCount !== 1 ? 's' : ''} unverified`}
+              </p>
+            </div>
           </div>
 
           {/* ── Hot Picks Widget ── */}

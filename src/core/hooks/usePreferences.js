@@ -32,6 +32,7 @@ const DEFAULTS = {
   focusIndicatorStyle: 'strong', // Focus ring: 'strong' | 'subtle' | 'none'
   layoutSize: 'normal',         // Content width: 'compact' | 'normal' | 'wide' | 'full'
   colorBlindMode: false,         // WCAG 1.4.1 — adds shape/pattern indicators alongside color (#358)
+  hidePracticeData: false,       // Hide practice/paper trading data across views (#450)
   // Performance
   pollingInterval: 30,
   chartAnimation: true,

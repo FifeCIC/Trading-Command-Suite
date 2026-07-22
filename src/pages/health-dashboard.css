@@ -1,0 +1,76 @@
+/* Health & Diagnostics Dashboard */
+
+.hd-page { max-width: none; margin: 0; padding: 1.25rem 1.5rem; color: var(--ink); }
+
+.hd-header { margin-bottom: 0.75rem; }
+.hd-header h1 { margin: 0 0 0.15rem; font-size: 1.2rem; }
+.hd-subtitle { color: var(--ink-soft); font-size: 0.73rem; margin: 0; }
+
+/* Sections */
+.hd-section { margin-bottom: 1rem; }
+.hd-section-title { font-size: 0.85rem; font-weight: 700; margin: 0 0 0.4rem; color: var(--ink); }
+
+/* Vitals Grid */
+.hd-vitals-grid { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.hd-card {
+  flex: 1; min-width: 130px; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.75rem;
+}
+.hd-card-label { font-size: 0.62rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+.hd-card-value { font-size: 1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.hd-card-sub { font-size: 0.62rem; color: var(--ink-soft); margin-top: 1px; }
+
+/* Provider Grid */
+.hd-provider-grid { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.hd-provider-chip {
+  display: flex; align-items: center; gap: 0.3rem;
+  padding: 0.3rem 0.55rem; border-radius: 6px;
+  background: var(--panel); border: 1px solid var(--line);
+  font-size: 0.68rem;
+}
+.hd-provider-healthy { border-color: rgba(34,197,94,0.3); }
+.hd-provider-degraded { border-color: rgba(245,158,11,0.3); }
+.hd-provider-unhealthy { border-color: rgba(239,68,68,0.3); }
+.hd-provider-icon { font-size: 0.65rem; }
+.hd-provider-name { font-weight: 600; }
+.hd-provider-latency { font-size: 0.6rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.hd-provider-cred { font-size: 0.6rem; }
+.hd-provider-age { font-size: 0.58rem; color: var(--ink-soft); margin-left: auto; }
+
+/* Trend Chart */
+.hd-trend-chart { display: flex; flex-direction: column; gap: 2px; }
+.hd-trend-row { display: flex; align-items: center; gap: 0.4rem; }
+.hd-trend-hour { font-size: 0.6rem; color: var(--ink-soft); width: 55px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.hd-trend-bar-wrap { flex: 1; height: 12px; background: rgba(128,128,128,0.06); border-radius: 3px; overflow: hidden; }
+.hd-trend-bar { display: block; height: 100%; border-radius: 3px; min-width: 2px; transition: width 0.3s; }
+.hd-trend-val { font-size: 0.62rem; font-weight: 700; width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
+.hd-trend-count { font-size: 0.58rem; color: var(--ink-soft); width: 30px; text-align: right; }
+
+/* Tables */
+.hd-table-wrap { overflow-x: auto; }
+.hd-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
+.hd-table th { text-align: left; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); padding: 0.25rem 0.4rem; border-bottom: 1px solid var(--line); }
+.hd-table td { padding: 0.2rem 0.4rem; border-bottom: 1px solid rgba(128,128,128,0.05); }
+.hd-table-sm td { font-size: 0.65rem; }
+.hd-td-name { font-weight: 600; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hd-td-num { font-variant-numeric: tabular-nums; text-align: right; }
+.hd-td-hint { font-size: 0.6rem; color: var(--ink-soft); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hd-td-mono { font-family: monospace; font-size: 0.6rem; }
+.hd-td-age { font-size: 0.6rem; color: var(--ink-soft); white-space: nowrap; }
+.hd-tr-warn { background: rgba(245,158,11,0.04); }
+.hd-tr-critical { background: rgba(239,68,68,0.05); }
+.hd-method-badge { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.03em; }
+
+/* Empty states */
+.hd-empty { color: var(--ink-soft); font-size: 0.7rem; padding: 0.5rem 0; display: block; }
+.hd-empty-ok { color: var(--color-profit); font-size: 0.7rem; padding: 0.5rem 0; }
+
+/* Footer */
+.hd-footer { text-align: center; font-size: 0.62rem; color: var(--ink-soft); padding: 0.5rem 0; border-top: 1px solid var(--line); margin-top: 0.5rem; }
+
+@media (max-width: 760px) {
+  .hd-page { padding: 0.75rem 0.6rem; }
+  .hd-vitals-grid { gap: 0.3rem; }
+  .hd-card { min-width: 90px; padding: 0.4rem 0.55rem; }
+  .hd-card-value { font-size: 0.85rem; }
+}
