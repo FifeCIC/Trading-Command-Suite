@@ -5,6 +5,12 @@ applyTo: "nest/src/**, src/pages/**, src/components/**, src/data/**, src/core/**
 
 # Issue Pre-Close Checklist — ALWAYS APPLY
 
+## ⚠️ BEFORE YOU START ANY WORK
+
+**Read `.github/AGENT-ATTENTION.md`** to see known blockers and issues. Do not waste time diagnosing problems that are already documented. The attention log is the shared memory of the agent team.
+
+---
+
 You MUST NOT close a GitHub issue by running `gh issue close` directly. You MUST first post a pre-close checklist comment, THEN close the issue with that comment.
 
 ## The checklist — USE THE ISSUE'S OWN ACCEPTANCE CRITERIA
@@ -87,6 +93,23 @@ It does NOT mean "the schema supports storing those fields" or "the recorder pas
 Do not close it. Either:
 - Complete the remaining tasks
 - Extract unfinished items into new issues, update the body to reference them, and close the parent only if the remaining items are truly independent
+
+### 5. Verify dependencies BEFORE claiming something is blocked.
+
+❌ WRONG: "Can't run E2E test — bridge is probably down based on old logs."
+✅ RIGHT: `curl http://localhost:5000/` → responds → `curl http://localhost:5000/positions` → returns data → `curl -X POST http://localhost:5000/order` → fails → CONFIRMED: read works, write broken.
+
+A claimed blocker must include the exact curl command and response that proves it.
+
+### 6. Log every confirmed blocker to the shared attention log.
+
+When you hit a verified blocker, append it to `.github/AGENT-ATTENTION.md` with:
+- Date and your agent name
+- What's blocked (specific endpoint/task)
+- How you verified it (curl command + response)
+- Which issues are affected
+
+This file is visible to humans and other agents. Read it at the start of every session so you know what's broken before starting work.
 
 After posting the checklist as a comment, close the issue WITH that comment using:
 

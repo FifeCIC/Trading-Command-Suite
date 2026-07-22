@@ -2,6 +2,7 @@ import { Controller, Get, Post, Param, Body, Query, Logger } from '@nestjs/commo
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdapterFactory } from './adapter-factory';
 import { Mt5Adapter } from './adapters/mt5.adapter';
+import { PrismaService } from '../../database/prisma.service';
 
 @ApiTags('providers')
 @Controller('providers/mt5')
@@ -9,7 +10,10 @@ export class Mt5Controller {
   private readonly logger = new Logger(Mt5Controller.name);
   private readonly BRIDGE_URL = process.env.MT5_BRIDGE_URL || 'http://localhost:5000';
 
-  constructor(private readonly adapterFactory: AdapterFactory) {}
+  constructor(
+    private readonly adapterFactory: AdapterFactory,
+    private readonly prisma: PrismaService,
+  ) {}
 
   private getMt5Adapter(): Mt5Adapter | null {
     const adapter = this.adapterFactory.create('mt5');
@@ -209,15 +213,12 @@ export class Mt5Controller {
   }
 
   /**
-   * @deprecated Use POST /api/trading/mt5/order instead.
-   * This legacy endpoint calls the MT5 bridge directly without recording
-   * the trade in the audit trail, decision log, or Trade table.
-   * Orders placed here are invisible to portfolio tracking.
-   * Will be removed in Phase 4 cleanup (#446).
+   * Place an MT5 order. Routes through the bridge AND records the trade
+   * for traceability (#446). Prefer POST /api/trading/mt5/order which goes
+   * through Mt5TradingService, but this endpoint now records trades too.
    */
   @Post('order')
-  async placeOrder(@Body() body: { symbol: string; type: string; volume: number; price?: number; sl?: number; tp?: number }) {
-    this.logger.warn(`⚠️ DEPRECATED — direct MT5 order bypassing trade recorder: ${body.type} ${body.volume} ${body.symbol} — use POST /api/trading/mt5/order instead`);
+  async placeOrder(@Body() body: { symbol: string; type: string; volume: number; price?: number; sl?: number; tp?: number; comment?: string }) {
     try {
       const res = await fetch(`${this.BRIDGE_URL}/order`, {
         method: 'POST',
@@ -225,11 +226,24 @@ export class Mt5Controller {
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(15000),
       });
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
-        return { success: false, error: (errBody as any).error || `Bridge HTTP ${res.status}` };
+      const data = await res.json() as any;
+
+      // Record trade for traceability (#446)
+      if (data.success && this.prisma.isAvailable) {
+        const side = (body.type?.toUpperCase() === 'SELL') ? 'sell' : 'buy';
+        try {
+          await (this.prisma as any).trade.create({
+            data: {
+              symbol: body.symbol, side, quantity: body.volume,
+              entryPrice: data.price || 0, provider: 'mt5', status: 'open',
+              origin: 'user', ticket: data.ticket ?? null,
+              sl: body.sl ?? null, tp: body.tp ?? null,
+              brokerComment: body.comment ?? null,
+            },
+          });
+        } catch { /* non-critical */ }
       }
-      return await res.json();
+      return data;
     } catch (err: any) {
       return { success: false, error: err.message || 'Bridge unreachable' };
     }
@@ -242,11 +256,21 @@ export class Mt5Controller {
         method: 'POST',
         signal: AbortSignal.timeout(15000),
       });
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
-        return { success: false, error: (errBody as any).error || `Bridge HTTP ${res.status}` };
+      const data = await res.json() as any;
+
+      // Update trade record with close data (#446)
+      if (data.success && this.prisma.isAvailable) {
+        try {
+          const ticketNum = parseInt(ticket, 10);
+          if (!isNaN(ticketNum)) {
+            await (this.prisma as any).trade.updateMany({
+              where: { ticket: ticketNum, status: 'open' },
+              data: { status: 'closed', exitPrice: data.price ?? null, closedAt: new Date() },
+            });
+          }
+        } catch { /* non-critical */ }
       }
-      return await res.json();
+      return data;
     } catch (err: any) {
       return { success: false, error: err.message || 'Bridge unreachable' };
     }
@@ -255,7 +279,6 @@ export class Mt5Controller {
   @Post('close-all')
   async closeAll() {
     try {
-      // Fetch positions, then close each
       const posRes = await fetch(`${this.BRIDGE_URL}/positions`, { signal: AbortSignal.timeout(10000) });
       if (!posRes.ok) return { closed: 0, failed: 0, error: `Bridge HTTP ${posRes.status}` };
       const positions = await posRes.json();
@@ -269,10 +292,20 @@ export class Mt5Controller {
             method: 'POST',
             signal: AbortSignal.timeout(15000),
           });
-          closeRes.ok ? closed++ : failed++;
-        } catch {
-          failed++;
-        }
+          const data = await closeRes.json() as any;
+          if (data.success) {
+            closed++;
+            // Update trade record (#446)
+            if (this.prisma.isAvailable) {
+              try {
+                await (this.prisma as any).trade.updateMany({
+                  where: { ticket: pos.ticket, status: 'open' },
+                  data: { status: 'closed', exitPrice: data.price ?? null, closedAt: new Date() },
+                });
+              } catch { /* non-critical */ }
+            }
+          } else { failed++; }
+        } catch { failed++; }
       }
       return { closed, failed, total: allPositions.length };
     } catch (err: any) {

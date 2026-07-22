@@ -299,3 +299,17 @@
   border-radius: 3px;
   margin-left: 2px;
 }
+
+/* Graceful fallback: ProtocolPicker when checklist API unavailable (#412) */
+.sw-fallback-protocol {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  font-size: 0.82rem;
+}
+.sw-fallback-label { font-weight: 600; color: var(--ink-soft); }
+.sw-fallback-note { font-size: 0.72rem; color: var(--ink-soft); margin-left: auto; }

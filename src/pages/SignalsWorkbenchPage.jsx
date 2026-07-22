@@ -1,12 +1,13 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { apiPost } from '../core/api/client';
+import { apiGet, apiPost } from '../core/api/client';
 import { usePreferences } from '../core/hooks/usePreferences';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import SymbolAutocomplete from '../components/SymbolAutocomplete';
 import ProtocolChecklist from '../components/ProtocolChecklist';
+import ProtocolPicker from '../components/ProtocolPicker';
 import './signals-workbench.css';
 
 const SIGNAL_COLORS = { BUY: '#22c55e', SELL: '#ef4444', HOLD: '#94a3b8' };
@@ -25,6 +26,15 @@ export default function SignalsWorkbenchPage() {
   const [viewMode, setViewMode] = useState('ladder');
   const [resolvedSymbols, setResolvedSymbols] = useState([]);
   const inputRef = useRef(null);
+
+  // Detect if protocol list API is available (for graceful fallback)
+  const protoCheckQuery = useQuery({
+    queryKey: ['protocol-check-health'],
+    queryFn: () => apiGet('/api/scoring/protocols'),
+    staleTime: 120_000,
+    retry: 1,
+  });
+  const protocolApiAvailable = protoCheckQuery.isSuccess && (protoCheckQuery.data?.protocols?.length > 0);
   const [sessionRuns, setSessionRuns] = useState(() => {
     try { return JSON.parse(localStorage.getItem('sw-session-runs') || '[]'); }
     catch { return []; }
@@ -454,12 +464,29 @@ export default function SignalsWorkbenchPage() {
 
       {/* ── Protocol Checklist (positioned below results per #412) ── */}
       <motion.div className="sw-protocol-checklist-section" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.18 }}>
-        <ProtocolChecklist
-          selected={selectedProtocols}
-          onChange={setSelectedProtocols}
-          maxHeight={250}
-        />
-        {selectedProtocols.length === 0 && (
+        {protocolApiAvailable ? (
+          <ProtocolChecklist
+            selected={selectedProtocols}
+            onChange={setSelectedProtocols}
+            maxHeight={250}
+          />
+        ) : protoCheckQuery.isLoading ? (
+          <div className="pc-wrap pc-loading">
+            <span className="pc-loading-text">Loading protocols…</span>
+          </div>
+        ) : (
+          /* Graceful fallback: single ProtocolPicker when checklist API is unavailable (#412) */
+          <div className="sw-fallback-protocol">
+            <span className="sw-fallback-label">Protocol:</span>
+            <ProtocolPicker
+              value={selectedProtocols[0] || ''}
+              onChange={(id) => setSelectedProtocols(id ? [id] : [])}
+              placeholder="Default directives"
+            />
+            <span className="sw-fallback-note">Protocol checklist unavailable — using single-select mode</span>
+          </div>
+        )}
+        {selectedProtocols.length === 0 && protocolApiAvailable && (
           <p className="sw-checklist-hint">Check protocols above to compare scores side-by-side. Leave unchecked for default scoring.</p>
         )}
       </motion.div>
