@@ -82,50 +82,79 @@ export class DecisionChainService {
           },
         } : {}),
       },
-      include: {
-        scoringStrategy: { select: { id: true, name: true, protocolId: true } },
-        scoreSnapshot: true,
-        strategyEval: true,
-        trade: true,
-      },
       orderBy: { timestamp: 'desc' },
       take: limit,
     });
 
-    return trails.map(t => ({
-      // Score Snapshot
-      snapshotId: t.scoreSnapshot?.id ?? '',
-      protocolId: t.scoringStrategy?.protocolId ?? t.longProtocolId ?? '',
-      symbol: t.symbol,
-      composite: t.scoreSnapshot?.composite ?? t.chosenComposite,
-      signal: t.scoreSnapshot?.tradingSignal ?? t.finalSignal ?? '',
-      rarityPct: t.scoreSnapshot?.rarityPct ?? null,
-      snappedAt: t.scoreSnapshot?.snappedAt?.toISOString() ?? '',
-      // Decision Trail
-      trailId: t.id,
-      tickNumber: t.tickNumber,
-      trailTimestamp: t.timestamp.toISOString(),
-      winner: t.winner,
-      chosenComposite: t.chosenComposite,
-      finalSignal: t.finalSignal,
-      actionable: t.actionable,
-      reason: t.reason,
-      // Strategy Evaluation
-      evalId: t.strategyEval?.id ?? null,
-      evalComposite: t.strategyEval?.composite ?? null,
-      evalSignal: t.strategyEval?.signal ?? null,
-      traded: t.strategyEval?.traded ?? null,
-      tradeTicket: t.strategyEval?.tradeTicket ?? t.tradeTicket ?? null,
-      evaluatedAt: t.strategyEval?.evaluatedAt?.toISOString() ?? null,
-      // Trade
-      tradeId: t.trade?.id ?? null,
-      tradeSide: t.trade?.side ?? null,
-      tradeQuantity: t.trade?.quantity ?? null,
-      entryPrice: t.trade?.entryPrice ?? null,
-      exitPrice: t.trade?.exitPrice ?? null,
-      pnl: t.trade?.pnl ?? null,
-      tradeStatus: t.trade?.status ?? null,
-    }));
+    // Resolve linked records in batches (avoids N+1)
+    const scoringIds = [...new Set(trails.map(t => t.strategyId).filter(Boolean))];
+    const snapshotIds = [...new Set(trails.map(t => t.scoreSnapshotId).filter(Boolean))];
+    const evalIds = [...new Set(trails.map(t => t.strategyEvalId).filter(Boolean))];
+    const tradeIds = [...new Set(trails.map(t => t.tradeId).filter(Boolean))];
+
+    const [scoringMap, snapshotMap, evalMap, tradeMap] = await Promise.all([
+      this.loadMap('scoringStrategy', scoringIds),
+      this.loadMap('scoreSnapshot', snapshotIds),
+      this.loadMap('strategyEvaluation', evalIds),
+      this.loadMap('trade', tradeIds),
+    ]);
+
+    return trails.map(t => {
+      const scoring = scoringMap.get(t.strategyId) as any;
+      const snapshot = t.scoreSnapshotId ? snapshotMap.get(t.scoreSnapshotId) as any : null;
+      const eval_ = t.strategyEvalId ? evalMap.get(t.strategyEvalId) as any : null;
+      const trade = t.tradeId ? tradeMap.get(t.tradeId) as any : null;
+
+      return {
+        // Score Snapshot
+        snapshotId: snapshot?.id ?? '',
+        protocolId: scoring?.protocolId ?? t.longProtocolId ?? '',
+        symbol: t.symbol,
+        composite: snapshot?.composite ?? t.chosenComposite,
+        signal: snapshot?.tradingSignal ?? t.finalSignal ?? '',
+        rarityPct: snapshot?.rarityPct ?? null,
+        snappedAt: snapshot?.snappedAt?.toISOString() ?? '',
+        // Decision Trail
+        trailId: t.id,
+        tickNumber: t.tickNumber,
+        trailTimestamp: t.timestamp.toISOString(),
+        winner: t.winner,
+        chosenComposite: t.chosenComposite,
+        finalSignal: t.finalSignal,
+        actionable: t.actionable,
+        reason: t.reason,
+        // Strategy Evaluation
+        evalId: eval_?.id ?? null,
+        evalComposite: eval_?.composite ?? null,
+        evalSignal: eval_?.signal ?? null,
+        traded: eval_?.traded ?? null,
+        tradeTicket: eval_?.tradeTicket ?? t.tradeTicket ?? null,
+        evaluatedAt: eval_?.evaluatedAt?.toISOString() ?? null,
+        // Trade
+        tradeId: trade?.id ?? null,
+        tradeSide: trade?.side ?? null,
+        tradeQuantity: trade?.quantity ?? null,
+        entryPrice: trade?.entryPrice ?? null,
+        exitPrice: trade?.exitPrice ?? null,
+        pnl: trade?.pnl ?? null,
+        tradeStatus: trade?.status ?? null,
+      };
+    });
+  }
+
+  /** Batch-load a table by ID list into a Map. */
+  private async loadMap(table: string, ids: string[]): Promise<Map<string, any>> {
+    const map = new Map<string, any>();
+    if (ids.length === 0) return map;
+    // Use raw queries since we can't use Prisma model methods generically
+    const rows = await (this.prisma as any).$queryRawUnsafe(
+      `SELECT * FROM \`${table}\` WHERE id IN (${ids.map(() => '?').join(',')})`,
+      ...ids,
+    );
+    for (const row of rows as any[]) {
+      map.set(row.id, row);
+    }
+    return map;
   }
 
   /**
@@ -137,13 +166,17 @@ export class DecisionChainService {
   async backfillScoreSnapshots(): Promise<{ matched: number; total: number }> {
     const trails = await this.prisma.decisionTrail.findMany({
       where: { scoreSnapshotId: null },
-      include: { scoringStrategy: { select: { protocolId: true } } },
       take: 1000,
     });
 
     let matched = 0;
     for (const trail of trails) {
-      const protocolId = trail.scoringStrategy?.protocolId ?? trail.longProtocolId;
+      // Look up scoring strategy to get protocolId
+      const scoring = await (this.prisma as any).scoringStrategy.findUnique({
+        where: { id: trail.strategyId },
+        select: { protocolId: true },
+      });
+      const protocolId = scoring?.protocolId ?? trail.longProtocolId;
       if (!protocolId) continue;
 
       // Find closest score_snapshot within ±2 min

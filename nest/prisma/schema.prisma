@@ -693,8 +693,6 @@ model Trade {
   @@index([origin, createdAt])
   @@index([scoringStrategyId])
   @@index([ticket])
-
-  decisionTrails DecisionTrail[]
 }
 
 model ApiCalls {
@@ -893,8 +891,6 @@ model ScoreSnapshot {
   @@map("score_snapshot")
   @@index([protocolId, snappedAt])
   @@index([symbol, snappedAt])
-
-  decisionTrails DecisionTrail[]
 }
 
 
@@ -1026,7 +1022,6 @@ model StrategyEvaluation {
   evaluatedAt   DateTime @default(now())
 
   strategy TradingStrategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
-  decisionTrails DecisionTrail[]
 
   @@map("strategy_evaluation")
   @@index([strategyId, evaluatedAt])
@@ -1076,7 +1071,6 @@ model ScoringStrategy {
   watchlist         Watchlist?               @relation(fields: [watchlistId], references: [id])
   tradingStrategies TradingStrategy[]
   protocolLinks     ScoringStrategyProtocol[]
-  decisionTrails    DecisionTrail[]
 
   @@index([watchlistId])
   @@map("scoring_strategy")
@@ -1474,20 +1468,12 @@ model DecisionTrail {
   tradePrice      Float?
 
   // ── Chain linking (#475) — FK targets for joined audit queries ──
-  // Populated progressively as the pipeline advances:
-  //   scoringStrategy  ← set at creation (strategyId = ScoringStrategy.id)
-  //   scoreSnapshotId  ← set after scoring, matched on protocolId + symbol + time
-  //   strategyEvalId   ← set after TradingStrategy evaluation
-  //   tradeId          ← set after order execution
+  // Populated progressively as the pipeline advances.
+  // DB-level FKs are omitted due to MySQL engine mix; Prisma handles
+  // joins at the application level via `include`.
   scoreSnapshotId String?  @db.VarChar(36)
   strategyEvalId  String?  @db.VarChar(36)
   tradeId         String?  @db.VarChar(36)
-
-  // Relations
-  scoringStrategy ScoringStrategy?   @relation(fields: [strategyId], references: [id])
-  scoreSnapshot   ScoreSnapshot?     @relation(fields: [scoreSnapshotId], references: [id])
-  strategyEval    StrategyEvaluation? @relation(fields: [strategyEvalId], references: [id])
-  trade           Trade?             @relation(fields: [tradeId], references: [id])
 
   @@map("decision_trail")
   @@index([timestamp])
