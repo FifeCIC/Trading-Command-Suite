@@ -1502,6 +1502,184 @@ const QA_CHECKLIST = [
     priority: 'medium',
     versionNote: '2026-07-18 — #226 Gold Speed chart offline state',
   },
+
+  // ═══════════════════════════════════════════════════
+  // HEALTH DASHBOARD & DIAGNOSTICS (2026-07-21/22)
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-health-001',
+    area: 'System',
+    system: 'Health Dashboard',
+    name: 'Health dashboard renders all 6 diagnostic sections',
+    procedure: 'Navigate to /status/health-check. Verify 6 collapsible sections: System Vitals, Provider Health Grid, API Trends, DB Tables vs Retention, Slow Queries, Trace Correlations. Check auto-refresh every 15s.',
+    expected: 'System Vitals shows 5-card grid (CPU, Memory, Uptime, Heap, Platform). Provider grid with status chips. API bar chart with color-coded bars. DB table sortable by data size. Slow queries table with endpoint/method/duration. Trace correlations table with cache keys.',
+    category: 'UI',
+    priority: 'high',
+    versionNote: '2026-07-21/22 — #424 Health Dashboard + enhancements',
+  },
+  {
+    id: 'qa-health-002',
+    area: 'System',
+    system: 'Health Summary',
+    name: 'Health summary returns compact text blob for AI agents',
+    procedure: 'GET /api/system/health-summary → verify ~300 char text blob with CPU%, Mem%, DB status, provider summary, error count.',
+    expected: 'One-paragraph summary suitable for LLM context window. All metrics present. Text-only, no JSON nesting.',
+    category: 'API',
+    priority: 'medium',
+    versionNote: '2026-07-22 — agent tooling endpoint',
+  },
+  {
+    id: 'qa-health-003',
+    area: 'System',
+    system: 'Health Settings Toggles',
+    name: 'Health check toggles enable/disable diagnostic sections',
+    procedure: 'Navigate to Settings → 🩺 Health & Diagnostics. Toggle off "System Vitals", toggle on "Slow Queries". Navigate to /status/health-check → verify Vitals section hidden, Slow Queries visible. Verify 10 toggles total.',
+    expected: 'Toggles backed by HealthChecksConfig in AppSettings. Disabled sections excluded from dashboard computation. GET /api/system/settings/health-checks returns toggle state.',
+    category: 'Feature',
+    priority: 'medium',
+    versionNote: '2026-07-22 — 10 check toggles in Settings',
+  },
+  {
+    id: 'qa-health-004',
+    area: 'System',
+    system: 'Agent CLI Health Check',
+    name: 'PowerShell health check script produces system snapshot',
+    procedure: 'Run `pwsh scripts/health-check.ps1`. Verify output includes port status (3201/5000/5173), disk space, service status, recent errors.',
+    expected: '1-command system snapshot. All 3 ports checked. Disk free space reported. Error rates from last 5 minutes. Exit code 0 when healthy.',
+    category: 'Integration',
+    priority: 'medium',
+    versionNote: '2026-07-22 — health-check.ps1 agent CLI',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // SPEED SCANNER — PROTOCOL ID + PATTERNS (2026-07-22)
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-ss-001',
+    area: 'Scoring',
+    system: 'Speed Scanner',
+    name: 'Protocol IDs display as human-readable slugs',
+    procedure: 'Navigate to /automation/speed-scanner. Verify protocol column shows slugs like "cad-sniper-v1" not UUIDs like "42f2ec59-...".',
+    expected: 'All protocol IDs resolved to human-readable slugs. No raw UUIDs visible in the ladder.',
+    category: 'Regression',
+    priority: 'high',
+    versionNote: '2026-07-22 — #459 protocol resolution fix',
+  },
+  {
+    id: 'qa-ss-002',
+    area: 'Scoring',
+    system: 'Speed Scanner',
+    name: 'Candlestick patterns detected and displayed',
+    procedure: 'Scan a symbol with 20+ trend bars. Verify Pattern column shows detected patterns (doji, hammer, shooting star, engulfing).',
+    expected: 'Pattern column populated. MicroTrendDetector.aggregatePatterns() wired with real bar data. Body/range ratio logic identifies patterns.',
+    category: 'Feature',
+    priority: 'high',
+    versionNote: '2026-07-22 — #459 pattern detection activated',
+  },
+  {
+    id: 'qa-ss-003',
+    area: 'Scoring',
+    system: 'Speed Scanner',
+    name: 'Inactive protocol filter toggle works',
+    procedure: 'Open Screen Options → toggle "Include Inactive Protocols" OFF → verify only active protocols shown. Toggle ON → verify all protocols visible.',
+    expected: 'Backend returns protocolActive boolean per symbol. Frontend filters protocolActive===false unless toggle is ON.',
+    category: 'Feature',
+    priority: 'medium',
+    versionNote: '2026-07-22 — #459 inactive protocols filter',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // TRADE PIPELINE — SCHEMA + TRACEABILITY (2026-07-22)
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-trade-006',
+    area: 'Trading',
+    system: 'Trade Pipeline',
+    name: 'Trade records capture full MT5 fields',
+    procedure: 'Place an order via any path (MT5 trading page, automation, legacy endpoint). Query Trade table — verify ticket, sl, tp, magic, swap, brokerComment columns populated.',
+    expected: 'All MT5 order fields persisted. ticket is Int. sl/tp as Float. magic as Int. swap as Float. brokerComment as String. @@index([ticket]) index present.',
+    category: 'Integration',
+    priority: 'critical',
+    versionNote: '2026-07-22 — #446 trade pipeline schema + traceability',
+  },
+  {
+    id: 'qa-trade-007',
+    area: 'Trading',
+    system: 'Trade Pipeline',
+    name: 'Legacy MT5 endpoints now write Trade records',
+    procedure: 'POST /api/providers/mt5/order with valid order body. Verify Trade table gets a new row with all fields. Verify decision_log also updated.',
+    expected: 'Previously bypassed legacy endpoint now wired into traceability chain. Full audit trail from order→trade→decision_log.',
+    category: 'Regression',
+    priority: 'critical',
+    versionNote: '2026-07-22 — #446 8 code paths audited and wired',
+  },
+  {
+    id: 'qa-trade-008',
+    area: 'Trading',
+    system: 'Trade Pipeline',
+    name: 'Ticket badge visible on position cards',
+    procedure: 'Navigate to /trading/positions-monitor. Verify each position card shows ticket number badge when available.',
+    expected: 'Ticket badge styled with ticket-badge CSS. Shows MT5 ticket number for traceability. Empty state when no ticket assigned.',
+    category: 'UI',
+    priority: 'medium',
+    versionNote: '2026-07-22 — #446 positions monitor ticket badge',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // EXECUTION QUEUE — LIVE EVENTS (2026-06-21)
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-auto-009',
+    area: 'Automation',
+    system: 'Execution Queue',
+    name: 'Live Events tab shows unified automation + decision stream',
+    procedure: 'Navigate to /automation/execution-queue. Verify two tabs: ⟳ Live Events (default) and 🏗 Protocol Queue (legacy). Check event stats bar shows Automation count, Decision count, Total.',
+    expected: 'Live Events polls GET /api/automation/events every 3s. Type badges: Tick (automation) / Decision (decision). Each event row: type badge, elapsed time, symbol chip, task name, detail, status badge, duration, composite score.',
+    category: 'Feature',
+    priority: 'high',
+    versionNote: '2026-06-21 — #457 Execution Queue → Unified Automation Hub',
+  },
+  {
+    id: 'qa-auto-010',
+    area: 'Automation',
+    system: 'Execution Queue',
+    name: 'Automation events endpoint returns unified stream',
+    procedure: 'GET /api/automation/events?limit=50&type=automation → verify time-sorted events from AutomationEvent + DecisionLog. GET /api/automation/events?type=decision → verify only DecisionLog rows.',
+    expected: 'Unified stream from existing Prisma models. Type badge differentiation. Limit capped at 200, default 50. try/catch guards against missing tables.',
+    category: 'API',
+    priority: 'high',
+    versionNote: '2026-06-21 — #457 new GET /api/automation/events endpoint',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // COMMANDS REFERENCE (2026-07-22)
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-cmd-001',
+    area: 'System',
+    system: 'Commands Reference',
+    name: 'Commands Reference page shows 27 CLI commands with categories',
+    procedure: 'Navigate to /status/commands. Verify 6 category filter tabs (services, health, build, db, debug, trading). Click each tab to filter. Click a command code block to copy.',
+    expected: '27 commands across 6 categories. Click-to-copy works. Filter tabs narrow results. Each command shows description and code block.',
+    category: 'UI',
+    priority: 'medium',
+    versionNote: '2026-07-22 — Commands Reference cheatsheet page',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // AGENT GOVERNANCE (2026-07-22)
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-gov-001',
+    area: 'Process',
+    system: 'Agent Governance',
+    name: 'Agent close checklist rules are documented and accessible',
+    procedure: 'Open .github/instructions/agent-issue-close-checklist.instructions.md. Verify 6 rules listed. Check .github/AGENT-ATTENTION.md exists with known blockers logged.',
+    expected: '6 critical rules: no fake checkboxes, verify dependencies, do actual task, no close with unchecked boxes, verify blockers with curl, log confirmed blockers. AGENT-ATTENTION.md lists current blockers (MT5 bridge, P&L mismatch, directiveoutcome table size).',
+    category: 'Audit',
+    priority: 'medium',
+    versionNote: '2026-07-22 — agent governance rules + attention log',
+  },
 ];
 
 export default QA_CHECKLIST;

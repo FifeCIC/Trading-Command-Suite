@@ -120,7 +120,16 @@ export default function SetupWizardPage() {
           <div className={`wizard-result ${allOk ? 'all-ok' : 'needs-work'}`}>
             <h3>{allOk ? '✓ System is ready' : '⚠ Some items need attention'}</h3>
             {allOk ? (
-              <p>The backend is connected, the database has test symbols, market data is loaded, and providers are configured. You can now use the SEES Live Stack, scoring pipeline, and all data pages.</p>
+              <>
+                <p>The backend is connected, the database has test symbols, market data is loaded, and providers are configured. You can now use the SEES Live Stack, scoring pipeline, and all data pages.</p>
+                <button
+                  className="wizard-enter-btn"
+                  onClick={() => { try { localStorage.setItem('tcs-setup-completed', 'true'); } catch {}; window.location.href = '/dashboard'; }}
+                  style={{ marginTop: '1rem', padding: '0.6rem 1.5rem', fontSize: '0.9rem', fontWeight: 700, border: 'none', borderRadius: 6, background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}
+                >
+                  Enter Dashboard →
+                </button>
+              </>
             ) : (
               <p>Address the items marked above, then revisit this wizard. Each check includes instructions for what to fix. At minimum the API and DB are needed to proceed.</p>
             )}

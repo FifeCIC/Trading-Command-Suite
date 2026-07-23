@@ -1,0 +1,204 @@
+/* META.Stack Explorer — Vertical pipeline */
+.mse-page { max-width: 860px; margin: 0 auto; padding: 1.25rem 1.5rem 4rem; color: var(--ink); }
+
+/* Header */
+.mse-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.mse-header h1 { margin: 0 0 0.15rem; font-size: 1.2rem; }
+.mse-subtitle { color: var(--ink-soft); font-size: 0.8rem; margin: 0; }
+.mse-header-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+.mse-progress { font-size: 0.78rem; color: var(--ink-soft); font-weight: 600; font-variant-numeric: tabular-nums; }
+.mse-action-btn {
+  padding: 0.3rem 0.7rem; border: 1px solid var(--line); border-radius: 6px;
+  background: transparent; color: var(--ink); font-size: 0.73rem; cursor: pointer;
+  font-family: inherit; transition: border-color 0.15s;
+}
+.mse-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+.mse-action-btn:first-of-type { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.mse-action-reset:hover { border-color: #ef4444; color: #ef4444; }
+
+/* Controls */
+.mse-controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.mse-symbol-input { flex: 0 1 200px; }
+.mse-protocol-select {
+  padding: 0.5rem 0.65rem; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel); color: var(--ink); font-family: inherit; font-size: 0.82rem; max-width: 220px;
+}
+.mse-protocol-select:focus { outline: none; border-color: var(--accent); }
+.mse-run-btn {
+  padding: 0.5rem 1.2rem; border: none; border-radius: 8px;
+  background: var(--accent); color: #fff; font-family: inherit;
+  font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s;
+}
+.mse-run-btn:hover { opacity: 0.85; }
+.mse-run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.mse-loading { padding: 2rem 0; }
+
+/* Pipeline vertical flow */
+.mse-pipeline { display: flex; flex-direction: column; }
+
+/* Stage wrapper with connector */
+.mse-stage-wrapper { position: relative; }
+
+/* Vertical connector */
+.mse-connector-vertical {
+  display: flex; flex-direction: column; align-items: center; padding: 0.15rem 0;
+}
+.mse-connector-line {
+  width: 2px; height: 18px; background: var(--line); border-radius: 1px;
+}
+.mse-connector-arrow { font-size: 0.6rem; color: var(--ink-soft); margin-top: -2px; }
+
+/* Stage card */
+.mse-stage {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 1rem 1.15rem; transition: border-color 0.3s, box-shadow 0.3s, opacity 0.3s;
+}
+.mse-stage:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+
+/* Pending (faded) vs Confirmed states */
+.mse-stage-pending { opacity: 0.55; border-style: dashed; }
+.mse-stage-pending .mse-live-val { filter: blur(2px); user-select: none; }
+.mse-stage-confirmed { opacity: 1; border-style: solid; border-color: var(--accent); box-shadow: 0 2px 16px rgba(14,165,166,0.1); }
+.mse-stage-confirmed .mse-live-val { filter: none; }
+
+/* Stage header */
+.mse-stage-head { display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.4rem; }
+.mse-stage-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
+.mse-stage-title-group { flex: 1; min-width: 0; }
+.mse-stage-title { margin: 0; font-size: 0.95rem; }
+.mse-stage-fn {
+  display: inline-block; margin-top: 2px; font-size: 0.7rem; font-family: 'Fira Code','Cascadia Code',monospace;
+  color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent);
+  padding: 1px 6px; border-radius: 3px;
+}
+
+/* Confirmation badge */
+.mse-confirm-badge {
+  flex-shrink: 0; padding: 0.25rem 0.6rem; border: 1px solid var(--line); border-radius: 6px;
+  background: transparent; color: var(--ink-soft); font-size: 0.7rem; cursor: pointer;
+  font-family: inherit; white-space: nowrap; transition: all 0.2s;
+}
+.mse-confirm-badge:hover { border-color: var(--accent); }
+.mse-confirm-badge.mse-confirmed {
+  background: color-mix(in srgb, #22c55e 12%, transparent);
+  border-color: #22c55e; color: #22c55e; font-weight: 600;
+}
+
+/* Stage description */
+.mse-stage-desc { margin: 0 0 0.5rem; font-size: 0.8rem; color: var(--ink-soft); line-height: 1.45; }
+
+/* Live value row */
+.mse-stage-live { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
+.mse-live-label { font-size: 0.7rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+.mse-live-val { font-size: 0.82rem; font-weight: 600; color: var(--ink); }
+.mse-live-dim { color: var(--ink-soft); }
+
+/* Info popover button */
+.mse-info-btn {
+  margin-left: auto; width: 22px; height: 22px; border: 1px solid var(--line); border-radius: 50%;
+  background: transparent; color: var(--ink-soft); font-size: 0.7rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.mse-info-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Native popover */
+.mse-popover {
+  padding: 1rem; background: var(--panel); border: 1px solid var(--accent); border-radius: 10px;
+  color: var(--ink); font-size: 0.78rem; max-width: 380px;
+  /* Anchor defaults: centered */
+  margin: 0; border: 1px solid var(--accent);
+}
+.mse-popover-title { margin: 0 0 0.5rem; font-size: 0.85rem; }
+.mse-popover-body { display: flex; flex-direction: column; gap: 0.4rem; }
+.mse-popover-grid { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.5rem; align-items: baseline; }
+.mse-popover-item { display: contents; }
+.mse-popover-label { font-size: 0.65rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+.mse-popover-item code, .mse-popover-grid code { font-size: 0.7rem; font-family: 'Fira Code',monospace; }
+.mse-popover-code-sm { font-size: 0.62rem !important; word-break: break-all; }
+.mse-popover-example { font-size: 0.7rem; color: var(--accent); font-weight: 600; }
+
+/* Nested sub-cards */
+.mse-subs { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.5rem; }
+.mse-sub-card {
+  padding: 0.45rem 0.65rem; border: 1px solid var(--line); border-left: 4px solid;
+  border-radius: 6px; background: color-mix(in srgb, var(--panel) 50%, transparent);
+}
+.mse-sub-head { display: flex; gap: 0.5rem; align-items: baseline; flex-wrap: wrap; }
+.mse-sub-label { font-weight: 700; font-size: 0.78rem; }
+.mse-sub-desc { font-size: 0.72rem; color: var(--ink-soft); }
+.mse-sub-live { font-size: 0.75rem; color: var(--accent); font-weight: 600; margin-top: 2px; }
+
+/* Directive list (expandable) */
+.mse-detail-toggle { margin-top: 0.4rem; }
+.mse-detail-summary {
+  font-size: 0.75rem; color: var(--accent); cursor: pointer; font-weight: 600;
+  padding: 0.2rem 0; border-bottom: 1px dashed transparent;
+}
+.mse-detail-summary:hover { border-bottom-color: var(--accent); }
+.mse-directive-list { display: flex; flex-direction: column; gap: 1px; margin-top: 0.3rem; max-height: 280px; overflow-y: auto; }
+.mse-dir-row {
+  display: flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.35rem;
+  border-radius: 3px; font-size: 0.73rem; border-left: 3px solid transparent;
+  cursor: default;
+}
+.mse-dir-bullish { border-left-color: rgba(34,197,94,0.3); }
+.mse-dir-bearish { border-left-color: rgba(239,68,68,0.3); }
+.mse-dir-neutral { border-left-color: rgba(148,163,184,0.2); }
+.mse-dir-name { font-weight: 600; min-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mse-dir-score { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 50px; text-align: right; }
+.mse-dir-pct { font-size: 0.68rem; color: var(--ink-soft); min-width: 30px; text-align: right; }
+.mse-dir-group-tag { font-size: 0.62rem; color: var(--ink-soft); background: color-mix(in srgb, var(--ink-soft) 10%, transparent); padding: 0 4px; border-radius: 2px; }
+
+/* Risk chain (expandable) */
+.mse-risk-chain { display: flex; flex-direction: column; gap: 2px; margin-top: 0.3rem; }
+.mse-risk-row {
+  display: flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.4rem;
+  border-radius: 4px; font-size: 0.72rem; flex-wrap: wrap; border-left: 3px solid;
+}
+.mse-risk-hard_gate { border-left-color: #ef4444; background: rgba(239,68,68,0.05); }
+.mse-risk-soft_modifier { border-left-color: #f59e0b; background: rgba(245,158,11,0.05); }
+.mse-risk-regime_override { border-left-color: #8b5cf6; background: rgba(139,92,246,0.05); }
+.mse-risk-name { font-weight: 600; min-width: 90px; }
+.mse-risk-mult { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent); }
+.mse-risk-cum { font-size: 0.65rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.mse-risk-reason { font-size: 0.68rem; color: var(--ink-soft); flex: 1; }
+
+/* Final signal banner */
+.mse-signal-banner {
+  padding: 0.75rem 1rem; border: 2px solid; border-radius: 12px; text-align: center;
+}
+.mse-signal-banner.mse-signal-verified {
+  box-shadow: 0 0 24px color-mix(in srgb, #22c55e 25%, transparent);
+  position: relative;
+}
+.mse-signal-banner.mse-signal-verified::before {
+  content: '✓ Pipeline Verified';
+  position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+  background: #22c55e; color: #fff; font-size: 0.65rem; font-weight: 700;
+  padding: 2px 10px; border-radius: 4px; white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+.mse-signal-main { display: flex; align-items: center; justify-content: center; gap: 0.75rem; flex-wrap: wrap; }
+.mse-signal-symbol { font-size: 1.2rem; font-weight: 800; }
+.mse-signal-badge {
+  font-size: 0.9rem; font-weight: 800; color: #fff; padding: 2px 12px; border-radius: 6px;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.mse-signal-composite { font-size: 1.1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mse-signal-meta { display: flex; gap: 1rem; justify-content: center; margin-top: 0.35rem; font-size: 0.72rem; color: var(--ink-soft); flex-wrap: wrap; }
+
+/* Empty state */
+.mse-empty { text-align: center; padding: 3rem 1rem; }
+.mse-empty-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+.mse-empty h2 { font-size: 1rem; margin: 0 0 0.3rem; }
+.mse-empty p { color: var(--ink-soft); font-size: 0.8rem; max-width: 420px; margin: 0 auto; }
+
+/* Responsive */
+@media (max-width: 700px) {
+  .mse-page { padding: 0.75rem 0.75rem 3rem; }
+  .mse-header { flex-direction: column; }
+  .mse-stage { padding: 0.75rem; }
+  .mse-controls { flex-direction: column; align-items: stretch; }
+  .mse-symbol-input { flex: auto; }
+  .mse-protocol-select { max-width: none; }
+}

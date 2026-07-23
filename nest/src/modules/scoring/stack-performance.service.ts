@@ -355,25 +355,26 @@ export class StackPerformanceService {
   }> {
     const currentFingerprint = await this.computeFingerprint(scoringStrategyId);
 
-    // Get the fingerprint at time of last rating persist
-    const lastPerf = await this.prisma.stackPerformance.findUnique({
+    // Query the latest snapshot for historical fingerprint comparison (#481)
+    const latestSnapshot = await this.prisma.metaStackSnapshot.findFirst({
       where: { scoringStrategyId },
-      select: { computedAt: true },
+      orderBy: { createdAt: 'desc' },
+      select: { fingerprint: true },
     }).catch(() => null);
 
-    if (!lastPerf) {
-      return { changed: false, currentFingerprint, lastTradeFingerprint: null, message: null };
+    if (!latestSnapshot) {
+      return { changed: false, currentFingerprint, lastTradeFingerprint: null, message: 'No previous snapshot — create one via POST /api/scoring/metastacks/:id/snapshot' };
     }
 
-    // For now, we don't store historical fingerprints — this is a placeholder
-    // for a future where StackPerformance stores the fingerprint at compute time.
-    // When we add `fingerprint` column to StackPerformance, this becomes:
-    //   changed = lastPerf.fingerprint !== currentFingerprint
+    const changed = latestSnapshot.fingerprint !== currentFingerprint;
+
     return {
-      changed: false,
+      changed,
       currentFingerprint,
-      lastTradeFingerprint: null,
-      message: 'Fingerprint tracking active — historical comparison requires schema update.',
+      lastTradeFingerprint: latestSnapshot.fingerprint,
+      message: changed
+        ? 'MetaStack configuration has changed since last snapshot.'
+        : 'MetaStack configuration unchanged since last snapshot.',
     };
   }
 

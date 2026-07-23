@@ -1,3 +1,1 @@
-SELECT table_name, table_rows, ROUND(data_length/1048576,1) AS data_mb, ROUND(index_length/1048576,1) AS index_mb
-FROM information_schema.tables WHERE table_schema='tradingcs'
-ORDER BY data_length DESC LIMIT 15;
+SELECT TABLE_NAME, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA='tradingcs' AND TABLE_NAME IN ('decision_trail','scoring_strategy','score_snapshot','strategy_evaluation','trade','trading_strategy');

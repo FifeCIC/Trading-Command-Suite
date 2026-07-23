@@ -127,6 +127,8 @@ import DecisionTrailPage from '../pages/DecisionTrailPage.jsx';
 import SymbolPage from '../pages/SymbolPage.jsx';
 import ArchitectureFrameworkPage from '../pages/ArchitectureFrameworkPage.jsx';
 import DiagramsPage from '../pages/DiagramsPage.jsx';
+import MetaStackExplorerPage from '../pages/MetaStackExplorerPage.jsx';
+import FileInventoryPage from '../pages/FileInventoryPage.jsx';
 
 // ── Lab ──
 import ComponentLabPage from '../pages/ComponentLabPage.jsx';
@@ -289,6 +291,8 @@ export const VIEW_COMPONENTS = {
   'qa-testing': QATestingPage,
   'architecture-framework': ArchitectureFrameworkPage,
   'diagrams': DiagramsPage,
+  'meta-stack-explorer': MetaStackExplorerPage,
+  'file-inventory': FileInventoryPage,
 
   // Lab
   'component-lab': ComponentLabPage,

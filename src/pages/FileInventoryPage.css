@@ -1,0 +1,168 @@
+.file-inventory-page {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.fi-header {
+  margin-bottom: 1.5rem;
+}
+
+.fi-header h2 {
+  font-size: 1.3rem;
+  margin: 0 0 0.25rem;
+  color: var(--ink);
+}
+
+/* ── Summary cards ── */
+.fi-summary {
+  margin-bottom: 1.5rem;
+}
+
+.fi-summary h3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.5rem;
+}
+
+.fi-summary-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.fi-summary-card {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.45rem 0.75rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  color: var(--ink);
+  transition: border-color 0.15s;
+  align-items: center;
+}
+
+.fi-summary-card:hover {
+  border-color: var(--accent);
+}
+
+.fi-summary-ext {
+  font-weight: 700;
+  font-family: 'SF Mono', 'Cascadia Code', monospace;
+  color: var(--accent);
+  min-width: 2.5rem;
+}
+
+.fi-summary-count,
+.fi-summary-lines,
+.fi-summary-size {
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ── Filters ── */
+.fi-filters {
+  margin-bottom: 0.75rem;
+  min-height: 1.5rem;
+}
+
+.fi-filter-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--line));
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: var(--ink);
+}
+
+.fi-filter-clear {
+  background: none;
+  border: none;
+  color: var(--riskHigh);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0;
+}
+
+/* ── Table ── */
+.fi-table-wrap {
+  overflow-x: auto;
+}
+
+.fi-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.fi-table th {
+  text-align: left;
+  padding: 0.45rem 0.5rem;
+  border-bottom: 2px solid var(--line);
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-size: 0.73rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fi-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.fi-sortable:hover {
+  color: var(--accent);
+}
+
+.fi-num {
+  text-align: right;
+}
+
+.fi-table td {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.fi-table tbody tr:hover {
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
+}
+
+.fi-table tbody tr.fi-bloated {
+  background: color-mix(in srgb, var(--riskHigh) 6%, transparent);
+}
+
+.fi-table tbody tr.fi-bloated:hover {
+  background: color-mix(in srgb, var(--riskHigh) 12%, transparent);
+}
+
+.fi-path {
+  font-family: 'SF Mono', 'Cascadia Code', monospace;
+  font-size: 0.75rem;
+  max-width: 500px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fi-ext {
+  font-family: 'SF Mono', 'Cascadia Code', monospace;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+
+.fi-date {
+  color: var(--ink-soft);
+  white-space: nowrap;
+  font-size: 0.75rem;
+}

@@ -76,6 +76,10 @@ export default function CreateStrategyPage() {
   const [maxPyramidTiers, setMaxPyramidTiers] = useState('1');
   const [slTpInheritance, setSlTpInheritance] = useState('inherit');
   const [maxPositions, setMaxPositions] = useState('1');
+  const [hotStockEnabled, setHotStockEnabled] = useState(false);
+  const [hotStockAllocation, setHotStockAllocation] = useState('5');
+  const [hotStockDetection, setHotStockDetection] = useState('top-scoring');
+  const [hotStockMaxHold, setHotStockMaxHold] = useState('24');
 
   // ── Data sources ──
   const [protocols, setProtocols] = useState([]);
@@ -195,6 +199,10 @@ export default function CreateStrategyPage() {
         maxPyramidTiers: parseInt(maxPyramidTiers) || 1,
         slTpInheritance,
         maxPositions: parseInt(maxPositions) || 1,
+        hotStockEnabled,
+        hotStockAllocation: hotStockEnabled ? parseFloat(hotStockAllocation) || 5 : null,
+        hotStockDetectionMode: hotStockEnabled ? hotStockDetection : null,
+        hotStockMaxHoldHours: hotStockEnabled ? parseInt(hotStockMaxHold) || 24 : null,
         active: true,
       };
 
@@ -344,6 +352,10 @@ export default function CreateStrategyPage() {
                   setMaxPyramidTiers(String(strat.maxPyramidTiers ?? 1));
                   setSlTpInheritance(strat.slTpInheritance || 'inherit');
                   setMaxPositions(String(strat.maxPositions ?? 1));
+                  setHotStockEnabled(strat.hotStockEnabled || false);
+                  setHotStockAllocation(String(strat.hotStockAllocation || 5));
+                  setHotStockDetection(strat.hotStockDetectionMode || 'top-scoring');
+                  setHotStockMaxHold(String(strat.hotStockMaxHoldHours || 24));
                   if (!name.trim()) setName(strat.name || '');
                 }
               }}
@@ -457,6 +469,41 @@ export default function CreateStrategyPage() {
             </select>
             <span className="ff-hint">How many positions this strategy can open simultaneously across different symbols. Default: 1 (single position).</span>
           </label>
+        </fieldset>
+
+        {/* ── Hot Stock Picks Integration (#339) ── */}
+        <fieldset className="ff-fieldset">
+          <legend>🔥 Hot Stock Auto-Discovery</legend>
+          <label className="ff-field">
+            <span className="ff-label">
+              <input type="checkbox" checked={hotStockEnabled} onChange={e => setHotStockEnabled(e.target.checked)} style={{ marginRight: '0.4rem' }} />
+              Allow auto-discovery of hot symbols
+            </span>
+            <span className="ff-hint">When enabled, this strategy can automatically trade hot stock picks detected by the system, in addition to its configured watchlist symbols.</span>
+          </label>
+          {hotStockEnabled && (
+            <>
+              <label className="ff-field">
+                <span className="ff-label">Hot Stock Allocation (%)</span>
+                <input type="number" className="ff-input" value={hotStockAllocation} onChange={e => setHotStockAllocation(e.target.value)} min="1" max="100" />
+                <span className="ff-hint">Separate portfolio allocation % for hot stock trades (independent from main strategy allocation).</span>
+              </label>
+              <label className="ff-field">
+                <span className="ff-label">Detection Mode</span>
+                <select className="ff-select" value={hotStockDetection} onChange={e => setHotStockDetection(e.target.value)}>
+                  <option value="top-scoring">Top Scoring Only — only highest-ranked hot picks</option>
+                  <option value="volume-spike">Volume Spike — symbols with unusual volume activity</option>
+                  <option value="all">All Detected — any symbol flagged by hot stock detection</option>
+                </select>
+                <span className="ff-hint">Which hot stock detection methods to trust for automatic trading.</span>
+              </label>
+              <label className="ff-field">
+                <span className="ff-label">Max Hold (hours)</span>
+                <input type="number" className="ff-input" value={hotStockMaxHold} onChange={e => setHotStockMaxHold(e.target.value)} min="1" max="168" />
+                <span className="ff-hint">Maximum holding period for hot stock positions. Default: 24 hours (shorter than strategy default).</span>
+              </label>
+            </>
+          )}
         </fieldset>
 
         {/* ── Submit ── */}

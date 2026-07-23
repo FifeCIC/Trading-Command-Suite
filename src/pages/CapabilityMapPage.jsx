@@ -173,6 +173,23 @@ const KNOWN_FEATURES = {
   'Protocol Directive Editor (Configure Directives)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   // 2026-07-17 — Decision Trail Browser
   'Decision Trail Browser': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
+  // 2026-07-21/22 — Health Dashboard + Diagnostics
+  'System Health Diagnostics': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Health Dashboard (6 diagnostic panels)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Health Settings (10 check toggles)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Agent CLI Health Check': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Commands Reference (27 CLI)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // 2026-07-22 — Speed Scanner Protocol + Patterns (#459)
+  'Speed Scanner Pattern Detection': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Speed Scanner Protocol Resolution (UUID→slug)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  // 2026-07-22 — Trade Pipeline Traceability (#446)
+  'Trade Pipeline (MT5 fields + traceability)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'TradeRecorderService (full MT5 capture)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  // 2026-07-22 — Agent Governance
+  'Agent Close Checklist Rules': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Agent Attention Log (shared blockers)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // 2026-06-21 — Execution Queue Live Events (#457)
+  'Execution Queue Live Events (Unified)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
 };
 
 // ── Build unified capability rows ──
@@ -340,6 +357,9 @@ function buildCapabilityRows(directives, providers) {
     'Sticky Header + Notice Components',
     'Status Badge Component',
     'Multi-Screen Cockpit (Phase 1)',
+    'Health Dashboard (6 diagnostic panels)',
+    'Commands Reference (27 CLI)',
+    'Health Settings (10 check toggles)',
   ].forEach((name) => {
     const known = KNOWN_FEATURES[name] || {};
     rows.push({
@@ -419,6 +439,8 @@ function buildCapabilityRows(directives, providers) {
     'Notification Service (Email/Win/Telegram/Discord)',
     'API Activity Middleware',
     'Process Manager',
+    'System Health Diagnostics',
+    'TradeRecorderService (full MT5 capture)',
   ].forEach((name) => {
     const known = KNOWN_FEATURES[name] || {};
     rows.push({

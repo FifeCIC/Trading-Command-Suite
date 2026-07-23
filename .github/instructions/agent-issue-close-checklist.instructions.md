@@ -11,6 +11,14 @@ applyTo: "nest/src/**, src/pages/**, src/components/**, src/data/**, src/core/**
 
 ---
 
+## ⚠️ BEFORE YOU START ANY WORK
+
+**Read `.github/AGENT-ATTENTION.md`** to see known blockers and issues. Do not waste time diagnosing problems that are already documented. The attention log is the shared memory of the agent team.
+
+**Checkbox the issue.** If the issue has action-oriented bullets (`### Investigation Required`, `### Recommended Next Steps`, `### Fix Options`, `### Scope`) without checkboxes, add `- [ ]` to every actionable bullet BEFORE starting work. Uncheckboxed bullets are invisible to the completion process — they get skipped. A bullet that says "Check whether X" or "Action: do Y" without a checkbox is not tracked and will not get done.
+
+---
+
 You MUST NOT close a GitHub issue by running `gh issue close` directly. You MUST first post a pre-close checklist comment, THEN close the issue with that comment.
 
 ## The checklist — USE THE ISSUE'S OWN ACCEPTANCE CRITERIA
@@ -110,6 +118,12 @@ When you hit a verified blocker, append it to `.github/AGENT-ATTENTION.md` with:
 - Which issues are affected
 
 This file is visible to humans and other agents. Read it at the start of every session so you know what's broken before starting work.
+
+### 7. Schema changes go through the migration system — NEVER inline DDL.
+
+Table creation belongs in Prisma schema + `prisma db push`, or in a startup bootstrap method that runs ONCE (like `PrismaService.onModuleInit`). Do NOT put `CREATE TABLE` in service methods, controllers, or the automation loop. These run repeatedly and belong to a different layer.
+
+If `prisma db push` can't run due to a pre-existing table conflict, resolve the conflict. Do not work around it by scattering DDL through application code.
 
 After posting the checklist as a comment, close the issue WITH that comment using:
 

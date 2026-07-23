@@ -146,6 +146,22 @@ function protocolNeedsEurUsd(groups: DirectiveGroup[]): boolean {
 
 // ─── Thresholds ──────────────────────────────────────────
 
+/**
+ * Scoring thresholds — determine BUY/HOLD/SELL from composite score.
+ *
+ * These thresholds are the single most impactful constants in the trading
+ * pipeline. A wrong value here means every strategy produces wrong signals.
+ *
+ * Historical context (#327): the original HOLD_FLOOR was 35, which mapped
+ * nearly all composites (typically 7-20 after risk multiplier ~0.5) to SELL.
+ * Result: 100% SELL bias, 0 BUY signals. The fix shifted HOLD_FLOOR to 20,
+ * which maps typical composites to HOLD. Only genuinely weak scores (< 20)
+ * now trigger SELL. Real bearish signals still need the dedicated short-side
+ * directives in directive-groups.ts.
+ *
+ * ENTRY_THRESHOLD (40): composite must reach 40+ to trigger a BUY or SELL.
+ * Between HOLD_FLOOR (20) and ENTRY_THRESHOLD (40): HOLD — market is neutral.
+ */
 const ENTRY_THRESHOLD = 40;
 const HOLD_FLOOR = 20;
 

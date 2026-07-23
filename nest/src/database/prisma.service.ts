@@ -43,6 +43,7 @@ export class PrismaService
         this.logger.log(
           `Prisma connected to MySQL and verified (attempt ${attempt}).`,
         );
+        await this.bootstrapSchema();
         return;
       } catch (error) {
         if (attempt < DB_RETRIES) {
@@ -63,5 +64,29 @@ export class PrismaService
 
   async onModuleDestroy(): Promise<void> {
     await this.$disconnect();
+  }
+
+  /**
+   * One-time schema bootstrapping for additive tables that prisma db push
+   * can't safely create (e.g. due to pre-existing table conflicts like
+   * automation_rule). Uses CREATE TABLE IF NOT EXISTS — safe to run on
+   * every startup. Only called once in onModuleInit after DB is verified.
+   *
+   * Additive-only — never drops or alters existing tables.
+   */
+  private async bootstrapSchema(): Promise<void> {
+    const tables = [
+      // Bootstrap placeholder — DecisionTrail is now managed by Prisma (#475).
+      // Add future tables here that Prisma db push cannot safely create
+      // (e.g. due to pre-existing conflicts like automation_rule).
+    ];
+
+    for (const sql of tables) {
+      try {
+        await this.$executeRawUnsafe(sql);
+      } catch (err) {
+        this.logger.warn(`Schema bootstrap failed: ${(err as Error).message}`);
+      }
+    }
   }
 }

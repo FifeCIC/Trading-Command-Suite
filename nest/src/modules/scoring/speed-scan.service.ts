@@ -124,8 +124,15 @@ const SYMBOL_PROTOCOL_MAP: Record<string, string> = {
 };
 
 /**
- * Resolve protocol for a symbol — DB-first with hardcoded fallback.
- * Queries symbol_protocol_assignment table; falls back to static map for bootstrap.
+ * Resolve the protocol slug for a symbol — DB-first with hardcoded fallback.
+ *
+ * IMPORTANT: Uses `include` (not `select`) to join the Protocol table.
+ * `select: { protocolId: true }` returns the UUID foreign key, not the
+ * human-readable slug. This caused #459 — Speed Scanner showed UUIDs like
+ * "42f2ec59-..." instead of "cad-sniper-v1". Always use `include` with
+ * relations when you need fields from the related table, not just the FK.
+ *
+ * Also returns `active` status so the frontend can filter inactive protocols.
  */
 async function resolveProtocolForSymbol(symbol: string, prisma: any): Promise<{ slug: string; active: boolean }> {
   // Try DB first — join to Protocol table to get the slug (NOT the UUID) + active status

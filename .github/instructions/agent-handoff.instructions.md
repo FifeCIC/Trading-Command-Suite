@@ -40,6 +40,28 @@ Every function that is part of a larger pipeline should have a header comment sh
 | Known gotcha or fragile point | ⚠️ WARNING with the specific risk |
 | Integration with another system | Which system, which endpoint/file |
 
+### Concept comments — explain the REASONING, not just the mechanics
+
+When a decision was made that isn't obvious from the code alone, add a sentence explaining the concept or theory behind it. These are the comments a human developer needs to understand WHY something was done a certain way — without having to reverse-engineer the git history and GitHub issues.
+
+Examples of good reasoning comments:
+
+```js
+// IMPORTANT: Uses `include` (not `select`) to join the Protocol table.
+// `select: { protocolId: true }` returns the UUID foreign key, not the
+// human-readable slug. This caused #459. Always use `include` with
+// relations when you need fields from the related table, not just the FK.
+```
+
+```js
+/**
+ * These thresholds are the single most impactful constants in the trading
+ * pipeline. The original HOLD_FLOOR of 35 mapped nearly all composites
+ * (typically 7-20 after risk multiplier ~0.5) to SELL. Result: 100% SELL
+ * bias. Fix: shifted to 20 — typical composites now map to HOLD.
+ */
+```
+
 ### Signal: don't comment the obvious
 
 If the code reads clearly on its own, don't add a comment. Comments are for **non-obvious** system context, not for paraphrasing code.

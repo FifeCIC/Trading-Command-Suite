@@ -1,8 +1,19 @@
 /**
- * TradeRecorderService
- * ====================
- * Persists all trade executions to the Prisma Trade model for audit trail.
- * Every sell/buy that goes through TCS is recorded here regardless of provider.
+ * TradeRecorderService — persists trade executions to the Trade table.
+ *
+ * Every order that reaches a broker MUST pass through this service.
+ * This is the single chokepoint for trade traceability (#446).
+ *
+ * MT5 traceability fields (ticket, sl, tp, magic, swap, brokerComment):
+ * These were added in #446 Phase 2. Previously, the automation loop called
+ * bridgePost(), received a ticket number, and discarded it. The Trade record
+ * had no link to the broker position — you couldn't reconcile DB trades with
+ * MT5 positions. Now every field the bridge returns is stored.
+ *
+ * The ticket field is how we match a Trade row to an MT5 position:
+ *   bridge GET /positions → ticket=152239905341
+ *   DB   SELECT * FROM trade WHERE ticket=152239905341
+ * Without ticket, there is no traceability.
  */
 
 import { Injectable, Logger } from '@nestjs/common';

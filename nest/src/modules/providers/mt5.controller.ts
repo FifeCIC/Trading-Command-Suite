@@ -213,9 +213,20 @@ export class Mt5Controller {
   }
 
   /**
-   * Place an MT5 order. Routes through the bridge AND records the trade
-   * for traceability (#446). Prefer POST /api/trading/mt5/order which goes
-   * through Mt5TradingService, but this endpoint now records trades too.
+   * Place an MT5 order through the bridge AND record it in the Trade table.
+   *
+   * This endpoint was historically a DIRECT bridge passthrough — it sent orders
+   * to the Python bridge and returned the result with zero traceability.
+   * Orders placed here were invisible to portfolio tracking, decision logs,
+   * and the audit trail (#446 Phase 1 finding).
+   *
+   * Now it still calls the bridge (keeping backward compatibility for any
+   * callers) but ALSO writes a Trade record with ticket/sl/tp/comment on
+   * success. The try/catch around the DB write ensures a recording failure
+   * never blocks the actual order.
+   *
+   * Prefer POST /api/trading/mt5/order which goes through Mt5TradingService
+   * for full validation + recording, but this endpoint is now safe to use.
    */
   @Post('order')
   async placeOrder(@Body() body: { symbol: string; type: string; volume: number; price?: number; sl?: number; tp?: number; comment?: string }) {

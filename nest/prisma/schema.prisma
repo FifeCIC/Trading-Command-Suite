@@ -693,6 +693,8 @@ model Trade {
   @@index([origin, createdAt])
   @@index([scoringStrategyId])
   @@index([ticket])
+
+  decisionTrails DecisionTrail[]
 }
 
 model ApiCalls {
@@ -891,6 +893,8 @@ model ScoreSnapshot {
   @@map("score_snapshot")
   @@index([protocolId, snappedAt])
   @@index([symbol, snappedAt])
+
+  decisionTrails DecisionTrail[]
 }
 
 
@@ -992,6 +996,11 @@ model TradingStrategy {
   cooldownMinutes Int    @default(5)
   mode          String   @default("manual") @db.VarChar(20)
   active        Boolean  @default(false)
+  // Hot Stock Picks integration (#339)
+  hotStockEnabled      Boolean  @default(false)
+  hotStockAllocation   Float?   // separate allocation % for hot stock trades
+  hotStockDetectionMode String? @db.VarChar(20) // "top-scoring" | "volume-spike" | "all"
+  hotStockMaxHoldHours Int?     // shorter max hold for hot stock positions (default: 24h)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -1017,6 +1026,7 @@ model StrategyEvaluation {
   evaluatedAt   DateTime @default(now())
 
   strategy TradingStrategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  decisionTrails DecisionTrail[]
 
   @@map("strategy_evaluation")
   @@index([strategyId, evaluatedAt])
@@ -1066,6 +1076,7 @@ model ScoringStrategy {
   watchlist         Watchlist?               @relation(fields: [watchlistId], references: [id])
   tradingStrategies TradingStrategy[]
   protocolLinks     ScoringStrategyProtocol[]
+  decisionTrails    DecisionTrail[]
 
   @@index([watchlistId])
   @@map("scoring_strategy")
@@ -1085,6 +1096,35 @@ model ScoringStrategyProtocol {
 
   @@unique([scoringStrategyId, protocolSlug])
   @@map("scoring_strategy_protocol")
+}
+
+// ── MetaStack Versioning (#295 Phase 1 / #481) ──
+model MetaStackSnapshot {
+  id                String   @id @default(uuid()) @db.VarChar(36)
+  scoringStrategyId String   @db.VarChar(36)
+  version           String   @db.VarChar(20)   // semver, e.g. "1.0.0"
+  snapshot          Json                        // full strategy config at this version
+  fingerprint       String   @db.VarChar(64)   // SHA-256 of snapshot JSON
+  createdAt         DateTime @default(now())
+  createdBy         String?  @db.VarChar(100)
+
+  @@index([scoringStrategyId])
+  @@index([scoringStrategyId, version])
+  @@map("metastack_snapshot")
+}
+
+model MetaStackChangeLog {
+  id                String   @id @default(uuid()) @db.VarChar(36)
+  scoringStrategyId String   @db.VarChar(36)
+  fromVersion       String?  @db.VarChar(20)
+  toVersion         String   @db.VarChar(20)
+  summary           String?  @db.VarChar(500)
+  details           Json?                       // JSON diff between versions
+  createdAt         DateTime @default(now())
+  author            String?  @db.VarChar(100)
+
+  @@index([scoringStrategyId])
+  @@map("metastack_change_log")
 }
 
 model SymbolProtocolAffinity {
@@ -1397,6 +1437,66 @@ model DecisionLog {
   @@index([timestamp])
   @@index([strategyId, timestamp])
   @@index([symbol, timestamp])
+}
+
+// ── Decision Trail ──────────────────────────────────────
+// Captures the LONG vs SHORT protocol comparison that drives
+// every trading decision. Currently computed in-memory and
+// discarded after each tick (#350, #474).
+//
+// One row per strategy per tick — whether or not a trade executed.
+// Links to score_snapshot (via timestamp+symbol+strategy) and
+// trade (via tradeTicket) for full-chain traceability.
+
+model DecisionTrail {
+  id              String   @id @default(uuid()) @db.VarChar(36)
+  tickNumber      Int
+  timestamp       DateTime @default(now())
+  strategyId      String   @db.VarChar(36)
+  symbol          String   @db.VarChar(20)
+  // LONG side
+  longProtocolId  String?  @db.VarChar(100)
+  longComposite   Float    @default(0)
+  longSignal      String?  @db.VarChar(10)
+  // SHORT side
+  shortProtocolId String?  @db.VarChar(100)
+  shortComposite  Float    @default(0)
+  shortSignal     String?  @db.VarChar(10)
+  // Outcome
+  winner          String?  @db.VarChar(10)   // LONG | SHORT | NONE
+  chosenComposite Float    @default(0)
+  finalSignal     String?  @db.VarChar(10)   // BUY | SELL | HOLD
+  reason          String?  @db.Text
+  actionable      Boolean  @default(false)
+  // Trade result (only if a trade executed)
+  tradeTicket     Int?
+  tradeVolume     Float?
+  tradePrice      Float?
+
+  // ── Chain linking (#475) — FK targets for joined audit queries ──
+  // Populated progressively as the pipeline advances:
+  //   scoringStrategy  ← set at creation (strategyId = ScoringStrategy.id)
+  //   scoreSnapshotId  ← set after scoring, matched on protocolId + symbol + time
+  //   strategyEvalId   ← set after TradingStrategy evaluation
+  //   tradeId          ← set after order execution
+  scoreSnapshotId String?  @db.VarChar(36)
+  strategyEvalId  String?  @db.VarChar(36)
+  tradeId         String?  @db.VarChar(36)
+
+  // Relations
+  scoringStrategy ScoringStrategy?   @relation(fields: [strategyId], references: [id])
+  scoreSnapshot   ScoreSnapshot?     @relation(fields: [scoreSnapshotId], references: [id])
+  strategyEval    StrategyEvaluation? @relation(fields: [strategyEvalId], references: [id])
+  trade           Trade?             @relation(fields: [tradeId], references: [id])
+
+  @@map("decision_trail")
+  @@index([timestamp])
+  @@index([strategyId, tickNumber])
+  @@index([symbol, timestamp])
+  @@index([actionable])
+  @@index([scoreSnapshotId])
+  @@index([strategyEvalId])
+  @@index([tradeId])
 }
 
 // ── Audit trail ──────────────────────────────────────────

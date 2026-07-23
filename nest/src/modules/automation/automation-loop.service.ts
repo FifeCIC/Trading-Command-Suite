@@ -25,6 +25,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { TimelineService } from './timeline.service';
 import { ScoringService } from '../scoring/scoring.service';
+import { MetaStackVersioningService } from '../scoring/metastack-versioning.service';
 import { ScoringLogService } from '../system/scoring-log.service';
 import { TradingStrategyService } from '../trading/trading-strategy.service';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
@@ -378,6 +379,7 @@ export class AutomationLoopService implements OnModuleInit {
     private readonly auditLog: AuditLogService,
     private readonly directivesService: DirectivesService,
     private readonly protocolDb: ProtocolDbService,
+    private readonly versioningService: MetaStackVersioningService,
   ) {
     this.initBrokerStates();
     // loadScoringStrategies() is deferred to onModuleInit (needs DB connection)
@@ -567,6 +569,10 @@ export class AutomationLoopService implements OnModuleInit {
           enabled: strat.enabled, tradingEnabled: strat.tradingEnabled,
         },
       });
+      // Auto-create version snapshot on strategy save (#481)
+      this.versioningService.createSnapshot(strat.id, 'auto-save').catch(err =>
+        this.logger.warn(`Auto-snapshot failed for ${strat.id}: ${(err as Error).message}`),
+      );
     } catch (err) {
       this.logger.warn(`Failed to save scoring strategy ${strat.id}: ${(err as Error).message}`);
     }
@@ -792,6 +798,7 @@ export class AutomationLoopService implements OnModuleInit {
     this.state.tickCount++;
     this.state.lastTickAt = new Date().toISOString();
     const decisions: TickDecision[] = [];
+    const trailRecords: any[] = [];  // DecisionTrail rows (#474)
     this.directivesService.clearTickCache();
     this.gatedScoreCache.clear();
     this.protocolDb.clearCache();
@@ -974,6 +981,25 @@ export class AutomationLoopService implements OnModuleInit {
               composite: chosenComposite, signal: side,
             });
 
+            // ── Decision Trail: store the LONG vs SHORT comparison (#474) ──
+            trailRecords.push({
+              tickNumber: this.state.tickCount,
+              strategyId: strat.id, symbol: sym,
+              longProtocolId: strat.protocolId,
+              longComposite: longGated.composite,
+              longSignal: longGated.signal ?? null,
+              shortProtocolId: strat.shortProtocolId ?? null,
+              shortComposite: shortGated?.composite ?? null,
+              shortSignal: shortGated?.signal ?? null,
+              winner: side,
+              chosenComposite,
+              finalSignal: side,
+              reason: `${strat.protocolId}=${longGated.composite}` +
+                (shortGated ? ` vs ${strat.shortProtocolId}=${shortGated.composite}` : '') +
+                ` → ${side} (threshold: ${strat.tradeThreshold})`,
+              actionable: adjScore >= strat.tradeThreshold,
+            });
+
             this.auditLog.logScored(this.state.tickCount, strat.id, sym,
               longGated.composite, shortGated?.composite ?? null,
               side, chosenComposite, adjScore >= strat.tradeThreshold);
@@ -1057,6 +1083,7 @@ export class AutomationLoopService implements OnModuleInit {
 
     // Persist decisions to DB so they survive restarts
     this.persistDecisions(decisions, this.state.tickCount);
+    this.persistDecisionTrail(trailRecords);
 
     // ── Portfolio Snapshot (per tick) ───────────────────
     // Captures equity, P&L, and position count at each decision point.
@@ -1621,6 +1648,19 @@ export class AutomationLoopService implements OnModuleInit {
         },
       }).catch(() => {});
     }
+  }
+
+  /**
+   * Persist decision trail records — captures the LONG vs SHORT protocol
+   * comparison that drives each trading decision (#474).
+   * Fire-and-forget — don't block the tick on DB writes.
+   * Table creation is handled once at startup via PrismaService.bootstrapSchema().
+   */
+  private persistDecisionTrail(records: any[]) {
+    if (!this.prisma.isAvailable || records.length === 0) return;
+    this.prisma.decisionTrail.createMany({ data: records }).then(
+      () => this.logger.debug(`Persisted ${records.length} trail records`),
+    ).catch(err => this.logger.warn(`Trail persist failed: ${err.message}`));
   }
 
   /**

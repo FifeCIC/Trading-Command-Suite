@@ -145,6 +145,8 @@ export const PAGE_DATA_STATUS = {
   'ai-costs': { status: 'partial', note: 'Frontend ready, backend pending' },
   'ai-logs': { status: 'partial', note: 'Frontend ready, backend pending' },
   'decision-trail': { status: 'partial', note: 'Frontend ready, depends on #350 Decision-Trail storage' },
+  'health-check': { status: 'live', source: '/api/system/health-dashboard (6 diagnostic panels, 15s refresh)' },
+  'commands': { status: 'live', source: 'Static CLI reference (27 commands across 6 categories)' },
 };
 
 /**

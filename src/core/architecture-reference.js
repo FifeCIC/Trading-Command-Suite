@@ -25,6 +25,7 @@ export const STATUS_SNAPSHOT = [
   'Agentic AI discoverability: /api/architecture/manifest endpoint provides machine-readable system map. Diagrams page has 19 Mermaid diagrams. GitHub Issues are the canonical task tracking system. Full revision history in closed issues with `revision-log` label.',
   '2026-06-26: Automation Architecture v1 designed — broker-agnostic automation loop with Timeline system as decision modifier (FOMC→reduce risk, earnings→block symbol, session open→boost protocols, seasonality→adjust thresholds).',
   '2026-07-01–02: Agent sessions — EarningsModule, AnalystTargetsService (Finnhub→FMP fallback), Settings API, Market Correlations wired, Seasonality directives, DataImportLog, PortfolioSnapshot models. 15+ issues closed. See GitHub Issues with `revision-log` label for detailed history.',
+  '2026-07-22: Handoff batch #3 — 6 handoffs processed. Health Dashboard + Commands Reference pages deployed. Speed Scanner protocol UUID→slug resolution + candlestick pattern detection (#459). Trade pipeline schema extended with MT5 fields + full traceability chain (#446). Agent governance close-checklist rules + AGENT-ATTENTION.md shared blocker log. Execution Queue dual-tab redesign with Live Events stream (#457). Health settings toggles (10 check toggles). Agent CLI health-check.ps1 tooling.',
 ]
 
 
@@ -234,10 +235,21 @@ export const CURRENT_SLICE = [
   'A/B Protocol Testing (#373) — New page at /lab/ab-testing. Runs two protocols against same watchlist via POST /api/scoring/gated/batch. Signal Comparison table with Match/Diverge badges, agreement rate card, direction bias bar (both-bullish/A-only/B-only/both-bearish), and Directive Analysis divergence cards. 30s auto-refresh. Files: ABTestingPage.jsx, ab-testing.css.',
   'AI Cost Monitoring (#371) — New page at /lab/ai-costs. Tracks DeepSeek usage via /api/ai/usage and /api/ai/usage/breakdown (pending backend). Four summary cards (total cost, avg/call, cost vs P&L, projected monthly). Cost-by-feature breakdown bars, budget cap fill gauge, per-feature toggles. 60s auto-refresh. Files: AICostsPage.jsx, ai-costs.css.',
   'AI Log Viewer (#375) — New page at /status/ai-logs. Queries /api/ai/logs with provider (deepseek/gemini) and feature filters (pending backend). Expandable log rows with full prompt/response in styled code blocks. Cost summary cards, provider badges, token counts. 30s auto-refresh. Files: AILogViewerPage.jsx, ai-log-viewer.css.',
+  // ── Sprint 2026-07-21/22 — Health Dashboard, Trade Pipeline, Speed Scanner, Agent Governance ──
+  'Health Dashboard — 6 diagnostic panels at /status/health-check: System Vitals (CPU/Mem/Uptime/Heap/Platform), Provider Health Grid, API Trends bar chart (24h), DB Tables vs Retention, Slow Queries (>1s), Trace Correlations. Auto-refresh 15s. Data from GET /api/system/health-dashboard.',
+  'Health Settings Toggles — 10 check toggles in Settings → 🩺 Health & Diagnostics backed by HealthChecksConfig in AppSettings. Dashboard respects disabled checks — excluded sections are never computed.',
+  'Agent Health Tooling — health-check.ps1 CLI script for 1-command system snapshot. GET /api/system/health-summary returns ~300 char text blob for LLM context.',
+  'Commands Reference — Page at /status/commands with 27 CLI commands across 6 categories (services, health, build, db, debug, trading). Click-to-copy with filter tabs.',
+  'Speed Scanner Protocol Resolution (#459) — resolveProtocolForSymbol() now returns human-readable slugs (cad-sniper-v1) instead of raw UUIDs. Backend returns protocolActive boolean; frontend filters inactive protocols via Screen Options toggle.',
+  'Candlestick Pattern Detection (#459) — MicroTrendDetector.aggregatePatterns() wired with real data. detectCandlestickPatterns() identifies doji, hammer, shooting star, engulfing from 20 trend bars using body/range ratio logic.',
+  'Trade Pipeline Schema (#446) — Trade model extended: ticket (Int), sl (Float), tp (Float), magic (Int), swap (Float), brokerComment (String). @@index([ticket]) added. 8 code paths audited and wired into traceability chain.',
+  'Trade Pipeline Traceability (#446) — Full chain: broker.placeOrder() → result with ticket → tradeRecorder.record() → Prisma Trade table. Automation loop + Mt5TradingService + legacy controller all pass MT5 fields. Legacy POST /api/providers/mt5/order now writes Trade records.',
+  'Execution Queue Live Events (#457) — Dual-tab redesign: ⟳ Live Events (default) and 🏗 Protocol Queue. GET /api/automation/events?limit=50&type=automation|decision returns unified event stream from existing AutomationEvent + DecisionLog models. 3s polling, type badges, event stats bar.',
+  'Agent Governance Rules — agent-issue-close-checklist.instructions.md with 6 critical rules for issue completion. AGENT-ATTENTION.md shared blocker log (MT5 bridge, P&L mismatch, directiveoutcome table 2.59M rows). Session-start rule: agents must read AGENT-ATTENTION.md before work.',
 ]
 
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-17 (handoff batch #2)'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-22 (handoff batch #3)'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -822,6 +834,46 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated operator access',
     owner: 'Backtest controller',
     contract: 'Returns chart-ready OHLCV with RSI/MACD/EMA overlays for symbol+timeframe.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/system/health-dashboard',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'SystemHealthController',
+    contract: 'Runs 6 diagnostics in parallel via Promise.all(): system vitals (CPU/Mem/Uptime/Heap/Platform), provider health grid, API trends (24h AVG duration), DB tables vs retention, slow queries (>1s), trace correlations. Returns unified payload with fetchedAt timestamp. All methods try/catch guarded — returns [] on failure.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/system/health-summary',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'SystemHealthController',
+    contract: 'Returns ~300 char text blob summarizing system health: CPU%, Mem%, DB status, provider summary, error count. Designed for LLM context window consumption. Text-only, no JSON nesting.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/system/settings/health-checks',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'SettingsController',
+    contract: 'Returns HealthChecksConfig toggle state. 10 boolean toggles for diagnostic sections. Dashboard respects disabled checks — excluded sections are never computed.',
+    status: 'active',
+  },
+  {
+    route: 'PUT /api/system/settings/health-checks',
+    method: 'PUT',
+    permission: 'Authenticated operator access',
+    owner: 'SettingsController',
+    contract: 'Updates HealthChecksConfig toggle state. Accepts partial update body. Persists to app-settings.json. Returns merged full health checks config.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/automation/events',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'AutomationController',
+    contract: 'Returns unified, time-sorted event stream from existing AutomationEvent + DecisionLog Prisma models. Query: ?limit=50&type=automation|decision. Type badges: automation/decision. Limit capped at 200. try/catch guards against missing tables.',
     status: 'active',
   },
 ]

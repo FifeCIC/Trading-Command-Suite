@@ -98,6 +98,8 @@ export const NAV_TREE = {
     views: [
       { id: 'architecture-framework', label: 'Architecture', icon: '⬡' },
       { id: 'diagrams', label: 'Diagrams', icon: '▦' },
+      { id: 'meta-stack-explorer', label: 'META.Stack Explorer', icon: '🔬' },
+      { id: 'file-inventory', label: 'File Inventory', icon: '📁' },
       // ── Lab (remaining) ──
     ],
   },

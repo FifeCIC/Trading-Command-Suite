@@ -653,6 +653,15 @@ function AppShell() {
   const isApiOnline = Boolean(healthQuery.data?.version);
   const isDbOnline = healthQuery.data?.services?.databaseConnected === true;
 
+  // ── Setup gate: redirect to setup wizard if infra not ready ──
+  const setupCompleted = (() => { try { return localStorage.getItem('tcs-setup-completed') === 'true'; } catch { return false; } })();
+  const healthFetched = healthQuery.isFetched;
+  const needsSetup = healthFetched && !setupCompleted && (!isApiOnline || !isDbOnline);
+  const onSetupPage = window.location.pathname === '/status/setup';
+  useEffect(() => {
+    if (needsSetup && !onSetupPage) { window.location.href = '/status/setup'; }
+  }, [needsSetup, onSetupPage]);
+
   // ── MT5 bridge status (lightweight poll) ─────────────
   const mt5Query = useQuery({
     queryKey: ['mt5-diag-header'],
