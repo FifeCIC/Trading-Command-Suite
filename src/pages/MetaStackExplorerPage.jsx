@@ -14,12 +14,11 @@
  * Route: /development/meta-stack-explorer
  * Data:  POST /api/scoring/gated/batch (live)
  */
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
-import SymbolAutocomplete from '../components/SymbolAutocomplete';
-import LoadingSkeleton from '../components/LoadingSkeleton';
+import FadeCardGroup from '../components/FadeCardGroup';
 import './meta-stack-explorer.css';
 
 /* ── Scroll-reveal card (IntersectionObserver pattern from ThemeLabScroll) ── */
@@ -213,10 +212,8 @@ const PIPELINE = [
 
 /* ── Main component ────────────────────────────────────── */
 export default function MetaStackExplorerPage() {
-  const [symbolInput, setSymbolInput] = useState('EURUSD');
-  const [protocolId, setProtocolId] = useState('default');
   const [confirmedStages, setConfirmedStages] = useState({});
-  const [runTick, setRunTick] = useState(0);
+  const [selectedStrategyId, setSelectedStrategyId] = useState(null);
   const [scrollPct, setScrollPct] = useState(0);
 
   // ── Prerequisite data queries ──
@@ -251,6 +248,12 @@ export default function MetaStackExplorerPage() {
     refetchInterval: 30_000,
   });
 
+  // ── Derived from selected Trading Strategy (cascades through all stages) ──
+  const tradingStrats = Array.isArray(tradingStratsQuery.data) ? tradingStratsQuery.data : [];
+  const selectedStrategy = tradingStrats.find(s => s.id === selectedStrategyId) || null;
+  const activeSymbol = selectedStrategy?.symbol || null;
+  const activeProtocolId = selectedStrategy?.protocolId || null;
+
   // ── Scroll progress bar (ThemeLabScroll pattern) ──
   useEffect(() => {
     const onScroll = () => {
@@ -272,21 +275,24 @@ export default function MetaStackExplorerPage() {
   });
   const protocols = protoQuery.data?.protocols ?? [];
 
-  const ticker = symbolInput.split(/[,\s]+/)[0]?.trim()?.toUpperCase() || 'EURUSD';
-
+  // Scoring auto-triggers when a Trading Strategy is selected (provides symbol + protocol)
   const scoreQuery = useQuery({
-    queryKey: ['mse-score-v2', ticker, protocolId],
+    queryKey: ['mse-score-v2', activeSymbol, activeProtocolId],
     queryFn: async () => {
-      const r = await apiPost('/api/scoring/gated/batch', { tickers: [ticker], protocolId });
+      if (!activeSymbol || !activeProtocolId) return null;
+      const r = await apiPost('/api/scoring/gated/batch', { tickers: [activeSymbol], protocolId: activeProtocolId });
       return Array.isArray(r) ? r[0] : null;
     },
-    enabled: !!ticker && !!protocolId,
+    enabled: !!activeSymbol && !!activeProtocolId,
     staleTime: 10_000,
   });
 
   const scored = scoreQuery.data;
-  const isLoading = scoreQuery.isFetching;
-  const selectedProtocol = protocols.find(p => p.id === protocolId);
+  const signalClass = scored
+    ? (scored.signal === 'BUY' || scored.signal === 'STRONG_BUY') ? 'buy'
+      : (scored.signal === 'SELL' || scored.signal === 'STRONG_SELL') ? 'sell' : 'hold'
+    : '';
+  const selectedProtocol = protocols.find(p => p.id === activeProtocolId);
 
   const liveValues = useMemo(() => {
     const symCount = symbolsQuery.data?.symbols?.length || 0;
@@ -294,64 +300,43 @@ export default function MetaStackExplorerPage() {
     const autoRunning = autoQuery.data?.running || false;
     const activeStrats = autoQuery.data?.activeStrategies || 0;
     const scoringStrats = Array.isArray(scoringStratsQuery.data) ? scoringStratsQuery.data : [];
-    const tradingStrats = Array.isArray(tradingStratsQuery.data) ? tradingStratsQuery.data : [];
     const positions = Array.isArray(positionsQuery.data) ? positionsQuery.data : [];
     const totalPnl = positions.reduce((s, p) => s + (p.profit || 0), 0);
 
-    // Find matching scoring strategy for current protocol
-    const matchingScoringStrat = scoringStrats.find(s => s.protocolId === protocolId);
-    const matchingTradingStrats = tradingStrats.filter(s => s.protocolId === protocolId && s.symbol === ticker);
+    const matchingScoringStrat = scoringStrats.find(s => s.protocolId === activeProtocolId);
+    const matchingTradingStrats = tradingStrats.filter(s => s.protocolId === activeProtocolId && s.symbol === activeSymbol);
 
     const vals = {
-      'prereq-symbols': `${symCount} symbols registered${symCount > 0 ? ' ✓' : ' — add symbols first'}`,
+      'prereq-symbols': `${symCount} symbols registered${symCount > 0 ? ' ✓' : ' — use Add Symbol'}`,
       'prereq-watchlist': `${wlCount} watchlists${wlCount > 0 ? ' ✓' : ' — create one first'}`,
-      'prereq-protocol': selectedProtocol ? `${selectedProtocol.name || protocolId} paired` : '— select a protocol above',
-      'prereq-sees': autoRunning ? `Automation running (tick #${autoQuery.data?.tick || '?'}, ${activeStrats} strategies)` : 'Automation stopped — manual runs via Run Pipeline button',
+      'prereq-protocol': activeProtocolId
+        ? `${selectedProtocol?.name || activeProtocolId} (from selected strategy)`
+        : '— select a Trading Strategy below to auto-resolve',
+      'prereq-sees': autoRunning
+        ? `Automation running (tick #${autoQuery.data?.tick || '?'}, ${activeStrats} strategies)`
+        : 'Automation paused — strategies scored on-demand',
+      'trading-strategy': selectedStrategy
+        ? `${selectedStrategy.name} — ${selectedStrategy.symbol} @ ${selectedStrategy.timeframe}, mode: ${selectedStrategy.mode}`
+        : '⬇ Select a Trading Strategy below to populate the full pipeline',
       'scoring-strategy': matchingScoringStrat
         ? `${matchingScoringStrat.name} — mode: ${matchingScoringStrat.mode}, threshold: ${matchingScoringStrat.tradeThreshold}`
-        : 'No scoring strategy matched for this protocol — create one or activate a built-in',
-      'trading-strategy': matchingTradingStrats.length > 0
-        ? `${matchingTradingStrats.length} strategy(s) match ${ticker}: ${matchingTradingStrats.map(s => s.name).join(', ')}`
-        : `No trading strategy for ${ticker} with ${protocolId} — create or activate one`,
+        : activeProtocolId ? 'No matching scoring strategy for this protocol' : '— select a strategy first',
       'outcome': positions.length > 0
-        ? `${positions.length} open positions, total P&L: $${totalPnl.toFixed(2)}${totalPnl >= 0 ? ' ✓' : ''}`
-        : 'No open positions — trade execution pending',
+        ? `${positions.length} open positions, total P&L: $${totalPnl.toFixed(2)}`
+        : 'No open positions',
     };
     if (!scored) return vals;
     return {
       ...vals,
       'market-data': `${scored.meta?.directiveCount || '?'} directives receiving bars for ${scored.symbol}`,
-      'protocol': `${selectedProtocol?.name || protocolId} — ${scored.meta?.weightStrategy || 'group-weighted'} mode`,
+      'protocol': `${selectedProtocol?.name || activeProtocolId} — ${scored.meta?.weightStrategy || 'group-weighted'} mode`,
       'conditions': `${scored.meta?.gatedCount || 0}/${scored.meta?.directiveCount || 0} directives passed activation gates`,
       'directives': `${scored.meta?.directiveCount || 0} executed, ${scored.meta?.gatedCount || 0} active after gating`,
       'groups': scored.subScores ? Object.entries(scored.subScores).map(([k, v]) => `${k}: ${v}%`).join(' | ') : '—',
       'risk-gate': scored.riskGate?.hardGateTriggered ? '🚫 BLOCKED — trade vetoed' : `✓ PASS — multiplier ×${scored.riskMultiplier?.toFixed?.(3) || '1.0'}`,
       'composite': `${scored.composite}/100 → ${scored.signal}`,
     };
-  }, [scored, selectedProtocol, protocolId, ticker, symbolsQuery.data, watchlistsQuery.data, autoQuery.data, scoringStratsQuery.data, tradingStratsQuery.data, positionsQuery.data]);
-
-  const handleRun = useCallback(() => {
-    scoreQuery.refetch();
-    setRunTick(t => t + 1);
-  }, [scoreQuery]);
-
-  // ── Copy trace to clipboard ──
-  const copyTrace = useCallback(() => {
-    if (!scored) return;
-    const lines = [
-      `META.Stack Pipeline Trace — ${scored.symbol} via ${selectedProtocol?.name || protocolId}`,
-      `Generated: ${new Date().toISOString()}`,
-      '',
-      ...PIPELINE.map(s => {
-        const lv = liveValues[s.id] || '—';
-        const conf = confirmedStages[s.id] ? '✓' : '○';
-        return `${conf} ${s.title} — ${s.fn}\n   ${s.fnDesc}\n   Live: ${lv}`;
-      }),
-      '',
-      `RESULT: ${scored.signal} (${scored.composite}/100) | Risk: ×${scored.riskMultiplier?.toFixed?.(3) || '—'} | Rarity: ${scored.rarity?.label || '—'}`,
-    ];
-    navigator.clipboard.writeText(lines.join('\n')).catch(() => {});
-  }, [scored, selectedProtocol, protocolId, liveValues, confirmedStages]);
+  }, [scored, selectedProtocol, activeProtocolId, activeSymbol, selectedStrategy, symbolsQuery.data, watchlistsQuery.data, autoQuery.data, scoringStratsQuery.data, tradingStratsQuery.data, positionsQuery.data]);
 
   const confirmedCount = Object.values(confirmedStages).filter(Boolean).length;
   const allConfirmed = confirmedCount === PIPELINE.length;
@@ -367,35 +352,18 @@ export default function MetaStackExplorerPage() {
           <p className="mse-subtitle">Modular Expert Trading Architecture — end-to-end pipeline trace</p>
         </div>
         <div className="mse-header-actions">
-          {scored && (
-            <button className="mse-action-btn" onClick={copyTrace} title="Copy pipeline trace to clipboard">📋 Copy Trace</button>
-          )}
           <span className="mse-progress">{confirmedCount}/{PIPELINE.length} confirmed</span>
           <button className="mse-action-btn" onClick={confirmAll}>Confirm All</button>
           <button className="mse-action-btn mse-action-reset" onClick={resetAll}>Reset</button>
         </div>
       </header>
 
-      <div className="mse-controls" onKeyDown={(e) => { if (e.key === 'Enter') handleRun(); }}>
-        <SymbolAutocomplete className="mse-symbol-input" value={symbolInput} onChange={setSymbolInput} placeholder="EURUSD" />
-        <select className="mse-protocol-select" value={protocolId} onChange={e => setProtocolId(e.target.value)}>
-          {protocols.map(p => (<option key={p.id} value={p.id}>{p.name ?? p.id}</option>))}
-        </select>
-        <button className="mse-run-btn" onClick={handleRun} disabled={isLoading}>
-          {isLoading ? '⏳ Running…' : '▶ Run Pipeline'}
-        </button>
-      </div>
-
-      {isLoading && !scored && (<div className="mse-loading"><LoadingSkeleton variant="card" count={4} /></div>)}
-
-      {/* ── Pipeline stages (vertical) — prerequisites always visible, core requires scored ── */}
+      {/* ── Pipeline stages (vertical) — prerequisites always visible, core requires strategy selection ── */}
       <div className="mse-pipeline">
         {PIPELINE.map((stage, i) => {
-          // Prerequisites show always; core stages only after Run
-          const isPrereq = stage.id.startsWith('prereq-');
-          const isPostScoring = ['scoring-strategy', 'trading-strategy', 'outcome'].includes(stage.id);
-          const shouldShow = isPrereq || (!isPrereq && scored);
-          if (!shouldShow) return null;
+          // All stages visible; scoring stages show placeholder until strategy selected
+          const needsScoring = !stage.id.startsWith('prereq-') && !['scoring-strategy', 'trading-strategy', 'outcome'].includes(stage.id);
+          const hasData = !needsScoring || scored;
 
           const confirmed = !!confirmedStages[stage.id];
             return (
@@ -407,10 +375,12 @@ export default function MetaStackExplorerPage() {
                   </div>
                 )}
                 <RevealCard
-                  className={`mse-stage ${confirmed ? 'mse-stage-confirmed' : 'mse-stage-pending'}`}
+                  className={`mse-stage ${confirmed ? 'mse-stage-confirmed' : 'mse-stage-pending'} ${!hasData && needsScoring ? 'mse-stage-waiting' : ''}`}
                   style={{ transitionDelay: `${i * 0.06}s` }}
-                  key={runTick + '-' + stage.id}
+                  key={stage.id}
                 >
+                  <span className="mse-stage-num">{i + 1}</span>
+                  <div className="mse-stage-inner">
                   <div className="mse-stage-head">
                     <span className="mse-stage-icon">{stage.icon}</span>
                     <div className="mse-stage-title-group">
@@ -433,32 +403,54 @@ export default function MetaStackExplorerPage() {
                     </InfoPopover>
                   </div>
 
+                  {/* Trading Strategy selector — drives the entire pipeline */}
+                  {stage.id === 'trading-strategy' && (
+                    <div className="mse-strategy-picker">
+                      <span className="mse-live-label">Select a Trading Strategy:</span>
+                      <select
+                        className="mse-protocol-select mse-protocol-select-wide"
+                        value={selectedStrategyId || ''}
+                        onChange={e => setSelectedStrategyId(e.target.value || null)}
+                      >
+                        <option value="">— Choose a strategy to populate the pipeline —</option>
+                        {tradingStrats.filter(s => s.active).map(s => (
+                          <option key={s.id} value={s.id}>
+                            {s.name} ({s.symbol} @ {s.timeframe})
+                          </option>
+                        ))}
+                      </select>
+                      {selectedStrategy && (
+                        <div className="mse-strategy-detail">
+                          Symbol: <strong>{selectedStrategy.symbol}</strong> | Protocol: <strong>{selectedStrategy.protocolId}</strong>
+                          {selectedStrategy.shortProtocolId && <> | Short: <strong>{selectedStrategy.shortProtocolId}</strong></>}
+                          {' '}| Mode: <strong>{selectedStrategy.mode}</strong> | Min composite: <strong>{selectedStrategy.minComposite}</strong>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {stage.isComplex && stage.subs && (
-                    <div className="mse-subs">
-                      {stage.subs.map(sub => {
+                    <FadeCardGroup
+                      variant="hover scroll-each"
+                      cards={stage.subs.map(sub => {
                         let subLive = '—';
-                        if (stage.id === 'directives' && scored.breakouts) {
+                        if (stage.id === 'directives' && scored && scored.breakouts) {
                           const group = scored.breakouts[sub.id];
                           if (group) {
                             const names = group.slice(0, 3).map(d => d.name).join(', ');
                             subLive = `${group.length} directives: ${names}${group.length > 3 ? ` +${group.length - 3} more` : ''}`;
                           }
                         }
-                        if (stage.id === 'risk-gate' && scored.riskGate?.multiplierChain) {
+                        if (stage.id === 'risk-gate' && scored && scored.riskGate?.multiplierChain) {
                           const step = scored.riskGate.multiplierChain.find(s => s.directiveId === sub.id);
                           subLive = step ? `×${step.multiplier?.toFixed?.(3)} (${step.tier.replace('_', ' ')}, severity ${Math.round((step.severity || 0) * 100)}%)` : 'not triggered';
                         }
-                        return (
-                          <div key={sub.id} className="mse-sub-card" style={{ borderLeftColor: sub.color }}>
-                            <div className="mse-sub-head"><span className="mse-sub-label">{sub.label}</span><span className="mse-sub-desc">{sub.desc}</span></div>
-                            <div className="mse-sub-live">{subLive}</div>
-                          </div>
-                        );
+                        return { label: sub.label, desc: sub.desc, color: sub.color, extra: subLive };
                       })}
-                    </div>
+                    />
                   )}
 
-                  {stage.id === 'directives' && scored.breakouts && (
+                  {stage.id === 'directives' && scored && scored.breakouts && (
                     <details className="mse-detail-toggle">
                       <summary className="mse-detail-summary">Show all {scored.meta?.directiveCount || 0} directive results</summary>
                       <div className="mse-directive-list">
@@ -476,7 +468,7 @@ export default function MetaStackExplorerPage() {
                     </details>
                   )}
 
-                  {stage.id === 'risk-gate' && scored.riskGate?.multiplierChain && (
+                  {stage.id === 'risk-gate' && scored && scored.riskGate?.multiplierChain && (
                     <details className="mse-detail-toggle">
                       <summary className="mse-detail-summary">Show full risk multiplier chain ({scored.riskGate.multiplierChain.length} rules)</summary>
                       <div className="mse-risk-chain">
@@ -491,6 +483,7 @@ export default function MetaStackExplorerPage() {
                       </div>
                     </details>
                   )}
+                </div>{/* /mse-stage-inner */}
                 </RevealCard>
               </div>
             );
@@ -501,20 +494,14 @@ export default function MetaStackExplorerPage() {
           {scored && (
           <RevealCard>
             <motion.div
-              className={`mse-signal-banner ${allConfirmed ? 'mse-signal-verified' : ''}`}
-              style={{
-                borderColor: (scored.signal === 'BUY' || scored.signal === 'STRONG_BUY') ? '#22c55e'
-                  : (scored.signal === 'SELL' || scored.signal === 'STRONG_SELL') ? '#ef4444' : '#f59e0b',
-                background: `color-mix(in srgb, ${(scored.signal === 'BUY' || scored.signal === 'STRONG_BUY') ? '#22c55e'
-                  : (scored.signal === 'SELL' || scored.signal === 'STRONG_SELL') ? '#ef4444' : '#f59e0b'} 8%, transparent)`,
-              }}
+              className={`mse-signal-banner mse-signal-${signalClass} ${allConfirmed ? 'mse-signal-verified' : ''}`}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3, duration: 0.5 }}
             >
               <div className="mse-signal-main">
                 <span className="mse-signal-symbol">{scored.symbol}</span>
-                <span className="mse-signal-badge" style={{ background: (scored.signal === 'BUY' || scored.signal === 'STRONG_BUY') ? '#22c55e' : (scored.signal === 'SELL' || scored.signal === 'STRONG_SELL') ? '#ef4444' : '#f59e0b' }}>{scored.signal}</span>
+                <span className={`mse-signal-badge mse-signal-badge-${signalClass}`}>{scored.signal}</span>
                 <span className="mse-signal-composite">{scored.composite}/100</span>
               </div>
               <div className="mse-signal-meta">
@@ -527,11 +514,11 @@ export default function MetaStackExplorerPage() {
           )}
         </div>{/* /mse-pipeline */}
 
-      {!scored && !isLoading && (
+      {!selectedStrategy && (
         <div className="mse-empty">
-          <div className="mse-empty-icon">🔬</div>
-          <h2>Run the pipeline</h2>
-          <p>Select a symbol and protocol above, then click "Run Pipeline" to trace a live score through every layer of META.Stack.</p>
+          <div className="mse-empty-icon">📈</div>
+          <h2>Select a Trading Strategy</h2>
+          <p>Scroll down to the <strong>Trading Strategy Evaluation</strong> stage and pick a strategy from the dropdown. This will populate the entire pipeline with live data using the actual backend functions.</p>
         </div>
       )}
     </div>

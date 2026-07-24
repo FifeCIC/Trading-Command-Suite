@@ -6,7 +6,7 @@
 .dw-widget {
   background: var(--panel, #141a2e);
   border: 1px solid var(--line, #1e2a45);
-  border-left: 3px solid var(--accent, #0ea5a6);
+  border: 1px solid var(--accent, #0ea5a6);
   border-radius: 10px;
   overflow: hidden;
   display: flex;

@@ -34,10 +34,10 @@
 .sd-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
 .sd-card.expanded { border-color: var(--accent, #14b8b9); }
 
-.sd-status-active { border-left: 3px solid #22c55e; }
-.sd-status-paused { border-left: 3px solid #f59e0b; }
-.sd-status-stopped { border-left: 3px solid #64748b; }
-.sd-status-error { border-left: 3px solid #ef4444; }
+.sd-status-active { border-color: #22c55e; }
+.sd-status-paused { border-color: #f59e0b; }
+.sd-status-stopped { border-color: #64748b; }
+.sd-status-error { border-color: #ef4444; }
 
 /* Card header */
 .sd-card-header { padding: 12px 14px 8px; cursor: pointer; }

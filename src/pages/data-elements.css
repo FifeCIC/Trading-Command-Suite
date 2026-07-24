@@ -14,9 +14,9 @@
   padding: 0.85rem 1rem;
 }
 
-.de-card--complete { border-left: 3px solid #22c55e; }
-.de-card--partial { border-left: 3px solid #f59e0b; }
-.de-card--unavailable { border-left: 3px solid #ef4444; }
+.de-card--complete { border-color: #22c55e; }
+.de-card--partial { border-color: #f59e0b; }
+.de-card--unavailable { border-color: #ef4444; }
 
 .de-card-header {
   display: flex;

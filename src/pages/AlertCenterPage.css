@@ -76,14 +76,14 @@
   padding: 0.75rem;
   background: var(--panel, #1e293b);
   border: 1px solid var(--line, #334155);
-  border-left: 4px solid #64748b;
+  border-color: #64748b;
   border-radius: 8px;
 }
 
-.ac-sev-critical { border-left-color: #dc2626; }
-.ac-sev-high { border-left-color: #ea580c; }
-.ac-sev-warning { border-left-color: #f59e0b; }
-.ac-sev-info { border-left-color: #3b82f6; }
+.ac-sev-critical { border-color: #dc2626; }
+.ac-sev-high { border-color: #ea580c; }
+.ac-sev-warning { border-color: #f59e0b; }
+.ac-sev-info { border-color: #3b82f6; }
 
 .ac-card-icon {
   font-size: 1.2rem;

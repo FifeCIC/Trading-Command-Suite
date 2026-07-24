@@ -1580,7 +1580,31 @@ button.nav-active {
   }
 }
 
-/* ── Popover API Base Styles ── */
+/* ── Card Accent: full-border (replaces border-left-only pattern) ── */
+/* Usage: add class "card-accent" to any card/panel that previously
+   used a colored border-left for status indication.
+   Variants: .card-accent-ok (green), .card-accent-warn (amber),
+             .card-accent-err (red), .card-accent-info (blue) */
+.card-accent {
+  border: 1px solid var(--accent, #3b82f6);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, #3b82f6) 18%, transparent) inset;
+}
+.card-accent-ok {
+  border-color: var(--color-profit, #22c55e);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-profit, #22c55e) 18%, transparent) inset;
+}
+.card-accent-warn {
+  border-color: var(--color-warning, #f59e0b);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-warning, #f59e0b) 18%, transparent) inset;
+}
+.card-accent-err {
+  border-color: var(--danger, #ef4444);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger, #ef4444) 18%, transparent) inset;
+}
+.card-accent-info {
+  border-color: var(--color-accent-blue, #3b82f6);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent-blue, #3b82f6) 18%, transparent) inset;
+}
 [popover] {
   border: 1px solid var(--line);
   border-radius: 8px;

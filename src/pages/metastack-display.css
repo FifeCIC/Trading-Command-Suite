@@ -78,11 +78,11 @@
   padding: 10px 12px; border-radius: 6px; margin-bottom: 5px;
   border-left: 4px solid transparent;
 }
-.msd-signal-strong-up { background: rgba(34,197,94,0.08); border-left-color: #22c55e; }
+.msd-signal-strong-up { background: rgba(34,197,94,0.08); border-color: #22c55e; }
 .msd-signal-up { background: rgba(34,197,94,0.04); border-left-color: rgba(34,197,94,0.45); }
 .msd-signal-neutral { background: rgba(255,255,255,0.02); border-left-color: rgba(107,114,128,0.35); }
 .msd-signal-down { background: rgba(239,68,68,0.04); border-left-color: rgba(239,68,68,0.45); }
-.msd-signal-strong-down { background: rgba(239,68,68,0.08); border-left-color: #ef4444; }
+.msd-signal-strong-down { background: rgba(239,68,68,0.08); border-color: #ef4444; }
 
 .msd-signal-sym { font-size: 0.78rem; font-weight: 700; font-family: 'JetBrains Mono', 'Fira Code', monospace; display: block; }
 .msd-signal-label { font-size: 0.9rem; font-weight: 700; display: block; margin-top: 2px; }

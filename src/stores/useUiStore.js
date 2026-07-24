@@ -13,7 +13,11 @@ export const useUiStore = create(
       qaChecks: {},
       toggleDevOverlay: () => set((state) => ({ devOverlayOpen: !state.devOverlayOpen })),
       closeDevOverlay: () => set({ devOverlayOpen: false }),
-      setThemeMode: (mode) => set({ themeMode: mode === 'dark' ? 'dark' : 'light' }),
+      setThemeMode: (mode) => {
+        const allowed = ['light', 'dark', 'black'];
+        const safeMode = allowed.includes(mode) ? mode : 'dark';
+        set({ themeMode: safeMode });
+      },
       setThemePack: (pack) => {
         const safePack = typeof pack === 'string' && /^[a-z0-9-]{1,64}$/i.test(pack) ? pack : 'scifi';
         set({ themePack: safePack });

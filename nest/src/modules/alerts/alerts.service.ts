@@ -126,6 +126,50 @@ export class AlertsService {
     } catch { return { active: 0, critical: 0 }; }
   }
 
+  /** Bulk dismiss all active alerts */
+  async dismissAll(): Promise<number> {
+    if (!this.prisma.isAvailable) return 0;
+    try {
+      const result = await (this.prisma as any).alert.updateMany({
+        where: { dismissed: false },
+        data: { dismissed: true },
+      });
+      this.logger.log(`Dismissed ${result.count} alerts`);
+      return result.count;
+    } catch (err) {
+      this.logger.warn(`Failed to dismiss alerts: ${(err as Error).message}`);
+      return 0;
+    }
+  }
+
+  /** Delete alerts older than retainDays (both dismissed and active beyond retention) */
+  async cleanupOld(retainDays: number): Promise<number> {
+    if (!this.prisma.isAvailable) return 0;
+    try {
+      const cutoff = new Date(Date.now() - retainDays * 86400000);
+      const result = await (this.prisma as any).alert.deleteMany({
+        where: { createdAt: { lt: cutoff } },
+      });
+      this.logger.log(`Cleaned up ${result.count} alerts older than ${retainDays} days`);
+      return result.count;
+    } catch (err) {
+      this.logger.warn(`Alert cleanup failed: ${(err as Error).message}`);
+      return 0;
+    }
+  }
+
+  // ── Notification settings (in-memory, survives until restart) ──
+  private notifSettings = { maxAlerts: 200, autoDismissDays: 3, mutedTypes: [] as string[] };
+
+  async updateNotificationSettings(body: { maxAlerts?: number; autoDismissDays?: number; mutedTypes?: string[] }) {
+    if (body.maxAlerts !== undefined) this.notifSettings.maxAlerts = body.maxAlerts;
+    if (body.autoDismissDays !== undefined) this.notifSettings.autoDismissDays = body.autoDismissDays;
+    if (body.mutedTypes !== undefined) this.notifSettings.mutedTypes = body.mutedTypes;
+    return this.notifSettings;
+  }
+
+  async getNotificationSettings() { return this.notifSettings; }
+
   /** Create a real alert — persisted to DB */
   async addAlert(type: string, title: string, detail?: string, severity = 'info', ticker?: string, link?: string) {
     if (!this.prisma.isAvailable) return null;

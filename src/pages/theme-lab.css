@@ -570,3 +570,6 @@
   overflow-x: auto;
   white-space: pre;
 }
+
+/* ── Fade-on-Hover / Scroll: use shared FadeCardGroup component ── */
+/* See src/components/FadeCardGroup.css for the fc-* classes        */

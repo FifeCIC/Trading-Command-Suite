@@ -104,15 +104,15 @@
 }
 
 .va-metric-card.va-high {
-  border-left: 3px solid #ef4444;
+  border-color: #ef4444;
 }
 
 .va-metric-card.va-mid {
-  border-left: 3px solid #f59e0b;
+  border-color: #f59e0b;
 }
 
 .va-metric-card.va-low {
-  border-left: 3px solid #22c55e;
+  border-color: #22c55e;
 }
 
 .va-metric-label {

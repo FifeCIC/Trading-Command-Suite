@@ -248,8 +248,8 @@
   margin-bottom: 10px;
 }
 
-.plab-scenario-card.risk-low { border-left: 3px solid var(--color-profit); }
-.plab-scenario-card.risk-medium { border-left: 3px solid var(--color-warning); }
+.plab-scenario-card.risk-low { border-color: var(--color-profit); }
+.plab-scenario-card.risk-medium { border-color: var(--color-warning); }
 .plab-scenario-card.risk-high { border-left: 3px solid var(--color-loss); }
 
 .plab-scenario-name {

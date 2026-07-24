@@ -272,8 +272,8 @@
   border-radius: 3px;
   font-size: 0.75rem;
 }
-.sdl-directive.bullish { border-left: 3px solid #22c55e; }
-.sdl-directive.bearish { border-left: 3px solid #ef4444; }
+.sdl-directive.bullish { border-color: #22c55e; }
+.sdl-directive.bearish { border-color: #ef4444; }
 .sdl-directive.neutral { border-left: 3px solid var(--border); }
 .sdl-dir-name {
   flex: 1;

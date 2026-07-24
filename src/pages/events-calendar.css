@@ -5,7 +5,7 @@
 .ec-affects { font-size: 0.65rem; color: var(--accent); margin-top: 0.2rem; }
 .ec-timeline { position: relative; padding-left: 1.5rem; }
 .ec-timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--line); }
-.ec-event { position: relative; padding: 0.65rem 0.75rem; margin-bottom: 0.6rem; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; border-left: 3px solid var(--line); cursor: pointer; }
+.ec-event { position: relative; padding: 0.65rem 0.75rem; margin-bottom: 0.6rem; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
 .ec-event-dot { position: absolute; left: -1.65rem; top: 1rem; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--panel); }
 .ec-event-content {}
 .ec-event-header { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }

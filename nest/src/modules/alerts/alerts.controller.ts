@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Put, Body, Query, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Put, Body, Query, Logger } from '@nestjs/common';
 import { AlertsService, Alert, AlertConfig } from './alerts.service';
 
 @Controller('alerts')
@@ -51,5 +51,32 @@ export class AlertsController {
     const result = this.alertsService.updateConfig(id, updates);
     if (!result) return { error: 'Config not found' };
     return result;
+  }
+
+  /** POST /api/alerts/dismiss-all — bulk dismiss all active alerts */
+  @Post('dismiss-all')
+  async dismissAll() {
+    const count = await this.alertsService.dismissAll();
+    return { dismissed: count };
+  }
+
+  /** DELETE /api/alerts/cleanup — remove old/dismissed alerts beyond retention */
+  @Delete('cleanup')
+  async cleanup(@Query('retainDays') retainDays?: string) {
+    const days = parseInt(retainDays || '7', 10);
+    const deleted = await this.alertsService.cleanupOld(days);
+    return { deleted, retainDays: days };
+  }
+
+  /** PUT /api/alerts/settings — update notification preferences */
+  @Put('settings')
+  async updateSettings(@Body() body: { maxAlerts?: number; autoDismissDays?: number; mutedTypes?: string[] }) {
+    return this.alertsService.updateNotificationSettings(body);
+  }
+
+  /** GET /api/alerts/settings — get notification preferences */
+  @Get('settings')
+  async getSettings() {
+    return this.alertsService.getNotificationSettings();
   }
 }

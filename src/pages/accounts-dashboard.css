@@ -53,9 +53,9 @@
   gap: 0.5rem;
 }
 
-.ad-card--live { border-left: 3px solid #22c55e; }
-.ad-card--isa { border-left: 3px solid #0ea5a6; }
-.ad-card--demo { border-left: 3px solid #64748b; opacity: 0.85; }
+.ad-card--live { border-color: #22c55e; }
+.ad-card--isa { border-color: #0ea5a6; }
+.ad-card--demo { border-color: #64748b; opacity: 0.85; }
 
 .ad-card-header {
   display: flex;

@@ -111,7 +111,7 @@
 
 /* ── News ── */
 .ro-news-list { display: flex; flex-direction: column; gap: 3px; max-height: 260px; overflow-y: auto; }
-.ro-news-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.35rem; border-radius: 4px; font-size: 0.73rem; border-left: 3px solid transparent; }
+.ro-news-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.35rem; border-radius: 4px; font-size: 0.73rem; border: 1px solid transparent; }
 .ro-news-pos { border-left-color: var(--color-profit); background: rgba(34,197,94,0.03); }
 .ro-news-neg { border-left-color: var(--color-loss); background: rgba(239,68,68,0.03); }
 .ro-news-neut { border-left-color: var(--color-neutral); }

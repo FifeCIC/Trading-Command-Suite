@@ -50,13 +50,16 @@ function createSafeFallbackBundle() {
 }
 
 export function useThemeRuntime({ mode, packId = 'core', adapterIds } = {}) {
+  // 'black' mode uses the dark palette + overrides bg/panel to pure black
+  const resolvedMode = mode === 'black' ? 'dark' : (mode === 'light' ? 'light' : 'dark');
+
   const bundle = useMemo(() => {
     try {
-      return buildThemeBundle(mode, { pack: packId, adapterIds });
+      return buildThemeBundle(resolvedMode, { pack: packId, adapterIds });
     } catch {
       return createSafeFallbackBundle();
     }
-  }, [mode, packId, adapterIds]);
+  }, [resolvedMode, packId, adapterIds]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -69,9 +72,16 @@ export function useThemeRuntime({ mode, packId = 'core', adapterIds } = {}) {
       }
     });
 
+    // Pure black override — overrides bg and panel after theme vars are set
+    if (mode === 'black') {
+      root.style.setProperty('--bg', '#000000', 'important');
+      root.style.setProperty('--panel', '#000000', 'important');
+      root.style.setProperty('--line', '#1a1a1a', 'important');
+    }
+
     root.setAttribute('data-theme-pack', bundle.packId || 'unknown');
-    root.setAttribute('data-theme-mode', bundle.tokens?.mode || 'light');
-  }, [bundle]);
+    root.setAttribute('data-theme-mode', mode || 'light');
+  }, [bundle, mode]);
 
   return bundle;
 }

@@ -489,7 +489,7 @@ export default function DashboardPage() {
                 const popId = `session-pop-${s.label.replace(/\s/g, '')}`;
                 return (
                   <div key={s.label} className={`dash-session ${isOpen ? 'dash-session-open' : 'dash-session-closed'} dash-session-hoverable`}>
-                    <span className="dash-session-dot" style={{background: isOpen ? '#22c55e' : '#ef4444'}}/>
+                    <span className={`dash-session-dot ${isOpen ? 'dash-session-dot-open' : 'dash-session-dot-closed'}`} />
                     <span>{s.label}</span>
                     <span className="dash-session-status">{isOpen ? 'Open' : 'Closed'}</span>
                     <div className="dash-session-popover">
@@ -516,14 +516,13 @@ export default function DashboardPage() {
                 const key = newsSourceKeys[i];
                 const count = newsCounts[key] || 0;
                 const hasArticles = count > 0;
-                const statusColor = hasArticles ? '#22c55e' : '#64748b';
                 const statusIcon = hasArticles ? '●' : '◐';
                 const statusLabel = hasArticles ? `${count.toLocaleString()} articles` : 'Unverified';
                 return (
                   <div key={key} className="dash-news-row">
-                    <span className="dash-news-dot" style={{ color: statusColor }}>{statusIcon}</span>
+                    <span className={`dash-news-dot ${hasArticles ? 'dash-news-dot-active' : 'dash-news-dot-muted'}`}>{statusIcon}</span>
                     <span className="dash-news-name">{name}</span>
-                    <span className="dash-news-status" style={{ color: statusColor }}>{statusLabel}</span>
+                    <span className={`dash-news-status ${hasArticles ? 'dash-news-dot-active' : 'dash-news-dot-muted'}`}>{statusLabel}</span>
                   </div>
                 );
               })}

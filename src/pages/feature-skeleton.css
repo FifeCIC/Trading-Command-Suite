@@ -97,7 +97,7 @@
 }
 
 .skeleton-card--cyan::after {
-  border-left: 2px solid #3bd9ff;
+  border: 1px solid rgba(59,217,255,0.6);
   border-bottom: 2px solid #3bd9ff;
 }
 

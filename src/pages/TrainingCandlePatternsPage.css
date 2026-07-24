@@ -200,8 +200,8 @@
   background: rgba(51, 65, 85, 0.5);
 }
 
-.pattern-item.direction-bullish { border-left: 3px solid #22c55e; }
-.pattern-item.direction-bearish { border-left: 3px solid #ef4444; }
+.pattern-item.direction-bullish { border-color: #22c55e; }
+.pattern-item.direction-bearish { border-color: #ef4444; }
 .pattern-item.direction-neutral { border-left: 3px solid #94a3b8; }
 
 .pattern-item .pattern-icon {

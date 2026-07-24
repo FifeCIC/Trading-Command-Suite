@@ -212,19 +212,19 @@
 
 /* Row color hints */
 .run-row--completed {
-  border-left: 3px solid #16a34a;
+  border-color: #16a34a;
 }
 
 .run-row--running {
-  border-left: 3px solid #2563eb;
+  border-color: #2563eb;
 }
 
 .run-row--failed {
-  border-left: 3px solid #dc2626;
+  border-color: #dc2626;
 }
 
 .run-row--queued {
-  border-left: 3px solid #d97706;
+  border-color: #d97706;
 }
 
 /* Cell styles */

@@ -124,8 +124,8 @@
   border-radius: 6px;
   border-left: 3px solid #334155;
 }
-.sf-strat-item.sf-strat-trading { border-left-color: #22c55e; }
-.sf-strat-item.sf-strat-active { border-left-color: #3b82f6; }
+.sf-strat-item.sf-strat-trading { border-color: #22c55e; }
+.sf-strat-item.sf-strat-active { border-color: #3b82f6; }
 .sf-strat-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; }
 .sf-strat-name { font-weight: 600; font-size: 0.82rem; color: #e2e8f0; }
 .sf-mode-badge {
@@ -184,7 +184,7 @@
   border: 1px solid rgba(51,65,85,0.4);
   border-radius: 5px;
 }
-.sf-eval-item.sf-eval-traded { border-left: 2px solid #22c55e; }
+.sf-eval-item.sf-eval-traded { border-color: #22c55e; }
 .sf-eval-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.15rem; }
 .sf-eval-signal { font-weight: 700; font-size: 0.78rem; }
 .sf-eval-composite { font-weight: 700; font-size: 0.78rem; color: #e2e8f0; }

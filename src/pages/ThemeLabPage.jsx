@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import FadeCardGroup from '../components/FadeCardGroup';
 import './theme-lab.css';
 
 const LAB_SECTIONS = [
@@ -57,6 +58,13 @@ const FORM_STANDARD_CLASSES = [
   '.app-btn-primary    /* Primary action button */',
   '.app-btn-secondary  /* Secondary/cancel button */',
 ].join('\n');
+
+const FADE_CARDS = [
+  { label: 'Technical Analysis', desc: 'Price action, momentum, patterns, volume — weighted at 0.40 in group-weighted mode.', color: '#3b82f6' },
+  { label: 'Sentiment & Fundamentals', desc: 'Analyst consensus, news, earnings, social — weighted at 0.35.', color: '#f59e0b' },
+  { label: 'Risk & Structural', desc: 'Correlation, dilution, concentration, volatility, liquidity — multiplier on composite.', color: '#22c55e' },
+  { label: 'Risk Controls', desc: 'Stop-loss triggers, drawdown limits, exposure caps — hard gates that veto trades.', color: '#ef4444' },
+];
 
 export default function ThemeLabPage() {
   const [activeBg, setActiveBg] = useState(null);
@@ -206,7 +214,35 @@ export default function ThemeLabPage() {
         </div>
       </section>
 
-      {/* ── Pulsing Header Card ──────────────────────────────── */}
+      {/* ── Fade-on-Hover Stack ──────────────────────────────── */}
+      <section className="tl-section">
+        <h2>Fade-on-Hover Card Stack</h2>
+        <p className="tl-hint">
+          Cards that start muted and reveal their full colour on hover — tones down busy multi-card stacks.
+          Uses the shared <code>&lt;FadeCardGroup variant="hover"&gt;</code> component.
+        </p>
+        <FadeCardGroup cards={FADE_CARDS} variant="hover" />
+      </section>
+
+      {/* ── Fade-on-Scroll Stack ─────────────────────────────── */}
+      <section className="tl-section">
+        <h2>Fade-on-Scroll Card Stack</h2>
+        <p className="tl-hint">
+          Same component with <code>variant="scroll"</code> — cards also reveal when the group
+          reaches the vertical centre of the viewport. Scroll to see the effect.
+        </p>
+        <FadeCardGroup cards={FADE_CARDS} variant="scroll" />
+      </section>
+
+      {/* ── Fade-on-Scroll (one at a time) ────────────────────── */}
+      <section className="tl-section">
+        <h2>Fade-on-Scroll — One Card at a Time</h2>
+        <p className="tl-hint">
+          <code>variant="scroll-each"</code> — each card lights up individually as it crosses the
+          screen centre line. Only one card is highlighted at a time.
+        </p>
+        <FadeCardGroup cards={FADE_CARDS} variant="scroll-each" />
+      </section>
       <section className="tl-section">
         <h2>Pulsing Header Card</h2>
         <p className="tl-hint">A card with a pulsing header — useful for indicating active problems or live-updating status.</p>

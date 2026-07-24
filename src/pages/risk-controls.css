@@ -87,7 +87,7 @@
 /* Kill Switch */
 .rc-empty { color: var(--ink-soft); font-size: 0.75rem; margin: 0; }
 .rc-kill-log { display: flex; flex-direction: column; gap: 0.3rem; }
-.rc-kill-event { display: flex; gap: 0.5rem; padding: 0.4rem 0.5rem; background: rgba(239,68,68,0.05); border-left: 3px solid #ef4444; border-radius: 4px; font-size: 0.72rem; }
+.rc-kill-event { display: flex; gap: 0.5rem; padding: 0.4rem 0.5rem; background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.6); border-radius: 4px; font-size: 0.72rem; }
 .rc-kill-time { font-weight: 600; color: #ef4444; white-space: nowrap; }
 .rc-kill-reason { color: var(--ink-soft); }
 

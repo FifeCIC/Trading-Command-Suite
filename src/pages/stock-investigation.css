@@ -9,8 +9,8 @@
 .si-empty { text-align: center; padding: 3rem 1rem; color: var(--ink-soft); }
 .si-list { display: flex; flex-direction: column; gap: 0.5rem; }
 .si-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem; }
-.si-card.si-open { border-left: 3px solid #22c55e; }
-.si-card.si-monitoring { border-left: 3px solid #f59e0b; }
+.si-card.si-open { border-color: #22c55e; }
+.si-card.si-monitoring { border-color: #f59e0b; }
 .si-card.si-closed { border-left: 3px solid #6b7280; opacity: 0.7; }
 .si-card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
 .si-symbol { font-weight: 700; font-size: 0.85rem; }

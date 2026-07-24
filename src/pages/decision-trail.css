@@ -112,8 +112,8 @@
 }
 .dt-trail-card:hover { border-color: #475569; }
 .dt-trail-card.expanded { border-color: var(--accent); }
-.dt-trail-card.complete { border-left: 3px solid #22c55e; }
-.dt-trail-card.incomplete { border-left: 3px solid #f59e0b; }
+.dt-trail-card.complete { border-color: #22c55e; }
+.dt-trail-card.incomplete { border-color: #f59e0b; }
 
 .dt-trail-summary {
   display: flex;

@@ -138,6 +138,7 @@ import { useUiStore } from './stores/useUiStore';
 import { useThemeRuntime } from './theme/useThemeRuntime';
 import './theme/packs/ai-original.css';
 import './theme/packs/scifi.css';
+import './theme/packs/slate.css';
 import { featureFlags } from './utils/featureFlags';
 import { NAV_TREE, PRIMARY_PAGES, QUICK_MENU, getNavStructure, getFilteredNavStructure } from './core/nav-tree';
 import { getExperienceLevel } from './core/experience-levels';
@@ -151,6 +152,7 @@ const THEME_CARDS = [
   { id: 'core', name: 'Core', description: 'Clean, neutral palette.', colors: ['#f4f7fb', '#0ea5a6', '#0f172a'] },
   { id: 'oceanic', name: 'Oceanic', description: 'Deep blue with teal.', colors: ['#0f1b2e', '#00d9ff', '#d6e8ff'] },
   { id: 'scifi', name: 'Sci-Fi', description: 'Dark navy, cyan neon.', colors: ['#0a1428', '#00d9ff', '#c1d0e0'] },
+  { id: 'slate', name: 'Slate', description: 'Blue-gray with indigo accent — matches the dashboard.', colors: ['#0f172a', '#3b82f6', '#e2e8f0'] },
   { id: 'terminal', name: 'Terminal', description: 'Black, neon green.', colors: ['#0a0a0a', '#00ff41', '#e0e0e0'] },
   { id: 'void', name: 'Void', description: 'Black, neon purple.', colors: ['#08080d', '#8a50ff', '#d4d0e8'] },
 ];

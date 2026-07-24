@@ -139,8 +139,8 @@
 .ad-timeline-dot {
   width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0;
 }
-.ad-timeline-danger { border-left: 2px solid var(--color-loss); padding-left: 0.5rem; }
-.ad-timeline-boost { border-left: 2px solid var(--color-profit); padding-left: 0.5rem; }
+.ad-timeline-danger { border-color: var(--color-loss); padding-left: 0.5rem; }
+.ad-timeline-boost { border-color: var(--color-profit); padding-left: 0.5rem; }
 .ad-timeline-label { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .ad-risk-badge {
   font-size: 0.65rem; padding: 1px 5px; border-radius: 3px; font-weight: 700;
@@ -238,7 +238,7 @@
 .ad-decision-blocked { border-left-color: var(--color-loss); }
 .ad-decision-queued { border-left-color: var(--color-warning); }
 .ad-decision-executed { border-left-color: var(--color-accent-blue); }
-.ad-decision-signal { border-left-color: #a855f7; }
+.ad-decision-signal { border-color: #a855f7; }
 .ad-decision-symbol { font-weight: 700; }
 .ad-decision-tag {
   font-size: 0.65rem; padding: 1px 5px; border-radius: 3px; font-weight: 600;

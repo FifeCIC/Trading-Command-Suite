@@ -1,0 +1,77 @@
+/* ── FadeCardGroup — reusable coloured card stacks ────────── */
+/* Variants: hover (default), scroll (center-reveal), both   */
+/* Usage: <FadeCardGroup cards={[...]} variant="scroll" />   */
+
+.fc-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-width: 560px;
+}
+
+.fc-card {
+  position: relative;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--fc-color, var(--accent)) 35%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--fc-color, var(--accent)) 5%, var(--panel));
+  opacity: 0.5;
+  transition: opacity 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  cursor: default;
+}
+
+.fc-card:hover {
+  opacity: 1;
+  border-color: var(--fc-color, var(--accent));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--fc-color, var(--accent)) 20%, transparent) inset,
+    0 2px 12px color-mix(in srgb, var(--fc-color, var(--accent)) 10%, transparent);
+  transform: translateY(-1px);
+  z-index: 2;
+}
+
+/* Scroll-center reveal: all cards in a centered group light up */
+.fc-scroll.fc-centered .fc-card {
+  opacity: 1;
+  border-color: var(--fc-color, var(--accent));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--fc-color, var(--accent)) 15%, transparent) inset;
+}
+
+/* Scroll-center-each: individual cards light up one at a time */
+.fc-card-centered {
+  opacity: 1;
+  border-color: var(--fc-color, var(--accent));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--fc-color, var(--accent)) 20%, transparent) inset,
+    0 2px 12px color-mix(in srgb, var(--fc-color, var(--accent)) 10%, transparent);
+  transform: translateY(-1px);
+}
+
+.fc-head {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin-bottom: 0.15rem;
+}
+
+.fc-label {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--ink, #e2e8f0);
+}
+
+.fc-desc {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ink-soft, #94a3b8);
+  line-height: 1.45;
+}
+
+.fc-extra {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 600;
+}

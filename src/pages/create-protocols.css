@@ -71,7 +71,7 @@
 }
 .cp-group-card--risk {
   border-color: var(--warning, #f59e0b);
-  border-left: 3px solid var(--warning, #f59e0b);
+  border: 1px solid var(--warning, #f59e0b);
 }
 .cp-group-header {
   display: flex;

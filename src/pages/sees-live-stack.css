@@ -472,7 +472,7 @@
 }
 
 .sees-row--stale {
-  border-left: 3px solid #d97706;
+  border: 1px solid rgba(217,119,6,0.6);
 }
 
 .sees-row--no_data td {

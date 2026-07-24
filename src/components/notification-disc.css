@@ -240,7 +240,7 @@
 }
 
 /* Severity left-border accents */
-.notif-critical { border-left: 3px solid #ef4444; }
-.notif-warning  { border-left: 3px solid #f59e0b; }
-.notif-info     { border-left: 3px solid #3b82f6; }
-.notif-success  { border-left: 3px solid #22c55e; }
+.notif-critical { border-color: rgba(239,68,68,0.6); }
+.notif-warning  { border-color: #f59e0b; }
+.notif-info     { border-color: #3b82f6; }
+.notif-success  { border-color: #22c55e; }

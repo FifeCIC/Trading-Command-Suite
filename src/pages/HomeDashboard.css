@@ -3,8 +3,8 @@
 .nav-dashboard {
   width: 100%;
   padding: 1.5rem 2rem;
-  color: #e2e8f0;
-  background: #0f172a;
+  color: var(--ink, #e2e8f0);
+  background: var(--bg, #0f172a);
   min-height: 100vh;
 }
 
@@ -16,7 +16,7 @@
   align-items: center;
   padding: 0 0 1rem;
   margin-bottom: 1rem;
-  border-bottom: 1px solid #1e293b;
+  border-bottom: 1px solid var(--panel, #1e293b);
 }
 .nd-topbar-logo {
   height: 36px;
@@ -77,13 +77,13 @@
   font-size: 2rem;
   font-weight: 700;
   margin: 0 0 0.5rem;
-  color: #f1f5f9;
+  color: var(--ink, #f1f5f9);
   letter-spacing: -0.02em;
 }
 
 .nd-hero-subtitle {
   margin: 0 0 1.5rem;
-  color: #64748b;
+  color: var(--ink-soft, #64748b);
   font-size: 1.05rem;
 }
 
@@ -91,12 +91,12 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
   border-radius: 8px;
   padding: 8px 20px;
   font-size: 0.9rem;
-  color: #94a3b8;
+  color: var(--ink-soft, #94a3b8);
   margin-bottom: 1.5rem;
 }
 
@@ -111,7 +111,7 @@
 
 .nd-hero-enter {
   padding: 0.7rem 2rem;
-  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  background: linear-gradient(135deg, var(--accent, #3b82f6), #6366f1);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -123,7 +123,7 @@
 }
 .nd-hero-enter:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 20px rgba(59,130,246,0.35);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--accent, #3b82f6) 35%, transparent);
 }
 
 /* ── Status (centered on landing) ──────────────────────────── */
@@ -138,7 +138,7 @@
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #94a3b8;
+  color: var(--ink-soft, #94a3b8);
   margin: 0 0 1rem;
 }
 
@@ -152,15 +152,15 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
   border-radius: 8px;
   padding: 0.6rem 0.85rem;
 }
 
 .nd-status-label {
   font-size: 0.78rem;
-  color: #64748b;
+  color: var(--ink-soft, #64748b);
 }
 
 .nd-status-value {
@@ -168,9 +168,9 @@
   font-size: 0.82rem;
 }
 
-.nd-status-value.ok { color: #22c55e; }
-.nd-status-value.warn { color: #f59e0b; }
-.nd-status-value.err { color: #ef4444; }
+.nd-status-value.ok { color: var(--color-profit, #22c55e); }
+.nd-status-value.warn { color: var(--color-warning, #f59e0b); }
+.nd-status-value.err { color: var(--danger, #ef4444); }
 
 /* ── Setup (backend offline) ───────────────────────────────── */
 
@@ -186,12 +186,12 @@
 
 .nd-setup h2 {
   font-size: 1rem;
-  color: #ef4444;
+  color: var(--danger, #ef4444);
   margin: 0 0 0.5rem;
 }
 
 .nd-setup-text {
-  color: #94a3b8;
+  color: var(--ink-soft, #94a3b8);
   font-size: 0.9rem;
   margin: 0 0 0.75rem;
 }
@@ -207,7 +207,7 @@
 
 .nd-restart-btn {
   padding: 0.5rem 1.25rem;
-  background: #dc2626;
+  background: var(--danger, #dc2626);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -217,23 +217,23 @@
   font-family: inherit;
 }
 .nd-restart-btn:disabled {
-  background: #334155;
+  background: var(--line, #334155);
   cursor: not-allowed;
 }
 
 .nd-restart-msg {
-  color: #94a3b8;
+  color: var(--ink-soft, #94a3b8);
   font-size: 0.8rem;
 }
 
 .nd-setup-hint {
-  color: #64748b;
+  color: var(--ink-soft, #64748b);
   font-size: 0.75rem;
   margin: 0.5rem 0 0;
 }
 .nd-setup-hint code {
   padding: 0.15rem 0.4rem;
-  background: #0f172a;
+  background: var(--bg, #0f172a);
   border-radius: 3px;
   font-size: 0.8rem;
 }
@@ -248,14 +248,14 @@
   font-size: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #94a3b8;
+  color: var(--ink-soft, #94a3b8);
   margin: 0 0 1rem;
 }
 
 .nd-section-label {
   font-size: 0.8rem;
   font-weight: 500;
-  color: #64748b;
+  color: var(--ink-soft, #64748b);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin: 0 0 0.75rem 0;
@@ -264,7 +264,7 @@
 .nd-workflow {
   margin-bottom: 1.5rem;
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid #1e293b;
+  border-bottom: 1px solid var(--panel, #1e293b);
 }
 
 .nd-nav-grid {
@@ -287,9 +287,9 @@
   flex-direction: column;
   align-items: center;
   gap: 0.3rem;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-top: 2px solid #3b82f6;
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
+  border-top: 2px solid var(--accent, #3b82f6);
   border-radius: 10px;
   padding: 0.85rem 0.6rem;
   cursor: pointer;
@@ -312,7 +312,7 @@
 .nd-nav-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  border-color: #3b82f6;
+  border-color: var(--accent, #3b82f6);
 }
 
 .nd-nav-card-primary:hover {
@@ -334,12 +334,12 @@
 .nd-nav-label {
   font-weight: 600;
   font-size: 0.82rem;
-  color: #f1f5f9;
+  color: var(--ink, #f1f5f9);
 }
 
 .nd-nav-count {
   font-size: 0.65rem;
-  color: #64748b;
+  color: var(--ink-soft, #64748b);
 }
 
 .nd-status-label {
@@ -366,7 +366,7 @@
 }
 
 .nd-status-value.mt5 {
-  color: #3b82f6;
+  color: var(--accent, #3b82f6);
 }
 
 /* ── Tips ─────────────────────────────────────────────────── */
@@ -381,17 +381,17 @@
 }
 
 .nd-tips li {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
   border-radius: 8px;
   padding: 0.75rem 1rem;
   font-size: 0.9rem;
-  color: #94a3b8;
+  color: var(--ink-soft, #94a3b8);
   line-height: 1.5;
 }
 
 .nd-tips li strong {
-  color: #e2e8f0;
+  color: var(--ink, #e2e8f0);
 }
 
 /* ── Responsive ───────────────────────────────────────────── */
@@ -422,8 +422,8 @@
 .dash-col-side { display: flex; flex-direction: column; gap: 0.75rem; }
 
 .dash-card {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
   border-radius: 10px;
   padding: 0.85rem 1rem;
 }
@@ -431,22 +431,30 @@
   padding: 0.55rem 0.85rem;
 }
 .dash-card-compact h3 { margin: 0 0 0.35rem; font-size: 0.82rem; }
-.dash-card h3 { font-size: 0.88rem; margin: 0 0 0.6rem; color: #e2e8f0; }
+.dash-card h3 { font-size: 0.88rem; margin: 0 0 0.6rem; color: var(--ink, #e2e8f0); }
 
 .dash-card-stats { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; }
 .dash-stat { display: flex; flex-direction: column; gap: 0.1rem; min-width: 90px; }
-.dash-stat-label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
-.dash-stat-value { font-size: 0.9rem; font-weight: 700; color: #e2e8f0; }
-.dash-stat-value.ok { color: #22c55e; }
-.dash-stat-value.err { color: #ef4444; }
+.dash-stat-label { font-size: 0.7rem; color: var(--ink-soft, #64748b); text-transform: uppercase; letter-spacing: 0.04em; }
+.dash-stat-value { font-size: 0.9rem; font-weight: 700; color: var(--ink, #e2e8f0); }
+.dash-stat-value.ok { color: var(--color-profit, #22c55e); }
+.dash-stat-value.err { color: var(--danger, #ef4444); }
 
 .dash-pnl-broker { border-top: 1px solid var(--line); margin-top: 0.5rem; padding-top: 0.5rem; display: flex; gap: 1.25rem; }
 .dash-pnl-broker-item { display: flex; align-items: center; gap: 0.5rem; }
 .dash-pnl-broker-label { font-size: 0.7rem; color: var(--ink-soft); text-transform: uppercase; min-width: 30px; }
 .dash-pnl-broker-value { font-size: 0.85rem; font-weight: 700; }
-.dash-pnl-broker-value.ok { color: #22c55e; }
-.dash-pnl-broker-value.err { color: #ef4444; }
+.dash-pnl-broker-value.ok { color: var(--color-profit, #22c55e); }
+.dash-pnl-broker-value.err { color: var(--danger, #ef4444); }
 .dash-pnl-broker-detail { font-size: 0.65rem; color: var(--ink-soft); }
+
+/* ── Session dot (theme-aware) ───────────────────────────── */
+.dash-session-dot-open { background: var(--color-profit, #22c55e); }
+.dash-session-dot-closed { background: var(--danger, #ef4444); }
+
+/* ── News dot (theme-aware) ──────────────────────────────── */
+.dash-news-dot-active { color: var(--color-profit, #22c55e); }
+.dash-news-dot-muted { color: var(--ink-soft, #64748b); }
 
 /* ── P&L by Broker Card ─────────────────────────────────── */
 .dash-broker-grid {

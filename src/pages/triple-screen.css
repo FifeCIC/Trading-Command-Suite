@@ -147,9 +147,9 @@
 }
 
 /* Slot accent borders */
-.ts-slot-left { border-left: 3px solid var(--color-accent-blue, #3b82f6); }
-.ts-slot-center { border-left: 3px solid var(--accent, #0ea5a6); }
-.ts-slot-right { border-left: 3px solid var(--color-warning, #f59e0b); }
+.ts-slot-left { border-color: var(--color-accent-blue, #3b82f6); }
+.ts-slot-center { border-color: var(--accent, #0ea5a6); }
+.ts-slot-right { border-color: var(--color-warning, #f59e0b); }
 
 /* ── Notes ──────────────────────────────────────────── */
 .ts-notes {

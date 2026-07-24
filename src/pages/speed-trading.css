@@ -295,7 +295,7 @@
 }
 
 .st-dir-item.variable {
-  border-left: 2px solid #8b5cf6;
+  border: 1px solid rgba(139,92,246,0.6);
 }
 
 .st-dir-id {

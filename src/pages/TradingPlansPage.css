@@ -51,7 +51,7 @@
 }
 
 .plan-item:hover { background: var(--hover, #252525); }
-.plan-item.selected { background: var(--accent-dim, #1a3350); border-left: 3px solid var(--accent, #0066cc); }
+.plan-item.selected { background: var(--accent-dim, #1a3350); border-color: var(--accent, #0066cc); }
 
 .plan-item-title {
   font-weight: 600;

@@ -20,7 +20,7 @@
 /* Cards */
 .sym-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0.85rem; margin-bottom: 0.75rem; }
 .sym-card h2 { margin: 0 0 0.5rem; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
-.sym-card--score { border-left: 4px solid var(--accent, #6366f1); }
+.sym-card--score { border-color: var(--accent, #6366f1); }
 .sym-card--risk { border-left: 4px solid var(--color-loss); }
 .sym-card--earnings { border-left: 4px solid var(--color-warning); }
 .sym-muted { color: var(--ink-soft); font-size: 0.78rem; margin: 0; }

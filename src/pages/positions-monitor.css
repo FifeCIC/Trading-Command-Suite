@@ -100,10 +100,10 @@
 }
 
 /* Win/loss left border */
-.pm-pos-card.pm-win { border-left: 3px solid var(--color-profit); }
+.pm-pos-card.pm-win { border-color: var(--color-profit); }
 .pm-pos-card.pm-lose { border-left: 3px solid var(--color-loss); }
 
-.pm-option { border-left: 3px solid #8b5cf6; }
+.pm-option { border-color: #8b5cf6; }
 
 .pm-pos-header {
   display: flex;
