@@ -12,7 +12,7 @@ function RiskBar({ pct, label }) {
       <motion.div className="pm-risk-fill" initial={{ width: 0 }} animate={{ width: `${displayPct}%` }} transition={{ duration: 0.5, ease: 'easeOut' }} style={{ background: color }} />
       <span className="pm-risk-label" title="Risk Exposure = |(Current − Entry) / Entry| × 100%. Represents how much this position could lose if it moved against you.">{label}: {displayPct.toFixed(1)}%</span>
       {/* 20% threshold marker */}
-      <div className="pm-risk-threshold" style={{ left: '20%' }} title="20% risk threshold — positions above this line need review" />
+      <div className="pm-risk-threshold" title="20% risk threshold — positions above this line need review" />
     </div>
   );
 }

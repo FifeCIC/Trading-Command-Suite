@@ -50,6 +50,18 @@
   gap: 0.5rem;
 }
 
+/* ── Utility overrides ── */
+.dal-spacer { margin: 1rem 0; }
+.dal-empty { padding: 1rem 0; }
+.dal-table-wrap { overflow-x: auto; }
+.dal-th-time { width: 100px; }
+.dal-th-method { width: 70px; }
+.dal-th-provider { width: 110px; }
+.dal-th-status { width: 70px; }
+.dal-th-latency { width: 80px; }
+.dal-cell-mono { font-size: 11px; }
+.dal-chip-sm { font-size: 10px; }
+
 .dal-card:hover {
   border-color: var(--accent, #0ea5a6);
   box-shadow: 0 2px 8px rgba(14, 165, 166, 0.1);

@@ -254,3 +254,16 @@
   font-size: 0.68rem; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .ad-decision-time { font-size: 0.65rem; color: var(--ink-soft); text-align: right; }
+
+/* ── Architecture link ── */
+.ad-arch-link { font-size: 11px; color: var(--accent); text-decoration: none; padding: 4px 10px; border: 1px solid var(--line); border-radius: 4px; align-self: center; }
+
+/* ── Count badge in panel title ── */
+.ad-count-badge { font-size: var(--text-xs, 0.7rem); color: var(--ink-soft); font-weight: 400; }
+
+/* ── Timeline body / description ── */
+.ad-timeline-body { flex: 1; min-width: 0; }
+.ad-timeline-icon { margin-right: 4px; }
+.ad-timeline-label { font-size: 0.8rem; }
+.ad-timeline-desc { margin: 0; font-size: var(--text-xs, 0.7rem); color: var(--ink-soft); }
+.ad-timeline-time { font-size: var(--text-2xs, 0.65rem); color: var(--ink-soft); white-space: nowrap; }

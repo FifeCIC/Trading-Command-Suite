@@ -183,7 +183,7 @@ export default function SettingsPage() {
           />
         </SettingRow>
 
-        <h3 style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--ink-soft)' }}>Risk Limits</h3>
+        <h3 className="settings-subheading">Risk Limits</h3>
 
         <SettingRow label="Max Drawdown (%)" hint="Circuit breaker trips when drawdown exceeds this.">
           <input
@@ -241,22 +241,22 @@ export default function SettingsPage() {
 
         {serverLimits && (
           <>
-            <h3 style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--ink-soft)' }}>Server-Enforced Hard Limits</h3>
-            <p style={{ fontSize: '0.68rem', color: 'var(--ink-soft)', margin: '0 0 0.4rem' }}>
+            <h3 className="settings-subheading">Server-Enforced Hard Limits</h3>
+            <p className="settings-hint-text">
               These are set in <code>nest/.env</code> and require a server restart to change.
               Strategies and UI settings cannot override them.
             </p>
             <SettingRow label="Max Position Size (lots)" hint="Hard cap on any single position volume.">
-              <code style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)' }}>{serverLimits.maxPositionSize}</code>
+              <code className="settings-limit-value">{serverLimits.maxPositionSize}</code>
             </SettingRow>
             <SettingRow label="Max Daily Loss ($)" hint="Trading halts if today's P&L drops below this.">
-              <code style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ef4444' }}>${serverLimits.maxDailyLoss}</code>
+              <code className="settings-limit-value settings-limit-danger">${serverLimits.maxDailyLoss}</code>
             </SettingRow>
             <SettingRow label="Max Open Positions" hint="Absolute cap on concurrent positions across all strategies.">
-              <code style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)' }}>{serverLimits.maxOpenPositions}</code>
+              <code className="settings-limit-value">{serverLimits.maxOpenPositions}</code>
             </SettingRow>
             {serverLimits.note && (
-              <p style={{ fontSize: '0.65rem', color: 'var(--ink-soft)', fontStyle: 'italic', margin: '0.25rem 0 0' }}>
+              <p className="settings-note">
                 ℹ️ {serverLimits.note}
               </p>
             )}
@@ -397,7 +397,7 @@ function HealthChecksSection() {
   return (
     <section className="settings-section">
       <h2>🩺 Health & Diagnostics</h2>
-      <p style={{ fontSize: '0.7rem', color: 'var(--ink-soft)', margin: '0 0 0.5rem' }}>
+      <p className="settings-health-desc">
         Enable or disable individual health checks. Disabled checks skip their queries entirely — useful for reducing load or silencing known issues.
       </p>
       {Object.entries(CHECK_LABELS).map(([key, label]) => (
@@ -413,8 +413,8 @@ function HealthChecksSection() {
         <input type="number" min="5" max="120" step="5" className="settings-input settings-input-sm"
           value={hc?.autoRefreshSec ?? 15} onChange={e => setRefresh(Math.max(5, parseInt(e.target.value, 10) || 15))} />
       </SettingRow>
-      <p style={{ fontSize: '0.62rem', color: 'var(--ink-soft)', fontStyle: 'italic', margin: '0.5rem 0 0' }}>
-        See <a href="/status/health-check" style={{ color: 'var(--accent)' }}>Health Dashboard</a> for live diagnostics.
+      <p className="settings-footnote">
+        See <a href="/status/health-check">Health Dashboard</a> for live diagnostics.
       </p>
     </section>
   );

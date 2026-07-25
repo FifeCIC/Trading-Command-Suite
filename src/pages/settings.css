@@ -83,4 +83,49 @@
 }
 .settings-input:focus { outline: none; border-color: var(--accent, #0ea5a6); }
 .settings-input-sm { width: 80px; text-align: center; }
-.settings-section-desc { font-size: 0.7rem; color: var(--ink-soft, #888); margin: 0 0 0.5rem; }
+.settings-section-desc { font-size: var(--text-xs, 0.7rem); color: var(--ink-soft, #888); margin: 0 0 0.5rem; }
+
+/* ── Section sub-heading ── */
+.settings-subheading {
+  margin: 0.75rem 0 0;
+  font-size: var(--text-sm, 0.8rem);
+  color: var(--ink-soft);
+}
+
+/* ── Server limit value display ── */
+.settings-limit-value {
+  font-size: var(--text-base, 0.85rem);
+  font-weight: var(--weight-bold, 700);
+  color: var(--ink);
+}
+.settings-limit-value.settings-limit-danger { color: var(--danger, #ef4444); }
+
+/* ── Hint / description text ── */
+.settings-hint-text {
+  font-size: var(--text-2xs, 0.68rem);
+  color: var(--ink-soft);
+  margin: 0 0 0.4rem;
+}
+
+/* ── Server note (italic fine print) ── */
+.settings-note {
+  font-size: var(--text-2xs, 0.65rem);
+  color: var(--ink-soft);
+  font-style: italic;
+  margin: 0.25rem 0 0;
+}
+
+/* ── Health checks description ── */
+.settings-health-desc {
+  font-size: var(--text-xs, 0.7rem);
+  color: var(--ink-soft);
+  margin: 0 0 0.5rem;
+}
+
+/* ── Footer fine print ── */
+.settings-footnote {
+  font-size: 0.62rem;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin: 0.5rem 0 0;
+}

@@ -69,7 +69,7 @@ function ConfirmBadge({ confirmed, onToggle, label }) {
 function InfoPopover({ id, title, children }) {
   return (
     <>
-      <button className="mse-info-btn" popoverTarget={id} aria-label={`Technical details for ${title}`}>ⓘ</button>
+      <button className="mse-info-btn" popovertarget={id} aria-label={`Technical details for ${title}`}>ⓘ</button>
       <div id={id} popover="auto" className="mse-popover">
         <h4 className="mse-popover-title">{title}</h4>
         <div className="mse-popover-body">{children}</div>
@@ -82,57 +82,58 @@ function InfoPopover({ id, title, children }) {
 const PIPELINE = [
   // ── Prerequisites (Stage 0) ──
   {
-    id: 'prereq-symbols', title: 'Symbol Registration', icon: '➕',
+    id: 'prereq-symbols', title: 'Symbol Registration', linkTo: '/watchlists/add-symbol', linkLabel: 'Add Symbol',
     fn: 'SymbolsController.create() / POST /api/symbols',
     fnDesc: 'Symbols must be registered in the database before they can be scored. Use the Add Symbol feature. Built-in symbols (EURUSD, GBPUSD, etc.) come pre-registered as part of the default installation.',
     dbTable: 'symbol',
     dbColumns: 'id (UUID), ticker, name, exchange, type, active',
   },
   {
-    id: 'prereq-watchlist', title: 'Watchlist Setup', icon: '⊞',
+    id: 'prereq-watchlist', title: 'Watchlist Setup', linkTo: '/watchlists/user-watchlists', linkLabel: 'Watchlists',
     fn: 'Watchlists — built-in defaults available, user should create their own',
     fnDesc: 'A watchlist groups symbols for batch scoring. Built-in watchlists (forex-majors, primary) are provided. User-created watchlists ensure only intended symbols are scored. A protocol must be paired with a watchlist.',
     dbTable: 'watchlist',
     dbColumns: 'id, label, symbols (JSON array of tickers)',
   },
   {
-    id: 'prereq-protocol', title: 'Protocol Pairing', icon: '◆',
+    id: 'prereq-protocol', title: 'Protocol Pairing', linkTo: '/scoring/configure-directives', linkLabel: 'Protocol Editor',
     fn: 'Protocol ←→ Watchlist pairing (Protocol Editor or built-in)',
     fnDesc: 'Many protocols are provided as part of installation (47 built-in). Each must be paired with a watchlist. This pairing is what the automation loop uses to know which symbols to score with which protocol.',
     dbTable: 'scoring_strategy (protocol assignment)',
     dbColumns: 'protocolId, watchlistName, watchlistId',
   },
   {
-    id: 'prereq-sees', title: 'SEES / Automation Active', icon: '⚡',
-    fn: 'AutomationLoopService — 2-min tick OR manual POST /api/scoring/gated/batch',
-    fnDesc: 'SEES (the scoring engine) can run manually for one-time scoring, or automatically every 2 minutes when automation is active. Active protocols paired with watchlists are scored on each tick. Manual runs use the gated/batch endpoint.',
-    dbTable: 'automation_state (runtime), score_snapshot (output)',
+    id: 'prereq-automation', title: 'Automation Loop', linkTo: '/automation/automation-dashboard', linkLabel: 'Automation Dashboard',
+    fn: 'AutomationLoopService — 2-min tick scheduling',
+    fnDesc: 'The automation loop is a scheduler that ticks every 2 minutes. It decides which strategies to run and when. SEES (the scoring engine) is one of the services that runs inside the loop, alongside health checks, data refresh, and trading decisions. The loop can be paused — strategies are then scored on-demand via manual batch runs.',
+    dbTable: 'automation_state (runtime)',
     dbColumns: 'running (bool), tick (int), activeStrategies (int)',
   },
-  // ── Core scoring pipeline ──
+  // ── SEES Pipeline (the scoring engine itself — stages 5–11) ──
+  { isMarker: true, type: 'sees-start', label: 'SEES Pipeline' },
   {
-    id: 'market-data', title: 'Market Data Ingestion', icon: '📡',
+    id: 'market-data', title: 'Market Data Ingestion', linkTo: '/watchlists/active-symbols', linkLabel: 'Active Symbols',
     fn: 'MarketDataService.getBars()',
     fnDesc: 'Fetches daily OHLCV bars from the MT5 bridge for the requested symbol. Bars are ordered oldest → newest per directive contract.',
     dbTable: 'market_bar',
     dbColumns: 'symbolId, timestamp, open, high, low, close, volume, timeframe',
   },
   {
-    id: 'protocol', title: 'Protocol Resolution', icon: '◆',
+    id: 'protocol', title: 'Protocol Resolution', linkTo: '/scoring/protocols', linkLabel: 'Protocols',
     fn: 'ProtocolDbService.findBySlug()',
     fnDesc: 'Looks up the protocol configuration from the database. Returns directive groups, direction mode (LONG_ONLY/SHORT_ONLY/BOTH), and weight strategy.',
     dbTable: 'scoring_strategy',
     dbColumns: 'id, name, slug, config (JSON: groups[], directionMode, weightStrategy)',
   },
   {
-    id: 'conditions', title: 'Condition Detection', icon: '🔍',
+    id: 'conditions', title: 'Condition Detection',
     fn: 'ConditionDetectorService.detect()',
     fnDesc: 'Analyzes the market environment: session (Asian/London/NY), volatility regime, gap presence, multi-timeframe alignment. Produces a ConditionVector used to gate and weight directives.',
     dbTable: 'N/A (pure computation)',
     dbColumns: 'session, volatility, gapPercent, mtfAlignment',
   },
   {
-    id: 'directives', title: 'Directive Execution', icon: '⚡',
+    id: 'directives', title: 'Directive Execution', linkTo: '/scoring/directives-manager', linkLabel: 'Directives',
     fn: 'DirectivesService.runAll()',
     fnDesc: 'Runs every active directive in the protocol against the symbol. Each directive has independent logic — some need 36+ bars, some check session windows, some query external data. Muted/gated directives return score=0. Time-gated and suitability-gated checks run BEFORE calculation.',
     dbTable: 'directive (registry), score_snapshot (output)',
@@ -145,14 +146,14 @@ const PIPELINE = [
     ],
   },
   {
-    id: 'groups', title: 'Group Score Aggregation', icon: '📊',
+    id: 'groups', title: 'Group Score Aggregation',
     fn: 'ProtocolGatingService.scoreWithGating() — group phase',
     fnDesc: 'Groups directive results by category (Technical/Sentiment/Risk). Computes each group\'s percentage: sum(rawScores) ÷ sum(maxScores) × 100. Directives with higher maxScore naturally contribute more weight.',
     dbTable: 'score_snapshot',
     dbColumns: 'protocolId, symbol, composite, signal, snappedAt',
   },
   {
-    id: 'risk-gate', title: 'Risk Gating', icon: '🛡️',
+    id: 'risk-gate', title: 'Risk Gating',
     fn: 'RiskGatingEngine.apply()',
     fnDesc: 'Applies tiered risk rules to the base score. Hard gates (severity ≥ 0.8) can veto a trade entirely — score → 0. Soft modifiers scale proportionally by severity × weight. Regime overrides change directional bias without affecting magnitude. Cumulative multiplier is floored at 0.5.',
     dbTable: 'N/A (pure computation)',
@@ -166,15 +167,16 @@ const PIPELINE = [
     ],
   },
   {
-    id: 'composite', title: 'Composite Score & Signal', icon: '🎯',
+    id: 'composite', title: 'Composite Score & Signal', linkTo: '/scoring/live-ordering-stack', linkLabel: 'Scoring Ladder',
     fn: 'ProtocolGatingService.scoreWithGating() — composite phase',
     fnDesc: 'Computes final composite: (technical×0.40 + sentiment×0.35) × riskMultiplier, clamped 0–100. Assigns signal: ≥80 STRONG, ≥40 BUY, ≥20 HOLD, <20 → direction-dependent. Stores snapshot in score_snapshot for rarity percentile computation.',
     dbTable: 'score_snapshot (output)',
     dbColumns: 'protocolId, symbol, composite, signal, rarityPercentile, snappedAt',
   },
+  { isMarker: true, type: 'sees-end', label: 'SEES End' },
   // ── Post-scoring: Strategy layers ──
   {
-    id: 'scoring-strategy', title: 'Scoring Strategy Rules', icon: '⚙',
+    id: 'scoring-strategy', title: 'Scoring Strategy Rules', linkTo: '/trading/create-strategy', linkLabel: 'Create Strategy',
     fn: 'AutomationLoopService.evaluateStrategy() → gate checks',
     fnDesc: 'Active scoring strategies have additional rules beyond the raw protocol score. Gates can involve: directive-based strict gates (grouped directives that must all agree), trade threshold comparison (composite must exceed tradeThreshold), budget gate (daily loss limits), and mode-based filtering (manual/semi-auto/auto). A strategy can permit or block a trade independently of the signal.',
     dbTable: 'scoring_strategy, automation_rule',
@@ -188,7 +190,7 @@ const PIPELINE = [
     ],
   },
   {
-    id: 'trading-strategy', title: 'Trading Strategy Evaluation', icon: '📈',
+    id: 'trading-strategy', title: 'Trading Strategy Evaluation', linkTo: '/trading/trading-strategies', linkLabel: 'Trading Strategies',
     fn: 'TradingStrategyService.evaluate() → portfolio-aware decision',
     fnDesc: 'Trading strategies add the portfolio context: Are existing positions profitable? Is the symbol already held? Would this exceed max positions? Does the strategy allow averaging down? Some strategies require existing positions to be in profit before opening new ones. Cooldown periods prevent overtrading.',
     dbTable: 'trading_strategy, decision_log',
@@ -202,7 +204,7 @@ const PIPELINE = [
     ],
   },
   {
-    id: 'outcome', title: 'Trade Execution & Outcome', icon: '🏁',
+    id: 'outcome', title: 'Trade Execution & Outcome', linkTo: '/trading/positions-monitor', linkLabel: 'Positions Monitor',
     fn: 'Mt5Adapter.placeOrder() → TradeRecorderService → Trade Journal',
     fnDesc: 'If all gates pass, the trade is sent to the broker via MT5 bridge. The outcome is recorded: did the order fill? What was the entry price? Over time, outcomes are compared against signals to measure prediction accuracy. Manual trades not executed through the app won\'t have this data — but testing uses the app for full traceability.',
     dbTable: 'trade (execution), decision_log (permission), trade_journal (outcome)',
@@ -212,7 +214,10 @@ const PIPELINE = [
 
 /* ── Main component ────────────────────────────────────── */
 export default function MetaStackExplorerPage() {
-  const [confirmedStages, setConfirmedStages] = useState({});
+  const [confirmedStages, setConfirmedStages] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('mse-confirmed-stages') || '{}'); }
+    catch { return {}; }
+  });
   const [selectedStrategyId, setSelectedStrategyId] = useState(null);
   const [scrollPct, setScrollPct] = useState(0);
 
@@ -264,9 +269,13 @@ export default function MetaStackExplorerPage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const toggleConfirm = (stageId) => setConfirmedStages(prev => ({ ...prev, [stageId]: !prev[stageId] }));
-  const confirmAll = () => { const a = {}; PIPELINE.forEach(s => { a[s.id] = true; }); setConfirmedStages(a); };
-  const resetAll = () => setConfirmedStages({});
+  const toggleConfirm = (stageId) => setConfirmedStages(prev => {
+    const next = { ...prev, [stageId]: !prev[stageId] };
+    try { localStorage.setItem('mse-confirmed-stages', JSON.stringify(next)); } catch {}
+    return next;
+  });
+  const confirmAll = () => { const a = {}; PIPELINE.forEach(s => { if (!s.isMarker) a[s.id] = true; }); setConfirmedStages(a); try { localStorage.setItem('mse-confirmed-stages', JSON.stringify(a)); } catch {} };
+  const resetAll = () => { setConfirmedStages({}); try { localStorage.removeItem('mse-confirmed-stages'); } catch {} };
 
   const protoQuery = useQuery({
     queryKey: ['mse-protocols-v2'],
@@ -274,6 +283,14 @@ export default function MetaStackExplorerPage() {
     staleTime: 120_000,
   });
   const protocols = protoQuery.data?.protocols ?? [];
+
+  // Non-gated protocol list (has createdAt for user-vs-built-in heuristic)
+  const protoAllQuery = useQuery({
+    queryKey: ['mse-protocols-all'],
+    queryFn: () => apiGet('/api/scoring/protocols').catch(() => ({ protocols: [] })),
+    staleTime: 120_000,
+  });
+  const allProtocolsData = protoAllQuery.data?.protocols ?? [];
 
   // Scoring auto-triggers when a Trading Strategy is selected (provides symbol + protocol)
   const scoreQuery = useQuery({
@@ -296,50 +313,143 @@ export default function MetaStackExplorerPage() {
 
   const liveValues = useMemo(() => {
     const symCount = symbolsQuery.data?.symbols?.length || 0;
+    const allSymbols = symbolsQuery.data?.symbols || [];
     const wlCount = Array.isArray(watchlistsQuery.data) ? watchlistsQuery.data.length : 0;
+    const allWatchlists = Array.isArray(watchlistsQuery.data) ? watchlistsQuery.data : [];
+    // Built-in watchlists have slug IDs; user-created have UUIDs (36 chars with dashes)
+    const userWatchlists = allWatchlists.filter(w => (w.id || '').length >= 36);
+    const hasUserWatchlist = userWatchlists.length > 0;
     const autoRunning = autoQuery.data?.running || false;
     const activeStrats = autoQuery.data?.activeStrategies || 0;
     const scoringStrats = Array.isArray(scoringStratsQuery.data) ? scoringStratsQuery.data : [];
     const positions = Array.isArray(positionsQuery.data) ? positionsQuery.data : [];
     const totalPnl = positions.reduce((s, p) => s + (p.profit || 0), 0);
 
+    // Protocol pairing checks
+    const allProtocols = allProtocolsData || [];
+    const protoCount = allProtocols.length;
+    // Cross-reference: which protocols have scoring strategies linked?
+    const protoIdsWithStrats = new Set(scoringStrats.map(s => s.protocolId).filter(Boolean));
+    const protocolsWithStrats = allProtocols.filter(p => protoIdsWithStrats.has(p.id));
+    // Cross-reference: do those strategies have valid watchlist links?
+    // Strategies use either watchlistId (FK) or watchlistName (label) — check both
+    const watchlistIds = new Set(allWatchlists.map(w => w.id));
+    const watchlistLabels = new Set(allWatchlists.map(w => w.label?.toLowerCase?.() || w.name?.toLowerCase?.() || ''));
+    const stratsWithValidWl = scoringStrats.filter(s =>
+      (s.watchlistId && watchlistIds.has(s.watchlistId)) ||
+      (s.watchlistName && watchlistLabels.has(s.watchlistName.toLowerCase()))
+    );
+    const stratsWithNameOnly = scoringStrats.filter(s =>
+      !s.watchlistId && s.watchlistName && watchlistLabels.has(s.watchlistName.toLowerCase())
+    );
+    const stratsUnlinked = scoringStrats.filter(s =>
+      !(s.watchlistId && watchlistIds.has(s.watchlistId)) &&
+      !(s.watchlistName && watchlistLabels.has(s.watchlistName.toLowerCase()))
+    );
+    // Pick 3 random protocols with strategies linked
+    const randomLinked = protocolsWithStrats.sort(() => Math.random() - 0.5).slice(0, 3);
+    // Check if any non-default symbols exist (user-added, not just built-in forex/crypto/indices)
+    const builtInTypes = ['forex', 'crypto', 'index', 'commodity'];
+    const userSymbols = allSymbols.filter(s => !builtInTypes.includes(s.type));
+    const hasUserSymbols = userSymbols.length > 0;
+
     const matchingScoringStrat = scoringStrats.find(s => s.protocolId === activeProtocolId);
     const matchingTradingStrats = tradingStrats.filter(s => s.protocolId === activeProtocolId && s.symbol === activeSymbol);
 
     const vals = {
-      'prereq-symbols': `${symCount} symbols registered${symCount > 0 ? ' ✓' : ' — use Add Symbol'}`,
-      'prereq-watchlist': `${wlCount} watchlists${wlCount > 0 ? ' ✓' : ' — create one first'}`,
-      'prereq-protocol': activeProtocolId
-        ? `${selectedProtocol?.name || activeProtocolId} (from selected strategy)`
-        : '— select a Trading Strategy below to auto-resolve',
-      'prereq-sees': autoRunning
-        ? `Automation running (tick #${autoQuery.data?.tick || '?'}, ${activeStrats} strategies)`
-        : 'Automation paused — strategies scored on-demand',
-      'trading-strategy': selectedStrategy
-        ? `${selectedStrategy.name} — ${selectedStrategy.symbol} @ ${selectedStrategy.timeframe}, mode: ${selectedStrategy.mode}`
-        : '⬇ Select a Trading Strategy below to populate the full pipeline',
-      'scoring-strategy': matchingScoringStrat
-        ? `${matchingScoringStrat.name} — mode: ${matchingScoringStrat.mode}, threshold: ${matchingScoringStrat.tradeThreshold}`
-        : activeProtocolId ? 'No matching scoring strategy for this protocol' : '— select a strategy first',
-      'outcome': positions.length > 0
-        ? `${positions.length} open positions, total P&L: $${totalPnl.toFixed(2)}`
-        : 'No open positions',
+      'prereq-symbols': [
+        { label: 'Any symbols registered', pass: symCount > 0, detail: `${symCount} total` },
+        { label: 'Non-default symbol added', pass: hasUserSymbols, detail: hasUserSymbols ? `${userSymbols.length} stock/ETF symbols` : 'only built-in forex/crypto — use Add Symbol' },
+      ],
+      'prereq-watchlist': [
+        { label: 'Any watchlist exists', pass: wlCount > 0, detail: `${wlCount} total (${allWatchlists.length - userWatchlists.length} built-in)` },
+        { label: 'User-created watchlist', pass: hasUserWatchlist, detail: hasUserWatchlist ? `${userWatchlists.length} custom watchlists` : 'only built-in — create your own' },
+      ],
+      'prereq-protocol': [
+        { label: 'Any protocol registered', pass: protoCount > 0, detail: `${protoCount} total` },
+        { label: 'Protocols linked to scoring strategies', pass: protocolsWithStrats.length > 0, detail: protocolsWithStrats.length > 0 ? `${protocolsWithStrats.length} of ${protoCount} linked` : 'no scoring strategies — create one' },
+        { label: 'Linked watchlist exists', pass: stratsWithValidWl.length > 0, detail: stratsWithValidWl.length > 0 ? `${stratsWithValidWl.length} valid${stratsWithNameOnly.length > 0 ? ` (${stratsWithNameOnly.length} name-based)` : ''}${stratsUnlinked.length > 0 ? `, ${stratsUnlinked.length} unlinked` : ''}` : 'no strategies with valid watchlists — assign via Strategy Editor' },
+        ...(!activeSymbol ? [{ label: 'Examples (linked protocols)', pass: randomLinked.length > 0, detail: randomLinked.length > 0 ? randomLinked.map(p => p.name || p.id).join(', ') : 'none linked' }] : []),
+      ],
+      'prereq-automation': [
+        { label: 'Automation loop running', pass: autoRunning, detail: autoRunning ? `tick #${autoQuery.data?.tick || '?'}, ${activeStrats} strategies` : 'paused — strategies scored on-demand' },
+        { label: 'Active strategies in loop', pass: activeStrats > 0, detail: activeStrats > 0 ? `${activeStrats} strategies cycling` : 'no strategies — enable from Automation page' },
+      ],
+      'trading-strategy': [
+        { label: 'Trading strategy selected', pass: !!selectedStrategy, detail: selectedStrategy ? selectedStrategy.name : '⬇ Select below' },
+        { label: 'Strategy active', pass: selectedStrategy?.active === true, detail: selectedStrategy ? (selectedStrategy.active ? 'active' : 'inactive') : '—' },
+        { label: 'Symbol assigned', pass: !!selectedStrategy?.symbol, detail: selectedStrategy?.symbol || 'no symbol' },
+        { label: 'Protocol assigned', pass: !!selectedStrategy?.protocolId, detail: selectedStrategy?.protocolId || 'no protocol' },
+        { label: 'Mode configured', pass: !!selectedStrategy?.mode, detail: selectedStrategy?.mode || '—' },
+      ],
+      'scoring-strategy': [
+        { label: 'Scoring strategy found', pass: !!matchingScoringStrat, detail: matchingScoringStrat ? matchingScoringStrat.name : (activeProtocolId ? 'no match — create one for this protocol' : '— select a strategy first') },
+        { label: 'Strategies configured', pass: scoringStrats.length > 0, detail: scoringStrats.length > 0 ? `${scoringStrats.length} total` : 'none — create via Strategy Editor' },
+        { label: 'Strategy enabled', pass: matchingScoringStrat?.enabled === true, detail: matchingScoringStrat ? (matchingScoringStrat.enabled ? 'enabled' : 'disabled') : '—' },
+        { label: 'Trade threshold set', pass: (matchingScoringStrat?.tradeThreshold || 0) > 0, detail: matchingScoringStrat ? `${matchingScoringStrat.tradeThreshold}` : '—' },
+        { label: 'Watchlist linked', pass: !!(matchingScoringStrat?.watchlistId || matchingScoringStrat?.watchlistName), detail: matchingScoringStrat ? (matchingScoringStrat.watchlistName || matchingScoringStrat.watchlistId || 'none') : '—' },
+      ],
+      'outcome': [
+        { label: 'Open positions', pass: positions.length > 0, detail: positions.length > 0 ? `${positions.length} open` : 'none' },
+        { label: 'Total P&L', pass: totalPnl !== 0, detail: `$${totalPnl.toFixed(2)}` },
+        { label: 'Recent decisions logged', pass: false, detail: 'check /api/trading/decisions' },
+      ],
+      // Scoring stages — show waiting state when no strategy selected
+      'market-data': [{ label: 'Awaiting strategy selection', pass: false, detail: 'select a Trading Strategy below' }],
+      'protocol': [{ label: 'Awaiting strategy selection', pass: false, detail: 'select a Trading Strategy below' }],
+      'conditions': [{ label: 'Awaiting strategy selection', pass: false, detail: 'select a Trading Strategy below' }],
+      'directives': [{ label: 'Awaiting strategy selection', pass: false, detail: 'select a Trading Strategy below' }],
+      'groups': [{ label: 'Awaiting strategy selection', pass: false, detail: 'select a Trading Strategy below' }],
+      'risk-gate': [{ label: 'Awaiting strategy selection', pass: false, detail: 'select a Trading Strategy below' }],
+      'composite': [{ label: 'Awaiting strategy selection', pass: false, detail: 'select a Trading Strategy below' }],
     };
     if (!scored) return vals;
+    const dCount = scored.meta?.directiveCount || 0;
+    const gCount = scored.meta?.gatedCount || 0;
+    const groupKeys = scored.breakouts ? Object.keys(scored.breakouts) : [];
     return {
       ...vals,
-      'market-data': `${scored.meta?.directiveCount || '?'} directives receiving bars for ${scored.symbol}`,
-      'protocol': `${selectedProtocol?.name || activeProtocolId} — ${scored.meta?.weightStrategy || 'group-weighted'} mode`,
-      'conditions': `${scored.meta?.gatedCount || 0}/${scored.meta?.directiveCount || 0} directives passed activation gates`,
-      'directives': `${scored.meta?.directiveCount || 0} executed, ${scored.meta?.gatedCount || 0} active after gating`,
-      'groups': scored.subScores ? Object.entries(scored.subScores).map(([k, v]) => `${k}: ${v}%`).join(' | ') : '—',
-      'risk-gate': scored.riskGate?.hardGateTriggered ? '🚫 BLOCKED — trade vetoed' : `✓ PASS — multiplier ×${scored.riskMultiplier?.toFixed?.(3) || '1.0'}`,
-      'composite': `${scored.composite}/100 → ${scored.signal}`,
+      'market-data': [
+        { label: 'Bars fetched', pass: dCount > 0, detail: `${dCount} directives receiving bars` },
+        { label: 'Symbol matched', pass: scored.symbol === activeSymbol, detail: scored.symbol || '—' },
+        { label: 'Protocol routed', pass: !!activeProtocolId, detail: activeProtocolId || '—' },
+      ],
+      'protocol': [
+        { label: 'Protocol resolved', pass: !!selectedProtocol, detail: selectedProtocol?.name || activeProtocolId || '—' },
+        { label: 'Weight strategy', pass: !!scored.meta?.weightStrategy, detail: scored.meta?.weightStrategy || 'group-weighted' },
+        { label: 'Recommended timeframe', pass: !!selectedProtocol?.recommendedTimeframe, detail: selectedProtocol?.recommendedTimeframe || '—' },
+      ],
+      'conditions': [
+        { label: 'Gating active', pass: scored.gatingActive !== false, detail: scored.gatingActive ? 'active' : 'inactive' },
+        { label: 'Gated directives', pass: gCount > 0, detail: `${gCount} passed activation gates` },
+        { label: 'Weight strategy', pass: !!scored.meta?.weightStrategy, detail: scored.meta?.weightStrategy || '—' },
+      ],
+      'directives': [
+        { label: 'Total executed', pass: dCount > 0, detail: `${dCount} directives` },
+        { label: 'Passed gates', pass: gCount > 0, detail: `${gCount} active after gating` },
+        { label: 'Group coverage', pass: groupKeys.length > 0, detail: groupKeys.join(', ') || '—' },
+      ],
+      'groups': scored.subScores ? [
+        { label: 'Technical group score', pass: (scored.subScores.technical || 0) > 0, detail: `${scored.subScores.technical || 0}%` },
+        { label: 'Sentiment group score', pass: (scored.subScores.sentiment || 0) > 0, detail: `${scored.subScores.sentiment || 0}%` },
+        { label: 'Risk group active', pass: (scored.subScores.risk || 0) > 0, detail: `${scored.subScores.risk || 0}%` },
+      ] : [{ label: 'Awaiting scoring', pass: false, detail: 'select a Trading Strategy above' }],
+      'risk-gate': [
+        { label: 'Hard gate triggered', pass: !scored.riskGate?.hardGateTriggered, detail: scored.riskGate?.hardGateTriggered ? '🚫 BLOCKED — trade vetoed' : '✓ none triggered' },
+        { label: 'Risk multiplier applied', pass: (scored.riskMultiplier || 1) < 1, detail: `×${scored.riskMultiplier?.toFixed?.(3) || '1.0'}${(scored.riskMultiplier || 1) < 1 ? ' (reduced)' : ' (no reduction)'}` },
+        { label: 'Multiplier chain', pass: (scored.riskGate?.multiplierChain?.length || 0) > 0, detail: `${scored.riskGate?.multiplierChain?.length || 0} rules applied` },
+      ],
+      'composite': [
+        { label: 'Final composite', pass: (scored.composite || 0) > 0, detail: `${scored.composite}/100` },
+        { label: 'Signal assigned', pass: !!scored.signal, detail: scored.signal || '—' },
+        { label: 'Threshold check', pass: (scored.composite || 0) >= (matchingScoringStrat?.tradeThreshold || 60), detail: `${scored.composite} vs threshold ${matchingScoringStrat?.tradeThreshold || 60} → ${(scored.composite || 0) >= (matchingScoringStrat?.tradeThreshold || 60) ? 'PASS' : 'FAIL'}` },
+      ],
     };
-  }, [scored, selectedProtocol, activeProtocolId, activeSymbol, selectedStrategy, symbolsQuery.data, watchlistsQuery.data, autoQuery.data, scoringStratsQuery.data, tradingStratsQuery.data, positionsQuery.data]);
+  }, [scored, selectedProtocol, activeProtocolId, activeSymbol, selectedStrategy, symbolsQuery.data, watchlistsQuery.data, allProtocolsData, autoQuery.data, scoringStratsQuery.data, tradingStratsQuery.data, positionsQuery.data]);
 
   const confirmedCount = Object.values(confirmedStages).filter(Boolean).length;
-  const allConfirmed = confirmedCount === PIPELINE.length;
+  const stageCount = PIPELINE.filter(s => !s.isMarker).length;
+  const allConfirmed = confirmedCount === stageCount;
 
   return (
     <div className="mse-page">
@@ -352,7 +462,7 @@ export default function MetaStackExplorerPage() {
           <p className="mse-subtitle">Modular Expert Trading Architecture — end-to-end pipeline trace</p>
         </div>
         <div className="mse-header-actions">
-          <span className="mse-progress">{confirmedCount}/{PIPELINE.length} confirmed</span>
+          <span className="mse-progress">{confirmedCount}/{stageCount} confirmed</span>
           <button className="mse-action-btn" onClick={confirmAll}>Confirm All</button>
           <button className="mse-action-btn mse-action-reset" onClick={resetAll}>Reset</button>
         </div>
@@ -361,14 +471,26 @@ export default function MetaStackExplorerPage() {
       {/* ── Pipeline stages (vertical) — prerequisites always visible, core requires strategy selection ── */}
       <div className="mse-pipeline">
         {PIPELINE.map((stage, i) => {
-          // All stages visible; scoring stages show placeholder until strategy selected
+          // ── Section marker banner ──
+          if (stage.isMarker) {
+            return (
+              <div key={stage.type} className={`mse-section-marker ${stage.type}`}>
+                <div className="mse-section-marker-line" />
+                <span className="mse-section-marker-label">{stage.label}</span>
+                <div className="mse-section-marker-line" />
+              </div>
+            );
+          }
+
+          // ── Regular stage card ──
+          // Compute stage number by counting non-marker stages up to this index
+          const num = PIPELINE.slice(0, i + 1).filter(s => !s.isMarker).length;
           const needsScoring = !stage.id.startsWith('prereq-') && !['scoring-strategy', 'trading-strategy', 'outcome'].includes(stage.id);
           const hasData = !needsScoring || scored;
-
           const confirmed = !!confirmedStages[stage.id];
             return (
               <div key={stage.id} className="mse-stage-wrapper">
-                {i > 0 && (
+                {i > 0 && !PIPELINE[i - 1].isMarker && (
                   <div className="mse-connector-vertical">
                     <div className="mse-connector-line" />
                     <span className="mse-connector-arrow">▼</span>
@@ -376,29 +498,46 @@ export default function MetaStackExplorerPage() {
                 )}
                 <RevealCard
                   className={`mse-stage ${confirmed ? 'mse-stage-confirmed' : 'mse-stage-pending'} ${!hasData && needsScoring ? 'mse-stage-waiting' : ''}`}
-                  style={{ transitionDelay: `${i * 0.06}s` }}
+                  style={{ transitionDelay: `${num * 0.06}s` }}
                   key={stage.id}
                 >
-                  <span className="mse-stage-num">{i + 1}</span>
+                  <span className="mse-stage-num">{num}</span>
                   <div className="mse-stage-inner">
                   <div className="mse-stage-head">
-                    <span className="mse-stage-icon">{stage.icon}</span>
                     <div className="mse-stage-title-group">
                       <h3 className="mse-stage-title">{stage.title}</h3>
-                      <code className="mse-stage-fn">{stage.fn}</code>
                     </div>
+                    <button className="mse-info-btn" popovertarget={`pop-${stage.id}`} aria-label={`Technical details for ${stage.title}`} title="Technical details">Info</button>
                     <ConfirmBadge confirmed={confirmed} onToggle={() => toggleConfirm(stage.id)} label={stage.title} />
                   </div>
                   <p className="mse-stage-desc">{stage.fnDesc}</p>
                   <div className="mse-stage-live">
-                    <span className="mse-live-label">Live value:</span>
-                    <span className={`mse-live-val ${confirmed ? '' : 'mse-live-dim'}`}>{liveValues[stage.id] || '—'}</span>
-                    <InfoPopover id={`pop-${stage.id}`} title={`${stage.title} — Technical Detail`}>
+                    <span className="mse-live-label">Status</span>
+                    {Array.isArray(liveValues[stage.id]) ? (
+                      <div className="mse-check-list">
+                        {liveValues[stage.id].map((check, ci) => (
+                          <div key={ci} className={`mse-check-item ${check.pass === true ? 'mse-check-pass' : check.pass === false ? 'mse-check-fail' : 'mse-check-pending'}`}>
+                            <span className="mse-check-icon">{check.pass === true ? '✓' : check.pass === false ? '✗' : '○'}</span>
+                            <span className="mse-check-label">{check.label}</span>
+                            <span className="mse-check-detail">{check.detail}</span>
+                            {check.link && (
+                              <a href={check.link} className="mse-check-link" title={check.linkLabel || 'Open'}>Go →</a>
+                            )}
+                          </div>
+                        ))}
+                        {stage.linkTo && (
+                          <a href={stage.linkTo} className="mse-stage-action-link">{stage.linkLabel || 'Open page'} →</a>
+                        )}
+                      </div>
+                    ) : (
+                      <span className={`mse-live-val ${confirmed ? '' : 'mse-live-dim'}`}>{liveValues[stage.id] || '—'}</span>
+                    )}
+                    <InfoPopover id={`pop-${stage.id}`} title={`${stage.title}`}>
                       <div className="mse-popover-grid">
                         <div className="mse-popover-item"><span className="mse-popover-label">Function</span><code>{stage.fn}</code></div>
+                        {stage.fnDesc && <div className="mse-popover-item"><span className="mse-popover-label">Description</span><span className="mse-popover-desc">{stage.fnDesc}</span></div>}
                         <div className="mse-popover-item"><span className="mse-popover-label">DB Table</span><code>{stage.dbTable}</code></div>
                         <div className="mse-popover-item"><span className="mse-popover-label">Columns</span><code className="mse-popover-code-sm">{stage.dbColumns}</code></div>
-                        <div className="mse-popover-item"><span className="mse-popover-label">Example</span><span className="mse-popover-example">{liveValues[stage.id] || '—'}</span></div>
                       </div>
                     </InfoPopover>
                   </div>
@@ -432,6 +571,7 @@ export default function MetaStackExplorerPage() {
                   {stage.isComplex && stage.subs && (
                     <FadeCardGroup
                       variant="hover scroll-each"
+                      maxWidth="100%"
                       cards={stage.subs.map(sub => {
                         let subLive = '—';
                         if (stage.id === 'directives' && scored && scored.breakouts) {
@@ -488,7 +628,7 @@ export default function MetaStackExplorerPage() {
               </div>
             );
           })}
-
+          {/* ── Trailing connector ── */}
           <div className="mse-connector-vertical"><div className="mse-connector-line" /></div>
 
           {scored && (

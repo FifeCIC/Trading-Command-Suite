@@ -8,6 +8,7 @@ import { TradingStrategyService } from './trading-strategy.service';
 import { TradingStrategyController } from './trading-strategy.controller';
 import { TradeRecorderService } from './trade-recorder.service';
 import { DuplicateGuardService } from './duplicate-guard.service';
+import { StopGuardianService } from './stop-guardian.service';
 import { TradeHistoryController } from './trade-history.controller';
 import { DirectivesModule } from '../directives/directives.module';
 import { RiskModule } from '../risk/risk.module';
@@ -17,7 +18,7 @@ import { DatabaseModule } from '../../database/database.module';
 @Module({
   imports: [DirectivesModule, RiskModule, NotificationsModule, DatabaseModule],
   controllers: [Mt5TradingController, SessionTrackerController, TradingStrategyController, TradeHistoryController],
-  providers: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, TradeRecorderService, DuplicateGuardService],
-  exports: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, TradeRecorderService, DuplicateGuardService],
+  providers: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, TradeRecorderService, DuplicateGuardService, StopGuardianService],
+  exports: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, TradeRecorderService, DuplicateGuardService, StopGuardianService],
 })
 export class TradingModule {}

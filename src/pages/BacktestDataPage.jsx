@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './trading-platforms.css';
+import './backtest-data.css';
 
 const STATUS_COLORS = {
   ok: 'tp-chip--ok',
@@ -29,8 +30,8 @@ function BarStatus({ count }) {
 function Mt5Badge({ symbol }) {
   const type = (symbol.type || '').toLowerCase();
   const canRecord = MT5_RECORDABLE_TYPES.has(type);
-  if (!canRecord) return <span className="tp-chip tp-chip--neutral" style={{ fontSize: 9, opacity: 0.5 }} title="Not available via MT5 (stock/ETF)">—</span>;
-  return <span className="tp-chip tp-chip--ok" style={{ fontSize: 9 }} title="Recordable via MT5 bridge">MT5</span>;
+  if (!canRecord) return <span className="tp-chip tp-chip--neutral btd-chip-sm" style={{ opacity: 0.5 }} title="Not available via MT5 (stock/ETF)">—</span>;
+  return <span className="tp-chip tp-chip--ok btd-chip-sm" title="Recordable via MT5 bridge">MT5</span>;
 }
 
 export default function BacktestDataPage() {
@@ -129,7 +130,7 @@ export default function BacktestDataPage() {
       </header>
 
       {/* Summary cards */}
-      <div className="data-cards" style={{ marginBottom: 16 }}>
+      <div className="data-cards btd-cards">
         <div className="data-card">
           <div className="data-card-value">{summary.symbolsWithBars}<small>/{summary.totalSymbols}</small></div>
           <div className="data-card-label">Symbols with Data</div>
@@ -149,7 +150,7 @@ export default function BacktestDataPage() {
       </div>
 
       {/* Filter chips */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+      <div className="btd-filters">
         {[
           { key: 'all', label: `All (${symbols.length})` },
           { key: 'with-data', label: `With Data (${symbols.filter((s) => s.barCount > 0).length})` },
@@ -168,25 +169,25 @@ export default function BacktestDataPage() {
       </div>
 
       {/* Table */}
-      <p className="tp-hint" style={{ marginBottom: 8 }}>
+      <p className="tp-hint btd-hint">
         <strong>BT Runs</strong> = separate backtest sessions recorded per symbol. Each run captures a snapshot of bars at that time.
         <strong> Rec</strong> = start/stop 5-second candle recording for live bar collection.
       </p>
-      <div className="tp-table-wrap" style={{ overflowX: 'auto' }}>
+      <div className="tp-table-wrap btd-table-wrap">
         <table className="tp-table">
           <thead>
             <tr>
-              <th onClick={() => toggleSort('ticker')} style={{ cursor: 'pointer' }}>Ticker{sortArrow('ticker')}</th>
-              <th onClick={() => toggleSort('type')} style={{ cursor: 'pointer' }}>Type{sortArrow('type')}</th>
-              <th onClick={() => toggleSort('barCount')} style={{ cursor: 'pointer' }}>Bars{sortArrow('barCount')}</th>
-              <th onClick={() => toggleSort('dateFrom')} style={{ cursor: 'pointer' }}>From{sortArrow('dateFrom')}</th>
-              <th onClick={() => toggleSort('dateTo')} style={{ cursor: 'pointer' }}>To{sortArrow('dateTo')}</th>
-              <th onClick={() => toggleSort('provider')} style={{ cursor: 'pointer' }}>Provider{sortArrow('provider')}</th>
+              <th onClick={() => toggleSort('ticker')} className="btd-sortable">Ticker{sortArrow('ticker')}</th>
+              <th onClick={() => toggleSort('type')} className="btd-sortable">Type{sortArrow('type')}</th>
+              <th onClick={() => toggleSort('barCount')} className="btd-sortable">Bars{sortArrow('barCount')}</th>
+              <th onClick={() => toggleSort('dateFrom')} className="btd-sortable">From{sortArrow('dateFrom')}</th>
+              <th onClick={() => toggleSort('dateTo')} className="btd-sortable">To{sortArrow('dateTo')}</th>
+              <th onClick={() => toggleSort('provider')} className="btd-sortable">Provider{sortArrow('provider')}</th>
               <th>Timeframes</th>
-              <th style={{ width: 40 }} title="MT5 bridge recording support">MT5</th>
-              <th onClick={() => toggleSort('backtestRuns')} style={{ cursor: 'pointer' }}>BT Runs{sortArrow('backtestRuns')}</th>
-              <th onClick={() => toggleSort('lastBacktest')} style={{ cursor: 'pointer' }}>Last BT{sortArrow('lastBacktest')}</th>
-              <th style={{ width: 55 }} title="Record 5s candles / Stop recording">Rec</th>
+              <th className="btd-th-rec" title="MT5 bridge recording support">MT5</th>
+              <th onClick={() => toggleSort('backtestRuns')} className="btd-sortable">BT Runs{sortArrow('backtestRuns')}</th>
+              <th onClick={() => toggleSort('lastBacktest')} className="btd-sortable">Last BT{sortArrow('lastBacktest')}</th>
+              <th className="btd-th-act" title="Record 5s candles / Stop recording">Rec</th>
             </tr>
           </thead>
           <tbody>
@@ -204,7 +205,7 @@ export default function BacktestDataPage() {
                   )}
                   <tr className={isPriority ? 'bt-priority-row' : ''}>
                     <td className="tp-mono">
-                      {isPriority && <span style={{ color: 'var(--accent, #0ea5a6)', marginRight: 4 }}>★</span>}
+                      {isPriority && <span className="btd-star">★</span>}
                       {s.ticker}
                     </td>
                     <td>{s.type}</td>
@@ -213,16 +214,16 @@ export default function BacktestDataPage() {
                     <td className="tp-mono">{s.dateTo || '—'}</td>
                     <td><span className="tp-chip tp-chip--neutral">{s.provider || '—'}</span></td>
                     <td>{s.timeframes?.join(', ') || '—'}</td>
-                    <td style={{ textAlign: 'center' }}><Mt5Badge symbol={s} /></td>
-                    <td style={{ textAlign: 'center' }}>{s.backtestRuns || '—'}</td>
-                    <td className="tp-mono" style={{ fontSize: 11 }}>{s.lastBacktest || '—'}</td>
+                    <td className="btd-center"><Mt5Badge symbol={s} /></td>
+                    <td className="btd-center">{s.backtestRuns || '—'}</td>
+                    <td className="tp-mono btd-cell-mono">{s.lastBacktest || '—'}</td>
                     <td>
                       {recordingTickers.has(s.ticker) ? (
-                        <button className="tp-chip tp-chip--warn" style={{ cursor: 'pointer', padding: '2px 6px', fontSize: 10 }} onClick={() => toggleRecording(s.ticker)} title={`⏺ Recording ${recordings.find(r => r.ticker === s.ticker)?.barCount ?? 0} 5s bars — click to stop`}>
+                        <button className="tp-chip tp-chip--warn btd-rec-btn" onClick={() => toggleRecording(s.ticker)} title={`⏺ Recording ${recordings.find(r => r.ticker === s.ticker)?.barCount ?? 0} 5s bars — click to stop`}>
                           ⏺ {recordings.find(r => r.ticker === s.ticker)?.barCount ?? 0}
                         </button>
                       ) : (
-                        <button className="tp-chip tp-chip--neutral" style={{ cursor: 'pointer', padding: '2px 6px', fontSize: 10, opacity: 0.6 }} onClick={() => toggleRecording(s.ticker)} title="Start recording 5s candles">
+                        <button className="tp-chip tp-chip--neutral btd-rec-btn-dim" onClick={() => toggleRecording(s.ticker)} title="Start recording 5s candles">
                           ⏺
                         </button>
                       )}
@@ -232,7 +233,7 @@ export default function BacktestDataPage() {
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={11} style={{ textAlign: 'center', padding: 24, color: 'var(--tcs-text-muted)' }}>No symbols match this filter.</td></tr>
+              <tr><td colSpan={11} className="btd-empty">No symbols match this filter.</td></tr>
             )}
           </tbody>
         </table>

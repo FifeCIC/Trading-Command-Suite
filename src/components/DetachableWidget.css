@@ -54,6 +54,7 @@
 
 .dw-floating-titlebar {
   cursor: move;
+  touch-action: none;
 }
 
 .dw-titlebar-left {
@@ -217,6 +218,7 @@
   bottom: 0;
   width: 16px;
   height: 16px;
+  touch-action: none;
   cursor: nwse-resize;
   background: linear-gradient(
     135deg,

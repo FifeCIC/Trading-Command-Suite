@@ -143,7 +143,7 @@ export default function DirectivesManagerPage() {
         <section className="directives-toolbar">
           <div className="directives-toolbar-row">
             <label htmlFor="directive-search">Search</label>
-            <input id="directive-search" type="search" placeholder="Loading directives…" disabled />
+            <input id="directive-search" type="search" placeholder="Loading directives…" value="" readOnly disabled />
           </div>
           <div className="directives-toolbar-stats" role="status">
             <span>Loading…</span>

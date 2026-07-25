@@ -21,21 +21,23 @@ const DECISIONS = [
   { id: 'directive-config', label: 'Default vs Custom Config', status: 'active', desc: 'Visual comparison of directive behaviour with default weights vs customised weights.' },
 ];
 
+import './feature-lab.css';
+
 export default function FeatureLabPage() {
   const [expanded, setExpanded] = useState(null);
 
   return (
-    <div style={{ maxWidth: 960, margin: '0 auto', padding: '1.5rem', color: 'var(--ink, #e2e8f0)' }}>
-      <header style={{ marginBottom: '1.5rem' }}>
-        <h1 style={{ margin: '0 0 0.3rem', fontSize: '1.4rem' }}>Feature Lab</h1>
-        <p style={{ color: 'var(--ink-soft, #94a3b8)', fontSize: '0.85rem', margin: 0 }}>
+    <div className="fl-page">
+      <header className="fl-header">
+        <h1 className="fl-title">Feature Lab</h1>
+        <p className="fl-desc">
           Visual demonstrations of trading automation concepts and design decisions. Each demo shows the logic and events before full implementation.
         </p>
-        <Link to="/lab/lab-landing" style={{ fontSize: '0.78rem', color: 'var(--accent, #0ea5a6)' }}>← Back to Lab Overview</Link>
+        <Link to="/lab/lab-landing" className="fl-back-link">← Back to Lab Overview</Link>
       </header>
 
-      <h2 style={{ fontSize: '1rem', margin: '1.25rem 0 0.6rem', color: 'var(--ink-soft, #94a3b8)' }}>Feature Demos</h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <h2 className="fl-section-head">Feature Demos</h2>
+      <div className="fl-list">
         {DEMOS.map((demo) => (
           <div
             key={demo.id}
@@ -56,42 +58,42 @@ export default function FeatureLabPage() {
                 fontFamily: 'inherit',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                <h3 style={{ margin: 0, fontSize: '0.95rem' }}>{demo.label}</h3>
+              <div className="fl-card-head">
+                <h3 className="fl-card-title">{demo.label}</h3>
                 {demo.status === 'active' && (
-                  <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 999, background: 'rgba(34,197,94,0.2)', color: '#22c55e' }}>LIVE</span>
+                  <span className="fl-badge-live">LIVE</span>
                 )}
                 {demo.status === 'planned' && (
-                  <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 999, background: 'rgba(255,255,255,0.05)', color: 'var(--ink-soft, #94a3b8)' }}>PLANNED</span>
+                  <span className="fl-badge-planned">PLANNED</span>
                 )}
                 {demo.status === 'active' && (
-                  <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--ink-soft, #94a3b8)' }}>{expanded === demo.id ? '▾' : '▸'}</span>
+                  <span className="fl-expand-arrow">{expanded === demo.id ? '▾' : '▸'}</span>
                 )}
               </div>
-              <p style={{ fontSize: '0.78rem', color: 'var(--ink-soft, #94a3b8)', margin: 0 }}>{demo.desc}</p>
+              <p className="fl-card-desc">{demo.desc}</p>
             </button>
             {demo.id === 'trailing-stop' && expanded === 'trailing-stop' && (
-              <div style={{ padding: '0 1rem 1rem' }}>
+              <div className="fl-expanded">
                 <TrailingStopDemo />
               </div>
             )}
             {demo.id === 'auto-risk' && expanded === 'auto-risk' && (
-              <div style={{ padding: '0 1rem 1rem' }}>
+              <div className="fl-expanded">
                 <AutoRiskSizingDemo />
               </div>
             )}
             {demo.id === 'partial-tp' && expanded === 'partial-tp' && (
-              <div style={{ padding: '0 1rem 1rem' }}>
+              <div className="fl-expanded">
                 <PartialTakeProfitDemo />
               </div>
             )}
             {demo.id === 'session-open' && expanded === 'session-open' && (
-              <div style={{ padding: '0 1rem 1rem' }}>
+              <div className="fl-expanded">
                 <SessionOpenEffectDemo />
               </div>
             )}
             {demo.id === 'news-dissipation' && expanded === 'news-dissipation' && (
-              <div style={{ padding: '0 1rem 1rem' }}>
+              <div className="fl-expanded">
                 <NewsDissipationDemo />
               </div>
             )}
@@ -99,11 +101,11 @@ export default function FeatureLabPage() {
         ))}
       </div>
 
-      <h2 style={{ fontSize: '1rem', margin: '1.5rem 0 0.6rem', color: 'var(--ink-soft, #94a3b8)' }}>Design Decisions</h2>
-      <p style={{ fontSize: '0.75rem', color: 'var(--ink-soft, #94a3b8)', margin: '0 0 0.75rem' }}>
+      <h2 className="fl-section-head fl-section-head-last">Design Decisions</h2>
+      <p className="fl-dd-desc">
         Visual comparisons to help make architectural choices. See the trade-offs before committing.
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+      <div className="fl-list fl-list-last">
         {DECISIONS.map((d) => (
           <div
             key={d.id}
@@ -124,27 +126,27 @@ export default function FeatureLabPage() {
                 fontFamily: 'inherit',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '1rem' }}>🔬</span>
-                <h3 style={{ margin: 0, fontSize: '0.9rem' }}>{d.label}</h3>
+              <div className="fl-card-head">
+                <span className="fl-icon">🔬</span>
+                <h3 className="fl-card-title-sm">{d.label}</h3>
                 {d.status === 'active' ? (
-                  <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 999, background: 'rgba(34,197,94,0.2)', color: '#22c55e' }}>LIVE</span>
+                  <span className="fl-badge-live">LIVE</span>
                 ) : (
-                  <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: 999, background: 'rgba(255,255,255,0.05)', color: 'var(--ink-soft, #94a3b8)' }}>PLANNED</span>
+                  <span className="fl-badge-planned">PLANNED</span>
                 )}
                 {d.status === 'active' && (
-                  <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--ink-soft, #94a3b8)' }}>{expanded === d.id ? '▾' : '▸'}</span>
+                  <span className="fl-expand-arrow">{expanded === d.id ? '▾' : '▸'}</span>
                 )}
               </div>
-              <p style={{ fontSize: '0.78rem', color: 'var(--ink-soft, #94a3b8)', margin: 0 }}>{d.desc}</p>
+              <p className="fl-card-desc">{d.desc}</p>
             </button>
             {d.id === 'timezone' && expanded === 'timezone' && (
-              <div style={{ padding: '0 1rem 1rem' }}>
+              <div className="fl-expanded">
                 <TimezoneDecisionDemo />
               </div>
             )}
             {d.id === 'directive-config' && expanded === 'directive-config' && (
-              <div style={{ padding: '0 1rem 1rem' }}>
+              <div className="fl-expanded">
                 <DirectiveConfigDemo />
               </div>
             )}

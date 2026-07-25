@@ -240,7 +240,7 @@ export default function SignalsWorkbenchPage() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 + i * 0.03 }}
-              style={{ borderLeftColor: SIGNAL_COLORS[env.signal] || '#94a3b8' }}
+              style={{ borderColor: SIGNAL_COLORS[env.signal] || '#94a3b8' }}
               onClick={() => setExpandedSymbol(expandedSymbol === env.symbol ? null : env.symbol)}
             >
               <div className="sw-env-top">
@@ -249,7 +249,7 @@ export default function SignalsWorkbenchPage() {
                 <span className="sw-env-composite" style={{ color: SIGNAL_COLORS[env.signal] }}>
                   {env.composite.toFixed(0)}
                   {env.maxPossible > 0 && (
-                    <span style={{ fontSize: '0.65rem', opacity: 0.7, marginLeft: 2 }}>
+                    <span className="sw-env-max">
                       /{env.maxPossible} ({Math.round(env.composite / env.maxPossible * 100)}%)
                     </span>
                   )}
@@ -352,7 +352,7 @@ export default function SignalsWorkbenchPage() {
                           <div
                             key={j}
                             className="sw-conflict-row"
-                            style={{ borderLeftColor: CONFLICT_SEVERITY[c.severity]?.color }}
+                            style={{ borderColor: CONFLICT_SEVERITY[c.severity]?.color }}
                           >
                             <span className="sw-conflict-type">{c.type}</span>
                             <span className="sw-conflict-sev" style={{ color: CONFLICT_SEVERITY[c.severity]?.color }}>

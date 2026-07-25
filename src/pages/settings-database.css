@@ -1,0 +1,59 @@
+/* ── Settings Database Page ──────────────────────────────── */
+
+.sdb-section { line-height: 1.6; }
+.sdb-section p { margin: 0; }
+
+.sdb-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  font-size: var(--text-base, 0.82rem);
+  color: var(--ink-soft);
+}
+
+.sdb-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.sdb-export-btn {
+  padding: 0.5rem 1.2rem;
+  font-weight: 600;
+}
+
+.sdb-result-ok {
+  margin-top: 0.75rem;
+  border-color: var(--color-profit, #22c55e);
+}
+
+.sdb-result-err {
+  margin-top: 0.75rem;
+  border-color: var(--danger);
+}
+
+.sdb-result-ok p:first-child {
+  color: var(--color-profit, #22c55e);
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+}
+
+.sdb-result-err p:first-child {
+  color: var(--danger);
+  margin: 0;
+}
+
+.sdb-result-meta {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.sdb-hint {
+  margin-top: 0.35rem;
+}
+
+/* Table styles */
+.sdb-table th.sdb-right { text-align: right; }
+.sdb-table td.sdb-mono { font-family: monospace; font-size: var(--text-base, 0.82rem); }
+.sdb-table td.sdb-right { text-align: right; font-variant-numeric: tabular-nums; }
+.sdb-table td.sdb-muted { font-size: 0.78rem; color: var(--ink-soft); }

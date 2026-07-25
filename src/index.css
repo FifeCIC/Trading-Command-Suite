@@ -84,6 +84,51 @@ html[data-hide-page-subtitle='true'] .po-subtitle { display: none; }
   --notice-info-text: #60a5fa;
 }
 
+/* ── Design Tokens — typography scale ────────────────────── */
+/* Sorted by frequency of use across the app (31K CSS lines audited 2026-07-24) */
+:root {
+  --text-2xs: 0.65rem;   /* 179 uses — badges, meta, fine print */
+  --text-xs:  0.7rem;    /* 275 uses — labels, hints, captions */
+  --text-sm:  0.75rem;   /* 207 uses — body-small, descriptions */
+  --text-base: 0.82rem;  /* 260 uses — body, card labels */
+  --text-md:  0.88rem;   /* ~120 uses — card titles, section heads */
+  --text-lg:  1rem;      /* ~90 uses — page headings */
+  --text-xl:  1.25rem;   /* ~50 uses — hero, major headings */
+  --text-2xl: 1.5rem;    /* ~30 uses — page titles */
+
+  /* Font weights */
+  --weight-normal:   400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+  --weight-extrabold: 800;
+
+  /* Letter spacing */
+  --tracking-wide: 0.04em;
+  --tracking-wider: 0.06em;
+  --tracking-widest: 0.08em;
+}
+
+/* ── Design Tokens — spacing scale ───────────────────────── */
+:root {
+  --space-xs: 0.25rem;   /* 4px  — tight inline gaps */
+  --space-sm: 0.5rem;    /* 8px  — card gaps, button groups */
+  --space-md: 0.75rem;   /* 12px — section gaps, stat groups */
+  --space-lg: 1rem;      /* 16px — container padding */
+  --space-xl: 1.5rem;    /* 24px — page padding, section spacing */
+  --space-2xl: 2rem;     /* 32px — hero/header spacing */
+}
+
+/* ── Design Tokens — radius scale ────────────────────────── */
+:root {
+  --radius-xs:  3px;    /* 162 uses — chips, inline badges */
+  --radius-sm:  6px;    /* 307 uses — buttons, inputs, small cards */
+  --radius-md:  8px;    /* 308 uses — cards, panels, dropdowns */
+  --radius-lg:  10px;   /* 175 uses — larger cards, modals */
+  --radius-xl:  12px;   /* 46 uses — hero cards, feature panels */
+  --radius-pill: 999px; /* 81 uses — badges, pills, status dots */
+}
+
 /* Page width — centralised max-width for trading views */
 :root { --page-max-width: 1400px; }
 

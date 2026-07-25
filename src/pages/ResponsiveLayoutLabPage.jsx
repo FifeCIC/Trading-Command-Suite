@@ -201,6 +201,72 @@ export default function ResponsiveLayoutLabPage() {
             Users can override via column toggle settings above.
           </p>
         </div>
+
+        {/* ── Content Width Patterns ── */}
+        <div className="rll-content-width-section">
+          <h3>Content Width Patterns <span className="rll-hint">— when the sidebar hides, how should content behave?</span></h3>
+          <p className="rll-hint" style={{ marginBottom: '0.6rem' }}>
+            When the left sidebar collapses on narrow screens, content can either <strong>fill 100%</strong> (dashboards, data tables)
+            or stay <strong>fixed-width + left-aligned</strong> (documentation, settings forms). These two patterns demonstrate both.
+          </p>
+
+          <div className="rll-width-demos">
+            {/* ── Full-Width Fill ── */}
+            <div className="rll-width-demo">
+              <div className="rll-width-demo-label">Full-width fill
+                <span className="rll-hint"> — content expands to 100% of available space. Best for data-heavy views.</span>
+              </div>
+              <div className="rll-fill-container">
+                <div className="rll-fill-bar">
+                  <span className="rll-fill-bar-label">📊 Dashboard</span>
+                  <div className="rll-fill-metrics">
+                    <span className="rll-fill-metric">7 positions</span>
+                    <span className="rll-fill-metric">+$1,240</span>
+                    <span className="rll-fill-metric">85% BUY</span>
+                    <span className="rll-fill-metric">Circuit: READY</span>
+                  </div>
+                </div>
+                <div className="rll-fill-content">
+                  <div className="rll-fill-card">NVDA <strong>92</strong> <span className="rll-sig-buy">BUY</span></div>
+                  <div className="rll-fill-card">AAPL <strong>78</strong> <span className="rll-sig-buy">BUY</span></div>
+                  <div className="rll-fill-card">XAUUSD <strong>88</strong> <span className="rll-sig-buy">BUY</span></div>
+                  <div className="rll-fill-card">MSFT <strong>65</strong> <span className="rll-sig-hold">HOLD</span></div>
+                  <div className="rll-fill-card">TSLA <strong>42</strong> <span className="rll-sig-sell">SELL</span></div>
+                </div>
+              </div>
+              <p className="rll-hint">Rule: <code>width: 100%</code> — no max-width constraint. Content stretches edge-to-edge.</p>
+            </div>
+
+            {/* ── Fixed-Width, Left-Aligned ── */}
+            <div className="rll-width-demo">
+              <div className="rll-width-demo-label">Fixed-width, left-aligned
+                <span className="rll-hint"> — optimal reading width, anchored left. Best for docs &amp; forms.</span>
+              </div>
+              <div className="rll-fixed-container">
+                <div className="rll-fixed-panel">
+                  <h4>Strategy Settings</h4>
+                  <div className="rll-fixed-field">
+                    <label>Protocol name</label>
+                    <input type="text" defaultValue="tech-titans-v1" readOnly />
+                  </div>
+                  <div className="rll-fixed-field">
+                    <label>Max position size</label>
+                    <input type="text" defaultValue="$5,000" readOnly />
+                  </div>
+                  <div className="rll-fixed-field">
+                    <label>Stop-loss (%)</label>
+                    <input type="text" defaultValue="2.5%" readOnly />
+                  </div>
+                  <div className="rll-fixed-field">
+                    <label>Description</label>
+                    <textarea defaultValue="Tech Titans v1 — buys mega-cap tech on institutional accumulation signals with a 2.5% stop-loss and 5% take-profit target. Activated Mon–Fri 09:30–16:00 ET." readOnly rows={3} />
+                  </div>
+                </div>
+              </div>
+              <p className="rll-hint">Rule: <code>max-width: 640px; margin-left: 0</code> — content stays at a readable width, anchored left.</p>
+            </div>
+          </div>
+        </div>
       </motion.div>
     </div>
   );

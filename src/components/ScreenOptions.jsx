@@ -639,7 +639,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                 <h2 className="so-title">Quick Calculators</h2>
                 <button className="so-close-btn" onClick={() => setCalcOpen(false)} aria-label="Close calculators">✕</button>
               </div>
-              <div className="so-body" style={{ padding: '16px 20px', overflowY: 'auto' }}>
+              <div className="so-body">
                 <CalcPanel />
               </div>
             </motion.div>
@@ -670,16 +670,16 @@ function CalcPanel() {
   var rrRatio = rrRisk > 0 ? rrReward / rrRisk : 0;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div className="so-calc-panel">
       {/* Position Size */}
-      <div>
-        <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.5rem', color: 'var(--ink)' }}>Position Size</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div className="so-calc-section">
+        <h3>Position Size</h3>
+        <div className="so-calc-fields">
           <CalcInput label="Account ($)" value={account} onChange={setAccount} />
           <CalcInput label="Risk %" value={riskPct} onChange={setRiskPct} step="0.1" />
           <CalcInput label="Entry ($)" value={entry} onChange={setEntry} step="0.01" />
           <CalcInput label="Stop Loss ($)" value={stopLoss} onChange={setStopLoss} step="0.01" />
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+          <div className="so-calc-results">
             <CalcResult label="Max Shares" value={maxShares} />
             <CalcResult label="Position $" value={`$${totalValue.toFixed(0)}`} />
             <CalcResult label="Risk $" value={`$${riskAmount.toFixed(0)}`} />
@@ -688,13 +688,13 @@ function CalcPanel() {
       </div>
 
       {/* Risk/Reward */}
-      <div>
-        <h3 style={{ fontSize: '0.9rem', margin: '0 0 0.5rem', color: 'var(--ink)' }}>Risk / Reward</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div className="so-calc-section">
+        <h3>Risk / Reward</h3>
+        <div className="so-calc-fields">
           <CalcInput label="Entry ($)" value={tpEntry} onChange={setTpEntry} step="0.01" />
           <CalcInput label="Stop Loss ($)" value={tpSl} onChange={setTpSl} step="0.01" />
           <CalcInput label="Take Profit ($)" value={tpTp} onChange={setTpTp} step="0.01" />
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+          <div className="so-calc-results">
             <CalcResult label="Risk" value={`$${rrRisk.toFixed(1)}`} />
             <CalcResult label="Reward" value={`$${rrReward.toFixed(1)}`} />
             <CalcResult label="R:R" value={`1:${rrRatio.toFixed(1)}`} highlight />
@@ -707,14 +707,13 @@ function CalcPanel() {
 
 function CalcInput({ label, value, onChange, step }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-      <label style={{ fontSize: '0.72rem', color: 'var(--ink-soft)', minWidth: '90px', textTransform: 'uppercase' }}>{label}</label>
+    <div className="so-calc-input">
+      <label>{label}</label>
       <input
         type="number"
         value={value}
         onChange={(e) => onChange(Number(e.target.value) || 0)}
         step={step}
-        style={{ flex: 1, padding: '5px 8px', border: '1px solid var(--line)', borderRadius: '4px', background: 'var(--bg)', color: 'var(--ink)', fontSize: '0.82rem', fontFamily: 'inherit' }}
       />
     </div>
   );
@@ -722,9 +721,9 @@ function CalcInput({ label, value, onChange, step }) {
 
 function CalcResult({ label, value, highlight }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--bg)', padding: '6px 10px', borderRadius: '4px', flex: 1 }}>
-      <span style={{ fontSize: '0.6rem', color: 'var(--ink-soft)', textTransform: 'uppercase' }}>{label}</span>
-      <strong style={{ fontSize: '0.82rem', color: highlight ? 'var(--accent)' : 'var(--ink)' }}>{value}</strong>
+    <div className="so-calc-result">
+      <span>{label}</span>
+      <strong className={highlight ? 'so-calc-highlight' : ''}>{value}</strong>
     </div>
   );
 }

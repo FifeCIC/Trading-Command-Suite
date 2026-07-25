@@ -11,7 +11,7 @@ import './FadeCardGroup.css';
  *   "scroll-each"  — each card lights up individually as it crosses screen center
  *   Examples: "hover", "scroll", "scroll-each", "hover scroll", "hover scroll-each"
  */
-export default function FadeCardGroup({ cards, variant = 'hover' }) {
+export default function FadeCardGroup({ cards, variant = 'hover', maxWidth }) {
   const groupRef = useRef(null);
   const variants = new Set(variant.split(/\s+/).filter(Boolean));
   const hasHover = variants.has('hover');
@@ -52,6 +52,7 @@ export default function FadeCardGroup({ cards, variant = 'hover' }) {
     <div
       ref={groupRef}
       className={`fc-group${hasScrollGroup ? ' fc-scroll' : ''}${isHoverOnly ? ' fc-hover-only' : ''}`}
+      style={maxWidth ? { maxWidth } : undefined}
     >
       {cards.map((card, i) => (
         <div

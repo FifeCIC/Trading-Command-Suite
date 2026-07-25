@@ -48,7 +48,10 @@ export default function DailySummaryReportPage() {
     queryFn: () => apiGet('/api/providers/mt5/history?from=' + todayStr()).catch(() => ({ deals: [] })),
     staleTime: 30_000,
   });
-  const deals = historyQuery.data?.deals || historyQuery.data || [];
+  const deals = (() => {
+    const raw = historyQuery.data?.deals || historyQuery.data;
+    return Array.isArray(raw) ? raw : [];
+  })();
 
   const rankedQuery = useQuery({
     queryKey: ['report-ranked'],

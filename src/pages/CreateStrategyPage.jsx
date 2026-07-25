@@ -104,7 +104,10 @@ export default function CreateStrategyPage() {
           apiGet('/api/trading/mt5/account').catch(() => null),
         ]);
         if (cancelled) return;
-        setProtocols((protos.protocols || protos || []).filter(p => p.active !== false));
+        // Deduplicate by id — API may return same protocol from code + database
+        const rawProtocols = (protos.protocols || protos || []).filter(p => p.active !== false);
+        const seen = new Set();
+        setProtocols(rawProtocols.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; }));
         setScoringStrategies(Array.isArray(scoring) ? scoring : (scoring.strategies || []));
         setWatchlists(wls.watchlists || []);
         setMt5Account(mt5);

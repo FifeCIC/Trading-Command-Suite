@@ -145,7 +145,7 @@ export default function DecisionTrailPage() {
             const decisionColor = trail.decision === 'EXECUTED' ? '#22c55e' : trail.decision === 'SCORED' ? '#3b82f6' : trail.decision === 'FAILED' ? '#ef4444' : '#f59e0b';
             return (
               <motion.div
-                key={trail.ticket || trail.timestamp || i}
+                key={trail.id || `${trail.ticket || trail.timestamp}-${i}`}
                 className={`dt-trail-card ${isExpanded ? 'expanded' : ''}`}
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}

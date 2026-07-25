@@ -147,8 +147,8 @@ export default function SystemStatusPage() {
             <p className="status-hint">No providers configured with credentials.</p>
           ) : (
             <ul className="provider-list">
-              {activeProvs.map((pr) => (
-                <li key={pr.provider}>
+              {activeProvs.map((pr, i) => (
+                <li key={pr.provider || i}>
                   <span>{pr.displayName}</span>
                   <span className={`ss-chip ss-chip--${pr.status === 'healthy' ? 'ok' : pr.status === 'missing-credentials' ? 'warn' : 'neutral'}`}>
                     {pr.status}
@@ -200,8 +200,8 @@ export default function SystemStatusPage() {
           {mt5Accs.length > 0 && (
             <StatusCard title="All Accounts" variant="neutral">
               <ul className="provider-list">
-                {mt5Accs.map((a) => (
-                  <li key={a.accountNumber}>
+                {mt5Accs.map((a, i) => (
+                  <li key={a.accountNumber || i}>
                     <span>#{a.accountNumber}</span>
                     <span className={`ss-chip ss-chip--${a.isActive ? 'ok' : 'neutral'}`}>
                       {a.isActive ? 'Active' : 'Inactive'}

@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TradeRecorderService } from './trade-recorder.service';
+import { StopGuardianService } from './stop-guardian.service';
+import { PrismaService } from '../../database/prisma.service';
 
 const BRIDGE_URL = process.env.MT5_BRIDGE_URL || 'http://localhost:5000';
 
@@ -32,7 +34,11 @@ export class Mt5TradingService {
   private readonly logger = new Logger(Mt5TradingService.name);
   private bridgeUrl = BRIDGE_URL;
 
-  constructor(private readonly tradeRecorder: TradeRecorderService) {}
+  constructor(
+    private readonly tradeRecorder: TradeRecorderService,
+    private readonly stopGuardian: StopGuardianService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   async getAccount(): Promise<Mt5Account | null> {
     try {
@@ -93,6 +99,10 @@ export class Mt5TradingService {
         body: JSON.stringify(body),
       });
       const data = await res.json();
+
+      // ── Order audit: record every bridge order attempt (#477) ──
+      this.recordOrder(params.symbol, params.type, params.volume, data.success ? 'filled' : 'rejected', data.ticket, data.price, data.error);
+
       if (data.success) {
         // Record successful trade with MT5 traceability fields (#446)
         this.tradeRecorder.record({
@@ -109,6 +119,16 @@ export class Mt5TradingService {
           tp: params.tp,
           brokerComment: params.comment,
         });
+        // Record initial SL/TP as adjustment (#476)
+        if (data.ticket && (params.sl || params.tp)) {
+          this.stopGuardian.recordAdjustment({
+            tradeTicket: data.ticket as number,
+            symbol: params.symbol,
+            newSl: params.sl ?? null,
+            newTp: params.tp ?? null,
+            reason: 'Initial SL/TP set at order placement',
+          });
+        }
         return { success: true, ticket: data.ticket, price: data.price };
       }
       // Record rejected attempt
@@ -134,8 +154,28 @@ export class Mt5TradingService {
         origin,
         strategy: params.comment || undefined,
       });
+      // Order audit: network/bridge failures (#477)
+      this.recordOrder(params.symbol, params.type, params.volume, 'error', undefined, undefined, errorMsg);
       return { success: false, error: errorMsg };
     }
+  }
+
+  /** Record every order attempt in the order audit table (#477). Fire-and-forget. */
+  private recordOrder(symbol: string, type: string, quantity: number, status: string, ticket?: number, price?: number, error?: string): void {
+    if (!this.prisma.isAvailable) return;
+    this.prisma.order.create({
+      data: {
+        symbol,
+        type: type.toLowerCase(),
+        side: type === 'BUY' ? 'buy' : 'sell',
+        quantity,
+        price: price ?? null,
+        status,
+        provider: 'mt5',
+        providerId: ticket ? String(ticket) : null,
+        filledAt: status === 'filled' ? new Date() : null,
+      },
+    }).catch(() => {}); // fire-and-forget — failures logged silently
   }
 
   /**

@@ -160,7 +160,7 @@ export default function DataAreaLandingPage() {
       </header>
 
       {loading && (
-        <div style={{ margin: '1rem 0' }}>
+        <div className="dal-spacer">
           <LoadingSkeleton variant="card" count={6} />
         </div>
       )}
@@ -412,36 +412,36 @@ export default function DataAreaLandingPage() {
           <LoadingSkeleton variant="table" rows={4} cols={5} />
         )}
         {!recentActivity.isLoading && recentRecords.length === 0 && (
-          <p className="dal-neutral" style={{ padding: '1rem 0' }}>No recent activity recorded yet.</p>
+          <p className="dal-neutral dal-empty">No recent activity recorded yet.</p>
         )}
         {recentRecords.length > 0 && (
-          <div className="tp-table-wrap" style={{ overflowX: 'auto' }}>
+          <div className="tp-table-wrap dal-table-wrap">
             <table className="tp-table dal-recent-table">
               <thead>
                 <tr>
-                  <th style={{ width: 100 }}>Time</th>
-                  <th style={{ width: 70 }}>Method</th>
+                  <th className="dal-th-time">Time</th>
+                  <th className="dal-th-method">Method</th>
                   <th>Endpoint</th>
-                  <th style={{ width: 110 }}>Provider</th>
-                  <th style={{ width: 70 }}>Status</th>
-                  <th style={{ width: 80 }}>Latency</th>
+                  <th className="dal-th-provider">Provider</th>
+                  <th className="dal-th-status">Status</th>
+                  <th className="dal-th-latency">Latency</th>
                 </tr>
               </thead>
               <tbody>
                 {recentRecords.map((r, i) => (
                   <tr key={r.id || i}>
-                    <td className="tp-mono" style={{ fontSize: 11 }}>
+                    <td className="tp-mono dal-cell-mono">
                       {r.timestamp ? new Date(r.timestamp).toLocaleTimeString() : '—'}
                     </td>
-                    <td><span className="tp-chip tp-chip--neutral" style={{ fontSize: 10 }}>{r.method}</span></td>
-                    <td><code style={{ fontSize: 11 }}>{r.endpoint}</code></td>
-                    <td><span className="tp-chip tp-chip--info" style={{ fontSize: 10 }}>{r.provider || 'internal'}</span></td>
+                    <td><span className="tp-chip tp-chip--neutral dal-chip-sm">{r.method}</span></td>
+                    <td><code className="dal-cell-mono">{r.endpoint}</code></td>
+                    <td><span className="tp-chip tp-chip--info dal-chip-sm">{r.provider || 'internal'}</span></td>
                     <td>
-                      <span className={`tp-chip ${r.statusCode >= 400 ? 'tp-chip--warn' : 'tp-chip--ok'}`} style={{ fontSize: 10 }}>
+                      <span className={`tp-chip ${r.statusCode >= 400 ? 'tp-chip--warn' : 'tp-chip--ok'} dal-chip-sm`}>
                         {r.statusCode}
                       </span>
                     </td>
-                    <td className="tp-mono" style={{ fontSize: 11 }}>{r.durationMs}ms</td>
+                    <td className="tp-mono dal-cell-mono">{r.durationMs}ms</td>
                   </tr>
                 ))}
               </tbody>

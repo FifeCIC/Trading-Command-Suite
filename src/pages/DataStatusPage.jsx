@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
 import LoadingSkeleton from '../components/LoadingSkeleton'
 import './trading-platforms.css'
+import './data-status.css'
 
 const STATUS_COLORS = {
   healthy: 'tp-chip--ok', fresh: 'tp-chip--ok',
@@ -44,7 +45,7 @@ export default function DataStatusPage() {
 
   return (
     <div className="trading-platforms-page">
-      <header className="tp-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+      <header className="tp-page-header ds-header">
         <div>
           <h1>Data Status</h1>
           <p>All data systems at a glance · Mode: {symData.mode || '...'}</p>
@@ -54,30 +55,30 @@ export default function DataStatusPage() {
 
       {anyError && <p className="error" style={{ marginBottom: 16 }}>Some endpoints returned errors. Check backend.</p>}
 
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 20 }}>
-        <div className="tp-card" style={{ textAlign: 'center', padding: 20 }}>
-          <div style={{ fontSize: '2rem', fontWeight: 700 }}>{syms.length}</div>
+      <section className="ds-stat-grid">
+        <div className="tp-card ds-stat-card">
+          <div className="ds-stat-value">{syms.length}</div>
           <div className="hint">Total Symbols</div>
-          <div style={{ fontSize: '0.85rem', marginTop: 4 }}>{activeSyms} active</div>
+          <div className="ds-stat-sub">{activeSyms} active</div>
         </div>
-        <div className="tp-card" style={{ textAlign: 'center', padding: 20 }}>
-          <div style={{ fontSize: '2rem', fontWeight: 700, color: '#4caf50' }}>{freshCount}</div>
+        <div className="tp-card ds-stat-card">
+          <div className="ds-stat-value ds-fresh">{freshCount}</div>
           <div className="hint">Fresh</div>
         </div>
-        <div className="tp-card" style={{ textAlign: 'center', padding: 20 }}>
-          <div style={{ fontSize: '2rem', fontWeight: 700, color: '#ff9800' }}>{staleCount}</div>
+        <div className="tp-card ds-stat-card">
+          <div className="ds-stat-value ds-stale">{staleCount}</div>
           <div className="hint">Stale</div>
         </div>
-        <div className="tp-card" style={{ textAlign: 'center', padding: 20 }}>
-          <div style={{ fontSize: '2rem', fontWeight: 700, color: '#f44336' }}>{missingCount}</div>
+        <div className="tp-card ds-stat-card">
+          <div className="ds-stat-value ds-missing">{missingCount}</div>
           <div className="hint">Missing</div>
         </div>
-        <div className="tp-card" style={{ textAlign: 'center', padding: 20 }}>
-          <div style={{ fontSize: '2rem', fontWeight: 700 }}>{provItems.length}</div>
+        <div className="tp-card ds-stat-card">
+          <div className="ds-stat-value">{provItems.length}</div>
           <div className="hint">Providers</div>
         </div>
-        <div className="tp-card" style={{ textAlign: 'center', padding: 20 }}>
-          <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{lastImport ? new Date(lastImport).toLocaleTimeString() : '—'}</div>
+        <div className="tp-card ds-stat-card">
+          <div className="ds-stat-value-sm">{lastImport ? new Date(lastImport).toLocaleTimeString() : '—'}</div>
           <div className="hint">Last Import</div>
         </div>
       </section>

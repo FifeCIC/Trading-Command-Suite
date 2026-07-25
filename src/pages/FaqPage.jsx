@@ -58,7 +58,7 @@ export default function FaqPage() {
 
       {/* Search bar */}
       <section className="tp-card">
-        <div className="tp-controls-grid" style={{ alignItems: 'end' }}>
+        <div className="tp-controls-grid">
           <label className="tp-control" style={{ flex: 1 }}>
             <span>Search</span>
             <input
@@ -72,14 +72,13 @@ export default function FaqPage() {
         </div>
 
         {/* Category filter chips */}
-        <div className="faq-categories" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+        <div className="faq-categories">
           {allCategories.map((cat) => (
             <button
               key={cat.name || '__all__'}
               type="button"
               className={`tp-chip ${activeCategory === cat.name ? 'tp-chip--ok' : ''}`}
               onClick={() => setActiveCategory(activeCategory === cat.name ? '' : cat.name)}
-              style={{ cursor: 'pointer', fontSize: '0.82rem' }}
             >
               {cat.label || cat.name} ({cat.count})
             </button>
@@ -88,7 +87,7 @@ export default function FaqPage() {
       </section>
 
       {/* Results count */}
-      <p style={{ margin: '0.75rem 0', fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
+      <p className="faq-results-count">
         {faqQuery.isLoading
           ? 'Loading...'
           : search.trim()
@@ -98,7 +97,7 @@ export default function FaqPage() {
 
       {/* FAQ entries */}
       {!faqQuery.isLoading && entries.length === 0 && (
-        <div className="tp-card" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+        <div className="tp-card faq-empty">
           <p>No FAQ entries yet.</p>
           <p className="hint">Content will be added in a future update.</p>
         </div>
@@ -111,23 +110,22 @@ export default function FaqPage() {
           <article
             key={entry.id}
             className="tp-card faq-entry"
-            style={{ marginBottom: '0.5rem', cursor: 'pointer' }}
             onClick={() => setExpandedId(isOpen ? null : entry.id)}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+            <div className="faq-entry-row">
               <div>
                 <h3
-                  style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}
+                  className="faq-entry-title"
                   dangerouslySetInnerHTML={{ __html: highlight(entry.question) }}
                 />
-                <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem' }}>
-                  <span className="tp-chip tp-chip--neutral" style={{ fontSize: '0.7rem' }}>{entry.category}</span>
+                <div className="faq-entry-tags">
+                  <span className="tp-chip tp-chip--neutral">{entry.category}</span>
                   {entry.tags && entry.tags.split(',').filter(Boolean).slice(0, 3).map((tag) => (
-                    <span key={tag} className="tp-chip tp-chip--neutral" style={{ fontSize: '0.7rem', opacity: 0.6 }}>{tag.trim()}</span>
+                    <span key={tag} className="tp-chip tp-chip--neutral" style={{ opacity: 0.6 }}>{tag.trim()}</span>
                   ))}
                 </div>
               </div>
-              <span style={{ fontSize: '0.85rem', color: 'var(--ink-soft)', flexShrink: 0 }}>
+              <span className="faq-entry-arrow">
                 {isOpen ? '▲' : '▼'}
               </span>
             </div>
@@ -135,13 +133,6 @@ export default function FaqPage() {
             {isOpen && (
               <div
                 className="faq-answer"
-                style={{
-                  marginTop: '0.75rem',
-                  paddingTop: '0.75rem',
-                  borderTop: '1px solid var(--line)',
-                  lineHeight: 1.6,
-                  fontSize: '0.9rem',
-                }}
                 dangerouslySetInnerHTML={{ __html: highlight(entry.answer) }}
               />
             )}

@@ -1485,6 +1485,28 @@ model DecisionTrail {
   @@index([tradeId])
 }
 
+// ── Stop Adjustment (#476) ──────────────────────────────
+// Tracks every SL/TP modification — whether by Stop Guardian
+// automation or manual amend. Links back to the trade and
+// records the directive scores that triggered the change.
+
+model StopAdjustment {
+  id              String   @id @default(uuid()) @db.VarChar(36)
+  tradeTicket     Int
+  symbol          String   @db.VarChar(20)
+  oldSl           Float?
+  newSl           Float?
+  oldTp           Float?
+  newTp           Float?
+  reason          String   @db.VarChar(200)
+  directiveScores Json?
+  adjustedAt      DateTime @default(now())
+
+  @@map("stop_adjustment")
+  @@index([tradeTicket])
+  @@index([symbol, adjustedAt])
+}
+
 // ── Audit trail ──────────────────────────────────────────
 // Step-by-step trace of every decision point in the
 // automation tick loop. Queryable for diagnostics.

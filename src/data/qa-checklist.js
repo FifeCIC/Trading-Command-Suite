@@ -751,7 +751,7 @@ const QA_CHECKLIST = [
   // UI FEATURES (2026-07-14)
   // ═══════════════════════════════════════════════════
   {
-    id: 'qa-ui-005',
+    id: 'qa-ui-005-v2',
     area: 'UI Features',
     system: 'ActiveSymbols Columns & Selection',
     name: 'Open Trade, P/L, Protocols columns + row selection + Create Watchlist',
@@ -972,7 +972,7 @@ const QA_CHECKLIST = [
   // DECISION-TRAIL & DATA PERSISTENCE (2026-07-15)
   // ═══════════════════════════════════════════════════
   {
-    id: 'qa-data-001',
+    id: 'qa-dt-001',
     area: 'Data',
     system: 'Decision Log',
     name: 'Decision log survives NestJS restart',
@@ -982,7 +982,7 @@ const QA_CHECKLIST = [
     priority: 'high',
   },
   {
-    id: 'qa-data-002',
+    id: 'qa-dt-002',
     area: 'Data',
     system: 'Order Logging',
     name: 'All bridge order attempts logged',
@@ -992,7 +992,7 @@ const QA_CHECKLIST = [
     priority: 'high',
   },
   {
-    id: 'qa-data-003',
+    id: 'qa-dt-003',
     area: 'Data',
     system: 'Data Retention',
     name: 'Pruning API works correctly',
@@ -1040,7 +1040,7 @@ const QA_CHECKLIST = [
   // UI/UX — 2026-07-16/17 Handoffs
   // ═══════════════════════════════════════════════════
   {
-    id: 'qa-ui-006',
+    id: 'qa-ui-006-v2',
     area: 'Accessibility',
     system: 'Focus Indicator',
     name: 'Focus indicator style preference changes keyboard focus ring',
@@ -1051,7 +1051,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-07-16 — #359',
   },
   {
-    id: 'qa-ui-007',
+    id: 'qa-ui-007-v2',
     area: 'Trading Tools',
     system: 'Calculator Screen Options',
     name: 'Calculator Screen Options show/hide toggles',
@@ -1062,7 +1062,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-07-16 — #376',
   },
   {
-    id: 'qa-ui-008',
+    id: 'qa-ui-008-v2',
     area: 'Accessibility',
     system: 'Screen Reader Live Regions',
     name: 'Screen reader announces real-time data changes',
@@ -1073,7 +1073,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-07-16 — #361',
   },
   {
-    id: 'qa-ui-009',
+    id: 'qa-ui-009-v2',
     area: 'Scoring',
     system: 'Protocol Name Resolution',
     name: 'All protocols display readable names on MetaStack Display',
@@ -1084,7 +1084,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-07-16 — #395',
   },
   {
-    id: 'qa-ui-010',
+    id: 'qa-ui-010-v2',
     area: 'Accessibility',
     system: 'Keyboard Navigation',
     name: 'Skip link appears on Tab and navigates to main content',
@@ -1095,7 +1095,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-07-16 — #360',
   },
   {
-    id: 'qa-ui-011',
+    id: 'qa-ui-011-v2',
     area: 'Dashboard',
     system: 'News & Sentiment',
     name: 'News & Sentiment card shows provider status',
@@ -1106,7 +1106,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-07-16 — #367 A+C',
   },
   {
-    id: 'qa-ui-012',
+    id: 'qa-ui-012-v2',
     area: 'Scoring',
     system: 'Daily Briefing',
     name: 'Daily Briefing page renders morning/evening views with tiered symbols',
@@ -1117,7 +1117,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-07-16 — #368 A+B',
   },
   {
-    id: 'qa-ui-013',
+    id: 'qa-ui-013-v2',
     area: 'UI',
     system: 'Notification Disc',
     name: 'Notification bell shows provider issues and errors',
@@ -1128,7 +1128,7 @@ const QA_CHECKLIST = [
     versionNote: '2026-07-16 — #378 Part 4',
   },
   {
-    id: 'qa-ui-014',
+    id: 'qa-ui-014-v2',
     area: 'Dashboard',
     system: 'Recent Trades',
     name: 'Recent trades table shows last 5 completed trades',

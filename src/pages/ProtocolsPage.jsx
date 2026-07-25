@@ -37,9 +37,19 @@ export default function ProtocolsPage() {
     staleTime: 30_000,
   });
 
-  const protocols = Array.isArray(protocolsQuery.data?.protocols)
-    ? protocolsQuery.data.protocols
-    : [];
+  const protocols = (() => {
+    const raw = Array.isArray(protocolsQuery.data?.protocols)
+      ? protocolsQuery.data.protocols
+      : [];
+    // Deduplicate by id — API may return protocols with the same id
+    // from different sources (e.g. built-in + database rows)
+    const seen = new Set();
+    return raw.filter(p => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+  })();
   const loading = protocolsQuery.isLoading;
   const error = protocolsQuery.error?.message || null;
 

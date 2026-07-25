@@ -1,0 +1,11 @@
+/* Data Status Page */
+
+.ds-header { display: flex; justify-content: space-between; align-items: start; }
+.ds-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.ds-stat-card { text-align: center; padding: 20px; }
+.ds-stat-value { font-size: 2rem; font-weight: var(--weight-bold, 700); }
+.ds-stat-value-sm { font-size: 1.2rem; font-weight: var(--weight-bold, 700); }
+.ds-fresh { color: var(--color-profit, #4caf50); }
+.ds-stale { color: var(--color-warning, #ff9800); }
+.ds-missing { color: var(--danger, #f44336); }
+.ds-stat-sub { font-size: var(--text-base, 0.85rem); margin-top: 4px; }

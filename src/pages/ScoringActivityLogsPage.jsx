@@ -168,9 +168,8 @@ export default function ScoringActivityLogsPage() {
                 <th>Top Scores</th>
               </tr>
             </thead>
-            <tbody>
-              <AnimatePresence>
-                {filtered.map((run) => {
+            <AnimatePresence>
+              {filtered.map((run) => {
                   const isExpanded = expandedRun === run.id;
                   const topScores = (run.scores || [])
                     .filter((s) => s.value > 0)
@@ -238,8 +237,7 @@ export default function ScoringActivityLogsPage() {
                     </motion.tbody>
                   );
                 })}
-              </AnimatePresence>
-            </tbody>
+            </AnimatePresence>
           </table>
         </div>
       )}

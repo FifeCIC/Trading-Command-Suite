@@ -274,7 +274,6 @@ export default function DetachableWidget({
           {/* Floating title bar */}
           <div
             className="dw-titlebar dw-floating-titlebar"
-            style={{ touchAction: 'none' }}
           >
             <div className="dw-titlebar-left">
               <span className="dw-grip">⠿</span>
@@ -328,7 +327,6 @@ export default function DetachableWidget({
           {/* Resize handle */}
           <div
             className="dw-resize-handle"
-            style={{ touchAction: 'none' }}
           />
         </div>
       </div>

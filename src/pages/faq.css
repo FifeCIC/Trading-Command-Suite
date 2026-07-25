@@ -1,0 +1,13 @@
+/* FAQ Page */
+
+.faq-categories { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+.faq-categories button { cursor: pointer; font-size: var(--text-base, 0.82rem); }
+.faq-results-count { margin: 0.75rem 0; font-size: var(--text-base, 0.85rem); color: var(--ink-soft); }
+.faq-empty { text-align: center; padding: 3rem 1rem; }
+.faq-entry { margin-bottom: 0.5rem; cursor: pointer; }
+.faq-entry-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+.faq-entry-title { margin: 0; font-size: 0.95rem; font-weight: 600; }
+.faq-entry-tags { display: flex; gap: 0.4rem; margin-top: 0.35rem; }
+.faq-entry-tags .tp-chip { font-size: var(--text-xs, 0.7rem); }
+.faq-entry-arrow { font-size: var(--text-base, 0.85rem); color: var(--ink-soft); flex-shrink: 0; }
+.faq-answer { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--line); line-height: 1.6; font-size: var(--text-base, 0.9rem); }

@@ -12,7 +12,7 @@ export default function ThemeLabPopover() {
       <section className="tl-section">
         <h2>Basic Popover</h2>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <button popoverTarget="pop1" style={{ padding: '0.5rem 1rem', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: '0.82rem' }}>
+          <button popovertarget="pop1" style={{ padding: '0.5rem 1rem', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: '0.82rem' }}>
             Toggle Popover
           </button>
           <div id="pop1" popover="auto" style={{
@@ -31,7 +31,7 @@ export default function ThemeLabPopover() {
           }}>
             <p style={{ margin: 0 }}>Tooltip-style popover. Light-dismiss on outside click or Escape.</p>
           </div>
-          <button popoverTarget="pop2" style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--line)', borderRadius: 8, cursor: 'pointer', color: 'var(--ink)', fontSize: '0.82rem' }}>
+          <button popovertarget="pop2" style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--line)', borderRadius: 8, cursor: 'pointer', color: 'var(--ink)', fontSize: '0.82rem' }}>
             Tooltip
           </button>
         </div>
@@ -49,7 +49,7 @@ export default function ThemeLabPopover() {
               left: anchor(left);
             }
           `}</style>
-          <button id="anchor-btn" popoverTarget="anchor-pop" style={{
+          <button id="anchor-btn" popovertarget="anchor-pop" style={{
             padding: '0.5rem 1.5rem', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: '0.9rem',
           }}>
             Anchored Popover

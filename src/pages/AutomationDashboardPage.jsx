@@ -109,7 +109,7 @@ export default function AutomationDashboardPage() {
           <button className="ad-btn ad-btn-run" onClick={() => runNowMutation.mutate()} disabled={isBusy || !loopRunning}>
             {runNowMutation.isPending ? '⏳' : '⚡'} Run Now
           </button>
-          <a href="/builder/architecture-framework" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '4px 10px', border: '1px solid var(--line)', borderRadius: 4, alignSelf: 'center' }}>⬡ Architecture</a>
+          <a href="/builder/architecture-framework" className="ad-arch-link">⬡ Architecture</a>
         </div>
       </motion.header>
 
@@ -315,7 +315,7 @@ export default function AutomationDashboardPage() {
 
           {/* Timeline */}
           <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
-            <h2 className="ad-panel-title">⏱ Timeline {timelineEvents.length > 0 && <span style={{ fontSize: '0.7rem', color: 'var(--ink-soft)', fontWeight: 400 }}>({timelineEvents.length} events)</span>}</h2>
+            <h2 className="ad-panel-title">⏱ Timeline {timelineEvents.length > 0 && <span className="ad-count-badge">({timelineEvents.length} events)</span>}</h2>
             {timelineQuery.isLoading && <LoadingSkeleton variant="text" lines={4} />}
             {timelineQuery.isError && (
               <EmptyState icon="⏱️" title="Timeline unavailable" description="Backend may be starting up." />
@@ -328,10 +328,10 @@ export default function AutomationDashboardPage() {
                 {timelineEvents.slice(0, 8).map((ev) => (
                   <div key={ev.id} className={`ad-timeline-item ${ev.action === 'block' || ev.action === 'reduce' ? 'ad-timeline-danger' : ev.action === 'boost' ? 'ad-timeline-boost' : ''}`}>
                     <span className="ad-timeline-dot" style={{ background: ev.color || 'var(--accent)' }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="ad-timeline-body">
                       <div className="ad-timeline-label">
-                        {ev.icon && <span style={{ marginRight: 4 }}>{ev.icon}</span>}
-                        <strong style={{ fontSize: '0.8rem' }}>{ev.label}</strong>
+                        {ev.icon && <span className="ad-timeline-icon">{ev.icon}</span>}
+                        <strong>{ev.label}</strong>
                         {ev.riskMultiplier && ev.riskMultiplier !== 1 && (
                           <span className={`ad-risk-badge ${ev.riskMultiplier < 1 ? 'ad-risk-down' : 'ad-risk-up'}`}>
                             {ev.riskMultiplier < 1 ? '↓' : '↑'}{Math.abs(1 - ev.riskMultiplier) * 100}%
@@ -339,10 +339,10 @@ export default function AutomationDashboardPage() {
                         )}
                       </div>
                       {ev.description && (
-                        <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--ink-soft)' }}>{ev.description}</p>
+                        <p className="ad-timeline-desc">{ev.description}</p>
                       )}
                     </div>
-                    <span className="ad-timeline-time" style={{ fontSize: '0.65rem', color: 'var(--ink-soft)', whiteSpace: 'nowrap' }}>
+                    <span className="ad-timeline-time">
                       {new Date(ev.startsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
@@ -388,7 +388,7 @@ export default function AutomationDashboardPage() {
 
           {/* Decision Log */}
           <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-            <h2 className="ad-panel-title">📋 Decision Log {recentDecisions.length > 0 && <span style={{ fontSize: '0.7rem', color: 'var(--ink-soft)', fontWeight: 400 }}>({recentDecisions.length})</span>}</h2>
+            <h2 className="ad-panel-title">📋 Decision Log {recentDecisions.length > 0 && <span className="ad-count-badge">({recentDecisions.length})</span>}</h2>
             {recentDecisions.length === 0 ? (
               <EmptyState icon="📋" title="No decisions yet" description="Start the loop and click Run Now to trigger a tick." />
             ) : (

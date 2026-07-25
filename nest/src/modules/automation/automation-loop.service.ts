@@ -339,6 +339,13 @@ export class AutomationLoopService implements OnModuleInit {
           brokerComment: `TCS ${strategyName} | ${composite}%`,
         } as any);
       } catch {}
+      // ── Trade-point portfolio snapshot (#477) ──
+      // Captures the full portfolio picture at the moment of trade
+      // for later "why was this trade placed?" analysis.
+      try {
+        const allPos = await this.fetchAllPositions();
+        this.capturePortfolioSnapshot(allPos, this.state.tickCount, 'trade');
+      } catch { /* non-critical */ }
     }
     decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: result.success?'EXECUTED':'FAILED', reason: result.success?`Ticket ${result.ticket}`:(result.error||'Unknown'), composite, signal: side, ticket: result.ticket, price: result.price, quantity: baseSize });
   }
@@ -1085,10 +1092,11 @@ export class AutomationLoopService implements OnModuleInit {
     this.persistDecisions(decisions, this.state.tickCount);
     this.persistDecisionTrail(trailRecords);
 
-    // ── Portfolio Snapshot (per tick) ───────────────────
-    // Captures equity, P&L, and position count at each decision point.
-    // Enables drawdown analysis and equity curve tracking over time.
-    this.capturePortfolioSnapshot(allPositions, this.state.tickCount);
+    // ── Portfolio Snapshot (at trade execution) ─────────
+    // Captured at the point of trade, not every tick — shows
+    // the full portfolio picture at the moment of decision.
+    // Enables "why was this trade placed?" analysis: what
+    // positions were held, what was the P&L and exposure? (#477)
 
     // Flush audit event buffer (best-effort, noiseless on failure)
     this.auditLog.flush().catch(() => {});
@@ -1664,18 +1672,35 @@ export class AutomationLoopService implements OnModuleInit {
   }
 
   /**
-   * Capture a portfolio snapshot after each tick.
+   * Fetch all positions across all configured brokers.
+   * Used for trade-point portfolio snapshots (#477).
+   */
+  private async fetchAllPositions(): Promise<any[]> {
+    const positions: any[] = [];
+    for (const bs of Object.values(this.state.brokerStates)) {
+      try {
+        const adapter = this.adapterFactory.create(bs.brokerId);
+        if (adapter?.getPositions) {
+          const result = await adapter.getPositions();
+          if (Array.isArray(result)) positions.push(...result);
+        }
+      } catch { /* broker may be offline */ }
+    }
+    return positions;
+  }
+
+  /**
+   * Capture a portfolio snapshot at trade execution points.
    * Writes total equity, P&L, and position count to portfolio_snapshot.
    * Fire-and-forget — failures are silent (non-critical).
    */
-  private capturePortfolioSnapshot(positions: any[], tickNumber: number) {
+  private capturePortfolioSnapshot(positions: any[], tickNumber: number, type: string = 'session') {
     if (!this.prisma.isAvailable) return;
     try {
       const totalValue = positions.reduce((s: number, p: any) => s + (p.marketValue || p.value || 0), 0);
       const totalCost = positions.reduce((s: number, p: any) => s + (p.costBasis || (p.avgCost || 0) * (p.quantity || 0)), 0);
       const totalPnl = positions.reduce((s: number, p: any) => s + (p.unrealizedPnl || p.pnl || 0), 0);
 
-      // Summarize by provider
       const providerMap = new Map<string, { value: number; count: number }>();
       for (const p of positions) {
         const provider = p.brokerId || p.provider || 'unknown';
@@ -1691,7 +1716,7 @@ export class AutomationLoopService implements OnModuleInit {
 
       this.prisma.portfolioSnapshot.create({
         data: {
-          snapshotType: 'session',
+          snapshotType: type,
           totalValue: totalValue || 0,
           totalCost: totalCost || 0,
           totalPnl: totalPnl || 0,
@@ -1700,9 +1725,7 @@ export class AutomationLoopService implements OnModuleInit {
           providerSummary: providerSummary as any,
         },
       }).catch(() => {});
-    } catch {
-      // Non-critical — don't block the tick loop
-    }
+    } catch { /* non-critical */ }
   }
 
   emergencyStop(): { stopped: boolean; message: string } {

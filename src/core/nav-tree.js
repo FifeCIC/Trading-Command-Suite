@@ -13,7 +13,6 @@
  *   - watchlists → Watchlists (active symbols, user lists)
  *   - automation → Automation (execution queue, rules, alerts)
  *   - planner    → Planner (finances, trading styles, objectives)
- *   - builder    → Development (architecture, diagrams, assets, lab tools)
  *   - training   → Training (candle patterns, order testing, MT5 demo)
  *   - status     → Status (system health, platform, risk, security)
  *   - lab        → Lab (sandbox, theme lab, motion lab, component lab)
@@ -93,16 +92,6 @@ export const NAV_TREE = {
       { id: 'alert-center', label: 'Alert Center', icon: '◈' },
     ],
   },
-  research: {
-    label: 'Development',
-    views: [
-      { id: 'architecture-framework', label: 'Architecture', icon: '⬡' },
-      { id: 'diagrams', label: 'Diagrams', icon: '▦' },
-      { id: 'meta-stack-explorer', label: 'META.Stack Explorer', icon: '🔬' },
-      { id: 'file-inventory', label: 'File Inventory', icon: '📁' },
-      // ── Lab (remaining) ──
-    ],
-  },
   training: {
     label: 'Training',
     views: [
@@ -124,6 +113,9 @@ export const NAV_TREE = {
       { id: 'platform-api-management', label: 'API Management', icon: '⚙' },
       { id: 'platform-comparisons', label: 'API Comparisons', icon: '▤' },
       { id: 'platform-api-efficiency', label: 'API Efficiency', icon: '◈' },
+      // ── System Maps ──
+      { id: 'architecture-framework', label: 'Architecture', icon: '⬡' },
+      { id: 'file-inventory', label: 'File Inventory', icon: '📁' },
       // ── Security ──
       { id: 'security', label: 'Security', icon: '⚙' },
       { id: 'analytics', label: 'Analytics', icon: '▦' },
@@ -138,6 +130,8 @@ export const NAV_TREE = {
     views: [
       { id: 'lab', label: 'Lab Sandbox', icon: '🔬' },
       { id: 'lab-landing', label: 'Lab Overview', icon: '🔬' },
+      { id: 'meta-stack-explorer', label: 'META.Stack Explorer', icon: '🔬' },
+      { id: 'diagrams', label: 'Diagrams', icon: '▦' },
       { id: 'pipeline-graph-lab', label: 'Pipeline Graph (Prototype)', icon: '🗺️' },
       { id: 'feature-lab', label: 'Feature Lab', icon: '🔬' },
       { id: 'theme-lab', label: 'Theme Lab', icon: '🎨' },

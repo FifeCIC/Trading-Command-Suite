@@ -198,11 +198,11 @@ export default function CandlePatternsGuidePage() {
   const toggle = (id) => setExpanded(expanded === id ? null : id);
 
   return (
-    <div className="pf-page" style={{ maxWidth: '1100px' }}>
+    <div className="pf-page cpg-page">
       <div className="pf-header">
         <div>
           <h1>🕯️ Candle Patterns Guide</h1>
-          <p style={{ color: 'var(--ink-soft)', margin: '0.25rem 0 0', fontSize: '0.88rem' }}>
+          <p className="cpg-subtitle">
             Comprehensive educational reference for {PATTERNS.length} candlestick patterns with detailed charts,
             market psychology breakdowns, and trading scenarios.
             See <strong>Pattern Detection</strong> for live scanning against real market data.
@@ -211,7 +211,7 @@ export default function CandlePatternsGuidePage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="pf-summary" style={{ marginBottom: '1rem' }}>
+      <div className="pf-summary cpg-summary">
         <div className="pf-sum-card">
           <div className="pf-sum-val">{PATTERNS.length}</div>
           <div>Patterns</div>
@@ -231,8 +231,8 @@ export default function CandlePatternsGuidePage() {
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: '2px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', padding: '2px' }}>
+      <div className="cpg-toolbar">
+        <div className="cpg-mode-switch">
           {CATEGORIES.map(c => (
             <button key={c.key} onClick={() => setCategoryFilter(c.key)}
               style={{
@@ -260,7 +260,7 @@ export default function CandlePatternsGuidePage() {
             padding: '0.3rem 0.7rem', borderRadius: '6px', border: '1px solid #334155',
             background: '#1e293b', color: '#e2e8f0', fontSize: '0.76rem', width: '180px'
           }} />
-        <span style={{ fontSize: '0.72rem', color: '#64748b', marginLeft: 'auto' }}>
+        <span className="cpg-count">
           Showing {filtered.length} of {PATTERNS.length}
         </span>
       </div>

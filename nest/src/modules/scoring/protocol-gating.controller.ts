@@ -99,15 +99,23 @@ export class ProtocolGatingController {
         include: { directives: { where: { active: true }, select: { id: true, weight: true } } },
       });
       for (const s of dbStrategies) {
-        protocols.push({
-          id: s.id,
-          name: s.name,
-          description: s.description ?? '',
-          source: 'database',
-          directiveCount: s.directives.length,
-          maxScore: s.directives.reduce((sum, d) => sum + (d.weight * 100), 0),
-          active: s.active,
-        });
+        // Merge into existing code-registry entry if same id, otherwise add new
+        const existing = protocols.find(p => p.id === s.id);
+        if (existing) {
+          // Database row overrides active status; keep richer code metadata
+          existing.active = s.active;
+          existing.source = 'database';  // mark as DB-backed
+        } else {
+          protocols.push({
+            id: s.id,
+            name: s.name,
+            description: s.description ?? '',
+            source: 'database',
+            directiveCount: s.directives.length,
+            maxScore: s.directives.reduce((sum, d) => sum + (d.weight * 100), 0),
+            active: s.active,
+          });
+        }
       }
     } catch {
       // DB might not be available — skip
