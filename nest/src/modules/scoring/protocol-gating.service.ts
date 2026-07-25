@@ -149,6 +149,26 @@ function protocolNeedsEurUsd(groups: DirectiveGroup[]): boolean {
 /**
  * Scoring thresholds — determine BUY/HOLD/SELL from composite score.
  *
+ * ⚠️ THREE-LAYER THRESHOLD ARCHITECTURE:
+ *
+ * Layer 1 (HERE — global signal classification):
+ *   ENTRY_THRESHOLD (40): composites ≥ 40 are actionable (BUY or SELL).
+ *   HOLD_FLOOR (20): composites 20–39 are HOLD. Below 20 is SELL.
+ *   These only classify the SIGNAL LABEL. They do NOT control execution.
+ *
+ * Layer 2 (automation-loop.service.ts — per-protocol style defaults):
+ *   STYLE_THRESHOLDS: scalp=75, speed=80, day=65, swing=55, position=45.
+ *   Selected by protocol.tradingStyle via getStyleThreshold().
+ *   Used as the default when a strategy has no explicit tradeThreshold.
+ *
+ * Layer 3 (scoring_strategy table — per-strategy execution):
+ *   tradeThreshold / minComposite: each strategy's own execution bar.
+ *   Stored in the DB. Overrides Layer 2. This is what actually gates
+ *   trade dispatch in compareProtocolPair() → dispatchTrade().
+ *
+ * RESULT: A composite of 45 could be "BUY" (Layer 1) but might not
+ * trigger a trade if the strategy's threshold is 55 (Layer 3).
+ *
  * These thresholds are the single most impactful constants in the trading
  * pipeline. A wrong value here means every strategy produces wrong signals.
  *

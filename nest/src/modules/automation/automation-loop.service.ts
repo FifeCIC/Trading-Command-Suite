@@ -38,7 +38,22 @@ import { BarRefreshService } from '../market-data/bar-refresh.service';
 import { AuditLogService } from './audit-log.service';
 import { ProtocolDbService } from '../scoring/protocol-db.service';
 
-// ── Protocol-aware thresholds by trading style ──
+/**
+ * Layer 2 of the 3-layer threshold architecture.
+ *
+ * Layer 1 (protocol-gating.service.ts): ENTRY_THRESHOLD=40 / HOLD_FLOOR=20
+ *   — global signal label classification (BUY/HOLD/SELL).
+ *
+ * Layer 2 (HERE): per-protocol style defaults.
+ *   — selected by protocol.tradingStyle. Used as fallback when a strategy
+ *     has no explicit tradeThreshold/minComposite set.
+ *   — faster styles (scalp/speed) have higher bars (75-80) to reduce noise.
+ *   — slower styles (swing/position) have lower bars (45-55) to capture trends.
+ *
+ * Layer 3 (scoring_strategy table): per-strategy tradeThreshold / minComposite.
+ *   — each strategy's own execution bar. Overrides Layer 2.
+ *   — this is what compareProtocolPair() checks before dispatching.
+ */
 const STYLE_THRESHOLDS: Record<string, number> = {
   scalp: 75,
   'day-trade': 65,
@@ -248,9 +263,24 @@ export class AutomationLoopService implements OnModuleInit {
   }
 
   /**
-   * Shared trade dispatch — called by evaluateStrategy (step 4).
-   * Encapsulates cooldown, duplicate guard, and order placement.
+   * Shared trade dispatch — STEP 5 of 5 in the tick lifecycle.
+   *
+   * PIPELINE POSITION:
+   *   Step 1: Timeline risk check → global risk multiplier
+   *   Step 2: Fetch positions + load active strategies
+   *   Step 3: Score symbols via SEES (rankAll / protocol-gating)
+   *   Step 4: evaluateStrategy() → compareProtocolPair() → decides BUY/SELL/HOLD
+   *   Step 5 (HERE): dispatchTrade() — gates + execution
+   *
+   * SAFETY GATES (in order — each must pass before the next is checked):
+   *   1. Symbol cooldown (60s): prevents re-trading the same symbol too fast
+   *   2. Global cooldown (3s): prevents burst trading across all symbols
+   *   3. Duplicate guard: blocks if a position already exists for this symbol
+   *   4. Diversification check: blocks if portfolio is over-concentrated
+   *   5. Mode dispatch: manual=log only, semi-auto=queue, auto=execute
+   *
    * Phase B.2: extracted from step 3b so scoring never trades directly.
+   * Portfolio snapshot (#477) captured on successful execution.
    */
   private async dispatchTrade(params: {
     strategyId: string;

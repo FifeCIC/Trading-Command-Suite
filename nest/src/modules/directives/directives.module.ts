@@ -628,7 +628,7 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.dilutionImpact);
     this.directivesService.register(this.rolloverRisk);
 
-    // ── Load DB active-status cache for runtime stubbing (#288) ──
-    await this.directivesService.refreshActiveStatuses();
+    // ── Load DB metadata onto in-memory registry (Epic #510 Phase 2) ──
+    await this.directivesService.loadDirectiveMetadata();
   }
 }

@@ -1,4 +1,6 @@
 ﻿import { useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '../core/api/client';
 import mermaid from 'mermaid';
 
 mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
@@ -1432,6 +1434,11 @@ export default function DiagramsPage() {
 
   const diagram = DIAGRAMS.find((d) => d.id === active) || DIAGRAMS[0];
 
+  // Live data queries for dynamic diagram verification (#493)
+  const autoQ = useQuery({ queryKey: ['diagram-auto'], queryFn: () => apiGet('/api/automation/status').catch(() => null), refetchInterval: 30000 });
+  const protoQ = useQuery({ queryKey: ['diagram-proto'], queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => null), refetchInterval: 60000 });
+  const live = { loop: autoQ.data?.loopEnabled, tick: autoQ.data?.tickCount, strats: autoQ.data?.activeStrategies?.length ?? 0, protos: protoQ.data?.count ?? protoQ.data?.protocols?.length ?? 0 };
+
   useEffect(() => {
     if (!containerRef.current) return;
     const id = `mermaid-${diagram.id}`;
@@ -1480,6 +1487,16 @@ export default function DiagramsPage() {
           </button>
         ))}
       </div>
+
+      {(active === 'sees-trading' || active === 'sees-automation') && live.loop !== undefined && (
+        <div style={{ display:'flex',gap:'1rem',flexWrap:'wrap',alignItems:'center',padding:'0.35rem 0.9rem',marginBottom:'0.5rem',background:'var(--panel)',border:'1px solid var(--line)',borderRadius:'8px',fontSize:'0.7rem' }}>
+          <span style={{ fontWeight:600,color:'var(--accent)' }}>Live System</span>
+          <span>Loop: <strong style={{ color:live.loop?'#22c55e':'#ef4444' }}>{live.loop?'ON':'OFF'}</strong></span>
+          <span>Tick: <strong>{live.tick ?? '...'}</strong></span>
+          <span>Strategies: <strong>{live.strats}</strong></span>
+          <span>Protocols: <strong>{live.protos}</strong></span>
+        </div>
+      )}
 
       {/* â”€â”€ Diagram Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div

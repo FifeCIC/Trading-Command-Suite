@@ -96,22 +96,16 @@
 
 /* Stage header */
 .mse-stage-head { display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.4rem; }
-.mse-stage-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
 .mse-stage-title-group { flex: 1; min-width: 0; }
-
-/* Action link (go to page) */
-.mse-stage-link {
-  font-size: 0.7rem; white-space: nowrap; color: var(--accent); text-decoration: none;
-  padding: 0.15rem 0.45rem; border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-  border-radius: 5px; transition: background 0.15s, border-color 0.15s; flex-shrink: 0; margin-top: 1px;
-}
-.mse-stage-link:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); border-color: var(--accent); }
 .mse-stage-title { margin: 0; font-size: 0.95rem; }
-.mse-stage-fn {
-  display: inline-block; margin-top: 2px; font-size: 0.7rem; font-family: 'Fira Code','Cascadia Code',monospace;
-  color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent);
-  padding: 1px 6px; border-radius: 3px;
+
+/* Info button — same size/style as confirm badge */
+.mse-info-btn {
+  flex-shrink: 0; padding: 0.25rem 0.6rem; border: 1px solid var(--line); border-radius: 6px;
+  background: transparent; color: var(--ink-soft); font-size: 0.7rem; cursor: pointer;
+  font-family: inherit; white-space: nowrap; transition: all 0.2s;
 }
+.mse-info-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 /* Confirmation badge */
 .mse-confirm-badge {
@@ -129,41 +123,44 @@
 .mse-stage-desc { margin: 0 0 0.5rem; font-size: 0.8rem; color: var(--ink-soft); line-height: 1.45; }
 
 /* Check-list items (for prerequisite stages) */
-.mse-check-list { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.mse-check-list { display: flex; flex-direction: column; gap: 4px; flex: 1; }
 .mse-check-item {
-  display: flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.4rem;
-  border-radius: 4px; font-size: 0.78rem;
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.5rem;
+  border-radius: 5px; font-size: 0.82rem;
 }
 .mse-check-pass { background: rgba(34,197,94,0.06); }
 .mse-check-fail { background: rgba(239,68,68,0.06); }
 .mse-check-pending { background: transparent; }
-.mse-check-icon { font-weight: 700; font-size: 0.75rem; min-width: 16px; text-align: center; }
+.mse-check-icon { font-weight: 700; font-size: 0.8rem; min-width: 18px; text-align: center; }
 .mse-check-pass .mse-check-icon { color: #22c55e; }
 .mse-check-fail .mse-check-icon { color: #ef4444; }
 .mse-check-pending .mse-check-icon { color: var(--ink-soft); }
 .mse-check-label { font-weight: 600; }
-.mse-check-detail { font-size: 0.7rem; color: var(--ink-soft); margin-left: auto; }
+.mse-check-detail { font-size: 0.73rem; color: var(--ink-soft); margin-left: auto; }
+/* Per-check link */
+.mse-check-link {
+  font-size: 0.68rem; color: var(--accent); text-decoration: none; white-space: nowrap;
+  padding: 0.1rem 0.4rem; border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: 4px; transition: background 0.15s; flex-shrink: 0;
+}
+.mse-check-link:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+/* Stage-level action link (below checks) */
+.mse-stage-action-link {
+  display: inline-block; align-self: flex-start; font-size: 0.7rem; color: var(--accent);
+  text-decoration: none; padding: 0.15rem 0.5rem; border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 5px; transition: background 0.15s; margin-top: 2px;
+}
+.mse-stage-action-link:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .mse-stage-live { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.5rem; }
 .mse-live-label { font-size: 0.68rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: -0.05rem; }
 .mse-live-val { font-size: 0.82rem; font-weight: 600; color: var(--ink); }
 .mse-live-dim { color: var(--ink-soft); }
 
-/* Strategy picker dropdown */
-.mse-strategy-picker { margin-bottom: 0.5rem; }
-.mse-strategy-detail { margin-top: 0.4rem; font-size: 0.75rem; color: var(--ink-soft); padding: 0.3rem 0.5rem; background: color-mix(in srgb, var(--accent) 6%, transparent); border-radius: 4px; }
-.mse-info-btn {
-  margin-left: auto; width: 22px; height: 22px; border: 1px solid var(--line); border-radius: 50%;
-  background: transparent; color: var(--ink-soft); font-size: 0.7rem; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-}
-.mse-info-btn:hover { border-color: var(--accent); color: var(--accent); }
-
 /* Native popover */
 .mse-popover {
   padding: 1rem; background: var(--panel); border: 1px solid var(--accent); border-radius: 10px;
-  color: var(--ink); font-size: 0.78rem; max-width: 380px;
-  /* Anchor defaults: centered */
-  margin: 0; border: 1px solid var(--accent);
+  color: var(--ink); font-size: 0.78rem; max-width: 420px;
+  margin: 0;
 }
 .mse-popover-title { margin: 0 0 0.5rem; font-size: 0.85rem; }
 .mse-popover-body { display: flex; flex-direction: column; gap: 0.4rem; }

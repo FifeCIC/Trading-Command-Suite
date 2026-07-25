@@ -12,9 +12,6 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DirectiveGroup } from '../directives/directive-groups';
 
-// Keep PROTOCOL_REGISTRY as fallback during transition
-import { PROTOCOL_REGISTRY, DIRECTIVE_GROUPS } from '../directives/directive-groups';
-
 export interface ProtocolConfig {
   groups: DirectiveGroup[];
   name: string;
@@ -58,10 +55,8 @@ export class ProtocolDbService implements OnModuleInit {
 
     try {
       if (!this.prisma.isAvailable) {
-        // Fall back to hardcoded registry
-        const fallback = PROTOCOL_REGISTRY[slug];
-        this.cache.set(slug, fallback ?? null);
-        return fallback as ProtocolConfig | undefined;
+        this.cache.set(slug, null);
+        return undefined;
       }
 
       const protocol = await (this.prisma as any).protocol.findUnique({
@@ -77,11 +72,9 @@ export class ProtocolDbService implements OnModuleInit {
       });
 
       if (!protocol) {
-        // Not in DB — try hardcoded fallback
-        const fallback = PROTOCOL_REGISTRY[slug];
-        this.cache.set(slug, fallback ?? null);
-        if (!fallback) this.logger.warn(`Protocol "${slug}" not found in DB or hardcoded registry`);
-        return fallback as ProtocolConfig | undefined;
+        this.cache.set(slug, null);
+        this.logger.warn(`Protocol "${slug}" not found in DB`);
+        return undefined;
       }
 
       // Map DB shape → DirectiveGroup[] shape
@@ -125,10 +118,9 @@ export class ProtocolDbService implements OnModuleInit {
       this.cache.set(slug, config);
       return config;
     } catch (err) {
-      this.logger.warn(`Protocol DB lookup failed for "${slug}": ${(err as Error).message} — using hardcoded fallback`);
-      const fallback = PROTOCOL_REGISTRY[slug];
-      this.cache.set(slug, fallback ?? null);
-      return fallback as ProtocolConfig | undefined;
+      this.logger.warn(`Protocol DB lookup failed for "${slug}": ${(err as Error).message}`);
+      this.cache.set(slug, null);
+      return undefined;
     }
   }
 
@@ -137,11 +129,11 @@ export class ProtocolDbService implements OnModuleInit {
    */
   async getAllSlugs(): Promise<string[]> {
     try {
-      if (!this.prisma.isAvailable) return Object.keys(PROTOCOL_REGISTRY);
+      if (!this.prisma.isAvailable) return [];
       const protocols = await (this.prisma as any).protocol.findMany({ select: { slug: true } });
       return protocols.map((p: any) => p.slug);
     } catch {
-      return Object.keys(PROTOCOL_REGISTRY);
+      return [];
     }
   }
 
@@ -151,7 +143,7 @@ export class ProtocolDbService implements OnModuleInit {
    */
   async getAllProtocols(): Promise<Record<string, ProtocolConfig>> {
     try {
-      if (!this.prisma.isAvailable) return { ...PROTOCOL_REGISTRY };
+      if (!this.prisma.isAvailable) return {};
       const dbProtocols = await (this.prisma as any).protocol.findMany({
         include: {
           directiveGroups: {
@@ -160,7 +152,7 @@ export class ProtocolDbService implements OnModuleInit {
           },
         },
       });
-      if (!dbProtocols?.length) return { ...PROTOCOL_REGISTRY };
+      if (!dbProtocols?.length) return {};
 
       const result: Record<string, ProtocolConfig> = {};
       for (const p of dbProtocols) {
@@ -189,14 +181,10 @@ export class ProtocolDbService implements OnModuleInit {
           seasonalAffinity: p.seasonalAffinity ?? undefined,
         };
       }
-      // Merge in any hardcoded protocols not in DB
-      for (const [slug, cfg] of Object.entries(PROTOCOL_REGISTRY)) {
-        if (!result[slug]) result[slug] = cfg as ProtocolConfig;
-      }
       return result;
     } catch (err) {
-      this.logger.warn(`getAllProtocols failed: ${(err as Error).message} — using hardcoded`);
-      return { ...PROTOCOL_REGISTRY };
+      this.logger.warn(`getAllProtocols failed: ${(err as Error).message}`);
+      return {};
     }
   }
 
@@ -212,16 +200,38 @@ export class ProtocolDbService implements OnModuleInit {
     this.logger.log(`Preloaded ${Object.keys(this.preloadedCache).length} protocols into sync cache`);
   }
 
-  /** Sync lookup — returns from preloaded cache. Falls back to hardcoded. */
+  /** Sync lookup — returns from preloaded cache. */
   getCached(slug: string): ProtocolConfig | undefined {
     if (this.preloadedCache) return this.preloadedCache[slug];
-    return PROTOCOL_REGISTRY[slug] as ProtocolConfig | undefined;
+    return undefined;
   }
 
-  /** Sync access to all cached protocols. Falls back to hardcoded. */
+  /** Sync access to all cached protocols. */
   getAllCached(): Record<string, ProtocolConfig> {
     if (this.preloadedCache) return this.preloadedCache;
-    return { ...PROTOCOL_REGISTRY };
+    return {};
+  }
+
+  /**
+   * Verify protocols are seeded in DB (replaces hardcoded PROTOCOL_REGISTRY seed).
+   * Queries current DB counts — data was seeded via POST /api/scoring/gated/protocols/seed.
+   *
+   * Epic #510 Phase 4 — DB-Driven Architecture.
+   */
+  async seedProtocolsToDatabase(): Promise<{ seeded: number; groups: number; entries: number }> {
+    try {
+      if (!this.prisma.isAvailable) return { seeded: 0, groups: 0, entries: 0 };
+      const [pCount, gCount, eCount] = await Promise.all([
+        (this.prisma as any).protocol.count(),
+        (this.prisma as any).protocolDirectiveGroup.count(),
+        (this.prisma as any).protocolDirectiveEntry.count(),
+      ]);
+      this.logger.log(`DB protocol counts: ${pCount} protocols, ${gCount} groups, ${eCount} entries`);
+      return { seeded: pCount, groups: gCount, entries: eCount };
+    } catch (err) {
+      this.logger.warn(`Failed to count protocols: ${(err as Error).message}`);
+      return { seeded: 0, groups: 0, entries: 0 };
+    }
   }
 
   /** Check if any protocol needs EURUSD data for its directives. */
@@ -239,7 +249,7 @@ export class ProtocolDbService implements OnModuleInit {
   }
 
   /**
-   * Convenience: get protocol name for display. Falls back to hardcoded name.
+   * Convenience: get protocol name for display.
    */
   async getName(slug: string): Promise<string> {
     const config = await this.findBySlug(slug);

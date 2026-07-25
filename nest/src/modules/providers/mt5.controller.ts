@@ -225,11 +225,13 @@ export class Mt5Controller {
    * success. The try/catch around the DB write ensures a recording failure
    * never blocks the actual order.
    *
-   * Prefer POST /api/trading/mt5/order which goes through Mt5TradingService
-   * for full validation + recording, but this endpoint is now safe to use.
+   * @deprecated Use POST /api/trading/mt5/order instead (Mt5TradingService with full validation + recording).
+   * This endpoint is kept for backward compatibility but no active code paths call it.
+   * Will be removed in Phase 3 cleanup (Epic #510 DB-Driven Architecture).
    */
   @Post('order')
   async placeOrder(@Body() body: { symbol: string; type: string; volume: number; price?: number; sl?: number; tp?: number; comment?: string }) {
+    this.logger.warn(`DEPRECATED — POST /api/providers/mt5/order called for ${body.symbol}. Redirect to POST /api/trading/mt5/order.`);
     try {
       const res = await fetch(`${this.BRIDGE_URL}/order`, {
         method: 'POST',
@@ -254,14 +256,18 @@ export class Mt5Controller {
           });
         } catch { /* non-critical */ }
       }
-      return data;
+      return { ...data, _deprecated: true, _migrateTo: 'POST /api/trading/mt5/order' };
     } catch (err: any) {
-      return { success: false, error: err.message || 'Bridge unreachable' };
+      return { success: false, error: err.message || 'Bridge unreachable', _deprecated: true };
     }
   }
 
+  /**
+   * @deprecated Use DELETE /api/trading/mt5/close/:ticket instead.
+   */
   @Post('close/:ticket')
   async closePosition(@Param('ticket') ticket: string) {
+    this.logger.warn(`DEPRECATED — POST /api/providers/mt5/close/${ticket} called. Redirect to DELETE /api/trading/mt5/close/${ticket}.`);
     try {
       const res = await fetch(`${this.BRIDGE_URL}/close/${ticket}`, {
         method: 'POST',
@@ -281,9 +287,9 @@ export class Mt5Controller {
           }
         } catch { /* non-critical */ }
       }
-      return data;
+      return { ...data, _deprecated: true, _migrateTo: `DELETE /api/trading/mt5/close/${ticket}` };
     } catch (err: any) {
-      return { success: false, error: err.message || 'Bridge unreachable' };
+      return { success: false, error: err.message || 'Bridge unreachable', _deprecated: true };
     }
   }
 

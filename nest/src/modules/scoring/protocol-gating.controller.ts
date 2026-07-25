@@ -43,6 +43,7 @@ export class ProtocolGatingController {
       }>;
       tradingStyle?: string;
       recommendedTimeframe?: string;
+      directionMode?: string;
       avgHoldTime?: string;
       winRateTarget?: string;
       idealFor?: string;
@@ -86,6 +87,7 @@ export class ProtocolGatingController {
         groups,
         tradingStyle: (proto as any).tradingStyle,
         recommendedTimeframe: (proto as any).recommendedTimeframe,
+        directionMode: (proto as any).directionMode || 'LONG_ONLY',
         avgHoldTime: (proto as any).avgHoldTime,
         winRateTarget: (proto as any).winRateTarget,
         idealFor: (proto as any).idealFor,
@@ -99,12 +101,24 @@ export class ProtocolGatingController {
         include: { directives: { where: { active: true }, select: { id: true, weight: true } } },
       });
       for (const s of dbStrategies) {
-        // Merge into existing code-registry entry if same id, otherwise add new
+        /**
+         * IMPORTANT: Merge, don't push. The same protocol appears in both the
+         * code registry (via ProtocolDbService.getAllCached()) and the DB
+         * (strategy table). Before this fix, DB entries were pushed as
+         * duplicates, causing duplicate React keys and double-counted
+         * protocols in the frontend (ProtocolsPage, CreateStrategyPage).
+         *
+         * Merge strategy: if the DB row has the same id as a code-registry
+         * entry, overlay `active` and mark `source: 'database'`. Otherwise,
+         * it's a truly new DB-only strategy — push normally.
+         *
+         * See 2026-07-25-console-warnings-fixed.md handoff for full context.
+         */
         const existing = protocols.find(p => p.id === s.id);
         if (existing) {
-          // Database row overrides active status; keep richer code metadata
+          // DB row overrides active status; keep richer code metadata
           existing.active = s.active;
-          existing.source = 'database';  // mark as DB-backed
+          existing.source = 'database';
         } else {
           protocols.push({
             id: s.id,
@@ -241,6 +255,16 @@ export class ProtocolGatingController {
     );
 
     return this.protocolGating.scorePortfolio(holdings);
+  }
+
+  /**
+   * POST /api/scoring/gated/protocols/seed
+   * Seed all hardcoded protocols into the DB. Idempotent.
+   * Epic #510 Phase 3 — DB-Driven Architecture.
+   */
+  @Post('protocols/seed')
+  async seedProtocols() {
+    return this.protocolDb.seedProtocolsToDatabase();
   }
 
   /**

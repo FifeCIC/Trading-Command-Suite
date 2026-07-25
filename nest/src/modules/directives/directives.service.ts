@@ -67,6 +67,56 @@ export class DirectivesService {
     return Array.from(this.registry.entries()).map(([id, d]) => ({ id, name: d.name }));
   }
 
+  /**
+   * Seed all in-memory directives into the database.
+   * Idempotent — uses upsert so it's safe to call multiple times.
+   * Directives with isDefault=true are originals — protected from overwrite by user forks.
+   *
+   * Epic #510 Phase 1 — DB-Driven Architecture.
+   */
+  async seedToDatabase(): Promise<{ seeded: number; skipped: number }> {
+    let seeded = 0;
+    let skipped = 0;
+    for (const [id, directive] of this.registry) {
+      try {
+        await (this.prisma as any).directive.upsert({
+          where: { id },
+          create: {
+            id,
+            name: directive.name,
+            type: (directive as any).category || 'technical',
+            weight: directive.maxScore || 100,
+            config: {
+              description: directive.description,
+              directionBias: directive.directionBias || 'neutral',
+              version: (directive as any).version || '1.0.0',
+            },
+            active: true,
+            nature: directive.directionBias || 'neutral',
+            isDefault: true,
+          },
+          update: {
+            // Only update non-user-customised fields
+            name: directive.name,
+            type: (directive as any).category || 'technical',
+            weight: directive.maxScore || 100,
+            config: {
+              description: directive.description,
+              directionBias: directive.directionBias || 'neutral',
+              version: (directive as any).version || '1.0.0',
+            },
+          },
+        });
+        seeded++;
+      } catch (err) {
+        this.logger.warn(`Failed to seed directive ${id}: ${(err as Error).message}`);
+        skipped++;
+      }
+    }
+    this.logger.log(`Seeded ${seeded} directives to DB (${skipped} skipped)`);
+    return { seeded, skipped };
+  }
+
   /** Run a single directive by ID — used by per-directive backtest coverage (#106). */
   async runSingle(id: string, input: any): Promise<DirectiveResult | null> {
     const directive = this.registry.get(id);
@@ -597,9 +647,78 @@ export class DirectivesService {
   }
 
   /**
+   * Load directive metadata from DB and overlay onto the in-memory registry.
+   * Called once at module init — DB is the source of truth for active status,
+   * weight overrides, and config. Algorithm code (calculate()) stays in TypeScript.
+   *
+   * WHY OVERLAY INSTEAD OF REPLACE: The 102 this.register() calls in
+   * directives.module.ts load directive CLASS INSTANCES into the registry Map.
+   * Each instance carries its calculate() method — the actual algorithm code.
+   * We cannot replace these instances with DB records because DB rows are data,
+   * not executable code (and never will be — see Epic #510 non-goals).
+   *
+   * Instead, we overlay metadata: DB values for active, weight, and config
+   * are patched onto the existing class instances. The calculate() method
+   * and core logic remain untouched. This gives users DB-level control over
+   * which directives run and at what weight, without putting code in the DB.
+   *
+   * PATTERN: DB is a property-overlay, not a replacement. Class instances
+   * provide the algorithm; DB provides the configuration.
+   *
+   * Epic #510 Phase 2 — DB-Driven Architecture.
+   */
+  async loadDirectiveMetadata(): Promise<void> {
+    if (!this.prisma.isAvailable) return;
+    try {
+      const dbDirectives = await this.prisma.directive.findMany({
+        select: { id: true, active: true, weight: true, config: true, nature: true },
+      });
+
+      // Refresh active-status cache (used by runAll to skip inactive directives)
+      this.dbActiveStatuses.clear();
+      let overridden = 0;
+      let inactive = 0;
+
+      for (const db of dbDirectives) {
+        this.dbActiveStatuses.set(db.id, db.active);
+
+        // Overlay DB metadata onto in-memory directive instances
+        const directive = this.registry.get(db.id);
+        if (!directive) continue;
+
+        if (!db.active) {
+          inactive++;
+        }
+
+        // Override maxScore from DB weight (if different from class default)
+        if (db.weight && (directive as any).maxScore !== db.weight) {
+          (directive as any).maxScore = db.weight;
+          overridden++;
+        }
+
+        // Merge DB config overrides
+        if (db.config && typeof db.config === 'object') {
+          const dbConfig = db.config as Record<string, any>;
+          if (dbConfig.description && (directive as any).description !== dbConfig.description) {
+            (directive as any).description = dbConfig.description;
+          }
+          if (dbConfig.directionBias && directive.directionBias !== dbConfig.directionBias) {
+            (directive as any).directionBias = dbConfig.directionBias;
+          }
+        }
+      }
+
+      this.logger.log(
+        `Directive metadata loaded from DB: ${dbDirectives.length} directives, ${overridden} weight overrides, ${inactive} inactive`,
+      );
+    } catch (err) {
+      this.logger.warn(`Failed to load directive metadata from DB: ${(err as Error).message}`);
+    }
+  }
+
+  /**
    * Refresh the in-memory active-status cache from the DB.
-   * Called once at module init — directive stubbing is a manual operation,
-   * so real-time sync is unnecessary. The cache avoids a DB query on every tick.
+   * @deprecated Use loadDirectiveMetadata() instead (Epic #510 Phase 2).
    */
   async refreshActiveStatuses(): Promise<void> {
     if (!this.prisma.isAvailable) return;

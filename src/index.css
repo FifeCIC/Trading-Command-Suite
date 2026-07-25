@@ -1145,6 +1145,10 @@ button.nav-active {
 
 .right-rail {
   grid-area: right;
+  position: sticky;
+  top: 1rem;
+  height: calc(100vh - 2rem);
+  overflow-y: auto;
 }
 
 .left-rail h2,

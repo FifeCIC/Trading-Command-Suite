@@ -1,6 +1,0 @@
-.uplot-chart-container {
-  width: 100%;
-  min-height: 200px;
-  position: relative;
-}
-.uplot-chart-container .uplot { width: 100% !important; }

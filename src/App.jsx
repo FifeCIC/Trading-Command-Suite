@@ -1021,11 +1021,6 @@ function AppShell() {
           <span>© 2026 Ryan Bayne. All rights reserved.</span>
           <span className="footer-bottom-links">
             <button type="button" onClick={onDownloadRuntimeReport}>Export Report</button>
-            {devOverlayOpen ? (
-              <button type="button" onClick={toggleDevOverlay}>Hide Dev Overlay</button>
-            ) : (
-              <button type="button" onClick={toggleDevOverlay}>Dev Overlay</button>
-            )}
           </span>
         </div>
         {devOverlayOpen && (

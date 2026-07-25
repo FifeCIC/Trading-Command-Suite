@@ -1,1 +1,1 @@
-SELECT TABLE_NAME, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA='tradingcs' AND TABLE_NAME IN ('decision_trail','scoring_strategy','score_snapshot','strategy_evaluation','trade','trading_strategy');
+SELECT COUNT(*) as cnt FROM \protocol\; SELECT COUNT(*) as cnt FROM protocol_directive_group; SELECT COUNT(*) as cnt FROM protocol_directive_entry; SELECT COUNT(*) as cnt FROM \directive\;

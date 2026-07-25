@@ -1,16 +1,16 @@
 import { Controller, Get, Patch, Post, Delete, Param, Query, Body } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { DirectivesService } from './directives.service';
-// LAST REMAINING CONSUMER: PROTOCOL_REGISTRY used only for design-time category enrichment
-// in the directive listing UI. FALLBACK_CATEGORIES (below) provides full coverage for all
-// known directives. This import can be removed once ProtocolDbService is available in
-// DirectivesModule (requires resolving ScoringModule↔DirectivesModule import cycle).
-import { PROTOCOL_REGISTRY } from './directive-groups';
+import { PrismaService } from '../../database/prisma.service';
+import { DIRECTIVE_GROUPS, SHORT_DIRECTIVE_GROUPS, BTC_SPEED_GROUPS } from './directive-groups';
 
 @ApiTags('directives')
 @Controller('directives')
 export class DirectivesController {
-  constructor(private readonly directivesService: DirectivesService) {}
+  constructor(
+    private readonly directivesService: DirectivesService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List all registered directives with metadata' })
@@ -35,15 +35,11 @@ export class DirectivesController {
       }
     } catch { /* DB might not be available */ }
 
-    // Build a category map from all protocol groups
+    // Build directive→category map from canonical group definitions (Epic #510 Phase 4).
     const directiveCategory = new Map<string, string>();
-    for (const proto of Object.values(PROTOCOL_REGISTRY)) {
-      for (const group of proto.groups) {
-        for (const did of group.directiveIds) {
-          if (!directiveCategory.has(did)) {
-            directiveCategory.set(did, group.name);
-          }
-        }
+    for (const group of [...DIRECTIVE_GROUPS, ...SHORT_DIRECTIVE_GROUPS, ...BTC_SPEED_GROUPS]) {
+      for (const did of group.directiveIds) {
+        if (!directiveCategory.has(did)) directiveCategory.set(did, group.name);
       }
     }
 
@@ -121,19 +117,19 @@ export class DirectivesController {
       };
     }
 
-    // Compute protocolCount: how many protocols include each directive
+    // Compute protocolCount from DB (how many protocols include each directive).
+    // Falls back to 0 if DB unavailable — this is UI enrichment only.
     const protocolCounts = new Map<string, number>();
-    for (const proto of Object.values(PROTOCOL_REGISTRY)) {
-      const seen = new Set<string>();
-      for (const group of proto.groups) {
-        for (const did of group.directiveIds) {
-          if (!seen.has(did)) { seen.add(did); }
-        }
+    try {
+      const entries = await (this.prisma as any).protocolDirectiveEntry.findMany({
+        select: { directiveId: true },
+        distinct: ['directiveId'],
+      });
+      // Count occurrences of each directiveId
+      for (const e of entries) {
+        protocolCounts.set(e.directiveId, (protocolCounts.get(e.directiveId) ?? 0) + 1);
       }
-      for (const did of seen) {
-        protocolCounts.set(did, (protocolCounts.get(did) ?? 0) + 1);
-      }
-    }
+    } catch { /* DB unavailable — protocolCounts stays empty */ }
 
     // ── Merge stats from Score history ──
     // Short deadline — Score queries may be slow/locked. Return directives immediately
@@ -348,6 +344,12 @@ export class DirectivesController {
   async listForks() {
     const forks = await this.directivesService.getForks();
     return { forks };
+  }
+
+  @Post('seed')
+  @ApiOperation({ summary: 'Seed all in-memory directives into the database (Epic #510 Phase 1)' })
+  async seedToDatabase() {
+    return this.directivesService.seedToDatabase();
   }
 
   @Get('effective')

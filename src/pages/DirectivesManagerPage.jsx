@@ -229,16 +229,12 @@ export default function DirectivesManagerPage() {
                     >
                       <td>
                         <span className="directive-primary">
-                          <span>
-                            <a
-                              href={`/scoring/directives/${item.id}`}
-                              onClick={(e) => { e.preventDefault(); navigate(`/scoring/directives/${item.id}`); }}
-                              style={{ color: 'var(--accent)', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600 }}
-                            >
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                            <span style={{ color: 'var(--ink)', fontSize: '0.9rem', fontWeight: 600 }}>
                               {item.name}
-                            </a>
-                            <small style={{ color: '#60a5fa', fontFamily: 'monospace' }}>{item.code}</small>
-                          </span>
+                            </span>
+                            <small style={{ color: '#60a5fa', fontFamily: 'monospace', fontSize: '0.72rem' }}>{item.code}</small>
+                          </div>
                         </span>
                       </td>
                       <td>

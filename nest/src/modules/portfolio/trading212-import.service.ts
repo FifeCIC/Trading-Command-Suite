@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Trading212Adapter, T212OrderResult } from '../providers/adapters/trading212.adapter';
+import { ProviderCacheService } from '../providers/provider-cache.service';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
 import { SystemLogService } from '../system/log.service';
 import { cleanT212Ticker } from '../providers/t212-ticker-map';
@@ -61,16 +62,16 @@ export interface TradeHistorySummary {
 @Injectable()
 export class Trading212ImportService {
   private readonly logger = new Logger(Trading212ImportService.name);
-  // Rate-limiting: minimum 60s between imports to avoid flooding T212 API
-  private lastImportTime = 0;
-  private readonly IMPORT_COOLDOWN_MS = 60_000;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly t212Adapter: Trading212Adapter,
+    private readonly cache: ProviderCacheService,
     private readonly tradeRecorder: TradeRecorderService,
     private readonly syslog: SystemLogService,
-  ) {}
+  ) {
+    this.cache.setCooldown('trading212', 60_000);
+  }
 
   private getAuthHeader(): string {
     const key = process.env.TRADING212_API_KEY || '';
@@ -81,25 +82,48 @@ export class Trading212ImportService {
     return key; // Fallback to key-only auth
   }
 
-  async validateConnection(): Promise<{ valid: boolean; account?: T212Account; error?: string }> {
+  /**
+   * Returns cached portfolio data from our DB — never calls Trading212 live.
+   * The import endpoint handles live sync. This keeps page loads instant and
+   * prevents blank data when T212 API is slow or rate-limited.
+   */
+  async validateConnection(): Promise<{ valid: boolean; account?: T212Account & { refreshedSec: number }; positions?: any[]; error?: string }> {
     const apiKey = process.env.TRADING212_API_KEY;
     if (!apiKey) {
       return { valid: false, error: 'TRADING212_API_KEY not set in .env' };
     }
 
+    if (!this.prisma.isAvailable) {
+      return { valid: false, error: 'Database not available' };
+    }
+
     try {
-      const auth = this.getAuthHeader();
-      const res = await fetch('https://live.trading212.com/api/v0/equity/account/cash', {
-        headers: { Authorization: auth },
+      // Read cached positions from our DB
+      const positions = await this.prisma.position.findMany({
+        where: { provider: 'trading212' },
+        orderBy: { symbol: 'asc' },
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        return { valid: false, error: `HTTP ${res.status}: ${text.substring(0, 200)}` };
-      }
+      // Build account summary from cached positions
+      const totalInvested = positions.reduce((s, p) => s + (p.avgPrice * p.quantity || 0), 0);
+      const totalValue = positions.reduce((s, p) => s + (p.currentPrice * p.quantity || 0), 0);
+      const totalPpl = positions.reduce((s, p) => s + (p.pnl || 0), 0);
 
-      const account: T212Account = await res.json();
-      return { valid: true, account };
+      const refreshedSec = this.cache.lastRefreshAgoSec('trading212');
+
+      return {
+        valid: true,
+        account: {
+          total: totalValue,
+          free: 0, // not tracked from positions alone
+          invested: totalInvested,
+          ppl: totalPpl,
+          result: totalPpl,
+          blocked: 0,
+          refreshedSec,
+        } as any,
+        positions,
+      };
     } catch (err) {
       return { valid: false, error: (err as Error).message };
     }
@@ -114,12 +138,10 @@ export class Trading212ImportService {
     error?: string;
     cooldown?: boolean;
   }> {
-    const now = Date.now();
-    if (now - this.lastImportTime < this.IMPORT_COOLDOWN_MS) {
-      const remaining = Math.ceil((this.IMPORT_COOLDOWN_MS - (now - this.lastImportTime)) / 1000);
+    if (!this.cache.canRefresh('trading212')) {
+      const remaining = this.cache.remainingSec('trading212');
       return { success: false, positionsImported: 0, symbolsCreated: 0, error: `Cooldown: ${remaining}s remaining`, cooldown: true };
     }
-    this.lastImportTime = now;
 
     const apiKey = process.env.TRADING212_API_KEY;
     if (!apiKey) return { success: false, positionsImported: 0, symbolsCreated: 0, error: 'No API key' };
@@ -146,22 +168,18 @@ export class Trading212ImportService {
 
       let symbolsCreated = 0;
       const imported: Array<{ ticker: string; quantity: number; ppl: number; currentPrice: number }> = [];
+      const currentTickers = new Set<string>();
 
       for (const pos of positions) {
-        // Clean ticker: use shared normalizer (handles 3LNVl_EQ→3LNV, AIRp_EQ→AIR, etc.)
         const cleanTicker = cleanT212Ticker(pos.ticker);
+        currentTickers.add(cleanTicker);
 
         // Ensure symbol exists in our DB
         try {
           const existing = await this.prisma.symbol.findUnique({ where: { ticker: cleanTicker } });
           if (!existing && this.prisma.isAvailable) {
             await this.prisma.symbol.create({
-              data: {
-                ticker: cleanTicker,
-                name: cleanTicker,
-                exchange: 'Trading212',
-                type: 'stock',
-              },
+              data: { ticker: cleanTicker, name: cleanTicker, exchange: 'Trading212', type: 'stock' },
             });
             symbolsCreated++;
           }
@@ -173,44 +191,54 @@ export class Trading212ImportService {
           ppl: pos.ppl,
           currentPrice: pos.currentPrice,
         });
-      }
 
-      // Store positions in the normalized Position table (UPSERT by symbol+provider)
-      let persistedCount = 0;
-      if (this.prisma.isAvailable) {
-        try {
-          // Delete stale T212 positions that are no longer in the portfolio
-          await this.prisma.position.deleteMany({
-            where: { provider: 'trading212' },
-          });
-
-          // Insert fresh positions from the API
-          for (const pos of positions) {
-            const cleanTicker = cleanT212Ticker(pos.ticker);
-            await this.prisma.position.create({
-              data: {
-                symbol: cleanTicker,
-                quantity: pos.quantity,
-                avgPrice: pos.averagePrice,
-                currentPrice: pos.currentPrice,
-                pnl: pos.ppl ?? null,
-                provider: 'trading212',
-                accountId: 'trading212',
-              },
+        // Update existing or create — no gap window (no delete-all-first)
+        if (this.prisma.isAvailable) {
+          try {
+            const existing = await this.prisma.position.findFirst({
+              where: { symbol: cleanTicker, provider: 'trading212' },
             });
-            persistedCount++;
-          }
-
-          this.logger.log(`Trading212: persisted ${persistedCount} positions to Position table`);
-        } catch (err) {
-          this.logger.warn(`Failed to persist T212 positions to DB: ${(err as Error).message}`);
+            if (existing) {
+              await this.prisma.position.update({
+                where: { id: existing.id },
+                data: {
+                  quantity: pos.quantity,
+                  avgPrice: pos.averagePrice,
+                  currentPrice: pos.currentPrice,
+                  pnl: pos.ppl ?? null,
+                },
+              });
+            } else {
+              await this.prisma.position.create({
+                data: {
+                  symbol: cleanTicker,
+                  quantity: pos.quantity,
+                  avgPrice: pos.averagePrice,
+                  currentPrice: pos.currentPrice,
+                  pnl: pos.ppl ?? null,
+                  provider: 'trading212',
+                  accountId: 'trading212',
+                },
+              });
+            }
+          } catch { /* position may not exist yet */ }
         }
       }
 
-      // Store account snapshot
-      if (account) {
-        this.logger.log(`Trading212: imported ${imported.length} positions, ${persistedCount} persisted, account value: $${account.total}`);
+      // AFTER all upserts, remove positions no longer in the portfolio (single gap-free pass)
+      if (this.prisma.isAvailable && currentTickers.size > 0) {
+        try {
+          await this.prisma.position.deleteMany({
+            where: {
+              provider: 'trading212',
+              symbol: { notIn: Array.from(currentTickers) },
+            },
+          });
+        } catch { /* cleanup is best-effort */ }
       }
+
+      this.cache.touch('trading212');
+      this.logger.log(`Trading212: imported ${imported.length} positions, ${symbolsCreated} symbols created`);
 
       return {
         success: true,

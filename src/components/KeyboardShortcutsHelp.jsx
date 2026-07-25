@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useUiStore } from '../stores/useUiStore';
 
 const SHORTCUTS = [
   {
@@ -32,6 +33,7 @@ const SHORTCUTS = [
 
 export default function KeyboardShortcutsHelp() {
   const [open, setOpen] = useState(false);
+  const toggleDevOverlay = useUiStore((state) => state.toggleDevOverlay);
 
   const toggle = useCallback(() => setOpen((p) => !p), []);
 
@@ -66,7 +68,17 @@ export default function KeyboardShortcutsHelp() {
 
   return (
     <>
-      {/* Floating trigger button */}
+      {/* Floating trigger buttons */}
+      <button
+        type="button"
+        className="ksh-trigger"
+        onClick={toggleDevOverlay}
+        title="Toggle Dev Overlay"
+        aria-label="Toggle Dev Overlay"
+        style={{ right: 122 }}
+      >
+        ◈
+      </button>
       <button
         type="button"
         className="ksh-trigger"

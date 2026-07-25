@@ -296,20 +296,23 @@ export class SymbolsService {
       take: 20,
     }) as any[];
 
-    // Protocol info — lazy import to avoid cross-module dependency
-    let PROTOCOL_REGISTRY: Record<string, any> = {};
-    try {
-      const mod = await import('../directives/directive-groups.js');
-      PROTOCOL_REGISTRY = mod.PROTOCOL_REGISTRY || {};
-    } catch { /* fallback to empty */ }
-
     const protocolIds = new Set<string>();
     scoringForSymbol.forEach((s: any) => { protocolIds.add(s.protocolId); if (s.shortProtocolId) protocolIds.add(s.shortProtocolId); });
     tradingStrategies.forEach((s: any) => { protocolIds.add(s.protocolId); if (s.shortProtocolId) protocolIds.add(s.shortProtocolId); });
 
+    // Protocol info — query from DB (Epic #510 Phase 4, replaces PROTOCOL_REGISTRY import)
+    const dbProtocols = await (this.prisma as any).protocol.findMany({
+      where: { slug: { in: [...protocolIds] } },
+      select: { slug: true, name: true, description: true, directionMode: true, tradingStyle: true, idealFor: true, directiveGroups: { select: { id: true } } },
+    }).catch(() => []);
+    const protocolMap: Record<string, any> = {};
+    for (const p of dbProtocols) {
+      protocolMap[p.slug] = p;
+    }
+
     const protocolInfo: Record<string, any> = {};
     for (const pid of protocolIds) {
-      const entry = PROTOCOL_REGISTRY[pid];
+      const entry = protocolMap[pid];
       if (entry) {
         protocolInfo[pid] = {
           id: pid,
@@ -317,7 +320,7 @@ export class SymbolsService {
           description: entry.description || '',
           directionMode: entry.directionMode || 'LONG_ONLY',
           tradingStyle: entry.tradingStyle || '',
-          groupCount: entry.groups?.length || 0,
+          groupCount: entry.directiveGroups?.length || 0,
           idealFor: entry.idealFor || '',
         };
       }

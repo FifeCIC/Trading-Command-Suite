@@ -662,6 +662,7 @@ model Position {
   @@index([symbol])
   @@index([symbolId])
   @@index([provider, accountId])
+  @@unique([symbol, provider])
 }
 
 model Trade {
