@@ -99,7 +99,6 @@ import PersonalFinancesPage from './pages/PersonalFinancesPage';
 import TradingStylesPage from './pages/TradingStylesPage';
 import ObjectivesPage from './pages/ObjectivesPage';
 import CalculatorsPage from './pages/CalculatorsPage';
-import SystemStatusPage from './pages/SystemStatusPage';
 import SystemLogPage from './pages/SystemLogPage';
 import TrainingCandlePatternsPage from './pages/TrainingCandlePatternsPage';
 import CandlePatternsGuidePage from './pages/CandlePatternsGuidePage';
@@ -750,10 +749,76 @@ function AppShell() {
               <span className="hamburger-line" />
               <span className="hamburger-line" />
             </button>
-            <a href="/status/status" className="topbar-status-summary" title={`API: ${isApiOnline ? '✓' : '✗'} | DB: ${isDbOnline ? '✓' : '✗'} | MT5: ${isMt5Online ? '✓' : '✗'}`}>
-              <span className={`topbar-status-dot ${statusLevel}`} />
-              <span>{statusLabel}</span>
-            </a>
+            <div style={{ position: 'relative' }}>
+              <button
+                type="button"
+                className="topbar-status-summary"
+                onClick={() => setStatusPopoutOpen(v => !v)}
+                onBlur={() => setTimeout(() => setStatusPopoutOpen(false), 200)}
+                title={`API: ${isApiOnline ? '✓' : '✗'} | DB: ${isDbOnline ? '✓' : '✗'} | MT5: ${isMt5Online ? '✓' : '✗'}`}
+              >
+                <span className={`topbar-status-dot ${statusLevel}`} />
+                <span>{statusLabel}</span>
+              </button>
+              {statusPopoutOpen && (
+                <div className="topbar-status-popout" style={{
+                  position: 'absolute', top: '100%', right: 0, marginTop: 6,
+                  background: 'var(--panel)', border: '1px solid var(--line)',
+                  borderRadius: 8, padding: '0.75rem 1rem', zIndex: 100,
+                  minWidth: 200, boxShadow: 'var(--shadow-card)',
+                  fontFamily: 'var(--font-body)',
+                }}>
+                  <div className="dev-section-title" style={{ marginBottom: '0.5rem' }}>System Status</div>
+                  <div className="dev-stat-row">
+                    <span className="dev-stat-label">API</span>
+                    <span className={`dev-stat-value ${isApiOnline ? 'ok' : 'error'}`}>
+                      {isApiOnline ? 'Online' : 'Offline'}
+                    </span>
+                  </div>
+                  <div className="dev-stat-row">
+                    <span className="dev-stat-label">Database</span>
+                    <span className={`dev-stat-value ${isDbOnline ? 'ok' : 'error'}`}>
+                      {isDbOnline ? 'Connected' : 'Disconnected'}
+                    </span>
+                  </div>
+                  <div className="dev-stat-row">
+                    <span className="dev-stat-label">MT5 Bridge</span>
+                    <span className={`dev-stat-value ${isMt5Online ? 'ok' : 'error'}`}>
+                      {isMt5Online ? 'Connected' : 'Offline'}
+                    </span>
+                  </div>
+                  {isMt5Online && mt5Query.data && (
+                    <>
+                      <div className="dev-stat-row">
+                        <span className="dev-stat-label">MT5 Account</span>
+                        <span className="dev-stat-value muted">{mt5Query.data.account || '—'}</span>
+                      </div>
+                      <div className="dev-stat-row">
+                        <span className="dev-stat-label">Balance</span>
+                        <span className="dev-stat-value muted">
+                          {mt5Query.data.balance != null ? `$${Number(mt5Query.data.balance).toLocaleString()}` : '—'}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  <div className="dev-stat-row">
+                    <span className="dev-stat-label">Mode</span>
+                    <span className="dev-stat-value muted">{healthQuery.data?.mode || '—'}</span>
+                  </div>
+                  <div className="dev-stat-row">
+                    <span className="dev-stat-label">Providers</span>
+                    <span className="dev-stat-value muted">{availableAdapters.length} registered</span>
+                  </div>
+                  <div className="dev-stat-row">
+                    <span className="dev-stat-label">Version</span>
+                    <span className="dev-stat-value muted">{healthQuery.data?.version || '—'}</span>
+                  </div>
+                  <a href="/status/setup" className="dev-action-btn" style={{ display: 'block', marginTop: '0.5rem', textAlign: 'center', textDecoration: 'none' }}>
+                    Setup & Diagnostics →
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <MarketTape />

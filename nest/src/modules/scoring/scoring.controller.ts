@@ -42,20 +42,27 @@ export class ScoringController {
   @Get('ranked')
   @UseInterceptors(new CacheInterceptor(15000))
   @UseInterceptors(new PaginationInterceptor('ranked'))
-  @ApiOperation({ summary: 'Get symbols ranked by aggregate score' })
+  @ApiOperation({ summary: 'Get symbols ranked by score (DB-read by default, fresh on demand)' })
   @ApiOkResponse({
-    description: 'Ranked symbol list with scores and directive breakdown',
+    description: 'Ranked symbol list. Uses pre-computed DB scores by default. Pass ?fresh=true to run the full pipeline.',
   })
   ranked(
     @Query('strategy_id') strategyId?: string,
     @Query('limit') limit?: string,
+    @Query('fresh') fresh?: string,
   ) {
     const parsedLimit = Number(limit ?? 20);
     const safeLimit = Number.isFinite(parsedLimit)
       ? Math.min(Math.max(parsedLimit, 1), 100)
       : 20;
 
-    return this.scoringService.rankAll(strategyId, safeLimit);
+    // ?fresh=true → run the full pipeline (speed trading, testing, on-demand)
+    if (fresh === 'true') {
+      return this.scoringService.rankAll(strategyId, safeLimit);
+    }
+
+    // Default: read pre-computed scores from DB
+    return this.scoringService.rankFromDb(safeLimit);
   }
 
   @Get('degradation')

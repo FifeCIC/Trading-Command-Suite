@@ -105,7 +105,7 @@ export const NAV_TREE = {
     label: 'Status',
     views: [
       // ── System Health ──
-      { id: 'status', label: 'System Status', icon: '◉' },
+      { id: 'setup', label: 'Setup & Diagnostics', icon: '◉' },
       { id: 'health-check', label: 'Health & Diagnostics', icon: '🩺' },
       { id: 'commands', label: 'Commands Reference', icon: '💻' },
       { id: 'system-log', label: 'System Log', icon: '📋' },

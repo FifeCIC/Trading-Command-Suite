@@ -403,7 +403,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
         {statusLevel && (
           <button
             className="so-gear-btn"
-            onClick={() => window.location.href = '/status/status'}
+            onClick={() => window.location.href = '/status/setup'}
             title={`Bridge: ${isMt5Online ? 'Connected' : 'Offline'} | API: ${isApiOnline ? 'Online' : 'Offline'} | DB: ${isDbOnline ? 'Connected' : 'Offline'}`}
             aria-label="System status"
             style={{ color: statusLevel === 'online' ? '#22c55e' : statusLevel === 'warn' ? '#f59e0b' : '#ef4444' }}

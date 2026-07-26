@@ -488,6 +488,119 @@ export class ScoringService implements OnModuleInit {
   }
 
   /**
+   * GET /api/scoring/ranked?source=db (default) — Read pre-computed scores from DB.
+   * Fast, cheap, no directive re-computation. Relies on automation loop having
+   * already scored symbols via the 2-minute tick. Falls back to fresh compute
+   * if the ScoreSnapshot table is empty (first run after seeding).
+   *
+   * GET /api/scoring/ranked?fresh=true — Run the full pipeline fresh (delegates to rankAll).
+   * Use for speed trading, testing, or when you need data newer than 2 minutes.
+   */
+  async rankFromDb(limit = 20): Promise<RankedResult> {
+    const modeInfo = this.modeService.getModeInfo();
+    const base = {
+      mode: modeInfo.mode,
+      services: { database: modeInfo.database, queue: modeInfo.queue, redis: modeInfo.redis },
+      strategy: { name: 'DB-Read (pre-computed)', entryThreshold: ENTRY_THRESHOLD, watchThreshold: WATCH_THRESHOLD, maxPossibleScore: 100, directiveCount: 102 },
+    };
+
+    if (!this.prisma.isAvailable) {
+      return { ...base, degradation: { overallCoverage: 0, degradedProviders: [], failedProviders: [], isDegraded: true, warning: 'Database unavailable' }, summary: { symbolsWithData: 0, symbolsWithoutData: 0, totalSymbols: 0 }, ranked: [] };
+    }
+
+    try {
+      // Get latest snapshot per symbol from ScoreSnapshot table
+      const snapshots = await (this.prisma as any).scoreSnapshot.findMany({
+        orderBy: { snappedAt: 'desc' },
+        take: limit * 3, // overfetch to dedupe per-symbol
+      });
+
+      if (!snapshots || snapshots.length === 0) {
+        // Fallback: Score table (older format)
+        const scores = await this.prisma.score.findMany({
+          orderBy: { timestamp: 'desc' },
+          take: limit * 3,
+          include: { symbol: { select: { ticker: true } } },
+        });
+        if (!scores || scores.length === 0) {
+          this.logger.warn('No pre-computed scores in DB — falling back to fresh compute');
+          return this.rankAll(undefined, limit);
+        }
+        // Dedupe per symbol, take latest
+        const seen = new Set<string>();
+        const ranked: RankedSymbol[] = [];
+        for (const s of scores) {
+          if (seen.has(s.symbolId)) continue;
+          seen.add(s.symbolId);
+          ranked.push({
+            symbolId: s.symbolId,
+            ticker: (s as any).symbol?.ticker ?? s.symbolId,
+            score: s.value,
+            normalizedScore: Math.min(100, s.value),
+            maxPossibleScore: 100,
+            totalDirectives: 102,
+            activeDirectives: 102,
+            coverage: 1,
+            degraded: false,
+            degradedProviders: [],
+            confidence: 0.5,
+            freshness: 'cached',
+            signal: s.value >= 60 ? 'BUY' : s.value >= 40 ? 'HOLD' : 'SELL',
+            dataStatus: 'live' as const,
+            breakdown: [],
+            timestamp: s.timestamp?.toISOString?.() ?? new Date().toISOString(),
+          });
+          if (ranked.length >= limit) break;
+        }
+        return {
+          ...base,
+          degradation: { overallCoverage: 1, degradedProviders: [], failedProviders: [], isDegraded: false, warning: null },
+          summary: { symbolsWithData: ranked.length, symbolsWithoutData: 0, totalSymbols: ranked.length },
+          ranked,
+        };
+      }
+
+      // ScoreSnapshot table: dedupe per symbol
+      const seen = new Set<string>();
+      const ranked: RankedSymbol[] = [];
+      for (const s of snapshots) {
+        const sym = s.symbol?.toUpperCase?.() ?? s.symbol;
+        if (!sym || seen.has(sym)) continue;
+        seen.add(sym);
+        ranked.push({
+          symbolId: s.id,
+          ticker: sym,
+          score: s.composite ?? 0,
+          normalizedScore: Math.min(100, s.composite ?? 0),
+          maxPossibleScore: 100,
+          totalDirectives: 102,
+          activeDirectives: 102,
+          coverage: 1,
+          degraded: false,
+          degradedProviders: [],
+          confidence: 0.5,
+          freshness: 'cached',
+          signal: s.tradingSignal ?? (s.composite >= 60 ? 'BUY' : s.composite >= 40 ? 'HOLD' : 'SELL'),
+          dataStatus: 'live' as const,
+          breakdown: [],
+          timestamp: s.snappedAt?.toISOString?.() ?? new Date().toISOString(),
+        });
+        if (ranked.length >= limit) break;
+      }
+
+      return {
+        ...base,
+        degradation: { overallCoverage: 1, degradedProviders: [], failedProviders: [], isDegraded: false, warning: null },
+        summary: { symbolsWithData: ranked.length, symbolsWithoutData: 0, totalSymbols: ranked.length },
+        ranked,
+      };
+    } catch (err) {
+      this.logger.warn(`rankFromDb failed: ${(err as Error).message} — falling back to fresh compute`);
+      return this.rankAll(undefined, limit);
+    }
+  }
+
+  /**
    * POST /api/scoring/run — Trigger a full scoring run.
    * Accepts optional symbol filter and timeframe.
    */

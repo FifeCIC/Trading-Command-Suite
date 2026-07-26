@@ -111,7 +111,6 @@ import ScenarioAnalysisPage from '../pages/ScenarioAnalysisPage.jsx';
 import StrategiesPage from '../pages/StrategiesPage.jsx';
 
 // ── Status / System ──
-import SystemStatusPage from '../pages/SystemStatusPage.jsx';
 import SystemLogPage from '../pages/SystemLogPage.jsx';
 import HealthDashboardPage from '../pages/HealthDashboardPage.jsx';
 import CommandsReferencePage from '../pages/CommandsReferencePage.jsx';
@@ -277,7 +276,7 @@ export const VIEW_COMPONENTS = {
   'strategies': TradingStrategiesPage,
 
   // Status / System
-  'status': SystemStatusPage,
+  'commands': CommandsReferencePage,
   'system-log': SystemLogPage,
   'health-check': HealthDashboardPage,
   'commands': CommandsReferencePage,

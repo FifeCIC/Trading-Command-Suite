@@ -10,7 +10,7 @@ const TYPE_FALLBACKS = {
   signal: '/scoring/live-ordering-stack',
   drawdown: '/trading/portfolio-overview',
   backtest: '/training/backtest',
-  system: '/status/status',
+  system: '/status/setup',
   daily: '/dashboard',
 };
 

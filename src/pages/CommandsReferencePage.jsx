@@ -118,7 +118,7 @@ export default function CommandsReferencePage() {
 
       <motion.footer className="cr-footer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
         <p>💡 <strong>Tip:</strong> Run <code>pwsh scripts/health-check.ps1</code> at the start of every session. Agents: call <code>GET /api/system/health-summary</code> first — it costs ~300 tokens for full system awareness.</p>
-        <p>See also: <a href="/status/health-check">🩺 Health Dashboard</a> · <a href="/status/system-log">📋 System Log</a> · <a href="/status/status">◉ System Status</a></p>
+        <p>See also: <a href="/status/health-check">🩺 Health Dashboard</a> · <a href="/status/system-log">📋 System Log</a> · <a href="/status/setup">◉ Setup & Diagnostics</a></p>
       </motion.footer>
     </div>
   );
