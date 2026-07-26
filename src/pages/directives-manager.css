@@ -378,6 +378,19 @@
   opacity: 0.8;
 }
 
+/* Inline row Test button */
+.directive-row-test-btn {
+  padding: 0.3rem 0.7rem; border: 1px solid var(--accent); border-radius: 5px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent); font-size: 0.73rem; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: background 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+.directive-row-test-btn:hover {
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
 /* ── Advanced box (standalone, not accordion) ── */
 
 .directive-detail-advanced-box {

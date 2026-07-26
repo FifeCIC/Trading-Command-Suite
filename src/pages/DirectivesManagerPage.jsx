@@ -213,6 +213,7 @@ export default function DirectivesManagerPage() {
                 <th>BIAS</th>
                 <th>Protocols</th>
                 <th>Weighting</th>
+                <th>Test</th>
               </tr>
             </thead>
             <tbody>
@@ -278,6 +279,15 @@ export default function DirectivesManagerPage() {
                           {item.boostEnabled ? ' +boost' : ''}
                           {item.multiplierEnabled ? ' xmult' : ''}
                         </span>
+                      </td>
+                      <td>
+                        <button
+                          className="directive-row-test-btn"
+                          onClick={(e) => { e.stopPropagation(); navigate(`/scoring/directive-detail?id=${item.code}`); }}
+                          title={`Test ${item.name} in isolation`}
+                        >
+                          Test
+                        </button>
                       </td>
                     </tr>
                   </Fragment>

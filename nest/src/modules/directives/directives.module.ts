@@ -4,6 +4,7 @@ import { DirectivesController } from './directives.controller';
 import { ConditionDetectorService } from './condition-detector.service';
 import { ProvidersModule } from '../providers/providers.module';
 import { ResearchModule } from '../research/research.module';
+import { MarketDataModule } from '../market-data/market-data.module';
 import { TimezoneService } from '../scoring/timezone.service';
 
 // Implemented (real math)
@@ -171,7 +172,7 @@ import { TripleWitchingDirective } from './implementations/triple-witching.direc
 import { ElectionCycleDirective } from './implementations/election-cycle.directive';
 
 @Module({
-  imports: [ProvidersModule, ResearchModule],
+  imports: [ProvidersModule, ResearchModule, MarketDataModule],
   controllers: [DirectivesController],
   providers: [
     DirectivesService,
