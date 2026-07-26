@@ -4,3 +4,9 @@ dist/
 .env.local
 .DS_Store
 .vscode/
+
+# Backtest data archives (large generated files)
+nest/data/backtest-archive/*.gz
+
+# Logs (generated at runtime)
+nest/logs/
