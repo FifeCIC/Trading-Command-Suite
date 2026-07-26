@@ -1,0 +1,155 @@
+/* Strategy Library Page */
+.sl-page { max-width: 880px; margin: 0 auto; padding: 1.25rem 1.5rem 4rem; color: var(--ink); }
+
+.sl-header { margin-bottom: 1.5rem; }
+.sl-header h1 { margin: 0 0 0.2rem; font-size: 1.3rem; }
+.sl-subtitle { color: var(--ink-soft); font-size: 0.82rem; margin: 0; }
+
+.sl-empty { text-align: center; padding: 3rem 1rem; color: var(--ink-soft); }
+
+.sl-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+/* Card */
+.sl-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  overflow: hidden; transition: border-color 0.2s;
+}
+.sl-card--open { border-color: var(--accent); }
+
+.sl-card-header {
+  display: flex; align-items: flex-start; gap: 0.75rem; padding: 1rem 1.15rem;
+  background: none; border: none; color: inherit; font-family: inherit; text-align: left;
+  width: 100%; cursor: pointer; transition: background 0.15s;
+}
+.sl-card-header:hover { background: rgba(255,255,255,0.02); }
+
+.sl-card-title { flex: 1; min-width: 0; }
+.sl-card-title h2 { margin: 0 0 0.2rem; font-size: 1rem; }
+.sl-tagline { margin: 0; font-size: 0.78rem; color: var(--ink-soft); }
+
+.sl-card-meta { display: flex; gap: 0.4rem; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
+
+.sl-badge {
+  padding: 2px 8px; border-radius: 4px; font-size: 0.68rem; font-weight: 700;
+  border: 1px solid; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap;
+}
+.sl-badge--category { color: var(--ink-soft); border-color: var(--line); }
+
+.sl-chevron {
+  font-size: 0.7rem; color: var(--ink-soft); transition: transform 0.2s;
+  flex-shrink: 0; margin-top: 0.3rem;
+}
+.sl-chevron--open { transform: rotate(180deg); }
+
+/* Expanded content */
+.sl-expanded {
+  padding: 0 1.15rem 1.15rem;
+  border-top: 1px solid var(--line);
+}
+
+.sl-section { margin-bottom: 1.25rem; }
+.sl-section h3 {
+  margin: 0 0 0.5rem; font-size: 0.85rem; color: var(--accent);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+
+.sl-prose {
+  font-size: 0.82rem; color: var(--ink-soft); line-height: 1.65;
+  white-space: pre-line;
+}
+.sl-prose--rich strong { color: var(--ink); }
+
+.sl-hint { font-size: 0.73rem; color: var(--ink-soft); font-style: italic; margin: 0 0 0.5rem; }
+
+.sl-meta-row {
+  display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 0.5rem;
+  font-size: 0.75rem; color: var(--ink-soft);
+}
+.sl-meta-row strong { color: var(--ink); }
+
+/* Mechanics grid */
+.sl-mechanics-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.6rem;
+}
+.sl-mechanic-card {
+  background: rgba(0,0,0,0.15); border: 1px solid var(--line);
+  border-radius: 8px; padding: 0.75rem;
+}
+.sl-mechanic-card h4 { margin: 0 0 0.3rem; font-size: 0.8rem; color: var(--ink); }
+.sl-mechanic-card p { margin: 0; font-size: 0.75rem; color: var(--ink-soft); line-height: 1.5; }
+
+/* State machine */
+.sl-state-flow { display: flex; gap: 0.5rem; align-items: flex-start; flex-wrap: wrap; }
+.sl-state-node {
+  position: relative; background: rgba(0,0,0,0.2); border: 1px solid var(--line);
+  border-radius: 8px; padding: 0.6rem 0.75rem; min-width: 120px; flex: 1;
+}
+.sl-state-label { font-size: 0.8rem; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+.sl-state-name { font-size: 0.65rem; font-family: monospace; color: var(--accent); margin-bottom: 4px; }
+.sl-state-desc { font-size: 0.7rem; color: var(--ink-soft); line-height: 1.4; }
+.sl-state-arrow {
+  position: absolute; right: -1rem; top: 50%; transform: translateY(-50%);
+  font-size: 1rem; color: var(--accent); font-weight: 700;
+}
+
+/* Directive chips */
+.sl-directive-grid { display: flex; flex-direction: column; gap: 0.35rem; }
+.sl-directive-chip {
+  display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.7rem;
+  background: rgba(0,0,0,0.15); border: 1px solid var(--line); border-radius: 6px;
+  color: var(--ink); font-family: inherit; font-size: 0.78rem; cursor: pointer;
+  text-align: left; transition: border-color 0.15s;
+}
+.sl-directive-chip:hover { border-color: var(--accent); }
+.sl-directive-id {
+  font-family: monospace; font-size: 0.72rem; color: var(--accent);
+  min-width: 160px; flex-shrink: 0;
+}
+.sl-directive-role {
+  font-weight: 700; font-size: 0.73rem; min-width: 100px; flex-shrink: 0;
+}
+.sl-directive-note { font-size: 0.7rem; color: var(--ink-soft); }
+
+/* Two column */
+.sl-two-col {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;
+}
+@media (max-width: 600px) { .sl-two-col { grid-template-columns: 1fr; } }
+
+/* Bullet lists */
+.sl-bullet-list { margin: 0; padding-left: 1.2rem; font-size: 0.78rem; color: var(--ink-soft); line-height: 1.6; }
+.sl-bullet-list li { margin-bottom: 0.25rem; }
+.sl-bullet-list--pro li::marker { color: #22c55e; }
+.sl-bullet-list--con li::marker { color: #ef4444; }
+
+/* Config grid */
+.sl-config-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.4rem;
+}
+.sl-config-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.4rem 0.6rem; background: rgba(0,0,0,0.15);
+  border: 1px solid var(--line); border-radius: 5px;
+}
+.sl-config-key { font-size: 0.72rem; color: var(--ink-soft); }
+.sl-config-value { font-size: 0.75rem; font-family: monospace; color: var(--accent); }
+
+/* Activate bar */
+.sl-activate-bar {
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  padding: 0.75rem 0.9rem; background: rgba(14,165,166,0.06);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: 8px; margin-top: 0.75rem; flex-wrap: wrap;
+}
+.sl-activate-info { font-size: 0.78rem; color: var(--ink-soft); }
+.sl-activate-note { color: var(--ink-soft); font-style: italic; }
+.sl-activate-btn {
+  padding: 0.45rem 1.1rem; border: none; border-radius: 6px;
+  background: var(--accent); color: #fff; font-family: inherit;
+  font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.sl-activate-btn:hover { opacity: 0.85; }
+.sl-activate-btn:disabled { opacity: 0.4; cursor: not-allowed; }

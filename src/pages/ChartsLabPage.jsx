@@ -22,7 +22,7 @@ import { useState, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { SPEED_PROTOCOL_SYMBOLS } from '../data/speed-protocols';
-import CandlestickChart from '../components/CandlestickChart';
+import SpeedChart from '../components/SpeedChart';
 
 const CHART_SYMBOLS = [...new Set(['EURUSD', 'GBPUSD', 'XAUUSD', 'USDCAD', ...SPEED_PROTOCOL_SYMBOLS])].sort();
 import CanvasCandlestickChart from '../components/CanvasCandlestickChart';
@@ -245,13 +245,16 @@ export default function ChartsLabPage() {
       <div className="clab-chart-area">
         <div ref={chartContainerRef} className="clab-chart-container" />
         {engine === 'lightweight' && (
-          <CandlestickChart
+          <SpeedChart
             containerRef={chartContainerRef}
             ticks={ticks}
             historicalCandles={historicalCandles.length > 0 ? historicalCandles : null}
             intervalMs={tfMs[timeframe] ?? 5000}
             maxBars={bars}
-            indicators={INDICATOR_PRESETS.filter((ind) => activeIndicators.has(`${ind.type}-${ind.period}`))}
+            symbol={symbol}
+            timeframe={timeframe}
+            chartMode="candles"
+            chartSettings={{ showVolume: true, showEMA9: true, showEMA21: true, showEMA50: true, gridStyle: 1, upColor: '#22c55e', downColor: '#ef4444' }}
           />
         )}
         {engine === 'canvas' && (

@@ -4,7 +4,7 @@
  * Used by DirectiveDetailPage to show the price action a directive evaluated.
  */
 import { useEffect, useRef } from 'react';
-import { createChart } from 'lightweight-charts';
+import { createChart, CandlestickSeries } from 'lightweight-charts';
 
 export default function DirectiveChart({ bars, symbol, height = 300 }) {
   const containerRef = useRef(null);
@@ -40,7 +40,7 @@ export default function DirectiveChart({ bars, symbol, height = 300 }) {
       },
     });
 
-    const candleSeries = chart.addCandlestickSeries({
+    const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: '#22c55e',
       downColor: '#ef4444',
       borderUpColor: '#22c55e',

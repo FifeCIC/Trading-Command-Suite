@@ -71,6 +71,7 @@ export const NAV_TREE = {
       { id: 'market-context', label: 'Market Context', icon: '🌐' },
       { id: 'positions-monitor', label: 'Positions Monitor', icon: '◈' },
       { id: 'trading-strategies', label: 'Trading Strategies', icon: '◆' },
+      { id: 'strategy-library', label: 'Strategy Library', icon: '📚' },
       { id: 'strategy-dashboard', label: 'Strategy Dashboard', icon: '📊' },
       { id: 'create-strategy', label: 'Create Strategy', icon: '⊞' },
       { id: 'strategy-comparison', label: 'Strategy Comparison', icon: '⚖' },

@@ -1,10 +1,16 @@
 /**
- * SpeedChart — TradingView lightweight-charts wrapper for Speed Trading.
+ * SpeedChart — unified lightweight-charts wrapper for the Trading Command Suite.
  *
  * Chart modes:
  *   'candles' — full OHLC + volume + EMA overlays (default)
  *   'line'    — area chart with gradient
  *   'minimal' — compact price + signal display (no chart)
+ *
+ * Data sources:
+ *   Internal: fetches candles from MT5 bridge (default)
+ *   External: receives ticks + historicalCandles via props (used by ChartsLab)
+ *
+ * Merged from SpeedChart + CandlestickChart (#506).
  */
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
@@ -21,8 +27,51 @@ const API_BASE = 'http://localhost:3201';
 /** Map our timeframe names to MT5 bridge names */
 const TF_MAP = { '1s': '1m', '5s': '1m', '15s': '1m', '30s': '1m', '1m': '1m', '5m': '5m', '15m': '15m', '1h': '1h', '1d': '1d' };
 
-export default function SpeedChart({ symbol, timeframe, chartMode, scanScore, chartSettings }) {
-  const containerRef = useRef(null);
+/**
+ * Bucket raw ticks into OHLC candles. Shared with CandlestickChart (now merged).
+ */
+function bucketTicks(ticks, intervalMs) {
+  if (!ticks.length) return [];
+  const buckets = [];
+  let currentBucket = null;
+  for (const tick of ticks) {
+    const bucketTime = Math.floor(tick.timestamp / intervalMs) * intervalMs;
+    if (!currentBucket || currentBucket.time !== bucketTime) {
+      if (currentBucket) buckets.push(currentBucket);
+      currentBucket = {
+        time: bucketTime / 1000, // lightweight-charts uses seconds
+        open: tick.price,
+        high: tick.price,
+        low: tick.price,
+        close: tick.price,
+        volume: tick.volume || 0,
+      };
+    } else {
+      currentBucket.high = Math.max(currentBucket.high, tick.price);
+      currentBucket.low = Math.min(currentBucket.low, tick.price);
+      currentBucket.close = tick.price;
+      currentBucket.volume += tick.volume || 0;
+    }
+  }
+  if (currentBucket) buckets.push(currentBucket);
+  return buckets;
+}
+
+export default function SpeedChart({
+  symbol,
+  timeframe,
+  chartMode,
+  scanScore,
+  chartSettings,
+  // External data mode (from CandlestickChart merge)
+  containerRef: externalContainerRef,
+  ticks,
+  historicalCandles = null,
+  intervalMs = 5000,
+  maxBars = 100,
+}) {
+  const internalContainerRef = useRef(null);
+  const containerRef = externalContainerRef || internalContainerRef;
   const chartRef = useRef(null);
   const candleSeriesRef = useRef(null);
   const volumeSeriesRef = useRef(null);
@@ -32,8 +81,32 @@ export default function SpeedChart({ symbol, timeframe, chartMode, scanScore, ch
   const [dataError, setDataError] = useState(null);
   const [hoverInfo, setHoverInfo] = useState(null);
 
-  // ── Fetch candles ──
+  // ── External data mode (from CandlestickChart merge #506) ──
+  const useExternalData = ticks !== undefined;
+
+  // When in external mode, bucket ticks into candles
+  const extCandles = useMemo(() => {
+    if (!useExternalData || !ticks?.length) return null;
+    const all = bucketTicks(ticks, intervalMs);
+    if (all.length === 0) return { completed: [], current: null };
+
+    // Prepend historical candles if provided
+    let completed = historicalCandles
+      ? [...historicalCandles.slice(-maxBars), ...all.slice(0, -1)].slice(-maxBars)
+      : all.slice(0, -1).slice(-maxBars);
+    const current = all[all.length - 1];
+
+    // Convert to SpeedChart bar format
+    const allBars = [...completed, current].map(c => ({
+      timestamp: new Date(c.time * 1000).toISOString(),
+      open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume || 0,
+    }));
+    return { allBars, completed, current };
+  }, [ticks, intervalMs, maxBars, historicalCandles, useExternalData]);
+
+  // ── Fetch candles (internal mode only) ──
   const fetchBars = useCallback(async () => {
+    if (useExternalData) return; // skip fetch in external mode
     const mt5tf = TF_MAP[timeframe] || '1m';
     try {
       const res = await fetch(`${API_BASE}/api/trading/mt5/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${mt5tf}&limit=300`);
@@ -55,13 +128,24 @@ export default function SpeedChart({ symbol, timeframe, chartMode, scanScore, ch
 
   useEffect(() => {
     if (chartMode === 'minimal') return;
+    if (useExternalData) return; // external mode — chart updated by extCandles memo
     fetchBars();
     const timer = setInterval(fetchBars, 3000);
     return () => clearInterval(timer);
-  }, [fetchBars, chartMode]);
+  }, [fetchBars, chartMode, useExternalData]);
 
-  // ── Compute EMA values ──
+  // ── Compute chart data from bars (internal) or extCandles (external) ──
   const chartData = useMemo(() => {
+    if (useExternalData) {
+      if (!extCandles?.allBars?.length) return null;
+      // Also set last price from external data
+      const last = extCandles.allBars[extCandles.allBars.length - 1];
+      if (last && !lastPrice) setLastPrice({ bid: last.close, ask: last.close, timestamp: last.timestamp });
+      return extCandles.allBars.map(b => ({
+        time: Math.floor(new Date(b.timestamp).getTime() / 1000),
+        open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume || 0,
+      }));
+    }
     if (bars.length === 0) return null;
     return bars.map((b) => ({
       time: Math.floor(new Date(b.timestamp).getTime() / 1000),
