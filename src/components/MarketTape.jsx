@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
-import './MarketTape.css';
+import './market-tape.css';
 
 /* ── Preference key ── */
 const PREFS_KEY = 'tcs:market-tape';

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import './DetachableWidget.css';
+import './detachable-widget.css';
 
 /**
  * DetachableWidget — A resizable, detachable panel shell for the command dashboard.

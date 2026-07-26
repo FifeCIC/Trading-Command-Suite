@@ -8,7 +8,7 @@ const VIEW_META = {
   '/dashboard': {
     label: 'Dashboard',
     file: 'src/pages/DashboardPage.jsx',
-    css: 'src/pages/HomeDashboard.css',
+    css: 'src/pages/home-dashboard.css',
     api: ['GET /api/providers/mt5/diagnostics', 'GET /api/providers/mt5/positions', 'GET /api/scoring/ranked'],
   },
   '/trading/market-context': {
@@ -44,7 +44,7 @@ const VIEW_META = {
   '/trading/trade-journal': {
     label: 'Trade Journal',
     file: 'src/pages/TradeJournalPage.jsx',
-    css: 'src/pages/TradeJournalPage.css',
+    css: 'src/pages/trade-journal-page.css',
     api: ['GET /api/journal/entries', 'GET /api/journal/stats'],
   },
   '/trading/calculators': {
@@ -170,7 +170,7 @@ const VIEW_META = {
   '/lab/hot-stock-picks': {
     label: 'Hot Stock Picks',
     file: 'src/pages/HotStockPicksPage.jsx',
-    css: 'src/pages/HotStockPicksPage.css',
+    css: 'src/pages/hot-stock-picks-page.css',
     api: ['GET /api/scoring/ranked'],
   },
   '/lab/theme-lab': {

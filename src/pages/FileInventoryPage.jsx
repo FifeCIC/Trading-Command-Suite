@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client.js';
 import { useState, useMemo } from 'react';
-import './FileInventoryPage.css';
+import './file-inventory-page.css';
 
 export default function FileInventoryPage() {
   const { data, isLoading, error } = useQuery({

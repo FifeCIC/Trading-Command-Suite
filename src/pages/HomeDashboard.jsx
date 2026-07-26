@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiGet } from '../core/api/client';
 import ScreenOptions from '../components/ScreenOptions';
-import './HomeDashboard.css';
+import './home-dashboard.css';
 
 export default function HomeDashboard() {
   const navigate = useNavigate();

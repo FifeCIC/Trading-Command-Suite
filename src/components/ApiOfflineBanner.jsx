@@ -1,4 +1,4 @@
-import './ApiOfflineBanner.css';
+import './api-offline-banner.css';
 
 /**
  * Standardized banner shown when the NestJS backend API is unreachable.

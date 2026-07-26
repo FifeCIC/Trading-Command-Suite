@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
-import './HotStockPicksPage.css';
+import './hot-stock-picks-page.css';
 
 const REFRESH_MS = 60_000;
 const TOP_N = 10;

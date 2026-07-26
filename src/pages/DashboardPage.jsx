@@ -5,7 +5,7 @@ import { apiGet } from '../core/api/client';
 import { NAV_TREE } from '../core/nav-tree';
 import ScreenOptions from '../components/ScreenOptions';
 import CopyViewData from '../components/CopyViewData';
-import './HomeDashboard.css'; // reuses nav-card styles
+import './home-dashboard.css'; // reuses nav-card styles
 
 const AREA_ICONS = {
   qa: '🧪', trading: '📈', scoring: '🎯', research: '🔬', data: '🗄️',

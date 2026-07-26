@@ -1,4 +1,4 @@
-import './PatternDetailPanel.css';
+import './pattern-detail-panel.css';
 
 const DIRECTION_EMOJI = { bullish: '🟢', bearish: '🔴', neutral: '⚪' };
 const DIRECTION_LABEL = { bullish: 'Bullish', bearish: 'Bearish', neutral: 'Neutral' };

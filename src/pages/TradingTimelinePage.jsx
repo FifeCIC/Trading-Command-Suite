@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import './TradingTimelinePage.css';
+import './trading-timeline-page.css';
 
 const VIEWS = ['Day', '2-Day', 'Week', 'Month'];
 const SESSION_ICONS = { london: '🇬🇧', ny: '🇺🇸', asia: '🇯🇵', tokyo: '🇯🇵' };

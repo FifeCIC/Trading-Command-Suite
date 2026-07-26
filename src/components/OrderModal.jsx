@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { placeSellOrder, placeBuyOrder } from '../core/api/orders';
-import './OrderModal.css';
+import './order-modal.css';
 
 /**
  * OrderModal — Two-step order confirmation modal with safety gates.

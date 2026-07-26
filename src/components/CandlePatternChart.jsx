@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createChart, CandlestickSeries } from 'lightweight-charts';
-import './CandlePatternChart.css';
+import './candle-pattern-chart.css';
 
 const PATTERN_COLORS = {
   bullish: 'rgba(34, 197, 94, 0.85)',

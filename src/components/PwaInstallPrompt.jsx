@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import './PwaInstallPrompt.css';
+import './pwa-install-prompt.css';
 
 /**
  * PWA Install Prompt Banner

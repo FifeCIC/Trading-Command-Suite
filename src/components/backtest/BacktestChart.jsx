@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { createChart, CandlestickSeries, ColorType } from 'lightweight-charts';
 import EmptyState from '../EmptyState';
-import './BacktestChart.css';
+import './backtest-chart.css';
 
 function timeToDate(time) {
   return typeof time === 'string' ? time : new Date(time * 1000).toISOString().split('T')[0];

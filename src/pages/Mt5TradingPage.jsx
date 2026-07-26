@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import AccountSummary from '../components/mt5/AccountSummary';
 import PositionsTable from '../components/mt5/PositionsTable';
 import OrderForm from '../components/mt5/OrderForm';
-import './Mt5TradingPage.css';
+import './mt5-trading-page.css';
 
 const PLATFORMS = [
   { id: 'mt5', label: 'MT5', icon: '📊', available: true },

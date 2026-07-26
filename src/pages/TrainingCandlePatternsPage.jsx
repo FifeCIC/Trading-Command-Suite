@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import CandlePatternChart from '../components/CandlePatternChart';
 import PatternDetailPanel from '../components/PatternDetailPanel';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
-import './TrainingCandlePatternsPage.css';
+import './training-candle-patterns-page.css';
 
 const TIMEFRAMES = ['M5', 'M15', 'M30', 'H1', 'H4', 'D1'];
 const SYMBOLS = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'NZDUSD', 'XAUUSD', 'BTCUSD', 'NVDA', 'AAPL'];

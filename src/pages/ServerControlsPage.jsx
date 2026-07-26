@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import './ServerControlsPage.css';
+import './server-controls-page.css';
 
 const TASK_API = '/api/processes';
 const POLL_MS = 5000;

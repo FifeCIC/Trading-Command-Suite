@@ -40,8 +40,6 @@ import {
   VERIFICATION_GOVERNANCE,
 } from './architecture-framework.data'
 import './architecture-framework.css'
-import './architecture-framework-modern.css'
-
 const LIVE_REFRESH_INTERVAL_MS = 30_000
 const EMPTY_OBJ = {}
 const DRIFT_STORAGE_KEY = 'architecture-drift-verification'

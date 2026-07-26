@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
-import './TradeJournalPage.css';
+import './trade-journal-page.css';
 
 /** Map an MT5 history deal to a journal entry */
 function mapDealToEntry(deal) {

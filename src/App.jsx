@@ -238,6 +238,8 @@ function AppShell() {
   // ── Screen Options overlay ──
   const [screenOptionsOpen, setScreenOptionsOpen] = useState(false);
   const [screenOptionsView, setScreenOptionsView] = useState(null);
+  // ── Status popout ──
+  const [statusPopoutOpen, setStatusPopoutOpen] = useState(false);
 
   // Update screen options view when user navigates
   useEffect(() => {

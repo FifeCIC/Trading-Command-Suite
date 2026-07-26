@@ -3,7 +3,7 @@
  * by hour and day of week for the active symbol.
  */
 import { useEffect, useState, useRef } from 'react';
-import './SeasonalityHeatmap.css';
+import './seasonality-heatmap.css';
 
 const API = 'http://localhost:3201';
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import './TradingPlansPage.css';
+import './trading-plans-page.css';
 
 const API = 'http://localhost:3201/api/plans';
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import './FadeCardGroup.css';
+import './fade-card-group.css';
 
 /**
  * Shared fade-card group — reusable across Theme Lab, MetaStack Explorer, etc.

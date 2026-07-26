@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiGet } from '../core/api/client';
-import './HealthStatusBar.css';
+import './health-status-bar.css';
 
 const STATUS = { ONLINE: 'online', DEGRADED: 'degraded', OFFLINE: 'offline', UNKNOWN: 'unknown' };
 

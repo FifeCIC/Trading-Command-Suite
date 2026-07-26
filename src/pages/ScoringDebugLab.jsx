@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import './ScoringDebugLab.css';
+import './scoring-debug-lab.css';
 
 const API = '/api';
 const SYMBOLS = ['EURUSD', 'GBPUSD', 'USDCAD', 'XAUUSD', 'USDJPY', 'US500', 'BTC-USD'];

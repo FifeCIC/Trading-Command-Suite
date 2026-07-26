@@ -133,10 +133,8 @@ Source:   ${window.location.pathname}`;
 
         <div className="dev-stat-row">
           <span className="dev-stat-label">Server</span>
-          <span className="dev-stat-value">
-            {healthLoading && '…'}
-            {healthError && <span className="error">Offline</span>}
-            {healthData && <span className="ok">Online</span>}
+          <span className={`dev-stat-value ${healthData ? 'ok' : healthError ? 'error' : 'muted'}`}>
+            {healthLoading ? '…' : healthData ? 'Online' : healthError ? 'Offline' : '—'}
           </span>
         </div>
 

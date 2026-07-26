@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
-import './ProtocolsPage.css';
+import './protocols-page.css';
 
 const SOURCE_LABELS = { code: 'System', database: 'Database' };
 const SOURCE_COLORS = { code: '#8b5cf6', database: '#3b82f6' };
