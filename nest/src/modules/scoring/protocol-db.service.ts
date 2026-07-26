@@ -11,6 +11,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DirectiveGroup } from '../directives/directive-groups';
+import { PROTOCOL_SEED_DATA } from './protocols-seed-data';
 
 export interface ProtocolConfig {
   groups: DirectiveGroup[];
@@ -213,25 +214,92 @@ export class ProtocolDbService implements OnModuleInit {
   }
 
   /**
-   * Verify protocols are seeded in DB (replaces hardcoded PROTOCOL_REGISTRY seed).
-   * Queries current DB counts — data was seeded via POST /api/scoring/gated/protocols/seed.
+   * Seed all protocols from the standalone seed data file into the DB.
+   * Idempotent — uses upsert on all 3 tables. Safe to call multiple times.
+   *
+   * The seed data lives in protocols-seed-data.ts (generated from live DB via
+   * scripts/dump-protocol-seed.cjs). It is NOT imported by any runtime consumer
+   * — only by this seed method. This keeps it as an "installation file."
    *
    * Epic #510 Phase 4 — DB-Driven Architecture.
    */
   async seedProtocolsToDatabase(): Promise<{ seeded: number; groups: number; entries: number }> {
-    try {
-      if (!this.prisma.isAvailable) return { seeded: 0, groups: 0, entries: 0 };
-      const [pCount, gCount, eCount] = await Promise.all([
-        (this.prisma as any).protocol.count(),
-        (this.prisma as any).protocolDirectiveGroup.count(),
-        (this.prisma as any).protocolDirectiveEntry.count(),
-      ]);
-      this.logger.log(`DB protocol counts: ${pCount} protocols, ${gCount} groups, ${eCount} entries`);
-      return { seeded: pCount, groups: gCount, entries: eCount };
-    } catch (err) {
-      this.logger.warn(`Failed to count protocols: ${(err as Error).message}`);
-      return { seeded: 0, groups: 0, entries: 0 };
+    let protocols = 0, groups = 0, entries = 0;
+    for (const [slug, config] of Object.entries(PROTOCOL_SEED_DATA)) {
+      try {
+        const proto = await (this.prisma as any).protocol.upsert({
+          where: { slug },
+          create: {
+            slug,
+            name: config.name,
+            description: config.description,
+            directionMode: config.directionMode || 'LONG_ONLY',
+            tradingStyle: config.tradingStyle,
+            recommendedTimeframe: config.recommendedTimeframe,
+            avgHoldTime: config.avgHoldTime,
+            winRateTarget: config.winRateTarget,
+            idealFor: config.idealFor,
+            isDefault: true,
+          },
+          update: {
+            name: config.name,
+            description: config.description,
+            directionMode: config.directionMode || 'LONG_ONLY',
+            tradingStyle: config.tradingStyle,
+            recommendedTimeframe: config.recommendedTimeframe,
+            avgHoldTime: config.avgHoldTime,
+            winRateTarget: config.winRateTarget,
+            idealFor: config.idealFor,
+          },
+        });
+        protocols++;
+
+        for (const [idx, group] of config.groups.entries()) {
+          const dg = await (this.prisma as any).protocolDirectiveGroup.upsert({
+            where: { protocolId_groupId: { protocolId: proto.id, groupId: group.id } },
+            create: {
+              protocolId: proto.id,
+              groupId: group.id,
+              name: group.name,
+              description: group.description,
+              weight: group.weight,
+              isRiskGate: group.isRiskGate,
+              minMultiplier: group.minMultiplier,
+              maxMultiplier: group.maxMultiplier,
+              sortOrder: idx,
+            },
+            update: {
+              name: group.name,
+              weight: group.weight,
+              isRiskGate: group.isRiskGate,
+              minMultiplier: group.minMultiplier,
+              maxMultiplier: group.maxMultiplier,
+              sortOrder: idx,
+            },
+          });
+          groups++;
+
+          for (const did of group.directiveIds) {
+            const maxScore = group.directiveMaxScores?.[did] ?? 100;
+            await (this.prisma as any).protocolDirectiveEntry.upsert({
+              where: { groupId_directiveId: { groupId: dg.id, directiveId: did } },
+              create: {
+                groupId: dg.id,
+                directiveId: did,
+                maxScore,
+                active: true,
+              },
+              update: { maxScore },
+            });
+            entries++;
+          }
+        }
+      } catch (err) {
+        this.logger.warn(`Failed to seed protocol ${slug}: ${(err as Error).message}`);
+      }
     }
+    this.logger.log(`Seeded ${protocols} protocols, ${groups} groups, ${entries} entries to DB`);
+    return { seeded: protocols, groups, entries };
   }
 
   /** Check if any protocol needs EURUSD data for its directives. */
