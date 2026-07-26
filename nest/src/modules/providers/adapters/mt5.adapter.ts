@@ -84,6 +84,45 @@ export class Mt5Adapter implements IProviderAdapter {
     return { 'Content-Type': 'application/json' };
   }
 
+  /**
+   * Classify a fetch error into a diagnostic category for logging/troubleshooting.
+   */
+  private classifyBridgeError(err: Error): 'timeout' | 'dns' | 'refused' | 'network' | 'parse' | 'unknown' {
+    const msg = err.message?.toLowerCase() ?? '';
+    if (msg.includes('timeout') || msg.includes('abort')) return 'timeout';
+    if (msg.includes('econnrefused') || msg.includes('connection refused')) return 'refused';
+    if (msg.includes('enotfound') || msg.includes('dns') || msg.includes('getaddrinfo')) return 'dns';
+    if (msg.includes('fetch failed')) return 'network';
+    if (msg.includes('json') || msg.includes('unexpected token')) return 'parse';
+    return 'unknown';
+  }
+
+  /**
+   * Read a non-OK response body for diagnostics. Truncated to 500 chars.
+   */
+  private async readBridgeErrorBody(res: Response): Promise<string> {
+    try {
+      const text = await res.text();
+      return text.substring(0, 500);
+    } catch {
+      return '(could not read body)';
+    }
+  }
+
+  /**
+   * Log detailed bridge diagnostics to the system log and logger.
+   */
+  private logBridgeDiag(method: string, path: string, detail: string, body?: unknown): void {
+    const summary = body ? JSON.stringify(body).substring(0, 200) : '(no body)';
+    this.logger.warn(`MT5 bridge ${method} ${path} FAILED: ${detail} [body=${summary}]`);
+    this.bridgeEvents?.log({
+      eventType: 'bridge_diag',
+      account: process.env.MT5_ACCOUNT || undefined,
+      server: process.env.MT5_SERVER || undefined,
+      errorMessage: `${method} ${path}: ${detail}`.substring(0, 500),
+    }).catch(() => {});
+  }
+
   private async bridgeGet<T>(path: string): Promise<T | null> {
     if (this.tripped) {
       const cooldownMs = 60_000; // 1 min circuit breaker
@@ -98,7 +137,7 @@ export class Mt5Adapter implements IProviderAdapter {
           event: 'provider-degraded',
         }).catch(() => {});
       } else {
-        this.logger.debug('MT5 circuit breaker active — skipping request');
+        this.logBridgeDiag('GET', path, 'circuit breaker active (skipped)');
         return null;
       }
     }
@@ -110,8 +149,11 @@ export class Mt5Adapter implements IProviderAdapter {
       });
       if (!res.ok) {
         this.consecutiveErrors++;
+        const errorBody = await this.readBridgeErrorBody(res);
+        const detail = `HTTP ${res.status}: ${errorBody}`;
+        this.logBridgeDiag('GET', path, detail);
         if (this.consecutiveErrors >= 10) {
-          this.tripBreaker(`HTTP ${res.status} from bridge`);
+          this.tripBreaker(detail);
         }
         this.logBridgeState('disconnected', `HTTP ${res.status}`);
         return null;
@@ -121,16 +163,16 @@ export class Mt5Adapter implements IProviderAdapter {
       return (await res.json()) as T;
     } catch (error: unknown) {
       const err = error as Error;
-      const isTransient = err.message?.includes('fetch failed') || err.message?.includes('ECONNREFUSED') || err.message?.includes('Connection refused');
-      // Only count non-transient errors (timeouts, etc.) toward circuit breaker
+      const category = this.classifyBridgeError(err);
+      const isTransient = category === 'refused' || category === 'dns' || category === 'network';
       if (!isTransient) {
         this.consecutiveErrors++;
       }
+      this.logBridgeDiag('GET', path, `${category}: ${err.message}`);
       if (this.consecutiveErrors >= 10) {
-        this.tripBreaker(err.message);
+        this.tripBreaker(`${category}: ${err.message}`);
       }
       this.logBridgeState('disconnected', err.message);
-      this.logger.warn(`MT5 bridge request failed: ${err.message}`);
       return null;
     }
   }
@@ -268,11 +310,11 @@ export class Mt5Adapter implements IProviderAdapter {
       comment: safeComment,
     };
 
-    this.logger.log(`MT5 order: ${body.type} ${body.symbol} ×${body.volume} sl=${body.sl} tp=${body.tp} [tripped=${this.tripped}]`);
+    this.logger.log(`MT5 order: ${body.type} ${body.symbol} ×${body.volume} sl=${body.sl} tp=${body.tp} [tripped=${this.tripped} errors=${this.consecutiveErrors}]`);
     const data = await this.bridgePost<any>('/order', body);
 
     if (!data) {
-      this.logger.warn(`MT5 order FAILED: bridgePost returned null [url=${this.bridgeUrl} tripped=${this.tripped} errors=${this.consecutiveErrors}]`);
+      this.logger.warn(`MT5 order FAILED — see bridge_diag event for details [url=${this.bridgeUrl} tripped=${this.tripped} consecutiveErrors=${this.consecutiveErrors}]`);
       // Record failed order attempt
       this.prisma?.order.create({
         data: {
@@ -320,6 +362,7 @@ export class Mt5Adapter implements IProviderAdapter {
         this.consecutiveErrors = 0;
         this.logBridgeEvent('reconnected', 'Circuit breaker released');
       } else {
+        this.logBridgeDiag('POST', path, 'circuit breaker active (skipped)', body);
         return null;
       }
     }
@@ -333,8 +376,11 @@ export class Mt5Adapter implements IProviderAdapter {
       });
       if (!res.ok) {
         this.consecutiveErrors++;
+        const errorBody = await this.readBridgeErrorBody(res);
+        const detail = `HTTP ${res.status}: ${errorBody}`;
+        this.logBridgeDiag('POST', path, detail, body);
         if (this.consecutiveErrors >= 10) {
-          this.tripBreaker(`HTTP ${res.status} from bridge POST`);
+          this.tripBreaker(detail);
         }
         this.logBridgeState('disconnected', `HTTP ${res.status}`);
         return null;
@@ -344,12 +390,13 @@ export class Mt5Adapter implements IProviderAdapter {
       return (await res.json()) as T;
     } catch (err) {
       const error = err as Error;
-      const isTransient = error.message?.includes('fetch failed') || error.message?.includes('ECONNREFUSED') || error.message?.includes('Connection refused');
-      if (!isTransient) {
+      const category = this.classifyBridgeError(error);
+      this.logBridgeDiag('POST', path, `${category}: ${error.message}`, body);
+      if (category !== 'refused' && category !== 'dns' && category !== 'network') {
         this.consecutiveErrors++;
       }
       if (this.consecutiveErrors >= 10) {
-        this.tripBreaker(error.message);
+        this.tripBreaker(`${category}: ${error.message}`);
       }
       this.logBridgeState('disconnected', error.message);
       return null;
