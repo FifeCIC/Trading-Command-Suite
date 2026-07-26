@@ -1,0 +1,57 @@
+/* ── Glossary Popover ── */
+
+.glossary-term {
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: var(--accent, #0ea5a6);
+  text-underline-offset: 3px;
+  cursor: help;
+  color: var(--ink, #e2e8f0);
+  transition: color 0.15s;
+}
+.glossary-term:hover,
+.glossary-term:focus {
+  color: var(--accent, #0ea5a6);
+  outline: none;
+}
+
+.glossary-popover {
+  position: fixed;
+  z-index: 10000;
+  max-width: 300px;
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--accent, #0ea5a6);
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  pointer-events: auto;
+  animation: gp-fade-in 0.15s ease-out;
+  transform: translateY(-100%);
+}
+
+@keyframes gp-fade-in {
+  from { opacity: 0; transform: translateY(calc(-100% + 6px)); }
+  to   { opacity: 1; transform: translateY(-100%); }
+}
+
+.glossary-popover-term {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--ink, #e2e8f0);
+  margin-bottom: 0.3rem;
+}
+
+.glossary-popover-def {
+  font-size: 0.75rem;
+  color: var(--ink-soft, #94a3b8);
+  line-height: 1.5;
+}
+
+.glossary-popover-cat {
+  font-size: 0.65rem;
+  color: var(--accent, #0ea5a6);
+  margin-top: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

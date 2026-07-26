@@ -134,6 +134,15 @@ var GLOBAL_PREFERENCES = [
     field: 'hidePracticeData',
     defaultValue: false,
   },
+  {
+    id: 'showTrainingGuidance',
+    label: '📖 Show Training Guidance',
+    description: 'Display beginner-friendly explanations, tips, and glossary links throughout the app. Turn off if you\'re experienced and prefer a clean interface.',
+    type: 'checkbox',
+    key: 'tcs:preferences',
+    field: 'showTrainingGuidance',
+    defaultValue: true,
+  },
 ];
 
 /** Registry of option definitions keyed by view ID */
@@ -311,6 +320,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   var highContrastText = prefs.highContrastText === true;
   var colorBlindMode = prefs.colorBlindMode === true;
   var hidePracticeData = prefs.hidePracticeData === true;
+  var showTrainingGuidance = prefs.showTrainingGuidance !== false;
   var fontScale = prefs.fontScale || 'normal';
   var focusIndicatorStyle = prefs.focusIndicatorStyle || 'strong';
   var layoutSize = prefs.layoutSize || 'normal';
@@ -366,7 +376,8 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   }, [isOpen, onToggle]);
 
   // Build global section state for rendering
-  var globalValueMap = { displayMode: displayMode, experienceLevel: experienceLevel, hidePageTitle: hidePageTitle, hidePageSubtitle: hidePageSubtitle, highContrastText: highContrastText, colorBlindMode: colorBlindMode, hidePracticeData: hidePracticeData, fontScale: fontScale, focusIndicatorStyle: focusIndicatorStyle };
+  var showTrainingGuidance = prefs.showTrainingGuidance !== false;
+  var globalValueMap = { displayMode: displayMode, experienceLevel: experienceLevel, hidePageTitle: hidePageTitle, hidePageSubtitle: hidePageSubtitle, highContrastText: highContrastText, colorBlindMode: colorBlindMode, hidePracticeData: hidePracticeData, showTrainingGuidance: showTrainingGuidance, fontScale: fontScale, focusIndicatorStyle: focusIndicatorStyle };
   var hasGlobalSections = true; // always show global section
   var hasViewSections = registry && registry.sections.length > 0;
 

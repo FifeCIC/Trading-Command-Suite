@@ -105,3 +105,11 @@
 .dd-test-raw { margin-top: 0.5rem; }
 .dd-test-raw summary { font-size: 0.7rem; color: var(--ink-soft); cursor: pointer; }
 .dd-test-raw pre { font-size: 0.65rem; font-family: monospace; background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 4px; margin: 0.3rem 0 0; max-height: 200px; overflow: auto; }
+
+/* ── Chart section ── */
+.dd-chart-container { border-radius: 8px; overflow: hidden; }
+.dd-chart-empty {
+  display: flex; align-items: center; justify-content: center; height: 200px;
+  color: var(--ink-soft); font-size: 0.82rem; font-style: italic;
+  border: 1px dashed var(--line); border-radius: 8px;
+}

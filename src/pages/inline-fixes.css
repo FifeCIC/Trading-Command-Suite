@@ -94,3 +94,26 @@
 /* ─── SymbolsBrowserPage ─── */
 .sb-filter-label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; }
 .sb-filter-input { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 0.85rem; }
+
+/* ─── UnavailablePlaceholder ─── */
+.unavailable-placeholder {
+  max-width: 500px; margin: 60px auto; text-align: center;
+  padding: 40px; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 12px; color: var(--text);
+}
+.unavailable-icon { font-size: 2rem; margin-bottom: 12px; }
+.unavailable-title { margin: 0 0 8px; font-size: 1.2rem; color: var(--text-strong); }
+.unavailable-message { color: var(--text-muted); font-size: 0.85rem; line-height: 1.6; margin: 0 0 16px; }
+.unavailable-action {
+  display: inline-block; padding: 8px 18px; border-radius: 8px;
+  background: var(--accent); color: #fff; text-decoration: none;
+  font-size: 0.82rem; font-weight: 600;
+}
+
+/* ─── LastUpdated ─── */
+.last-updated {
+  position: absolute; top: 8px; right: 16px;
+  font-size: 0.72rem; color: var(--ink-soft);
+  font-style: italic; z-index: 1;
+  pointer-events: none; user-select: none;
+}

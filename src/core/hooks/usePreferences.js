@@ -33,6 +33,8 @@ const DEFAULTS = {
   layoutSize: 'normal',         // Content width: 'compact' | 'normal' | 'wide' | 'full'
   colorBlindMode: false,         // WCAG 1.4.1 — adds shape/pattern indicators alongside color (#358)
   hidePracticeData: false,       // Hide practice/paper trading data across views (#450)
+  showTrainingGuidance: true,    // Show beginner-friendly explanations and tips (#445)
+  dismissedGuides: {},            // Map of guideId → ISO timestamp for dismissed training containers
   // Performance
   pollingInterval: 30,
   chartAnimation: true,

@@ -22,7 +22,6 @@
  * Data:  POST /api/scoring/gated/batch (live)
  */
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
@@ -228,7 +227,6 @@ export default function MetaStackExplorerPage() {
     catch { return null; }
   });
   const [scrollPct, setScrollPct] = useState(0);
-  const navigate = useNavigate();
 
   // ── Prerequisite data queries ──
   const symbolsQuery = useQuery({
@@ -643,7 +641,8 @@ export default function MetaStackExplorerPage() {
                               <a
                                 href={`/scoring/directive-detail?id=${d.directiveId}`}
                                 className="mse-dir-name"
-                                onClick={(e) => { e.preventDefault(); navigate(`/scoring/directive-detail?id=${d.directiveId}`); }}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 style={{ color: 'var(--accent)', textDecoration: 'underline', cursor: 'pointer' }}
                               >{d.name}</a>
                               <span className="mse-dir-score">{d.score}/{d.maxScore}</span>

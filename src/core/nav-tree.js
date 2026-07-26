@@ -92,13 +92,14 @@ export const NAV_TREE = {
       { id: 'alert-center', label: 'Alert Center', icon: '◈' },
     ],
   },
-  training: {
-    label: 'Training',
+  education: {
+    label: 'Education',
     views: [
       { id: 'candle-patterns', label: 'Pattern Detection', icon: '🕯️' },
       { id: 'candle-patterns-guide', label: 'Candle Patterns', icon: '◉' },
       { id: 'mt5-demo-trading', label: 'MT5 Demo Trading', icon: '🎮' },
       { id: 'backtest', label: 'Backtest Engine', icon: '⬡' },
+      { id: 'settings-education', label: 'Education Settings', icon: '⚙' },
     ],
   },
   status: {
@@ -121,7 +122,6 @@ export const NAV_TREE = {
       { id: 'analytics', label: 'Analytics', icon: '▦' },
       { id: 'audit-log', label: 'Audit Log', icon: '▤' },
       { id: 'ai-logs', label: 'AI Logs', icon: '📋' },
-      { id: 'setup', label: 'Setup Checklist', icon: '⊞' },
       { id: 'capability-map', label: 'Capability Map', icon: '🗺️' },
     ],
   },

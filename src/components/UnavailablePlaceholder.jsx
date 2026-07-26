@@ -9,28 +9,17 @@ export default function UnavailablePlaceholder({ title, message, action, actionU
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      style={{
-        maxWidth: 500, margin: '60px auto', textAlign: 'center',
-        padding: 40, background: 'var(--bg-card)', border: '1px solid var(--border)',
-        borderRadius: 12, color: 'var(--text)',
-      }}
+      className="unavailable-placeholder"
     >
-      <div style={{ fontSize: '2rem', marginBottom: 12 }}>🚧</div>
-      <h2 style={{ margin: '0 0 8px', fontSize: '1.2rem', color: 'var(--text-strong)' }}>
+      <div className="unavailable-icon">🚧</div>
+      <h2 className="unavailable-title">
         {title || 'Not Available'}
       </h2>
-      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.6, margin: '0 0 16px' }}>
+      <p className="unavailable-message">
         {message || 'This feature requires additional setup or is not yet connected to live data.'}
       </p>
       {action && actionUrl && (
-        <a
-          href={actionUrl}
-          style={{
-            display: 'inline-block', padding: '8px 18px', borderRadius: 8,
-            background: 'var(--accent)', color: '#fff', textDecoration: 'none',
-            fontSize: '0.82rem', fontWeight: 600,
-          }}
-        >
+        <a href={actionUrl} className="unavailable-action">
           {action}
         </a>
       )}

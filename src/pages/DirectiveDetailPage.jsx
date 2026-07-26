@@ -12,6 +12,9 @@ import { useState } from 'react';
 import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
+import BeginnerGuide from '../components/BeginnerGuide';
+import GlossaryRichText from '../components/GlossaryRichText';
+import DirectiveChart from '../components/DirectiveChart';
 import './directive-detail.css';
 
 export default function DirectiveDetailPage() {
@@ -79,13 +82,18 @@ function DirectiveDetailContent({ directive, id, navigate }) {
 
       <p className="dd-code" style={{ fontFamily: 'monospace', color: '#60a5fa' }}>{directive.id}</p>
 
+      {/* ── Beginner's Guide ── */}
+      <BeginnerGuide directive={directive} />
+
       {/* ── Formula Card ── */}
       <section className="dd-card">
         <h2>Formula</h2>
         <div className="dd-formula">
-          {typeof directive.description === 'string' ? directive.description
-            : typeof directive.formula === 'string' ? directive.formula
-            : 'No formula description available.'}
+          <GlossaryRichText text={
+            typeof directive.description === 'string' ? directive.description
+              : typeof directive.formula === 'string' ? directive.formula
+              : 'No formula description available.'
+          } />
         </div>
         <div className="dd-meta-grid">
           <div><span>Max Score</span><strong>{directive.maxScore ?? '—'}</strong></div>
@@ -200,7 +208,7 @@ function DirectiveDetailContent({ directive, id, navigate }) {
             {testResult.result.reason && (
               <div className="dd-test-reason">
                 <span className="dd-test-reason-label">Reason</span>
-                <p>{typeof testResult.result.reason === 'string' ? testResult.result.reason : JSON.stringify(testResult.result.reason)}</p>
+                <p><GlossaryRichText text={typeof testResult.result.reason === 'string' ? testResult.result.reason : JSON.stringify(testResult.result.reason)} /></p>
               </div>
             )}
             {testResult.result.meta && Object.keys(testResult.result.meta).length > 0 && (
@@ -216,6 +224,17 @@ function DirectiveDetailContent({ directive, id, navigate }) {
           <div className="dd-test-error">{testResult.error}</div>
         )}
       </section>
+
+      {/* ── Chart ── */}
+      {testResult?.bars && testResult.bars.length > 0 && (
+        <section className="dd-card">
+          <h2>Chart</h2>
+          <p className="dd-hint" style={{ marginBottom: '0.75rem' }}>
+            {testResult.symbol} · {testResult.timeframe} · {testResult.barCount} bars · {testResult.firstBar?.slice(0, 10)} → {testResult.lastBar?.slice(0, 10)}
+          </p>
+          <DirectiveChart bars={testResult.bars} symbol={testResult.symbol} height={320} />
+        </section>
+      )}
 
       {/* ── Raw Metadata ── */}
       <section className="dd-card dd-raw">

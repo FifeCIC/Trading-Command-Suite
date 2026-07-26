@@ -704,6 +704,11 @@ function AppShell() {
 
       <header className="topbar topbar-omni">
         <div className="topbar-row topbar-row-main">
+          <div className="topbar-brand" title="Trading Command Suite" aria-label="Trading Command Suite">
+            <span className="topbar-brand-line"><span className="topbar-brand-accent">T</span>RADING</span>
+            <span className="topbar-brand-line"><span className="topbar-brand-accent">C</span>OMMAND</span>
+            <span className="topbar-brand-line"><span className="topbar-brand-accent">S</span>UITE</span>
+          </div>
           <nav className="topbar-area-nav" aria-label="Main navigation">
             {/* Platform-specific pages (Trading212, etc.) — left of separator */}
             {Object.entries(NAV_TREE)
@@ -1090,30 +1095,6 @@ function AppShell() {
             <button type="button" onClick={onDownloadRuntimeReport}>Export Report</button>
           </span>
         </div>
-        {devOverlayOpen && (
-          <div className="dev-footer">
-            <section className="footer-panel footer-insights" {...withDevTag('floating.insights', { kind: 'hidden-info' })}>
-              <div className="floating-title"><span>Hidden Info</span><BadgePill label={themePack} status="ok" /></div>
-              <p>Policy: {policyMeta.policyEnforced ? 'enforced' : 'not enforced'}</p>
-              <p>Fail-closed: {policyMeta.failClosed ? 'on' : 'off'}</p>
-              <p>Vitals tracked: {Object.keys(performanceSnapshot.metrics).length}</p>
-            </section>
-            <section className="footer-panel footer-log" {...withDevTag('floating.log', { kind: 'activity-log' })}>
-              <div className="floating-title"><span>Live Activity Log</span><BadgePill label={`${activityLog.length}`} status="neutral" /></div>
-              <div className="log-scroll">
-                {activityLog.length === 0 && <p className="muted">Interact with the shell to populate log events.</p>}
-                {activityLog.map((item) => (<p key={item.id} className="log-line">{item.timestamp} [{item.type}] {item.details}</p>))}
-              </div>
-            </section>
-            <section className="footer-panel app-footer-ff">
-              <div className="floating-title"><span>Feature Flags</span></div>
-              {Object.entries(ffState).map(([name, enabled]) => (
-                <label key={name} className="ff-row"><input type="checkbox" checked={enabled} onChange={() => enabled ? featureFlags.disable(name) : featureFlags.enable(name)} /><span>{name}</span></label>
-              ))}
-              <button type="button" className="ff-reset" onClick={() => featureFlags.reset()}>Reset defaults</button>
-            </section>
-          </div>
-        )}
       </footer>
 
       <ScreenOptions

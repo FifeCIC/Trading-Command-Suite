@@ -31,17 +31,7 @@ export default function LastUpdated({ at }) {
   if (minutesAgo === null) return null;
 
   return (
-    <div style={{
-      position: 'absolute',
-      top: 8,
-      right: 16,
-      fontSize: '0.72rem',
-      color: 'var(--ink-soft)',
-      fontStyle: 'italic',
-      zIndex: 1,
-      pointerEvents: 'none',
-      userSelect: 'none',
-    }}>
+    <div className="last-updated">
       Updated {minutesAgo === 0 ? 'now' : `${minutesAgo}m ago`}
     </div>
   );

@@ -454,6 +454,14 @@ export class DirectivesController {
       barCount: bars.length,
       firstBar: bars[0]?.timestamp?.toISOString?.() ?? bars[0]?.timestamp,
       lastBar: bars[bars.length - 1]?.timestamp?.toISOString?.() ?? bars[bars.length - 1]?.timestamp,
+      bars: bars.map((b) => ({
+        time: Math.floor(new Date(b.timestamp).getTime() / 1000),
+        open: b.open,
+        high: b.high,
+        low: b.low,
+        close: b.close,
+        volume: b.volume,
+      })),
       result,
     };
   }

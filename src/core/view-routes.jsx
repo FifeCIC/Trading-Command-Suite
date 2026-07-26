@@ -14,7 +14,6 @@
  */
 
 // ── Trading ──
-import HomeDashboardPage from '../pages/HomeDashboardPage.jsx';
 import TradingStrategiesPage from '../pages/TradingStrategiesPage.jsx';
 import StrategyDashboardPage from '../pages/StrategyDashboardPage.jsx';
 import StrategyComparisonPage from '../pages/StrategyComparisonPage.jsx';
@@ -118,6 +117,7 @@ import SetupWizardPage from '../pages/SetupWizardPage.jsx';
 import FaqPage from '../pages/FaqPage.jsx';
 import SettingsPage from '../pages/SettingsPage.jsx';
 import SettingsDatabasePage from '../pages/SettingsDatabasePage.jsx';
+import SettingsEducationPage from '../pages/SettingsEducationPage.jsx';
 import ServerControlsPage from '../pages/ServerControlsPage.jsx';
 import ReportsPage from '../pages/ReportsPage.jsx';
 import CapabilityMapPage from '../pages/CapabilityMapPage.jsx';
@@ -179,7 +179,6 @@ import HomeDashboard from '../pages/HomeDashboard.jsx';
 // ── MAP ──────────────────────────────────────────────────────────────────────
 export const VIEW_COMPONENTS = {
   // Trading
-  'overview': HomeDashboardPage,
   'trading-strategies': TradingStrategiesPage,
   'strategy-comparison': StrategyComparisonPage,
   'trade-journal': TradeJournalPage,
@@ -284,6 +283,7 @@ export const VIEW_COMPONENTS = {
   'faq': FaqPage,
   'settings': SettingsPage,
   'settings-database': SettingsDatabasePage,
+  'settings-education': SettingsEducationPage,
   'server-controls': ServerControlsPage,
   'reports': ReportsPage,
   'capability-map': CapabilityMapPage,

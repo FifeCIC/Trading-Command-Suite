@@ -607,7 +607,6 @@ body {
   font-size: 0.95rem;
   color: var(--ink);
   background: var(--bg);
-  transition: background 0.3s ease;
 }
 
 /* --- Background tone overrides --- */
@@ -905,6 +904,27 @@ button.nav-active {
   align-items: center;
   gap: 0.75rem;
   justify-content: space-between;
+}
+
+/* ── Brand logo ── */
+.topbar-brand {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+  gap: 1px;
+  flex-shrink: 0;
+  user-select: none;
+}
+.topbar-brand-line {
+  font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft, #94a3b8);
+  text-transform: uppercase;
+}
+.topbar-brand-accent {
+  color: var(--accent, #0ea5a6);
 }
 
 .topbar-area-nav {
