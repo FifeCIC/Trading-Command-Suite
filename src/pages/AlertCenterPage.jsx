@@ -50,13 +50,13 @@ export default function AlertCenterPage() {
   };
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto', padding: 20, color: '#e2e8f0' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+    <div className="ac-page">
+      <header className="ac-header-row">
         <div><h1>Alert Center</h1><p style={{ color: '#64748b' }}>{unread} unread</p></div>
         <button onClick={markAllRead} style={{ padding: '6px 14px', background: '#374151', color: '#d1d5db', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>Mark All Read</button>
       </header>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div className="ac-tabs-row">
         {['all', 'signal', 'drawdown', 'daily', 'system'].map(f => (
           <button key={f} onClick={() => setFilter(f)}
             style={{ padding: '4px 12px', border: '1px solid #334155', borderRadius: 6, background: filter === f ? '#1e40af' : '#0f1117', color: filter === f ? '#fff' : '#94a3b8', fontSize: 12, cursor: 'pointer' }}>
@@ -65,7 +65,7 @@ export default function AlertCenterPage() {
         ))}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="ac-alert-list">
         {filtered.map(a => (
           <div key={a.id} onClick={() => handleAlertClick(a)}
             style={{

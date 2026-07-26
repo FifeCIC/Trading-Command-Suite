@@ -22,11 +22,7 @@ export default function DirectiveDetailPage() {
 
   const { data: directive, isLoading, error } = useQuery({
     queryKey: ['directive', id],
-    queryFn: async () => {
-      const res = await apiGet('/api/directives');
-      const dirs = Array.isArray(res) ? res : (res?.directives || []);
-      return dirs.find((d) => d.id === id) || null;
-    },
+    queryFn: () => apiGet(`/api/directives/${id}`),
     enabled: !!id,
     staleTime: 60_000,
   });
@@ -94,7 +90,7 @@ function DirectiveDetailContent({ directive, id, navigate }) {
         <div className="dd-meta-grid">
           <div><span>Max Score</span><strong>{directive.maxScore ?? '—'}</strong></div>
           <div><span>Direction Bias</span><strong>{directive.directionBias || 'neutral'}</strong></div>
-          <div><span>Complexity</span><strong>{directive.complexity || '—'}</strong></div>
+          <div><span>Complexity</span><strong>{typeof directive.complexity === 'object' ? directive.complexity?.label || JSON.stringify(directive.complexity) : (directive.complexity || '—')}</strong></div>
           <div><span>Classification</span><strong>{directive.classification || '—'}</strong></div>
         </div>
       </section>

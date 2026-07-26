@@ -783,10 +783,10 @@ export default function SpeedTradingPage() {
       {/* ── Chart Settings Modal ── */}
       {chartSettingsOpen && (
         <div className="st-overlay" onClick={() => setChartSettingsOpen(false)}>
-          <div className="st-overlay-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 340 }}>
-            <h2 style={{ marginBottom: 12 }}>⚙ Chart Settings</h2>
+          <div className="st-overlay-box st-chart-overlay" onClick={e => e.stopPropagation()}>
+            <h2 className="st-overlay-title">⚙ Chart Settings</h2>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: '0.78rem' }}>
+            <div className="st-overlay-form">
               {/* Indicators */}
               <div style={{ fontWeight: 700, color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Indicators</div>
               <label className="st-chart-setting"><span>Volume histogram</span><input type="checkbox" checked={chartSettings.showVolume} onChange={e => setChartSettings(s => ({ ...s, showVolume: e.target.checked }))} /></label>
@@ -817,7 +817,7 @@ export default function SpeedTradingPage() {
               </div>
             </div>
 
-            <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
+            <div className="st-overlay-actions">
               <button className="st-btn" onClick={() => { setChartSettings({ showVolume: true, showEMA9: true, showEMA21: true, showEMA50: false, gridStyle: 1, upColor: '#22c55e', downColor: '#ef4444' }); }}>Reset defaults</button>
               <button className="st-btn" onClick={() => setChartSettingsOpen(false)}>Close</button>
             </div>

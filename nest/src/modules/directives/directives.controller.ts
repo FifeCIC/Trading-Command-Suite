@@ -268,6 +268,44 @@ export class DirectivesController {
   }
 
   /**
+   * GET /api/directives/:id
+   *
+   * Returns a single directive by ID, directly from the registry + DB.
+   */
+  @Get(':id')
+  async getOne(@Param('id') id: string) {
+    const directive = this.directivesService.get(id);
+    if (!directive) return { error: `Directive "${id}" not found` };
+
+    // Load DB metadata
+    let dbMeta: any = {};
+    try {
+      const dbResult = await this.directivesService.getDbStatuses();
+      const dbRow = dbResult?.find((d: any) => d.id === id);
+      if (dbRow) dbMeta = { active: dbRow.active, nature: dbRow.nature };
+    } catch {}
+
+    return {
+      id: directive.id,
+      name: directive.name,
+      description: directive.description,
+      category: (directive as any).category || 'Other',
+      maxScore: directive.maxScore,
+      complexity: (directive as any).complexity,
+      active: dbMeta.active ?? true,
+      classification: (directive as any).classification || 'active',
+      nature: dbMeta.nature,
+      directionBias: directive.directionBias,
+      version: directive.version,
+      priority: directive.priority,
+      performance: dbMeta.performance,
+      inputs: (directive as any).inputs,
+      dependsOn: (directive as any).dependsOn,
+      formula: (directive as any).formula,
+    };
+  }
+
+  /**
    * GET /api/directives/stats
    *
    * Returns per-directive performance stats from Score history.

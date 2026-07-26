@@ -191,6 +191,7 @@
 .mse-dir-bearish { border-color: rgba(239,68,68,0.45); background: rgba(239,68,68,0.06); }
 .mse-dir-neutral { border-color: rgba(148,163,184,0.3); }
 .mse-dir-name { font-weight: 600; min-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mse-dir-name:hover { color: var(--ink) !important; text-decoration: none !important; }
 .mse-dir-score { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 50px; text-align: right; }
 .mse-dir-pct { font-size: 0.68rem; color: var(--ink-soft); min-width: 30px; text-align: right; }
 .mse-dir-group-tag { font-size: 0.62rem; color: var(--ink-soft); background: color-mix(in srgb, var(--ink-soft) 10%, transparent); padding: 0 4px; border-radius: 2px; }

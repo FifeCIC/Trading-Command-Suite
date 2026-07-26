@@ -447,9 +447,9 @@ export default function ArchitectureFrameworkPage() {
           <p><strong>Priority:</strong> P0 foundation</p>
           <p><strong>Role:</strong> active decision reference</p>
           <p><strong>Mode:</strong> {viewMode === 'roadmap' ? 'roadmap overlay' : 'framework'}</p>
-          <div className="architecture-cross-nav" style={{ marginTop: 8, display: 'flex', gap: 6 }}>
-            <a href="/builder/diagrams" className="architecture-chip-link" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '2px 8px', border: '1px solid var(--line)', borderRadius: 4 }}>▦ Diagrams</a>
-            <a href="/status/capability-map" className="architecture-chip-link" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '2px 8px', border: '1px solid var(--line)', borderRadius: 4 }}>🗺️ Capability Map</a>
+          <div className="architecture-cross-nav arch-cross-nav-row">
+            <a href="/builder/diagrams" className="architecture-chip-link arch-chip-link">▦ Diagrams</a>
+            <a href="/status/capability-map" className="architecture-chip-link arch-chip-link">🗺️ Capability Map</a>
           </div>
         </div>
       </section>
@@ -562,7 +562,7 @@ export default function ArchitectureFrameworkPage() {
       <section className="architecture-index-shell">
         <div className="architecture-index-header">
           <h2>Architecture Index</h2>
-          <div className="architecture-actions" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <div className="architecture-actions arch-actions-row">
             {(() => {
               const staleSectionCount = SECTION_META.filter((s) => {
                 const v = getVerifiedDate(`section:${s.id}`)
@@ -596,12 +596,12 @@ export default function ArchitectureFrameworkPage() {
             >
               {section.title}
               {vTone !== 'ok' && (
-                <span className={`architecture-chip architecture-chip-${vTone}`} style={{ marginLeft: 6, fontSize: 9 }}>
+                <span className={`architecture-chip architecture-chip-${vTone} arch-chip-ml`}>
                   {vTone === 'error' ? 'stale' : 'review'}
                 </span>
               )}
               {vTone === 'ok' && verifiedDate && (
-                <span className="architecture-chip architecture-chip-ok" style={{ marginLeft: 6, fontSize: 9 }}>
+                <span className="architecture-chip architecture-chip-ok arch-chip-ml">
                   ✓
                 </span>
               )}
@@ -830,7 +830,7 @@ export default function ArchitectureFrameworkPage() {
                 </tbody>
               </table>
             </div>
-            <p className="hint" style={{ marginTop: 12 }}>24 sections documented. 20 established + 4 subsystem deep-dives (now built).</p>
+            <p className="hint arch-hint-mt">24 sections documented. 20 established + 4 subsystem deep-dives (now built).</p>
           </div>
         </SectionBlock>
       )}
@@ -1204,7 +1204,7 @@ export default function ArchitectureFrameworkPage() {
                 </tbody>
               </table>
             </div>
-            <div className="architecture-actions" style={{ marginTop: 8 }}>
+            <div className="architecture-actions arch-actions-mt">
               <button type="button" onClick={() => markAllVerified(CURRENT_ROUTE_CONTRACTS.map((r) => `route:${r.route}`))} aria-label="Mark all route contracts as verified">
                 Mark All Verified
               </button>

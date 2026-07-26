@@ -62,14 +62,14 @@ export default function SymbolsBrowserPage() {
         <p>{syms.length} symbol{syms.length !== 1 ? 's' : ''} in database · Showing {filtered.length} · Mode: {s.mode || '...'}</p>
       </header>
 
-      <section className="sb-controls" style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'end' }}>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.8rem' }}>
+      <section className="sb-controls il-flex-wrap">
+        <label className="sb-filter-label">
           Search
-          <input type="text" placeholder="Ticker or name..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--line)', background: 'var(--panel)', color: 'var(--ink)', fontSize: '0.85rem' }} />
+          <input type="text" placeholder="Ticker or name..." value={search} onChange={(e) => setSearch(e.target.value)} className="sb-filter-input" />
         </label>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.8rem' }}>
+        <label className="sb-filter-label">
           Type
-          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--line)', background: 'var(--panel)', color: 'var(--ink)', fontSize: '0.85rem' }}>
+          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="sb-filter-input">
             <option value="all">All Types</option>
             {SYMBOL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
@@ -81,11 +81,11 @@ export default function SymbolsBrowserPage() {
           <table className="symbols-table">
             <thead>
               <tr>
-                <th style={{ width: 32 }}>⭐</th>
-                <th onClick={() => toggleSort('ticker')} style={{ cursor: 'pointer' }}>Ticker{sortIcon('ticker')}</th>
-                <th onClick={() => toggleSort('name')} style={{ cursor: 'pointer' }}>Name{sortIcon('name')}</th>
-                <th onClick={() => toggleSort('exchange')} style={{ cursor: 'pointer' }}>Exchange{sortIcon('exchange')}</th>
-                <th onClick={() => toggleSort('type')} style={{ cursor: 'pointer' }}>Type{sortIcon('type')}</th>
+                <th className="il-w-32">⭐</th>
+                <th onClick={() => toggleSort('ticker')} className="il-clickable">Ticker{sortIcon('ticker')}</th>
+                <th onClick={() => toggleSort('name')} className="il-clickable">Name{sortIcon('name')}</th>
+                <th onClick={() => toggleSort('exchange')} className="il-clickable">Exchange{sortIcon('exchange')}</th>
+                <th onClick={() => toggleSort('type')} className="il-clickable">Type{sortIcon('type')}</th>
                 <th>Freshness</th>
               </tr>
             </thead>

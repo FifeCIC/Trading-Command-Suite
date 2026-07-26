@@ -53,7 +53,7 @@ function VitalsCard({ vitals }) {
       </div>
       <div className="hd-card">
         <div className="hd-card-label">Platform</div>
-        <div className="hd-card-value" style={{ fontSize: '0.75rem' }}>{vitals.platform}</div>
+        <div className="hd-card-value il-fs-075">{vitals.platform}</div>
         <div className="hd-card-sub">PID {vitals.pid}</div>
       </div>
     </div>

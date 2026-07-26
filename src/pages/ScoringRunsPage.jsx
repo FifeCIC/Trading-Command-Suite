@@ -116,7 +116,7 @@ export default function ScoringRunsPage() {
             placeholder="Search ticker or strategy…"
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
-            style={{ width: 200 }}
+            className="il-w-200"
           />
           <button className="pf-refresh-btn" onClick={() => runsQuery.refetch()} disabled={runsQuery.isFetching}>
             {runsQuery.isFetching ? '⟳' : '↻'}
@@ -165,11 +165,11 @@ export default function ScoringRunsPage() {
       {/* ── Runs Table ──────────────────────────────────────── */}
       {runs.length > 0 && !compareMode && (
         <div className="pf-section">
-          <div style={{ overflowX: 'auto' }}>
+          <div className="il-overflow-x">
             <table className="pf-table">
               <thead>
                 <tr>
-                  <th style={{ width: 32 }}>
+                  <th className="il-w-32">
                     <input type="checkbox" checked={selectedIds.size === runs.length && runs.length > 0} onChange={toggleSelectAll} />
                   </th>
                   <th>Time</th>
@@ -188,13 +188,12 @@ export default function ScoringRunsPage() {
                   return (
                     <React.Fragment key={run.id}>
                       <tr
-                        className={`directive-row ${expanded ? 'is-selected' : ''} ${selectedIds.has(run.id) ? 'sr-row-checked' : ''}`}
-                        style={{ cursor: 'pointer' }}
+                        className={`directive-row ${expanded ? 'is-selected' : ''} ${selectedIds.has(run.id) ? 'sr-row-checked' : ''} il-clickable`}
                       >
                         <td onClick={(e) => e.stopPropagation()}>
                           <input type="checkbox" checked={selectedIds.has(run.id)} onChange={() => toggleSelect(run.id)} />
                         </td>
-                        <td style={{ whiteSpace: 'nowrap' }} onClick={() => toggleExpand(run.id)}>
+                        <td className="il-nowrap" onClick={() => toggleExpand(run.id)}>
                           {new Date(run.timestamp).toLocaleString(undefined, {
                             month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
                           })}
@@ -237,7 +236,7 @@ export default function ScoringRunsPage() {
                           <td colSpan={8} style={{ padding: '0.5rem 0.7rem', background: 'color-mix(in srgb, var(--panel) 60%, var(--accent))' }}>
                             {detailQuery.isLoading && <p className="pf-hint">Loading scores…</p>}
                             {detailQuery.data?.run?.scores && (
-                              <table className="pf-table" style={{ margin: 0, fontSize: '0.8rem' }}>
+                              <table className="pf-table sr-detail-table">
                                 <thead>
                                   <tr>
                                     <th>Ticker</th>
@@ -287,15 +286,15 @@ export default function ScoringRunsPage() {
       {/* ── Compare Mode ─────────────────────────────────── */}
       {compareMode && selectedRuns.length >= 2 && (
         <div className="pf-section sr-compare-panel">
-          <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem' }}>Comparing {selectedRuns.length} Runs</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${selectedRuns.length}, 1fr)`, gap: '0.75rem', overflowX: 'auto' }}>
+          <h3 className="sr-compare-title">Comparing {selectedRuns.length} Runs</h3>
+          <div className="sr-compare-grid" style={{ gridTemplateColumns: `repeat(${selectedRuns.length}, 1fr)` }}>
             {selectedRuns.map((run) => (
-              <div key={run.id} className="sr-compare-col" style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 8, padding: '0.75rem', minWidth: 200 }}>
-                <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.4rem' }}>{run.strategyName || 'Unknown'}</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--ink-soft)', marginBottom: '0.5rem' }}>
+              <div key={run.id} className="sr-compare-col">
+                <div className="sr-compare-name">{run.strategyName || 'Unknown'}</div>
+                <div className="sr-compare-date">
                   {new Date(run.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.75rem' }}>
+                <div className="sr-compare-stats">
                   <span className={run.avgScore >= 60 ? 'pf-green' : run.avgScore >= 40 ? 'pf-amber' : 'pf-red'}>
                     Avg: {run.avgScore?.toFixed(1)}
                   </span>

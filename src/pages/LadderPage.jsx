@@ -316,14 +316,14 @@ export default function LiveOrderingStackPage() {
         </div>
 
         {scored.length === 0 ? (
-          <div className="so-empty" style={{ padding: '2rem', textAlign: 'center' }}>
+          <div className="so-empty ladder-empty">
             {symbolsQuery.isLoading ? (
               <p>Loading symbols…</p>
             ) : watchlistSymbols.length === 0 ? (
               <p>No symbols in this watchlist.</p>
             ) : (
               <>
-                <p style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem' }}>🔒 No Scoring Data</p>
+                <p className="ladder-no-data-title">🔒 No Scoring Data</p>
                 <p style={{ color: 'var(--ink-soft)', fontSize: '0.85rem', maxWidth: 480, margin: '0 auto' }}>
                   The Ladder requires active scoring data to display ranked symbols.
                   Ensure the protocol is active and market data (bars) is available for the symbols in this watchlist.

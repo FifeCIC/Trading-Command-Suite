@@ -324,8 +324,8 @@ function ServerStatusPanel() {
 
   return (
     <section className="status-section">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <h2 style={{ margin: 0 }}>Server Controls</h2>
+      <div className="status-section-header">
+        <h2>Server Controls</h2>
         <button className="ss-btn" onClick={handleCopy}>
           {copied ? '✓ Copied' : '📋 Copy Startup Commands'}
         </button>
@@ -342,8 +342,8 @@ function ServerStatusPanel() {
             <MetricRow label="Port" value={srv.port} />
             {srv.version && <MetricRow label="Version" value={srv.version} />}
             {srv.mode && <MetricRow label="Mode" value={srv.mode} />}
-            <p className="status-hint" style={{ marginTop: 6 }}>{srv.hint}</p>
-            <div className="status-actions" style={{ marginTop: 10, display: 'flex', gap: 6 }}>
+            <p className="status-hint status-hint-mt-6">{srv.hint}</p>
+            <div className="status-actions status-actions-row">
               <button
                 className="ss-btn ss-btn--open"
                 disabled={!srv.online}
@@ -357,7 +357,7 @@ function ServerStatusPanel() {
       </div>
 
       {/* Startup commands (always visible for clarity) */}
-      <details style={{ marginTop: 16 }}>
+      <details className="status-details-section">
         <summary style={{ cursor: 'pointer', color: '#94a3b8', fontSize: '0.8rem' }}>
           Terminal startup commands (PowerShell)
         </summary>

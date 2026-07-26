@@ -43,3 +43,54 @@
 
 /* Overlay */
 .il-overlay-box { max-width: 340px; }
+
+/* ─── ScoringRunsPage ─── */
+.sr-detail-table { margin: 0; font-size: 0.8rem; }
+.sr-compare-title { margin: 0 0 0.75rem; font-size: 1rem; }
+.sr-compare-grid { display: grid; gap: 0.75rem; overflow-x: auto; }
+.sr-compare-col {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.75rem;
+  min-width: 200px;
+}
+.sr-compare-name { font-weight: 700; font-size: 0.85rem; margin-bottom: 0.4rem; }
+.sr-compare-date { font-size: 0.72rem; color: var(--ink-soft); margin-bottom: 0.5rem; }
+.sr-compare-stats { display: flex; gap: 0.5rem; flex-wrap: wrap; font-size: 0.75rem; }
+
+/* ─── LadderPage ─── */
+.ladder-empty { padding: 2rem; text-align: center; }
+.ladder-no-data-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
+
+/* ─── SystemStatusPage ─── */
+.status-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.status-section-header h2 { margin: 0; }
+.status-hint-mt-8 { margin-top: 8px; }
+.status-hint-mt-6 { margin-top: 6px; }
+.status-actions-row { margin-top: 10px; display: flex; gap: 6px; }
+.status-details-section { margin-top: 16px; }
+
+/* ─── ArchitectureFrameworkPage ─── */
+.arch-cross-nav-row { margin-top: 8px; display: flex; gap: 6px; }
+.arch-actions-row { display: flex; gap: 6px; align-items: center; }
+.arch-actions-mt { margin-top: 8px; }
+.arch-hint-mt { margin-top: 12px; }
+.arch-chip-link { font-size: 11px; color: var(--accent); text-decoration: none; padding: 2px 8px; border: 1px solid var(--line); border-radius: 4px; }
+.arch-chip-ml { margin-left: 6px; font-size: 9px; }
+
+/* ─── AlertCenterPage ─── */
+.ac-page { max-width: 800px; margin: 0 auto; padding: 20px; color: #e2e8f0; }
+.ac-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.ac-tabs-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.ac-alert-list { display: flex; flex-direction: column; gap: 8px; }
+
+/* ─── SpeedTradingPage ─── */
+.st-chart-overlay { max-width: 340px; }
+.st-overlay-title { margin-bottom: 12px; }
+.st-overlay-form { display: flex; flex-direction: column; gap: 10px; font-size: 0.78rem; }
+.st-overlay-actions { margin-top: 14px; display: flex; gap: 8px; }
+
+/* ─── SymbolsBrowserPage ─── */
+.sb-filter-label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; }
+.sb-filter-input { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 0.85rem; }
