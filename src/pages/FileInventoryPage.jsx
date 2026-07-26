@@ -14,10 +14,21 @@ export default function FileInventoryPage() {
   const [sortDir, setSortDir] = useState('desc');
   const [filterDir, setFilterDir] = useState('');
   const [filterExt, setFilterExt] = useState('');
+  const [hideLibraries, setHideLibraries] = useState(false);
+  const [hideSpecial, setHideSpecial] = useState(false);
+
+  const LIBRARY_DIRS = ['node_modules', 'vendor', 'dist', '.next', 'build', '__pycache__'];
+  const SPECIAL_DIRS = ['.github', 'docs', 'scripts', 'handoff', 'handoffs'];
 
   const sortedFiles = useMemo(() => {
     if (!data?.files) return [];
     let list = [...data.files];
+    if (hideLibraries) {
+      list = list.filter(f => !LIBRARY_DIRS.some(d => f.dir === d || f.dir.startsWith(d + '/')));
+    }
+    if (hideSpecial) {
+      list = list.filter(f => !SPECIAL_DIRS.some(d => f.dir === d || f.dir.startsWith(d + '/')));
+    }
     if (filterDir) list = list.filter(f => f.dir.startsWith(filterDir));
     if (filterExt) list = list.filter(f => f.ext === filterExt);
     list.sort((a, b) => {
@@ -26,7 +37,7 @@ export default function FileInventoryPage() {
       return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
     });
     return list;
-  }, [data, sortKey, sortDir, filterDir, filterExt]);
+  }, [data, sortKey, sortDir, filterDir, filterExt, hideLibraries, hideSpecial]);
 
   const toggleSort = (key) => {
     if (sortKey === key) {
@@ -103,6 +114,14 @@ export default function FileInventoryPage() {
 
       {/* ── Filters ── */}
       <div className="fi-filters">
+        <label className="fi-filter-toggle">
+          <input type="checkbox" checked={hideLibraries} onChange={e => setHideLibraries(e.target.checked)} />
+          Hide libraries (node_modules, vendor, dist)
+        </label>
+        <label className="fi-filter-toggle">
+          <input type="checkbox" checked={hideSpecial} onChange={e => setHideSpecial(e.target.checked)} />
+          Hide special (.github, docs, scripts)
+        </label>
         {(filterDir || filterExt) && (
           <span className="fi-filter-badge">
             Filtered: {filterExt ? `ext=${filterExt}` : ''}{filterDir ? ` dir=${filterDir}` : ''}

@@ -70,6 +70,25 @@
 .fi-filters {
   margin-bottom: 0.75rem;
   min-height: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+
+.fi-filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  cursor: pointer;
+  user-select: none;
+}
+
+.fi-filter-toggle input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .fi-filter-badge {

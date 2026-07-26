@@ -87,7 +87,9 @@ function DirectiveDetailContent({ directive, id, navigate }) {
       <section className="dd-card">
         <h2>Formula</h2>
         <div className="dd-formula">
-          {directive.description || directive.formula || 'No formula description available.'}
+          {typeof directive.description === 'string' ? directive.description
+            : typeof directive.formula === 'string' ? directive.formula
+            : 'No formula description available.'}
         </div>
         <div className="dd-meta-grid">
           <div><span>Max Score</span><strong>{directive.maxScore ?? '—'}</strong></div>
@@ -202,7 +204,7 @@ function DirectiveDetailContent({ directive, id, navigate }) {
             {testResult.result.reason && (
               <div className="dd-test-reason">
                 <span className="dd-test-reason-label">Reason</span>
-                <p>{testResult.result.reason}</p>
+                <p>{typeof testResult.result.reason === 'string' ? testResult.result.reason : JSON.stringify(testResult.result.reason)}</p>
               </div>
             )}
             {testResult.result.meta && Object.keys(testResult.result.meta).length > 0 && (
