@@ -1,3 +1,23 @@
+/**
+ * META.Stack Display — Pipeline Overview Dashboard
+ * =================================================
+ * High-level cards showing key information for each of the 6 pipeline stages
+ * (Symbols → Strategy → Signals → Risk Rules → Execution → Results) for the
+ * currently selected Trading Strategy.
+ *
+ * Role in the META.Stack design cycle (see issue #501):
+ *   Tier 2 of 3 — sits between Explorer (deep trace) and Triple-Screen (rich layout).
+ *   Provides quick health checks and smooth switching between META.Stacks.
+ *   Serves as fallback iterator when Triple-Screen has issues.
+ *
+ * Development priority:
+ *   1. Explorer walkthrough (validate pipeline correctness)
+ *   2. This page — polish after Explorer is stable
+ *   3. Triple-Screen layout (future)
+ *
+ * Route: /lab/metastack-display
+ * Data:  GET /api/scoring/metastacks/ratings
+ */
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';

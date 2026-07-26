@@ -1,8 +1,15 @@
 /**
- * META.Stack Explorer — Vertical pipeline trace
- * =============================================
- * A vertical, scroll-through breakdown of the full scoring pipeline
- * from market data ingestion to final trading signal.
+ * META.Stack Explorer — Vertical Pipeline Trace
+ * ==============================================
+ * Deep technical walkthrough of the full scoring pipeline (14+ stages),
+ * from market data ingestion through directive scoring, risk gating,
+ * and final trading signal generation.
+ *
+ * Role in the META.Stack design cycle (see issue #501):
+ *   Tier 1 of 3 — the primary development/debugging tool. Validates that
+ *   the system works as intended before building richer displays.
+ *   Display (Tier 2) and Triple-Screen (Tier 3) depend on Explorer
+ *   verifying pipeline correctness first.
  *
  * Each stage:
  *   - Scroll-reveal card (IntersectionObserver)
@@ -11,7 +18,7 @@
  *   - Popover for deeper technical detail (DB tables, columns, values)
  *   - Nested sub-stages for complex sections (directives, risk gate)
  *
- * Route: /development/meta-stack-explorer
+ * Route: /lab/meta-stack-explorer
  * Data:  POST /api/scoring/gated/batch (live)
  */
 import { useState, useMemo, useEffect, useRef } from 'react';
