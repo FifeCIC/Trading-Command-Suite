@@ -1,0 +1,45 @@
+/* ─── Inline-Style Utility Classes (#488 Phase 3) ──────────────── */
+/* Replaces static inline styles across pages.                      */
+/* Dynamic styles (computed from state/data) remain as inline.      */
+
+/* Layout */
+.il-overflow-x { overflow-x: auto; }
+.il-nowrap { white-space: nowrap; }
+.il-clickable { cursor: pointer; }
+
+/* Flex helpers */
+.il-flex-between { display: flex; justify-content: space-between; align-items: center; }
+.il-flex-wrap { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.il-flex-col-gap { display: flex; flex-direction: column; gap: 8px; }
+.il-items-end { align-items: end; }
+
+/* Spacing */
+.il-mt-1 { margin-top: 1rem; }
+.il-mb-1 { margin-bottom: 1rem; }
+.il-mt-075 { margin-top: 0.75rem; }
+.il-mt-05 { margin-top: 0.5rem; }
+.il-pt-0 { padding-top: 0; }
+
+/* Small text */
+.il-fs-11 { font-size: 11px; }
+.il-fs-10 { font-size: 10px; }
+.il-fs-075 { font-size: 0.75rem; }
+.il-fs-078 { font-size: 0.78rem; }
+.il-fs-08 { font-size: 0.8rem; }
+.il-fs-085 { font-size: 0.85rem; }
+.il-fs-065 { font-size: 0.65rem; }
+
+/* Column widths */
+.il-w-32 { width: 32px; }
+.il-w-50 { width: 50px; }
+.il-w-80 { width: 80px; }
+.il-w-90 { width: 90px; }
+.il-w-110 { width: 110px; }
+.il-w-120 { width: 120px; }
+.il-w-200 { width: 200px; }
+
+/* Badge/chip padding */
+.il-chip-pad { padding: 1px 6px; border-radius: 3px; }
+
+/* Overlay */
+.il-overlay-box { max-width: 340px; }

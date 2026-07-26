@@ -66,7 +66,7 @@ export default function ApiActivityPage() {
 
       <section className="tp-card tp-controls-card">
         <h3>Filters</h3>
-        <div className="tp-controls-grid" style={{ alignItems: 'end' }}>
+        <div className="tp-controls-grid il-items-end">
           <label className="tp-control">
             <span>Provider</span>
             <select value={provider} onChange={(event) => setProvider(event.target.value)}>
@@ -88,7 +88,7 @@ export default function ApiActivityPage() {
           <div><span className="k">Avg latency</span> <span className="v">{summary.avgLatencyMs ?? 0}ms</span></div>
         </div>
         {statusRows.length > 0 && (
-          <div className="tp-provider-pills" style={{ marginTop: '0.75rem' }}>
+          <div className="tp-provider-pills il-mt-075">
             {statusRows.map(([label, count]) => (
               <span key={label} className="tp-provider-pill">{label}: {count}</span>
             ))}
@@ -125,13 +125,13 @@ export default function ApiActivityPage() {
             <table className="tp-comparison-table">
               <thead>
                 <tr>
-                  <th style={{ width: 110 }}>Time</th>
-                  <th style={{ width: 80 }}>Method</th>
+                  <th className="il-w-110">Time</th>
+                  <th className="il-w-80">Method</th>
                   <th>Endpoint</th>
-                  <th style={{ width: 120 }}>Provider</th>
-                  <th style={{ width: 80 }}>Status</th>
-                  <th style={{ width: 90 }}>Latency</th>
-                  <th style={{ width: 90 }}>Size</th>
+                  <th className="il-w-120">Provider</th>
+                  <th className="il-w-80">Status</th>
+                  <th className="il-w-90">Latency</th>
+                  <th className="il-w-90">Size</th>
                 </tr>
               </thead>
               <tbody>

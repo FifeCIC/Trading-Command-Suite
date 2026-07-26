@@ -162,7 +162,7 @@ export default function TradeHistoryPage() {
 
       {/* ── API Error Banner ────────────────────────────────── */}
       {apiError && (
-        <div className="pf-mode-badge pf-mode-mock" style={{ marginBottom: '1rem' }}>
+        <div className="pf-mode-badge pf-mode-mock th-error-banner">
           ⚠ Trading212 API: {apiError} — showing fallback data
         </div>
       )}
@@ -172,7 +172,7 @@ export default function TradeHistoryPage() {
 
       {/* ── Win/Loss Detail ─────────────────────────────────── */}
       {summary.totalTrades > 0 && (
-        <div className="pf-section" style={{ paddingTop: 0 }}>
+        <div className="pf-section pf-section-flush">
           <div className="pf-hint">
             {summary.winningTrades} wins / {summary.losingTrades} losses
             {summary.losingTrades > 0 && (
@@ -194,7 +194,7 @@ export default function TradeHistoryPage() {
                 : 'MT5 trade history integration coming soon.'}
           </p>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="th-table-scroll">
             <table className="pf-table">
               <thead>
                 <tr>

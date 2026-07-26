@@ -88,3 +88,18 @@
 .db-chip--neutral { background: color-mix(in srgb, var(--line) 75%, var(--panel)); color: var(--ink-soft); }
 .db-chip--error { background: #ff004020; color: var(--danger); }
 .db-chip--info { background: #0ea5a620; color: var(--accent); }
+
+/* ─── Column widths & small text ─────────────────────────── */
+
+.dt-col-view {
+  width: 50px;
+}
+
+.dt-num-sm {
+  font-size: 11px;
+}
+
+.dt-phpmyadmin-link {
+  font-size: 10px;
+  text-decoration: none;
+}

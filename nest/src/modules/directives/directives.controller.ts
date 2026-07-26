@@ -2,6 +2,7 @@ import { Controller, Get, Patch, Post, Delete, Param, Query, Body } from '@nestj
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { DirectivesService } from './directives.service';
 import { PrismaService } from '../../database/prisma.service';
+import { MarketDataService } from '../market-data/market-data.service';
 import { DIRECTIVE_GROUPS, SHORT_DIRECTIVE_GROUPS, BTC_SPEED_GROUPS } from './directive-groups';
 
 @ApiTags('directives')
@@ -10,6 +11,7 @@ export class DirectivesController {
   constructor(
     private readonly directivesService: DirectivesService,
     private readonly prisma: PrismaService,
+    private readonly marketData: MarketDataService,
   ) {}
 
   @Get()
@@ -384,5 +386,37 @@ export class DirectivesController {
   async revert(@Param('id') id: string) {
     const result = await this.directivesService.revertFork(id);
     return result;
+  }
+
+  @Post(':id/test')
+  @ApiOperation({ summary: 'Test a single directive against live/historical bars for a symbol' })
+  async testDirective(
+    @Param('id') id: string,
+    @Body() body: { symbol: string; timeframe?: string; barCount?: number },
+  ) {
+    const { symbol, timeframe = '1d', barCount = 100 } = body;
+    if (!symbol) return { error: 'symbol is required' };
+
+    // Look up symbol in DB to get DB id for bar fetch
+    const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: symbol.toUpperCase() } }).catch(() => null);
+    if (!dbSym) return { error: `Symbol "${symbol}" not found in database` };
+
+    // Fetch bars
+    const bars = await this.marketData.getBars(dbSym.id, timeframe, barCount).catch(() => null);
+    if (!bars || bars.length === 0) return { error: `No ${timeframe} bars available for ${symbol}` };
+
+    // Run the single directive
+    const result = await this.directivesService.runSingle(id, { symbol: symbol.toUpperCase(), bars });
+    if (!result) return { error: `Directive "${id}" not found or failed to execute` };
+
+    return {
+      directiveId: id,
+      symbol: symbol.toUpperCase(),
+      timeframe,
+      barCount: bars.length,
+      firstBar: bars[0]?.timestamp?.toISOString?.() ?? bars[0]?.timestamp,
+      lastBar: bars[bars.length - 1]?.timestamp?.toISOString?.() ?? bars[bars.length - 1]?.timestamp,
+      result,
+    };
   }
 }

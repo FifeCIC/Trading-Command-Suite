@@ -333,6 +333,13 @@ export default function DirectivesManagerPage() {
                     {selected.status === 'active' ? 'Disable' : 'Enable'}
                   </button>
                   <button type="button" className="directive-detail-btn directive-btn-delete">Delete</button>
+                  <button
+                    type="button"
+                    className="directive-detail-btn directive-btn-test"
+                    onClick={() => navigate(`/scoring/directive-detail?id=${selected.code}`)}
+                  >
+                    Test
+                  </button>
                 </div>
               </section>
 

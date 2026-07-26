@@ -58,3 +58,50 @@
   background: rgba(0,0,0,0.2); padding: 0.6rem; border-radius: 6px;
   overflow-x: auto; max-height: 300px; overflow-y: auto; margin: 0;
 }
+
+/* ── Test Directive section ── */
+.dd-hint { font-size: 0.78rem; color: var(--ink-soft, #94a3b8); margin: 0; }
+.dd-test-controls { display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.dd-test-field { display: flex; flex-direction: column; gap: 3px; font-size: 0.7rem; color: var(--ink-soft); font-weight: 600; }
+.dd-test-input, .dd-test-select {
+  padding: 0.4rem 0.55rem; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--panel); color: var(--ink); font-family: inherit; font-size: 0.8rem; min-width: 80px;
+}
+.dd-test-input:focus, .dd-test-select:focus { outline: none; border-color: var(--accent); }
+.dd-test-btn {
+  padding: 0.45rem 1rem; border: none; border-radius: 6px; background: var(--accent);
+  color: #fff; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+}
+.dd-test-btn:hover { opacity: 0.85; }
+.dd-test-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.dd-test-error {
+  padding: 0.6rem 0.8rem; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 6px; color: #ef4444; font-size: 0.78rem; margin-bottom: 0.5rem;
+}
+.dd-test-result { margin-top: 0.75rem; }
+.dd-test-result-header {
+  display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem;
+  color: var(--ink-soft); margin-bottom: 0.5rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--line);
+}
+.dd-test-date-range { font-family: monospace; font-size: 0.68rem; }
+.dd-test-scores {
+  display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 0.5rem;
+  padding: 0.5rem 0.6rem; background: rgba(0,0,0,0.15); border-radius: 6px;
+}
+.dd-test-score-main { display: flex; flex-direction: column; }
+.dd-test-score-label { font-size: 0.65rem; color: var(--ink-soft); text-transform: uppercase; }
+.dd-test-score-value { font-size: 1.1rem; font-weight: 700; color: var(--ink); }
+.dd-test-score-pct { font-size: 1.4rem; font-weight: 800; color: var(--accent); }
+.dd-test-meta { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+.dd-test-meta > div { display: flex; flex-direction: column; gap: 1px; }
+.dd-test-meta span { font-size: 0.65rem; color: var(--ink-soft); }
+.dd-test-meta strong { font-size: 0.82rem; color: var(--ink); }
+.dd-test-signal-bullish, .dd-test-signal-buy { color: #22c55e; }
+.dd-test-signal-bearish, .dd-test-signal-sell { color: #ef4444; }
+.dd-test-signal-neutral, .dd-test-signal-hold { color: #f59e0b; }
+.dd-test-reason { margin-bottom: 0.5rem; }
+.dd-test-reason-label { font-size: 0.65rem; color: var(--ink-soft); text-transform: uppercase; font-weight: 600; }
+.dd-test-reason p { margin: 3px 0 0; font-size: 0.78rem; color: var(--ink-soft); line-height: 1.5; }
+.dd-test-raw { margin-top: 0.5rem; }
+.dd-test-raw summary { font-size: 0.7rem; color: var(--ink-soft); cursor: pointer; }
+.dd-test-raw pre { font-size: 0.65rem; font-family: monospace; background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 4px; margin: 0.3rem 0 0; max-height: 200px; overflow: auto; }

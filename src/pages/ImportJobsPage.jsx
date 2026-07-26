@@ -182,7 +182,7 @@ export default function ImportJobsPage() {
         <h2>Recent Import Runs</h2>
 
         {isLoading && (
-          <div style={{ marginTop: '1rem' }}>
+          <div className="ij-loading-group">
             <LoadingSkeleton variant="card" count={4} />
             <LoadingSkeleton variant="table" rows={6} cols={6} className="ls-spacer-top" />
           </div>

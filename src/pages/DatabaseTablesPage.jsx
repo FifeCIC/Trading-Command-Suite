@@ -145,7 +145,7 @@ export default function DatabaseTablesPage() {
             <th>Rows</th>
             <th>Version</th>
             <th>Last Insert</th>
-            <th style={{ width: 50 }}>View</th>
+            <th className="dt-col-view">View</th>
           </tr>
         </thead>
         <tbody>
@@ -155,11 +155,11 @@ export default function DatabaseTablesPage() {
               <td>{t.description}</td>
               <td>{statusChip(tableStatus(t.prismaModel, t))}</td>
               <td className="num">{t.status === 'planned' ? '—' : rowCount(t.prismaModel)}</td>
-              <td className="num" style={{ fontSize: 11 }}>{t.status === 'active' ? `Prisma ${prismaVersion}` : '—'}</td>
-              <td className="num" style={{ fontSize: 11 }}>{t.status === 'active' && t.prismaModel ? lastInsert(t.prismaModel) : '—'}</td>
+              <td className="num dt-num-sm">{t.status === 'active' ? `Prisma ${prismaVersion}` : '—'}</td>
+              <td className="num dt-num-sm">{t.status === 'active' && t.prismaModel ? lastInsert(t.prismaModel) : '—'}</td>
               <td>
                 {t.status === 'active' && (
-                  <a href={phpMyAdminLink(t.name)} target="_blank" rel="noreferrer" className="tp-chip tp-chip--info" style={{ fontSize: 10, textDecoration: 'none' }} title="Open in phpMyAdmin">
+                  <a href={phpMyAdminLink(t.name)} target="_blank" rel="noreferrer" className="tp-chip tp-chip--info dt-phpmyadmin-link" title="Open in phpMyAdmin">
                     🔗
                   </a>
                 )}

@@ -1,3 +1,5 @@
+@import './pages/inline-fixes.css';
+
 /* ── View Transitions API ─────────────────────────────────── */
 /* Crossfade between SPA page navigations.
    Disabled when user sets pageTransitions=false in Preferences.

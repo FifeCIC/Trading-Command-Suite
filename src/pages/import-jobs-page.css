@@ -299,6 +299,12 @@
   color: var(--notice-warning-text);
 }
 
+/* ─── Loading Group ──────────────────────────────────────── */
+
+.ij-loading-group {
+  margin-top: 1rem;
+}
+
 .badge-unknown {
   background: var(--bg-subtle, #f1f5f9);
   color: var(--text-muted, #64748b);

@@ -253,11 +253,11 @@ export default function SeesArenaPage() {
         )}
 
         {compResult?.comparison?.length > 0 && (
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', fontSize: '0.65rem', color: 'var(--ink-soft)', flexWrap: 'wrap' }}>
-            <span><span className="sa-score-high" style={{ padding: '1px 6px', borderRadius: 3 }}>65+</span> Strong</span>
-            <span><span className="sa-score-med" style={{ padding: '1px 6px', borderRadius: 3 }}>40-64</span> Moderate</span>
-            <span><span className="sa-score-low" style={{ padding: '1px 6px', borderRadius: 3 }}>&lt;40</span> Weak</span>
-            <span><span className="sa-score-gated" style={{ padding: '1px 6px', borderRadius: 3 }}>⛔</span> Hard-gated</span>
+          <div className="il-flex-wrap il-mt-1 il-fs-065" style={{ color: 'var(--ink-soft)' }}>
+            <span><span className="sa-score-high il-chip-pad">65+</span> Strong</span>
+            <span><span className="sa-score-med il-chip-pad">40-64</span> Moderate</span>
+            <span><span className="sa-score-low il-chip-pad">&lt;40</span> Weak</span>
+            <span><span className="sa-score-gated il-chip-pad">⛔</span> Hard-gated</span>
             <span>|</span>
             <span><span className="sa-div-high">20+</span> High divergence</span>
           </div>
