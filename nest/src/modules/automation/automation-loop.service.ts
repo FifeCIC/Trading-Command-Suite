@@ -37,6 +37,7 @@ import { MarketDataService } from '../market-data/market-data.service';
 import { BarRefreshService } from '../market-data/bar-refresh.service';
 import { AuditLogService } from './audit-log.service';
 import { ProtocolDbService } from '../scoring/protocol-db.service';
+import { PositionSyncService } from '../providers/position-sync.service';
 
 /**
  * Layer 2 of the 3-layer threshold architecture.
@@ -417,6 +418,7 @@ export class AutomationLoopService implements OnModuleInit {
     private readonly directivesService: DirectivesService,
     private readonly protocolDb: ProtocolDbService,
     private readonly versioningService: MetaStackVersioningService,
+    private readonly positionSync: PositionSyncService,
   ) {
     this.initBrokerStates();
     // loadScoringStrategies() is deferred to onModuleInit (needs DB connection)
@@ -867,6 +869,10 @@ export class AutomationLoopService implements OnModuleInit {
           this.logger.warn(`  ${brokerId}: failed to fetch positions — ${(err as Error).message}`);
         }
       }
+
+      // 2a. Sync MT5 positions → DB (two-way data flow #470)
+      this.positionSync.syncPositions().catch(err =>
+        this.logger.warn(`Position sync failed: ${(err as Error).message}`));
 
       // 2b. Discover active TradingStrategy records from DB
       let activeStrategies: any[] = [];

@@ -6,9 +6,15 @@
 }
 .dd-back:hover { text-decoration: underline; }
 
-.dd-header { margin-bottom: 0.5rem; }
-.dd-header h1 { margin: 0 0 0.4rem; font-size: 1.3rem; }
-.dd-code { margin: 0 0 1rem; font-size: 0.75rem; }
+.dd-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.dd-header-left h1 { margin: 0; font-size: 1.3rem; line-height: 1.2; }
+.dd-code { margin: 0.2rem 0 0; font-size: 0.72rem; font-family: 'SF Mono', 'Cascadia Code', monospace; color: #60a5fa; }
 
 .dd-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 .dd-badge {

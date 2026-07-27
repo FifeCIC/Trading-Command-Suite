@@ -66,7 +66,10 @@ function DirectiveDetailContent({ directive, id, navigate }) {
       <button className="dd-back" onClick={() => navigate('/scoring/directives-manager')}>← Back to Directives</button>
 
       <header className="dd-header">
-        <h1>{directive.name || directive.id}</h1>
+        <div className="dd-header-left">
+          <h1>{directive.name || directive.id}</h1>
+          <p className="dd-code">{directive.id}</p>
+        </div>
         <div className="dd-badges">
           <span className="dd-badge" style={{ background: catColor + '18', color: catColor, borderColor: catColor + '33' }}>
             {directive.category || 'Other'}
@@ -79,8 +82,6 @@ function DirectiveDetailContent({ directive, id, navigate }) {
           )}
         </div>
       </header>
-
-      <p className="dd-code" style={{ fontFamily: 'monospace', color: '#60a5fa' }}>{directive.id}</p>
 
       {/* ── Beginner's Guide ── */}
       <BeginnerGuide directive={directive} />
