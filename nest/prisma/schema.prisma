@@ -681,8 +681,8 @@ model Trade {
   openedAt          DateTime @default(now())
   closedAt          DateTime?
   createdAt         DateTime @default(now())
-  // MT5 broker traceability (#446)
-  ticket            Int?     // MT5 position ticket
+  // Broker traceability (#446, #470) — broker-agnostic
+  brokerTicket     String?  @db.VarChar(100) // broker-specific order/position ID (MT5 ticket, T212 orderId, etc.)
   sl                Float?   // Stop-loss price
   tp                Float?   // Take-profit price
   magic             Int?     // MT5 magic number
@@ -693,7 +693,7 @@ model Trade {
   @@index([status])
   @@index([origin, createdAt])
   @@index([scoringStrategyId])
-  @@index([ticket])
+  @@index([brokerTicket])
 }
 
 model ApiCalls {

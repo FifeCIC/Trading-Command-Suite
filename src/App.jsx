@@ -838,6 +838,15 @@ function AppShell() {
       )}
       <aside className={`left-rail${mobileNavOpen ? ' left-rail--open' : ''}`} aria-label="Section navigation">
         <div className="left-rail-header">
+          <button
+            type="button"
+            className="rail-collapse-toggle"
+            onClick={() => setLeftCollapsed(v => !v)}
+            title={leftCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={leftCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {leftCollapsed ? '▸' : '◂'}
+          </button>
           <h2>{NAV_TREE[primaryArea]?.label || primaryArea}</h2>
           <button
             type="button"
@@ -907,20 +916,6 @@ function AppShell() {
             </div>
           </div>
         )}
-
-        <div className="rail-block">
-          <button
-            type="button"
-            className={devOverlayOpen ? 'cta' : ''}
-            onClick={() => {
-              toggleDevOverlay();
-              pushActivity('RUNTIME', 'Toggled dev overlay');
-            }}
-            style={{ padding: '0.4rem 0.7rem', fontSize: '0.82rem', width: '100%' }}
-          >
-            {devOverlayOpen ? 'Hide' : 'Show'} Dev Overlay
-          </button>
-        </div>
 
         {primaryArea === 'settings' && (
           <>

@@ -865,14 +865,26 @@ export class AutomationLoopService implements OnModuleInit {
           const positions = await adapter.getPositions();
           this.logger.log(`  ${brokerId}: ${positions.length} positions`);
           allPositions.push(...positions);
+
+          // Sync positions → DB (two-way data flow #470, broker-agnostic)
+          const normalised = positions.map((p: any) => ({
+            symbol: p.symbol,
+            brokerTicket: String(p.ticket ?? p.id ?? ''),
+            quantity: p.quantity,
+            avgPrice: p.avgCost ?? p.entryPrice ?? 0,
+            currentPrice: p.currentPrice ?? p.avgCost ?? 0,
+            pnl: p.unrealizedPnl ?? p.pnl ?? 0,
+            sl: p.sl ?? null,
+            tp: p.tp ?? null,
+            comment: p.comment ?? '',
+            openedAt: p.openedAt ? new Date(p.openedAt) : new Date(),
+          }));
+          this.positionSync.syncPositions(brokerId, normalised).catch(err =>
+            this.logger.warn(`Position sync [${brokerId}] failed: ${(err as Error).message}`));
         } catch (err) {
           this.logger.warn(`  ${brokerId}: failed to fetch positions — ${(err as Error).message}`);
         }
       }
-
-      // 2a. Sync MT5 positions → DB (two-way data flow #470)
-      this.positionSync.syncPositions().catch(err =>
-        this.logger.warn(`Position sync failed: ${(err as Error).message}`));
 
       // 2b. Discover active TradingStrategy records from DB
       let activeStrategies: any[] = [];
