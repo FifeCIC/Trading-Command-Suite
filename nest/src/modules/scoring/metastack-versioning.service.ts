@@ -15,9 +15,13 @@ export class MetaStackVersioningService {
   async createSnapshot(scoringStrategyId: string, createdBy?: string) {
     const strategy = await this.prisma.scoringStrategy.findUnique({
       where: { id: scoringStrategyId },
-      include: { protocolLinks: true },
     });
     if (!strategy) throw new NotFoundException(`Strategy ${scoringStrategyId} not found`);
+
+    // Query protocol links separately (#470 — FK deferred)
+    const links = await (this.prisma as any).scoringStrategyProtocol.findMany({
+      where: { scoringStrategyId },
+    });
 
     // Get latest version to increment
     const latest = await this.prisma.metaStackSnapshot.findFirst({
@@ -43,7 +47,7 @@ export class MetaStackVersioningService {
       maxPyramidTiers: strategy.maxPyramidTiers,
       slTpInheritance: strategy.slTpInheritance,
       weightStrategy: strategy.weightStrategy,
-      protocolLinks: strategy.protocolLinks?.map(p => ({
+      protocolLinks: links.map(p => ({
         protocolSlug: p.protocolSlug,
         role: p.role,
         sortOrder: p.sortOrder,
@@ -158,10 +162,12 @@ export class MetaStackVersioningService {
   async getCurrentFingerprint(scoringStrategyId: string): Promise<string> {
     const strategy = await this.prisma.scoringStrategy.findUnique({
       where: { id: scoringStrategyId },
-      include: { protocolLinks: true },
     });
     if (!strategy) throw new NotFoundException(`Strategy ${scoringStrategyId} not found`);
-    const data = { ...strategy, protocolLinks: strategy.protocolLinks?.map(p => ({ protocolSlug: p.protocolSlug, role: p.role, sortOrder: p.sortOrder })) || [] };
+    const links = await (this.prisma as any).scoringStrategyProtocol.findMany({
+      where: { scoringStrategyId },
+    });
+    const data = { ...strategy, protocolLinks: links.map(p => ({ protocolSlug: p.protocolSlug, role: p.role, sortOrder: p.sortOrder })) || [] };
     return this.hashSnapshot(data);
   }
 

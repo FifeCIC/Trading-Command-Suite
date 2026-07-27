@@ -589,7 +589,8 @@ model Watchlist {
   updatedAt   DateTime @updatedAt
   importedAt  DateTime?
 
-  scoringStrategies ScoringStrategy[]
+  // FK deferred — ScoringStrategy table created separately (#470)
+  // scoringStrategies ScoringStrategy[]
 }
 
 model CronMeta {
@@ -1002,7 +1003,8 @@ model TradingStrategy {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  scoringStrategy ScoringStrategy? @relation(fields: [scoringStrategyId], references: [id])
+  // FK deferred — ScoringStrategy table created separately (#470)
+  // scoringStrategy ScoringStrategy? @relation(fields: [scoringStrategyId], references: [id])
   evaluations StrategyEvaluation[]
 
   @@index([scoringStrategyId])
@@ -1070,9 +1072,10 @@ model ScoringStrategy {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  watchlist         Watchlist?               @relation(fields: [watchlistId], references: [id])
-  tradingStrategies TradingStrategy[]
-  protocolLinks     ScoringStrategyProtocol[]
+  // FK relations deferred — dependent tables created separately (#470)
+  // watchlist         Watchlist?               @relation(fields: [watchlistId], references: [id])
+  // tradingStrategies TradingStrategy[]
+  // protocolLinks     ScoringStrategyProtocol[]
 
   @@index([watchlistId])
   @@map("scoring_strategy")
@@ -1088,7 +1091,8 @@ model ScoringStrategyProtocol {
   role              String   @default("primary") @db.VarChar(20)  // primary | secondary | correlation
   sortOrder         Int      @default(0)
 
-  scoringStrategy   ScoringStrategy @relation(fields: [scoringStrategyId], references: [id], onDelete: Cascade)
+  // FK deferred — ScoringStrategy table created separately (#470)
+  // scoringStrategy   ScoringStrategy @relation(fields: [scoringStrategyId], references: [id], onDelete: Cascade)
 
   @@unique([scoringStrategyId, protocolSlug])
   @@map("scoring_strategy_protocol")
