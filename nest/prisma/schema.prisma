@@ -682,7 +682,8 @@ model Trade {
   closedAt          DateTime?
   createdAt         DateTime @default(now())
   // Broker traceability (#446, #470) — broker-agnostic
-  brokerTicket     String?  @db.VarChar(100) // broker-specific order/position ID (MT5 ticket, T212 orderId, etc.)
+  ticket           Int?     // Legacy MT5 ticket (kept for existing data)
+  brokerTicket     String?  @db.VarChar(100) // Broker-specific order/position ID (MT5 ticket, T212 orderId, etc.)
   sl                Float?   // Stop-loss price
   tp                Float?   // Take-profit price
   magic             Int?     // MT5 magic number
