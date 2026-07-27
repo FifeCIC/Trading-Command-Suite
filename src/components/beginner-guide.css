@@ -142,3 +142,81 @@
 }
 .bg-tips li { margin-bottom: 0.25rem; }
 .bg-tips strong { color: var(--ink, #e2e8f0); }
+
+/* ── Directive Meta Block (parameters + scoring zones) ── */
+.bg-meta {
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--line, rgba(255,255,255,0.06));
+  padding-top: 0.65rem;
+}
+.bg-meta h4 {
+  font-size: 0.73rem;
+  color: var(--accent, #0ea5a6);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.4rem;
+}
+.bg-meta-params {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+  margin-bottom: 0.25rem;
+}
+.bg-meta-params td {
+  padding: 0.2rem 0.4rem;
+  border-bottom: 1px solid var(--line, rgba(255,255,255,0.04));
+}
+.bg-meta-param-key {
+  color: var(--ink-soft, #94a3b8);
+  font-weight: 500;
+}
+.bg-meta-param-val {
+  color: var(--ink, #e2e8f0);
+  font-weight: 600;
+  text-align: right;
+  font-family: 'SF Mono', 'Cascadia Code', monospace;
+}
+.bg-meta-zones {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.bg-meta-zone {
+  background: rgba(0,0,0,0.15);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+}
+.bg-meta-zone-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+.bg-meta-zone-range {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink, #e2e8f0);
+}
+.bg-meta-zone-score {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--accent, #0ea5a6);
+  white-space: nowrap;
+  font-family: 'SF Mono', 'Cascadia Code', monospace;
+}
+.bg-meta-zone-meaning {
+  font-size: 0.7rem;
+  color: var(--ink-soft, #94a3b8);
+  line-height: 1.5;
+  margin: 0;
+}
+.bg-meta-interpretation {
+  margin-top: 0.65rem;
+}
+.bg-meta-interpretation p {
+  font-size: 0.73rem;
+  color: var(--ink-soft, #94a3b8);
+  line-height: 1.55;
+  margin: 0;
+}

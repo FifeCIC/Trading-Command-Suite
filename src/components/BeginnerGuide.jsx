@@ -15,6 +15,7 @@
 import { useState, useCallback } from 'react';
 import { usePreferences } from '../core/hooks/usePreferences';
 import GlossaryPopover from './GlossaryPopover';
+import { getDirectiveMeta } from '../data/directive-meta';
 import './beginner-guide.css';
 
 const GLOBAL_ID = 'directives-global';
@@ -41,6 +42,7 @@ export default function BeginnerGuide({ directive }) {
   const category = directive.category || 'Other';
   const name = directive.name || directive.id;
   const description = typeof directive.description === 'string' ? directive.description : '';
+  const directiveId = directive.id;
 
   return (
     <div className="bg-wrapper">
@@ -52,6 +54,7 @@ export default function BeginnerGuide({ directive }) {
           category={category}
           name={name}
           description={description}
+          directiveId={directiveId}
           onDismiss={() => dismiss(SPECIFIC_ID)}
         />
       )}
@@ -117,7 +120,7 @@ function GlobalGuide({ onDismiss }) {
 /* ────────────────────────────────────────────
    Container 2: About This Directive (specific)
    ──────────────────────────────────────────── */
-function SpecificGuide({ category, name, description, onDismiss }) {
+function SpecificGuide({ category, name, description, directiveId, onDismiss }) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -136,7 +139,8 @@ function SpecificGuide({ category, name, description, onDismiss }) {
       {!collapsed && (
         <div className="bg-body">
           <div className="bg-content">
-            <GuideBody category={category} name={name} description={description} />
+            <GuideBody category={category} name={name} description={description} directiveId={directiveId} />
+            <DirectiveMetaBlock directiveId={directiveId} />
           </div>
         </div>
       )}
@@ -147,16 +151,16 @@ function SpecificGuide({ category, name, description, onDismiss }) {
 /* ────────────────────────────────────────────
    Category-specific guide bodies
    ──────────────────────────────────────────── */
-function GuideBody({ category, name, description }) {
+function GuideBody({ category, name, description, directiveId }) {
   switch (category) {
-    case 'Entry':    return <EntryBody name={name} description={description} />;
-    case 'Exit':     return <ExitBody name={name} description={description} />;
-    case 'Risk':     return <RiskBody name={name} description={description} />;
-    case 'Momentum': return <MomentumBody name={name} description={description} />;
-    case 'Trend':    return <TrendBody name={name} description={description} />;
-    case 'Volume':   return <VolumeBody name={name} description={description} />;
-    case 'Macro':    return <MacroBody name={name} description={description} />;
-    default:         return <DefaultBody name={name} description={description} />;
+    case 'Entry':    return <EntryBody name={name} description={description} directiveId={directiveId} />;
+    case 'Exit':     return <ExitBody name={name} description={description} directiveId={directiveId} />;
+    case 'Risk':     return <RiskBody name={name} description={description} directiveId={directiveId} />;
+    case 'Momentum': return <MomentumBody name={name} description={description} directiveId={directiveId} />;
+    case 'Trend':    return <TrendBody name={name} description={description} directiveId={directiveId} />;
+    case 'Volume':   return <VolumeBody name={name} description={description} directiveId={directiveId} />;
+    case 'Macro':    return <MacroBody name={name} description={description} directiveId={directiveId} />;
+    default:         return <DefaultBody name={name} description={description} directiveId={directiveId} />;
   }
 }
 
@@ -317,6 +321,45 @@ function DefaultBody({ name, description }) {
         </div>
       )}
     </>
+  );
+}
+
+function DirectiveMetaBlock({ directiveId }) {
+  const meta = directiveId ? getDirectiveMeta(directiveId) : null;
+  if (!meta) return null;
+
+  return (
+    <div className="bg-meta">
+      <h4>📐 Parameters & Logic</h4>
+      <table className="bg-meta-params">
+        <tbody>
+          {Object.entries(meta.parameters).map(([key, val]) => (
+            <tr key={key}>
+              <td className="bg-meta-param-key">{key}</td>
+              <td className="bg-meta-param-val">{val}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h4 style={{ marginTop: '0.75rem' }}>📊 Scoring Zones</h4>
+      <div className="bg-meta-zones">
+        {meta.scoringZones.map((zone, i) => (
+          <div key={i} className="bg-meta-zone">
+            <div className="bg-meta-zone-header">
+              <span className="bg-meta-zone-range">{zone.range}</span>
+              <span className="bg-meta-zone-score">{zone.score}</span>
+            </div>
+            <p className="bg-meta-zone-meaning">{zone.meaning}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-meta-interpretation">
+        <h4>🔍 How to Interpret Scores</h4>
+        <p>{meta.interpretation}</p>
+      </div>
+    </div>
   );
 }
 
