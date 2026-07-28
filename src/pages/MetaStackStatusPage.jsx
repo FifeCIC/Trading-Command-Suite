@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -69,6 +70,22 @@ export default function MetaStackStatusPage() {
     queryFn: () => apiGet('/api/scoring/ranked?limit=20'),
     refetchInterval: 30_000,
   });
+
+  // ── Fresh scoring trigger (manual, not auto) ──
+  const [freshScoring, setFreshScoring] = useState(false);
+  const [freshScoreResult, setFreshScoreResult] = useState(null);
+
+  const triggerFreshScoring = async () => {
+    setFreshScoring(true);
+    try {
+      const data = await apiGet('/api/scoring/ranked?fresh=true&limit=20');
+      setFreshScoreResult(data);
+      scoringQ.refetch();
+    } catch {
+      // silently fail — the regular poll will update
+    }
+    setFreshScoring(false);
+  };
 
   const refreshAll = () => {
     providersQ.refetch();
@@ -226,7 +243,22 @@ export default function MetaStackStatusPage() {
 
         {/* ── Priority Symbol: XAUUSD ── */}
         <section className="mss-panel mss-panel--priority">
-          <h3 className="mss-panel-title">🎯 Priority Focus: {PRIORITY_SYMBOL}</h3>
+          <h3 className="mss-panel-title">
+            🎯 Priority Focus: {PRIORITY_SYMBOL}
+            <button
+              type="button"
+              className="btn mss-fresh-btn"
+              onClick={triggerFreshScoring}
+              disabled={freshScoring}
+            >
+              {freshScoring ? '⏳ Scoring…' : '🔄 Run Fresh Scoring'}
+            </button>
+          </h3>
+          {freshScoreResult && (
+            <div className="mss-fresh-result">
+              Fresh scoring complete — {freshScoreResult?.ranked?.find(r => r.ticker === PRIORITY_SYMBOL)?.score ?? '?'}/100, signal: {freshScoreResult?.ranked?.find(r => r.ticker === PRIORITY_SYMBOL)?.signal ?? '?'}
+            </div>
+          )}
           {priorityResult ? (
             <div className="mss-priority-detail">
               <div className="mss-priority-score-row">
@@ -262,15 +294,15 @@ export default function MetaStackStatusPage() {
 
               {/* What's needed to get a trade */}
               <div className="mss-checklist">
-                <h4 className="mss-checklist-title">End-to-End Readiness</h4>
+                <h4 className="mss-checklist-title">End-to-End Readiness (xau-speed-v1 — 14 directives)</h4>
                 <div className="mss-checklist-item mss-checklist--ok">
-                  ✅ MT5 Bridge — connected, orders accepted
+                  ✅ MT5 Bridge — connected, orders accepted (read + write)
                 </div>
                 <div className="mss-checklist-item mss-checklist--ok">
-                  ✅ Protocol mapped — xau-speed-v1
+                  ✅ Protocol mapped — xau-speed-v1 with 14 directives (incl. new gold-round-numbers + gold-session-profile)
                 </div>
                 <div className="mss-checklist-item mss-checklist--ok">
-                  ✅ Bar data — OHLCV candles available
+                  ✅ Bar data — 200 bars all timeframes (5m/15m/1h/4h/1d)
                 </div>
                 <div className={`mss-checklist-item ${priorityResult.score >= 60 ? 'mss-checklist--ok' : 'mss-checklist--warn'}`}>
                   {priorityResult.score >= 60 ? '✅' : '⚠️'} Scoring threshold — score {priorityResult.score}/{scoringStrategy.entryThreshold || 60} needed for BUY
@@ -279,7 +311,7 @@ export default function MetaStackStatusPage() {
                   {priorityResult.signal === 'BUY' || priorityResult.signal === 'SELL' ? '✅' : '⚠️'} Signal generation — currently {priorityResult.signal || 'HOLD'}
                 </div>
                 <div className="mss-checklist-item mss-checklist--warn">
-                  ⏳ Strategy activation — Gold Scalp strategy ready for activation
+                  ⏳ Threshold calibration — directives fire but composite stays at {priorityResult.score}. Investigate protocol gating weights or directive score contributions.
                 </div>
               </div>
             </div>

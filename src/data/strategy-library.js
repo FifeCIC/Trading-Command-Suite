@@ -8,6 +8,41 @@
  *
  * When a strategy is "activated" from the library page, the full
  * META.Stack pipeline is assembled and added to the automation loop.
+ *
+ * ── Adding a New Strategy ──────────────────────────────────────────────
+ *
+ * 1. Add an entry to the STRATEGY_LIBRARY array below.  Required fields:
+ *    id, name, tagline, category, assetClasses[], difficulty, timeframe,
+ *    status, overview, theory, mechanics[], directiveMappings[],
+ *    strengths[], risks[], configSchema{}.
+ *
+ * 2. Each directiveMapping must reference a real directive ID registered
+ *    in the NestJS DirectivesModule.  Check the /api/directives endpoint
+ *    to confirm the directive exists before referencing it.
+ *
+ * 3. status values:
+ *    'concept'   — documented but no directives wired yet
+ *    'partial'   — some directives exist but gaps remain
+ *    'supported' — all directive mappings reference live directives
+ *    'live'      — actively running in the automation loop (has tcsProtocol)
+ *
+ * 4. If the strategy references NEW directives, those directives must be:
+ *    a) Implemented in nest/src/modules/directives/implementations/*.directive.ts
+ *    b) Imported + registered in directives.module.ts
+ *    c) Seeded to DB via POST /api/directives/seed
+ *    d) Classified in prisma/seed_nature.sql
+ *    e) Calibrated in prisma/seed.ts (if symbol-specific tuning needed)
+ *
+ * 5. Strategies with tcsProtocol are "wired" — they have an active protocol
+ *    config in the ProtocolRegistry and can be run by the automation loop.
+ *    Strategies without tcsProtocol are documentation-only (concept stage).
+ *
+ * ── Strategy Card Rendering ─────────────────────────────────────────────
+ *
+ * The StrategyLibraryPage renders each entry as an expandable card.
+ * CSS: src/pages/strategy-library.css
+ * The page filters nothing — all strategies in this array are shown.
+ * Future: filter by assetClass, difficulty, or status.
  */
 
 export const STRATEGY_LIBRARY = [

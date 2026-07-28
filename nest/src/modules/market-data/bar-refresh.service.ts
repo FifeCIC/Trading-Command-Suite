@@ -12,6 +12,41 @@
  *   BAR_REFRESH_LIVE_LIMIT      — bars per symbol in live mode (default 200)
  *   BAR_REFRESH_RECORD_LIMIT    — bars per symbol in record mode (default 500)
  *   BAR_REFRESH_INTERVAL_MS     — live refresh interval in ms (default 300000)
+ *
+ * ── Three-Layer Data Provisioning Pipeline ──────────────────────────────
+ *
+ * This service is Layer 0 (pre-warming).  The full pipeline:
+ *
+ *   LAYER 0 — BarRefreshService (this file)
+ *     Pre-warms the marketBar table with 200 bars across 5 timeframes
+ *     (5m, 15m, 1h, 4h, 1d) every 5 minutes.  This ensures the cache
+ *     is hot before any directive runs.
+ *
+ *   LAYER 1 — IDirective.minBars (per-directive declaration)
+ *     Each directive declares `readonly minBars: Record<string, number>`
+ *     mapping timeframe → minimum bar count.  Example:
+ *       price-action:     { '1d': 200 }
+ *       btc-halving-cycle: { '1d': 365 }
+ *       mtf-confluence:    { '1d': 200, '1h': 50, '15m': 30 }
+ *     File: directives/interfaces/directive.interface.ts
+ *
+ *   LAYER 2 — ProtocolDbService.getRequiredBars(protocolSlug)
+ *     Walks all directive IDs in a protocol, collects their minBars,
+ *     computes the MAX per timeframe, and returns a Record<string,number>.
+ *     File: scoring/protocol-db.service.ts
+ *
+ *   LAYER 3 — Automation loop / Protocol Gating controller
+ *     Uses getRequiredBars() to call getBars(sym, tf, requiredBars[tf])
+ *     dynamically — no more hardcoded "getBars(sym, tf, 100)".
+ *     Files: automation/automation-loop.service.ts,
+ *            scoring/protocol-gating.controller.ts
+ *
+ * BEFORE this pipeline existed, directives like price-action (needing 200
+ * daily bars) would starve with "need 200 bars, have 25".  The hardcoded
+ * getBars(sym, tf, 100) couldn't satisfy any directive needing >100 bars.
+ *
+ * TIMEFRAMES expanded from ['5m','1h'] to ['5m','15m','1h','4h','1d']
+ * on 2026-07-28 to support multi-timeframe directives and gold strategies.
  */
 
 import { Injectable, Logger } from '@nestjs/common';

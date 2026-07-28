@@ -115,6 +115,26 @@
   font-size: 1rem;
   font-weight: 600;
   color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mss-fresh-btn {
+  font-size: 0.75rem;
+  padding: 4px 12px;
+  margin-left: auto;
+}
+
+.mss-fresh-result {
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
+  border-radius: 6px;
+  padding: 8px 14px;
+  margin-bottom: 16px;
+  font-size: 0.8125rem;
+  color: var(--accent);
 }
 
 /* ── Tables ────────────────────────────────────────────── */

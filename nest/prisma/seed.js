@@ -26,6 +26,12 @@ async function main() {
     console.log('Seed complete.');
     const faqCount = await (0, seed_faq_1.seedFaq)(prisma);
     console.log(`  ✓ ${faqCount} FAQ entries seeded.`);
+    // ── Symbol Calibrations ──────────────────────────────────────────────
+    // Per-symbol directive weight multipliers (SymbolCalibration table).
+    // >1.0 = directive is MORE important for this symbol.
+    // <1.0 = directive is LESS reliable for this symbol.
+    // Upserted — safe to re-run.  XAUUSD and NVDA are most heavily tuned.
+    // When adding a directive, check if it needs a calibration for these symbols.
     const calibrations = [
         { symbol: 'DOGEUSD', directiveId: 'news-sentiment', weightMultiplier: 3.0, reason: 'DOGE is 3x more sensitive to social sentiment and news' },
         { symbol: 'DOGEUSD', directiveId: 'volume-surge', weightMultiplier: 1.5, reason: 'Whale activity precedes DOGE moves more than typical crypto' },

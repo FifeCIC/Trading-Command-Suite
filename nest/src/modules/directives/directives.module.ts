@@ -67,6 +67,11 @@ import { NewsSentimentPositiveDirective } from './implementations/news-sentiment
 import { EarningsProximityDirective } from './implementations/earnings-proximity.directive';
 import { VixRegimeDirective } from './implementations/vix-regime.directive';
 import { DxyRegimeDirective } from './implementations/dxy-regime.directive';
+// ── Precious Metals / Commodity-Specific (XAUUSD, XAGUSD) ─────────────────
+// These directives only score gold/silver symbols.  They are registered as
+// symbol-specific (nature='symbol-specific') in the DB and carry elevated
+// weight multipliers for XAUUSD in prisma/seed.ts calibrations.
+// Added 2026-07-28 to support Gold Macro Regime Strategy.
 import { GoldMacroCorrelationDirective } from './implementations/gold-macro-correlation.directive';
 import { GoldRoundNumbersDirective } from './implementations/gold-round-numbers.directive';
 import { GoldSessionProfileDirective } from './implementations/gold-session-profile.directive';
@@ -560,6 +565,7 @@ export class DirectivesModule implements OnModuleInit {
     // Implemented — Macro
     this.directivesService.register(this.vixRegime);
     this.directivesService.register(this.dxyRegime);
+    // ── Precious Metals (XAUUSD/XAGUSD) — added 2026-07-28 ──
     this.directivesService.register(this.goldMacro);
     this.directivesService.register(this.goldRoundNumbers);
     this.directivesService.register(this.goldSessionProfile);

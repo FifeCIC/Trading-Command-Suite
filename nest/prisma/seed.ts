@@ -34,7 +34,23 @@ async function main() {
   const faqCount = await seedFaq(prisma);
   console.log(`  ✓ ${faqCount} FAQ entries seeded.`);
 
-  // Seed symbol calibrations
+  // ── Symbol Calibrations ─────────────────────────────────────────────────
+  // Per-symbol directive weight multipliers stored in the SymbolCalibration
+  // table.  These tune the scoring engine for known symbol→directive quirks:
+  //
+  //   weightMultiplier > 1.0 → directive is MORE important for this symbol
+  //   weightMultiplier < 1.0 → directive is LESS reliable for this symbol
+  //
+  // Example: gold trends strongly, so RSI oversold mean-reversion is less
+  // reliable (0.7×).  But gold respects round numbers obsessively, so the
+  // gold-round-numbers directive gets a boost (1.3×).
+  //
+  // When adding a new directive, check if any symbol already in this list
+  // would benefit from a calibration entry.  XAUUSD and NVDA are the most
+  // heavily tuned symbols.
+  //
+  // These are upserted — safe to re-run the seed without duplicates.
+  // =========================================================================
   const calibrations = [
     { symbol: 'DOGEUSD', directiveId: 'news-sentiment', weightMultiplier: 3.0, reason: 'DOGE is 3x more sensitive to social sentiment and news' },
     { symbol: 'DOGEUSD', directiveId: 'volume-surge', weightMultiplier: 1.5, reason: 'Whale activity precedes DOGE moves more than typical crypto' },
