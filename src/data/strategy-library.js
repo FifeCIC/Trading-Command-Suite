@@ -984,6 +984,8 @@ are filtered out when DXY is strongly rising.
       { directiveId: 'speed-momentum', role: 'Primary Signal', note: 'M1/M5 price velocity for scalp entries' },
       { directiveId: 'volume-surge', role: 'Confirmation', note: 'Volume spike validation for candlestick patterns' },
       { directiveId: 'support-resistance-levels', role: 'Level Detection', note: 'Round numbers and daily pivot levels' },
+      { directiveId: 'gold-round-numbers', role: 'Level Precision', note: 'Gold-specific $100/$50/$10 round number zones with proximity scoring' },
+      { directiveId: 'gold-session-profile', role: 'Session Quality', note: 'Gold-specific session timing (London/NY overlap optimal, Asian avoid)' },
       { directiveId: 'gold-macro-correlation', role: 'DXY Filter', note: 'Dollar strength/weakness as secondary signal' },
       { directiveId: 'dxy-regime', role: 'Macro Context', note: 'Broad USD trend — filters counter-trend scalps' },
       { directiveId: 'time-stop', role: 'Session Exit', note: 'Exit before low-liquidity Asian session' },
@@ -1019,6 +1021,147 @@ are filtered out when DXY is strongly rising.
       sessionEndEST: '12:00',
       asianSessionStartEST: '18:00',
       asianSessionEndEST: '02:00',
+    },
+  },
+  {
+    id: 'gold-macro-regime',
+    name: 'Gold Macro Regime',
+    tagline: 'Swing trade XAUUSD using DXY, real yields, and structural levels — the macro trinity for gold',
+    category: 'Macro / Swing',
+    assetClasses: ['Commodities', 'Precious Metals'],
+    difficulty: 'Intermediate',
+    timeframe: '4H / Daily',
+    status: 'supported',
+    tcsProtocol: 'xau-macro-v1',
+
+    overview: `
+Trade gold on the 4H and daily timeframes using the three macro drivers
+that have driven gold for 50+ years: USD strength (DXY), real interest
+rates (10Y Treasury), and safe-haven demand (VIX). Combine macro direction
+with technical entry at psychological round numbers for high-probability
+swing trades with 100-300 pip targets.
+    `.trim(),
+
+    theory: `
+Gold is the world's oldest macro asset. Unlike equities (driven by earnings)
+or forex (driven by rate differentials), gold's price is determined by
+three interrelated macro forces. Understanding their interaction is the
+key to timing gold entries:
+
+**The Macro Trinity:**
+
+**1. USD Strength (DXY) — 45% weight**
+Gold is priced in USD. When the dollar strengthens, gold becomes more
+expensive for non-USD buyers, reducing demand. The DXY-gold correlation
+averages -0.55 over 20-day windows and spikes to -0.85 during USD
+rallies. This is the PRIMARY driver — if DXY direction is unclear,
+gold direction is unclear.
+
+**2. Real Interest Rates (10Y TIPS / Treasury) — 35% weight**
+Gold pays no yield. When real (inflation-adjusted) rates rise, the
+opportunity cost of holding gold increases — investors rotate to bonds.
+When real rates fall or go negative, gold becomes the only store of
+value that doesn't lose purchasing power. The 10-year Treasury yield
+is the cleanest daily proxy for real rate expectations.
+
+**3. Safe-Haven Demand (VIX / Geopolitical) — 20% weight**
+When fear spikes — financial crisis, war, pandemic — capital floods
+into gold regardless of DXY or yields. This is the "VIX bid." It is
+the hardest driver to time but the most profitable when caught.
+Sustained VIX above 25 historically precedes gold rallies of 5-15%.
+
+**The Technical Catalyst: Round Numbers**
+Macro tells you WHAT direction. Round numbers tell you WHEN to enter.
+Gold respects $50 and $100 psychological levels with unusual precision —
+institutional algos cluster orders at these levels. Entering a long
+near $2,600 support when DXY is falling and real yields are declining
+is a 3-standard-deviation setup that fires only 4-8 times per year.
+    `.trim(),
+
+    mechanics: [
+      {
+        title: 'Macro Direction Filter (Daily)',
+        body: 'Each day, evaluate the three macro drivers. DXY above 105 and rising → bearish gold (score 0-30). DXY below 101 and falling → bullish gold (score 70-100). 10Y yield above 4.5% → headwind. 10Y below 3.8% → tailwind. VIX above 25 → safe-haven bid active. The composite macro score determines allowed trade direction: score > 65 = long only, score < 35 = short only, 35-65 = no trade (neutral macro).',
+      },
+      {
+        title: 'Round Number Entry Zones',
+        body: 'Wait for price to reach a $50 or $100 psychological level before entering. Entry at a major level ($2,600, $2,700) with macro confirmation has historically produced 65-70% win rates on 4H swings. Place limit orders 0.15-0.30% above the level (for longs) to catch the bounce — do not chase the level if price is already 1%+ away.',
+      },
+      {
+        title: 'ATR-Based Position Sizing',
+        body: 'Gold\'s daily ATR typically ranges from $25-45 (0.9-1.7%). Position size is calculated as: RiskAmount / (1.5 × Daily ATR). A $500 risk budget with $35 ATR = 500 / 52.5 = 9.5 micro lots (0.095 standard). This ensures stops are placed outside normal daily noise.',
+      },
+      {
+        title: 'Structural Stop Placement',
+        body: 'Stops are placed behind the nearest structural level, not a fixed dollar amount. For longs: stop at the nearest $50 level minus $5 (e.g., entry at $2,615, stop at $2,595 — below the $2,600 level). For shorts: stop at the nearest $50 level plus $5. Minimum stop distance: 1.5× ATR to avoid noise exits.',
+      },
+      {
+        title: 'Macro Invalidation Rules',
+        body: 'Exit any position immediately if the macro driver that justified the trade reverses. If you entered long because DXY was below 101 and DXY closes above 103 → exit regardless of P&L. If you entered because real yields were falling and 10Y breaks above 4.8% → exit. The macro thesis is the foundation — if it cracks, the trade has no reason to exist.',
+      },
+      {
+        title: 'Session Timing for Entries',
+        body: 'Only enter new positions during the London morning (08:00-12:00 GMT) or London-NY overlap (13:00-17:00 GMT). These sessions provide the cleanest technical structure for gold. Avoid entering during Asian hours (00:00-08:00 GMT) — gold ranges narrowly and false breakouts are common.',
+      },
+    ],
+
+    stateMachine: {
+      description: 'Macro-driven swing positions with clear invalidation rules:',
+      states: [
+        { state: 'SCANNING', label: 'Macro Scan', desc: 'Daily evaluation of DXY, 10Y, VIX. Composite score determines long/short/neutral bias.' },
+        { state: 'WAITING', label: 'Awaiting Level', desc: 'Macro is aligned. Waiting for price to tag a $50/$100 round number for entry.' },
+        { state: 'ACTIVE_LONG', label: 'Long Active', desc: 'In a long position. Stop below nearest structural level. Monitoring macro invalidation.' },
+        { state: 'ACTIVE_SHORT', label: 'Short Active', desc: 'In a short position. Stop above nearest level. Monitoring for DXY reversal or VIX spike.' },
+        { state: 'MACRO_INVALIDATED', label: 'Thesis Broken', desc: 'Macro driver reversed. Exiting regardless of P&L — discipline over hope.' },
+        { state: 'DEFENSIVE', label: 'Risk-Off', desc: 'VIX > 30 or DXY > 108. No new positions. Existing positions trailed to breakeven or exited.' },
+      ],
+    },
+
+    directiveMappings: [
+      { directiveId: 'dxy-regime', role: 'Primary Macro Driver', note: 'USD strength/weakness — 45% of macro score' },
+      { directiveId: 'gold-macro-correlation', role: 'Composite Macro Score', note: 'DXY + 10Y yield + VIX weighted scoring' },
+      { directiveId: 'gold-round-numbers', role: 'Entry Trigger', note: '$50/$100 psychological level detection for entries' },
+      { directiveId: 'gold-session-profile', role: 'Session Gate', note: 'Blocks entries during low-quality Asian session' },
+      { directiveId: 'support-resistance-levels', role: 'Stop Placement', note: 'Structural level identification for stop positioning' },
+      { directiveId: 'atr-dip', role: 'Position Sizing', note: 'ATR-based risk calibration for gold volatility' },
+      { directiveId: 'fibonacci-levels', role: 'Secondary Entry', note: 'Fib retracement confluence with round numbers' },
+      { directiveId: 'time-stop', role: 'Dead Trade Exit', note: 'Exit if macro thesis doesn\'t produce move within 15 days' },
+    ],
+
+    strengths: [
+      '50+ years of macro relationships — DXY/gold correlation is one of the most persistent in finance',
+      'Round number entries provide clear, objective entry points — no guessing where to buy',
+      'Macro invalidation rules enforce discipline — no "hoping" a losing trade turns around',
+      '4H/Daily timeframes mean low screen time — check charts 2-3 times per day',
+      'Only 4-8 high-conviction setups per year — quality over quantity',
+    ],
+
+    risks: [
+      'Macro correlations can temporarily break during extreme events (COVID, 2008)',
+      'Requires patience — waiting for macro + level alignment can mean weeks between trades',
+      'DXY data may rely on EURUSD proxy — introduces ~0.85 correlation vs true DXY',
+      'Real yield data (10Y TIPS) is not available via MT5 — 10Y nominal is used as proxy',
+      'Geopolitical events (wars, sanctions) can override all macro drivers without warning',
+    ],
+
+    configSchema: {
+      dxyStrongThreshold: 105,
+      dxyWeakThreshold: 101,
+      yieldHeadwindThreshold: 4.5,
+      yieldTailwindThreshold: 3.8,
+      vixFearThreshold: 25,
+      vixDefensiveThreshold: 30,
+      macroScoreLongMin: 65,
+      macroScoreShortMax: 35,
+      roundNumberMajorStep: 100,
+      roundNumberMinorStep: 50,
+      entryZonePct: 0.003,
+      stopStructuralBuffer: 5,
+      stopMinAtrMultiplier: 1.5,
+      riskPerTradePct: 2,
+      timeInvalidationDays: 15,
+      sessionEntryStartGMT: 8,
+      sessionEntryEndGMT: 17,
     },
   },
 ];

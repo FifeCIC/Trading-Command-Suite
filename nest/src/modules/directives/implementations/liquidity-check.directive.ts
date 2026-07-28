@@ -30,7 +30,8 @@ export class LiquidityCheckDirective implements IDirective {
   readonly description =
     'Penalises illiquid symbols. Rewards symbols with stable volume, tight ranges, and low gap frequency.';
   readonly priority = 65;
-  readonly maxScore = 80; // Risk gate — lower ceiling than directional signals
+  readonly maxScore = 80;
+  readonly minBars = { '1d': 20 }; // Risk gate — lower ceiling than directional signals
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

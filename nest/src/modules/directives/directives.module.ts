@@ -68,6 +68,8 @@ import { EarningsProximityDirective } from './implementations/earnings-proximity
 import { VixRegimeDirective } from './implementations/vix-regime.directive';
 import { DxyRegimeDirective } from './implementations/dxy-regime.directive';
 import { GoldMacroCorrelationDirective } from './implementations/gold-macro-correlation.directive';
+import { GoldRoundNumbersDirective } from './implementations/gold-round-numbers.directive';
+import { GoldSessionProfileDirective } from './implementations/gold-session-profile.directive';
 import { CadUsdOilCorrelationDirective } from './implementations/cad-usd-oil-correlation.directive';
 import { VolatilityEnvelopeDirective } from './implementations/volatility-envelope.directive';
 import { MomentumExhaustionDirective } from './implementations/momentum-exhaustion.directive';
@@ -258,6 +260,8 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     IchimokuCloudDirective,
     // Stubs — Macro
     GoldMacroCorrelationDirective,
+    GoldRoundNumbersDirective,
+    GoldSessionProfileDirective,
     CadUsdOilCorrelationDirective,
     // Stubs — Temporal
     FridayPositioningDirective,
@@ -421,6 +425,8 @@ export class DirectivesModule implements OnModuleInit {
     private readonly vixRegime: VixRegimeDirective,
     private readonly dxyRegime: DxyRegimeDirective,
     private readonly goldMacro: GoldMacroCorrelationDirective,
+    private readonly goldRoundNumbers: GoldRoundNumbersDirective,
+    private readonly goldSessionProfile: GoldSessionProfileDirective,
     private readonly cadUsdOil: CadUsdOilCorrelationDirective,
     // Stubs — Temporal
     private readonly mondayEffectReal: MondayEffectRealDirective,
@@ -555,6 +561,8 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.vixRegime);
     this.directivesService.register(this.dxyRegime);
     this.directivesService.register(this.goldMacro);
+    this.directivesService.register(this.goldRoundNumbers);
+    this.directivesService.register(this.goldSessionProfile);
     this.directivesService.register(this.cadUsdOil);
     // Stubs — Macro
     // Temporal — real (not stub)

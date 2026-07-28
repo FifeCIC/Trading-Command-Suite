@@ -33,6 +33,7 @@ export class InstitutionalFootprintDirective implements IDirective {
     'Detects institutional-level volume and price activity patterns. Simplified footprint-only version of price-time-gap.';
   readonly priority = 70;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 17 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

@@ -25,6 +25,7 @@ export class EmaStructureDirective implements IDirective {
     'Scores symbols where price sits above EMA20 which sits above EMA50.';
   readonly priority = 75;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 51 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

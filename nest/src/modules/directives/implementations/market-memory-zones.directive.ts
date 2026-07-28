@@ -36,6 +36,7 @@ export class MarketMemoryZonesDirective implements IDirective {
     'Identifies unfilled-order zones from impulsive moves, structure shifts, and liquidity events.';
   readonly priority = 62;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 30 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

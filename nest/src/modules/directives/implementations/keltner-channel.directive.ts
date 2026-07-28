@@ -10,6 +10,7 @@ export class KeltnerChannelDirective implements IDirective {
   readonly description = 'EMA(20) ± 2×ATR(10). Price at lower band = oversold. Break above upper = momentum. MT5 Keltner.';
   readonly priority = 68;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 24 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

@@ -44,6 +44,7 @@ export class GapScannerDirective implements IDirective {
     'Detects overnight/opening price gaps. Small gaps (0.5-2%) tend to fill — fade the gap. Large gaps (>2%) may gap-and-go — follow momentum. Extreme gaps (>5%) are news-driven and unpredictable.';
   readonly priority = 72;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 2 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

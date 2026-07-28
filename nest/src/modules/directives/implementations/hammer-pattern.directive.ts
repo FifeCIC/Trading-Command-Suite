@@ -35,6 +35,7 @@ export class HammerPatternDirective implements IDirective {
 
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 6 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

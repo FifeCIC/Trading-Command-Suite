@@ -44,6 +44,7 @@ export class ObvDivergenceDirective implements IDirective {
     'Detects bullish/bearish OBV (On-Balance Volume) divergence — price extremes not confirmed by volume flow. Strongest divergence signal — indicates smart money accumulation/distribution.';
   readonly priority = 86;
   readonly maxScore = 120;
+  readonly minBars = { '1d': 20 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

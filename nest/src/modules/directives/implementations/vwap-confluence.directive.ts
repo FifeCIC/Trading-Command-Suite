@@ -62,6 +62,7 @@ export class VwapConfluenceSimpleDirective implements IDirective {
     'Price at VWAP + RSI confirming + volume elevated = high-confidence mean-reversion entry. Prop-firm staple.';
   readonly priority = 78;
   readonly maxScore = 105;
+  readonly minBars = { '1d': 5 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

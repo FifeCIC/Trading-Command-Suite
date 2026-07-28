@@ -28,6 +28,7 @@ export class RsiOverboughtDirective implements IDirective {
 
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 16 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

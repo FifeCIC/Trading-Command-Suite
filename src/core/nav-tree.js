@@ -116,6 +116,7 @@ export const NAV_TREE = {
       { id: 'platform-comparisons', label: 'API Comparisons', icon: '▤' },
       { id: 'platform-api-efficiency', label: 'API Efficiency', icon: '◈' },
       // ── System Maps ──
+      { id: 'meta-stack-status', label: 'META.Stack Status', icon: '🎯' },
       { id: 'architecture-framework', label: 'Architecture', icon: '⬡' },
       { id: 'file-inventory', label: 'File Inventory', icon: '📁' },
       // ── Security ──

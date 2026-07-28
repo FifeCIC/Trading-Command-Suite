@@ -33,6 +33,7 @@ export class AnalystAdjustmentsDirective implements IDirective {
   readonly description = 'Scores based on analyst consensus. Strong bullish consensus = positive. High sell ratings or weak consensus = negative.';
   readonly priority = 45;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 1 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

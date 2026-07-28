@@ -29,6 +29,7 @@ export class CandlePressureDirective implements IDirective {
     'CLV-based buy/sell pressure. CPI > 0.6 = bullish pressure, < 0.4 = bearish.';
   readonly priority = 52;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 10 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

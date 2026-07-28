@@ -9,6 +9,7 @@ export class AwesomeOscillatorDirective implements IDirective {
   readonly description = '5-bar SMA - 34-bar SMA of (H+L)/2. Positive & rising = bullish. MT5 Awesome Oscillator.';
   readonly priority = 65;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 36 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

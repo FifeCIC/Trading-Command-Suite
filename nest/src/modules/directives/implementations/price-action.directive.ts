@@ -25,6 +25,7 @@ export class PriceActionDirective implements IDirective {
   readonly description = 'Scores price position relative to MA(20), MA(50), MA(200). Above all = bullish structure.';
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 200 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

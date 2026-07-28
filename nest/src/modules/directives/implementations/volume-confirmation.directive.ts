@@ -23,7 +23,8 @@ export class VolumeConfirmationDirective implements IDirective {
   readonly description =
     'Scores symbols where recent volume exceeds the average.';
   readonly priority = 60;
-  readonly maxScore = 100; // Raised from 85 — the bonus structure in calculate() can reach 100
+  readonly maxScore = 100;
+  readonly minBars = { '1d': 21 }; // Raised from 85 — the bonus structure in calculate() can reach 100
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

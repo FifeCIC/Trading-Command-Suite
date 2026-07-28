@@ -27,6 +27,7 @@ export class HurstMemoryDirective implements IDirective {
     'Hurst exponent via R/S analysis. H>0.6 trending, H<0.4 mean-reverting.';
   readonly priority = 75;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 50 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

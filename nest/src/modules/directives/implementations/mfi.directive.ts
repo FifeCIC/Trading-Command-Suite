@@ -32,6 +32,7 @@ export class MfiDirective implements IDirective {
 
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 17 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

@@ -37,7 +37,8 @@ export class DilutionImpactDirective implements IDirective {
   readonly description =
     'Penalises stocks with recent share dilution. No dilution = full score. On-demand import + DB read.';
   readonly priority = 45;
-  readonly maxScore = 60; // Risk penalty — lower ceiling
+  readonly maxScore = 60;
+  readonly minBars = { '1d': 1 }; // Risk penalty — lower ceiling
   readonly version = '1.2.0';
 
   constructor(

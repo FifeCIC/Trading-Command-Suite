@@ -13,6 +13,7 @@ export class BullsPowerDirective implements IDirective {
   readonly description = 'High - EMA(13). Positive values signal bullish pressure. Derived from MT5 Bulls Power.';
   readonly priority = 65;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 16 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

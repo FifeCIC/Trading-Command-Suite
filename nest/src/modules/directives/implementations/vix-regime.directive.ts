@@ -21,6 +21,7 @@ export class VixRegimeDirective implements IDirective {
   readonly description = 'Market-wide volatility regime. Low VIX = calm, high VIX = defensive.';
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 20 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

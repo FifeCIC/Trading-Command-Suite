@@ -8,9 +8,10 @@
  * Phase D.1 of META.Stack DB-driven refactor.
  */
 
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DirectiveGroup } from '../directives/directive-groups';
+import { DirectivesService } from '../directives/directives.service';
 import { PROTOCOL_SEED_DATA } from './protocols-seed-data';
 
 export interface ProtocolConfig {
@@ -31,13 +32,59 @@ export class ProtocolDbService implements OnModuleInit {
   private readonly logger = new Logger(ProtocolDbService.name);
   private cache = new Map<string, ProtocolConfig | null>();
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => DirectivesService))
+    private readonly directivesService: DirectivesService,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     // Preload in background — don't block startup
     this.preloadAll().catch((err) => {
       this.logger.warn(`Background protocol preload failed: ${(err as Error).message}`);
     });
+  }
+
+  /**
+   * Compute the maximum bar requirement across all directives in this protocol.
+   * Returns a map of timeframe → minimum bar count needed.
+   *
+   * For example, if a protocol has directives needing { '1d': 25 }, { '1d': 72 },
+   * and { '1d': 16, '4h': 50 }, the result is { '1d': 72, '4h': 50 }.
+   *
+   * Used by the automation loop and manual scoring to dynamically size bar fetches.
+   */
+  getRequiredBars(protocolSlug: string): Record<string, number> {
+    const cache = this.getAllCached();
+    const protocol = cache[protocolSlug];
+    if (!protocol) return { '1d': 100 }; // default fallback
+
+    const required: Record<string, number> = {};
+
+    // Collect all directive IDs across all groups in this protocol
+    const allDirectiveIds = new Set<string>();
+    for (const group of protocol.groups) {
+      for (const did of group.directiveIds) {
+        allDirectiveIds.add(did);
+      }
+    }
+
+    // For each directive, look up its minBars and compute the max per timeframe
+    for (const did of allDirectiveIds) {
+      const directive = this.directivesService.get(did);
+      if (!directive?.minBars) continue;
+
+      for (const [tf, count] of Object.entries(directive.minBars)) {
+        required[tf] = Math.max(required[tf] || 0, count);
+      }
+    }
+
+    // Return defaults if nothing collected
+    if (Object.keys(required).length === 0) {
+      return { '1d': 100 };
+    }
+
+    return required;
   }
 
   /** Clear the cache at start of each tick. */

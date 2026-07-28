@@ -1001,7 +1001,10 @@ export class AutomationLoopService implements OnModuleInit {
             const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: sym } });
             if (!dbSym) continue;
 
-            const bars = await this.marketData.getBars(dbSym.id, '5m', 100);
+            // Dynamic bar fetch based on protocol's directive requirements
+            const requiredBars = this.protocolDb.getRequiredBars(strat.protocolId);
+            const barCount = requiredBars['5m'] || 100;
+            const bars = await this.marketData.getBars(dbSym.id, '5m', barCount);
             if (!bars || bars.length < 20) continue;
 
             this.auditLog.logBarsFetched(this.state.tickCount, sym, bars.length,
@@ -1115,9 +1118,19 @@ export class AutomationLoopService implements OnModuleInit {
       }
 
       for (const [sym, strategyIds] of strategyIdsBySymbol) {
-        // Fetch bars once per symbol
+        // Fetch bars once per symbol — compute max required across all strategies for this symbol
         const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: sym } });
-        const bars = dbSym ? await this.marketData.getBars(dbSym.id, '5m', 100) : null;
+        let maxBars = 100; // default
+        if (dbSym) {
+          for (const sid of strategyIds) {
+            const strat = await this.strategyService.findOne(sid).catch(() => null);
+            if (strat?.protocolId) {
+              const req = this.protocolDb.getRequiredBars(strat.protocolId);
+              maxBars = Math.max(maxBars, req['5m'] || 100);
+            }
+          }
+        }
+        const bars = dbSym ? await this.marketData.getBars(dbSym.id, '5m', maxBars) : null;
         const hasBars = bars && bars.length >= 20;
 
         for (const strategyId of strategyIds) {
@@ -1230,7 +1243,9 @@ export class AutomationLoopService implements OnModuleInit {
         if (preFetchedBars && preFetchedBars.length >= 20) return preFetchedBars;
         const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: strategy.symbol } });
         if (!dbSym) return null;
-        const bars = await this.marketData.getBars(dbSym.id, effectiveTimeframe, 100);
+        const requiredBars = this.protocolDb.getRequiredBars(effectiveProtocolId);
+        const barCount = requiredBars[effectiveTimeframe] || 100;
+        const bars = await this.marketData.getBars(dbSym.id, effectiveTimeframe, barCount);
         return bars && bars.length >= 20 ? bars : null;
       };
 

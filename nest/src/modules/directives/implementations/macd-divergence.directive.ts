@@ -47,6 +47,7 @@ export class MacdDivergenceDirective implements IDirective {
     'Detects bullish/bearish MACD histogram divergence — price making new extremes while MACD momentum fails to confirm. Stronger than RSI divergence.';
   readonly priority = 84;
   readonly maxScore = 115;
+  readonly minBars = { '1d': 52 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

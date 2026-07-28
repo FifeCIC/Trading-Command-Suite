@@ -18,6 +18,7 @@ export class RegimeShiftExitDirective implements IDirective {
   readonly description = 'Detects market structure breakdown via entropy spike. Urgent exit signal.';
   readonly priority = 80;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 40 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

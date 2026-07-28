@@ -20,6 +20,7 @@ export class TargetAchievedDirective implements IDirective {
   readonly directionBias = 'bullish' as const;
   readonly priority = 60;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 24 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

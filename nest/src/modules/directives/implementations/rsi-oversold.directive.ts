@@ -25,6 +25,7 @@ export class RsiOversoldDirective implements IDirective {
     'Scores oversold symbols where RSI is below threshold and starting to curl up.';
   readonly priority = 85;
   readonly maxScore = 120;
+  readonly minBars = { '1d': 16 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

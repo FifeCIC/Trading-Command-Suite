@@ -13,6 +13,7 @@ export class ElectionCycleDirective implements IDirective {
   readonly description = 'Year 3 of US presidential cycle historically strongest for equities. Year 2 (midterms) weakest.';
   readonly priority = 28;
   readonly maxScore = 10;
+  readonly minBars = { '1d': 1 };
   readonly version = '1.0.0';
 
   // US presidential cycle: 2025=Year1, 2026=Year2, 2027=Year3, 2028=Year4

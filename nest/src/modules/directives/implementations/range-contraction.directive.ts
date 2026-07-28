@@ -28,6 +28,7 @@ export class RangeContractionDirective implements IDirective {
     'Detects compression zones. Maturity grading for coiled-spring breakout signals.';
   readonly priority = 58;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 30 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

@@ -27,6 +27,7 @@ export class LiquiditySweepDirective implements IDirective {
     'Detects stop hunts via wick-ratio thresholds and engulfing confirmation.';
   readonly priority = 68;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 15 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

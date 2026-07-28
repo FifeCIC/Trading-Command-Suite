@@ -12,6 +12,7 @@ export class MondayEffectDirective implements IDirective {
   readonly description = 'Monday bearish bias — statistically the worst day of the week for equities.';
   readonly priority = 25;
   readonly maxScore = 10;
+  readonly minBars = { '1d': 2 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

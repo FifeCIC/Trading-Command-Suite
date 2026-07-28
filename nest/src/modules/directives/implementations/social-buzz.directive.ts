@@ -36,6 +36,7 @@ export class SocialBuzzDirective implements IDirective {
     'Scores social media sentiment and mention volume from Reddit/Twitter. Reads from SocialMention DB table (populated by cron).';
   readonly priority = 40;
   readonly maxScore = 70;
+  readonly minBars = { '1d': 1 };
   readonly version = '1.1.0';
 
   constructor(

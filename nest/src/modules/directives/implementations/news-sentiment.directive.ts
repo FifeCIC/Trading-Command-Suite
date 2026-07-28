@@ -20,6 +20,7 @@ export class NewsSentimentPositiveDirective implements IDirective {
   readonly description = 'Evaluates news sentiment. Mock-first — neutral when no API connected.';
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 1 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

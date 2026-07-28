@@ -43,6 +43,7 @@ export class CadUsdOilCorrelationDirective implements IDirective {
     'Oil up = CAD up (USDCAD down). Covers all 5 CAD crosses.';
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 20 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

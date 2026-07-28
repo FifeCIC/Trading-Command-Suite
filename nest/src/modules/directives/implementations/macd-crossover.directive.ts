@@ -26,6 +26,7 @@ export class MacdCrossoverDirective implements IDirective {
     'Scores symbols where MACD line crosses above the signal line.';
   readonly priority = 80;
   readonly maxScore = 110;
+  readonly minBars = { '1d': 36 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

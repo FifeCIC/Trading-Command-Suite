@@ -122,6 +122,7 @@ import SettingsEducationPage from '../pages/SettingsEducationPage.jsx';
 import ServerControlsPage from '../pages/ServerControlsPage.jsx';
 import ReportsPage from '../pages/ReportsPage.jsx';
 import CapabilityMapPage from '../pages/CapabilityMapPage.jsx';
+import MetaStackStatusPage from '../pages/MetaStackStatusPage.jsx';
 import QATestingPage from '../pages/QATestingPage.jsx';
 import DecisionTrailPage from '../pages/DecisionTrailPage.jsx';
 import SymbolPage from '../pages/SymbolPage.jsx';
@@ -289,6 +290,7 @@ export const VIEW_COMPONENTS = {
   'server-controls': ServerControlsPage,
   'reports': ReportsPage,
   'capability-map': CapabilityMapPage,
+  'meta-stack-status': MetaStackStatusPage,
   'qa-testing': QATestingPage,
   'architecture-framework': ArchitectureFrameworkPage,
   'diagrams': DiagramsPage,

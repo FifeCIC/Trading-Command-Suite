@@ -36,7 +36,8 @@ export class SessionTimingFilterDirective implements IDirective {
   readonly description =
     'Session-based quality multiplier. US/London sessions have highest quality. Proven filter.';
   readonly priority = 76;
-  readonly maxScore = 120; // PROVEN filter — session timing > regime > HTF alignment
+  readonly maxScore = 120;
+  readonly minBars = { '1d': 1 }; // PROVEN filter — session timing > regime > HTF alignment
   readonly version = '1.1.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

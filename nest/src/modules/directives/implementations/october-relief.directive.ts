@@ -12,6 +12,7 @@ export class OctoberReliefDirective implements IDirective {
   readonly description = 'Mid-to-late October reversal rally — historically strong bounce from September selloff.';
   readonly priority = 30;
   readonly maxScore = 15;
+  readonly minBars = { '1d': 1 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

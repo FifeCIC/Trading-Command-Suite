@@ -65,6 +65,7 @@ export class DxyRegimeDirective implements IDirective {
     'Gold, majors, commodities, and crypto are all correlated to USD strength.';
   readonly priority = 55; // Higher than VIX — DXY leads everything
   readonly maxScore = 100;
+  readonly minBars = { '1d': 20 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

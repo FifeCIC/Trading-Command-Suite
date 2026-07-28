@@ -38,6 +38,7 @@ export class RsiDivergenceDirective implements IDirective {
     'Detects bullish/bearish RSI divergence — price making new extremes while RSI fails to confirm. Strong reversal signal.';
   readonly priority = 82;
   readonly maxScore = 110;
+  readonly minBars = { '1d': 31 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

@@ -12,6 +12,7 @@ export class SellInMayDirective implements IDirective {
   readonly description = 'May–October seasonal equity weakness. Historically the worst 6-month stretch for equities.';
   readonly priority = 30;
   readonly maxScore = 15;
+  readonly minBars = { '1d': 1 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

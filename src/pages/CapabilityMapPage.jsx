@@ -26,8 +26,8 @@ const KNOWN_FEATURES = {
   'ExitSignalService (Multi-factor)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'RateLimitGovernor (9 providers)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
   'TimezoneService (IANA-aware)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Protocol System (32 protocols)': { dataPersistence: 'config', uiSurfaces: 3, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Directive Registry (99 directives)': { dataPersistence: 'config', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Protocol System (44 protocols, DB-driven)': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Directive Registry (102 directives, DB-backed metadata)': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Multi-Protocol SEES Arena': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Trading Strategy Stacks (real)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Sector Rotation + Protocol Strat': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
@@ -190,6 +190,25 @@ const KNOWN_FEATURES = {
   'Agent Attention Log (shared blockers)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
   // 2026-06-21 — Execution Queue Live Events (#457)
   'Execution Queue Live Events (Unified)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  // 2026-07-25/28 — Epic #510, Capital.com, Strategy Library, Cleanup
+  'DB-Driven Directives (Epic #510)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'DB-Driven Protocols (37 seeded)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Capital.com Adapter (CFD Broker)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'PositionSyncService (Broker-Agnostic)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'Strategy Library (9 strategies)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Gold Scalp Protocol (xau-speed-v1)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'CAD Sniper Protocol (cad-sniper-v1)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Forex Session Protocol (forex-session-v1)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'META.Stack Status Dashboard': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Auto-Trading Safety (15 disabled)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'AI Cost Tracking (Usage API)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
+  'Bundle Optimization (uplot dropped, mermaid lazy)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'SpeedChart Unification (Candlestick merged)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Diagram Accuracy (31 diagrams, 4 new)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'META.Stack Explorer (14-stage checklist)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Deprecated MT5 Order Pathway Cleanup': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'Console Warning Cleanup (10+ fixed)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Dead Code Cleanup (3,900 lines removed)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
 };
 
 // ── Build unified capability rows ──

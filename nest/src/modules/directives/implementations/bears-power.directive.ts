@@ -10,6 +10,7 @@ export class BearsPowerDirective implements IDirective {
   readonly description = 'Low - EMA(13). Negative values signal bearish pressure. Derived from MT5 Bears Power.';
   readonly priority = 65;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 16 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

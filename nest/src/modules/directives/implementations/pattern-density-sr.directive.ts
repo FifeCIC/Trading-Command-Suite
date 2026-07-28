@@ -26,6 +26,7 @@ export class PatternDensitySrDirective implements IDirective {
     'Aggregates repeated pattern detections into support/resistance zones via price bin density scoring.';
   readonly priority = 55;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 40 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

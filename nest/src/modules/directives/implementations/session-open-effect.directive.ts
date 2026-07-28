@@ -46,7 +46,8 @@ export class SessionOpenEffectDirective implements IDirective {
   readonly description =
     'Predicts directional bias around major session opens. US open at 13:30 UTC is the most impactful for crypto.';
   readonly priority = 74;
-  readonly maxScore = 110; // Directional bias at session opens — high signal value
+  readonly maxScore = 110;
+  readonly minBars = { '1d': 30 }; // Directional bias at session opens — high signal value
   readonly version = '1.1.0';
 
   readonly suitability = {

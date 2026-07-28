@@ -16,6 +16,7 @@ import { FinnhubAdapter } from './adapters/finnhub.adapter';
 import { TwelveDataAdapter } from './adapters/twelve-data.adapter';
 import { FmpAdapter } from './adapters/fmp.adapter';
 import { BinanceAdapter } from './adapters/binance.adapter';
+import { CapitalComAdapter } from './adapters/capital-com.adapter';
 import { CryptoProviderRouter } from './crypto-provider-router.service';
 import { RateLimitGovernor } from './rate-limit-governor.service';
 import { ProviderDegradationService } from './provider-degradation.service';
@@ -47,10 +48,11 @@ import { PositionSyncService } from './position-sync.service';
     TwelveDataAdapter,
     FmpAdapter,
     BinanceAdapter,
+    CapitalComAdapter,
     ProviderCacheService,
     PositionSyncService,
   ],
-  exports: [ProvidersService, AdapterFactory, FinnhubAdapter, FmpAdapter, Mt5Adapter, AlphaVantageAdapter, RateLimitGovernor, ProviderDegradationService, CryptoProviderRouter, BinanceAdapter, Mt5ConnectionManager, BridgeEventService, ProviderCacheService, PositionSyncService],
+  exports: [ProvidersService, AdapterFactory, FinnhubAdapter, FmpAdapter, Mt5Adapter, AlphaVantageAdapter, RateLimitGovernor, ProviderDegradationService, CryptoProviderRouter, BinanceAdapter, CapitalComAdapter, Mt5ConnectionManager, BridgeEventService, ProviderCacheService, PositionSyncService],
 })
 export class ProvidersModule implements OnModuleInit {
   constructor(
@@ -127,6 +129,14 @@ export class ProvidersModule implements OnModuleInit {
       baseUrl: 'https://financialmodelingprep.com/api/v3',
       capabilities: ['quotes', 'candles', 'profiles', 'fundamentals'],
       failoverPriority: 50,
+    });
+
+    this.adapterFactory.register('capital.com', CapitalComAdapter, {
+      name: 'Capital.com',
+      apiKeyEnv: 'CAPITAL_COM_API_KEY',
+      baseUrl: process.env.CAPITAL_COM_BASE_URL || 'https://demo-api-capital.backend-capital.com',
+      capabilities: ['quotes', 'candles', 'trades'],
+      failoverPriority: 25,
     });
   }
 }

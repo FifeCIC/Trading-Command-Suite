@@ -13,6 +13,7 @@ export class TurnaroundTuesdayDirective implements IDirective {
   readonly description = 'Tuesday reversal bias — tends to reverse Monday direction. Bullish after red Monday, bearish after green Monday.';
   readonly priority = 28;
   readonly maxScore = 15;
+  readonly minBars = { '1d': 2 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

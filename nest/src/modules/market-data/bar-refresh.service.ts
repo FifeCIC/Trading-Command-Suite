@@ -4,12 +4,13 @@
  * Periodically fetches fresh OHLCV bars from the MT5 bridge
  * and upserts them into the marketBar table. Supports two modes:
  *
- *   LIVE:   fetches 5-10 bars/symbol, every 5 min — feeds directives
- *   RECORD: fetches 100+ bars/symbol, on-demand — for backtesting
+ *   LIVE:   fetches bars/symbol across all needed timeframes, every 5 min
+ *           Default 200 bars to satisfy directives requiring deep lookback.
+ *   RECORD: fetches 500+ bars/symbol, on-demand — for backtesting
  *
  * Config via environment variables:
- *   BAR_REFRESH_LIVE_LIMIT      — bars per symbol in live mode (default 10)
- *   BAR_REFRESH_RECORD_LIMIT    — bars per symbol in record mode (default 100)
+ *   BAR_REFRESH_LIVE_LIMIT      — bars per symbol in live mode (default 200)
+ *   BAR_REFRESH_RECORD_LIMIT    — bars per symbol in record mode (default 500)
  *   BAR_REFRESH_INTERVAL_MS     — live refresh interval in ms (default 300000)
  */
 
@@ -26,18 +27,22 @@ interface BarProvider {
 
 const LIVE_LIMIT = process.env.BAR_REFRESH_LIVE_LIMIT
   ? parseInt(process.env.BAR_REFRESH_LIVE_LIMIT, 10)
-  : 10;
+  : 200;  // Enough to satisfy directives like price-action (200) in one cycle
 
 const RECORD_LIMIT = process.env.BAR_REFRESH_RECORD_LIMIT
   ? parseInt(process.env.BAR_REFRESH_RECORD_LIMIT, 10)
-  : 100;
+  : 500;  // Deep lookback for backtesting
 
 const REFRESH_INTERVAL_MS = process.env.BAR_REFRESH_INTERVAL_MS
   ? parseInt(process.env.BAR_REFRESH_INTERVAL_MS, 10)
   : 300_000; // 5 minutes
 
-/** Timeframes to refresh. */
-const TIMEFRAMES = ['5m', '1h'];
+/**
+ * Timeframes to refresh — covers all timeframes used by directives.
+ * 5m/15m/1h/4h for intraday patterns and MTF confluence.
+ * 1d for daily-based directives (the majority).
+ */
+const TIMEFRAMES = ['5m', '15m', '1h', '4h', '1d'];
 
 export type BarRefreshMode = 'live' | 'record';
 

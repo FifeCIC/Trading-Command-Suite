@@ -246,10 +246,28 @@ export const CURRENT_SLICE = [
   'Trade Pipeline Traceability (#446) — Full chain: broker.placeOrder() → result with ticket → tradeRecorder.record() → Prisma Trade table. Automation loop + Mt5TradingService + legacy controller all pass MT5 fields. Legacy POST /api/providers/mt5/order now writes Trade records.',
   'Execution Queue Live Events (#457) — Dual-tab redesign: ⟳ Live Events (default) and 🏗 Protocol Queue. GET /api/automation/events?limit=50&type=automation|decision returns unified event stream from existing AutomationEvent + DecisionLog models. 3s polling, type badges, event stats bar.',
   'Agent Governance Rules — agent-issue-close-checklist.instructions.md with 6 critical rules for issue completion. AGENT-ATTENTION.md shared blocker log (MT5 bridge, P&L mismatch, directiveoutcome table 2.59M rows). Session-start rule: agents must read AGENT-ATTENTION.md before work.',
+  // ── 2026-07-25/28 — Epic #510, Cleanup, Capital.com, Strategy Library ──
+  'Epic #510 Complete — All 4 phases: (1) 102 directives seeded to DB, (2) loadDirectiveMetadata() at startup, (3) 37 protocols seeded to DB via POST /api/scoring/gated/protocols/seed, (4) ~1,810-line PROTOCOL_REGISTRY removed from directive-groups.ts. All protocol data now DB-only via ProtocolDbService. Algorithm code stays in TypeScript — only metadata goes to DB.',
+  'DB-Driven Directives — POST /api/directives/seed (idempotent upsert, 102 directives). loadDirectiveMetadata() reads active status, weight overrides, config from DB at startup. 3 directives marked inactive from DB (overrides class defaults).',
+  'Protocol Seed Endpoint — POST /api/scoring/gated/protocols/seed → {"seeded":37,"groups":111,"entries":540}. DB state: protocol (37 rows), protocol_directive_group (111), protocol_directive_entry (540). Idempotent — safe to re-run.',
+  'Capital.com Adapter — Complete IProviderAdapter implementation with session-based auth (CST + X-SECURITY-TOKEN headers). Registered at failoverPriority 25 with quotes/candles/trades capabilities. Demo account verified: £1,000 CFD, positions API 200, accounts API 200. Session auto-refreshes at 9hr expiry. Adapter auto-detects missing credentials and sets mode=none gracefully.',
+  'PositionSyncService — Broker-agnostic position sync service. Upserts into Position table by symbol+provider. Links Trade records by brokerTicket. Detects closed positions → finalizes Trade records (fills closedAt, sets P&L). Integrated into AutomationLoopService — syncs on every tick after broker position fetch.',
+  'Strategy Library — 9 strategies in src/data/strategy-library.js: 4 supported (forex-session-trading, forex-session-cable, cad-oil-correlation, gold-scalp), 5 concept (scale-in variants, sector rotation, offensive/defensive regime). Each strategy has theory, mechanics, directiveMappings with directive IDs, strengths, risks, configSchema, and stateMachine. StrategyLibraryPage at /trading/strategy-library.',
+  'XAUUSD Priority Path — Gold Scalp (xau-speed-v1) identified as closest to full end-to-end live trading. MT5 bridge: read+write ✅. Protocol mapped: 6 directives ✅. Bar data importing: 200 bars all timeframes ✅. Scoring running: score 11/100, all HOLD ⚠️. Gap: score-to-threshold calibration (entry threshold=60, current score=11).',
+  'META.Stack Status Page — New dashboard at /status/meta-stack-status. Live TanStack Query from /api/providers/health and /api/scoring/ranked. Sections: Quick Stats (providers, signals, strategies), Broker Execution Readiness (MT5/T212/Capital.com/Alpaca/Binance with read/write/asset class), Priority Focus (XAUUSD with 6-item E2E checklist), Scoring Pipeline table, Strategy Library cross-reference, Data Provider Status. Auto-refresh 30s. Registered in view-routes.jsx + nav-tree.js.',
+  'Auto-Trading Disabled — 15 trading_strategy rows set active=0 (all mode=auto, minComposite=3 — effectively trade on any score). Automation loop continues scoring 24/7 but zero auto-executions. Semi-auto strategies queue for manual confirmation. 3-layer threshold architecture: Layer 1 global ENTRY_THRESHOLD=40/HOLD_FLOOR=20, Layer 2 per-protocol style defaults (scalp=75/speed=80/day=65/swing=55/pos=45), Layer 3 per-strategy tradeThreshold from scoring_strategy table.',
+  'Dead Code Cleanup — 14 unreachable pages deleted, 3 dead components (NotificationDisc, ShareCard, UPlotChart), 10 orphan CSS files removed. Frontend reduced ~3,900 lines. WatchlistsPage.jsx deleted (duplicate of UserWatchlistsPage). All deleted pages were already unregistered in view-routes.jsx. 6 pages intentionally kept (active route dependencies).',
+  'Console Warning Fixes — 10+ React warnings fixed across 8 files: duplicate keys (protocol dedup in API + QA checklist 19 IDs + DecisionTrail), uncontrolled inputs (DirectivesManager search), invalid DOM props (popoverTarget→popovertarget ×3, stroke-dasharray→strokeDasharray), nested tbody (ScoringActivityLogs), missing key props (SystemStatus), crash guard for non-array data (DailySummaryReport).',
+  'Diagram Accuracy Fixes — 3 diagrams corrected: scoring-gating (actual 3-layer threshold architecture), data-flow-architecture (removed false zero-usage labels from MacroSnapshot/SocialMention/InsiderTransaction), sees-automation (DB-driven counts). 4 new diagrams: memoization-cache (#408), db-vs-hardcoded (Epic #510 migration path), priority-queue-dispatch, dual-protocol-fallback. 31 total diagrams at /lab/diagrams.',
+  'META.Stack Explorer Checklists — All 14 pipeline stages converted to DB-backed checklist format. Stage 3 (Protocol Pairing): cross-references protocol IDs, scoring strategies, and watchlists (found 5/7 strategies use name-based linking, no FK set). 11 stage action links navigate to relevant config pages. SEES Pipeline markers separate scoring engine (steps 5-11) from prerequisites and post-scoring.',
+  'Deprecated MT5 Order Pathway — POST /api/providers/mt5/order and close/:ticket marked @deprecated with _deprecated:true + _migrateTo in response. Zero active callers confirmed via code audit + log analysis. Replacement: POST /api/trading/mt5/order with full validation + Trade recording.',
+  'AI Cost Tracking — GET /api/ai/usage?period=today|week|month and /api/ai/usage/breakdown endpoints deployed. Raw SQL queries against ai_api_call MySQL table with zero-data fallback (returns {totalCost:0,totalCalls:0,totalTokens:0}). DeepSeekService not yet wired to logCall() — partial completion.',
+  'Bundle Optimization — uplot npm dependency dropped (was only consumed by dead UPlotChart.jsx). Mermaid converted from static import (~1MB in main bundle) to dynamic import() inside DiagramsPage useEffect — code-split out. Runtime dependencies: 11 (was 12). lightweight-charts is sole charting library.',
+  'SpeedChart Unification — CandlestickChart.jsx deleted and merged into SpeedChart.jsx. SpeedChart now supports external data mode (ticks + containerRef + intervalMs + maxBars). Added bucketTicks() utility. Single chart component for real-time and historical OHLCV.',
 ]
 
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-22 (handoff batch #3)'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-28 (handoff batch #4 — Epic #510, Capital.com, Strategy Library, cleanup)'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -874,6 +892,46 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated operator access',
     owner: 'AutomationController',
     contract: 'Returns unified, time-sorted event stream from existing AutomationEvent + DecisionLog Prisma models. Query: ?limit=50&type=automation|decision. Type badges: automation/decision. Limit capped at 200. try/catch guards against missing tables.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/directives/seed',
+    method: 'POST',
+    permission: 'Admin access',
+    owner: 'DirectivesController',
+    contract: 'Idempotent seed of 102 directives into DB directive table. Upserts id, name, weight, config (description/directionBias/version), active, isDefault, nature. Returns {seeded:N, skipped:N}. Safe to re-run — no duplicates.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/scoring/gated/protocols/seed',
+    method: 'POST',
+    permission: 'Admin access',
+    owner: 'ProtocolGatingController',
+    contract: 'Idempotent seed of 37 protocols into DB (protocol + protocol_directive_group + protocol_directive_entry tables). Upserts slug, name, description, directionMode, tradingStyle, groups (weight, isRiskGate, multipliers), and entries (directiveId, maxScore). Returns {seeded:37, groups:111, entries:540}.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/ai/usage',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'AiUsageController',
+    contract: 'Returns AI cost summary from ai_api_call table. Query: ?period=today|week|month. Zero-data fallback returns {totalCost:0, totalCalls:0, totalTokens:0}.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/ai/usage/breakdown',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'AiUsageController',
+    contract: 'Returns per-feature cost breakdown from ai_api_call table. Zero-data fallback returns empty features array.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/providers/positions/sync',
+    method: 'POST',
+    permission: 'Automation loop (internal)',
+    owner: 'PositionSyncService',
+    contract: 'Broker-agnostic position sync. Accepts provider ID + positions array. Upserts into Position table by symbol+provider. Links Trade records by brokerTicket. Detects closed positions → finalizes Trade records. Called by automation loop on every tick.',
     status: 'active',
   },
 ]

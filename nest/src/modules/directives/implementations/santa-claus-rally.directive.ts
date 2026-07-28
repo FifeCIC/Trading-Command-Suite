@@ -12,6 +12,7 @@ export class SantaClausRallyDirective implements IDirective {
   readonly description = 'Dec 24–Jan 2 bullish window. Historically ~1.3% gain over the final 5 trading days of December and first 2 of January.';
   readonly priority = 30;
   readonly maxScore = 20;
+  readonly minBars = { '1d': 1 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

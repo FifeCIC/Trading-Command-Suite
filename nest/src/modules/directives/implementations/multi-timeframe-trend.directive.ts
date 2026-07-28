@@ -39,6 +39,7 @@ export class MultiTimeframeTrendDirective implements IDirective {
     'Scores trend alignment across daily, hourly, and 15M timeframes using EMA structure, ADX strength, and VWAP position. Higher confidence when all timeframes agree.';
   readonly priority = 80;
   readonly maxScore = 120;
+  readonly minBars = { '1d': 20, '1h': 20, '15m': 20 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

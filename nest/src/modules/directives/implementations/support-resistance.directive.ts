@@ -25,6 +25,7 @@ export class SupportResistanceLevelsDirective implements IDirective {
   readonly description = 'Detects local S/R levels from swing pivots. Near support = bullish, near resistance = bearish.';
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 35 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

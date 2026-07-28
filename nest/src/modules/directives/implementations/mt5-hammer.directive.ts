@@ -23,6 +23,7 @@ export class Mt5HammerDirective implements IDirective {
   readonly description = 'MT5-sourced hammer and shooting star reversal patterns with RSI(37) confirmation.';
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 14 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

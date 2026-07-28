@@ -485,11 +485,13 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "rsi-oversold",
           "rsi-overbought",
           "support-resistance-levels",
-          "session-open-effect"
+          "session-open-effect",
+          "gold-round-numbers"
         ],
         "directiveMaxScores": {
           "speed-momentum": 120,
-          "rsi-oversold": 120
+          "rsi-oversold": 120,
+          "gold-round-numbers": 80
         }
       },
       {
@@ -502,7 +504,8 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "news-sentiment-positive",
-          "gold-macro-correlation"
+          "gold-macro-correlation",
+          "gold-session-profile"
         ],
         "directiveMaxScores": {}
       },

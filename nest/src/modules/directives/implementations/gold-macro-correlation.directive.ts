@@ -39,6 +39,7 @@ export class GoldMacroCorrelationDirective implements IDirective {
     'Gold is the ultimate macro asset — DXY and real rates are the primary drivers.';
   readonly priority = 55;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 20 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

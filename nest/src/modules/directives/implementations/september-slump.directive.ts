@@ -12,6 +12,7 @@ export class SeptemberSlumpDirective implements IDirective {
   readonly description = 'September bearish bias — historically the worst month for equities since 1950.';
   readonly priority = 32;
   readonly maxScore = 20;
+  readonly minBars = { '1d': 1 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

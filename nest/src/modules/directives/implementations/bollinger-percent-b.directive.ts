@@ -20,6 +20,7 @@ export class BollingerPercentBDirective implements IDirective {
   readonly description = '%B > 0.8 = overbought (bearish). %B < 0.2 = oversold (bullish). Scores reversal probability at extremes.';
   readonly priority = 60;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 22 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

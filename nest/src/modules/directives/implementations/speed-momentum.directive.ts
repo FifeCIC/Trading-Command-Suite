@@ -27,6 +27,7 @@ export class SpeedMomentumDirective implements IDirective {
     'Short-term price velocity over 5 candles, amplified by volume confirmation. Core signal for speed/scalp trading on M1-M15 timeframes.';
   readonly priority = 85;
   readonly maxScore = 120;
+  readonly minBars = { '1d': 10 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

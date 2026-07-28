@@ -191,6 +191,22 @@ export interface IDirective {
   readonly suitability?: SuitabilityProfile;
 
   /**
+   * Minimum number of bars required per timeframe for this directive to produce
+   * a meaningful score. When the input has fewer bars than declared here,
+   * the directive may return score 0 (data-starved) rather than a false signal.
+   *
+   * Keyed by timeframe string (e.g. '1m', '5m', '1h', '1d').
+   * Example: { '1d': 25 } — this directive needs at least 25 daily bars.
+   *
+   * If omitted, the directive has no minimum bar requirement (uses all available).
+   * If the input timeframe is not in the map, the directive runs regardless.
+   *
+   * Used by protocol-level requiredBars computation and dynamic data fetching
+   * to ensure every directive in a protocol gets adequate market data.
+   */
+  readonly minBars?: Record<string, number>;
+
+  /**
    * Evaluate the directive against the provided market data.
    * Must NOT throw — return a neutral/low-confidence result on error.
    * Score should be in range 0 to this.maxScore.

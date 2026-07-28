@@ -10,6 +10,7 @@ export class AtrTrailingStopDirective implements IDirective {
   readonly description = 'Trailing stop at 3× ATR(14) from highest high. Price above stop = trend intact. MT5 ATR Trailing.';
   readonly priority = 64;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 18 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

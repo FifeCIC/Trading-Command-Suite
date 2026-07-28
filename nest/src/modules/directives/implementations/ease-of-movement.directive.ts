@@ -19,6 +19,7 @@ export class EaseOfMovementDirective implements IDirective {
   readonly description = 'EoM measures price/volume efficiency. High positive = easy upward movement. Scores trend quality.';
   readonly priority = 55;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 16 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

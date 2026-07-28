@@ -32,6 +32,7 @@ export class FxTimingDirective implements IDirective {
     'Evaluates whether the current FX rate is favourable for converting foreign-currency profits to GBP. Requires FX data feed (Q289).';
   readonly priority = 65;
   readonly maxScore = 80;
+  readonly minBars = { '1d': 1 };
   readonly version = '0.1.0'; // pre-release — needs FX data
 
   calculate(_input: DirectiveInput): DirectiveResult {

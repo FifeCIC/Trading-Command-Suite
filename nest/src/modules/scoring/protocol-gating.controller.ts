@@ -247,8 +247,10 @@ export class ProtocolGatingController {
         const sym = await this.prisma.symbol.findFirst({
           where: { ticker: p.symbol },
         });
+        // Use built-in-default protocol's bar requirements for portfolio scoring
+        const requiredBars = this.protocolDb.getRequiredBars('built-in-default');
         const bars = sym
-          ? await this.marketData.getBars(sym.id, '1d', 200)
+          ? await this.marketData.getBars(sym.id, '1d', requiredBars['1d'] || 200)
           : [];
         return { symbol: p.symbol, bars: bars || [] };
       }),
@@ -277,13 +279,16 @@ export class ProtocolGatingController {
   async getBatchGated(@Body() body: { tickers: string[]; protocolId?: string }): Promise<GatedScore[]> {
     if (!body.tickers?.length) return [];
 
+    const protocolBars = body.protocolId
+      ? this.protocolDb.getRequiredBars(body.protocolId)
+      : { '1d': 200 };
     const holdings = await Promise.all(
       body.tickers.map(async (ticker) => {
         const sym = await this.prisma.symbol.findFirst({
           where: { ticker: ticker.toUpperCase() },
         });
         const bars = sym
-          ? await this.marketData.getBars(sym.id, '1d', 200)
+          ? await this.marketData.getBars(sym.id, '1d', protocolBars['1d'] || 200)
           : [];
         return { symbol: ticker.toUpperCase(), bars: bars || [] };
       }),

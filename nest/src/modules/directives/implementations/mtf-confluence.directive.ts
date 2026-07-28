@@ -79,6 +79,7 @@ export class MtfConfluenceConservativeDirective implements IDirective {
   readonly description = 'All 3 timeframes (daily, 1h, 15m) must be bullish for BUY. High-accuracy, low-frequency. ~3-5 signals/month on SPY.';
   readonly priority = 88;
   readonly maxScore = 115;
+  readonly minBars = { '1d': 200, '1h': 50, '15m': 30 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

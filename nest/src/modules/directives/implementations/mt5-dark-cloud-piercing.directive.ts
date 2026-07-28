@@ -21,6 +21,7 @@ export class Mt5DarkCloudPiercingDirective implements IDirective {
   readonly description = 'Dark Cloud Cover (bearish reversal) and Piercing Line (bullish reversal) with CCI(37) confirmation.';
   readonly priority = 65;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 41 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

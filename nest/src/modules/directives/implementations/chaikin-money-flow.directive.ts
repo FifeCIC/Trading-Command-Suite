@@ -20,6 +20,7 @@ export class ChaikinMoneyFlowDirective implements IDirective {
   readonly description = 'CMF > 0.2 = accumulation (bullish). < -0.2 = distribution (bearish). Scores institutional flow.';
   readonly priority = 65;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 22 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

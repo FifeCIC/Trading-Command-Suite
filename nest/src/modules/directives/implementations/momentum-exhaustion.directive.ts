@@ -20,6 +20,7 @@ export class MomentumExhaustionDirective implements IDirective {
   readonly directionBias = 'bullish' as const;
   readonly priority = 65;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 19 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

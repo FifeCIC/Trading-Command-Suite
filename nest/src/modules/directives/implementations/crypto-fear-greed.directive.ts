@@ -32,6 +32,7 @@ export class CryptoFearGreedDirective implements IDirective {
     'Contrarian sentiment from the Alternative.me Fear & Greed Index. Extreme fear (<25) = bullish. Extreme greed (>75) = bearish.';
   readonly priority = 55;
   readonly maxScore = 60;
+  readonly minBars = { '1d': 1 };
   readonly version = '2.0.0';
 
   private readonly logger = new Logger(CryptoFearGreedDirective.name);

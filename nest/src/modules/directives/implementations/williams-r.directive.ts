@@ -16,6 +16,7 @@ export class WilliamsRDirective implements IDirective {
   readonly directionBias = 'bearish' as const;
   readonly priority = 75;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 16 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

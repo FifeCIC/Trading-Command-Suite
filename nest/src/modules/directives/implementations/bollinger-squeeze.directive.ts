@@ -24,6 +24,7 @@ export class BollingerBandSqueezeDirective implements IDirective {
   readonly description = 'Detects bandwidth at multi-period low — signals imminent volatility expansion.';
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 72 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

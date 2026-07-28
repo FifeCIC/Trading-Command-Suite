@@ -23,6 +23,7 @@ export class MarketRegimeDirective implements IDirective {
   readonly description =
     'Ensemble regime classifier: Hurst + ADX + volatility. Scores based on regime clarity and alignment.';
   readonly maxScore = 100;
+  readonly minBars = { '1d': 20 };
   readonly version = '1.0.0';
   readonly priority = 70;
   readonly suitability = {

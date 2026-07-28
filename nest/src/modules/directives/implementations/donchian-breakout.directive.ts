@@ -19,6 +19,7 @@ export class DonchianBreakoutDirective implements IDirective {
   readonly description = 'Donchian Channel breakout. Price > upper = new high breakout. Price < lower = breakdown. Scores momentum.';
   readonly priority = 70;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 22 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

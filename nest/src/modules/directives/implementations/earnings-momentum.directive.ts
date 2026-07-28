@@ -32,6 +32,7 @@ export class EarningsMomentumDirective implements IDirective {
     'Scores earnings surprise magnitude and post-earnings estimate revision trends from stored EarningsEvent records.';
   readonly priority = 55;
   readonly maxScore = 90;
+  readonly minBars = { '1d': 1 };
   readonly version = '1.0.0';
 
   constructor(private readonly prisma: PrismaService) {}

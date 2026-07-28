@@ -24,6 +24,7 @@ export class PositionSizeKellyDirective implements IDirective {
   readonly description =
     'Scores position size against Kelly Criterion optimal allocation. Half-Kelly is the recommended standard.';
   readonly maxScore = 100;
+  readonly minBars = { '1d': 20 };
   readonly version = '1.0.0';
   readonly priority = 55;
   readonly suitability = {

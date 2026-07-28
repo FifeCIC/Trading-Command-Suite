@@ -25,6 +25,7 @@ export class AtrDipDirective implements IDirective {
     'Scores pullback quality using ATR-normalized distance from recent high.';
   readonly priority = 70;
   readonly maxScore = 95;
+  readonly minBars = { '1d': 34 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

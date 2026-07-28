@@ -12,6 +12,7 @@ export class TripleWitchingDirective implements IDirective {
   readonly description = 'Quarterly options/futures expiration (Mar/Jun/Sep/Dec 3rd Friday) — elevated volume and volatility warning.';
   readonly priority = 25;
   readonly maxScore = 5;
+  readonly minBars = { '1d': 1 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

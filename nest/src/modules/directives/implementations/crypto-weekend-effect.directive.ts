@@ -25,6 +25,7 @@ export class CryptoWeekendEffectDirective implements IDirective {
     'Accounts for 24/7 crypto weekend dynamics: lower volume, wider spreads, manipulation risk on Saturdays/Sundays. Monday mornings offer recovery opportunities.';
   readonly priority = 30;
   readonly maxScore = 50;
+  readonly minBars = { '1d': 2 };
   readonly version = '2.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

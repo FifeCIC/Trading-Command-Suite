@@ -32,6 +32,7 @@ export class MarketStructureBosDirective implements IDirective {
     'Detects BOS (Break of Structure) and CHOCH (Change of Character) via swing points.';
   readonly priority = 70;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 30 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

@@ -12,6 +12,7 @@ export class FridayDriftDirective implements IDirective {
   readonly description = 'Friday bullish bias — closes higher ~58% of the time historically.';
   readonly priority = 25;
   readonly maxScore = 10;
+  readonly minBars = { '1d': 5 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

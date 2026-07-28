@@ -38,6 +38,7 @@ export class InsiderActivityDirective implements IDirective {
     'Scores insider buying/selling clusters. Cluster buying = strong bullish. On-demand import + DB read.';
   readonly priority = 50;
   readonly maxScore = 85;
+  readonly minBars = { '1d': 1 };
   readonly version = '1.2.0';
 
   constructor(

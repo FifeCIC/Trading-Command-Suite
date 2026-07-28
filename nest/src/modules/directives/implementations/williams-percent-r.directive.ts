@@ -21,6 +21,7 @@ export class WilliamsPercentRDirective implements IDirective {
   readonly description = 'Williams %R oscillator. Bullish when %R < -80 (oversold) with upward curl.';
   readonly priority = 65;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 16 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

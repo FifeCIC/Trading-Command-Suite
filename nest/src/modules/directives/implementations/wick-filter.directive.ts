@@ -26,6 +26,7 @@ export class WickFilterDirective implements IDirective {
   readonly description = 'Detects fakeout wicks vs genuine breakouts. Uses ATR, volume, and multi-timeframe logic.';
   readonly priority = 55;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 10 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {

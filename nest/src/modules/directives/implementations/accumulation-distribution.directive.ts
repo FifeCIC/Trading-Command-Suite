@@ -18,6 +18,7 @@ export class AccumulationDistributionDirective implements IDirective {
   readonly description = 'A/D line divergence from price. Rising A/D with flat price = accumulation. Scores divergence quality.';
   readonly priority = 60;
   readonly maxScore = 100;
+  readonly minBars = { '1d': 14 };
   readonly version = '1.0.0';
 
   calculate(input: DirectiveInput): DirectiveResult {
