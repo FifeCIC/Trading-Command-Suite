@@ -15,6 +15,7 @@ import EmptyState from '../components/EmptyState';
 import BeginnerGuide from '../components/BeginnerGuide';
 import GlossaryRichText from '../components/GlossaryRichText';
 import DirectiveChart from '../components/DirectiveChart';
+import SymbolAutocomplete from '../components/SymbolAutocomplete';
 import './directive-detail.css';
 
 export default function DirectiveDetailPage() {
@@ -54,6 +55,21 @@ function DirectiveDetailContent({ directive, id, navigate }) {
   });
 
   const testResult = testMutation.data;
+
+  // Bar count availability — query symbol metadata to disable unattainable counts
+  const barCounts = [36, 50, 72, 100, 200, 365];
+  const barAvailQuery = useQuery({
+    queryKey: ['bar-avail', testSymbol, testTimeframe],
+    queryFn: async () => {
+      // Use the test endpoint with the max bar count to discover actual availability
+      const r = await apiPost(`/api/directives/${id}/test`, {
+        symbol: testSymbol, timeframe: testTimeframe, barCount: 365,
+      }).catch(() => null);
+      return r?.barCount || 0;
+    },
+    enabled: !!testSymbol && testSymbol.length > 0,
+    staleTime: 120_000,
+  });
 
   const categoryColors = {
     Entry: '#22c55e', Exit: '#ef4444', Risk: '#f59e0b', Macro: '#8b5cf6',
@@ -140,12 +156,11 @@ function DirectiveDetailContent({ directive, id, navigate }) {
         <div className="dd-test-controls">
           <label className="dd-test-field">
             Symbol
-            <input
-              type="text"
+            <SymbolAutocomplete
               value={testSymbol}
-              onChange={e => setTestSymbol(e.target.value.toUpperCase())}
+              onChange={(val) => setTestSymbol(val.split(/[,\s]+/).filter(Boolean)[0]?.toUpperCase() || '')}
               placeholder="EURUSD"
-              className="dd-test-input"
+              className="dd-symbol-input"
             />
           </label>
           <label className="dd-test-field">
@@ -162,11 +177,11 @@ function DirectiveDetailContent({ directive, id, navigate }) {
           <label className="dd-test-field">
             Bars
             <select value={testBarCount} onChange={e => setTestBarCount(Number(e.target.value))} className="dd-test-select">
-              <option value={36}>36</option>
-              <option value={50}>50</option>
-              <option value={72}>72</option>
-              <option value={100}>100</option>
-              <option value={200}>200</option>
+              {barCounts.map(n => (
+                <option key={n} value={n} disabled={barAvailQuery.data > 0 && n > barAvailQuery.data}>
+                  {n}{barAvailQuery.data > 0 && n > barAvailQuery.data ? ` (max ${barAvailQuery.data})` : ''}
+                </option>
+              ))}
             </select>
           </label>
           <button

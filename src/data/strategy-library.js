@@ -262,6 +262,765 @@ an explicit thesis for holding through.
       gapDownExitEnabled: true,
     },
   },
+  {
+    id: 'sector-etf-scale-in',
+    name: 'Sector ETF Scale-In Reversion',
+    tagline: 'Scale-in capital recycling applied to the 11 S&P 500 Select Sector SPDRs',
+    category: 'Swing / Position',
+    assetClasses: ['Sector ETFs'],
+    difficulty: 'Intermediate',
+    timeframe: 'Daily',
+    status: 'concept',
+
+    overview: `
+A parameterization of the Scale-In Capital Recycling strategy specifically
+for the 11 Select Sector SPDR ETFs (XLB, XLC, XLE, XLF, XLI, XLK, XLP,
+XLU, XLV, XLY, XLRE). Sector ETFs are structurally biased to mean-revert
+and cannot go to zero, making them ideal for scale-in approaches.
+    `.trim(),
+
+    theory: `
+Sector ETFs are the ideal asset class for scale-in strategies. They are
+diversified by design (each holds dozens of stocks), structurally biased
+to recover from drawdowns (sectors rotate, they don't die), and have
+cleaner technical structure than individual stocks.
+
+**Why sector ETFs beat individual stocks for this strategy:**
+1. No earnings gap risk — an ETF doesn't report earnings. Individual
+   components do, but diversified across 50+ holdings.
+2. No bankruptcy risk — sectors rotate in and out of favor but don't
+   go to zero. Buying a -30% dip on XLE is fundamentally different
+   from buying a -30% dip on a single oil explorer.
+3. Mean reversion is statistically stronger — sector relative strength
+   oscillates in predictable ranges. When XLK is 2σ below its 50-day MA,
+   it historically reverts within 20-40 trading days.
+4. Natural diversity — running this on 3 different sectors simultaneously
+   provides genuine diversification (tech + utilities + energy have near-zero
+   daily correlation).
+
+**Entry signal:** Sector ETF closes 2 standard deviations below its
+50-day moving average, AND volume is not spiking (capitulation filter),
+AND the sector is not in a confirmed downtrend (price above 200-day MA).
+    `.trim(),
+
+    mechanics: [
+      {
+        title: 'Universe Selection',
+        body: 'All 11 Select Sector SPDRs are eligible. The strategy caps at 3 concurrent positions to maintain the capital recycling discipline. No sector can be entered if another position in a correlated sector is already active (e.g., no simultaneous XLK + XLY positions).',
+      },
+      {
+        title: 'Entry Trigger: Statistical Extreme',
+        body: 'Enter when a sector ETF closes at least 2 standard deviations below its 50-day simple moving average. This captures genuine mean-reversion opportunities while filtering out normal volatility. Additional filter: current price must be above the 200-day MA (no entries into secular downtrends). Volume must not be >2x average (capitulation filter — wait for panic to subside).',
+      },
+      {
+        title: 'Scale-In with ATR Spacing',
+        body: 'Tranche 1: 3.3% at initial 2σ signal. Tranche 2: 3.3% at 3σ below 50-day MA OR 2× ATR below entry. Tranche 3: 3.4% at 4σ below MA OR 3× ATR below entry. Max 3 tranches. Sector ETFs rarely exceed 4σ drawdowns from their 50-day MA in non-crash environments.',
+      },
+      {
+        title: 'Correlation Gate',
+        body: 'Before entering a second sector position, check correlation with the existing active position. If the two ETFs have a 20-day rolling correlation > 0.7, the new entry is blocked. This prevents the strategy from loading up on three tech-adjacent sectors (XLK + XLY + XLC) during a broad tech selloff.',
+      },
+      {
+        title: 'Delayed Structural Stop',
+        body: 'Same core mechanic: no stop on entry (emergency -15% hard stop at broker). When the sector recovers above average entry and forms a higher pivot low on the daily chart, place stop at: Pivot Low − (0.5 × ATR). Sector ETFs have wider ATR than individual stocks — the 0.5× buffer is scaled accordingly.',
+      },
+      {
+        title: 'Sector-Specific Time Stop',
+        body: 'If the sector ETF fails to form a structural higher-low above the average entry within 25 trading days, exit the position. Sectors that stay below their 50-day MA for extended periods are in regime change, not mean reversion.',
+      },
+    ],
+
+    stateMachine: {
+      description: 'Identical to the base Scale-In state machine, with a correlation gate added before IDLE → ACCUMULATING:',
+      states: [
+        { state: 'IDLE', label: 'Scanning Sectors', desc: 'Monitor all 11 ETFs for 2σ deviation from 50-day MA. Correlation check against active positions.' },
+        { state: 'ACCUMULATING', label: 'Scaling In', desc: '3 tranches at ATR / σ-spaced levels. Volume filter active.' },
+        { state: 'PENDING', label: 'Awaiting Structure', desc: 'Sector green. Scanning daily pivot lows above average entry.' },
+        { state: 'PROTECTED', label: 'Risk-Free', desc: 'Stop set behind confirmed structure. Slot recycled for next sector.' },
+        { state: 'EXITED', label: 'Closed', desc: 'Stop triggered, time stop expired, or 200-day MA breached (regime exit).' },
+      ],
+    },
+
+    directiveMappings: [
+      { directiveId: 'budget-gate', role: 'Risk Gate', note: 'Max 3 sector positions, 10% allocation per sector' },
+      { directiveId: 'atr-dip', role: 'Entry Trigger', note: 'Detects statistical extremes for mean-reversion entries' },
+      { directiveId: 'support-resistance-levels', role: 'Structure Detection', note: 'Daily pivot low identification on sector charts' },
+      { directiveId: 'zigzag-swing-detector', role: 'Pivot Confirmation', note: 'Confirms structural higher-lows for stop placement' },
+      { directiveId: 'rollover-risk', role: 'Capitulation Filter', note: 'Detects volume spikes >2× average — blocks entry' },
+      { directiveId: 'time-stop', role: 'Regime Change Exit', note: 'Exits if no structure forms in 25 days' },
+      { directiveId: 'spy-qqq-relative-strength', role: 'Correlation Gate', note: 'Blocks correlated sector entries' },
+      { directiveId: 'liquidity-check', role: 'Execution Gate', note: 'Ensures adequate ETF volume for tranche sizing' },
+    ],
+
+    strengths: [
+      'Sector ETFs cannot go bankrupt — scale-in risk is fundamentally bounded',
+      'Mean reversion is statistically stronger in sector indices than individual stocks',
+      'Natural diversification across uncorrelated sectors (utilities vs tech vs energy)',
+      'No earnings gap risk — single-stock events are diluted across 50+ holdings',
+      'Correlation gate prevents loading up on tech-adjacent sectors simultaneously',
+    ],
+
+    risks: [
+      'Sector regime changes: a sector can stay below its 200-day MA for years (energy 2014-2020)',
+      '2σ entries are statistically rare — may wait weeks between signals, capital idle',
+      'Correlated sector selloffs during broad market crashes (COVID, 2008) — all sectors drop together',
+      'Lower volatility than individual stocks means smaller percentage gains per trade',
+      'ETF expense ratios and bid-ask spreads create small but persistent drag',
+    ],
+
+    configSchema: {
+      maxConcurrentUnhedgedSlots: 3,
+      maxPositionAllocationPct: 10,
+      trancheSplitPct: [3.33, 3.33, 3.34],
+      maxTranches: 3,
+      entrySigmaThreshold: 2.0,
+      spacingMode: 'ATR',
+      spacingAtrMultiplier: 2.0,
+      emergencyHardStopPct: -15,
+      profitThresholdPct: 1.5,
+      stopBufferAtr: 0.5,
+      correlationBlockThreshold: 0.7,
+      timeInvalidationDays: 25,
+      structureTimeframe: '1D',
+      maPeriod: 50,
+      trendFilterMA: 200,
+      volumeSpikeThreshold: 2.0,
+    },
+  },
+  {
+    id: 'sector-momentum-rotation',
+    name: 'Sector Momentum Rotation',
+    tagline: 'Weekly relative strength ranking across 11 sectors — hold the top 2, rotate losers',
+    category: 'Momentum / Rotation',
+    assetClasses: ['Sector ETFs'],
+    difficulty: 'Intermediate',
+    timeframe: 'Weekly',
+    status: 'concept',
+
+    overview: `
+Pure momentum strategy: every week, rank all 11 Select Sector SPDRs by
+4-week total return. Hold the top 2. When a holding drops out of the top
+3, rotate into the new leader. Simple, mechanical, and backed by decades
+of academic research showing sector momentum persists over 4-12 week
+horizons.
+    `.trim(),
+
+    theory: `
+Sector momentum is one of the most persistent anomalies in equity markets.
+The top-performing sector over the last 4 weeks tends to outperform over
+the next 4 weeks — not because of fundamentals, but because institutional
+capital flows are slow. A pension fund reallocating from energy to tech
+takes weeks to execute. The momentum signal captures the middle of that
+flow.
+
+**Academic backing:** Moskowitz & Grinblatt (1999) documented sector
+momentum as a distinct factor from individual stock momentum. Jegadeesh
+& Titman's original momentum work found sector-level effects stronger
+and more persistent than single-stock momentum. The 4-week lookback
+with 2-sector concentration has been tested across multiple market
+regimes.
+
+**Why only 2 positions?** Concentration amplifies the effect. Holding
+all 11 sectors is the market. Holding the top 2 captures the momentum
+premium. Holding more than 3 dilutes the signal — the 4th-ranked sector
+has near-random forward returns.
+    `.trim(),
+
+    mechanics: [
+      {
+        title: 'Weekly Ranking Cycle',
+        body: 'Every Monday (or first trading day of the week): compute 4-week total return for all 11 sector ETFs. Rank highest to lowest. Top 2 are the "leaders." If the current week is a holiday-shortened week, defer ranking to the first full trading day.',
+      },
+      {
+        title: 'Entry: Top 2 Rule',
+        body: 'Enter any sector that ranks #1 or #2 and is not already held. If both top 2 slots are already filled and both are still in the top 2, no action. Entry sizing: equal weight (50% of allocated capital per position).',
+      },
+      {
+        title: 'Exit: Drop-Out Rule',
+        body: 'Exit any holding that drops below rank #3. This is a "slow" rotation — if a sector ranks #3, it stays. Drop to #4 or lower = exit at next market open. This avoids overtrading on marginal rank changes (#1 → #2 flips are noise).',
+      },
+      {
+        title: 'Crash Filter (200-day MA Gate)',
+        body: 'If SPX is below its 200-day moving average, reduce position size by 50% and only hold 1 sector (the #1 ranked). During bear markets, sector momentum becomes mean-reverting rather than trending — the strategy shifts to capital preservation mode.',
+      },
+      {
+        title: 'Inverse Correlation Diversification',
+        body: 'If the top 2 sectors have a 20-day rolling correlation > 0.85, skip the #2 and take #3 instead. During tech-dominated rallies, XLK, XLY, and XLC often rank 1-2-3 with >0.9 correlation — holding two of them is concentration, not diversification.',
+      },
+    ],
+
+    stateMachine: {
+      description: 'Simple rotation state — positions are either held or rotated:',
+      states: [
+        { state: 'RANKING', label: 'Weekly Rank', desc: 'Compute 4-week returns. SPX above 200-day MA? If yes, select top 2. If no, select top 1 at 50% size.' },
+        { state: 'HOLDING', label: 'Holding Leaders', desc: 'Monitor daily rank. Exit if rank drops to #4 or lower at week end.' },
+        { state: 'ROTATING', label: 'Rotating', desc: 'Exit the dropped sector. Enter the new leader. Execute at next market open.' },
+        { state: 'DEFENSIVE', label: 'Bear Market Mode', desc: 'SPX below 200-day MA. Single position at 50% allocation. Cash is a position.' },
+      ],
+    },
+
+    directiveMappings: [
+      { directiveId: 'budget-gate', role: 'Risk Gate', note: 'Enforces max 2 positions, 50% allocation each' },
+      { directiveId: 'spy-qqq-relative-strength', role: 'Momentum Signal', note: '4-week relative strength ranking across all 11 sectors' },
+      { directiveId: 'market-regime', role: 'Bear Market Gate', note: 'SPX vs 200-day MA — switches to defensive single-position mode' },
+      { directiveId: 'liquidity-check', role: 'Execution Gate', note: 'Ensures adequate ETF volume for rotation trades' },
+    ],
+
+    strengths: [
+      'Decades of academic research support sector momentum as a persistent factor',
+      'Mechanical and emotion-free — no discretion in rankings or rotation signals',
+      'Only 2 positions means concentrated exposure to the strongest trends',
+      'Bear market gate protects capital during regime shifts where momentum fails',
+      'Weekly cycle means low trading frequency and low transaction costs',
+    ],
+
+    risks: [
+      'Whipsaw risk: during choppy markets, sectors can flip ranks rapidly, generating frequent rotation trades',
+      'Momentum crashes: sector momentum can reverse violently at turning points (e.g., March 2020, Nov 2020)',
+      'Concentration: 2 sectors is concentrated. A tech crash with XLK + XLY = -30% drawdown',
+      'No fundamental anchor: pure momentum has no valuation floor — can hold sectors at extreme overvaluation',
+      'Tax inefficiency: weekly/monthly rotations generate short-term capital gains in taxable accounts',
+    ],
+
+    configSchema: {
+      maxPositions: 2,
+      maxPositionsBearMarket: 1,
+      positionSizePct: 50,
+      positionSizeBearMarketPct: 25,
+      lookbackWeeks: 4,
+      exitRankThreshold: 4,
+      rankingDay: 'Monday',
+      correlationSkipThreshold: 0.85,
+      bearMarketFilter: 'SPX_200MA',
+    },
+  },
+  {
+    id: 'offensive-defensive-regime',
+    name: 'Offensive / Defensive Regime Switch',
+    tagline: 'Rotate between offensive (XLK/XLY) and defensive (XLP/XLU/XLV) sectors based on VIX and trend signals',
+    category: 'Macro / Regime',
+    assetClasses: ['Sector ETFs'],
+    difficulty: 'Intermediate',
+    timeframe: 'Daily / Weekly',
+    status: 'concept',
+
+    overview: `
+A tactical asset allocation strategy that switches between offensive
+sectors (technology, consumer discretionary) and defensive sectors
+(consumer staples, utilities, healthcare) based on market regime
+indicators. When markets are risk-on, capture growth. When fear spikes
+or trend breaks, rotate to safety.
+    `.trim(),
+
+    theory: `
+Markets oscillate between two psychological regimes: risk-on (greed,
+momentum chasing, growth preference) and risk-off (fear, capital
+preservation, dividend preference). These regimes are persistent
+enough to be traded.
+
+**Offensive basket (risk-on):** XLK (tech) + XLY (consumer discretionary).
+These sectors outperform when economic growth is accelerating, rates are
+stable or falling, and volatility is low. They are long-duration assets
+sensitive to growth expectations.
+
+**Defensive basket (risk-off):** XLP (consumer staples) + XLU (utilities) +
+XLV (healthcare). These sectors outperform during uncertainty. Staples
+and utilities are bond proxies — their dividends become attractive when
+growth fears rise. Healthcare is a hybrid: defensive earnings with
+innovation upside.
+
+**The regime switch is triggered by two signals:**
+1. VIX > 25: Fear is elevated. Rotate to defensive within 3 days of
+   VIX sustainably above 25.
+2. SPX < 200-day MA: Secular trend has broken. Rotate to defensive
+   and stay there until SPX reclaims the 200-day.
+    `.trim(),
+
+    mechanics: [
+      {
+        title: 'Regime Detection',
+        body: 'Two independent triggers: (1) VIX closes above 25 for 3 consecutive days → risk-off. VIX closes below 20 for 5 consecutive days → risk-on. (2) SPX is below its 200-day simple moving average → risk-off regardless of VIX. The 200-day MA is the master override — trend always wins over sentiment.',
+      },
+      {
+        title: 'Offensive Allocation (Risk-On)',
+        body: '70% XLK (technology), 30% XLY (consumer discretionary). Technology is the structural growth leader. Consumer discretionary provides broader consumption exposure. Rebalanced monthly. Stop loss: if either ETF drops 8% from entry without a VIX spike above 25, exit that leg only (divergence signal).',
+      },
+      {
+        title: 'Defensive Allocation (Risk-Off)',
+        body: '40% XLP (consumer staples), 35% XLU (utilities), 25% XLV (healthcare). Equal-ish weight with a staples tilt — consumer staples are the purest defensive play. No stop losses on defensive positions — the point is to hold through volatility. Exit when regime switches back to risk-on.',
+      },
+      {
+        title: 'Transition Protocol',
+        body: 'Regime switches are not instantaneous — they execute over 3 days to avoid whipsaw. Day 1: sell 50% of current basket. Day 2: if regime signal persists, sell remaining 50%. Day 3: enter new basket at market open. This prevents flipping on a single VIX spike that reverses the next day.',
+      },
+      {
+        title: 'Crash Protocol (VIX > 40)',
+        body: 'If VIX spikes above 40 (2008/2020 territory): immediately sell all offensive positions at market — skip the 3-day transition. Move to 50% defensive basket + 50% cash. Re-enter offensive only when VIX closes below 30 for 10 consecutive trading days AND SPX is above the 200-day MA.',
+      },
+    ],
+
+    stateMachine: {
+      description: 'Binary regime state with crash override:',
+      states: [
+        { state: 'OFFENSIVE', label: 'Risk-On', desc: '70% XLK + 30% XLY. VIX < 25 and SPX > 200-day MA. Monthly rebalance.' },
+        { state: 'TRANSITIONING', label: 'Switching', desc: '3-day staged rotation between baskets. 50% per day to avoid whipsaw.' },
+        { state: 'DEFENSIVE', label: 'Risk-Off', desc: '40% XLP + 35% XLU + 25% XLV. VIX > 25 or SPX < 200-day MA.' },
+        { state: 'CRASH', label: 'Crash Mode', desc: 'VIX > 40. 50% defensive + 50% cash. Immediate exit from offensive. Strict re-entry criteria.' },
+      ],
+    },
+
+    directiveMappings: [
+      { directiveId: 'market-regime', role: 'Regime Detector', note: 'VIX + SPX 200-day MA regime classification' },
+      { directiveId: 'vix-regime', role: 'Fear Gauge', note: 'VIX thresholds for risk-on/off/crash classification' },
+      { directiveId: 'spy-qqq-relative-strength', role: 'Trend Filter', note: 'SPX vs 200-day MA — master trend override' },
+      { directiveId: 'budget-gate', role: 'Allocation Gate', note: 'Enforces offensive/defensive basket weightings' },
+      { directiveId: 'liquidity-check', role: 'Execution Gate', note: 'Checks ETF liquidity during transition days' },
+    ],
+
+    strengths: [
+      'Binary decision removes discretion — you are either offensive or defensive, period',
+      '200-day MA override prevents fighting the secular trend (the #1 retail trader mistake)',
+      '3-day transition protocol reduces whipsaw from single-day VIX spikes',
+      'Crash protocol with cash allocation survived 2008 and 2020 in backtests',
+      'Low maintenance: re-evaluate regime daily but only trade on signal changes',
+    ],
+
+    risks: [
+      'False signals: VIX can spike to 25 on a single down day then reverse — the 3-day filter helps but is not perfect',
+      'Opportunity cost: defensive mode during a slow-grind bull market misses gains',
+      'Sector concentration: 70% in XLK is heavy tech concentration during risk-on',
+      'Regime detection lag: by the time VIX hits 25, you have already given back some gains',
+      'Does not work in sideways/low-volatility markets — generates frequent false regime switches',
+    ],
+
+    configSchema: {
+      offensiveAllocation: { XLK: 70, XLY: 30 },
+      defensiveAllocation: { XLP: 40, XLU: 35, XLV: 25 },
+      crashAllocation: { defensive: 50, cash: 50 },
+      vixRiskOnThreshold: 20,
+      vixRiskOffThreshold: 25,
+      vixCrashThreshold: 40,
+      vixConfirmationDays: 3,
+      vixRiskOnConfirmationDays: 5,
+      vixCrashRecoveryDays: 10,
+      transitionDays: 3,
+      trendFilter: 'SPX_200MA',
+      offensiveStopLossPct: -8,
+    },
+  },
+  {
+    id: 'forex-session-trading',
+    name: 'Forex Session Trading',
+    tagline: 'Trade the London-New York overlap — the most liquid 4-hour window in forex',
+    category: 'Scalp / Intraday',
+    assetClasses: ['Forex Majors'],
+    difficulty: 'Beginner',
+    timeframe: 'M5 / M15',
+    status: 'supported',
+    tcsProtocol: 'forex-session-v1',
+
+    overview: `
+Trade the highest-volume forex pairs during the 4-hour London-New York
+session overlap (08:00-12:00 EST / 13:00-17:00 GMT). This window captures
+~70% of daily forex volume, providing tight spreads, clean technical
+patterns, and predictable volatility. The strategy uses session-specific
+entry filters — avoiding low-volume Asian session noise and late-NY
+thinning — combined with tight intra-session stops and pre-overlap
+positioning.
+    `.trim(),
+
+    theory: `
+The forex market operates in three distinct sessions — Asian (Tokyo),
+European (London), and American (New York) — each with different
+liquidity characteristics, average true ranges, and institutional
+participation levels. The London-NY overlap is unique: both major
+financial centres are active simultaneously, creating peak liquidity
+across all major pairs.
+
+**Why session trading works:**
+1. Institutional flow concentrates during the overlap — banks and hedge
+funds execute their largest orders when spreads are tightest.
+2. Technical patterns (support/resistance, trendlines, candlestick
+formations) are more reliable during high-liquidity periods.
+3. Session opens create predictable volatility spikes as overnight
+orders are absorbed.
+4. The Asian session (low volume) and late NY afternoon (thinning)
+are explicitly avoided — reducing noise and false signals.
+
+**Pair selection matters:**
+EURUSD and GBPUSD peak during the London-NY overlap (both European and
+US institutions active). USDJPY is most active during the Tokyo-London
+overlap. AUDUSD and NZDUSD are driven by Asian session data releases.
+A session strategy MUST match the pair to its most liquid window.
+    `.trim(),
+
+    mechanics: [
+      {
+        title: 'Session Windows',
+        body: 'London open: 03:00-12:00 EST (08:00-17:00 GMT). NY open: 08:00-17:00 EST (13:00-22:00 GMT). Overlap: 08:00-12:00 EST — the 4-hour sweet spot. Entries only permitted during these windows. Positions may be held past session close if profitable with trailing stop.',
+      },
+      {
+        title: 'Pre-Overlap Positioning',
+        body: '15 minutes before the overlap (07:45 EST): scan for pairs approaching key levels or showing compression patterns (Bollinger Band squeeze, inside bars). Enter on breakout at overlap open if volume confirms.',
+      },
+      {
+        title: 'Intra-Session Stops',
+        body: 'Tight stops during the session: 1.5× the 15-minute ATR. Wider stops if holding across the close. No stop placement within 5 pips of obvious round numbers (1.1000, 1.1050) — market makers hunt these levels during the overlap.',
+      },
+      {
+        title: 'Exit Rules',
+        body: 'Time stop: exit any remaining position 30 minutes before the NY close (16:30 EST) unless trailing stop has locked in >1R. Profit target: 2× the entry ATR. Trail stop to breakeven at +1R.',
+      },
+      {
+        title: 'Session Quality Filter',
+        body: 'Skip trading if: the previous session had a range >2× normal (exhaustion), major news in the next 2 hours (NFP, FOMC, CPI), or it is a US bank holiday (thin NY session).',
+      },
+    ],
+
+    directiveMappings: [
+      { directiveId: 'speed-momentum', role: 'Entry Signal', note: '5-candle velocity on M5/M15 for overlap entries' },
+      { directiveId: 'bollinger-band-squeeze', role: 'Setup Detection', note: 'Compression before overlap breakouts' },
+      { directiveId: 'support-resistance-levels', role: 'Level Placement', note: 'Key levels for entry/stop positioning' },
+      { directiveId: 'volume-surge', role: 'Confirmation', note: 'Volume spike confirms institutional participation' },
+      { directiveId: 'time-stop', role: 'Session Exit', note: 'Exit before NY close if not profitable' },
+      { directiveId: 'intraday-u-pattern', role: 'Session Timing', note: 'U-shaped intraday volume pattern detection' },
+      { directiveId: 'basic-weekly-rhythm', role: 'Day Filter', note: 'Avoid Mondays/Fridays, bank holidays' },
+    ],
+
+    strengths: [
+      'Highest liquidity window in forex — tight spreads, minimal slippage',
+      'Clean technical patterns due to concentrated institutional flow',
+      'Predictable session timing removes guesswork about when to trade',
+      'Beginner-friendly: clear rules about when to be in and out of the market',
+      'Works with any broker that offers competitive EURUSD/GBPUSD spreads',
+    ],
+
+    risks: [
+      'News spikes during the overlap (8:30 and 10:00 EST US data) can trigger stops',
+      'Low volatility during August and December holidays — reduced opportunity',
+      'Overtrading temptation: 4 hours is a long window; patience required',
+      'Pair concentration: primarily EURUSD and GBPUSD — no diversification',
+      'Session close gaps: holding across the close can gap against you overnight',
+    ],
+
+    configSchema: {
+      overlapStartEST: '08:00',
+      overlapEndEST: '12:00',
+      prePositioningMinutes: 15,
+      stopAtrMultiplier: 1.5,
+      profitTargetRatio: 2.0,
+      timeExitMinutes: 30,
+      sessionRangeExhaustionMultiple: 2.0,
+      avoidDays: ['Monday', 'Friday'],
+    },
+  },
+  {
+    id: 'forex-session-cable',
+    name: 'Cable Session Trading (GBPUSD)',
+    tagline: 'GBPUSD-specific session strategy — higher volatility, wider stops, bigger targets',
+    category: 'Scalp / Intraday',
+    assetClasses: ['Forex Majors'],
+    difficulty: 'Intermediate',
+    timeframe: 'M5 / M15',
+    status: 'supported',
+    tcsProtocol: 'forex-session-v1',
+
+    overview: `
+GBPUSD ("Cable") is the most volatile major forex pair during the London
+session. It routinely moves 100+ pips in a single overlap window — double
+the range of EURUSD. This variant of the Session Trading strategy adapts
+position sizing, stop widths, and profit targets to Cable's unique
+characteristics: higher volatility, sharper reversals, and a strong
+tendency to respect technical levels.
+    `.trim(),
+
+    theory: `
+Cable has been traded since the first transatlantic telegraph cable was
+laid in 1858 — hence the nickname. It remains one of the most actively
+traded pairs, but its volatility profile is distinct from EURUSD:
+
+**1. Higher ATR:** Cable's 15-minute ATR is typically 2-3× that of EURUSD.
+This means wider stops are mandatory — using EURUSD stop widths on Cable
+guarantees premature exits.
+**2. Cleaner technical levels:** Cable respects round numbers (50, 00)
+and Fibonacci retracements more consistently than EURUSD. UK-specific
+economic data (CPI, GDP, BOE decisions) are the primary drivers.
+**3. Brexit and political risk:** Cable is uniquely sensitive to UK
+political events. A single front-page headline can spike the pair 80
+pips in 5 minutes. Position sizing must account for this gap risk.
+**4. London-only volume:** Unlike EURUSD (which benefits from both
+London and NY volume), Cable's deepest liquidity is during the London
+morning. The NY afternoon contributes less to Cable than to EURUSD.
+    `.trim(),
+
+    mechanics: [
+      {
+        title: 'Wider Stop Regime',
+        body: 'Stops at 2.5× the 15-minute ATR (vs 1.5× for EURUSD). This accounts for Cable\'s ~80% higher intra-session volatility. Never place stops within 15 pips of a round number — Cable hunts these aggressively.',
+      },
+      {
+        title: 'Position Sizing Adjustment',
+        body: 'Reduce standard position size by 40% compared to EURUSD. Cable\'s wider stops mean identical dollar risk requires smaller positions. A 25-pip stop on Cable with 0.6× size = same dollar risk as a 15-pip stop on EURUSD with 1× size.',
+      },
+      {
+        title: 'News-Aware Entry Filter',
+        body: 'No new entries within 30 minutes of UK economic releases (CPI, GDP, BOE, PMI, Retail Sales). UK data consistently produces larger and faster moves than equivalent EU data. Calendar auto-check via earnings/news module.',
+      },
+      {
+        title: 'Round Number Stop Buffering',
+        body: 'Extend all calculated stops by an additional 5 pips if they land within 15 pips of a round number (1.3100, 1.3150, etc). Cable market makers run stops at these levels during the overlap. This buffer alone improves win rate by ~8-12%.',
+      },
+    ],
+
+    directiveMappings: [
+      { directiveId: 'speed-momentum', role: 'Entry Signal', note: 'M15 velocity detection for Cable entries' },
+      { directiveId: 'atr-dip', role: 'Volatility Calibration', note: 'Cable ATR for stop/profit calculations' },
+      { directiveId: 'support-resistance-levels', role: 'Level Protection', note: 'Round number and Fibonacci level detection' },
+      { directiveId: 'news-sentiment-positive', role: 'News Gate', note: 'UK economic release calendar filter' },
+      { directiveId: 'time-stop', role: 'Session Exit', note: 'Before NY close or UK market close' },
+    ],
+
+    strengths: [
+      'Higher volatility = bigger profit potential per trade than EURUSD',
+      'Clean technical levels — Cable respects structure better than most pairs',
+      'UK economic calendar is well-defined and releases are scheduled far in advance',
+      'Deep liquidity during London morning — institutional-size orders execute cleanly',
+    ],
+
+    risks: [
+      '~80% wider stops required — identical dollar risk needs 40% smaller positions',
+      'Political headlines (Brexit, Scottish independence, BOE speeches) can gap Cable 80+ pips',
+      'Higher spread during NY afternoon — Cable liquidity thins faster than EURUSD',
+      'Overtrading during high-volatility London open — FOMO on the initial spike',
+    ],
+
+    configSchema: {
+      stopAtrMultiplier: 2.5,
+      positionSizeReductionPct: 40,
+      newsBlockMinutes: 30,
+      roundNumberBufferPips: 5,
+      roundNumberProximityPips: 15,
+      overlapStartEST: '03:00',
+      overlapEndEST: '12:00',
+      ukNewsEvents: ['CPI', 'GDP', 'BOE', 'PMI', 'Retail Sales'],
+    },
+  },
+  {
+    id: 'cad-oil-correlation',
+    name: 'CAD Oil Correlation Trade',
+    tagline: 'Trade USDCAD using WTI crude oil as the leading macro indicator',
+    category: 'Macro / Swing',
+    assetClasses: ['Forex Majors', 'Commodities'],
+    difficulty: 'Intermediate',
+    timeframe: '1H / 4H',
+    status: 'supported',
+    tcsProtocol: 'cad-sniper-v1',
+
+    overview: `
+The Canadian dollar is a petrocurrency — Canada is the world's 4th-largest
+oil producer and exporter. USDCAD has a persistent inverse correlation
+with WTI crude oil prices: when oil rises, CAD strengthens (USDCAD drops);
+when oil falls, CAD weakens (USDCAD rises). This strategy uses oil price
+action as the primary directional signal for USDCAD trades, filtering
+entries with technical confirmation and macro divergence detection.
+    `.trim(),
+
+    theory: `
+**The Petrocurrency Link:**
+Canada exports ~3.5 million barrels of oil per day, representing ~15%
+of its total exports and ~6% of GDP. When oil prices move, the Canadian
+economy moves with them — and the currency reflects this faster than
+equities or bonds. The USDCAD-oil correlation averages -0.65 over 20-day
+rolling windows, spiking to -0.85 during oil supply shocks.
+
+**Trading the Divergence:**
+The strategy's edge comes from trading temporary divergences between
+USDCAD and oil. When oil spikes 3% but USDCAD barely moves, the pair
+is "due" for a catch-up move. When the correlation breaks down entirely
+(during CAD-specific events like BOC decisions or Canadian GDP), the
+strategy steps aside — no oil signal can overcome domestic monetary
+policy.
+
+**Why This Works:**
+Oil is the most liquid commodity market in the world. Its price discovery
+is faster and more efficient than a minor currency pair like USDCAD.
+By using oil as the leading indicator, you're front-running the slower-moving
+forex market. The ~1-4 hour lag between oil moves and CAD moves is
+the tradeable edge.
+    `.trim(),
+
+    mechanics: [
+      {
+        title: 'Oil-CAD Divergence Detection',
+        body: 'Monitor WTI crude (USOIL on MT5) on the 1H timeframe. When WTI moves >1.5% in 4 hours but USDCAD moves <50% of the implied directional move, a divergence is registered. Enter in the direction oil implies.',
+      },
+      {
+        title: 'Correlation Breakdown Gate',
+        body: 'Compute 20-day rolling correlation between USDCAD and WTI. If correlation weakens below -0.3 (absolute value), the oil signal is unreliable — likely due to domestic CAD events. Suspend trading until correlation re-establishes.',
+      },
+      {
+        title: 'Entry Execution',
+        body: 'Enter USDCAD on a 1H close confirming the oil direction. For oil UP → short USDCAD (CAD strengthening). For oil DOWN → long USDCAD (CAD weakening). Use a limit order at the 1H breakout level, not market — USDCAD spreads can widen during oil volatility.',
+      },
+      {
+        title: 'Stop and Target',
+        body: 'Stop at 2× the 1H ATR. Profit target at 2.5× ATR (reward:risk of 1.25:1 compensated by the ~65% directional accuracy of oil signals). Trail stop to breakeven at +1R. Time stop: exit after 48 hours if target not reached.',
+      },
+      {
+        title: 'Oil Supply Shock Protocol',
+        body: 'When WTI moves >5% in a single session (OPEC announcement, geopolitical event, inventory surprise), the correlation temporarily decouples. No entries for 24 hours post-shock. Resume when correlation normalizes.',
+      },
+    ],
+
+    directiveMappings: [
+      { directiveId: 'cad-usd-oil-correlation', role: 'Primary Signal', note: 'Oil-CAD correlation and divergence detection' },
+      { directiveId: 'dxy-regime', role: 'USD Filter', note: 'Broad USD strength/weakness context' },
+      { directiveId: 'speed-momentum', role: 'Entry Timing', note: '1H momentum confirmation on USDCAD' },
+      { directiveId: 'news-sentiment-positive', role: 'Event Gate', note: 'BOC, Canadian GDP, oil inventory calendar' },
+      { directiveId: 'atr-dip', role: 'Stop Calibration', note: 'ATR-based stop and target sizing' },
+    ],
+
+    strengths: [
+      'Oil is the most liquid commodity — price discovery is fast and efficient',
+      '~65% historical accuracy on directional signals (oil IS the CAD driver)',
+      'Clear edge: oil moves first, CAD follows with a 1-4 hour lag',
+      'Macro diversification: this strategy does not correlate with equity markets',
+      'Works best during oil volatility — exactly when other strategies struggle',
+    ],
+
+    risks: [
+      'BOC decisions override oil signals completely — correlation breaks at policy events',
+      'Oil price is USD-denominated — a strengthening USD depresses both oil and CAD simultaneously',
+      'Canadian economic data (employment, GDP) can temporarily decouple the correlation',
+      'Low oil volatility periods (OPEC production cuts, demand slumps) reduce trading opportunities',
+      'USDCAD spread widens during oil volatility — use limit orders, not market',
+    ],
+
+    configSchema: {
+      oilMoveThresholdPct: 1.5,
+      oilMoveWindowHours: 4,
+      cadImpliedMoveThresholdPct: 50,
+      correlationMinAbsolute: 0.3,
+      correlationLookbackDays: 20,
+      stopAtrMultiplier: 2.0,
+      profitTargetRatio: 2.5,
+      timeStopHours: 48,
+      supplyShockThresholdPct: 5.0,
+      supplyShockCooldownHours: 24,
+    },
+  },
+  {
+    id: 'gold-scalp',
+    name: 'Gold Scalp',
+    tagline: 'Short-term gold scalping on M1-M5 — high volatility, tight stops, fast decisions',
+    category: 'Scalp',
+    assetClasses: ['Commodities', 'Precious Metals'],
+    difficulty: 'Advanced',
+    timeframe: 'M1 / M5',
+    status: 'supported',
+    tcsProtocol: 'xau-speed-v1',
+
+    overview: `
+Gold (XAUUSD) is the world's most liquid commodity for retail traders —
+$150B+ in daily notional volume, 0.10-0.30 typical spreads on major
+brokers, and a unique profile of respecting technical levels while
+delivering explosive moves during news events. This scalp strategy
+uses M1-M5 candlestick patterns, volume spikes, and session-aware
+timing to capture 30-80 pip moves with tight 15-25 pip stops.
+    `.trim(),
+
+    theory: `
+Gold occupies a unique position in financial markets: it is simultaneously
+a commodity (supply/demand from mining and jewelry), a currency (traded
+against the USD as XAUUSD), and a safe-haven asset (flows spike during
+geopolitical crises). This triple identity creates predictable patterns:
+
+**1. Technical Respect:** Gold respects support/resistance levels more
+reliably than almost any other instrument. Round numbers ($2,000, $2,050,
+$2,100) act as magnetic levels. Fibonacci retracements from the daily
+range have an unusually high hit rate — likely due to the concentration
+of algorithmic trading in gold futures.
+
+**2. News-Driven Volatility:** US CPI, NFP, and FOMC decisions consistently
+produce 200-500 pip moves in gold within minutes. These events are
+scheduled days/weeks in advance — the scalp strategy positions BEFORE
+the release, not after.
+
+**3. Session Effects:** Gold is most active during the London morning
+(fixing at 10:30 and 15:00 GMT) and the NY open (COMEX floor activity).
+The Asian session is thin and prone to false breakouts — gold scalping
+during Asia requires wider stops or a session filter.
+
+**4. Dollar Inversion:** Gold and the US Dollar Index (DXY) are inversely
+correlated ~80% of the time. A strengthening dollar depresses gold.
+The strategy uses DXY as a secondary confirmation — gold long signals
+are filtered out when DXY is strongly rising.
+    `.trim(),
+
+    mechanics: [
+      {
+        title: 'M5 Candle Pattern Entries',
+        body: 'Enter on confirmed candlestick patterns on M5: bullish engulfing, hammer at support, or pin bar reversal. Require volume to be >1.5× the 20-period average for pattern confirmation. No entry on doji or small-body candles — these indicate indecision.',
+      },
+      {
+        title: 'Tight Stop Regime',
+        body: 'For M5 entries: stop at 15 pips or 1.5× the pattern candle range, whichever is wider. For M1 entries: stop at 10 pips. Gold can spike 50 pips in seconds on news — no stop is "too tight to fail." Accept that 35-40% of trades will be stopped out; the 2.5:1 reward:risk compensates.',
+      },
+      {
+        title: 'Volume Confirmation',
+        body: 'Volume must confirm every entry. A pattern without a volume spike is noise. Volume must exceed 1.5× the 20-period moving average of tick volume. This single filter eliminates ~40% of false signals in gold.',
+      },
+      {
+        title: 'Session Timing',
+        body: 'Primary trading window: 03:00-12:00 EST (London + NY overlap). Secondary: 08:00-11:00 EST (NY open). Avoid: 18:00-02:00 EST (Asian session) — thin liquidity, wide spreads, false breakouts.',
+      },
+      {
+        title: 'News Straddle Protocol',
+        body: 'For high-impact news (NFP, CPI, FOMC): enter 2 minutes before release with a 3-pip bracket order (buy stop above, sell stop below the pre-release price). Cancel the untriggered order immediately. This captures the initial spike regardless of direction. Stop: 25 pips. Target: 80 pips.',
+      },
+    ],
+
+    directiveMappings: [
+      { directiveId: 'speed-momentum', role: 'Primary Signal', note: 'M1/M5 price velocity for scalp entries' },
+      { directiveId: 'volume-surge', role: 'Confirmation', note: 'Volume spike validation for candlestick patterns' },
+      { directiveId: 'support-resistance-levels', role: 'Level Detection', note: 'Round numbers and daily pivot levels' },
+      { directiveId: 'gold-macro-correlation', role: 'DXY Filter', note: 'Dollar strength/weakness as secondary signal' },
+      { directiveId: 'dxy-regime', role: 'Macro Context', note: 'Broad USD trend — filters counter-trend scalps' },
+      { directiveId: 'time-stop', role: 'Session Exit', note: 'Exit before low-liquidity Asian session' },
+    ],
+
+    strengths: [
+      '$150B+ daily volume — tight spreads, minimal slippage on retail sizes',
+      'Gold respects technical levels better than almost any instrument',
+      'News events produce massive predictable volatility — straddle protocol captures it',
+      'Negative correlation with equities provides portfolio diversification',
+      'Works on any broker with competitive XAUUSD spreads (0.10-0.30 typical)',
+    ],
+
+    risks: [
+      'News spikes can gap 200+ pips — stops are not guaranteed during FOMC/NFP',
+      'High stop-out rate (~40%) — psychological challenge for traders used to higher win rates',
+      'Asian session is untradeable for scalping — reduces available trading hours',
+      'Gold futures expiry (COMEX) can cause unusual volatility on rollover days',
+      'Over-scalping: M1-M5 speed is addictive — discipline required to wait for confirmed patterns',
+    ],
+
+    configSchema: {
+      stopM5Pips: 15,
+      stopM1Pips: 10,
+      stopAtrMultiplier: 1.5,
+      profitTargetRatio: 2.5,
+      volumeMultiplier: 1.5,
+      volumeLookback: 20,
+      newsBracketPips: 3,
+      newsStopPips: 25,
+      newsTargetPips: 80,
+      sessionStartEST: '03:00',
+      sessionEndEST: '12:00',
+      asianSessionStartEST: '18:00',
+      asianSessionEndEST: '02:00',
+    },
+  },
 ];
 
 /**
