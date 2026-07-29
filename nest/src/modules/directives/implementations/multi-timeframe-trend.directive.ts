@@ -41,6 +41,7 @@ export class MultiTimeframeTrendDirective implements IDirective {
   readonly maxScore = 120;
   readonly minBars = { '1d': 20, '1h': 20, '15m': 20 };
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { dayBars, hourBars, min15Bars } = input;

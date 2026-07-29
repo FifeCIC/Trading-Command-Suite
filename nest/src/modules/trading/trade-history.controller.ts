@@ -8,6 +8,8 @@ import { Controller, Get, Query, Logger } from '@nestjs/common';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
 import { PrismaService } from '../../database/prisma.service';
 import { Mt5TradingService } from './mt5-trading.service';
+import { SwapCostService } from './swap-cost.service';
+import { WeekendDefenseService } from './weekend-defense.service';
 
 @Controller('trading')
 export class TradeHistoryController {
@@ -17,6 +19,8 @@ export class TradeHistoryController {
     private readonly tradeRecorder: TradeRecorderService,
     private readonly prisma: PrismaService,
     private readonly mt5: Mt5TradingService,
+    private readonly swapCost: SwapCostService,
+    private readonly weekendDefense: WeekendDefenseService,
   ) {}
 
   /** Get trade history from the audit trail (all providers) */
@@ -204,5 +208,69 @@ export class TradeHistoryController {
       activeStrategies: showdown.length,
       totalStrategies: showdown.length,
     };
+  }
+
+  // ── Swap Cost Calculator ──────────────────────────────
+
+  @Get('swap-forecast')
+  async swapForecast(
+    @Query('symbol') symbol: string,
+    @Query('volume') volume?: string,
+    @Query('direction') direction?: string,
+  ) {
+    const vol = volume ? parseFloat(volume) : 0.1;
+    const dir = (direction || 'BUY').toUpperCase() === 'SELL' ? 'SELL' as const : 'BUY' as const;
+    if (!symbol) return { error: 'symbol query parameter is required' };
+    const forecast = await this.swapCost.forecastSwap(symbol, vol, dir);
+    if (!forecast) return { error: `Could not fetch swap rates for ${symbol}. Is MT5 bridge running?` };
+    return forecast;
+  }
+
+  @Get('swap-rates')
+  async swapRates(@Query('symbol') symbol: string) {
+    if (!symbol) return { error: 'symbol query parameter is required' };
+    const rates = await this.swapCost.getSwapRates(symbol);
+    if (!rates) return { error: `Could not fetch swap rates for ${symbol}. Is MT5 bridge running?` };
+    return {
+      ...rates,
+      interpretation: {
+        swapLong: rates.swapLong < 0
+          ? `Long charged ${Math.abs(rates.swapLong)} pts/day`
+          : `Long credited ${rates.swapLong} pts/day`,
+        swapShort: rates.swapShort < 0
+          ? `Short charged ${Math.abs(rates.swapShort)} pts/day`
+          : `Short credited ${rates.swapShort} pts/day`,
+      },
+    };
+  }
+
+  // ── Weekend Defense ──────────────────────────────────
+
+  @Get('weekend-checklist')
+  async weekendChecklist() {
+    try {
+      const mt5 = this.mt5 as any;
+      const posData = await mt5.getPositions().catch(() => []);
+      const positions = Array.isArray(posData) ? posData : [];
+
+      if (positions.length === 0) {
+        return {
+          generatedAt: new Date().toISOString(),
+          dayOfWeek: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getUTCDay()],
+          isFriday: new Date().getUTCDay() === 5,
+          positions: [],
+          totalExposure: 0,
+          totalSwapCostTonight: 0,
+          totalGapRisk: 0,
+          summary: { holdCount: 0, reduceCount: 0, closeCount: 0, totalPositions: 0 },
+          nextMarketOpen: new Date().getUTCDay() === 5 ? 'Monday 00:00 GMT' : null,
+          message: 'No open positions — weekend is clear.',
+        };
+      }
+
+      return this.weekendDefense.buildChecklist(positions);
+    } catch (err) {
+      return { error: `Failed to build weekend checklist: ${(err as Error).message}` };
+    }
   }
 }

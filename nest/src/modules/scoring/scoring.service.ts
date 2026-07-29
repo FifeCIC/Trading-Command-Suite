@@ -147,7 +147,7 @@ export class ScoringService implements OnModuleInit {
     }
   }
 
-  async rankAll(strategyId?: string, limit = 20, symbolFilter?: string[]): Promise<RankedResult> {
+  async rankAll(strategyId?: string, limit = 20, symbolFilter?: string[], protocolSlug?: string): Promise<RankedResult> {
     const modeInfo = this.modeService.getModeInfo();
 
     // Strategy weights are now derived from each directive's maxScore.
@@ -160,8 +160,34 @@ export class ScoringService implements OnModuleInit {
       } catch { /* use defaults */ }
     }
 
-    // Compute protocol max from all registered directives
-    const allDirectives = this.directivesService.list();
+    // Compute directive list — protocol-scoped when a protocol is specified
+    let allDirectives = this.directivesService.list();
+    if (protocolSlug && this.prisma.isAvailable) {
+      try {
+        const protocol = await (this.prisma as any).protocol.findUnique({
+          where: { slug: protocolSlug },
+          include: {
+            directiveGroups: {
+              include: { directives: true },
+            },
+          },
+        });
+        if (protocol?.directiveGroups) {
+          const protocolDirectiveIds = new Set<string>();
+          for (const group of protocol.directiveGroups) {
+            for (const entry of group.directives || []) {
+              if (entry.directiveId) protocolDirectiveIds.add(entry.directiveId);
+            }
+          }
+          if (protocolDirectiveIds.size > 0) {
+            allDirectives = allDirectives.filter(d => protocolDirectiveIds.has(d.id));
+            this.logger.log(`Protocol-scoped scoring: ${allDirectives.length} directives from "${protocolSlug}" (of ${this.directivesService.list().length} total)`);
+          }
+        }
+      } catch (err) {
+        this.logger.warn(`Protocol lookup failed for "${protocolSlug}" — falling back to all directives: ${(err as Error).message}`);
+      }
+    }
     const protocolMaxScore = allDirectives.reduce((sum, d) => sum + d.maxScore, 0);
     const protocolDirectiveCount = allDirectives.length;
 
@@ -501,7 +527,7 @@ export class ScoringService implements OnModuleInit {
     const base = {
       mode: modeInfo.mode,
       services: { database: modeInfo.database, queue: modeInfo.queue, redis: modeInfo.redis },
-      strategy: { name: 'DB-Read (pre-computed)', entryThreshold: ENTRY_THRESHOLD, watchThreshold: WATCH_THRESHOLD, maxPossibleScore: 100, directiveCount: 102 },
+      strategy: { name: 'DB-Read (pre-computed)', entryThreshold: ENTRY_THRESHOLD, watchThreshold: WATCH_THRESHOLD, maxPossibleScore: 100, directiveCount: this.directivesService.list().length },
     };
 
     if (!this.prisma.isAvailable) {

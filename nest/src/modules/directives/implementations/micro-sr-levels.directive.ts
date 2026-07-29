@@ -39,6 +39,7 @@ export class MicroSrLevelsDirective implements IDirective {
   readonly maxScore = 100;
   readonly minBars = { '1d': 2, '1h': 10, '15m': 10, '5m': 5 };
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars, dayBars, hourBars, min15Bars } = input;

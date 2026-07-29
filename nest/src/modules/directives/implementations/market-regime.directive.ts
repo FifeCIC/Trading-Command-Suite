@@ -25,6 +25,7 @@ export class MarketRegimeDirective implements IDirective {
   readonly maxScore = 100;
   readonly minBars = { '1d': 20 };
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
   readonly priority = 70;
   readonly suitability = {
     regimeType: 'any' as const,

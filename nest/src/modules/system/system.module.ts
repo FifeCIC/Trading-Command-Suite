@@ -12,6 +12,8 @@ import { ScoringLogService } from './scoring-log.service';
 import { ScoringLogController } from './scoring-log.controller';
 import { MetricsMiddleware } from '../../common/middleware/metrics.middleware';
 import { ProvidersModule } from '../providers/providers.module';
+import { DirectivesModule } from '../directives/directives.module';
+import { ScoringModule } from '../scoring/scoring.module';
 import { DataRetentionService } from './data-retention.service';
 import { DataRetentionController } from './data-retention.controller';
 import { SystemHealthService } from './system-health.service';
@@ -24,12 +26,13 @@ import { ConfigExportService } from './config-export.service';
 import { ConfigExportController } from './config-export.controller';
 import { FileInventoryService } from './file-inventory.service';
 import { FileInventoryController } from './file-inventory.controller';
+import { ConfigReloadController } from './config-reload.controller';
 
 @Global()
 @Module({
-  imports: [ProvidersModule],
+  imports: [ProvidersModule, DirectivesModule, ScoringModule],
   providers: [SystemLogService, ProcessManagerService, SettingsService, ScoringLogService, MetricsMiddleware, DataRetentionService, SystemHealthService, BacktestArchiveService, ConfigExportService, FileInventoryService],
-  controllers: [SystemLogController, ProcessManagerController, DataFreshnessController, ArchitectureManifestController, DatabaseStatsController, SettingsController, ScoringLogController, DataRetentionController, SystemHealthController, BacktestArchiveController, PreferencesController, AutomationRulesController, ConfigExportController, FileInventoryController],
+  controllers: [SystemLogController, ProcessManagerController, DataFreshnessController, ArchitectureManifestController, DatabaseStatsController, SettingsController, ScoringLogController, DataRetentionController, SystemHealthController, BacktestArchiveController, PreferencesController, AutomationRulesController, ConfigExportController, FileInventoryController, ConfigReloadController],
   exports: [SystemLogService, ProcessManagerService, SettingsService, ScoringLogService, MetricsMiddleware, DataRetentionService],
 })
 export class SystemModule {}

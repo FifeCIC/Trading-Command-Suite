@@ -86,6 +86,7 @@ export const NAV_TREE = {
     label: 'Automation',
     views: [
       { id: 'automation-dashboard', label: 'Dashboard', icon: '◉' },
+      { id: 'automation-overview', label: 'Overview', icon: '📋' },
       { id: 'decision-trail', label: 'Decision Trail', icon: '🔗' },
       { id: 'speed-scanner', label: 'Speed Scanner', icon: '⚡' },
       { id: 'execution-queue', label: 'Execution Queue', icon: '⇢' },

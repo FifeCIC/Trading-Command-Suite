@@ -4,12 +4,13 @@
  * Exposes RiskService + TradingGatesService as a unified risk dashboard.
  */
 
-import { Controller, Get, Post, Body, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Logger } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RiskService, PortfolioRisk, PositionSizeType, StopLossType, TakeProfitType } from './risk.service';
 import { TradingGatesService, GateConfig } from '../trading-gates/trading-gates.service';
 import { MonteCarloService } from './monte-carlo.service';
 import { PrismaService } from '../../database/prisma.service';
+import { WeekendGapRiskService } from './weekend-gap-risk.service';
 
 @ApiTags('risk')
 @Controller('risk')
@@ -21,6 +22,7 @@ export class RiskController {
     private readonly tradingGates: TradingGatesService,
     private readonly monteCarlo: MonteCarloService,
     private readonly prisma: PrismaService,
+    private readonly weekendGapRisk: WeekendGapRiskService,
   ) {}
 
   /**
@@ -258,5 +260,31 @@ export class RiskController {
       maxDrawdown: 0.25,
       trailingStopAtProfit: 0.03,
     };
+  }
+
+  // ── Weekend Gap Risk ──────────────────────────────────
+
+  @Get('weekend-exposure')
+  @ApiOperation({ summary: 'Project weekend gap risk for a position based on historical gaps' })
+  async weekendExposure(
+    @Query('symbol') symbol: string,
+    @Query('direction') direction?: string,
+    @Query('value') value?: string,
+  ) {
+    if (!symbol) return { error: 'symbol query parameter is required' };
+    const dir = (direction || 'BUY').toUpperCase() === 'SELL' ? 'SELL' as const : 'BUY' as const;
+    const posValue = value ? parseFloat(value) : 1000;
+
+    const exposure = await this.weekendGapRisk.projectExposure(symbol, dir, posValue);
+    return exposure;
+  }
+
+  @Get('weekend-gap-stats')
+  @ApiOperation({ summary: 'Historical weekend gap statistics for a symbol' })
+  async weekendGapStats(@Query('symbol') symbol: string) {
+    if (!symbol) return { error: 'symbol query parameter is required' };
+    const stats = await this.weekendGapRisk.getGapStats(symbol);
+    if (!stats) return { error: `Insufficient data for ${symbol} gap analysis` };
+    return stats;
   }
 }

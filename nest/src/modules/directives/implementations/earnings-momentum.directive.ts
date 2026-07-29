@@ -34,6 +34,8 @@ export class EarningsMomentumDirective implements IDirective {
   readonly maxScore = 90;
   readonly minBars = { '1d': 1 };
   readonly version = '1.0.0';
+  readonly requiredDataFeeds = ['earnings'];
+  readonly readiness = 'ready' as const;
 
   constructor(private readonly prisma: PrismaService) {}
 

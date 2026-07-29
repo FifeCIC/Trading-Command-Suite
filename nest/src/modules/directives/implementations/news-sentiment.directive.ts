@@ -22,6 +22,8 @@ export class NewsSentimentPositiveDirective implements IDirective {
   readonly maxScore = 100;
   readonly minBars = { '1d': 1 };
   readonly version = '1.0.0';
+  readonly requiredDataFeeds = ['news'];
+  readonly readiness = 'bravo' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     // Check for sentiment data on bars (would come from news API in production)

@@ -138,6 +138,17 @@ export interface IDirective {
   readonly description: string;
 
   /**
+   * Readiness tier — enforced by the scoring pipeline and activation gates.
+   * - 'alpha': Mock, stub, or placeholder. Excluded from composite scoring.
+   * - 'bravo': Real math but degraded/proxy data. Included with capped confidence.
+   * - 'ready': Verified against live data. Full scoring active.
+   *
+   * Default is 'alpha' (alpha until proven otherwise). See docs/readiness-tiers.md.
+   * A protocol can only claim the readiness of its weakest directive.
+   */
+  readonly readiness: 'alpha' | 'bravo' | 'ready';
+
+  /**
    * Directional bias of this directive.
    * - 'bullish': Only produces buy/hold signals. Exclude from SHORT_ONLY protocols.
    * - 'bearish': Only produces sell/hold signals. Exclude from LONG_ONLY protocols.
@@ -205,6 +216,28 @@ export interface IDirective {
    * to ensure every directive in a protocol gets adequate market data.
    */
   readonly minBars?: Record<string, number>;
+
+  /**
+   * External data feeds this directive depends on (beyond OHLCV bars).
+   * Used by Layer B capability contracts to check if a strategy's data
+   * requirements can be met before activation.
+   *
+   * Common values:
+   *   'dxy'          — US Dollar Index (DXY or EURUSD proxy)
+   *   'vix'          — Volatility Index (VIX or ATR proxy)
+   *   'treasury10y'  — 10-year Treasury yield
+   *   'oil'          — Crude oil price (WTI/Brent)
+   *   'news'         — News sentiment API (Alpha Vantage / Finnhub)
+   *   'earnings'     — Earnings calendar data
+   *   'social'       — Social media sentiment (Reddit / Twitter)
+   *   'insider'      — Insider trading filings
+   *   'fear-greed'   — Crypto Fear & Greed Index (alternative.me)
+   *   'halving'      — Bitcoin halving cycle data
+   *
+   * If omitted or empty, the directive only needs bar data (self-contained).
+   * See docs/readiness-tiers.md for how this interacts with readiness tiers.
+   */
+  readonly requiredDataFeeds?: string[];
 
   /**
    * Evaluate the directive against the provided market data.

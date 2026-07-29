@@ -209,6 +209,17 @@ const KNOWN_FEATURES = {
   'Deprecated MT5 Order Pathway Cleanup': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
   'Console Warning Cleanup (10+ fixed)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
   'Dead Code Cleanup (3,900 lines removed)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // 2026-07-29 — Readiness Tiers, Swap/Gap/Defense, IBKR
+  'Readiness Tier System (87/10/7)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'ALPHA Directive Exclusion from Composite': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Interactive Brokers Adapter (Mock)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'Swap Cost Calculator (Triple-Swap)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'Weekend Gap Risk Service (42 gaps)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'risk', devCompletion: 'complete' },
+  'Weekend Defense Checklist (EOW)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'Config Hot-Reload (20ms, no restart)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Score Momentum Indicator (Phase 5)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+  'Phase Restructuring (80 issues)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'NestJS Zero-Error Build (104 directives + 10 adapters)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
 };
 
 // ── Build unified capability rows ──

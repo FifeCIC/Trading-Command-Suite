@@ -117,6 +117,28 @@ function DirectiveDetailContent({ directive, id, navigate }) {
           <div><span>Direction Bias</span><strong>{directive.directionBias || 'neutral'}</strong></div>
           <div><span>Complexity</span><strong>{typeof directive.complexity === 'object' ? directive.complexity?.label || JSON.stringify(directive.complexity) : (directive.complexity || '—')}</strong></div>
           <div><span>Classification</span><strong>{directive.classification || '—'}</strong></div>
+          <div>
+            <span>Readiness</span>
+            <strong style={{
+              color: directive.readiness === 'ready' ? '#22c55e' : directive.readiness === 'bravo' ? '#f59e0b' : '#ef4444',
+            }}>
+              {directive.readiness === 'ready' ? '🟢 READY' : directive.readiness === 'bravo' ? '🟡 BRAVO' : '🔴 ALPHA'}
+            </strong>
+          </div>
+          <div>
+            <span>Data Feeds</span>
+            <strong>
+              {(directive.requiredDataFeeds && directive.requiredDataFeeds.length > 0)
+                ? directive.requiredDataFeeds.map(f => (
+                    <span key={f} style={{
+                      background: '#3b82f618', color: '#60a5fa',
+                      padding: '1px 6px', borderRadius: '3px', fontSize: '0.75rem',
+                      marginRight: '4px', border: '1px solid #3b82f633',
+                    }}>{f}</span>
+                  ))
+                : 'bars only (self-contained)'}
+            </strong>
+          </div>
         </div>
       </section>
 

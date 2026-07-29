@@ -23,6 +23,8 @@ export class EarningsProximityDirective implements IDirective {
   readonly maxScore = 100;
   readonly minBars = { '1d': 1 };
   readonly version = '1.0.0';
+  readonly requiredDataFeeds = ['earnings'];
+  readonly readiness = 'bravo' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     // Check for earnings date on the input symbol data

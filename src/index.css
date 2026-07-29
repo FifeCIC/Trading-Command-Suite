@@ -714,6 +714,7 @@ button.nav-active {
 .left-rail-collapsed .rail-links { gap: 0.25rem; }
 .left-rail-collapsed .rail-links button { justify-content: center; padding: 0.45rem 0.3rem; }
 .left-rail-collapsed .rail-links button.nav-active { background: var(--accent); }
+.left-rail-collapsed .rail-collapse-toggle { font-size: 0.6rem; padding: 0.3rem; min-width: 32px; min-height: 32px; border-radius: 3px; }
 
 .rail-collapse-toggle {
   background: var(--panel);
@@ -726,22 +727,17 @@ button.nav-active {
   line-height: 1;
   min-height: 44px;
   min-width: 44px;
-  position: fixed;
-  bottom: 1rem;
-  z-index: 100;
-  transition: left 0.25s ease;
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  z-index: 10;
+  width: 100%;
+  transition: background 0.15s, color 0.15s;
 }
-/* Expanded: sidebar right edge at ~270px from viewport */
-.site-shell:not(.left-rail-collapsed) .rail-collapse-toggle {
-  left: 270px;
-  width: 260px;
-}
-/* Collapsed: sidebar right edge at ~58px from viewport */
-.site-shell.left-rail-collapsed .rail-collapse-toggle {
-  left: 58px;
-  width: 48px;
-}
-.rail-collapse-toggle:hover { border-color: var(--accent); color: var(--ink); }
+.rail-collapse-toggle:hover { border-color: var(--accent); color: var(--ink); background: rgba(255,255,255,0.03); }
+
+/* Spacer to push toggle down when content is short */
+.rail-bottom-spacer { flex: 1; min-height: 0; }
 
 .site-shell.background-aura:not(.layout-omni) {
   background:

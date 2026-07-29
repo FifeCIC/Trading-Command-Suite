@@ -27,6 +27,7 @@ export class AtrDipDirective implements IDirective {
   readonly maxScore = 95;
   readonly minBars = { '1d': 34 };
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

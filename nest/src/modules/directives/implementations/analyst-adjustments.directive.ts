@@ -35,6 +35,7 @@ export class AnalystAdjustmentsDirective implements IDirective {
   readonly maxScore = 100;
   readonly minBars = { '1d': 1 };
   readonly version = '1.0.0';
+  readonly readiness = 'bravo' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const data: AnalystData | undefined = (input as any).analystRecommendation;

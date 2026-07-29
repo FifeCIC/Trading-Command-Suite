@@ -58,6 +58,7 @@ model Directive {
   config     Json
   active     Boolean   @default(true)
   nature     String?   @db.VarChar(30)
+  readiness  String    @default("alpha") @db.VarChar(10)
   parentId   String?   @db.VarChar(36)
   isDefault  Boolean   @default(true)
   forkReason String?   @db.VarChar(500)

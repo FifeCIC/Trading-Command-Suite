@@ -38,10 +38,14 @@ export function useNetworkStatus() {
     // Periodic connectivity check (every 30s)
     const interval = setInterval(async () => {
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8_000);
         const res = await fetch('/api/health', {
-          method: 'HEAD',
+          method: 'GET',
           cache: 'no-store',
+          signal: controller.signal,
         });
+        clearTimeout(timeout);
         if (res.ok && !navigator.onLine) {
           handleOnline();
         }

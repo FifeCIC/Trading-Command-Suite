@@ -26,6 +26,7 @@ export class PositionSizeKellyDirective implements IDirective {
   readonly maxScore = 100;
   readonly minBars = { '1d': 20 };
   readonly version = '1.0.0';
+  readonly readiness = 'alpha' as const;
   readonly priority = 55;
   readonly suitability = {
     regimeType: 'any' as const,

@@ -264,6 +264,12 @@ export default function MetaStackExplorerPage() {
     queryFn: () => apiGet('/api/trading/mt5/positions').catch(() => []),
     refetchInterval: 30_000,
   });
+  // Directive registry — used for readiness badges on directive results
+  const directivesQuery = useQuery({
+    queryKey: ['mse-directives'],
+    queryFn: () => apiGet('/api/directives').catch(() => []),
+    staleTime: 120_000,
+  });
 
   // ── Derived from selected Trading Strategy (cascades through all stages) ──
   const tradingStrats = Array.isArray(tradingStratsQuery.data) ? tradingStratsQuery.data : [];
@@ -474,6 +480,7 @@ export default function MetaStackExplorerPage() {
       ],
       'directives': [
         { label: 'Total executed', pass: dCount > 0, detail: `${dCount} directives` },
+        { label: 'Readiness', pass: (scored.meta?.readinessBreakdown?.ready || 0) > 0, detail: `🟢 ${scored.meta?.readinessBreakdown?.ready || 0} ready, 🟡 ${scored.meta?.readinessBreakdown?.bravo || 0} bravo, 🔴 ${scored.meta?.readinessBreakdown?.alphaExcluded || 0} excluded` },
         { label: 'Total raw score', pass: totalRaw > 0, detail: `${totalRaw} / ${totalMax} (${totalPct}%) — before group weighting & risk gating` },
         { label: 'Group coverage', pass: groupKeys.length > 0, detail: groupKeys.map(k => `${k}: ${scored.subRawTotals?.[k] || 0}/${scored.subMaxTotals?.[k] || 0}`).join(', ') || '—' },
         { label: 'Top directive', pass: !!topDir, detail: topDir ? `${topDir.name} (${topDir.score}/${topDir.maxScore} = ${topDir.normalizedScore}%)` : '—' },
@@ -498,6 +505,23 @@ export default function MetaStackExplorerPage() {
     };
   }, [scored, selectedProtocol, activeProtocolId, activeSymbol, selectedStrategy, symbolsQuery.data, watchlistsQuery.data, allProtocolsData, autoQuery.data, providerHealthQuery.data, scoringStratsQuery.data, tradingStratsQuery.data, positionsQuery.data]);
 
+  // ── Directive readiness lookup (for per-directive badges) ──
+  const readinessMap = useMemo(() => {
+    const map = {};
+    if (Array.isArray(directivesQuery.data)) {
+      for (const d of directivesQuery.data) {
+        map[d.id] = d.readiness || 'alpha';
+      }
+    }
+    return map;
+  }, [directivesQuery.data]);
+
+  const READINESS_STYLES = {
+    ready:  { color: '#22c55e', bg: '#22c55e18', label: 'READY', title: 'Verified against live data' },
+    bravo:  { color: '#f59e0b', bg: '#f59e0b18', label: 'BRAVO', title: 'Real math, proxy/limited data' },
+    alpha:  { color: '#ef4444', bg: '#ef444418', label: 'ALPHA', title: 'Mock, stub, or placeholder' },
+  };
+
   const confirmedCount = Object.values(confirmedStages).filter(Boolean).length;
   const stageCount = PIPELINE.filter(s => !s.isMarker).length;
   const allConfirmed = confirmedCount === stageCount;
@@ -518,6 +542,56 @@ export default function MetaStackExplorerPage() {
           <button className="mse-action-btn mse-action-reset" onClick={resetAll}>Reset</button>
         </div>
       </header>
+
+      {/* ── Selected Strategy Banner ── */}
+      {selectedStrategy ? (
+        <div className="mse-strategy-banner">
+          <span className="mse-strategy-banner-icon">📌</span>
+          <span className="mse-strategy-banner-name">{selectedStrategy.name}</span>
+          <span className="mse-strategy-banner-meta">
+            {selectedStrategy.symbol} · {selectedStrategy.timeframe || '1h'}
+            {selectedStrategy.mode ? ` · ${selectedStrategy.mode}` : ''}
+          </span>
+          {selectedProtocol && (
+            <span className="mse-strategy-banner-protocol" title={`Protocol: ${selectedProtocol.name}`}>
+              ⚙ {selectedProtocol.name}
+            </span>
+          )}
+          {selectedStrategy.minComposite > 0 && (
+            <span className="mse-strategy-banner-threshold">
+              Min composite: {selectedStrategy.minComposite}
+            </span>
+          )}
+          <button
+            className="mse-strategy-banner-change"
+            onClick={() => {
+              const el = document.querySelector('.mse-strategy-picker');
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }}
+          >
+            Change ↓
+          </button>
+        </div>
+      ) : (
+        <div className="mse-strategy-banner mse-strategy-banner--empty">
+          <span className="mse-strategy-banner-icon">📌</span>
+          <span className="mse-strategy-banner-name">No strategy selected</span>
+          <span className="mse-strategy-banner-meta">
+            {tradingStrats.length > 0
+              ? `${tradingStrats.length} trading strateg${tradingStrats.length === 1 ? 'y' : 'ies'} available — pick one to populate the pipeline`
+              : 'No trading strategies found — create one first'}
+          </span>
+          <button
+            className="mse-strategy-banner-change"
+            onClick={() => {
+              const el = document.querySelector('.mse-strategy-picker');
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }}
+          >
+            Pick ↓
+          </button>
+        </div>
+      )}
 
       {/* ── Pipeline stages (vertical) — prerequisites always visible, core requires strategy selection ── */}
       <div className="mse-pipeline">
@@ -636,7 +710,10 @@ export default function MetaStackExplorerPage() {
                       <summary className="mse-detail-summary">Show all {scored.meta?.directiveCount || 0} directive results</summary>
                       <div className="mse-directive-list">
                         {Object.entries(scored.breakouts).map(([groupId, directives]) =>
-                          directives.map(d => (
+                          directives.map(d => {
+                            const rd = readinessMap[d.directiveId] || 'alpha';
+                            const rs = READINESS_STYLES[rd] || READINESS_STYLES.alpha;
+                            return (
                             <div key={d.directiveId} className={`mse-dir-row mse-dir-${d.signalClass}`} title={d.reason}>
                               <a
                                 href={`/scoring/directive-detail?id=${d.directiveId}`}
@@ -648,8 +725,19 @@ export default function MetaStackExplorerPage() {
                               <span className="mse-dir-score">{d.score}/{d.maxScore}</span>
                               <span className="mse-dir-pct">{d.normalizedScore}%</span>
                               <span className="mse-dir-group-tag">{groupId}</span>
+                              <span
+                                style={{
+                                  color: rs.color, background: rs.bg,
+                                  border: `1px solid ${rs.color}40`,
+                                  padding: '1px 5px', borderRadius: '3px',
+                                  fontSize: '0.62rem', fontWeight: 700,
+                                  flexShrink: 0,
+                                }}
+                                title={rs.title}
+                              >{rs.label}</span>
                             </div>
-                          ))
+                            );
+                          })
                         )}
                       </div>
                     </details>

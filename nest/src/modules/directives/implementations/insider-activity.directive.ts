@@ -40,6 +40,8 @@ export class InsiderActivityDirective implements IDirective {
   readonly maxScore = 85;
   readonly minBars = { '1d': 1 };
   readonly version = '1.2.0';
+  readonly requiredDataFeeds = ['insider'];
+  readonly readiness = 'ready' as const;
 
   constructor(
     private readonly prisma: PrismaService,

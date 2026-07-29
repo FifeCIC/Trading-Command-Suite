@@ -97,7 +97,11 @@ export interface GatedScore {
     gatedCount: number;
     riskDirectiveCount: number;
     weightStrategy: 'group-weighted' | 'maxscore-weighted';
+    /** Readiness tier counts: ready/bravo/alpha. Alpha directives are excluded from scoring. */
+    readinessBreakdown: { ready: number; bravo: number; alpha: number; alphaExcluded: number };
   };
+  /** Directives excluded from the composite due to ALPHA readiness. */
+  excludedBreakdown: { directiveId: string; name: string; reason: string }[];
 }
 
 // ─── Rarity Bands ────────────────────────────────────────
@@ -270,6 +274,10 @@ export class ProtocolGatingService {
 
     // 3. Group results with maxScore from directive registry
     const groups = new Map<string, { results: DirectiveResult[]; config: DirectiveGroup; maxScores: Map<string, number> }>();
+    const excludedBreakdown: { directiveId: string; name: string; reason: string }[] = [];
+    let alphaCount = 0;
+    let bravoCount = 0;
+    let readyCount = 0;
 
     for (const group of activeGroups) {
       const groupResults: DirectiveResult[] = [];
@@ -283,6 +291,21 @@ export class ProtocolGatingService {
         const bias = directive?.directionBias ?? 'neutral';
         if (directionMode === 'LONG_ONLY' && bias === 'bearish') continue;
         if (directionMode === 'SHORT_ONLY' && bias === 'bullish') continue;
+
+        // ── Readiness Gate: exclude ALPHA directives from composite ──
+        const readiness = (directive as any)?.readiness ?? 'alpha';
+        if (readiness === 'alpha') {
+          excludedBreakdown.push({
+            directiveId,
+            name: directive?.name ?? directiveId,
+            reason: 'mock — excluded from composite (readiness: alpha)',
+          });
+          alphaCount++;
+          continue; // Skip — do not include in scoring
+        }
+        if (readiness === 'bravo') bravoCount++;
+        if (readiness === 'ready') readyCount++;
+
         groupResults.push(result);
         maxScores.set(directiveId, directive?.maxScore ?? 100);
       }
@@ -421,10 +444,14 @@ export class ProtocolGatingService {
         additiveEquivalent,
         gatingDelta: composite - additiveEquivalent,
         directiveCount: allResults.size,
-        gatedCount: allResults.size,
+        gatedCount: allResults.size - alphaCount,
         riskDirectiveCount: breakouts['risk']?.length ?? 0,
         weightStrategy,
+        // ── Readiness breakdown — see docs/readiness-tiers.md ──
+        readinessBreakdown: { ready: readyCount, bravo: bravoCount, alpha: alphaCount, alphaExcluded: alphaCount },
       },
+      // ── Directives excluded from scoring due to ALPHA readiness ──
+      excludedBreakdown,
     };
   }
 

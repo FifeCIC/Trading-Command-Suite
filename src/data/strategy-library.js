@@ -20,11 +20,11 @@
  *    in the NestJS DirectivesModule.  Check the /api/directives endpoint
  *    to confirm the directive exists before referencing it.
  *
- * 3. status values:
- *    'concept'   — documented but no directives wired yet
- *    'partial'   — some directives exist but gaps remain
- *    'supported' — all directive mappings reference live directives
- *    'live'      — actively running in the automation loop (has tcsProtocol)
+ * 3. status values (maps to readiness tiers — see docs/readiness-tiers.md):
+ *    'concept'   — ALPHA: documented but no directives wired yet
+ *    'partial'   — ALPHA→BRAVO: some directives exist but gaps remain
+ *    'supported' — BRAVO: all directive mappings reference live directives
+ *    'live'      — READY: actively running, all directives ≥ bravo, verified
  *
  * 4. If the strategy references NEW directives, those directives must be:
  *    a) Implemented in nest/src/modules/directives/implementations/*.directive.ts

@@ -42,6 +42,8 @@ export class BtcHalvingCycleDirective implements IDirective {
   readonly maxScore = 200;
   readonly minBars = { '1d': 365 };
   readonly version = '2.0.0';
+  readonly requiredDataFeeds = ['halving'];
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const now = input.bars?.length ? new Date(input.bars[input.bars.length - 1].timestamp) : new Date();

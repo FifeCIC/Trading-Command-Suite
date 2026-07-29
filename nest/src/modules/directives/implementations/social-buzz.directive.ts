@@ -38,6 +38,8 @@ export class SocialBuzzDirective implements IDirective {
   readonly maxScore = 70;
   readonly minBars = { '1d': 1 };
   readonly version = '1.1.0';
+  readonly requiredDataFeeds = ['social'];
+  readonly readiness = 'ready' as const;
 
   constructor(
     private readonly prisma: PrismaService,

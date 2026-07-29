@@ -17,6 +17,7 @@ export class TimeStopDirective implements IDirective {
   readonly maxScore = 100;
   readonly minBars = { '1d': 5 };
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     // Time stop is contextual — needs position open time which isn't in bars

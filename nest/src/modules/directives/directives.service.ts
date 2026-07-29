@@ -93,6 +93,7 @@ export class DirectivesService {
             },
             active: true,
             nature: directive.directionBias || 'neutral',
+            readiness: directive.readiness || 'alpha',
             isDefault: true,
           },
           update: {
@@ -100,6 +101,7 @@ export class DirectivesService {
             name: directive.name,
             type: (directive as any).category || 'technical',
             weight: directive.maxScore || 100,
+            readiness: directive.readiness || 'alpha',
             config: {
               description: directive.description,
               directionBias: directive.directionBias || 'neutral',
@@ -641,7 +643,7 @@ export class DirectivesService {
   async getDbStatuses() {
     if (!this.prisma.isAvailable) return [];
     return this.prisma.directive.findMany({
-      select: { id: true, active: true, nature: true },
+      select: { id: true, active: true, nature: true, readiness: true },
       where: { isDefault: true },
     });
   }

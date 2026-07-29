@@ -87,6 +87,8 @@ export interface BarRefreshStatus {
   intervalMs: number;
   liveLimit: number;
   recordLimit: number;
+  /** Active timeframes being refreshed. */
+  timeframes: string[];
   lastRefresh: string | null;
   lastUpserted: number;
   lastSymbols: number;
@@ -138,6 +140,7 @@ export class BarRefreshService {
       intervalMs: REFRESH_INTERVAL_MS,
       liveLimit: LIVE_LIMIT,
       recordLimit: RECORD_LIMIT,
+      timeframes: TIMEFRAMES,
       lastRefresh: this.lastRefresh?.toISOString() ?? null,
       lastUpserted: this.lastUpserted,
       lastSymbols: this.lastSymbols,

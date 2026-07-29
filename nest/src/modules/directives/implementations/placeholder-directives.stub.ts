@@ -47,6 +47,7 @@ export class StochasticDirective implements IDirective {
   readonly priority = 74;
   readonly maxScore = 100;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { highs, lows, closes } = this.extract(input);
@@ -74,6 +75,7 @@ export class CciDirective implements IDirective {
   readonly priority = 72;
   readonly maxScore = 100;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { highs, lows, closes } = this.extract(input);
@@ -99,6 +101,7 @@ export class MfiDirective implements IDirective {
   readonly priority = 73;
   readonly maxScore = 100;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { highs, lows, closes, volumes } = this.extract(input);
@@ -123,6 +126,7 @@ export class AdxDirective implements IDirective {
   readonly priority = 76;
   readonly maxScore = 110;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { highs, lows, closes } = this.extract(input);
@@ -148,6 +152,7 @@ export class RsiOverboughtDirective implements IDirective {
   readonly priority = 78;
   readonly maxScore = 100;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -172,6 +177,7 @@ export class MomentumContinuationComboDirective implements IDirective {
   readonly priority = 74;
   readonly maxScore = 110;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -221,6 +227,7 @@ export class MovingAveragesDirective implements IDirective {
   readonly priority = 72;
   readonly maxScore = 100;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -250,6 +257,7 @@ export class MaCrossoverDirective implements IDirective {
   readonly priority = 73;
   readonly maxScore = 95;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -279,6 +287,7 @@ export class PriceAboveSma50Directive implements IDirective {
   readonly priority = 68;
   readonly maxScore = 90;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -312,6 +321,7 @@ export class BollingerBandSqueezeDirective implements IDirective {
   readonly priority = 70;
   readonly maxScore = 100;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -345,6 +355,7 @@ export class VolatilityToolsDirective implements IDirective {
   readonly priority = 66;
   readonly maxScore = 90;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { highs, lows, closes } = this.extract(input);
@@ -376,6 +387,7 @@ export class ObvDirective implements IDirective {
   readonly priority = 68;
   readonly maxScore = 95;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -406,6 +418,7 @@ export class VolumeSurgeDirective implements IDirective {
   readonly priority = 69;
   readonly maxScore = 90;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -431,6 +444,7 @@ export class VolumeRhythmDirective implements IDirective {
   readonly priority = 55;
   readonly maxScore = 70;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -463,6 +477,7 @@ export class DojiPatternDirective implements IDirective {
   readonly priority = 67;
   readonly maxScore = 95;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -500,6 +515,7 @@ export class HammerPatternDirective implements IDirective {
   readonly priority = 68;
   readonly maxScore = 95;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -544,6 +560,7 @@ export class EngulfingPatternDirective implements IDirective {
   readonly priority = 69;
   readonly maxScore = 100;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -579,6 +596,7 @@ export class PinBarPatternDirective implements IDirective {
   readonly priority = 66;
   readonly maxScore = 90;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -618,6 +636,7 @@ export class ThreeSoldiersPatternDirective implements IDirective {
   readonly priority = 65;
   readonly maxScore = 90;
   readonly version = '2.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -662,6 +681,7 @@ export class VixRegimeDirective implements IDirective {
   readonly priority = 0;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(_input: DirectiveInput): DirectiveResult {
     return stubResult(this.id, 'vix-regime.php');
@@ -676,6 +696,7 @@ export class CadUsdOilCorrelationDirective implements IDirective {
   readonly priority = 0;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(_input: DirectiveInput): DirectiveResult {
     return stubResult(this.id, 'cad-usd-oil-correlation.php');
@@ -694,6 +715,7 @@ export class MondayEffectDirective implements IDirective {
   readonly priority = 30;
   readonly maxScore = 50;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -718,6 +740,7 @@ export class FridayPositioningDirective implements IDirective {
   readonly priority = 30;
   readonly maxScore = 50;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -741,6 +764,7 @@ export class MidweekMomentumDirective implements IDirective {
   readonly priority = 32;
   readonly maxScore = 55;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -768,6 +792,7 @@ export class AdvancedWeeklyRhythmDirective implements IDirective {
   readonly priority = 35;
   readonly maxScore = 60;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -796,6 +821,7 @@ export class SpyOptionsExpiryDirective implements IDirective {
   readonly priority = 28;
   readonly maxScore = 45;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const now = new Date();
@@ -818,6 +844,7 @@ export class SpyMonthEndRebalancingDirective implements IDirective {
   readonly priority = 28;
   readonly maxScore = 45;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const now = new Date();
@@ -843,6 +870,7 @@ export class SpyQqqRelativeStrengthDirective implements IDirective {
   readonly priority = 42;
   readonly maxScore = 70;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -870,6 +898,7 @@ export class CryptoFearGreedDirective implements IDirective {
   readonly priority = 0;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(_input: DirectiveInput): DirectiveResult {
     return stubResult(this.id, 'crypto-fear-greed.php');
@@ -884,6 +913,7 @@ export class BtcHalvingCycleDirective implements IDirective {
   readonly priority = 0;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(_input: DirectiveInput): DirectiveResult {
     return stubResult(this.id, 'btc-halving-cycle.php');
@@ -898,6 +928,7 @@ export class CryptoWeekendEffectDirective implements IDirective {
   readonly priority = 0;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(_input: DirectiveInput): DirectiveResult {
     return stubResult(this.id, 'crypto-weekend-effect.php');
@@ -916,6 +947,7 @@ export class NvdaEarningsMomentumDirective implements IDirective {
   readonly priority = 38;
   readonly maxScore = 65;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const isNvda = input.symbol.toUpperCase() === 'NVDA';
@@ -939,6 +971,7 @@ export class TslaSentimentAmplifierDirective implements IDirective {
   readonly priority = 38;
   readonly maxScore = 65;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const isTsla = input.symbol.toUpperCase() === 'TSLA';
@@ -970,6 +1003,7 @@ export class DividendYieldAttractiveDirective implements IDirective {
   readonly priority = 36;
   readonly maxScore = 55;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -993,6 +1027,7 @@ export class EarningsProximityDirective implements IDirective {
   readonly priority = 0;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(_input: DirectiveInput): DirectiveResult {
     return stubResult(this.id, 'earnings-proximity.php');
@@ -1007,6 +1042,7 @@ export class NewsSentimentPositiveDirective implements IDirective {
   readonly priority = 0;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(_input: DirectiveInput): DirectiveResult {
     return stubResult(this.id, 'news-sentiment-positive.php');
@@ -1025,6 +1061,7 @@ export class ConfluenceReversalComboDirective implements IDirective {
   readonly priority = 74;
   readonly maxScore = 110;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -1086,6 +1123,7 @@ export class PriceActionDirective implements IDirective {
   readonly priority = 0;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(_input: DirectiveInput): DirectiveResult {
     return stubResult(this.id, 'price-action.php');
@@ -1104,6 +1142,7 @@ export class SupportResistanceLevelsDirective implements IDirective {
   readonly priority = 0;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(_input: DirectiveInput): DirectiveResult {
     return stubResult(this.id, 'support-resistance-levels.php');
@@ -1118,6 +1157,7 @@ export class OverheadSupplyPressureDirective implements IDirective {
   readonly priority = 0;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(_input: DirectiveInput): DirectiveResult {
     return stubResult(this.id, 'overhead-supply-pressure.php');
@@ -1132,6 +1172,7 @@ export class PanicExhaustionAbsorptionDirective implements IDirective {
   readonly priority = 0;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(_input: DirectiveInput): DirectiveResult {
     return stubResult(this.id, 'panic-exhaustion-absorption.php');
@@ -1146,6 +1187,7 @@ export class TimeBasedSupportDirective implements IDirective {
   readonly priority = 55;
   readonly maxScore = 80;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -1183,6 +1225,7 @@ export class IsaResetDirective implements IDirective {
   readonly priority = 20;
   readonly maxScore = 30;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const now = new Date();
@@ -1207,6 +1250,7 @@ export class BollingerBandsDirective implements IDirective {
   readonly priority = 72;
   readonly maxScore = 100;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -1240,6 +1284,7 @@ export class VwapDirective implements IDirective {
   readonly priority = 70;
   readonly maxScore = 95;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -1280,6 +1325,7 @@ export class BasicWeeklyRhythmDirective implements IDirective {
   readonly priority = 34;
   readonly maxScore = 55;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -1306,6 +1352,7 @@ export class IntradayUPatternDirective implements IDirective {
   readonly priority = 40;
   readonly maxScore = 70;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -1337,6 +1384,7 @@ export class InstitutionalTimingDirective implements IDirective {
   readonly priority = 30;
   readonly maxScore = 50;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const now = new Date();
@@ -1362,6 +1410,7 @@ export class MacdDirective implements IDirective {
   readonly priority = 75;
   readonly maxScore = 110;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -1398,6 +1447,7 @@ export class PortfolioPerformanceDirective implements IDirective {
   readonly priority = 58;
   readonly maxScore = 90;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -1427,6 +1477,7 @@ export class AdaptiveRiskMonitorDirective implements IDirective {
   readonly priority = 64;
   readonly maxScore = 90;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -1458,6 +1509,7 @@ export class AnalystAdjustmentsDirective implements IDirective {
   readonly priority = 50;
   readonly maxScore = 80;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -1482,6 +1534,7 @@ export class ConvictionGrowthDirective implements IDirective {
   readonly priority = 66;
   readonly maxScore = 100;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -1530,6 +1583,7 @@ export class EarningsImplementationDirective implements IDirective {
   readonly priority = 46;
   readonly maxScore = 70;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -1559,6 +1613,7 @@ export class EarningsWhispersDirective implements IDirective {
   readonly priority = 44;
   readonly maxScore = 65;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -1585,6 +1640,7 @@ export class LikeZacksDirective implements IDirective {
   readonly priority = 52;
   readonly maxScore = 85;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -1620,6 +1676,7 @@ export class MeanReversionDirective implements IDirective {
   readonly priority = 71;
   readonly maxScore = 105;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -1651,6 +1708,7 @@ export class ResistanceLevelsStrategyDirective implements IDirective {
   readonly priority = 70;
   readonly maxScore = 100;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -1686,6 +1744,7 @@ export class Sp500RegimeDirective implements IDirective {
   readonly priority = 70;
   readonly maxScore = 100;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -1727,6 +1786,7 @@ export class VixStrategyDirective implements IDirective {
   readonly priority = 63;
   readonly maxScore = 90;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -1759,6 +1819,7 @@ export class WeeklyRhythmStrategyDirective implements IDirective {
   readonly priority = 62;
   readonly maxScore = 85;
   readonly version = '2.0.0';
+  readonly readiness = 'alpha' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

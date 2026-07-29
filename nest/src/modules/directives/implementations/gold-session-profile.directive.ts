@@ -103,6 +103,7 @@ export class GoldSessionProfileDirective implements IDirective {
   readonly maxScore = 100;
   readonly minBars = { '1d': 1 }; // Session-based — only needs current time
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const sym = input.symbol.toUpperCase();

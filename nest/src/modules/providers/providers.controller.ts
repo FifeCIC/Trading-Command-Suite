@@ -14,6 +14,7 @@ import { RateLimitGovernor } from './rate-limit-governor.service';
 import { ProviderDegradationService } from './provider-degradation.service';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
 import { Trading212Adapter } from './adapters/trading212.adapter';
+import { CapitalComAdapter } from './adapters/capital-com.adapter';
 
 @ApiTags('providers')
 @Controller('providers')
@@ -22,6 +23,7 @@ export class ProvidersController {
     private readonly providersService: ProvidersService,
     private readonly adapterFactory: AdapterFactory,
     private readonly t212Adapter: Trading212Adapter,
+    private readonly capitalComAdapter: CapitalComAdapter,
     private readonly rateLimitGovernor: RateLimitGovernor,
     private readonly degradation: ProviderDegradationService,
   ) {}
@@ -144,5 +146,17 @@ export class ProvidersController {
       healthOk,
       timestamp: new Date().toISOString(),
     };
+  }
+
+  @Get('capital.com/account')
+  @ApiOperation({ summary: 'Get Capital.com account details (balance, equity, margin)' })
+  @ApiOkResponse({ description: 'Capital.com account summary' })
+  async getCapitalComAccount() {
+    try {
+      const account = await this.capitalComAdapter.getAccount();
+      return account ?? { connected: false, mode: 'demo', brokerName: 'Capital.com' };
+    } catch (err) {
+      return { connected: false, error: (err as Error).message, mode: 'demo', brokerName: 'Capital.com' };
+    }
   }
 }

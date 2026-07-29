@@ -47,6 +47,7 @@ import StrategyWizardPage from '../pages/StrategyWizardPage.jsx';
 
 // ── Automation ──
 import AutomationDashboardPage from '../pages/AutomationDashboardPage.jsx';
+import AutomationOverviewPage from '../pages/AutomationOverviewPage.jsx';
 import AutomationRulesPage from '../pages/AutomationRulesPage.jsx';
 import ExecutionQueuePage from '../pages/ExecutionQueuePage.jsx';
 
@@ -219,6 +220,7 @@ export const VIEW_COMPONENTS = {
 
   // Automation
   'automation-dashboard': AutomationDashboardPage,
+  'automation-overview': AutomationOverviewPage,
   'automation-rules': AutomationRulesPage,
   'execution-queue': ExecutionQueuePage,
   'alert-center': AlertCenterPage,

@@ -254,6 +254,9 @@ export class DirectivesController {
       protocolCount: protocolCounts.get(d.id) ?? 0,
       complexity: complexityMap[d.id] ?? { level: 1, label: 'Basic', factors: [] },
       active: dbActive,
+      // ── Readiness tier — from directive implementation, default alpha ──
+      readiness: (d as any).readiness || 'alpha',
+      requiredDataFeeds: (d as any).requiredDataFeeds || [],
       // ── Performance classification (from #283 audit + DB stubbing #288) ──
       classification: (!dbActive || isStub) ? 'stub' : (st?.count ? 'active' : 'untested'),
       performance: (!dbActive || isStub) ? 'underperforming' : (st?.count ? (st.totalScore / st.count >= 50 ? 'healthy' : 'weak') : 'unknown'),
@@ -282,7 +285,7 @@ export class DirectivesController {
     try {
       const dbResult = await this.directivesService.getDbStatuses();
       const dbRow = dbResult?.find((d: any) => d.id === id);
-      if (dbRow) dbMeta = { active: dbRow.active, nature: dbRow.nature };
+      if (dbRow) dbMeta = { active: dbRow.active, nature: dbRow.nature, readiness: dbRow.readiness };
     } catch {}
 
     return {
@@ -295,6 +298,8 @@ export class DirectivesController {
       active: dbMeta.active ?? true,
       classification: (directive as any).classification || 'active',
       nature: dbMeta.nature,
+      readiness: dbMeta.readiness || directive.readiness || 'alpha',
+      requiredDataFeeds: (directive as any).requiredDataFeeds || [],
       directionBias: directive.directionBias,
       version: directive.version,
       priority: directive.priority,

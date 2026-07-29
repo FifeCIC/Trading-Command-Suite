@@ -54,6 +54,7 @@ export class WilliamsRDirective implements IDirective {
   readonly priority = 45;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -108,6 +109,7 @@ export class AwesomeOscillatorDirective implements IDirective {
   readonly priority = 40;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -171,6 +173,7 @@ export class ForceIndexDirective implements IDirective {
   readonly priority = 45;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -229,6 +232,7 @@ export class ChaikinMoneyFlowDirective implements IDirective {
   readonly priority = 50;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -298,6 +302,7 @@ export class DonchianBreakoutDirective implements IDirective {
   readonly priority = 55;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -354,6 +359,7 @@ export class KeltnerChannelDirective implements IDirective {
   readonly priority = 45;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -418,6 +424,7 @@ export class SuperTrendDirective implements IDirective {
   readonly priority = 50;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -468,6 +475,7 @@ export class ParabolicSARDirective implements IDirective {
   readonly priority = 48;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -555,6 +563,7 @@ export class ADXDICrossoverDirective implements IDirective {
   readonly priority = 50;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -610,6 +619,7 @@ export class BollingerPctBDirective implements IDirective {
   readonly priority = 42;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -660,6 +670,7 @@ export class ATRTrailingStopDirective implements IDirective {
   readonly priority = 48;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -711,6 +722,7 @@ export class MomentumROCDirective implements IDirective {
   readonly priority = 45;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -768,6 +780,7 @@ export class DeMarkerDirective implements IDirective {
   readonly priority = 42;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -820,6 +833,7 @@ export class AccumulationDistDirective implements IDirective {
   readonly priority = 45;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -881,6 +895,7 @@ export class BullsBearsPowerDirective implements IDirective {
   readonly priority = 45;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -931,6 +946,7 @@ export class EaseOfMovementDirective implements IDirective {
   readonly priority = 40;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -986,6 +1002,7 @@ export class IchimokuCloudDirective implements IDirective {
   readonly priority = 50;
   readonly maxScore = 100;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {

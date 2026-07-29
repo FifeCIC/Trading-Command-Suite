@@ -11,6 +11,7 @@ export class ParabolicSarDirective implements IDirective {
   readonly maxScore = 100;
   readonly minBars = { '1d': 12 };
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
   private readonly AF_STEP = 0.02;
   private readonly AF_MAX = 0.2;
 

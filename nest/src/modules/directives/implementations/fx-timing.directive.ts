@@ -33,7 +33,8 @@ export class FxTimingDirective implements IDirective {
   readonly priority = 65;
   readonly maxScore = 80;
   readonly minBars = { '1d': 1 };
-  readonly version = '0.1.0'; // pre-release — needs FX data
+  readonly version = '0.1.0';
+  readonly readiness = 'ready' as const; // pre-release — needs FX data
 
   calculate(_input: DirectiveInput): DirectiveResult {
     // PLACEHOLDER — real implementation requires FX rate data from /api/fx/rate/:pair

@@ -22,6 +22,7 @@ export class MomentumExhaustionDirective implements IDirective {
   readonly maxScore = 100;
   readonly minBars = { '1d': 19 };
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

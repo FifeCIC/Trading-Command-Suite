@@ -26,6 +26,7 @@ export class PositionSizeConfidenceDirective implements IDirective {
   readonly maxScore = 100;
   readonly minBars = { '1d': 5 };
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
   readonly priority = 60;
   readonly suitability = {
     regimeType: 'any' as const,

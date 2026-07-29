@@ -222,7 +222,9 @@ export class ProtocolGatingController {
           gatedCount: 0,
           riskDirectiveCount: 0,
           weightStrategy: 'group-weighted' as const,
+          readinessBreakdown: { ready: 0, bravo: 0, alpha: 0, alphaExcluded: 0 },
         },
+        excludedBreakdown: [],
       };
     }
 

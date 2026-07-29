@@ -41,6 +41,22 @@
   color: var(--riskHigh, #d97706);
 }
 
+.mss-banner--info {
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
+  color: var(--accent);
+}
+
+.mss-reload-btn {
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+  color: var(--accent);
+}
+
+.mss-reload-btn:hover {
+  background: color-mix(in srgb, var(--accent) 20%, var(--panel));
+}
+
 /* ── Stat Grid ─────────────────────────────────────────── */
 
 .mss-stat-grid {
@@ -314,6 +330,60 @@
 
 .mss-checklist--ok { color: var(--riskNormal, #16a34a); }
 .mss-checklist--warn { color: var(--riskHigh, #dc2626); }
+
+/* Directive Breakdown */
+.mss-breakdown {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.mss-breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 0.75rem;
+}
+
+.mss-breakdown-sig {
+  width: 14px;
+  text-align: center;
+  font-size: 0.7rem;
+}
+
+.mss-sig--bullish { color: var(--riskNormal, #16a34a); }
+.mss-sig--bearish { color: var(--riskHigh, #dc2626); }
+.mss-sig--neutral { color: var(--textFaint); }
+
+.mss-breakdown-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.mss-breakdown-score {
+  color: var(--textFaint);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+  min-width: 48px;
+  text-align: right;
+}
+
+.mss-breakdown-contrib {
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  min-width: 40px;
+  text-align: right;
+}
+
+.mss-breakdown-reason {
+  margin-top: 6px;
+  font-size: 0.7rem;
+  color: var(--textFaint);
+  font-style: italic;
+  line-height: 1.4;
+}
 
 /* ── Scoring Pipeline Meta ─────────────────────────────── */
 

@@ -35,6 +35,13 @@ const PROTOCOL_BROKER_MAP = {
     tradingEnabled: true,
     note: 'Virtual ledger — ideal for testing new strategies',
   },
+  // Capital.com — CFDs: forex, commodities, indices, crypto. Full execution.
+  'capital.com': {
+    supportedStyles: ['scalp', 'day-trade', 'swing', 'position'],
+    supportedAssetTypes: ['forex', 'commodity', 'index', 'crypto'],
+    tradingEnabled: true,
+    note: 'CFD broker — session-based auth, demo + live accounts',
+  },
 };
 
 // ── Protocol trading style → default risk parameters ──
@@ -86,6 +93,7 @@ export default function CreateStrategyPage() {
   const [scoringStrategies, setScoringStrategies] = useState([]);
   const [watchlists, setWatchlists] = useState([]);
   const [mt5Account, setMt5Account] = useState(null);
+  const [capitalComAccount, setCapitalComAccount] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(null);
@@ -111,6 +119,8 @@ export default function CreateStrategyPage() {
         setScoringStrategies(Array.isArray(scoring) ? scoring : (scoring.strategies || []));
         setWatchlists(wls.watchlists || []);
         setMt5Account(mt5);
+        // Fetch Capital.com account on mount
+        apiGet('/api/providers/capital.com/account').then(setCapitalComAccount).catch(() => {});
         setLoading(false);
       } catch (err) {
         if (!cancelled) { setError(err.message); setLoading(false); }
@@ -398,6 +408,7 @@ export default function CreateStrategyPage() {
                 <option key={id} value={id} disabled={!isCompatible}>
                   {id === 'mt5' ? `MT5${mt5Account ? ` (${mt5Account.balance != null ? '$' + mt5Account.balance : 'connected'})` : ''}` :
                    id === 'trading212' ? 'Trading212 (portfolio-monitoring only)' :
+                   id === 'capital.com' ? `Capital.com${capitalComAccount?.balance != null ? ` (£${capitalComAccount.balance})` : ' (configured)'}` :
                    'Paper Trading (virtual $10k)'}
                   {!isCompatible ? ' — incompatible' : ''}
                 </option>

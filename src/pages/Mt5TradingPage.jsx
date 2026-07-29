@@ -215,7 +215,7 @@ export default function Mt5TradingPage() {
       if (!confirmed) return;
     }
     try {
-      const res = await fetch(`/api/providers/mt5/close/${ticket}`, { method: 'POST' });
+      const res = await fetch(`/api/trading/mt5/close/${ticket}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         setMsg(`Position #${ticket} closed`);
@@ -239,7 +239,7 @@ export default function Mt5TradingPage() {
     if (!window.confirm(warning)) return;
 
     try {
-      const res = await fetch('/api/providers/mt5/close-all', { method: 'POST' });
+      const res = await fetch('/api/trading/mt5/close-all', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
         setMsg(`Closed ${data.closed || 'all'} positions`);

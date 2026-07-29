@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '../core/api/client';
+import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { STRATEGY_LIBRARY } from '../data/strategy-library';
 import './meta-stack-status.css';
@@ -63,12 +63,18 @@ export default function MetaStackStatusPage() {
     queryKey: ['mss-providers'],
     queryFn: () => apiGet('/api/providers/health'),
     refetchInterval: 30_000,
+    retry: 2,
+    retryDelay: 2000,
+    staleTime: 15_000,
   });
 
   const scoringQ = useQuery({
     queryKey: ['mss-scoring'],
     queryFn: () => apiGet('/api/scoring/ranked?limit=20'),
     refetchInterval: 30_000,
+    retry: 2,
+    retryDelay: 2000,
+    staleTime: 15_000,
   });
 
   // ── Fresh scoring trigger (manual, not auto) ──
@@ -78,7 +84,7 @@ export default function MetaStackStatusPage() {
   const triggerFreshScoring = async () => {
     setFreshScoring(true);
     try {
-      const data = await apiGet('/api/scoring/ranked?fresh=true&limit=20');
+      const data = await apiGet('/api/scoring/ranked?fresh=true&protocol=xau-speed-v1&limit=10');
       setFreshScoreResult(data);
       scoringQ.refetch();
     } catch {
@@ -92,8 +98,27 @@ export default function MetaStackStatusPage() {
     scoringQ.refetch();
   };
 
-  const loading = providersQ.isLoading || scoringQ.isLoading;
-  const anyError = providersQ.isError || scoringQ.isError;
+  const [reloading, setReloading] = useState(false);
+  const [reloadMsg, setReloadMsg] = useState(null);
+
+  const reloadConfig = async () => {
+    setReloading(true);
+    setReloadMsg(null);
+    try {
+      const res = await apiPost('/api/system/reload-config');
+      setReloadMsg(`✅ ${res.reloaded?.join(', ')} reloaded (${res.ms}ms)`);
+      setTimeout(() => {
+        refreshAll();
+        setReloadMsg(null);
+      }, 1500);
+    } catch {
+      setReloadMsg('❌ Reload failed — check backend');
+    }
+    setReloading(false);
+  };
+
+  const loading = providersQ.isLoading && scoringQ.isLoading && !providersQ.data && !scoringQ.data;
+  const anyError = providersQ.isError && scoringQ.isError;
 
   // ── Derived data ──────────────────────────────────────
 
@@ -126,13 +151,13 @@ export default function MetaStackStatusPage() {
   const sellSignals = ranked.filter(r => r.signal === 'SELL');
   const symbolsWithScore = ranked.filter(r => r.score > 0).length;
 
-  // ── Loading state ─────────────────────────────────────
+  // ── Initial load (no cached data) ────────────────────
 
   if (loading) return (
     <div className="mss-page">
       <header className="mss-header">
         <h2>META.Stack Status</h2>
-        <p className="muted">Loading system capability assessment…</p>
+        <p className="muted">Connecting to API…</p>
       </header>
       <LoadingSkeleton variant="card" count={4} />
       <LoadingSkeleton variant="table" rows={6} cols={4} className="ls-spacer-top" />
@@ -152,7 +177,14 @@ export default function MetaStackStatusPage() {
           </p>
         </div>
         <button type="button" className="btn" onClick={refreshAll}>Refresh</button>
+        <button type="button" className="btn mss-reload-btn" onClick={reloadConfig} disabled={reloading}>
+          {reloading ? '⏳' : '🔄'} Reload Config
+        </button>
       </header>
+
+      {reloadMsg && (
+        <div className="mss-banner mss-banner--info">{reloadMsg}</div>
+      )}
 
       {anyError && (
         <div className="mss-banner mss-banner--warn">
@@ -314,6 +346,33 @@ export default function MetaStackStatusPage() {
                   ⏳ Threshold calibration — directives fire but composite stays at {priorityResult.score}. Investigate protocol gating weights or directive score contributions.
                 </div>
               </div>
+
+              {/* Directive Breakdown — from fresh scoring */}
+              {freshScoreResult?.ranked && (() => {
+                const freshXau = freshScoreResult.ranked.find(r => r.ticker === PRIORITY_SYMBOL);
+                if (!freshXau?.breakdown?.length) return null;
+                const top5 = [...freshXau.breakdown]
+                  .sort((a, b) => Math.abs(b.contribution || 0) - Math.abs(a.contribution || 0))
+                  .slice(0, 5);
+                return (
+                  <div className="mss-breakdown">
+                    <h4 className="mss-checklist-title">Top Directive Contributions</h4>
+                    {top5.map(d => (
+                      <div key={d.name} className="mss-breakdown-row">
+                        <span className={`mss-breakdown-sig mss-sig--${d.signalClass || 'neutral'}`}>
+                          {d.signalClass === 'bullish' ? '▲' : d.signalClass === 'bearish' ? '▼' : '─'}
+                        </span>
+                        <span className="mss-breakdown-name">{d.name}</span>
+                        <span className="mss-breakdown-score">{d.score}/{d.maxScore}</span>
+                        <span className="mss-breakdown-contrib" style={{ color: (d.contribution || 0) >= 0 ? 'var(--riskNormal)' : 'var(--riskHigh)' }}>
+                          {d.contribution >= 0 ? '+' : ''}{d.contribution}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="mss-breakdown-reason">{top5[0]?.reason}</div>
+                  </div>
+                );
+              })()}
             </div>
           ) : (
             <div className="mss-empty">

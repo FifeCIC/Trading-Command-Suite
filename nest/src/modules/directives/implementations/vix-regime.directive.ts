@@ -23,6 +23,7 @@ export class VixRegimeDirective implements IDirective {
   readonly maxScore = 100;
   readonly minBars = { '1d': 20 };
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const vix = (input as any).vixValue as number | undefined;

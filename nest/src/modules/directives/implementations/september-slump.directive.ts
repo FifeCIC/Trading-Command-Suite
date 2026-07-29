@@ -14,6 +14,7 @@ export class SeptemberSlumpDirective implements IDirective {
   readonly maxScore = 20;
   readonly minBars = { '1d': 1 };
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const now = new Date();

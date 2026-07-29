@@ -6,8 +6,10 @@
  *
  * Route: /trading/strategy-library
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '../core/api/client';
 import { STRATEGY_LIBRARY } from '../data/strategy-library';
 import './strategy-library.css';
 
@@ -31,11 +33,34 @@ const STATUS_COLORS = {
   live: '#22c55e',
 };
 
+const READINESS_STYLES = {
+  ready:  { color: '#22c55e', bg: '#22c55e18', label: 'READY', title: 'Verified against live data' },
+  bravo:  { color: '#f59e0b', bg: '#f59e0b18', label: 'BRAVO', title: 'Real math, proxy/limited data' },
+  alpha:  { color: '#ef4444', bg: '#ef444418', label: 'ALPHA', title: 'Mock, stub, or placeholder' },
+};
+
 export default function StrategyLibraryPage() {
   const navigate = useNavigate();
   const [expandedId, setExpandedId] = useState(null);
 
   const toggle = (id) => setExpandedId((prev) => (prev === id ? null : id));
+
+  // Fetch directive readiness from API for per-directive badges
+  const directivesQuery = useQuery({
+    queryKey: ['directives'],
+    queryFn: () => apiGet('/api/directives'),
+    staleTime: 60_000,
+  });
+
+  const readinessMap = useMemo(() => {
+    const map = {};
+    if (directivesQuery.data) {
+      for (const d of directivesQuery.data) {
+        map[d.id] = d.readiness || 'alpha';
+      }
+    }
+    return map;
+  }, [directivesQuery.data]);
 
   return (
     <div className="sl-page">
@@ -139,7 +164,10 @@ export default function StrategyLibraryPage() {
                       These TCS directives support this strategy. Click any directive to inspect or test it.
                     </p>
                     <div className="sl-directive-grid">
-                      {strategy.directiveMappings.map((dm) => (
+                      {strategy.directiveMappings.map((dm) => {
+                        const readiness = readinessMap[dm.directiveId] || 'alpha';
+                        const rs = READINESS_STYLES[readiness] || READINESS_STYLES.alpha;
+                        return (
                         <button
                           key={dm.directiveId}
                           className="sl-directive-chip"
@@ -148,8 +176,26 @@ export default function StrategyLibraryPage() {
                           <span className="sl-directive-id">{dm.directiveId}</span>
                           <span className="sl-directive-role">{dm.role}</span>
                           <span className="sl-directive-note">{dm.note}</span>
+                          <span
+                            className="sl-readiness-badge"
+                            style={{
+                              color: rs.color,
+                              background: rs.bg,
+                              border: `1px solid ${rs.color}40`,
+                              padding: '1px 6px',
+                              borderRadius: '3px',
+                              fontSize: '0.65rem',
+                              fontWeight: 700,
+                              marginLeft: 'auto',
+                              flexShrink: 0,
+                            }}
+                            title={rs.title}
+                          >
+                            {rs.label}
+                          </span>
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
                   </section>
 

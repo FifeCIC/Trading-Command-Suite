@@ -24,6 +24,12 @@ const COMPLEXITY_COLORS = {
   'Expert':   '#8b5cf6',
 };
 
+const READINESS_COLORS = {
+  'ready':  { color: '#22c55e', bg: '#22c55e18', label: 'READY' },
+  'bravo':  { color: '#f59e0b', bg: '#f59e0b18', label: 'BRAVO' },
+  'alpha':  { color: '#ef4444', bg: '#ef444418', label: 'ALPHA' },
+};
+
 /** Map API directive shape into the manager's expected fields. */
 function hydrateFromApi(raw) {
   return {
@@ -54,6 +60,7 @@ function hydrateFromApi(raw) {
     bias: raw.bias ?? null,
     classification: raw.classification ?? 'unknown',
     performance: raw.performance ?? 'unknown',
+    readiness: raw.readiness ?? 'alpha',
   }
 }
 
@@ -196,6 +203,15 @@ export default function DirectivesManagerPage() {
           <span><strong>{allDirectives.length}</strong> total</span>
           <span className="directives-stat-dot stat-active" />
           <span><strong>{allDirectives.filter((item) => item.active).length}</strong> active</span>
+          <span style={{ marginLeft: '0.5rem', color: '#22c55e', fontSize: '0.78rem' }}>
+            🟢 {allDirectives.filter((i) => i.readiness === 'ready').length}
+          </span>
+          <span style={{ color: '#f59e0b', fontSize: '0.78rem' }}>
+            🟡 {allDirectives.filter((i) => i.readiness === 'bravo').length}
+          </span>
+          <span style={{ color: '#ef4444', fontSize: '0.78rem' }}>
+            🔴 {allDirectives.filter((i) => i.readiness === 'alpha').length}
+          </span>
         </div>
       </section>
 
@@ -208,6 +224,7 @@ export default function DirectivesManagerPage() {
                 <th>Category</th>
                 <th>Status</th>
                 <th>Class</th>
+                <th>Readiness</th>
                 <th>Complexity</th>
                 <th>RUNS</th>
                 <th>BIAS</th>
@@ -262,6 +279,19 @@ export default function DirectivesManagerPage() {
                         ) : (
                           <span style={{ color: '#64748b', fontSize: '0.72rem' }} title="Not yet scored">—</span>
                         )}
+                      </td>
+                      <td>
+                        {(() => {
+                          const r = READINESS_COLORS[item.readiness] || READINESS_COLORS.alpha;
+                          return (
+                            <span
+                              style={{ color: r.color, background: r.bg, padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, border: `1px solid ${r.color}40` }}
+                              title={item.readiness === 'ready' ? 'Verified against live data' : item.readiness === 'bravo' ? 'Real math, proxy/limited data' : 'Mock, stub, or placeholder'}
+                            >
+                              {r.label}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td style={{ color: COMPLEXITY_COLORS[item.complexity] || '#94a3b8' }}>
                         <span style={{ border: `1px solid ${COMPLEXITY_COLORS[item.complexity] || '#94a3b8'}`, padding: '2px 8px', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 600 }}>

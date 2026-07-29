@@ -6,6 +6,64 @@
 .mse-header h1 { margin: 0 0 0.15rem; font-size: 1.2rem; }
 .mse-subtitle { color: var(--ink-soft); font-size: 0.8rem; margin: 0; }
 .mse-header-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+
+/* Strategy banner — sticky so it stays visible while scrolling the pipeline */
+.mse-strategy-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  background: var(--panel);
+  border: 1px solid rgba(14,165,166,0.25);
+  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
+  margin-bottom: 1rem;
+  font-size: 0.82rem;
+  position: sticky;
+  top: 4px;
+  z-index: 50;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+}
+.mse-strategy-banner--empty {
+  background: rgba(148,163,184,0.04);
+  border-color: var(--line);
+}
+.mse-strategy-banner-icon { font-size: 1rem; flex-shrink: 0; }
+.mse-strategy-banner-name {
+  font-weight: 700;
+  color: var(--ink);
+}
+.mse-strategy-banner-meta {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+.mse-strategy-banner-protocol {
+  background: rgba(14,165,166,0.12);
+  color: var(--accent);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.73rem;
+  font-weight: 600;
+}
+.mse-strategy-banner-threshold {
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  font-family: 'SF Mono', 'Cascadia Code', monospace;
+}
+.mse-strategy-banner-change {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, color 0.15s;
+}
+.mse-strategy-banner-change:hover { border-color: var(--accent); color: var(--accent); }
 .mse-progress { font-size: 0.78rem; color: var(--ink-soft); font-weight: 600; font-variant-numeric: tabular-nums; }
 .mse-action-btn {
   padding: 0.3rem 0.7rem; border: 1px solid var(--line); border-radius: 6px;

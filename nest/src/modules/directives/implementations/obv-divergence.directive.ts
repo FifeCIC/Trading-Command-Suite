@@ -46,6 +46,7 @@ export class ObvDivergenceDirective implements IDirective {
   readonly maxScore = 120;
   readonly minBars = { '1d': 20 };
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map((b) => b.close);

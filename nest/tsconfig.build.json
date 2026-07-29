@@ -1,4 +1,4 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "e2e", "prisma", "**/*spec.ts", "src/modules/providers/adapters/capital-com.adapter.ts"]
+  "exclude": ["node_modules", "test", "dist", "e2e", "prisma", "**/*spec.ts"]
 }

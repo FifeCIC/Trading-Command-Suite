@@ -34,6 +34,8 @@ export class CryptoFearGreedDirective implements IDirective {
   readonly maxScore = 60;
   readonly minBars = { '1d': 1 };
   readonly version = '2.0.0';
+  readonly requiredDataFeeds = ['fear-greed'];
+  readonly readiness = 'ready' as const;
 
   private readonly logger = new Logger(CryptoFearGreedDirective.name);
   private cache: FngCache | null = null;

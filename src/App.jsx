@@ -838,15 +838,6 @@ function AppShell() {
       )}
       <aside className={`left-rail${mobileNavOpen ? ' left-rail--open' : ''}`} aria-label="Section navigation">
         <div className="left-rail-header">
-          <button
-            type="button"
-            className="rail-collapse-toggle"
-            onClick={() => setLeftCollapsed(v => !v)}
-            title={leftCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-label={leftCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {leftCollapsed ? '▸' : '◂'}
-          </button>
           <h2>{NAV_TREE[primaryArea]?.label || primaryArea}</h2>
           <button
             type="button"

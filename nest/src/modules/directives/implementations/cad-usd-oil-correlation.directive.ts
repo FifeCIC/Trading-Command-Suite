@@ -45,6 +45,8 @@ export class CadUsdOilCorrelationDirective implements IDirective {
   readonly maxScore = 100;
   readonly minBars = { '1d': 20 };
   readonly version = '1.0.0';
+  readonly requiredDataFeeds = ['oil'];
+  readonly readiness = 'bravo' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     let dxy = (input as any).dxyValue as number | undefined;

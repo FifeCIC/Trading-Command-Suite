@@ -40,6 +40,7 @@ export class DilutionImpactDirective implements IDirective {
   readonly maxScore = 60;
   readonly minBars = { '1d': 1 }; // Risk penalty — lower ceiling
   readonly version = '1.2.0';
+  readonly readiness = 'ready' as const;
 
   constructor(
     private readonly prisma: PrismaService,

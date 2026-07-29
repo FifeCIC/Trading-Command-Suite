@@ -39,6 +39,7 @@ export class SessionTimingFilterDirective implements IDirective {
   readonly maxScore = 120;
   readonly minBars = { '1d': 1 }; // PROVEN filter — session timing > regime > HTF alignment
   readonly version = '1.1.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

@@ -81,6 +81,7 @@ export class MtfConfluenceConservativeDirective implements IDirective {
   readonly maxScore = 115;
   readonly minBars = { '1d': 200, '1h': 50, '15m': 30 };
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { dayBars, hourBars, min15Bars, bars } = input;
@@ -124,6 +125,7 @@ export class MtfConfluenceWeightedDirective implements IDirective {
   readonly priority = 80;
   readonly maxScore = 110;
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { dayBars, hourBars, min15Bars, bars } = input;

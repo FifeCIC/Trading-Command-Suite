@@ -20,11 +20,13 @@ export default function AccountsDashboardPage() {
         apiGet('/api/providers/mt5/accounts'),
         apiGet('/api/portfolio/summary'),
         apiGet('/api/isa/dashboard'),
+        apiGet('/api/providers/capital.com/account').catch(() => null),
       ]);
 
       const mt5Raw = results[0].status === 'fulfilled' ? results[0].value : null;
       const t212Raw = results[1].status === 'fulfilled' ? results[1].value : null;
       const isaRaw = results[2].status === 'fulfilled' ? results[2].value : null;
+      const capitalRaw = results[3].status === 'fulfilled' ? results[3].value : null;
 
       const errors = [];
       if (results[0].status === 'rejected') errors.push('MT5 bridge offline');
@@ -35,7 +37,7 @@ export default function AccountsDashboardPage() {
       const mt5Data = Array.isArray(mt5Raw) ? mt5Raw : mt5Accounts;
       const t212Data = t212Raw ?? {};
 
-      setData({ mt5: mt5Data, t212: t212Data, isa: isaRaw, errors });
+      setData({ mt5: mt5Data, t212: t212Data, isa: isaRaw, capital: capitalRaw, errors });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -197,9 +199,26 @@ export default function AccountsDashboardPage() {
               </div>
               )}
 
-              {liveMT5.length === 0 && t212Account.total == null && (
+              {liveMT5.length === 0 && t212Account.total == null && !data?.capital && (
                 <EmptyState icon="💼" title="No live accounts connected" description="Start MT5 bridge or configure Trading212 credentials." />
               )}
+
+              {/* Capital.com */}
+              <div className={`ad-card ${data?.capital?.connected !== false ? 'ad-card--live' : 'ad-card--demo'}`}>
+                <div className="ad-card-header">
+                  <span className="ad-provider">Capital.com</span>
+                  <span className="ad-status-dot">{data?.capital?.connected ? '🟢' : data?.capital ? '🟡' : '🔴'}</span>
+                </div>
+                <div className="ad-card-body">
+                  <span className="ad-card-name">{data?.capital?.brokerName || 'CFD Account'}</span>
+                  <span className="ad-card-balance">{formatCurrency(data?.capital?.balance, data?.capital?.currency || 'GBP')}</span>
+                  {data?.capital?.currency && <span className="ad-card-currency">{data.capital.currency}</span>}
+                </div>
+                <div className="ad-card-footer">
+                  <span className="ad-card-type">{data?.capital?.mode || 'demo'}</span>
+                  {data?.capital?.marginLevel != null && <span className="ad-card-server">Margin: {data.capital.marginLevel.toFixed(1)}%</span>}
+                </div>
+              </div>
             </div>
           </section>
 

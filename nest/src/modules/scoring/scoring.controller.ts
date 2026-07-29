@@ -50,6 +50,7 @@ export class ScoringController {
     @Query('strategy_id') strategyId?: string,
     @Query('limit') limit?: string,
     @Query('fresh') fresh?: string,
+    @Query('protocol') protocol?: string,
   ) {
     const parsedLimit = Number(limit ?? 20);
     const safeLimit = Number.isFinite(parsedLimit)
@@ -58,7 +59,7 @@ export class ScoringController {
 
     // ?fresh=true → run the full pipeline (speed trading, testing, on-demand)
     if (fresh === 'true') {
-      return this.scoringService.rankAll(strategyId, safeLimit);
+      return this.scoringService.rankAll(strategyId, safeLimit, undefined, protocol);
     }
 
     // Default: read pre-computed scores from DB

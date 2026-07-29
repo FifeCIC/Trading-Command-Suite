@@ -264,10 +264,25 @@ export const CURRENT_SLICE = [
   'AI Cost Tracking — GET /api/ai/usage?period=today|week|month and /api/ai/usage/breakdown endpoints deployed. Raw SQL queries against ai_api_call MySQL table with zero-data fallback (returns {totalCost:0,totalCalls:0,totalTokens:0}). DeepSeekService not yet wired to logCall() — partial completion.',
   'Bundle Optimization — uplot npm dependency dropped (was only consumed by dead UPlotChart.jsx). Mermaid converted from static import (~1MB in main bundle) to dynamic import() inside DiagramsPage useEffect — code-split out. Runtime dependencies: 11 (was 12). lightweight-charts is sole charting library.',
   'SpeedChart Unification — CandlestickChart.jsx deleted and merged into SpeedChart.jsx. SpeedChart now supports external data mode (ticks + containerRef + intervalMs + maxBars). Added bucketTicks() utility. Single chart component for real-time and historical OHLCV.',
+  'Config Hot-Reload — POST /api/system/reload-config reloads directive metadata and protocol caches from DB in ~20ms. No restart needed for toggling directives, updating weights, or changing protocol status. Reuses Epic #510 loadDirectiveMetadata() + ProtocolDbService.preloadAll(). Frontend button on META.Stack Status page.',
+  // ── 2026-07-29 — Readiness Tiers, Scoring Layers, Weekend Risk, IBKR ──
+  'Readiness Tier System — Every directive declares readiness: 87 READY, 10 BRAVO, 7 ALPHA. Added to IDirective interface, all 104 directives classified, Prisma schema updated with readiness column, DB seeded. Weakest-link rule: a protocol is only as ready as its least-ready directive. ALPHA excludes from composite, BRAVO contributes at reduced confidence. Full audit at docs/directive-readiness-audit.md.',
+  'ALPHA Exclusion from Scoring — ProtocolGatingService.scoreWithGating() skips directives where readiness === alpha. Alpha directives still appear in breakdown with "excluded — not ready" flag. Composite only reflects READY+BRAVO directives. Readiness breakdown added to meta: { ready, bravo, alpha, alphaExcluded }. xau-speed-v1 verified: 17 ready + 7 bravo, 0 alpha excluded.',
+  'Hybrid Base+Bonus Scoring (Layer C) — Proposed scoring architecture where directives produce BASE (continuous) + BONUS (threshold-gated) scores. Creates ladder separation between symbols. Uncapped maxScores, tunable per protocol. See docs/sees-hybrid-scoring.md and #518.',
+  'Capability Contracts (Layer B) — Strategies refuse activation when data requirements cannot be met. PENDING state for "waiting for data," BLOCKED for "can never work." /api/market-data/capabilities endpoint enhanced with timeframes array. See #517.',
+  'Swap Cost Calculator (#33) — SwapCostService with triple-swap Wednesday detection, weekend projection, swap-to-P&L ratio. GET /api/trading/swap-forecast and /api/trading/swap-rates. Computes from MT5 bridge symbol info (swapLong/swapShort/swapMode).',
+  'Weekend Gap Risk Service (#34) — WeekendGapRiskService mines MarketBar 1d data for Friday→Monday gaps. 42 XAUUSD gaps analyzed: mean -0.08%, max adverse -2.47%. GET /api/risk/weekend-gap-stats and /api/risk/weekend-exposure project dollar risk per position.',
+  'Weekend Defense Checklist (#35) — WeekendDefenseService aggregates swap + gap risk into per-position HOLD/REDUCE/CLOSE recommendations. GET /api/trading/weekend-checklist. Close if swap exceeds 50% of profit or gap risk >10%. Dependencies #33 and #34 met.',
+  'Interactive Brokers Mock Adapter (#8) — Full IProviderAdapter implementation with mock OHLCV, quotes, positions (50 AAPL), $100K account. Env-gated via IBKR_MODE. Registered at failoverPriority 10. 10th provider in health dashboard.',
+  'Score Momentum Indicator Proposal (#519) — Phase 5 experimental: rate score velocity (Δscore/Δt), acceleration, volatility, and directive-level drift from ScoreHistoryService data. 5 output signals: Surge, Collapse, Fading Momentum, Indecision, Conviction.',
+  'Phase Restructuring — All 80 open issues reclassified into new 5-phase system: Phase 1 (11 core engineering), Phase 2 (13 beta polish), Phase 3 (34 signals & trading), Phase 4 (19 public release), Phase 5 (3 experimental). Label descriptions updated. Old phase-2/3 issues bulk-migrated.',
+  'Readiness UI — DirectivesManagerPage shows readiness column with color badges (green=ready, yellow=bravo, red=alpha). Toolbar shows summary counts. Each badge has hover tooltip explaining the tier.',
+  'Prep Issues #520-#524 Completed — Directive audit (87/10/7 classification), readiness field added to all 104 directives, seed_nature.sql fixed, ALPHA exclusion from composite, capabilities endpoint enhanced with timeframes.',
+  'NestJS Build — 100% clean. Zero TypeScript errors, zero tsconfig excludes. All 104 directives + 10 provider adapters compile without issues.',
 ]
 
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-28 (handoff batch #4 — Epic #510, Capital.com, Strategy Library, cleanup)'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-29 (handoff batch #5 — readiness tiers, scoring layers, swap/gap/defense, IBKR, phase restructure)'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -932,6 +947,14 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Automation loop (internal)',
     owner: 'PositionSyncService',
     contract: 'Broker-agnostic position sync. Accepts provider ID + positions array. Upserts into Position table by symbol+provider. Links Trade records by brokerTicket. Detects closed positions → finalizes Trade records. Called by automation loop on every tick.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/system/reload-config',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'ConfigReloadController',
+    contract: 'Hot-reloads directive metadata and protocol caches from DB without restart. Returns {success, reloaded: ["directives","protocols"], ms, warnings}. For toggling directives, updating weights, or changing protocol status. New directive classes or schema changes still need restart.',
     status: 'active',
   },
 ]

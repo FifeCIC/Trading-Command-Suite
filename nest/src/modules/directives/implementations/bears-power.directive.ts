@@ -12,6 +12,7 @@ export class BearsPowerDirective implements IDirective {
   readonly maxScore = 100;
   readonly minBars = { '1d': 16 };
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const lows = input.bars.map((b) => b.low);

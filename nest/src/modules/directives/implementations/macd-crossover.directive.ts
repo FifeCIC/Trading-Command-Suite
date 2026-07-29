@@ -28,6 +28,7 @@ export class MacdCrossoverDirective implements IDirective {
   readonly maxScore = 110;
   readonly minBars = { '1d': 36 };
   readonly version = '1.0.0';
+  readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map((b) => b.close);

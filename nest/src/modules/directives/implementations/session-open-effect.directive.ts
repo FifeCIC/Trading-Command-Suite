@@ -49,6 +49,7 @@ export class SessionOpenEffectDirective implements IDirective {
   readonly maxScore = 110;
   readonly minBars = { '1d': 30 }; // Directional bias at session opens — high signal value
   readonly version = '1.1.0';
+  readonly readiness = 'ready' as const;
 
   readonly suitability = {
     regimeType: 'any' as const,

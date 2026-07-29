@@ -17,6 +17,7 @@ import { TwelveDataAdapter } from './adapters/twelve-data.adapter';
 import { FmpAdapter } from './adapters/fmp.adapter';
 import { BinanceAdapter } from './adapters/binance.adapter';
 import { CapitalComAdapter } from './adapters/capital-com.adapter';
+import { InteractiveBrokersAdapter } from './adapters/interactive-brokers.adapter';
 import { CryptoProviderRouter } from './crypto-provider-router.service';
 import { RateLimitGovernor } from './rate-limit-governor.service';
 import { ProviderDegradationService } from './provider-degradation.service';
@@ -49,10 +50,11 @@ import { PositionSyncService } from './position-sync.service';
     FmpAdapter,
     BinanceAdapter,
     CapitalComAdapter,
+    InteractiveBrokersAdapter,
     ProviderCacheService,
     PositionSyncService,
   ],
-  exports: [ProvidersService, AdapterFactory, FinnhubAdapter, FmpAdapter, Mt5Adapter, AlphaVantageAdapter, RateLimitGovernor, ProviderDegradationService, CryptoProviderRouter, BinanceAdapter, CapitalComAdapter, Mt5ConnectionManager, BridgeEventService, ProviderCacheService, PositionSyncService],
+  exports: [ProvidersService, AdapterFactory, FinnhubAdapter, FmpAdapter, Mt5Adapter, AlphaVantageAdapter, RateLimitGovernor, ProviderDegradationService, CryptoProviderRouter, BinanceAdapter, CapitalComAdapter, InteractiveBrokersAdapter, Mt5ConnectionManager, BridgeEventService, ProviderCacheService, PositionSyncService],
 })
 export class ProvidersModule implements OnModuleInit {
   constructor(
@@ -137,6 +139,14 @@ export class ProvidersModule implements OnModuleInit {
       baseUrl: process.env.CAPITAL_COM_BASE_URL || 'https://demo-api-capital.backend-capital.com',
       capabilities: ['quotes', 'candles', 'trades'],
       failoverPriority: 25,
+    });
+
+    this.adapterFactory.register('interactive-brokers', InteractiveBrokersAdapter, {
+      name: 'Interactive Brokers',
+      apiKeyEnv: 'IBKR_MODE',
+      baseUrl: 'http://localhost:4001',
+      capabilities: ['quotes', 'candles', 'profiles'],
+      failoverPriority: 10,
     });
   }
 }
