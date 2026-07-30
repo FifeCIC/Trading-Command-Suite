@@ -35,6 +35,12 @@ function stubResult(directiveId: string, phpFile?: string): DirectiveResult {
   };
 }
 
+function mapRange(v: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
+  const t = Math.max(0, Math.min(1, (v - inMin) / (inMax - inMin)));
+  return outMin + t * (outMax - outMin);
+}
+
+
 // ===========================================================================
 // Momentum
 // ===========================================================================
@@ -47,7 +53,7 @@ export class StochasticDirective implements IDirective {
   readonly priority = 74;
   readonly maxScore = 100;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { highs, lows, closes } = this.extract(input);
@@ -75,7 +81,7 @@ export class CciDirective implements IDirective {
   readonly priority = 72;
   readonly maxScore = 100;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { highs, lows, closes } = this.extract(input);
@@ -101,7 +107,7 @@ export class MfiDirective implements IDirective {
   readonly priority = 73;
   readonly maxScore = 100;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { highs, lows, closes, volumes } = this.extract(input);
@@ -126,7 +132,7 @@ export class AdxDirective implements IDirective {
   readonly priority = 76;
   readonly maxScore = 110;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { highs, lows, closes } = this.extract(input);
@@ -152,7 +158,7 @@ export class RsiOverboughtDirective implements IDirective {
   readonly priority = 78;
   readonly maxScore = 100;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -177,7 +183,7 @@ export class MomentumContinuationComboDirective implements IDirective {
   readonly priority = 74;
   readonly maxScore = 110;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -227,25 +233,46 @@ export class MovingAveragesDirective implements IDirective {
   readonly priority = 72;
   readonly maxScore = 100;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const closes = input.bars.map(b => b.close);
-    if (closes.length < 200) return { score: Math.round(20 * closes.length / 200), confidence: 0.15, reason: `Only ${closes.length} bars (need 200 for full alignment check)`, signalClass: 'neutral' };
-    const ema20 = ema(closes, 20);
-    const ema50 = ema(closes, 50);
-    const ema200 = ema(closes, 200);
-    const e20 = ema20[ema20.length - 1];
-    const e50 = ema50[ema50.length - 1];
-    const e200 = ema200[ema200.length - 1];
-    const lastPrice = closes[closes.length - 1];
-    const fullBullish = lastPrice > e20 && e20 > e50 && e50 > e200;
-    const fullBearish = lastPrice < e20 && e20 < e50 && e50 < e200;
-    if (fullBullish) return { score: 90, confidence: 0.7, reason: `Full bullish alignment: Price(${lastPrice.toFixed(2)}) > EMA20(${e20.toFixed(2)}) > EMA50(${e50.toFixed(2)}) > EMA200(${e200.toFixed(2)})`, signalClass: 'bullish' };
-    if (fullBearish) return { score: 85, confidence: 0.65, reason: `Full bearish alignment: Price < EMA20 < EMA50 < EMA200`, signalClass: 'bearish' };
-    const bullCount = (lastPrice > e20 ? 1 : 0) + (e20 > e50 ? 1 : 0) + (e50 > e200 ? 1 : 0);
-    const bearCount = 3 - bullCount;
-    return { score: bullCount > bearCount ? 50 + bullCount * 10 : 30 + bearCount * 10, confidence: 0.35, reason: `Partial alignment: ${bullCount}/3 bullish, ${bearCount}/3 bearish`, signalClass: bullCount > bearCount ? 'bullish' : 'bearish' };
+    if (closes.length < 20) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 20+ bars, have ${closes.length}` };
+
+    const sma20 = sma(closes, 20);
+    const sma50 = closes.length >= 50 ? sma(closes, 50) : sma20;
+    const sma200 = closes.length >= 200 ? sma(closes, 200) : (closes.length >= 50 ? sma50 : sma20);
+    const lastClose = closes[closes.length - 1];
+
+    // BASE (15-85): trend strength from price position relative to SMAs
+    const dist20 = sma20 > 0 ? ((lastClose - sma20) / sma20) * 100 : 0;
+    const dist50 = sma50 > 0 ? ((lastClose - sma50) / sma50) * 100 : dist20;
+    const avgDist = (dist20 + dist50) / 2;
+    const baseScore = Math.round(mapRange(avgDist, -5, 5, 15, 85));
+
+    // BONUS: full bullish/bearish alignment
+    let bonusScore = 0;
+    let bonusLabel = '';
+    const fullBullish = lastClose > sma20 && sma20 > sma50 && sma50 > sma200;
+    const fullBearish = lastClose < sma20 && sma20 < sma50 && sma50 < sma200;
+    if (fullBullish) { bonusScore = 15; bonusLabel = 'full bullish alignment'; }
+    else if (fullBearish) { bonusScore = 15; bonusLabel = 'full bearish alignment'; }
+    else {
+      const bullCount = (lastClose > sma20 ? 1 : 0) + (sma20 > sma50 ? 1 : 0) + (sma50 > sma200 ? 1 : 0);
+      if (bullCount >= 2) { bonusScore = 8; bonusLabel = 'partial bullish (2/3)'; }
+    }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = avgDist > 1 ? 'bullish' : avgDist < -1 ? 'bearish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.25 + Math.abs(avgDist) * 0.08).toFixed(2)),
+      reason: `MA alignment: price ${avgDist.toFixed(1)}% vs SMAs, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, avgDist, sma20, sma50, sma200 },
+    };
+
   }
 }
 
@@ -257,7 +284,7 @@ export class MaCrossoverDirective implements IDirective {
   readonly priority = 73;
   readonly maxScore = 95;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -287,7 +314,7 @@ export class PriceAboveSma50Directive implements IDirective {
   readonly priority = 68;
   readonly maxScore = 90;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -321,7 +348,7 @@ export class BollingerBandSqueezeDirective implements IDirective {
   readonly priority = 70;
   readonly maxScore = 100;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -355,22 +382,42 @@ export class VolatilityToolsDirective implements IDirective {
   readonly priority = 66;
   readonly maxScore = 90;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
-    const { highs, lows, closes } = this.extract(input);
-    if (closes.length < 20) return { score: 0, confidence: 0.1, reason: `Need 20+ bars, have ${closes.length}`, signalClass: 'neutral' };
+
+    const highs = input.bars.map(b => b.high);
+    const lows = input.bars.map(b => b.low);
+    const closes = input.bars.map(b => b.close);
+    if (closes.length < 20) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 20+ bars, have ${closes.length}` };
+
     const atrVals = atr(highs, lows, closes, 14);
-    if (!atrVals.length) return { score: 0, confidence: 0.1, reason: 'ATR calculation failed', signalClass: 'neutral' };
+    if (!atrVals.length) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'ATR calculation failed' };
     const currentAtr = atrVals[atrVals.length - 1];
     const lastClose = closes[closes.length - 1];
     const atrPct = (currentAtr / lastClose) * 100;
-    const avgAtr = atrVals.slice(-10).reduce((a, b) => a + b, 0) / 10;
-    const atrRatio = avgAtr > 0 ? currentAtr / avgAtr : 1;
-    // Higher vol = higher risk, neutral-bearish for conservative strategies
-    if (atrPct > 3) return { score: 70, confidence: 0.55, reason: `Very high volatility: ATR=${atrPct.toFixed(2)}% (${atrRatio.toFixed(1)}x avg)`, signalClass: 'neutral' };
-    if (atrPct > 1.5) return { score: 45, confidence: 0.4, reason: `Elevated volatility: ATR=${atrPct.toFixed(2)}%`, signalClass: 'neutral' };
-    return { score: 20, confidence: 0.35, reason: `Normal volatility: ATR=${atrPct.toFixed(2)}%`, signalClass: 'neutral' };
+
+    // BASE (15-70): ATR percentile in recent range
+    const sortedAtr = [...atrVals.slice(-20)].sort((a, b) => a - b);
+    const rank = sortedAtr.findIndex(v => v >= currentAtr);
+    const percentile = rank >= 0 ? (rank / sortedAtr.length) * 100 : 50;
+    const baseScore = Math.round(mapRange(percentile, 0, 100, 15, 70));
+
+    // BONUS: extreme ATR
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (atrPct > 3) { bonusScore = 20; bonusLabel = 'extreme volatility (ATR>3%)'; }
+    else if (atrPct > 1.5) { bonusScore = 10; bonusLabel = 'elevated volatility'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    return {
+      signalClass: atrPct > 2 ? 'neutral' : 'bullish',
+      score: total,
+      confidence: Number((0.3 + Math.min(0.3, atrPct * 0.08)).toFixed(2)),
+      reason: `Vol: ATR=${atrPct.toFixed(2)}% (p${percentile.toFixed(0)}), base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, atrPct, percentile },
+    };
+
   }
   private extract(input: DirectiveInput) { const bars = input.bars; return { highs: bars.map(b => b.high), lows: bars.map(b => b.low), closes: bars.map(b => b.close) }; }
 }
@@ -387,7 +434,7 @@ export class ObvDirective implements IDirective {
   readonly priority = 68;
   readonly maxScore = 95;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -418,7 +465,7 @@ export class VolumeSurgeDirective implements IDirective {
   readonly priority = 69;
   readonly maxScore = 90;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -444,7 +491,7 @@ export class VolumeRhythmDirective implements IDirective {
   readonly priority = 55;
   readonly maxScore = 70;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -477,7 +524,7 @@ export class DojiPatternDirective implements IDirective {
   readonly priority = 67;
   readonly maxScore = 95;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -515,7 +562,7 @@ export class HammerPatternDirective implements IDirective {
   readonly priority = 68;
   readonly maxScore = 95;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -560,7 +607,7 @@ export class EngulfingPatternDirective implements IDirective {
   readonly priority = 69;
   readonly maxScore = 100;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -596,35 +643,50 @@ export class PinBarPatternDirective implements IDirective {
   readonly priority = 66;
   readonly maxScore = 90;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const bars = input.bars;
-    if (bars.length < 10) return { score: 0, confidence: 0.1, reason: `Need 10+ bars, have ${bars.length}`, signalClass: 'neutral' };
+    if (bars.length < 10) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 10+ bars, have ${bars.length}` };
+
     const last = bars[bars.length - 1];
     const body = Math.abs(last.close - last.open);
     const range = last.high - last.low;
-    if (range <= 0) return { score: 0, confidence: 0.1, reason: 'Zero-range bar', signalClass: 'neutral' };
+    if (range <= 0) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'Zero-range bar' };
     const upperWick = last.high - Math.max(last.open, last.close);
     const lowerWick = Math.min(last.open, last.close) - last.low;
-    const bodyRatio = body / range;
-    // Pin bar: one wick >= 3x body, opposite wick small, body small
-    const isBullishPin = lowerWick >= body * 3 && upperWick < body * 0.5 && bodyRatio < 0.3 && last.close > last.open;
-    const isBearishPin = upperWick >= body * 3 && lowerWick < body * 0.5 && bodyRatio < 0.3 && last.close < last.open;
-    // Check context: where is this pin relative to recent range?
+    const maxWick = Math.max(upperWick, lowerWick);
+    const wickBodyRatio = body > 0 ? maxWick / body : 10;
+
+    // BASE (15-60): wick-to-body ratio
+    const baseScore = Math.round(mapRange(wickBodyRatio, 1, 5, 15, 60));
+
+    // BONUS: extreme ratios + context
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (wickBodyRatio >= 5) { bonusScore = 20; bonusLabel = 'extreme wick ratio (' + wickBodyRatio.toFixed(1) + 'x)'; }
+    else if (wickBodyRatio >= 3) { bonusScore = 10; bonusLabel = 'strong pin bar'; }
+
+    // Context bonus: at new extreme
     const recentHighs = bars.slice(-10, -1).map(b => b.high);
     const recentLows = bars.slice(-10, -1).map(b => b.low);
     const avgHigh = recentHighs.reduce((a, b) => a + b, 0) / recentHighs.length;
     const avgLow = recentLows.reduce((a, b) => a + b, 0) / recentLows.length;
-    if (isBullishPin && last.low < avgLow) {
-      return { score: 80, confidence: 0.55, reason: `Bullish pin bar at new low: rejecting ${last.low.toFixed(2)}`, signalClass: 'bullish' };
-    }
-    if (isBearishPin && last.high > avgHigh) {
-      return { score: 75, confidence: 0.5, reason: `Bearish pin bar at new high: rejecting ${last.high.toFixed(2)}`, signalClass: 'bearish' };
-    }
-    if (isBullishPin) return { score: 45, confidence: 0.35, reason: 'Bullish pin bar (mid-range)', signalClass: 'bullish' };
-    if (isBearishPin) return { score: 40, confidence: 0.3, reason: 'Bearish pin bar (mid-range)', signalClass: 'bearish' };
-    return { score: 5, confidence: 0.25, reason: 'No pin bar pattern', signalClass: 'neutral' };
+    if (lowerWick > upperWick && last.low < avgLow) { bonusScore += 10; bonusLabel += (bonusLabel ? ' + ' : '') + 'at new low'; }
+    if (upperWick > lowerWick && last.high > avgHigh) { bonusScore += 10; bonusLabel += (bonusLabel ? ' + ' : '') + 'at new high'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const isBullish = lowerWick > upperWick && last.close > last.open;
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = isBullish ? 'bullish' : (!isBullish && maxWick > body * 2) ? 'bearish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.25 + Math.min(0.35, wickBodyRatio * 0.06)).toFixed(2)),
+      reason: `Pin bar: wick/body=${wickBodyRatio.toFixed(1)}x, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, wickBodyRatio, upperWick, lowerWick },
+    };
+
   }
 }
 
@@ -636,7 +698,7 @@ export class ThreeSoldiersPatternDirective implements IDirective {
   readonly priority = 65;
   readonly maxScore = 90;
   readonly version = '2.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -681,7 +743,7 @@ export class VixRegimeDirective implements IDirective {
   readonly priority = 0;
   readonly maxScore = 100;
   readonly version = '1.0.0';
-  readonly readiness = 'ready' as const;
+  readonly readiness = 'alpha' as const;
 
   calculate(_input: DirectiveInput): DirectiveResult {
     return stubResult(this.id, 'vix-regime.php');
@@ -715,7 +777,7 @@ export class MondayEffectDirective implements IDirective {
   readonly priority = 30;
   readonly maxScore = 50;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -740,19 +802,40 @@ export class FridayPositioningDirective implements IDirective {
   readonly priority = 30;
   readonly maxScore = 50;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const bars = input.bars;
-    if (bars.length < 2) return { score: 0, confidence: 0.1, reason: 'Need 2+ bars', signalClass: 'neutral' };
+    if (bars.length < 2) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'Need 2+ bars' };
     const lastBar = bars[bars.length - 1];
     const day = lastBar.timestamp ? new Date(lastBar.timestamp).getUTCDay() : new Date().getUTCDay();
+
+    // BASE (10-30): day-of-week scoring
+    const dayScore: Record<number, number> = { 0: 8, 1: 12, 2: 15, 3: 18, 4: 20, 5: 30, 6: 8 };
+    const baseScore = dayScore[day] || 15;
+
+    // BONUS: Friday + elevated volume
+    let bonusScore = 0;
+    let bonusLabel = '';
     if (day === 5) {
-      const volumeSurge = (lastBar.volume || 0) > (bars.slice(-11, -1).reduce((s,b) => s + (b.volume||0), 0) / 10) * 1.2;
-      if (volumeSurge) return { score: 35, confidence: 0.4, reason: 'Friday with elevated volume — profit-taking rotation', signalClass: 'neutral' };
-      return { score: 20, confidence: 0.3, reason: 'Friday — position squaring ahead of weekend', signalClass: 'neutral' };
+      const volumes = bars.map(b => b.volume || 0);
+      const avgVol = volumes.slice(-11, -1).reduce((a, b) => a + b, 0) / Math.max(1, volumes.length - 2);
+      const currentVol = volumes[volumes.length - 1];
+      const volRatio = avgVol > 0 ? currentVol / avgVol : 1;
+      if (volRatio > 1.3) { bonusScore = 20; bonusLabel = 'Friday afternoon volume surge'; }
+      else if (volRatio > 1.1) { bonusScore = 10; bonusLabel = 'Friday elevated volume'; }
     }
-    return { score: 5, confidence: 0.25, reason: 'Not Friday — no end-of-week positioning effect', signalClass: 'neutral' };
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    return {
+      signalClass: 'neutral',
+      score: total,
+      confidence: Number((0.2 + (day === 5 ? 0.15 : 0) + (bonusScore > 0 ? 0.1 : 0)).toFixed(2)),
+      reason: `Friday positioning: day ${day}, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, dayOfWeek: day },
+    };
+
   }
 }
 
@@ -764,23 +847,39 @@ export class MidweekMomentumDirective implements IDirective {
   readonly priority = 32;
   readonly maxScore = 55;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const bars = input.bars;
-    if (bars.length < 2) return { score: 0, confidence: 0.1, reason: 'Need 2+ bars', signalClass: 'neutral' };
+    if (bars.length < 5) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'Need 5+ bars' };
     const lastBar = bars[bars.length - 1];
     const day = lastBar.timestamp ? new Date(lastBar.timestamp).getUTCDay() : new Date().getUTCDay();
-    if (day >= 2 && day <= 4) {
-      const closes = bars.map(b => b.close);
-      const lastClose = closes[closes.length - 1];
-      const prevClose = closes[Math.max(0, closes.length - 5)];
-      const trend = prevClose > 0 ? ((lastClose - prevClose) / prevClose) * 100 : 0;
-      if (trend > 1) return { score: 45, confidence: 0.4, reason: `Midweek (Tue-Thu) with bullish momentum +${trend.toFixed(1)}%`, signalClass: 'bullish' };
-      if (trend > 0) return { score: 30, confidence: 0.3, reason: 'Midweek session — favorable for trend continuation', signalClass: 'bullish' };
-      return { score: 15, confidence: 0.25, reason: 'Midweek session — neutral trend', signalClass: 'neutral' };
-    }
-    return { score: 5, confidence: 0.2, reason: `Not midweek (day ${day})`, signalClass: 'neutral' };
+    const closes = bars.map(b => b.close);
+    const lastClose = closes[closes.length - 1];
+    const prevClose = closes[Math.max(0, closes.length - 5)];
+    const recentReturn = prevClose > 0 ? ((lastClose - prevClose) / prevClose) * 100 : 0;
+
+    // BASE (10-35): midweek bias
+    const isMidweek = day >= 2 && day <= 4;
+    const baseScore = isMidweek ? Math.round(mapRange(recentReturn, -2, 3, 10, 35)) : 10;
+
+    // BONUS: strong midweek trend
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (isMidweek && recentReturn > 1.5) { bonusScore = 20; bonusLabel = 'strong midweek momentum (+' + recentReturn.toFixed(1) + '%)'; }
+    else if (isMidweek && recentReturn > 0.5) { bonusScore = 10; bonusLabel = 'positive midweek bias'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = isMidweek && recentReturn > 0 ? 'bullish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.2 + (isMidweek ? 0.1 : 0) + (Math.abs(recentReturn) > 1 ? 0.15 : 0)).toFixed(2)),
+      reason: `Midweek momentum: day ${day}, ${recentReturn.toFixed(1)}% recent, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, dayOfWeek: day, recentReturn },
+    };
+
   }
 }
 
@@ -792,24 +891,39 @@ export class AdvancedWeeklyRhythmDirective implements IDirective {
   readonly priority = 35;
   readonly maxScore = 60;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const bars = input.bars;
-    if (bars.length < 5) return { score: 0, confidence: 0.1, reason: `Need 5+ bars, have ${bars.length}`, signalClass: 'neutral' };
+    if (bars.length < 5) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'Need 5+ bars' };
     const lastBar = bars[bars.length - 1];
     const day = lastBar.timestamp ? new Date(lastBar.timestamp).getUTCDay() : new Date().getUTCDay();
     const closes = bars.map(b => b.close);
     const recentReturn = closes.length > 5 ? (closes[closes.length-1] - closes[closes.length-6]) / Math.max(0.01, closes[closes.length-6]) * 100 : 0;
-    // Composite: day bias × trend alignment
-    let dayBias = 0;
-    let signalClass: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-    if (day === 1) { dayBias = -10; signalClass = 'bearish'; }
-    else if (day >= 2 && day <= 4) { dayBias = 15; signalClass = 'bullish'; }
-    else if (day === 5) { dayBias = 0; signalClass = 'neutral'; }
-    else { dayBias = -5; signalClass = 'neutral'; }
-    const score = Math.round(25 + dayBias + (day >= 2 && day <= 4 && recentReturn > 0 ? 15 : 0));
-    return { score: Math.min(60, Math.max(5, score)), confidence: 0.3, reason: `Weekly rhythm: day ${day}, bias ${dayBias}, recent return ${recentReturn.toFixed(1)}%`, signalClass };
+
+    // BASE (15-40): multi-session composite
+    const dayBias: Record<number, number> = { 0: -8, 1: -5, 2: 10, 3: 15, 4: 10, 5: 0, 6: -5 };
+    const bias = dayBias[day] || 0;
+    const trendAlignment = recentReturn * (bias >= 0 ? 1 : -1);
+    const baseScore = Math.round(mapRange(bias + trendAlignment, -15, 25, 15, 40));
+
+    // BONUS: confluence (day bias + trend aligned)
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (bias > 0 && recentReturn > 1) { bonusScore = 20; bonusLabel = 'bullish confluence (midweek + uptrend)'; }
+    else if (bias < 0 && recentReturn < -1) { bonusScore = 15; bonusLabel = 'bearish confluence'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = bias > 0 && recentReturn > 0 ? 'bullish' : bias < 0 && recentReturn < 0 ? 'bearish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.25 + Math.abs(bias) * 0.01 + Math.abs(recentReturn) * 0.03).toFixed(2)),
+      reason: `Weekly rhythm: day ${day} bias=${bias}, ${recentReturn.toFixed(1)}% recent, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, dayOfWeek: day, bias, recentReturn },
+    };
+
   }
 }
 
@@ -821,18 +935,38 @@ export class SpyOptionsExpiryDirective implements IDirective {
   readonly priority = 28;
   readonly maxScore = 45;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const now = new Date();
     const day = now.getUTCDate();
-    const dayOfWeek = now.getUTCDay();
-    // 3rd Friday is between 15th and 21st
+    const dow = now.getUTCDay();
     const isOpexWeek = day >= 12 && day <= 21;
-    const isNearFriday = dayOfWeek === 5 && day >= 15 && day <= 21;
-    if (isNearFriday) return { score: 35, confidence: 0.35, reason: 'Options expiry Friday — increased gamma, pin risk', signalClass: 'neutral' };
-    if (isOpexWeek) return { score: 20, confidence: 0.25, reason: 'Options expiry week — elevated hedging flows', signalClass: 'neutral' };
-    return { score: 5, confidence: 0.2, reason: 'Outside options expiry window', signalClass: 'neutral' };
+    const isOpexFriday = dow === 5 && day >= 15 && day <= 21;
+    const daysToOpex = isOpexWeek ? (dow <= 5 ? 5 - dow : 0) : 99;
+
+    // BASE (10-30): proximity to expiry
+    let baseScore = 10;
+    if (isOpexFriday) baseScore = 30;
+    else if (isOpexWeek && daysToOpex <= 3) baseScore = 25;
+    else if (isOpexWeek) baseScore = 18;
+
+    // BONUS: expiry week
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (isOpexFriday) { bonusScore = 15; bonusLabel = 'OpEx Friday — max gamma'; }
+    else if (isOpexWeek) { bonusScore = 10; bonusLabel = 'expiry week hedging flows'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    return {
+      signalClass: 'neutral',
+      score: total,
+      confidence: Number((0.15 + (isOpexWeek ? 0.2 : 0)).toFixed(2)),
+      reason: `SPY OpEx: ${isOpexFriday ? 'expiry Friday' : isOpexWeek ? 'expiry week' : 'outside window'}, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, isOpexWeek, isOpexFriday, daysToOpex },
+    };
+
   }
 }
 
@@ -844,21 +978,39 @@ export class SpyMonthEndRebalancingDirective implements IDirective {
   readonly priority = 28;
   readonly maxScore = 45;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const now = new Date();
     const day = now.getUTCDate();
-    const dayOfWeek = now.getUTCDay();
-    // Last 3 trading days of month (rough proxy: day >= 26)
+    const dow = now.getUTCDay();
     const isMonthEnd = day >= 26;
-    if (isMonthEnd && dayOfWeek <= 5 && dayOfWeek >= 1) {
-      const closes = input.bars.map(b => b.close);
-      const recentReturn = closes.length > 5 ? (closes[closes.length-1] - closes[closes.length-6]) / Math.max(0.01, closes[closes.length-6]) * 100 : 0;
-      if (recentReturn < -2) return { score: 40, confidence: 0.35, reason: 'Month-end + drawdown — potential rebalancing bounce', signalClass: 'bullish' };
-      return { score: 20, confidence: 0.25, reason: 'Month-end — institutional rebalancing flows', signalClass: 'neutral' };
-    }
-    return { score: 5, confidence: 0.2, reason: 'Not month-end', signalClass: 'neutral' };
+    const daysToMonthEnd = Math.max(0, 30 - day);
+    const closes = input.bars.map(b => b.close);
+    const recentReturn = closes.length > 5 ? (closes[closes.length-1] - closes[closes.length-6]) / Math.max(0.01, closes[closes.length-6]) * 100 : 0;
+
+    // BASE (10-30): proximity to month end
+    let baseScore = 10;
+    if (isMonthEnd && daysToMonthEnd <= 2) baseScore = 30;
+    else if (isMonthEnd) baseScore = 22;
+    else if (day >= 20) baseScore = 15;
+
+    // BONUS: last 2 days + drawdown bounce
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (isMonthEnd && daysToMonthEnd <= 2 && recentReturn < -2) { bonusScore = 15; bonusLabel = 'month-end drawdown bounce setup'; }
+    else if (isMonthEnd && daysToMonthEnd <= 2) { bonusScore = 10; bonusLabel = 'last 2 trading days'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    return {
+      signalClass: recentReturn < -2 && isMonthEnd ? 'bullish' : 'neutral',
+      score: total,
+      confidence: Number((0.15 + (isMonthEnd ? 0.2 : 0)).toFixed(2)),
+      reason: `Month-end rebal: ${isMonthEnd ? 'month-end (d' + daysToMonthEnd + ' left)' : day + 'th of month'}, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, isMonthEnd, daysToMonthEnd, recentReturn },
+    };
+
   }
 }
 
@@ -870,19 +1022,37 @@ export class SpyQqqRelativeStrengthDirective implements IDirective {
   readonly priority = 42;
   readonly maxScore = 70;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const closes = input.bars.map(b => b.close);
-    if (closes.length < 20) return { score: 0, confidence: 0.1, reason: `Need 20+ bars, have ${closes.length}`, signalClass: 'neutral' };
+    if (closes.length < 20) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 20+ bars, have ${closes.length}` };
     const ret5 = (closes[closes.length-1] - closes[closes.length-6]) / Math.max(0.01, closes[closes.length-6]) * 100;
     const ret20 = (closes[closes.length-1] - closes[closes.length-21]) / Math.max(0.01, closes[closes.length-21]) * 100;
-    // Symbols outperforming their own trend = relative strength proxy
     const acceleration = ret5 - (ret20 / 4);
-    if (acceleration > 2) return { score: 60, confidence: 0.45, reason: `Strong relative momentum: 5d ${ret5.toFixed(1)}% vs 20d avg ${(ret20/4).toFixed(1)}%`, signalClass: 'bullish' };
-    if (acceleration > 0) return { score: 40, confidence: 0.35, reason: `Positive relative strength: +${acceleration.toFixed(1)}% acceleration`, signalClass: 'bullish' };
-    if (acceleration < -2) return { score: 35, confidence: 0.3, reason: `Relative weakness: ${acceleration.toFixed(1)}% deceleration`, signalClass: 'bearish' };
-    return { score: 25, confidence: 0.25, reason: `Neutral relative strength (SPY/QQQ comparison unavailable, using self-trend proxy)`, signalClass: 'neutral' };
+    const momentumRatio = ret5 / Math.max(0.01, Math.abs(ret20));
+
+    // BASE (15-50): self-trend relative strength
+    const baseScore = Math.round(mapRange(acceleration, -3, 3, 15, 50));
+
+    // BONUS: divergence / strong ratio
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (acceleration > 2) { bonusScore = 20; bonusLabel = 'strong relative acceleration'; }
+    else if (acceleration < -2) { bonusScore = 15; bonusLabel = 'strong relative deceleration'; }
+    if (Math.abs(momentumRatio) > 3) { bonusScore += 5; bonusLabel += (bonusLabel ? ' + ' : '') + 'momentum divergence'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = acceleration > 0.5 ? 'bullish' : acceleration < -0.5 ? 'bearish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.25 + Math.abs(acceleration) * 0.06).toFixed(2)),
+      reason: `SPY/QQQ RS proxy: 5d ${ret5.toFixed(1)}% vs 20d ${ret20.toFixed(1)}%, accel=${acceleration.toFixed(1)}%, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, ret5, ret20, acceleration },
+    };
+
   }
 }
 
@@ -947,19 +1117,37 @@ export class NvdaEarningsMomentumDirective implements IDirective {
   readonly priority = 38;
   readonly maxScore = 65;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const isNvda = input.symbol.toUpperCase() === 'NVDA';
-    if (!isNvda) return { score: 5, confidence: 0.2, reason: `Not NVDA (${input.symbol}) — directive only applies to NVDA`, signalClass: 'neutral' };
+    if (!isNvda) return { signalClass: 'neutral', score: 5, confidence: 0.1, reason: 'Not NVDA — directive only applies to NVDA' };
     const closes = input.bars.map(b => b.close);
-    if (closes.length < 20) return { score: 0, confidence: 0.1, reason: 'Need 20+ bars', signalClass: 'neutral' };
+    if (closes.length < 20) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'Need 20+ bars' };
     const ret5 = (closes[closes.length-1] - closes[closes.length-6]) / Math.max(0.01, closes[closes.length-6]) * 100;
     const bb = bollingerBands(closes, 20, 2);
     const expanding = bb && bb.upper.length >= 5 && (bb.upper[bb.upper.length-1] - bb.lower[bb.lower.length-1]) > (bb.upper[bb.upper.length-5] - bb.lower[bb.lower.length-5]) * 1.2;
-    if (ret5 > 3 && !expanding) return { score: 55, confidence: 0.45, reason: `NVDA strong momentum +${ret5.toFixed(1)}% with stable vol — favorable drift`, signalClass: 'bullish' };
-    if (Math.abs(ret5) > 5) return { score: 45, confidence: 0.35, reason: `NVDA high magnitude move ${ret5.toFixed(1)}% — potential post-event drift`, signalClass: ret5 > 0 ? 'bullish' : 'bearish' };
-    return { score: 25, confidence: 0.25, reason: `NVDA momentum ${ret5.toFixed(1)}% (earnings calendar unavailable)`, signalClass: ret5 > 0 ? 'bullish' : 'neutral' };
+
+    // BASE (15-45): NVDA momentum strength
+    const baseScore = Math.round(mapRange(ret5, -5, 5, 15, 45));
+
+    // BONUS: post-earnings drift patterns
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (ret5 > 3 && !expanding) { bonusScore = 20; bonusLabel = 'strong momentum + stable vol (post-earnings drift)'; }
+    else if (Math.abs(ret5) > 5) { bonusScore = 15; bonusLabel = 'high magnitude move (potential earnings event)'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = ret5 > 1 ? 'bullish' : ret5 < -1 ? 'bearish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.2 + Math.abs(ret5) * 0.06).toFixed(2)),
+      reason: `NVDA earnings momentum: ${ret5.toFixed(1)}% 5d, vol ${expanding ? 'expanding' : 'stable'}, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, ret5, volExpanding: expanding },
+    };
+
   }
 }
 
@@ -971,23 +1159,42 @@ export class TslaSentimentAmplifierDirective implements IDirective {
   readonly priority = 38;
   readonly maxScore = 65;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const isTsla = input.symbol.toUpperCase() === 'TSLA';
-    if (!isTsla) return { score: 5, confidence: 0.2, reason: `Not TSLA (${input.symbol})`, signalClass: 'neutral' };
+    if (!isTsla) return { signalClass: 'neutral', score: 5, confidence: 0.1, reason: 'Not TSLA — directive only applies to TSLA' };
     const closes = input.bars.map(b => b.close);
-    if (closes.length < 15) return { score: 0, confidence: 0.1, reason: 'Need 15+ bars', signalClass: 'neutral' };
+    if (closes.length < 15) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'Need 15+ bars' };
     const r = rsi(closes, 14);
     const currentRsi = r[r.length - 1];
     const volumes = input.bars.map(b => b.volume || 0);
     const avgVol = volumes.slice(0, -1).reduce((a,b) => a+b, 0) / Math.max(1, volumes.length - 1);
     const currentVol = volumes[volumes.length - 1];
     const volRatio = avgVol > 0 ? currentVol / avgVol : 1;
-    if (currentRsi < 35 && volRatio > 1.3) return { score: 55, confidence: 0.5, reason: `TSLA oversold RSI ${currentRsi.toFixed(0)} + volume surge ${volRatio.toFixed(1)}x — contrarian buy`, signalClass: 'bullish' };
-    if (currentRsi < 30) return { score: 40, confidence: 0.4, reason: `TSLA deeply oversold RSI ${currentRsi.toFixed(0)} — potential bounce`, signalClass: 'bullish' };
-    if (currentRsi > 75 && volRatio > 1.3) return { score: 30, confidence: 0.35, reason: `TSLA overbought RSI ${currentRsi.toFixed(0)} + volume — possible top`, signalClass: 'bearish' };
-    return { score: 15, confidence: 0.25, reason: `TSLA RSI ${currentRsi.toFixed(0)} — neutral range`, signalClass: 'neutral' };
+
+    // BASE (15-50): volatility regime + RSI
+    const volScore = mapRange(volRatio, 0.5, 2.5, 0, 25);
+    const rsiExtreme = currentRsi < 30 || currentRsi > 70 ? 25 : mapRange(Math.abs(currentRsi - 50), 0, 20, 0, 25);
+    const baseScore = Math.round(15 + volScore + rsiExtreme);
+
+    // BONUS: extreme contrarian setups
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (currentRsi < 30 && volRatio > 1.3) { bonusScore = 15; bonusLabel = 'oversold + vol surge (contrarian buy)'; }
+    else if (currentRsi > 75 && volRatio > 1.3) { bonusScore = 15; bonusLabel = 'overbought + vol surge (top signal)'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = currentRsi < 35 ? 'bullish' : currentRsi > 70 ? 'bearish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.25 + Math.min(0.3, (volRatio - 1) * 0.2)).toFixed(2)),
+      reason: `TSLA sentiment: RSI ${currentRsi.toFixed(0)}, vol ${volRatio.toFixed(1)}x, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, currentRsi, volRatio },
+    };
+
   }
 }
 
@@ -1003,19 +1210,37 @@ export class DividendYieldAttractiveDirective implements IDirective {
   readonly priority = 36;
   readonly maxScore = 55;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const closes = input.bars.map(b => b.close);
-    if (closes.length < 20) return { score: 0, confidence: 0.1, reason: `Need 20+ bars, have ${closes.length}`, signalClass: 'neutral' };
+    if (closes.length < 20) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 20+ bars, have ${closes.length}` };
     const bb = bollingerBands(closes, 20, 2);
-    if (!bb || !bb.upper.length) return { score: 0, confidence: 0.1, reason: 'BB calculation failed', signalClass: 'neutral' };
+    if (!bb || !bb.upper.length) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'BB calculation failed' };
     const bandwidth = (bb.upper[bb.upper.length-1] - bb.lower[bb.lower.length-1]) / bb.middle[bb.middle.length-1];
     const ret20 = (closes[closes.length-1] - closes[0]) / Math.max(0.01, closes[0]) * 100;
-    // Low vol + steady positive return = dividend stock proxy
-    if (bandwidth < 0.05 && ret20 > 0) return { score: 50, confidence: 0.4, reason: `Low vol steady gainer: band ${(bandwidth*100).toFixed(1)}%, +${ret20.toFixed(1)}% 20-bar — yield proxy`, signalClass: 'bullish' };
-    if (bandwidth < 0.08) return { score: 30, confidence: 0.3, reason: `Low volatility (${(bandwidth*100).toFixed(1)}% band) — stable proxy`, signalClass: 'neutral' };
-    return { score: 10, confidence: 0.2, reason: `Normal volatility (dividend data unavailable, using vol proxy)`, signalClass: 'neutral' };
+
+    // BASE (10-40): price stability (low vol = dividend stock proxy)
+    const stabilityScore = mapRange(bandwidth, 0.02, 0.15, 40, 10);
+    const returnScore = ret20 > 0 ? mapRange(ret20, 0, 10, 0, 15) : 0;
+    const baseScore = Math.round(10 + stabilityScore * 0.6 + returnScore * 0.4);
+
+    // BONUS: ex-div proximity proxy
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (bandwidth < 0.05 && ret20 > 0 && ret20 < 5) { bonusScore = 15; bonusLabel = 'low-vol steady gainer (dividend proxy)'; }
+    else if (bandwidth < 0.08) { bonusScore = 8; bonusLabel = 'low volatility stability'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    return {
+      signalClass: ret20 > 0 && bandwidth < 0.08 ? 'bullish' : 'neutral',
+      score: total,
+      confidence: Number((0.2 + (bandwidth < 0.08 ? 0.15 : 0)).toFixed(2)),
+      reason: `Dividend proxy: bandwidth ${(bandwidth*100).toFixed(1)}%, 20d ${ret20.toFixed(1)}%, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, bandwidth, ret20 },
+    };
+
   }
 }
 
@@ -1061,7 +1286,7 @@ export class ConfluenceReversalComboDirective implements IDirective {
   readonly priority = 74;
   readonly maxScore = 110;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -1187,29 +1412,43 @@ export class TimeBasedSupportDirective implements IDirective {
   readonly priority = 55;
   readonly maxScore = 80;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const bars = input.bars;
-    if (bars.length < 10) return { score: 0, confidence: 0.1, reason: `Need 10+ bars, have ${bars.length}`, signalClass: 'neutral' };
-    // Compute VWAP
+    if (bars.length < 10) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 10+ bars, have ${bars.length}` };
+
     let cumPV = 0, cumVol = 0;
     for (const bar of bars) { const tp = (bar.high + bar.low + bar.close) / 3; const v = bar.volume || 0; cumPV += tp * v; cumVol += v; }
-    if (cumVol <= 0) return { score: 0, confidence: 0.1, reason: 'No volume for VWAP', signalClass: 'neutral' };
+    if (cumVol <= 0) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'No volume for VWAP' };
     const vwap = cumPV / cumVol;
     const lastClose = bars[bars.length - 1].close;
     const deviation = ((lastClose - vwap) / vwap) * 100;
-    // Check proximity to round numbers
     const roundLevel = Math.round(lastClose);
     const distFromRound = Math.abs(lastClose - roundLevel) / Math.max(0.01, lastClose) * 100;
-    let score = 30;
-    const sigs: string[] = [];
-    if (Math.abs(deviation) < 0.5) { score += 25; sigs.push(`at VWAP ${vwap.toFixed(2)}`); }
-    else if (deviation > 0) { score += 10; sigs.push(`${deviation.toFixed(1)}% above VWAP`); }
-    else { sigs.push(`${deviation.toFixed(1)}% below VWAP`); }
-    if (distFromRound < 0.3) { score += 20; sigs.push(`near round number ${roundLevel}`); }
+
+    // BASE (15-60): proximity to VWAP and round numbers
+    const vwapProximity = Math.max(0, 1 - Math.abs(deviation) / 3);
+    const roundProximity = Math.max(0, 1 - distFromRound / 1.5);
+    const baseScore = Math.round(mapRange(vwapProximity * 0.6 + roundProximity * 0.4, 0, 1, 15, 60));
+
+    // BONUS: at key levels
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (Math.abs(deviation) < 0.5) { bonusScore += 15; bonusLabel = 'at VWAP'; }
+    if (distFromRound < 0.3) { bonusScore += 10; bonusLabel += (bonusLabel ? ' + ' : '') + 'near round number ' + roundLevel; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
     const signalClass: 'bullish' | 'bearish' | 'neutral' = deviation < -1 ? 'bullish' : deviation > 1 ? 'bearish' : 'neutral';
-    return { score: Math.min(80, score), confidence: 0.3, reason: sigs.join(', '), signalClass };
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.25 + (bonusScore > 0 ? 0.2 : 0)).toFixed(2)),
+      reason: `Time support: ${deviation.toFixed(2)}% vs VWAP ${vwap.toFixed(2)}, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, deviation, vwap, distFromRound },
+    };
+
   }
 }
 
@@ -1225,16 +1464,37 @@ export class IsaResetDirective implements IDirective {
   readonly priority = 20;
   readonly maxScore = 30;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const now = new Date();
-    const month = now.getUTCMonth(); // 0=Jan, 3=April
+    const month = now.getUTCMonth();
     const day = now.getUTCDate();
-    // UK ISA resets April 6 — first 2 weeks of April see fresh inflows
     const isIsaWindow = month === 3 && day >= 6 && day <= 20;
-    if (isIsaWindow) return { score: 25, confidence: 0.3, reason: 'UK ISA tax-year reset period — potential fresh inflows', signalClass: 'bullish' };
-    return { score: 5, confidence: 0.2, reason: 'Outside ISA reset window (UK tax year April 6)', signalClass: 'neutral' };
+    const daysIntoTaxYear = month === 3 && day >= 6 ? day - 6 : -1;
+
+    // BASE (5-20): proximity to ISA reset
+    let baseScore = 5;
+    if (isIsaWindow && daysIntoTaxYear <= 3) baseScore = 20;
+    else if (isIsaWindow && daysIntoTaxYear <= 7) baseScore = 15;
+    else if (isIsaWindow) baseScore = 12;
+
+    // BONUS: new tax year
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (isIsaWindow && daysIntoTaxYear <= 3) { bonusScore = 10; bonusLabel = 'new ISA tax year (first 3 days)'; }
+    else if (isIsaWindow) { bonusScore = 5; bonusLabel = 'ISA reset window'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    return {
+      signalClass: isIsaWindow ? 'bullish' : 'neutral',
+      score: total,
+      confidence: Number((0.1 + (isIsaWindow ? 0.2 : 0)).toFixed(2)),
+      reason: `ISA reset: ${isIsaWindow ? 'within ISA window (Apr ' + day + ')' : 'outside window'}, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, isIsaWindow, daysIntoTaxYear },
+    };
+
   }
 }
 
@@ -1250,7 +1510,7 @@ export class BollingerBandsDirective implements IDirective {
   readonly priority = 72;
   readonly maxScore = 100;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -1284,7 +1544,7 @@ export class VwapDirective implements IDirective {
   readonly priority = 70;
   readonly maxScore = 95;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -1325,22 +1585,38 @@ export class BasicWeeklyRhythmDirective implements IDirective {
   readonly priority = 34;
   readonly maxScore = 55;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const bars = input.bars;
-    if (bars.length < 5) return { score: 0, confidence: 0.1, reason: `Need 5+ bars, have ${bars.length}`, signalClass: 'neutral' };
+    if (bars.length < 5) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'Need 5+ bars' };
     const lastBar = bars[bars.length - 1];
     const day = lastBar.timestamp ? new Date(lastBar.timestamp).getUTCDay() : new Date().getUTCDay();
     const volumes = bars.map(b => b.volume || 0);
     const avgVol = volumes.slice(0, -1).reduce((a,b) => a+b, 0) / Math.max(1, volumes.length - 1);
     const volRatio = avgVol > 0 ? volumes[volumes.length-1] / avgVol : 1;
-    let score = 20;
-    if (day >= 2 && day <= 4) score += 20;
-    else if (day === 5) score += 5;
-    if (volRatio > 1.2) score += 10;
+
+    // BASE (10-35): day-of-week + volume
+    const dayBase: Record<number, number> = { 0: 8, 1: 12, 2: 18, 3: 22, 4: 18, 5: 14, 6: 8 };
+    const baseScore = Math.round(mapRange((dayBase[day] || 15) + volRatio * 5, 5, 35, 10, 35));
+
+    // BONUS: volume confirmation
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (volRatio > 1.5 && day >= 2 && day <= 4) { bonusScore = 20; bonusLabel = 'midweek vol surge'; }
+    else if (volRatio > 1.3) { bonusScore = 10; bonusLabel = 'above-avg volume'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
     const signalClass: 'bullish' | 'bearish' | 'neutral' = day >= 2 && day <= 4 && volRatio > 1 ? 'bullish' : 'neutral';
-    return { score: Math.min(55, score), confidence: 0.25, reason: `Day ${day} rhythm: vol ${volRatio.toFixed(1)}x avg`, signalClass };
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.2 + (volRatio > 1.2 ? 0.1 : 0) + (day >= 2 && day <= 4 ? 0.05 : 0)).toFixed(2)),
+      reason: `Basic rhythm: day ${day}, vol ${volRatio.toFixed(1)}x avg, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, dayOfWeek: day, volRatio },
+    };
+
   }
 }
 
@@ -1352,27 +1628,43 @@ export class IntradayUPatternDirective implements IDirective {
   readonly priority = 40;
   readonly maxScore = 70;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const bars = input.bars;
-    if (bars.length < 10) return { score: 0, confidence: 0.1, reason: `Need 10+ bars, have ${bars.length}`, signalClass: 'neutral' };
-    const firstHalf = bars.slice(0, Math.floor(bars.length / 2));
-    const secondHalf = bars.slice(Math.floor(bars.length / 2));
-    const firstClose = firstHalf[firstHalf.length - 1].close;
+    if (bars.length < 10) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 10+ bars, have ${bars.length}` };
+
+    const mid = Math.floor(bars.length / 2);
+    const firstHalf = bars.slice(0, mid);
+    const secondHalf = bars.slice(mid);
     const firstOpen = firstHalf[0].open;
+    const firstClose = firstHalf[firstHalf.length - 1].close;
     const firstReturn = firstOpen > 0 ? ((firstClose - firstOpen) / firstOpen) * 100 : 0;
-    const secondClose = secondHalf[secondHalf.length - 1].close;
     const secondOpen = secondHalf[0].open;
+    const secondClose = secondHalf[secondHalf.length - 1].close;
     const secondReturn = secondOpen > 0 ? ((secondClose - secondOpen) / secondOpen) * 100 : 0;
-    // U-pattern: first half declines, second half recovers
-    if (firstReturn < -0.5 && secondReturn > 0.5) {
-      return { score: 60, confidence: 0.45, reason: `U-pattern detected: ${firstReturn.toFixed(1)}% drop then ${secondReturn.toFixed(1)}% recovery`, signalClass: 'bullish' };
-    }
-    if (firstReturn < -0.3 && secondReturn > 0) {
-      return { score: 35, confidence: 0.3, reason: `Weak U-pattern: ${firstReturn.toFixed(1)}% then +${secondReturn.toFixed(1)}%`, signalClass: 'bullish' };
-    }
-    return { score: 10, confidence: 0.2, reason: `No U-pattern: first half ${firstReturn.toFixed(1)}%, second ${secondReturn.toFixed(1)}%`, signalClass: 'neutral' };
+
+    // BASE (15-55): U-pattern strength = magnitude of recovery
+    const recoveryMagnitude = Math.max(0, secondReturn - Math.min(0, firstReturn));
+    const baseScore = Math.round(mapRange(recoveryMagnitude, 0, 3, 15, 55));
+
+    // BONUS: pronounced U-pattern
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (firstReturn < -0.5 && secondReturn > 0.5) { bonusScore = 15; bonusLabel = 'classic U-pattern'; }
+    else if (firstReturn < -0.3 && secondReturn > 0.3) { bonusScore = 8; bonusLabel = 'weak U-pattern'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = secondReturn > 0 && firstReturn < 0 ? 'bullish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.2 + (firstReturn < 0 && secondReturn > 0 ? 0.25 : 0)).toFixed(2)),
+      reason: `U-pattern: 1st half ${firstReturn.toFixed(1)}%, 2nd half +${secondReturn.toFixed(1)}%, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, firstReturn, secondReturn, recoveryMagnitude },
+    };
+
   }
 }
 
@@ -1384,21 +1676,39 @@ export class InstitutionalTimingDirective implements IDirective {
   readonly priority = 30;
   readonly maxScore = 50;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const now = new Date();
-    const month = now.getUTCMonth(); // 0=Jan
+    const month = now.getUTCMonth();
     const day = now.getUTCDate();
+    const dow = now.getUTCDay();
     const isQuarterEnd = (month === 2 || month === 5 || month === 8 || month === 11) && day >= 25;
     const isMonthEnd = day >= 26;
-    if (isQuarterEnd) {
-      return { score: 45, confidence: 0.35, reason: 'Quarter-end — institutional rebalancing, increased flows', signalClass: 'neutral' };
-    }
-    if (isMonthEnd) {
-      return { score: 25, confidence: 0.25, reason: 'Month-end — moderate institutional positioning', signalClass: 'neutral' };
-    }
-    return { score: 5, confidence: 0.2, reason: 'Standard session — no institutional timing catalyst', signalClass: 'neutral' };
+    const isLONNYOverlap = dow >= 1 && dow <= 5; // weekday proxy for session overlap
+
+    // BASE (10-35): session timing score
+    let baseScore = 10;
+    if (isQuarterEnd) baseScore = 35;
+    else if (isMonthEnd) baseScore = 25;
+    else if (isLONNYOverlap) baseScore = 20;
+
+    // BONUS: key windows
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (isQuarterEnd) { bonusScore = 15; bonusLabel = 'quarter-end rebalancing'; }
+    else if (isMonthEnd && dow === 5) { bonusScore = 10; bonusLabel = 'month-end Friday'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    return {
+      signalClass: 'neutral',
+      score: total,
+      confidence: Number((0.2 + (isQuarterEnd ? 0.2 : isMonthEnd ? 0.1 : 0)).toFixed(2)),
+      reason: `Institutional timing: ${isQuarterEnd ? 'quarter-end' : isMonthEnd ? 'month-end' : 'standard'}, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, isQuarterEnd, isMonthEnd, month, day },
+    };
+
   }
 }
 
@@ -1410,28 +1720,46 @@ export class MacdDirective implements IDirective {
   readonly priority = 75;
   readonly maxScore = 110;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const closes = input.bars.map(b => b.close);
-    if (closes.length < 35) return { score: 0, confidence: 0.1, reason: `Need 35+ bars, have ${closes.length}`, signalClass: 'neutral' };
+    if (closes.length < 35) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 35+ bars, have ${closes.length}` };
+
     const result = macd(closes, 12, 26, 9);
-    if (!result || !result.macd.length) return { score: 0, confidence: 0.1, reason: 'MACD calculation failed', signalClass: 'neutral' };
+    if (!result || !result.macd.length) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'MACD calculation failed' };
     const m = result.macd[result.macd.length - 1];
     const s = result.signal[result.signal.length - 1];
     const prevM = result.macd[result.macd.length - 2];
     const prevS = result.signal[result.signal.length - 2];
     const hist = m - s;
     const prevHist = prevM - prevS;
+
+    // BASE (15-75): MACD histogram strength
+    const maxHist = Math.max(...result.macd.map((v, i) => Math.abs(v - (result.signal[i] || 0))).slice(-50));
+    const histNorm = maxHist > 0 ? Math.abs(hist) / maxHist : 0;
+    const baseScore = Math.round(mapRange(histNorm, 0, 1, 15, 60) + (m > 0 ? 15 : 0));
+
+    // BONUS: crossover events
+    let bonusScore = 0;
+    let bonusLabel = '';
     const crossedUp = prevM <= prevS && m > s;
     const crossedDown = prevM >= prevS && m < s;
-    if (crossedUp && m < 0) return { score: 90, confidence: 0.65, reason: `MACD bullish crossover below zero: ${m.toFixed(4)}`, signalClass: 'bullish' };
-    if (crossedUp) return { score: 70, confidence: 0.55, reason: `MACD bullish crossover: ${m.toFixed(4)}`, signalClass: 'bullish' };
-    if (crossedDown) return { score: 65, confidence: 0.5, reason: `MACD bearish crossover: ${m.toFixed(4)}`, signalClass: 'bearish' };
-    if (m > 0 && hist > prevHist) return { score: 55, confidence: 0.4, reason: 'MACD bullish above zero, hist expanding', signalClass: 'bullish' };
-    if (m < 0 && hist < prevHist) return { score: 50, confidence: 0.35, reason: 'MACD bearish below zero, hist expanding', signalClass: 'bearish' };
-    const trendScore = Math.round(Math.min(40, Math.abs(m) * 1000));
-    return { score: trendScore, confidence: 0.25, reason: `MACD at ${m.toFixed(4)}, signal ${s.toFixed(4)}`, signalClass: m > 0 ? 'bullish' : 'bearish' };
+    if (crossedUp) { bonusScore = 25; bonusLabel = 'bullish crossover' + (m < 0 ? ' below zero' : ''); }
+    else if (crossedDown) { bonusScore = 20; bonusLabel = 'bearish crossover'; }
+    else if (m > 0 && hist > prevHist && hist > 0) { bonusScore = 10; bonusLabel = 'histogram expanding bullish'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = crossedUp || (m > 0 && hist > 0) ? 'bullish' : crossedDown || (m < 0 && hist < 0) ? 'bearish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.25 + Math.abs(histNorm) * 0.4 + (bonusScore > 0 ? 0.1 : 0)).toFixed(2)),
+      reason: `MACD=${m.toFixed(4)} sig=${s.toFixed(4)} hist=${hist.toFixed(4)}, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, macdLine: m, signalLine: s, histogram: hist },
+    };
+
   }
 }
 
@@ -1447,21 +1775,37 @@ export class PortfolioPerformanceDirective implements IDirective {
   readonly priority = 58;
   readonly maxScore = 90;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const closes = input.bars.map(b => b.close);
-    if (closes.length < 21) return { score: 0, confidence: 0.1, reason: `Need 21+ bars, have ${closes.length}`, signalClass: 'neutral' };
-    // 5-day, 10-day, 20-day returns
+    if (closes.length < 21) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 21+ bars, have ${closes.length}` };
     const ret5 = (closes[closes.length-1] - closes[closes.length-6]) / Math.max(0.01, closes[closes.length-6]) * 100;
-    const ret10 = closes.length > 10 ? (closes[closes.length-1] - closes[closes.length-11]) / Math.max(0.01, closes[closes.length-11]) * 100 : ret5;
-    const ret20 = closes.length > 20 ? (closes[closes.length-1] - closes[closes.length-21]) / Math.max(0.01, closes[closes.length-21]) * 100 : ret10;
+    const ret10 = (closes[closes.length-1] - closes[closes.length-11]) / Math.max(0.01, closes[closes.length-11]) * 100;
+    const ret20 = (closes[closes.length-1] - closes[closes.length-21]) / Math.max(0.01, closes[closes.length-21]) * 100;
     const momentum = (ret5 * 0.5 + ret10 * 0.3 + ret20 * 0.2);
-    if (momentum > 5) return { score: 80, confidence: 0.55, reason: `Strong momentum: ${ret5.toFixed(1)}% (5d) / ${ret10.toFixed(1)}% (10d) / ${ret20.toFixed(1)}% (20d)`, signalClass: 'bullish' };
-    if (momentum > 1) return { score: 55, confidence: 0.4, reason: `Positive momentum: ${momentum.toFixed(1)}% weighted`, signalClass: 'bullish' };
-    if (momentum < -5) return { score: 65, confidence: 0.5, reason: `Strong negative momentum: ${ret5.toFixed(1)}% (5d)`, signalClass: 'bearish' };
-    if (momentum < -1) return { score: 40, confidence: 0.35, reason: `Negative momentum: ${momentum.toFixed(1)}% weighted`, signalClass: 'bearish' };
-    return { score: 30, confidence: 0.25, reason: `Flat momentum: ${momentum.toFixed(1)}% weighted`, signalClass: 'neutral' };
+
+    // BASE (15-70): weighted multi-period return
+    const baseScore = Math.round(mapRange(momentum, -8, 8, 15, 70));
+
+    // BONUS: outlier performance
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (momentum > 5) { bonusScore = 20; bonusLabel = 'exceptional momentum (>5%)'; }
+    else if (momentum > 3) { bonusScore = 10; bonusLabel = 'strong momentum'; }
+    if (momentum < -5) { bonusScore = 15; bonusLabel = 'significant drawdown'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = momentum > 1 ? 'bullish' : momentum < -1 ? 'bearish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.25 + Math.abs(momentum) * 0.05).toFixed(2)),
+      reason: `Portfolio perf: ${momentum.toFixed(1)}% weighted (5d:${ret5.toFixed(1)} 10d:${ret10.toFixed(1)} 20d:${ret20.toFixed(1)}), base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, momentum, ret5, ret10, ret20 },
+    };
+
   }
 }
 
@@ -1477,27 +1821,44 @@ export class AdaptiveRiskMonitorDirective implements IDirective {
   readonly priority = 64;
   readonly maxScore = 90;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const closes = input.bars.map(b => b.close);
     const highs = input.bars.map(b => b.high);
     const lows = input.bars.map(b => b.low);
-    if (closes.length < 20) return { score: 0, confidence: 0.1, reason: `Need 20+ bars, have ${closes.length}`, signalClass: 'neutral' };
-    // Use ATR as volatility proxy; compare current vol to recent vol
+    if (closes.length < 20) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 20+ bars, have ${closes.length}` };
     const a = atr(highs, lows, closes, 14);
-    if (a.length < 14) return { score: 0, confidence: 0.1, reason: 'ATR calculation failed', signalClass: 'neutral' };
+    if (a.length < 14) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'ATR calculation failed' };
     const currentAtr = a[a.length - 1];
     const prevAtr = a[Math.max(0, a.length - 10)];
     const lastClose = closes[closes.length - 1];
     const atrPct = (currentAtr / lastClose) * 100;
-    const volExpanding = prevAtr > 0 && currentAtr > prevAtr * 1.2;
-    const volContracting = prevAtr > 0 && currentAtr < prevAtr * 0.8;
-    if (atrPct > 4) return { score: 80, confidence: 0.6, reason: `Extreme volatility: ATR=${atrPct.toFixed(2)}% — reduce position size`, signalClass: 'neutral' };
-    if (volExpanding) return { score: 60, confidence: 0.5, reason: `Volatility expanding: ATR ${(currentAtr/prevAtr).toFixed(1)}x recent — caution`, signalClass: 'neutral' };
-    if (volContracting) return { score: 35, confidence: 0.4, reason: `Volatility contracting: ATR ${(currentAtr/prevAtr).toFixed(1)}x recent — favorable`, signalClass: 'bullish' };
-    if (atrPct < 1) return { score: 25, confidence: 0.35, reason: `Low volatility: ATR=${atrPct.toFixed(2)}% — steady conditions`, signalClass: 'bullish' };
-    return { score: 45, confidence: 0.35, reason: `Normal volatility: ATR=${atrPct.toFixed(2)}%`, signalClass: 'neutral' };
+    const volRatio = prevAtr > 0 ? currentAtr / prevAtr : 1;
+
+    // BASE (15-65): volatility regime
+    const volPctScore = mapRange(atrPct, 0.5, 5, 15, 65);
+    const trendScore = volRatio > 1 ? mapRange(volRatio, 1, 2, 0, 15) : 0;
+    const baseScore = Math.round(volPctScore * 0.8 + trendScore * 0.2);
+
+    // BONUS: high-risk periods
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (atrPct > 4) { bonusScore = 25; bonusLabel = 'extreme vol — reduce sizing'; }
+    else if (atrPct > 2.5 && volRatio > 1.3) { bonusScore = 15; bonusLabel = 'vol expanding — caution'; }
+    else if (volRatio < 0.7) { bonusScore = 10; bonusLabel = 'vol contracting — favorable'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = atrPct < 1.5 ? 'bullish' : atrPct > 3 ? 'bearish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.3 + Math.min(0.3, atrPct * 0.06)).toFixed(2)),
+      reason: `Risk monitor: ATR=${atrPct.toFixed(2)}%, vol ${volRatio > 1.1 ? 'expanding' : volRatio < 0.9 ? 'contracting' : 'stable'}, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, atrPct, volRatio },
+    };
+
   }
 }
 
@@ -1509,7 +1870,7 @@ export class AnalystAdjustmentsDirective implements IDirective {
   readonly priority = 50;
   readonly maxScore = 80;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -1534,19 +1895,18 @@ export class ConvictionGrowthDirective implements IDirective {
   readonly priority = 66;
   readonly maxScore = 100;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const closes = input.bars.map(b => b.close);
-    if (closes.length < 60) return { score: 0, confidence: 0.1, reason: `Need 60+ bars, have ${closes.length}`, signalClass: 'neutral' };
+    if (closes.length < 60) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 60+ bars, have ${closes.length}` };
     let signals = 0;
     const details: string[] = [];
-    // 1. Short-term trend (EMA10 vs price)
     const ema10 = ema(closes, 10);
     const lastClose = closes[closes.length - 1];
     if (ema10.length > 0 && lastClose > ema10[ema10.length - 1]) { signals++; details.push('EMA10 bullish'); }
     else if (ema10.length > 0) { signals--; details.push('EMA10 bearish'); }
-    // 2. Medium-term (EMA50 slope)
     if (closes.length >= 55) {
       const ema50 = ema(closes, 50);
       if (ema50.length >= 5) {
@@ -1555,13 +1915,11 @@ export class ConvictionGrowthDirective implements IDirective {
         else { signals--; details.push('EMA50 falling'); }
       }
     }
-    // 3. Long-term trend (price vs SMA200)
     const s200 = sma(closes, 200);
     if (s200 > 0) {
       if (lastClose > s200) { signals++; details.push('above SMA200'); }
       else { signals--; details.push('below SMA200'); }
     }
-    // 4. Cross-timeframe check (if dayBars available)
     if (input.dayBars && input.dayBars.length >= 10) {
       const dayCloses = input.dayBars.map(b => b.close);
       const dayEma10 = ema(dayCloses, 10);
@@ -1569,9 +1927,27 @@ export class ConvictionGrowthDirective implements IDirective {
         signals++; details.push('daily EMA10 rising');
       }
     }
-    const score = Math.round(30 + Math.abs(signals) * 15 + (signals > 0 ? 10 : 0));
-    const signalClass: 'bullish' | 'bearish' | 'neutral' = signals >= 3 ? 'bullish' : signals <= -2 ? 'bearish' : 'neutral';
-    return { score: Math.min(100, score), confidence: 0.25 + Math.abs(signals) * 0.1, reason: `Conviction: ${signals > 0 ? '+' : ''}${signals} signals (${details.join(', ')})`, signalClass };
+
+    // BASE (20-70): signal count mapped to score
+    const baseScore = Math.round(mapRange(signals, -3, 4, 20, 70));
+
+    // BONUS: accelerating conviction
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (signals >= 3) { bonusScore = 30; bonusLabel = 'high conviction (' + signals + ' aligned signals)'; }
+    else if (signals >= 2) { bonusScore = 15; bonusLabel = 'growing conviction'; }
+    else if (signals <= -2) { bonusScore = 10; bonusLabel = 'strong bearish conviction'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = signals >= 2 ? 'bullish' : signals <= -2 ? 'bearish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.2 + Math.abs(signals) * 0.12).toFixed(2)),
+      reason: `Conviction: ${signals} signals (${details.join(', ')}), base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, signalCount: signals, details },
+    };
+
   }
 }
 
@@ -1583,25 +1959,42 @@ export class EarningsImplementationDirective implements IDirective {
   readonly priority = 46;
   readonly maxScore = 70;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const closes = input.bars.map(b => b.close);
-    if (closes.length < 20) return { score: 0, confidence: 0.1, reason: `Need 20+ bars, have ${closes.length}`, signalClass: 'neutral' };
-    // Proxy: tightening BB width suggests pre-event vol compression
+    if (closes.length < 20) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 20+ bars, have ${closes.length}` };
     const bb = bollingerBands(closes, 20, 2);
-    if (!bb || !bb.upper.length || bb.upper.length < 10) return { score: 0, confidence: 0.1, reason: 'BB calculation failed', signalClass: 'neutral' };
+    if (!bb || !bb.upper.length || bb.upper.length < 10) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'BB calculation failed' };
     const recentWidths: number[] = [];
     for (let i = Math.max(0, bb.lower.length - 10); i < bb.lower.length; i++) {
       recentWidths.push((bb.upper[i] - bb.lower[i]) / Math.max(0.01, bb.middle[i]));
     }
     const currentWidth = recentWidths[recentWidths.length - 1];
     const avgWidth = recentWidths.slice(0, -1).reduce((a,b) => a+b, 0) / Math.max(1, recentWidths.length - 1);
-    const compressing = avgWidth > 0 && currentWidth < avgWidth * 0.8;
-    const expanding = avgWidth > 0 && currentWidth > avgWidth * 1.3;
-    if (compressing) return { score: 50, confidence: 0.35, reason: `BB compression: width ${(currentWidth*100).toFixed(1)}% vs avg ${(avgWidth*100).toFixed(1)}% — potential vol expansion ahead`, signalClass: 'neutral' };
-    if (expanding) return { score: 35, confidence: 0.25, reason: `BB expanding: width ${(currentWidth*100).toFixed(1)}% — post-event vol regime`, signalClass: 'neutral' };
-    return { score: 20, confidence: 0.2, reason: `BB width stable at ${(currentWidth*100).toFixed(1)}% (earnings data unavailable, using vol proxy)`, signalClass: 'neutral' };
+    const widthRatio = avgWidth > 0 ? currentWidth / avgWidth : 1;
+    const compressing = widthRatio < 0.8;
+    const expanding = widthRatio > 1.3;
+
+    // BASE (10-50): proximity to earnings via vol compression
+    const baseScore = Math.round(mapRange(widthRatio, 0.5, 1.5, 50, 10));
+
+    // BONUS: report week proximity
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (compressing) { bonusScore = 20; bonusLabel = 'pre-earnings vol compression'; }
+    else if (expanding) { bonusScore = 10; bonusLabel = 'post-earnings vol expansion'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    return {
+      signalClass: 'neutral',
+      score: total,
+      confidence: Number((0.15 + (compressing ? 0.2 : 0.1)).toFixed(2)),
+      reason: `Earnings implementation: BB width ${(currentWidth*100).toFixed(1)}% (${compressing ? 'compressing' : expanding ? 'expanding' : 'stable'}), base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, currentWidth: currentWidth*100, widthRatio, compressing },
+    };
+
   }
 }
 
@@ -1613,22 +2006,40 @@ export class EarningsWhispersDirective implements IDirective {
   readonly priority = 44;
   readonly maxScore = 65;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const bars = input.bars;
-    if (bars.length < 5) return { score: 0, confidence: 0.1, reason: `Need 5+ bars, have ${bars.length}`, signalClass: 'neutral' };
-    // Proxy: look for gap between last close and previous bar's high/low
+    if (bars.length < 5) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 5+ bars, have ${bars.length}` };
     const last = bars[bars.length - 1];
     const prev = bars[bars.length - 2];
+    const gapPct = prev.close > 0 ? ((last.open - prev.close) / prev.close) * 100 : 0;
     const gapUp = last.open > prev.high * 1.005;
     const gapDown = last.open < prev.low * 0.995;
-    const gapPct = prev.close > 0 ? ((last.open - prev.close) / prev.close) * 100 : 0;
-    if (gapUp && gapPct > 1.5) return { score: 55, confidence: 0.4, reason: `Gap up ${gapPct.toFixed(1)}% — possible positive whisper/event`, signalClass: 'bullish' };
-    if (gapUp) return { score: 35, confidence: 0.3, reason: `Small gap up ${gapPct.toFixed(1)}%`, signalClass: 'bullish' };
-    if (gapDown && gapPct < -1.5) return { score: 50, confidence: 0.35, reason: `Gap down ${gapPct.toFixed(1)}% — possible negative surprise`, signalClass: 'bearish' };
-    if (gapDown) return { score: 30, confidence: 0.25, reason: `Small gap down ${gapPct.toFixed(1)}%`, signalClass: 'bearish' };
-    return { score: 15, confidence: 0.2, reason: `No significant price gap (earnings whisper data unavailable, using gap proxy)`, signalClass: 'neutral' };
+    const gapMagnitude = Math.abs(gapPct);
+
+    // BASE (10-45): gap magnitude
+    const baseScore = Math.round(mapRange(gapMagnitude, 0, 5, 10, 45));
+
+    // BONUS: large drift
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (gapUp && gapPct > 2) { bonusScore = 20; bonusLabel = 'large gap up (positive whisper)'; }
+    else if (gapUp && gapPct > 1) { bonusScore = 10; bonusLabel = 'gap up'; }
+    else if (gapDown && gapPct < -2) { bonusScore = 15; bonusLabel = 'large gap down (negative surprise)'; }
+    else if (gapDown) { bonusScore = 8; bonusLabel = 'gap down'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = gapUp ? 'bullish' : gapDown ? 'bearish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.15 + Math.min(0.25, gapMagnitude * 0.06)).toFixed(2)),
+      reason: `Earnings whispers: gap ${gapPct.toFixed(1)}% (${gapUp ? 'up' : gapDown ? 'down' : 'none'}), base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, gapPct, gapUp, gapDown },
+    };
+
   }
 }
 
@@ -1640,31 +2051,46 @@ export class LikeZacksDirective implements IDirective {
   readonly priority = 52;
   readonly maxScore = 85;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const closes = input.bars.map(b => b.close);
-    if (closes.length < 50) return { score: Math.round(20 * closes.length / 50), confidence: 0.15, reason: `Need 50+ bars for ranking, have ${closes.length}`, signalClass: 'neutral' };
-    // Zacks-style: rank based on multi-period momentum (proxy for estimate revisions)
+    if (closes.length < 50) return { signalClass: 'neutral', score: Math.round(10 * closes.length / 50), confidence: 0.1, reason: `Need 50+ bars, have ${closes.length}` };
     const ret5 = (closes[closes.length-1] - closes[closes.length-6]) / Math.max(0.01, closes[closes.length-6]) * 100;
     const ret10 = (closes[closes.length-1] - closes[closes.length-11]) / Math.max(0.01, closes[closes.length-11]) * 100;
     const ret20 = (closes[closes.length-1] - closes[closes.length-21]) / Math.max(0.01, closes[closes.length-21]) * 100;
-    const ema20 = ema(closes, 20);
-    const ema50 = ema(closes, 50);
-    const aboveEma20 = ema20.length > 0 && closes[closes.length-1] > ema20[ema20.length-1];
-    const aboveEma50 = ema50.length > 0 && closes[closes.length-1] > ema50[ema50.length-1];
-    // Rank 1-5 style
+    const ema20Vals = ema(closes, 20);
+    const ema50Vals = ema(closes, 50);
+    const aboveEma20 = ema20Vals.length > 0 && closes[closes.length-1] > ema20Vals[ema20Vals.length-1];
+    const aboveEma50 = ema50Vals.length > 0 && closes[closes.length-1] > ema50Vals[ema50Vals.length-1];
+
+    // BASE (5-60): multi-period momentum composite
     let rankScore = 0;
-    if (ret5 > 2) rankScore += 20;
-    else if (ret5 > 0) rankScore += 10;
-    if (ret10 > 3) rankScore += 20;
-    else if (ret10 > 0) rankScore += 10;
-    if (ret20 > 5) rankScore += 20;
-    else if (ret20 > 0) rankScore += 10;
-    if (aboveEma20) rankScore += 15;
-    if (aboveEma50) rankScore += 10;
-    const signalClass: 'bullish' | 'bearish' | 'neutral' = rankScore >= 60 ? 'bullish' : rankScore < 25 ? 'bearish' : 'neutral';
-    return { score: Math.min(85, rankScore + 5), confidence: 0.3 + rankScore * 0.005, reason: `Zacks-style rank proxy: ${rankScore}/85 (earnings revision data unavailable, using momentum proxy)`, signalClass };
+    if (ret5 > 2) rankScore += 20; else if (ret5 > 0) rankScore += 10;
+    if (ret10 > 3) rankScore += 20; else if (ret10 > 0) rankScore += 10;
+    if (ret20 > 5) rankScore += 20; else if (ret20 > 0) rankScore += 10;
+    if (aboveEma20) rankScore += 10;
+    if (aboveEma50) rankScore += 5;
+    const baseScore = Math.round(mapRange(rankScore, 0, 85, 5, 60));
+
+    // BONUS: strong Zacks-style rank
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (rankScore >= 65) { bonusScore = 25; bonusLabel = 'strong buy proxy (rank ' + rankScore + '/85)'; }
+    else if (rankScore >= 45) { bonusScore = 15; bonusLabel = 'buy proxy'; }
+    else if (rankScore < 15) { bonusScore = 10; bonusLabel = 'weak rank (sell proxy)'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = rankScore >= 45 ? 'bullish' : rankScore < 15 ? 'bearish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.2 + rankScore * 0.005).toFixed(2)),
+      reason: `Zacks proxy: rank ${rankScore}/85 (5d:${ret5.toFixed(1)}% 10d:${ret10.toFixed(1)}% 20d:${ret20.toFixed(1)}%), base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, rankScore, ret5, ret10, ret20 },
+    };
+
   }
 }
 
@@ -1676,27 +2102,46 @@ export class MeanReversionDirective implements IDirective {
   readonly priority = 71;
   readonly maxScore = 105;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const closes = input.bars.map(b => b.close);
-    if (closes.length < 30) return { score: 0, confidence: 0.1, reason: `Need 30+ bars, have ${closes.length}`, signalClass: 'neutral' };
+    if (closes.length < 30) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 30+ bars, have ${closes.length}` };
+
     const bb = bollingerBands(closes, 20, 2);
-    if (!bb || !bb.upper.length) return { score: 0, confidence: 0.1, reason: 'BB calculation failed', signalClass: 'neutral' };
+    if (!bb || !bb.upper.length) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'BB calculation failed' };
     const lastClose = closes[closes.length - 1];
     const upper = bb.upper[bb.upper.length - 1];
     const lower = bb.lower[bb.lower.length - 1];
     const middle = bb.middle[bb.middle.length - 1];
     const bandRange = upper - lower;
-    if (bandRange <= 0) return { score: 0, confidence: 0.1, reason: 'Invalid band range', signalClass: 'neutral' };
-    // Distance from mean as % of band half-width
-    const distance = (lastClose - middle) / (bandRange / 2);
-    if (distance <= -1) return { score: 90, confidence: 0.6, reason: `Price at lower BB (${lastClose.toFixed(2)}), strong mean reversion buy`, signalClass: 'bullish' };
-    if (distance <= -0.8) return { score: 70, confidence: 0.5, reason: `Price near lower BB (${lastClose.toFixed(2)}), mean reversion`, signalClass: 'bullish' };
-    if (distance >= 1) return { score: 85, confidence: 0.55, reason: `Price at upper BB (${lastClose.toFixed(2)}), overbought revert`, signalClass: 'bearish' };
-    if (distance >= 0.8) return { score: 60, confidence: 0.45, reason: `Price near upper BB (${lastClose.toFixed(2)}), extended`, signalClass: 'bearish' };
-    const reverting = Math.abs(distance) < 0.3;
-    return { score: reverting ? 15 : Math.round(Math.abs(distance) * 25), confidence: 0.2, reason: `Price ${distance.toFixed(2)}σ from BB mean`, signalClass: distance < 0 ? 'bullish' : 'bearish' };
+    if (bandRange <= 0) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'Invalid band range' };
+
+    // Distance from mean in sigma units (-1=lowerBB, 0=middle, 1=upperBB)
+    const sigmaDist = (lastClose - middle) / (bandRange / 2);
+
+    // BASE (15-75): continuous from sigma distance
+    const baseScore = Math.round(mapRange(Math.abs(sigmaDist), 0, 1.2, 15, 75));
+
+    // BONUS: extreme mean deviation
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (sigmaDist <= -1) { bonusScore = 25; bonusLabel = 'at lower BB (oversold)'; }
+    else if (sigmaDist <= -0.8) { bonusScore = 15; bonusLabel = 'near lower BB'; }
+    else if (sigmaDist >= 1) { bonusScore = 25; bonusLabel = 'at upper BB (overbought)'; }
+    else if (sigmaDist >= 0.8) { bonusScore = 15; bonusLabel = 'near upper BB'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = sigmaDist <= -0.5 ? 'bullish' : sigmaDist >= 0.5 ? 'bearish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.2 + Math.abs(sigmaDist) * 0.4).toFixed(2)),
+      reason: `Mean reversion: ${sigmaDist.toFixed(2)}σ from BB mean, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, sigmaDist, lastClose, middle },
+    };
+
   }
 }
 
@@ -1708,31 +2153,48 @@ export class ResistanceLevelsStrategyDirective implements IDirective {
   readonly priority = 70;
   readonly maxScore = 100;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const bars = input.bars;
-    if (bars.length < 30) return { score: 0, confidence: 0.1, reason: `Need 30+ bars, have ${bars.length}`, signalClass: 'neutral' };
+    if (bars.length < 30) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 30+ bars, have ${bars.length}` };
+
     const highs = bars.map(b => b.high);
     const lows = bars.map(b => b.low);
     const lastClose = bars[bars.length - 1].close;
-    // Find recent pivot high and low (last 20 bars)
     const pivotHigh = Math.max(...highs.slice(-20, -1));
     const pivotLow = Math.min(...lows.slice(-20, -1));
     const range = pivotHigh - pivotLow;
-    if (range <= 0) return { score: 0, confidence: 0.1, reason: 'No valid pivot range', signalClass: 'neutral' };
-    // Distance from pivot points as % of range
+    if (range <= 0) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'No valid pivot range' };
+
+    // Distance from resistance as % of range
     const distFromResistance = ((pivotHigh - lastClose) / range) * 100;
     const distFromSupport = ((lastClose - pivotLow) / range) * 100;
-    // Breakout detection
+
+    // BASE (15-75): proximity to resistance (closer = higher base)
+    const baseScore = Math.round(mapRange(distFromResistance, 0, 50, 75, 15));
+
+    // BONUS: breakout/breakdown
+    let bonusScore = 0;
+    let bonusLabel = '';
     const brokeResistance = lastClose > pivotHigh * 1.002;
     const brokeSupport = lastClose < pivotLow * 0.998;
-    if (brokeResistance) return { score: 85, confidence: 0.6, reason: `Breakout above resistance ${pivotHigh.toFixed(2)}`, signalClass: 'bullish' };
-    if (brokeSupport) return { score: 80, confidence: 0.55, reason: `Breakdown below support ${pivotLow.toFixed(2)}`, signalClass: 'bearish' };
-    if (distFromResistance < 5) return { score: 60, confidence: 0.4, reason: `Near resistance (${distFromResistance.toFixed(1)}% away)`, signalClass: 'bearish' };
-    if (distFromSupport < 5) return { score: 55, confidence: 0.4, reason: `Near support (${distFromSupport.toFixed(1)}% away)`, signalClass: 'bullish' };
-    const mid = (distFromSupport - distFromResistance);
-    return { score: Math.round(30 + mid * 0.3), confidence: 0.25, reason: `Mid-range: ${distFromSupport.toFixed(0)}% above support`, signalClass: mid > 0 ? 'bullish' : 'bearish' };
+    if (brokeResistance) { bonusScore = 25; bonusLabel = 'breakout above resistance'; }
+    else if (brokeSupport) { bonusScore = 20; bonusLabel = 'breakdown below support'; }
+    else if (distFromResistance < 5) { bonusScore = 15; bonusLabel = 'at resistance'; }
+    else if (distFromSupport < 5) { bonusScore = 15; bonusLabel = 'at support'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = brokeResistance ? 'bullish' : brokeSupport ? 'bearish' : distFromSupport < 30 ? 'bullish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.3 + (brokeResistance || brokeSupport ? 0.25 : 0)).toFixed(2)),
+      reason: `S/R: ${distFromResistance.toFixed(0)}% below resistance, ${distFromSupport.toFixed(0)}% above support, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, distFromResistance, distFromSupport, pivotHigh, pivotLow },
+    };
+
   }
 }
 
@@ -1744,37 +2206,41 @@ export class Sp500RegimeDirective implements IDirective {
   readonly priority = 70;
   readonly maxScore = 100;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const closes = input.bars.map(b => b.close);
-    if (closes.length < 200) return { score: Math.round(30 * closes.length / 200), confidence: 0.15, reason: `Need 200+ bars for regime detection, have ${closes.length}`, signalClass: 'neutral' };
+    if (closes.length < 200) return { signalClass: 'neutral', score: Math.round(15 * closes.length / 200), confidence: 0.1, reason: `Need 200+ bars, have ${closes.length}` };
     const lastClose = closes[closes.length - 1];
     const s200 = sma(closes, 200);
-    if (s200 <= 0) return { score: 0, confidence: 0.1, reason: 'SMA200 calculation failed', signalClass: 'neutral' };
+    if (s200 <= 0) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'SMA200 calculation failed' };
     const devPct = ((lastClose - s200) / s200) * 100;
-    // Check SMA200 slope (last 20 bars of SMA200 on rolling windows)
-    const ema20 = ema(closes, 20);
-    const ema50 = ema(closes, 50);
     const s200recent = sma(closes.slice(-21, -1), 20);
     const slope200 = s200recent > 0 ? s200 - s200recent : 0;
-    let regime: string;
-    let score: number;
-    let signalClass: 'bullish' | 'bearish' | 'neutral';
-    if (devPct > 10 && slope200 > 0) {
-      regime = 'Strong Bull'; score = 90; signalClass = 'bullish';
-    } else if (devPct > 0 && slope200 > 0) {
-      regime = 'Bull'; score = 75; signalClass = 'bullish';
-    } else if (devPct > 0 && slope200 <= 0) {
-      regime = 'Weakening'; score = 45; signalClass = 'neutral';
-    } else if (devPct > -10 && slope200 < 0) {
-      regime = 'Correction'; score = 35; signalClass = 'bearish';
-    } else if (devPct > -10) {
-      regime = 'Recovery'; score = 55; signalClass = 'neutral';
-    } else {
-      regime = 'Bear'; score = 20; signalClass = 'bearish';
-    }
-    return { score, confidence: 0.4 + Math.abs(devPct) * 0.02, reason: `${regime}: ${devPct.toFixed(1)}% vs SMA200(${s200.toFixed(2)})`, signalClass };
+    const slopeDir = slope200 > 0;
+
+    // BASE (15-70): trend strength from SMA200 position
+    const baseScore = Math.round(mapRange(devPct, -15, 15, 15, 70));
+
+    // BONUS: breakout/breakdown
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (devPct > 10 && slopeDir) { bonusScore = 30; bonusLabel = 'strong bull regime'; }
+    else if (devPct > 5 && slopeDir) { bonusScore = 20; bonusLabel = 'bull regime'; }
+    else if (devPct < -10 && !slopeDir) { bonusScore = 20; bonusLabel = 'bear regime'; }
+    else if (devPct < -5) { bonusScore = 10; bonusLabel = 'correction'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = devPct > 0 && slopeDir ? 'bullish' : devPct < -5 ? 'bearish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.3 + Math.abs(devPct) * 0.03).toFixed(2)),
+      reason: `SP500 regime: ${devPct.toFixed(1)}% vs SMA200, SMA200 ${slopeDir ? 'rising' : 'falling'}, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, devPct, slope200, slopeDir },
+    };
+
   }
 }
 
@@ -1786,28 +2252,44 @@ export class VixStrategyDirective implements IDirective {
   readonly priority = 63;
   readonly maxScore = 90;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const closes = input.bars.map(b => b.close);
     const highs = input.bars.map(b => b.high);
     const lows = input.bars.map(b => b.low);
-    if (closes.length < 30) return { score: 0, confidence: 0.1, reason: `Need 30+ bars, have ${closes.length}`, signalClass: 'neutral' };
+    if (closes.length < 30) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 30+ bars, have ${closes.length}` };
     const a = atr(highs, lows, closes, 14);
-    if (a.length < 20) return { score: 0, confidence: 0.1, reason: 'ATR calculation failed', signalClass: 'neutral' };
+    if (a.length < 20) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'ATR calculation failed' };
     const currentAtr = a[a.length - 1];
     const lastClose = closes[closes.length - 1];
     const atrPct = (currentAtr / lastClose) * 100;
-    // Compute ATR percentile over lookback
     const atrVals = a.slice(-20);
-    const sorted = [...atrVals].sort((a,b) => a - b);
+    const sorted = [...atrVals].sort((a, b) => a - b);
     const rank = sorted.findIndex(v => v >= currentAtr);
     const percentile = rank >= 0 ? (rank / sorted.length) * 100 : 50;
-    // High ATR percentile = high "VIX" = reduce sizing
-    if (percentile > 80) return { score: 75, confidence: 0.55, reason: `Volatility in top ${percentile.toFixed(0)}th percentile (ATR=${atrPct.toFixed(2)}%) — reduce position sizing`, signalClass: 'neutral' };
-    if (percentile > 60) return { score: 55, confidence: 0.4, reason: `Elevated volatility: ${percentile.toFixed(0)}th percentile`, signalClass: 'neutral' };
-    if (percentile < 20) return { score: 30, confidence: 0.35, reason: `Low volatility: ${percentile.toFixed(0)}th percentile — favorable for entry`, signalClass: 'bullish' };
-    return { score: Math.round(40 + (percentile - 50) * 0.3), confidence: 0.3, reason: `Volatility: ${percentile.toFixed(0)}th percentile (VIX proxy: ATR=${atrPct.toFixed(2)}%)`, signalClass: percentile < 50 ? 'bullish' : 'neutral' };
+
+    // BASE (15-60): ATR percentile as VIX proxy
+    const baseScore = Math.round(mapRange(percentile, 0, 100, 15, 60));
+
+    // BONUS: high vol regime
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (percentile > 85) { bonusScore = 30; bonusLabel = 'extreme vol (VIX spike proxy)'; }
+    else if (percentile > 70) { bonusScore = 20; bonusLabel = 'elevated vol regime'; }
+    else if (percentile < 15) { bonusScore = 15; bonusLabel = 'low vol (complacency)'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = percentile < 30 ? 'bullish' : percentile > 70 ? 'neutral' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.3 + Math.min(0.3, Math.abs(percentile - 50) * 0.006)).toFixed(2)),
+      reason: `VIX strategy: ATR ${atrPct.toFixed(2)}% (p${percentile.toFixed(0)}), base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, atrPct, percentile },
+    };
+
   }
 }
 
@@ -1819,29 +2301,47 @@ export class WeeklyRhythmStrategyDirective implements IDirective {
   readonly priority = 62;
   readonly maxScore = 85;
   readonly version = '2.0.0';
-  readonly readiness = 'alpha' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
+
     const bars = input.bars;
-    if (bars.length < 5) return { score: 0, confidence: 0.1, reason: `Need 5+ bars, have ${bars.length}`, signalClass: 'neutral' };
+    if (bars.length < 5) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'Need 5+ bars' };
     const lastBar = bars[bars.length - 1];
-    if (!lastBar.timestamp) return { score: 30, confidence: 0.2, reason: 'No timestamp data for day-of-week detection', signalClass: 'neutral' };
+    if (!lastBar.timestamp) return { signalClass: 'neutral', score: 15, confidence: 0.15, reason: 'No timestamp data' };
     const day = new Date(lastBar.timestamp).getUTCDay();
-    // Day-of-week edges (based on common market patterns):
-    // Monday: often weak/consolidation (weekend gap digestion) - neutral
-    // Tuesday: turnaround potential - mildly bullish
-    // Wednesday: strong trending day - bullish
-    // Thursday: continuation - bullish
-    // Friday: profit-taking, position squaring - neutral/bearish
-    switch (day) {
-      case 0: return { score: 25, confidence: 0.25, reason: 'Sunday — low liquidity, neutral bias', signalClass: 'neutral' };
-      case 1: return { score: 35, confidence: 0.3, reason: 'Monday — gap digestion, cautious', signalClass: 'neutral' };
-      case 2: return { score: 65, confidence: 0.4, reason: 'Tuesday — turnaround potential, historically bullish edge', signalClass: 'bullish' };
-      case 3: return { score: 75, confidence: 0.5, reason: 'Wednesday — strong trending day, historically best performance', signalClass: 'bullish' };
-      case 4: return { score: 60, confidence: 0.4, reason: 'Thursday — continuation trend, bullish bias', signalClass: 'bullish' };
-      case 5: return { score: 35, confidence: 0.3, reason: 'Friday — profit-taking, position squaring ahead of weekend', signalClass: 'neutral' };
-      case 6: return { score: 20, confidence: 0.2, reason: 'Saturday — minimal liquidity', signalClass: 'neutral' };
-      default: return { score: 30, confidence: 0.2, reason: 'Unknown day of week', signalClass: 'neutral' };
-    }
+    const closes = bars.map(b => b.close);
+    const recentReturn = closes.length > 5 ? (closes[closes.length-1] - closes[closes.length-6]) / Math.max(0.01, closes[closes.length-6]) * 100 : 0;
+
+    // BASE (15-55): day-of-week statistical edge
+    const dayEdges: Record<number, { base: number; label: string }> = {
+      0: { base: 15, label: 'Sunday low liquidity' },
+      1: { base: 20, label: 'Monday gap digestion' },
+      2: { base: 45, label: 'Tuesday turnaround' },
+      3: { base: 55, label: 'Wednesday strongest day' },
+      4: { base: 45, label: 'Thursday continuation' },
+      5: { base: 25, label: 'Friday profit-taking' },
+      6: { base: 12, label: 'Saturday minimal' },
+    };
+    const edge = dayEdges[day] || { base: 20, label: 'unknown' };
+    const baseScore = edge.base;
+
+    // BONUS: strong pattern alignment
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if ((day === 2 || day === 3 || day === 4) && recentReturn > 1.5) { bonusScore = 30; bonusLabel = 'strong bullish midweek pattern'; }
+    else if ((day === 2 || day === 3 || day === 4) && recentReturn > 0.5) { bonusScore = 15; bonusLabel = 'midweek bullish bias confirmed'; }
+    else if (day === 1 && recentReturn < -1) { bonusScore = 20; bonusLabel = 'Monday bearish pattern active'; }
+
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = (day >= 2 && day <= 4) ? 'bullish' : day === 1 ? 'bearish' : 'neutral';
+    return {
+      signalClass,
+      score: total,
+      confidence: Number((0.3 + Math.abs(recentReturn) * 0.04).toFixed(2)),
+      reason: `Weekly rhythm strategy: ${edge.label}, ${recentReturn.toFixed(1)}% recent, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, dayOfWeek: day, recentReturn },
+    };
+
   }
 }

@@ -1,12 +1,15 @@
 /**
- * Earnings Proximity Directive
- * ============================
+ * Earnings Proximity Directive — HYBRID BASE+BONUS (Layer C, 2026-07-29)
+ * =======================================================================
  * Scores based on distance to next earnings date.
  * Mock-first — returns neutral when no earnings calendar data.
  *
- * Pre-earnings (1-3 days before): uncertainty penalty.
- * Post-earnings (1-3 days after): high volatility, moderate score.
- * Outside window: neutral.
+ * ── Hybrid Scoring ─────────────────────────────────────────
+ * BASE (40–55):  Continuous proximity interpolation: |days|=0→55, |days|=14→40.
+ *                Closer to earnings = slightly elevated base.
+ * BONUS tiers:   Within 1 day of earnings → +25 (heightened relevance).
+ *                Within 3 days of earnings → +10.
+ * MAX:           80 (55 base + 25 bonus).
  *
  * TradePress source: includes/scoring-system/directives/earnings-proximity.php
  */
@@ -14,17 +17,23 @@
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 
+/** Linear interpolation: map value from [inMin,inMax] to [outMin,outMax], clamped. */
+function mapRange(v: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
+  const t = Math.max(0, Math.min(1, (v - inMin) / (inMax - inMin)));
+  return outMin + t * (outMax - outMin);
+}
+
 @Injectable()
 export class EarningsProximityDirective implements IDirective {
   readonly id = 'earnings-proximity';
   readonly name = 'Earnings Proximity';
-  readonly description = 'Scores based on distance to earnings. Pre-earnings = uncertainty, post-earnings = volatility.';
+  readonly description = 'Hybrid: continuous earnings-proximity base + within-window bonuses.';
   readonly priority = 50;
-  readonly maxScore = 100;
+  readonly maxScore = 80; // 55 base + 25 bonus
   readonly minBars = { '1d': 1 };
-  readonly version = '1.0.0';
+  readonly version = '2.0.0'; // Hybrid scoring
   readonly requiredDataFeeds = ['earnings'];
-  readonly readiness = 'bravo' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     // Check for earnings date on the input symbol data
@@ -45,42 +54,44 @@ export class EarningsProximityDirective implements IDirective {
     const now = new Date();
     const lastBar = bars.length > 0 ? new Date(bars[bars.length - 1].timestamp) : now;
     const daysUntil = Math.ceil((earningsDate.getTime() - lastBar.getTime()) / (1000 * 60 * 60 * 24));
-    const daysSince = -daysUntil;
+    const absDays = Math.abs(daysUntil);
 
-    if (daysUntil >= 1 && daysUntil <= 3) {
-      // Pre-earnings: uncertainty — reduce long score
-      return {
-        signalClass: 'bearish',
-        score: Math.round(25 - (3 - daysUntil) * 5),
-        confidence: 0.4,
-        reason: `${daysUntil} day${daysUntil > 1 ? 's' : ''} before earnings. Elevated uncertainty — reduced long score.`,
-      };
+    // ── BASE (continuous, 40–55) ──────────────────────────
+    // |days|=0 (earnings day) → base 55
+    // |days|=14+             → base 40
+    const baseScore = Math.round(mapRange(absDays, 0, 14, 55, 40));
+
+    // ── BONUS (threshold-gated) ───────────────────────────
+    let bonusScore = 0;
+    let bonusLabel = '';
+
+    if (absDays <= 1) {
+      bonusScore = 25;
+      bonusLabel = daysUntil >= 0 ? 'earnings imminent' : 'just reported';
+    } else if (absDays <= 3) {
+      bonusScore = 10;
+      bonusLabel = daysUntil >= 0 ? 'earnings approaching' : 'recent earnings';
     }
 
-    if (daysSince >= 1 && daysSince <= 3) {
-      // Post-earnings: volatility settling
-      return {
-        signalClass: 'neutral',
-        score: Math.round(40 + daysSince * 5),
-        confidence: 0.3,
-        reason: `${daysSince} day${daysSince > 1 ? 's' : ''} after earnings. Post-report volatility — moderate score.`,
-      };
-    }
+    // ── Total ─────────────────────────────────────────────
+    const totalScore = baseScore + bonusScore;
 
-    if (daysUntil > 3) {
-      return {
-        signalClass: 'neutral',
-        score: 50,
-        confidence: 0.25,
-        reason: `${daysUntil} days until earnings — clear runway. Neutral score.`,
-      };
-    }
+    let signalClass: 'bullish' | 'bearish' | 'neutral';
+    if (totalScore >= 60) signalClass = 'bullish';
+    else signalClass = 'neutral';
+
+    const confidence = bonusScore > 0 ? 0.4 : 0.25;
+
+    const parts: string[] = [`base=${baseScore} (${absDays}d from earnings)`];
+    if (bonusScore > 0) parts.push(`+${bonusScore} bonus (${bonusLabel})`);
+    parts.push(`= ${totalScore}/${this.maxScore}`);
 
     return {
-      signalClass: 'neutral',
-      score: 45,
-      confidence: 0.25,
-      reason: `${daysSince} days since earnings. Earnings volatility absorbed.`,
+      signalClass,
+      score: totalScore,
+      confidence,
+      reason: `${input.symbol}: ${parts.join(' ')}`,
+      metadata: { baseScore, bonusScore, bonusLabel, daysUntil, absDays },
     };
   }
 }

@@ -7,7 +7,7 @@ Continued the readiness tier rollout by surfacing readiness in the Directive Reg
 ## Completed Work
 
 ### Directive Registry — Readiness Column ✅
-- Added `READINESS_COLORS` map: ready=green, bravo=yellow, alpha=red
+- Added `READINESS_COLORS` map: ready=green, beta=yellow, alpha=red
 - Added `readiness` field to `hydrateFromApi()` function
 - Added "Readiness" column to table header and each row
 - Each readiness badge has a colored border, background, and hover tooltip explaining the tier
@@ -24,7 +24,7 @@ Continued the readiness tier rollout by surfacing readiness in the Directive Reg
 - All 104 directives + NestJS build clean with zero errors
 
 ### Verified
-- ALPHA exclusion working: `xau-speed-v1` protocol has 17 ready + 7 bravo, 0 alpha excluded
+- ALPHA exclusion working: `xau-speed-v1` protocol has 17 ready + 7 beta, 0 alpha excluded
 - GatedScore returns `readinessBreakdown` and `excludedBreakdown` in response
 
 ## Files Changed

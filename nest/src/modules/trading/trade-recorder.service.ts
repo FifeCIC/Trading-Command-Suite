@@ -32,6 +32,10 @@ export interface TradeRecord {
   scoringStrategyId?: string;
   status: 'open' | 'closed' | 'rejected';
   origin?: 'user' | 'agent' | 'strategy' | 'system';
+  /** Pipeline identifier — which system generated this trade (#525) */
+  source?: 'meta-stack' | 'speed-scanner' | 'manual' | 'backtest' | 'directive-direct';
+  /** A/B test pairing reference */
+  abTestId?: string;
   openedAt?: Date;
   /** MT5 broker fields for traceability */
   ticket?: number;
@@ -67,6 +71,8 @@ export class TradeRecorderService {
           scoringStrategyId: trade.scoringStrategyId || null,
           status: trade.status,
           origin: trade.origin || 'user',
+          source: trade.source ?? null,
+          abTestId: trade.abTestId ?? null,
           openedAt: trade.openedAt || new Date(),
           closedAt: trade.status === 'closed' ? new Date() : null,
           // MT5 traceability (#446)

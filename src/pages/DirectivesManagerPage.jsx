@@ -26,7 +26,7 @@ const COMPLEXITY_COLORS = {
 
 const READINESS_COLORS = {
   'ready':  { color: '#22c55e', bg: '#22c55e18', label: 'READY' },
-  'bravo':  { color: '#f59e0b', bg: '#f59e0b18', label: 'BRAVO' },
+  'beta':  { color: '#f59e0b', bg: '#f59e0b18', label: 'BETA' },
   'alpha':  { color: '#ef4444', bg: '#ef444418', label: 'ALPHA' },
 };
 
@@ -75,6 +75,7 @@ export default function DirectivesManagerPage() {
   const navigate = useNavigate();
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState(null)
+  const [readinessFilter, setReadinessFilter] = useState('all') // 'all' | 'ready' | 'beta' | 'alpha'
   const [expandedRows, setExpandedRows] = useState(() => new Set())
   const queryClient = useQueryClient()
 
@@ -116,16 +117,23 @@ export default function DirectivesManagerPage() {
   }
 
   const filtered = useMemo(() => {
+    let result = allDirectives;
+    // Text search filter
     const q = query.trim().toLowerCase()
-    if (!q) return allDirectives
-
-    return allDirectives.filter((item) => {
-      return [item.code, item.name, item.category, item.summary]
-        .join(' ')
-        .toLowerCase()
-        .includes(q)
-    })
-  }, [allDirectives, query])
+    if (q) {
+      result = result.filter((item) => {
+        return [item.code, item.name, item.category, item.summary]
+          .join(' ')
+          .toLowerCase()
+          .includes(q)
+      })
+    }
+    // Readiness tier filter
+    if (readinessFilter !== 'all') {
+      result = result.filter((item) => item.readiness === readinessFilter)
+    }
+    return result
+  }, [allDirectives, query, readinessFilter])
 
   const selected = useMemo(() => {
     const first = filtered[0] ?? null
@@ -198,16 +206,40 @@ export default function DirectivesManagerPage() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
+          <div className="directives-readiness-filters" style={{ display: 'flex', gap: '0.35rem', marginLeft: '0.75rem' }}>
+            {['all', 'ready', 'beta', 'alpha'].map((tier) => {
+              const rs = tier === 'all' ? { color: '#94a3b8', bg: '#94a3b818', label: 'ALL' } : READINESS_COLORS[tier];
+              return (
+                <button
+                  key={tier}
+                  onClick={() => setReadinessFilter(tier)}
+                  style={{
+                    background: readinessFilter === tier ? rs.bg : 'transparent',
+                    color: rs.color,
+                    border: `1px solid ${rs.color}40`,
+                    padding: '3px 10px',
+                    borderRadius: '4px',
+                    fontSize: '0.72rem',
+                    fontWeight: readinessFilter === tier ? 700 : 500,
+                    cursor: 'pointer',
+                    opacity: readinessFilter === tier ? 1 : 0.6,
+                  }}
+                >
+                  {rs.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div className="directives-toolbar-stats" role="status" aria-live="polite">
-          <span><strong>{allDirectives.length}</strong> total</span>
+          <span><strong>{filtered.length}</strong> shown</span>
           <span className="directives-stat-dot stat-active" />
           <span><strong>{allDirectives.filter((item) => item.active).length}</strong> active</span>
           <span style={{ marginLeft: '0.5rem', color: '#22c55e', fontSize: '0.78rem' }}>
             🟢 {allDirectives.filter((i) => i.readiness === 'ready').length}
           </span>
           <span style={{ color: '#f59e0b', fontSize: '0.78rem' }}>
-            🟡 {allDirectives.filter((i) => i.readiness === 'bravo').length}
+            🟡 {allDirectives.filter((i) => i.readiness === 'beta').length}
           </span>
           <span style={{ color: '#ef4444', fontSize: '0.78rem' }}>
             🔴 {allDirectives.filter((i) => i.readiness === 'alpha').length}
@@ -286,7 +318,7 @@ export default function DirectivesManagerPage() {
                           return (
                             <span
                               style={{ color: r.color, background: r.bg, padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, border: `1px solid ${r.color}40` }}
-                              title={item.readiness === 'ready' ? 'Verified against live data' : item.readiness === 'bravo' ? 'Real math, proxy/limited data' : 'Mock, stub, or placeholder'}
+                              title={item.readiness === 'ready' ? 'Verified against live data' : item.readiness === 'beta' ? 'Real math, proxy/limited data' : 'Mock, stub, or placeholder'}
                             >
                               {r.label}
                             </span>

@@ -220,6 +220,13 @@ const KNOWN_FEATURES = {
   'Score Momentum Indicator (Phase 5)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'partial' },
   'Phase Restructuring (80 issues)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
   'NestJS Zero-Error Build (104 directives + 10 adapters)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // 2026-07-29 — Handoff Batch #6
+  'SymbolResolverService (8 tiers, 4 presets)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Scoring Paths Canonical (5 surfaces)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Activity Feed (Automation Dashboard)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Config Reload Policy (Two-Tier)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Strategy Page Consolidation (9→4)': { dataPersistence: 'config', uiSurfaces: 4, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Backtest UI Unification Plan (Phase 2-5)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'partial' },
 };
 
 // ── Build unified capability rows ──

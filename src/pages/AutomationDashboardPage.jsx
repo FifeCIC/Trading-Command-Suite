@@ -38,6 +38,13 @@ export default function AutomationDashboardPage() {
     refetchOnWindowFocus: true,
   });
 
+  const activityQuery = useQuery({
+    queryKey: ['automation', 'activity'],
+    queryFn: () => apiGet('/api/automation/activity?limit=25'),
+    refetchInterval: 3000,
+    refetchOnWindowFocus: true,
+  });
+
   const queryClient = useQueryClient();
 
   const toggleMutation = useMutation({
@@ -72,12 +79,34 @@ export default function AutomationDashboardPage() {
   const loopState = statusQuery.data ?? {};
   const brokerStates = statusQuery.data?.brokerStates ?? {};
   const recentDecisions = statusQuery.data?.recentDecisions ?? [];
+  const activityEvents = activityQuery.data?.events ?? [];
+  const currentPhase = activityQuery.data?.currentPhase;
+  const currentTick = activityQuery.data?.currentTick;
+  const totalEventsToday = activityQuery.data?.totalEventsToday ?? 0;
   const loopRunning = loopState.loopEnabled;
   const isBusy = startMutation.isPending || stopMutation.isPending || runNowMutation.isPending;
 
   const formatTime = (iso) => {
     if (!iso) return '—';
     return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
+
+  const phaseLabel = (step) => {
+    const map = {
+      tick_start: '🚀 Init', bars_fetched: '📊 Bars', scored: '🧮 Score',
+      gated: '🛡 Gate', dispatch: '📤 Dispatch', order_sent: '📨 Sent',
+      order_result: '✅ Result', duplicate_check: '🔒 Dup Check',
+    };
+    return map[step] || step;
+  };
+
+  const phaseColor = (step) => {
+    const map = {
+      tick_start: '#94a3b8', bars_fetched: '#3b82f6', scored: '#8b5cf6',
+      gated: '#f59e0b', dispatch: '#06b6d4', order_sent: '#f97316',
+      order_result: '#22c55e', duplicate_check: '#ef4444',
+    };
+    return map[step] || '#94a3b8';
   };
 
   // Directive breakdown for selected symbol
@@ -379,9 +408,55 @@ export default function AutomationDashboardPage() {
                       <span>{s.protocolId}</span> · <span>{s.mode}</span>
                       {s.lastComposite != null && <span> · Score: {s.lastComposite}</span>}
                     </div>
+                    {s.dataStatus && s.dataStatus !== 'ready' && (
+                      <div className="ad-strategy-status" style={{
+                        marginTop: '0.35rem', fontSize: '0.72rem',
+                        color: s.dataStatus === 'pending_bars' ? '#f59e0b' : '#ef4444',
+                        background: s.dataStatus === 'pending_bars' ? '#f59e0b10' : '#ef444410',
+                        padding: '2px 8px', borderRadius: '4px',
+                      }}>
+                        {s.dataStatus === 'pending_bars' ? '⏳' : '🚫'} {s.dataStatusReason || s.dataStatus}
+                      </div>
+                    )}
                   </div>
                   );
                 })}
+              </div>
+            )}
+          </motion.section>
+
+          {/* Activity Feed */}
+          <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}>
+            <h2 className="ad-panel-title">
+              📡 Activity Feed
+              {currentPhase && <span className="ad-phase-badge" style={{ background: phaseColor(currentPhase) + '22', color: phaseColor(currentPhase), marginLeft: '0.5rem', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '10px' }}>{phaseLabel(currentPhase)}</span>}
+              {totalEventsToday > 0 && <span className="ad-count-badge">({totalEventsToday} today)</span>}
+            </h2>
+            {activityQuery.isLoading && <LoadingSkeleton variant="text" lines={4} />}
+            {activityEvents.length === 0 && !activityQuery.isLoading && (
+              <EmptyState icon="📡" title="No activity yet" description="Start the loop and run a tick to see step-by-step progress." />
+            )}
+            {activityEvents.length > 0 && (
+              <div className="ad-activity-list">
+                {activityEvents.slice(0, 15).map((ev) => (
+                  <div key={ev.id} className="ad-activity-row">
+                    <span className="ad-activity-phase" style={{ color: phaseColor(ev.step) }} title={ev.step}>
+                      {phaseLabel(ev.step)}
+                    </span>
+                    {ev.symbol && <span className="ad-activity-symbol">{ev.symbol}</span>}
+                    {ev.decision && (
+                      <span className={`ad-activity-decision ad-decision-${ev.decision.toLowerCase()}`}>
+                        {ev.decision}
+                      </span>
+                    )}
+                    {ev.detail && (
+                      <span className="ad-activity-detail" title={ev.detail}>
+                        {ev.detail.length > 60 ? ev.detail.substring(0, 60) + '…' : ev.detail}
+                      </span>
+                    )}
+                    <span className="ad-activity-time">{formatTime(ev.timestamp)}</span>
+                  </div>
+                ))}
               </div>
             )}
           </motion.section>

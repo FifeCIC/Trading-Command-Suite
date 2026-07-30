@@ -1680,6 +1680,184 @@ const QA_CHECKLIST = [
     priority: 'medium',
     versionNote: '2026-07-22 — agent governance rules + attention log',
   },
+
+  // ═══════════════════════════════════════════════════
+  // SYMBOL RESOLVER (2026-07-29 — #413)
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-symres-001',
+    area: 'Symbols',
+    system: 'SymbolResolverService',
+    name: 'All 8 tiers resolve symbols correctly',
+    procedure: 'GET /api/symbols/resolution?tier=positions → verify returns position symbols. Repeat for active-strategies, active-protocols, watchlist-starred, macro, sector, forex-floor, all-active. Verify no tier returns empty when data exists.',
+    expected: 'Each tier returns distinct symbol sets. Macro tier returns SPY/QQQ/VIX/etc. Forex-floor returns EURUSD/GBPUSD/XAUUSD/etc. Limit=200 respected.',
+    category: 'API',
+    priority: 'high',
+    versionNote: '2026-07-29 — #413 Shared Symbol Tier Resolver',
+  },
+  {
+    id: 'qa-symres-002',
+    area: 'Symbols',
+    system: 'SymbolResolverService',
+    name: 'Feature presets return correct tier unions',
+    procedure: 'GET /api/symbols/resolution?feature=news → verify includes positions+macro+sector+all-active. Check bar-refresh, scoring, automation features similarly.',
+    expected: 'Each feature returns the union of its declared tiers without duplicates. No tier overlap causes double-counting.',
+    category: 'API',
+    priority: 'high',
+    versionNote: '2026-07-29 — #413 Shared Symbol Tier Resolver',
+  },
+  {
+    id: 'qa-symres-003',
+    area: 'Symbols',
+    system: 'SymbolResolverService',
+    name: 'Services delegate to resolver (not local queries)',
+    procedure: 'Check NewsImportService, BarRefreshService, AutomationLoopService — search for inline DB symbol queries. Verify they import SymbolResolverService and call resolveTierSymbols() or getSymbolsForFeature().',
+    expected: 'No duplicate MACRO_SYMBOLS/SECTOR_SYMBOLS constants in consuming services. No inline SELECT DISTINCT symbol FROM position queries.',
+    category: 'Audit',
+    priority: 'medium',
+    versionNote: '2026-07-29 — #413 Shared Symbol Tier Resolver',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // SCORING PATHS (2026-07-29 — #497)
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-scorepaths-001',
+    area: 'Scoring Pipeline',
+    system: 'Scoring Paths (5 surfaces)',
+    name: 'All 5 scoring surfaces return valid data',
+    procedure: 'Test each: GET /api/scoring/ranked?limit=5, POST /api/scoring/gated/batch with valid symbols, GET /api/signals/ladder?symbols=XAUUSD, POST /api/speed/scan with symbol, GET /api/backtest/benchmark?symbol=XAUUSD.',
+    expected: 'All 5 return 200 with valid JSON. No 404s. No "deprecated" warnings for canonical paths. Gated/batch returns ~14 directives (not 104).',
+    category: 'API',
+    priority: 'critical',
+    versionNote: '2026-07-29 — #497 Scoring Paths Audit',
+  },
+  {
+    id: 'qa-scorepaths-002',
+    area: 'Scoring Pipeline',
+    system: 'Scoring Paths (5 surfaces)',
+    name: 'Each controller has canonical JSDoc header',
+    procedure: 'Read scoring.controller.ts, protocol-gating.controller.ts, signals.controller.ts, speed-scan.controller.ts, backtest.controller.ts. Verify each has JSDoc header with canonical role, cost profile, use cases, cross-references.',
+    expected: '5 controller headers documented. Gated/batch marked as ★ canonical META.Stack path. Flat ranked warns "NOT for trading decisions."',
+    category: 'Audit',
+    priority: 'medium',
+    versionNote: '2026-07-29 — #497 Scoring Paths Audit',
+  },
+  {
+    id: 'qa-scorepaths-003',
+    area: 'Scoring Pipeline',
+    system: 'Scoring Paths (5 surfaces)',
+    name: 'Scoring paths diagram renders on DiagramsPage',
+    procedure: 'Navigate to /lab/diagrams. Find "Scoring Paths (5 Surfaces)" diagram. Verify 5 entry points → 5 pipelines → frontend consumers. Verify gated/batch highlighted as canonical (green).',
+    expected: 'Diagram shows all 5 paths with correct labels. Signals→gated delegation shown as dotted line. Diagram renders without errors.',
+    category: 'UI',
+    priority: 'low',
+    versionNote: '2026-07-29 — #497 Scoring Paths Audit',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // ACTIVITY FEED (2026-07-29 — #463)
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-activity-001',
+    area: 'Automation',
+    system: 'Activity Feed',
+    name: 'Activity endpoint returns real events',
+    procedure: 'GET /api/automation/activity?limit=5. Verify response has events[], currentTick, currentPhase, phaseStartedAt, totalEventsToday. Each event has tickNumber, timestamp, step, symbol, decision, detail, durationMs.',
+    expected: 'Events array populated when automation loop has run. totalEventsToday > 0 after recent ticks. Phase badge matches current step.',
+    category: 'API',
+    priority: 'high',
+    versionNote: '2026-07-29 — #463 Activity Feed',
+  },
+  {
+    id: 'qa-activity-002',
+    area: 'Automation',
+    system: 'Activity Feed',
+    name: 'Activity Feed widget renders on Automation Dashboard',
+    procedure: 'Navigate to /trading/automation. Verify Activity Feed widget appears between Active Strategies and Decision Log. Verify 3s polling updates events. Verify phase icons + color coding for 8 step types.',
+    expected: 'Widget shows 15 most recent events. Phase icons color-coded (🚀 gray, 📊 blue, 🧮 purple, 🛡 amber, 📤 cyan, 📨 orange, ✅ green, 🔒 red). Decision badges show BUY/SELL/SKIP/BLOCKED. Empty state when loop not running.',
+    category: 'UI',
+    priority: 'high',
+    versionNote: '2026-07-29 — #463 Activity Feed',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // CONFIG RELOAD (2026-07-29 — #509)
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-config-001',
+    area: 'System',
+    system: 'Config Reload',
+    name: 'Hot-reload updates directive metadata (~20ms)',
+    procedure: 'Toggle a directive active/inactive via DB. POST /api/system/reload-config. Verify response shows {success:true, reloaded:["directives","protocols"], ms:<50}. Check directive status reflects change.',
+    expected: 'Response within 50ms. Directive metadata refreshed from DB. No restart needed.',
+    category: 'API',
+    priority: 'high',
+    versionNote: '2026-07-29 — #509 Config Reload Policy',
+  },
+  {
+    id: 'qa-config-002',
+    area: 'System',
+    system: 'Config Reload',
+    name: 'Tier 2 changes (new directives/providers) require restart',
+    procedure: 'Add a new directive TypeScript class to nest/src/modules/directives/. POST /api/system/reload-config. Verify directive is NOT available in the registry until full restart.',
+    expected: 'Hot-reload succeeds but new directive class is not registered. After restart, directive appears in registry. Warning logged for missing class.',
+    category: 'Integration',
+    priority: 'medium',
+    versionNote: '2026-07-29 — #509 Config Reload Policy',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // STRATEGY CONSOLIDATION (2026-07-29 — #504)
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-stratcon-001',
+    area: 'Trading',
+    system: 'Strategy Pages',
+    name: 'All 4 canonical strategy pages render',
+    procedure: 'Navigate to /trading/strategies-index, /trading/strategy-monitor, /trading/strategy-builder, /trading/strategy-create. Verify all 4 render without console errors.',
+    expected: 'All 4 pages render. StrategiesListPage shows filterable cards with inline toggle. StrategyMonitorPage shows Overview/Compare/Ladders tabs. StrategyBuilderPage shows drag-and-drop canvas. StrategyCreatePage shows Form/Wizard tabs.',
+    category: 'UI',
+    priority: 'critical',
+    versionNote: '2026-07-29 — #504 Strategy Consolidation (9→4)',
+  },
+  {
+    id: 'qa-stratcon-002',
+    area: 'Trading',
+    system: 'Strategy Pages',
+    name: 'Legacy strategy pages still accessible under section header',
+    procedure: 'Open sidebar → Trading section. Verify "── Legacy Strategy Pages ──" section header exists. Verify old pages still accessible and labeled "(old)."',
+    expected: 'Legacy pages accessible. Section header divider present. Old page links work. Nothing deleted.',
+    category: 'UI',
+    priority: 'medium',
+    versionNote: '2026-07-29 — #504 Strategy Consolidation (9→4)',
+  },
+
+  // ═══════════════════════════════════════════════════
+  // BACKTEST PLAN (2026-07-29 — #467)
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-backplan-001',
+    area: 'Backtesting',
+    system: 'Backtest UI Plan',
+    name: 'Backtest backend has 14 endpoints operational',
+    procedure: 'List endpoints in backtest.controller.ts. Verify all 14 return valid responses (not 404). Test: POST /run, POST /optimize, POST /walk-forward, POST /runs/compare, POST /coverage, GET /benchmark, GET /equity/:runId, GET /data-inventory, GET /runs.',
+    expected: 'All 14 endpoints accessible. POST endpoints return valid JSON for test input. GET endpoints return arrays. No 500 errors on valid input.',
+    category: 'API',
+    priority: 'high',
+    versionNote: '2026-07-29 — #467 Backtest UI Plan (backend audit)',
+  },
+  {
+    id: 'qa-backplan-002',
+    area: 'Backtesting',
+    system: 'Backtest UI Plan',
+    name: 'Phase 5 charts deferred — non-chart features prioritized',
+    procedure: 'Verify BacktestChartPane and EquityCurveChart components are in src/components/backtest/ but NOT imported in BacktestPage.jsx main flow. Verify BacktestPage focuses on results table, config, parameter sweep.',
+    expected: 'Chart components exist but deferred. Current UI shows results table, execution panel, presets. No TradingView embedding yet.',
+    category: 'Audit',
+    priority: 'low',
+    versionNote: '2026-07-29 — #467 Backtest UI Plan (charts → phase 5)',
+  },
 ];
 
 export default QA_CHECKLIST;

@@ -4,6 +4,7 @@ import { ProtocolRunnerService } from './protocol-runner.service';
 import { ExecutionQueueService } from './execution-queue.service';
 import { MultiProtocolRankingService } from './multi-protocol-ranking.service';
 import { AutomationLoopService } from './automation-loop.service';
+import { AuditLogService } from './audit-log.service';
 import { PrismaService } from '../../database/prisma.service';
 import type { CacheStats, CacheDebugEntry } from './symbol-data-cache.service';
 import type { ProtocolRunConfig, RunResult } from './protocol-runner.service';
@@ -19,6 +20,7 @@ export class AutomationController {
     private readonly ranking: MultiProtocolRankingService,
     private readonly loop: AutomationLoopService,
     private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   // ── Cache endpoints ─────────────────────────────────
@@ -150,6 +152,17 @@ export class AutomationController {
 
   // ── Execution Queue endpoints ──────────────────────
 
+  /**
+   * GET /api/automation/activity — lightweight current-tick progress feed.
+   * Reads the most recent automation_event rows and derives current tick/phase.
+   * Designed for 3s polling from the Automation Dashboard activity widget.
+   */
+  @Get('activity')
+  async getActivity(@Query('limit') limit?: string) {
+    const take = Math.min(parseInt(limit || '30', 10) || 30, 100);
+    return this.auditLog.getRecentActivity(take);
+  }
+
   /** GET /api/automation/events — unified log of ALL automated activity */
   @Get('events')
   async getEvents(@Query('limit') limit?: string, @Query('type') type?: string) {
@@ -189,6 +202,80 @@ export class AutomationController {
     // Sort by timestamp descending
     events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     return { events: events.slice(0, take), total: events.length };
+  }
+
+  /**
+   * GET /api/automation/decision-trail — walk the full audit chain.
+   *
+   * ?tradeTicket=123     — trace from a specific trade back through the pipeline
+   * ?symbol=XAUUSD       — all trail records for a symbol
+   * ?tickNumber=5        — all trail records for a tick
+   * ?limit=20            — max records (default 20)
+   *
+   * Returns the LONG vs SHORT comparison, winner, and linked trade/scoring IDs.
+   */
+  @Get('decision-trail')
+  async getDecisionTrail(
+    @Query('tradeTicket') tradeTicket?: string,
+    @Query('symbol') symbol?: string,
+    @Query('tickNumber') tickNumber?: string,
+    @Query('limit') limit?: string,
+  ) {
+    if (!this.prisma.isAvailable) {
+      return { trails: [], message: 'Database unavailable' };
+    }
+
+    const take = Math.min(parseInt(limit || '20', 10) || 20, 100);
+
+    try {
+      const where: any = {};
+      if (tradeTicket) where.tradeTicket = parseInt(tradeTicket, 10);
+      if (symbol) where.symbol = symbol.toUpperCase();
+      if (tickNumber) where.tickNumber = parseInt(tickNumber, 10);
+
+      const trails = await (this.prisma as any).decisionTrail.findMany({
+        where,
+        orderBy: { timestamp: 'desc' },
+        take,
+      });
+
+      return {
+        trails: trails.map((t: any) => ({
+          id: t.id,
+          tickNumber: t.tickNumber,
+          timestamp: t.timestamp,
+          strategyId: t.strategyId,
+          symbol: t.symbol,
+          long: {
+            protocolId: t.longProtocolId,
+            composite: t.longComposite,
+            signal: t.longSignal,
+          },
+          short: {
+            protocolId: t.shortProtocolId,
+            composite: t.shortComposite,
+            signal: t.shortSignal,
+          },
+          winner: t.winner,
+          chosenComposite: t.chosenComposite,
+          finalSignal: t.finalSignal,
+          reason: t.reason?.substring?.(0, 500) ?? t.reason,
+          actionable: t.actionable,
+          tradeTicket: t.tradeTicket,
+          tradeVolume: t.tradeVolume,
+          tradePrice: t.tradePrice,
+          chainLinks: {
+            scoreSnapshotId: t.scoreSnapshotId,
+            strategyEvalId: t.strategyEvalId,
+            tradeId: t.tradeId,
+          },
+        })),
+        total: trails.length,
+        filters: { tradeTicket: tradeTicket || null, symbol: symbol || null, tickNumber: tickNumber ? parseInt(tickNumber, 10) : null },
+      };
+    } catch (err) {
+      return { trails: [], error: (err as Error).message };
+    }
   }
 
   /** GET /api/automation/queue — current queue state */
@@ -253,6 +340,12 @@ export class AutomationController {
   async getStatus() {
     const loopState = this.loop.getState();
 
+    // Build lookup of dataStatus from the in-memory loop state (set during tick)
+    const dataStatusMap = new Map<string, { dataStatus: string; dataStatusReason: string }>();
+    for (const s of (loopState.activeStrategies || [])) {
+      if (s.dataStatus) dataStatusMap.set(s.id, { dataStatus: s.dataStatus, dataStatusReason: s.dataStatusReason });
+    }
+
     const activeStrategies: any[] = [];
     if (this.prisma.isAvailable) {
       try {
@@ -261,6 +354,7 @@ export class AutomationController {
           include: { evaluations: { orderBy: { evaluatedAt: 'desc' }, take: 1 } },
         });
         for (const s of strategies) {
+          const ds = dataStatusMap.get(s.id);
           activeStrategies.push({
             id: s.id,
             name: s.name,
@@ -272,6 +366,8 @@ export class AutomationController {
             lastEvaluatedAt: s.evaluations?.[0]?.evaluatedAt ?? null,
             lastSignal: s.evaluations?.[0]?.signal ?? null,
             lastComposite: s.evaluations?.[0]?.composite ?? null,
+            dataStatus: ds?.dataStatus || 'unknown',
+            dataStatusReason: ds?.dataStatusReason || 'Not yet checked',
           });
         }
       } catch { /* strategies table may not have brokerId yet */ }

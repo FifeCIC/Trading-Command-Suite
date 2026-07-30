@@ -94,6 +94,7 @@ export default function StrategyDashboardPage() {
         pnl: stratPnl,
         posCount,
         duration: formatDuration(active.runDurationMs || 0),
+        runDurationMs: active.runDurationMs || 0,
         tradeThreshold: s.tradeThreshold || 3,
         protocolId: s.protocolId || active.protocolId,
         watchlistName: s.watchlistName || active.watchlistName,
@@ -181,6 +182,14 @@ export default function StrategyDashboardPage() {
                   <div className="sd-metric">
                     <span className="sd-metric-label">Budget</span>
                     <span className="sd-metric-value">{card.budget}</span>
+                  </div>
+                  <div className="sd-metric">
+                    <span className="sd-metric-label">P&amp;L/day</span>
+                    <span className="sd-metric-value" style={{ color: card.pnl >= 0 ? '#22c55e' : '#ef4444' }}>
+                      {card.runDurationMs > 86400000
+                        ? `${card.pnl >= 0 ? '+' : ''}${(card.pnl / (card.runDurationMs / 86400000)).toFixed(2)}`
+                        : '—'}
+                    </span>
                   </div>
                   <div className="sd-metric">
                     <span className="sd-metric-label">Runtime</span>

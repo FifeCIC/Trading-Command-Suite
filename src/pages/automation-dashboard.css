@@ -267,3 +267,34 @@
 .ad-timeline-label { font-size: 0.8rem; }
 .ad-timeline-desc { margin: 0; font-size: var(--text-xs, 0.7rem); color: var(--ink-soft); }
 .ad-timeline-time { font-size: var(--text-2xs, 0.65rem); color: var(--ink-soft); white-space: nowrap; }
+
+/* ── Activity Feed ──────────────────────────────────────── */
+.ad-activity-list { display: flex; flex-direction: column; gap: 2px; }
+.ad-activity-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 4px 8px; border-radius: 4px;
+  font-size: 0.75rem; transition: background 0.1s;
+}
+.ad-activity-row:hover { background: var(--line); }
+.ad-activity-phase {
+  font-size: 0.7rem; font-weight: 600; white-space: nowrap;
+  min-width: 70px;
+}
+.ad-activity-symbol {
+  font-weight: 700; font-size: 0.72rem; min-width: 50px;
+  color: var(--ink);
+}
+.ad-activity-decision {
+  font-size: 0.62rem; padding: 1px 5px; border-radius: 3px; font-weight: 600;
+  text-align: center; min-width: 56px;
+}
+.ad-activity-detail {
+  font-size: 0.65rem; color: var(--ink-soft); flex: 1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ad-activity-time {
+  font-size: 0.62rem; color: var(--ink-soft); white-space: nowrap;
+}
+.ad-phase-badge {
+  font-weight: 600; white-space: nowrap;
+}

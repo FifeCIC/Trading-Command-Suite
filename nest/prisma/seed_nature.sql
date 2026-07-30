@@ -12,7 +12,7 @@
 --
 -- When adding a new directive:
 --   1. Add its ID to the relevant nature IN() list below
---   2. Add its readiness promotion if it's bravo or ready
+--   2. Add its readiness promotion if it's beta or ready
 --   3. Run this SQL against the live DB after seeding
 -- ============================================================================
 
@@ -28,11 +28,11 @@ UPDATE Directive SET nature = 'data-gated' WHERE id IN ('news-sentiment-positive
 
 -- ── Readiness Promotion (default is 'alpha' from seed) ────────────────────
 
--- BRAVO: Real math but proxy/degraded data
-UPDATE Directive SET readiness = 'bravo' WHERE id IN ('dxy-regime','gold-macro-correlation','cad-usd-oil-correlation','news-sentiment-positive','earnings-proximity','analyst-adjustments','dividend-yield-attractive','earnings-implementation','earnings-whispers','like-zacks') AND readiness = 'alpha';
+-- BETA: Real math but proxy/degraded data
+UPDATE Directive SET readiness = 'beta' WHERE id IN ('dxy-regime','gold-macro-correlation','cad-usd-oil-correlation','news-sentiment-positive','earnings-proximity','analyst-adjustments','dividend-yield-attractive','earnings-implementation','earnings-whispers','like-zacks') AND readiness = 'alpha';
 
 -- READY: Verified real math on real data
--- All directives NOT in the above BRAVO list and NOT dead stubs are promoted.
+-- All directives NOT in the above BETA list and NOT dead stubs are promoted.
 -- Dead stubs (the 7 in placeholder-directives.stub.ts with priority:0) stay alpha.
 UPDATE Directive SET readiness = 'ready' WHERE readiness = 'alpha' AND id NOT IN ('vix-regime','crypto-weekend-effect','panic-exhaustion-absorption','position-size-kelly');
 

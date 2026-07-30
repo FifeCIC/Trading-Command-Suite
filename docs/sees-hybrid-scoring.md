@@ -123,7 +123,7 @@ See `readiness-tiers.md` for the full policy. Applied to scoring:
 | Tier | Scoring Behavior |
 |------|-----------------|
 | **ALPHA** | Directive returns mock-neutral (score=50). Excluded from composite. |
-| **BRAVO** | Directive computes real base score but bonus tiers may be uncalibrated. Included in composite with reduced weight. |
+| **BETA** | Directive computes real base score but bonus tiers may be uncalibrated. Included in composite with reduced weight. |
 | **READY** | Full hybrid scoring active. Base + bonus both calibrated against live data. Full weight. |
 
-A protocol's composite only includes READY and BRAVO directives. ALPHA directives are listed in the breakdown with a "mock — excluded from composite" flag. This prevents mock directives from dragging the composite toward 50.
+A protocol's composite only includes READY and BETA directives. ALPHA directives are listed in the breakdown with a "mock — excluded from composite" flag. This prevents mock directives from dragging the composite toward 50.

@@ -56,6 +56,10 @@ export const DIRECTIVE_GROUPS: DirectiveGroup[] = [
       'rsi-oversold', 'rsi-overbought', 'macd-crossover', 'ema-structure',
       'volume-confirmation', 'speed-momentum', 'bollinger-band-squeeze',
       'support-resistance-levels', 'volatility-tools', 'session-open-effect',
+      // Gold-specific directives (#283 audit — all top-10 heavyweight for XAUUSD):
+      'gold-session-profile',   // session-based gold patterns (impact ~957)
+      'gold-round-numbers',     // psychological price levels for gold (ready)
+      'engulfing-pattern',      // candlestick reversal (impact ~898)
     ],
   },
   {
@@ -69,6 +73,8 @@ export const DIRECTIVE_GROUPS: DirectiveGroup[] = [
     directiveIds: [
       'analyst-adjustments', 'news-sentiment-positive', 'earnings-proximity',
       'earnings-momentum', 'social-buzz', 'insider-activity',
+      // Gold macro driver — DXY, real yields, VIX correlation for XAUUSD/XAGUSD:
+      'gold-macro-correlation',
     ],
   },
   {

@@ -1,124 +1,73 @@
 /**
- * ADX (Average Directional Index) Directive
- * =========================================
- * Measures trend strength without indicating direction.
- * +DI > -DI = bullish bias. -DI > +DI = bearish bias.
- *
- * ADX > 25 = strong trend (scores higher)
- * ADX 20–25 = moderate trend
- * ADX < 20 = ranging/choppy (scores lower)
- *
- * TradePress source: includes/scoring-system/directives/adx.php
+ * ADX — HYBRID BASE+BONUS (Layer C, 2026-07-29)
+ * ================================================
+ * BASE (0–60): Continuous ADX: 0→0, 25→40, 50+→60. Every tick.
+ * BONUS: ADX > 40 → +20 (very strong trend), +DI spread > 20 → +15.
+ * MAX: 100.
  */
 
 import { Injectable } from '@nestjs/common';
-import {
-  DirectiveInput,
-  DirectiveResult,
-  IDirective,
-} from '../interfaces/directive.interface';
+import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { adx } from '../utils/indicators';
 
 const ADX_PERIOD = 14;
-const STRONG_TREND = 25;
-const WEAK_TREND = 20;
 const MIN_BARS = ADX_PERIOD + 5;
+
+function mapRange(v: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
+  const t = Math.max(0, Math.min(1, (v - inMin) / (inMax - inMin)));
+  return outMin + t * (outMax - outMin);
+}
 
 @Injectable()
 export class AdxDirective implements IDirective {
   readonly id = 'adx';
   readonly name = 'Average Directional Index';
-  readonly description =
-    'Measures trend strength. ADX > 25 = trending. +DI > -DI = bullish bias. Scores trend conviction.';
-
+  readonly description = 'Hybrid: continuous ADX base + trend strength bonuses.';
   readonly priority = 50;
   readonly maxScore = 100;
   readonly minBars = { '1d': 19 };
-  readonly version = '1.0.0';
+  readonly version = '2.0.0';
   readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const highs = input.bars.map(b => b.high);
     const lows = input.bars.map(b => b.low);
     const closes = input.bars.map(b => b.close);
-
     if (closes.length < MIN_BARS) {
-      return {
-      signalClass: 'neutral',
-      score: 0,
-        confidence: 0.1,
-        reason: `Insufficient data: need ${MIN_BARS} bars, have ${closes.length}.`,
-      };
+      return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Insufficient data: need ${MIN_BARS} bars, have ${closes.length}.` };
     }
-
     const { adx: adxValues, plusDi, minusDi } = adx(highs, lows, closes, ADX_PERIOD);
     if (adxValues.length < 2) {
       return { score: 0, confidence: 0.1, reason: 'Not enough ADX values.' };
     }
-
     const currentAdx = adxValues[adxValues.length - 1];
     const prevAdx = adxValues[adxValues.length - 2];
     const currentPlusDi = plusDi[plusDi.length - 1];
     const currentMinusDi = minusDi[minusDi.length - 1];
-
     const adxRising = currentAdx > prevAdx;
     const bullishBias = currentPlusDi > currentMinusDi;
     const diSpread = Math.abs(currentPlusDi - currentMinusDi);
 
-    if (currentAdx >= STRONG_TREND) {
-      // Strong trend: score high if bullish bias, moderate if bearish
-      const trendQuality = Math.min(1, (currentAdx - STRONG_TREND) / 25); // 25–50 → 0–1
-      if (bullishBias) {
-        const score = Math.round(65 + trendQuality * 25 + (adxRising ? 10 : 0)); // 65–100
-        return {
-          score,
-          confidence: 0.6 + trendQuality * 0.3,
-          reason: `Strong bullish trend (ADX ${currentAdx.toFixed(1)}${adxRising ? ' ↗' : ''}, +DI ${currentPlusDi.toFixed(1)} > -DI ${currentMinusDi.toFixed(1)}). High trend conviction.`,
-        };
-      } else {
-        const score = Math.round(25 - trendQuality * 15); // 10–25
-        return {
-          score,
-          confidence: 0.55 + trendQuality * 0.2,
-          reason: `Strong bearish trend (ADX ${currentAdx.toFixed(1)}, -DI ${currentMinusDi.toFixed(1)} > +DI ${currentPlusDi.toFixed(1)}). Anti-long — reduced score.`,
-        };
-      }
-    }
+    // BASE (0–60): ADX strength → score. Ranging(0-20)→0-20, Trending(25+)→40-60.
+    const baseScore = Math.round(mapRange(currentAdx, 0, 50, 0, 60));
 
-    if (currentAdx >= WEAK_TREND) {
-      // Moderate trend
-      if (bullishBias) {
-        const score = Math.round(45 + (adxRising ? 10 : 0) + diSpread * 0.3);
-        return {
-          score,
-          confidence: 0.4 + (adxRising ? 0.15 : 0),
-          reason: `Moderate bullish trend (ADX ${currentAdx.toFixed(1)}${adxRising ? ' ↗' : ''}, +DI ${currentPlusDi.toFixed(1)} > -DI ${currentMinusDi.toFixed(1)}).`,
-        };
-      } else {
-        return {
-      signalClass: 'neutral',
-      score: 30,
-          confidence: 0.4,
-          reason: `Moderate bearish trend (ADX ${currentAdx.toFixed(1)}, -DI > +DI). Limited long opportunity.`,
-        };
-      }
-    }
+    // BONUS tiers
+    let bonusScore = 0;
+    let bonusLabel = '';
+    if (currentAdx > 40) { bonusScore = 20; bonusLabel = 'very strong trend (ADX>40)'; }
+    if (diSpread > 20 && bullishBias) { bonusScore += 15; bonusLabel += (bonusLabel ? ' + ' : '') + 'wide DI spread'; }
+    if (adxRising && currentAdx > 25) { bonusScore += 5; }
 
-    // Ranging / weak trend
-    if (bullishBias) {
-      return {
-      signalClass: 'neutral',
-      score: 35,
-        confidence: 0.25,
-        reason: `Weak/ranging market (ADX ${currentAdx.toFixed(1)} < ${WEAK_TREND}). Bullish DI bias but low trend conviction — cautious score.`,
-      };
-    }
+    const total = Math.min(this.maxScore, baseScore + bonusScore);
+    const parts = [`base=${baseScore} (ADX ${currentAdx.toFixed(1)})`];
+    if (bonusScore > 0) parts.push(`+${bonusScore} bonus`);
 
     return {
-      signalClass: 'neutral',
-      score: 25,
-      confidence: 0.25,
-      reason: `Ranging market (ADX ${currentAdx.toFixed(1)}). No directional conviction — neutral score.`,
+      signalClass: bullishBias && total >= 50 ? 'bullish' : total >= 40 ? 'neutral' : 'bearish',
+      score: total,
+      confidence: Number((currentAdx > 25 ? 0.5 + (currentAdx / 50) * 0.3 : 0.25 + (currentAdx / 25) * 0.15).toFixed(2)),
+      reason: `ADX=${currentAdx.toFixed(1)} ${adxRising ? '↗' : '↘'} +DI=${currentPlusDi.toFixed(1)} -DI=${currentMinusDi.toFixed(1)}: ${parts.join(' ')}=${total}/${this.maxScore}`,
+      metadata: { baseScore, bonusScore, bonusLabel, currentAdx, bullishBias, diSpread },
     };
   }
 }

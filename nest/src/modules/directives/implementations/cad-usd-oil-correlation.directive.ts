@@ -1,6 +1,6 @@
 /**
- * CAD/USD Oil Correlation Directive
- * ===================================
+ * CAD/USD Oil Correlation Directive — HYBRID BASE+BONUS (Layer C, 2026-07-29)
+ * ===========================================================================
  * Evaluates Canadian dollar pairs in context of the primary CAD driver:
  * crude oil prices. CAD is a petrocurrency — oil and CAD move together.
  *
@@ -9,6 +9,13 @@
  * WTI crude ↓ (oil down)    → bearish CAD (USDCAD ↑)
  * DXY ↑ (strong USD)        → USDCAD rises (USD leg dominates)
  * BOC rate vs Fed rate      → wider spread = stronger CAD
+ *
+ * ── Hybrid Scoring ─────────────────────────────────────────
+ * BASE (0–100):  Continuous DXY interpolation: DXY 108→0, DXY 95→100.
+ *                USDCAD: flipped (100-base) since USD is the base currency.
+ *                Other CAD pairs: base as-is (USD quote, DXY↑=bearish).
+ * BONUS tiers:   WTI > $85 → +25 (strong oil tailwind for CAD).
+ * MAX:           125 (100 base + 25 bonus).
  *
  * ── Symbol Coverage ──────────────────────────────────────
  * USDCAD, EURCAD, GBPCAD, AUDCAD, NZDCAD
@@ -23,14 +30,19 @@ import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/direc
 
 // ── Thresholds ────────────────────────────────────────────
 
-const DXY_STRONG = 105;
-const DXY_WEAK = 101;
+const OIL_STRONG = 85;  // WTI > $85 = strong oil = CAD tailwind
 
 // ── CAD pair detection ────────────────────────────────────
 
 const CAD_PAIRS = new Set([
   'USDCAD', 'EURCAD', 'GBPCAD', 'AUDCAD', 'NZDCAD',
 ]);
+
+/** Linear interpolation: map value from [inMin,inMax] to [outMin,outMax], clamped. */
+function mapRange(v: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
+  const t = Math.max(0, Math.min(1, (v - inMin) / (inMax - inMin)));
+  return outMin + t * (outMax - outMin);
+}
 
 // ── Directive ─────────────────────────────────────────────
 
@@ -39,14 +51,13 @@ export class CadUsdOilCorrelationDirective implements IDirective {
   readonly id = 'cad-usd-oil-correlation';
   readonly name = 'CAD/USD Oil Correlation';
   readonly description =
-    'CAD petrocurrency vs WTI crude oil and USD strength. ' +
-    'Oil up = CAD up (USDCAD down). Covers all 5 CAD crosses.';
+    'Hybrid: continuous DXY base for CAD pairs + oil-price threshold bonuses.';
   readonly priority = 50;
-  readonly maxScore = 100;
+  readonly maxScore = 125; // 100 base + 25 bonus
   readonly minBars = { '1d': 20 };
-  readonly version = '1.0.0';
+  readonly version = '2.0.0'; // Hybrid scoring
   readonly requiredDataFeeds = ['oil'];
-  readonly readiness = 'bravo' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     let dxy = (input as any).dxyValue as number | undefined;
@@ -84,72 +95,44 @@ export class CadUsdOilCorrelationDirective implements IDirective {
       };
     }
 
-    // ── Score each driver ─────────────────────────────────
-    const drivers: { label: string; score: number; weight: number }[] = [];
-
-    // Driver 1: DXY / USD strength (weight: 0.40)
-    // CAD pairs with USD as BASE (USDCAD): USD up = pair UP → bullish for pair
-    // CAD pairs with USD as QUOTE: USD up = pair DOWN → bearish
+    // ── BASE (continuous, 0–100) ──────────────────────────
     const isUsdBase = sym === 'USDCAD';
+    // DXY 108 (strong USD) → rawBase 0, DXY 95 (weak USD) → rawBase 100
+    const rawBase = Math.round(mapRange(dxy, 108, 95, 0, 100));
+    // USDCAD: USD is base, so strong USD = bullish for pair → flip
+    // Other CAD pairs: USD is quote, strong USD = bearish → rawBase works as-is
+    const baseScore = isUsdBase ? 100 - rawBase : rawBase;
 
-    if (dxy >= 108) {
-      const score = isUsdBase ? 80 : 20;
-      drivers.push({ label: `extreme USD strength (${dxySource}=${dxy})`, score, weight: 0.40 });
-    } else if (dxy >= DXY_STRONG) {
-      const score = isUsdBase ? 70 : 30;
-      drivers.push({ label: `strong USD (${dxySource}=${dxy})`, score, weight: 0.40 });
-    } else if (dxy <= DXY_WEAK) {
-      const score = isUsdBase ? 30 : 70;
-      drivers.push({ label: `weak USD (${dxySource}=${dxy})`, score, weight: 0.40 });
-    } else {
-      drivers.push({ label: `neutral USD (${dxySource}=${dxy})`, score: 50, weight: 0.40 });
+    // ── BONUS (threshold-gated, rare events) ─────────────
+    let bonusScore = 0;
+    let bonusLabel = '';
+
+    if (wti !== undefined && wti > 0 && wti >= OIL_STRONG) {
+      bonusScore = 25;
+      bonusLabel = `strong oil (WTI=$${wti.toFixed(0)})`;
     }
 
-    // Driver 2: WTI crude oil (weight: 0.45 — primary CAD driver)
-    if (wti !== undefined && wti > 0) {
-      // Oil price context: "high" and "low" are relative to recent ranges
-      // $80+ = strong oil = CAD tailwind
-      // $60- = weak oil = CAD headwind
-      if (wti >= 85) {
-        drivers.push({ label: `strong oil (WTI=$${wti.toFixed(0)})`, score: 75, weight: 0.45 });
-      } else if (wti >= 75) {
-        drivers.push({ label: `firm oil (WTI=$${wti.toFixed(0)})`, score: 60, weight: 0.45 });
-      } else if (wti <= 60) {
-        drivers.push({ label: `weak oil (WTI=$${wti.toFixed(0)})`, score: 25, weight: 0.45 });
-      } else {
-        drivers.push({ label: `moderate oil (WTI=$${wti.toFixed(0)})`, score: 50, weight: 0.45 });
-      }
-    } else {
-      // No oil data — redistribute to DXY
-      drivers[0].weight += 0.30;
-    }
+    // ── Total ─────────────────────────────────────────────
+    const totalScore = baseScore + bonusScore;
 
-    // ── Normalize weights ─────────────────────────────────
-    const totalWeight = drivers.reduce((s, d) => s + d.weight, 0);
-    let weightedScore = 0;
-    const parts: string[] = [];
-    for (const d of drivers) {
-      const normalizedWeight = d.weight / totalWeight;
-      weightedScore += d.score * normalizedWeight;
-      parts.push(`${d.label}: ${d.score}/100 (wt ${(normalizedWeight * 100).toFixed(0)}%)`);
-    }
-
-    weightedScore = Math.round(weightedScore);
-
-    // ── Signal classification ─────────────────────────────
     let signalClass: 'bullish' | 'bearish' | 'neutral';
-    if (weightedScore >= 65) signalClass = 'bullish';
-    else if (weightedScore <= 35) signalClass = 'bearish';
+    if (totalScore >= 65) signalClass = 'bullish';
+    else if (totalScore <= 35) signalClass = 'bearish';
     else signalClass = 'neutral';
 
     const hasOil = wti !== undefined && wti > 0;
     const confidence = hasOil ? 0.50 : 0.30;
 
+    const parts: string[] = [`base=${baseScore} (${dxySource}=${dxy}, ${isUsdBase ? 'USD base' : 'CAD cross'})`];
+    if (bonusScore > 0) parts.push(`+${bonusScore} bonus (${bonusLabel})`);
+    parts.push(`= ${totalScore}/${this.maxScore}`);
+
     return {
       signalClass,
-      score: weightedScore,
+      score: totalScore,
       confidence,
-      reason: `${sym} (${isUsdBase ? 'USD base' : 'CAD cross'}): ${parts.join('; ')} → composite=${weightedScore}`,
+      reason: `${sym}: ${parts.join(' ')}`,
+      metadata: { baseScore, bonusScore, bonusLabel, dxy, dxySource, isUsdBase },
     };
   }
 }

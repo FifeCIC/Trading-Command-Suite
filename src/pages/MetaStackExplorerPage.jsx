@@ -323,6 +323,15 @@ export default function MetaStackExplorerPage() {
   });
 
   const scored = scoreQuery.data;
+
+  // Score Momentum (#519)
+  const velocityQuery = useQuery({
+    queryKey: ['mse-velocity', activeSymbol],
+    queryFn: () => apiGet(`/api/scoring/velocity/${activeSymbol}?window=5`).catch(() => null),
+    enabled: !!activeSymbol,
+    refetchInterval: 30_000,
+  });
+  const velocity = velocityQuery.data;
   const signalClass = scored
     ? (scored.signal === 'BUY' || scored.signal === 'STRONG_BUY') ? 'buy'
       : (scored.signal === 'SELL' || scored.signal === 'STRONG_SELL') ? 'sell' : 'hold'
@@ -408,6 +417,21 @@ export default function MetaStackExplorerPage() {
         { label: 'Automation loop running', pass: autoRunning, detail: autoRunning ? `tick #${autoQuery.data?.tickCount || '?'}, every ${(autoQuery.data?.tickIntervalMs || 120000) / 1000}s` : 'paused — enable from Automation Dashboard', link: '/automation/automation-dashboard', linkLabel: 'Automation' },
         { label: 'Trading strategies in loop', pass: activeStrats > 0, detail: activeStrats > 0 ? `${activeStrats} active (of ${totalTradingStrats} total)` : 'none active — enable from Automation page', link: '/automation/automation-dashboard', linkLabel: 'Automation' },
         { label: 'Strategies wired to protocols', pass: wiredStrats.length === activeStrats && activeStrats > 0, detail: activeStrats > 0 ? `${wiredStrats.length}/${activeStrats} have protocol + symbol` : '—' },
+        // ── Data readiness per strategy (from automation loop PENDING state) ──
+        (() => {
+          const loopStrats = autoQuery.data?.activeStrategies || [];
+          const sel = loopStrats.find(s => s.id === selectedStrategy?.id);
+          const ready = sel?.dataStatus === 'ready';
+          const pending = sel?.dataStatus === 'pending_bars';
+          const blocked = sel?.dataStatus === 'blocked';
+          return {
+            label: 'Data readiness',
+            pass: ready,
+            detail: sel
+              ? `${sel.dataStatus === 'ready' ? '✓' : sel.dataStatus === 'pending_bars' ? '⏳' : '🚫'} ${sel.dataStatusReason || sel.dataStatus || 'unknown'}`
+              : '— (select a strategy above)',
+          };
+        })(),
         { label: 'Broker connections', pass: connectedBrokers.length > 0 || healthyProviders.length > 0, detail: connectedBrokers.length > 0 ? `${connectedBrokers.length} in loop (${connectedBrokers.map(([k]) => k.toUpperCase()).join(', ')})` : healthyProviders.length > 0 ? `${healthyProviders.length} healthy (${healthyProviders.map(p => p.provider).join(', ')}) — loop has not registered yet` : `no brokers connected — check MT5 bridge` },
         { label: 'Active timeline events', pass: timelineEvents.length >= 0, detail: timelineEvents.length > 0 ? `${timelineEvents.length} events (risk ×${globalRiskMultiplier.toFixed(2)})` : 'none — risk multiplier ×1.0' },
       ],
@@ -480,7 +504,7 @@ export default function MetaStackExplorerPage() {
       ],
       'directives': [
         { label: 'Total executed', pass: dCount > 0, detail: `${dCount} directives` },
-        { label: 'Readiness', pass: (scored.meta?.readinessBreakdown?.ready || 0) > 0, detail: `🟢 ${scored.meta?.readinessBreakdown?.ready || 0} ready, 🟡 ${scored.meta?.readinessBreakdown?.bravo || 0} bravo, 🔴 ${scored.meta?.readinessBreakdown?.alphaExcluded || 0} excluded` },
+        { label: 'Readiness', pass: (scored.meta?.readinessBreakdown?.ready || 0) > 0, detail: `🟢 ${scored.meta?.readinessBreakdown?.ready || 0} ready, 🟡 ${scored.meta?.readinessBreakdown?.beta || 0} beta, 🔴 ${scored.meta?.readinessBreakdown?.alphaExcluded || 0} excluded` },
         { label: 'Total raw score', pass: totalRaw > 0, detail: `${totalRaw} / ${totalMax} (${totalPct}%) — before group weighting & risk gating` },
         { label: 'Group coverage', pass: groupKeys.length > 0, detail: groupKeys.map(k => `${k}: ${scored.subRawTotals?.[k] || 0}/${scored.subMaxTotals?.[k] || 0}`).join(', ') || '—' },
         { label: 'Top directive', pass: !!topDir, detail: topDir ? `${topDir.name} (${topDir.score}/${topDir.maxScore} = ${topDir.normalizedScore}%)` : '—' },
@@ -499,6 +523,7 @@ export default function MetaStackExplorerPage() {
       'composite': [
         { label: 'Final composite', pass: (scored.composite || 0) > 0, detail: `${scored.composite}/100` },
         { label: 'Signal assigned', pass: !!scored.signal, detail: scored.signal || '—' },
+        { label: 'Score Momentum', pass: velocity?.signal !== 'insufficient_data', detail: velocity && velocity.signal !== 'insufficient_data' ? `${velocity.velocityPtsPerHour > 0 ? '📈' : '📉'} ${velocity.velocityPtsPerHour} pts/hr · ${velocity.signalLabel}` : '— (need more ticks)' },
         { label: 'Rarity', pass: !!scored.rarity, detail: scored.rarity ? `${scored.rarity.band} (p${scored.rarity.percentile}, ${scored.rarity.sampleSize} samples)` : '—' },
         { label: 'Threshold check', pass: (scored.composite || 0) >= (matchingScoringStrat?.tradeThreshold || 60), detail: `${scored.composite} vs threshold ${matchingScoringStrat?.tradeThreshold || 60} → ${(scored.composite || 0) >= (matchingScoringStrat?.tradeThreshold || 60) ? 'PASS' : 'FAIL'}` },
       ],
@@ -518,7 +543,7 @@ export default function MetaStackExplorerPage() {
 
   const READINESS_STYLES = {
     ready:  { color: '#22c55e', bg: '#22c55e18', label: 'READY', title: 'Verified against live data' },
-    bravo:  { color: '#f59e0b', bg: '#f59e0b18', label: 'BRAVO', title: 'Real math, proxy/limited data' },
+    beta:  { color: '#f59e0b', bg: '#f59e0b18', label: 'BETA', title: 'Real math, proxy/limited data' },
     alpha:  { color: '#ef4444', bg: '#ef444418', label: 'ALPHA', title: 'Mock, stub, or placeholder' },
   };
 
@@ -783,6 +808,7 @@ export default function MetaStackExplorerPage() {
                 <span>Risk: ×{scored.riskMultiplier?.toFixed?.(3) || '—'}</span>
                 <span>Rarity: {scored.rarity?.label || '—'} ({scored.rarity?.percentile || '?'}p)</span>
                 <span>Strategy: {scored.meta?.weightStrategy || '—'}</span>
+                <a href={`/scoring/directive-impact-audit?symbol=${encodeURIComponent(activeSymbol)}`} className="mse-impact-link" title="See which directives drive this score">📊 Impact Audit →</a>
               </div>
             </motion.div>
           </RevealCard>

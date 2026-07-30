@@ -1,13 +1,27 @@
 /**
- * EurUsdCacheService
- * ==================
- * Tick-level cache for EURUSD quote (DXY proxy).
+ * EurUsdCacheService — DXY proxy data source
+ * ===========================================
+ * Tick-level cache for EURUSD quote from MT5, used as a DXY proxy.
  *
- * Problem: scoreWithGating() and rankAll() both fetch EURUSD from MT5
- * on every call — once per symbol per tick. This is redundant.
+ * ── Why EURUSD as DXY proxy ──────────────────────────────
+ * The US Dollar Index (DXY) is an ICE futures contract rarely available on
+ * retail brokers (MetaQuotes-Demo doesn't offer it). EURUSD makes up 57.6%
+ * of the DXY basket and has strong inverse correlation — it's a reliable proxy.
  *
- * Solution: Fetch once per tick, cache for 60s. Both services share
- * this cache. If MT5 is offline, returns undefined (directives handle it).
+ * DXY derivation (done by consumers, not here):
+ *   EURUSD ≥ 1.15 → DXY ~98  (weak USD)
+ *   EURUSD ≥ 1.08 → DXY ~103 (neutral)
+ *   EURUSD < 1.08 → DXY ~108 (strong USD)
+ *
+ * ── Cache Strategy ───────────────────────────────────────
+ * Problem: scoreWithGating() and rankAll() both call getQuote('EURUSD') on
+ * every symbol per tick — redundant MT5 API calls.
+ * Solution: Fetch once per tick, cache for 60s (shorter than the 120s tick
+ * interval). Both scoring paths share this cache.
+ *
+ * ── Fallback ─────────────────────────────────────────────
+ * Returns undefined if MT5 is offline. Directives handle missing data
+ * with their own neutral/default returns.
  */
 
 import { Injectable, Logger } from '@nestjs/common';

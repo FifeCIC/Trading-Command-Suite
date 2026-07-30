@@ -9,7 +9,7 @@ Add a `readiness` tier to every directive, data feed, protocol, and strategy:
 | Tier | Meaning | Directive Behavior |
 |------|---------|-------------------|
 | **ALPHA** | Idea documented, code exists, NOT verified | Returns mock-neutral (score=50) |
-| **BRAVO** | Works with real data, has documented limitations | Real math but e.g. uses proxy data |
+| **BETA** | Works with real data, has documented limitations | Real math but e.g. uses proxy data |
 | **READY** | Verified against live data, thresholds tuned | Full scoring active |
 
 **Weakest-link rule**: A component can only claim the readiness of its weakest dependency. One ALPHA directive makes the entire protocol ALPHA.
@@ -17,22 +17,22 @@ Add a `readiness` tier to every directive, data feed, protocol, and strategy:
 ## Tasks
 
 ### Phase 1 — Directive Interface
-- [ ] Add `readonly readiness: 'alpha' | 'bravo' | 'ready'` to IDirective interface
+- [ ] Add `readonly readiness: 'alpha' | 'beta' | 'ready'` to IDirective interface
 - [ ] Default all 104 existing directives to 'alpha' (alpha until proven)
-- [ ] Promote directives with verified real-math to 'bravo' (~25 directives)
+- [ ] Promote directives with verified real-math to 'beta' (~25 directives)
 - [ ] Add `readiness` column to Directive DB table (enum)
 
 ### Phase 2 — Enforcement
 - [ ] Scoring pipeline: exclude ALPHA directives from composite (show in breakdown as "mock — excluded")
 - [ ] Protocol activation: BLOCK if protocol readiness is ALPHA
-- [ ] BRAVO directives: cap confidence at 0.6
+- [ ] BETA directives: cap confidence at 0.6
 
 ### Phase 3 — UI Honesty
 - [ ] Strategy Library: per-directive readiness badges (red/yellow/green)
 - [ ] META.Stack Explorer: stage status reflects weakest dependency
 - [ ] Automation Dashboard: strategy status shows RUNNING / PENDING / BLOCKED / DEGRADED
 - [ ] Directive Registry: filterable readiness column
-- [ ] QA Testing Page: priority queue — alpha directives sorted by "closest to bravo"
+- [ ] QA Testing Page: priority queue — alpha directives sorted by "closest to beta"
 
 ### Phase 4 — Pending State
 - [ ] Strategies waiting for data enter PENDING (not BLOCKED)

@@ -153,4 +153,68 @@ export class AuditLogService {
       detail: { reason },
     });
   }
+
+  /**
+   * Get recent activity for the activity feed.
+   * Returns the latest events grouped by tick, with a phase summary.
+   */
+  async getRecentActivity(limit = 30): Promise<{
+    events: Array<{
+      id: string;
+      tickNumber: number;
+      timestamp: string;
+      step: string;
+      symbol: string | null;
+      decision: string | null;
+      detail: string | null;
+      durationMs: number | null;
+    }>;
+    currentTick: number | null;
+    currentPhase: string | null;
+    phaseStartedAt: string | null;
+    totalEventsToday: number;
+  }> {
+    if (!this.prisma.isAvailable) {
+      return { events: [], currentTick: null, currentPhase: null, phaseStartedAt: null, totalEventsToday: 0 };
+    }
+
+    try {
+      const events = await (this.prisma as any).automationEvent.findMany({
+        orderBy: { timestamp: 'desc' },
+        take: limit,
+      });
+
+      // Count today's events
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayCount = await (this.prisma as any).automationEvent.count({
+        where: { timestamp: { gte: today } },
+      });
+
+      // Derive current tick + phase from the most recent event
+      const latest = events[0] || null;
+      const currentTick = latest?.tickNumber ?? null;
+      const currentPhase = latest?.step ?? null;
+      const phaseStartedAt = latest?.timestamp?.toISOString?.() ?? null;
+
+      return {
+        events: events.map((e: any) => ({
+          id: e.id,
+          tickNumber: e.tickNumber,
+          timestamp: e.timestamp?.toISOString?.() ?? e.timestamp,
+          step: e.step,
+          symbol: e.symbol,
+          decision: e.decision,
+          detail: e.detail?.substring?.(0, 300) ?? e.detail,
+          durationMs: e.durationMs,
+        })),
+        currentTick,
+        currentPhase,
+        phaseStartedAt,
+        totalEventsToday: todayCount,
+      };
+    } catch {
+      return { events: [], currentTick: null, currentPhase: null, phaseStartedAt: null, totalEventsToday: 0 };
+    }
+  }
 }

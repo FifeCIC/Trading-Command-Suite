@@ -6,7 +6,7 @@ Multi-hour architectural discussion about quality control, honesty in scoring, a
 
 ## Key Decisions
 
-1. **Readiness Tier System** (ALPHA → BRAVO → READY): Every component declares its readiness. Weakest-link rule enforced — one alpha directive poisons the entire chain upward. See `docs/readiness-tiers.md`.
+1. **Readiness Tier System** (ALPHA → BETA → READY): Every component declares its readiness. Weakest-link rule enforced — one alpha directive poisons the entire chain upward. See `docs/readiness-tiers.md`.
 
 2. **Capability Contracts**: Strategies refuse to activate when data requirements can't be met. PENDING state for "waiting for data" vs BLOCKED for "can never work." See `docs/readiness-tiers.md` § Pending State.
 

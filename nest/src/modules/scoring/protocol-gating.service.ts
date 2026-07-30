@@ -97,8 +97,8 @@ export interface GatedScore {
     gatedCount: number;
     riskDirectiveCount: number;
     weightStrategy: 'group-weighted' | 'maxscore-weighted';
-    /** Readiness tier counts: ready/bravo/alpha. Alpha directives are excluded from scoring. */
-    readinessBreakdown: { ready: number; bravo: number; alpha: number; alphaExcluded: number };
+    /** Readiness tier counts: ready/beta/alpha. Alpha directives are excluded from scoring. */
+    readinessBreakdown: { ready: number; beta: number; alpha: number; alphaExcluded: number };
   };
   /** Directives excluded from the composite due to ALPHA readiness. */
   excludedBreakdown: { directiveId: string; name: string; reason: string }[];
@@ -236,17 +236,21 @@ export class ProtocolGatingService {
       ? (protocolConfig?.groups ?? DIRECTIVE_GROUPS)
       : DIRECTIVE_GROUPS;
 
-    // ── Fetch EURUSD for DXY proxy (cached per tick) — only if needed ──
+    // ── DXY data provisioning (EURUSD proxy) ─────────────────────
+    // MT5 always provides EURUSD. DXY futures (ICE index) are rarely available
+    // on retail brokers. EURUSD is 57.6% of the DXY basket — strong inverse.
+    // We derive DXY proxy: ≥1.15→98 (weak USD), ≥1.08→103 (neutral), <1.08→108 (strong).
+    // Both eurusdValue and dxyValue are attached to DirectiveInput so directives
+    // don't each re-derive the proxy. See EurUsdCacheService (60s TTL).
     let eurusdValue: number | undefined;
+    let dxyValue: number | undefined;
     if (protocolNeedsEurUsd(activeGroups)) {
       eurusdValue = await this.eurusdCache.getValue();
-
-      // ── Persist macro snapshot ──────────────────────────
       if (eurusdValue !== undefined && eurusdValue > 0) {
-        const proxyDxy = eurusdValue >= 1.15 ? 98 : eurusdValue >= 1.08 ? 103 : 108;
+        dxyValue = eurusdValue >= 1.15 ? 98 : eurusdValue >= 1.08 ? 103 : 108;
         this.macroSnapshot.capture({
           eurusdValue,
-          dxyValue: proxyDxy,
+          dxyValue,
           source: 'eurusd-proxy',
         }).catch(err => this.logger.warn(`Snapshot: ${(err as Error).message}`));
       }
@@ -256,6 +260,7 @@ export class ProtocolGatingService {
       symbol,
       bars,
       eurusdValue,
+      dxyValue,
       ...(higherTfBars ?? {}),
     } as DirectiveInput;
 
@@ -276,7 +281,7 @@ export class ProtocolGatingService {
     const groups = new Map<string, { results: DirectiveResult[]; config: DirectiveGroup; maxScores: Map<string, number> }>();
     const excludedBreakdown: { directiveId: string; name: string; reason: string }[] = [];
     let alphaCount = 0;
-    let bravoCount = 0;
+    let betaCount = 0;
     let readyCount = 0;
 
     for (const group of activeGroups) {
@@ -292,7 +297,12 @@ export class ProtocolGatingService {
         if (directionMode === 'LONG_ONLY' && bias === 'bearish') continue;
         if (directionMode === 'SHORT_ONLY' && bias === 'bullish') continue;
 
-        // ── Readiness Gate: exclude ALPHA directives from composite ──
+        // ── Readiness Gate (alpha→beta→ready tier system) ─────────
+        // Alpha = mock/stub/placeholder → EXCLUDED from composite.
+        // Beta  = real math, proxy/limited data → included, flagged.
+        // Ready = verified against live data → included fully.
+        // Readiness is set on IDirective.readiness (directive.interface.ts L149)
+        // and mirrored in the Directive DB table. See docs/readiness-tiers.md.
         const readiness = (directive as any)?.readiness ?? 'alpha';
         if (readiness === 'alpha') {
           excludedBreakdown.push({
@@ -303,7 +313,7 @@ export class ProtocolGatingService {
           alphaCount++;
           continue; // Skip — do not include in scoring
         }
-        if (readiness === 'bravo') bravoCount++;
+        if (readiness === 'beta') betaCount++;
         if (readiness === 'ready') readyCount++;
 
         groupResults.push(result);
@@ -448,7 +458,7 @@ export class ProtocolGatingService {
         riskDirectiveCount: breakouts['risk']?.length ?? 0,
         weightStrategy,
         // ── Readiness breakdown — see docs/readiness-tiers.md ──
-        readinessBreakdown: { ready: readyCount, bravo: bravoCount, alpha: alphaCount, alphaExcluded: alphaCount },
+        readinessBreakdown: { ready: readyCount, beta: betaCount, alpha: alphaCount, alphaExcluded: alphaCount },
       },
       // ── Directives excluded from scoring due to ALPHA readiness ──
       excludedBreakdown,

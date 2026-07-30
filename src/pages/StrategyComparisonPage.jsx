@@ -61,8 +61,7 @@ export default function StrategyComparisonPage() {
                   <th>Strategy</th>
                   <th>Trades</th>
                   <th>Win Rate</th>
-                  <th>Total P&L</th>
-                  <th>Avg Win</th>
+                  <th>Total P&L</th>                  <th>P&amp;L/Trade</th>                  <th>Avg Win</th>
                   <th>Avg Loss</th>
                   <th>Best</th>
                   <th>Worst</th>
@@ -81,6 +80,9 @@ export default function StrategyComparisonPage() {
                     <td>{s.trades}</td>
                     <td style={{ color: s.winRate >= 50 ? '#22c55e' : '#ef4444' }}>{s.winRate}%</td>
                     <td><PnlBadge value={s.totalPnl} /></td>
+                    <td style={{ color: (s.totalPnl / Math.max(1, s.trades)) >= 0 ? '#22c55e' : '#ef4444' }}>
+                      {s.trades > 0 ? `${s.totalPnl >= 0 ? '+' : ''}${(s.totalPnl / s.trades).toFixed(2)}` : '—'}
+                    </td>
                     <td className="sc-up">+{s.avgWinPnl.toFixed(2)}</td>
                     <td className="sc-down">{s.avgLossPnl.toFixed(2)}</td>
                     <td className="sc-up">+{s.bestTrade.toFixed(2)}</td>

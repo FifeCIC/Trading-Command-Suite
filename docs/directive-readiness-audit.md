@@ -5,7 +5,7 @@
 > Methodology: Read every directive implementation file, inspected calculate() logic.
 >
 > **READY** = Real math on real data. Deterministic output.
-> **BRAVO** = Real math but proxy/limited data. Known limitation.
+> **BETA** = Real math but proxy/limited data. Known limitation.
 > **ALPHA** = Mock, stub, placeholder, or returns constant values.
 
 ## Summary
@@ -13,7 +13,7 @@
 | Readiness | Count |
 |-----------|-------|
 | READY | 87 |
-| BRAVO | 10 |
+| BETA | 10 |
 | ALPHA | 7 |
 | **Total** | **104** |
 
@@ -207,7 +207,7 @@
 
 ---
 
-## BRAVO — Real Math, Degraded/Proxy Data (10 directives)
+## BETA — Real Math, Degraded/Proxy Data (10 directives)
 
 | Directive ID | Notes | Limitation |
 |---|---|---|
@@ -231,7 +231,7 @@ These are from `placeholder-directives.stub.ts` — older v1.0.0 stubs with `pri
 | Directive ID | Notes |
 |---|---|
 | `vix-regime` (stub) | STUB — returns stubResult. Superseded by `vix-regime.directive.ts` (READY) |
-| `cad-usd-oil-correlation` (stub) | STUB — returns stubResult. Superseded by `cad-usd-oil-correlation.directive.ts` (BRAVO) |
+| `cad-usd-oil-correlation` (stub) | STUB — returns stubResult. Superseded by `cad-usd-oil-correlation.directive.ts` (BETA) |
 | `crypto-fear-greed` (stub) | STUB — superseded by `crypto-fear-greed.directive.ts` (READY) |
 | `btc-halving-cycle` (stub) | STUB — superseded by `btc-halving-cycle.directive.ts` (READY) |
 | `crypto-weekend-effect` (stub) | STUB — returns stubResult. Superseded by `crypto-weekend-effect.directive.ts` (READY) |

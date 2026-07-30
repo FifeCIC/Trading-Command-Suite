@@ -35,7 +35,7 @@ const STATUS_COLORS = {
 
 const READINESS_STYLES = {
   ready:  { color: '#22c55e', bg: '#22c55e18', label: 'READY', title: 'Verified against live data' },
-  bravo:  { color: '#f59e0b', bg: '#f59e0b18', label: 'BRAVO', title: 'Real math, proxy/limited data' },
+  beta:  { color: '#f59e0b', bg: '#f59e0b18', label: 'BETA', title: 'Real math, proxy/limited data' },
   alpha:  { color: '#ef4444', bg: '#ef444418', label: 'ALPHA', title: 'Mock, stub, or placeholder' },
 };
 
@@ -57,6 +57,16 @@ export default function StrategyLibraryPage() {
     if (directivesQuery.data) {
       for (const d of directivesQuery.data) {
         map[d.id] = d.readiness || 'alpha';
+      }
+    }
+    return map;
+  }, [directivesQuery.data]);
+
+  const feedsMap = useMemo(() => {
+    const map = {};
+    if (directivesQuery.data) {
+      for (const d of directivesQuery.data) {
+        map[d.id] = d.requiredDataFeeds || [];
       }
     }
     return map;
@@ -193,6 +203,15 @@ export default function StrategyLibraryPage() {
                           >
                             {rs.label}
                           </span>
+                          {(feedsMap[dm.directiveId] || []).map((feed) => (
+                            <span key={feed} style={{
+                              color: '#60a5fa', background: '#3b82f610',
+                              border: '1px solid #3b82f633',
+                              padding: '1px 4px', borderRadius: '3px',
+                              fontSize: '0.58rem', fontWeight: 600,
+                              flexShrink: 0,
+                            }} title={`Requires ${feed} data`}>{feed}</span>
+                          ))}
                         </button>
                         );
                       })}

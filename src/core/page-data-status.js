@@ -13,6 +13,10 @@
 export const PAGE_DATA_STATUS = {
   // ── Trading ──
   'trading-strategies': { status: 'live', source: 'DB (seed data)' },
+  'strategies-index': { status: 'live', source: 'DB (filterable card index, #504)' },
+  'strategy-monitor': { status: 'live', source: 'DB (tabbed hub: overview/compare/ladders, #504)' },
+  'strategy-builder': { status: 'live', source: 'Drag-and-drop directive canvas (now registered, #504)' },
+  'strategy-create': { status: 'live', source: 'Tabbed creation: form + wizard (#504)' },
   'mt5-trading': { status: 'live', source: 'MT5 Bridge' },
   'calculators': { status: 'mock', note: 'Client-side only' },
   'stock-investigation': { status: 'live', source: '/api/research/investigations' },
@@ -88,7 +92,7 @@ export const PAGE_DATA_STATUS = {
   'add-symbol': { status: 'live', source: 'DB' },
 
   // ── Automation ──
-  'automation-dashboard': { status: 'partial', source: 'Dashboard + mock queue' },
+  'automation-dashboard': { status: 'live', source: 'Automation loop + activity feed (3s polling)' },
   'execution-queue': { status: 'live', source: 'DB execution queue' },
   'automation-rules': { status: 'live', source: 'DB' },
   'alert-center': { status: 'live', source: 'Alert system + DB' },

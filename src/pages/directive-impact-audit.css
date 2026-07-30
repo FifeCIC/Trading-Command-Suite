@@ -1,0 +1,177 @@
+/* Directive Impact Audit Page — #283 */
+.dia-page {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.dia-header {
+  margin-bottom: 1.25rem;
+}
+.dia-header h1 {
+  font-size: 1.4rem;
+  margin: 0 0 0.25rem;
+}
+
+/* ── Controls ── */
+.dia-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.dia-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.dia-control-group label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--textFaint);
+}
+.dia-input, .dia-select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+  min-width: 100px;
+}
+.dia-select {
+  cursor: pointer;
+}
+
+/* ── Summary Bar ── */
+.dia-summary-bar {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0.5rem 1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+  color: var(--textDim);
+}
+.dia-summary-sep {
+  color: var(--border);
+}
+
+/* ── Tier Badge ── */
+.dia-tier-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* ── Readiness Dot ── */
+.dia-readiness-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
+
+/* ── Table ── */
+.dia-table-wrap {
+  overflow-x: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.dia-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.dia-table th {
+  text-align: left;
+  padding: 0.55rem 0.6rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--textFaint);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.dia-table td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.dia-table tbody tr:hover {
+  background: var(--bg);
+}
+.dia-row-hw {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+.dia-rank {
+  color: var(--textFaint);
+  font-size: 0.75rem;
+  width: 2rem;
+}
+.dia-name {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dia-num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.dia-impact {
+  font-weight: 700;
+}
+
+/* ── Impact Bar ── */
+.dia-bar-cell {
+  width: 120px;
+}
+.dia-bar-track {
+  height: 6px;
+  background: var(--bg);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.dia-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* ── Legend ── */
+.dia-legend {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.dia-legend h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+}
+.dia-legend p {
+  margin: 0 0 0.75rem;
+}
+.dia-legend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--textDim);
+}

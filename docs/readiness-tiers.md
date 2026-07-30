@@ -29,12 +29,12 @@ Every component in the system — directives, data feeds, protocols, strategies 
 │         │ Protocol: contains ≥1 alpha directive            │
 │         │ Strategy: status = 'concept'                     │
 ├─────────┼──────────────────────────────────────────────────┤
-│  BRAVO  │ Works with real data, has known limitations.     │
+│  BETA  │ Works with real data, has known limitations.     │
 │         │ Limitations are DOCUMENTED and SURFACED to user. │
 │         │                                                  │
 │         │ Directive: real math, but e.g. uses proxy data   │
 │         │ Data feed: active but indirect (EURUSD for DXY)  │
-│         │ Protocol: all directives ≥ bravo, some degraded  │
+│         │ Protocol: all directives ≥ beta, some degraded  │
 │         │ Strategy: status = 'partial' or 'supported'      │
 ├─────────┼──────────────────────────────────────────────────┤
 │  READY  │ Verified against live data. Thresholds tuned.    │
@@ -55,8 +55,8 @@ This is the strictest quality control in the system. Examples:
 
 | Component | Dependencies | Readiness |
 |-----------|-------------|-----------|
-| `gold-macro-correlation` directive | DXY feed (EURUSD proxy = BRAVO), 10Y feed (not connected = ALPHA) | **ALPHA** |
-| `xau-speed-v1` protocol | 9 directives: 4 READY, 3 BRAVO, 2 ALPHA | **ALPHA** |
+| `gold-macro-correlation` directive | DXY feed (EURUSD proxy = BETA), 10Y feed (not connected = ALPHA) | **ALPHA** |
+| `xau-speed-v1` protocol | 9 directives: 4 READY, 3 BETA, 2 ALPHA | **ALPHA** |
 | Gold Macro Regime strategy | `xau-macro-v1` protocol (ALPHA) | **ALPHA** |
 
 A single alpha directive poisons the entire chain upward. This is intentionally harsh — it forces the team to promote dependencies before claiming readiness.
@@ -65,7 +65,7 @@ A single alpha directive poisons the entire chain upward. This is intentionally 
 
 | Component | Storage Location | Field |
 |-----------|-----------------|-------|
-| Directive | `IDirective` interface (NestJS) | `readonly readiness: 'alpha' \| 'bravo' \| 'ready'` |
+| Directive | `IDirective` interface (NestJS) | `readonly readiness: 'alpha' \| 'beta' \| 'ready'` |
 | Directive (DB) | `Directive` table | `readiness` column (enum) |
 | Data Feed | Provider health endpoint | `status` field with readiness metadata |
 | Protocol | Computed from directive readiness | Not stored — derived at query time |
@@ -75,9 +75,9 @@ A single alpha directive poisons the entire chain upward. This is intentionally 
 
 ### 1. Directive Registration
 
-When a new directive is added to `directives.module.ts`, it MUST declare a readiness tier. The default is `'alpha'` — a directive is alpha until proven otherwise. Promoting to bravo or ready requires:
+When a new directive is added to `directives.module.ts`, it MUST declare a readiness tier. The default is `'alpha'` — a directive is alpha until proven otherwise. Promoting to beta or ready requires:
 
-- Bravo: Evidence of real data flowing + documented limitations
+- Beta: Evidence of real data flowing + documented limitations
 - Ready: Test suite with known input/output pairs + confidence calibration
 
 ### 2. Protocol Activation
@@ -86,24 +86,24 @@ When a protocol is activated (wired to a strategy), the system computes its read
 
 ### 3. Strategy Library Display
 
-The Strategy Library page shows per-strategy readiness. Expandable cards show per-directive readiness with color coding (red=alpha, yellow=bravo, green=ready). Users can filter to show only READY strategies.
+The Strategy Library page shows per-strategy readiness. Expandable cards show per-directive readiness with color coding (red=alpha, yellow=beta, green=ready). Users can filter to show only READY strategies.
 
 ### 4. Scoring Pipeline
 
-ALPHA directives are EXCLUDED from composite scoring. They appear in the breakdown with a "mock — excluded" flag. BRAVO directives are included but their confidence is capped at 0.6. READY directives contribute fully.
+ALPHA directives are EXCLUDED from composite scoring. They appear in the breakdown with a "mock — excluded" flag. BETA directives are included but their confidence is capped at 0.6. READY directives contribute fully.
 
 ### 5. META.Stack Explorer
 
-Each pipeline stage shows readiness: green check (ready), yellow dash (bravo/degraded), red X (alpha/missing). The "Confirm All" button only activates for stages where all sub-components are ≥ bravo.
+Each pipeline stage shows readiness: green check (ready), yellow dash (beta/degraded), red X (alpha/missing). The "Confirm All" button only activates for stages where all sub-components are ≥ beta.
 
 ## Transition Rules
 
 | From → To | Requirement |
 |-----------|------------|
-| ALPHA → BRAVO | Real data flowing for ≥ 5 trading days. Documented limitations. No mock/stub returns. |
-| BRAVO → READY | Test suite passing. Thresholds calibrated against ≥ 50 historical signals. Confidence ≥ 0.6. |
+| ALPHA → BETA | Real data flowing for ≥ 5 trading days. Documented limitations. No mock/stub returns. |
+| BETA → READY | Test suite passing. Thresholds calibrated against ≥ 50 historical signals. Confidence ≥ 0.6. |
 
-Transitions are ONE-WAY. A READY directive that starts returning mock data (provider fails) is demoted to BRAVO, not ALPHA — it still has proven logic, just degraded data.
+Transitions are ONE-WAY. A READY directive that starts returning mock data (provider fails) is demoted to BETA, not ALPHA — it still has proven logic, just degraded data.
 
 ## Pending State (Data-Gated Activation)
 
@@ -134,8 +134,8 @@ This distinguishes between "can never work" (BLOCKED — missing provider, unsup
 |-------------|--------|
 | Strategy Library | Toggle: Show all / Hide ALPHA / READY only |
 | Directive Registry | Column: Readiness (sortable, filterable) |
-| Protocol Config | Badge on each directive: 🟢 READY 🟡 BRAVO 🔴 ALPHA |
+| Protocol Config | Badge on each directive: 🟢 READY 🟡 BETA 🔴 ALPHA |
 | META.Stack Explorer | Stage status reflects weakest dependency |
 | Automation Dashboard | Strategy status: RUNNING / PENDING / BLOCKED / DEGRADED |
-| QA Testing Page | Priority queue: ALPHA directives sorted by "closest to BRAVO" |
+| QA Testing Page | Priority queue: ALPHA directives sorted by "closest to BETA" |
 | Capability Map | Feature readiness heatmap (green → red gradient) |

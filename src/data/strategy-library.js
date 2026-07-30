@@ -22,9 +22,9 @@
  *
  * 3. status values (maps to readiness tiers — see docs/readiness-tiers.md):
  *    'concept'   — ALPHA: documented but no directives wired yet
- *    'partial'   — ALPHA→BRAVO: some directives exist but gaps remain
- *    'supported' — BRAVO: all directive mappings reference live directives
- *    'live'      — READY: actively running, all directives ≥ bravo, verified
+ *    'partial'   — ALPHA→BETA: some directives exist but gaps remain
+ *    'supported' — BETA: all directive mappings reference live directives
+ *    'live'      — READY: actively running, all directives ≥ beta, verified
  *
  * 4. If the strategy references NEW directives, those directives must be:
  *    a) Implemented in nest/src/modules/directives/implementations/*.directive.ts

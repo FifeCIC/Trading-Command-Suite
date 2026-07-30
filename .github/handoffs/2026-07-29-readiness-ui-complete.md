@@ -2,7 +2,7 @@
 
 ## Summary
 
-Readiness tiers (ALPHA/BRAVO/READY) are now visible across all three key UI surfaces. Users can see at a glance which directives are real vs mock.
+Readiness tiers (ALPHA/BETA/READY) are now visible across all three key UI surfaces. Users can see at a glance which directives are real vs mock.
 
 ## Completed — All UI Surfaces
 

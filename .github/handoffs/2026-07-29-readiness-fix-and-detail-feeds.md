@@ -9,8 +9,8 @@ Fixed readiness distribution in placeholder stubs and added requiredDataFeeds di
 - Correctly classified placeholder-directives.stub.ts entries:
   - True stubs (return stubResult) → ALPHA
   - Real implementations (priority > 0) → READY
-  - BRAVO directives correctly limited to the 5 proxy-data directives
-- Final distribution: 68 READY, 5 BRAVO, 31 ALPHA (dead-code stubs)
+  - BETA directives correctly limited to the 5 proxy-data directives
+- Final distribution: 68 READY, 5 BETA, 31 ALPHA (dead-code stubs)
 
 ### Directive Detail Page — requiredDataFeeds
 - Added Readiness badge (🟢🟡🔴) to the metadata grid

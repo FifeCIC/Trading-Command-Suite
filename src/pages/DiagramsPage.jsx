@@ -1426,6 +1426,153 @@ const DIAGRAMS = [
     style W2 fill:#f59e0b,color:#000
     style W3 fill:#f59e0b,color:#000`,
   },
+  {
+    id: 'scoring-paths',
+    label: 'Scoring Paths (5 Surfaces)',
+    desc: 'Canonical as of 2026-07-29. Five scoring surfaces, each with a distinct role. Protocol-gated scoring (~14 directives) is ~7× cheaper than unfiltered rankAll (104 directives). The gated/batch pipeline is the canonical META.Stack path for trading decisions.',
+    code: `flowchart TB
+    subgraph EntryPoints["Entry Points"]
+        direction LR
+        E1["Dashboard /<br/>Quick Lookup"]
+        E2["Trading Decision /<br/>Strategy Eval"]
+        E3["Signal Quality /<br/>Trust Assessment"]
+        E4["Scalping /<br/>Speed Trading"]
+        E5["Analytics /<br/>Performance"]
+    end
+
+    subgraph Pipeline1["1. Flat Ranked (Workhorse)"]
+        P1["GET /api/scoring/ranked<br/>104 directives · flat weighting<br/>DB-cached (free) · 15s cache<br/>?fresh=true for live compute"]
+    end
+
+    subgraph Pipeline2["2. META.Stack Gated ★ CANONICAL"]
+        P2["POST /api/scoring/gated/batch<br/>~14 directives · risk gates<br/>rarity weighting · readiness filter<br/>~7× cheaper than flat"]
+    end
+
+    subgraph Pipeline3["3. Signal Envelopes"]
+        P3["GET/POST /api/signals/ladder<br/>Confidence rails · conflict detect<br/>pre-trade readiness<br/>wraps gated pipeline"]
+    end
+
+    subgraph Pipeline4["4. Speed Scan (Scalping)"]
+        P4["POST /api/speed/scan<br/>4 timeframes · micro-trend<br/>seasonal affinity · 23 symbols<br/>heaviest per-symbol, few symbols"]
+    end
+
+    subgraph Pipeline5["5. Benchmark (Analytics)"]
+        P5["GET /api/backtest/benchmark<br/>Buy-and-hold comparison<br/>reads MarketBar 1d<br/>no directives run"]
+    end
+
+    subgraph Consumers["Frontend Consumers"]
+        direction LR
+        C1["Dashboard · DailyBriefing<br/>HotStockPicks · AnalyseSymbol<br/>MetaStackStatus · GapScanner<br/>ChartComparison · ScoringOverview"]
+        C2["Ladder · ABTesting<br/>MetaStackExplorer · SpeedTrading<br/>Protocols · CreateStrategy<br/>SpeedDecisionPanel"]
+        C3["SignalsWorkbench<br/>ComponentLab"]
+        C4["SpeedScanner · SpeedTrading<br/>GoldSpeed · BtcSpeed<br/>MetaStackDisplay"]
+        C5["No frontend yet<br/>(new 2026-07-29)"]
+    end
+
+    E1 --> P1
+    E2 --> P2
+    E3 --> P3
+    E4 --> P4
+    E5 --> P5
+
+    P1 --> C1
+    P2 --> C2
+    P3 --> C3
+    P4 --> C4
+    P5 --> C5
+
+    P3 -.->|"delegates to"| P2
+
+    style P2 fill:#22c55e,color:#000,stroke:#16a34a,stroke-width:3px
+    style P1 fill:#f59e0b,color:#000
+    style P3 fill:#3b82f6,color:#fff
+    style P4 fill:#7c3aed,color:#fff
+    style P5 fill:#64748b,color:#fff
+    style E1 fill:#1e293b,color:#e5e7eb
+    style E2 fill:#1e293b,color:#e5e7eb
+    style E3 fill:#1e293b,color:#e5e7eb
+    style E4 fill:#1e293b,color:#e5e7eb
+    style E5 fill:#1e293b,color:#e5e7eb`,
+  },
+  {
+    id: 'ab-duplication',
+    label: '[CONCEPT] A/B Duplication Flow',
+    desc: 'CONCEPT (2026-07-29). How to create an A/B test pair: clone the original, establish the pairing contract, run both sides. The contract enables the decision-trail (#350) to compare trades and highlight exactly what differed between A and B.',
+    code: `flowchart TB
+    subgraph Original["Original (Side A)"]
+        A1["Protocol<br/>xau-speed-v1"]
+        A2["Scoring Strategy<br/>watchlist=XAU pairs"]
+        A3["Trading Strategy<br/>symbol=XAUUSD, broker=mt5"]
+    end
+
+    subgraph Clone["Clone (Side B)"]
+        B1["Protocol (clone)<br/>xau-speed-v1-b"]
+        B2["Scoring Strategy (clone)<br/>same watchlist"]
+        B3["Trading Strategy (clone)<br/>same symbol, broker"]
+    end
+
+    subgraph Contract["A/B Pairing Contract"]
+        C1["ab_pair table<br/>id, name, sideAProtocolId, sideBProtocolId<br/>sideAStrategyId, sideBStrategyId<br/>status: draft|active|completed"]
+        C2["Rules<br/>· Same symbol + watchlist<br/>· Same broker + risk params<br/>· Only protocol differs<br/>· Max 1 active test"]
+    end
+
+    subgraph Execution["Execution"]
+        E1["Automation Loop Tick"]
+        E2["Score Side A → dispatch"]
+        E3["Score Side B → dispatch"]
+        E4["Decision-Trail compares<br/>longComposite, shortComposite<br/>directive breakout diffs"]
+    end
+
+    A1 -->|"clone"| B1
+    A2 -->|"clone"| B2
+    A3 -->|"clone"| B3
+
+    A1 --> C1
+    B1 --> C1
+    A3 --> C1
+    B3 --> C1
+
+    C1 --> E1
+    E1 --> E2
+    E1 --> E3
+    E2 --> E4
+    E3 --> E4
+
+    style C1 fill:#7c3aed,color:#fff,stroke:#6d28d9,stroke-width:2px
+    style E4 fill:#f59e0b,color:#000`,
+  },
+  {
+    id: 'ab-contract',
+    label: '[CONCEPT] A/B Contract — Decision-Trail Comparison',
+    desc: 'CONCEPT (2026-07-29). The decision-trail (#350) is the foundation for A/B comparison. Two trades on the same tick, same symbol, different protocols — the trail shows exactly which directive scores diverged. This is how we answer "why did A win but B lose?"',
+    code: `flowchart LR
+    subgraph Tick["Tick #N, Symbol=XAUUSD"]
+        direction TB
+        T1["Side A: xau-speed-v1<br/>longComposite=72, shortComposite=—<br/>winner=LONG, signal=BUY"]
+        T2["Side B: xau-speed-v1-b<br/>longComposite=58, shortComposite=—<br/>winner=LONG, signal=HOLD"]
+    end
+
+    subgraph Trail["Decision-Trail Comparison"]
+        direction TB
+        D1["Directive: gold-session-profile<br/>A: 85/100 · B: 62/100<br/>Δ = -23 — B penalized harder<br/>Reason: B has stricter session gate"]
+        D2["Directive: gold-round-numbers<br/>A: 70/80 · B: 68/80<br/>Δ = -2 — negligible"]
+        D3["Directive: rsi-oversold<br/>A: 55/70 · B: 42/70<br/>Δ = -13 — different RSI period"]
+        D4["Verdict: B's stricter session gate<br/>and shorter RSI period caused<br/>14-point composite drop"]
+    end
+
+    subgraph Output["Output"]
+        O1["A: EXECUTED (ticket 456)<br/>B: SKIPPED (below threshold)"]
+        O2["trade.source = 'meta-stack'<br/>ab_test_id = 'test-001'"]
+    end
+
+    Tick --> Trail
+    Trail --> Output
+
+    style D1 fill:#ef4444,color:#fff
+    style D2 fill:#64748b,color:#fff
+    style D3 fill:#f59e0b,color:#000
+    style D4 fill:#7c3aed,color:#fff,stroke:#6d28d9`,
+  },
 ];
 
 export default function DiagramsPage() {

@@ -77,6 +77,13 @@ export class MarketDataService {
     return bars.reverse();
   }
 
+  /** Count available bars for a symbol+timeframe (used by data readiness checks). */
+  async getBarCount(symbolId: string, timeframe: string): Promise<number> {
+    return this.prisma.marketBar.count({
+      where: { symbolId, timeframe },
+    });
+  }
+
   /** Get top price movers across all active symbols for a given lookback period. */
   async getTopMovers(lookback: string = '15m', limit: number = 20) {
     // Fetch all active symbols

@@ -254,14 +254,15 @@ export class ScoringService implements OnModuleInit {
 
     // ── Fetch EURUSD for DXY proxy (cached per tick) ────
     const eurusdValue = await this.eurusdCache.getValue();
+    const dxyValue = eurusdValue !== undefined && eurusdValue > 0
+      ? (eurusdValue >= 1.15 ? 98 : eurusdValue >= 1.08 ? 103 : 108)
+      : undefined;
 
     // ── Persist macro snapshot & detect regime change ─────
-    if (eurusdValue !== undefined && eurusdValue > 0) {
-      // Derive DXY proxy from EURUSD (EURUSD is 57.6% of DXY basket — inverse)
-      const proxyDxy = eurusdValue >= 1.15 ? 98 : eurusdValue >= 1.08 ? 103 : 108;
+    if (dxyValue !== undefined) {
       this.macroSnapshot.capture({
         eurusdValue,
-        dxyValue: proxyDxy,
+        dxyValue,
         source: 'eurusd-proxy',
       }).catch(err => this.logger.warn(`Macro snapshot failed: ${(err as Error).message}`));
     }
@@ -272,6 +273,7 @@ export class ScoringService implements OnModuleInit {
         symbol: symbol.ticker,
         bars,
         eurusdValue,
+        dxyValue,
       } as DirectiveInput;
       const results = await this.directivesService.runAll(input);
 

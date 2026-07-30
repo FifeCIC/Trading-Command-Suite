@@ -1,7 +1,14 @@
 /**
- * Analyst Adjustments Directive
- * ==============================
+ * Analyst Adjustments Directive — HYBRID BASE+BONUS (Layer C, 2026-07-29)
+ * ========================================================================
  * Scores based on analyst recommendation consensus.
+ *
+ * ── Hybrid Scoring ─────────────────────────────────────────
+ * BASE (0–80):   Continuous bullish% interpolation: 40%→0, 95%→80.
+ *                Every percentage point of analyst consensus counts.
+ * BONUS tiers:   strongBuyPct > 35% → +15 (strong conviction).
+ *                trendPct > 5% → +10 (improving sentiment).
+ * MAX:           105 (80 base + 25 bonus).
  *
  * Data is expected to be pre-fetched by the scoring pipeline and attached
  * to the input as `(input as any).analystRecommendation`.
@@ -26,16 +33,22 @@ interface AnalystData {
   trendPct?: number; // 3-month change in bullish%
 }
 
+/** Linear interpolation: map value from [inMin,inMax] to [outMin,outMax], clamped. */
+function mapRange(v: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
+  const t = Math.max(0, Math.min(1, (v - inMin) / (inMax - inMin)));
+  return outMin + t * (outMax - outMin);
+}
+
 @Injectable()
 export class AnalystAdjustmentsDirective implements IDirective {
   readonly id = 'analyst-adjustments';
   readonly name = 'Analyst Adjustments';
-  readonly description = 'Scores based on analyst consensus. Strong bullish consensus = positive. High sell ratings or weak consensus = negative.';
+  readonly description = 'Hybrid: continuous analyst-consensus base + strong-buy/trend bonuses.';
   readonly priority = 45;
-  readonly maxScore = 100;
+  readonly maxScore = 105; // 80 base + 25 bonus
   readonly minBars = { '1d': 1 };
-  readonly version = '1.0.0';
-  readonly readiness = 'bravo' as const;
+  readonly version = '2.0.0'; // Hybrid scoring
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const data: AnalystData | undefined = (input as any).analystRecommendation;
@@ -49,67 +62,45 @@ export class AnalystAdjustmentsDirective implements IDirective {
       };
     }
 
-    const { strongBuy, buy, hold, sell, strongSell, total, bullishPct, bearishPct, strongBuyPct, trendPct } = data;
-    let score = 50;
-    const reasons: string[] = [];
+    const { bullishPct, strongBuyPct, trendPct } = data;
 
-    // Strong consensus
-    if (bullishPct >= 90) {
-      score += 15;
-      reasons.push(`${bullishPct.toFixed(0)}% bullish (${strongBuy + buy}/${total})`);
-    } else if (bullishPct >= 80) {
-      score += 10;
-      reasons.push(`${bullishPct.toFixed(0)}% bullish`);
-    } else if (bullishPct >= 70) {
-      score += 5;
-      reasons.push(`${bullishPct.toFixed(0)}% bullish`);
-    } else if (bullishPct < 60) {
-      score -= 10;
-      reasons.push(`Only ${bullishPct.toFixed(0)}% bullish`);
+    // ── BASE (continuous, 0–80) ──────────────────────────
+    // bullishPct 40% → base 0 (weak consensus)
+    // bullishPct 95% → base 80 (overwhelming bullish)
+    const baseScore = Math.round(mapRange(bullishPct, 40, 95, 0, 80));
+
+    // ── BONUS (threshold-gated) ───────────────────────────
+    let bonusScore = 0;
+    const bonusParts: string[] = [];
+
+    if (strongBuyPct > 35) {
+      bonusScore += 15;
+      bonusParts.push(`strong buys ${strongBuyPct.toFixed(0)}%`);
     }
 
-    // Strong Buy premium
-    if (strongBuyPct >= 35) {
-      score += 5;
-      reasons.push(`${strongBuy} strong buys`);
+    if (trendPct !== undefined && trendPct > 5) {
+      bonusScore += 10;
+      bonusParts.push(`+${trendPct.toFixed(0)}% 3mo trend`);
     }
 
-    // Bearish penalty
-    if (bearishPct > 10) {
-      score -= 15;
-      reasons.push(`${sell + strongSell} bearish ratings (${bearishPct.toFixed(0)}%)`);
-    } else if (sell > 0 || strongSell > 0) {
-      score -= 5;
-      reasons.push(`${sell + strongSell} analysts bearish`);
-    }
+    const bonusLabel = bonusParts.join(' + ');
 
-    // Coverage depth
-    if (total >= 40) {
-      score += 5;
-      reasons.push(`${total} analysts covering`);
-    } else if (total < 10) {
-      score -= 5;
-      reasons.push(`Only ${total} analysts`);
-    }
+    // ── Total ─────────────────────────────────────────────
+    const totalScore = Math.max(0, Math.min(this.maxScore, baseScore + bonusScore));
 
-    // Trend
-    if (trendPct !== undefined) {
-      if (trendPct > 5) {
-        score += 5;
-        reasons.push(`Improving: +${trendPct.toFixed(0)}% 3mo trend`);
-      } else if (trendPct < -5) {
-        score -= 5;
-        reasons.push(`Deteriorating: ${trendPct.toFixed(0)}% 3mo trend`);
-      }
-    }
+    const signalClass = totalScore >= 65 ? 'bullish' : totalScore <= 35 ? 'bearish' : 'neutral';
+    const confidence = data.total >= 20 ? 0.7 : data.total >= 10 ? 0.5 : 0.3;
 
-    const signalClass = score >= 65 ? 'bullish' : score <= 35 ? 'bearish' : 'neutral';
+    const parts: string[] = [`base=${baseScore} (${bullishPct.toFixed(0)}% bullish)`];
+    if (bonusScore > 0) parts.push(`+${bonusScore} bonus (${bonusLabel})`);
+    parts.push(`= ${totalScore}/${this.maxScore}`);
 
     return {
       signalClass,
-        score: Math.max(0, Math.min(this.maxScore, score)),
-      confidence: total >= 20 ? 0.7 : total >= 10 ? 0.5 : 0.3,
-      reason: reasons.join('. ') || 'Analyst consensus evaluated',
+      score: totalScore,
+      confidence,
+      reason: `${input.symbol}: ${parts.join(' ')}`,
+      metadata: { baseScore, bonusScore, bonusLabel, bullishPct, strongBuyPct, trendPct },
     };
   }
 }

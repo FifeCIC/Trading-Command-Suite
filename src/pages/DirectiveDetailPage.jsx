@@ -120,9 +120,9 @@ function DirectiveDetailContent({ directive, id, navigate }) {
           <div>
             <span>Readiness</span>
             <strong style={{
-              color: directive.readiness === 'ready' ? '#22c55e' : directive.readiness === 'bravo' ? '#f59e0b' : '#ef4444',
+              color: directive.readiness === 'ready' ? '#22c55e' : directive.readiness === 'beta' ? '#f59e0b' : '#ef4444',
             }}>
-              {directive.readiness === 'ready' ? '🟢 READY' : directive.readiness === 'bravo' ? '🟡 BRAVO' : '🔴 ALPHA'}
+              {directive.readiness === 'ready' ? '🟢 READY' : directive.readiness === 'beta' ? '🟡 BETA' : '🔴 ALPHA'}
             </strong>
           </div>
           <div>

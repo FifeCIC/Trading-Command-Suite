@@ -12,7 +12,7 @@ In the scoring pipeline, when aggregating directive scores into the protocol com
 - [ ] Add filter: skip directives where `readiness === 'alpha'` (or where readiness field is missing — treat as alpha)
 - [ ] Add `excluded: true, exclusionReason: 'mock — not ready'` flag to excluded directives in the breakdown
 - [ ] Adjust composite normalization: only divide by the maxScores of INCLUDED directives
-- [ ] Add a summary field: `readinessBreakdown: { ready: 3, bravo: 4, alpha: 7, alphaExcluded: 7 }`
+- [ ] Add a summary field: `readinessBreakdown: { ready: 3, beta: 4, alpha: 7, alphaExcluded: 7 }`
 - [ ] Verify: protocol with 3 READY + 7 ALPHA → composite reflects only the 3 READY directives
 - [ ] Verify: protocol with all ALPHA directives → composite = 0 with "all directives excluded" warning
 - [ ] Verify: protocol with all READY directives → composite unchanged (no regression)

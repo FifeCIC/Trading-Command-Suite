@@ -9,7 +9,7 @@ Open every directive implementation file in `nest/src/modules/directives/impleme
 | Classification | Criteria |
 |---------------|----------|
 | **READY** | Real math on real bar data. Deterministic output. No mock/stub fallback. |
-| **BRAVO** | Real math but uses proxy/indirect data (e.g. EURUSD proxy for DXY). Document the limitation. |
+| **BETA** | Real math but uses proxy/indirect data (e.g. EURUSD proxy for DXY). Document the limitation. |
 | **ALPHA** | Returns mock-neutral (score=50), stub (score=0), or placeholder. Not connected to real data. |
 
 ## Deliverable
@@ -21,7 +21,7 @@ A markdown table committed to `docs/directive-readiness-audit.md`:
 |-------------|-----------|-------|
 | rsi-oversold | READY | Real RSI math on bars |
 | bollinger-band-squeeze | READY | Real bandwidth calculation |
-| dxy-regime | BRAVO | Real math, uses EURUSD proxy (~0.85 correlation to DXY) |
+| dxy-regime | BETA | Real math, uses EURUSD proxy (~0.85 correlation to DXY) |
 | news-sentiment-positive | ALPHA | Returns mock-neutral, no API keys |
 | support-resistance-levels | ALPHA | STUBBED, returns 0 |
 | ... | ... | ... |

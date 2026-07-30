@@ -1,0 +1,60 @@
+/* ── Strategies List — Canonical Index ──────────────────── */
+
+.sl-page { padding: 1.5rem 2rem; max-width: var(--page-max-width, 1400px); margin: 0 auto; }
+
+.sl-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; }
+.sl-header h1 { margin: 0; font-size: 1.5rem; }
+.sl-subtitle { margin: 4px 0 0; font-size: 0.85rem; color: var(--ink-soft); }
+
+.sl-filter-bar { display: flex; gap: 4px; }
+.sl-filter-chip {
+  padding: 4px 12px; border-radius: 14px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink-soft); cursor: pointer;
+  font-size: 0.72rem; transition: all 0.15s;
+}
+.sl-filter-chip:hover { border-color: var(--accent); color: var(--ink); }
+.sl-filter-active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.sl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem; }
+
+.sl-card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; padding: 0.85rem 1rem;
+  cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s;
+}
+.sl-card:hover { border-color: var(--accent); }
+.sl-card-selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+.sl-card-top { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
+.sl-card-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.sl-card-name { font-size: 0.9rem; flex: 1; }
+.sl-card-type {
+  font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; border: 1px solid;
+  font-weight: 600; white-space: nowrap;
+}
+
+.sl-card-meta { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 0.4rem; }
+.sl-chip {
+  font-size: 0.62rem; padding: 1px 6px; border-radius: 3px;
+  background: var(--line); color: var(--ink-soft);
+}
+.sl-chip-wl { background: rgba(139,92,246,0.1); color: #8b5cf6; }
+.sl-chip-proto { background: rgba(6,182,212,0.1); color: #06b6d4; }
+.sl-chip-broker { background: rgba(245,158,11,0.1); color: #d97706; }
+
+.sl-card-score { display: flex; justify-content: space-between; align-items: center; margin: 0.3rem 0; }
+.sl-score-label { font-size: 0.65rem; color: var(--ink-soft); }
+.sl-score-value { font-size: 1.1rem; font-weight: 800; }
+
+.sl-card-positions { font-size: 0.65rem; color: #3b82f6; margin-top: 0.2rem; }
+.sl-card-warning {
+  font-size: 0.62rem; padding: 3px 8px; border-radius: 4px; margin-top: 0.3rem;
+  background: rgba(239,68,68,0.08); color: #ef4444;
+}
+
+.sl-card-detail { margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid var(--line); }
+.sl-detail-desc { font-size: 0.72rem; color: var(--ink-soft); margin: 0 0 0.5rem; }
+.sl-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 1rem; font-size: 0.7rem; color: var(--ink-soft); }
+.sl-detail-grid strong { color: var(--ink); }
+
+.sl-toggle-row { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; font-size: 0.72rem; }

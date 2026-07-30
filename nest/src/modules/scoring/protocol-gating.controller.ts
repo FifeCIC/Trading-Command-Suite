@@ -6,6 +6,34 @@ import { PortfolioService } from '../portfolio/portfolio.service';
 import { ProtocolDbService } from './protocol-db.service';
 import { DirectivesService } from '../directives/directives.service';
 
+/**
+ * Protocol Gating Controller — META.Stack Canonical Scoring
+ * ==========================================================
+ * CANONICAL ROLE (2026-07-29): The authoritative scoring path for
+ * trading decisions. This is the META.Stack pipeline:
+ *
+ *   Market Data → Protocol → Directives → Group Scores → Risk Gate → Composite
+ *
+ * Unlike /api/scoring/ranked (which runs ALL 104 directives flat),
+ * this pipeline:
+ *   1. Scopes to a single protocol (~8-16 directives instead of 104)
+ *   2. Applies risk-gate chains (max score multipliers)
+ *   3. Computes rarity-weighted composites
+ *   4. Excludes ALPHA-tier (mock) directives
+ *   5. Returns full directive breakouts with gate reasoning
+ *
+ * Use for:
+ *   - Ladder page (strategy comparison)
+ *   - A/B Testing (protocol comparison)
+ *   - META.Stack Explorer (pipeline visualization)
+ *   - Speed Trading (protocol-scoped quick decisions)
+ *   - Automation loop (tick scoring)
+ *
+ * ~7× cheaper than unfiltered rankAll due to protocol scoping.
+ *
+ * @see docs/handoff/2026-07-29-scoring-paths-audit-497.md
+ */
+
 @Controller('scoring/gated')
 export class ProtocolGatingController {
   private readonly logger = new Logger(ProtocolGatingController.name);
@@ -222,7 +250,7 @@ export class ProtocolGatingController {
           gatedCount: 0,
           riskDirectiveCount: 0,
           weightStrategy: 'group-weighted' as const,
-          readinessBreakdown: { ready: 0, bravo: 0, alpha: 0, alphaExcluded: 0 },
+          readinessBreakdown: { ready: 0, beta: 0, alpha: 0, alphaExcluded: 0 },
         },
         excludedBreakdown: [],
       };

@@ -17,6 +17,9 @@
 import TradingStrategiesPage from '../pages/TradingStrategiesPage.jsx';
 import StrategyDashboardPage from '../pages/StrategyDashboardPage.jsx';
 import StrategyComparisonPage from '../pages/StrategyComparisonPage.jsx';
+import StrategiesListPage from '../pages/StrategiesListPage.jsx';
+import StrategyMonitorPage from '../pages/StrategyMonitorPage.jsx';
+import StrategyCreatePage from '../pages/StrategyCreatePage.jsx';
 import TradeJournalPage from '../pages/TradeJournalPage.jsx';
 import TradingPlansPage from '../pages/TradingPlansPage.jsx';
 import CalculatorsPage from '../pages/CalculatorsPage.jsx';
@@ -33,6 +36,7 @@ import StrategyLibraryPage from '../pages/StrategyLibraryPage.jsx';
 // ── Scoring ──
 import DirectivesManagerPage from '../pages/DirectivesManagerPage.jsx';
 import DirectiveDetailPage from '../pages/DirectiveDetailPage.jsx';
+import DirectiveImpactAuditPage from '../pages/DirectiveImpactAuditPage.jsx';
 import LadderPage from '../pages/LadderPage.jsx';
 import SeesArenaPage from '../pages/SeesArenaPage.jsx';
 import SignalsWorkbenchPage from '../pages/SignalsWorkbenchPage.jsx';
@@ -181,7 +185,11 @@ import HomeDashboard from '../pages/HomeDashboard.jsx';
 
 // ── MAP ──────────────────────────────────────────────────────────────────────
 export const VIEW_COMPONENTS = {
-  // Trading
+  // Trading — Canonical (2026-07-29 #504 consolidation)
+  'strategies-index': StrategiesListPage,
+  'strategy-monitor': StrategyMonitorPage,
+  'strategy-create': StrategyCreatePage,
+  // Trading — Legacy strategy pages (under review)
   'trading-strategies': TradingStrategiesPage,
   'strategy-comparison': StrategyComparisonPage,
   'trade-journal': TradeJournalPage,
@@ -205,6 +213,7 @@ export const VIEW_COMPONENTS = {
 
   // Scoring
   'directives-manager': DirectivesManagerPage,
+  'directive-impact-audit': DirectiveImpactAuditPage,
   'directive-detail': DirectiveDetailPage,
   'live-ordering-stack': LadderPage,
   'sees-arena': SeesArenaPage,
@@ -214,6 +223,7 @@ export const VIEW_COMPONENTS = {
   'scoring-activity-logs': ScoringActivityLogsPage,
   'protocols': ProtocolsPage,
   'create-protocols': CreateProtocolsPage,
+  'strategy-builder': StrategyBuilderPage,
   'strategy-wizard': StrategyWizardPage,
   'strategy-ladders': StrategyLaddersPage,
   'scoring-overview': ScoringOverviewPage,

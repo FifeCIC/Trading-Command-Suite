@@ -140,13 +140,13 @@ export interface IDirective {
   /**
    * Readiness tier — enforced by the scoring pipeline and activation gates.
    * - 'alpha': Mock, stub, or placeholder. Excluded from composite scoring.
-   * - 'bravo': Real math but degraded/proxy data. Included with capped confidence.
+   * - 'beta': Real math but degraded/proxy data. Included with capped confidence.
    * - 'ready': Verified against live data. Full scoring active.
    *
    * Default is 'alpha' (alpha until proven otherwise). See docs/readiness-tiers.md.
    * A protocol can only claim the readiness of its weakest directive.
    */
-  readonly readiness: 'alpha' | 'bravo' | 'ready';
+  readonly readiness: 'alpha' | 'beta' | 'ready';
 
   /**
    * Directional bias of this directive.

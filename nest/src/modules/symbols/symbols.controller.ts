@@ -19,6 +19,7 @@ import { CreateSymbolDto } from './dto/create-symbol.dto';
 import { UpdateSymbolDto } from './dto/update-symbol.dto';
 import { SymbolsService } from './symbols.service';
 import { SymbolNameEnricherService } from './symbol-name-enricher.service';
+import { SymbolResolverService, type SymbolTier, type ResolutionFeature } from './symbol-resolver.service';
 
 @ApiTags('symbols')
 @Controller('symbols')
@@ -28,6 +29,7 @@ export class SymbolsController {
     private readonly modeService: ModeService,
     private readonly prisma: PrismaService,
     private readonly enricher: SymbolNameEnricherService,
+    private readonly symbolResolver: SymbolResolverService,
   ) {}
 
   private readonly logger = new Logger(SymbolsController.name);
@@ -95,6 +97,41 @@ export class SymbolsController {
     const tickers = symbols.map((s) => s.ticker);
     this.logger.log(`with-bars: ${tickers.length} symbols have market data`);
     return { ...this.modeMeta(), tickers };
+  }
+
+  @Get('resolution')
+  @ApiOperation({ summary: 'Resolve symbols by tier or feature using the shared resolver' })
+  async resolution(
+    @Query('tier') tier?: string,
+    @Query('feature') feature?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const limitNum = limit ? parseInt(limit, 10) : undefined;
+
+    if (feature) {
+      const validFeatures: ResolutionFeature[] = ['news', 'bar-refresh', 'scoring', 'automation'];
+      if (!validFeatures.includes(feature as ResolutionFeature)) {
+        return { ...this.modeMeta(), error: `Invalid feature "${feature}". Valid: ${validFeatures.join(', ')}` };
+      }
+      const selection = await this.symbolResolver.getSymbolsForFeature(feature as ResolutionFeature, limitNum);
+      return { ...this.modeMeta(), ...selection };
+    }
+
+    if (tier) {
+      const validTiers: SymbolTier[] = [
+        'positions', 'active-strategies', 'active-protocols',
+        'watchlist-starred', 'macro', 'sector', 'forex-floor', 'all-active',
+      ];
+      if (!validTiers.includes(tier as SymbolTier)) {
+        return { ...this.modeMeta(), error: `Invalid tier "${tier}". Valid: ${validTiers.join(', ')}` };
+      }
+      const symbols = await this.symbolResolver.getSymbolsByTier(tier as SymbolTier, limitNum);
+      return { ...this.modeMeta(), tier, symbols, count: symbols.length };
+    }
+
+    // No tier or feature specified — return all
+    const symbols = await this.symbolResolver.getAllSymbols(limitNum);
+    return { ...this.modeMeta(), symbols, count: symbols.length };
   }
 
   @Get(':id')

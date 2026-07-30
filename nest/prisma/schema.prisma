@@ -680,6 +680,8 @@ model Trade {
   strategy          String?  @db.VarChar(200)
   scoringStrategyId String?  @db.VarChar(36)
   origin            String   @default("user") @db.VarChar(20)
+  source            String?  @db.VarChar(30)  // Pipeline: meta-stack | speed-scanner | manual | backtest | directive-direct
+  abTestId          String?  @db.VarChar(36)  // A/B test pairing reference
   openedAt          DateTime @default(now())
   closedAt          DateTime?
   createdAt         DateTime @default(now())

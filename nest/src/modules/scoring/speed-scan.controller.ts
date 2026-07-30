@@ -1,5 +1,28 @@
 /**
- * SpeedScanController — endpoint for the Speed Trading "Best Symbol" scanner.
+ * SpeedScanController — Micro-Trend Scalping Scanner
+ * ====================================================
+ * CANONICAL ROLE (2026-07-29): Short-term pattern detection for
+ * scalping and speed trading. DISTINCT from the main scoring pipelines.
+ *
+ * This is NOT general-purpose scoring. It:
+ *   - Uses short timeframes (5s, 15s, 1m) for micro-trend detection
+ *   - Fetches 4 timeframes per symbol (1d, 1h, 15m, requested)
+ *   - Applies seasonal affinity multipliers
+ *   - Includes MicroTrendDetector analysis
+ *   - Scores against each symbol's best-mapped protocol
+ *
+ * Heaviest per-symbol cost due to 4× bar fetching, but runs on
+ * a small symbol set (default 23, from speed trading watchlist).
+ *
+ * Use for:
+ *   - Speed Trading page (real-time scalping decisions)
+ *   - Gold/BTC Speed Trading variants
+ *   - MetaStack Display (speed leaderboard)
+ *
+ * NOT for: dashboard overviews (use /api/scoring/ranked),
+ * strategy evaluation (use /api/scoring/gated/batch).
+ *
+ * @see docs/handoff/2026-07-29-scoring-paths-audit-497.md
  *
  * POST /api/speed/scan
  */

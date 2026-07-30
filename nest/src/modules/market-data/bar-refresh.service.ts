@@ -52,6 +52,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
+import { SymbolResolverService } from '../symbols/symbol-resolver.service';
 
 // Avoid importing the concrete adapter class
 interface BarProvider {
@@ -110,6 +111,7 @@ export class BarRefreshService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly adapterFactory: AdapterFactory,
+    private readonly symbolResolver: SymbolResolverService,
   ) {}
 
   /** Start periodic live refresh. Safe to call multiple times. */
@@ -150,39 +152,11 @@ export class BarRefreshService {
 
   /**
    * Resolve symbols for bar refresh.
-   * Tier-based: open positions + active trading strategy symbols.
-   * No hardcoded ALWAYS_SYMBOLS — uses live data from the system.
+   * Delegates to the shared SymbolResolverService (feature: bar-refresh).
    */
   async resolveRefreshSymbols(): Promise<string[]> {
-    const symbolSet = new Set<string>();
-
-    // 1. Open positions (always relevant)
-    try {
-      if (this.prisma.isAvailable) {
-        const positions = await this.prisma.position.findMany({
-          select: { symbol: true },
-          distinct: ['symbol'],
-        });
-        for (const p of positions) symbolSet.add(p.symbol.toUpperCase());
-      }
-    } catch { /* no positions */ }
-
-    // 2. Active trading strategy symbols
-    try {
-      if (this.prisma.isAvailable) {
-        const strategies = await (this.prisma as any).tradingStrategy.findMany({
-          where: { active: true },
-          select: { symbol: true },
-        });
-        for (const s of strategies) symbolSet.add(s.symbol.toUpperCase());
-      }
-    } catch { /* DB may not have tradingStrategy table yet */ }
-
-    // 3. Always include major forex/crypto pairs as floor (directive operation needs these)
-    const floor = ['EURUSD', 'GBPUSD', 'USDCAD', 'XAUUSD', 'US500'];
-    for (const s of floor) symbolSet.add(s);
-
-    return [...symbolSet];
+    const selection = await this.symbolResolver.getSymbolsForFeature('bar-refresh');
+    return selection.symbols;
   }
 
   /**

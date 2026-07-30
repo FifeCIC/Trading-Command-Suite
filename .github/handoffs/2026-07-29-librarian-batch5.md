@@ -38,7 +38,7 @@
 
 ## Key Architecture State
 
-- **Directives**: 104 total — 87 READY, 10 BRAVO, 7 ALPHA. DB-backed with readiness column.
+- **Directives**: 104 total — 87 READY, 10 BETA, 7 ALPHA. DB-backed with readiness column.
 - **Protocols**: 44 in DB, ALPHA directives excluded from scoring composite.
 - **Providers**: 10 total (IBKR new, mock mode). MT5 healthy, Capital.com configured, T212 buggy.
 - **Scoring**: ALPHA exclusion active. Readiness breakdown in every GatedScore response.

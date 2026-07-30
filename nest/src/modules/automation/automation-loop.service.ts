@@ -38,6 +38,8 @@ import { BarRefreshService } from '../market-data/bar-refresh.service';
 import { AuditLogService } from './audit-log.service';
 import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { PositionSyncService } from '../providers/position-sync.service';
+import { WeekendDefenseService } from '../trading/weekend-defense.service';
+import { SymbolResolverService } from '../symbols/symbol-resolver.service';
 
 /**
  * Layer 2 of the 3-layer threshold architecture.
@@ -364,6 +366,7 @@ export class AutomationLoopService implements OnModuleInit {
           symbol, side: side.toLowerCase(), quantity: baseSize,
           entryPrice: result.price || entryPrice || 0, pnl: 0,
           provider: brokerId, status: 'open', origin: 'strategy',
+          source: 'meta-stack',
           scoringStrategyId: strategyId,
           ticket: result.ticket as number | undefined,
           sl, tp,
@@ -419,6 +422,8 @@ export class AutomationLoopService implements OnModuleInit {
     private readonly protocolDb: ProtocolDbService,
     private readonly versioningService: MetaStackVersioningService,
     private readonly positionSync: PositionSyncService,
+    private readonly weekendDefense: WeekendDefenseService,
+    private readonly symbolResolver: SymbolResolverService,
   ) {
     this.initBrokerStates();
     // loadScoringStrategies() is deferred to onModuleInit (needs DB connection)
@@ -854,6 +859,39 @@ export class AutomationLoopService implements OnModuleInit {
       this.state.globalRiskMultiplier = this.timelineService.computeRiskMultiplier(globalEvents);
       this.logger.log(`Tick #${this.state.tickCount}: ${events.length} timeline events, global risk ${this.state.globalRiskMultiplier.toFixed(2)}`);
 
+      // 1b. Weekend defense check — Wed (triple-swap) and Fri (weekend gap)
+      const today = new Date().getUTCDay();
+      if (today === 3 || today === 5) {
+        const mt5Positions = allPositions.filter((p: any) => p.type !== undefined);
+        if (mt5Positions.length > 0) {
+          try {
+            const checklist = await this.weekendDefense.buildChecklist(
+              mt5Positions.map((p: any) => ({
+                symbol: p.symbol,
+                ticket: p.ticket,
+                type: p.type,
+                volume: p.volume,
+                price_open: p.price_open,
+                price_current: p.price_current,
+                profit: p.profit || 0,
+                swap: p.swap || 0,
+              }))
+            );
+            const toClose = checklist.positions.filter(p => p.recommendation === 'CLOSE');
+            const toReduce = checklist.positions.filter(p => p.recommendation === 'REDUCE');
+            if (toClose.length > 0) {
+              this.logger.warn(`⚠️ Weekend Defense: ${toClose.length} position(s) should be CLOSED — ${toClose.map(p => `${p.symbol} (swap drag)`).join(', ')}`);
+            }
+            if (toReduce.length > 0) {
+              this.logger.log(`🟡 Weekend Defense: ${toReduce.length} position(s) should be REDUCED — ${toReduce.map(p => p.symbol).join(', ')}`);
+            }
+            this.logger.log(`Weekend Defense: ${checklist.summary.totalPositions} positions, $${checklist.totalSwapCostTonight.toFixed(2)} swap tonight, $${checklist.totalGapRisk.toFixed(2)} gap risk`);
+          } catch (err) {
+            this.logger.warn(`Weekend defense check skipped: ${(err as Error).message}`);
+          }
+        }
+      }
+
       // 2. Fetch portfolios from all enabled brokers
       allPositions = [];
       for (const [brokerId, brokerState] of Object.entries(this.state.brokerStates)) {
@@ -891,6 +929,44 @@ export class AutomationLoopService implements OnModuleInit {
       try {
         const all = await this.strategyService.findAll();
         activeStrategies = all.filter((s: any) => s.active);
+
+        // ── Data Readiness Check: annotate each strategy with dataStatus ──
+        for (const strat of activeStrategies) {
+          try {
+            const protocolId = strat.protocolId || (strat as any).scoringStrategy?.protocolId;
+            if (!protocolId) {
+              strat.dataStatus = 'blocked';
+              strat.dataStatusReason = 'No protocol linked';
+              continue;
+            }
+            const requiredBars = this.protocolDb.getRequiredBars(protocolId);
+            const timeframe = this.protocolDb.getCached(protocolId)?.recommendedTimeframe || '1d';
+            const minBarsNeeded = requiredBars[timeframe] || 100;
+
+            const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: strat.symbol } });
+            if (!dbSym) {
+              strat.dataStatus = 'pending_bars';
+              strat.dataStatusReason = `Symbol ${strat.symbol} not in registry`;
+              continue;
+            }
+
+            const existingBars = await this.marketData.getBarCount(dbSym.id, timeframe);
+            if (existingBars >= minBarsNeeded) {
+              strat.dataStatus = 'ready';
+              strat.dataStatusReason = `${existingBars}/${minBarsNeeded} bars available`;
+            } else if (existingBars > 0) {
+              strat.dataStatus = 'pending_bars';
+              strat.dataStatusReason = `Accumulating bars: ${existingBars}/${minBarsNeeded} (${timeframe})`;
+            } else {
+              strat.dataStatus = 'pending_bars';
+              strat.dataStatusReason = `Waiting for first bars (${timeframe})`;
+            }
+          } catch {
+            strat.dataStatus = 'pending_bars';
+            strat.dataStatusReason = 'Unable to verify data readiness';
+          }
+        }
+
         this.state.activeStrategies = activeStrategies;
         this.logger.log(`  ${activeStrategies.length} active strategies loaded`);
       } catch (err) {
@@ -902,8 +978,9 @@ export class AutomationLoopService implements OnModuleInit {
       this.cleanPriorityQueue();
       activeStrategies = this.getPrioritizedStrategies(activeStrategies);
 
-      // Collect symbols from active strategies
-      const strategySymbols = [...new Set(activeStrategies.map(s => s.symbol))];
+      // Collect symbols from active strategies via shared resolver
+      const strategySymbols = await this.symbolResolver.getSymbolsByTier('active-strategies');
+      // Combine with live broker positions for the full working set
       const allSymbols = [...new Set([...allPositions.map(p => p.symbol), ...strategySymbols])];
 
       if (allSymbols.length === 0) {
@@ -1176,6 +1253,27 @@ export class AutomationLoopService implements OnModuleInit {
       const strategyCheck = await this.strategyService.findOne(strategyId);
       if (!strategyCheck || !strategyCheck.active) return null;
       const strategy = strategyCheck as NonNullable<typeof strategyCheck>;
+
+      // ── Data Readiness Gate (Layer B Phase 2) ──
+      // Skip evaluation if bars haven't accumulated or feeds aren't connected.
+      const loopStrat = this.state.activeStrategies?.find((s: any) => s.id === strategyId);
+      const dataStatus = (loopStrat as any)?.dataStatus;
+      if (dataStatus === 'pending_bars') {
+        return {
+          timestamp: new Date().toISOString(),
+          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
+          decision: 'SKIP', reason: `⏳ PENDING: ${(loopStrat as any)?.dataStatusReason || 'Waiting for bar data'}`,
+          composite: 0,
+        };
+      }
+      if (dataStatus === 'blocked') {
+        return {
+          timestamp: new Date().toISOString(),
+          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
+          decision: 'BLOCKED', reason: `🚫 ${(loopStrat as any)?.dataStatusReason || 'Data requirements not met'}`,
+          composite: 0,
+        };
+      }
 
       // Cooldown
       const lastTrade = this.lastTradeTime.get(strategyId);
@@ -1628,6 +1726,7 @@ export class AutomationLoopService implements OnModuleInit {
               provider: strategy.brokerId || 'mt5',
               status: 'open',
               origin: 'strategy',
+              source: 'meta-stack',
               scoringStrategyId: strategyId,
             } as any);
           } catch { /* non-critical */ }

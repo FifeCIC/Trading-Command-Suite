@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { SettingsService, type NewsImportSettings, type NewsTierConfig } from '../system/settings.service';
+import { SymbolResolverService, MACRO_SYMBOLS, SECTOR_SYMBOLS } from '../symbols/symbol-resolver.service';
 
 /**
  * News Import Service
@@ -87,24 +88,7 @@ const KEY_PEOPLE_PATTERNS: RegExp[] = [
 // ── Tier-Based Symbol Lists ──
 // Replaces the hardcoded GIANT_SYMBOLS constant.
 // Symbols are now resolved per-tier based on positions, protocols, and config.
-
-/** Macro/global market proxy symbols — always relevant regardless of positions. */
-const MACRO_SYMBOLS = [
-  'SPY', 'QQQ', 'IWM', 'DIA',        // US equity indices
-  'TLT', 'SHY', 'LQD', 'HYG',        // bonds / credit
-  'GLD', 'SLV', 'USO', 'UNG',        // commodities
-  'UUP', 'FXY',                       // currencies
-  'VIX',                              // volatility
-];
-
-/** Sector-representative symbols for broad sector coverage. */
-const SECTOR_SYMBOLS = [
-  'XLK', 'XLF', 'XLE', 'XLV', 'XLI', // tech, financials, energy, healthcare, industrials
-  'XLY', 'XLP', 'XLB', 'XLU', 'XLRE', // consumer disc, staples, materials, utilities, real estate
-  'SMH', 'SOXX',                      // semiconductors
-  'IBB', 'XBI',                       // biotech
-  'KRE', 'XLF',                       // regional banks / financials (XLF intentional overlap)
-];
+// MACRO_SYMBOLS and SECTOR_SYMBOLS are imported from SymbolResolverService.
 
 // ── Known ticker pattern for headline scanning ──
 
@@ -137,6 +121,7 @@ export class NewsImportService {
     private readonly prisma: PrismaService,
     private readonly adapterFactory: AdapterFactory,
     private readonly settingsService: SettingsService,
+    private readonly symbolResolver: SymbolResolverService,
   ) {}
 
   // ── Public API ──
@@ -215,128 +200,32 @@ export class NewsImportService {
 
   /**
    * Resolve symbols for a specific priority tier.
+   * Delegates to the shared SymbolResolverService.
    */
   async resolveTierSymbols(tierId: string): Promise<string[]> {
-    const set = new Set<string>();
-
-    switch (tierId) {
-      case 'positions': {
-        // Tier 1: Open positions only — highest priority
-        try {
-          const positions = await this.prisma.position.findMany({
-            select: { symbol: true },
-            distinct: ['symbol'],
-          });
-          for (const p of positions) set.add(p.symbol.toUpperCase());
-        } catch (err) {
-          this.logger.warn(`Tier positions: could not load position symbols: ${(err as Error).message}`);
-        }
-        break;
-      }
-
-      case 'active-protocols': {
-        // Tier 2: Symbols assigned to active protocols + starred watchlist symbols
-        try {
-          const assignments = await (this.prisma as any).symbolProtocolAssignment.findMany({
-            select: { symbol: true },
-            distinct: ['symbol'],
-          });
-          for (const a of assignments) set.add(a.symbol.toUpperCase());
-        } catch {
-          // Table may not exist yet — fall back to active symbols
-        }
-
-        // Also include starred watchlist symbols
-        try {
-          const watchlists = await this.prisma.watchlist.findMany({
-            select: { symbols: true },
-          });
-          for (const w of watchlists) {
-            const syms = (w.symbols as any[]) || [];
-            for (const s of syms) {
-              if (typeof s === 'string') set.add(s.toUpperCase());
-              if (typeof s === 'object' && s?.ticker) set.add(s.ticker.toUpperCase());
-            }
-          }
-        } catch {
-          // No watchlists
-        }
-
-        // Remove position symbols (they're handled by Tier 1)
-        try {
-          const positions = await this.prisma.position.findMany({
-            select: { symbol: true },
-            distinct: ['symbol'],
-          });
-          for (const p of positions) set.delete(p.symbol.toUpperCase());
-        } catch {
-          // ok
-        }
-        break;
-      }
-
-      case 'macro': {
-        // Tier 3: Macro/global market proxy symbols
-        for (const s of MACRO_SYMBOLS) set.add(s);
-        break;
-      }
-
-      case 'sector': {
-        // Tier 4: Sector-representative ETFs
-        for (const s of SECTOR_SYMBOLS) set.add(s);
-        break;
-      }
-
-      case 'other': {
-        // Tier 5: Everything else — active DB symbols not covered by higher tiers
-        try {
-          const active = await this.prisma.symbol.findMany({
-            where: { active: true },
-            select: { ticker: true },
-          });
-          for (const s of active) set.add(s.ticker.toUpperCase());
-        } catch {
-          // No active symbols
-        }
-
-        // Remove any symbols already covered by higher tiers
-        try {
-          const positions = await this.prisma.position.findMany({
-            select: { symbol: true },
-            distinct: ['symbol'],
-          });
-          for (const p of positions) set.delete(p.symbol.toUpperCase());
-        } catch { /* ok */ }
-        for (const s of MACRO_SYMBOLS) set.delete(s);
-        for (const s of SECTOR_SYMBOLS) set.delete(s);
-        break;
-      }
-
-      default:
-        return [];
+    // Map legacy news tier IDs to shared resolver tiers
+    const tierMap: Record<string, import('../symbols/symbol-resolver.service').SymbolTier> = {
+      'positions': 'positions',
+      'active-protocols': 'active-protocols',
+      'macro': 'macro',
+      'sector': 'sector',
+      'other': 'all-active',
+    };
+    const resolverTier = tierMap[tierId];
+    if (!resolverTier) {
+      this.logger.warn(`Unknown tier "${tierId}" — returning empty`);
+      return [];
     }
-
-    return Array.from(set).sort();
+    return this.symbolResolver.getSymbolsByTier(resolverTier);
   }
 
   /**
    * Resolve the full legacy set of symbols (kept for backward-compat with manual import).
-   * This is the old monolith — tier system replaces it for scheduled runs.
+   * Delegates to the shared SymbolResolverService.
    */
   async resolveTrackedSymbols(): Promise<string[]> {
-    const set = new Set<string>();
-
-    // Combine all tier symbols
-    for (const tierId of ['positions', 'active-protocols', 'macro', 'sector', 'other']) {
-      const symbols = await this.resolveTierSymbols(tierId);
-      for (const s of symbols) set.add(s);
-    }
-
-    // Always include macro + sector as floor
-    for (const s of MACRO_SYMBOLS) set.add(s);
-    for (const s of SECTOR_SYMBOLS) set.add(s);
-
-    return Array.from(set).sort();
+    const selection = await this.symbolResolver.getSymbolsForFeature('news');
+    return selection.symbols;
   }
 
   /**

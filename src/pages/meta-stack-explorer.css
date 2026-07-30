@@ -297,6 +297,8 @@
 .mse-signal-badge-hold { background: #f59e0b; }
 .mse-signal-composite { font-size: 1.1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .mse-signal-meta { display: flex; gap: 1rem; justify-content: center; margin-top: 0.35rem; font-size: 0.72rem; color: var(--ink-soft); flex-wrap: wrap; }
+.mse-impact-link { color: var(--accent); text-decoration: none; font-weight: 600; white-space: nowrap; }
+.mse-impact-link:hover { text-decoration: underline; }
 
 /* Empty state */
 .mse-empty { text-align: center; padding: 3rem 1rem; }

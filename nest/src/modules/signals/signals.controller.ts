@@ -3,6 +3,31 @@ import { SignalsService } from './signals.service';
 import { SignalEnvelopeService } from './signal-envelope.service';
 import { SignalLadderDto } from './dto/signal-ladder.dto';
 
+/**
+ * Signals Controller — Enriched Signal Envelopes
+ * ===============================================
+ * CANONICAL ROLE (2026-07-29): Signal quality assessment with
+ * confidence rails, conflict detection, and pre-trade readiness.
+ *
+ * This is a LAYER ON TOP of protocol-gated scoring. It takes the
+ * raw scores from the gating pipeline and enriches them with:
+ *   - Confidence intervals (score stability over time)
+ *   - Conflict detection (bullish vs bearish directive disagreement)
+ *   - Pre-trade readiness checks (data freshness, bar sufficiency)
+ *
+ * Distinct from /api/scoring/gated/batch because it adds the
+ * "should I trust this signal?" layer that raw scoring doesn't provide.
+ *
+ * Use for:
+ *   - Signals Workbench (quality assessment)
+ *   - Component Lab (envelope visualization)
+ *
+ * Internally delegates to ProtocolGatingService for base scoring,
+ * then wraps results with confidence/conflict metadata.
+ *
+ * @see docs/handoff/2026-07-29-scoring-paths-audit-497.md
+ */
+
 @Controller('signals')
 export class SignalsController {
   private readonly logger = new Logger(SignalsController.name);

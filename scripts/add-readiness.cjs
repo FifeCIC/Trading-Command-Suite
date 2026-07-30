@@ -1,7 +1,7 @@
 /**
  * add-readiness.cjs — One-time script to add readonly readiness = 'alpha' to all directives.
  * Run: node scripts/add-readiness.cjs
- * After running: manually promote READY/BRAVO directives per docs/directive-readiness-audit.md
+ * After running: manually promote READY/BETA directives per docs/directive-readiness-audit.md
  */
 
 const fs = require('fs');

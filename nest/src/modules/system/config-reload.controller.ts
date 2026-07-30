@@ -7,16 +7,32 @@ import { ProtocolDbService } from '../scoring/protocol-db.service';
  *
  * POST /api/system/reload-config
  *
- * Reloads directive metadata, protocol caches, and strategy configs
- * from the database WITHOUT requiring a full NestJS restart.
+ * ── Two-Tier Config Reload Policy (2026-07-29, #509) ─────────────────
  *
- * Use after: toggling directives active/inactive, updating weights,
- * changing protocol status, or modifying scoring strategy thresholds.
+ * TIER 1 — Hot Reload (POST /api/system/reload-config, ~20ms):
+ *   ✅ Toggle directive active/inactive
+ *   ✅ Update directive weights / maxScore
+ *   ✅ Change protocol status (active/inactive)
+ *   ✅ Modify scoring strategy thresholds
+ *   ✅ Update settings (DB-read, always fresh)
+ *   ✅ Trading strategy config changes
+ *   No restart needed. Takes effect on next scoring tick.
  *
- * Does NOT cover: adding new directive TypeScript classes,
- * protocol group restructures, or Prisma schema changes.
+ * TIER 2 — Full Restart Required:
+ *   ❌ New directive TypeScript class (compiled code, must re-register)
+ *   ❌ Protocol group restructure (new directive-to-group relationships)
+ *   ❌ New provider adapter registration
+ *   ❌ Calibration override changes (in-memory cache, startup only)
+ *   ❌ Prisma schema changes (migration + rebuild)
+ *   ❌ Environment variable changes (.env)
  *
- * @see GitHub issue #509 for the full two-tier reload proposal
+ * ── UI Guidance ──────────────────────────────────────────────────────
+ * The MetaStackStatusPage "Reload Config" button handles Tier 1.
+ * For Tier 2 changes, the UI should show "Restart Required" indicator.
+ * The /api/system/reload-config response includes a `note` field
+ * explaining what was reloaded and what still needs a restart.
+ *
+ * @see docs/handoff/2026-07-29-config-reload-policy-509.md
  */
 @Controller('system')
 export class ConfigReloadController {

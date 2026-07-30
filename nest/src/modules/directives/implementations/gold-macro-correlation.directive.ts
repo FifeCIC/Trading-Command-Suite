@@ -1,6 +1,6 @@
 /**
- * Gold Macro Correlation Directive
- * =================================
+ * Gold Macro Correlation Directive — HYBRID BASE+BONUS (Layer C, 2026-07-29)
+ * ===========================================================================
  * Evaluates gold (XAUUSD, XAGUSD) in context of macro drivers:
  * USD strength (DXY), real yields, safe-haven demand.
  *
@@ -10,6 +10,13 @@
  * 10Y yield ↑ (rising)     → bearish gold (opportunity cost)
  * 10Y yield ↓ (falling)    → bullish gold
  * VIX ↑ (fear)             → bullish gold (safe haven)
+ *
+ * ── Hybrid Scoring ─────────────────────────────────────────
+ * BASE (0–100):  Continuous DXY interpolation: DXY 108→0, DXY 95→100.
+ *                Every DXY tick produces a visible score change.
+ * BONUS tiers:   yield10Y > 4.5% or < 3.8% → +20 (rate extremes).
+ *                VIX > 25 → +15 (fear premium).
+ * MAX:           135 (100 base + 35 bonus max).
  *
  * ── Data Sources ─────────────────────────────────────────
  * dxyValue or eurusdValue on DirectiveInput (from DXY pipeline)
@@ -22,11 +29,15 @@ import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/direc
 
 // ── Thresholds ────────────────────────────────────────────
 
-const DXY_STRONG = 105;
-const DXY_WEAK = 101;
-const YIELD_RISING = 4.5;   // 10Y > 4.5% = rising rate pressure
-const YIELD_FALLING = 3.8;  // 10Y < 3.8% = falling rate tailwind
-const VIX_FEAR = 25;        // VIX > 25 = safe-haven bid
+const YIELD_HIGH = 4.5;   // 10Y > 4.5% = rising rate pressure
+const YIELD_LOW = 3.8;    // 10Y < 3.8% = falling rate tailwind
+const VIX_FEAR = 25;      // VIX > 25 = safe-haven bid
+
+/** Linear interpolation: map value from [inMin,inMax] to [outMin,outMax], clamped. */
+function mapRange(v: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
+  const t = Math.max(0, Math.min(1, (v - inMin) / (inMax - inMin)));
+  return outMin + t * (outMax - outMin);
+}
 
 // ── Directive ─────────────────────────────────────────────
 
@@ -35,14 +46,13 @@ export class GoldMacroCorrelationDirective implements IDirective {
   readonly id = 'gold-macro-correlation';
   readonly name = 'Gold Macro Correlation';
   readonly description =
-    'Gold vs USD strength (DXY), real yields (10Y), and safe-haven flows (VIX). ' +
-    'Gold is the ultimate macro asset — DXY and real rates are the primary drivers.';
+    'Hybrid: continuous DXY base for gold + yield/VIX threshold bonuses.';
   readonly priority = 55;
-  readonly maxScore = 100;
+  readonly maxScore = 135; // 100 base + 35 bonus max
   readonly minBars = { '1d': 20 };
-  readonly version = '1.0.0';
+  readonly version = '2.0.0'; // Hybrid scoring
   readonly requiredDataFeeds = ['dxy', 'treasury10y', 'vix'];
-  readonly readiness = 'bravo' as const;
+  readonly readiness = 'beta' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     let dxy = (input as any).dxyValue as number | undefined;
@@ -81,72 +91,52 @@ export class GoldMacroCorrelationDirective implements IDirective {
       };
     }
 
-    // ── Score each macro driver ───────────────────────────
-    const drivers: { label: string; score: number; weight: number }[] = [];
+    // ── BASE (continuous, 0–100) ──────────────────────────
+    // DXY 108 (strong USD) → base 0 (bearish gold)
+    // DXY 95 (weak USD)    → base 100 (bullish gold)
+    const baseScore = Math.round(mapRange(dxy, 108, 95, 0, 100));
 
-    // Driver 1: DXY / USD strength (weight: 0.45 — primary driver)
-    if (dxy >= 108) {
-      drivers.push({ label: `strong USD (${dxySource}=${dxy})`, score: 15, weight: 0.45 });
-    } else if (dxy >= DXY_STRONG) {
-      drivers.push({ label: `moderate USD strength (${dxySource}=${dxy})`, score: 30, weight: 0.45 });
-    } else if (dxy <= DXY_WEAK) {
-      drivers.push({ label: `weak USD (${dxySource}=${dxy})`, score: 75, weight: 0.45 });
-    } else {
-      drivers.push({ label: `neutral USD (${dxySource}=${dxy})`, score: 50, weight: 0.45 });
-    }
+    // ── BONUS (threshold-gated, rare events) ─────────────
+    let bonusScore = 0;
+    const bonusParts: string[] = [];
 
-    // Driver 2: Real yields / 10Y Treasury (weight: 0.35)
+    // Yield extremes (stackable with VIX)
     if (yield10Y !== undefined && yield10Y > 0) {
-      if (yield10Y >= YIELD_RISING) {
-        drivers.push({ label: `high 10Y yield (${yield10Y}%)`, score: 20, weight: 0.35 });
-      } else if (yield10Y <= YIELD_FALLING) {
-        drivers.push({ label: `low 10Y yield (${yield10Y}%)`, score: 75, weight: 0.35 });
-      } else {
-        drivers.push({ label: `moderate 10Y yield (${yield10Y}%)`, score: 50, weight: 0.35 });
+      if (yield10Y >= YIELD_HIGH || yield10Y <= YIELD_LOW) {
+        bonusScore += 20;
+        bonusParts.push(`yield extreme (${yield10Y}%)`);
       }
-    } else {
-      // No yield data — redistribute weight to DXY
-      drivers[0].weight += 0.20;
     }
 
-    // Driver 3: VIX / safe-haven demand (weight: 0.20, or redistributed)
-    if (vix !== undefined && vix > 0) {
-      if (vix >= VIX_FEAR) {
-        drivers.push({ label: `elevated fear (VIX=${vix.toFixed(0)})`, score: 70, weight: 0.20 });
-      } else {
-        drivers.push({ label: `calm markets (VIX=${vix.toFixed(0)})`, score: 50, weight: 0.20 });
-      }
-    } else {
-      // No VIX data — redistribute to DXY
-      drivers[0].weight += 0.15;
+    // VIX fear premium
+    if (vix !== undefined && vix > 0 && vix >= VIX_FEAR) {
+      bonusScore += 15;
+      bonusParts.push(`VIX=${vix.toFixed(0)}`);
     }
 
-    // ── Normalize weights ─────────────────────────────────
-    const totalWeight = drivers.reduce((s, d) => s + d.weight, 0);
-    let weightedScore = 0;
-    const parts: string[] = [];
-    for (const d of drivers) {
-      const normalizedWeight = d.weight / totalWeight;
-      weightedScore += d.score * normalizedWeight;
-      parts.push(`${d.label}: ${d.score}/100 (wt ${(normalizedWeight * 100).toFixed(0)}%)`);
-    }
+    const bonusLabel = bonusParts.join(' + ');
 
-    weightedScore = Math.round(weightedScore);
+    // ── Total ─────────────────────────────────────────────
+    const totalScore = baseScore + bonusScore;
 
-    // ── Signal classification ─────────────────────────────
     let signalClass: 'bullish' | 'bearish' | 'neutral';
-    if (weightedScore >= 65) signalClass = 'bullish';
-    else if (weightedScore <= 35) signalClass = 'bearish';
+    if (totalScore >= 65) signalClass = 'bullish';
+    else if (totalScore <= 35) signalClass = 'bearish';
     else signalClass = 'neutral';
 
     const hasFullData = yield10Y !== undefined && vix !== undefined;
     const confidence = hasFullData ? 0.55 : 0.35;
 
+    const parts: string[] = [`base=${baseScore} (${dxySource}=${dxy})`];
+    if (bonusScore > 0) parts.push(`+${bonusScore} bonus (${bonusLabel})`);
+    parts.push(`= ${totalScore}/${this.maxScore}`);
+
     return {
       signalClass,
-      score: weightedScore,
+      score: totalScore,
       confidence,
-      reason: `${sym}: ${parts.join('; ')} → composite=${weightedScore}`,
+      reason: `${sym}: ${parts.join(' ')}`,
+      metadata: { baseScore, bonusScore, bonusLabel, dxy, dxySource },
     };
   }
 }

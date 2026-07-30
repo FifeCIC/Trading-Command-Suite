@@ -1,18 +1,35 @@
 /**
- * Scoring Controller
- * ==================
- * Exposes the ranked symbol endpoint consumed by the SEES UI panel.
+ * Scoring Controller — Flat/Ranked Pipeline
+ * ==========================================
+ * CANONICAL ROLE (2026-07-29): Quick overview & dashboard scoring.
  *
- * GET /api/scoring/ranked
- *   Query params: strategy_id (optional), limit (default 20)
- *   Returns: RankedResult with mode+services metadata and ranked symbols.
+ * This is the ORIGINAL scoring path. It runs ALL 104 directives against
+ * every symbol (unfiltered) when ?fresh=true, or reads pre-computed
+ * results from the DB when cached. Use for:
+ *   - Dashboards (DashboardPage, DailyBriefing, HotStockPicks)
+ *   - Quick symbol lookups (AnalyseSymbol, GapScanner)
+ *   - Status pages (MetaStackStatus, ScoringOverview)
+ *
+ * NOT for trading decisions — use /api/scoring/gated/batch for
+ * protocol-scoped, risk-gated scoring with directive breakouts.
+ *
+ * ── Scoring Surface Map ──────────────────────────────────────
+ *   /api/scoring/ranked          ← THIS FILE — flat, all-directive
+ *   /api/scoring/gated/batch     ← Protocol-gated, risk chains
+ *   /api/signals/ladder          ← Enriched envelopes, conflict detection
+ *   /api/speed/scan              ← Micro-trend scalping scanner
+ *   /api/backtest/benchmark      ← Buy-and-hold comparison (analytics)
+ *
+ * @see docs/handoff/2026-07-29-scoring-paths-audit-497.md
  */
 
 import { Body, Controller, Get, Param, Post, Query, UseInterceptors } from '@nestjs/common';
 import { PaginationInterceptor } from '../../common/interceptors/pagination.interceptor';
-import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ScoringService } from './scoring.service';
 import { ScoreHistoryService } from './score-history.service';
+import { ScoreVelocityService } from './score-velocity.service';
+import { DirectiveImpactService } from './directive-impact.service';
 import { StrategyCompetitionService } from './strategy-competition.service';
 import { PredictiveScoringService } from './predictive-scoring.service';
 import { OutcomeTrackerService } from './outcome-tracker.service';
@@ -29,6 +46,8 @@ export class ScoringController {
   constructor(
     private readonly scoringService: ScoringService,
     private readonly scoreHistoryService: ScoreHistoryService,
+    private readonly scoreVelocityService: ScoreVelocityService,
+    private readonly directiveImpactService: DirectiveImpactService,
     private readonly competitionService: StrategyCompetitionService,
     private readonly predictiveService: PredictiveScoringService,
     private readonly outcomeTracker: OutcomeTrackerService,
@@ -158,6 +177,32 @@ export class ScoringController {
   @ApiOkResponse({ description: 'Latest score snapshot' })
   getLatest(@Param('symbolId') symbolId: string) {
     return this.scoreHistoryService.getLatest(symbolId);
+  }
+
+  /**
+   * GET /api/scoring/velocity/:symbol?window=5
+   * Score Momentum Indicator (#519) — velocity, acceleration, volatility, directive drift.
+   */
+  @Get('velocity/:symbol')
+  @ApiOperation({ summary: 'Get score momentum metrics for a symbol' })
+  @ApiParam({ name: 'symbol', description: 'Symbol ticker (e.g. XAUUSD)' })
+  @ApiQuery({ name: 'window', description: 'Number of snapshots (default 5)', required: false })
+  async getVelocity(@Param('symbol') symbol: string, @Query('window') window?: string) {
+    const w = Math.min(20, Math.max(2, Number(window) || 5));
+    return this.scoreVelocityService.getVelocity(symbol.toUpperCase(), w);
+  }
+
+  /**
+   * GET /api/scoring/directive-impact/:symbol?window=10
+   * Directive Performance Audit (#283) — ranks directives by real-world impact.
+   */
+  @Get('directive-impact/:symbol')
+  @ApiOperation({ summary: 'Get directive impact ranking for a symbol' })
+  @ApiParam({ name: 'symbol', description: 'Symbol ticker (e.g. XAUUSD)' })
+  @ApiQuery({ name: 'window', description: 'Number of snapshots (default 10)', required: false })
+  async getDirectiveImpact(@Param('symbol') symbol: string, @Query('window') window?: string) {
+    const w = Math.min(50, Math.max(3, Number(window) || 10));
+    return this.directiveImpactService.getImpactReport(symbol.toUpperCase(), w);
   }
 
   @Get('recently-analysed')

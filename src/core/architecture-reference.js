@@ -266,8 +266,8 @@ export const CURRENT_SLICE = [
   'SpeedChart Unification — CandlestickChart.jsx deleted and merged into SpeedChart.jsx. SpeedChart now supports external data mode (ticks + containerRef + intervalMs + maxBars). Added bucketTicks() utility. Single chart component for real-time and historical OHLCV.',
   'Config Hot-Reload — POST /api/system/reload-config reloads directive metadata and protocol caches from DB in ~20ms. No restart needed for toggling directives, updating weights, or changing protocol status. Reuses Epic #510 loadDirectiveMetadata() + ProtocolDbService.preloadAll(). Frontend button on META.Stack Status page.',
   // ── 2026-07-29 — Readiness Tiers, Scoring Layers, Weekend Risk, IBKR ──
-  'Readiness Tier System — Every directive declares readiness: 87 READY, 10 BRAVO, 7 ALPHA. Added to IDirective interface, all 104 directives classified, Prisma schema updated with readiness column, DB seeded. Weakest-link rule: a protocol is only as ready as its least-ready directive. ALPHA excludes from composite, BRAVO contributes at reduced confidence. Full audit at docs/directive-readiness-audit.md.',
-  'ALPHA Exclusion from Scoring — ProtocolGatingService.scoreWithGating() skips directives where readiness === alpha. Alpha directives still appear in breakdown with "excluded — not ready" flag. Composite only reflects READY+BRAVO directives. Readiness breakdown added to meta: { ready, bravo, alpha, alphaExcluded }. xau-speed-v1 verified: 17 ready + 7 bravo, 0 alpha excluded.',
+  'Readiness Tier System — Every directive declares readiness: 87 READY, 10 BETA, 7 ALPHA. Added to IDirective interface, all 104 directives classified, Prisma schema updated with readiness column, DB seeded. Weakest-link rule: a protocol is only as ready as its least-ready directive. ALPHA excludes from composite, BETA contributes at reduced confidence. Full audit at docs/directive-readiness-audit.md.',
+  'ALPHA Exclusion from Scoring — ProtocolGatingService.scoreWithGating() skips directives where readiness === alpha. Alpha directives still appear in breakdown with "excluded — not ready" flag. Composite only reflects READY+BETA directives. Readiness breakdown added to meta: { ready, beta, alpha, alphaExcluded }. xau-speed-v1 verified: 17 ready + 7 beta, 0 alpha excluded.',
   'Hybrid Base+Bonus Scoring (Layer C) — Proposed scoring architecture where directives produce BASE (continuous) + BONUS (threshold-gated) scores. Creates ladder separation between symbols. Uncapped maxScores, tunable per protocol. See docs/sees-hybrid-scoring.md and #518.',
   'Capability Contracts (Layer B) — Strategies refuse activation when data requirements cannot be met. PENDING state for "waiting for data," BLOCKED for "can never work." /api/market-data/capabilities endpoint enhanced with timeframes array. See #517.',
   'Swap Cost Calculator (#33) — SwapCostService with triple-swap Wednesday detection, weekend projection, swap-to-P&L ratio. GET /api/trading/swap-forecast and /api/trading/swap-rates. Computes from MT5 bridge symbol info (swapLong/swapShort/swapMode).',
@@ -276,13 +276,20 @@ export const CURRENT_SLICE = [
   'Interactive Brokers Mock Adapter (#8) — Full IProviderAdapter implementation with mock OHLCV, quotes, positions (50 AAPL), $100K account. Env-gated via IBKR_MODE. Registered at failoverPriority 10. 10th provider in health dashboard.',
   'Score Momentum Indicator Proposal (#519) — Phase 5 experimental: rate score velocity (Δscore/Δt), acceleration, volatility, and directive-level drift from ScoreHistoryService data. 5 output signals: Surge, Collapse, Fading Momentum, Indecision, Conviction.',
   'Phase Restructuring — All 80 open issues reclassified into new 5-phase system: Phase 1 (11 core engineering), Phase 2 (13 beta polish), Phase 3 (34 signals & trading), Phase 4 (19 public release), Phase 5 (3 experimental). Label descriptions updated. Old phase-2/3 issues bulk-migrated.',
-  'Readiness UI — DirectivesManagerPage shows readiness column with color badges (green=ready, yellow=bravo, red=alpha). Toolbar shows summary counts. Each badge has hover tooltip explaining the tier.',
+  'Readiness UI — DirectivesManagerPage shows readiness column with color badges (green=ready, yellow=beta, red=alpha). Toolbar shows summary counts. Each badge has hover tooltip explaining the tier.',
   'Prep Issues #520-#524 Completed — Directive audit (87/10/7 classification), readiness field added to all 104 directives, seed_nature.sql fixed, ALPHA exclusion from composite, capabilities endpoint enhanced with timeframes.',
   'NestJS Build — 100% clean. Zero TypeScript errors, zero tsconfig excludes. All 104 directives + 10 provider adapters compile without issues.',
+  // ── 2026-07-29 — Handoff Batch #6: Symbol Resolver, Scoring Paths, Activity Feed, Config Reload, Strategy Consolidation, Backtest Plan ──
+  'Shared Symbol Tier Resolver (#413) — SymbolResolverService in symbols/ module. 8 tiers (positions, active-strategies, active-protocols, watchlist-starred, macro, sector, forex-floor, all-active) + 4 feature presets (news, bar-refresh, scoring, automation). Consolidates 4 services (NewsImport, BarRefresh, AutomationLoop). Debug endpoint: GET /api/symbols/resolution.',
+  'Scoring Paths Audit (#497) — All 5 scoring surfaces accepted as canonical: flat ranked (dashboard), gated/batch (META.Stack trading decisions ★), signals/ladder (trust assessment), speed/scan (micro-trend scalping), backtest/benchmark (analytics). Each controller header documents canonical role + cost + cross-references. New Mermaid diagram on DiagramsPage. Protocol gating 7× cheaper than flat ranked (~14 vs 104 directives).',
+  'Automation Activity Feed (#463) — Polling approach chosen over SSE. GET /api/automation/activity?limit=30 reads automation_event table via AuditLogService.getRecentActivity(). Activity Feed widget on AutomationDashboardPage with 3s polling, 15 most recent events, phase color coding (8 step types), decision badges, symbol chips. Zero new DB writes — reads existing data only.',
+  'Config Reload Two-Tier Policy (#509) — Tier 1 hot-reload (POST /api/system/reload-config, ~20ms): directive metadata, protocol caches, scoring strategy thresholds, settings. Tier 2 restart required: new directive classes, protocol restructures, new provider adapters, calibration overrides, Prisma schema changes, env variables. 9 config surfaces audited.',
+  'Strategy Page Consolidation (#504) — 9 strategy-related pages → 4 canonical pages: StrategiesListPage (filterable card index), StrategyMonitorPage (tabbed hub: Overview/Compare/Ladders), StrategyBuilderPage (drag-and-drop directive canvas, now registered), StrategyCreatePage (tabbed creation: Form/Wizard). Old pages preserved under "Legacy" sidebar section. 4 dead code pages identified (not deleted).',
+  'Backtest UI Unification Plan (#467) — Charts deferred to Phase 5. Non-chart unification starts Phase 2: results table, config save/load, parameter sweep UI, walk-forward UI, CSV export, benchmark card. Phase 3: A/B comparison, batch runs, coverage viz. 14 backend endpoints already built — frontend needs to expose them. 3 shared cross-cut components identified (ExecutionRealismPanel, ResultsTable, SignalCard).',
 ]
 
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-29 (handoff batch #5 — readiness tiers, scoring layers, swap/gap/defense, IBKR, phase restructure)'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-30 (handoff batch #6 — symbol resolver, scoring paths canonical, activity feed, config reload policy, strategy consolidation 9→4, backtest UI plan)'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -506,8 +513,40 @@ export const CURRENT_ROUTE_CONTRACTS = [
     method: 'GET',
     permission: 'Authenticated operator access',
     owner: 'Scoring controller',
-    contract: 'Returns ranked symbols with directive breakdown, confidence, signal classification.',
-    status: 'migration',
+    contract: 'FLAT SCORING (canonical 2026-07-29). Returns ranked symbols with directive breakdown, confidence, signal classification. Runs ALL 104 directives unfiltered when ?fresh=true; reads DB cache by default (15s cache). Use for dashboards and quick lookups. NOT for trading decisions — use gated/batch.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/scoring/gated/batch',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'Protocol Gating controller',
+    contract: 'CANONICAL META.STACK SCORING (2026-07-29). Protocol-scoped (~14 directives), risk-gated, rarity-weighted. ~7× cheaper than flat ranked. Excludes ALPHA directives. Returns full directive breakouts with gate reasoning. Use for trading decisions, strategy evaluation, A/B testing.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/signals/ladder',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Signals controller',
+    contract: 'SIGNAL QUALITY LAYER (2026-07-29). Wraps gated scoring with confidence rails, conflict detection, pre-trade readiness. Delegates to ProtocolGatingService internally. Use for trust assessment before executing trades.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/speed/scan',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'Speed Scan controller',
+    contract: 'MICRO-TREND SCALPING (2026-07-29). Short timeframes (5s–1m), 4 timeframes per symbol, seasonal affinity. Heaviest per-symbol but runs on small set (~23 symbols). Distinct from main scoring — scalping only.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/backtest/benchmark',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'Backtest controller',
+    contract: 'BENCHMARK ANALYTICS (2026-07-29). Compares strategy returns vs buy-and-hold from MarketBar 1d. No directives run — reads historical data only. Analytics, not scoring.',
+    status: 'active',
   },
   {
     route: 'GET /api/scoring/algorithm-lab/state',
@@ -954,7 +993,23 @@ export const CURRENT_ROUTE_CONTRACTS = [
     method: 'POST',
     permission: 'Authenticated operator access',
     owner: 'ConfigReloadController',
-    contract: 'Hot-reloads directive metadata and protocol caches from DB without restart. Returns {success, reloaded: ["directives","protocols"], ms, warnings}. For toggling directives, updating weights, or changing protocol status. New directive classes or schema changes still need restart.',
+    contract: 'Two-tier reload policy (2026-07-29). Tier 1 hot-reload (~20ms): directive metadata and protocol caches from DB without restart. Returns {success, reloaded: ["directives","protocols"], ms, warnings}. For toggling directives, updating weights, or changing protocol status. Tier 2 restart: new directive classes, protocol restructures, new adapters, calibration overrides, Prisma schema changes, env variables.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/symbols/resolution',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'SymbolsController',
+    contract: 'Symbol Resolver debug endpoint (2026-07-29). Returns all symbols across all 8 tiers. Query: ?tier=positions|active-strategies|active-protocols|watchlist-starred|macro|sector|forex-floor|all-active or ?feature=news|bar-refresh|scoring|automation. Optional ?limit (default 200). Without params: returns all symbols across all tiers.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/automation/activity',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'AutomationController',
+    contract: 'Activity log feed (2026-07-29). Reads most recent automation_event rows via AuditLogService.getRecentActivity(). Returns { events[], currentTick, currentPhase, phaseStartedAt, totalEventsToday }. Each event: tickNumber, timestamp, step, symbol, decision, detail, durationMs. Zero new DB writes — reads existing audit trail. Query: ?limit=30.',
     status: 'active',
   },
 ]
