@@ -25084,3 +25084,17 @@
 2026-07-30 00:23:26,432 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1343.58
 2026-07-30 00:23:26,434 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
 2026-07-30 00:23:26,443 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-07-30 01:17:26,287 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-30 01:17:26,361 [ERROR] Error handling /positions: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-30 01:21:22,989 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-30 01:21:22,995 [ERROR] Error handling /positions: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-30 01:27:26,337 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-30 01:27:26,345 [ERROR] Error handling /positions: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-30 01:31:22,937 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-30 01:31:22,943 [ERROR] Error handling /positions: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-30 01:37:26,226 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-30 01:37:26,235 [ERROR] Error handling /positions: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-30 01:41:22,859 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-30 01:41:22,866 [ERROR] Error handling /positions: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-30 01:47:26,531 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-07-30 01:47:26,538 [ERROR] Error handling /positions: [WinError 10053] An established connection was aborted by the software in your host machine
