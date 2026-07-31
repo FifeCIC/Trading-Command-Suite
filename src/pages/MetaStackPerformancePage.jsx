@@ -13,6 +13,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import Notice from '../components/Notice';
 import './metastack-performance.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const BAND_COLORS = {
   Gold: '#ffd700', Silver: '#c0c0c0', Bronze: '#cd7f32', Untested: '#64748b',
@@ -69,8 +70,11 @@ export default function MetaStackPerformancePage() {
     <div className="mp-page">
       <header className="mp-header">
         <div>
-          <h1>📊 MetaStack Performance</h1>
-          <p className="mp-subtitle">Stack ratings, composition, and performance history for every M.E.T.A. configuration</p>
+          <h1>MetaStack Performance
+          <PageInfoPopover>
+            Stack ratings, composition, and performance history for every M.E.T.A. configuration
+          </PageInfoPopover>
+        </h1>
         </div>
       </header>
 

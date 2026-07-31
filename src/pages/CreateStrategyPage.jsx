@@ -11,6 +11,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { apiGet, apiPost } from '../core/api/client';
 import '../core/forms.css';
 import './create-strategy.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 // ── Protocol → Broker compatibility ──
 const PROTOCOL_BROKER_MAP = {
@@ -252,10 +253,11 @@ export default function CreateStrategyPage() {
   return (
     <main className="create-strategy-page">
       <header className="cs-header">
-        <h1>Create Trading Strategy</h1>
-        <p className="cs-subtitle">
-          Link a scoring protocol to a symbol and broker account.
-        </p>
+        <h1>Create Trading Strategy
+          <PageInfoPopover>
+            Link a scoring protocol to a symbol and broker account.
+          </PageInfoPopover>
+        </h1>
       </header>
 
       {saved && (

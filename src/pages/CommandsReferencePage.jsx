@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import './commands-reference.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 // ── Command categories ──────────────────────────────────
 
@@ -76,8 +77,11 @@ export default function CommandsReferencePage() {
   return (
     <div className="cr-page">
       <motion.header className="cr-header" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-        <h1>💻 Commands Reference</h1>
-        <p className="cr-subtitle">Quick-access CLI commands for developers and agents. Click any command to copy it.</p>
+        <h1>Commands Reference
+          <PageInfoPopover>
+            Quick-access CLI commands for developers and agents. Click any command to copy it.
+          </PageInfoPopover>
+        </h1>
       </motion.header>
 
       {/* Filter tabs */}

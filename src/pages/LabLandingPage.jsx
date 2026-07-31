@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import './lab-landing.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const LAB_SECTIONS = [
   {
@@ -80,11 +81,12 @@ export default function LabLandingPage() {
   return (
     <div className="ll-page">
       <header className="ll-header">
-        <h1>Lab</h1>
-        <p className="ll-subtitle">
-          Exploration, experimentation, and demonstration area. Everything here is sandboxed —
+        <h1>Lab
+          <PageInfoPopover>
+            Exploration, experimentation, and demonstration area. Everything here is sandboxed —
           changes do not affect live trading.
-        </p>
+          </PageInfoPopover>
+        </h1>
       </header>
 
       <div className="ll-grid">

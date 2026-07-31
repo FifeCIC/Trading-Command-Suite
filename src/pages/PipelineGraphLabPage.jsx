@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import './pipeline-graph-lab.css';
 import PIPELINE_POSITIONS from '../data/pipeline-graph-positions.json';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 // ── Background icon SVG components (one per node type) ───
 function BgIconData() { return <svg viewBox="0 0 100 100" className="pg-bg-svg"><rect x="20" y="20" width="60" height="12" rx="3" opacity="0.5"/><rect x="20" y="38" width="45" height="12" rx="3" opacity="0.35"/><rect x="20" y="56" width="52" height="12" rx="3" opacity="0.25"/><rect x="20" y="74" width="38" height="10" rx="3" opacity="0.15"/></svg>; }
@@ -575,8 +576,11 @@ export default function PipelineGraphLabPage() {
     <div className="pg-page">
       <header className="pg-header">
         <div>
-          <h1>Pipeline Graph <span className="pg-badge-live">LIVE DATA</span></h1>
-          <p className="pg-subtitle">Click a node for documentation · Drag to pan · Hover for stats · Real-time health from APIs</p>
+          <h1>Pipeline Graph <span className="pg-badge-live">LIVE DATA</span>
+          <PageInfoPopover>
+            Click a node for documentation · Drag to pan · Hover for stats · Real-time health from APIs
+          </PageInfoPopover>
+        </h1>
         </div>
         <div className="pg-legend">
           <span><span className="pg-dot" style={{ background: '#22c55e' }}/> Healthy</span>

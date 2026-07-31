@@ -12,6 +12,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './recently-analysed.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const SIGNAL_CONFIG = {
   entry:     { label: 'Entry',     color: '#22c55e', bg: '#22c55e18' },
@@ -53,8 +54,11 @@ export default function RecentlyAnalysedSymbolsPage() {
     <div className="ra-page">
       <header className="ra-header">
         <div>
-          <h1>Recently Analysed Symbols</h1>
-          <p className="ra-subtitle">Symbols most recently scored by the SEES pipeline — ordered by analysis time</p>
+          <h1>Recently Analysed Symbols
+          <PageInfoPopover>
+            Symbols most recently scored by the SEES pipeline — ordered by analysis time
+          </PageInfoPopover>
+        </h1>
         </div>
         <button className="ra-refresh-btn" onClick={() => refetch()}>↻ Refresh</button>
       </header>

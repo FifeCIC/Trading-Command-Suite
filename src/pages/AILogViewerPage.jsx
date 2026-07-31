@@ -15,6 +15,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import Notice from '../components/Notice';
 import './ai-log-viewer.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const PROVIDERS = [
   { id: 'deepseek', label: 'DeepSeek', color: '#3b82f6' },
@@ -84,8 +85,11 @@ export default function AILogViewerPage() {
     <div className="al-page">
       <header className="al-header">
         <div>
-          <h1>📋 AI Log Viewer</h1>
-          <p className="al-subtitle">Browse AI request/response logs, filter by provider and feature</p>
+          <h1>AI Log Viewer
+          <PageInfoPopover>
+            Browse AI request/response logs, filter by provider and feature
+          </PageInfoPopover>
+        </h1>
         </div>
       </header>
 

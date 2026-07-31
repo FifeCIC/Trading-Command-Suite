@@ -1633,6 +1633,7 @@ model Protocol {
   avgHoldTime          String?  @db.VarChar(50)
   winRateTarget        String?  @db.VarChar(20)
   idealFor             String?  @db.Text
+  derivedFrom          String?  @db.VarChar(100)  // Parent protocol slug — links variants for A/B testing
   isDefault            Boolean  @default(false)
   seasonalAffinity     Json?                                      // monthly weights + date ranges
   createdAt            DateTime @default(now())

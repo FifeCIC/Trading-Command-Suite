@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './sees-arena.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 export default function StrategyLaddersPage() {
   const arenaQuery = useQuery({
@@ -22,11 +23,12 @@ export default function StrategyLaddersPage() {
     <div className="sa-page">
       <header className="sa-header">
         <div>
-          <h1>Strategy Ladders</h1>
-          <p className="sa-subtitle">
+          <h1>Strategy Ladders
+          <PageInfoPopover>
             Trading strategies scored against their protocol groups. Each strategy defines which protocols to run — 
             the best score across protocols is used. Strategies are currently hardcoded and will be database-driven in a future update.
-          </p>
+          </PageInfoPopover>
+        </h1>
         </div>
       </header>
 

@@ -14,6 +14,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPut } from '../core/api/client';
 import './global-allocator.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 // ── Constants ───────────────────────────────────────────
 
@@ -112,10 +113,11 @@ export default function GlobalAllocatorPage() {
   return (
     <div className="allocator-page">
       <header className="allocator-header">
-        <h1>🌐 Global Strategy Allocator</h1>
-        <p className="allocator-subtitle">
-          Cross-broker diversification &amp; strategy allocation. Avoid duplicate symbols across brokers.
-        </p>
+        <h1>Global Strategy Allocator
+          <PageInfoPopover>
+            Cross-broker diversification &amp; strategy allocation. Avoid duplicate symbols across brokers.
+          </PageInfoPopover>
+        </h1>
       </header>
 
       {/* ── Quick Stats Bar ── */}

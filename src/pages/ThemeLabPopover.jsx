@@ -2,11 +2,12 @@ export default function ThemeLabPopover() {
   return (
     <div className="tl-page">
       <header className="tl-header">
-        <h1>Popover API</h1>
-        <p className="tl-subtitle">
-          Native browser popovers — no JS needed for show/hide. Light dismiss, focus management, anchor positioning built in.
-          <br /><strong>Status: 🧪 Experimental</strong> — Chrome/Edge only. Requires polyfill for Firefox/Safari.
-        </p>
+        <h1>Popover API
+          <PageInfoPopover>
+            Native browser popovers — no JS needed for show/hide. Light dismiss, focus management, anchor positioning built in.
+          Status: 🧪 Experimental — Chrome/Edge only. Requires polyfill for Firefox/Safari.
+          </PageInfoPopover>
+        </h1>
       </header>
 
       <section className="tl-section">

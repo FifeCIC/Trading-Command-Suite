@@ -5,6 +5,7 @@
  */
 import { usePreferences } from '../core/hooks/usePreferences';
 import './preference-lab.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const SECTIONS = {
   trading: {
@@ -79,8 +80,11 @@ export default function PreferenceLab() {
   return (
     <div className="plab-page">
       <header className="plab-header">
-        <h1>Preference Lab</h1>
-        <p className="plab-subtitle">All user preferences in one view. Stored in localStorage under <code>tcs:preferences</code>.</p>
+        <h1>Preference Lab
+          <PageInfoPopover>
+            All user preferences in one view. Stored in localStorage under tcs:preferences.
+          </PageInfoPopover>
+        </h1>
       </header>
 
       <div className="plab-grid">

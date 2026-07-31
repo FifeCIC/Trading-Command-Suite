@@ -7,15 +7,17 @@
  */
 
 import './t212-cfd.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 export default function T212CFDPage() {
   return (
     <div className="t212c-page">
       <header className="t212c-header">
-        <h1>📉 CFD Trading</h1>
-        <p className="t212c-subtitle">
-          Contracts for Difference — leveraged trading on indices, forex, commodities, and shares.
-        </p>
+        <h1>CFD Trading
+          <PageInfoPopover>
+            Contracts for Difference — leveraged trading on indices, forex, commodities, and shares.
+          </PageInfoPopover>
+        </h1>
       </header>
 
       <section className="t212c-section">

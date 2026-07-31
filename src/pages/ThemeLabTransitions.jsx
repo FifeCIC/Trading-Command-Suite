@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 export default function ThemeLabTransitions() {
   const [slowMo, setSlowMo] = useState(false);
@@ -20,11 +21,12 @@ export default function ThemeLabTransitions() {
   return (
     <div className="tl-page">
       <header className="tl-header">
-        <h1>Transitions Lab</h1>
-        <p className="tl-subtitle">
-          Native browser page-to-page crossfade. Enabled globally via <code>&lt;meta name="view-transition" content="same-origin" /&gt;</code>.
-          <br /><strong>Status: ✅ Accepted</strong> — active on every page. No JS needed.
-        </p>
+        <h1>Transitions Lab
+          <PageInfoPopover>
+            Native browser page-to-page crossfade. Enabled globally via &lt;meta name="view-transition" content="same-origin" /&gt;.
+          Status: ✅ Accepted — active on every page. No JS needed.
+          </PageInfoPopover>
+        </h1>
       </header>
 
       <section className="tl-section">

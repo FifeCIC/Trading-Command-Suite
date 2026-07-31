@@ -5,6 +5,7 @@ import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './stock-investigation.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 export default function StockInvestigationPage() {
   const [symbol, setSymbol] = useState('');
@@ -42,8 +43,11 @@ export default function StockInvestigationPage() {
   return (
     <div className="si-page">
       <motion.header className="si-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1>🔍 Stock Investigation</h1>
-        <p className="si-subtitle">Persistent research — investigations survive sessions and build knowledge over time</p>
+        <h1>Stock Investigation
+          <PageInfoPopover>
+            Persistent research — investigations survive sessions and build knowledge over time
+          </PageInfoPopover>
+        </h1>
       </motion.header>
 
       {!apiOnline && <ApiOfflineBanner />}

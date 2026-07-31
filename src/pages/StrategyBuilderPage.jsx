@@ -8,6 +8,7 @@ import DirectivePalette from '../components/StrategyBuilder/DirectivePalette'
 import StrategyCanvas from '../components/StrategyBuilder/StrategyCanvas'
 import '../core/forms.css'
 import '../components/StrategyBuilder/strategy-builder.css'
+import PageInfoPopover from '../components/PageInfoPopover';
 
 // Heuristic: derive compatible symbol types from directive category
 function getCompatibleTypes(directive) {
@@ -147,8 +148,11 @@ export default function StrategyBuilderPage() {
   return (
     <div className="sb-page">
       <header className="sb-header">
-        <h1>Protocol Builder</h1>
-        <p className="sb-subtitle" style={{fontSize:'0.82rem',color:'var(--ink-soft)',margin:'0.2rem 0 0'}}>Create a protocol by selecting directives from the palette. Protocols define WHAT to score — individual directives contribute evidence. Note: some directives are symbol-type-specific — ensure your chosen symbols match.</p>
+        <h1>Protocol Builder
+          <PageInfoPopover>
+            Create a protocol by selecting directives from the palette. Protocols define WHAT to score — individual directives contribute evidence. Note: some directives are symbol-type-specific — ensure your chosen symbols match.
+          </PageInfoPopover>
+        </h1>
       </header>
 
       {/* Collapsible metadata form toggle */}

@@ -20,6 +20,7 @@ export interface SeedProtocol {
   directionMode: string;
   tradingStyle: string | null;
   recommendedTimeframe: string | null;
+  derivedFrom?: string | null;
   avgHoldTime: string | null;
   winRateTarget: string | null;
   idealFor: string | null;
@@ -514,6 +515,290 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "name": "Execution Risk",
         "description": "Execution Risk",
         "weight": 0.4,
+        "isRiskGate": true,
+        "minMultiplier": 0.4,
+        "maxMultiplier": 1.3,
+        "directiveIds": [
+          "vix-regime",
+          "liquidity-check",
+          "portfolio-performance",
+          "crypto-weekend-effect"
+        ],
+        "directiveMaxScores": {
+          "crypto-weekend-effect": 50
+        }
+      }
+    ]
+  },
+  "xau-speed-m5": {
+    "name": "Gold Scalp M5",
+    "description": "5-minute gold (XAUUSD) scalping protocol. Derived from xau-speed-v1 — same directive set, longer timeframe for more stable signals. Suitable for semi-auto and automated trading with existing bar refresh.",
+    "directionMode": "LONG_ONLY",
+    "tradingStyle": "Scalp",
+    "recommendedTimeframe": "5m",
+    "derivedFrom": "xau-speed-v1",
+    "avgHoldTime": "5–30 minutes",
+    "winRateTarget": "60–70%",
+    "idealFor": "Gold scalping on 5m bars during London/NY overlap. More reliable than tick-level — fewer false signals, still fast enough for multiple trades per session.",
+    "groups": [
+      {
+        "id": "technical",
+        "name": "Micro-Structure Technicals",
+        "description": "Micro-Structure Technicals",
+        "weight": 0.4,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "speed-momentum",
+          "bollinger-band-squeeze",
+          "volume-confirmation",
+          "volatility-tools",
+          "rsi-oversold",
+          "rsi-overbought",
+          "support-resistance-levels",
+          "session-open-effect",
+          "gold-round-numbers"
+        ],
+        "directiveMaxScores": {
+          "speed-momentum": 100,
+          "rsi-oversold": 100,
+          "gold-round-numbers": 80
+        }
+      },
+      {
+        "id": "sentiment",
+        "name": "Sentiment & Macro Context",
+        "description": "Sentiment & Macro Context",
+        "weight": 0.25,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "news-sentiment-positive",
+          "gold-macro-correlation",
+          "gold-session-profile"
+        ],
+        "directiveMaxScores": {}
+      },
+      {
+        "id": "risk",
+        "name": "Execution Risk",
+        "description": "Execution Risk",
+        "weight": 0.35,
+        "isRiskGate": true,
+        "minMultiplier": 0.4,
+        "maxMultiplier": 1.3,
+        "directiveIds": [
+          "vix-regime",
+          "liquidity-check",
+          "portfolio-performance",
+          "crypto-weekend-effect"
+        ],
+        "directiveMaxScores": {
+          "crypto-weekend-effect": 50
+        }
+      }
+    ]
+  },
+  "xau-speed-m15": {
+    "name": "Gold Day-Trade M15",
+    "description": "15-minute gold (XAUUSD) day-trading protocol. Derived from xau-speed-v1 — longer timeframe, broader stops, fewer but higher-quality signals.",
+    "directionMode": "LONG_ONLY",
+    "tradingStyle": "Day Trade",
+    "recommendedTimeframe": "15m",
+    "derivedFrom": "xau-speed-v1",
+    "avgHoldTime": "30 min – 4 hours",
+    "winRateTarget": "55–65%",
+    "idealFor": "Day-trading gold during active sessions. Wider stops accommodate intraday swings. Best during London open through NY close.",
+    "groups": [
+      {
+        "id": "technical",
+        "name": "Micro-Structure Technicals",
+        "description": "Micro-Structure Technicals",
+        "weight": 0.35,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "speed-momentum",
+          "bollinger-band-squeeze",
+          "volume-confirmation",
+          "volatility-tools",
+          "rsi-oversold",
+          "rsi-overbought",
+          "support-resistance-levels",
+          "session-open-effect",
+          "gold-round-numbers"
+        ],
+        "directiveMaxScores": {
+          "speed-momentum": 90,
+          "rsi-oversold": 90,
+          "gold-round-numbers": 80
+        }
+      },
+      {
+        "id": "sentiment",
+        "name": "Sentiment & Macro Context",
+        "description": "Sentiment & Macro Context",
+        "weight": 0.3,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "news-sentiment-positive",
+          "gold-macro-correlation",
+          "gold-session-profile"
+        ],
+        "directiveMaxScores": {}
+      },
+      {
+        "id": "risk",
+        "name": "Execution Risk",
+        "description": "Execution Risk",
+        "weight": 0.35,
+        "isRiskGate": true,
+        "minMultiplier": 0.4,
+        "maxMultiplier": 1.3,
+        "directiveIds": [
+          "vix-regime",
+          "liquidity-check",
+          "portfolio-performance",
+          "crypto-weekend-effect"
+        ],
+        "directiveMaxScores": {
+          "crypto-weekend-effect": 50
+        }
+      }
+    ]
+  },
+  "xau-speed-1h": {
+    "name": "Gold Swing 1H",
+    "description": "1-hour gold (XAUUSD) swing trading protocol. Derived from xau-speed-v1 — swing timeframe with trend-following bias. Holds through intraday noise.",
+    "directionMode": "LONG_ONLY",
+    "tradingStyle": "Swing",
+    "recommendedTimeframe": "1h",
+    "derivedFrom": "xau-speed-v1",
+    "avgHoldTime": "4 hours – 2 days",
+    "winRateTarget": "50–60%",
+    "idealFor": "Swing trading gold on hourly bars. Captures multi-session trends. Wider stops, fewer trades, higher profit targets per trade.",
+    "groups": [
+      {
+        "id": "technical",
+        "name": "Micro-Structure Technicals",
+        "description": "Micro-Structure Technicals",
+        "weight": 0.3,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "speed-momentum",
+          "bollinger-band-squeeze",
+          "volume-confirmation",
+          "volatility-tools",
+          "rsi-oversold",
+          "rsi-overbought",
+          "support-resistance-levels",
+          "session-open-effect",
+          "gold-round-numbers"
+        ],
+        "directiveMaxScores": {
+          "speed-momentum": 80,
+          "rsi-oversold": 80,
+          "gold-round-numbers": 80
+        }
+      },
+      {
+        "id": "sentiment",
+        "name": "Sentiment & Macro Context",
+        "description": "Sentiment & Macro Context",
+        "weight": 0.35,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "news-sentiment-positive",
+          "gold-macro-correlation",
+          "gold-session-profile"
+        ],
+        "directiveMaxScores": {}
+      },
+      {
+        "id": "risk",
+        "name": "Execution Risk",
+        "description": "Execution Risk",
+        "weight": 0.35,
+        "isRiskGate": true,
+        "minMultiplier": 0.4,
+        "maxMultiplier": 1.3,
+        "directiveIds": [
+          "vix-regime",
+          "liquidity-check",
+          "portfolio-performance",
+          "crypto-weekend-effect"
+        ],
+        "directiveMaxScores": {
+          "crypto-weekend-effect": 50
+        }
+      }
+    ]
+  },
+  "xau-speed-4h": {
+    "name": "Gold Position 4H",
+    "description": "4-hour gold (XAUUSD) position trading protocol. Derived from xau-speed-v1 — multi-day trend following with macro overlay. Ignores intraday noise entirely.",
+    "directionMode": "LONG_ONLY",
+    "tradingStyle": "Position",
+    "recommendedTimeframe": "4h",
+    "derivedFrom": "xau-speed-v1",
+    "avgHoldTime": "2–10 days",
+    "winRateTarget": "45–55%",
+    "idealFor": "Position trading gold on 4H bars. Captures weekly trends driven by USD strength, real rates, and geopolitical events. Fewest trades, largest targets.",
+    "groups": [
+      {
+        "id": "technical",
+        "name": "Micro-Structure Technicals",
+        "description": "Micro-Structure Technicals",
+        "weight": 0.25,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "speed-momentum",
+          "bollinger-band-squeeze",
+          "volume-confirmation",
+          "volatility-tools",
+          "rsi-oversold",
+          "rsi-overbought",
+          "support-resistance-levels",
+          "session-open-effect",
+          "gold-round-numbers"
+        ],
+        "directiveMaxScores": {
+          "speed-momentum": 70,
+          "rsi-oversold": 70,
+          "gold-round-numbers": 80
+        }
+      },
+      {
+        "id": "sentiment",
+        "name": "Sentiment & Macro Context",
+        "description": "Sentiment & Macro Context",
+        "weight": 0.4,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "news-sentiment-positive",
+          "gold-macro-correlation",
+          "gold-session-profile"
+        ],
+        "directiveMaxScores": {}
+      },
+      {
+        "id": "risk",
+        "name": "Execution Risk",
+        "description": "Execution Risk",
+        "weight": 0.35,
         "isRiskGate": true,
         "minMultiplier": 0.4,
         "maxMultiplier": 1.3,

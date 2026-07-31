@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchAnalystTargets } from '../core/api/research.js';
 import './price-forecast.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 // Default symbols list for the forecast table
 const DEFAULT_SYMBOLS = ['AAPL', 'NVDA', 'MSFT', 'TSLA', 'AMD', 'AMZN', 'META', 'GOOGL', 'JPM', 'NFLX', 'BA', 'XOM', 'SPY', 'GLD'];
@@ -78,11 +79,12 @@ export default function PriceForecastPage() {
   return (
     <div className="pf-page">
       <header className="pf-header">
-        <h1>Price Forecast</h1>
-        <p className="pf-subtitle">
-          Analyst price targets and consensus ratings.
-          <span className="pf-source"> Data refreshes hourly.</span>
-        </p>
+        <h1>Price Forecast
+          <PageInfoPopover>
+            Analyst price targets and consensus ratings.
+           Data refreshes hourly.
+          </PageInfoPopover>
+        </h1>
       </header>
 
       {/* Consensus summary */}

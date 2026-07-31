@@ -16,6 +16,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import Notice from '../components/Notice';
 import './ai-costs.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const PERIODS = [
   { key: 'today', label: 'Today' },
@@ -98,8 +99,11 @@ export default function AICostsPage() {
     <div className="ac-page">
       <header className="ac-header">
         <div>
-          <h1>🤖 AI Cost Monitoring</h1>
-          <p className="ac-subtitle">Track DeepSeek API usage, costs, and cost-vs-P&L ratio</p>
+          <h1>AI Cost Monitoring
+          <PageInfoPopover>
+            Track DeepSeek API usage, costs, and cost-vs-P&L ratio
+          </PageInfoPopover>
+        </h1>
         </div>
         <div className="ac-period-tabs">
           {PERIODS.map(p => (

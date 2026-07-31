@@ -18,6 +18,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import Notice from '../components/Notice';
 import ProtocolPicker from '../components/ProtocolPicker';
 import './ab-testing.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const SIGNAL_COLORS = { BUY: '#22c55e', SELL: '#ef4444', HOLD: '#f59e0b', unknown: '#64748b' };
 
@@ -150,8 +151,11 @@ export default function ABTestingPage() {
     <div className="ab-page">
       <header className="ab-header">
         <div>
-          <h1>⚖️ A/B Protocol Testing</h1>
-          <p className="ab-subtitle">Compare two protocols side-by-side — signal agreement, divergence analysis, directive contribution</p>
+          <h1>A/B Protocol Testing
+          <PageInfoPopover>
+            Compare two protocols side-by-side — signal agreement, divergence analysis, directive contribution
+          </PageInfoPopover>
+        </h1>
         </div>
       </header>
 

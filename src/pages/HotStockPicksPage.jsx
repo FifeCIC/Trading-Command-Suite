@@ -5,6 +5,7 @@ import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import './hot-stock-picks-page.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const REFRESH_MS = 60_000;
 const TOP_N = 10;
@@ -110,8 +111,11 @@ export default function HotStockPicksPage() {
     return (
       <div className="hsp-page">
         <header className="hsp-header">
-          <h1>Hot Stock Picks</h1>
-          <p className="hsp-subtitle">Symbols showing unusual activity detected by the scoring engine.</p>
+          <h1>Hot Stock Picks
+          <PageInfoPopover>
+            Symbols showing unusual activity detected by the scoring engine.
+          </PageInfoPopover>
+        </h1>
         </header>
         <div className="hsp-grid">
           <LoadingSkeleton variant="card" count={6} />

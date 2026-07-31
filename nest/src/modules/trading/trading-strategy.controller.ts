@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, Logger } from '@nestjs/common';
 import { TradingStrategyService } from './trading-strategy.service';
+import { DEFAULT_TRADING_STRATEGIES } from './strategy-seed-data';
 
 @Controller('trading/strategies')
 export class TradingStrategyController {
@@ -8,6 +9,18 @@ export class TradingStrategyController {
 
   @Get()
   async findAll() { return this.service.findAll(); }
+
+  @Get('with-ratios')
+  async findAllWithRatios() { return this.service.findAllWithRatios(); }
+
+  /**
+   * POST /api/trading/strategies/seed — idempotent seed of default strategies.
+   * Creates scoring strategies + trading strategies for all session pairs.
+   */
+  @Post('seed')
+  async seedDefaults() {
+    return this.service.seedDefaults(DEFAULT_TRADING_STRATEGIES);
+  }
 
   @Get(':id')
   async findOne(@Param('id') id: string) { return this.service.findOne(id); }

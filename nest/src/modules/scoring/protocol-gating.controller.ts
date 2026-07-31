@@ -71,6 +71,7 @@ export class ProtocolGatingController {
       }>;
       tradingStyle?: string;
       recommendedTimeframe?: string;
+      derivedFrom?: string | null;
       directionMode?: string;
       avgHoldTime?: string;
       winRateTarget?: string;
@@ -115,6 +116,7 @@ export class ProtocolGatingController {
         groups,
         tradingStyle: (proto as any).tradingStyle,
         recommendedTimeframe: (proto as any).recommendedTimeframe,
+        derivedFrom: (proto as any).derivedFrom ?? null,
         directionMode: (proto as any).directionMode || 'LONG_ONLY',
         avgHoldTime: (proto as any).avgHoldTime,
         winRateTarget: (proto as any).winRateTarget,

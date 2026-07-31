@@ -5,6 +5,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './health-dashboard.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 // ── Helpers ──────────────────────────────────────────────
 
@@ -123,8 +124,11 @@ export default function HealthDashboardPage() {
   return (
     <div className="hd-page">
       <motion.header className="hd-header" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-        <h1>🩺 Health & Diagnostics</h1>
-        <p className="hd-subtitle">System vitals, DB health, slow queries, API trends, provider status, and trace correlation — refreshed every 15s.</p>
+        <h1>Health & Diagnostics
+          <PageInfoPopover>
+            System vitals, DB health, slow queries, API trends, provider status, and trace correlation — refreshed every 15s.
+          </PageInfoPopover>
+        </h1>
       </motion.header>
 
       {!apiOnline && <ApiOfflineBanner />}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import LoadingSkeleton from '../components/LoadingSkeleton'
 import './strategies-page.css'
+import PageInfoPopover from '../components/PageInfoPopover';
 
 /**
  * Seed strategy data matching docs/CANONICAL-DIRECTIVE-REFERENCE.md
@@ -74,12 +75,13 @@ export default function StrategiesPage() {
   return (
     <main className="strategies-page">
       <header className="strategies-header">
-        <h1>Strategy Management</h1>
-        <p className="strategies-subtitle">
-          View available scoring strategies, inspect directive weights and
+        <h1>Strategy Management
+          <PageInfoPopover>
+            View available scoring strategies, inspect directive weights and
           thresholds, and select the active strategy. Strategy data is
-          <strong> static / seed data</strong> for MVP.
-        </p>
+           static / seed data for MVP.
+          </PageInfoPopover>
+        </h1>
       </header>
 
       {/* Active strategy summary card */}

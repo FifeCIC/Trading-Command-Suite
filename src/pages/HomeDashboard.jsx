@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { apiGet } from '../core/api/client';
 import ScreenOptions from '../components/ScreenOptions';
 import './home-dashboard.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 export default function HomeDashboard() {
   const navigate = useNavigate();
@@ -83,8 +84,11 @@ export default function HomeDashboard() {
       {/* ── Centered Logo ── */}
       <div className="nd-hero">
         <img src="/tcs-logo.png" alt="Trading Command Suite" className="nd-hero-logo" />
-        <h1 className="nd-hero-title">Trading Command Suite</h1>
-        <p className="nd-hero-subtitle">Algorithmic analysis &amp; portfolio management</p>
+        <h1 className="nd-hero-title">Trading Command Suite
+          <PageInfoPopover>
+            Algorithmic analysis &amp; portfolio management
+          </PageInfoPopover>
+        </h1>
         <div className="nd-hero-status">
           <span className="nd-hero-dot" data-status={isApiOnline ? 'ok' : healthQuery.isLoading ? 'loading' : 'err'}>{statusDot}</span>
           <span>{statusLabel}</span>

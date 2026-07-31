@@ -6,6 +6,7 @@ import { usePreferences } from '../core/hooks/usePreferences';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './risk-controls.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 function Gauge({ value, max, label, color, icon }) {
   const pct = Math.min(100, Math.max(0, (value / max) * 100));
@@ -78,8 +79,11 @@ export default function RiskControlsPage() {
     <div className="rc-page">
       <motion.header className="rc-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div>
-          <h1>Risk Controls</h1>
-          <p className="rc-subtitle">Central guardrails — exposure caps, drawdown limits, circuit breakers, kill switch.</p>
+          <h1>Risk Controls
+          <PageInfoPopover>
+            Central guardrails — exposure caps, drawdown limits, circuit breakers, kill switch.
+          </PageInfoPopover>
+        </h1>
         </div>
         <span className="rc-clock">{data.generatedAt ? new Date(data.generatedAt).toLocaleTimeString() : '—'}</span>
       </motion.header>

@@ -4,6 +4,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './performance-lab.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 function PnlBadge({ value }) {
   const cls = value >= 0 ? 'pl-up' : 'pl-down';
@@ -54,8 +55,11 @@ export default function PerformanceLabPage() {
     <div className="pl-page">
       <header className="pl-header">
         <div>
-          <h1>Trading Performance</h1>
-          <p className="pl-subtitle">Real trade outcomes — win rate, P&L, drawdown, and equity curve from closed trades. Open positions show mark-to-market via MT5.</p>
+          <h1>Trading Performance
+          <PageInfoPopover>
+            Real trade outcomes — win rate, P&L, drawdown, and equity curve from closed trades. Open positions show mark-to-market via MT5.
+          </PageInfoPopover>
+        </h1>
         </div>
         <div className="pl-days">
           {[30, 90, 180, 365].map(d => (

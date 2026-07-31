@@ -6,6 +6,7 @@ import { createChart, CandlestickSeries } from 'lightweight-charts';
 import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './snapshot-replay.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const SPEEDS = { '1×': 500, '5×': 100, '20×': 25, 'Instant': 0 };
 const TIMEFRAMES = ['1m', '5m', '15m', '1h'];
@@ -139,8 +140,11 @@ export default function SnapshotReplayPage() {
   return (
     <div className="sr-page">
       <header className="sr-header">
-        <h1>⏮ Market Replay</h1>
-        <p className="sr-subtitle">Step through historical bars with full directive scoring</p>
+        <h1>⏮ Market Replay
+          <PageInfoPopover>
+            Step through historical bars with full directive scoring
+          </PageInfoPopover>
+        </h1>
       </header>
 
       {/* ── Replay Config ── */}

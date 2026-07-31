@@ -27,6 +27,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import FadeCardGroup from '../components/FadeCardGroup';
 import './meta-stack-explorer.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 /* ── Scroll-reveal card (IntersectionObserver pattern from ThemeLabScroll) ── */
 function RevealCard({ children, className = '', style = {} }) {
@@ -558,8 +559,11 @@ export default function MetaStackExplorerPage() {
 
       <header className="mse-header">
         <div>
-          <h1>META.Stack Explorer</h1>
-          <p className="mse-subtitle">Modular Expert Trading Architecture — end-to-end pipeline trace</p>
+          <h1>META.Stack Explorer
+          <PageInfoPopover>
+            Modular Expert Trading Architecture — end-to-end pipeline trace
+          </PageInfoPopover>
+        </h1>
         </div>
         <div className="mse-header-actions">
           <span className="mse-progress">{confirmedCount}/{stageCount} confirmed</span>

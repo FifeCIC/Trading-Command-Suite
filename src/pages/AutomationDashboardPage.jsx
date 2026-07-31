@@ -7,6 +7,7 @@ import EmptyState from '../components/EmptyState';
 import ToggleSwitch from '../components/ToggleSwitch';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './automation-dashboard.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 export default function AutomationDashboardPage() {
   const [selectedSymbol, setSelectedSymbol] = useState(null);
@@ -122,8 +123,11 @@ export default function AutomationDashboardPage() {
     <div className="ad-page">
       <motion.header className="ad-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div>
-          <h1>🤖 Automation</h1>
-          <p className="ad-subtitle">Multi-broker command center — scores, strategies, and trade decisions</p>
+          <h1>Automation
+          <PageInfoPopover>
+            Multi-broker command center — scores, strategies, and trade decisions
+          </PageInfoPopover>
+        </h1>
         </div>
         <div className="ad-header-actions">
           {loopRunning ? (

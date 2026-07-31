@@ -13,6 +13,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './chart-comparison.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const SYMBOLS = ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMD', 'SPY', 'QQQ', 'GOOGL', 'META', 'AMZN'];
 const TIMEFRAMES = [
@@ -117,8 +118,11 @@ export default function ChartComparisonPage() {
     <div className="cc-page">
       <header className="cc-header">
         <div>
-          <h1>Chart Comparison</h1>
-          <p className="cc-subtitle">Real MT5 candlesticks + SEES protocol scores — A/B comparison</p>
+          <h1>Chart Comparison
+          <PageInfoPopover>
+            Real MT5 candlesticks + SEES protocol scores — A/B comparison
+          </PageInfoPopover>
+        </h1>
         </div>
       </header>
 

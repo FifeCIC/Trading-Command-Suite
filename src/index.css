@@ -861,6 +861,12 @@ textarea {
   min-height: 44px;
 }
 
+/* ── Dropdown options — must be explicit; browsers don't inherit from <select> ── */
+option {
+  background: var(--panel, #1e293b);
+  color: var(--ink, #e2e8f0);
+}
+
 input[type="checkbox"] {
   min-width: 44px;
   min-height: 44px;

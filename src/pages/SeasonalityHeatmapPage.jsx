@@ -12,6 +12,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './seasonality-heatmap.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -84,8 +85,11 @@ export default function SeasonalityHeatmapPage() {
     <div className="sh-page">
       <header className="sh-header">
         <div>
-          <h1>Seasonality Heatmap</h1>
-          <p className="sh-subtitle">Hour × Day win rate — historical bullish/bearish bias from MT5 data</p>
+          <h1>Seasonality Heatmap
+          <PageInfoPopover>
+            Hour × Day win rate — historical bullish/bearish bias from MT5 data
+          </PageInfoPopover>
+        </h1>
         </div>
       </header>
 

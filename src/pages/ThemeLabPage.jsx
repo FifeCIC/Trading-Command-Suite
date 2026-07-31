@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FadeCardGroup from '../components/FadeCardGroup';
 import './theme-lab.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const LAB_SECTIONS = [
   { id: 'theme-lab-motion', label: 'Motion Lab', desc: 'Animation library examples — enter/exit, hover, layout, gestures', icon: '◆' },
@@ -73,11 +74,12 @@ export default function ThemeLabPage() {
   return (
     <div className="tl-page">
       <header className="tl-header">
-        <h1>Theme Lab</h1>
-        <p className="tl-subtitle">
-          Sandbox for exploring UI technologies. <strong>Experimental features live here.</strong>
-          Changes are not applied globally — see <code>.github/instructions/ui-standards.instructions.md</code> for what's accepted vs experimental.
-        </p>
+        <h1>Theme Lab
+          <PageInfoPopover>
+            Sandbox for exploring UI technologies. Experimental features live here.
+          Changes are not applied globally — see .github/instructions/ui-standards.instructions.md for what's accepted vs experimental.
+          </PageInfoPopover>
+        </h1>
       </header>
 
       {/* ── Lab Sections Hub ─────────────────────────────── */}

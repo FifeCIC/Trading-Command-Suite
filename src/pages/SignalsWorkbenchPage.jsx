@@ -9,6 +9,7 @@ import SymbolAutocomplete from '../components/SymbolAutocomplete';
 import ProtocolChecklist from '../components/ProtocolChecklist';
 import ProtocolPicker from '../components/ProtocolPicker';
 import './signals-workbench.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const SIGNAL_COLORS = { BUY: '#22c55e', SELL: '#ef4444', HOLD: '#94a3b8' };
 const CONFLICT_SEVERITY = {
@@ -126,10 +127,11 @@ export default function SignalsWorkbenchPage() {
     <div className="sw-page">
       <motion.header className="sw-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div>
-          <h1>Scoring Workbench</h1>
-          <p className="sw-subtitle">
+          <h1>Scoring Workbench
+          <PageInfoPopover>
             Manual scoring tool — enter tickers for detailed directive breakdown and signal ranking.
-          </p>
+          </PageInfoPopover>
+        </h1>
         </div>
         <span className="sw-clock">
           {ladderData?.generatedAt ? new Date(ladderData.generatedAt).toLocaleTimeString() : '—'}

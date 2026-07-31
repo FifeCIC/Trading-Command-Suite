@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './sees-arena.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const STORAGE_KEY = 'tcs:arena-state';
 
@@ -151,8 +152,11 @@ export default function SeesArenaPage() {
     <div className="sa-page">
       <header className="sa-header">
         <div>
-          <h1>SEES Arena</h1>
-          <p className="sa-subtitle">Multi-protocol scoring comparison — see how different strategies rate your symbols. Only selected protocols run — data-insufficient ones (⚠️) are automatically excluded.</p>
+          <h1>SEES Arena
+          <PageInfoPopover>
+            Multi-protocol scoring comparison — see how different strategies rate your symbols. Only selected protocols run — data-insufficient ones (⚠️) are automatically excluded.
+          </PageInfoPopover>
+        </h1>
         </div>
       </header>
 

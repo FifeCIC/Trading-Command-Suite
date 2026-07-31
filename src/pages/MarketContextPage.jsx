@@ -13,6 +13,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import Notice from '../components/Notice';
 import './market-context.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const MOOD_COLORS = {
   caution:  { bg: 'var(--notice-warning-bg)', border: 'var(--notice-warning-border)', text: 'var(--notice-warning-text)', icon: '⚠️' },
@@ -178,8 +179,11 @@ export default function MarketContextPage() {
     <div className="mc-page">
       <header className="mc-header">
         <div>
-          <h1>Market Context</h1>
-          <p className="mc-subtitle">Multi-factor market awareness — session strength, live checklist, upcoming events</p>
+          <h1>Market Context
+          <PageInfoPopover>
+            Multi-factor market awareness — session strength, live checklist, upcoming events
+          </PageInfoPopover>
+        </h1>
         </div>
         <button className="mc-refresh-btn" onClick={() => refetch()}>↻ Refresh</button>
       </header>

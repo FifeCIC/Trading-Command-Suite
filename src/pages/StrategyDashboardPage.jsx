@@ -17,6 +17,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import Notice from '../components/Notice';
 import './strategy-dashboard.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const STATUS_COLORS = {
   running: '#22c55e', paused: '#f59e0b', stopped: '#64748b',
@@ -127,8 +128,11 @@ export default function StrategyDashboardPage() {
     <div className="sd-page">
       <header className="sd-header">
         <div>
-          <h1>📊 Strategy Dashboard</h1>
-          <p className="sd-subtitle">Multi-column grid — monitor all strategies in real-time</p>
+          <h1>Strategy Dashboard
+          <PageInfoPopover>
+            Multi-column grid — monitor all strategies in real-time
+          </PageInfoPopover>
+        </h1>
         </div>
         <div className="sd-header-stats">
           <span className="sd-hs-item">{strategyCards.length} strategies</span>

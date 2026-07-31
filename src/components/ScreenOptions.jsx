@@ -260,7 +260,7 @@ const OPTIONS_REGISTRY = {
 };
 
 export default function ScreenOptions({ activeView, onSettingsChange, isOpen, onToggle, isBookmarked, onToggleBookmark, statusLevel, isMt5Online, isApiOnline, isDbOnline }) {
-  var prefs = usePreferences();
+  var { prefs, set: setPref } = usePreferences();
   var registry = activeView ? OPTIONS_REGISTRY[activeView] : null;
   var [calcOpen, setCalcOpen] = useState(false);
   var [notifOpen, setNotifOpen] = useState(false);
@@ -364,8 +364,8 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   }, [values, onSettingsChange]);
 
   var handleGlobalChange = useCallback(function (field, value) {
-    prefs.set(field, value);
-  }, [prefs]);
+    setPref(field, value);
+  }, [setPref]);
 
   // Close on Escape
   useEffect(function () {
@@ -376,7 +376,6 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   }, [isOpen, onToggle]);
 
   // Build global section state for rendering
-  var showTrainingGuidance = prefs.showTrainingGuidance !== false;
   var globalValueMap = { displayMode: displayMode, experienceLevel: experienceLevel, hidePageTitle: hidePageTitle, hidePageSubtitle: hidePageSubtitle, highContrastText: highContrastText, colorBlindMode: colorBlindMode, hidePracticeData: hidePracticeData, showTrainingGuidance: showTrainingGuidance, fontScale: fontScale, focusIndicatorStyle: focusIndicatorStyle };
   var hasGlobalSections = true; // always show global section
   var hasViewSections = registry && registry.sections.length > 0;

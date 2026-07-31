@@ -5,6 +5,7 @@ import { apiGet, apiPost } from '../core/api/client';
 import { createChart, CandlestickSeries } from 'lightweight-charts';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './snapshot-library.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const TIMEFRAMES = ['1M', '5M', '15M', '1H', '4H', '1D', '1W'];
 const QUICK_SYMBOLS = ['EURUSD', 'USDJPY', 'XAUUSD', 'BTCUSD', 'SPY', 'NVDA', 'AAPL', 'MSFT'];
@@ -93,8 +94,11 @@ export default function SnapshotLibraryPage() {
   return (
     <div className="sl-page">
       <motion.header className="sl-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1>Snapshot Library</h1>
-        <p className="sl-subtitle">Import real market data for a symbol + date range. Use snapshots for backtesting and moment-in-time replay.</p>
+        <h1>Snapshot Library
+          <PageInfoPopover>
+            Import real market data for a symbol + date range. Use snapshots for backtesting and moment-in-time replay.
+          </PageInfoPopover>
+        </h1>
       </motion.header>
 
       {/* ── Import Form ── */}

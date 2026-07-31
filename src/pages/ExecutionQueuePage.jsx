@@ -5,6 +5,7 @@ import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './execution-queue.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const STATUS_COLORS = {
   queued: '#f59e0b', running: '#3b82f6', complete: '#22c55e', failed: '#ef4444', cancelled: '#94a3b8',
@@ -135,10 +136,11 @@ export default function ExecutionQueuePage() {
     <div className="eq-page">
       <motion.header className="eq-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div>
-          <h1>Execution Queue</h1>
-          <p className="eq-subtitle">
+          <h1>Execution Queue
+          <PageInfoPopover>
             Unified automation hub — all automated activity in one place. Ticks, trade decisions, protocol runs, and scheduled tasks.
-          </p>
+          </PageInfoPopover>
+        </h1>
         </div>
       </motion.header>
 

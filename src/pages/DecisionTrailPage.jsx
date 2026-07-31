@@ -16,6 +16,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import Notice from '../components/Notice';
 import './decision-trail.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const TRAIL_STAGES = [
   { id: 'scoring', label: 'Scoring', icon: '🎯', desc: 'Directive scores computed' },
@@ -82,8 +83,11 @@ export default function DecisionTrailPage() {
     <div className="dt-page">
       <header className="dt-header">
         <div>
-          <h1>🔗 Decision Trail Browser</h1>
-          <p className="dt-subtitle">Trace the full pipeline: Scoring → Comparison → Decision → Execution → Monitoring. Data from automation loop decision_log — the same decisions shown in /api/automation/status.</p>
+          <h1>Decision Trail Browser
+          <PageInfoPopover>
+            Trace the full pipeline: Scoring → Comparison → Decision → Execution → Monitoring. Data from automation loop decision_log — the same decisions shown in /api/automation/status.
+          </PageInfoPopover>
+        </h1>
         </div>
       </header>
 

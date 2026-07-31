@@ -14,6 +14,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import Notice from '../components/Notice';
 import './daily-summary-report.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 function formatCurrency(n) {
   if (n == null) return '$0.00';
@@ -210,8 +211,11 @@ export default function DailySummaryReportPage() {
     <div className="dr-page">
       <header className="dr-header">
         <div>
-          <h1>📋 Daily Summary Report</h1>
-          <p className="dr-subtitle">Auto-generated trading summary — copy to clipboard for Reddit, Discord, or other platforms</p>
+          <h1>Daily Summary Report
+          <PageInfoPopover>
+            Auto-generated trading summary — copy to clipboard for Reddit, Discord, or other platforms
+          </PageInfoPopover>
+        </h1>
         </div>
       </header>
 

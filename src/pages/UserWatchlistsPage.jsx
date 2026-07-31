@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
+import PageInfoPopover from '../components/PageInfoPopover';
 import './watchlists.css';
 
 /** Clean watchlist label: strip timestamp suffixes */
@@ -52,6 +53,21 @@ export default function UserWatchlistsPage() {
 
   const selectedWl = watchlists?.find(w => w.id === selectedId);
   const symbols = detail?.symbols ?? [];
+
+  // Fetch all symbols to get company names
+  const { data: allSymbols } = useQuery({
+    queryKey: ['all-symbols-names'],
+    queryFn: () => apiGet('/api/symbols').catch(() => ({ symbols: [] })),
+    staleTime: 120_000,
+  });
+  const symbolNameMap = {};
+  if (allSymbols?.symbols) {
+    allSymbols.symbols.forEach(s => {
+      if (s.ticker && s.name && s.name !== s.ticker) {
+        symbolNameMap[s.ticker.toUpperCase()] = s.name;
+      }
+    });
+  }
 
   // Lock status for selected watchlist
   const lockQuery = useQuery({
@@ -325,20 +341,18 @@ export default function UserWatchlistsPage() {
                 </div>
                 <div className="wl-symbols-grid">
                   {symbols.map(s => {
-                    // Handle both object {ticker, name} and plain string formats
                     const ticker = typeof s === 'string' ? s : (s.ticker || s.symbol || s.name || '');
-                    const displayName = typeof s === 'string' ? s : (s.name || s.ticker || s.symbol || '');
-                    // Clean Trading212 IDs like "RBLX_US_EQ" → "RBLX"
                     const cleanTicker = ticker.includes('_') ? ticker.split('_')[0] : ticker;
+                    const companyName = symbolNameMap[cleanTicker.toUpperCase()] || '';
                     return (
                       <div key={ticker || Math.random()} className="wl-symbol-chip-wrap">
                         <a
                           href={`/research/symbol/${cleanTicker}`}
                           className="wl-symbol-chip"
                         >
-                          {cleanTicker}
-                          {displayName && displayName !== cleanTicker && (
-                            <span className="wl-symbol-name">{displayName}</span>
+                          <span className="wl-symbol-ticker">{cleanTicker}</span>
+                          {companyName && (
+                            <span className="wl-symbol-name">{companyName}</span>
                           )}
                         </a>
                         {!isLocked && (
@@ -346,6 +360,7 @@ export default function UserWatchlistsPage() {
                             className="wl-symbol-remove"
                             onClick={(e) => { e.preventDefault(); removeSymbolMutation.mutate({ watchlistId: selectedId, ticker: cleanTicker }); }}
                             title={`Remove ${cleanTicker}`}
+                            aria-label={`Remove ${cleanTicker}`}
                           >
                             ✕
                           </button>

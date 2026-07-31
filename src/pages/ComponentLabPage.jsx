@@ -4,6 +4,7 @@ import { apiGet } from '../core/api/client';
 import DetachableWidget from '../components/DetachableWidget';
 import CenterPicker from '../components/CenterPicker';
 import './component-lab.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 // ── Widget Scale Context ──
 const WidgetScaleContext = createContext(1);
@@ -501,11 +502,12 @@ export default function ComponentLabPage() {
     <WidgetScaleContext.Provider value={widgetScale}>
     <div className="cl-page">
       <header className="cl-header">
-        <h1>Component Lab</h1>
-        <p className="cl-subtitle">
-          Detachable, themable widgets built on <code>&lt;DetachableWidget /&gt;</code>.
+        <h1>Component Lab
+          <PageInfoPopover>
+            Detachable, themable widgets built on &lt;DetachableWidget /&gt;.
           Each widget can be detached into a floating overlay for a custom dashboard layout.
-        </p>
+          </PageInfoPopover>
+        </h1>
         <div className="cl-header-actions">
           <div className="cl-scale-bar">
             <span className="cl-scale-label">Widget Size:</span>

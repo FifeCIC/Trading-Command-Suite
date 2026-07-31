@@ -21,6 +21,7 @@ export interface ProtocolConfig {
   directionMode?: 'LONG_ONLY' | 'SHORT_ONLY' | 'BOTH';
   tradingStyle?: string;
   recommendedTimeframe?: string;
+  derivedFrom?: string | null;
   avgHoldTime?: string;
   winRateTarget?: string;
   idealFor?: string;
@@ -157,6 +158,7 @@ export class ProtocolDbService implements OnModuleInit {
         directionMode: (protocol.directionMode as 'LONG_ONLY' | 'SHORT_ONLY' | 'BOTH') || 'LONG_ONLY',
         tradingStyle: protocol.tradingStyle ?? undefined,
         recommendedTimeframe: protocol.recommendedTimeframe ?? undefined,
+        derivedFrom: protocol.derivedFrom ?? null,
         avgHoldTime: protocol.avgHoldTime ?? undefined,
         winRateTarget: protocol.winRateTarget ?? undefined,
         idealFor: protocol.idealFor ?? undefined,
@@ -223,6 +225,7 @@ export class ProtocolDbService implements OnModuleInit {
           directionMode: (p.directionMode as any) || 'LONG_ONLY',
           tradingStyle: p.tradingStyle ?? undefined,
           recommendedTimeframe: p.recommendedTimeframe ?? undefined,
+          derivedFrom: p.derivedFrom ?? null,
           avgHoldTime: p.avgHoldTime ?? undefined,
           winRateTarget: p.winRateTarget ?? undefined,
           idealFor: p.idealFor ?? undefined,
@@ -286,6 +289,7 @@ export class ProtocolDbService implements OnModuleInit {
             avgHoldTime: config.avgHoldTime,
             winRateTarget: config.winRateTarget,
             idealFor: config.idealFor,
+            derivedFrom: (config as any).derivedFrom ?? null,
             isDefault: true,
           },
           update: {
@@ -297,6 +301,7 @@ export class ProtocolDbService implements OnModuleInit {
             avgHoldTime: config.avgHoldTime,
             winRateTarget: config.winRateTarget,
             idealFor: config.idealFor,
+            derivedFrom: (config as any).derivedFrom ?? null,
           },
         });
         protocols++;

@@ -11,6 +11,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import LastUpdated from '../components/LastUpdated';
+import PageInfoPopover from '../components/PageInfoPopover';
 import './t212-portfolio.css';
 
 export default function T212PortfolioPage() {
@@ -75,13 +76,15 @@ export default function T212PortfolioPage() {
   return (
     <div className="t212p-page">
       <header className="t212p-header">
-        <h1>🏦 Trading212 Portfolio</h1>
-        <p className="t212p-subtitle">
-          Investment account overview — positions, orders, and sync controls.{' '}
-          <strong className={`t212p-mode t212p-mode--${modeClass}`} title={currentMode === 'demo' ? 'Connected to a Trading212 demo (paper) account — not a real money account' : currentMode === 'live' ? 'Connected to a live Trading212 account with real funds' : 'No Trading212 account connected'}>
-            {modeLabel}
-          </strong>
-        </p>
+        <h1>
+          Trading212 Portfolio
+          <PageInfoPopover>
+            Investment account overview — positions, orders, and sync controls.{' '}
+            <strong className={`t212p-mode t212p-mode--${modeClass}`} title={currentMode === 'demo' ? 'Connected to a Trading212 demo (paper) account — not a real money account' : currentMode === 'live' ? 'Connected to a live Trading212 account with real funds' : 'No Trading212 account connected'}>
+              {modeLabel}
+            </strong>
+          </PageInfoPopover>
+        </h1>
         {currentMode === 'none' && (
           <p className="t212p-hint" style={{ marginTop: '0.5rem', color: 'var(--ink-soft)', fontStyle: 'italic' }}>
             Configure TRADING212_API_KEY in your .env file to connect a Trading212 account.

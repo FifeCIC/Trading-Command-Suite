@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { STRATEGY_LIBRARY } from '../data/strategy-library';
 import './strategy-library.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const DIFFICULTY_COLORS = {
   Beginner: '#22c55e',
@@ -76,10 +77,11 @@ export default function StrategyLibraryPage() {
     <div className="sl-page">
       <header className="sl-header">
         <div>
-          <h1>Strategy Library</h1>
-          <p className="sl-subtitle">
+          <h1>Strategy Library
+          <PageInfoPopover>
             Browse trading strategies, understand their mechanics, and activate a complete META.Stack pipeline.
-          </p>
+          </PageInfoPopover>
+        </h1>
         </div>
       </header>
 

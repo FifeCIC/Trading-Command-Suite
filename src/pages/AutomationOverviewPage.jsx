@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './automation-overview.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 /* ── Helpers ── */
 function StatusDot({ on }) {
@@ -99,8 +100,11 @@ export default function AutomationOverviewPage() {
   return (
     <div className="ao-page">
       <header className="ao-header">
-        <h1>Automation Overview</h1>
-        <p className="ao-subtitle">Strategy chain snapshot — see what the automation system is running right now.</p>
+        <h1>Automation Overview
+          <PageInfoPopover>
+            Strategy chain snapshot — see what the automation system is running right now.
+          </PageInfoPopover>
+        </h1>
       </header>
 
       {/* ── Services Snapshot ── */}

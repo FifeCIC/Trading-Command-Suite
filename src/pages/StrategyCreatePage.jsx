@@ -22,6 +22,7 @@ import StrategyWizard from '../components/StrategyBuilder/StrategyWizard';
 import '../core/forms.css';
 import '../components/StrategyBuilder/strategy-wizard.css';
 import './strategy-create.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const TABS = [
   { id: 'form', label: 'Form', icon: '📝' },
@@ -177,8 +178,11 @@ export default function StrategyCreatePage() {
     <div className="sc-page">
       <motion.header className="sc-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div>
-          <h1>Create Strategy</h1>
-          <p className="sc-subtitle">Form or wizard — configure a new trading or scoring strategy</p>
+          <h1>Create Strategy
+          <PageInfoPopover>
+            Form or wizard — configure a new trading or scoring strategy
+          </PageInfoPopover>
+        </h1>
         </div>
       </motion.header>
 

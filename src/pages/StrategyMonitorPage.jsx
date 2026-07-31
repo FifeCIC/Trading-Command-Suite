@@ -8,7 +8,7 @@
  *   Compare   — P&L comparison across strategies (from StrategyComparisonPage)
  *   Ladders   — protocol-scored strategy rankings (from StrategyLaddersPage)
  *
- * Data: /api/trading/strategies, /api/automation/status, /api/trading/strategy-comparison, /api/scoring/arena
+ * Data: /api/trading/strategies/with-ratios, /api/automation/status, /api/trading/strategy-comparison, /api/scoring/arena
  *
  * @created 2026-07-29 — #504 strategy page consolidation
  */
@@ -53,7 +53,7 @@ export default function StrategyMonitorPage() {
   // ── Shared data ──
   const { data: strategies = [], isLoading: stratLoading } = useQuery({
     queryKey: ['monitor-strategies'],
-    queryFn: () => apiGet('/api/trading/strategies').catch(() => ({ strategies: [] })),
+    queryFn: () => apiGet('/api/trading/strategies/with-ratios').catch(() => ({ strategies: [] })),
     refetchInterval: 15_000,
   });
   const stratList = Array.isArray(strategies) ? strategies : (strategies?.strategies || strategies?.viable || []);

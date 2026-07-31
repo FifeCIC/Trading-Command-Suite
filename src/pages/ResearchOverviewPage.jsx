@@ -5,6 +5,7 @@ import { usePreferences } from '../core/hooks/usePreferences';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './research-overview.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 function MKV({ label, val, chg, invert }) {
   return (
@@ -49,8 +50,11 @@ export default function ResearchOverviewPage() {
   return (
     <div className="ro-page">
       <motion.header className="ro-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <div><h1>Research Overview</h1>
-        <p className="ro-subtitle">Cross-system dashboard — scoring, portfolio, market context, upcoming events.</p></div>
+        <div><h1>Research Overview
+          <PageInfoPopover>
+            Cross-system dashboard — scoring, portfolio, market context, upcoming events.
+          </PageInfoPopover>
+        </h1></div>
         <span className="ro-clock">Updated: {fmt(data.generatedAt)}</span>
       </motion.header>
       {!apiOnline && !isLoading && <ApiOfflineBanner />}

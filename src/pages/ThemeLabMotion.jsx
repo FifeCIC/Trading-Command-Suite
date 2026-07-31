@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { useState } from 'react';
 import '../pages/theme-lab.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const demos = [
   {
@@ -114,11 +115,12 @@ export default function ThemeLabMotion() {
   return (
     <div className="tl-page">
       <header className="tl-header">
-        <h1>Motion Lab</h1>
-        <p className="tl-subtitle">
-          <a href="https://motion.dev" target="_blank" rel="noreferrer">motion.dev</a> — 3.5KB animation library. Fade, slide, scale, stagger, AnimatePresence.
-          <br /><strong>Status: ✅ Accepted</strong> for micro-interactions. Keep under 300ms, prefer GPU-friendly properties.
-        </p>
+        <h1>Motion Lab
+          <PageInfoPopover>
+            motion.dev — 3.5KB animation library. Fade, slide, scale, stagger, AnimatePresence.
+          Status: ✅ Accepted for micro-interactions. Keep under 300ms, prefer GPU-friendly properties.
+          </PageInfoPopover>
+        </h1>
       </header>
 
       <button onClick={() => setKey((k) => k + 1)} className="tl-demo-btn" style={{ marginBottom: '1rem', padding: '0.4rem 0.85rem', fontSize: '0.78rem', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--line)', borderRadius: 6, color: 'var(--ink-soft)', cursor: 'pointer' }}>

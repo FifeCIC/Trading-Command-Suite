@@ -3,6 +3,7 @@ import CandlePatternChart from '../components/CandlePatternChart';
 import PatternDetailPanel from '../components/PatternDetailPanel';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './training-candle-patterns-page.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 const TIMEFRAMES = ['M5', 'M15', 'M30', 'H1', 'H4', 'D1'];
 const SYMBOLS = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'NZDUSD', 'XAUUSD', 'BTCUSD', 'NVDA', 'AAPL'];
@@ -62,10 +63,11 @@ export default function TrainingCandlePatternsPage() {
     <div className="training-candle-patterns-page">
       <div className="page-header">
         <div className="header-left">
-          <h1>🕯️ Candle Pattern Training</h1>
-          <p className="subtitle">
+          <h1>Candle Pattern Training
+          <PageInfoPopover>
             Learn to identify candlestick patterns. The same patterns that feed your trading signals.
-          </p>
+          </PageInfoPopover>
+        </h1>
         </div>
         <div className="header-right">
           <div className="pattern-counter" title="Total patterns detected">

@@ -12,6 +12,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { apiGet, apiPost } from '../core/api/client';
 import '../core/forms.css';
 import './create-protocols.css';
+import PageInfoPopover from '../components/PageInfoPopover';
 
 // ── Constants ──
 const DIRECTION_MODES = [
@@ -256,12 +257,13 @@ export default function CreateProtocolsPage() {
   return (
     <div className="cp-page">
       <header className="cp-header">
-        <h1>Protocol Builder</h1>
-        <p className="cp-subtitle">
-          Build a scoring protocol from directive groups. Protocols define WHAT to score —
+        <h1>Protocol Builder
+          <PageInfoPopover>
+            Build a scoring protocol from directive groups. Protocols define WHAT to score —
           individual directives within each group contribute evidence toward a composite score.
           Risk groups gate Technical + Sentiment groups multiplicatively.
-        </p>
+          </PageInfoPopover>
+        </h1>
       </header>
 
       {/* ── Protocol Metadata ── */}

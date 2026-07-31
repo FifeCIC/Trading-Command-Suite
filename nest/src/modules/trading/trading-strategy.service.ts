@@ -13,7 +13,7 @@ import { DirectiveInput, MarketBar } from '../directives/interfaces/directive.in
 export interface StrategySummary {
   id: string;
   name: string;
-  protocolId: string | null;  // Deprecated — use ScoringStrategy via scoringStrategyId FK
+  protocolId: string | null;
   shortProtocolId?: string | null;
   symbol: string;
   timeframe: string;
@@ -21,15 +21,21 @@ export interface StrategySummary {
   active: boolean;
   brokerId?: string;
   minComposite?: number;
-  baseSize?: number | null;  // Deprecated — use ScoringStrategy
-  slPct?: number | null;     // Deprecated — use ScoringStrategy
-  tpPct?: number | null;     // Deprecated — use ScoringStrategy
+  baseSize?: number | null;
+  slPct?: number | null;
+  tpPct?: number | null;
   cooldownMinutes?: number;
   maxPositions?: number;
   lastEvaluatedAt: string | null;
   lastSignal: string | null;
   lastComposite: number | null;
   evaluationCount: number;
+  /** Profit/runtime ratio: total P&L / days active. null if no trades. */
+  profitRatio: number | null;
+  /** Total realized P&L across all trades for this strategy. */
+  totalPnl: number | null;
+  /** Days since first trade (or 1 if only one day of trades). */
+  daysActive: number | null;
 }
 
 @Injectable()
@@ -81,8 +87,56 @@ export class TradingStrategyService {
         lastSignal: lastEval?.signal ?? null,
         lastComposite: lastEval?.composite ?? null,
         evaluationCount: s.evaluations?.length ?? 0,
+        profitRatio: null, totalPnl: null, daysActive: null, // filled below
       };
     });
+  }
+
+  /**
+   * findAll with profit/runtime ratio (#343).
+   * Computes SUM(trade.pnl) / days_active per strategy.
+   */
+  async findAllWithRatios(): Promise<StrategySummary[]> {
+    const strategies = await this.findAll();
+
+    if (!this.prisma.isAvailable || strategies.length === 0) return strategies;
+
+    try {
+      // Batch query: P&L per strategy from the trade table
+      const trades = await this.prisma.trade.findMany({
+        where: {
+          scoringStrategyId: { in: strategies.map(s => s.id) },
+          pnl: { not: null },
+          status: 'closed',
+        },
+        select: { scoringStrategyId: true, pnl: true, openedAt: true },
+      });
+
+      // Aggregate per strategy
+      const agg = new Map<string, { totalPnl: number; firstTrade: Date; lastTrade: Date }>();
+      for (const t of trades) {
+        if (!t.scoringStrategyId) continue;
+        const entry = agg.get(t.scoringStrategyId) || { totalPnl: 0, firstTrade: t.openedAt, lastTrade: t.openedAt };
+        entry.totalPnl += t.pnl || 0;
+        if (t.openedAt < entry.firstTrade) entry.firstTrade = t.openedAt;
+        if (t.openedAt > entry.lastTrade) entry.lastTrade = t.openedAt;
+        agg.set(t.scoringStrategyId, entry);
+      }
+
+      // Apply ratios
+      for (const s of strategies) {
+        const a = agg.get(s.id);
+        if (!a) continue;
+        const daysActive = Math.max(1, Math.ceil((Date.now() - a.firstTrade.getTime()) / 86400000));
+        s.totalPnl = Math.round(a.totalPnl * 100) / 100;
+        s.daysActive = daysActive;
+        s.profitRatio = Math.round((a.totalPnl / daysActive) * 100) / 100;
+      }
+    } catch (err) {
+      this.logger.warn(`Could not compute profit ratios: ${(err as Error).message}`);
+    }
+
+    return strategies;
   }
 
   async findOne(id: string) {
@@ -628,6 +682,84 @@ export class TradingStrategyService {
     if (last > first * 1.002) return 'BUY';
     if (last < first * 0.998) return 'SELL';
     return 'HOLD';
+  }
+
+  /**
+   * Seed default trading strategies from seed data.
+   * Idempotent — skips strategies that already exist by name+symbol.
+   * Creates scoring strategies automatically if they don't exist.
+   */
+  async seedDefaults(strategies: Array<{
+    name: string; symbol: string; protocolId: string;
+    brokerId: string; mode: string; timeframe: string;
+    baseSize: number; slPct: number; tpPct: number; minComposite: number;
+  }>): Promise<{ created: number; skipped: number; scoringCreated: number }> {
+    if (!this.prisma.isAvailable) {
+      return { created: 0, skipped: strategies.length, scoringCreated: 0 };
+    }
+
+    let created = 0, skipped = 0, scoringCreated = 0;
+
+    for (const s of strategies) {
+      // Check if already exists
+      const existing = await (this.prisma as any).tradingStrategy.findFirst({
+        where: { name: s.name, symbol: s.symbol },
+      });
+      if (existing) { skipped++; continue; }
+
+      // Create or find scoring strategy
+      let scoringId: string | null = null;
+      try {
+        const existingScoring = await (this.prisma as any).scoringStrategy.findFirst({
+          where: { protocolId: s.protocolId, watchlistName: 'default' },
+        });
+        if (existingScoring) {
+          scoringId = existingScoring.id;
+        } else {
+          const createdScoring = await (this.prisma as any).scoringStrategy.create({
+            data: {
+              name: `${s.name} Scoring`,
+              protocolId: s.protocolId,
+              watchlistName: 'default',
+              enabled: true,
+              tradeThreshold: s.minComposite,
+              mode: 'score',
+            },
+          });
+          scoringId = createdScoring.id;
+          scoringCreated++;
+        }
+      } catch (err) {
+        this.logger.warn(`Could not create scoring strategy for ${s.name}: ${(err as Error).message}`);
+      }
+
+      // Create trading strategy
+      try {
+        await (this.prisma as any).tradingStrategy.create({
+          data: {
+            name: s.name,
+            symbol: s.symbol,
+            protocolId: s.protocolId,
+            brokerId: s.brokerId,
+            mode: s.mode,
+            timeframe: s.timeframe,
+            baseSize: s.baseSize,
+            slPct: s.slPct,
+            tpPct: s.tpPct,
+            minComposite: s.minComposite,
+            scoringStrategyId: scoringId,
+            active: true,
+          },
+        });
+        created++;
+      } catch (err) {
+        this.logger.warn(`Could not create trading strategy ${s.name}: ${(err as Error).message}`);
+        skipped++;
+      }
+    }
+
+    this.logger.log(`Seed complete: ${created} created, ${skipped} skipped, ${scoringCreated} scoring auto-created`);
+    return { created, skipped, scoringCreated };
   }
 }
 

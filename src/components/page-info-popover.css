@@ -1,0 +1,52 @@
+/* PageInfoPopover — ℹ icon tooltip for page descriptions */
+
+.pip-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line, #334155);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.7rem;
+  cursor: help;
+  padding: 0;
+  line-height: 1;
+  vertical-align: middle;
+  margin-left: 0.4rem;
+  transition: color 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+.pip-trigger:hover,
+.pip-trigger:focus-visible {
+  color: var(--accent, #0ea5a6);
+  border-color: var(--accent, #0ea5a6);
+  outline: none;
+}
+
+.pip-popover {
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--accent, #0ea5a6);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  max-width: 400px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  animation: pip-fade-in 0.15s ease-out;
+  margin: 0;
+  inset: unset;
+  top: anchor(bottom);
+  left: anchor(left);
+}
+
+@keyframes pip-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.pip-content {
+  font-size: 0.82rem;
+  color: var(--ink-soft, #94a3b8);
+  line-height: 1.55;
+}
