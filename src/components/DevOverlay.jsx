@@ -1,12 +1,15 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useUiStore } from '../stores/useUiStore';
-import { formatViewMeta } from '../core/view-meta';
+import { getViewMeta } from '../core/view-meta';
 
 /**
  * Dev Overlay — primary panel for Admin + Status information.
  *
  * Always shows when devOverlayOpen is true. Admin/Status data is the
  * primary content; tagged runtime elements appear below.
+ *
+ * Inspect Mode: click any UI element to open its source file in VS Code.
+ * Requires `code` command in PATH on the development machine.
  */
 export default function DevOverlay({
   healthQuery,
@@ -21,8 +24,21 @@ export default function DevOverlay({
 
   // ── Copy View Info ──
   const handleCopyViewInfo = useCallback(() => {
-    const meta = formatViewMeta(window.location.pathname);
-    navigator.clipboard.writeText(meta).then(() => {
+    const meta = getViewMeta(window.location.pathname);
+    if (!meta) {
+      setCopiedMsg('No metadata for this route');
+      setTimeout(() => setCopiedMsg(''), 2000);
+      return;
+    }
+    const text = [
+      `View:       ${meta.label}`,
+      `Route:      ${window.location.pathname}`,
+      `File:       ${meta.file}`,
+      `CSS:        ${meta.css}`,
+      `API:        ${(meta.api || []).join(', ') || 'None'}`,
+      `Component:  <${meta.label.replace(/\s+/g, '')} />`,
+    ].join('\n');
+    navigator.clipboard.writeText(text).then(() => {
       setCopiedMsg('View info copied!');
       setTimeout(() => setCopiedMsg(''), 2000);
     }).catch(() => {
@@ -56,37 +72,38 @@ export default function DevOverlay({
       e.preventDefault();
       e.stopPropagation();
       
-      // Copy element snippet
-      const tag = hoveredEl.tagName.toLowerCase();
-      const id = hoveredEl.id ? `#${hoveredEl.id}` : '';
-      const classes = hoveredEl.className && typeof hoveredEl.className === 'string'
-        ? `.${hoveredEl.className.split(' ').filter(Boolean).join('.')}`
-        : '';
+      // Resolve route to source file
+      const meta = getViewMeta(window.location.pathname);
+      const file = meta?.file || null;
       
-      // Preserve meaningful text — truncate only long content
-      const rawText = (hoveredEl.textContent || '').trim().replace(/\s+/g, ' ');
-      const displayText = rawText.length > 80
-        ? rawText.slice(0, 77) + '…'
-        : rawText;
-      const innerPreview = displayText
-        ? displayText
-        : (hoveredEl.children.length > 0 ? `[${hoveredEl.children.length} children]` : '');
+      // Extract a short text query from the element for line matching
+      const text = (hoveredEl.textContent || '').trim().replace(/\s+/g, ' ').substring(0, 60);
       
-      const snippet = hoveredEl.outerHTML.replace(
-        hoveredEl.innerHTML,
-        innerPreview || '…'
-      );
-      
-      const info = `Element:  <${tag}${id}${classes}>
-Snippet:  ${snippet}
-Source:   ${window.location.pathname}`;
-      
-      navigator.clipboard.writeText(info).then(() => {
-        setCopiedMsg('Element copied!');
+      if (file) {
+        setCopiedMsg(text ? `Opening "${text}"...` : `Opening ${file}...`);
+        fetch('http://localhost:3201/api/dev/open-file', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ file, query: text || undefined }),
+        }).then(r => r.json()).then(data => {
+          const msg = data.line
+            ? `Opened ${file}:${data.line}`
+            : data.opened ? `Opened: ${file}` : `Failed: ${data.error || 'unknown'}`;
+          setCopiedMsg(msg);
+          setTimeout(() => setCopiedMsg(''), 3000);
+        }).catch(() => {
+          setCopiedMsg('Backend unreachable');
+          setTimeout(() => setCopiedMsg(''), 2000);
+        });
+      } else {
+        setCopiedMsg('No source file mapped for this route');
         setTimeout(() => setCopiedMsg(''), 2000);
-      }).catch(() => {});
+      }
 
-      // Exit inspect mode after copy
+      if (hoveredEl) {
+        hoveredEl.style.outline = '';
+        hoveredEl = null;
+      }
       setInspectMode(false);
     }
 
@@ -187,7 +204,7 @@ Source:   ${window.location.pathname}`;
             className="dev-action-btn"
             style={{ marginTop: '0.35rem' }}
           >
-            {inspectMode ? '🔍 Inspecting... (click element)' : '🔍 Inspect Element'}
+            {inspectMode ? '🔍 Click element to open in VS Code...' : '🔍 Inspect Element'}
           </button>
           {copiedMsg && (
             <span style={{ fontSize: '0.68rem', color: '#22c55e', display: 'block', marginTop: '0.25rem' }}>

@@ -26,6 +26,7 @@ export const STATUS_SNAPSHOT = [
   '2026-06-26: Automation Architecture v1 designed — broker-agnostic automation loop with Timeline system as decision modifier (FOMC→reduce risk, earnings→block symbol, session open→boost protocols, seasonality→adjust thresholds).',
   '2026-07-01–02: Agent sessions — EarningsModule, AnalystTargetsService (Finnhub→FMP fallback), Settings API, Market Correlations wired, Seasonality directives, DataImportLog, PortfolioSnapshot models. 15+ issues closed. See GitHub Issues with `revision-log` label for detailed history.',
   '2026-07-22: Handoff batch #3 — 6 handoffs processed. Health Dashboard + Commands Reference pages deployed. Speed Scanner protocol UUID→slug resolution + candlestick pattern detection (#459). Trade pipeline schema extended with MT5 fields + full traceability chain (#446). Agent governance close-checklist rules + AGENT-ATTENTION.md shared blocker log. Execution Queue dual-tab redesign with Live Events stream (#457). Health settings toggles (10 check toggles). Agent CLI health-check.ps1 tooling.',
+  '2026-07-31: Session strategies + protocol variants — 4 new XAUUSD protocol variants (xau-speed-m5/m15/1h/4h) with derivedFrom A/B tracking. 3 new session trading strategies (Tokyo USDJPY, London EURUSD, US SPX500). Strategy seed data file + POST /api/trading/strategies/seed endpoint. protocol.derivedFrom column added to schema, surfaced in GET /api/scoring/gated/protocols. Total: 48 protocols, 7 active trading strategies in automation loop.',
 ]
 
 
@@ -286,10 +287,15 @@ export const CURRENT_SLICE = [
   'Config Reload Two-Tier Policy (#509) — Tier 1 hot-reload (POST /api/system/reload-config, ~20ms): directive metadata, protocol caches, scoring strategy thresholds, settings. Tier 2 restart required: new directive classes, protocol restructures, new provider adapters, calibration overrides, Prisma schema changes, env variables. 9 config surfaces audited.',
   'Strategy Page Consolidation (#504) — 9 strategy-related pages → 4 canonical pages: StrategiesListPage (filterable card index), StrategyMonitorPage (tabbed hub: Overview/Compare/Ladders), StrategyBuilderPage (drag-and-drop directive canvas, now registered), StrategyCreatePage (tabbed creation: Form/Wizard). Old pages preserved under "Legacy" sidebar section. 4 dead code pages identified (not deleted).',
   'Backtest UI Unification Plan (#467) — Charts deferred to Phase 5. Non-chart unification starts Phase 2: results table, config save/load, parameter sweep UI, walk-forward UI, CSV export, benchmark card. Phase 3: A/B comparison, batch runs, coverage viz. 14 backend endpoints already built — frontend needs to expose them. 3 shared cross-cut components identified (ExecutionRealismPanel, ResultsTable, SignalCard).',
+  // ── 2026-07-31 — Session Strategies + Protocol Variants ──
+  'XAUUSD Protocol Variants (A/B Foundation) — 4 new protocol variants derived from xau-speed-v1: xau-speed-m5 (5m scalp), xau-speed-m15 (15m day trade), xau-speed-1h (1h swing), xau-speed-4h (4h position). Share 14 directives across technical/sentiment/risk groups with progressively reduced speed-momentum and RSI weightings for longer timeframes.',
+  'Session Trading Strategies — 3 new strategies covering all 3 market sessions: Tokyo USDJPY (forex-session-v1), London EURUSD (eurusd-macro-v1), US SPX500 (spy-day-v1). Active in automation loop: Tokyo/London scoring live, US pending bars.',
+  'Strategy Seed Data — NEW nest/src/modules/trading/strategy-seed-data.ts with 7 default strategies (4 XAUUSD variants + 3 session). POST /api/trading/strategies/seed idempotent endpoint.',
+  'Protocol derivedFrom Field — protocol.derivedFrom VARCHAR(100) column added to Prisma schema + DB. Surfaced in GET /api/scoring/gated/protocols response for A/B variant tracking. ProtocolDbService reads through to DB. Total: 48 protocols, 7 active trading strategies in automation loop.',
 ]
 
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-30 (handoff batch #6 — symbol resolver, scoring paths canonical, activity feed, config reload policy, strategy consolidation 9→4, backtest UI plan)'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-31 (session strategies + XAUUSD protocol variants A/B, strategy seed endpoint, derivedFrom column)'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -1010,6 +1016,22 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated operator access',
     owner: 'AutomationController',
     contract: 'Activity log feed (2026-07-29). Reads most recent automation_event rows via AuditLogService.getRecentActivity(). Returns { events[], currentTick, currentPhase, phaseStartedAt, totalEventsToday }. Each event: tickNumber, timestamp, step, symbol, decision, detail, durationMs. Zero new DB writes — reads existing audit trail. Query: ?limit=30.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/trading/strategies/seed',
+    method: 'POST',
+    permission: 'Admin access',
+    owner: 'TradingStrategyController',
+    contract: 'Idempotent seed of 7 default trading strategies (4 XAUUSD variants + 3 session) into scoring_strategy + trading_strategy tables. Reads from nest/src/modules/trading/strategy-seed-data.ts. Returns {seeded:N, skipped:N}. Safe to re-run.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/scoring/gated/protocols',
+    method: 'GET',
+    permission: 'Authenticated operator access',
+    owner: 'ProtocolGatingController',
+    contract: 'Returns all protocols with their directive groups. Each protocol now includes derivedFrom field (parent protocol slug) for A/B variant tracking. Updated 2026-07-31 to surface derivedFrom from protocol table.',
     status: 'active',
   },
 ]

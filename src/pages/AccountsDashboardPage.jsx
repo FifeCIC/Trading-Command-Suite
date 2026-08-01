@@ -75,8 +75,16 @@ export default function AccountsDashboardPage() {
   const mt5Accounts = Array.isArray(data?.mt5) ? data.mt5 : (Array.isArray(data?.mt5?.accounts) ? data.mt5.accounts : []);
   const t212Summary = data?.t212 ?? {};
 
-  // Separate live from demo
-  const liveMT5 = mt5Accounts.filter((a) => a.type === 'live' || a.isLive || a.login?.toString().includes('7240659') || a.login?.toString().includes('8026714'));
+  // Separate live from demo. Classification is derived from backend metadata
+  // (isLive from server name) — never from hardcoded login numbers.
+  const liveMT5 = mt5Accounts.filter((a) => {
+    if (a.isLive === true) return true;
+    if (a.isLive === false) return false;
+    // Fallback: derive from server name when the backend hasn't flagged it yet.
+    const srv = (a.server || '').toLowerCase();
+    const isDemo = srv.includes('demo');
+    return !isDemo && Boolean(a.login);
+  });
   const demoMT5 = mt5Accounts.filter((a) => !liveMT5.includes(a));
 
   // Trading212 data

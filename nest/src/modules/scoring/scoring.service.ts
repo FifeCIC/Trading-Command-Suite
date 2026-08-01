@@ -486,24 +486,10 @@ export class ScoringService implements OnModuleInit {
       totalSymbols: ranked.length,
     };
 
-    // Persist score snapshots for history endpoints
-    try {
-      const strategy = await this.findOrCreateDefaultStrategy();
-      if (strategy) {
-        const strategyId = strategy.id;
-        for (const s of ranked) {
-          await this.scoreHistoryService.storeSnapshot(
-            s.symbolId,
-            strategyId,
-            s.score,
-            { breakdown: s.breakdown, confidence: s.confidence, mode: base.mode },
-          );
-        }
-        this.logger.debug(`Stored ${ranked.length} score snapshots (strategyId=${strategyId})`);
-      }
-    } catch (err) {
-      this.logger.warn(`Failed to persist score snapshots: ${String(err)}`);
-    }
+    // ── Score snapshots are now stored by protocol-gated scoring only.
+    // The flat rankAll pipeline no longer persists per-symbol snapshots
+    // to avoid flooding the DB with high-frequency, unbounded-score runs.
+    // See protocol-gating.service.ts for the canonical snapshot path.
 
     return {
       ...base,

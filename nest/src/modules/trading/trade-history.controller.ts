@@ -273,4 +273,90 @@ export class TradeHistoryController {
       return { error: `Failed to build weekend checklist: ${(err as Error).message}` };
     }
   }
+
+  /**
+   * GET /api/trading/stop-adjustments — query SL/TP adjustment history.
+   * ?symbol=XAUUSD&tradeTicket=123&limit=20
+   */
+  @Get('stop-adjustments')
+  async getStopAdjustments(
+    @Query('symbol') symbol?: string,
+    @Query('tradeTicket') tradeTicket?: string,
+    @Query('limit') limit?: string,
+  ) {
+    if (!this.prisma.isAvailable) return { adjustments: [], message: 'Database unavailable' };
+    const take = Math.min(parseInt(limit || '20', 10) || 20, 100);
+    try {
+      const where: any = {};
+      if (symbol) where.symbol = symbol.toUpperCase();
+      if (tradeTicket) where.tradeTicket = parseInt(tradeTicket, 10);
+
+      const adjustments = await (this.prisma as any).stopAdjustment.findMany({
+        where, orderBy: { adjustedAt: 'desc' }, take,
+      });
+
+      return {
+        adjustments: adjustments.map((a: any) => ({
+          id: a.id,
+          tradeTicket: a.tradeTicket,
+          symbol: a.symbol,
+          oldSl: a.oldSl, newSl: a.newSl,
+          oldTp: a.oldTp, newTp: a.newTp,
+          reason: a.reason,
+          directiveScores: a.directiveScores,
+          adjustedAt: a.adjustedAt,
+        })),
+        total: adjustments.length,
+      };
+    } catch (err) {
+      return { adjustments: [], error: (err as Error).message };
+    }
+  }
+
+  /**
+   * GET /api/trading/portfolio-snapshots — query portfolio snapshots.
+   * ?type=trade&limit=10
+   */
+  @Get('portfolio-snapshots')
+  async getPortfolioSnapshots(
+    @Query('type') type?: string,
+    @Query('limit') limit?: string,
+  ) {
+    if (!this.prisma.isAvailable) return { snapshots: [], message: 'Database unavailable' };
+    const take = Math.min(parseInt(limit || '10', 10) || 10, 50);
+    try {
+      const where: any = {};
+      if (type) where.snapshotType = type;
+
+      const snapshots = await (this.prisma as any).portfolioSnapshot.findMany({
+        where, orderBy: { takenAt: 'desc' }, take,
+        include: { positions: true },
+      });
+
+      return {
+        snapshots: snapshots.map((s: any) => ({
+          id: s.id,
+          type: s.snapshotType,
+          totalValue: s.totalValue,
+          totalPnl: s.totalPnl,
+          totalPnlPct: s.totalPnlPct,
+          positionCount: s.positionCount,
+          cash: s.cash,
+          providerSummary: s.providerSummary,
+          takenAt: s.takenAt,
+          positions: s.positions?.map((p: any) => ({
+            symbol: p.symbol,
+            quantity: p.quantity,
+            entryPrice: p.entryPrice,
+            currentPrice: p.currentPrice,
+            pnl: p.pnl,
+            pnlPct: p.pnlPct,
+          })) || [],
+        })),
+        total: snapshots.length,
+      };
+    } catch (err) {
+      return { snapshots: [], error: (err as Error).message };
+    }
+  }
 }

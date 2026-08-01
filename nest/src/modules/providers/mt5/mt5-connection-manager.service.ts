@@ -16,6 +16,12 @@ export interface Mt5Account {
   currency?: string;
   connected: boolean;
   lastSeen?: string;
+  /**
+   * Derived account type — true when the server is a live trading server.
+   * Demo/practice servers (server name containing "demo") are false.
+   * Derived from server metadata rather than hardcoded login numbers.
+   */
+  isLive?: boolean;
 }
 
 export interface Mt5BridgeHealth {
@@ -66,6 +72,8 @@ export class Mt5ConnectionManager {
       server: a.server || '',
       active: a.active || false,
       connected: data.connected && a.active,
+      // Live server names host "ib"/"live" variants; demo/practice servers contain "demo".
+      isLive: this.isLiveServer(a.server || '', a.login || ''),
     }));
 
     // Enrich active account with balance info
@@ -81,6 +89,22 @@ export class Mt5ConnectionManager {
     this.cacheAccounts = accounts;
     this.lastFetch = now;
     return accounts;
+  }
+
+  /**
+   * Heuristically classify whether an MT5 account is live vs demo/practice.
+   * Demo/practice servers embed "demo" in the server name (e.g. "ICMarketsSC-Demo",
+   * "MetaQuotes-Demo", "Pepperstone-MT5-Demo"). Everything else is treated as live.
+   * This avoids ever hardcoding specific login numbers in application source.
+   */
+  private isLiveServer(server: string, login: string): boolean {
+    const s = (server || '').toLowerCase();
+    const normalized = s.replace(/[^a-z]/g, '');
+    if (normalized.includes('demo')) return false;
+    // MetaQuotes-Demo, Demo, etc. — anything that declares itself demo/practice is not live.
+    if (s.includes('demo')) return false;
+    // Live ICMarkets servers end in "-MT5-2"/"-MT5-3" (no "demo" token) — treat as live.
+    return login.length > 0;
   }
 
   async getHealth(): Promise<Mt5BridgeHealth | null> {

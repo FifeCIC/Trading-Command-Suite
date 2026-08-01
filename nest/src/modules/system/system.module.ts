@@ -27,12 +27,13 @@ import { ConfigExportController } from './config-export.controller';
 import { FileInventoryService } from './file-inventory.service';
 import { FileInventoryController } from './file-inventory.controller';
 import { ConfigReloadController } from './config-reload.controller';
+import { DevController } from './dev.controller';
 
 @Global()
 @Module({
   imports: [ProvidersModule, DirectivesModule, ScoringModule],
   providers: [SystemLogService, ProcessManagerService, SettingsService, ScoringLogService, MetricsMiddleware, DataRetentionService, SystemHealthService, BacktestArchiveService, ConfigExportService, FileInventoryService],
-  controllers: [SystemLogController, ProcessManagerController, DataFreshnessController, ArchitectureManifestController, DatabaseStatsController, SettingsController, ScoringLogController, DataRetentionController, SystemHealthController, BacktestArchiveController, PreferencesController, AutomationRulesController, ConfigExportController, FileInventoryController, ConfigReloadController],
+  controllers: [SystemLogController, ProcessManagerController, DataFreshnessController, ArchitectureManifestController, DatabaseStatsController, SettingsController, ScoringLogController, DataRetentionController, SystemHealthController, BacktestArchiveController, PreferencesController, AutomationRulesController, ConfigExportController, FileInventoryController, ConfigReloadController, DevController],
   exports: [SystemLogService, ProcessManagerService, SettingsService, ScoringLogService, MetricsMiddleware, DataRetentionService],
 })
 export class SystemModule {}

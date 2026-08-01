@@ -227,6 +227,12 @@ const KNOWN_FEATURES = {
   'Config Reload Policy (Two-Tier)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
   'Strategy Page Consolidation (9→4)': { dataPersistence: 'config', uiSurfaces: 4, pipelineIntegration: 'none', devCompletion: 'complete' },
   'Backtest UI Unification Plan (Phase 2-5)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+  // 2026-07-31 — Session Strategies + Protocol Variants
+  'XAUUSD Protocol Variants (A/B, 4 timeframes)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Protocol derivedFrom (A/B Tracking)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Session Trading Strategies (Tokyo/London/US)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Strategy Seed Data (7 defaults)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Session Market Coverage (USDJPY/EURUSD/SPX500)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
 };
 
 // ── Build unified capability rows ──

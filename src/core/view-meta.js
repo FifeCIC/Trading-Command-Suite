@@ -41,6 +41,30 @@ const VIEW_META = {
     css: 'src/pages/strategy-comparison.css',
     api: ['GET /api/trading/strategy-comparison'],
   },
+  '/trading/strategies-index': {
+    label: 'Strategies',
+    file: 'src/pages/StrategiesListPage.jsx',
+    css: 'src/pages/strategies-list.css',
+    api: ['GET /api/trading/strategies/with-ratios', 'GET /api/portfolio'],
+  },
+  '/trading/strategy-monitor': {
+    label: 'Strategy Monitor',
+    file: 'src/pages/StrategyMonitorPage.jsx',
+    css: 'src/pages/strategy-monitor.css',
+    api: ['GET /api/trading/strategies/with-ratios', 'GET /api/automation/status', 'GET /api/trading/strategy-comparison', 'GET /api/scoring/arena'],
+  },
+  '/trading/strategy-create': {
+    label: 'Create Strategy',
+    file: 'src/pages/StrategyCreatePage.jsx',
+    css: 'src/pages/strategy-create.css',
+    api: ['GET /api/scoring/gated/protocols', 'GET /api/watchlists', 'POST /api/trading/strategies'],
+  },
+  '/scoring/strategy-builder': {
+    label: 'Protocol Builder',
+    file: 'src/pages/StrategyBuilderPage.jsx',
+    css: 'src/components/StrategyBuilder/strategy-builder.css',
+    api: ['GET /api/directives', 'GET /api/watchlists'],
+  },
   '/trading/trade-journal': {
     label: 'Trade Journal',
     file: 'src/pages/TradeJournalPage.jsx',
