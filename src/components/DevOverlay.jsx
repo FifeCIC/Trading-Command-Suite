@@ -20,6 +20,7 @@ export default function DevOverlay({
 }) {
   const open = useUiStore((state) => state.devOverlayOpen);
   const [inspectMode, setInspectMode] = useState(false);
+  const [inspectAction, setInspectAction] = useState('open'); // 'open' | 'copy'
   const [copiedMsg, setCopiedMsg] = useState('');
 
   // ── Copy View Info ──
@@ -47,12 +48,34 @@ export default function DevOverlay({
     });
   }, []);
 
+  // ── Open View File ──
+  const handleOpenViewFile = useCallback(() => {
+    const meta = getViewMeta(window.location.pathname);
+    if (!meta?.file) {
+      setCopiedMsg('No source file mapped for this route');
+      setTimeout(() => setCopiedMsg(''), 2000);
+      return;
+    }
+    setCopiedMsg(`Opening ${meta.file}...`);
+    fetch('http://localhost:3201/api/dev/open-file', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file: meta.file }),
+    }).then(r => r.json()).then(data => {
+      setCopiedMsg(data.opened ? `Opened: ${meta.file}` : `Failed: ${data.error || 'unknown'}`);
+      setTimeout(() => setCopiedMsg(''), 3000);
+    }).catch(() => {
+      setCopiedMsg('Backend unreachable');
+      setTimeout(() => setCopiedMsg(''), 2000);
+    });
+  }, []);
+
   // ── Element Inspector Mode ──
   useEffect(() => {
     if (!inspectMode) return;
 
     let hoveredEl = null;
-    let overlay = null;
+    const HEADERS = new Set(['H1','H2','H3','H4','H5','H6','TH','LABEL','LEGEND']);
 
     function onMouseMove(e) {
       if (hoveredEl) {
@@ -60,11 +83,14 @@ export default function DevOverlay({
         hoveredEl = null;
       }
       const el = document.elementFromPoint(e.clientX, e.clientY);
-      if (el && el !== document.body && el !== document.documentElement) {
-        hoveredEl = el;
-        el.style.outline = '2px solid #f59e0b';
-        el.style.outlineOffset = '1px';
-      }
+      if (!el || el === document.body || el === document.documentElement) return;
+      
+      // In 'open' mode, only highlight headings — they map to source lines best
+      if (inspectAction === 'open' && !HEADERS.has(el.tagName)) return;
+      
+      hoveredEl = el;
+      el.style.outline = '2px solid #f59e0b';
+      el.style.outlineOffset = '1px';
     }
 
     function onClick(e) {
@@ -72,38 +98,35 @@ export default function DevOverlay({
       e.preventDefault();
       e.stopPropagation();
       
-      // Resolve route to source file
       const meta = getViewMeta(window.location.pathname);
       const file = meta?.file || null;
-      
-      // Extract a short text query from the element for line matching
       const text = (hoveredEl.textContent || '').trim().replace(/\s+/g, ' ').substring(0, 60);
-      
-      if (file) {
+
+      if (inspectAction === 'open' && file) {
+        // Open file at matching line
         setCopiedMsg(text ? `Opening "${text}"...` : `Opening ${file}...`);
         fetch('http://localhost:3201/api/dev/open-file', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ file, query: text || undefined }),
         }).then(r => r.json()).then(data => {
-          const msg = data.line
-            ? `Opened ${file}:${data.line}`
-            : data.opened ? `Opened: ${file}` : `Failed: ${data.error || 'unknown'}`;
-          setCopiedMsg(msg);
+          setCopiedMsg(data.line ? `Opened ${file}:${data.line}` : data.opened ? `Opened: ${file}` : `Failed`);
           setTimeout(() => setCopiedMsg(''), 3000);
-        }).catch(() => {
-          setCopiedMsg('Backend unreachable');
-          setTimeout(() => setCopiedMsg(''), 2000);
-        });
+        }).catch(() => { setCopiedMsg('Backend unreachable'); setTimeout(() => setCopiedMsg(''), 2000); });
       } else {
-        setCopiedMsg('No source file mapped for this route');
-        setTimeout(() => setCopiedMsg(''), 2000);
+        // Copy element info only
+        const tag = hoveredEl.tagName.toLowerCase();
+        const id = hoveredEl.id ? `#${hoveredEl.id}` : '';
+        const cls = hoveredEl.className && typeof hoveredEl.className === 'string'
+          ? `.${hoveredEl.className.split(' ').filter(Boolean).join('.')}` : '';
+        const info = `Element:  <${tag}${id}${cls}>\nText:     ${text || '(none)'}\nSource:   ${window.location.pathname}`;
+        navigator.clipboard.writeText(info).then(() => {
+          setCopiedMsg('Element copied!');
+          setTimeout(() => setCopiedMsg(''), 2000);
+        }).catch(() => {});
       }
 
-      if (hoveredEl) {
-        hoveredEl.style.outline = '';
-        hoveredEl = null;
-      }
+      if (hoveredEl) { hoveredEl.style.outline = ''; hoveredEl = null; }
       setInspectMode(false);
     }
 
@@ -117,7 +140,7 @@ export default function DevOverlay({
       document.body.style.cursor = '';
       if (hoveredEl) hoveredEl.style.outline = '';
     };
-  }, [inspectMode]);
+  }, [inspectMode, inspectAction]);
 
   // ── Escape key closes inspect mode or overlay ──
   const toggleDevOverlay = useUiStore((state) => state.toggleDevOverlay);
@@ -200,11 +223,27 @@ export default function DevOverlay({
           </button>
           <button
             type="button"
-            onClick={() => { setInspectMode(true); setCopiedMsg(''); }}
+            onClick={handleOpenViewFile}
             className="dev-action-btn"
             style={{ marginTop: '0.35rem' }}
           >
-            {inspectMode ? '🔍 Click element to open in VS Code...' : '🔍 Inspect Element'}
+            📂 Open View File
+          </button>
+          <button
+            type="button"
+            onClick={() => { setInspectAction('open'); setInspectMode(true); setCopiedMsg(''); }}
+            className="dev-action-btn"
+            style={{ marginTop: '0.35rem' }}
+          >
+            {inspectMode && inspectAction === 'open' ? '🔍 Click a heading to jump to its line...' : '🔍 Inspect & Open'}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setInspectAction('copy'); setInspectMode(true); setCopiedMsg(''); }}
+            className="dev-action-btn"
+            style={{ marginTop: '0.35rem' }}
+          >
+            {inspectMode && inspectAction === 'copy' ? '🔎 Click element to copy info...' : '🔎 Inspect & Copy'}
           </button>
           {copiedMsg && (
             <span style={{ fontSize: '0.68rem', color: '#22c55e', display: 'block', marginTop: '0.25rem' }}>
