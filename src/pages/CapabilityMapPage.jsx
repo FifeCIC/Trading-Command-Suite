@@ -197,7 +197,7 @@ const KNOWN_FEATURES = {
   'PositionSyncService (Broker-Agnostic)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
   'Strategy Library (9 strategies)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Gold Scalp Protocol (xau-speed-v1)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'CAD Sniper Protocol (cad-sniper-v1)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'USDCAD Oil-Pair Protocol (usdcad-oil-v1)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Forex Session Protocol (forex-session-v1)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'META.Stack Status Dashboard': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
   'Auto-Trading Safety (15 disabled)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },

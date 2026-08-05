@@ -1,0 +1,23 @@
+/* MarketContextWidget — compact dashboard widget */
+
+.mcw-widget {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+}
+.mcw-loading { color: var(--ink-soft); font-size: 0.78rem; padding: 1rem; }
+
+.mcw-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 0.4rem; padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--line);
+}
+.mcw-title { font-weight: 700; font-size: 0.82rem; color: var(--ink); }
+.mcw-mood { font-size: 0.72rem; font-weight: 600; text-transform: capitalize; }
+
+.mcw-body { display: flex; flex-direction: column; gap: 0.2rem; }
+.mcw-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.mcw-label { font-size: 0.68rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.03em; }
+.mcw-value { font-size: 0.75rem; color: var(--ink); text-align: right; }
+.mcw-ok { color: #22c55e; }
+.mcw-warn { color: #ef4444; }
+.mcw-high { color: #ef4444; font-size: 0.68rem; font-weight: 600; }

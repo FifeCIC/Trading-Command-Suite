@@ -487,8 +487,8 @@ input[type='radio'] {
   font-size: 0.88rem;
   font-weight: 500;
   color: var(--ink);
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
   text-decoration: none;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
   position: relative;
@@ -517,7 +517,7 @@ input[type='radio'] {
   height: 0;
   border-top: 6px solid transparent;
   border-bottom: 6px solid transparent;
-  border-left: 7px solid #334155;
+  border-left: 7px solid var(--line, #334155);
   z-index: 1;
 }
 
@@ -526,13 +526,13 @@ input[type='radio'] {
 }
 
 .breadcrumbs a.breadcrumbs-pill:hover {
-  background: #273348;
+  background: color-mix(in srgb, var(--panel, #1e293b) 88%, var(--accent, #818cf8) 12%);
   border-color: var(--accent, #818cf8);
-  color: var(--accent-bright, #a5b4fc);
+  color: var(--accent, #a5b4fc);
 }
 
 .breadcrumbs-current {
-  background: #1a2340;
+  background: color-mix(in srgb, var(--panel, #1a2340) 92%, var(--accent, #6366f1) 8%);
   border-color: var(--accent, #6366f1);
   color: var(--ink);
   font-weight: 600;
@@ -978,6 +978,25 @@ button.nav-active {
   gap: 0.5rem;
   flex-shrink: 0;
 }
+
+.topbar-calc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  min-height: 44px;
+  min-width: 44px;
+  margin-right: 0.35rem;
+}
+.topbar-calc-btn:hover { border-color: var(--accent); color: var(--ink); }
 
 .topbar-status-summary {
   display: flex;

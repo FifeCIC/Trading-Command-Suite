@@ -283,7 +283,6 @@ export default function SymbolPage() {
         {symId && (
           <Link to={`/research/symbol/${symId}`} className="sym-action-btn sym-action-full">📊 Full Detail (Chart & Trade)</Link>
         )}
-        <Link to={`/scoring/signals-workbench`} className="sym-action-btn">🔬 Scoring Workbench</Link>
         <Link to={`/research/investigation?symbol=${symbol}`} className="sym-action-btn">🔍 Research</Link>
       </motion.div>
     </div>

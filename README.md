@@ -1,31 +1,37 @@
 # Trading Command Suite
 
-![Status](https://img.shields.io/badge/status-starter-blue)
+![Status](https://img.shields.io/badge/status-alpha-orange)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
 
-**A production-ready React PWA command surface for Trader.CORE workflows.** Lean, opinionated, and architecture-first for rapid implementation.
+**Algorithmic trading & portfolio management platform.** Multi-broker, multi-session scoring engine with protocol-gated directive pipelines, automation loop, and decision-trail audit chain.
 
 Built by [FifeCIC](https://fifecic.scot) | [Ryan Bayne](https://github.com/RyanBayne)
 
 ---
 
-## What's Included
+## What It Does
 
-- **React 18** + Vite for fast development and optimised builds
-- **TanStack Query** for server state management
-- **Zustand** for client state
-- **Zod** for runtime validation
-- **PWA plugin** for installability and offline support
-- **Feature flags** for progressive rollout
-- **API URL helper** for environment-aware endpoints
-- **Dev Runtime overlay** with element tags for debugging
-- **Privacy-safe analytics foundation**
-- **Bundle budget checker** to prevent bloat
+- **META.Stack Scoring** — 43 protocols, 100+ directives across technical, sentiment, and risk groups. Protocol-gated scoring (~14 directives per protocol) is ~7× cheaper than flat scoring.
+- **Automation Loop** — 120s tick cycle. Scores strategy symbols, gates through risk chains, dispatches trades. 7 active strategies covering Tokyo, London, and US sessions.
+- **Decision Trail** — Full audit chain from trade → dispatch → gate → score → directive → market data. Queryable via `GET /api/automation/decision-trail`.
+- **Multi-Broker** — 10 provider adapters (MT5, Alpaca, Trading212, Capital.com, Finnhub, FMP, Binance, Yahoo, Interactive Brokers, Polygon).
+- **A/B Testing Foundation** — Protocol variants with `derivedFrom` lineage. LONG vs SHORT comparison stored per tick. Ready for side-by-side protocol evaluation.
 
-## Used By
+## Architecture
 
-- **[OmniCore](https://github.com/LOLinDark/StarCitizen-OmniCore)** — Star Citizen companion PWA
-- **[StreamerOps](https://github.com/LOLinDark/StreamerOps)** — Browser-based OBS overlay control
+```
+React 18 + Vite (5173)     ← PWA frontend
+NestJS (3201)              ← API + scoring engine
+MT5 Bridge (5000)          ← Python bridge to MetaTrader 5
+MySQL + Prisma             ← Persistent state
+```
+
+## Tech Stack
+
+- **Frontend**: React 18, Vite, TanStack Query, Zustand, Zod, PWA plugin
+- **Backend**: NestJS, Prisma ORM, MySQL
+- **Trading**: MT5 Python bridge, 10 provider adapters, protocol-gated scoring
+- **Dev Tools**: Dev Overlay with inspect-to-open-in-VS-Code, feature flags, bundle budget checker
 
 ## Quick Start
 
@@ -33,37 +39,42 @@ Built by [FifeCIC](https://fifecic.scot) | [Ryan Bayne](https://github.com/RyanB
 git clone <repo-url> trading-command-suite
 cd trading-command-suite
 npm install
-npm run dev
+cd nest && npm install && cd ..
+
+# Start the full stack (MT5 Bridge → NestJS → Vite)
+pwsh -File scripts/tcs-launch.ps1
+
+# Or individual services
+npm run dev                  # Vite frontend (5173)
+npm --prefix nest run start  # NestJS API (3201)
 ```
+
+## Key Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/health` | System health (DB, providers, queue) |
+| `GET /api/scoring/gated/protocols` | List all protocols with directive groups |
+| `POST /api/scoring/gated/batch` | Protocol-gated scoring (canonical META.Stack) |
+| `GET /api/scoring/ranked` | Flat scoring overview (dashboards) |
+| `GET /api/automation/status` | Loop state, active strategies, broker states |
+| `GET /api/automation/decision-trail` | Full audit chain for any trade |
+| `POST /api/system/reload-config` | Hot-reload directives + protocols (~20ms) |
 
 ## Available Scripts
 
-- `npm run dev` — Start Vite dev server
+- `npm run dev` — Vite dev server (5173)
 - `npm run build` — Production build
-- `npm run build:guard` — Build + bundle budget check
-- `npm run preview` — Preview production build
 - `npm run lint` — ESLint
-- `npm run check:bundle` — Check bundle budget constraints
+- `pwsh -File scripts/tcs-launch.ps1` — Start full stack
+- `pwsh -File scripts/tcs-stop.ps1` — Stop full stack
 
 ## Ops Notes
 
-- Central docs map: `G:/My Drive/Project Management/Live/Trading-Command-Suite-Documentation/DOCUMENTATION-INDEX.md`
-- Agent rules: `G:/My Drive/Project Management/Live/Trading-Command-Suite-Documentation/.agent-rules.md`
-- Active execution queue: `G:/My Drive/Project Management/Live/Trading-Command-Suite-Documentation/.agenticmemory/SPRINT.md`
-- Optional local infra helper (placeholder scaffold): [scripts/setup-local-infra.ps1](scripts/setup-local-infra.ps1)
-
-## Why Not Create React App / Next.js?
-
-Trading Command Suite is for projects that need:
-- PWA-first architecture without SSR overhead
-- Full control over the build pipeline
-- Minimal abstraction layers
-- A known-good starting point that's already proven in production
-
-## Support This Work
-
-- **Buy Me a Coffee**: [buymeacoffee.com/ryanbayne](https://www.buymeacoffee.com/ryanbayne)
-- **Sponsorship**: contact tradingcs@fifecic.scot
+- Central docs: `G:/My Drive/Project Management/Live/Trading-Command-Suite-Documentation/DOCUMENTATION-INDEX.md`
+- Agent rules: `.github/instructions/`
+- Active sprint: `G:/My Drive/Project Management/Live/Trading-Command-Suite-Documentation/SPRINT.md`
+- Prisma: `$env:DATABASE_URL = "..." ; npx prisma db push` (from `nest/` directory)
 
 ## Licence
 

@@ -149,6 +149,122 @@ export class BacktestController {
     return this.backtestService.runDirectiveCoverage(body);
   }
 
+  /**
+   * GET /api/backtest/directive-audit — full directive performance audit.
+   * Supports single symbol (?symbol=XAUUSD) or cross-symbol (?symbols=XAUUSD,EURUSD).
+   * Includes protocol impact analysis and saves to trend storage.
+   */
+  @Get('directive-audit')
+  async directiveAudit(
+    @Query('symbol') symbol?: string,
+    @Query('symbols') symbols?: string,
+    @Query('days') days?: string,
+  ) {
+    const lookback = days ? parseInt(days, 10) : 365;
+    const tickers = symbols
+      ? symbols.split(',').map(s => s.trim().toUpperCase()).filter(Boolean)
+      : [(symbol || 'XAUUSD').toUpperCase()];
+
+    // ── Build protocol→directive map for impact analysis ──
+    const protocolImpact = new Map<string, string[]>(); // directiveId → protocol slugs
+    try {
+      if (this.prisma.isAvailable) {
+        const entries = await (this.prisma as any).protocolDirectiveEntry.findMany({
+          include: { group: { include: { protocol: { select: { slug: true } } } } },
+        });
+        for (const e of entries) {
+          const slug = e.group?.protocol?.slug;
+          if (!slug) continue;
+          if (!protocolImpact.has(e.directiveId)) protocolImpact.set(e.directiveId, []);
+          if (!protocolImpact.get(e.directiveId)!.includes(slug)) {
+            protocolImpact.get(e.directiveId)!.push(slug);
+          }
+        }
+      }
+    } catch { /* DB may not have protocol tables */ }
+
+    // ── Run audit per symbol ──
+    const perSymbol: any[] = [];
+    for (const ticker of tickers) {
+      const raw = await this.backtestService.runDirectiveCoverage({
+        symbol: ticker, days: lookback, timeframe: '1d',
+      });
+      if ((raw as any).error) { perSymbol.push({ symbol: ticker, error: (raw as any).error }); continue; }
+
+      const results = (raw as any).results || [];
+      const withSignals = results.filter((r: any) => !r.error && r.signals >= 3);
+      const top = withSignals.filter((r: any) => r.winRate10d > 55).sort((a: any, b: any) => b.winRate10d - a.winRate10d);
+      const refine = withSignals.filter((r: any) => r.winRate10d >= 45 && r.winRate10d <= 55);
+      const stub = withSignals.filter((r: any) => r.winRate10d < 45);
+      const noSignals = results.filter((r: any) => !r.error && r.signals < 3);
+
+      const mapResult = (r: any) => ({
+        directiveId: r.directiveId, name: r.name, signals: r.signals,
+        winRate5d: r.winRate5d, avgReturn5d: r.avgReturn5d,
+        winRate10d: r.winRate10d, avgReturn10d: r.avgReturn10d,
+        protocols: protocolImpact.get(r.directiveId) || [],
+      });
+
+      perSymbol.push({
+        symbol: ticker,
+        days: lookback,
+        summary: { totalDirectives: results.length, withSignals: withSignals.length, top: top.length, refine: refine.length, stub: stub.length, noSignals: noSignals.length },
+        top: top.map(mapResult),
+        refine: refine.map(mapResult),
+        stub: stub.map(mapResult),
+        noSignals: noSignals.map((r: any) => ({ directiveId: r.directiveId, name: r.name, protocols: protocolImpact.get(r.directiveId) || [] })),
+      });
+    }
+
+    // ── Save to trend storage ──
+    try {
+      if (this.prisma.isAvailable && perSymbol.length > 0 && !perSymbol[0].error) {
+        const s = perSymbol[0].summary;
+        await (this.prisma as any).directiveAuditRun.create({
+          data: {
+            symbol: tickers.join(','),
+            days: lookback,
+            topCount: s.top,
+            refineCount: s.refine,
+            stubCount: s.stub,
+            noDataCount: s.noSignals,
+            results: perSymbol,
+          },
+        });
+      }
+    } catch { /* non-critical */ }
+
+    return {
+      symbols: tickers,
+      days: lookback,
+      generatedAt: new Date().toISOString(),
+      perSymbol,
+    };
+  }
+
+  /**
+   * GET /api/backtest/directive-audit/history — past audit runs for trend analysis.
+   */
+  @Get('directive-audit/history')
+  async auditHistory(@Query('symbol') symbol?: string, @Query('limit') limit?: string) {
+    if (!this.prisma.isAvailable) return { runs: [] };
+    const take = Math.min(parseInt(limit || '10', 10) || 10, 50);
+    try {
+      const where: any = {};
+      if (symbol) where.symbol = { contains: symbol.toUpperCase() };
+      const runs = await (this.prisma as any).directiveAuditRun.findMany({
+        where, orderBy: { runAt: 'desc' }, take,
+      });
+      return {
+        runs: runs.map((r: any) => ({
+          id: r.id, symbol: r.symbol, days: r.days,
+          topCount: r.topCount, refineCount: r.refineCount, stubCount: r.stubCount, noDataCount: r.noDataCount,
+          runAt: r.runAt,
+        })),
+      };
+    } catch { return { runs: [] }; }
+  }
+
   // ── Benchmark Comparison ──────────────────────────────
 
   @Get('benchmark')

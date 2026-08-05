@@ -255,9 +255,6 @@ export default function DirectivesManagerPage() {
                 <th>Directive</th>
                 <th>Category</th>
                 <th>Status</th>
-                <th>Class</th>
-                <th>Readiness</th>
-                <th>Complexity</th>
                 <th>RUNS</th>
                 <th>BIAS</th>
                 <th>Protocols</th>
@@ -303,33 +300,6 @@ export default function DirectivesManagerPage() {
                           {item.status}
                         </span>
                       </td>
-                      <td>
-                        {item.classification === 'stub' ? (
-                          <span style={{ color: '#f59e0b', fontSize: '0.72rem', fontWeight: 700, background: '#f59e0b18', padding: '1px 6px', borderRadius: '3px' }} title="Placeholder — real implementation pending">STUB</span>
-                        ) : item.classification === 'active' ? (
-                          <span style={{ color: '#22c55e', fontSize: '0.72rem', fontWeight: 700, background: '#22c55e18', padding: '1px 6px', borderRadius: '3px' }} title="Actively scoring">LIVE</span>
-                        ) : (
-                          <span style={{ color: '#64748b', fontSize: '0.72rem' }} title="Not yet scored">—</span>
-                        )}
-                      </td>
-                      <td>
-                        {(() => {
-                          const r = READINESS_COLORS[item.readiness] || READINESS_COLORS.alpha;
-                          return (
-                            <span
-                              style={{ color: r.color, background: r.bg, padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, border: `1px solid ${r.color}40` }}
-                              title={item.readiness === 'ready' ? 'Verified against live data' : item.readiness === 'beta' ? 'Real math, proxy/limited data' : 'Mock, stub, or placeholder'}
-                            >
-                              {r.label}
-                            </span>
-                          );
-                        })()}
-                      </td>
-                      <td style={{ color: COMPLEXITY_COLORS[item.complexity] || '#94a3b8' }}>
-                        <span style={{ border: `1px solid ${COMPLEXITY_COLORS[item.complexity] || '#94a3b8'}`, padding: '2px 8px', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 600 }}>
-                          {item.complexity}
-                        </span>
-                      </td>
                       <td>{item.runs ?? '—'}</td>
                       <td style={{ fontWeight: 700, color: item.bias === 'bullish' ? '#22c55e' : item.bias === 'bearish' ? '#ef4444' : 'var(--ink-soft)' }}>{item.bias ?? '—'}</td>
                       <td style={{ color: item.protocolCount > 0 ? 'var(--accent)' : 'var(--ink-soft)' }}>
@@ -368,6 +338,26 @@ export default function DirectivesManagerPage() {
                 <div className="directive-detail-header-row">
                   <h2 style={{color:'var(--accent)', fontSize:'1.05rem', textShadow: '0 0 12px rgba(59,130,246,0.4)'}}>{selected.name}</h2>
                   <span className={`directive-chip tone-${toneForStatus(selected.status)}`}>{selected.status}</span>
+                </div>
+                <div className="directive-detail-meta-row">
+                  {(() => {
+                    const r = READINESS_COLORS[selected.readiness] || READINESS_COLORS.alpha;
+                    return (
+                      <span
+                        className="directive-detail-badge"
+                        style={{ color: r.color, background: r.bg, border: `1px solid ${r.color}40` }}
+                        title={selected.readiness === 'ready' ? 'Verified against live data' : selected.readiness === 'beta' ? 'Real math, proxy/limited data' : 'Mock, stub, or placeholder'}
+                      >
+                        {r.label}
+                      </span>
+                    );
+                  })()}
+                  <span
+                    className="directive-detail-badge"
+                    style={{ color: COMPLEXITY_COLORS[selected.complexity] || '#94a3b8', border: `1px solid ${COMPLEXITY_COLORS[selected.complexity] || '#94a3b8'}40`, background: 'transparent' }}
+                  >
+                    {selected.complexity}
+                  </span>
                 </div>
               </header>
 

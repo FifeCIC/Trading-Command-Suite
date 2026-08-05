@@ -62,9 +62,10 @@ export default function DecisionTrailPage() {
 
   // ── Compute completeness stats ──
   const stats = useMemo(() => {
-    if (trails.length === 0) return { total: 0, complete: 0, missingStages: {} };
+    if (trails.length === 0) return { total: 0, complete: 0, missingStages: {}, anyData: false };
     let complete = 0;
     const missing = {};
+    let anyData = false;
     TRAIL_STAGES.forEach(s => { missing[s.id] = 0; });
     trails.forEach(t => {
       const present = t.stages || [];
@@ -72,9 +73,10 @@ export default function DecisionTrailPage() {
       if (allPresent) complete++;
       TRAIL_STAGES.forEach(s => {
         if (!present.includes(s.id)) missing[s.id]++;
+        else anyData = true;
       });
     });
-    return { total: trails.length, complete, missingStages: missing };
+    return { total: trails.length, complete, missingStages: missing, anyData };
   }, [trails]);
 
   const isLoading = trailsQuery.isLoading && !trailsQuery.data;
@@ -91,8 +93,8 @@ export default function DecisionTrailPage() {
         </div>
       </header>
 
-      {/* Completeness overview */}
-      {stats.total > 0 && (
+      {/* Completeness overview — only show when stage data exists */}
+      {stats.total > 0 && stats.anyData && (
         <div className="dt-completeness-bar">
           <span className="dt-completeness-label">Pipeline Completeness</span>
           <div className="dt-completeness-track">
@@ -176,25 +178,10 @@ export default function DecisionTrailPage() {
                   <span className="dt-trail-chevron">{isExpanded ? '▾' : '▸'}</span>
                 </div>
 
-                {/* Expanded detail */}
+                {/* Expanded detail — additional fields not in summary */}
                 {isExpanded && (
                   <div className="dt-timeline">
                     <div className="dt-trail-data">
-                      <div className="dt-data-row">
-                        <span>Decision</span><strong>{trail.decision}</strong>
-                      </div>
-                      <div className="dt-data-row">
-                        <span>Composite</span><strong>{(trail.composite || 0).toFixed(0)}</strong>
-                      </div>
-                      {trail.signal && (
-                        <div className="dt-data-row"><span>Signal</span><strong>{trail.signal}</strong></div>
-                      )}
-                      {trail.reason && (
-                        <div className="dt-data-row"><span>Reason</span><strong className="dt-reason">{trail.reason}</strong></div>
-                      )}
-                      {trail.ticket && (
-                        <div className="dt-data-row"><span>Ticket</span><strong>#{trail.ticket}</strong></div>
-                      )}
                       {trail.price && (
                         <div className="dt-data-row"><span>Price</span><strong>{trail.price}</strong></div>
                       )}
@@ -206,6 +193,15 @@ export default function DecisionTrailPage() {
                       )}
                       {trail.brokerId && (
                         <div className="dt-data-row"><span>Broker</span><strong>{trail.brokerId}</strong></div>
+                      )}
+                      {trail.watchlistName && (
+                        <div className="dt-data-row"><span>Watchlist</span><strong>{trail.watchlistName}</strong></div>
+                      )}
+                      {trail.protocolId && (
+                        <div className="dt-data-row"><span>Protocol</span><strong>{trail.protocolId}</strong></div>
+                      )}
+                      {!trail.price && !trail.quantity && !trail.strategyId && !trail.brokerId && !trail.watchlistName && !trail.protocolId && (
+                        <div className="dt-data-row"><span>Note</span><strong className="dt-reason">No additional data available — pipeline stages not yet populated.</strong></div>
                       )}
                     </div>
                   </div>

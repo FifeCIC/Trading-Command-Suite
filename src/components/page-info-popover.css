@@ -6,23 +6,28 @@
   justify-content: center;
   width: 22px;
   height: 22px;
-  border: 1px solid var(--line, #334155);
+  min-width: 22px;
+  min-height: 22px;
+  border: none;
   border-radius: 50%;
-  background: transparent;
-  color: var(--ink-soft, #94a3b8);
+  background: var(--ink-soft, #64748b);
+  color: #fff;
   font-size: 0.7rem;
+  font-weight: 700;
   cursor: help;
   padding: 0;
   line-height: 1;
   vertical-align: middle;
   margin-left: 0.4rem;
-  transition: color 0.15s, border-color 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: inherit;
 }
 .pip-trigger:hover,
 .pip-trigger:focus-visible {
-  color: var(--accent, #0ea5a6);
-  border-color: var(--accent, #0ea5a6);
+  background: var(--accent, #0ea5a6);
+  color: #fff;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent, #0ea5a6) 40%, transparent);
+  transform: scale(1.15);
   outline: none;
 }
 

@@ -63,20 +63,17 @@ export default function SeesArenaPage() {
   const saved = useMemo(() => loadArenaState(), []);
 
   const [tab, setTab] = useState('compare');
-  const [symbolsInput, setSymbolsInput] = useState(saved.symbolsInput);
   const [selectedProtocols, setSelectedProtocols] = useState(saved.selectedProtocols);
   const [compResult, setCompResult] = useState(null);
   const [comparing, setComparing] = useState(false);
   const [autoRun, setAutoRun] = useState(saved.autoRun);
   const autoRunRef = useRef(autoRun);
 
-  // Keep ref in sync
   useEffect(() => { autoRunRef.current = autoRun; }, [autoRun]);
 
-  // ── Persist on relevant state changes ──
   useEffect(() => {
-    saveArenaState({ symbolsInput, selectedProtocols, autoRun });
-  }, [symbolsInput, selectedProtocols, autoRun]);
+    saveArenaState({ symbolsInput: '', selectedProtocols, autoRun });
+  }, [selectedProtocols, autoRun]);
 
   const filtersQuery = useQuery({
     queryKey: ['arena-filters'], queryFn: () => apiGet('/api/scoring/arena/filters'), staleTime: 60_000,
@@ -127,24 +124,55 @@ export default function SeesArenaPage() {
     } else { setSelectedProtocols([...selectedProtocols, id]); }
   }
 
-  const runComparison = useCallback(async (syms) => {
-    const symbols = syms || symbolsInput.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
-    if (!symbols.length) return;
+  // ── Derive symbols from selected protocols' linked watchlists ──
+  const derivedSymbols = useMemo(() => {
+    if (!selectedProtocols || !protocols.length) return [];
+    const symbolSet = new Set();
+    for (const pid of selectedProtocols) {
+      const proto = protocolMap[pid];
+      const watchlists = proto?.linkedWatchlists || [];
+      for (const wl of watchlists) {
+        // linkedWatchlists can be strings (names) or objects with symbols
+        if (typeof wl === 'string') {
+          // We'll collect watchlist names; symbols resolved at compare time
+          symbolSet.add(`__wl__${wl}`);
+        }
+      }
+    }
+    return [...symbolSet];
+  }, [selectedProtocols, protocolMap, protocols]);
+
+  const runComparison = useCallback(async () => {
+    if (!selectedProtocols?.length) return;
     setComparing(true);
     try {
-      const r = await apiPost('/api/scoring/arena/compare', { symbols, protocols: selectedProtocols || undefined });
+      // Collect all symbols from all selected protocols via the new symbols endpoint
+      const allSymbols = new Set();
+      for (const pid of selectedProtocols) {
+        try {
+          const res = await apiGet(`/api/scoring/gated/protocols/${pid}/symbols`).catch(() => ({ symbols: [] }));
+          for (const s of (res.symbols || [])) {
+            if (s) allSymbols.add(s.toUpperCase());
+          }
+        } catch { /* protocol may not have symbols */ }
+      }
+      const symbols = [...allSymbols];
+      if (!symbols.length) {
+        setCompResult({ error: 'No symbols found for the selected protocols. Check that protocols have linked watchlists or single-symbol config.' });
+        setComparing(false);
+        return;
+      }
+      const r = await apiPost('/api/scoring/arena/compare', { symbols, protocols: selectedProtocols });
       setCompResult(r);
     } catch { setCompResult({ error: 'Comparison failed — backend may be offline.' }); }
     setComparing(false);
-  }, [symbolsInput, selectedProtocols]);
+  }, [selectedProtocols, protocolMap]);
 
   // ── Auto-run on mount if user had it enabled ──
   useEffect(() => {
-    if (autoRunRef.current && protocols.length > 0) {
-      const syms = symbolsInput.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
-      if (syms.length > 0) runComparison(syms);
+    if (autoRunRef.current && protocols.length > 0 && selectedProtocols?.length > 0) {
+      runComparison();
     }
-    // Only run on mount when protocols load
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [protocols.length]);
 
@@ -166,10 +194,8 @@ export default function SeesArenaPage() {
 
       <>
         <div className="sa-controls">
-          <input type="text" className="sa-symbol-input" placeholder="Symbols: SPY, QQQ, NVDA, XAUUSD..."
-            value={symbolsInput} onChange={(e) => setSymbolsInput(e.target.value)} />
-          <button className="sa-btn" onClick={() => runComparison()} disabled={comparing}>
-            {comparing ? '⟳ Comparing...' : '▶ Compare'}
+          <button className="sa-btn" onClick={() => runComparison()} disabled={comparing || !selectedProtocols?.length}>
+            {comparing ? '⟳ Comparing...' : '▶ Compare All Watchlist Symbols'}
           </button>
           <label className="sa-autorun-toggle" title="Remember selections and auto-run on return">
             <input type="checkbox" checked={autoRun} onChange={(e) => setAutoRun(e.target.checked)} />
@@ -251,8 +277,8 @@ export default function SeesArenaPage() {
 
         {!compResult && !comparing && (
           <div className="sa-empty">
-            <p>Enter symbols and click <strong>Compare</strong> to see how protocols rate them side-by-side.</p>
-            <p className="sa-hint">Hover over <strong>?</strong> icons for protocol methodology explanations.</p>
+            <p>Select protocols above and click <strong>Compare</strong> to see how they rate their watchlist symbols side-by-side.</p>
+            <p className="sa-hint">Symbols are auto-derived from each protocol's linked watchlists. Hover over <strong>?</strong> icons for methodology.</p>
           </div>
         )}
 

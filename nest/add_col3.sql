@@ -1,1 +1,0 @@
-ALTER TABLE decision_trail ADD COLUMN tradeId VARCHAR(36) NULL;

@@ -9,7 +9,7 @@
 
 ## What changed
 
-1. **Protocol ID UUID → slug:** `resolveProtocolForSymbol()` was returning the raw UUID from `symbolProtocolAssignment.protocolId` (FK). Changed `select: { protocolId: true }` to `include: { protocol: { select: { slug: true, active: true } } }`. Now returns human-readable slugs like `cad-sniper-v1` instead of `42f2ec59-...`.
+1. **Protocol ID UUID → slug:** `resolveProtocolForSymbol()` was returning the raw UUID from `symbolProtocolAssignment.protocolId` (FK). Changed `select: { protocolId: true }` to `include: { protocol: { select: { slug: true, active: true } } }`. Now returns human-readable slugs like `usdcad-oil-v1` instead of `42f2ec59-...`.
 
 2. **Pattern detection activated:** `MicroTrendDetector.aggregatePatterns()` was never called with real data. Added `detectCandlestickPatterns()` function that identifies doji, hammer, shooting star, engulfing patterns from 20 trend bars (body/range ratio logic). Wired to `analyze(trendBars, detectedPatterns)`.
 

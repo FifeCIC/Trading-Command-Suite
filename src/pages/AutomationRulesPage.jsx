@@ -21,9 +21,9 @@ const DEFAULT_RULES = [
   },
   {
     id: 'min-sees-score',
-    name: 'Minimum SEES Score',
+    name: 'Minimum SEES Aggregate Score (%)',
     description: 'Require a minimum aggregate SEES score before any BUY signal can execute. Score threshold applies globally across all strategies.',
-    config: { threshold: 60, unit: 'score (0-100)' },
+    config: { threshold: 60, unit: '%' },
     enabled: false,
   },
 ];
@@ -73,8 +73,21 @@ export default function AutomationRulesPage() {
                 <p style={{ margin: '0 0 0.35rem', fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
                   {rule.description}
                 </p>
-                <div className="pf-hint">
+                <div className="pf-hint" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                   Threshold: <strong>{rule.config.threshold}{rule.config.unit}</strong>
+                  {rule.id === 'min-sees-score' && (
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={rule.config.threshold}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        setRules(prev => prev.map(r => r.id === rule.id ? { ...r, config: { ...r.config, threshold: val } } : r));
+                      }}
+                      style={{ width: 100, accentColor: 'var(--accent)' }}
+                    />
+                  )}
                 </div>
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', flexShrink: 0 }}>

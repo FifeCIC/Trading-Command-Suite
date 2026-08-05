@@ -849,7 +849,7 @@ morning. The NY afternoon contributes less to Cable than to EURUSD.
     difficulty: 'Intermediate',
     timeframe: '1H / 4H',
     status: 'supported',
-    tcsProtocol: 'cad-sniper-v1',
+    tcsProtocol: 'usdcad-oil-v1',
 
     overview: `
 The Canadian dollar is a petrocurrency — Canada is the world's 4th-largest

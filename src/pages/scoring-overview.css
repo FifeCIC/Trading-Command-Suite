@@ -488,6 +488,12 @@
   min-width: 200px;
   cursor: pointer;
 }
+.los-watchlist-hint {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  align-self: flex-end;
+  padding-bottom: 0.1rem;
+}
 .los-select:focus { border-color: var(--accent, #0ea5a6); outline: none; }
 .los-auto-btn {
   background: var(--panel, #1e293b);

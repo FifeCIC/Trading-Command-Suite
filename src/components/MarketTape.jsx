@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import './market-tape.css';
+import { computeSessionStates, nextSessionLabel } from '../core/session-utils';
 
 /* ── Preference key ── */
 const PREFS_KEY = 'tcs:market-tape';
@@ -59,47 +60,13 @@ function fmtUptime(seconds) {
   return `${m}m`;
 }
 
-/* ── Sessions ── */
-const SESSIONS = [
-  { id: 'london', label: 'London', flag: '🇬🇧', tz: 'Europe/London', openHour: 8, closeHour: 16 },
-  { id: 'ny', label: 'NY', flag: '🇺🇸', tz: 'America/New_York', openHour: 9, closeHour: 16 },
-  { id: 'tokyo', label: 'Tokyo', flag: '🇯🇵', tz: 'Asia/Tokyo', openHour: 9, closeHour: 15 },
-];
-
+/* ── Sessions ──
+ * Session definitions/state now come from the canonical DST-aware util
+ * (src/core/session-utils.js) which mirrors the backend MarketSessionsService.
+ * NY opens at 09:30 ET (not 09:00) and DST is handled automatically.
+ */
 function computeSessions() {
-  const now = new Date();
-  return SESSIONS.map((s) => {
-    try {
-      const opts = { timeZone: s.tz, hour: '2-digit', minute: '2-digit', hour12: false };
-      const timeStr = now.toLocaleString('en-GB', opts);
-      const [h, m] = timeStr.split(':').map(Number);
-      const minutes = h * 60 + m;
-      const openMin = s.openHour * 60;
-      const closeMin = s.closeHour * 60;
-      const active = minutes >= openMin && minutes < closeMin;
-      const closingSoon = active && (closeMin - minutes <= 30);
-      return { ...s, active, closingSoon, openMin, closeMin };
-    } catch { return { ...s, active: false, closingSoon: false }; }
-  });
-}
-
-function nextSessionLabel(sessions) {
-  const now = new Date();
-  const nowMin = now.getUTCHours() * 60 + now.getUTCMinutes();
-  let closest = null;
-  for (const s of sessions) {
-    if (!s.active && s.openMin > nowMin) {
-      const diff = s.openMin - nowMin;
-      if (!closest || diff < closest.diff) closest = { session: s, diff };
-    }
-  }
-  if (!closest) {
-    const first = sessions.find((s) => !s.active);
-    return first ? `${first.flag} ${first.label}` : '';
-  }
-  const h = Math.floor(closest.diff / 60);
-  const m = closest.diff % 60;
-  return `${closest.session.flag} ${closest.session.label} in ${h}h ${m}m`;
+  return computeSessionStates();
 }
 
 /* ── Component ── */
@@ -166,8 +133,8 @@ export default function MarketTape() {
   // 1. Sessions
   if (prefs.sessions) {
     const parts = sessions.map((s) => {
-      const status = s.active ? (s.closingSoon ? 'closing' : 'open') : 'closed';
-      return `${s.flag} ${s.label} ${status}`;
+      const status = s.active ? (s.closesSoon ? 'closing' : 'open') : 'closed';
+      return `${s.flag} ${s.name} ${status}`;
     });
     sections.push({ key: 'sessions', label: 'Sessions', content: parts.join(' · '), color: 'var(--ink)' });
   }

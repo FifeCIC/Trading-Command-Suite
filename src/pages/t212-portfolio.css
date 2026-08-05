@@ -59,6 +59,35 @@
 }
 .t212p-hint { font-size: 0.78rem; color: var(--ink-soft, #64748b); }
 
+/* ── Account Toggle ── */
+.t212p-toggle-bar {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  overflow: hidden;
+  width: fit-content;
+}
+.t212p-toggle-btn {
+  padding: 0.4rem 1rem;
+  border: none;
+  background: var(--panel, #1e293b);
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-right: 1px solid var(--line, #334155);
+}
+.t212p-toggle-btn:last-child { border-right: none; }
+.t212p-toggle-btn:hover { background: color-mix(in srgb, var(--panel) 88%, var(--accent) 12%); color: var(--ink); }
+.t212p-toggle-btn.active {
+  background: var(--accent, #0ea5a6);
+  color: #fff;
+}
+
 .t212p-sync-result {
   margin-top: 0.5rem;
   padding: 0.4rem 0.75rem;

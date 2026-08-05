@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Post, Delete, Param, Query, Body } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Delete, Param, Query, Body, Logger } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { DirectivesService } from './directives.service';
 import { PrismaService } from '../../database/prisma.service';
@@ -119,17 +119,21 @@ export class DirectivesController {
       };
     }
 
-    // Compute protocolCount from DB (how many protocols include each directive).
+    // Compute protocolCount from DB (how many distinct protocols include each directive).
     // Falls back to 0 if DB unavailable — this is UI enrichment only.
     const protocolCounts = new Map<string, number>();
     try {
       const entries = await (this.prisma as any).protocolDirectiveEntry.findMany({
-        select: { directiveId: true },
-        distinct: ['directiveId'],
+        select: { directiveId: true, group: { select: { protocolId: true } } },
       });
-      // Count occurrences of each directiveId
+      // Count distinct protocols per directive (not groups)
+      const directiveProtocols = new Map<string, Set<string>>();
       for (const e of entries) {
-        protocolCounts.set(e.directiveId, (protocolCounts.get(e.directiveId) ?? 0) + 1);
+        if (!directiveProtocols.has(e.directiveId)) directiveProtocols.set(e.directiveId, new Set());
+        directiveProtocols.get(e.directiveId)!.add(e.group.protocolId);
+      }
+      for (const [dirId, protoSet] of directiveProtocols) {
+        protocolCounts.set(dirId, protoSet.size);
       }
     } catch { /* DB unavailable — protocolCounts stays empty */ }
 
@@ -469,5 +473,32 @@ export class DirectivesController {
       })),
       result,
     };
+  }
+
+  /**
+   * POST /api/directives/:id/stub — mark a directive as alpha (inactive in composites).
+   * Used by the Directive Performance Audit to instantly suppress underperforming directives.
+   */
+  @Post(':id/stub')
+  async stubDirective(@Param('id') id: string) {
+    const directive = this.directivesService.get(id);
+    if (!directive) return { error: `Directive "${id}" not found` };
+
+    // Update in-memory readiness
+    (directive as any).readiness = 'alpha';
+
+    // Persist to DB if available (raw SQL — directive table has many required fields)
+    if (this.prisma.isAvailable) {
+      try {
+        await (this.prisma as any).$executeRawUnsafe(
+          `INSERT INTO directive (id, name, type, weight, active, readiness) VALUES (?, ?, 'scoring', 1.0, 0, 'alpha') ON DUPLICATE KEY UPDATE active = 0, readiness = 'alpha'`,
+          id, directive.name || id,
+        );
+      } catch (err) {
+        return { stubbed: true, warning: `In-memory only — DB persist failed: ${(err as Error).message}` };
+      }
+    }
+
+    return { stubbed: true, directiveId: id, readiness: 'alpha', note: 'Directive excluded from composites. Use reload-config or restart to apply globally.' };
   }
 }

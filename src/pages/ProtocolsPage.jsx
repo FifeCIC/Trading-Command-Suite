@@ -3,9 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import './protocols-page.css';
 
-const SOURCE_LABELS = { code: 'System', database: 'Database' };
-const SOURCE_COLORS = { code: '#8b5cf6', database: '#3b82f6' };
-
 /** Classify a protocol by its directive/data dependencies */
 function getProtocolType(proto) {
   const id = (proto.id || '').toLowerCase();
@@ -113,9 +110,6 @@ export default function ProtocolsPage() {
                   <span className={`protocols-item-conn ${p.isFullyConnected ? 'connected' : p.connectionCount > 0 ? 'partial' : 'none'}`} title={p.isFullyConnected ? 'Fully connected — trading enabled' : p.connectionCount > 0 ? `${p.connectionCount} strategy(s), monitoring only` : 'No scoring strategies linked'} />
                 </div>
                 <div className="protocols-item-meta">
-                  <span className="protocols-source" style={{ background: SOURCE_COLORS[p.source] || '#888' }}>
-                    {SOURCE_LABELS[p.source] || p.source}
-                  </span>
                   <span className="protocols-type-mini" style={{ color: getProtocolType(p).color, borderColor: getProtocolType(p).color }}>
                     {getProtocolType(p).label}
                   </span>
@@ -133,12 +127,6 @@ export default function ProtocolsPage() {
             <div className="protocols-header">
               <div style={{ flex: 1 }}>
                 <h1>{selectedProto.name}</h1>
-                <span
-                  className="protocols-source-badge"
-                  style={{ background: SOURCE_COLORS[selectedProto.source] || '#888' }}
-                >
-                  {SOURCE_LABELS[selectedProto.source] || selectedProto.source}
-                </span>
                 {(() => {
                   const pt = getProtocolType(selectedProto);
                   return (
@@ -197,6 +185,19 @@ export default function ProtocolsPage() {
                   {selectedProto.active ? 'Active' : 'Inactive'}
                 </div>
                 <div className="protocols-stat-label">Status</div>
+              </div>
+              <div className="protocols-stat">
+                <button
+                  className={`protocols-toggle-btn ${selectedProto.active ? 'enabled' : 'disabled'}`}
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`/api/scoring/gated/protocols/${selectedProto.id}/toggle`, { method: 'PATCH' });
+                      if (res.ok) protocolsQuery.refetch();
+                    } catch { /* ok */ }
+                  }}
+                >
+                  {selectedProto.active ? 'Disable' : 'Enable'}
+                </button>
               </div>
             </div>
             {selectedProto.idealFor && (

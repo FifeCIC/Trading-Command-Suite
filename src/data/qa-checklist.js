@@ -1559,7 +1559,7 @@ const QA_CHECKLIST = [
     area: 'Scoring',
     system: 'Speed Scanner',
     name: 'Protocol IDs display as human-readable slugs',
-    procedure: 'Navigate to /automation/speed-scanner. Verify protocol column shows slugs like "cad-sniper-v1" not UUIDs like "42f2ec59-...".',
+    procedure: 'Navigate to /automation/speed-scanner. Verify protocol column shows slugs like "usdcad-oil-v1" not UUIDs like "42f2ec59-...".',
     expected: 'All protocol IDs resolved to human-readable slugs. No raw UUIDs visible in the ladder.',
     category: 'Regression',
     priority: 'high',

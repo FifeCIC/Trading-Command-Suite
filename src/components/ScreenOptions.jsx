@@ -449,14 +449,6 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
           </div>
         )}
         <button
-          className={`so-gear-btn ${calcOpen ? 'so-gear-active' : ''}`}
-          onClick={() => setCalcOpen((v) => !v)}
-          title="Quick Calculators"
-          aria-label="Open Calculators"
-        >
-          C
-        </button>
-        <button
           className={`so-gear-btn ${isOpen ? 'so-gear-active' : ''}`}
           onClick={onToggle}
           title={`Screen Options${registry ? ` — ${registry.title}` : ''}`}

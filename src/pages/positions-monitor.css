@@ -195,30 +195,34 @@
   margin-bottom: 10px;
 }
 
-/* Risk bar */
+/* Risk bar — compact, not full-width */
 .pm-risk-bar {
   position: relative;
-  height: 20px;
-  background: var(--color-input-bg);
-  border-radius: 4px;
+  height: 16px;
+  max-width: 260px;
+  background: var(--line, #334155);
+  border-radius: 8px;
   overflow: hidden;
+  margin-top: 0.25rem;
 }
 
 .pm-risk-fill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: 8px;
   transition: width 0.5s;
 }
 
 .pm-risk-label {
   position: absolute;
-  top: 2px;
+  top: 1px;
   left: 8px;
-  font-size: 0.75rem;
-  color: #e2e8f0;
+  font-size: 0.68rem;
+  color: #fff;
   font-weight: 600;
   z-index: 1;
   cursor: help;
+  mix-blend-mode: difference;
+  line-height: 14px;
 }
 
 .pm-risk-threshold {

@@ -106,7 +106,7 @@ export class ArenaController {
       id: 'forex-pairs',
       name: 'Forex Pairs',
       description: 'Session-aware forex trading with DXY overlay. CAD, EUR, and major pair protocols.',
-      protocolIds: ['forex-session-v1', 'dxy-sensitivity-v1', 'cad-sniper-v1'],
+      protocolIds: ['forex-session-v1', 'dxy-sensitivity-v1', 'usdcad-oil-v1'],
       category: 'forex',
     },
     {

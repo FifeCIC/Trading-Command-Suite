@@ -18,6 +18,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { SeasonalityService } from '../scoring/seasonality.service';
 import { AdapterFactory } from '../providers/adapter-factory';
+import { MarketSessionsService, type SessionTimelineEvent } from '../calendar/market-sessions.service';
 
 export interface TimelineEvent {
   id: string;
@@ -50,6 +51,7 @@ export class TimelineService {
     private readonly prisma: PrismaService,
     private readonly seasonalityService: SeasonalityService,
     private readonly adapterFactory: AdapterFactory,
+    private readonly marketSessions: MarketSessionsService,
   ) {}
 
   // ── Main API ──────────────────────────────────────────
@@ -180,90 +182,34 @@ export class TimelineService {
   }
 
   private getSessionEvents(now: Date, lookahead: Date): TimelineEvent[] {
-    const events: TimelineEvent[] = [];
-    const sessions = [
-      { name: 'Sydney', openUtc: 22, closeUtc: 7, protocols: [] },
-      { name: 'Tokyo', openUtc: 0, closeUtc: 9, protocols: [] },
-      { name: 'London', openUtc: 8, closeUtc: 17, protocols: ['xau-speed-v1', 'forex-session-v1'] },
-      { name: 'New York', openUtc: 13, closeUtc: 22, protocols: ['spy-speed-v1', 'spy-day-v1', 'oil-speed-v1'] },
-    ];
+    // Session windows now come from the canonical DST-aware MarketSessionsService.
+    // This replaces the old hardcoded-UTC session logic (NY was pinned to 13:00 UTC,
+    // 30min early in EDT; DST was ignored). All session state is derived from the
+    // session's own IANA timezone, so it stays correct year-round.
+    const lookaheadMinutes = Math.round((lookahead.getTime() - now.getTime()) / 60000);
+    const sessionEvents: SessionTimelineEvent[] =
+      this.marketSessions.getTimelineEvents(now, Math.max(0, lookaheadMinutes));
 
-    const currentHour = now.getUTCHours();
-    const currentDay = now.getUTCDay();
-
-    // Skip weekends
-    if (currentDay === 0 || currentDay === 6) return events;
-
-    for (const session of sessions) {
-      // Check if session is active now
-      const isActive = session.openUtc <= currentHour && currentHour < session.closeUtc;
-      // Check if session opens within lookahead
-      const opensSoon = session.openUtc > currentHour &&
-        session.openUtc <= lookahead.getUTCHours();
-
-      if (isActive) {
-        events.push({
-          id: `session-${session.name.toLowerCase()}-active`,
-          type: 'SESSION_OPEN',
-          scope: 'session',
-          session: session.name.toLowerCase(),
-          action: 'boost',
-          riskMultiplier: 1.15,
-          thresholdAdjust: -5,
-          label: `${session.name} session active`,
-          description: `${session.name} market open — higher liquidity, tighter spreads`,
-          icon: '🌅',
-          color: '#22c55e',
-          startsAt: new Date(now.getFullYear(), now.getMonth(), now.getDate(), session.openUtc, 0).toISOString(),
-          endsAt: new Date(now.getFullYear(), now.getMonth(), now.getDate(), session.closeUtc, 0).toISOString(),
-          source: 'system',
-          createdAt: new Date().toISOString(),
-        });
-
-        // London+NY overlap
-        if (session.name === 'New York' && currentHour >= 13 && currentHour < 17) {
-          events.push({
-            id: 'session-london-ny-overlap',
-            type: 'SESSION_OVERLAP',
-            scope: 'session',
-            session: 'london-ny',
-            action: 'boost',
-            riskMultiplier: 1.25,
-            thresholdAdjust: -8,
-            label: 'London + NY overlap',
-            description: 'Highest volume period — all protocols boosted',
-            icon: '🔥',
-            color: '#f59e0b',
-            startsAt: now.toISOString(),
-            endsAt: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0).toISOString(),
-            source: 'system',
-            createdAt: new Date().toISOString(),
-          });
-        }
-      }
-
-      if (opensSoon) {
-        const openTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), session.openUtc, 0);
-        if (openTime <= lookahead) {
-          events.push({
-            id: `session-${session.name.toLowerCase()}-soon`,
-            type: 'SESSION_OPEN',
-            scope: 'session',
-            session: session.name.toLowerCase(),
-            action: 'info',
-            label: `${session.name} opens soon`,
-            description: `${session.name} session opens at ${String(session.openUtc).padStart(2, '0')}:00 UTC`,
-            icon: '⏰',
-            color: '#3b82f6',
-            startsAt: openTime.toISOString(),
-            source: 'system',
-            createdAt: new Date().toISOString(),
-          });
-        }
-      }
-    }
-
-    return events;
+    return sessionEvents.map((e) => {
+      const ev: TimelineEvent = {
+        id: e.id,
+        type: e.type,
+        scope: 'session',
+        session: e.session,
+        action: e.action,
+        riskMultiplier: e.riskMultiplier,
+        thresholdAdjust: e.thresholdAdjust,
+        label: e.label,
+        description: e.description,
+        icon: e.icon,
+        color: e.color,
+        startsAt: e.startsAt,
+        endsAt: e.endsAt,
+        source: 'system',
+        createdAt: e.createdAt,
+      };
+      return ev;
+    });
   }
 
   private async getSeasonalityEvents(symbol: string): Promise<TimelineEvent[]> {

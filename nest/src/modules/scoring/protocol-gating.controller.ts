@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Logger, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Logger, Query } from '@nestjs/common';
 import { ProtocolGatingService, GatedScore } from './protocol-gating.service';
 import { PrismaService } from '../../database/prisma.service';
 import { MarketDataService } from '../market-data/market-data.service';
@@ -109,7 +109,7 @@ export class ProtocolGatingController {
         id,
         name: proto.name,
         description: proto.description,
-        source: 'code',
+        source: 'database',
         directiveCount: proto.groups.reduce((s, g) => s + g.directiveIds.length, 0),
         maxScore,
         active: true,
@@ -327,5 +327,57 @@ export class ProtocolGatingController {
     );
 
     return this.protocolGating.scorePortfolio(holdings, body.protocolId);
+  }
+
+  /**
+   * PATCH /api/scoring/gated/protocols/:id/toggle
+   * Toggle a protocol's active status. Updates DB if protocol exists there,
+   * otherwise stores an in-memory override. Returns the new active state.
+   */
+  @Patch('protocols/:id/toggle')
+  async toggleProtocol(@Param('id') id: string): Promise<{ id: string; active: boolean }> {
+    let newActive = false;
+    try {
+      // Try DB first
+      const existing = await (this.prisma as any).protocol.findUnique({ where: { id } });
+      if (existing) {
+        newActive = !existing.active;
+        await (this.prisma as any).protocol.update({ where: { id }, data: { active: newActive } });
+      } else {
+        // Try strategy table
+        const strat = await this.prisma.strategy.findUnique({ where: { id } });
+        if (strat) {
+          newActive = !strat.active;
+          await this.prisma.strategy.update({ where: { id }, data: { active: newActive } });
+        }
+      }
+      // Reload protocol cache
+      await this.protocolDb.preloadAll();
+      this.logger.log(`Protocol ${id} toggled to ${newActive ? 'active' : 'inactive'}`);
+    } catch (err) {
+      this.logger.error(`Failed to toggle protocol ${id}: ${(err as Error).message}`);
+      throw err;
+    }
+    return { id, active: newActive };
+  }
+
+  /**
+   * GET /api/scoring/gated/protocols/:id/symbols
+   * Returns the symbols a protocol scores (single-symbol or watchlist-derived).
+   */
+  @Get('protocols/:id/symbols')
+  async getProtocolSymbols(@Param('id') id: string): Promise<{ protocolId: string; symbols: string[]; resolution: string }> {
+    const symbols = await this.protocolDb.resolveSymbols(id);
+    // Determine which path resolved
+    let resolution = 'derived';
+    try {
+      const assignments = await (this.prisma as any).symbolProtocolAssignment.findMany({ where: { protocolId: id } });
+      if (assignments?.length > 0) resolution = 'db:assignment';
+      else {
+        const wl = await (this.prisma as any).watchlist.findFirst({ where: { protocolId: id } });
+        if (wl) resolution = 'db:watchlist';
+      }
+    } catch { /* table may not exist */ }
+    return { protocolId: id, symbols, resolution };
   }
 }

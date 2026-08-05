@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import PageInfoPopover from '../components/PageInfoPopover';
@@ -135,7 +135,7 @@ export default function UserWatchlistsPage() {
 
   const handleSelect = (id) => {
     setCreatingNew(false);
-    setSelectedId(prev => prev === id ? null : id);
+    setSelectedId(id);
   };
 
   async function handleCreateWatchlist() {
@@ -178,42 +178,15 @@ export default function UserWatchlistsPage() {
                 {wl.source.includes('CSV') ? '📄 CSV' : wl.source === 'manual' ? '✏️ Manual' : wl.kind === 'built-in' ? '🔗 Built-in' : wl.source}
               </span>
             )}
-            <span className="wl-chevron">{selectedId === wl.id ? '▴' : '▾'}</span>
           </div>
         </div>
-        {!wl.isDefault && selectedId === wl.id && (
-          <button
-            className="wl-delete-btn"
-            onClick={(e) => { e.stopPropagation(); if (confirm(`Delete "${cleanLabel(wl.label)}"?`)) deleteMutation.mutate(wl.id); }}
-            disabled={isLocked}
-            title={isLocked ? 'Locked by active strategies' : 'Delete watchlist'}
-          >
-            🗑️
-          </button>
+        {wl.importedAt && selectedId === wl.id && (
+          <div className="wl-list-date-row">
+            <span className="wl-list-date">
+              Imported {new Date(wl.importedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
+          </div>
         )}
-
-        <AnimatePresence>
-          {selectedId === wl.id && (
-            <motion.div
-              className="wl-list-detail"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              {wl.importedAt && (
-                <span className="wl-list-date">
-                  Imported {new Date(wl.importedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                </span>
-              )}
-              {wl.kind === 'built-in' && (
-                <span className="wl-list-date" style={{ marginLeft: 8, color: 'var(--accent)' }}>
-                  {syncing && selectedId === wl.id ? 'Syncing…' : 'Auto-synced'}
-                </span>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </motion.div>
     );
   }
@@ -323,7 +296,19 @@ export default function UserWatchlistsPage() {
               </div>
             ) : (
               <div className="wl-detail-content">
-                <h3>{cleanLabel(selectedWl.label)}</h3>
+                <div className="wl-detail-header-row">
+                  <h3>{cleanLabel(selectedWl.label)}</h3>
+                  {!selectedWl.isDefault && (
+                    <button
+                      className="wl-delete-btn"
+                      onClick={() => { if (confirm(`Delete "${cleanLabel(selectedWl.label)}"?`)) { deleteMutation.mutate(selectedWl.id); } }}
+                      disabled={isLocked}
+                      title={isLocked ? 'Locked by active strategies' : 'Delete watchlist'}
+                    >
+                      🗑️ Delete
+                    </button>
+                  )}
+                </div>
                 <div className="wl-symbols-count">
                   {symbols.length} symbols
                   {selectedId === 'trading212-portfolio' && (

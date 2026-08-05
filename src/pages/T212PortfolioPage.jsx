@@ -19,6 +19,7 @@ export default function T212PortfolioPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState(null);
   const [imported, setImported] = useState(false);
+  const [accountFilter, setAccountFilter] = useState('all');
 
   const mode = useQuery({
     queryKey: ['t212-mode'],
@@ -94,6 +95,13 @@ export default function T212PortfolioPage() {
 
       <LastUpdated at={lastUpdated} />
 
+      {/* ── Account Toggle ── */}
+      <div className="t212p-toggle-bar">
+        <button className={`t212p-toggle-btn ${accountFilter === 'all' ? 'active' : ''}`} onClick={() => setAccountFilter('all')}>All</button>
+        <button className={`t212p-toggle-btn ${accountFilter === 'live' ? 'active' : ''}`} onClick={() => setAccountFilter('live')}>Live</button>
+        <button className={`t212p-toggle-btn ${accountFilter === 'practice' ? 'active' : ''}`} onClick={() => setAccountFilter('practice')}>Practice</button>
+      </div>
+
       {/* ── Account Summary ── */}
       <section className="t212p-section">
         <h2>Account Summary</h2>
@@ -152,7 +160,7 @@ export default function T212PortfolioPage() {
                   <tr key={p.ticker || i}>
                     <td className="t212p-symbol">{p.ticker || p.symbol}</td>
                     <td>{p.quantity?.toFixed(2) || '—'}</td>
-                    <td>£{p.averagePrice?.toFixed(2) || '—'}</td>
+                    <td>£{p.avgPrice?.toFixed(2) || '—'}</td>
                     <td>£{p.currentPrice?.toFixed(2) || '—'}</td>
                     <td className={p.ppl > 0 ? 't212p-profit' : p.ppl < 0 ? 't212p-loss' : ''}>
                       {p.ppl != null ? `£${p.ppl.toFixed(2)}` : '—'}

@@ -7,13 +7,13 @@
 }
 
 .dt-header { margin-bottom: 20px; }
-.dt-header h1 { font-size: 1.5rem; font-weight: 700; color: #f1f5f9; margin: 0 0 4px; }
-.dt-subtitle { color: #64748b; font-size: 0.82rem; margin: 0; }
+.dt-header h1 { font-size: 1.5rem; font-weight: 700; color: var(--ink); margin: 0 0 4px; }
+.dt-subtitle { color: var(--ink-soft); font-size: 0.82rem; margin: 0; }
 
 /* Completeness bar */
 .dt-completeness-bar {
-  background: #1a1d2e;
-  border: 1px solid #2d3040;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 14px 16px;
   margin-bottom: 16px;
@@ -26,7 +26,7 @@
 .dt-completeness-label {
   font-size: 0.7rem;
   font-weight: 700;
-  color: #94a3b8;
+  color: var(--ink-soft);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   flex-shrink: 0;
@@ -59,7 +59,7 @@
 
 .dt-completeness-summary {
   font-size: 0.68rem;
-  color: #64748b;
+  color: var(--ink-soft);
   flex-shrink: 0;
 }
 
@@ -69,48 +69,48 @@
   align-items: flex-end;
   gap: 0.75rem;
   margin-bottom: 16px;
-  background: #1a1d2e;
-  border: 1px solid #2d3040;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 10px 14px;
 }
 
 .dt-filter-group { display: flex; flex-direction: column; gap: 4px; }
 .dt-filter-group label {
-  font-size: 0.65rem; font-weight: 600; color: #64748b;
+  font-size: 0.65rem; font-weight: 600; color: var(--ink-soft);
   text-transform: uppercase; letter-spacing: 0.04em;
 }
 
 .dt-input {
   padding: 6px 10px; border-radius: 6px;
-  border: 1px solid #2d3040; background: #111318;
-  color: #e2e8f0; font-size: 0.82rem; width: 160px;
+  border: 1px solid var(--line); background: var(--bg, #0a0e17);
+  color: var(--ink); font-size: 0.82rem; width: 160px;
 }
 
 .dt-refresh-btn {
   padding: 6px 14px; border-radius: 6px;
-  border: 1px solid #2d3040; background: #111318;
-  color: #94a3b8; font-size: 0.78rem; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel);
+  color: var(--ink-soft); font-size: 0.78rem; cursor: pointer;
   transition: all 0.15s; margin-left: auto;
 }
-.dt-refresh-btn:hover { color: #e2e8f0; border-color: var(--accent); }
+.dt-refresh-btn:hover { color: var(--ink); border-color: var(--accent); }
 
 /* Empty */
 .dt-empty { text-align: center; padding: 40px 20px; }
-.dt-empty p { color: #64748b; font-size: 0.9rem; margin: 0; }
+.dt-empty p { color: var(--ink-soft); font-size: 0.9rem; margin: 0; }
 .dt-empty-hint { font-size: 0.75rem !important; margin-top: 6px !important; }
 
 /* Trail list */
 .dt-list { display: flex; flex-direction: column; gap: 0.4rem; }
 
 .dt-trail-card {
-  background: #1a1d2e;
-  border: 1px solid #2d3040;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
   transition: border-color 0.15s;
 }
-.dt-trail-card:hover { border-color: #475569; }
+.dt-trail-card:hover { border-color: var(--accent); }
 .dt-trail-card.expanded { border-color: var(--accent); }
 .dt-trail-card.complete { border-color: #22c55e; }
 .dt-trail-card.incomplete { border-color: #f59e0b; }
@@ -131,7 +131,7 @@
   min-width: 160px;
 }
 
-.dt-trail-symbol { font-weight: 700; color: #e2e8f0; font-size: 0.88rem; }
+.dt-trail-symbol { font-weight: 700; color: var(--ink); font-size: 0.88rem; }
 .dt-trail-direction {
   padding: 1px 6px; border-radius: 3px;
   font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
@@ -156,21 +156,21 @@
 }
 
 .dt-mini-stage.present { background: rgba(34,197,94,0.1); color: #22c55e; }
-.dt-mini-stage.missing { background: rgba(100,116,139,0.05); color: #475569; }
+.dt-mini-stage.missing { background: rgba(100,116,139,0.05); color: var(--ink-soft); }
 
 .dt-trail-info {
   display: flex; flex-direction: column; align-items: flex-end;
   gap: 1px; flex-shrink: 0;
-  font-size: 0.68rem; color: #64748b;
+  font-size: 0.68rem; color: var(--ink-soft);
 }
 .dt-trail-time { font-size: 0.62rem; }
 
-.dt-trail-chevron { color: #64748b; font-size: 0.7rem; width: 14px; text-align: center; }
+.dt-trail-chevron { color: var(--ink-soft); font-size: 0.7rem; width: 14px; text-align: center; }
 
 /* Timeline */
 .dt-timeline {
   padding: 0 14px 14px;
-  border-top: 1px solid #2d3040;
+  border-top: 1px solid var(--line);
 }
 
 .dt-timeline-track {

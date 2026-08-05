@@ -119,7 +119,7 @@ const SYMBOL_PROTOCOL_MAP: Record<string, string> = {
   VIX: 'vix-spike-v1',
   EURUSD: 'forex-session-v1', GBPUSD: 'forex-session-v1', USDJPY: 'forex-session-v1',
   AUDUSD: 'forex-session-v1', USDCHF: 'forex-session-v1', NZDUSD: 'forex-session-v1',
-  USDCAD: 'cad-sniper-v1', US30: 'dow-speed-v1', DJI30: 'dow-speed-v1',
+  USDCAD: 'usdcad-oil-v1', US30: 'dow-speed-v1', DJI30: 'dow-speed-v1',
   UK100: 'ftse-speed-v1', JPN225: 'nikkei-speed-v1', EUSTX50: 'euro-stoxx-v1',
 };
 
@@ -129,7 +129,7 @@ const SYMBOL_PROTOCOL_MAP: Record<string, string> = {
  * IMPORTANT: Uses `include` (not `select`) to join the Protocol table.
  * `select: { protocolId: true }` returns the UUID foreign key, not the
  * human-readable slug. This caused #459 — Speed Scanner showed UUIDs like
- * "42f2ec59-..." instead of "cad-sniper-v1". Always use `include` with
+ * "42f2ec59-..." instead of "usdcad-oil-v1". Always use `include` with
  * relations when you need fields from the related table, not just the FK.
  *
  * Also returns `active` status so the frontend can filter inactive protocols.

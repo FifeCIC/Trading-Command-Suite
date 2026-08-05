@@ -149,12 +149,36 @@
   background: var(--panel); color: var(--ink); font-family: inherit; font-size: 0.72rem;
 }
 .wl-list-date { font-size: 0.68rem; color: #475569; }
+.wl-list-date-row {
+  padding: 0.25rem 0.75rem 0.5rem;
+  display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap;
+}
+
+/* Delete button — in detail pane */
+.wl-delete-btn {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 6px;
+  background: transparent;
+  color: #ef4444;
+  font-size: 0.72rem;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.wl-delete-btn:hover:not(:disabled) { background: #ef4444; color: #fff; }
+.wl-delete-btn:disabled { opacity: 0.4; cursor: default; }
 
 /* ── Right Detail Panel ── */
 .wl-detail-empty {
   padding: 2.5rem 1.5rem; text-align: center; color: var(--ink-soft); font-size: 0.88rem;
 }
 .wl-detail-content { padding: 1rem 1.2rem; }
+.wl-detail-header-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.4rem;
+}
+.wl-detail-header-row h3 { margin: 0; font-size: 1.05rem; color: var(--ink); }
 .wl-detail-content h3 { margin: 0 0 0.4rem; font-size: 1.05rem; color: var(--ink); }
 .wl-proto-badge {
   display: inline-block; margin-bottom: 0.5rem;

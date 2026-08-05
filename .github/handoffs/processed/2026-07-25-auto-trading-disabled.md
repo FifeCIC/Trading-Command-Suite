@@ -18,7 +18,7 @@ Disabled 15 auto-mode trading strategies that were placing rogue trades every 2-
 - 4 "Cross" strategies: EUR/CHF, AUD/JPY, GBP/JPY, EUR/JPY
 
 **Still active (semi-auto — safe, require manual confirmation):**
-- Default EURUSD, MT5 Technical Core EURUSD, GBPUSD Session, EURUSD Session, CAD Sniper USDCAD, Gold Scalp
+- Default EURUSD, MT5 Technical Core EURUSD, GBPUSD Session, EURUSD Session, USDCAD Session, Gold Scalp
 
 ## Root Cause Analysis
 

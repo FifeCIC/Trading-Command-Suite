@@ -26,6 +26,8 @@ export interface ProtocolConfig {
   winRateTarget?: string;
   idealFor?: string;
   seasonalAffinity?: any;
+  /** How to resolve symbols for this protocol. If absent, derived from protocol ID. */
+  symbolResolution?: { type: 'single'; symbol: string } | { type: 'watchlist'; name: string };
 }
 
 @Injectable()
@@ -91,6 +93,97 @@ export class ProtocolDbService implements OnModuleInit {
   /** Clear the cache at start of each tick. */
   clearCache(): void {
     this.cache.clear();
+  }
+
+  /**
+   * Resolve which symbols a protocol scores. Three paths, in priority order:
+   * 1. Database: SymbolProtocolAssignment records (single-symbol assignments)
+   * 2. Database: Watchlist linked via watchlist_id on protocol
+   * 3. Auto-derived from protocol ID (fallback)
+   */
+  async resolveSymbols(protocolId: string): Promise<string[]> {
+    // Path 1: DB — SymbolProtocolAssignment records
+    try {
+      const assignments = await (this.prisma as any).symbolProtocolAssignment.findMany({
+        where: { protocolId },
+        select: { symbol: true },
+      });
+      if (assignments?.length > 0) {
+        return assignments.map((a: any) => a.symbol.toUpperCase());
+      }
+    } catch { /* table may not exist yet */ }
+
+    // Path 2: DB — Watchlist linked to this protocol
+    try {
+      const wl = await (this.prisma as any).watchlist.findFirst({
+        where: { protocolId },
+        select: { symbols: true },
+      });
+      if (wl?.symbols) {
+        const parsed = typeof wl.symbols === 'string' ? JSON.parse(wl.symbols) : wl.symbols;
+        if (Array.isArray(parsed)) {
+          return parsed.map((s: any) => typeof s === 'string' ? s.toUpperCase() : (s.ticker || s.symbol || '').toUpperCase()).filter(Boolean);
+        }
+      }
+    } catch { /* table may not exist yet */ }
+
+    // Path 3: Auto-derived from protocol ID
+    return this.deriveSymbolsFromId(protocolId);
+  }
+
+  /** Auto-derive symbols from a protocol ID when no explicit config exists. */
+  private async deriveSymbolsFromId(protocolId: string): Promise<string[]> {
+    const id = protocolId.toLowerCase();
+
+    // Single-symbol protocols — obvious from their name
+    if (id.includes('btc')) return ['BTCUSD'];
+    if (id.includes('xau') || id.includes('gold')) return ['XAUUSD'];
+    if (id.includes('oil')) return ['USOIL'];
+    if (id.includes('spy') || id.includes('spx')) return ['SPY'];
+    if (id.includes('qqq')) return ['QQQ'];
+    if (id.includes('dow')) return ['US30'];
+    if (id.includes('ftse')) return ['UK100'];
+    if (id.includes('tsla')) return ['TSLA'];
+    if (id.includes('doge')) return ['DOGEUSD'];
+    if (id.includes('china')) return ['CHN50'];
+    if (id.includes('vix')) return ['VIX'];
+
+    // Multi-symbol protocols — linked to named watchlists
+    if (id.includes('forex') || id.includes('session') || id.includes('dxy')) {
+      return this.getWatchlistSymbols('forex-majors');
+    }
+    if (id.includes('momentum')) {
+      return this.getWatchlistSymbols('momentum-stocks');
+    }
+    if (id.includes('pandemic')) {
+      return this.getWatchlistSymbols('pandemics');
+    }
+    if (id.includes('leverage')) {
+      return this.getWatchlistSymbols('leverage');
+    }
+
+    // Fallback: try a watchlist with matching name
+    const wlSymbols = await this.getWatchlistSymbols(protocolId);
+    if (wlSymbols.length > 0) return wlSymbols;
+
+    return [];
+  }
+
+  /** Get symbols from a watchlist by name (fuzzy match). */
+  private async getWatchlistSymbols(name: string): Promise<string[]> {
+    try {
+      const wl: any[] = await (this.prisma as any).$queryRawUnsafe(
+        `SELECT symbols FROM watchlist WHERE LOWER(REPLACE(REPLACE(name, '-', ' '), '_', ' ')) = LOWER(REPLACE(REPLACE(?, '-', ' '), '_', ' ')) LIMIT 1`,
+        name,
+      );
+      if (wl.length > 0 && wl[0].symbols) {
+        const parsed = typeof wl[0].symbols === 'string' ? JSON.parse(wl[0].symbols) : wl[0].symbols;
+        if (Array.isArray(parsed)) {
+          return parsed.map((s: any) => typeof s === 'string' ? s.toUpperCase() : (s.ticker || s.symbol || '').toUpperCase()).filter(Boolean);
+        }
+      }
+    } catch { /* best effort */ }
+    return [];
   }
 
   /**

@@ -226,6 +226,7 @@ export class ProtocolsController {
     description?: string;
     directionMode?: string;
     tradingStyle?: string;
+    recommendedTimeframe?: string;
     groups?: Array<{
       groupId: string;
       name: string;
@@ -253,6 +254,7 @@ export class ProtocolsController {
             description: body.description ?? existing.description,
             directionMode: body.directionMode ?? existing.directionMode,
             tradingStyle: body.tradingStyle ?? existing.tradingStyle,
+            recommendedTimeframe: body.recommendedTimeframe ?? existing.recommendedTimeframe,
           },
         });
         protocolId = existing.id;
@@ -264,6 +266,7 @@ export class ProtocolsController {
             description: body.description ?? null,
             directionMode: body.directionMode ?? 'LONG_ONLY',
             tradingStyle: body.tradingStyle ?? null,
+            recommendedTimeframe: body.recommendedTimeframe ?? null,
           },
         });
         protocolId = created.id;

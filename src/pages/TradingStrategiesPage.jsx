@@ -93,6 +93,8 @@ export default function TradingStrategiesPage() {
   const [editField, setEditField] = useState(null);     // which field is being edited
   const [editValue, setEditValue] = useState('');        // current input value
   const [saving, setSaving] = useState(false);           // save in progress
+  const [sortKey, setSortKey] = useState('symbol');
+  const [sortDir, setSortDir] = useState('asc');
 
   useEffect(() => {
     let cancelled = false;
@@ -137,6 +139,26 @@ export default function TradingStrategiesPage() {
     if (!selectedId) return null;
     return trading.find(s => s.id === selectedId) || null;
   }, [selectedId, trading]);
+
+  // ── Sorted list ──
+  const sortedTrading = useMemo(() => {
+    const sorted = [...trading];
+    sorted.sort((a, b) => {
+      const va = (a[sortKey] ?? '').toString().toLowerCase();
+      const vb = (b[sortKey] ?? '').toString().toLowerCase();
+      if (va < vb) return sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }, [trading, sortKey, sortDir]);
+
+  const handleSort = (key) => {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('asc'); }
+  };
+
+  const sortArrow = (key) => sortKey === key ? (sortDir === 'asc' ? ' ▴' : ' ▾') : '';
 
   const intel = selected ? inferIntelligence(selected) : null;
 
@@ -256,20 +278,20 @@ export default function TradingStrategiesPage() {
             <table className="ts-table">
               <thead>
                 <tr>
-                  <th>Symbol</th>
-                  <th>Name</th>
-                  <th className="ts-tf-header">
-                    TF
+                  <th className="ts-sortable" onClick={() => handleSort('symbol')}>Symbol{sortArrow('symbol')}</th>
+                  <th className="ts-sortable" onClick={() => handleSort('name')}>Name{sortArrow('name')}</th>
+                  <th className="ts-tf-header ts-sortable" onClick={() => handleSort('timeframe')}>
+                    TF{sortArrow('timeframe')}
                     <span className="ts-tf-popover">Timeframe — the chart interval each strategy operates on (e.g. 5m = 5-minute, 1h = 1-hour, 1D = daily)</span>
                   </th>
                   <th>Pos</th>
                   <th>SL / TP</th>
-                  <th>Mode</th>
-                  <th>Active</th>
+                  <th className="ts-sortable" onClick={() => handleSort('mode')}>Mode{sortArrow('mode')}</th>
+                  <th className="ts-sortable" onClick={() => handleSort('active')}>Active{sortArrow('active')}</th>
                 </tr>
               </thead>
               <tbody>
-                {trading.map(s => (
+                {sortedTrading.map(s => (
                   <tr
                     key={s.id}
                     className={`ts-row${selectedId === s.id ? ' ts-row--selected' : ''}`}

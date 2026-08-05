@@ -37,7 +37,7 @@
 - Updated CONTRACT_REGISTER_LAST_UPDATED to 2026-07-28
 
 ### `src/pages/CapabilityMapPage.jsx`
-- Added 19 new capability entries (Capital.com Adapter, Strategy Library, Gold Scalp, CAD Sniper, Forex Session protocols, META.Stack Status, Auto-Trading Safety, AI Cost Tracking, Bundle Optimization, SpeedChart Unification, Diagram Accuracy, META.Stack Explorer checklists, Deprecated MT5 Pathway, Console Warning Cleanup, Dead Code Cleanup)
+- Added 19 new capability entries (Capital.com Adapter, Strategy Library, Gold Scalp, USDCAD CAD, Forex Session protocols, META.Stack Status, Auto-Trading Safety, AI Cost Tracking, Bundle Optimization, SpeedChart Unification, Diagram Accuracy, META.Stack Explorer checklists, Deprecated MT5 Pathway, Console Warning Cleanup, Dead Code Cleanup)
 - Updated stale labels: "Protocol System (32 protocols)" → "(44 protocols, DB-driven)", "Directive Registry (99 directives)" → "(102 directives, DB-backed metadata)"
 
 ### `src/pages/MetaStackStatusPage.jsx` + `meta-stack-status.css` (NEW)

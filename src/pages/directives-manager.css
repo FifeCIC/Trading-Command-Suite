@@ -250,11 +250,11 @@
 
 .directive-slider {
   flex: 1;
-  height: 4px;
+  height: 6px;
   appearance: none;
   -webkit-appearance: none;
-  background: rgba(255,255,255,0.08);
-  border-radius: 2px;
+  background: var(--line, #334155);
+  border-radius: 3px;
   outline: none;
 }
 
@@ -334,7 +334,9 @@
   flex: 1;
   max-width: 140px;
   accent-color: var(--accent);
-  height: 4px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line, #334155);
 }
 
 /* ── Test results section ── */
@@ -518,3 +520,11 @@
   margin-bottom: 0.25rem;
 }
 .directive-detail-header-row h2 { margin: 0; }
+
+.directive-detail-meta-row {
+  display: flex; gap: 0.4rem; margin-top: 0.35rem; flex-wrap: wrap;
+}
+
+.directive-detail-badge {
+  padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;
+}

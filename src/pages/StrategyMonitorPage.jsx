@@ -20,11 +20,14 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import './strategy-monitor.css';
+import './strategies-list.css';
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: '📊' },
+  { id: 'strategies', label: 'Strategies', icon: '◆' },
   { id: 'compare', label: 'Compare', icon: '⚖️' },
   { id: 'ladders', label: 'Ladders', icon: '🪜' },
+  { id: 'signals', label: 'Signals', icon: '📡' },
 ];
 
 const STATUS_COLORS = {
@@ -49,6 +52,8 @@ function PnlBadge({ value }) {
 
 export default function StrategyMonitorPage() {
   const [tab, setTab] = useState('overview');
+  const [stratFilter, setStratFilter] = useState('all');
+  const [selectedStratId, setSelectedStratId] = useState(null);
 
   // ── Shared data ──
   const { data: strategies = [], isLoading: stratLoading } = useQuery({
@@ -88,6 +93,15 @@ export default function StrategyMonitorPage() {
     enabled: tab === 'ladders',
   });
 
+  // ── Tab: Signals ──
+  const { data: signalsData, isLoading: signalsLoading } = useQuery({
+    queryKey: ['monitor-signals'],
+    queryFn: () => apiGet('/api/signals/envelope/recent?limit=50').catch(() => []),
+    refetchInterval: 20_000,
+    enabled: tab === 'signals',
+  });
+  const signals = Array.isArray(signalsData) ? signalsData : (signalsData?.envelopes || signalsData?.signals || []);
+
   // ── Compute overview stats ──
   const overview = useMemo(() => {
     const active = stratList.filter(s => s.active !== false);
@@ -103,6 +117,17 @@ export default function StrategyMonitorPage() {
   const loopRunning = autoStatus?.loopEnabled;
   const tickCount = autoStatus?.tickCount || 0;
   const lastTickMs = autoStatus?.lastTickMs || 0;
+
+  // ── Strategies tab filters ──
+  const filteredStrats = useMemo(() => {
+    if (stratFilter === 'all') return stratList;
+    if (stratFilter === 'active') return stratList.filter(s => s.active !== false);
+    if (stratFilter === 'trading') return stratList.filter(s => s.symbol);
+    if (stratFilter === 'scoring') return stratList.filter(s => s.watchlistName);
+    if (stratFilter === 'faulty') return stratList.filter(s => s.dataStatus && s.dataStatus !== 'ready');
+    return stratList;
+  }, [stratList, stratFilter]);
+  const faultyStrats = useMemo(() => stratList.filter(s => s.dataStatus && s.dataStatus !== 'ready'), [stratList]);
 
   // ── Render ─────────────────────────────────────────────
 
@@ -154,7 +179,7 @@ export default function StrategyMonitorPage() {
           {/* Strategy cards */}
           {stratLoading ? <LoadingSkeleton variant="card" count={3} /> : (
             <div className="sm-card-grid">
-              {stratList.slice(0, 12).map(s => {
+              {stratList.map(s => {
                 const isActive = s.active !== false;
                 return (
                   <div key={s.id} className="sm-card">
@@ -179,6 +204,94 @@ export default function StrategyMonitorPage() {
           )}
           {!stratLoading && stratList.length === 0 && (
             <EmptyState icon="📊" title="No strategies" description="Create one to see monitoring data." />
+          )}
+        </motion.div>
+      )}
+
+      {/* ── Strategies Tab (merged from StrategiesListPage #560) ── */}
+      {tab === 'strategies' && (
+        <motion.div className="sm-tab-content" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+          {/* Filter bar */}
+          <div className="sm-strat-filters">
+            {['all', 'active', 'trading', 'scoring', 'faulty'].map(f => (
+              <button
+                key={f}
+                className={`sl-filter-chip ${stratFilter === f ? 'sl-filter-active' : ''} ${f === 'faulty' ? 'sl-filter-faulty' : ''}`}
+                onClick={() => setStratFilter(f)}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {/* Faulty banner */}
+          {faultyStrats.length > 0 && stratFilter !== 'faulty' && (
+            <div className="sl-faulty-banner">
+              <span>⚠️ {faultyStrats.length} strateg{faultyStrats.length !== 1 ? 'ies' : 'y'} with data issues</span>
+              <button className="sl-faulty-banner-btn" onClick={() => setStratFilter('faulty')}>View faulty</button>
+            </div>
+          )}
+
+          {stratLoading ? <LoadingSkeleton variant="card" count={6} /> : filteredStrats.length === 0 ? (
+            <EmptyState icon="◆" title="No strategies" description="No strategies match this filter." />
+          ) : (
+            <div className="sl-grid">
+              {filteredStrats.map((s, i) => {
+                const isActive = s.active !== false;
+                const isTrading = Boolean(s.symbol);
+                const isScoring = Boolean(s.watchlistName);
+                const typeLabel = isTrading ? 'Trading' : isScoring ? 'Scoring' : 'Strategy';
+                const typeColor = isTrading ? '#3b82f6' : isScoring ? '#8b5cf6' : '#94a3b8';
+
+                return (
+                  <motion.div
+                    key={s.id}
+                    className={`sl-card ${selectedStratId === s.id ? 'sl-card-selected' : ''}`}
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.02 }}
+                    onClick={() => setSelectedStratId(selectedStratId === s.id ? null : s.id)}
+                  >
+                    <div className="sl-card-top">
+                      <span className="sl-card-dot" style={{ background: isActive ? '#22c55e' : '#64748b' }} />
+                      <strong className="sl-card-name">{s.name}</strong>
+                      <span className="sl-card-type" style={{ background: typeColor + '18', color: typeColor, borderColor: typeColor + '33' }}>
+                        {typeLabel}
+                      </span>
+                    </div>
+                    <div className="sl-card-meta">
+                      {s.symbol && <span className="sl-chip">{s.symbol}</span>}
+                      {s.watchlistName && <span className="sl-chip sl-chip-wl">{s.watchlistName}</span>}
+                      <span className="sl-chip sl-chip-proto">{s.protocolId || '—'}</span>
+                      <span className="sl-chip sl-chip-broker">{s.brokerId || '—'}</span>
+                    </div>
+                    {s.lastComposite != null && (
+                      <div className="sl-card-score">
+                        <span className="sl-score-label">Last Score</span>
+                        <span className="sl-score-value" style={{ color: s.lastComposite >= 60 ? '#22c55e' : s.lastComposite >= 40 ? '#f59e0b' : '#ef4444' }}>
+                          {s.lastComposite}
+                        </span>
+                      </div>
+                    )}
+                    {s.dataStatus && s.dataStatus !== 'ready' && (
+                      <div className="sl-card-warning">
+                        {s.dataStatus === 'pending_bars' ? '⏳' : '🚫'} {s.dataStatusReason || s.dataStatus}
+                      </div>
+                    )}
+                    {selectedStratId === s.id && (
+                      <div className="sl-card-detail">
+                        {s.description && <p className="sl-detail-desc">{s.description}</p>}
+                        <div className="sl-detail-grid">
+                          <span>Mode: <strong>{s.mode || '—'}</strong></span>
+                          <span>Base Size: <strong>{s.baseSize || '—'}</strong></span>
+                          <span>SL: <strong>{s.slPct != null ? s.slPct + '%' : '—'}</strong></span>
+                          <span>TP: <strong>{s.tpPct != null ? s.tpPct + '%' : '—'}</strong></span>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
           )}
         </motion.div>
       )}
@@ -232,6 +345,44 @@ export default function StrategyMonitorPage() {
               </div>
             ) : (
               <EmptyState icon="🪜" title="Ladders unavailable" description="The arena endpoint may not be active yet." />
+            )
+          )}
+        </motion.div>
+      )}
+
+      {/* ── Signals Tab ── */}
+      {tab === 'signals' && (
+        <motion.div className="sm-tab-content" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+          {signalsLoading ? <LoadingSkeleton variant="text" lines={5} /> : (
+            signals.length > 0 ? (
+              <div className="sm-signals-list">
+                <div className="sm-signals-header">
+                  <span className="sm-sig-th">Time</span>
+                  <span className="sm-sig-th">Symbol</span>
+                  <span className="sm-sig-th">Score</span>
+                  <span className="sm-sig-th">Signal</span>
+                  <span className="sm-sig-th">Protocol</span>
+                  <span className="sm-sig-th">Strategy</span>
+                </div>
+                {signals.slice(0, 50).map((sig, i) => (
+                  <div key={sig.id || i} className="sm-signal-row">
+                    <span className="sm-sig-td sm-sig-time">
+                      {sig.timestamp ? new Date(sig.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}
+                    </span>
+                    <span className="sm-sig-td sm-sig-symbol">{sig.symbol}</span>
+                    <span className="sm-sig-td sm-sig-score" style={{ color: (sig.composite || sig.score || 0) >= 60 ? '#22c55e' : (sig.composite || sig.score || 0) >= 40 ? '#f59e0b' : '#64748b' }}>
+                      {sig.composite ?? sig.score ?? '—'}
+                    </span>
+                    <span className="sm-sig-td sm-sig-signal" style={{ color: sig.signal === 'BUY' ? '#22c55e' : sig.signal === 'SELL' ? '#ef4444' : '#f59e0b' }}>
+                      {sig.signal || 'HOLD'}
+                    </span>
+                    <span className="sm-sig-td sm-sig-proto">{sig.protocol || sig.protocolId || '—'}</span>
+                    <span className="sm-sig-td sm-sig-strategy">{sig.strategy || sig.strategyId || '—'}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState icon="📡" title="No signals yet" description="Signals appear when scoring strategies pass symbols through their gates. Run the scoring pipeline to populate." />
             )
           )}
         </motion.div>

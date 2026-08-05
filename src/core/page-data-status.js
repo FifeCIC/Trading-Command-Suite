@@ -12,10 +12,10 @@
 
 export const PAGE_DATA_STATUS = {
   // ── Trading ──
-  'trading-strategies': { status: 'live', source: 'DB (seed data)' },
-  'strategies-index': { status: 'live', source: 'DB (filterable card index, #504)' },
+  'trading-strategies': { status: 'live', source: 'DB (seed data, promoted from Legacy + sortable columns #566)' },
+  'strategies-index': { status: 'removed', note: 'Merged into strategy-monitor (#560, 2026-08-04)' },
   'strategy-monitor': { status: 'live', source: 'DB (tabbed hub: overview/compare/ladders, #504)' },
-  'strategy-builder': { status: 'live', source: 'Drag-and-drop directive canvas (now registered, #504)' },
+  'strategy-builder': { status: 'live', source: 'Scoring strategy builder with groups + gate toggle + threshold per group (#559, #560)' },
   'strategy-create': { status: 'live', source: 'Tabbed creation: form + wizard (#504)' },
   'mt5-trading': { status: 'live', source: 'MT5 Bridge' },
   'calculators': { status: 'mock', note: 'Client-side only' },
@@ -23,9 +23,10 @@ export const PAGE_DATA_STATUS = {
   'portfolio-overview': { status: 'live', source: 'Alpaca + DB' },
   'portfolio-events': { status: 'live', source: '/api/portfolio/events' },
   'trade-history': { status: 'live', source: 'DB' },
-  'positions-monitor': { status: 'live', source: 'Alpaca + MT5' },
+  'positions-monitor': { status: 'live', source: 'Alpaca + MT5 (promoted from Legacy #565)' },
   'trade-journal': { status: 'live', source: '/api/journal/entries + stats' },
   'market-context': { status: 'live', source: '/api/trading/sessions/market-context (MarketContextService)' },
+  'trading-plans': { status: 'live', source: 'DB (promoted from Legacy #568)' },
   'mt5-connection-manager': { status: 'live', source: 'MT5 Bridge' },
   'accounts-dashboard': { status: 'partial', source: 'Trading212 placeholder' },
   'speed-trading': { status: 'live', source: 'MT5 Bridge + speed-scan' },
@@ -37,14 +38,14 @@ export const PAGE_DATA_STATUS = {
   'scoring-overview': { status: 'live', source: 'DB + Directive Registry' },
   'configure-directives': { status: 'live', source: 'DB' },
   'sees-live-stack': { status: 'live', source: 'DB + Directive Engine' },
-  'sees-arena': { status: 'live', source: 'Multi-stack comparison' },
+  'sees-arena': { status: 'live', source: 'Multi-stack comparison (compare-only, ladders detached #434)' },
   'predictive-sees': { status: 'live', source: 'Directional bias engine' },
-  'signals-workbench': { status: 'live', source: 'SEES Diagnostics' },
   'exit-signals': { status: 'live', note: 'Exit urgency from portfolio scores + decisions' },
-  'protocol-overview': { status: 'live', source: 'DB' },
+  'protocol-overview': { status: 'live', source: 'DB (48 protocols, consolidated stats + directive tooltips)' },
   'create-protocols': { status: 'live', source: 'DB + Directive Registry' },
-  'scoring-runs': { status: 'live', source: 'DB' },
-  'scoring-activity-logs': { status: 'live', source: '/api/scoring/runs (OutcomeTrackerService)' },
+  'protocol-builder': { status: 'live', source: 'DB + Directive Registry (#560 Protocol Builder — new route, builds protocols with direction/timeframe/groups)' },
+  'scoring-runs': { status: 'removed', note: 'Duplicate of scoring-activity-logs (#558, 2026-08-04)' },
+  'scoring-activity-logs': { status: 'live', source: '/api/scoring/runs (OutcomeTrackerService, @@index on Score.timestamp #444)' },
 
   // ── Research ──
   'research-overview': { status: 'live', note: 'Signal dashboard with /api/scoring/ranked + /api/automation/status' },
@@ -92,17 +93,22 @@ export const PAGE_DATA_STATUS = {
   'add-symbol': { status: 'live', source: 'DB' },
 
   // ── Automation ──
-  'automation-dashboard': { status: 'live', source: 'Automation loop + activity feed (3s polling)' },
+  'automation-dashboard': { status: 'live', source: 'Automation loop + activity feed (3s polling, 3-column layout)' },
+  'automation-overview': { status: 'live', source: 'Automation status cards (health counter, MT5, providers #572)' },
   'execution-queue': { status: 'live', source: 'DB execution queue' },
   'automation-rules': { status: 'live', source: 'DB' },
-  'alert-center': { status: 'live', source: 'Alert system + DB' },
+  'alert-center': { status: 'live', source: 'Alert system + DB (Prisma Alert model, click navigation #442)' },
+
+  // ── Strategy Ladders (detached from Arena) ──
+  'strategy-ladders': { status: 'live', source: 'API stacks data (detached from SEES Arena #434)' },
 
   // ── Development ──
   'architecture-framework': { status: 'live', source: 'Static architecture data' },
   'diagrams': { status: 'live', source: 'Generated diagrams' },
   'workflow-wizards': { status: 'mock', note: 'Not yet built' },
   'theme-lab-popover': { status: 'live', source: 'Self-contained demo' },
-  'backtest': { status: 'live', source: 'Backtest engine + DB' },
+  'backtest': { status: 'live', source: 'Backtest engine + DB (moved to Training nav #466)' },
+  'meta-stack-explorer': { status: 'live', source: 'Interactive pipeline visualization via POST /api/scoring/gated/batch' },
   'performance-lab': { status: 'partial', source: 'Trade table + MT5 bridge' },
 
   // ── Training ──

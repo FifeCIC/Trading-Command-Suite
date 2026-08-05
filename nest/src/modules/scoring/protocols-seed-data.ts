@@ -1694,7 +1694,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
     "description": "Forex scoring protocol — session-based mean reversion with trend following. Works across EURUSD, GBPUSD, USDJPY, USDCAD, EURGBP.",
     "directionMode": "LONG_ONLY",
     "tradingStyle": "Session / Mean Reversion",
-    "recommendedTimeframe": "5m–1h",
+    "recommendedTimeframe": "5m",
     "avgHoldTime": "Minutes to hours",
     "winRateTarget": "60–70%",
     "idealFor": "Forex pairs during London/NY session overlap. Mean-reverting within daily ranges, trend-following on session breaks.",
@@ -2573,7 +2573,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
   },
   "usdcad-oil-v1": {
     "name": "USDCAD Oil-Pair V1",
-    "description": "Oil-correlation protocol replacing cad-sniper-v1",
+    "description": "Oil-correlation protocol for USDCAD — replaces the older CAD-focused protocol.",
     "directionMode": "BOTH",
     "tradingStyle": "day-trade",
     "recommendedTimeframe": null,

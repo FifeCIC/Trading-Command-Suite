@@ -59,7 +59,6 @@ export default function QATestingPage() {
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [expandedId, setExpandedId] = useState(null);
-  const [feedbackText, setFeedbackText] = useState('');
 
   useEffect(() => { saveState(state); }, [state]);
 
@@ -92,12 +91,6 @@ export default function QATestingPage() {
     });
   };
 
-  const saveFeedback = (id) => {
-    if (!feedbackText.trim()) return;
-    setState(prev => ({ ...prev, [`${id}-feedback`]: feedbackText }));
-    setFeedbackText('');
-  };
-
   return (
     <div className="qa-page">
       <header className="qa-header">
@@ -127,24 +120,15 @@ export default function QATestingPage() {
 
       {/* ── Filters ── */}
       <div className="qa-filters">
-        <div className="qa-filter-group">
-          <span className="qa-filter-label">Area:</span>
-          {AREAS.map(a => (
-            <button key={a} className={`qa-filter-btn ${areaFilter === a ? 'active' : ''}`} onClick={() => setAreaFilter(a)}>{a}</button>
-          ))}
-        </div>
-        <div className="qa-filter-group">
-          <span className="qa-filter-label">Priority:</span>
-          {PRIORITIES.map(p => (
-            <button key={p} className={`qa-filter-btn ${priorityFilter === p ? 'active' : ''}`} onClick={() => setPriorityFilter(p)}>{p}</button>
-          ))}
-        </div>
-        <div className="qa-filter-group">
-          <span className="qa-filter-label">Status:</span>
-          {STATUSES.map(s => (
-            <button key={s} className={`qa-filter-btn ${statusFilter === s ? 'active' : ''}`} onClick={() => setStatusFilter(s)}>{s}</button>
-          ))}
-        </div>
+        <select className="qa-filter-select" value={areaFilter} onChange={e => setAreaFilter(e.target.value)}>
+          {AREAS.map(a => <option key={a} value={a}>Area: {a}</option>)}
+        </select>
+        <select className="qa-filter-select" value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}>
+          {PRIORITIES.map(p => <option key={p} value={p}>Priority: {p}</option>)}
+        </select>
+        <select className="qa-filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+          {STATUSES.map(s => <option key={s} value={s}>Status: {s}</option>)}
+        </select>
       </div>
 
       {/* ── Items ── */}
@@ -202,18 +186,6 @@ export default function QATestingPage() {
                       <p>{feedback}</p>
                     </div>
                   )}
-                  <div className="qa-feedback-form">
-                    <textarea
-                      className="qa-feedback-input"
-                      placeholder="Leave testing notes or feedback..."
-                      rows={2}
-                      value={feedbackText}
-                      onChange={e => setFeedbackText(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveFeedback(item.id); } }}
-                    />
-                    <button className="qa-feedback-btn" onClick={() => saveFeedback(item.id)}>Save Note</button>
-                    <span className="qa-status-hint">Click status badge to cycle: untested → passed → failed → needs retest</span>
-                  </div>
                 </div>
               )}
             </motion.div>

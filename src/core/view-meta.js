@@ -59,11 +59,35 @@ const VIEW_META = {
     css: 'src/pages/strategy-create.css',
     api: ['GET /api/scoring/gated/protocols', 'GET /api/watchlists', 'POST /api/trading/strategies'],
   },
-  '/scoring/strategy-builder': {
+  '/lab/scoring-debug-lab': {
+    label: 'Scoring Debug (Dual Protocol)',
+    file: 'src/pages/ScoringDebugLab.jsx',
+    css: 'src/pages/scoring-debug-lab.css',
+    api: ['GET /api/scoring/gated/protocols', 'GET /api/scoring/gated/:symbol'],
+  },
+  '/scoring/protocols-ladder': {
+    label: 'Protocols Ladder',
+    file: 'src/pages/ProtocolsLadderPage.jsx',
+    css: 'src/pages/sees-arena.css',
+    api: ['GET /api/scoring/gated/protocols', 'GET /api/scoring/runs'],
+  },
+  '/scoring/strategy-ladders': {
+    label: 'Strategies Ladder',
+    file: 'src/pages/StrategyLaddersPage.jsx',
+    css: 'src/pages/sees-arena.css',
+    api: ['GET /api/scoring/arena'],
+  },
+  '/scoring/protocol-builder': {
     label: 'Protocol Builder',
+    file: 'src/pages/CreateProtocolsPage.jsx',
+    css: 'src/pages/create-protocols.css',
+    api: ['GET /api/directives', 'GET /api/watchlists', 'POST /api/scoring/protocols'],
+  },
+  '/scoring/strategy-builder': {
+    label: 'Strategy Builder',
     file: 'src/pages/StrategyBuilderPage.jsx',
-    css: 'src/components/StrategyBuilder/strategy-builder.css',
-    api: ['GET /api/directives', 'GET /api/watchlists'],
+    css: 'src/pages/create-protocols.css',
+    api: ['GET /api/scoring/protocols', 'POST /api/scoring/strategies'],
   },
   '/trading/trade-journal': {
     label: 'Trade Journal',
@@ -88,12 +112,6 @@ const VIEW_META = {
     file: 'src/pages/DirectivesManagerPage.jsx',
     css: 'src/pages/directives-manager.css',
     api: ['GET /api/directives'],
-  },
-  '/scoring/create-protocols': {
-    label: 'Create Protocols',
-    file: 'src/pages/StrategyBuilderPage.jsx',
-    css: 'src/components/StrategyBuilder/strategy-builder.css',
-    api: ['GET /api/directives', 'GET /api/watchlists', 'POST /api/strategies'],
   },
   '/scoring/scoring-runs': {
     label: 'Scoring Runs',
@@ -148,6 +166,36 @@ const VIEW_META = {
     file: 'src/pages/AutomationRulesPage.jsx',
     css: 'src/pages/automation-rules.css',
     api: ['GET /api/automation/rules'],
+  },
+  '/automation/automation-rules': {
+    label: 'Automation Rules',
+    file: 'src/pages/AutomationRulesPage.jsx',
+    css: 'src/pages/automation-rules.css',
+    api: ['GET /api/automation/rules'],
+  },
+  '/automation/execution-queue': {
+    label: 'Execution Queue',
+    file: 'src/pages/ExecutionQueuePage.jsx',
+    css: 'src/pages/execution-queue.css',
+    api: ['GET /api/automation/status', 'GET /api/trading/mt5/positions'],
+  },
+  '/automation/alert-center': {
+    label: 'Alert Center',
+    file: 'src/pages/AlertCenterPage.jsx',
+    css: 'src/pages/alert-center.css',
+    api: ['GET /api/alerts', 'GET /api/automation/status'],
+  },
+  '/automation/decision-trail': {
+    label: 'Decision Trail',
+    file: 'src/pages/DecisionTrailPage.jsx',
+    css: 'src/pages/decision-trail.css',
+    api: ['GET /api/automation/status', 'GET /api/automation/decisions'],
+  },
+  '/automation/automation-overview': {
+    label: 'Automation Overview',
+    file: 'src/pages/AutomationOverviewPage.jsx',
+    css: 'src/pages/automation-overview.css',
+    api: ['GET /api/automation/status', 'GET /api/trading/strategies', 'GET /api/automation/scoring-strategies', 'GET /api/scoring/protocols'],
   },
   '/watchlists/active-symbols': {
     label: 'Active Symbols',
@@ -210,9 +258,11 @@ export function getViewMeta(pathname) {
   // Try exact match first
   if (VIEW_META[pathname]) return VIEW_META[pathname];
 
-  // Try prefix match for sub-routes
-  for (const [route, meta] of Object.entries(VIEW_META)) {
-    if (pathname.startsWith(route + '/')) return meta;
+  // Try prefix match for sub-routes (e.g. /trading/strategy/123 → /trading/strategy)
+  // Sort by route length descending so longer (more specific) routes match first
+  const routes = Object.keys(VIEW_META).sort((a, b) => b.length - a.length);
+  for (const route of routes) {
+    if (pathname.startsWith(route + '/')) return VIEW_META[route];
   }
 
   return null;

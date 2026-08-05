@@ -70,3 +70,25 @@
 .sm-ladder-name { flex: 1; font-weight: 600; }
 .sm-ladder-score { font-weight: 800; min-width: 40px; text-align: right; }
 .sm-ladder-proto { font-size: 0.62rem; color: var(--ink-soft); background: var(--line); padding: 1px 6px; border-radius: 3px; }
+
+/* Signals tab */
+.sm-signals-list { display: flex; flex-direction: column; gap: 2px; }
+.sm-signals-header {
+  display: flex; gap: 0.5rem; padding: 6px 10px;
+  font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+  color: var(--ink-soft); letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--line); margin-bottom: 2px;
+}
+.sm-signal-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 5px 10px; border-radius: 4px; font-size: 0.76rem;
+  background: var(--panel); border: 1px solid var(--line);
+}
+.sm-signal-row:hover { background: color-mix(in srgb, var(--panel) 92%, var(--accent) 8%); }
+.sm-sig-th { flex: 1; min-width: 0; }
+.sm-sig-td { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sm-sig-time { flex: 0.7; color: var(--ink-soft); font-size: 0.7rem; }
+.sm-sig-symbol { font-weight: 700; }
+.sm-sig-score { font-weight: 700; min-width: 35px; }
+.sm-sig-signal { font-weight: 600; font-size: 0.68rem; }
+.sm-sig-proto, .sm-sig-strategy { color: var(--ink-soft); font-size: 0.68rem; }

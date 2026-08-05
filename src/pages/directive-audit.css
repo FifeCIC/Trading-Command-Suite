@@ -1,0 +1,57 @@
+/* ── Directive Performance Audit ──────────────────────── */
+
+.da-page { padding: 1.5rem 2rem; max-width: var(--page-max-width, 1400px); margin: 0 auto; }
+
+.da-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; }
+.da-header h1 { margin: 0; font-size: 1.5rem; }
+.da-subtitle { margin: 4px 0 0; font-size: 0.82rem; color: var(--ink-soft); max-width: 600px; }
+
+.da-controls { display: flex; gap: 0.5rem; align-items: center; }
+.da-input {
+  padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--panel); color: var(--ink); font-size: 0.8rem;
+}
+.da-btn {
+  padding: 6px 16px; border: 1px solid var(--accent); border-radius: 6px;
+  background: var(--accent); color: #fff; font-size: 0.8rem; font-weight: 600;
+  cursor: pointer; transition: opacity 0.15s;
+}
+.da-btn:hover { opacity: 0.9; }
+.da-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.da-summary { display: flex; gap: 1.5rem; padding: 0.6rem 1rem; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); margin-bottom: 1rem; }
+.da-summary-stat { font-size: 0.85rem; font-weight: 700; }
+
+.da-bucket { margin-bottom: 1.5rem; }
+.da-bucket-title { font-size: 1rem; margin: 0 0 0.5rem; display: flex; align-items: center; gap: 0.6rem; }
+.da-bucket-desc { font-size: 0.7rem; font-weight: 400; color: var(--ink-soft); }
+.da-empty { color: var(--ink-soft); font-size: 0.8rem; }
+
+.da-table { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.da-thead { display: flex; background: var(--line); font-size: 0.68rem; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.3px; }
+.da-tr { display: flex; border-top: 1px solid var(--line); font-size: 0.78rem; align-items: center; }
+.da-tr:hover { background: var(--line); }
+.da-th, .da-td { padding: 7px 10px; display: flex; align-items: center; box-sizing: border-box; }
+.da-th-name, .da-td-name { flex: 2 1 0; min-width: 100px; }
+.da-th-num, .da-td-num { flex: 1 1 0; justify-content: center; min-width: 55px; }
+.da-th-rec, .da-td-rec { flex: 2 1 0; min-width: 0; }
+
+.da-code { font-size: 0.65rem; color: var(--accent); display: block; }
+.da-name { font-size: 0.75rem; color: var(--ink); }
+.da-name-link { font-size: 0.75rem; color: var(--accent); text-decoration: none; cursor: pointer; }
+.da-name-link:hover { text-decoration: underline; color: var(--ink); }
+
+.da-bar-track { position: relative; width: 100%; height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
+.da-bar-fill { height: 100%; border-radius: 5px; transition: width 0.3s; }
+.da-bar-label { position: absolute; top: -2px; left: 50%; transform: translateX(-50%); font-size: 0.55rem; font-weight: 700; color: var(--ink); }
+
+.da-input-wide { min-width: 180px; }
+.da-msg { font-size: 0.72rem; color: #22c55e; font-weight: 600; }
+.da-error { padding: 1rem; color: #ef4444; background: rgba(239,68,68,0.08); border-radius: 8px; margin-bottom: 1rem; }
+.da-sym-label { font-size: 0.9rem; margin-right: 0.5rem; }
+.da-th-proto, .da-td-proto { flex: 2 1 0; min-width: 80px; display: flex; flex-wrap: wrap; gap: 2px; }
+.da-proto-chip { font-size: 0.55rem; padding: 1px 5px; border-radius: 3px; border: 1px solid; white-space: nowrap; font-weight: 600; }
+.da-proto-more { font-size: 0.55rem; color: var(--ink-soft); }
+.da-th-act, .da-td-act { flex: 0.6 0 auto; justify-content: center; min-width: 50px; }
+.da-stub-btn { padding: 2px 8px; border: 1px solid #ef4444; border-radius: 4px; background: rgba(239,68,68,0.1); color: #ef4444; font-size: 0.6rem; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+.da-stub-btn:hover { background: #ef4444; color: #fff; }

@@ -20,14 +20,18 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { MarketSessionsService } from '../../calendar/market-sessions.service';
 
 const MIN_BARS = 1; // Only needs the current bar's timestamp
 
-interface SessionInfo {
-  name: string;
-  quality: number; // 0-1, higher = better trading conditions
-  active: boolean;
-}
+// Session-based quality scores. Order = check for best first (overlap handled
+// by checking all active sessions and taking the highest quality).
+const SESSION_QUALITY: Record<string, number> = {
+  ny: 0.9,       // US regular session
+  london: 0.8,   // London forex session
+  tokyo: 0.4,    // Asian/Tokyo
+  sydney: 0.3,   // Sydney early
+};
 
 @Injectable()
 export class SessionTimingFilterDirective implements IDirective {
@@ -38,8 +42,10 @@ export class SessionTimingFilterDirective implements IDirective {
   readonly priority = 76;
   readonly maxScore = 120;
   readonly minBars = { '1d': 1 }; // PROVEN filter — session timing > regime > HTF alignment
-  readonly version = '1.1.0';
+  readonly version = '2.0.0';
   readonly readiness = 'ready' as const;
+
+  constructor(private readonly marketSessions: MarketSessionsService) {}
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
@@ -55,7 +61,6 @@ export class SessionTimingFilterDirective implements IDirective {
     // Get current bar's timestamp
     const currentBar = bars[bars.length - 1];
     const timestamp = currentBar.timestamp;
-    const hour = timestamp.getUTCHours();
     const dayOfWeek = timestamp.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
 
     // Weekend check
@@ -68,40 +73,20 @@ export class SessionTimingFilterDirective implements IDirective {
       };
     }
 
-    // Session detection (UTC hours)
-    const sessions: SessionInfo[] = [
-      {
-        name: 'Asian',
-        quality: 0.4,
-        active: hour >= 0 && hour < 9,
-      },
-      {
-        name: 'London',
-        quality: 0.8,
-        active: hour >= 8 && hour < 17,
-      },
-      {
-        name: 'US',
-        quality: 0.9,
-        active: hour >= 13 && hour < 21,
-      },
-      {
-        name: 'London-US Overlap',
-        quality: 1.0,
-        active: hour >= 13 && hour < 17,
-      },
-      {
-        name: 'Asian-London Overlap',
-        quality: 0.6,
-        active: hour >= 8 && hour < 9,
-      },
-    ];
+    // Session detection — DST-aware via canonical MarketSessionsService.
+    // Active sessions are derived from each session's own IANA timezone,
+    // so boundaries (e.g. NY 09:30 ET → 13:30/14:30 UTC) stay correct all year.
+    const activeScopes = this.marketSessions.getActiveSessions(timestamp)
+      .map((s) => s.scope);
+    const hour = timestamp.getUTCHours();
 
-    // Find active sessions
-    const activeSessions = sessions.filter((s) => s.active);
+    // Find active sessions with their quality (take the highest quality active).
+    const activeSessions = activeScopes
+      .map((scope) => ({ name: scope, quality: SESSION_QUALITY[scope] ?? 0.5, active: true }))
+      .sort((a, b) => b.quality - a.quality);
 
     if (activeSessions.length === 0) {
-      // Between sessions (e.g., 21:00-00:00 UTC, 09:00-08:00)
+      // Between sessions
       return {
         score: 20,
         confidence: 0.5,
@@ -111,8 +96,7 @@ export class SessionTimingFilterDirective implements IDirective {
     }
 
     // Highest quality active session
-    const bestSession = activeSessions.reduce((best, s) =>
-      s.quality > best.quality ? s : best, activeSessions[0]);
+    const bestSession = activeSessions[0];
 
     // Score based on session quality
     const score = Math.round(bestSession.quality * 80 + 20);

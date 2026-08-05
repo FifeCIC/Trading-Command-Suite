@@ -71,11 +71,6 @@ export default function AnalyseSymbolPage() {
       icon: '📈',
       action: () => navigate('/trading/mt5-trading'),
     },
-    {
-      label: 'SEES Diagnostics',
-      icon: '🔬',
-      action: () => navigate('/scoring/signals-workbench'),
-    },
   ];
 
   return (

@@ -35,7 +35,6 @@ export const EXPERIENCE_MATRIX = {
     'configure-directives':  { beginner: false, experienced: false, expert: true },
     'live-ordering-stack':   { beginner: false, experienced: false, expert: true },
     'sees-advanced':         { beginner: false, experienced: false, expert: true },
-    'signals-workbench':     { beginner: false, experienced: true,  expert: true },
     'exit-signals':          { beginner: false, experienced: true,  expert: true },
     'sees-arena':            { beginner: false, experienced: false, expert: true },
     'protocols':             { beginner: false, experienced: true,  expert: true },

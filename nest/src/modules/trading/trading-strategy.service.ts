@@ -13,6 +13,7 @@ import { DirectiveInput, MarketBar } from '../directives/interfaces/directive.in
 export interface StrategySummary {
   id: string;
   name: string;
+  version?: string | null;
   protocolId: string | null;
   shortProtocolId?: string | null;
   symbol: string;
@@ -70,6 +71,7 @@ export class TradingStrategyService {
       return {
         id: s.id,
         name: s.name,
+        version: (s as any).version ?? null,
         protocolId: s.protocolId,
         shortProtocolId: (s as any).shortProtocolId ?? null,
         symbol: s.symbol,

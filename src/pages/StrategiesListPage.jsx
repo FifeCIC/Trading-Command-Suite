@@ -35,7 +35,7 @@ function formatPnl(v) {
 
 export default function StrategiesListPage() {
   const [selectedId, setSelectedId] = useState(null);
-  const [filter, setFilter] = useState('all'); // all | active | trading | scoring
+  const [filter, setFilter] = useState('all'); // all | active | trading | scoring | faulty
 
   // ── Strategies ──
   const { data: strategies = [], isLoading, isError } = useQuery({
@@ -46,6 +46,12 @@ export default function StrategiesListPage() {
     },
     refetchInterval: 15_000,
   });
+
+  // Faulty strategies (pending_bars or blocked)
+  const faultyStrategies = useMemo(() => {
+    if (!strategies?.length) return [];
+    return strategies.filter(s => s.dataStatus && s.dataStatus !== 'ready');
+  }, [strategies]);
 
   // ── Portfolio cross-ref ──
   const { data: positions = [] } = useQuery({
@@ -69,6 +75,7 @@ export default function StrategiesListPage() {
     if (filter === 'active') return strategies.filter(s => s.active !== false);
     if (filter === 'trading') return strategies.filter(s => s.mode === 'trade' || s.symbol);
     if (filter === 'scoring') return strategies.filter(s => s.mode === 'score' || s.watchlistName);
+    if (filter === 'faulty') return strategies.filter(s => s.dataStatus && s.dataStatus !== 'ready');
     return strategies;
   }, [strategies, filter]);
 
@@ -78,13 +85,9 @@ export default function StrategiesListPage() {
   }, [selectedId, strategies]);
 
   const handleToggle = async (id) => {
-    try {
-      const res = await fetch(`${API}/${id}/toggle`, { method: 'POST' });
-      if (res.ok) {
-        const updated = await res.json();
-        // TanStack Query will refetch on next interval
-      }
-    } catch { /* ok */ }
+    // Optimistic update — toggle immediately in local state would require useState
+    // but we use useQuery data. Fire-and-forget with a fast POST, refetch on interval.
+    fetch(`${API}/${id}/toggle`, { method: 'POST' }).catch(() => {});
   };
 
   // ── Render ─────────────────────────────────────────────
@@ -101,10 +104,10 @@ export default function StrategiesListPage() {
           </p>
         </div>
         <div className="sl-filter-bar">
-          {['all', 'active', 'trading', 'scoring'].map(f => (
+          {['all', 'active', 'trading', 'scoring', 'faulty'].map(f => (
             <button
               key={f}
-              className={`sl-filter-chip ${filter === f ? 'sl-filter-active' : ''}`}
+              className={`sl-filter-chip ${filter === f ? 'sl-filter-active' : ''} ${f === 'faulty' ? 'sl-filter-faulty' : ''}`}
               onClick={() => setFilter(f)}
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -114,6 +117,12 @@ export default function StrategiesListPage() {
       </motion.header>
 
       {isError && <EmptyState icon="⚠️" title="Unable to load strategies" description="Is the NestJS backend running?" />}
+      {!isLoading && faultyStrategies.length > 0 && filter !== 'faulty' && (
+        <div className="sl-faulty-banner">
+          <span>⚠️ {faultyStrategies.length} strateg{faultyStrategies.length !== 1 ? 'ies' : 'y'} with data issues</span>
+          <button className="sl-faulty-banner-btn" onClick={() => setFilter('faulty')}>View faulty</button>
+        </div>
+      )}
       {!isLoading && filtered.length === 0 && (
         <EmptyState icon="🎯" title="No strategies" description="Create one to start trading or scoring." />
       )}

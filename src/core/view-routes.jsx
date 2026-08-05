@@ -17,7 +17,6 @@
 import TradingStrategiesPage from '../pages/TradingStrategiesPage.jsx';
 import StrategyDashboardPage from '../pages/StrategyDashboardPage.jsx';
 import StrategyComparisonPage from '../pages/StrategyComparisonPage.jsx';
-import StrategiesListPage from '../pages/StrategiesListPage.jsx';
 import StrategyMonitorPage from '../pages/StrategyMonitorPage.jsx';
 import StrategyCreatePage from '../pages/StrategyCreatePage.jsx';
 import TradeJournalPage from '../pages/TradeJournalPage.jsx';
@@ -39,15 +38,16 @@ import DirectiveDetailPage from '../pages/DirectiveDetailPage.jsx';
 import DirectiveImpactAuditPage from '../pages/DirectiveImpactAuditPage.jsx';
 import LadderPage from '../pages/LadderPage.jsx';
 import SeesArenaPage from '../pages/SeesArenaPage.jsx';
-import SignalsWorkbenchPage from '../pages/SignalsWorkbenchPage.jsx';
 import ExitSignalsPage from '../pages/ExitSignalsPage.jsx';
-import ScoringRunsPage from '../pages/ScoringRunsPage.jsx';
 import ScoringActivityLogsPage from '../pages/ScoringActivityLogsPage.jsx';
 import ProtocolsPage from '../pages/ProtocolsPage.jsx';
+import ProtocolTrailPage from '../pages/ProtocolTrailPage.jsx';
+import ProtocolsLadderPage from '../pages/ProtocolsLadderPage.jsx';
 import CreateProtocolsPage from '../pages/CreateProtocolsPage.jsx';
 import StrategyLaddersPage from '../pages/StrategyLaddersPage.jsx';
 import StrategyBuilderPage from '../pages/StrategyBuilderPage.jsx';
 import StrategyWizardPage from '../pages/StrategyWizardPage.jsx';
+import DirectiveAuditPage from '../pages/DirectiveAuditPage.jsx';
 
 // ── Automation ──
 import AutomationDashboardPage from '../pages/AutomationDashboardPage.jsx';
@@ -186,7 +186,6 @@ import HomeDashboard from '../pages/HomeDashboard.jsx';
 // ── MAP ──────────────────────────────────────────────────────────────────────
 export const VIEW_COMPONENTS = {
   // Trading — Canonical (2026-07-29 #504 consolidation)
-  'strategies-index': StrategiesListPage,
   'strategy-monitor': StrategyMonitorPage,
   'strategy-create': StrategyCreatePage,
   // Trading — Legacy strategy pages (under review)
@@ -215,14 +214,16 @@ export const VIEW_COMPONENTS = {
   'directives-manager': DirectivesManagerPage,
   'directive-impact-audit': DirectiveImpactAuditPage,
   'directive-detail': DirectiveDetailPage,
+  'directive-audit': DirectiveAuditPage,
   'live-ordering-stack': LadderPage,
   'sees-arena': SeesArenaPage,
-  'signals-workbench': SignalsWorkbenchPage,
   'exit-signals': ExitSignalsPage,
-  'scoring-runs': ScoringRunsPage,
   'scoring-activity-logs': ScoringActivityLogsPage,
   'protocols': ProtocolsPage,
+  'protocol-trail': ProtocolTrailPage,
+  'protocols-ladder': ProtocolsLadderPage,
   'create-protocols': CreateProtocolsPage,
+  'protocol-builder': CreateProtocolsPage,
   'strategy-builder': StrategyBuilderPage,
   'strategy-wizard': StrategyWizardPage,
   'strategy-ladders': StrategyLaddersPage,

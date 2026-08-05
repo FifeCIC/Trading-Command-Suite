@@ -163,7 +163,8 @@ export default function ScoringActivityLogsPage() {
             <thead>
               <tr>
                 <th>Time</th>
-                <th>Protocol / Strategy</th>
+                <th>Protocol</th>
+                <th>Strategy</th>
                 <th>Symbols</th>
                 <th>Top Scores</th>
               </tr>
@@ -188,6 +189,9 @@ export default function ScoringActivityLogsPage() {
                       >
                         <td className="sal-time">{new Date(run.timestamp).toLocaleString()}</td>
                         <td>
+                          <span className="sal-symbol">{run.protocolName || run.protocolId || '—'}</span>
+                        </td>
+                        <td>
                           <span className="sal-symbol">{run.strategyName || 'Unknown'}</span>
                         </td>
                         <td>{run.symbolsScored}</td>
@@ -209,7 +213,7 @@ export default function ScoringActivityLogsPage() {
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
                         >
-                          <td colSpan={4} style={{ padding: '0.5rem 1rem' }}>
+                          <td colSpan={5} style={{ padding: '0.5rem 1rem' }}>
                             <div className="sal-expand-grid">
                               {(run.scores || [])
                                 .sort((a, b) => b.value - a.value)

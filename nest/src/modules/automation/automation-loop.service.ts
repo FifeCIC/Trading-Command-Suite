@@ -108,12 +108,16 @@ function compareProtocolPair(
     return { side: 'HOLD', composite: Math.max(longComposite, shortComposite) };
   }
 
-  // Single-protocol: use the long protocol's signal directly
+  // Single-protocol: use the long protocol's signal, but enforce the
+  // composite threshold (previously fire-on-signal-alone gap — the dual-
+  // protocol branch required composite >= threshold but this branch didn't,
+  // allowing below-threshold trades to execute on signal direction alone).
   const signal = (longGated as any)?.signal;
-  return {
-    side: (signal === 'BUY' || signal === 'SELL') ? signal : 'HOLD',
-    composite: longComposite,
-  };
+  const belowThreshold = longComposite < threshold;
+  if (belowThreshold || (signal !== 'BUY' && signal !== 'SELL')) {
+    return { side: 'HOLD', composite: longComposite };
+  }
+  return { side: signal, composite: longComposite };
 }
 
 export interface PriorityQueueEntry {

@@ -165,6 +165,8 @@ export class ScoreHistoryService {
       timestamp: string;
       strategyId: string;
       strategyName: string;
+      protocolId: string | null;
+      protocolName: string | null;
       symbolsScored: number;
       avgScore: number;
       signalSummary: { buy: number; sell: number; neutral: number };
@@ -237,7 +239,7 @@ export class ScoreHistoryService {
       return { runs: [], total: 0, page, pageSize, totalPages: 0, queryTimeMs: Date.now() - startTime };
     }
 
-    // Resolve strategy names
+    // Resolve strategy names AND protocol info
     const strategyIds = [...new Set(scores.map((s: any) => s.strategyId).filter(Boolean))] as string[];
     const strategies = strategyIds.length > 0
       ? await this.prisma.strategy.findMany({
@@ -246,6 +248,19 @@ export class ScoreHistoryService {
         })
       : [];
     const nameMap = new Map((strategies as any[]).map((s: any) => [s.id, s.name]));
+
+    // Extract protocolIds from breakdown JSON — resolve names
+    const protoIds = [...new Set(
+      scores.map((s: any) => s.breakdown?.protocolId).filter(Boolean),
+    )] as string[];
+    const protoMap = new Map<string, string>();
+    if (protoIds.length > 0) {
+      const protocols = await this.prisma.protocol.findMany({
+        where: { id: { in: protoIds } },
+        select: { id: true, name: true },
+      }).catch(() => []);
+      for (const p of protocols as any[]) protoMap.set(p.id, p.name);
+    }
 
     // Group by minute + strategyId (each unique run)
     const groups = new Map<string, typeof scores>();
@@ -262,6 +277,7 @@ export class ScoreHistoryService {
       .map(([key, entries]) => {
         const [timestamp] = key.split('::');
         const strategyId = entries[0]?.strategyId || 'unknown';
+        const protocolId = (entries[0] as any)?.breakdown?.protocolId || null;
         const values = entries.map((e) => e.value);
         const avgScore = values.reduce((a, b) => a + b, 0) / values.length;
 
@@ -283,6 +299,8 @@ export class ScoreHistoryService {
           timestamp,
           strategyId,
           strategyName: nameMap.get(strategyId) || 'Unknown Strategy',
+          protocolId,
+          protocolName: protocolId ? (protoMap.get(protocolId) || null) : null,
           symbolsScored: entries.length,
           avgScore: Math.round(avgScore * 10) / 10,
           signalSummary: { buy, sell, neutral },

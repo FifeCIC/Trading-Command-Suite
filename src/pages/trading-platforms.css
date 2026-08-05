@@ -271,6 +271,14 @@
   z-index: 1;
 }
 
+.tp-comparison-table input[type="checkbox"] {
+  opacity: 0.5;
+  accent-color: var(--accent);
+}
+.tp-comparison-table input[type="checkbox"]:checked {
+  opacity: 0.8;
+}
+
 .tp-row-selected {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
@@ -308,6 +316,10 @@
 }
 .tp-col-option input[type="checkbox"] {
   accent-color: var(--accent, #3b82f6);
+  opacity: 0.55;
+}
+.tp-col-option input[type="checkbox"]:checked {
+  opacity: 0.85;
 }
 
 .tp-field-cell {

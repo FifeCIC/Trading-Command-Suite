@@ -1,11 +1,16 @@
 /**
- * Ladder
- * =====
- * The primary SEES scoring view. Pair a Watchlist with a Protocol
- * and get a live-ranked ladder of every symbol, refreshed
+ * Live Ordering Stack (Ladder)
+ * =============================
+ * Protocol-only scoring ladder. Select a protocol and get a live-ranked
+ * ladder of every symbol from the protocol's paired watchlist, refreshed
  * continuously as market data flows in.
  *
- * Layout clones Scoring Overview's clean card-based design.
+ * The watchlist is auto-derived from the protocol's linkedWatchlists[0].
+ * No manual watchlist selection needed — protocols are paired with
+ * watchlists at creation time via the Protocol Builder.
+ *
+ * Data: POST /api/scoring/gated/batch
+ * Layout: card-based, cloned from Scoring Overview
  */
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -34,19 +39,10 @@ const FRESHNESS_COLORS = {
 };
 
 export default function LiveOrderingStackPage() {
-  const [watchlistId, setWatchlistId] = useState('');
   const [protocolId, setProtocolId] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
   const [showHelp, setShowHelp] = useState(false);
-
-  // ── Available watchlists ──
-  const wlQuery = useQuery({
-    queryKey: ['los-watchlists'],
-    queryFn: () => apiGet('/api/watchlists').catch(() => []),
-    staleTime: 60_000,
-  });
-  const watchlists = Array.isArray(wlQuery.data) ? wlQuery.data : [];
 
   // ── Available protocols ──
   const protoQuery = useQuery({
@@ -56,28 +52,27 @@ export default function LiveOrderingStackPage() {
   });
   const protocols = (protoQuery.data?.protocols ?? []).filter(p => p.source === 'code');
 
-  // ── Planner objectives (for alignment indicator) ──
-  const objQuery = useQuery({
-    queryKey: ['los-objectives'],
-    queryFn: () => apiGet('/api/planner/objectives').catch(() => []),
-    staleTime: 120_000,
-  });
-  const objectives = Array.isArray(objQuery.data) ? objQuery.data.filter(o => o.status === 'active') : [];
+  // ── Derive watchlist from selected protocol ──
+  const selectedProtocol = useMemo(
+    () => protocols.find(p => p.id === protocolId),
+    [protocols, protocolId],
+  );
+  const linkedWatchlistId = selectedProtocol?.linkedWatchlists?.[0] || '';
 
-  // ── Watchlist symbols ──
+  // ── Watchlist symbols (auto-derived from protocol pairing) ──
   const symbolsQuery = useQuery({
-    queryKey: ['los-symbols', watchlistId],
-    queryFn: () => apiGet(`/api/watchlists/${watchlistId}`).catch(() => ({ symbols: [] })),
-    enabled: !!watchlistId,
+    queryKey: ['los-symbols', linkedWatchlistId],
+    queryFn: () => apiGet(`/api/watchlists/${linkedWatchlistId}`).catch(() => ({ symbols: [] })),
+    enabled: !!linkedWatchlistId,
     staleTime: 30_000,
   });
   const watchlistSymbols = symbolsQuery.data?.symbols ?? [];
 
   // ── Scored results via gated pipeline (includes rarity) ──
   const scoreQuery = useQuery({
-    queryKey: ['los-scored', watchlistId, protocolId],
+    queryKey: ['los-scored', linkedWatchlistId, protocolId],
     queryFn: async () => {
-      if (!watchlistId || !protocolId) return [];
+      if (!linkedWatchlistId || !protocolId) return [];
       const tickers = watchlistSymbols.map(s => s.ticker).filter(Boolean);
       if (tickers.length === 0) return [];
       return apiPost('/api/scoring/gated/batch', {
@@ -86,7 +81,7 @@ export default function LiveOrderingStackPage() {
       }).catch(() => []);
     },
     refetchInterval: autoRefresh ? REFRESH_MS : false,
-    enabled: !!watchlistId && !!protocolId && watchlistSymbols.length > 0,
+    enabled: !!linkedWatchlistId && !!protocolId && watchlistSymbols.length > 0,
   });
   // Sort by composite descending — belt-and-suspenders with backend sort (#432)
   const scored = useMemo(
@@ -129,7 +124,7 @@ export default function LiveOrderingStackPage() {
 
   // ── Pairing guidance — based on REAL batch scoring data ──
   const pairingGuidance = useMemo(() => {
-    if (!watchlistId || !protocolId) return null;
+    if (!linkedWatchlistId || !protocolId) return null;
     if (scoreQuery.isLoading) return { level: 'info', text: '⏳ Computing scores from live pipeline…', reasons: [] };
     if (!scoreQuery.data || scored.length === 0) return null;
     const avg = scored.reduce((s, r) => s + (r.composite ?? 0), 0) / scored.length;
@@ -138,11 +133,10 @@ export default function LiveOrderingStackPage() {
     if (avg >= 70) return { level: 'strong', text: '✅ Strong scoring — high composite across symbols', reasons };
     if (avg >= 40) return { level: 'ok', text: '⚡ Moderate scoring — mixed signals across symbols', reasons };
     return { level: 'weak', text: '⚠️ Weak scoring — low composite or few signals. Market data may be unavailable for these symbols.', reasons };
-  }, [watchlistId, protocolId, scored, scoreQuery.isLoading, scoreQuery.data]);
+  }, [linkedWatchlistId, protocolId, scored, scoreQuery.isLoading, scoreQuery.data]);
 
   // ── Selected labels ──
-  const selectedWatchlist = watchlists.find(w => w.id === watchlistId);
-  const selectedProtocol = protocols.find(p => p.id === protocolId);
+  const selectedProtocolLabel = selectedProtocol?.name ?? selectedProtocol?.id ?? protocolId;
 
   // ── Keyboard shortcuts ──
   useKeyboardShortcuts({
@@ -164,29 +158,11 @@ export default function LiveOrderingStackPage() {
       rarity: r.rarity?.band ?? '—',
       risk: r.riskMultiplier != null ? `${(r.riskMultiplier * 100).toFixed(0)}%` : '—',
     }));
-    exportCsv(rows, `sees-stack-${selectedProtocol?.name ?? 'scoring'}-${new Date().toISOString().slice(0, 10)}.csv`);
+    exportCsv(rows, `sees-stack-${selectedProtocolLabel}-${new Date().toISOString().slice(0, 10)}.csv`);
   };
 
-  // ── Objectives alignment ──
-  const alignedObjectives = useMemo(() => {
-    if (!selectedProtocol || objectives.length === 0) return [];
-    const protoName = (selectedProtocol.name || '').toLowerCase();
-    const protoId = (selectedProtocol.id || '').toLowerCase();
-    return objectives.filter(obj => {
-      const strat = (obj.linkedStrategy || '').toLowerCase();
-      const notes = (obj.notes || '').toLowerCase();
-      const desc = (obj.description || '').toLowerCase();
-      return strat.includes(protoName) || strat.includes(protoId)
-        || notes.includes(protoName) || notes.includes(protoId)
-        || desc.includes(protoName) || desc.includes(protoId)
-        || (protoId.includes('mt5') && obj.category === 'active-trading')
-        || (protoId.includes('speed') && obj.category === 'account-growth')
-        || (protoId.includes('mt5') && (obj.title || '').toLowerCase().includes('mt5'));
-    });
-  }, [selectedProtocol, objectives]);
-
   // ── Loading ──
-  if (wlQuery.isLoading || protoQuery.isLoading) {
+  if (protoQuery.isLoading) {
     return (
       <div className="so-page">
         <header className="so-page-header"><h2>Ladder</h2></header>
@@ -203,7 +179,7 @@ export default function LiveOrderingStackPage() {
         <div>
           <h1>Ladder</h1>
           <p className="so-subtitle">
-            {selectedWatchlist?.label ?? 'Select watchlist'} · {selectedProtocol?.name ?? 'Select protocol'}
+            {selectedProtocol?.name ?? 'Select a protocol'}
           </p>
         </div>
         <div className="los-header-actions">
@@ -216,21 +192,12 @@ export default function LiveOrderingStackPage() {
         </div>
       </header>
 
-      {/* ── Pair selectors ── */}
+      {/* ── Protocol selector ── */}
       <div className="los-selectors">
-        <label className="los-select-label">
-          <span>Watchlist</span>
-          <select value={watchlistId} onChange={e => setWatchlistId(e.target.value)} className="los-select">
-            {watchlists.map(w => (
-              <option key={w.id} value={w.id}>
-                {w.label} ({w.symbolCount ?? '?'})
-              </option>
-            ))}
-          </select>
-        </label>
         <label className="los-select-label">
           <span>Protocol</span>
           <select value={protocolId} onChange={e => setProtocolId(e.target.value)} className="los-select">
+            <option value="">Select a protocol...</option>
             {protocols.map(p => (
               <option key={p.id} value={p.id}>
                 {p.name ?? p.id}
@@ -238,6 +205,9 @@ export default function LiveOrderingStackPage() {
             ))}
           </select>
         </label>
+        {linkedWatchlistId && (
+          <span className="los-watchlist-hint">📋 Watchlist: {linkedWatchlistId}</span>
+        )}
         <button
           className={`los-auto-btn ${autoRefresh ? 'active' : ''}`}
           onClick={() => setAutoRefresh(!autoRefresh)}
@@ -262,19 +232,6 @@ export default function LiveOrderingStackPage() {
         <Notice level="info">{dataQualityWarning}</Notice>
       )}
 
-      {/* ── Objectives Alignment ── */}
-      {alignedObjectives.length > 0 && (
-        <Notice level="info" icon="🎯">
-          Aligned with{' '}
-          {alignedObjectives.map((obj, i) => (
-            <span key={obj.id}>
-              <a href="/planner/objectives" className="los-obj-link">{obj.title}</a>
-              {i < alignedObjectives.length - 1 ? ', ' : ''}
-            </span>
-          ))}
-        </Notice>
-      )}
-
       {/* ── Summary cards ── */}
       <div className="so-summary-grid">
         <div className="so-summary-card">
@@ -285,7 +242,7 @@ export default function LiveOrderingStackPage() {
         <div className="so-summary-card">
           <p className="so-card-label">Avg Composite Score</p>
           <span className="so-card-value">{stats.avgComposite.toFixed(1)}</span>
-          <p className="so-card-note">{selectedProtocol?.name ?? '—'}</p>
+          <p className="so-card-note">{selectedProtocolLabel}</p>
         </div>
         <div className="so-summary-card">
           <p className="so-card-label">Signal Split</p>

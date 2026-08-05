@@ -25,10 +25,27 @@ export default function DevOverlay({
 
   // ── Copy View Info ──
   const handleCopyViewInfo = useCallback(() => {
-    const meta = getViewMeta(window.location.pathname);
+    const pathname = window.location.pathname;
+    const meta = getViewMeta(pathname);
     if (!meta) {
-      setCopiedMsg('No metadata for this route');
-      setTimeout(() => setCopiedMsg(''), 2000);
+      // Generate a prompt for AI to register this view's metadata
+      const text = [
+        `View:       (No metadata registered for this route)`,
+        `Route:      ${window.location.pathname}`,
+        `URL:        ${window.location.origin}${window.location.pathname}`,
+        ``,
+        `This view needs metadata. Please:`,
+        `1. Add an entry to src/core/view-meta.js mapping this route`,
+        `2. Ensure the view ID is registered in src/core/view-routes.jsx`,
+        `3. Add a nav entry in src/core/nav-tree.js under the correct area`,
+      ].join('\n');
+      navigator.clipboard.writeText(text).then(() => {
+        setCopiedMsg('Prompt copied — paste to AI to register metadata');
+        setTimeout(() => setCopiedMsg(''), 3000);
+      }).catch(() => {
+        setCopiedMsg('Copy failed');
+        setTimeout(() => setCopiedMsg(''), 2000);
+      });
       return;
     }
     const text = [

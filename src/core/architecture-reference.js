@@ -11,7 +11,7 @@
  * Token budget: ~23K (vs ~38K for full Architecture Framework)
  * 
  * @generated — extracted from architecture-framework.data.js
- * @updated 2026-07-17
+ * @updated 2026-08-05
  */
 export const STATUS_SNAPSHOT = [
   'This page is the implementation front door for architecture-sensitive work.',
@@ -27,7 +27,8 @@ export const STATUS_SNAPSHOT = [
   '2026-07-01–02: Agent sessions — EarningsModule, AnalystTargetsService (Finnhub→FMP fallback), Settings API, Market Correlations wired, Seasonality directives, DataImportLog, PortfolioSnapshot models. 15+ issues closed. See GitHub Issues with `revision-log` label for detailed history.',
   '2026-07-22: Handoff batch #3 — 6 handoffs processed. Health Dashboard + Commands Reference pages deployed. Speed Scanner protocol UUID→slug resolution + candlestick pattern detection (#459). Trade pipeline schema extended with MT5 fields + full traceability chain (#446). Agent governance close-checklist rules + AGENT-ATTENTION.md shared blocker log. Execution Queue dual-tab redesign with Live Events stream (#457). Health settings toggles (10 check toggles). Agent CLI health-check.ps1 tooling.',
   '2026-07-31: Session strategies + protocol variants — 4 new XAUUSD protocol variants (xau-speed-m5/m15/1h/4h) with derivedFrom A/B tracking. 3 new session trading strategies (Tokyo USDJPY, London EURUSD, US SPX500). Strategy seed data file + POST /api/trading/strategies/seed endpoint. protocol.derivedFrom column added to schema, surfaced in GET /api/scoring/gated/protocols. Total: 48 protocols, 7 active trading strategies in automation loop.',
-]
+  '2026-08-04: Handoff batch #7 — 35 handoffs processed. Directives Manager UI cleaned (#428 — accordion/TESTS/AVG removed, formula in sidebar). Configure Directives enhanced (#430 — lock icons, usage check, remove directive endpoint). Ladder renamed from Live Ordering Stack (#431), data wiring investigated (#432 — empty state + pairing disclaimer). SEES Arena percentage signs + inactive filter (#433). Strategy Ladders detached to standalone page (#434). Protocols layout consolidated (#436 — merged stats, moved ID) + directive tooltips with real data (#437). Bot Rules → Automation Rules rename (#439). Alert Center DB persistence (#440 — Prisma Alert model, async service) + bell merge (#441) + click navigation (#442). Score timestamp index (#444). Trading Strategies TF tooltips + sidebar fonts (#447). Dashboard sessions popover + news counts (#448). Practice data toggle preference (#450). Dashboard P&L broker naming + LIVE/PRACTICE badges (#451). Trade Journal wired to MT5 history (#453). Market Tape settings + news/trade/uptime sections (#455). Speed Scanner inactive protocols toggle (#459). View Info Popovers registry (#460). Accounts Dashboard terminology (#461). Automation Dashboard 3-column layout + ToggleSwitch (#462). Algorithm Lab deleted, pipeline salvaged to SEES landing (#464). Decision Trail deep-links (#465). Backtest page moved to Training + days options (#466). META.Stack Explorer Phase 1 interactive pipeline page. Signals Workbench multi-protocol comparison + DB-backed symbol validation (#412). Strategy page consolidation 9→4 (#504). Automation activity feed polling (#463). Scoring paths audit — 5 canonical surfaces (#497). Config reload two-tier policy (#509). Backtest UI unification plan (#467). Shared Symbol Tier Resolver (#413).',
+  '2026-08-04: Handoff batch #8 — 5 sprint batches + protocol/strategy builder. Batch 1 (#544-#549): breadcrumbs theme-aware, pip-trigger enlarged, T212 All/Live/Practice toggle + avgPrice fix, QA filters→dropdowns, QA feedback textarea removed. Batch 3 (#551-#556): protocolCount distinct fix (backend), directive audit column alignment + clickable names, directive detail fonts +2pt, ladder watchlist selector removed. Batch 5 (#562-#567): positions-monitor + trading-strategies promoted from Legacy, strategy monitor Signals tab (4th), triple-screen + market-context investigated. Batch 6 (#568-#572): trading-plans promoted + overflow fix, calculators topbar button, Trading212→Accounts rename, automation dashboard full-width, health counter clarity + Broker→MT5 rename. Protocol Builder (#560): URL/identity swap with Strategy Builder — Protocol Builder (🧩) builds protocols (direction, timeframe, groups), Strategy Builder (⚙) configures scoring strategies with gate toggle + threshold per group. New route protocol-builder, StrategyBuilderPage rewritten.'
 
 
 export const ARCHITECTURE_INDEX = [
@@ -241,7 +242,7 @@ export const CURRENT_SLICE = [
   'Health Settings Toggles — 10 check toggles in Settings → 🩺 Health & Diagnostics backed by HealthChecksConfig in AppSettings. Dashboard respects disabled checks — excluded sections are never computed.',
   'Agent Health Tooling — health-check.ps1 CLI script for 1-command system snapshot. GET /api/system/health-summary returns ~300 char text blob for LLM context.',
   'Commands Reference — Page at /status/commands with 27 CLI commands across 6 categories (services, health, build, db, debug, trading). Click-to-copy with filter tabs.',
-  'Speed Scanner Protocol Resolution (#459) — resolveProtocolForSymbol() now returns human-readable slugs (cad-sniper-v1) instead of raw UUIDs. Backend returns protocolActive boolean; frontend filters inactive protocols via Screen Options toggle.',
+  'Speed Scanner Protocol Resolution (#459) — resolveProtocolForSymbol() now returns human-readable slugs (e.g., usdcad-oil-v1) instead of raw UUIDs. Backend returns protocolActive boolean; frontend filters inactive protocols via Screen Options toggle.',
   'Candlestick Pattern Detection (#459) — MicroTrendDetector.aggregatePatterns() wired with real data. detectCandlestickPatterns() identifies doji, hammer, shooting star, engulfing from 20 trend bars using body/range ratio logic.',
   'Trade Pipeline Schema (#446) — Trade model extended: ticket (Int), sl (Float), tp (Float), magic (Int), swap (Float), brokerComment (String). @@index([ticket]) added. 8 code paths audited and wired into traceability chain.',
   'Trade Pipeline Traceability (#446) — Full chain: broker.placeOrder() → result with ticket → tradeRecorder.record() → Prisma Trade table. Automation loop + Mt5TradingService + legacy controller all pass MT5 fields. Legacy POST /api/providers/mt5/order now writes Trade records.',
@@ -292,10 +293,17 @@ export const CURRENT_SLICE = [
   'Session Trading Strategies — 3 new strategies covering all 3 market sessions: Tokyo USDJPY (forex-session-v1), London EURUSD (eurusd-macro-v1), US SPX500 (spy-day-v1). Active in automation loop: Tokyo/London scoring live, US pending bars.',
   'Strategy Seed Data — NEW nest/src/modules/trading/strategy-seed-data.ts with 7 default strategies (4 XAUUSD variants + 3 session). POST /api/trading/strategies/seed idempotent endpoint.',
   'Protocol derivedFrom Field — protocol.derivedFrom VARCHAR(100) column added to Prisma schema + DB. Surfaced in GET /api/scoring/gated/protocols response for A/B variant tracking. ProtocolDbService reads through to DB. Total: 48 protocols, 7 active trading strategies in automation loop.',
+  // ── 2026-08-05 — Cleanup Sprint ──
+  'Signals Workbench Deleted — SignalsWorkbenchPage.jsx removed. Route removed from nav-tree and view-routes. Issue #555 closed. The multi-protocol comparison concept lives on in SEES Arena.',
+  'Orphaned Components Removed — ProtocolChecklist component (was only used by deleted SignalsWorkbench), DirectivePalette, DirectiveCard, and StrategyCanvas components (were only used by pre-rewrite StrategyBuilder) all deleted.',
+  'SQL Dev Scripts Cleaned — 17 SQL development scripts (add_col1.sql, etc.) removed from nest/ directory.',
+  'Stale View-Meta Entries — Removed stale view-meta entries for pages that no longer exist. Cleaned dead links in AnalyseSymbolPage, SymbolPage, and experience-levels references.',
+  'Page Data Status Cleanup — Removed stale scoring-runs and strategies-index entries (routes removed in earlier batches). Updated strategy-builder entry to reflect builder swap (#559).',
+  'Issues Closed — #555 Signals Workbench (deleted), #559 Protocol Column Fix (Scoring Activity Logs now has separate Protocol + Strategy columns, implemented in batch #558).',
 ]
 
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-31 (session strategies + XAUUSD protocol variants A/B, strategy seed endpoint, derivedFrom column)'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-08-05 (cleanup sprint: deleted SignalsWorkbench + orphaned components + 17 SQL scripts + stale view-meta; closed #555, #559)'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -592,6 +600,22 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated operator access',
     owner: 'Protocols controller',
     contract: 'Lists all scoring protocols with directive counts, maxPossibleScore, scheduler status, and recent activity feed.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/scoring/protocols',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'Protocols controller',
+    contract: 'Creates a new scoring protocol with directive groups, weight configuration, direction mode, and timeframe. Used by Protocol Builder page. Returns created protocol with group + entry details.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/scoring/strategies',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'Scoring strategies controller',
+    contract: 'Creates a new scoring strategy from a protocol. Configures gate toggles and threshold percentages per directive group. Used by Strategy Builder page. Returns created strategy with gate configuration.',
     status: 'active',
   },
   {

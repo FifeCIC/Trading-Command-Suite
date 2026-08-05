@@ -93,3 +93,45 @@
   .sa-page { padding: 0.75rem; }
   .sa-controls { flex-direction: column; }
 }
+
+/* ── Strategies Ladder (rebuilt #557) ── */
+.sl-ladder-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+  margin-bottom: 0.75rem; flex-wrap: wrap;
+}
+.sl-ladder-toggles { display: flex; gap: 4px; align-items: center; }
+.sl-ladder-chip {
+  padding: 4px 12px; border-radius: 14px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink-soft); cursor: pointer;
+  font-size: 0.7rem; font-family: inherit; transition: all 0.15s;
+}
+.sl-ladder-chip:hover { border-color: var(--accent); color: var(--ink); }
+.sl-ladder-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.sl-ladder-sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
+.sl-ladder-count { font-size: 0.72rem; color: var(--ink-soft); }
+
+.sl-ladder-table-wrap {
+  border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+  background: var(--panel);
+}
+.sl-ladder-table { width: 100%; border-collapse: collapse; }
+.sl-ladder-table thead th {
+  text-align: left; padding: 0.5rem 0.6rem;
+  border-bottom: 2px solid var(--line); color: var(--ink-soft);
+  font-weight: 600; font-size: 0.65rem; text-transform: uppercase;
+  letter-spacing: 0.04em; white-space: nowrap;
+}
+.sl-ladder-row td {
+  padding: 0.4rem 0.6rem; border-bottom: 1px solid rgba(128,128,128,0.06);
+  font-size: 0.78rem;
+}
+.sl-ladder-row:hover { background: rgba(14,165,166,0.03); }
+.sl-ladder-rank { font-size: 0.68rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.sl-ladder-strat {
+  display: inline-block; padding-left: 6px; border-left: 3px solid;
+  font-size: 0.7rem; color: var(--ink-soft);
+}
+.sl-ladder-signal { font-size: 0.68rem; font-weight: 700; }
+.sl-ladder-signal.buy { color: #22c55e; }
+.sl-ladder-signal.sell { color: #ef4444; }
+.sl-ladder-signal.hold { color: #94a3b8; }

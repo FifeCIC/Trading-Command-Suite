@@ -128,7 +128,7 @@ export default function AutomationOverviewPage() {
               <strong>Providers</strong>
             </div>
             <div className="ao-service-body">
-              <span>{healthyProviders}/{providerCount} healthy</span>
+              <span>{healthyProviders} healthy / {providerCount} total</span>
               <span>{providerList.slice(0, 6).map(p => p.provider?.toUpperCase?.() || p.id).join(', ')}</span>
             </div>
           </div>
@@ -136,7 +136,7 @@ export default function AutomationOverviewPage() {
             <div key={id} className="ao-service-card">
               <div className="ao-service-head">
                 <StatusDot on={state?.enabled} />
-                <strong>Broker: {id.toUpperCase()}</strong>
+                <strong>{id.toUpperCase()}</strong>
               </div>
               <div className="ao-service-body">
                 <span>{state?.enabled ? 'Enabled' : 'Disabled'}{state?.tradingEnabled ? ' · Trading' : ''}</span>

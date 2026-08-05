@@ -74,7 +74,6 @@ import AnalyseSymbolPage from './pages/AnalyseSymbolPage';
 import AccountsDashboardPage from './pages/AccountsDashboardPage';
 import OrderTestingPage from './pages/OrderTestingPage';
 import TradingTimelinePage from './pages/TradingTimelinePage';
-import SignalsWorkbenchPage from './pages/SignalsWorkbenchPage';
 import SettingsPage from './pages/SettingsPage';
 import StrategiesPage from './pages/StrategiesPage';
 import StrategyBuilderPage from './pages/StrategyBuilderPage';
@@ -754,7 +753,17 @@ function AppShell() {
               <span className="hamburger-line" />
               <span className="hamburger-line" />
             </button>
-            <div style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <button
+                type="button"
+                className="topbar-calc-btn"
+                onClick={() => navigate('/trading/calculators')}
+                title="Quick Calculators"
+                aria-label="Open Calculators"
+              >
+                🧮
+              </button>
+              <div style={{ position: 'relative' }}>
               <button
                 type="button"
                 className="topbar-status-summary"
@@ -823,6 +832,7 @@ function AppShell() {
                   </a>
                 </div>
               )}
+            </div>
             </div>
           </div>
         </div>

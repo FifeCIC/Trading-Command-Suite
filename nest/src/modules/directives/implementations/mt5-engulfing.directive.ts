@@ -1,7 +1,7 @@
 /**
  * MT5 Engulfing Directive
  * =======================
- * Ported from MetaQuotes MT5 Free Robots — CAD Sniper / BullishBearish Engulfing RSI.
+ * Ported from MetaQuotes MT5 Free Robots — CAD-focused / BullishBearish Engulfing RSI.
  *
  * Pattern: 2-candle bullish/bearish engulfing with RSI(37) confirmation.
  * Source: MT5 Experts/Free Robots/

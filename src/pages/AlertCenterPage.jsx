@@ -1,11 +1,22 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import PageInfoPopover from '../components/PageInfoPopover';
+import './alert-center.css';
 
-const TYPE_COLORS = { signal: '#4ade80', drawdown: '#f87171', daily: '#fbbf24', backtest: '#60a5fa', system: '#94a3b8' };
+const TYPE_COLORS = {
+  signal: '#4ade80', drawdown: '#f87171', daily: '#fbbf24',
+  backtest: '#60a5fa', system: '#94a3b8', trading: '#a78bfa',
+};
 
-// Fallback routes by alert type when no ticker/link is available
+const SEVERITY_LEVELS = {
+  drawdown: 'high', system: 'medium', signal: 'low',
+  daily: 'low', trading: 'medium', backtest: 'low',
+};
+const SEVERITY_COLORS = { high: '#ef4444', medium: '#f59e0b', low: '#64748b' };
+
+// Fallback routes by alert type
 const TYPE_FALLBACKS = {
   signal: '/scoring/live-ordering-stack',
   drawdown: '/trading/portfolio-overview',
@@ -14,10 +25,31 @@ const TYPE_FALLBACKS = {
   daily: '/dashboard',
 };
 
+/** Deduplicate consecutive identical alerts */
+function dedupeAlerts(raw) {
+  if (!raw?.length) return [];
+  const result = [];
+  let prev = null;
+  for (const a of raw) {
+    const key = `${a.type || ''}|${a.title || ''}|${a.detail || ''}`;
+    if (prev && prev.key === key) {
+      prev.count = (prev.count || 1) + 1;
+      prev.timestamps.push(a.time || a.timestamp || '');
+    } else {
+      const entry = { ...a, key, count: 1, timestamps: [a.time || a.timestamp || ''] };
+      result.push(entry);
+      prev = entry;
+    }
+  }
+  return result;
+}
+
 export default function AlertCenterPage() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
   const [readIds, setReadIds] = useState(new Set());
+  const [expandedId, setExpandedId] = useState(null);
+  const [showR3NK, setShowR3NK] = useState(true);
 
   const alertsQuery = useQuery({
     queryKey: ['alerts'],
@@ -26,16 +58,27 @@ export default function AlertCenterPage() {
     refetchInterval: 30_000,
   });
 
-  const alerts = (alertsQuery.data || []).map((a) => ({
-    ...a,
-    read: readIds.has(a.id),
-  }));
+  const rawAlerts = alertsQuery.data || [];
+  const MAX_ALERTS = 200;
 
-  const filtered = filter === 'all' ? alerts : alerts.filter((a) => a.type === filter);
-  const unread = alerts.filter((a) => !a.read).length;
+  // Deduplicate consecutive identical alerts, then apply filters
+  const alerts = useMemo(() => {
+    let list = dedupeAlerts(rawAlerts);
+    // Filter out R3NK if toggled off
+    if (!showR3NK) {
+      list = list.filter(a => !(a.title || '').toLowerCase().includes('r3nk'));
+    }
+    // Limit
+    if (list.length > MAX_ALERTS) list = list.slice(0, MAX_ALERTS);
+    return list.map(a => ({ ...a, read: readIds.has(a.id) }));
+  }, [rawAlerts, readIds, showR3NK]);
 
-  const markRead = (id) => setReadIds((prev) => new Set([...prev, id]));
-  const markAllRead = () => setReadIds(new Set(alerts.map((a) => a.id)));
+  const filtered = filter === 'all' ? alerts : alerts.filter(a => a.type === filter);
+  const unread = alerts.filter(a => !a.read).length;
+  const totalRaw = rawAlerts.length;
+
+  const markRead = (id) => setReadIds(prev => new Set([...prev, id]));
+  const markAllRead = () => setReadIds(new Set(alerts.map(a => a.id)));
 
   const handleAlertClick = (alert) => {
     markRead(alert.id);
@@ -49,37 +92,110 @@ export default function AlertCenterPage() {
     }
   };
 
+  const typeCounts = useMemo(() => {
+    const counts = {};
+    for (const a of alerts) { counts[a.type] = (counts[a.type] || 0) + 1; }
+    return counts;
+  }, [alerts]);
+
   return (
     <div className="ac-page">
-      <header className="ac-header-row">
-        <div><h1>Alert Center</h1><p style={{ color: '#64748b' }}>{unread} unread</p></div>
-        <button onClick={markAllRead} style={{ padding: '6px 14px', background: '#374151', color: '#d1d5db', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>Mark All Read</button>
+      <header className="ac-header">
+        <h1>Alert Center
+          <PageInfoPopover>
+            Central alert hub for trading signals, drawdown warnings, system events, and backtest results.
+            Consecutive identical alerts are merged with a count. Use the R3NK toggle to filter automated risk alerts.
+          </PageInfoPopover>
+        </h1>
+        <div className="ac-header-stats">
+          <span className="ac-unread-badge">{totalRaw > MAX_ALERTS ? `${MAX_ALERTS}+` : totalRaw}</span>
+          <span className="ac-unread-label">{unread} unread</span>
+          <button className="ac-mark-all-btn" onClick={markAllRead}>Mark All Read</button>
+        </div>
       </header>
 
-      <div className="ac-tabs-row">
-        {['all', 'signal', 'drawdown', 'daily', 'system'].map(f => (
-          <button key={f} onClick={() => setFilter(f)}
-            style={{ padding: '4px 12px', border: '1px solid #334155', borderRadius: 6, background: filter === f ? '#1e40af' : '#0f1117', color: filter === f ? '#fff' : '#94a3b8', fontSize: 12, cursor: 'pointer' }}>
-            {f.toUpperCase()}
-          </button>
-        ))}
+      <div className="ac-controls">
+        <div className="ac-tabs">
+          {['all', 'signal', 'drawdown', 'daily', 'system', 'trading'].map(f => (
+            <button
+              key={f}
+              className={`ac-tab ${filter === f ? 'ac-tab-active' : ''}`}
+              onClick={() => setFilter(f)}
+            >
+              {f.toUpperCase()}
+              {f !== 'all' && typeCounts[f] ? <span className="ac-tab-count">{typeCounts[f]}</span> : null}
+            </button>
+          ))}
+        </div>
+        <label className="ac-r3nk-toggle">
+          <input type="checkbox" checked={showR3NK} onChange={() => setShowR3NK(!showR3NK)} />
+          Show R3NK
+        </label>
       </div>
 
+      {totalRaw > MAX_ALERTS && (
+        <div className="ac-limit-banner">
+          Showing {MAX_ALERTS} of {totalRaw} alerts. Older alerts are hidden.
+        </div>
+      )}
+
       <div className="ac-alert-list">
-        {filtered.map(a => (
-          <div key={a.id} onClick={() => handleAlertClick(a)}
-            style={{
-              background: a.read ? '#1a1d2e' : '#111827', border: `1px solid ${a.read ? '#2d3040' : a.type === 'drawdown' ? '#7f1d1d' : '#1e3a5f'}`,
-              borderLeft: `3px solid ${TYPE_COLORS[a.type]}`, borderRadius: 8, padding: '12px 14px', cursor: 'pointer', opacity: a.read ? 0.7 : 1
-            }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <strong style={{ fontSize: 14 }}>{a.read ? '' : '● '}{a.title}</strong>
-              <span style={{ fontSize: 11, color: '#64748b' }}>{a.time}</span>
+        {filtered.length === 0 && !alertsQuery.isLoading && (
+          <div className="ac-empty">No alerts match this filter.</div>
+        )}
+        {alertsQuery.isLoading && <div className="ac-empty">Loading alerts…</div>}
+        {filtered.map(a => {
+          const severity = SEVERITY_LEVELS[a.type] || 'low';
+          const sevColor = SEVERITY_COLORS[severity];
+          const isExpanded = expandedId === a.id;
+
+          return (
+            <div
+              key={a.id}
+              className={`ac-alert-card ${a.read ? 'ac-read' : ''} ac-sev-${severity}`}
+              onClick={() => handleAlertClick(a)}
+            >
+              <div className="ac-alert-row">
+                <span className="ac-severity-dot" style={{ background: sevColor }} title={`Severity: ${severity}`} />
+                <span className="ac-alert-type" style={{ color: TYPE_COLORS[a.type] || '#94a3b8' }}>
+                  {a.type}
+                </span>
+                <strong className="ac-alert-title">
+                  {!a.read && <span className="ac-unread-dot">●</span>}
+                  {a.title}
+                </strong>
+                {a.count > 1 && (
+                  <span
+                    className="ac-dup-badge"
+                    onClick={(e) => { e.stopPropagation(); setExpandedId(isExpanded ? null : a.id); }}
+                    title="Consecutive duplicate — click to expand"
+                  >
+                    ×{a.count}
+                  </span>
+                )}
+                <span className="ac-alert-time">{a.time}</span>
+              </div>
+              <p className="ac-alert-detail">{a.detail}</p>
+
+              {/* Duplicate timestamps accordion */}
+              {isExpanded && a.timestamps?.length > 1 && (
+                <div className="ac-dup-list">
+                  {a.timestamps.map((ts, i) => (
+                    <div key={i} className="ac-dup-item">
+                      <span>#{i + 1}</span>
+                      <span>{ts}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <p style={{ color: '#94a3b8', fontSize: 12, margin: '4px 0 0' }}>{a.detail}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
+
+      <p className="ac-footer">
+        {filtered.length} shown · {totalRaw} raw alerts · auto-refresh 30s
+      </p>
     </div>
   );
 }

@@ -6,6 +6,8 @@ import { ProvidersModule } from '../providers/providers.module';
 import { ResearchModule } from '../research/research.module';
 import { MarketDataModule } from '../market-data/market-data.module';
 import { TimezoneService } from '../scoring/timezone.service';
+import { CalendarModule } from '../calendar/calendar.module';
+import { MarketSessionsService } from '../calendar/market-sessions.service';
 
 // Implemented (real math)
 import { RsiOversoldDirective } from './implementations/rsi-oversold.directive';
@@ -179,7 +181,7 @@ import { TripleWitchingDirective } from './implementations/triple-witching.direc
 import { ElectionCycleDirective } from './implementations/election-cycle.directive';
 
 @Module({
-  imports: [ProvidersModule, ResearchModule, MarketDataModule],
+  imports: [ProvidersModule, ResearchModule, MarketDataModule, CalendarModule],
   controllers: [DirectivesController],
   providers: [
     DirectivesService,

@@ -226,6 +226,9 @@
   letter-spacing: 0.04em;
 }
 
+.ts-sortable { cursor: pointer; user-select: none; }
+.ts-sortable:hover { color: var(--accent); }
+
 .ts-row { cursor: pointer; transition: background 0.12s; }
 .ts-row:hover { background: rgba(14,165,166,0.05); }
 .ts-row--selected { background: rgba(14,165,166,0.08); outline: 1px solid var(--accent); outline-offset: -1px; }

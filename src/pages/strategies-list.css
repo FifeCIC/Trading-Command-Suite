@@ -14,6 +14,7 @@
 }
 .sl-filter-chip:hover { border-color: var(--accent); color: var(--ink); }
 .sl-filter-active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.sl-filter-active.sl-filter-faulty { background: #ef4444; color: #fff; border-color: #ef4444; }
 
 .sl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem; }
 
@@ -58,3 +59,18 @@
 .sl-detail-grid strong { color: var(--ink); }
 
 .sl-toggle-row { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; font-size: 0.72rem; }
+
+/* Faulty strategies banner */
+.sl-faulty-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+  padding: 0.55rem 1rem; margin-bottom: 0.75rem;
+  background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 8px; font-size: 0.8rem; color: #ef4444;
+}
+.sl-faulty-banner-btn {
+  padding: 3px 10px; border: 1px solid rgba(239,68,68,0.3); border-radius: 14px;
+  background: transparent; color: #ef4444; cursor: pointer; font-size: 0.7rem;
+  white-space: nowrap; font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+.sl-faulty-banner-btn:hover { background: #ef4444; color: #fff; }

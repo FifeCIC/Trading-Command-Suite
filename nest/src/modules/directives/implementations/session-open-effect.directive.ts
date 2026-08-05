@@ -21,21 +21,17 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { MarketSessionsService, type MarketSession } from '../../calendar/market-sessions.service';
 
 const MIN_BARS = 30;
 const PRE_OPEN_BARS = 8; // ~2 hours on 15m, ~1 hour on 5m
 
 interface SessionOpen {
   name: string;
-  utcHour: number;
+  scope: 'tokyo' | 'london' | 'ny';
   label: string;
+  session: MarketSession;
 }
-
-const SESSIONS: SessionOpen[] = [
-  { name: 'Asian', utcHour: 0, label: 'Asian/Tokyo Open' },
-  { name: 'London', utcHour: 8, label: 'London Open' },
-  { name: 'US', utcHour: 13, label: 'US Market Open' },
-];
 
 const WINDOW_MINUTES = 30; // How close to the open to be "active"
 
@@ -44,7 +40,33 @@ export class SessionOpenEffectDirective implements IDirective {
   readonly id = 'session-open-effect';
   readonly name = 'Session Open Effect';
   readonly description =
-    'Predicts directional bias around major session opens. US open at 13:30 UTC is the most impactful for crypto.';
+    'Predicts directional bias around major session opens. US open (09:30 ET) is the most impactful for crypto.';
+
+  constructor(private readonly marketSessions: MarketSessionsService) {}
+
+  private getSessions(): SessionOpen[] {
+    const s = (scope: 'tokyo' | 'london' | 'ny') => this.marketSessions.getSession(scope);
+    const to = (scope: 'tokyo' | 'london' | 'ny', label: string): SessionOpen => ({
+      name: label, scope, label, session: s(scope)!,
+    });
+    return [
+      to('tokyo', 'Asian/Tokyo Open'),
+      to('london', 'London Open'),
+      to('ny', 'US Market Open'),
+    ].filter((x) => Boolean(x.session));
+  }
+
+  /** Absolute instant of a session's local open for the calendar day containing `onDay`, DST-aware. */
+  private localOpenInstant(scope: 'tokyo' | 'london' | 'ny', onDay: Date): Date {
+    const s = this.marketSessions.getSession(scope);
+    if (!s) return onDay;
+    const [oh, om] = s.open.split(':').map(Number);
+    // Reference a moment in the session's own timezone so DST offset is resolved.
+    const localRef = new Date(onDay.toLocaleString('en-US', { timeZone: s.iana }));
+    localRef.setHours(oh, om, 0, 0);
+    return localRef;
+  }
+
   readonly priority = 74;
   readonly maxScore = 110;
   readonly minBars = { '1d': 30 }; // Directional bias at session opens — high signal value
@@ -81,18 +103,17 @@ export class SessionOpenEffectDirective implements IDirective {
 
     const lastBar = bars[bars.length - 1];
     const barTime = lastBar.timestamp;
-    const barHour = barTime.getUTCHours();
-    const barMinute = barTime.getUTCMinutes();
-    const barMinutes = barHour * 60 + barMinute;
     const dayOfWeek = barTime.getUTCDay(); // 0=Sun, 6=Sat
 
-    // Find which session open is closest
+    // Find which session open is closest (DST-aware: open time is derived from
+    // each session's own IANA timezone for the bar's calendar day).
     let nearestOpen: SessionOpen | null = null;
     let minDist = Infinity;
 
-    for (const session of SESSIONS) {
-      const openMinutes = session.utcHour * 60 + 30; // Open at :30 past the hour
-      let dist = barMinutes - openMinutes;
+    const sessions = this.getSessions();
+    for (const session of sessions) {
+      const openInstant = this.localOpenInstant(session.scope, barTime);
+      let dist = (barTime.getTime() - openInstant.getTime()) / 60000;
       if (dist < 0) dist += 24 * 60; // Wrap around
       if (dist < minDist) {
         minDist = dist;
