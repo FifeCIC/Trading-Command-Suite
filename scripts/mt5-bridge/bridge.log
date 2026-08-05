@@ -25225,3 +25225,15 @@
 2026-08-01 16:14:55,265 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
 2026-08-01 16:14:55,265 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
 2026-08-01 16:14:55,335 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-01 16:18:26,662 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-01 16:26:11,474 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-01 16:29:31,115 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-01 16:30:16,195 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-01 16:31:06,521 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-01 20:27:17,366 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-01 20:28:58,551 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-01 20:29:19,839 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-01 20:29:19,896 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-01 20:29:19,911 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-02 00:31:06,900 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-02 00:48:43,058 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
