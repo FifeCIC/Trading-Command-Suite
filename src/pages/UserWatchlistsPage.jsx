@@ -180,13 +180,6 @@ export default function UserWatchlistsPage() {
             )}
           </div>
         </div>
-        {wl.importedAt && selectedId === wl.id && (
-          <div className="wl-list-date-row">
-            <span className="wl-list-date">
-              Imported {new Date(wl.importedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-            </span>
-          </div>
-        )}
       </motion.div>
     );
   }

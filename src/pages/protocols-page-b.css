@@ -1,0 +1,106 @@
+/* Protocols Registry — Page B (A/B variant) — protocols-page-b.css
+   Theme-synced using --panel, --line, --ink, --accent, --bg variables */
+
+.prb-page { padding: 1.25rem 1.5rem; max-width: 1200px; margin: 0 auto; }
+
+/* Header */
+.prb-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;
+}
+.prb-header-left h1 { margin: 0; font-size: 1.15rem; }
+.prb-loading { color: var(--ink-soft); padding: 2rem; }
+
+/* Status toggle button */
+.prb-status-btn {
+  font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 4px;
+  text-transform: uppercase; cursor: pointer; border: 1px solid transparent;
+  font-family: inherit; min-height: auto; transition: all 0.15s;
+}
+.prb-status-btn.active { background: rgba(34,197,94,0.1); color: #22c55e; border-color: rgba(34,197,94,0.25); }
+.prb-status-btn.active:hover { background: #22c55e; color: #fff; }
+.prb-status-btn.inactive { background: rgba(239,68,68,0.1); color: #ef4444; border-color: rgba(239,68,68,0.25); }
+.prb-status-btn.inactive:hover { background: #ef4444; color: #fff; }
+.prb-status-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* Toolbar */
+.prb-toolbar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 0.75rem; gap: 0.5rem;
+}
+.prb-filter-label {
+  font-size: 0.75rem; color: var(--ink-soft); display: flex; align-items: center; gap: 0.4rem;
+}
+.prb-filter-select {
+  padding: 0.3rem 0.5rem; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--panel); color: var(--ink); font-family: inherit; font-size: 0.78rem;
+}
+.prb-count { font-size: 0.72rem; color: var(--ink-soft); }
+
+/* Layout */
+.prb-layout {
+  display: grid; grid-template-columns: 300px 1fr; gap: 1rem; align-items: start;
+}
+
+/* Sidebar */
+.prb-sidebar {
+  border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+  background: var(--panel);
+}
+.prb-item {
+  padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--line);
+  cursor: pointer; transition: background 0.12s;
+}
+.prb-item:last-child { border-bottom: none; }
+.prb-item:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.prb-selected { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.prb-item-name { font-weight: 600; font-size: 0.82rem; color: var(--ink); display: flex; justify-content: space-between; align-items: center; }
+.prb-conn-dot { width: 7px; height: 7px; border-radius: 50%; }
+.prb-conn-dot.ok { background: #22c55e; }
+.prb-conn-dot.partial { background: #f59e0b; }
+.prb-conn-dot.none { background: var(--line); }
+.prb-item-meta { display: flex; gap: 0.5rem; margin-top: 0.2rem; font-size: 0.68rem; color: var(--ink-soft); }
+.prb-item-style { font-weight: 600; }
+
+/* Detail panel */
+.prb-detail {
+  border: 1px solid var(--line); border-radius: 10px; background: var(--panel);
+  padding: 1rem 1.2rem; min-height: 300px;
+}
+.prb-detail-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
+.prb-detail-title h2 { margin: 0; font-size: 1.05rem; color: var(--ink); }
+.prb-detail-id { font-size: 0.7rem; color: var(--accent); font-family: monospace; }
+.prb-description { font-size: 0.82rem; color: var(--ink-soft); line-height: 1.5; margin: 0 0 0.75rem; }
+
+/* Stats */
+.prb-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.5rem; margin-bottom: 0.75rem; }
+.prb-stat { background: color-mix(in srgb, var(--line) 30%, transparent); border-radius: 8px; padding: 0.45rem 0.6rem; text-align: center; }
+.prb-stat-val { font-size: 0.85rem; font-weight: 700; color: var(--ink); display: block; }
+.prb-stat-lbl { font-size: 0.62rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.03em; }
+
+/* Connections */
+.prb-connections {
+  border: 1px solid var(--line); border-radius: 8px; padding: 0.6rem 0.75rem; margin-bottom: 0.75rem;
+  background: color-mix(in srgb, var(--accent) 3%, transparent);
+}
+.prb-connections h3 { margin: 0 0 0.4rem; font-size: 0.72rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
+.prb-conn-row { display: flex; gap: 0.5rem; align-items: baseline; margin-bottom: 0.25rem; font-size: 0.75rem; }
+.prb-conn-label { color: var(--ink-soft); min-width: 70px; font-weight: 600; }
+.prb-conn-val { color: var(--ink); display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.prb-conn-chip { padding: 1px 6px; border-radius: 4px; background: var(--line); font-size: 0.7rem; }
+.prb-conn-none { color: var(--ink-soft); font-size: 0.7rem; font-style: italic; }
+
+/* Directive Groups */
+.prb-groups h3 { margin: 0 0 0.4rem; font-size: 0.72rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
+.prb-group {
+  border: 1px solid var(--line); border-radius: 6px; padding: 0.4rem 0.6rem; margin-bottom: 0.35rem;
+}
+.prb-group-head { display: flex; justify-content: space-between; margin-bottom: 0.25rem; }
+.prb-group-name { font-weight: 600; font-size: 0.78rem; color: var(--ink); }
+.prb-group-meta { font-size: 0.65rem; color: var(--ink-soft); }
+.prb-group-dirs { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+.prb-dir-chip {
+  padding: 1px 6px; border-radius: 3px; font-size: 0.65rem;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+}

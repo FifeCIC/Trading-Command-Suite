@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -36,6 +36,7 @@ function formatPnl(v) {
 export default function StrategiesListPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [filter, setFilter] = useState('all'); // all | active | trading | scoring | faulty
+  const queryClient = useQueryClient();
 
   // ── Strategies ──
   const { data: strategies = [], isLoading, isError } = useQuery({
@@ -85,9 +86,13 @@ export default function StrategiesListPage() {
   }, [selectedId, strategies]);
 
   const handleToggle = async (id) => {
-    // Optimistic update — toggle immediately in local state would require useState
-    // but we use useQuery data. Fire-and-forget with a fast POST, refetch on interval.
-    fetch(`${API}/${id}/toggle`, { method: 'POST' }).catch(() => {});
+    // Optimistic — update cache immediately, then sync with server
+    queryClient.setQueryData(['strategies-list'], (old) => {
+      if (!Array.isArray(old)) return old;
+      return old.map(s => s.id === id ? { ...s, active: !s.active } : s);
+    });
+    fetch(`${API}/${id}/toggle`, { method: 'POST' })
+      .catch(() => queryClient.invalidateQueries({ queryKey: ['strategies-list'] }));
   };
 
   // ── Render ─────────────────────────────────────────────

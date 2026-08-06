@@ -93,7 +93,6 @@ export const EXPERIENCE_MATRIX = {
     'status':                { beginner: true,  experienced: true,  expert: true },
     'system-health':         { beginner: false, experienced: true,  expert: true },
     'risk':                  { beginner: true,  experienced: true,  expert: true },
-    'security':              { beginner: false, experienced: false, expert: true },
     // Builder
     'architecture-framework': { beginner: false, experienced: false, expert: true },
     'capability-map':         { beginner: false, experienced: false, expert: true },

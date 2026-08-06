@@ -92,6 +92,20 @@ export default function StrategyCreatePage() {
   const [minComposite, setMinComposite] = useState(65);
   const [timeframe, setTimeframe] = useState('5m');
   const [watchlistName, setWatchlistName] = useState('');
+  const [description, setDescription] = useState('');
+  const [minRarityBand, setMinRarityBand] = useState('');
+  const [requireDirection, setRequireDirection] = useState('');
+  const [useRaritySizing, setUseRaritySizing] = useState(true);
+  const [maxSize, setMaxSize] = useState('');
+  const [maxPositions, setMaxPositions] = useState(1);
+  const [maxDailyLoss, setMaxDailyLoss] = useState('');
+  const [cooldownMinutes, setCooldownMinutes] = useState(5);
+  const [hotStockEnabled, setHotStockEnabled] = useState(false);
+  const [hotStockAllocation, setHotStockAllocation] = useState('');
+  const [hotStockDetectionMode, setHotStockDetectionMode] = useState('');
+  const [hotStockMaxHoldHours, setHotStockMaxHoldHours] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showHotStock, setShowHotStock] = useState(false);
   const [msg, setMsg] = useState('');
 
   // ── Data ──
@@ -159,6 +173,7 @@ export default function StrategyCreatePage() {
     if (!name.trim()) { setMsg('❌ Name is required'); return; }
     createMutation.mutate({
       name: name.trim(),
+      description: description.trim() || undefined,
       symbol: symbol.toUpperCase() || undefined,
       brokerId,
       protocolId: protocolId || undefined,
@@ -169,6 +184,17 @@ export default function StrategyCreatePage() {
       tpPct,
       minComposite,
       timeframe,
+      minRarityBand: minRarityBand || undefined,
+      requireDirection: requireDirection || undefined,
+      useRaritySizing,
+      maxSize: maxSize ? Number(maxSize) : undefined,
+      maxPositions: Number(maxPositions),
+      maxDailyLoss: maxDailyLoss ? Number(maxDailyLoss) : undefined,
+      cooldownMinutes: Number(cooldownMinutes),
+      hotStockEnabled,
+      hotStockAllocation: hotStockAllocation ? Number(hotStockAllocation) : undefined,
+      hotStockDetectionMode: hotStockDetectionMode || undefined,
+      hotStockMaxHoldHours: hotStockMaxHoldHours ? Number(hotStockMaxHoldHours) : undefined,
     });
   };
 
@@ -310,6 +336,101 @@ export default function StrategyCreatePage() {
                   ))}
                 </select>
               </label>
+
+              {/* Description */}
+              <label className="sc-field">
+                <span>Description</span>
+                <textarea
+                  className="sc-input sc-textarea" rows={2} placeholder="Optional notes about this strategy..."
+                  value={description} onChange={e => setDescription(e.target.value)}
+                />
+              </label>
+
+              {/* ── Signal Filters (collapsible) ── */}
+              <button type="button" className="sc-section-toggle" onClick={() => setShowAdvanced(!showAdvanced)}>
+                {showAdvanced ? '▾' : '▸'} Advanced Settings
+              </button>
+              {showAdvanced && (
+                <div className="sc-advanced-grid">
+                  <div className="sc-section-label">Signal Filters</div>
+                  <div className="sc-field-row">
+                    <label className="sc-field">
+                      <span>Min Rarity Band</span>
+                      <select className="sc-input" value={minRarityBand} onChange={e => setMinRarityBand(e.target.value)}>
+                        <option value="">— Any —</option>
+                        {['standard','strong','exceptional','cyclical','black-swan'].map(b => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="sc-field">
+                      <span>Require Direction</span>
+                      <select className="sc-input" value={requireDirection} onChange={e => setRequireDirection(e.target.value)}>
+                        <option value="">— Any —</option>
+                        <option value="long">Long only</option>
+                        <option value="short">Short only</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  {/* ── Position & Risk Management ── */}
+                  <div className="sc-section-label">Position & Risk Management</div>
+                  <div className="sc-field-row sc-field-row-4">
+                    <label className="sc-field">
+                      <span>Max Positions</span>
+                      <input className="sc-input" type="number" min="1" max="20" value={maxPositions} onChange={e => setMaxPositions(Number(e.target.value))} />
+                    </label>
+                    <label className="sc-field">
+                      <span>Max Size</span>
+                      <input className="sc-input" type="number" step="0.01" min="0" placeholder="e.g. 0.5" value={maxSize} onChange={e => setMaxSize(e.target.value)} />
+                    </label>
+                    <label className="sc-field">
+                      <span>Max Daily Loss ($)</span>
+                      <input className="sc-input" type="number" step="0.01" min="0" placeholder="e.g. 500" value={maxDailyLoss} onChange={e => setMaxDailyLoss(e.target.value)} />
+                    </label>
+                    <label className="sc-field">
+                      <span>Cooldown (min)</span>
+                      <input className="sc-input" type="number" min="0" max="1440" value={cooldownMinutes} onChange={e => setCooldownMinutes(Number(e.target.value))} />
+                    </label>
+                  </div>
+                  <label className="sc-field sc-checkbox-field">
+                    <label className="sc-checkbox-label">
+                      <input type="checkbox" checked={useRaritySizing} onChange={e => setUseRaritySizing(e.target.checked)} />
+                      <span>Use rarity-based position sizing</span>
+                    </label>
+                  </label>
+
+                  {/* ── Hot Stock Picks ── */}
+                  <div className="sc-section-label">Hot Stock Picks (#339)</div>
+                  <label className="sc-field sc-checkbox-field">
+                    <label className="sc-checkbox-label">
+                      <input type="checkbox" checked={hotStockEnabled} onChange={e => setHotStockEnabled(e.target.checked)} />
+                      <span>Enable hot stock picks</span>
+                    </label>
+                  </label>
+                  {hotStockEnabled && (
+                    <div className="sc-field-row sc-field-row-3">
+                      <label className="sc-field">
+                        <span>Hot Stock Allocation %</span>
+                        <input className="sc-input" type="number" step="0.1" min="0" max="100" placeholder="e.g. 10" value={hotStockAllocation} onChange={e => setHotStockAllocation(e.target.value)} />
+                      </label>
+                      <label className="sc-field">
+                        <span>Detection Mode</span>
+                        <select className="sc-input" value={hotStockDetectionMode} onChange={e => setHotStockDetectionMode(e.target.value)}>
+                          <option value="">— Select —</option>
+                          <option value="top-scoring">Top Scoring</option>
+                          <option value="volume-spike">Volume Spike</option>
+                          <option value="all">All</option>
+                        </select>
+                      </label>
+                      <label className="sc-field">
+                        <span>Max Hold (hours)</span>
+                        <input className="sc-input" type="number" min="1" max="168" placeholder="24" value={hotStockMaxHoldHours} onChange={e => setHotStockMaxHoldHours(e.target.value)} />
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Submit */}
               <div className="sc-actions">

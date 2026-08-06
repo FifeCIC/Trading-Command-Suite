@@ -103,8 +103,8 @@ const DIAGRAMS = [
     subgraph SETUP["1. SETUP (User)"]
         A1["Configure Providers"] --> A2["Import Market Data"]
         A2 --> A3["Create Watchlists"]
-        A3 --> A4["Build Protocols<br/>(directive groups + weights)"]
-        A4 --> A5["ScoringStrategy =<br/>Watchlist + Protocol + Broker + Mode"]
+        A3 --> A4["Build Protocols<br/>(directive groups + symbol resolution)"]
+        A4 --> A5["Protocol ↔ Symbols<br/>via SymbolProtocolAssignment<br/>or Watchlist link"]
     end
     subgraph AUTOMATION["2. AUTOMATION LOOP (M.E.T.A.)"]
         B1["Start Loop"] --> B2["Enable Broker<br/>(MT5 or T212)"]
@@ -1310,6 +1310,59 @@ const DIAGRAMS = [
     style L fill:#3b82f6,color:#fff`,
   },
 
+  {
+    id: 'protocol-symbol-resolution',
+    label: 'Protocol Symbol Resolution',
+    desc: 'How protocols determine which symbols to score. Three resolution paths in priority order: (1) DB SymbolProtocolAssignment rows for single-symbol protocols, (2) DB Watchlist linked via watchlist_id on protocol, (3) Auto-derived from protocol ID pattern matching. Added 2026-08-05 to fix META.Stack foundation.',
+    code: `flowchart TB
+    subgraph Protocol["Protocol"]
+        P1["btc-speed-v1"]
+    end
+
+    subgraph Path1["Path 1 — DB: SymbolProtocolAssignment"]
+        A1["SELECT symbol FROM SymbolProtocolAssignment WHERE protocolId = ?"]
+        A2["Single-symbol: BTCUSD"]
+    end
+
+    subgraph Path2["Path 2 — DB: Watchlist"]
+        B1["SELECT symbols FROM Watchlist WHERE protocolId = ?"]
+        B2["Multi-symbol: EURUSD, GBPUSD, USDJPY, ..."]
+    end
+
+    subgraph Path3["Path 3 — Auto-Derive Fallback"]
+        C1["Pattern match protocol ID"]
+        C2["btc-* → BTCUSD<br/>xau-* → XAUUSD<br/>forex-* → forex-majors watchlist<br/>oil-* → USOIL"]
+    end
+
+    subgraph API["resolveSymbols(protocolId)"]
+        D1["1. Check SymbolProtocolAssignment"]
+        D2["2. Check Watchlist.protocolId"]
+        D3["3. Auto-derive from ID"]
+    end
+
+    P1 --> D1
+    D1 -->|found| A1
+    D1 -->|not found| D2
+    D2 -->|found| B1
+    D2 -->|not found| D3
+    D3 --> C1
+    A1 --> A2
+    B1 --> B2
+    C1 --> C2
+
+    A2 --> Out["GET /api/scoring/gated/protocols/:id/symbols"]
+    B2 --> Out
+    C2 --> Out
+
+    style Path1 fill:#1a3a1a,stroke:#22c55e,color:#e5e7eb
+    style Path2 fill:#1a2a3a,stroke:#3b82f6,color:#e5e7eb
+    style Path3 fill:#3a2a1a,stroke:#f59e0b,color:#e5e7eb
+    style API fill:#1a1a2e,stroke:#8b5cf6,color:#e5e7eb
+    style D1 fill:#22c55e,color:#000
+    style D2 fill:#3b82f6,color:#fff
+    style D3 fill:#f59e0b,color:#000
+    style Out fill:#0ea5a6,color:#fff`,
+  },
   {
     id: 'protocol-direction',
     label: 'Protocol Direction Architecture',

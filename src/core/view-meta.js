@@ -41,12 +41,6 @@ const VIEW_META = {
     css: 'src/pages/strategy-comparison.css',
     api: ['GET /api/trading/strategy-comparison'],
   },
-  '/trading/strategies-index': {
-    label: 'Strategies',
-    file: 'src/pages/StrategiesListPage.jsx',
-    css: 'src/pages/strategies-list.css',
-    api: ['GET /api/trading/strategies/with-ratios', 'GET /api/portfolio'],
-  },
   '/trading/strategy-monitor': {
     label: 'Strategy Monitor',
     file: 'src/pages/StrategyMonitorPage.jsx',
@@ -113,24 +107,6 @@ const VIEW_META = {
     css: 'src/pages/directives-manager.css',
     api: ['GET /api/directives'],
   },
-  '/scoring/scoring-runs': {
-    label: 'Scoring Runs',
-    file: 'src/pages/ScoringRunsPage.jsx',
-    css: 'src/pages/snapshot-replay.css',
-    api: ['GET /api/scoring/runs', 'POST /api/scoring/run'],
-  },
-  '/scoring/scoring-activity-logs': {
-    label: 'Scoring Activity Logs',
-    file: 'src/pages/ScoringActivityLogsPage.jsx',
-    css: 'src/pages/scoring-activity-logs.css',
-    api: ['GET /api/scoring/runs', 'GET /api/signals/envelope/:symbol'],
-  },
-  '/scoring/scoring-overview': {
-    label: 'Scoring Overview',
-    file: 'src/pages/ScoringOverviewPage.jsx',
-    css: 'src/pages/scoring-overview.css',
-    api: ['GET /api/scoring/ranked'],
-  },
   '/scoring/exit-signals': {
     label: 'Exit Signals',
     file: 'src/pages/ExitSignalsPage.jsx',
@@ -143,11 +119,12 @@ const VIEW_META = {
     css: 'src/pages/sees-arena.css',
     api: ['POST /api/scoring/arena/consensus'],
   },
-  '/scoring/protocols': {
-    label: 'Protocols',
+  // Canonical URL — part of gradual /scoring/ → /protocols/ migration
+  '/protocols/protocols-registry': {
+    label: 'Protocols Registry',
     file: 'src/pages/ProtocolsPage.jsx',
     css: 'src/pages/protocols.css',
-    api: ['GET /api/scoring/protocols'],
+    api: ['GET /api/scoring/gated/protocols', 'GET /api/scoring/protocols'],
   },
   '/automation/automation-dashboard': {
     label: 'Automation Dashboard',
@@ -160,12 +137,6 @@ const VIEW_META = {
     file: 'src/pages/SpeedScannerPage.jsx',
     css: 'src/pages/speed-scanner.css',
     api: ['POST /api/speed/scan'],
-  },
-  '/automation/bot-rules': {
-    label: 'Automation Rules',
-    file: 'src/pages/AutomationRulesPage.jsx',
-    css: 'src/pages/automation-rules.css',
-    api: ['GET /api/automation/rules'],
   },
   '/automation/automation-rules': {
     label: 'Automation Rules',

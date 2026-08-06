@@ -126,10 +126,9 @@ export const PAGE_DATA_STATUS = {
   'platform-api-efficiency': { status: 'mock', note: 'Not yet built' },
   'platform-switches': { status: 'mock', note: 'Not yet built' },
   'risk-controls': { status: 'live', source: 'Risk module + DB' },
-  'security': { status: 'mock', note: 'Auth-dependent (Q152)' },
   'analytics': { status: 'live', source: 'Analytics pipeline' },
   'audit-log': { status: 'mock', note: 'Not yet built' },
-  'setup': { status: 'live', source: 'Setup checklist' },
+  'setup': { status: 'live', source: 'GET /api/health/setup (first-run detection, SetupBanner component)' },
   'capability-map': { status: 'live', source: 'Auto-generated from registries' },
 
   // ── Lab ──

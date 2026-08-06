@@ -87,7 +87,8 @@ def get_active_credentials():
     account = os.environ.get(f'MT5_ACCOUNT_{active}', os.environ.get('MT5_ACCOUNT', ''))
     password = os.environ.get(f'MT5_PASSWORD_{active}', os.environ.get('MT5_PASSWORD', ''))
     server = os.environ.get(f'MT5_SERVER_{active}', os.environ.get('MT5_SERVER', 'MetaQuotes-Demo'))
-    return account, password, server, active
+    path = os.environ.get(f'MT5_PATH_{active}', os.environ.get('MT5_PATH', '')) or None
+    return account, password, server, active, path
 
 def list_accounts():
     accounts = []
@@ -106,6 +107,7 @@ def list_accounts():
             'number': i,
             'login': acc,
             'server': os.environ.get(f'MT5_SERVER_{i}', ''),
+            'path': os.environ.get(f'MT5_PATH_{i}', '') or None,
             'active': str(i) == str(active_slot),
         })
     return accounts
@@ -221,9 +223,13 @@ def connect_mt5():
     global connection_errors
     if check_circuit_breaker():
         return False, 'Circuit breaker open — too many connection failures, cooling down'
-    account, password, server, active = get_active_credentials()
-    logger.info(f'Initializing MT5: server={server}, account={account} (account #{active})')
-    initialized = mt5.initialize(login=int(account), password=password, server=server)
+    account, password, server, active, path = get_active_credentials()
+    path_str = f', path={path}' if path else ''
+    logger.info(f'Initializing MT5: server={server}, account={account} (account #{active}){path_str}')
+    kwargs = dict(login=int(account), password=password, server=server)
+    if path:
+        kwargs['path'] = path
+    initialized = mt5.initialize(**kwargs)
     if initialized:
         connection_errors = 0
         reset_circuit_breaker()
@@ -283,7 +289,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
             if path == '/health':
                 connected, err = ensure_mt5()
                 acc = mt5.account_info() if connected else None
-                acct, _, _, active_num = get_active_credentials()
+                acct, _, _, active_num, _ = get_active_credentials()
                 return json_response(self, {
                     'connected': connected, 'mt5Package': True,
                     'activeAccount': active_num,
@@ -779,8 +785,12 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 acct = os.environ.get(f'MT5_ACCOUNT_{num}','')
                 pw = os.environ.get(f'MT5_PASSWORD_{num}','')
                 srv = os.environ.get(f'MT5_SERVER_{num}','')
+                mpath = os.environ.get(f'MT5_PATH_{num}','') or None
                 if not acct or not pw: return json_response(self, {'success': False, 'error': f'Account #{num} not configured'}, 400)
-                ok = mt5.initialize(login=int(acct), password=pw, server=srv)
+                kwargs = dict(login=int(acct), password=pw, server=srv)
+                if mpath:
+                    kwargs['path'] = mpath
+                ok = mt5.initialize(**kwargs)
                 if ok:
                     os.environ['MT5_ACTIVE_ACCOUNT'] = num
                     info = mt5.account_info()
@@ -828,8 +838,12 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 if not login or not password: return json_response(self, {'error': 'login and password required'}, 400)
                 try: login_int = int(login)
                 except (ValueError, TypeError): return json_response(self, {'error': f'Invalid login: {login}'}, 400)
+                mpath = body.get('path','') or None
                 mt5.shutdown()
-                ok = mt5.initialize(login=login_int, password=str(password), server=str(server))
+                kwargs = dict(login=login_int, password=str(password), server=str(server))
+                if mpath:
+                    kwargs['path'] = mpath
+                ok = mt5.initialize(**kwargs)
                 if ok:
                     info = mt5.account_info()
                     mt5.shutdown()

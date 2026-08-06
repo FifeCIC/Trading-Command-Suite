@@ -1648,6 +1648,7 @@ model Protocol {
   slug                 String   @unique @db.VarChar(100)
   name                 String   @db.VarChar(200)
   description          String?  @db.Text
+  active               Boolean  @default(true)
   version              String   @default("1.0.0") @db.VarChar(20)  // Semver for A/B tracking (#295)
   directionMode        String   @default("LONG_ONLY") @db.VarChar(20)
   tradingStyle         String?  @db.VarChar(50)

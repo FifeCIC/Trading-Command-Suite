@@ -1,0 +1,23 @@
+/* ABSwitcher — A/B toggle styled like breadcrumb pills */
+
+.ab-switcher {
+  display: inline-flex; gap: 0; margin-left: 0; vertical-align: top;
+}
+.ab-btn {
+  display: inline-flex; align-items: center;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.88rem; font-weight: 500;
+  color: var(--ink-soft);
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--line, #334155);
+  text-decoration: none; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  font-family: inherit; min-height: auto; min-width: auto; line-height: 1;
+  position: relative;
+}
+.ab-btn:first-child { border-radius: 0; }
+.ab-btn:last-child { border-radius: 0 6px 6px 0; }
+
+.ab-btn:hover { background: color-mix(in srgb, var(--panel) 88%, var(--accent) 12%); border-color: var(--accent); color: var(--accent); }
+.ab-active { background: color-mix(in srgb, var(--panel) 92%, var(--accent) 8%); border-color: var(--accent); color: var(--ink); font-weight: 600; }
+.ab-active:hover { background: color-mix(in srgb, var(--panel) 88%, var(--accent) 12%); color: var(--ink); }

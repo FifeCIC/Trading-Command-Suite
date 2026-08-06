@@ -1,0 +1,197 @@
+/**
+ * Protocols Registry — Page B (A/B variant)
+ * ===========================================
+ * Theme-synced redesign of ProtocolsPage. Changes vs Page A:
+ * - Dropdown menu filter instead of chip buttons
+ * - PageInfoPopover in header
+ * - Prominent toggle button in header area
+ * - Uses CSS variables from theme lab (--panel, --line, --ink, --accent)
+ *
+ * A/B toggle via ?variant=B in URL. Page A is ProtocolsPage.jsx.
+ */
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiGet } from '../core/api/client';
+import PageInfoPopover from '../components/PageInfoPopover';
+import './protocols-page-b.css';
+
+function getProtocolType(proto) {
+  const id = (proto.id || '').toLowerCase();
+  const name = (proto.name || '').toLowerCase();
+  const combined = id + ' ' + name;
+  if (/news|sentiment|social/i.test(combined)) return { label: 'News-Reactive', color: '#f59e0b', icon: '📰' };
+  if (/analyst|earnings|whisper/i.test(combined)) return { label: 'Analyst-Driven', color: '#3b82f6', icon: '📊' };
+  if (/insider|congress/i.test(combined)) return { label: 'Insider-Aware', color: '#a855f7', icon: '🔍' };
+  if (/macro|dxy|oil|gold|commodity/i.test(combined)) return { label: 'Macro-Driven', color: '#14b8a6', icon: '🌍' };
+  return { label: 'Technical-Only', color: '#64748b', icon: '📈' };
+}
+
+export default function ProtocolsPageB() {
+  const [selected, setSelected] = useState(null);
+  const [styleFilter, setStyleFilter] = useState('All');
+  const [toggling, setToggling] = useState(false);
+  const queryClient = useQueryClient();
+
+  const protocolsQuery = useQuery({
+    queryKey: ['protocols-b'],
+    queryFn: () => apiGet('/api/scoring/gated/protocols'),
+    staleTime: 30_000,
+  });
+
+  const protocols = useMemo(() => {
+    const raw = Array.isArray(protocolsQuery.data?.protocols) ? protocolsQuery.data.protocols : [];
+    const seen = new Set();
+    return raw.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
+  }, [protocolsQuery.data]);
+
+  useEffect(() => {
+    if (protocols.length > 0 && !selected) setSelected(protocols[0]);
+  }, [protocols, selected]);
+
+  const selectedProto = protocols.find(p => p.id === selected?.id) || protocols[0];
+  const styles = ['All', ...new Set(protocols.map(p => p.tradingStyle).filter(Boolean))];
+  const filteredProtocols = styleFilter === 'All' ? protocols : protocols.filter(p => p.tradingStyle === styleFilter);
+
+  async function handleToggle() {
+    if (!selectedProto) return;
+    setToggling(true);
+    // Optimistic update for instant UI feedback
+    setSelected(prev => ({ ...prev, active: !prev.active }));
+    try {
+      const res = await fetch(`/api/scoring/gated/protocols/${selectedProto.id}/toggle`, { method: 'PATCH' });
+      if (!res.ok) {
+        // Revert on failure
+        setSelected(prev => ({ ...prev, active: !prev.active }));
+      }
+      queryClient.invalidateQueries({ queryKey: ['protocols-b'] });
+    } catch {
+      setSelected(prev => ({ ...prev, active: !prev.active }));
+    }
+    setToggling(false);
+  }
+
+  if (protocolsQuery.isLoading) {
+    return <div className="prb-page"><div className="prb-loading">Loading protocols…</div></div>;
+  }
+
+  return (
+    <div className="prb-page">
+      {/* Header with A/B switcher */}
+      <header className="prb-header">
+        <div className="prb-header-left">
+          <h1>Protocols Registry
+            <PageInfoPopover>
+              Complete registry of all scoring protocols. Enable/disable, view configuration, and see META.Stack connections. Page B — redesigned variant with theme-synced styling.
+            </PageInfoPopover>
+          </h1>
+        </div>
+      </header>
+
+      {/* Style filter — dropdown menu */}
+      <div className="prb-toolbar">
+        <label className="prb-filter-label">
+          Style:
+          <select className="prb-filter-select" value={styleFilter} onChange={e => setStyleFilter(e.target.value)}>
+            {styles.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
+        <span className="prb-count">{filteredProtocols.length} of {protocols.length}</span>
+      </div>
+
+      <div className="prb-layout">
+        {/* Sidebar list */}
+        <div className="prb-sidebar">
+          {filteredProtocols.map(p => (
+            <div
+              key={p.id}
+              className={`prb-item ${selectedProto?.id === p.id ? 'prb-selected' : ''}`}
+              onClick={() => setSelected(p)}
+            >
+              <div className="prb-item-name">
+                {p.name}
+                <span className={`prb-conn-dot ${p.isFullyConnected ? 'ok' : p.connectionCount > 0 ? 'partial' : 'none'}`} />
+              </div>
+              <div className="prb-item-meta">
+                <span className="prb-item-style" style={{ color: getProtocolType(p).color }}>{p.tradingStyle || '—'}</span>
+                <span>{p.directiveCount} directives</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Detail panel */}
+        <div className="prb-detail">
+          {selectedProto && (
+            <>
+              <div className="prb-detail-head">
+                <div className="prb-detail-title">
+                  <h2>{selectedProto.name}</h2>
+                  <code className="prb-detail-id">{selectedProto.id}</code>
+                </div>
+                <button
+                  className={`prb-status-btn ${selectedProto.active ? 'active' : 'inactive'}`}
+                  onClick={handleToggle}
+                  disabled={toggling}
+                  title={`Click to ${selectedProto.active ? 'disable' : 'enable'} this protocol`}
+                >
+                  {toggling ? '…' : selectedProto.active ? 'Active' : 'Inactive'}
+                </button>
+              </div>
+
+              <p className="prb-description">{selectedProto.description}</p>
+
+              {/* Stats */}
+              <div className="prb-stats">
+                {selectedProto.tradingStyle && <div className="prb-stat"><span className="prb-stat-val">{selectedProto.tradingStyle}</span><span className="prb-stat-lbl">Style</span></div>}
+                {selectedProto.recommendedTimeframe && <div className="prb-stat"><span className="prb-stat-val">{selectedProto.recommendedTimeframe}</span><span className="prb-stat-lbl">Timeframe</span></div>}
+                <div className="prb-stat"><span className="prb-stat-val">{selectedProto.directiveCount}</span><span className="prb-stat-lbl">Directives</span></div>
+                <div className="prb-stat"><span className="prb-stat-val">{selectedProto.maxScore?.toLocaleString() ?? 'N/A'}</span><span className="prb-stat-lbl">Max Score</span></div>
+              </div>
+
+              {/* Connections */}
+              <div className="prb-connections">
+                <h3>META.Stack Connections</h3>
+                <div className="prb-conn-row">
+                  <span className="prb-conn-label">Watchlists</span>
+                  <span className="prb-conn-val">
+                    {selectedProto.linkedWatchlists?.length > 0
+                      ? selectedProto.linkedWatchlists.map((w, i) => <span key={i} className="prb-conn-chip">👁 {w}</span>)
+                      : <span className="prb-conn-none">None linked</span>}
+                  </span>
+                </div>
+                <div className="prb-conn-row">
+                  <span className="prb-conn-label">Strategies</span>
+                  <span className="prb-conn-val">
+                    {selectedProto.linkedStrategies?.length > 0
+                      ? selectedProto.linkedStrategies.map((s, i) => <span key={i} className="prb-conn-chip">{s.trading ? '⚡' : '📋'} {s.name}</span>)
+                      : <span className="prb-conn-none">None linked</span>}
+                  </span>
+                </div>
+              </div>
+
+              {/* Directive Groups */}
+              {selectedProto.groups?.length > 0 && (
+                <div className="prb-groups">
+                  <h3>Directive Groups</h3>
+                  {selectedProto.groups.map(g => (
+                    <div key={g.id} className="prb-group">
+                      <div className="prb-group-head">
+                        <span className="prb-group-name">{g.name}</span>
+                        <span className="prb-group-meta">Weight: {g.weight}{g.isRiskGate ? ' · Risk Gate' : ''}</span>
+                      </div>
+                      <div className="prb-group-dirs">
+                        {g.directives?.map(d => (
+                          <span key={d.id} className="prb-dir-chip">{d.name || d.id}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

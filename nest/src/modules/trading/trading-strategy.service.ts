@@ -157,27 +157,56 @@ export class TradingStrategyService {
     name: string;
     protocolId: string;
     symbol: string;
+    description?: string;
     brokerId?: string;
+    shortProtocolId?: string;
+    scoringStrategyId?: string;
     timeframe?: string;
     minComposite?: number;
+    minRarityBand?: string;
+    requireDirection?: string;
     slPct?: number;
     tpPct?: number;
     baseSize?: number;
+    useRaritySizing?: boolean;
+    maxSize?: number;
+    maxPositions?: number;
+    maxDailyLoss?: number;
+    cooldownMinutes?: number;
     mode?: string;
+    active?: boolean;
+    hotStockEnabled?: boolean;
+    hotStockAllocation?: number;
+    hotStockDetectionMode?: string;
+    hotStockMaxHoldHours?: number;
   }) {
     return this.prisma.tradingStrategy.create({
       data: {
         name: data.name,
+        description: data.description ?? null,
         protocolId: data.protocolId,
+        shortProtocolId: data.shortProtocolId ?? null,
+        scoringStrategyId: data.scoringStrategyId ?? null,
         symbol: data.symbol.toUpperCase(),
         brokerId: data.brokerId ?? 'mt5',
         timeframe: data.timeframe ?? '5m',
         minComposite: data.minComposite ?? 65,
+        minRarityBand: data.minRarityBand ?? null,
+        requireDirection: data.requireDirection ?? null,
         slPct: data.slPct ?? 1.0,
         tpPct: data.tpPct ?? 1.0,
         baseSize: data.baseSize ?? 0.01,
+        useRaritySizing: data.useRaritySizing ?? true,
+        maxSize: data.maxSize ?? null,
+        maxPositions: data.maxPositions ?? 1,
+        maxDailyLoss: data.maxDailyLoss ?? null,
+        cooldownMinutes: data.cooldownMinutes ?? 5,
         mode: data.mode ?? 'manual',
-        active: false,
+        active: data.active ?? false,
+        hotStockEnabled: data.hotStockEnabled ?? false,
+        hotStockAllocation: data.hotStockAllocation ?? null,
+        hotStockDetectionMode: data.hotStockDetectionMode ?? null,
+        hotStockMaxHoldHours: data.hotStockMaxHoldHours ?? null,
       },
     });
   }

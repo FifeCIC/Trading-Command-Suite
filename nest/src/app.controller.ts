@@ -140,4 +140,35 @@ export class AppController {
       },
     };
   }
+
+  /** First-run / setup status — checks whether the app needs initial configuration. */
+  @Get('health/setup')
+  async getSetupStatus() {
+    const checks: Record<string, boolean> = {};
+    let protocolCount = 0, strategyCount = 0, watchlistCount = 0;
+
+    if (this.prisma.isAvailable) {
+      try {
+        protocolCount = await (this.prisma as any).protocol.count();
+        strategyCount = await (this.prisma as any).tradingStrategy.count();
+        watchlistCount = await (this.prisma as any).watchlist.count();
+      } catch { /* DB unavailable — counts stay 0 */ }
+    }
+
+    checks.hasProtocols = protocolCount > 0;
+    checks.hasStrategies = strategyCount > 0;
+    checks.hasWatchlists = watchlistCount > 0;
+    checks.hasProviders = !!process.env.TRADING212_API_KEY || !!process.env.MT5_BRIDGE_URL;
+
+    const allReady = Object.values(checks).every(Boolean);
+
+    return {
+      ready: allReady,
+      checks,
+      counts: { protocols: protocolCount, strategies: strategyCount, watchlists: watchlistCount },
+      message: allReady
+        ? 'All systems configured.'
+        : 'Setup incomplete — configure providers and create your first protocol.',
+    };
+  }
 }

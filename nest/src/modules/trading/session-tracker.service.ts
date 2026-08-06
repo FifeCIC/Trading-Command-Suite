@@ -1,3 +1,19 @@
+/**
+ * SessionTrackerService — in-memory trading session tracker.
+ * ============================================================
+ * Tracks live trading session statistics: trade count, win/loss,
+ * total P&L, and session duration. Used by the trading dashboard
+ * and decision trail to show real-time session performance.
+ *
+ * Sessions are in-memory only — not persisted to DB. Restarting
+ * the server resets all session data.
+ *
+ * Lifecycle:
+ *   start()  → begins a new session
+ *   recordTrade(profit) → updates running stats
+ *   end()    → closes the session, returns final stats
+ */
+
 import { Injectable, Logger } from '@nestjs/common';
 
 export interface SessionInfo {

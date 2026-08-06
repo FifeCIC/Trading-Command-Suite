@@ -1,0 +1,44 @@
+/* SetupBanner — first-run onboarding card */
+.sb-banner {
+  margin: 0 0 1.5rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent, #0ea5a6) 8%, var(--panel, #1e293b)), var(--panel, #1e293b));
+  border: 1px solid color-mix(in srgb, var(--accent, #0ea5a6) 20%, var(--line, #334155));
+  border-radius: 14px;
+  overflow: hidden;
+}
+.sb-content { padding: 1.25rem 1.5rem; position: relative; }
+
+.sb-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+.sb-icon { font-size: 1.6rem; flex-shrink: 0; }
+.sb-title { margin: 0; font-size: 1.1rem; color: var(--ink); font-weight: 700; }
+.sb-subtitle { margin: 2px 0 0; font-size: 0.82rem; color: var(--ink-soft); }
+
+.sb-steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem; }
+.sb-step {
+  display: flex; flex-direction: column; gap: 0.15rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--line, #334155);
+  background: var(--panel, #1e293b);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  animation: sb-fade-in 0.3s ease both;
+}
+.sb-step:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.sb-step-done { opacity: 0.5; border-color: color-mix(in srgb, #22c55e 30%, var(--line)); }
+.sb-step-done:hover { opacity: 0.7; transform: none; box-shadow: none; }
+
+.sb-step-icon { font-size: 0.9rem; width: 22px; text-align: center; }
+.sb-step-label { font-size: 0.82rem; font-weight: 600; color: var(--ink); }
+.sb-step-desc { font-size: 0.7rem; color: var(--ink-soft); }
+
+.sb-dismiss {
+  position: absolute; top: 0.75rem; right: 1rem;
+  padding: 0.25rem 0.65rem; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--panel);
+  color: var(--ink-soft); font-size: 0.7rem; cursor: pointer;
+  font-family: inherit; transition: all 0.15s;
+}
+.sb-dismiss:hover { border-color: var(--ink-soft); color: var(--ink); }
+
+@keyframes sb-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }

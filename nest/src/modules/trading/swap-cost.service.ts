@@ -1,3 +1,19 @@
+/**
+ * SwapCostService — calculates overnight swap/rollover costs.
+ * ============================================================
+ * Swap (also called rollover or tom-next) is the interest rate
+ * differential charged when holding a position overnight. Brokers
+ * apply triple swap on Wednesday→Thursday for forex.
+ *
+ * This service queries MT5 for live swap rates and forecasts:
+ *  - Daily swap cost
+ *  - Triple-swap day detection (Wed for most brokers)
+ *  - Weekend projection (Fri→Mon hold)
+ *
+ * Used by the risk gate and pre-trade readiness check to warn
+ * when swap costs would erode expected profit.
+ */
+
 import { Injectable, Logger } from '@nestjs/common';
 import { AdapterFactory } from '../providers/adapter-factory';
 

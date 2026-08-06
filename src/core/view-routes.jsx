@@ -219,7 +219,7 @@ export const VIEW_COMPONENTS = {
   'sees-arena': SeesArenaPage,
   'exit-signals': ExitSignalsPage,
   'scoring-activity-logs': ScoringActivityLogsPage,
-  'protocols': ProtocolsPage,
+  'protocols-registry': ProtocolsPage,
   'protocol-trail': ProtocolTrailPage,
   'protocols-ladder': ProtocolsLadderPage,
   'create-protocols': CreateProtocolsPage,

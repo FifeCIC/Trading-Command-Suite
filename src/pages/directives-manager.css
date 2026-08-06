@@ -250,19 +250,9 @@
 
 .directive-slider {
   flex: 1;
+  max-width: 140px;
   height: 6px;
-  appearance: none;
-  -webkit-appearance: none;
-  background: var(--line, #334155);
-  border-radius: 3px;
-  outline: none;
-}
-
-.directive-slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 14px; height: 14px;
-  border-radius: 50%;
-  background: var(--accent);
+  accent-color: var(--accent);
   cursor: pointer;
 }
 
@@ -308,35 +298,6 @@
   color: var(--ink);
   font-size: 0.88rem;
   line-height: 1.4;
-}
-
-/* ── Defaults section ── */
-
-.directive-detail-defaults {
-  display: grid;
-  gap: 0.4rem;
-}
-
-.directive-detail-label {
-  font-size: 0.78rem;
-  color: var(--ink-soft);
-  display: block;
-  margin-bottom: 0.15rem;
-}
-
-.directive-slider-row {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.directive-slider {
-  flex: 1;
-  max-width: 140px;
-  accent-color: var(--accent);
-  height: 6px;
-  border-radius: 3px;
-  background: var(--line, #334155);
 }
 
 /* ── Test results section ── */

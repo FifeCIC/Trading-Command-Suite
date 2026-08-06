@@ -112,7 +112,7 @@ export class ProtocolGatingController {
         source: 'database',
         directiveCount: proto.groups.reduce((s, g) => s + g.directiveIds.length, 0),
         maxScore,
-        active: true,
+        active: proto.active !== false, // Respect DB value set by toggle endpoint
         groups,
         tradingStyle: (proto as any).tradingStyle,
         recommendedTimeframe: (proto as any).recommendedTimeframe,
@@ -146,8 +146,7 @@ export class ProtocolGatingController {
          */
         const existing = protocols.find(p => p.id === s.id);
         if (existing) {
-          // DB row overrides active status; keep richer code metadata
-          existing.active = s.active;
+          // Only override source, don't touch protocol's own active flag
           existing.source = 'database';
         } else {
           protocols.push({
@@ -338,11 +337,15 @@ export class ProtocolGatingController {
   async toggleProtocol(@Param('id') id: string): Promise<{ id: string; active: boolean }> {
     let newActive = false;
     try {
-      // Try DB first
-      const existing = await (this.prisma as any).protocol.findUnique({ where: { id } });
-      if (existing) {
-        newActive = !existing.active;
-        await (this.prisma as any).protocol.update({ where: { id }, data: { active: newActive } });
+      // Use raw SQL — Prisma client may not have 'active' field yet (added via SQL migration)
+      const existing: any[] = await (this.prisma as any).$queryRawUnsafe(
+        `SELECT active FROM protocol WHERE slug = ? LIMIT 1`, id,
+      );
+      if (existing?.length > 0) {
+        newActive = !existing[0].active;
+        await (this.prisma as any).$executeRawUnsafe(
+          `UPDATE protocol SET active = ? WHERE slug = ?`, newActive ? 1 : 0, id,
+        );
       } else {
         // Try strategy table
         const strat = await this.prisma.strategy.findUnique({ where: { id } });

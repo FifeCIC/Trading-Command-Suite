@@ -576,25 +576,6 @@ function AppShell() {
       );
     }
 
-    if (secondaryView === 'security') {
-      return (
-        <div className="content-grid">
-          <ContentCard title="Security Controls">
-            <ul>
-              <li>Theme allowlist policy and fail-closed enforcement.</li>
-              <li>Analytics endpoint restrictions (https or localhost only).</li>
-              <li>Sanitized event payloads and bounded local queue.</li>
-            </ul>
-          </ContentCard>
-          <ContentCard title="Governance Intent">
-            <p>
-              Production builds should enforce approved module sets and reject unknown extensions by default.
-            </p>
-          </ContentCard>
-        </div>
-      );
-    }
-
     if (secondaryView === 'about') {
       return (
         <section className="intro-panel">

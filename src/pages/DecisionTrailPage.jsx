@@ -93,7 +93,7 @@ export default function DecisionTrailPage() {
         </div>
       </header>
 
-      {/* Completeness overview — only show when stage data exists */}
+      {/* Completeness overview — hidden when no stage tracking data exists */}
       {stats.total > 0 && stats.anyData && (
         <div className="dt-completeness-bar">
           <span className="dt-completeness-label">Pipeline Completeness</span>

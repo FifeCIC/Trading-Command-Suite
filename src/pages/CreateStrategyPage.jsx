@@ -84,6 +84,13 @@ export default function CreateStrategyPage() {
   const [maxPyramidTiers, setMaxPyramidTiers] = useState('1');
   const [slTpInheritance, setSlTpInheritance] = useState('inherit');
   const [maxPositions, setMaxPositions] = useState('1');
+  const [maxSize, setMaxSize] = useState('');
+  const [maxDailyLoss, setMaxDailyLoss] = useState('');
+  const [cooldownMinutes, setCooldownMinutes] = useState('5');
+  const [minRarityBand, setMinRarityBand] = useState('');
+  const [requireDirection, setRequireDirection] = useState('');
+  const [useRaritySizing, setUseRaritySizing] = useState(true);
+  const [description, setDescription] = useState('');
   const [hotStockEnabled, setHotStockEnabled] = useState(false);
   const [hotStockAllocation, setHotStockAllocation] = useState('5');
   const [hotStockDetection, setHotStockDetection] = useState('top-scoring');
@@ -213,6 +220,13 @@ export default function CreateStrategyPage() {
         maxPyramidTiers: parseInt(maxPyramidTiers) || 1,
         slTpInheritance,
         maxPositions: parseInt(maxPositions) || 1,
+        maxSize: maxSize ? parseFloat(maxSize) : undefined,
+        maxDailyLoss: maxDailyLoss ? parseFloat(maxDailyLoss) : undefined,
+        cooldownMinutes: parseInt(cooldownMinutes) || 5,
+        minRarityBand: minRarityBand || undefined,
+        requireDirection: requireDirection || undefined,
+        useRaritySizing,
+        description: description.trim() || undefined,
         hotStockEnabled,
         hotStockAllocation: hotStockEnabled ? parseFloat(hotStockAllocation) || 5 : null,
         hotStockDetectionMode: hotStockEnabled ? hotStockDetection : null,
@@ -484,6 +498,58 @@ export default function CreateStrategyPage() {
               <option value="10">10 — Up to 10 concurrent positions</option>
             </select>
             <span className="ff-hint">How many positions this strategy can open simultaneously across different symbols. Default: 1 (single position).</span>
+          </label>
+          <div className="ff-row-3">
+            <label className="ff-field">
+              <span className="ff-label">Max Size (lots)</span>
+              <input className="ff-input" type="number" value={maxSize} onChange={e => setMaxSize(e.target.value)} step="0.01" min="0" placeholder="Unlimited" />
+              <span className="ff-hint">Cap on total position size. Leave empty for no limit.</span>
+            </label>
+            <label className="ff-field">
+              <span className="ff-label">Max Daily Loss ($)</span>
+              <input className="ff-input" type="number" value={maxDailyLoss} onChange={e => setMaxDailyLoss(e.target.value)} step="0.01" min="0" placeholder="No limit" />
+              <span className="ff-hint">Stop trading if daily loss exceeds this amount.</span>
+            </label>
+            <label className="ff-field">
+              <span className="ff-label">Cooldown (minutes)</span>
+              <input className="ff-input" type="number" value={cooldownMinutes} onChange={e => setCooldownMinutes(e.target.value)} min="0" max="1440" />
+              <span className="ff-hint">Minimum minutes between trades from this strategy.</span>
+            </label>
+          </div>
+          <div className="ff-row-3">
+            <label className="ff-field">
+              <span className="ff-label">Min Rarity Band</span>
+              <select className="ff-select" value={minRarityBand} onChange={e => setMinRarityBand(e.target.value)}>
+                <option value="">— Any —</option>
+                <option value="standard">Standard</option>
+                <option value="strong">Strong</option>
+                <option value="exceptional">Exceptional</option>
+                <option value="cyclical">Cyclical</option>
+                <option value="black-swan">Black Swan</option>
+              </select>
+              <span className="ff-hint">Only trade signals at or above this rarity tier.</span>
+            </label>
+            <label className="ff-field">
+              <span className="ff-label">Require Direction</span>
+              <select className="ff-select" value={requireDirection} onChange={e => setRequireDirection(e.target.value)}>
+                <option value="">— Any —</option>
+                <option value="long">Long only</option>
+                <option value="short">Short only</option>
+              </select>
+              <span className="ff-hint">Restrict this strategy to long or short positions only.</span>
+            </label>
+            <label className="ff-field">
+              <span className="ff-label">&nbsp;</span>
+              <label className="ff-checkbox-label">
+                <input type="checkbox" checked={useRaritySizing} onChange={e => setUseRaritySizing(e.target.checked)} />
+                <span className="ff-label">Use rarity-based position sizing</span>
+              </label>
+              <span className="ff-hint">Scale position size by signal rarity tier.</span>
+            </label>
+          </div>
+          <label className="ff-field">
+            <span className="ff-label">Description</span>
+            <textarea className="ff-input ff-textarea" rows={2} value={description} onChange={e => setDescription(e.target.value)} placeholder="Optional notes about this strategy..." />
           </label>
         </fieldset>
 

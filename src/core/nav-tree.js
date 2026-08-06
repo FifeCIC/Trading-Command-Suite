@@ -50,15 +50,18 @@ export const NAV_TREE = {
       { id: 'add-symbol', label: 'Add Symbol', icon: '➕' },
     ],
   },
-  scoring: {
+  // ── Protocols area (/protocols/ prefix) ──
+  // Fully migrated from legacy /scoring/ area (2026-08-06).
+  // API endpoints under /api/scoring/ are NOT affected — only frontend routes.
+  protocols: {
     label: 'Protocols',
     views: [
+      { id: 'protocols-registry', label: 'Protocols Registry', icon: '📋' },
       { id: 'directives-manager', label: 'Directives', icon: '◆' },
       { id: 'directive-impact-audit', label: 'Impact Audit', icon: '📊' },
       { id: 'directive-audit', label: 'Performance Audit', icon: '🔬' },
       { id: 'directive-detail', label: 'Directive Detail', icon: '🔬', hidden: true },
       { id: 'configure-directives', label: 'Protocol Editor', icon: '⚙' },
-      { id: 'protocols', label: 'Protocols', icon: '📋' },
       { id: 'protocol-trail', label: 'Protocol Trail', icon: '🔗' },
       { id: 'protocol-builder', label: 'Protocol Builder', icon: '🧩' },
       { id: 'sees-arena', label: 'SEES Arena', icon: '◆' },
@@ -134,8 +137,6 @@ export const NAV_TREE = {
       { id: 'meta-stack-status', label: 'META.Stack Status', icon: '🎯' },
       { id: 'architecture-framework', label: 'Architecture', icon: '⬡' },
       { id: 'file-inventory', label: 'File Inventory', icon: '📁' },
-      // ── Security ──
-      { id: 'security', label: 'Security', icon: '⚙' },
       { id: 'analytics', label: 'Analytics', icon: '▦' },
       { id: 'audit-log', label: 'Audit Log', icon: '▤' },
       { id: 'ai-logs', label: 'AI Logs', icon: '📋' },

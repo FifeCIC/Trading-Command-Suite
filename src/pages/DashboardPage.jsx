@@ -5,6 +5,7 @@ import { apiGet } from '../core/api/client';
 import { NAV_TREE } from '../core/nav-tree';
 import ScreenOptions from '../components/ScreenOptions';
 import CopyViewData from '../components/CopyViewData';
+import SetupBanner from '../components/SetupBanner';
 import './home-dashboard.css'; // reuses nav-card styles
 
 const AREA_ICONS = {
@@ -149,6 +150,7 @@ export default function DashboardPage() {
 
   return (
     <main id="main-content" className="nav-dashboard" aria-live="polite" aria-atomic="true">
+      <SetupBanner />
       {/* ── Top Bar with Logo + Nav ── */}
       <div className="nd-topbar">
         <img src="/tcs-logo.png" alt="Trading Command Suite" className="nd-topbar-logo" />

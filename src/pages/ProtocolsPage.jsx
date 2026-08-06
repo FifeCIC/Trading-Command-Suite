@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { apiGet } from '../core/api/client';
+import ProtocolsPageB from './ProtocolsPageB';
 import './protocols-page.css';
 
 /** Classify a protocol by its directive/data dependencies */
@@ -25,9 +27,14 @@ function getProtocolType(proto) {
 }
 
 export default function ProtocolsPage() {
+  // A/B testing: check variant param before any conditional rendering
+  const [searchParams] = useSearchParams();
+  const isVariantB = searchParams.get('variant') === 'B';
+
   const [selected, setSelected] = useState(null);
   const [styleFilter, setStyleFilter] = useState('All');
 
+  // Load data regardless of variant (so hooks are consistent)
   const protocolsQuery = useQuery({
     queryKey: ['protocols'],
     queryFn: () => apiGet('/api/scoring/gated/protocols'),
@@ -80,10 +87,13 @@ export default function ProtocolsPage() {
     );
   }
 
+  // A/B variant: render Page B if ?variant=B
+  if (isVariantB) return <ProtocolsPageB />;
+
   return (
     <div className="protocols-page">
       <div className="protocols-sidebar">
-        <h2>Protocols</h2>
+        <h2>Protocols Registry</h2>
         <div className="protocols-count">{filteredProtocols.length} of {protocols.length} protocol{protocols.length !== 1 ? 's' : ''}</div>
         {/* Trading style filters */}
         <div className="protocols-filters">

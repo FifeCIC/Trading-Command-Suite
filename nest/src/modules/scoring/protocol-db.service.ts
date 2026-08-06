@@ -18,6 +18,7 @@ export interface ProtocolConfig {
   groups: DirectiveGroup[];
   name: string;
   description: string;
+  active?: boolean;
   directionMode?: 'LONG_ONLY' | 'SHORT_ONLY' | 'BOTH';
   tradingStyle?: string;
   recommendedTimeframe?: string;
@@ -297,6 +298,15 @@ export class ProtocolDbService implements OnModuleInit {
       });
       if (!dbProtocols?.length) return {};
 
+      // Read active status via raw SQL — Prisma client may not have the column yet
+      let activeMap: Record<string, boolean> = {};
+      try {
+        const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+          `SELECT slug, active FROM protocol`
+        );
+        for (const r of rows) activeMap[r.slug] = !!r.active;
+      } catch { /* column may not exist yet */ }
+
       const result: Record<string, ProtocolConfig> = {};
       for (const p of dbProtocols) {
         result[p.slug] = {
@@ -315,6 +325,7 @@ export class ProtocolDbService implements OnModuleInit {
           })),
           name: p.name,
           description: p.description ?? '',
+          active: activeMap[p.slug] ?? true, // Raw SQL read — Prisma client may not have column
           directionMode: (p.directionMode as any) || 'LONG_ONLY',
           tradingStyle: p.tradingStyle ?? undefined,
           recommendedTimeframe: p.recommendedTimeframe ?? undefined,

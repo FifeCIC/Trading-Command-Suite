@@ -197,7 +197,7 @@
   margin-bottom: 4px;
 }
 .dt-timeline-dot.present { background: #22c55e; color: #fff; }
-.dt-timeline-dot.missing { background: #334155; color: #64748b; }
+.dt-timeline-dot.missing { background: var(--line, #334155); color: var(--ink-soft, #64748b); }
 
 .dt-timeline-line {
   position: absolute;

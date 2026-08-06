@@ -111,6 +111,15 @@
   }
 }
 
+/* ── Checkbox label ── */
+.ff-checkbox-label {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  font-size: 0.8rem; font-weight: 600; color: var(--ink);
+}
+.ff-checkbox-label input[type="checkbox"] {
+  width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer;
+}
+
 /* ── Toggle group (radio-card style) ── */
 .ff-toggle-group {
   display: grid;
