@@ -62,8 +62,26 @@ const VIEW_META = {
   '/scoring/protocols-ladder': {
     label: 'Protocols Ladder',
     file: 'src/pages/ProtocolsLadderPage.jsx',
-    css: 'src/pages/sees-arena.css',
-    api: ['GET /api/scoring/gated/protocols', 'GET /api/scoring/runs'],
+    css: 'src/pages/protocols-ladder.css',
+    api: ['GET /api/scoring/runs'],
+  },
+  '/protocols/symbols-ladder': {
+    label: 'Symbols Ladder',
+    file: 'src/pages/SymbolsLadderPage.jsx',
+    css: 'src/pages/protocols-ladder.css',
+    api: ['GET /api/scoring/runs'],
+  },
+  '/protocols/protocols-ladder': {
+    label: 'Protocols Ladder',
+    file: 'src/pages/ProtocolsLadderPage.jsx',
+    css: 'src/pages/protocols-ladder.css',
+    api: ['GET /api/scoring/runs'],
+  },
+  '/protocols/protocols-performance': {
+    label: 'Protocols Performance',
+    file: 'src/pages/ProtocolsPerformancePage.jsx',
+    css: 'src/pages/protocols-ladder.css',
+    api: ['GET /api/trading/strategies/with-ratios'],
   },
   '/scoring/strategy-ladders': {
     label: 'Strategies Ladder',
@@ -114,7 +132,13 @@ const VIEW_META = {
     api: ['GET /api/portfolio/exit-signals'],
   },
   '/scoring/sees-arena': {
-    label: 'SEES Arena',
+    label: 'Protocol Comparison',
+    file: 'src/pages/SeesArenaPage.jsx',
+    css: 'src/pages/sees-arena.css',
+    api: ['POST /api/scoring/arena/consensus'],
+  },
+  '/protocols/sees-arena': {
+    label: 'Protocol Comparison',
     file: 'src/pages/SeesArenaPage.jsx',
     css: 'src/pages/sees-arena.css',
     api: ['POST /api/scoring/arena/consensus'],
@@ -125,6 +149,18 @@ const VIEW_META = {
     file: 'src/pages/ProtocolsPage.jsx',
     css: 'src/pages/protocols.css',
     api: ['GET /api/scoring/gated/protocols', 'GET /api/scoring/protocols'],
+  },
+  '/lab/directive-audit': {
+    label: 'Directive Audit',
+    file: 'src/pages/DirectiveAuditPage.jsx',
+    css: 'src/pages/directive-audit.css',
+    api: ['GET /api/backtest/directive-audit'],
+  },
+  '/protocols/protocol-trail': {
+    label: 'Protocol Trail',
+    file: 'src/pages/ProtocolTrailPage.jsx',
+    css: 'src/pages/decision-trail.css',
+    api: ['GET /api/scoring/runs'],
   },
   '/automation/automation-dashboard': {
     label: 'Automation Dashboard',

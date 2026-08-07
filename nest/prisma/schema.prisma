@@ -1071,9 +1071,15 @@ model ScoringStrategy {
   maxPyramidTiers Int      @default(1)
   slTpInheritance String   @default("inherit") @db.VarChar(20)
   weightStrategy  String   @default("group-weighted") @db.VarChar(20)
+  gateConfig      Json?                                     // { groupId: { enabled, threshold } } — gate overrides per directive group
   enabled         Boolean  @default(true)
   tradingEnabled  Boolean  @default(false)
   activatedAt     DateTime?
+  // Hot Stock Picks integration (#339) — mirror of TradingStrategy hotStock fields
+  hotStockEnabled      Boolean  @default(false)
+  hotStockAllocation   Float?   // separate allocation % for hot stock trades
+  hotStockDetectionMode String? @db.VarChar(20) // "top-scoring" | "volume-spike" | "all"
+  hotStockMaxHoldHours Int?     // shorter max hold for hot stock positions (default: 24h)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -1753,4 +1759,21 @@ model Alert {
 
   @@index([type, createdAt])
   @@index([acknowledged, createdAt])
+}
+
+// ── Broker Configuration (#589 Phase 1) ──
+// Persisted broker capabilities replacing the in-memory PROTOCOL_BROKER_MAP.
+model BrokerConfig {
+  id                 String   @id @db.VarChar(50)  // brokerId: "mt5", "trading212", "paper", "capital.com"
+  displayName        String   @db.VarChar(100)
+  supportedStyles    Json                        // ["scalp","day-trade","swing","position","speed"]
+  supportedAssetTypes Json                       // ["forex","commodity","index","crypto","stock","etf"]
+  tradingEnabled     Boolean  @default(false)
+  note               String?  @db.Text
+  isActive           Boolean  @default(true)     // admin on/off for this broker
+  sortOrder          Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("broker_config")
 }

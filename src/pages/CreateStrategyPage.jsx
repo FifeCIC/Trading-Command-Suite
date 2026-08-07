@@ -217,8 +217,8 @@ export default function CreateStrategyPage() {
         slPct: parseFloat(slPct) || 1.0,
         tpPct: parseFloat(tpPct) || 1.0,
         minComposite: parseInt(minComposite) || 60,
-        maxPyramidTiers: parseInt(maxPyramidTiers) || 1,
-        slTpInheritance,
+        // maxPyramidTiers + slTpInheritance are ScoringStrategy fields —
+        // they will be used when the ScoringStrategy auto-create flow is built
         maxPositions: parseInt(maxPositions) || 1,
         maxSize: maxSize ? parseFloat(maxSize) : undefined,
         maxDailyLoss: maxDailyLoss ? parseFloat(maxDailyLoss) : undefined,

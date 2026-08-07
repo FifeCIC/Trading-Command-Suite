@@ -81,6 +81,10 @@ export class ProtocolGatingController {
     // Code-registered protocols (from DB-backed ProtocolDbService)
     const allProtocols = this.protocolDb.getAllCached();
     for (const [id, proto] of Object.entries(allProtocols)) {
+      // Skip protocols with no directive groups — these are ghost entries
+      // from legacy seed data (e.g. "Signals Workbench", "Conviction Dip Accumulation")
+      if (!proto.groups?.length) continue;
+
       const groups = proto.groups.map((g) => ({
         id: g.id,
         name: g.name,
@@ -146,19 +150,15 @@ export class ProtocolGatingController {
          */
         const existing = protocols.find(p => p.id === s.id);
         if (existing) {
-          // Only override source, don't touch protocol's own active flag
+          // Overlay: mark code-registry protocol as having a DB presence.
+          // Do NOT create new protocol entries from strategy records —
+          // strategies are not protocols and the code registry is the
+          // single source of truth for protocol definitions.
           existing.source = 'database';
-        } else {
-          protocols.push({
-            id: s.id,
-            name: s.name,
-            description: s.description ?? '',
-            source: 'database',
-            directiveCount: s.directives.length,
-            maxScore: s.directives.reduce((sum, d) => sum + (d.weight * 100), 0),
-            active: s.active,
-          });
         }
+        // else: this DB strategy has no matching code-registry protocol.
+        // Skip it — strategies ≠ protocols. These are legacy entries from
+        // the WordPress plugin era (names like "Signals Workbench → xau-speed-v1").
       }
     } catch {
       // DB might not be available — skip
@@ -168,17 +168,25 @@ export class ProtocolGatingController {
     try {
       const scoringStrategies = await this.prisma.scoringStrategy.findMany({
         where: { enabled: true },
-        select: { id: true, name: true, protocolId: true, watchlistName: true, tradingEnabled: true },
+        select: { id: true, name: true, protocolId: true, shortProtocolId: true, watchlistName: true, tradingEnabled: true },
       });
 
       // Build lookup maps
-      const strategiesByProtocol: Record<string, Array<{ id: string; name: string; watchlist: string; trading: boolean }>> = {};
+      const protocolsById = new Map(protocols.map(p => [p.id, p]));
+      const strategiesByProtocol: Record<string, Array<{ id: string; name: string; watchlist: string; trading: boolean; shortProtocolId?: string; shortProtocolName?: string }>> = {};
       const watchlistsByProtocol: Record<string, Set<string>> = {};
 
       for (const ss of scoringStrategies) {
         const pid = ss.protocolId;
         if (!strategiesByProtocol[pid]) strategiesByProtocol[pid] = [];
-        strategiesByProtocol[pid].push({ id: ss.id, name: ss.name, watchlist: ss.watchlistName, trading: ss.tradingEnabled });
+        strategiesByProtocol[pid].push({
+          id: ss.id,
+          name: ss.name,
+          watchlist: ss.watchlistName,
+          trading: ss.tradingEnabled,
+          shortProtocolId: ss.shortProtocolId || undefined,
+          shortProtocolName: ss.shortProtocolId ? protocolsById.get(ss.shortProtocolId)?.name || ss.shortProtocolId : undefined,
+        });
 
         if (!watchlistsByProtocol[pid]) watchlistsByProtocol[pid] = new Set();
         if (ss.watchlistName) watchlistsByProtocol[pid].add(ss.watchlistName);

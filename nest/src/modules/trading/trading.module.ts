@@ -6,6 +6,8 @@ import { SessionTrackerController } from './session-tracker.controller';
 import { MarketContextService } from './market-context.service';
 import { TradingStrategyService } from './trading-strategy.service';
 import { TradingStrategyController } from './trading-strategy.controller';
+import { BrokerConfigService } from './broker-config.service';
+import { BrokerConfigController } from './broker-config.controller';
 import { TradeRecorderService } from './trade-recorder.service';
 import { DuplicateGuardService } from './duplicate-guard.service';
 import { StopGuardianService } from './stop-guardian.service';
@@ -20,8 +22,8 @@ import { ProvidersModule } from '../providers/providers.module';
 
 @Module({
   imports: [DirectivesModule, RiskModule, NotificationsModule, DatabaseModule, ProvidersModule],
-  controllers: [Mt5TradingController, SessionTrackerController, TradingStrategyController, TradeHistoryController],
-  providers: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, TradeRecorderService, DuplicateGuardService, StopGuardianService, SwapCostService, WeekendDefenseService],
-  exports: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, TradeRecorderService, DuplicateGuardService, StopGuardianService, SwapCostService, WeekendDefenseService],
+  controllers: [Mt5TradingController, SessionTrackerController, TradingStrategyController, TradeHistoryController, BrokerConfigController],
+  providers: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopGuardianService, SwapCostService, WeekendDefenseService],
+  exports: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopGuardianService, SwapCostService, WeekendDefenseService],
 })
 export class TradingModule {}

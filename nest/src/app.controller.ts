@@ -158,7 +158,15 @@ export class AppController {
     checks.hasProtocols = protocolCount > 0;
     checks.hasStrategies = strategyCount > 0;
     checks.hasWatchlists = watchlistCount > 0;
-    checks.hasProviders = !!process.env.TRADING212_API_KEY || !!process.env.MT5_BRIDGE_URL;
+    // Check if providers actually respond, not just if env vars exist
+    let providersWorking = 0;
+    try {
+      const health = await this.providersService.getHealth();
+      for (const p of health.providers) {
+        if (p.status === 'healthy' || p.status === 'ok' || p.status === 'connected') providersWorking++;
+      }
+    } catch { /* provider health unavailable */ }
+    checks.hasProviders = providersWorking > 0;
 
     const allReady = Object.values(checks).every(Boolean);
 

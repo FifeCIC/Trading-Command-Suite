@@ -118,10 +118,23 @@ export class AlertsService {
   async getAlertCount(): Promise<{ active: number; critical: number }> {
     if (!this.prisma.isAvailable) return { active: 0, critical: 0 };
     try {
-      const [active, critical] = await Promise.all([
-        (this.prisma as any).alert.count({ where: { dismissed: false } }),
-        (this.prisma as any).alert.count({ where: { dismissed: false, severity: 'critical' } }),
-      ]);
+      // Fetch titles ordered by time to dedup consecutive identical alerts
+      const rows = await (this.prisma as any).alert.findMany({
+        where: { dismissed: false },
+        select: { title: true, detail: true, severity: true },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      // Dedup consecutive identical alerts (same title+detail)
+      let active = 0, critical = 0;
+      let prevKey = '';
+      for (const r of rows) {
+        const key = `${r.title || ''}|${r.detail || ''}`;
+        if (key === prevKey) continue;
+        prevKey = key;
+        active++;
+        if (r.severity === 'critical') critical++;
+      }
       return { active, critical };
     } catch { return { active: 0, critical: 0 }; }
   }

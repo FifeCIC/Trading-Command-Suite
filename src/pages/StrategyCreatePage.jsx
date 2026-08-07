@@ -29,31 +29,31 @@ const TABS = [
   { id: 'wizard', label: 'Wizard', icon: '🧙' },
 ];
 
-// ── Protocol → Broker compatibility (from CreateStrategyPage) ──
-const PROTOCOL_BROKER_MAP = {
+// ── Protocol → Broker compatibility (fallback — now served by GET /api/brokers) ──
+const BROKER_FALLBACK = {
   mt5: {
+    id: 'mt5', displayName: 'MetaTrader 5',
     supportedStyles: ['scalp', 'day-trade', 'swing', 'position', 'speed'],
     supportedAssetTypes: ['forex', 'commodity', 'index', 'crypto', 'stock'],
-    tradingEnabled: true,
-    note: 'Full execution — SL/TP, trailing stops, partial close',
+    tradingEnabled: true, note: 'Full execution — SL/TP, trailing stops, partial close',
   },
   trading212: {
+    id: 'trading212', displayName: 'Trading 212',
     supportedStyles: ['swing', 'position'],
     supportedAssetTypes: ['stock', 'etf'],
-    tradingEnabled: false,
-    note: 'Portfolio monitoring only — no trade execution',
+    tradingEnabled: false, note: 'Portfolio monitoring only — no trade execution',
   },
   paper: {
+    id: 'paper', displayName: 'Paper Trading',
     supportedStyles: ['scalp', 'day-trade', 'swing', 'position', 'speed'],
     supportedAssetTypes: ['forex', 'commodity', 'index', 'crypto', 'stock', 'etf'],
-    tradingEnabled: true,
-    note: 'Virtual ledger — ideal for testing new strategies',
+    tradingEnabled: true, note: 'Virtual ledger — ideal for testing new strategies',
   },
   'capital.com': {
+    id: 'capital.com', displayName: 'Capital.com',
     supportedStyles: ['scalp', 'day-trade', 'swing', 'position'],
     supportedAssetTypes: ['forex', 'commodity', 'index', 'crypto'],
-    tradingEnabled: true,
-    note: 'CFD broker — session-based auth, demo + live accounts',
+    tradingEnabled: true, note: 'CFD broker — session-based auth, demo + live accounts',
   },
 };
 
@@ -73,8 +73,6 @@ function inferAssetType(symbol) {
   if (['BTCUSD','ETHUSD','LTCUSD'].includes(s)) return 'crypto';
   return 'stock';
 }
-
-const BROKER_LIST = Object.keys(PROTOCOL_BROKER_MAP);
 
 export default function StrategyCreatePage() {
   const [tab, setTab] = useState('form');
@@ -123,12 +121,34 @@ export default function StrategyCreatePage() {
   });
   const wlList = watchlists?.watchlists || watchlists || [];
 
+  // Broker configs — fetched from API (#589), falls back to hardcoded defaults
+  const { data: brokerData } = useQuery({
+    queryKey: ['broker-configs'],
+    queryFn: () => apiGet('/api/brokers').catch(() => ({ brokers: Object.values(BROKER_FALLBACK) })),
+    staleTime: 300_000,
+  });
+  const brokerMap = useMemo(() => {
+    const brokers = brokerData?.brokers || Object.values(BROKER_FALLBACK);
+    const map = {};
+    for (const b of brokers) {
+      map[b.id] = {
+        supportedStyles: b.supportedStyles || [],
+        supportedAssetTypes: b.supportedAssetTypes || [],
+        tradingEnabled: b.tradingEnabled ?? true,
+        note: b.note || '',
+        displayName: b.displayName || b.id,
+      };
+    }
+    return map;
+  }, [brokerData]);
+  const BROKER_LIST = Object.keys(brokerMap);
+
   // ── Derived ──
   const selectedProto = useMemo(() => {
     return protoList.find(p => (p.id || p.slug) === protocolId) || null;
   }, [protoList, protocolId]);
 
-  const brokerCfg = PROTOCOL_BROKER_MAP[brokerId] || PROTOCOL_BROKER_MAP.mt5;
+  const brokerCfg = brokerMap[brokerId] || brokerMap.mt5;
   const assetType = inferAssetType(symbol);
 
   const brokerCompatible = useMemo(() => {

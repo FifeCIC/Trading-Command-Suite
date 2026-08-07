@@ -161,6 +161,8 @@ export class TradingStrategyService {
     brokerId?: string;
     shortProtocolId?: string;
     scoringStrategyId?: string;
+    watchlistId?: string;
+    watchlistName?: string;
     timeframe?: string;
     minComposite?: number;
     minRarityBand?: string;
@@ -180,13 +182,46 @@ export class TradingStrategyService {
     hotStockDetectionMode?: string;
     hotStockMaxHoldHours?: number;
   }) {
+    // Auto-create ScoringStrategy when watchlist is provided without a scoringStrategyId
+    let scoringStrategyId = data.scoringStrategyId ?? null;
+    if (!scoringStrategyId && (data.watchlistId || data.watchlistName)) {
+      try {
+        const watchlistName = data.watchlistName || data.watchlistId || 'default';
+        const existingScoring = await (this.prisma as any).scoringStrategy.findFirst({
+          where: { protocolId: data.protocolId, watchlistName },
+        });
+        if (existingScoring) {
+          scoringStrategyId = existingScoring.id;
+        } else {
+          const created = await (this.prisma as any).scoringStrategy.create({
+            data: {
+              name: `${data.name} Scoring`,
+              protocolId: data.protocolId,
+              watchlistName,
+              watchlistId: data.watchlistId ?? null,
+              brokerId: data.brokerId ?? 'mt5',
+              mode: data.mode ?? 'score',
+              tradeThreshold: data.minComposite ?? 60,
+              baseSize: data.baseSize ?? 0.01,
+              slPct: data.slPct ?? 1.0,
+              tpPct: data.tpPct ?? 1.0,
+              enabled: true,
+            },
+          });
+          scoringStrategyId = created.id;
+        }
+      } catch (err) {
+        this.logger.warn(`Auto-create ScoringStrategy failed for ${data.name}: ${(err as Error).message}`);
+      }
+    }
+
     return this.prisma.tradingStrategy.create({
       data: {
         name: data.name,
         description: data.description ?? null,
         protocolId: data.protocolId,
         shortProtocolId: data.shortProtocolId ?? null,
-        scoringStrategyId: data.scoringStrategyId ?? null,
+        scoringStrategyId,
         symbol: data.symbol.toUpperCase(),
         brokerId: data.brokerId ?? 'mt5',
         timeframe: data.timeframe ?? '5m',

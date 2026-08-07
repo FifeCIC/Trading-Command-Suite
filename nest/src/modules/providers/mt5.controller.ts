@@ -2,6 +2,7 @@ import { Controller, Get, Post, Param, Body, Query, Logger } from '@nestjs/commo
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdapterFactory } from './adapter-factory';
 import { Mt5Adapter } from './adapters/mt5.adapter';
+import { Mt5ConnectionManager } from './mt5/mt5-connection-manager.service';
 import { PrismaService } from '../../database/prisma.service';
 
 @ApiTags('providers')
@@ -13,6 +14,7 @@ export class Mt5Controller {
   constructor(
     private readonly adapterFactory: AdapterFactory,
     private readonly prisma: PrismaService,
+    private readonly mt5Connection: Mt5ConnectionManager,
   ) {}
 
   private getMt5Adapter(): Mt5Adapter | null {
@@ -21,6 +23,16 @@ export class Mt5Controller {
       return adapter;
     }
     return null;
+  }
+
+  @Get('brokers')
+  @ApiOperation({ summary: 'List all active MT5 broker instances with health' })
+  @ApiOkResponse({ description: 'Per-broker status, health, and connectivity' })
+  async getBrokers() {
+    return {
+      brokers: await this.mt5Connection.getAllBrokerHealths(),
+      timestamp: new Date().toISOString(),
+    };
   }
 
   @Get('diagnostics')
@@ -154,14 +166,13 @@ export class Mt5Controller {
   }
 
   @Get('accounts')
-  @ApiOperation({ summary: 'List configured MT5 accounts' })
+  @ApiOperation({ summary: 'List configured MT5 accounts (aggregated from all brokers)' })
   async getAccounts() {
     try {
-      const res = await fetch(`${this.BRIDGE_URL}/accounts`, { signal: AbortSignal.timeout(5000) });
-      if (!res.ok) return { accounts: [], error: `Bridge returned HTTP ${res.status}` };
-      return await res.json();
+      const accounts = await this.mt5Connection.getAccounts();
+      return { accounts, timestamp: new Date().toISOString() };
     } catch (err: any) {
-      return { accounts: [], error: err.message || 'Bridge unreachable' };
+      return { accounts: [], error: err.message || 'Failed to fetch accounts' };
     }
   }
 

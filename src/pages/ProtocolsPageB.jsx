@@ -29,6 +29,10 @@ function getProtocolType(proto) {
 export default function ProtocolsPageB() {
   const [selected, setSelected] = useState(null);
   const [styleFilter, setStyleFilter] = useState('All');
+  const [sortOrder, setSortOrder] = useState('active-first');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [usageFilter, setUsageFilter] = useState('all');
+  const [hideInactive, setHideInactive] = useState(false);
   const [toggling, setToggling] = useState(false);
   const queryClient = useQueryClient();
 
@@ -50,22 +54,62 @@ export default function ProtocolsPageB() {
 
   const selectedProto = protocols.find(p => p.id === selected?.id) || protocols[0];
   const styles = ['All', ...new Set(protocols.map(p => p.tradingStyle).filter(Boolean))];
-  const filteredProtocols = styleFilter === 'All' ? protocols : protocols.filter(p => p.tradingStyle === styleFilter);
+  const filteredProtocols = useMemo(() => {
+    let list = styleFilter === 'All' ? [...protocols] : protocols.filter(p => p.tradingStyle === styleFilter);
+    // Search filter — match against name and id
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter(p =>
+        (p.name || '').toLowerCase().includes(q) ||
+        (p.id || '').toLowerCase().includes(q)
+      );
+    }
+    // Usage filter — in use by trading strategies or not
+    if (usageFilter === 'in-use') {
+      list = list.filter(p => (p.connectionCount ?? 0) > 0);
+    } else if (usageFilter === 'unused') {
+      list = list.filter(p => (p.connectionCount ?? 0) === 0);
+    }
+    // Hide inactive
+    if (hideInactive) list = list.filter(p => p.active !== false);
+    // Sort
+    if (sortOrder === 'active-first') {
+      list.sort((a, b) => (b.active ? 1 : 0) - (a.active ? 1 : 0));
+    } else if (sortOrder === 'inactive-first') {
+      list.sort((a, b) => (a.active ? 1 : 0) - (b.active ? 1 : 0));
+    } else if (sortOrder === 'az') {
+      list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    } else if (sortOrder === 'za') {
+      list.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+    }
+    return list;
+  }, [protocols, styleFilter, sortOrder, searchQuery, usageFilter, hideInactive]);
 
   async function handleToggle() {
     if (!selectedProto) return;
     setToggling(true);
-    // Optimistic update for instant UI feedback
-    setSelected(prev => ({ ...prev, active: !prev.active }));
+    const newActive = !selectedProto.active;
+    // Optimistic update for instant UI feedback — update both selected and list
+    setSelected(prev => ({ ...prev, active: newActive }));
+    queryClient.setQueryData(['protocols-b'], (old) => {
+      if (!old?.protocols) return old;
+      return {
+        ...old,
+        protocols: old.protocols.map((p) =>
+          p.id === selectedProto.id ? { ...p, active: newActive } : p
+        ),
+      };
+    });
     try {
       const res = await fetch(`/api/scoring/gated/protocols/${selectedProto.id}/toggle`, { method: 'PATCH' });
       if (!res.ok) {
-        // Revert on failure
-        setSelected(prev => ({ ...prev, active: !prev.active }));
+        // Revert on failure — both selected and list
+        setSelected(prev => ({ ...prev, active: !newActive }));
+        queryClient.invalidateQueries({ queryKey: ['protocols-b'] });
       }
-      queryClient.invalidateQueries({ queryKey: ['protocols-b'] });
     } catch {
-      setSelected(prev => ({ ...prev, active: !prev.active }));
+      setSelected(prev => ({ ...prev, active: !newActive }));
+      queryClient.invalidateQueries({ queryKey: ['protocols-b'] });
     }
     setToggling(false);
   }
@@ -87,13 +131,41 @@ export default function ProtocolsPageB() {
         </div>
       </header>
 
-      {/* Style filter — dropdown menu */}
+      {/* Toolbar: search + style filter + sort */}
       <div className="prb-toolbar">
+        <input
+          className="prb-search"
+          type="text"
+          placeholder="Search protocols…"
+          value={searchQuery}
+          onChange={e => { setSearchQuery(e.target.value); setSelected(null); }}
+        />
         <label className="prb-filter-label">
           Style:
           <select className="prb-filter-select" value={styleFilter} onChange={e => setStyleFilter(e.target.value)}>
             {styles.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
+        </label>
+        <label className="prb-filter-label">
+          Order:
+          <select className="prb-filter-select" value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
+            <option value="active-first">Active first</option>
+            <option value="inactive-first">Inactive first</option>
+            <option value="az">A → Z</option>
+            <option value="za">Z → A</option>
+          </select>
+        </label>
+        <label className="prb-filter-label">
+          Stacked:
+          <select className="prb-filter-select" value={usageFilter} onChange={e => setUsageFilter(e.target.value)}>
+            <option value="all">All</option>
+            <option value="in-use">Yes</option>
+            <option value="unused">No</option>
+          </select>
+        </label>
+        <label className="prb-filter-label">
+          <input type="checkbox" checked={hideInactive} onChange={e => setHideInactive(e.target.checked)} />
+          <span>Hide inactive</span>
         </label>
         <span className="prb-count">{filteredProtocols.length} of {protocols.length}</span>
       </div>
@@ -109,7 +181,7 @@ export default function ProtocolsPageB() {
             >
               <div className="prb-item-name">
                 {p.name}
-                <span className={`prb-conn-dot ${p.isFullyConnected ? 'ok' : p.connectionCount > 0 ? 'partial' : 'none'}`} />
+                <span className={`prb-active-dot ${p.active ? 'on' : 'off'}`} title={p.active ? 'Protocol enabled' : 'Protocol disabled'} />
               </div>
               <div className="prb-item-meta">
                 <span className="prb-item-style" style={{ color: getProtocolType(p).color }}>{p.tradingStyle || '—'}</span>
@@ -156,7 +228,9 @@ export default function ProtocolsPageB() {
                   <span className="prb-conn-val">
                     {selectedProto.linkedWatchlists?.length > 0
                       ? selectedProto.linkedWatchlists.map((w, i) => <span key={i} className="prb-conn-chip">👁 {w}</span>)
-                      : <span className="prb-conn-none">None linked</span>}
+                      : selectedProto.linkedStrategies?.length > 0
+                        ? <span className="prb-conn-none">None linked</span>
+                        : <span className="prb-conn-na">Not required — protocol is self-scoped</span>}
                   </span>
                 </div>
                 <div className="prb-conn-row">

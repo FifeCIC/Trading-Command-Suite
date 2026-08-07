@@ -10,6 +10,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TradingStrategyService } from '../trading/trading-strategy.service';
 import { DirectivesService } from '../directives/directives.service';
+import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 
 interface Mt5RawPosition {
   ticket: number;
@@ -78,8 +79,9 @@ export class StopGuardianService {
   constructor(
     private readonly strategyService: TradingStrategyService,
     private readonly directivesService: DirectivesService,
+    private readonly mt5Connection: Mt5ConnectionManager,
   ) {
-    this.bridgeUrl = process.env.MT5_BRIDGE_URL || 'http://localhost:5000';
+    this.bridgeUrl = this.mt5Connection.getUrl();
   }
 
   // ── Loop Control ──────────────────────────────────────

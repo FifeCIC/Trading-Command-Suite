@@ -34,7 +34,6 @@ import StrategyLibraryPage from '../pages/StrategyLibraryPage.jsx';
 
 // ── Scoring ──
 import DirectivesManagerPage from '../pages/DirectivesManagerPage.jsx';
-import DirectiveDetailPage from '../pages/DirectiveDetailPage.jsx';
 import DirectiveImpactAuditPage from '../pages/DirectiveImpactAuditPage.jsx';
 import LadderPage from '../pages/LadderPage.jsx';
 import SeesArenaPage from '../pages/SeesArenaPage.jsx';
@@ -43,6 +42,8 @@ import ScoringActivityLogsPage from '../pages/ScoringActivityLogsPage.jsx';
 import ProtocolsPage from '../pages/ProtocolsPage.jsx';
 import ProtocolTrailPage from '../pages/ProtocolTrailPage.jsx';
 import ProtocolsLadderPage from '../pages/ProtocolsLadderPage.jsx';
+import SymbolsLadderPage from '../pages/SymbolsLadderPage.jsx';
+import ProtocolsPerformancePage from '../pages/ProtocolsPerformancePage.jsx';
 import CreateProtocolsPage from '../pages/CreateProtocolsPage.jsx';
 import StrategyLaddersPage from '../pages/StrategyLaddersPage.jsx';
 import StrategyBuilderPage from '../pages/StrategyBuilderPage.jsx';
@@ -213,7 +214,6 @@ export const VIEW_COMPONENTS = {
   // Scoring
   'directives-manager': DirectivesManagerPage,
   'directive-impact-audit': DirectiveImpactAuditPage,
-  'directive-detail': DirectiveDetailPage,
   'directive-audit': DirectiveAuditPage,
   'live-ordering-stack': LadderPage,
   'sees-arena': SeesArenaPage,
@@ -222,6 +222,8 @@ export const VIEW_COMPONENTS = {
   'protocols-registry': ProtocolsPage,
   'protocol-trail': ProtocolTrailPage,
   'protocols-ladder': ProtocolsLadderPage,
+  'symbols-ladder': SymbolsLadderPage,
+  'protocols-performance': ProtocolsPerformancePage,
   'create-protocols': CreateProtocolsPage,
   'protocol-builder': CreateProtocolsPage,
   'strategy-builder': StrategyBuilderPage,

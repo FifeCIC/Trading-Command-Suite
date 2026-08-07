@@ -26146,3 +26146,176 @@
 2026-08-06 02:46:19,445 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
 2026-08-06 02:46:19,445 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
 2026-08-06 02:46:19,453 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-06 11:41:15,186 [INFO] MetaTrader5 package loaded
+2026-08-06 11:41:15,211 [INFO] Connecting to MT5 at startup...
+2026-08-06 11:41:15,211 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2)
+2026-08-06 11:41:19,054 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-06 11:41:19,054 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-06 11:41:19,094 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-06 18:24:33,749 [INFO] MetaTrader5 package loaded
+2026-08-06 18:24:33,763 [INFO] Connecting to MT5 at startup...
+2026-08-06 18:24:33,763 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2)
+2026-08-06 18:24:38,862 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-06 18:24:38,862 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-06 18:24:38,943 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-06 19:24:39,976 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-06 19:45:43,761 [INFO] MetaTrader5 package loaded
+2026-08-06 19:45:43,762 [INFO] Connecting to MT5 at startup...
+2026-08-06 19:45:43,763 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2)
+2026-08-06 19:46:17,725 [INFO] MetaTrader5 package loaded
+2026-08-06 19:46:17,725 [INFO] Connecting to MT5 at startup...
+2026-08-06 19:46:17,725 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2)
+2026-08-06 19:46:30,142 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-06 19:46:30,142 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-06 19:46:30,142 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-06 19:46:30,142 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-06 19:46:30,151 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-06 19:46:30,152 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-06 19:47:40,720 [INFO] MetaTrader5 package loaded
+2026-08-06 19:47:40,720 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-06 19:47:40,720 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-06 19:47:40,720 [INFO] Connecting to MT5 at startup...
+2026-08-06 19:47:40,721 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2)
+2026-08-06 19:48:10,418 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-06 19:48:10,432 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-06 19:48:41,977 [INFO] MetaTrader5 package loaded
+2026-08-06 19:48:41,977 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-06 19:48:41,978 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-06 19:48:41,978 [INFO] Connecting to MT5 at startup...
+2026-08-06 19:48:41,978 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-06 19:48:41,981 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-06 19:48:41,993 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-06 19:48:51,905 [INFO] MetaTrader5 package loaded
+2026-08-06 19:48:51,906 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-06 19:48:51,906 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-06 19:48:51,906 [INFO] Connecting to MT5 at startup...
+2026-08-06 19:48:51,906 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-06 19:48:51,908 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-06 19:48:51,916 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-06 21:00:58,200 [INFO] MetaTrader5 package loaded
+2026-08-06 21:00:58,201 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-06 21:00:58,202 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-06 21:00:58,202 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-06 21:00:58,202 [INFO] Connecting to MT5 at startup...
+2026-08-06 21:00:58,203 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-06 21:00:58,203 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-06 21:00:58,203 [INFO] Connecting to MT5 at startup...
+2026-08-06 21:00:58,204 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-06 21:00:58,218 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-06 21:00:58,219 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-06 21:00:58,234 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-06 21:00:58,234 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-06 21:05:34,343 [INFO] MetaTrader5 package loaded
+2026-08-06 21:05:34,343 [INFO] Bridge instance #1: 51866583 @ ICMarketsSC-Demo on port 5000
+2026-08-06 21:05:34,343 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-06 21:05:34,344 [INFO] Connecting to MT5 at startup...
+2026-08-06 21:05:34,344 [INFO] Initializing MT5: server=ICMarketsSC-Demo, account=51866583 (account #1), path=C:\Program Files\MetaTrader 5 IC Markets Global\terminal64.exe
+2026-08-06 21:05:34,359 [INFO] Path-only init failed, trying with credentials: (-6, 'Terminal: Authorization failed')
+2026-08-06 21:05:34,360 [ERROR] MT5 initialization failed: (-6, 'Terminal: Authorization failed')
+2026-08-06 21:05:34,360 [WARNING] MT5 not connected at startup: (-6, 'Terminal: Authorization failed')
+2026-08-06 21:05:34,374 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-06 21:49:22,872 [INFO] MetaTrader5 package loaded
+2026-08-06 21:49:22,872 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-06 21:49:22,872 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-06 21:49:22,872 [INFO] Connecting to MT5 at startup...
+2026-08-06 21:49:22,872 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-06 21:49:22,875 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-06 21:49:22,886 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-06 21:49:34,212 [INFO] MetaTrader5 package loaded
+2026-08-06 21:49:34,212 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-06 21:49:34,212 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-06 21:49:34,213 [INFO] Connecting to MT5 at startup...
+2026-08-06 21:49:34,213 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-06 21:49:34,216 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-06 21:49:34,224 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-06 22:40:34,094 [INFO] MetaTrader5 package loaded
+2026-08-06 22:40:34,095 [INFO] MetaTrader5 package loaded
+2026-08-06 22:40:34,096 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5002
+2026-08-06 22:40:34,096 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5001
+2026-08-06 22:40:34,096 [INFO] Bridge instance #1: 51866583 @ ICMarketsSC-Demo on port 5000
+2026-08-06 22:40:34,097 [INFO] Starting MT5 Bridge v2 on port 5002 (http.server, no Flask)...
+2026-08-06 22:40:34,097 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-06 22:40:34,097 [INFO] Connecting to MT5 at startup...
+2026-08-06 22:40:34,098 [INFO] Connecting to MT5 at startup...
+2026-08-06 22:40:34,098 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-06 22:40:34,099 [INFO] Initializing MT5: server=ICMarketsSC-Demo, account=51866583 (account #1), path=C:\Program Files\MetaTrader 5 IC Markets Global\terminal64.exe
+2026-08-06 22:40:34,099 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-06 22:40:34,103 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-06 22:40:34,103 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-06 22:40:34,107 [INFO] Path-only init failed, trying with credentials: (-6, 'Terminal: Authorization failed')
+2026-08-06 22:40:34,112 [ERROR] MT5 initialization failed: (-6, 'Terminal: Authorization failed')
+2026-08-06 22:40:34,112 [WARNING] MT5 not connected at startup: (-6, 'Terminal: Authorization failed')
+2026-08-06 22:40:34,115 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-06 22:40:34,115 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5002
+2026-08-06 22:40:34,123 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-06 22:43:07,122 [INFO] MetaTrader5 package loaded
+2026-08-06 22:43:07,122 [INFO] Bridge instance #1: 51866583 @ ICMarketsSC-Demo on port 5000
+2026-08-06 22:43:07,123 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-06 22:43:07,123 [INFO] Connecting to MT5 at startup...
+2026-08-06 22:43:07,123 [INFO] Initializing MT5: server=ICMarketsSC-Demo, account=51866583 (account #1), path=C:\Program Files\MetaTrader 5 IC Markets Global\terminal64.exe
+2026-08-06 22:43:07,126 [INFO] MetaTrader5 package loaded
+2026-08-06 22:43:07,126 [INFO] Path-only init failed, trying with credentials: (-6, 'Terminal: Authorization failed')
+2026-08-06 22:43:07,127 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5002
+2026-08-06 22:43:07,128 [ERROR] MT5 initialization failed: (-6, 'Terminal: Authorization failed')
+2026-08-06 22:43:07,128 [INFO] Starting MT5 Bridge v2 on port 5002 (http.server, no Flask)...
+2026-08-06 22:43:07,128 [WARNING] MT5 not connected at startup: (-6, 'Terminal: Authorization failed')
+2026-08-06 22:43:07,128 [INFO] MetaTrader5 package loaded
+2026-08-06 22:43:07,128 [INFO] Connecting to MT5 at startup...
+2026-08-06 22:43:07,129 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-06 22:43:07,129 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5001
+2026-08-06 22:43:07,130 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-06 22:43:07,130 [INFO] Connecting to MT5 at startup...
+2026-08-06 22:43:07,131 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-06 22:43:07,132 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-06 22:43:07,135 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-06 22:43:07,141 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-06 22:43:07,143 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5002
+2026-08-06 22:43:07,147 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-06 22:46:21,821 [INFO] MetaTrader5 package loaded
+2026-08-06 22:46:21,822 [INFO] MetaTrader5 package loaded
+2026-08-06 22:46:21,822 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5002
+2026-08-06 22:46:21,823 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5001
+2026-08-06 22:46:21,823 [INFO] Starting MT5 Bridge v2 on port 5002 (http.server, no Flask)...
+2026-08-06 22:46:21,824 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-06 22:46:21,824 [INFO] Connecting to MT5 at startup...
+2026-08-06 22:46:21,824 [INFO] Connecting to MT5 at startup...
+2026-08-06 22:46:21,824 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-06 22:46:21,825 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-06 22:46:21,828 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-06 22:46:21,829 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-06 22:46:21,840 [INFO] MetaTrader5 package loaded
+2026-08-06 22:46:21,841 [INFO] Bridge instance #1: 51866583 @ ICMarketsSC-Demo on port 5000
+2026-08-06 22:46:21,841 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-06 22:46:21,842 [INFO] Connecting to MT5 at startup...
+2026-08-06 22:46:21,842 [INFO] Initializing MT5: server=ICMarketsSC-Demo, account=51866583 (account #1), path=C:\Program Files\MetaTrader 5 IC Markets Global\terminal64.exe
+2026-08-06 22:46:21,842 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5002
+2026-08-06 22:46:21,846 [INFO] Path-only init failed, trying with credentials: (-6, 'Terminal: Authorization failed')
+2026-08-06 22:46:21,847 [ERROR] MT5 initialization failed: (-6, 'Terminal: Authorization failed')
+2026-08-06 22:46:21,847 [WARNING] MT5 not connected at startup: (-6, 'Terminal: Authorization failed')
+2026-08-06 22:46:21,858 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-07 00:51:03,226 [INFO] MetaTrader5 package loaded
+2026-08-07 00:51:03,227 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5001
+2026-08-07 00:51:03,227 [INFO] Bridge instance #1: 51866583 @ ICMarketsSC-Demo on port 5000
+2026-08-07 00:51:03,228 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-07 00:51:03,228 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5002
+2026-08-07 00:51:03,228 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-07 00:51:03,228 [INFO] Connecting to MT5 at startup...
+2026-08-07 00:51:03,228 [INFO] Connecting to MT5 at startup...
+2026-08-07 00:51:03,228 [INFO] Starting MT5 Bridge v2 on port 5002 (http.server, no Flask)...
+2026-08-07 00:51:03,228 [INFO] Initializing MT5: server=ICMarketsSC-Demo, account=51866583 (account #1), path=C:\Program Files\MetaTrader 5 IC Markets Global\terminal64.exe
+2026-08-07 00:51:03,229 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-07 00:51:03,229 [INFO] Connecting to MT5 at startup...
+2026-08-07 00:51:03,229 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-07 00:51:03,242 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-07 00:51:03,245 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-07 00:51:03,254 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5002
+2026-08-07 00:51:03,256 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-07 00:52:10,647 [INFO] Path-only init failed, trying with credentials: (-10005, 'IPC timeout')
+2026-08-07 00:52:11,327 [ERROR] MT5 initialization failed: (-6, 'Terminal: Authorization failed')
+2026-08-07 00:52:11,328 [WARNING] MT5 not connected at startup: (-6, 'Terminal: Authorization failed')
+2026-08-07 00:52:11,340 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-07 00:53:56,696 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-07 01:39:01,154 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-07 01:39:01,183 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-07 01:39:01,214 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-07 01:39:10,867 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'

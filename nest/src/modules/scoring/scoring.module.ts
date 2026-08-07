@@ -23,6 +23,8 @@ import { ProtocolConsensusService } from './protocol-consensus.service';
 import { OutcomeTrackerService } from './outcome-tracker.service';
 import { SpeedScanService } from './speed-scan.service';
 import { SpeedScanController } from './speed-scan.controller';
+import { ScoringStrategyService } from './scoring-strategy.service';
+import { ScoringStrategyController } from './scoring-strategy.controller';
 import { SeasonalityService } from './seasonality.service';
 import { SeasonalityController } from './seasonality.controller';
 import { SeasonalAffinityService } from './seasonal-affinity.service';
@@ -43,8 +45,8 @@ import { DecisionChainController } from './decision-chain.controller';
 
 @Module({
   imports: [DatabaseModule, DirectivesModule, NotificationsModule, CalibrationModule, MarketDataModule, ProvidersModule, forwardRef(() => PortfolioModule)],
-  controllers: [ScoringController, ArenaController, ProtocolsController, ProtocolGatingController, SpeedScanController, SeasonalityController, MetaStackVersioningController, DecisionChainController],
-  providers: [ScoringService, ScoreHistoryService, ScoreVelocityService, DirectiveImpactService, ScoringSchedulerService, AveragingScorer, StrategyCompetitionService, PredictiveScoringService, ProtocolGatingService, ProtocolConsensusService, OutcomeTrackerService, SpeedScanService, SeasonalityService, SeasonalAffinityService, TickRecorderService, TimezoneService, MicroTrendDetector, RiskGatingEngine, SectorRotationService, MacroSnapshotService, EurUsdCacheService, StackPerformanceService, MetaStackVersioningService, ProtocolDbService, QuoteGateway, DecisionChainService],
+  controllers: [ScoringController, ArenaController, ProtocolsController, ProtocolGatingController, SpeedScanController, SeasonalityController, MetaStackVersioningController, DecisionChainController, ScoringStrategyController],
+  providers: [ScoringService, ScoreHistoryService, ScoreVelocityService, DirectiveImpactService, ScoringSchedulerService, AveragingScorer, StrategyCompetitionService, PredictiveScoringService, ProtocolGatingService, ProtocolConsensusService, OutcomeTrackerService, SpeedScanService, SeasonalityService, SeasonalAffinityService, TickRecorderService, TimezoneService, MicroTrendDetector, RiskGatingEngine, SectorRotationService, MacroSnapshotService, EurUsdCacheService, StackPerformanceService, MetaStackVersioningService, ProtocolDbService, QuoteGateway, DecisionChainService, ScoringStrategyService],
   exports: [ScoringService, ScoreHistoryService, ScoreVelocityService, DirectiveImpactService, AveragingScorer, StrategyCompetitionService, PredictiveScoringService, ProtocolGatingService, ProtocolConsensusService, OutcomeTrackerService, SpeedScanService, SeasonalityService, SeasonalAffinityService, TickRecorderService, TimezoneService, MicroTrendDetector, RiskGatingEngine, MacroSnapshotService, StackPerformanceService, MetaStackVersioningService, ProtocolDbService, DecisionChainService],
 })
 export class ScoringModule {}

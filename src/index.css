@@ -1176,7 +1176,8 @@ button.nav-active {
   flex-direction: column;
   position: sticky;
   top: 1rem;
-  height: calc(100vh - 2rem);
+  align-self: start;
+  max-height: calc(100vh - 2rem);
   overflow-y: auto;
 }
 
@@ -1190,7 +1191,8 @@ button.nav-active {
   grid-area: right;
   position: sticky;
   top: 1rem;
-  height: calc(100vh - 2rem);
+  align-self: start;
+  max-height: calc(100vh - 2rem);
   overflow-y: auto;
 }
 
@@ -1657,6 +1659,26 @@ button.nav-active {
   align-items: center;
   gap: 0.5rem;
   padding: 0.3rem 0 0.1rem;
+}
+
+.main-top-info {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.main-top-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+/* Hide page-level h1 — title is now in main-top-row */
+.main-stage h1 {
+  display: none;
 }
 
 /* ── Scroll-Driven Animation Utility ── */

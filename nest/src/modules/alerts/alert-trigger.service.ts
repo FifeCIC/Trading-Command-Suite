@@ -20,6 +20,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { AlertsService, type AlertSeverity } from './alerts.service';
 import { PrismaService } from '../../database/prisma.service';
 import { MarketCalendarService } from '../calendar/market-calendar.service';
+import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import * as http from 'http';
 
 interface TriggerConfig {
@@ -53,6 +54,7 @@ export class AlertTriggerService implements OnModuleInit {
     private readonly alerts: AlertsService,
     private readonly prisma: PrismaService,
     private readonly calendar: MarketCalendarService,
+    private readonly mt5Connection: Mt5ConnectionManager,
   ) {}
 
   onModuleInit() {
@@ -108,14 +110,22 @@ export class AlertTriggerService implements OnModuleInit {
 
   private async checkMt5Connection(): Promise<{ triggered: boolean; title: string; message: string; severity?: AlertSeverity } | null> {
     try {
-      const res = await this.httpGet('http://localhost:5000/health');
-      const data = JSON.parse(res);
-      if (!data.connected) {
-        return { triggered: true, title: 'MT5 Bridge Disconnected', message: 'The MT5 bridge on port 5000 is not connected. Automated trading is disabled.' };
+      const brokers = await this.mt5Connection.getAllBrokerHealths();
+      if (brokers.length === 0) {
+        return { triggered: true, title: 'MT5 Bridge Unreachable', message: 'No MT5 broker bridges configured.' };
+      }
+      const down = brokers.filter((b) => !b.reachable || !b.health?.connected);
+      if (down.length === brokers.length) {
+        const servers = down.map((b) => b.server).join(', ');
+        return { triggered: true, title: 'All MT5 Bridges Disconnected', message: `${servers} not connected. Automated trading disabled.` };
+      }
+      if (down.length > 0) {
+        const servers = down.map((b) => b.server).join(', ');
+        return { triggered: true, title: `${down.length} MT5 Bridge(s) Down`, message: `${servers} unreachable. Only ${brokers.length - down.length}/${brokers.length} active.`, severity: 'warning' };
       }
       return { triggered: false, title: '', message: '' };
     } catch {
-      return { triggered: true, title: 'MT5 Bridge Unreachable', message: 'Cannot reach MT5 bridge on port 5000. Check that the bridge process is running.' };
+      return { triggered: true, title: 'MT5 Bridge Error', message: 'Failed to query MT5 bridge health.' };
     }
   }
 
@@ -185,9 +195,8 @@ export class AlertTriggerService implements OnModuleInit {
 
   private async checkMarginUtilization(cfg: TriggerConfig): Promise<{ triggered: boolean; title: string; message: string; severity?: AlertSeverity } | null> {
     try {
-      const res = await this.httpGet('http://localhost:5000/account').catch(() => null);
-      if (!res) return null;
-      const acc = JSON.parse(res);
+      const acc = await this.mt5Connection.getAccountInfo();
+      if (!acc) return null;
       if (acc.margin && acc.equity) {
         const utilPct = (acc.margin / acc.equity) * 100;
         if (utilPct > (cfg.threshold || 50)) {

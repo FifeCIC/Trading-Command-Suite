@@ -153,9 +153,9 @@ export default function AccountsDashboardPage() {
             <div className="ad-grid">
               {/* MT5 Live */}
               {liveMT5.map((acc) => (
-                <div key={acc.login || acc.id} className="ad-card ad-card--live">
+                <div key={`${acc.brokerId ?? 'mt5'}-${acc.login}`} className={`ad-card ad-card--live ${acc.connected ? 'ad-card--active' : ''}`}>
                   <div className="ad-card-header">
-                    <span className="ad-provider">MT5</span>
+                    <span className="ad-provider">MT5 · {acc.server || 'Unknown'}</span>
                     <span className="ad-status-dot">{statusDot(acc)}</span>
                   </div>
                   <div className="ad-card-body">
@@ -164,9 +164,9 @@ export default function AccountsDashboardPage() {
                     {acc.currency && <span className="ad-card-currency">{acc.currency}</span>}
                   </div>
                   <div className="ad-card-footer">
-                    <span className="ad-card-type">Live</span>
+                    <span className="ad-card-type">{acc.connected ? '🟢 Active' : 'Live'}</span>
+                    {acc.brokerId && <span className="ad-card-server">Bridge #{acc.brokerId}</span>}
                     {acc.leverage && <span className="ad-card-server">1:{acc.leverage}</span>}
-                    {acc.server && <span className="ad-card-server">{acc.server}</span>}
                   </div>
                 </div>
               ))}
@@ -278,9 +278,9 @@ export default function AccountsDashboardPage() {
             {showPractice && (
               <div className="ad-grid" style={{ marginTop: '0.5rem' }}>
                 {demoMT5.map((acc) => (
-                  <div key={acc.login || acc.id} className="ad-card ad-card--demo">
+                  <div key={`${acc.brokerId ?? 'mt5'}-${acc.login}`} className={`ad-card ad-card--demo ${acc.connected ? 'ad-card--active' : ''}`}>
                     <div className="ad-card-header">
-                      <span className="ad-provider">MT5</span>
+                      <span className="ad-provider">MT5 · {acc.server || 'Unknown'}</span>
                       <span className="ad-status-dot">{statusDot(acc)}</span>
                     </div>
                     <div className="ad-card-body">
@@ -289,9 +289,9 @@ export default function AccountsDashboardPage() {
                       {acc.currency && <span className="ad-card-currency">{acc.currency}</span>}
                     </div>
                     <div className="ad-card-footer">
-                      <span className="ad-card-type">Practice</span>
+                      <span className="ad-card-type">{acc.connected ? '🟢 Active' : 'Practice'}</span>
+                      {acc.brokerId && <span className="ad-card-server">Bridge #{acc.brokerId}</span>}
                       {acc.leverage && <span className="ad-card-server">1:{acc.leverage}</span>}
-                      {acc.server && <span className="ad-card-server">{acc.server}</span>}
                     </div>
                   </div>
                 ))}

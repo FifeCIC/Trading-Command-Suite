@@ -46,6 +46,14 @@ export default function AutomationDashboardPage() {
     refetchOnWindowFocus: true,
   });
 
+  // Multi-broker MT5 health — one card per broker instance
+  const mt5BrokersQuery = useQuery({
+    queryKey: ['mt5', 'brokers'],
+    queryFn: () => apiGet('/api/providers/mt5/brokers'),
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
+  });
+
   const queryClient = useQueryClient();
 
   const toggleMutation = useMutation({
@@ -79,6 +87,7 @@ export default function AutomationDashboardPage() {
   const timelineEvents = timelineQuery.data?.events ?? [];
   const loopState = statusQuery.data ?? {};
   const brokerStates = statusQuery.data?.brokerStates ?? {};
+  const mt5Brokers = mt5BrokersQuery.data?.brokers ?? [];
   const recentDecisions = statusQuery.data?.recentDecisions ?? [];
   const activityEvents = activityQuery.data?.events ?? [];
   const currentPhase = activityQuery.data?.currentPhase;
@@ -172,35 +181,39 @@ export default function AutomationDashboardPage() {
 
       {!apiOnline && <ApiOfflineBanner />}
 
-      {/* ── Broker Config ── */}
+      {/* ── MT5 Broker Status ── */}
       <motion.div className="ad-broker-bar" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        {providerQuery.isLoading ? (
+        {mt5BrokersQuery.isLoading ? (
           <LoadingSkeleton variant="text" lines={1} />
-        ) : (
+        ) : mt5Brokers.length > 0 ? (
           <div className="ad-broker-list">
-            {Object.keys(brokerStates).length > 0 ? (
-              Object.entries(brokerStates).map(([id, bs]) => {
-                const connected = bs.enabled;
-                const trading = connected && bs.tradingEnabled;
-                const statusLabel = connected ? (trading ? 'Trading Enabled' : 'Monitor Only') : 'Offline';
-                const badgeColor = connected ? (trading ? '#22c55e' : '#f59e0b') : '#6b7280';
-                const tooltipText = connected
-                  ? `${id.toUpperCase()} — ${trading ? 'LIVE TRADING' : 'Monitoring only (trading disabled)'} | Threshold: ${bs.tradeThreshold || 65} | Confirm required: ${bs.requireConfirmation ? 'Yes' : 'No'}`
-                  : `${id.toUpperCase()} — Offline (not connected or disabled)`;
-                return (
-                <span key={id} className={`ad-broker-badge ${connected ? 'ad-broker-on' : 'ad-broker-off'}`}
-                      style={connected && !trading ? { borderColor: '#f59e0b', color: '#f59e0b' } : undefined}
-                      title={tooltipText}>
-                  <span className="ad-broker-dot" style={{ background: badgeColor }} />
-                  <span className="ad-broker-name">{id}</span>
-                  <span className="ad-broker-status">{statusLabel}</span>
-                </span>
-                );
-              })
-            ) : (
-              <span className="ad-broker-note">Start the loop to initialize broker states</span>
-            )}
+            {mt5Brokers.map((b) => {
+              const h = b.health;
+              const connected = b.reachable && h?.connected;
+              const balance = h?.balance ?? 0;
+              const equity = h?.equity ?? balance;
+              const pnl = equity - balance;
+              const pnlColor = pnl >= 0 ? '#22c55e' : '#ef4444';
+              return (
+                <div key={b.brokerId} className={`ad-broker-card ${connected ? 'ad-broker-on' : 'ad-broker-off'}`}
+                      title={`${b.server} — ${connected ? 'Connected' : 'Offline'} — Port ${b.url.split(':').pop()}`}>
+                  <span className="ad-broker-dot" style={{ background: connected ? '#22c55e' : '#6b7280' }} />
+                  <div className="ad-broker-info">
+                    <span className="ad-broker-server">{b.server}</span>
+                    <span className="ad-broker-account">{h?.account ?? '—'}</span>
+                  </div>
+                  {connected && (
+                    <div className="ad-broker-balance">
+                      <span className="ad-broker-equity">${equity.toFixed(0)}</span>
+                      {pnl !== 0 && <span className="ad-broker-pnl" style={{ color: pnlColor }}>{pnl >= 0 ? '+' : ''}{pnl.toFixed(0)}</span>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
+        ) : (
+          <span className="ad-broker-note">No MT5 bridges detected — check that bridges are running</span>
         )}
       </motion.div>
 

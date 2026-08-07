@@ -246,6 +246,18 @@
   color: #22c55e;
   border-color: #22c55e30;
 }
+.protocols-dual-badge {
+  display: inline-block;
+  margin-left: 0.3rem;
+  padding: 0 0.35rem;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  opacity: 0.85;
+}
 .protocols-conn-none {
   color: var(--ink-soft);
   font-style: italic;

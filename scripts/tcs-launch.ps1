@@ -11,10 +11,35 @@ param([switch]$SkipFrontend)
 $ROOT = 'C:\wamp64\www\trading-command-suite'
 $ErrorActionPreference = 'Continue'
 
+# ── Load .env ────────────────────────────────────────────
+
+$envPath = "$ROOT\nest\.env"
+$envVars = @{}
+if (Test-Path $envPath) {
+    Get-Content $envPath | ForEach-Object {
+        if ($_ -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') {
+            $envVars[$matches[1]] = $matches[2].Trim('"').Trim("'")
+        }
+    }
+}
+
+# Default to account #2 only if not specified
+$activeBrokers = ($envVars['MT5_ACTIVE_BROKERS'] -split ',').Trim() | Where-Object { $_ }
+if (-not $activeBrokers) { $activeBrokers = @('2') }
+$pythonPath = $envVars['MT5_PYTHON_PATH'] ?? 'python'
+$bridgeScript = "$ROOT\scripts\mt5-bridge\mt5_bridge_v2.py"
+$bridgeCwd = Split-Path $bridgeScript -Parent
+
+# Build list of bridge ports to kill/start
+$bridgePorts = @()
+for ($i = 0; $i -lt $activeBrokers.Count; $i++) {
+    $bridgePorts += 5000 + $i
+}
+
 # ── Kill anything on our ports ─────────────────────────────
 
 Write-Host "`n  Stopping existing services…" -ForegroundColor DarkGray
-@(3201, 5000, 5173, 5174) | ForEach-Object {
+@(3201) + $bridgePorts + @(5173, 5174) | ForEach-Object {
     $conn = Get-NetTCPConnection -LocalPort $_ -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($conn) { 
         try { Stop-Process -Id $conn.OwningProcess -Force -ErrorAction Stop } catch {}
@@ -39,16 +64,25 @@ if ($buildExit -ne 0) {
 }
 Write-Host "    Build OK ($buildExit)" -ForegroundColor DarkGray
 
-# ── Start MT5 Bridge ────────────────────────────────────────
+# ── Start MT5 Bridges (one per active broker) ──────────────
 
-Write-Host "  Starting MT5 Bridge (port 5000)…" -ForegroundColor Yellow
-$mt5 = Start-Process -FilePath "python" `
-    -ArgumentList "$ROOT\scripts\mt5-bridge\mt5_bridge_v2.py" `
-    -WorkingDirectory "$ROOT\scripts\mt5-bridge" `
-    -PassThru -NoNewWindow `
-    -RedirectStandardOutput "$env:TEMP\mt5-bridge.log" `
-    -RedirectStandardError "$env:TEMP\mt5-bridge-err.log"
-Write-Host "    PID $($mt5.Id)" -ForegroundColor DarkGray
+$mt5Pids = @()
+for ($i = 0; $i -lt $activeBrokers.Count; $i++) {
+    $brokerId = $activeBrokers[$i]
+    $bridgePort = 5000 + $i
+    $brokerServer = $envVars["MT5_SERVER_$brokerId"] ?? '?'
+    Write-Host "  Starting MT5 Bridge #${brokerId} — ${brokerServer} (port ${bridgePort})…" -ForegroundColor Yellow
+    $env:BRIDGE_PORT = "$bridgePort"
+    $env:BRIDGE_ACCOUNT = $brokerId
+    $mt5 = Start-Process -FilePath $pythonPath `
+        -ArgumentList $bridgeScript `
+        -WorkingDirectory $bridgeCwd `
+        -PassThru -NoNewWindow `
+        -RedirectStandardOutput "$env:TEMP\mt5-bridge-${bridgePort}.log" `
+        -RedirectStandardError "$env:TEMP\mt5-bridge-${bridgePort}-err.log"
+    $mt5Pids += $mt5.Id
+    Write-Host "    PID $($mt5.Id) (port ${bridgePort})" -ForegroundColor DarkGray
+}
 
 # ── Start NestJS API ────────────────────────────────────────
 
@@ -80,10 +114,14 @@ if (-not $SkipFrontend) {
 # ── Wait and verify ────────────────────────────────────────
 
 Write-Host "`n  Waiting for services to come online…" -ForegroundColor DarkGray
-$services = @(
-    @{ Name = 'MT5 Bridge'; Port = 5000; Color = 'Yellow' }
-    @{ Name = 'NestJS API'; Port = 3201; Color = 'Cyan' }
-)
+$services = @()
+for ($i = 0; $i -lt $activeBrokers.Count; $i++) {
+    $brokerId = $activeBrokers[$i]
+    $bridgePort = 5000 + $i
+    $brokerServer = $envVars["MT5_SERVER_$brokerId"] ?? '?'
+    $services += @{ Name = "MT5 #${brokerId} (${brokerServer})"; Port = $bridgePort; Color = 'Yellow' }
+}
+$services += @{ Name = 'NestJS API'; Port = 3201; Color = 'Cyan' }
 if (-not $SkipFrontend) {
     $services += @{ Name = 'Vite'; Port = 5173; Color = 'Green' }
 }

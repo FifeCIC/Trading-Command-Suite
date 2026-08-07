@@ -27,9 +27,9 @@ function getProtocolType(proto) {
 }
 
 export default function ProtocolsPage() {
-  // A/B testing: check variant param before any conditional rendering
+  // A/B testing: Page B is the default. Page A (original) available at ?variant=A
   const [searchParams] = useSearchParams();
-  const isVariantB = searchParams.get('variant') === 'B';
+  const isVariantA = searchParams.get('variant') === 'A';
 
   const [selected, setSelected] = useState(null);
   const [styleFilter, setStyleFilter] = useState('All');
@@ -81,14 +81,14 @@ export default function ProtocolsPage() {
         <div className="protocols-error">
           <h2>Unable to load protocols</h2>
           <p>{error}</p>
-          <button onClick={fetchProtocols}>Retry</button>
+          <button onClick={() => protocolsQuery.refetch()}>Retry</button>
         </div>
       </div>
     );
   }
 
-  // A/B variant: render Page B if ?variant=B
-  if (isVariantB) return <ProtocolsPageB />;
+  // Page B is default; Page A only at ?variant=A
+  if (!isVariantA) return <ProtocolsPageB />;
 
   return (
     <div className="protocols-page">
@@ -236,11 +236,18 @@ export default function ProtocolsPage() {
                 <span className="protocols-conn-label">Strategies</span>
                 <span className="protocols-conn-value">
                   {selectedProto.linkedStrategies?.length > 0
-                    ? selectedProto.linkedStrategies.map((s, i) => (
-                        <span key={i} className={`protocols-conn-chip ${s.trading ? 'protocols-conn-trading' : ''}`} title={s.trading ? `Strategy '${s.name}' → watchlist '${s.watchlist}' — trading enabled` : `Strategy '${s.name}' → watchlist '${s.watchlist}' (monitoring only)`}>
-                          {s.trading ? '⚡' : '📋'} {s.name}
+                    ? selectedProto.linkedStrategies.map((s, i) => {
+                        const isDual = !!s.shortProtocolId;
+                        const tooltip = isDual
+                          ? `${s.trading ? 'Trading' : 'Monitoring'} — Dual protocol: LONG (${selectedProto.name}) vs SHORT (${s.shortProtocolName || s.shortProtocolId})${s.watchlist ? ` — ${s.watchlist}` : ''}`
+                          : `${s.trading ? 'Trading' : 'Monitoring'} — Single protocol${s.watchlist ? ` — ${s.watchlist}` : ''}`;
+                        return (
+                        <span key={i} className={`protocols-conn-chip ${s.trading ? 'protocols-conn-trading' : ''}`} title={tooltip}>
+                          {isDual ? '🔁' : ''}{s.trading ? '⚡' : '📋'} {s.name}
+                          {isDual && <span className="protocols-dual-badge" title={`Paired with SHORT protocol: ${s.shortProtocolName || s.shortProtocolId}`}>↔ {s.shortProtocolName || s.shortProtocolId}</span>}
                         </span>
-                      ))
+                        );
+                      })
                     : <span className="protocols-conn-none">Not used by any scoring strategy</span>
                   }
                 </span>

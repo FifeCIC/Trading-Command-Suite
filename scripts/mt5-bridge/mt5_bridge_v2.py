@@ -226,10 +226,21 @@ def connect_mt5():
     account, password, server, active, path = get_active_credentials()
     path_str = f', path={path}' if path else ''
     logger.info(f'Initializing MT5: server={server}, account={account} (account #{active}){path_str}')
-    kwargs = dict(login=int(account), password=password, server=server)
+
+    initialized = False
     if path:
-        kwargs['path'] = path
-    initialized = mt5.initialize(**kwargs)
+        # Terminal-specific path: connect to an already-running broker terminal
+        # without credentials (it should already be logged in). Launching with
+        # login+password+path fails with "Process create failed" if terminal
+        # is already running — the path is for targeting, not launching.
+        initialized = mt5.initialize(path=path)
+        if not initialized:
+            # Fallback: try launching the terminal with full credentials
+            logger.info(f'Path-only init failed, trying with credentials: {mt5.last_error()}')
+            initialized = mt5.initialize(login=int(account), password=password, server=server, path=path)
+    else:
+        initialized = mt5.initialize(login=int(account), password=password, server=server)
+
     if initialized:
         connection_errors = 0
         reset_circuit_breaker()
@@ -252,12 +263,6 @@ def ensure_mt5():
         pass
     connection_errors += 1
     return False, 'MT5 not connected'
-
-# Connect MT5 once at startup
-logger.info('Connecting to MT5 at startup...')
-ok, err = connect_mt5()
-if not ok:
-    logger.warning(f'MT5 not connected at startup: {err}')
 
 # ─── JSON Helpers ─────────────────────────────────────────
 
@@ -787,10 +792,13 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 srv = os.environ.get(f'MT5_SERVER_{num}','')
                 mpath = os.environ.get(f'MT5_PATH_{num}','') or None
                 if not acct or not pw: return json_response(self, {'success': False, 'error': f'Account #{num} not configured'}, 400)
-                kwargs = dict(login=int(acct), password=pw, server=srv)
+                ok = False
                 if mpath:
-                    kwargs['path'] = mpath
-                ok = mt5.initialize(**kwargs)
+                    ok = mt5.initialize(path=mpath)
+                    if not ok:
+                        ok = mt5.initialize(login=int(acct), password=pw, server=srv, path=mpath)
+                else:
+                    ok = mt5.initialize(login=int(acct), password=pw, server=srv)
                 if ok:
                     os.environ['MT5_ACTIVE_ACCOUNT'] = num
                     info = mt5.account_info()
@@ -866,7 +874,18 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
 if __name__ == '__main__':
     port = int(os.environ.get('BRIDGE_PORT', 5000))
+    # BRIDGE_ACCOUNT overrides MT5_ACTIVE_ACCOUNT — lets multiple bridge instances
+    # each target a different account slot (e.g. 2=MetaQuotes, 3=Pepperstone).
+    if os.environ.get('BRIDGE_ACCOUNT'):
+        os.environ['MT5_ACTIVE_ACCOUNT'] = os.environ['BRIDGE_ACCOUNT']
+        account, _, server, active, _ = get_active_credentials()
+        logger.info(f'Bridge instance #{active}: {account} @ {server} on port {port}')
     logger.info(f'Starting MT5 Bridge v2 on port {port} (http.server, no Flask)...')
+    # Connect MT5 once at startup (after BRIDGE_ACCOUNT override takes effect)
+    logger.info('Connecting to MT5 at startup...')
+    ok, err = connect_mt5()
+    if not ok:
+        logger.warning(f'MT5 not connected at startup: {err}')
     server = HTTPServer(('127.0.0.1', port), BridgeHandler)
     logger.info(f'MT5 Bridge v2 listening on http://127.0.0.1:{port}')
     try:

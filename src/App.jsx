@@ -130,6 +130,9 @@ import CapabilityMapPage from './pages/CapabilityMapPage';
 import SourcesPage from './pages/SourcesPage';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
 import ScreenOptions from './components/ScreenOptions';
+import PageInfoPopover from './components/PageInfoPopover';
+import VIEW_META, { getViewMeta } from './core/view-meta';
+import { VIEW_EXPLANATIONS } from './core/view-explanations';
 
 import { useNetworkStatus } from './utils/networkStatus';
 import { useUiStore } from './stores/useUiStore';
@@ -1008,6 +1011,18 @@ function AppShell() {
         <div aria-live="assertive" aria-atomic="true" className="sr-only-alert" role="alert"></div>
         <div className="main-top-row">
           <Breadcrumbs />
+          {(() => {
+            const path = `/${primaryArea}/${secondaryView}`;
+            const meta = getViewMeta(path);
+            const explanation = VIEW_EXPLANATIONS[secondaryView];
+            if (!meta && !explanation) return null;
+            return (
+              <div className="main-top-info">
+                {meta && <span className="main-top-title">{meta.label}</span>}
+                {explanation && <PageInfoPopover>{explanation}</PageInfoPopover>}
+              </div>
+            );
+          })()}
         </div>
         <ErrorBoundary message="Something went wrong rendering this view.">
           {renderMainContent()}

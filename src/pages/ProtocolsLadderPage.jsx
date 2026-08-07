@@ -1,141 +1,181 @@
 /**
- * Protocols Ladder — Protocol-focused scoring ladder
- * ====================================================
- * Shows all active protocols and their scored symbols ranked by score.
- * Data comes from the database (scoring runs) — each run represents a
- * protocol scoring pass over its watchlist symbols.
+ * Protocols Ladder — Protocols ranked by scoring strength with aggregation.
+ * =========================================================================
+ * Each active protocol shows its top-scored symbol. "Aggregate" sort orders
+ * protocols by the combined score of their top 3, 5, or 7 symbols.
  *
- * Created 2026-08-05 — split from StrategyLaddersPage for the Protocols area.
+ * Data: GET /api/scoring/runs (all recent scoring runs)
+ *
+ * @created 2026-08-05 — original
+ * @rebuilt 2026-08-07 — added aggregation, per-protocol ranking
  */
 
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
-import './sees-arena.css';
+import './protocols-ladder.css';
 
 function scoreClass(v) {
-  if (v >= 65) return 'sa-score-high';
-  if (v >= 40) return 'sa-score-med';
-  return 'sa-score-low';
+  if (v >= 65) return 'pl-score-high';
+  if (v >= 40) return 'pl-score-med';
+  return 'pl-score-low';
+}
+
+function signalBadge(score) {
+  if (score >= 65) return <span className="pl-badge pl-badge-buy">BUY</span>;
+  if (score >= 40) return <span className="pl-badge pl-badge-hold">HOLD</span>;
+  return <span className="pl-badge pl-badge-sell">SELL</span>;
+}
+
+function scoreBar(pct) {
+  const w = Math.max(4, Math.min(100, pct));
+  const color = pct >= 65 ? '#22c55e' : pct >= 40 ? '#f59e0b' : '#ef4444';
+  return <span className="pl-bar" style={{ width: w, background: color }} />;
 }
 
 export default function ProtocolsLadderPage() {
-  const [sortBy, setSortBy] = useState('score');
+  const [sortBy, setSortBy] = useState('top-symbol');
+  const [aggSize, setAggSize] = useState(3);
 
-  const protocolsQuery = useQuery({
-    queryKey: ['protocols-ladder-protocols'],
+  const { data: protocolsData } = useQuery({
+    queryKey: ['pro-ladder-protocols'],
     queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => ({ protocols: [] })),
-    staleTime: 30_000,
+    staleTime: 60_000,
   });
 
-  const runsQuery = useQuery({
-    queryKey: ['protocols-ladder-runs'],
-    queryFn: () => apiGet('/api/scoring/runs?limit=50').catch(() => ({ runs: [] })),
+  const { data: runsData, isLoading } = useQuery({
+    queryKey: ['pro-ladder-runs'],
+    queryFn: () => apiGet('/api/scoring/runs?limit=100').catch(() => ({ runs: [] })),
     staleTime: 10_000,
     refetchInterval: 30_000,
   });
 
-  const activeProtocols = useMemo(() => {
-    const protos = protocolsQuery.data?.protocols || [];
-    return protos.filter(p => p.active !== false);
-  }, [protocolsQuery.data]);
+  // Build: protocol → { topSymbol, topNScore, symbolCount, avgScore }
+  const protocols = useMemo(() => {
+    const runs = runsData?.runs || [];
 
-  const entries = useMemo(() => {
-    const runs = runsQuery.data?.runs || [];
-    const all = [];
+    // Group scores by protocol
+    const byProto = new Map();
     for (const run of runs) {
-      const protoName = run.strategyName || '—';
-      if (run.scores?.length) {
-        for (const s of run.scores) {
-          all.push({
-            symbol: s.ticker || '—',
-            score: s.value || 0,
-            signal: s.value >= 65 ? 'BUY' : s.value >= 40 ? 'HOLD' : 'SELL',
-            protocolName: protoName,
-          });
+      const protoId = run.strategyName || run.protocolName || run.protocolId || '—';
+      if (!run.scores?.length) continue;
+
+      if (!byProto.has(protoId)) byProto.set(protoId, []);
+      for (const s of run.scores) {
+        byProto.get(protoId).push({
+          ticker: (s.ticker || s.symbol || '—').toUpperCase(),
+          score: s.value ?? s.score ?? 0,
+        });
+      }
+    }
+
+    // Compute per-protocol stats
+    const result = [];
+    for (const [protoId, scores] of byProto) {
+      const best = new Map();
+      for (const s of scores) {
+        if (!best.has(s.ticker) || s.score > best.get(s.ticker)) {
+          best.set(s.ticker, s.score);
         }
       }
-    }
-    const seen = new Map();
-    const deduped = [];
-    for (const e of all) {
-      const existing = seen.get(e.symbol);
-      if (!existing || e.score > existing.score) {
-        seen.set(e.symbol, e);
-      }
-    }
-    for (const e of seen.values()) deduped.push(e);
 
-    if (sortBy === 'score') deduped.sort((a, b) => b.score - a.score);
-    else deduped.sort((a, b) => a.symbol.localeCompare(b.symbol));
-    return deduped;
-  }, [runsQuery.data, sortBy]);
+      const sorted = [...best.entries()].sort((a, b) => b[1] - a[1]);
+      const topSymbol = sorted[0];
+      const topN = sorted.slice(0, aggSize).reduce((sum, [, s]) => sum + s, 0);
+      const avg = sorted.length > 0 ? Math.round(sorted.reduce((sum, [, s]) => sum + s, 0) / sorted.length) : 0;
 
-  const isLoading = protocolsQuery.isLoading || runsQuery.isLoading;
+      result.push({
+        protocolName: protoId,
+        topSymbol: topSymbol?.[0] || '—',
+        topScore: topSymbol?.[1] || 0,
+        topNScore: topN,
+        symbolCount: sorted.length,
+        avgScore: avg,
+      });
+    }
+
+    // Sort
+    if (sortBy === 'top-symbol') result.sort((a, b) => b.topScore - a.topScore);
+    else if (sortBy === 'aggregate') result.sort((a, b) => b.topNScore - a.topNScore);
+    else if (sortBy === 'avg') result.sort((a, b) => b.avgScore - a.avgScore);
+    else if (sortBy === 'count') result.sort((a, b) => b.symbolCount - a.symbolCount);
+    else if (sortBy === 'alpha') result.sort((a, b) => a.protocolName.localeCompare(b.protocolName));
+
+    return result;
+  }, [protocolsData, runsData, sortBy, aggSize]);
 
   return (
-    <div className="sa-page">
-      <header className="sa-header">
-        <div>
-          <h1>Protocols Ladder
+    <div className="pl-page">
+      <motion.header className="pl-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        <h1>Protocols Ladder
           <PageInfoPopover>
-            All active protocols and their scored symbols ranked by score.
-            Each row shows which protocol scored that symbol. Data from the database.
+            Active protocols ranked by scoring strength. "Aggregate" combines the top N symbols per protocol for a combined strength score.
           </PageInfoPopover>
-          </h1>
-        </div>
-      </header>
+        </h1>
+      </motion.header>
 
-      <div className="sl-ladder-bar">
-        <div className="sl-ladder-toggles">
-          <span className="sl-ladder-chip active">All Protocols ({activeProtocols.length})</span>
-          <span className="sl-ladder-sep" />
-          <button className={`sl-ladder-chip ${sortBy === 'score' ? 'active' : ''}`} onClick={() => setSortBy('score')}>By Score ↓</button>
-          <button className={`sl-ladder-chip ${sortBy === 'symbol' ? 'active' : ''}`} onClick={() => setSortBy('symbol')}>A–Z</button>
-        </div>
-        <span className="sl-ladder-count">{entries.length} scored</span>
+      <div className="pl-toolbar">
+        <label className="pl-filter">
+          Sort:
+          <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
+            <option value="top-symbol">Top Symbol</option>
+            <option value="aggregate">Aggregate (Top {aggSize})</option>
+            <option value="avg">Avg Score</option>
+            <option value="count">Symbol Count</option>
+            <option value="alpha">A → Z</option>
+          </select>
+        </label>
+        {sortBy === 'aggregate' && (
+          <label className="pl-filter">
+            Top:
+            <select value={aggSize} onChange={e => setAggSize(Number(e.target.value))}>
+              <option value={3}>Top 3</option>
+              <option value={5}>Top 5</option>
+              <option value={7}>Top 7</option>
+            </select>
+          </label>
+        )}
+        <span className="pl-count">{protocols.length} protocols</span>
       </div>
 
-      {isLoading && <LoadingSkeleton variant="text" lines={8} />}
-
-      {entries.length > 0 && (
-        <div className="sl-ladder-table-wrap">
-          <table className="sl-ladder-table">
+      {isLoading ? <LoadingSkeleton variant="card" count={5} /> : (
+        <div className="pl-table-wrap">
+          <table className="pl-table">
             <thead>
               <tr>
-                <th style={{ width: 40 }}>#</th>
-                <th>Symbol</th>
-                <th>Protocols</th>
-                <th>Signal</th>
-                <th style={{ width: 80 }}>Score</th>
+                <th>#</th>
+                <th>Protocol</th>
+                <th>Top Symbol</th>
+                <th>Score</th>
+                <th>Agg ({aggSize})</th>
+                <th>Avg</th>
+                <th># Sym</th>
               </tr>
             </thead>
             <tbody>
-              {entries.map((e, i) => (
-                <tr key={`${e.protocolName}-${e.symbol}-${i}`} className="sl-ladder-row">
-                  <td className="sl-ladder-rank">#{i + 1}</td>
-                  <td><strong>{e.symbol}</strong></td>
-                  <td><span className="sl-ladder-strat" style={{ borderLeftColor: 'var(--accent)' }}>{e.protocolName}</span></td>
-                  <td><span className={`sl-ladder-signal ${(e.signal || '').toLowerCase()}`}>{e.signal === 'BUY' ? '▲ BUY' : e.signal === 'SELL' ? '▼ SELL' : '◆ HOLD'}</span></td>
-                  <td><span className={scoreClass(e.score)} style={{ fontWeight: 700, padding: '1px 6px', borderRadius: 4, fontSize: '0.78rem' }}>{e.score.toFixed(0)}</span></td>
+              {protocols.map((p, i) => (
+                <tr key={p.protocolName}>
+                  <td className="pl-rank">{i + 1}</td>
+                  <td className="pl-symbol">{p.protocolName}</td>
+                  <td>{p.topSymbol}</td>
+                  <td>
+                    <span className="pl-bar-wrap">
+                      {scoreBar(p.topScore)}
+                      <span className={scoreClass(p.topScore)}>{p.topScore}</span>
+                    </span>
+                    {' '}{signalBadge(p.topScore)}
+                  </td>
+                  <td><strong>{p.topNScore}</strong></td>
+                  <td className="pl-muted">{p.avgScore}</td>
+                  <td className="pl-muted">{p.symbolCount}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
-
-      {!isLoading && entries.length === 0 && (
-        <div className="sa-empty">
-          <p>No scored symbols found for active protocols.</p>
-          <p className="sa-hint">Run scoring or wait for the next automation tick to populate the ladder.</p>
-        </div>
-      )}
-
-      {!isLoading && runsQuery.isError && (
-        <p className="sa-empty">Backend unavailable — is the NestJS API running?</p>
       )}
     </div>
   );

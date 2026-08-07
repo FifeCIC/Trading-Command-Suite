@@ -54,8 +54,10 @@
 }
 
 .ad-card--live { border-color: #22c55e; }
+.ad-card--live.ad-card--active { box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.3); }
 .ad-card--isa { border-color: #0ea5a6; }
 .ad-card--demo { border-color: #64748b; opacity: 0.85; }
+.ad-card--demo.ad-card--active { border-color: #22c55e; opacity: 1; box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.3); }
 
 .ad-card-header {
   display: flex;

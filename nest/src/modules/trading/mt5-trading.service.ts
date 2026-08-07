@@ -1,9 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TradeRecorderService } from './trade-recorder.service';
 import { StopGuardianService } from './stop-guardian.service';
+import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import { PrismaService } from '../../database/prisma.service';
-
-const BRIDGE_URL = process.env.MT5_BRIDGE_URL || 'http://localhost:5000';
 
 export interface Mt5Position {
   ticket: number;
@@ -32,13 +31,18 @@ export interface Mt5Account {
 @Injectable()
 export class Mt5TradingService {
   private readonly logger = new Logger(Mt5TradingService.name);
-  private bridgeUrl = BRIDGE_URL;
 
   constructor(
     private readonly tradeRecorder: TradeRecorderService,
     private readonly stopGuardian: StopGuardianService,
     private readonly prisma: PrismaService,
+    private readonly mt5Connection: Mt5ConnectionManager,
   ) {}
+
+  /** Get the bridge URL for a broker (defaults to first active) */
+  private get bridgeUrl(): string {
+    return this.mt5Connection.getUrl();
+  }
 
   async getAccount(): Promise<Mt5Account | null> {
     try {

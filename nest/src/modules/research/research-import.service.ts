@@ -6,6 +6,17 @@ import { ProvidersService } from '../providers/providers.service';
 @Injectable()
 export class ResearchImportService {
   private readonly logger = new Logger(ResearchImportService.name);
+  private finnhubUnavailableLogged = false;
+
+  /** Returns the Finnhub adapter, or null — logs once if unavailable. */
+  private getFinnhub(): any {
+    const adapter = this.providers.getAdapter('finnhub');
+    if (!adapter && !this.finnhubUnavailableLogged) {
+      this.logger.warn('Finnhub adapter not available — skipping Finnhub-dependent imports (logged once)');
+      this.finnhubUnavailableLogged = true;
+    }
+    return adapter;
+  }
 
   constructor(
     private readonly prisma: PrismaService,
@@ -21,11 +32,8 @@ export class ResearchImportService {
     const startTime = Date.now();
 
     try {
-      const finnhub = this.providers.getAdapter('finnhub');
-      if (!finnhub) {
-        this.logger.warn('Finnhub adapter not available, skipping earnings import');
-        return;
-      }
+      const finnhub = this.getFinnhub();
+      if (!finnhub) return;
       const events = await (finnhub as any).getEarningsCalendar(undefined, 3);
       let inserted = 0;
       let updated = 0;
@@ -92,10 +100,11 @@ export class ResearchImportService {
         select: { ticker: true },
       });
 
+      const finnhub = this.getFinnhub();
+      if (!finnhub) return;
+
       let fetched = 0;
       for (const { ticker } of symbols) {
-        const finnhub = this.providers.getAdapter('finnhub');
-        if (!finnhub) continue;
         const target = await (finnhub as any).getPriceTarget(ticker);
         if (!target) continue;
 
@@ -154,11 +163,8 @@ export class ResearchImportService {
     const startTime = Date.now();
 
     try {
-      const finnhub = this.providers.getAdapter('finnhub');
-      if (!finnhub) {
-        this.logger.warn('Finnhub adapter not available, skipping social sentiment import');
-        return;
-      }
+      const finnhub = this.getFinnhub();
+      if (!finnhub) return;
 
       const symbols = await this.prisma.symbol.findMany({
         where: { active: true },
@@ -206,11 +212,8 @@ export class ResearchImportService {
     const startTime = Date.now();
 
     try {
-      const finnhub = this.providers.getAdapter('finnhub');
-      if (!finnhub) {
-        this.logger.warn('Finnhub adapter not available, skipping insider transaction import');
-        return;
-      }
+      const finnhub = this.getFinnhub();
+      if (!finnhub) return;
 
       const symbols = await this.prisma.symbol.findMany({
         where: { active: true },
@@ -267,11 +270,8 @@ export class ResearchImportService {
    */
   async importInsiderTransactionsForSymbol(symbol: string): Promise<number> {
     try {
-      const finnhub = this.providers.getAdapter('finnhub');
-      if (!finnhub) {
-        this.logger.warn(`Finnhub not available — skipping insider import for ${symbol}`);
-        return 0;
-      }
+      const finnhub = this.getFinnhub();
+      if (!finnhub) return 0;
 
       const transactions = await (finnhub as any).getInsiderTransactions(symbol);
       if (!transactions || !Array.isArray(transactions)) return 0;
@@ -323,11 +323,8 @@ export class ResearchImportService {
     const startTime = Date.now();
 
     try {
-      const finnhub = this.providers.getAdapter('finnhub');
-      if (!finnhub) {
-        this.logger.warn('Finnhub adapter not available, skipping company metrics import');
-        return;
-      }
+      const finnhub = this.getFinnhub();
+      if (!finnhub) return;
 
       const symbols = await this.prisma.symbol.findMany({
         where: { active: true },
@@ -378,11 +375,8 @@ export class ResearchImportService {
    */
   async importCompanyMetricsForSymbol(symbol: string): Promise<boolean> {
     try {
-      const finnhub = this.providers.getAdapter('finnhub');
-      if (!finnhub) {
-        this.logger.warn(`Finnhub not available — skipping company metrics import for ${symbol}`);
-        return false;
-      }
+      const finnhub = this.getFinnhub();
+      if (!finnhub) return false;
 
       const metrics = await (finnhub as any).getCompanyMetrics(symbol);
       if (!metrics) return false;
