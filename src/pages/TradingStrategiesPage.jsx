@@ -5,84 +5,18 @@ import './trading-strategies.css';
 
 const TRADING = '/api/trading/strategies';
 
-// ── Strategy intelligence maps ──
-const PROTOCOL_INTEL = {
-  'btc-speed-v1': {
-    label: 'BTC Speed v1',
-    description: 'High-frequency scalping protocol for BTC/USD. Designed for rapid entry/exit within 15-minute windows.',
-    requiredAccounts: ['MT5 Bridge', 'Trading212'],
-    minimumDataSource: 'MT5 (tick-level or M1 bars)',
-    apiIntensity: 'intensive',
-    canFallback: false,
-    preTradeChecks: ['MT5 connected', 'Spread < 0.05%', 'Min 2 recent M1 bars'],
-  },
-  'conviction-dip': {
-    label: 'Conviction Dip Accumulation',
-    description: 'Accumulates positions during dips in high-conviction symbols using scaled entries.',
-    requiredAccounts: ['Alpaca', 'Trading212'],
-    minimumDataSource: 'Alpaca (1H bars) or Trading212',
-    apiIntensity: 'moderate',
-    canFallback: true,
-    preTradeChecks: ['Portfolio balance > 0', 'Symbol in watchlist', 'Min 50 1H bars'],
-  },
-  'momentum-breakout': {
-    label: 'Momentum Breakout',
-    description: 'Enter on confirmed momentum breakouts above resistance with volume confirmation.',
-    requiredAccounts: ['Alpaca', 'MT5 Bridge'],
-    minimumDataSource: 'Alpaca (1D bars) or MT5',  
-    apiIntensity: 'moderate',
-    canFallback: true,
-    preTradeChecks: ['Alpaca or MT5 connected', 'Min 50 1D bars', 'Volume > 1M avg'],
-  },
-  'mean-reversion-swing': {
-    label: 'Mean Reversion Swing',
-    description: 'Swing trade off overextended RSI and Bollinger Band extremes.',
-    requiredAccounts: ['Alpaca'],
-    minimumDataSource: 'Alpaca (1H bars)',
-    apiIntensity: 'low',
-    canFallback: true,
-    preTradeChecks: ['Alpaca connected', 'Min 100 1H bars'],
-  },
-  'earnings-whisper': {
-    label: 'Earnings Whisper',
-    description: 'Pre-earnings positioning based on whisper numbers and analyst revisions.',
-    requiredAccounts: ['Trading212'],
-    minimumDataSource: 'Trading212 or Finnhub',
-    apiIntensity: 'low',
-    canFallback: true,
-    preTradeChecks: ['Earnings date within 7 days', 'Analyst consensus available'],
-  },
-};
+// ── Strategy intelligence derived from protocol registry ──
+// No hardcoded maps. All metadata comes from GET /api/scoring/gated/protocols.
+// Fields not yet in the protocol schema (requiredAccounts, canFallback) are
+// omitted until they're added to the DB.
 
-const INTENSITY_COLORS = {
-  intensive: '#ef4444',
-  moderate: '#f59e0b', 
-  low: '#22c55e',
-};
-
-const INTENSITY_LABELS = {
-  intensive: 'Intensive — needs MT5 or real-time feed. 15-min max cycle.',
-  moderate: 'Moderate — hourly/daily bars sufficient. Free-tier viable.',
-  low: 'Low — daily bars OK. Minimum API calls.',
-};
-
-function inferIntelligence(strategy) {
-  const proto = PROTOCOL_INTEL[strategy.protocolId];
-  if (proto) return proto;
-  // Fallback: derive from timeframe
-  const tf = (strategy.timeframe || '').toLowerCase();
-  const isShort = tf.includes('m') || tf === '1h';
-  return {
-    label: strategy.protocolId || 'Unknown',
-    description: 'Custom protocol — review requirements manually.',
-    requiredAccounts: isShort ? ['MT5 Bridge'] : ['Alpaca', 'Trading212'],
-    minimumDataSource: isShort ? 'MT5 (real-time)' : 'Alpaca (1D bars)',
-    apiIntensity: isShort ? 'intensive' : 'moderate',
-    canFallback: !isShort,
-    preTradeChecks: isShort
-      ? ['MT5 connected', 'Spread < 0.1%']
-      : ['Provider connected', 'Min 50 bars'],
-  };
+function buildIntel(strategy, protocolMap) {
+  const proto = strategy.protocolId ? protocolMap[strategy.protocolId] : null;
+  const name = proto?.name || strategy.protocolId || 'Unknown';
+  const desc = proto?.description || 'Protocol metadata not available.';
+  const style = proto?.tradingStyle || '—';
+  const tf = proto?.recommendedTimeframe || strategy.timeframe || '—';
+  return { name, description: desc, tradingStyle: style, recommendedTimeframe: tf };
 }
 
 export default function TradingStrategiesPage() {
@@ -125,6 +59,20 @@ export default function TradingStrategiesPage() {
   });
   const positions = Array.isArray(portfolioQuery.data?.positions) ? portfolioQuery.data.positions : [];
 
+  // Protocol registry — authoritative source for protocol metadata
+  const protocolsQuery = useQuery({
+    queryKey: ['ts-protocols'],
+    queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => ({ protocols: [] })),
+    staleTime: 120_000,
+  });
+  const protocolMap = useMemo(() => {
+    const map = {};
+    for (const p of (protocolsQuery.data?.protocols || [])) {
+      map[p.id] = p;
+    }
+    return map;
+  }, [protocolsQuery.data]);
+
   // ── Compute position counts per symbol ──
   const positionCountBySymbol = useMemo(() => {
     const map = {};
@@ -160,7 +108,7 @@ export default function TradingStrategiesPage() {
 
   const sortArrow = (key) => sortKey === key ? (sortDir === 'asc' ? ' ▴' : ' ▾') : '';
 
-  const intel = selected ? inferIntelligence(selected) : null;
+  const intel = selected ? buildIntel(selected, protocolMap) : null;
 
   const handleToggle = (id) => {
     fetch(`${TRADING}/${id}/toggle`, { method: 'POST' })
@@ -350,52 +298,25 @@ export default function TradingStrategiesPage() {
                   </div>
                 </section>
 
-                {/* Data Requirements */}
+                {/* Protocol Info — from protocol registry (authoritative source) */}
                 <section className="ts-detail-section">
-                  <h3>Data Requirements</h3>
+                  <h3>Protocol</h3>
                   <div className="ts-detail-card">
                     <div className="ts-requirement-row">
-                      <span className="ts-req-label">Minimum source</span>
-                      <span className="ts-req-value">{intel?.minimumDataSource}</span>
+                      <span className="ts-req-label">Name</span>
+                      <span className="ts-req-value">{intel?.name || '—'}</span>
                     </div>
                     <div className="ts-requirement-row">
-                      <span className="ts-req-label">API intensity</span>
-                      <span className="ts-intensity-badge" style={{ background: INTENSITY_COLORS[intel?.apiIntensity] + '20', color: INTENSITY_COLORS[intel?.apiIntensity], borderColor: INTENSITY_COLORS[intel?.apiIntensity] }}>
-                        {intel?.apiIntensity}
-                      </span>
+                      <span className="ts-req-label">Style</span>
+                      <span className="ts-req-value">{intel?.tradingStyle || '—'}</span>
                     </div>
-                    <p className="ts-intensity-desc">{INTENSITY_LABELS[intel?.apiIntensity]}</p>
-                  </div>
-                </section>
-
-                {/* Required Accounts */}
-                <section className="ts-detail-section">
-                  <h3>Required Accounts</h3>
-                  <div className="ts-detail-card">
-                    {intel?.requiredAccounts?.map(acct => (
-                      <div key={acct} className="ts-account-chip">{acct}</div>
-                    ))}
-                    {!intel?.canFallback && (
-                      <p className="ts-no-fallback">⚠️ No fallback — this strategy cannot run without its primary data source.</p>
+                    <div className="ts-requirement-row">
+                      <span className="ts-req-label">Timeframe</span>
+                      <span className="ts-req-value">{intel?.recommendedTimeframe || '—'}</span>
+                    </div>
+                    {intel?.description && (
+                      <p className="ts-intensity-desc">{intel.description}</p>
                     )}
-                    {intel?.canFallback && (
-                      <p className="ts-has-fallback">✅ Fallback available — can run on reduced data.</p>
-                    )}
-                  </div>
-                </section>
-
-                {/* Pre-Trade Checks */}
-                <section className="ts-detail-section">
-                  <h3>Pre-Trade Checks</h3>
-                  <div className="ts-detail-card">
-                    <ul className="ts-checklist">
-                      {intel?.preTradeChecks?.map((check, i) => (
-                        <li key={i}>{check}</li>
-                      ))}
-                    </ul>
-                    <p className="ts-disable-note">
-                      Strategy will auto-disable if required checks fail or no positions exist.
-                    </p>
                   </div>
                 </section>
 

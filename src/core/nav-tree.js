@@ -20,6 +20,17 @@
  */
 
 export const NAV_TREE = {
+  /**
+   * Dashboard — MODULAR HUB (future)
+   * ==================================
+   * The Dashboard area is designed to become the primary modular view.
+   * Future iterations will support user-configurable widget grids, drag-and-drop
+   * layout persistence, and role-based card visibility.
+   *
+   * Currently renders the existing DashboardPage content inside the shared AppShell
+   * layout (sidebar + breadcrumbs + topbar), replacing the previous standalone
+   * /dashboard route that used a disconnected header.
+   */
   dashboard: {
     label: 'Dashboard',
     views: [
@@ -60,7 +71,6 @@ export const NAV_TREE = {
       { id: 'directives-manager', label: 'Directives', icon: '◆' },
       { id: 'symbols-ladder', label: 'Symbols Ladder', icon: '📈' },
       { id: 'protocols-ladder', label: 'Protocols Ladder', icon: '🪜' },
-      { id: 'protocols-performance', label: 'Protocols Performance', icon: '📊' },
       { kind: 'section-header', id: 'tools-header', label: 'Tools', icon: '' },
       { id: 'sees-arena', label: 'Protocol Comparison', icon: '⚖️' },
       { id: 'configure-directives', label: 'Protocol Editor', icon: '⚙' },

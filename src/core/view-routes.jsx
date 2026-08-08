@@ -43,7 +43,6 @@ import ProtocolsPage from '../pages/ProtocolsPage.jsx';
 import ProtocolTrailPage from '../pages/ProtocolTrailPage.jsx';
 import ProtocolsLadderPage from '../pages/ProtocolsLadderPage.jsx';
 import SymbolsLadderPage from '../pages/SymbolsLadderPage.jsx';
-import ProtocolsPerformancePage from '../pages/ProtocolsPerformancePage.jsx';
 import CreateProtocolsPage from '../pages/CreateProtocolsPage.jsx';
 import StrategyLaddersPage from '../pages/StrategyLaddersPage.jsx';
 import StrategyBuilderPage from '../pages/StrategyBuilderPage.jsx';
@@ -182,6 +181,7 @@ import PersonalFinancesPage from '../pages/PersonalFinancesPage.jsx';
 import TradingStylesPage from '../pages/TradingStylesPage.jsx';
 import ObjectivesPage from '../pages/ObjectivesPage.jsx';
 import GlobalAllocatorPage from '../pages/GlobalAllocatorPage.jsx';
+import DashboardPage from '../pages/DashboardPage.jsx';
 import HomeDashboard from '../pages/HomeDashboard.jsx';
 
 // ── MAP ──────────────────────────────────────────────────────────────────────
@@ -223,7 +223,6 @@ export const VIEW_COMPONENTS = {
   'protocol-trail': ProtocolTrailPage,
   'protocols-ladder': ProtocolsLadderPage,
   'symbols-ladder': SymbolsLadderPage,
-  'protocols-performance': ProtocolsPerformancePage,
   'create-protocols': CreateProtocolsPage,
   'protocol-builder': CreateProtocolsPage,
   'strategy-builder': StrategyBuilderPage,
@@ -306,6 +305,7 @@ export const VIEW_COMPONENTS = {
   'reports': ReportsPage,
   'capability-map': CapabilityMapPage,
   'meta-stack-status': MetaStackStatusPage,
+  'dashboard': DashboardPage,
   'qa-testing': QATestingPage,
   'architecture-framework': ArchitectureFrameworkPage,
   'diagrams': DiagramsPage,

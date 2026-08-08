@@ -9,64 +9,16 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { apiGet, apiPost } from '../core/api/client';
+import { getAssetType } from '../core/asset-types';
+import { useBrokers, STYLE_DEFAULTS } from '../core/broker-utils';
 import '../core/forms.css';
 import './create-strategy.css';
 import PageInfoPopover from '../components/PageInfoPopover';
 
-// ── Protocol → Broker compatibility ──
-const PROTOCOL_BROKER_MAP = {
-  // MT5 supports forex, commodities, indices, crypto (if enabled)
-  mt5: {
-    supportedStyles: ['scalp', 'day-trade', 'swing', 'position', 'speed'],
-    supportedAssetTypes: ['forex', 'commodity', 'index', 'crypto', 'stock'],
-    tradingEnabled: true,
-    note: 'Full execution — SL/TP, trailing stops, partial close',
-  },
-  // Trading212 supports stocks/ETFs only, long-only, no auto-execution
-  trading212: {
-    supportedStyles: ['swing', 'position'],
-    supportedAssetTypes: ['stock', 'etf'],
-    tradingEnabled: false,
-    note: 'Portfolio monitoring only — no trade execution',
-  },
-  // Paper trading supports everything, no real money
-  paper: {
-    supportedStyles: ['scalp', 'day-trade', 'swing', 'position', 'speed'],
-    supportedAssetTypes: ['forex', 'commodity', 'index', 'crypto', 'stock', 'etf'],
-    tradingEnabled: true,
-    note: 'Virtual ledger — ideal for testing new strategies',
-  },
-  // Capital.com — CFDs: forex, commodities, indices, crypto. Full execution.
-  'capital.com': {
-    supportedStyles: ['scalp', 'day-trade', 'swing', 'position'],
-    supportedAssetTypes: ['forex', 'commodity', 'index', 'crypto'],
-    tradingEnabled: true,
-    note: 'CFD broker — session-based auth, demo + live accounts',
-  },
-};
-
-// ── Protocol trading style → default risk parameters ──
-const STYLE_DEFAULTS = {
-  scalp:    { baseSize: 0.01, slPct: 0.3, tpPct: 0.5, minComposite: 70, timeframe: '5s' },
-  'day-trade': { baseSize: 0.02, slPct: 0.5, tpPct: 1.0, minComposite: 65, timeframe: '5m' },
-  speed:    { baseSize: 0.01, slPct: 0.2, tpPct: 0.4, minComposite: 75, timeframe: '15s' },
-  swing:    { baseSize: 0.05, slPct: 1.5, tpPct: 3.0, minComposite: 60, timeframe: '1h' },
-  position: { baseSize: 0.1, slPct: 3.0, tpPct: 6.0, minComposite: 55, timeframe: '1d' },
-};
-
-// ── Symbol → asset type inference ──
-function inferAssetType(symbol) {
-  const s = symbol.toUpperCase();
-  if (['EURUSD','GBPUSD','USDJPY','USDCAD','AUDUSD','NZDUSD','USDCHF'].includes(s)) return 'forex';
-  if (['XAUUSD','XAGUSD','USOIL','UKOIL','XTIUSD','XBRUSD'].includes(s)) return 'commodity';
-  if (['BTCUSD','ETHUSD','XRPUSD','LTCUSD'].includes(s)) return 'crypto';
-  if (['SPX500','TECH100','DJI30','US500','NAS100','GER40','UK100'].includes(s)) return 'index';
-  return 'stock';
-}
-
 export default function CreateStrategyPage() {
   // ── Creation path ──
   const [creationPath, setCreationPath] = useState('protocol'); // 'protocol' | 'scoring-strategy'
+  const { brokerMap } = useBrokers();
 
   // ── Form state ──
   const [name, setName] = useState('');
@@ -141,13 +93,13 @@ export default function CreateStrategyPage() {
   // ── Selected protocol metadata ──
   const selectedProtocol = useMemo(() => protocols.find(p => p.id === protocolId), [protocols, protocolId]);
   const protocolStyle = selectedProtocol?.tradingStyle || 'swing';
-  const assetType = useMemo(() => inferAssetType(symbol), [symbol]);
+  const assetType = useMemo(() => getAssetType(symbol), [symbol]);
 
   // ── Filtered brokers based on protocol + symbol compatibility ──
   const compatibleBrokers = useMemo(() => {
-    if (!protocolId) return Object.keys(PROTOCOL_BROKER_MAP);
+    if (!protocolId) return Object.keys(brokerMap);
     const style = protocolStyle;
-    return Object.entries(PROTOCOL_BROKER_MAP)
+    return Object.entries(brokerMap)
       .filter(([, cfg]) => cfg.supportedStyles.includes(style) && cfg.supportedAssetTypes.includes(assetType))
       .map(([id]) => id);
   }, [protocolId, protocolStyle, assetType]);
@@ -170,7 +122,7 @@ export default function CreateStrategyPage() {
     }
     // If current broker isn't compatible, switch to first compatible
     if (!compatibleBrokers.includes(brokerId)) {
-      const firstCompatible = Object.entries(PROTOCOL_BROKER_MAP)
+      const firstCompatible = Object.entries(brokerMap)
         .filter(([, cfg]) => cfg.supportedStyles.includes(style))
         .map(([id]) => id)[0] || 'mt5';
       setBrokerId(firstCompatible);
@@ -418,7 +370,7 @@ export default function CreateStrategyPage() {
         <label className="ff-field">
           <span className="ff-label">Broker Account</span>
           <select className="ff-select" value={brokerId} onChange={e => setBrokerId(e.target.value)}>
-            {Object.entries(PROTOCOL_BROKER_MAP).map(([id, cfg]) => {
+            {Object.entries(brokerMap).map(([id, cfg]) => {
               const isCompatible = compatibleBrokers.includes(id);
               return (
                 <option key={id} value={id} disabled={!isCompatible}>
@@ -432,7 +384,7 @@ export default function CreateStrategyPage() {
             })}
           </select>
           <span className="ff-hint">
-            {PROTOCOL_BROKER_MAP[brokerId]?.note}
+            {brokerMap[brokerId]?.note}
             {!compatibleBrokers.includes(brokerId) && ' ⚠️ This broker may not support the selected protocol style.'}
           </span>
         </label>

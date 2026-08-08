@@ -236,23 +236,25 @@ export class ScoringController {
 
   @Get('runs')
   @UseInterceptors(new CacheInterceptor(15000))
-  @ApiOperation({ summary: 'Get scoring runs grouped by time + strategy with search & pagination' })
+  @ApiOperation({ summary: 'Get scoring runs grouped by time + strategy (or protocol) with search & pagination' })
   getRuns(
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('strategyId') strategyId?: string,
+    @Query('groupBy') groupBy?: string,
   ) {
     const parsedPage = Number(page ?? 1);
     const parsedLimit = Number(limit ?? 30);
     const safePage = Number.isFinite(parsedPage) ? Math.max(parsedPage, 1) : 1;
-    const safeLimit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 100) : 30;
+    const safeLimit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 500) : 30;
 
     return this.scoreHistoryService.getRuns({
       search: search?.trim() || undefined,
       page: safePage,
       limit: safeLimit,
       strategyId: strategyId?.trim() || undefined,
+      groupBy: (groupBy === 'strategy' ? 'strategy' : 'protocol') as 'protocol' | 'strategy',
     });
   }
 

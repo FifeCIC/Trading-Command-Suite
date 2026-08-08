@@ -18,6 +18,7 @@ import {
   CURRENT_ROUTE_CONTRACTS,
   CURRENT_SLICE,
   DATABASE_SCHEMA,
+  DATA_AUTHORITY,
   DATA_STATES,
   DECISION_WORKFLOW,
   DEFINITION_OF_DONE,
@@ -797,6 +798,41 @@ export default function ArchitectureFrameworkPage() {
                 </article>
               </div>
             </article>
+          </div>
+        </SectionBlock>
+      )}
+
+      {visibleIds.has('data-authority') && (
+        <SectionBlock
+          id="data-authority"
+          title="Data Authority — Source of Truth per Entity"
+          summary="Which database table and API endpoint is authoritative for each entity type. Use this to avoid deriving data from the wrong source."
+          collapsed={collapsedSections.includes('data-authority')}
+          onToggle={toggleSection}
+        >
+          <div className="architecture-table-wrap">
+            <table className="architecture-table">
+              <thead>
+                <tr>
+                  <th>Entity</th>
+                  <th>DB Table</th>
+                  <th>API Endpoint</th>
+                  <th>Notes</th>
+                  <th>⚠ Anti-Pattern</th>
+                </tr>
+              </thead>
+              <tbody>
+                {DATA_AUTHORITY.map((row) => (
+                  <tr key={row.entity}>
+                    <td><strong>{row.entity}</strong></td>
+                    <td><code>{row.table}</code></td>
+                    <td><code>{row.endpoint}</code></td>
+                    <td>{row.notes}</td>
+                    <td className="architecture-warn">{row.antiPattern}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </SectionBlock>
       )}

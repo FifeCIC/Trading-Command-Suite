@@ -77,12 +77,6 @@ const VIEW_META = {
     css: 'src/pages/protocols-ladder.css',
     api: ['GET /api/scoring/runs'],
   },
-  '/protocols/protocols-performance': {
-    label: 'Protocols Performance',
-    file: 'src/pages/ProtocolsPerformancePage.jsx',
-    css: 'src/pages/protocols-ladder.css',
-    api: ['GET /api/trading/strategies/with-ratios'],
-  },
   '/scoring/strategy-ladders': {
     label: 'Strategies Ladder',
     file: 'src/pages/StrategyLaddersPage.jsx',

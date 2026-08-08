@@ -14,7 +14,6 @@ import { withDevTag } from './dev-runtime/tags';
 import { getPerformanceSnapshot, startPerformanceMonitoring } from './performance/monitor';
 import ArchitectureFrameworkPage from './pages/ArchitectureFrameworkPage';
 import HomeDashboard from './pages/HomeDashboard';
-import DashboardPage from './pages/DashboardPage';
 import BacktestPage from './pages/BacktestPage';
 import ScenarioAnalysisPage from './pages/ScenarioAnalysisPage';
 import FaqPage from './pages/FaqPage';
@@ -131,7 +130,7 @@ import SourcesPage from './pages/SourcesPage';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
 import ScreenOptions from './components/ScreenOptions';
 import PageInfoPopover from './components/PageInfoPopover';
-import VIEW_META, { getViewMeta } from './core/view-meta';
+import VIEW_META from './core/view-meta';
 import { VIEW_EXPLANATIONS } from './core/view-explanations';
 
 import { useNetworkStatus } from './utils/networkStatus';
@@ -212,9 +211,11 @@ function AppShell() {
   const navigate = useNavigate();
 
   const isHomePage = location.pathname === '/';
-  const isDashboardPage = location.pathname === '/dashboard';
-  const primaryArea = symbolId ? 'research' : (isHomePage || isDashboardPage ? null : (area || 'trading'));
-  const secondaryView = symbolId ? 'symbol-detail' : (view || 'directives-manager');
+  const primaryArea = symbolId ? 'research' : (isHomePage ? null : (area || 'trading'));
+  // defaultView: use the first registered view for the current area, falling back to directives-manager
+  const areaViews = NAV_STRUCTURE[area];
+  const defaultView = (areaViews && areaViews.length > 0) ? areaViews[0].id : 'directives-manager';
+  const secondaryView = symbolId ? 'symbol-detail' : (view || defaultView);
   const [demoPrompt, setDemoPrompt] = useState('Generate a responsive planning concept for eco garden week.');
   const [demoOutput, setDemoOutput] = useState('');
   const [activityLog, setActivityLog] = useState([]);
@@ -693,9 +694,9 @@ function AppShell() {
             <span className="topbar-brand-line"><span className="topbar-brand-accent">S</span>UITE</span>
           </div>
           <nav className="topbar-area-nav" aria-label="Main navigation">
-            {/* Platform-specific pages (Trading212, etc.) — left of separator */}
+            {/* Primary hubs — Dashboard + Accounts left of separator */}
             {Object.entries(NAV_TREE)
-              .filter(([id]) => ['trading212'].includes(id))
+              .filter(([id]) => ['dashboard', 'trading212'].includes(id))
               .map(([id, area]) => (
                 <button
                   key={id}
@@ -707,17 +708,17 @@ function AppShell() {
                   {area.label}
                 </button>
               ))}
-            {/* Separator between platform pages and main app */}
+            {/* Separator between primary hubs and area nav */}
             <span className="topbar-nav-sep" aria-hidden="true" />
-            {/* Main app navigation */}
+            {/* Area navigation */}
             {Object.entries(NAV_TREE)
-              .filter(([id]) => id !== 'dashboard' && !['trading212'].includes(id))
+              .filter(([id]) => !['dashboard', 'trading212'].includes(id))
               .map(([id, area]) => (
                 <button
                   key={id}
                   type="button"
                   className={primaryArea === id ? 'nav-active' : ''}
-                  onClick={() => id === 'dashboard' ? navigate('/dashboard') : onPrimarySelect(id)}
+                  onClick={() => onPrimarySelect(id)}
                   title={area.label}
                 >
                   {area.label}
@@ -1012,14 +1013,11 @@ function AppShell() {
         <div className="main-top-row">
           <Breadcrumbs />
           {(() => {
-            const path = `/${primaryArea}/${secondaryView}`;
-            const meta = getViewMeta(path);
             const explanation = VIEW_EXPLANATIONS[secondaryView];
-            if (!meta && !explanation) return null;
+            if (!explanation) return null;
             return (
               <div className="main-top-info">
-                {meta && <span className="main-top-title">{meta.label}</span>}
-                {explanation && <PageInfoPopover>{explanation}</PageInfoPopover>}
+                <PageInfoPopover>{explanation}</PageInfoPopover>
               </div>
             );
           })()}
@@ -1120,7 +1118,6 @@ export default function App() {
           <Route path="/:area/:view" element={<AppShell />} />
           <Route path="/:area" element={<AppShell />} />
           <Route path="/" element={<HomeDashboard />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <KeyboardShortcutsHelp />

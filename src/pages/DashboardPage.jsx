@@ -1,27 +1,11 @@
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
-import { NAV_TREE } from '../core/nav-tree';
-import ScreenOptions from '../components/ScreenOptions';
-import CopyViewData from '../components/CopyViewData';
 import SetupBanner from '../components/SetupBanner';
 import './home-dashboard.css'; // reuses nav-card styles
 
-const AREA_ICONS = {
-  qa: '🧪', trading: '📈', scoring: '🎯', research: '🔬', data: '🗄️',
-  watchlists: '👁️', automation: '⚙️', platforms: '🔌',
-  focus: '🎯', training: '🕯️', testing: '🧪',
-  status: '📡', settings: '⚙️', wizard: '🧙', ops: '🛡️',
-  analysis: '📊', builder: '🔧', planner: '📋', lab: '🧪',
-};
-
-/** Trading workflow areas — shown first as a focused group */
-const WORKFLOW_AREAS = ['qa', 'watchlists', 'scoring', 'trading'];
-
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const [screenOptionsOpen, setScreenOptionsOpen] = useState(false);
 
   // ── Portfolio data ──
   const diagQuery = useQuery({
@@ -119,8 +103,6 @@ export default function DashboardPage() {
   const divWarnings = divSummary.warnings || [];
   const divMode = (divSummary.settings || {})['diversification.mode'] || 'warn';
 
-  const statusLevel = diagQuery.isLoading ? null : mt5Connected ? 'online' : 'offline';
-
   // ── News article counts for accurate source status ──
   const newsCountsQuery = useQuery({
     queryKey: ['dash-news-counts'],
@@ -135,52 +117,9 @@ export default function DashboardPage() {
   const newsActiveCount = newsSources.filter((_, i) => (newsCounts[newsSourceKeys[i]] || 0) > 0).length;
   const newsInactiveCount = newsSources.length - newsActiveCount;
 
-  const areas = Object.entries(NAV_TREE)
-    .filter(([id]) => id !== 'dashboard')
-    .map(([id, area]) => ({
-      id,
-      label: area.label,
-      icon: AREA_ICONS[id] || '📋',
-      viewCount: (area.views || []).length,
-      firstView: (area.views || [])[0]?.id || 'overview',
-    }));
-
-  const workflowAreas = areas.filter(a => WORKFLOW_AREAS.includes(a.id));
-  const supportingAreas = areas.filter(a => !WORKFLOW_AREAS.includes(a.id));
-
   return (
-    <main id="main-content" className="nav-dashboard" aria-live="polite" aria-atomic="true">
+    <>
       <SetupBanner />
-      {/* ── Top Bar with Logo + Nav ── */}
-      <div className="nd-topbar">
-        <img src="/tcs-logo.png" alt="Trading Command Suite" className="nd-topbar-logo" />
-        <nav className="nd-topbar-nav" aria-label="Main navigation">
-          {areas.filter(a => ['trading212'].includes(a.id)).map((area) => (
-            <button
-              key={area.id}
-              type="button"
-              className="nd-topbar-btn"
-              onClick={() => navigate(`/${area.id}/${area.firstView}`)}
-              title={area.label}
-            >
-              {area.label}
-            </button>
-          ))}
-          <span className="nd-topbar-sep" aria-hidden="true" />
-          {areas.filter(a => !['trading212'].includes(a.id)).map((area) => (
-            <button
-              key={area.id}
-              type="button"
-              className="nd-topbar-btn"
-              onClick={() => navigate(`/${area.id}/${area.firstView}`)}
-              title={area.label}
-            >
-              {area.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-
       {/* ── Dashboard 2-Column Grid ── */}
       <div className="dash-grid">
         <div className="dash-col dash-col-main">
@@ -574,40 +513,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-      <ScreenOptions
-        activeView={null}
-        isOpen={screenOptionsOpen}
-        onToggle={() => setScreenOptionsOpen((v) => !v)}
-        isBookmarked={false}
-        onToggleBookmark={() => {}}
-        statusLevel={statusLevel}
-        isMt5Online={mt5Connected}
-        isApiOnline={!diagQuery.isError}
-        isDbOnline={!diagQuery.isError}
-      />
-      <CopyViewData getMarkdown={() => {
-        const lines = [
-          `# Trading Command Suite — Dashboard`,
-          `> ${new Date().toISOString()}`,
-          '',
-          '## Portfolio',
-          `- **Mode:** ${diag?.mode || 'unknown'}`,
-          `- **Balance:** ${diag?.balance != null ? '$' + diag.balance.toFixed(2) : '—'}`,
-          `- **Equity:** ${diag?.equity != null ? '$' + diag.equity.toFixed(2) : '—'}`,
-          `- **Open Positions:** ${positions.length}`,
-          `- **Total P&L:** ${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}`,
-          '',
-          '## Positions',
-          ...(positions.length > 0
-            ? positions.map(p => `- **${p.symbol}** ${p.type || 'BUY'} ×${p.volume} @ ${p.openPrice || '?'} → ${p.currentPrice || '?'} | P&L: ${(p.profit >= 0 ? '+' : '') + (p.profit || 0).toFixed(2)}`)
-            : ['- No open positions']),
-        ];
-        if (t212Positions && t212Positions.length > 0) {
-          lines.push('', '## Trading212 Positions');
-          t212Positions.forEach(p => lines.push(`- **${p.ticker || p.symbol}** | P&L: ${(p.pnl >= 0 ? '+' : '') + (p.pnl || 0).toFixed(2)}`));
-        }
-        return lines.join('\n');
-      }} />
-    </main>
+    </>
   );
 }

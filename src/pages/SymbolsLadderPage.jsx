@@ -1,109 +1,155 @@
 /**
- * Symbols Ladder — All symbols across all protocols, ranked by score.
- * ===================================================================
- * Every symbol scored by any protocol, deduped with best score + protocol.
- *
- * Data: GET /api/scoring/runs (all recent scoring runs)
- *
- * @created 2026-08-07 — Protocols area rework
+ * Symbols Ladder — All symbols across all active protocols.
+ * ==========================================================
+ * Direct approach: protocols → watchlists → symbols.
+ * No Score table, no historical runs — just the protocol definitions.
  */
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueries } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
 import './protocols-ladder.css';
 
-function scoreClass(v) {
-  if (v >= 65) return 'pl-score-high';
-  if (v >= 40) return 'pl-score-med';
-  return 'pl-score-low';
-}
-
-function signalBadge(score) {
-  if (score >= 65) return <span className="pl-badge pl-badge-buy">BUY</span>;
-  if (score >= 40) return <span className="pl-badge pl-badge-hold">HOLD</span>;
-  return <span className="pl-badge pl-badge-sell">SELL</span>;
-}
-
 export default function SymbolsLadderPage() {
-  const [sortBy, setSortBy] = useState('score');
-  const [signalFilter, setSignalFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('protocol');
+  const [protocolFilter, setProtocolFilter] = useState('all');
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['symbols-ladder'],
-    queryFn: () => apiGet('/api/scoring/runs?limit=100').catch(() => ({ runs: [] })),
-    staleTime: 10_000,
-    refetchInterval: 30_000,
+  // Active protocols
+  const { data: protocolsData, isLoading: pLoading } = useQuery({
+    queryKey: ['sl-protocols'],
+    queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => ({ protocols: [] })),
+    staleTime: 60_000,
   });
 
+  // Build: protocolId → { name, linkedWatchlistIds[] }
+  const protocolMap = useMemo(() => {
+    const protos = (protocolsData?.protocols || []).filter(p => p.active !== false);
+    const map = {};
+    for (const p of protos) {
+      // linkedWatchlists is a single string like "default", not an array
+      const raw = p.linkedWatchlists;
+      const ids = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
+      map[p.id] = { name: p.name || p.id, linkedWatchlistIds: ids };
+    }
+    return map;
+  }, [protocolsData]);
+
+  // Collect unique watchlist IDs across all active protocols
+  const uniqueWatchlistIds = useMemo(() => {
+    const ids = new Set();
+    for (const proto of Object.values(protocolMap)) {
+      for (const id of proto.linkedWatchlistIds) {
+        if (id) ids.add(id);
+      }
+    }
+    return [...ids];
+  }, [protocolMap]);
+
+  // Fetch each watchlist by ID to get its symbols
+  const watchlistQueries = useQueries({
+    queries: uniqueWatchlistIds.map(id => ({
+      queryKey: ['sl-watchlist', id],
+      queryFn: () => apiGet(`/api/watchlists/${id}`).catch(() => ({ symbols: [] })),
+      staleTime: 30_000,
+    })),
+  });
+
+  // Build: watchlistId → symbols[]
+  const watchlistSymbols = useMemo(() => {
+    const map = {};
+    for (let i = 0; i < uniqueWatchlistIds.length; i++) {
+      const id = uniqueWatchlistIds[i];
+      const query = watchlistQueries[i];
+      const raw = query?.data?.symbols;
+      let list = [];
+      if (Array.isArray(raw)) {
+        list = raw;
+      } else if (typeof raw === 'string' && raw.trim()) {
+        list = raw.split(',').map(s => s.trim());
+      }
+      map[id] = list.filter(Boolean);
+    }
+    return map;
+  }, [uniqueWatchlistIds, watchlistQueries]);
+
+  const queriesLoading = watchlistQueries.some(q => q.isLoading);
+
+  // Build entries: protocol → symbol
   const entries = useMemo(() => {
-    const runs = data?.runs || [];
-    const bestBySymbol = new Map();
-    for (const run of runs) {
-      const protoName = run.strategyName || run.protocolName || run.protocolId || '—';
-      if (run.scores?.length) {
-        for (const s of run.scores) {
-          const ticker = (s.ticker || s.symbol || '—').toUpperCase();
-          const score = s.value ?? s.score ?? 0;
-          if (!bestBySymbol.has(ticker) || score > bestBySymbol.get(ticker).score) {
-            bestBySymbol.set(ticker, { ticker, score, protocolName: protoName });
+    let result = [];
+    for (const [protoId, proto] of Object.entries(protocolMap)) {
+      const seen = new Set();
+      for (const wlId of proto.linkedWatchlistIds) {
+        const symbols = watchlistSymbols[wlId] || [];
+        for (const sym of symbols) {
+          if (!seen.has(sym)) {
+            seen.add(sym);
+            result.push({ symbol: sym.toUpperCase(), protocolId: protoId, protocolName: proto.name });
           }
         }
       }
+      // Protocols without linked watchlist symbols are skipped —
+      // they need watchlist links configured before they appear here.
     }
 
-    let list = [...bestBySymbol.values()];
+    if (protocolFilter !== 'all') result = result.filter(e => e.protocolId === protocolFilter);
 
-    const signal = (s) => s >= 65 ? 'BUY' : s >= 40 ? 'HOLD' : 'SELL';
-    if (signalFilter !== 'all') list = list.filter(e => signal(e.score) === signalFilter);
+    if (sortBy === 'alpha') result.sort((a, b) => a.symbol.localeCompare(b.symbol));
+    else if (sortBy === 'protocol') result.sort((a, b) => a.protocolName.localeCompare(b.protocolName));
 
-    if (sortBy === 'score') list.sort((a, b) => b.score - a.score);
-    else if (sortBy === 'alpha') list.sort((a, b) => a.ticker.localeCompare(b.ticker));
+    return result;
+  }, [protocolMap, watchlistSymbols, sortBy, protocolFilter]);
 
-    return list;
-  }, [data, sortBy, signalFilter]);
+  const protoIds = useMemo(() => {
+    const set = new Set(entries.map(e => e.protocolId));
+    return ['all', ...set].filter(Boolean).sort();
+  }, [entries]);
+
+  const isLoading = pLoading || queriesLoading;
 
   return (
     <div className="pl-page">
       <motion.header className="pl-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1>Symbols Ladder <PageInfoPopover>All symbols scored across all protocols, ranked by best score. Shows which protocol scored each symbol highest.</PageInfoPopover></h1>
+        <h1>Symbols Ladder
+          <PageInfoPopover>
+            Every symbol from every active protocol, resolved from watchlists and single-symbol protocol definitions.
+          </PageInfoPopover>
+        </h1>
       </motion.header>
 
       <div className="pl-toolbar">
         <label className="pl-filter">
           Sort:
           <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
-            <option value="score">Score ▼</option>
+            <option value="protocol">By Protocol</option>
             <option value="alpha">A → Z</option>
           </select>
         </label>
         <label className="pl-filter">
-          Signal:
-          <select value={signalFilter} onChange={e => setSignalFilter(e.target.value)}>
+          Protocol:
+          <select value={protocolFilter} onChange={e => setProtocolFilter(e.target.value)}>
             <option value="all">All</option>
-            <option value="BUY">Buy only</option>
-            <option value="SELL">Sell only</option>
-            <option value="HOLD">Hold only</option>
+            {protoIds.filter(n => n !== 'all').map(id => (
+              <option key={id} value={id}>{protocolMap[id]?.name || id}</option>
+            ))}
           </select>
         </label>
         <span className="pl-count">{entries.length} symbols</span>
       </div>
 
-      {isLoading ? <LoadingSkeleton variant="card" count={10} /> : (
+      {isLoading ? <LoadingSkeleton variant="card" count={8} /> : (
         <div className="pl-table-wrap">
           <table className="pl-table">
             <thead>
-              <tr><th>#</th><th>Symbol</th><th>Score</th><th>Signal</th><th>Best Protocol</th></tr>
+              <tr><th>#</th><th>Symbol</th><th>Protocol</th></tr>
             </thead>
             <tbody>
               {entries.map((e, i) => (
-                <tr key={e.ticker}>
+                <tr key={`${e.protocolId}:${e.symbol}`}>
                   <td className="pl-rank">{i + 1}</td>
-                  <td className="pl-symbol">{e.ticker}</td>
-                  <td><span className={scoreClass(e.score)}>{e.score}</span></td>
-                  <td>{signalBadge(e.score)}</td>
+                  <td className="pl-symbol">{e.symbol}</td>
                   <td className="pl-muted">{e.protocolName}</td>
                 </tr>
               ))}

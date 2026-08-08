@@ -24,22 +24,26 @@ export class AppController {
     const uptimeSec = Math.floor((Date.now() - this.startedAt) / 1000);
     const uptimeFmt = `${Math.floor(uptimeSec / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m ${uptimeSec % 60}s`;
 
-    // Fetch MT5 bridge health and terminal info
+    // Fetch MT5 bridge health across ALL active brokers
     let mt5Bridge: any = { connected: false, tradeAllowed: null, account: null, balance: null };
     try {
-      const health = await this.mt5Connection.getHealth();
-      const terminal = await this.mt5Connection.getTerminalInfo();
-      mt5Bridge = {
-        connected: health?.connected ?? false,
-        tradeAllowed: terminal?.tradeAllowed ?? null,
-        account: health?.account ?? null,
-        server: health?.server ?? null,
-        balance: health?.balance ?? null,
-        equity: health?.equity ?? null,
-        build: terminal?.build ?? null,
-      };
+      const allHealths = await this.mt5Connection.getAllBrokerHealths();
+      const connected = allHealths.filter((h: any) => h.health?.connected);
+      if (connected.length > 0) {
+        const best = connected[0];
+        mt5Bridge = {
+          connected: true,
+          tradeAllowed: (best.health as any)?.autoTrading ?? null,
+          account: best.health?.account ?? null,
+          server: best.server ?? null,
+          balance: best.health?.balance ?? null,
+          equity: best.health?.equity ?? null,
+          brokerId: best.brokerId,
+          activeCount: connected.length,
+        };
+      }
     } catch {
-      // MT5 bridge unavailable — keep defaults
+      // MT5 bridges unavailable — keep defaults
     }
 
     return {

@@ -16,6 +16,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet, apiPost } from '../core/api/client';
+import { getAssetType } from '../core/asset-types';
+import { STYLE_DEFAULTS } from '../core/broker-utils';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import StrategyWizard from '../components/StrategyBuilder/StrategyWizard';
@@ -28,51 +30,6 @@ const TABS = [
   { id: 'form', label: 'Form', icon: '📝' },
   { id: 'wizard', label: 'Wizard', icon: '🧙' },
 ];
-
-// ── Protocol → Broker compatibility (fallback — now served by GET /api/brokers) ──
-const BROKER_FALLBACK = {
-  mt5: {
-    id: 'mt5', displayName: 'MetaTrader 5',
-    supportedStyles: ['scalp', 'day-trade', 'swing', 'position', 'speed'],
-    supportedAssetTypes: ['forex', 'commodity', 'index', 'crypto', 'stock'],
-    tradingEnabled: true, note: 'Full execution — SL/TP, trailing stops, partial close',
-  },
-  trading212: {
-    id: 'trading212', displayName: 'Trading 212',
-    supportedStyles: ['swing', 'position'],
-    supportedAssetTypes: ['stock', 'etf'],
-    tradingEnabled: false, note: 'Portfolio monitoring only — no trade execution',
-  },
-  paper: {
-    id: 'paper', displayName: 'Paper Trading',
-    supportedStyles: ['scalp', 'day-trade', 'swing', 'position', 'speed'],
-    supportedAssetTypes: ['forex', 'commodity', 'index', 'crypto', 'stock', 'etf'],
-    tradingEnabled: true, note: 'Virtual ledger — ideal for testing new strategies',
-  },
-  'capital.com': {
-    id: 'capital.com', displayName: 'Capital.com',
-    supportedStyles: ['scalp', 'day-trade', 'swing', 'position'],
-    supportedAssetTypes: ['forex', 'commodity', 'index', 'crypto'],
-    tradingEnabled: true, note: 'CFD broker — session-based auth, demo + live accounts',
-  },
-};
-
-const STYLE_DEFAULTS = {
-  scalp:    { baseSize: 0.01, slPct: 0.3, tpPct: 0.5, minComposite: 70, timeframe: '5s' },
-  'day-trade': { baseSize: 0.02, slPct: 0.5, tpPct: 1.0, minComposite: 65, timeframe: '5m' },
-  speed:    { baseSize: 0.01, slPct: 0.2, tpPct: 0.4, minComposite: 75, timeframe: '15s' },
-  swing:    { baseSize: 0.05, slPct: 1.5, tpPct: 3.0, minComposite: 60, timeframe: '1h' },
-  position: { baseSize: 0.1, slPct: 3.0, tpPct: 6.0, minComposite: 55, timeframe: '1d' },
-};
-
-function inferAssetType(symbol) {
-  const s = symbol.toUpperCase();
-  if (['EURUSD','GBPUSD','USDJPY','USDCAD','AUDUSD','NZDUSD','USDCHF'].includes(s)) return 'forex';
-  if (['XAUUSD','XAGUSD','USOIL','UKOIL','XTIUSD','XBRUSD'].includes(s)) return 'commodity';
-  if (['US500','US100','US30','GER40','UK100'].includes(s)) return 'index';
-  if (['BTCUSD','ETHUSD','LTCUSD'].includes(s)) return 'crypto';
-  return 'stock';
-}
 
 export default function StrategyCreatePage() {
   const [tab, setTab] = useState('form');
@@ -121,14 +78,14 @@ export default function StrategyCreatePage() {
   });
   const wlList = watchlists?.watchlists || watchlists || [];
 
-  // Broker configs — fetched from API (#589), falls back to hardcoded defaults
+  // Broker configs — from API
   const { data: brokerData } = useQuery({
     queryKey: ['broker-configs'],
-    queryFn: () => apiGet('/api/brokers').catch(() => ({ brokers: Object.values(BROKER_FALLBACK) })),
+    queryFn: () => apiGet('/api/brokers').catch(() => ({ brokers: [] })),
     staleTime: 300_000,
   });
   const brokerMap = useMemo(() => {
-    const brokers = brokerData?.brokers || Object.values(BROKER_FALLBACK);
+    const brokers = brokerData?.brokers || [];
     const map = {};
     for (const b of brokers) {
       map[b.id] = {
@@ -149,7 +106,7 @@ export default function StrategyCreatePage() {
   }, [protoList, protocolId]);
 
   const brokerCfg = brokerMap[brokerId] || brokerMap.mt5;
-  const assetType = inferAssetType(symbol);
+  const assetType = getAssetType(symbol);
 
   const brokerCompatible = useMemo(() => {
     if (!brokerCfg) return true;

@@ -159,6 +159,7 @@ export class ScoreHistoryService {
     page?: number;
     limit?: number;
     strategyId?: string;
+    groupBy?: 'protocol' | 'strategy';
   }): Promise<{
     runs: Array<{
       id: string;
@@ -181,7 +182,7 @@ export class ScoreHistoryService {
   }> {
     const startTime = Date.now();
     const page = Math.max(1, opts?.page ?? 1);
-    const pageSize = Math.min(100, Math.max(1, opts?.limit ?? 30));
+    const pageSize = Math.min(500, Math.max(1, opts?.limit ?? 30));
     const search = opts?.search?.trim() || null;
     const strategyFilter = opts?.strategyId || null;
 
@@ -231,7 +232,7 @@ export class ScoreHistoryService {
     scores = await this.prisma.score.findMany({
       where: baseWhere,
       orderBy: { timestamp: 'desc' },
-      take: 200,
+      take: 2000,
       include: { symbol: { select: { ticker: true } } },
     });
 
@@ -262,12 +263,16 @@ export class ScoreHistoryService {
       for (const p of protocols as any[]) protoMap.set(p.id, p.name);
     }
 
-    // Group by minute + strategyId (each unique run)
+    // Group by minute + (strategyId or protocolId) — each unique run
+    const groupMode = opts?.groupBy || 'protocol';
     const groups = new Map<string, typeof scores>();
     for (const s of scores) {
       const ts = new Date(s.timestamp);
       ts.setSeconds(0, 0);
-      const key = `${ts.toISOString()}::${s.strategyId}`;
+      const groupKey = groupMode === 'protocol'
+        ? ((s as any).breakdown?.protocolId || s.strategyId)
+        : s.strategyId;
+      const key = `${ts.toISOString()}::${groupKey}`;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(s);
     }
@@ -275,9 +280,11 @@ export class ScoreHistoryService {
     // Build run objects with signal summaries
     const allRuns = Array.from(groups.entries())
       .map(([key, entries]) => {
-        const [timestamp] = key.split('::');
+        const [timestamp, groupId] = key.split('::');
         const strategyId = entries[0]?.strategyId || 'unknown';
-        const protocolId = (entries[0] as any)?.breakdown?.protocolId || null;
+        const protocolId = groupMode === 'protocol'
+          ? groupId
+          : ((entries[0] as any)?.breakdown?.protocolId || null);
         const values = entries.map((e) => e.value);
         const avgScore = values.reduce((a, b) => a + b, 0) / values.length;
 
@@ -294,8 +301,12 @@ export class ScoreHistoryService {
           e.value > (best?.value ?? -999) ? e : best, null as any);
         const topSymbol = best ? { ticker: (best as any).symbol?.ticker || best.symbolId, value: best.value } : null;
 
+        const runId = groupMode === 'protocol'
+          ? `run-${new Date(timestamp).getTime()}-${protocolId?.slice(0, 12) || 'unknown'}`
+          : `run-${new Date(timestamp).getTime()}-${strategyId.slice(0, 8)}`;
+
         return {
-          id: `run-${new Date(timestamp).getTime()}-${strategyId.slice(0, 8)}`,
+          id: runId,
           timestamp,
           strategyId,
           strategyName: nameMap.get(strategyId) || 'Unknown Strategy',

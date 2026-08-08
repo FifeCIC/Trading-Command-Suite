@@ -96,7 +96,7 @@ export default function HomeDashboard() {
         </div>
         <button
           className="nd-hero-enter"
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate('/dashboard/dashboard')}
         >
           Enter Dashboard
         </button>

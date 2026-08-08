@@ -36,76 +36,63 @@ export class Mt5Controller {
   }
 
   @Get('diagnostics')
-  @ApiOperation({ summary: 'MT5 bridge diagnostics and connection status' })
-  @ApiOkResponse({ description: 'MT5 bridge health, latency, account info' })
+  @ApiOperation({ summary: 'MT5 bridge diagnostics — aggregate across all active brokers' })
+  @ApiOkResponse({ description: 'Aggregated MT5 bridge health across all active broker instances' })
   async getDiagnostics() {
-    const adapter = this.getMt5Adapter();
-    if (!adapter) {
-      return { connected: false, error: 'MT5 adapter not registered' };
+    // Check all active broker accounts, not just the default bridge
+    const accounts = await this.mt5Connection.getAllBrokerHealths();
+    const connected = accounts.filter((a: any) => a.health?.connected);
+    const reachable = accounts.filter((a: any) => a.reachable);
+
+    if (connected.length > 0) {
+      const best = connected[0];
+      return {
+        connected: true,
+        bridgeRunning: true,
+        bridgeError: null,
+        activeAccounts: connected.length,
+        totalAccounts: reachable.length,
+        account: best.health?.account ?? null,
+        server: best.server,
+        balance: best.health?.balance ?? null,
+        equity: best.health?.equity ?? null,
+        brokerId: best.brokerId,
+        instructions: null,
+        timestamp: new Date().toISOString(),
+      };
     }
 
-    // Check if Python bridge is even reachable
-    let bridgeReachable = false;
-    let bridgeError = '';
-    let healthData: any = null;
+    // No active account connected — try a direct health check on the first bridge
+    const adapter = this.getMt5Adapter();
     try {
       const res = await fetch(`${this.BRIDGE_URL}/health`, { signal: AbortSignal.timeout(3000) });
-      if (res.ok) {
-        bridgeReachable = true;
-        healthData = await res.json();
-      } else {
-        bridgeError = `Bridge returned HTTP ${res.status}`;
-      }
+      const healthData = res.ok ? await res.json() : null;
+      return {
+        connected: false,
+        bridgeRunning: res.ok,
+        bridgeError: res.ok ? null : `Bridge HTTP ${res.status}`,
+        activeAccounts: 0,
+        totalAccounts: reachable.length,
+        account: healthData?.account ?? null,
+        server: healthData?.server ?? null,
+        balance: null,
+        equity: null,
+        instructions: res.ok
+          ? 'Bridge is running but cannot connect to MT5. Open MetaTrader 5 and log in.'
+          : `Bridge not reachable on ${this.BRIDGE_URL}`,
+        timestamp: new Date().toISOString(),
+      };
     } catch (err: any) {
-      bridgeError = err.message || 'Bridge unreachable';
+      return {
+        connected: false,
+        bridgeRunning: false,
+        bridgeError: err.message || 'Bridge unreachable',
+        activeAccounts: 0,
+        totalAccounts: reachable.length,
+        instructions: 'No MT5 bridges are running. Start from Intranet controls.',
+        timestamp: new Date().toISOString(),
+      };
     }
-
-    const healthOk = bridgeReachable && healthData?.connected === true;
-
-    // Try to get a quote if connected
-    let quote = null;
-    if (healthOk) {
-      quote = await adapter.getQuote('EURUSD');
-    }
-
-    return {
-      connected: healthOk,
-      bridgeRunning: bridgeReachable,
-      bridgeError: bridgeReachable ? null : (bridgeError || `Bridge not reachable on ${this.BRIDGE_URL}`),
-      bridgeHealth: healthData,
-      adapterName: adapter.name,
-      circuitBreakerTripped: (adapter as any).tripped === true,
-      bridgeCircuitBreaker: healthData?.circuitBreaker ?? null,
-      consecutiveErrors: (adapter as any).consecutiveErrors ?? 0,
-      mt5PackageAvailable: healthData?.mt5Package ?? null,
-      mt5LoggedIn: healthData?.connected ?? false,
-      account: healthData?.account ?? null,
-      server: healthData?.server ?? null,
-      balance: healthData?.balance ?? null,
-      equity: healthData?.equity ?? null,
-      leverage: healthData?.leverage ?? null,
-      margin: healthData?.margin ?? null,
-      marginFree: healthData?.marginFree ?? null,
-      marginLevel: healthData?.marginLevel ?? null,
-      autoTrading: healthData?.autoTrading ?? null,
-      lastQuote: quote
-        ? {
-            symbol: quote.symbol,
-            bid: quote.bid,
-            ask: quote.ask,
-            spread: quote.ask != null && quote.bid != null
-              ? Number(((quote.ask - quote.bid) * 10000).toFixed(1))
-              : null,
-            timestamp: quote.timestamp,
-          }
-        : null,
-      instructions: !bridgeReachable
-        ? 'The MT5 Python bridge is not running. Start it: cd scripts/mt5-bridge && python mt5_bridge.py'
-        : !healthOk
-          ? 'Bridge is running but cannot connect to MT5. Open MetaTrader 5 and log in to your account.'
-          : null,
-      timestamp: new Date().toISOString(),
-    };
   }
 
   @Post('restart-bridge')

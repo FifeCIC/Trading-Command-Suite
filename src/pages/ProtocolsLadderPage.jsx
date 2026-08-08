@@ -11,9 +11,8 @@
  */
 
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
-import { apiGet } from '../core/api/client';
+import { useProtocolData } from '../core/useProtocolData';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
 import './protocols-ladder.css';
@@ -40,60 +39,69 @@ export default function ProtocolsLadderPage() {
   const [sortBy, setSortBy] = useState('top-symbol');
   const [aggSize, setAggSize] = useState(3);
 
-  const { data: protocolsData } = useQuery({
-    queryKey: ['pro-ladder-protocols'],
-    queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => ({ protocols: [] })),
-    staleTime: 60_000,
-  });
+  const { protocols: registry, runs, protoName, isLoading } = useProtocolData();
 
-  const { data: runsData, isLoading } = useQuery({
-    queryKey: ['pro-ladder-runs'],
-    queryFn: () => apiGet('/api/scoring/runs?limit=100').catch(() => ({ runs: [] })),
-    staleTime: 10_000,
-    refetchInterval: 30_000,
-  });
-
-  // Build: protocol → { topSymbol, topNScore, symbolCount, avgScore }
+  // Merge scoring data into the active protocol registry.
+  // Only active protocols appear — inactive ones are skipped.
   const protocols = useMemo(() => {
-    const runs = runsData?.runs || [];
-
-    // Group scores by protocol
-    const byProto = new Map();
+    // Build protocolId → scoring aggregates from runs
+    const scored = new Map();
     for (const run of runs) {
-      const protoId = run.strategyName || run.protocolName || run.protocolId || '—';
-      if (!run.scores?.length) continue;
-
-      if (!byProto.has(protoId)) byProto.set(protoId, []);
+      const pId = run.protocolId;
+      if (!pId || !run.scores?.length) continue;
+      if (!scored.has(pId)) scored.set(pId, []);
       for (const s of run.scores) {
-        byProto.get(protoId).push({
+        scored.get(pId).push({
           ticker: (s.ticker || s.symbol || '—').toUpperCase(),
           score: s.value ?? s.score ?? 0,
         });
       }
     }
 
-    // Compute per-protocol stats
-    const result = [];
-    for (const [protoId, scores] of byProto) {
+    // Compute aggregates per protocol
+    const aggByProto = new Map();
+    for (const [pId, scores] of scored) {
       const best = new Map();
       for (const s of scores) {
         if (!best.has(s.ticker) || s.score > best.get(s.ticker)) {
           best.set(s.ticker, s.score);
         }
       }
-
       const sorted = [...best.entries()].sort((a, b) => b[1] - a[1]);
       const topSymbol = sorted[0];
       const topN = sorted.slice(0, aggSize).reduce((sum, [, s]) => sum + s, 0);
-      const avg = sorted.length > 0 ? Math.round(sorted.reduce((sum, [, s]) => sum + s, 0) / sorted.length) : 0;
-
-      result.push({
-        protocolName: protoId,
+      const avg = sorted.length > 0
+        ? Math.round(sorted.reduce((sum, [, s]) => sum + s, 0) / sorted.length)
+        : 0;
+      aggByProto.set(pId, {
         topSymbol: topSymbol?.[0] || '—',
         topScore: topSymbol?.[1] || 0,
         topNScore: topN,
         symbolCount: sorted.length,
         avgScore: avg,
+      });
+    }
+
+    // Build result from the full registry, falling back to runs-only protocols
+    const seen = new Set();
+    const result = [];
+
+    // First: active protocols from registry
+    for (const p of registry) {
+      if (p.active === false) continue;
+      if (seen.has(p.id)) continue;
+      seen.add(p.id);
+      const agg = aggByProto.get(p.id);
+      result.push({
+        protocolId: p.id,
+        protocolName: p.name || p.id,
+        active: p.active !== false,
+        topSymbol: agg?.topSymbol || '—',
+        topScore: agg?.topScore ?? 0,
+        topNScore: agg?.topNScore ?? 0,
+        symbolCount: agg?.symbolCount ?? 0,
+        avgScore: agg?.avgScore ?? 0,
+        hasData: !!agg,
       });
     }
 
@@ -105,7 +113,7 @@ export default function ProtocolsLadderPage() {
     else if (sortBy === 'alpha') result.sort((a, b) => a.protocolName.localeCompare(b.protocolName));
 
     return result;
-  }, [protocolsData, runsData, sortBy, aggSize]);
+  }, [registry, runs, sortBy, aggSize, protoName]);
 
   return (
     <div className="pl-page">
@@ -157,20 +165,22 @@ export default function ProtocolsLadderPage() {
             </thead>
             <tbody>
               {protocols.map((p, i) => (
-                <tr key={p.protocolName}>
+                <tr key={p.protocolId} className={!p.hasData ? 'pl-no-data' : ''}>
                   <td className="pl-rank">{i + 1}</td>
                   <td className="pl-symbol">{p.protocolName}</td>
-                  <td>{p.topSymbol}</td>
+                  <td className={p.hasData ? '' : 'pl-muted'}>{p.topSymbol}</td>
                   <td>
-                    <span className="pl-bar-wrap">
-                      {scoreBar(p.topScore)}
-                      <span className={scoreClass(p.topScore)}>{p.topScore}</span>
-                    </span>
-                    {' '}{signalBadge(p.topScore)}
+                    {p.hasData ? (
+                      <span className="pl-bar-wrap">
+                        {scoreBar(p.topScore)}
+                        <span className={scoreClass(p.topScore)}>{p.topScore}</span>
+                      </span>
+                    ) : <span className="pl-muted">—</span>}
+                    {p.hasData && <> {signalBadge(p.topScore)}</>}
                   </td>
-                  <td><strong>{p.topNScore}</strong></td>
-                  <td className="pl-muted">{p.avgScore}</td>
-                  <td className="pl-muted">{p.symbolCount}</td>
+                  <td><strong>{p.hasData ? p.topNScore : '—'}</strong></td>
+                  <td className="pl-muted">{p.hasData ? p.avgScore : '—'}</td>
+                  <td className="pl-muted">{p.hasData ? p.symbolCount : '—'}</td>
                 </tr>
               ))}
             </tbody>

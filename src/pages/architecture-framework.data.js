@@ -1981,8 +1981,61 @@ export const DATABASE_SCHEMA = {
   ],
 }
 
+export const DATA_AUTHORITY = [
+  {
+    entity: 'Protocols',
+    table: 'protocols',
+    endpoint: 'GET /api/scoring/gated/protocols',
+    notes: 'Single source of truth for protocol entities. active flag, tradingStyle, directives, linkedWatchlists.',
+    antiPattern: 'Do NOT derive protocol lists from scoring runs or hardcoded maps.',
+  },
+  {
+    entity: 'Symbols',
+    table: 'symbols',
+    endpoint: 'GET /api/symbols',
+    notes: 'asset_type column is authoritative. Do NOT hardcode symbol→asset mappings in JS.',
+    antiPattern: 'Do NOT use inferAssetType() or hardcoded symbol lists.',
+  },
+  {
+    entity: 'Watchlists',
+    table: 'watchlists',
+    endpoint: 'GET /api/watchlists/:id',
+    notes: 'List endpoint returns metadata only. Use :id endpoint for symbols array.',
+    antiPattern: 'Do NOT infer symbols from protocol names.',
+  },
+  {
+    entity: 'Scores (historical)',
+    table: 'scores',
+    endpoint: 'GET /api/scoring/runs',
+    notes: 'Historical record only. For entity lookup, use protocol/strategy tables.',
+    antiPattern: 'Do NOT build protocol lists from runs. Do NOT use strategyId when protocolId is missing.',
+  },
+  {
+    entity: 'Strategies',
+    table: 'strategies',
+    endpoint: 'GET /api/trading/strategies',
+    notes: 'Trading strategies reference protocols via protocolId FK.',
+    antiPattern: 'Do NOT hardcode strategy metadata in frontend.',
+  },
+  {
+    entity: 'Brokers',
+    table: 'brokers',
+    endpoint: 'GET /api/brokers',
+    notes: 'Capabilities, supported asset types, trading styles.',
+    antiPattern: 'Do NOT maintain BROKER_FALLBACK or PROTOCOL_BROKER_MAP in JS.',
+  },
+  {
+    entity: 'Directives',
+    table: 'directives',
+    endpoint: 'GET /api/directives',
+    notes: 'directionBias, readiness tier, required data feeds.',
+    antiPattern: 'Do NOT hardcode directive metadata.',
+  },
+]
+
 export const SECTION_META = [
   { id: 'status', title: 'Status Snapshot', terms: [...STATUS_SNAPSHOT, ...CURRENT_SLICE] },
+  { id: 'data-authority', title: 'Data Authority — Source of Truth per Entity', terms: [...DATA_AUTHORITY.flatMap(e => [e.entity, e.table, e.endpoint, e.notes, e.antiPattern]), 'authority', 'source of truth', 'canonical'] },
   { id: 'index', title: 'Architecture Index — 24-Section Parity', terms: [...ARCHITECTURE_INDEX.map(item => item.name), 'parity', '24-section'] },
   { id: 'tree', title: 'Architecture Tree', terms: [...DOMAINS, ...SYSTEM_SPINE] },
   { id: 'schema', title: 'Database Schema', terms: ['database', 'schema', 'entity', 'relationship', 'table', 'foreign key', 'symbol', 'strategy', 'score', 'signal', 'market', 'import', 'directive'] },
