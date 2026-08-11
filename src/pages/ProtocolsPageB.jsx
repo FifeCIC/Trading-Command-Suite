@@ -13,20 +13,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import PageInfoPopover from '../components/PageInfoPopover';
+import { getProtocolType } from '../core/protocol-utils';
 import './protocols-page-b.css';
 
-function getProtocolType(proto) {
-  const id = (proto.id || '').toLowerCase();
-  const name = (proto.name || '').toLowerCase();
-  const combined = id + ' ' + name;
-  if (/news|sentiment|social/i.test(combined)) return { label: 'News-Reactive', color: '#f59e0b', icon: '📰' };
-  if (/analyst|earnings|whisper/i.test(combined)) return { label: 'Analyst-Driven', color: '#3b82f6', icon: '📊' };
-  if (/insider|congress/i.test(combined)) return { label: 'Insider-Aware', color: '#a855f7', icon: '🔍' };
-  if (/macro|dxy|oil|gold|commodity/i.test(combined)) return { label: 'Macro-Driven', color: '#14b8a6', icon: '🌍' };
-  return { label: 'Technical-Only', color: '#64748b', icon: '📈' };
-}
-
-export default function ProtocolsPageB() {
+export default function ProtocolsPageB({ initialProtocolId }) {
   const [selected, setSelected] = useState(null);
   const [styleFilter, setStyleFilter] = useState('All');
   const [sortOrder, setSortOrder] = useState('active-first');
@@ -49,8 +39,11 @@ export default function ProtocolsPageB() {
   }, [protocolsQuery.data]);
 
   useEffect(() => {
-    if (protocols.length > 0 && !selected) setSelected(protocols[0]);
-  }, [protocols, selected]);
+    if (protocols.length > 0 && !selected) {
+      const target = initialProtocolId ? protocols.find(p => p.id === initialProtocolId) : null;
+      setSelected(target || protocols[0]);
+    }
+  }, [protocols, selected, initialProtocolId]);
 
   const selectedProto = protocols.find(p => p.id === selected?.id) || protocols[0];
   const styles = ['All', ...new Set(protocols.map(p => p.tradingStyle).filter(Boolean))];
@@ -215,9 +208,10 @@ export default function ProtocolsPageB() {
               {/* Stats */}
               <div className="prb-stats">
                 {selectedProto.tradingStyle && <div className="prb-stat"><span className="prb-stat-val">{selectedProto.tradingStyle}</span><span className="prb-stat-lbl">Style</span></div>}
+                <div className="prb-stat"><span className="prb-stat-val">{selectedProto.directionMode || 'LONG'}</span><span className="prb-stat-lbl">Direction</span></div>
                 {selectedProto.recommendedTimeframe && <div className="prb-stat"><span className="prb-stat-val">{selectedProto.recommendedTimeframe}</span><span className="prb-stat-lbl">Timeframe</span></div>}
                 <div className="prb-stat"><span className="prb-stat-val">{selectedProto.directiveCount}</span><span className="prb-stat-lbl">Directives</span></div>
-                <div className="prb-stat"><span className="prb-stat-val">{selectedProto.maxScore?.toLocaleString() ?? 'N/A'}</span><span className="prb-stat-lbl">Max Score</span></div>
+                <div className="prb-stat"><span className="prb-stat-val">{selectedProto.maxScore?.toLocaleString() ?? 'N/A'}</span><span className="prb-stat-lbl">Total Weight</span></div>
               </div>
 
               {/* Connections */}

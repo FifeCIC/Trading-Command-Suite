@@ -158,6 +158,22 @@ export interface IDirective {
   readonly directionBias?: 'bullish' | 'bearish' | 'neutral';
 
   /**
+   * Scoring category — determines which template to use.
+   * - 'oscillator': Bounded scale (RSI, CCI, VI). Uses curve formula: weight × curve + rawValue.
+   * - 'ratio': Unbounded ratio (A/D, volume surge). Hardcoded branch thresholds.
+   * - 'pattern': Binary detection (doji, engulfing, calendar). Flat score or zero.
+   * - 'structural': Risk gates, regime checks. Modifier, not signal score.
+   */
+  readonly category?: 'oscillator' | 'ratio' | 'pattern' | 'structural';
+
+  /**
+   * Floor value — the directive always returns at least this.
+   * Prevents zero scores from looking like the directive failed.
+   * Default 0 (no floor). Typical value: 1.
+   */
+  readonly minScore?: number;
+
+  /**
    * The maximum score this directive can return.
    * Higher maxScore = more influence on the total protocol score.
    * A directive with maxScore=180 naturally carries ~2× the weight of one with maxScore=90.

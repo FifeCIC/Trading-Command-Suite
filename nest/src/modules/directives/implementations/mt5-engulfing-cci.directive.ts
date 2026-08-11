@@ -17,12 +17,15 @@ const MIN_BARS = CCI_PERIOD + 4;
 export class Mt5EngulfingCciDirective implements IDirective {
   readonly id = 'mt5-engulfing-cci';
   readonly name = 'MT5 Engulfing + CCI(37)';
+  readonly category = 'pattern' as const;
   readonly description = 'MT5-sourced engulfing pattern with CCI(37) confirmation. Pattern detected=30, confirmed=85.';
   readonly priority = 70;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 41 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

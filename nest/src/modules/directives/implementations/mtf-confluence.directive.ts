@@ -76,12 +76,15 @@ function evaluateMicro(bars: { close: number }[]): TfResult {
 export class MtfConfluenceConservativeDirective implements IDirective {
   readonly id = 'mtf-confluence-conservative';
   readonly name = 'MTF Confluence (Conservative — ALL 3 Aligned)';
+  readonly category = 'oscillator' as const;
   readonly description = 'All 3 timeframes (daily, 1h, 15m) must be bullish for BUY. High-accuracy, low-frequency. ~3-5 signals/month on SPY.';
   readonly priority = 88;
   readonly maxScore = 115;
+  readonly minScore = 1;
   readonly minBars = { '1d': 200, '1h': 50, '15m': 30 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { dayBars, hourBars, min15Bars, bars } = input;

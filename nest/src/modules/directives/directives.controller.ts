@@ -1,6 +1,7 @@
 import { Controller, Get, Patch, Post, Delete, Param, Query, Body, Logger } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { DirectivesService } from './directives.service';
+import { DirectiveConfigService } from '../scoring/directive-config.service';
 import { PrismaService } from '../../database/prisma.service';
 import { MarketDataService } from '../market-data/market-data.service';
 import { DIRECTIVE_GROUPS, SHORT_DIRECTIVE_GROUPS, BTC_SPEED_GROUPS } from './directive-groups';
@@ -10,6 +11,7 @@ import { DIRECTIVE_GROUPS, SHORT_DIRECTIVE_GROUPS, BTC_SPEED_GROUPS } from './di
 export class DirectivesController {
   constructor(
     private readonly directivesService: DirectivesService,
+    private readonly configService: DirectiveConfigService,
     private readonly prisma: PrismaService,
     private readonly marketData: MarketDataService,
   ) {}
@@ -500,5 +502,31 @@ export class DirectivesController {
     }
 
     return { stubbed: true, directiveId: id, readiness: 'alpha', note: 'Directive excluded from composites. Use reload-config or restart to apply globally.' };
+  }
+
+  // ── Directive Config (DB-backed, user-adjustable) ────
+
+  @Get('config')
+  @ApiOperation({ summary: 'Get all directive config overrides from DB' })
+  async getAllConfig() {
+    const configs = await this.configService.getAllConfigs();
+    const result: Record<string, any> = {};
+    for (const [id, config] of configs) {
+      result[id] = config;
+    }
+    return result;
+  }
+
+  @Get(':id/config')
+  @ApiOperation({ summary: 'Get DB config for a single directive' })
+  async getConfig(@Param('id') id: string) {
+    return this.configService.getConfig(id);
+  }
+
+  @Patch(':id/config')
+  @ApiOperation({ summary: 'Update DB config for a directive' })
+  async updateConfig(@Param('id') id: string, @Body() body: Record<string, any>) {
+    await this.configService.updateConfig(id, body);
+    return { directiveId: id, updated: Object.keys(body) };
   }
 }

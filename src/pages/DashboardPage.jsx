@@ -2,6 +2,8 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import SetupBanner from '../components/SetupBanner';
+import MarketContextWidget from '../components/MarketContextWidget';
+import { scoreColor } from '../core/signal-utils';
 import './home-dashboard.css'; // reuses nav-card styles
 
 export default function DashboardPage() {
@@ -120,6 +122,8 @@ export default function DashboardPage() {
   return (
     <>
       <SetupBanner />
+      {/* ── Market Context Widget ── */}
+      <MarketContextWidget />
       {/* ── Dashboard 2-Column Grid ── */}
       <div className="dash-grid">
         <div className="dash-col dash-col-main">
@@ -487,7 +491,6 @@ export default function DashboardPage() {
             ) : (
               <div className="dash-hp-list">
                 {hotPicks.slice(0, 5).map((pick, i) => {
-                  const scoreColor = pick.score >= 50 ? 'var(--color-profit)' : pick.score >= 25 ? 'var(--color-warning)' : 'var(--color-loss)';
                   return (
                     <a
                       key={pick.symbolId}
@@ -498,7 +501,7 @@ export default function DashboardPage() {
                       <span className="dash-hp-rank">#{i + 1}</span>
                       <span className="dash-hp-ticker">{pick.ticker}</span>
                       <span className="dash-hp-signal">{pick.signal === 'entry' ? '🎯' : pick.signal === 'watch' ? '👁' : '—'}</span>
-                      <span className="dash-hp-score" style={{ color: scoreColor }}>{pick.score}</span>
+                      <span className="dash-hp-score" style={{ color: scoreColor(pick.score) }}>{pick.score}</span>
                     </a>
                   );
                 })}

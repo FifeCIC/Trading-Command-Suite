@@ -18,12 +18,15 @@ const MIN_BARS = CCI_PERIOD + 4;
 export class Mt5DarkCloudPiercingDirective implements IDirective {
   readonly id = 'mt5-dark-cloud-piercing';
   readonly name = 'MT5 Dark Cloud / Piercing Line';
+  readonly category = 'pattern' as const;
   readonly description = 'Dark Cloud Cover (bearish reversal) and Piercing Line (bullish reversal) with CCI(37) confirmation.';
   readonly priority = 65;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 41 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'bearish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

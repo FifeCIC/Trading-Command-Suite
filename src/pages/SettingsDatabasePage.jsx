@@ -10,6 +10,36 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import './settings-database.css';
 
+/** Table purpose descriptions — shown on hover */
+const TABLE_PURPOSES = {
+  score:               'Every scoring event. Append-only log. strategyId=protocolId for protocol scores, strategy UUID for strategy scores. Used by runs API, directive impact, research.',
+  score_snapshot:      'Latest protocol-gated score per protocol+symbol. Used for rarity percentile computation (current score vs 1-year history). NOT filtered by Scoring Strategy gates.',
+  strategy:            'Legacy strategy definitions from WordPress era. Being migrated to TradingStrategy + ScoringStrategy.',
+  trading_strategy:    'Trading strategy configs: symbol, broker, SL/TP, position sizing. Linked to ScoringStrategy via scoringStrategyId FK.',
+  scoring_strategy:    'Scoring strategy configs: protocol, watchlist, thresholds, gates. Links protocol definitions to trading rules.',
+  protocol:            'Protocol definitions with metadata (tradingStyle, directionMode, timeframes). Linked to directive groups.',
+  protocol_directive_group: 'Directive groups within a protocol (technical, sentiment, risk). Each group has a weight and directive list.',
+  protocol_directive_entry: 'Individual directives within a protocol group. Links directive IDs to groups.',
+  directive:           'Registered directive metadata (name, readiness tier, directionBias). The directive implementations are in code, this is the registry.',
+  directiveoutcome:    'Per-directive results from each scoring run. One row per directive per symbol per tick. Used for audit and performance analysis.',
+  marketbar:           'OHLCV market data bars per symbol+timeframe. Imported from MT5 bridge and external providers.',
+  position:            'Current open positions across all brokers. Synced from MT5/T212 on each tick.',
+  trade:               'Closed trade records with P&L, duration, entry/exit prices. Used for performance analytics.',
+  order:               'Order history: placed, filled, cancelled. Links to Trade table on fill.',
+  signal:              'Trading signals generated from scores. BUY/SELL/HOLD per symbol per tick.',
+  watchlist:           'Named groups of symbols for batch scoring and strategy assignment.',
+  symbol:              'Tradable symbol registry. Ticker, exchange, asset type. Looked up by ticker for scoring.',
+  alert:               'System alerts: MT5 health, provider degradation, data staleness, P&L thresholds.',
+  automation_config:   'Per-broker automation settings: enabled, intervals, trade thresholds.',
+  decision_trail:      'Audit trail of every automation decision: scored, skipped, executed, failed. Links to ScoreSnapshot for traceability.',
+  backtest_run:        'Historical backtest results with entry signals, equity curves, and performance stats.',
+  earnings_event:      'Upcoming and historical earnings dates. Used for earnings gate in risk assessment.',
+};
+
+function tablePurpose(tableName) {
+  return TABLE_PURPOSES[tableName] || '';
+}
+
 export default function SettingsDatabasePage() {
   const [exportResult, setExportResult] = useState(null);
 
@@ -106,7 +136,7 @@ export default function SettingsDatabasePage() {
           </thead>
           <tbody>
             {configTables.map((s) => (
-              <tr key={s.table}>
+              <tr key={s.table} title={tablePurpose(s.table)} className="sdb-hoverable">
                 <td className="sdb-mono">{s.table}</td>
                 <td>{s.label}</td>
                 <td className="sdb-right">
@@ -140,7 +170,7 @@ export default function SettingsDatabasePage() {
           </thead>
           <tbody>
             {dataTables.map((s) => (
-              <tr key={s.table}>
+              <tr key={s.table} title={tablePurpose(s.table)} className="sdb-hoverable">
                 <td className="sdb-mono">{s.table}</td>
                 <td>{s.label}</td>
                 <td className="sdb-right">

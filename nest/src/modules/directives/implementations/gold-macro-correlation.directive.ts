@@ -45,14 +45,17 @@ function mapRange(v: number, inMin: number, inMax: number, outMin: number, outMa
 export class GoldMacroCorrelationDirective implements IDirective {
   readonly id = 'gold-macro-correlation';
   readonly name = 'Gold Macro Correlation';
+  readonly category = 'structural' as const;
   readonly description =
     'Hybrid: continuous DXY base for gold + yield/VIX threshold bonuses.';
   readonly priority = 55;
-  readonly maxScore = 135; // 100 base + 35 bonus max
+  readonly maxScore = 135;
+  readonly minScore = 1; // 100 base + 35 bonus max
   readonly minBars = { '1d': 20 };
-  readonly version = '2.0.0'; // Hybrid scoring
+  readonly version = '2.0.1'; // Hybrid scoring
   readonly requiredDataFeeds = ['dxy', 'treasury10y', 'vix'];
   readonly readiness = 'beta' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     let dxy = (input as any).dxyValue as number | undefined;

@@ -6,8 +6,8 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import ToggleSwitch from '../components/ToggleSwitch';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
-import './automation-dashboard.css';
-import PageInfoPopover from '../components/PageInfoPopover';
+import { formatTime } from '../core/format-utils';
+import { pnlColor } from '../core/signal-utils';
 
 export default function AutomationDashboardPage() {
   const [selectedSymbol, setSelectedSymbol] = useState(null);
@@ -96,11 +96,6 @@ export default function AutomationDashboardPage() {
   const loopRunning = loopState.loopEnabled;
   const isBusy = startMutation.isPending || stopMutation.isPending || runNowMutation.isPending;
 
-  const formatTime = (iso) => {
-    if (!iso) return '—';
-    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  };
-
   const phaseLabel = (step) => {
     const map = {
       tick_start: '🚀 Init', bars_fetched: '📊 Bars', scored: '🧮 Score',
@@ -166,9 +161,9 @@ export default function AutomationDashboardPage() {
             <span className="ad-loop-sep">·</span>
             <span>Interval: {Math.round((loopState.tickIntervalMs || 300000) / 1000)}s</span>
             <span className="ad-loop-sep">·</span>
-            <span>Last: {formatTime(loopState.lastTickAt)}</span>
+            <span>Last: {formatTime(loopState.lastTickAt, { seconds: true })}</span>
             <span className="ad-loop-sep">·</span>
-            <span>Next: {formatTime(loopState.nextTickAt)}</span>
+            <span>Next: {formatTime(loopState.nextTickAt, { seconds: true })}</span>
             {loopState.lastTickMs > 0 && (
               <>
                 <span className="ad-loop-sep">·</span>
@@ -193,7 +188,6 @@ export default function AutomationDashboardPage() {
               const balance = h?.balance ?? 0;
               const equity = h?.equity ?? balance;
               const pnl = equity - balance;
-              const pnlColor = pnl >= 0 ? '#22c55e' : '#ef4444';
               return (
                 <div key={b.brokerId} className={`ad-broker-card ${connected ? 'ad-broker-on' : 'ad-broker-off'}`}
                       title={`${b.server} — ${connected ? 'Connected' : 'Offline'} — Port ${b.url.split(':').pop()}`}>
@@ -205,7 +199,7 @@ export default function AutomationDashboardPage() {
                   {connected && (
                     <div className="ad-broker-balance">
                       <span className="ad-broker-equity">${equity.toFixed(0)}</span>
-                      {pnl !== 0 && <span className="ad-broker-pnl" style={{ color: pnlColor }}>{pnl >= 0 ? '+' : ''}{pnl.toFixed(0)}</span>}
+                      {pnl !== 0 && <span className="ad-broker-pnl" style={{ color: pnlColor(pnl) }}>{pnl >= 0 ? '+' : ''}{pnl.toFixed(0)}</span>}
                     </div>
                   )}
                 </div>

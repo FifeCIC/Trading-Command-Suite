@@ -45,13 +45,16 @@ const PROXIMITY_PCT = 0.3;      // Within 0.3% of a swing level = active zone
 export class ZigZagSwingDetectorDirective implements IDirective {
   readonly id = 'zigzag-swing-detector';
   readonly name = 'ZigZag Swing Detector';
+  readonly category = 'pattern' as const;
   readonly description =
     'Detects swing highs and lows using a 5-bar window with 0.4% minimum deviation. Scores bullish/bearish swing structure and proximity to recent swing levels. Foundation for Fibonacci retracement and dynamic S/R directives.';
   readonly priority = 78;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 5 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

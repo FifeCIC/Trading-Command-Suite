@@ -1,5 +1,6 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { DirectivesService } from './directives.service';
+import { DirectiveConfigService } from '../scoring/directive-config.service';
 import { DirectivesController } from './directives.controller';
 import { ConditionDetectorService } from './condition-detector.service';
 import { ProvidersModule } from '../providers/providers.module';
@@ -185,6 +186,7 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
   controllers: [DirectivesController],
   providers: [
     DirectivesService,
+    DirectiveConfigService,
     ConditionDetectorService,
     TimezoneService,
     // Implemented
@@ -372,6 +374,7 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
 export class DirectivesModule implements OnModuleInit {
   constructor(
     private readonly directivesService: DirectivesService,
+    private readonly configService: DirectiveConfigService,
     // Implemented
     private readonly rsi: RsiOversoldDirective,
     private readonly macd: MacdCrossoverDirective,
@@ -647,5 +650,21 @@ export class DirectivesModule implements OnModuleInit {
 
     // ── Load DB metadata onto in-memory registry (Epic #510 Phase 2) ──
     await this.directivesService.loadDirectiveMetadata();
+
+    // ── Seed directive config into global_setting (Phase 2 — user-adjustable) ──
+    const allDirectives = this.directivesService.list();
+    await this.configService.seedFromDefaults(
+      allDirectives.map((d) => ({
+        id: d.id,
+        maxScore: d.maxScore,
+        category: (d as any).category,
+        minScore: (d as any).minScore,
+        directionBias: d.directionBias,
+        priority: d.priority,
+      })),
+    );
+
+    // ── Merge DB overrides onto in-memory directives ──
+    await this.directivesService.loadDbOverrides();
   }
 }

@@ -11,10 +11,13 @@ export class FridayDriftDirective implements IDirective {
   readonly name = 'Friday Drift';
   readonly description = 'Friday bullish bias — closes higher ~58% of the time historically.';
   readonly priority = 25;
-  readonly maxScore = 10;
+  readonly maxScore = 8;
+  readonly minScore = 1;
   readonly minBars = { '1d': 5 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly category = 'pattern' as const;
+  readonly directionBias = 'bullish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const now = new Date();

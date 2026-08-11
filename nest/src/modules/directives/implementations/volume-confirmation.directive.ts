@@ -20,13 +20,16 @@ const MIN_BARS = VOLUME_MA_PERIOD + 1;
 export class VolumeConfirmationDirective implements IDirective {
   readonly id = 'volume-confirmation';
   readonly name = 'Volume Confirmation';
+  readonly category = 'ratio' as const;
   readonly description =
     'Scores symbols where recent volume exceeds the average.';
   readonly priority = 60;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 21 }; // Raised from 85 — the bonus structure in calculate() can reach 100
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

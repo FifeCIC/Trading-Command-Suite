@@ -24,11 +24,14 @@ export class AtrDipDirective implements IDirective {
   readonly id = 'atr-dip';
   readonly name = 'ATR Normalized Dip';
   readonly description = 'Hybrid: continuous ATR-depth base + sweet-spot bonuses.';
+  readonly category = 'ratio' as const;
   readonly priority = 70;
   readonly maxScore = 95;
+  readonly minScore = 1;
   readonly minBars = { '1d': 34 };
-  readonly version = '2.0.0';
+  readonly version = '2.0.1';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

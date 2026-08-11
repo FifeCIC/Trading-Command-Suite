@@ -22,12 +22,14 @@ export class BollingerBandsDirective implements IDirective {
   readonly id = 'bollinger-bands';
   readonly name = 'Bollinger Bands';
   readonly description = 'Scores price position relative to Bollinger Bands (20,2). Near lower band = bullish, near upper = bearish.';
-
+  readonly category = 'oscillator' as const;
   readonly priority = 50;
-  readonly maxScore = 100;
+  readonly maxScore = 95;
+  readonly minScore = 1;
   readonly minBars = { '1d': 22 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

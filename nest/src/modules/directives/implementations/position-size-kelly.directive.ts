@@ -21,12 +21,15 @@ import {
 export class PositionSizeKellyDirective implements IDirective {
   readonly id = 'position-size-kelly';
   readonly name = 'Kelly Position Sizing';
+  readonly category = 'structural' as const;
   readonly description =
     'Scores position size against Kelly Criterion optimal allocation. Half-Kelly is the recommended standard.';
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 20 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'alpha' as const;
+  readonly directionBias = 'neutral' as const;
   readonly priority = 55;
   readonly suitability = {
     regimeType: 'any' as const,

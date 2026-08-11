@@ -1,4 +1,6 @@
-/** Bears Power (Elder) — Low - EMA(13). Negative = bears in control. MT5 Bears Power. */
+/** Bears Power (Elder) — Low - EMA(13). Negative = bears in control. MT5 Bears Power.
+ *  Category: oscillator — Elder's indicator, bounded range.
+ */
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { ema } from '../utils/indicators';
@@ -8,11 +10,14 @@ export class BearsPowerDirective implements IDirective {
   readonly id = 'bears-power';
   readonly name = 'Bears Power (Elder)';
   readonly description = 'Low - EMA(13). Negative values signal bearish pressure. Derived from MT5 Bears Power.';
+  readonly category = 'oscillator' as const;
   readonly priority = 65;
-  readonly maxScore = 100;
+  readonly maxScore = 65;
+  readonly minScore = 1;
   readonly minBars = { '1d': 16 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const lows = input.bars.map((b) => b.low);

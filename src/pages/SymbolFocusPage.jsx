@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import { timeAgo } from '../core/format-utils';
 import './symbol-focus.css';
 
 const DECISION_COLORS = {
@@ -69,17 +70,6 @@ export default function SymbolFocusPage() {
   const fmtCurrency = (v) => {
     if (v == null) return '—';
     return (v >= 0 ? '+' : '') + Number(v).toFixed(2);
-  };
-
-  const timeAgo = (ts) => {
-    if (!ts) return '';
-    const diff = Date.now() - new Date(ts).getTime();
-    const sec = Math.floor(diff / 1000);
-    if (sec < 60) return `${sec}s ago`;
-    const min = Math.floor(sec / 60);
-    if (min < 60) return `${min}m ago`;
-    const hr = Math.floor(min / 60);
-    return `${hr}h ago`;
   };
 
   const protocolList = Object.values(protocols || {});

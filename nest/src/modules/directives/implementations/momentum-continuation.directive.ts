@@ -24,11 +24,14 @@ export class MomentumContinuationComboDirective implements IDirective {
   readonly id = 'momentum-continuation-combo';
   readonly name = 'Momentum Continuation Combo';
   readonly description = 'Composite: trend alignment (EMA20) + momentum (MACD histogram) + volume confirmation.';
+  readonly category = 'oscillator' as const;
   readonly priority = 50;
-  readonly maxScore = 100;
+  readonly maxScore = 125;
+  readonly minScore = 1;
   readonly minBars = { '1d': 40 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'bullish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

@@ -1,4 +1,6 @@
-/** Awesome Oscillator — 5-period SMA - 34-period SMA of midpoint. MT5 AO. */
+/** Awesome Oscillator — 5-period SMA - 34-period SMA of midpoint. MT5 AO.
+ *  Category: oscillator — bounded range though unbounded in theory.
+ */
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 
@@ -7,11 +9,14 @@ export class AwesomeOscillatorDirective implements IDirective {
   readonly id = 'awesome-oscillator';
   readonly name = 'Awesome Oscillator';
   readonly description = '5-bar SMA - 34-bar SMA of (H+L)/2. Positive & rising = bullish. MT5 Awesome Oscillator.';
+  readonly category = 'oscillator' as const;
   readonly priority = 65;
-  readonly maxScore = 100;
+  readonly maxScore = 75;
+  readonly minScore = 1;
   readonly minBars = { '1d': 36 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

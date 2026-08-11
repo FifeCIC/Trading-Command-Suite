@@ -38,12 +38,15 @@ export class BtcHalvingCycleDirective implements IDirective {
   readonly name = 'Bitcoin Halving Cycle';
   readonly description =
     'Scores BTC position in its 4-year halving cycle. Post-halving supply shock (0-180 days) = strongest signal. Late-cycle euphoria (540-900 days) = elevated. Pre-halving bear (900+ days) = suppressed.';
+  readonly category = 'pattern' as const;
   readonly priority = 90;
   readonly maxScore = 200;
+  readonly minScore = 1;
   readonly minBars = { '1d': 365 };
   readonly version = '2.0.0';
   readonly requiredDataFeeds = ['halving'];
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const now = input.bars?.length ? new Date(input.bars[input.bars.length - 1].timestamp) : new Date();

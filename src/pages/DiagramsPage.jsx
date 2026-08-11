@@ -14,7 +14,7 @@ const DIAGRAMS = [
     subgraph Sources["Data Sources (10 Providers)"]
         A[MT5 Bridge]
         B[Finnhub / Alpha Vantage]
-        C[DB â€” MarketBar, Earnings]
+        C[DB -- MarketBar, Earnings]
     end
     subgraph Groups["Directive Groups (99+)"]
         D[Technical 40%<br/>momentum, patterns, volume]
@@ -52,43 +52,43 @@ const DIAGRAMS = [
     label: 'M.E.T.A. Stack Trading Lifecycle',
     desc: 'M.E.T.A. Stack orchestrates the full trading lifecycle. Automation tick: Priority Queue check (Hot Stock Picks boost) → Timeline risk check → fetch bars → per-tick directive memoization cache → dual-protocol gated scoring via SEES (LONG vs SHORT) → threshold + cooldown + duplicate guard → mode dispatch (manual/semi-auto/auto) → broker execution via AdapterFactory → trade recording. Priority queue allows manual boosting of cross-protocol hot picks to be evaluated FIRST.',
     code: `flowchart TB
-    subgraph Tick["1. Automation Tick (5min)"] 
+    subgraph Tick["1. Automation Tick (5min)"]
         A[clearTickCache] --> B[Timeline Risk Check]
         B --> C[Global Risk Multiplier]
         C --> D[Fetch Bars per Symbol]
     end
-    subgraph Cache["2. Directive Memoization #408"]
-        D --> E[directivesService.runAll<br/>100 directives per symbol]
-        E --> F[Tick-scoped Map cache<br/>key: symbol + bar-signature]
-        F --> G[Subsequent callers get<br/>cached result â€” no re-execution]
+    subgraph Cache["2. Directive Memoization"]
+        D --> E[directivesService.runAll]
+        E --> F[Tick-scoped Map cache]
+        F --> G[Subsequent callers get cached result]
     end
     subgraph SEES["3. SEES Scoring Engine"]
         G --> H[rankAll: global ranking]
-        G --> I[protocol-gating scoreWithGating<br/>Groups directives per protocol]
-        G --> J[evaluateStrategy<br/>Reuses cached directive results]
-        I --> K{LONG vs SHORT?}
+        G --> I[protocol-gating scoreWithGating]
+        G --> J[evaluateStrategy]
+        I --> K["LONG vs SHORT?"]
         H --> K
-        K -->|long wins| L[BUY signal]
-        K -->|short wins| M[SELL signal]
-        K -->|both low| N[HOLD]
+        K -->|"long wins"| L[BUY signal]
+        K -->|"short wins"| M[SELL signal]
+        K -->|"both low"| N[HOLD]
     end
     subgraph Gates["4. M.E.T.A. Safety Gates"]
-        L --> O{Score >= Threshold?}
+        L --> O["Score >= Threshold?"]
         M --> O
         O -->|No| P[SKIP]
-        O -->|Yes| Q{Cooldown active?}
+        O -->|Yes| Q["Cooldown active?"]
         Q -->|Yes| P
-        Q -->|No| R{Duplicate position?}
+        Q -->|No| R["Duplicate position?"]
         R -->|Yes| S[BLOCKED]
-        R -->|No| T{Mode?}
+        R -->|No| T["Mode?"]
     end
     subgraph Dispatch["5. Mode Dispatch"]
         T -->|manual| U[LOG only]
-        T -->|semi-auto| V[QUEUED<br/>await confirm]
+        T -->|"semi-auto"| V[QUEUED await confirm]
         T -->|auto| W[Execute]
     end
     subgraph Execution["6. Broker Execution"]
-        W --> X[AdapterFactory<br/>MT5 or T212]
+        W --> X[AdapterFactory MT5 or T212]
         X --> Y[placeOrder]
         Y --> Z[Trade Recorded]
     end
@@ -97,7 +97,7 @@ const DIAGRAMS = [
   },
   {
     id: 'sees-automation',
-    label: 'M.E.T.A. Stack â€” Setup to Execution',
+    label: 'M.E.T.A. Stack -- Setup to Execution',
     desc: 'End-to-end user journey through the M.E.T.A. Stack (Modular Expert Trading Architecture). Setup: providers → watchlists → protocols → ScoringStrategy. Automation: the loop invokes SEES for scoring, then evaluates TradingStrategies (each REQUIRES a linked ScoringStrategy via FK). Decision and execution are M.E.T.A. responsibilities. 42 protocols, 7 ScoringStrategies, 35 TradingStrategies — all linked.',
     code: `flowchart TB
     subgraph SETUP["1. SETUP (User)"]
@@ -144,7 +144,7 @@ const DIAGRAMS = [
   {
     id: 'data-arch',
     label: 'Data Architecture',
-    desc: 'End-to-end data flow: 10 providers â†’ AdapterFactory (rate-limited, failover) â†’ normalized storage (MarketBar, Earnings, News, Macro) â†’ SEES directives â†’ scoring â†’ M.E.T.A. trading â†’ analytics. No raw/transform split â€” adapters normalize on ingest.',
+    desc: 'End-to-end data flow: 10 providers ->’ AdapterFactory (rate-limited, failover) ->’ normalized storage (MarketBar, Earnings, News, Macro) ->’ SEES directives ->’ scoring ->’ M.E.T.A. trading ->’ analytics. No raw/transform split -- adapters normalize on ingest.',
     code: `flowchart TB
     subgraph Ingest["Data Ingest (10 Providers)"]
         A[MT5 Bridge]
@@ -156,9 +156,9 @@ const DIAGRAMS = [
     subgraph Import["Import Layer"]
         F[AdapterFactory<br/>priority + failover]
         G[RateLimitGovernor]
-        H[FreshnessService<br/>stale? â†’ re-import]
+        H[FreshnessService<br/>stale? ->’ re-import]
     end
-    subgraph Storage["Storage (Prisma â€” 70+ models)"]
+    subgraph Storage["Storage (Prisma -- 70+ models)"]
         I[(MarketBar)]
         J[(EarningsEvent)]
         K[(NewsArticle)]
@@ -179,7 +179,7 @@ const DIAGRAMS = [
     subgraph Analytics["Analytics"]
         U[CacheInterceptor<br/>TTL per endpoint]
         V[StackPerformance<br/>MetaStack ratings]
-        W[API Responses â†’ React]
+        W[API Responses ->’ React]
     end
     Ingest --> F
     F --> G --> H
@@ -201,7 +201,7 @@ const DIAGRAMS = [
   {
     id: 'component-arch',
     label: 'Component & Route Architecture',
-    desc: 'React component tree: BrowserRouter â†’ AppShell â†’ panels â†’ 80+ pages. Zustand stores (useUiStore, useCurrentSymbolStore) + TanStack Query for server state. Routes: /:area/:view, /research/symbol/:symbolId, /.',
+    desc: 'React component tree: BrowserRouter ->’ AppShell ->’ panels ->’ 80+ pages. Zustand stores (useUiStore, useCurrentSymbolStore) + TanStack Query for server state. Routes: /:area/:view, /research/symbol/:symbolId, /.',
     code: `flowchart TB
     A[BrowserRouter] --> B[AppShell]
     B --> C[TopBar]
@@ -225,7 +225,7 @@ const DIAGRAMS = [
     subgraph Routes["Route Structure"]
         Q[/:area/:view]
         R[/research/symbol/:symbolId]
-        S[/ â†’ HomeDashboard]
+        S[/ ->’ HomeDashboard]
     end
     D --> T[NAV_TREE Config<br/>15 areas]
     F --> U[Area Nav]
@@ -237,7 +237,7 @@ const DIAGRAMS = [
   {
     id: 'deployment',
     label: 'Deployment & Infrastructure',
-    desc: 'Local development infrastructure: WAMP (Apache + MySQL), NestJS with Prisma + BullMQ, Vite PWA, MT5 Python bridge, Redis queue, Intranet task runner (PHP on Apache), and Google Drive documentation. NestJS also acts as process manager (ServerControlsPage â†’ /api/processes). GitHub Actions CI runs on push to master.',
+    desc: 'Local development infrastructure: WAMP (Apache + MySQL), NestJS with Prisma + BullMQ, Vite PWA, MT5 Python bridge, Redis queue, Intranet task runner (PHP on Apache), and Google Drive documentation. NestJS also acts as process manager (ServerControlsPage ->’ /api/processes). GitHub Actions CI runs on push to master.',
     code: `flowchart TB
     subgraph Frontend["Frontend :5173"]
         A[Vite + React 18 PWA]
@@ -254,7 +254,7 @@ const DIAGRAMS = [
     end
     subgraph WAMP["WAMP Stack :80"]
         J[Apache + PHP 8.x]
-        K[(MySQL â€” Prisma datasource)]
+        K[(MySQL -- Prisma datasource)]
         L[Intranet /intranet<br/>api-tasks.php]
     end
     subgraph Queue["Redis :6379"]
@@ -270,7 +270,7 @@ const DIAGRAMS = [
         R[.agenticmemory/SPRINT.md]
     end
     subgraph CI["GitHub Actions"]
-        S[ci.yml â€” build + lint]
+        S[ci.yml -- build + lint]
         T[Frontend + Backend jobs]
     end
     A -->|/api proxy| D
@@ -357,7 +357,7 @@ const DIAGRAMS = [
   {
     id: 'exit-signals',
     label: 'Exit Signal System',
-    desc: '5 exit-focused directives contribute scores to the composite â€” they do NOT trigger position closes automatically. Exit monitoring is planned but not yet automated. These directives run alongside entry directives in the same scoring pipeline.',
+    desc: '5 exit-focused directives contribute scores to the composite -- they do NOT trigger position closes automatically. Exit monitoring is planned but not yet automated. These directives run alongside entry directives in the same scoring pipeline.',
     code: `flowchart TB
     subgraph Market["Market Data (same DirectiveInput)"]
         A[Price Bars<br/>closes, highs, lows]
@@ -472,7 +472,7 @@ const DIAGRAMS = [
     end
     subgraph Load["CalibrationService (OnModuleInit)"]
         E[(SymbolCalibration<br/>DB Table)]
-        F[Memory Cache<br/>Map symbol:directiveId â†’ multiplier]
+        F[Memory Cache<br/>Map symbol:directiveId ->’ multiplier]
     end
     subgraph Apply["applyCalibrations(symbol, results)"]
         G[Lookup multiplier<br/>flatCache.get symbol:directiveId]
@@ -507,7 +507,7 @@ const DIAGRAMS = [
   {
     id: 'scoring-gating',
     label: 'Scoring with Protocol Gating',
-    desc: 'ProtocolGatingService.scoreWithGating(): Run all directives â†’ group by protocol â†’ compute group % (rawSum/maxSumÃ—100) â†’ weighted combine (TechÃ—0.40 + SentÃ—0.35) â†’ RiskGatingEngine applies tiered rules (hard gates veto, soft modifiers compound, regime overrides). Floor at 0.5Ã— cumulative. Output: composite 0-100, signal BUY/HOLD/SELL, rarity band.',
+    desc: 'ProtocolGatingService.scoreWithGating(): Run all directives ->’ group by protocol ->’ compute group % (rawSum/maxSumÃ—100) ->’ weighted combine (TechÃ—0.40 + SentÃ—0.35) ->’ RiskGatingEngine applies tiered rules (hard gates veto, soft modifiers compound, regime overrides). Floor at 0.5Ã— cumulative. Output: composite 0-100, signal BUY/HOLD/SELL, rarity band.',
     code: `flowchart TB
     subgraph Directives["1. Run All Directives"]
         A[DirectivesService.runAll]
@@ -525,7 +525,7 @@ const DIAGRAMS = [
     subgraph RiskEngine["4. RiskGatingEngine.apply()"]
         H{Hard Gate?<br/>budget-gate Â· position-concentration<br/>Â· liquidity-check}
         I[Soft Modifiers<br/>correlation-drag Â· dilution-impact<br/>Â· volatility-regime]
-        J[Regime Override<br/>dxy-regime â†’ directional bias]
+        J[Regime Override<br/>dxy-regime ->’ directional bias]
         K[Cascading multiply<br/>floor at 0.5Ã—]
     end
     subgraph Output["5. Output"]
@@ -566,7 +566,7 @@ const DIAGRAMS = [
         B[Trading212 pri=30<br/>quotes, candles, trades]
         C[MT5 pri=40<br/>quotes, candles, trades]
         D[Polygon pri=45<br/>quotes, candles, profiles]
-        E[Finnhub pri=50<br/>DISABLED â€” key expires]
+        E[Finnhub pri=50<br/>DISABLED -- key expires]
         F[FMP pri=50<br/>quotes, candles, fundamentals]
         G[Twelve Data pri=55<br/>quotes, candles]
         H[Yahoo pri=60<br/>no auth, quotes, candles]
@@ -578,7 +578,7 @@ const DIAGRAMS = [
     end
     subgraph Factory["AdapterFactory"]
         L[register id, ctor, config]
-        M[create id â†’ cached instance]
+        M[create id ->’ cached instance]
         N[getActive preferredId?<br/>rate-limit-aware selection]
         O[getBrokerageAdapters]
     end
@@ -670,8 +670,8 @@ const DIAGRAMS = [
   },
   {
     id: 'speed-scanner',
-    label: 'Speed Trading â€” Best Symbol Scanner',
-    desc: 'On-demand batch scanner via POST /api/speed/scan. 23 default symbols scored against their mapped protocol (60+ symbolâ†’protocol entries in SYMBOL_PROTOCOL_MAP). Includes MicroTrendDetector analysis and seasonal affinity multiplier. Route-to-trade supports quick-trade (confirm), one-click (execute), and automation (create strategy) modes.',
+    label: 'Speed Trading -- Best Symbol Scanner',
+    desc: 'On-demand batch scanner via POST /api/speed/scan. 23 default symbols scored against their mapped protocol (60+ symbol->’protocol entries in SYMBOL_PROTOCOL_MAP). Includes MicroTrendDetector analysis and seasonal affinity multiplier. Route-to-trade supports quick-trade (confirm), one-click (execute), and automation (create strategy) modes.',
     code: `flowchart TB
     subgraph Trigger["Scan Trigger (on-demand)"]
         A[POST /api/speed/scan]
@@ -685,8 +685,8 @@ const DIAGRAMS = [
         G[TSLA Â· DOGEUSD Â· DJI30 Â· UK100...]
     end
     subgraph Scanner["SpeedScanService.scan()"]
-        H[SYMBOL_PROTOCOL_MAP<br/>60+ symbolâ†’protocol entries]
-        I[Fetch bars per symbol<br/>5s â†’ fallback 1d]
+        H[SYMBOL_PROTOCOL_MAP<br/>60+ symbol->’protocol entries]
+        I[Fetch bars per symbol<br/>5s ->’ fallback 1d]
         J[Higher TF bars<br/>1d Â· 1h Â· 15m]
         K[ProtocolGatingService.scoreWithGating]
         L[SeasonalAffinityService<br/>multiply composite]
@@ -700,9 +700,9 @@ const DIAGRAMS = [
         R[skipped: reason per symbol]
     end
     subgraph Trade["Route-to-Trade (POST /api/speed/trade)"]
-        S[quick-trade â†’ confirm UI]
-        T[one-click â†’ MT5 execute]
-        U[automation â†’ create TradingStrategy]
+        S[quick-trade ->’ confirm UI]
+        T[one-click ->’ MT5 execute]
+        U[automation ->’ create TradingStrategy]
     end
     A --> H
     B --> A
@@ -715,7 +715,7 @@ const DIAGRAMS = [
   },
   {
     id: 'protocol-calendar',
-    label: 'Protocol Calendar â€” Seasonal Prioritization',
+    label: 'Protocol Calendar -- Seasonal Prioritization',
     desc: 'SeasonalAffinityService applies date-driven weight adjustments to protocol composite scores. Each protocol declares a seasonalAffinity with monthly weights (0-11) and optional dateRanges (take precedence). Formula: adjustedScore = baseScore Ã— (1 + weight). Weight range: -1.0 to +1.0. Used by ScoringService.rankAll() and SpeedScanService.scan(). 20+ protocols have seasonal affinity defined across 32 total protocols.',
     code: `flowchart TB
     subgraph Input["Date Input"]
@@ -736,11 +736,11 @@ const DIAGRAMS = [
         K[adjustedScore =<br/>baseScore Ã— multiplier]
     end
     subgraph DateRanges["Date Range Overrides (examples)"]
-        L[Santa Claus Rally<br/>Dec 24 â†’ Jan 2: +0.20]
-        M[Pre-halving rally<br/>Apr 15 â†’ Jun 15: +0.10]
-        N[Summer driving season<br/>Jun 1 â†’ Sep 30: +0.10]
-        O[Sep/Oct vol season<br/>Sep 1 â†’ Oct 31: +0.15]
-        P[Chinese New Year<br/>Jan 20 â†’ Feb 15: âˆ’0.10]
+        L[Santa Claus Rally<br/>Dec 24 ->’ Jan 2: +0.20]
+        M[Pre-halving rally<br/>Apr 15 ->’ Jun 15: +0.10]
+        N[Summer driving season<br/>Jun 1 ->’ Sep 30: +0.10]
+        O[Sep/Oct vol season<br/>Sep 1 ->’ Oct 31: +0.15]
+        P[Chinese New Year<br/>Jan 20 ->’ Feb 15: âˆ’0.10]
     end
     subgraph Monthly["Monthly Weights (June examples)"]
         Q[oil-speed-v1: +0.15]
@@ -774,12 +774,12 @@ const DIAGRAMS = [
   },
   {
     id: 'seasonality-heatmap',
-    label: 'Seasonality Heatmap â€” Hour x Day Win Rates',
-    desc: 'SeasonalityService computes a 7Ã—24 grid of bullish win rates from MT5 1m candles (2000 bar limit). Fetches via NestJS proxy to MT5 bridge. Frontend: SeasonalityHeatmapPage at /analysis/seasonality-heatmap with TanStack Query, color-coded grid, tooltip, and legend. Note: session-timing-filter directive is independent â€” it uses hardcoded session quality values, not this heatmap data.',
+    label: 'Seasonality Heatmap -- Hour x Day Win Rates',
+    desc: 'SeasonalityService computes a 7Ã—24 grid of bullish win rates from MT5 1m candles (2000 bar limit). Fetches via NestJS proxy to MT5 bridge. Frontend: SeasonalityHeatmapPage at /analysis/seasonality-heatmap with TanStack Query, color-coded grid, tooltip, and legend. Note: session-timing-filter directive is independent -- it uses hardcoded session quality values, not this heatmap data.',
     code: `flowchart TB
     subgraph Data["Data Source"]
         A[GET /api/trading/mt5/candles<br/>symbol + timeframe=1m + limit=2000]
-        B[NestJS proxy â†’ MT5 Bridge :5001]
+        B[NestJS proxy ->’ MT5 Bridge :5001]
     end
     subgraph Compute["SeasonalityService.compute()"]
         C[Parse bar timestamps]
@@ -800,7 +800,7 @@ const DIAGRAMS = [
         L[7Ã—24 color grid<br/>green >=70% Â· red <=30%]
         M[Tooltip: day, hour, %, samples]
         N[Best/Worst cell summary]
-        O[Legend: bearish â†’ bullish]
+        O[Legend: bearish ->’ bullish]
     end
     subgraph Independent["Separate System"]
         P[session-timing-filter directive<br/>hardcoded session quality<br/>US=0.9 London=0.8 Asian=0.4]
@@ -815,7 +815,7 @@ const DIAGRAMS = [
   {
     id: 'provider-failover',
     label: 'Provider Failover & Rate Limiting',
-    desc: 'AdapterFactory.getActive() uses rate-limit-aware selection across 8 registered providers (Finnhub disabled). RateLimitTracker per adapter: circuit breaker trips after 3 consecutive 429s for 2min cooldown. isUsable() = !tripped && remaining > 0. Selection: collect usable instances â†’ sort by remaining DESC â†’ pick highest headroom. Only falls back to failoverPriority order when no instances are cached.',
+    desc: 'AdapterFactory.getActive() uses rate-limit-aware selection across 8 registered providers (Finnhub disabled). RateLimitTracker per adapter: circuit breaker trips after 3 consecutive 429s for 2min cooldown. isUsable() = !tripped && remaining > 0. Selection: collect usable instances ->’ sort by remaining DESC ->’ pick highest headroom. Only falls back to failoverPriority order when no instances are cached.',
     code: `flowchart TB
     subgraph Request["getActive(preferredId?)"]
         A[Incoming data request]
@@ -946,7 +946,7 @@ const DIAGRAMS = [
         B[POST /api/earnings/import?horizon=3]
         C[ProvidersService.getAdapter alphavantage]
         D[getEarningsCalendar<br/>horizonMonths=3]
-        E[Upsert by symbol+reportDate<br/>findFirst â†’ update or create]
+        E[Upsert by symbol+reportDate<br/>findFirst ->’ update or create]
         F[Record to DataImportLog<br/>status, counts, duration]
     end
     subgraph Staleness["Auto-Refresh"]
@@ -983,7 +983,7 @@ const DIAGRAMS = [
   {
     id: 'data-flow-architecture',
     label: 'Data Flow Architecture',
-    desc: 'End-to-end data flow from 8 registered providers through DataImportOrchestrator (freshness-triggered, demand-triggered, rate-limit aware) into normalized storage (70+ Prisma models). Directives consume DB data â€” only 1 directive (crypto-fear-greed) bypasses the DB with a direct API call. MacroSnapshot, SocialMention, InsiderTransaction models exist in schema but have zero usage.',
+    desc: 'End-to-end data flow from 8 registered providers through DataImportOrchestrator (freshness-triggered, demand-triggered, rate-limit aware) into normalized storage (70+ Prisma models). Directives consume DB data -- only 1 directive (crypto-fear-greed) bypasses the DB with a direct API call. MacroSnapshot, SocialMention, InsiderTransaction models exist in schema but have zero usage.',
     code: `flowchart TB
     subgraph PROVIDER["ðŸ”Œ PROVIDER LAYER (8 registered)"] 
         MT5["MT5 Bridge<br/>unlimited, candles+quotes"]
@@ -1118,13 +1118,13 @@ const DIAGRAMS = [
     code: `flowchart TB
     subgraph TCS["Trading Command Suite"]
         direction TB
-        subgraph SEES["SEES â€” Signal Engine"]
+        subgraph SEES["SEES -- Signal Engine"]
             A["99+ Directives<br/>6 with directionBias<br/>4 bullish Â· 2 bearish"]
             B["37 Protocols<br/>3 with directionMode: SHORT_ONLY<br/>rest implicitly LONG"]
             C["Ranked Symbol Output<br/>Composite scores 0-100"]
             A --> B --> C
         end
-        subgraph MS["M.E.T.A. â€” Modular Expert Trading Architecture"]
+        subgraph MS["M.E.T.A. -- Modular Expert Trading Architecture"]
             direction TB
             subgraph ProtocolPair["Protocol Pair (LONG + SHORT)"]
                 PL["ðŸŸ¢ LONG Protocol<br/>e.g. built-in-default<br/>directionMode: LONG_ONLY"]
@@ -1224,7 +1224,7 @@ const DIAGRAMS = [
   {
     id: 'metastack-signature',
     label: 'M.E.T.A. Configuration Signature',
-    desc: 'SHA-256 hash of MetaStack components detects configuration drift. When a watchlist symbol, protocol, or risk parameter changes, the signature changes â€” warning users that performance history may be stale.',
+    desc: 'SHA-256 hash of MetaStack components detects configuration drift. When a watchlist symbol, protocol, or risk parameter changes, the signature changes -- warning users that performance history may be stale.',
     code: `flowchart TB
     subgraph Components["MetaStack Components"]
         direction LR
@@ -1366,7 +1366,7 @@ const DIAGRAMS = [
   {
     id: 'protocol-direction',
     label: 'Protocol Direction Architecture',
-    desc: 'Protocols encode trading direction via directionMode (LONG_ONLY | SHORT_ONLY | BOTH). The automation loop compares LONG vs SHORT scores to determine trade direction. No direction query parameter â€” direction is selected by choosing the right protocol.',
+    desc: 'Protocols encode trading direction via directionMode (LONG_ONLY | SHORT_ONLY | BOTH). The automation loop compares LONG vs SHORT scores to determine trade direction. No direction query parameter -- direction is selected by choosing the right protocol.',
     code: `flowchart TB
     subgraph Registry["PROTOCOL_REGISTRY"]
         direction LR
@@ -1403,7 +1403,7 @@ const DIAGRAMS = [
         T4["ðŸŸ¢ BUY signal"]
         T5{"shortScore > longScore<br/>AND above threshold?"}
         T6["ðŸ”´ SELL signal"]
-        T7["âšª HOLD â€” both below threshold"]
+        T7["âšª HOLD -- both below threshold"]
         T1 --> T3
         T2 --> T5
         T3 -->|yes| T4
@@ -1482,7 +1482,7 @@ const DIAGRAMS = [
   {
     id: 'scoring-paths',
     label: 'Scoring Paths (5 Surfaces)',
-    desc: 'Canonical as of 2026-07-29. Five scoring surfaces, each with a distinct role. Protocol-gated scoring (~14 directives) is ~7× cheaper than unfiltered rankAll (104 directives). The gated/batch pipeline is the canonical META.Stack path for trading decisions.',
+    desc: 'Canonical as of 2026-07-29. Five scoring surfaces, each with a distinct role. Protocol-gated scoring (~14 directives) is ~7x cheaper than unfiltered rankAll (104 directives). The gated/batch pipeline is the canonical META.Stack path for trading decisions.',
     code: `flowchart TB
     subgraph EntryPoints["Entry Points"]
         direction LR
@@ -1498,7 +1498,7 @@ const DIAGRAMS = [
     end
 
     subgraph Pipeline2["2. META.Stack Gated ★ CANONICAL"]
-        P2["POST /api/scoring/gated/batch<br/>~14 directives · risk gates<br/>rarity weighting · readiness filter<br/>~7× cheaper than flat"]
+        P2["POST /api/scoring/gated/batch<br/>~14 directives · risk gates<br/>rarity weighting · readiness filter<br/>~7x cheaper than flat"]
     end
 
     subgraph Pipeline3["3. Signal Envelopes"]
@@ -1657,7 +1657,9 @@ export default function DiagramsPage() {
       <div className="pf-header">
         <div>
           <h1>System Diagrams</h1>
-          <p className="pf-hint" style={{ margin: '0.25rem 0 0' }}>Architecture and workflow diagrams for the Trading Command Suite. 26 diagrams covering all major subsystems.</p>
+          <p className="pf-hint" style={{ margin: '0.25rem 0 0' }}>
+            ⚠️ CONCEPTUAL REFERENCE ONLY — These diagrams are brainstorming artifacts and may not reflect current implementation. For the canonical pipeline structure, see the META.Stack Pipeline Graph.
+          </p>
           <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
             <a href="/builder/architecture-framework" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '2px 8px', border: '1px solid var(--line)', borderRadius: 4 }}>â¬¡ Architecture Framework</a>
             <a href="/status/capability-map" style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', padding: '2px 8px', border: '1px solid var(--line)', borderRadius: 4 }}>ðŸ—ºï¸ Capability Map</a>

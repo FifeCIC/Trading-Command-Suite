@@ -11,15 +11,11 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { formatCurrency } from '../core/format-utils';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import Notice from '../components/Notice';
 import './daily-summary-report.css';
 import PageInfoPopover from '../components/PageInfoPopover';
-
-function formatCurrency(n) {
-  if (n == null) return '$0.00';
-  return '$' + Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -106,7 +102,7 @@ export default function DailySummaryReportPage() {
     lines.push('## 💼 Portfolio');
     lines.push('');
     if (diag.connected !== undefined) {
-      lines.push(`- **Balance:** ${formatCurrency(diag.balance)}  |  **Equity:** ${formatCurrency(diag.equity)}`);
+      lines.push(`- **Balance:** ${formatCurrency(diag.balance, { abs: true })}  |  **Equity:** ${formatCurrency(diag.equity, { abs: true })}`);
     }
     lines.push(`- **Open Positions:** ${positions.length} (${longs} long, ${shorts} short)`);
     lines.push(`- **Unrealized P&L:** ${totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}`);

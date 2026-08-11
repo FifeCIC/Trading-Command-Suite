@@ -20,12 +20,15 @@ const HARAMI_BODY_RATIO = 0.4; // Inner body must be < 40% of outer body
 export class Mt5HaramiDirective implements IDirective {
   readonly id = 'mt5-harami';
   readonly name = 'MT5 Harami Pattern (with RSI confirmation)';
+  readonly category = 'pattern' as const;
   readonly description = 'MT5-sourced harami reversal pattern with RSI(37) confirmation.';
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 14 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

@@ -27,11 +27,14 @@ export class PanicExhaustionAbsorptionDirective implements IDirective {
   readonly id = 'panic-exhaustion-absorption';
   readonly name = 'Panic Exhaustion & Absorption';
   readonly description = 'Detects panic → capitulation → exhaustion → stabilization sequence.';
+  readonly category = 'pattern' as const;
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 19 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'bullish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

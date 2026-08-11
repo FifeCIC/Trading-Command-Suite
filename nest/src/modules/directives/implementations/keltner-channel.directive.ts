@@ -8,11 +8,14 @@ export class KeltnerChannelDirective implements IDirective {
   readonly id = 'keltner-channel';
   readonly name = 'Keltner Channel';
   readonly description = 'EMA(20) ± 2×ATR(10). Price at lower band = oversold. Break above upper = momentum. MT5 Keltner.';
+  readonly category = 'oscillator' as const;
   readonly priority = 68;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 24 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const highs = input.bars.map((b) => b.high);

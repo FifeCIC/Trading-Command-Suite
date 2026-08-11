@@ -222,9 +222,9 @@ export class ScoreHistoryService {
       if (matchingStrategies.length > 0) where.OR.push(strategyNameFilter);
     }
 
-    // Only fetch scores from the last 7 days — prevents full-table scan of 181K+ rows
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const baseWhere: any = { timestamp: { gte: sevenDaysAgo } };
+    // Fetch scores from the last 14 days
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+    const baseWhere: any = { timestamp: { gte: fourteenDaysAgo } };
     if (Object.keys(where).length > 0) {
       baseWhere.AND = [where];
     }
@@ -232,7 +232,7 @@ export class ScoreHistoryService {
     scores = await this.prisma.score.findMany({
       where: baseWhere,
       orderBy: { timestamp: 'desc' },
-      take: 2000,
+      take: 10000,
       include: { symbol: { select: { ticker: true } } },
     });
 
@@ -391,6 +391,28 @@ export class ScoreHistoryService {
         })),
       },
     };
+  }
+
+  /**
+   * GET /api/scoring/latest-scores
+   * Lightweight: returns { [ticker]: bestScore } for all symbols in the last 30 days.
+   */
+  async getLatestScores(): Promise<Record<string, number>> {
+    if (!this.prisma.isAvailable) return {};
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const rows = await this.prisma.score.findMany({
+      where: { timestamp: { gte: thirtyDaysAgo } },
+      select: { symbol: { select: { ticker: true } }, value: true },
+      orderBy: { value: 'desc' },
+    });
+    const map: Record<string, number> = {};
+    for (const row of rows as any[]) {
+      const ticker = row.symbol?.ticker;
+      if (ticker && (!map[ticker] || row.value > map[ticker])) {
+        map[ticker] = row.value;
+      }
+    }
+    return map;
   }
 
   /**

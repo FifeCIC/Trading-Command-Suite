@@ -1,4 +1,6 @@
-/** ATR Trailing Stop — dynamic stop based on ATR multiple. MT5 ATR Trailing. */
+/** ATR Trailing Stop — dynamic stop based on ATR multiple. MT5 ATR Trailing.
+ *  Category: ratio — distance-based, no bounded scale.
+ */
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { atr } from '../utils/indicators';
@@ -8,11 +10,14 @@ export class AtrTrailingStopDirective implements IDirective {
   readonly id = 'atr-trailing-stop';
   readonly name = 'ATR Trailing Stop';
   readonly description = 'Trailing stop at 3× ATR(14) from highest high. Price above stop = trend intact. MT5 ATR Trailing.';
+  readonly category = 'ratio' as const;
   readonly priority = 64;
-  readonly maxScore = 100;
+  readonly maxScore = 85;
+  readonly minScore = 1;
   readonly minBars = { '1d': 18 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const highs = input.bars.map((b) => b.high);

@@ -1,4 +1,6 @@
-/** Accumulation/Distribution Line — cumulative volume × CLV. MT5 A/D. */
+/** Accumulation/Distribution Line — cumulative volume × CLV. MT5 A/D.
+ *  Category: ratio — trending A/D ratio, no bounded scale.
+ */
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 
@@ -7,11 +9,14 @@ export class AccumDistDirective implements IDirective {
   readonly id = 'accumulation-dist';
   readonly name = 'Accumulation/Distribution';
   readonly description = 'A/D line trending up while price flat = accumulation. Divergence = reversal signal. MT5 A/D.';
+  readonly category = 'ratio' as const;
   readonly priority = 68;
-  readonly maxScore = 100;
+  readonly maxScore = 70;
+  readonly minScore = 1;
   readonly minBars = { '1d': 22 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

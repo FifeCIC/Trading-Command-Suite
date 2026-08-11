@@ -23,11 +23,14 @@ export class BollingerBandSqueezeDirective implements IDirective {
   readonly id = 'bollinger-band-squeeze';
   readonly name = 'Bollinger Band Squeeze';
   readonly description = 'Hybrid: continuous percentile base + bonus for extreme squeezes.';
+  readonly category = 'pattern' as const;
   readonly priority = 50;
   readonly maxScore = 90;
+  readonly minScore = 1;
   readonly minBars = { '1d': 72 };
-  readonly version = '2.0.0';
+  readonly version = '2.0.1';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

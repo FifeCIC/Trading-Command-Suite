@@ -1,21 +1,32 @@
 /**
- * AutomationLoopService — broker-agnostic scoring & execution engine.
+ * AutomationLoopService — STAGE 2+3 of the META.Stack pipeline.
+ * ==============================================================
+ * ROLE: Orchestrates the full tick: score → gate → evaluate → execute.
+ *       Does NOT compute scores itself — delegates to ScoringService and
+ *       ProtocolGatingService. Does NOT execute trades directly — delegates
+ *       to TradingStrategyService.
+ *
+ * PIPELINE POSITION:
+ *   ScoringService/ProtocolGating (Stage 1) → DB
+ *   → AutomationLoop (Stage 2: gate via ScoringStrategies)
+ *   → AutomationLoop (Stage 3: evaluate via TradingStrategies)
+ *   → TradingStrategyService.execute() (Stage 4)
+ *
+ * BOUNDARY: This service READS scores and MAKES decisions. It does not
+ *           compute directive-level scores or place broker orders.
  *
  * Uses manual setInterval (not @nestjs/schedule cron) for:
  *  - Dynamic interval changes per broker
  *  - Immediate pause/resume without restart
  *  - Run-on-demand from dashboard
- *  - No extra dependencies
  *
- * Tick flow (Phase B refactored):
+ * Tick flow:
  *   1. Check Timeline → global risk multiplier
  *   2. Fetch all broker portfolios via AdapterFactory
- *   3. Score strategy-relevant symbols via ScoringService.rankAll()
- *   3b. Score watchlist symbols per ScoringStrategy with protocol gating
- *       → results cached in gatedScoreCache (NO trading — scoring only)
- *   4. Evaluate active TradingStrategies against cached scored results
- *       → dispatchTrade() handles cooldown, duplicate guard, execution
- *   5. Record all decisions + flush audit log
+ *   3. Score via ScoringService.rankAll() [delegated]
+ *   3b. Score watchlist symbols per ScoringStrategy with protocol gating [delegated]
+ *   4. Evaluate active TradingStrategies against scored results
+ *   5. Dispatch trades via TradingStrategyService [delegated]
  */
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';

@@ -11,23 +11,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet, apiPost } from '../core/api/client'
 import LoadingSkeleton from '../components/LoadingSkeleton'
-import './mt5-status.css'
+import { formatTime, timeAgo } from '../core/format-utils';
 
 const FOREX_PAIRS = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'NZDUSD']
 const STATUS_QUERY_INTERVAL = 10_000 // 10s default, not 3-5s
-
-function formatTime(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleTimeString()
-}
-
-function timeAgo(iso) {
-  if (!iso) return '—'
-  const secs = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
-  if (secs < 5) return 'Just now'
-  if (secs < 60) return `${secs}s ago`
-  return `${Math.floor(secs / 60)}m ago`
-}
 
 export default function Mt5StatusPage() {
   const [selectedSymbol, setSelectedSymbol] = useState('EURUSD')

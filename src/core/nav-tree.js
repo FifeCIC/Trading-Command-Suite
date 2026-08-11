@@ -124,6 +124,7 @@ export const NAV_TREE = {
   education: {
     label: 'Education',
     views: [
+      { id: 'glossary', label: 'Glossary', icon: '📖' },
       { id: 'candle-patterns', label: 'Pattern Detection', icon: '🕯️' },
       { id: 'candle-patterns-guide', label: 'Candle Patterns', icon: '◉' },
       { id: 'mt5-demo-trading', label: 'MT5 Demo Trading', icon: '🎮' },
@@ -164,6 +165,7 @@ export const NAV_TREE = {
       { id: 'metastack-display', label: 'META.Stack Display', icon: '📐' },
       { id: 'metastack-performance', label: 'MetaStack Performance', icon: '📊' },
       { id: 'pipeline-graph-lab', label: 'Pipeline Graph', icon: '🗺️' },
+      { id: 'meta-stack-pipeline', label: 'META.Stack Pipeline', icon: '🔗' },
       { id: 'ab-testing', label: 'A/B Protocol Testing', icon: '⚖️' },
       { id: 'directive-audit', label: 'Directive Audit', icon: '🔬' },
       { id: 'snapshot-replay', label: 'Snapshot Replay', icon: '⏮' },

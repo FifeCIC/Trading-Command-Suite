@@ -25,13 +25,16 @@ const RETURN_PERIOD = 1; // 1-bar returns
 export class SigmaScoreDirective implements IDirective {
   readonly id = 'sigma-score';
   readonly name = 'Sigma Score (Z-Score)';
+  readonly category = 'oscillator' as const;
   readonly description =
     'Z-score of log returns. ±2σ = significant, ±3σ = extreme. Mean-reversion at extremes.';
   readonly priority = 60;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 20 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

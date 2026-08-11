@@ -39,6 +39,7 @@ const WINDOW_MINUTES = 30; // How close to the open to be "active"
 export class SessionOpenEffectDirective implements IDirective {
   readonly id = 'session-open-effect';
   readonly name = 'Session Open Effect';
+  readonly category = 'pattern' as const;
   readonly description =
     'Predicts directional bias around major session opens. US open (09:30 ET) is the most impactful for crypto.';
 
@@ -69,9 +70,11 @@ export class SessionOpenEffectDirective implements IDirective {
 
   readonly priority = 74;
   readonly maxScore = 110;
+  readonly minScore = 1;
   readonly minBars = { '1d': 30 }; // Directional bias at session opens — high signal value
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   readonly suitability = {
     regimeType: 'any' as const,

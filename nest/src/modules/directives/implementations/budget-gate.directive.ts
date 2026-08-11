@@ -29,11 +29,14 @@ export class BudgetGateDirective implements IDirective {
   readonly name = 'Budget Gate';
   readonly description =
     'Gates new trade entries when the signal budget is near exhaustion. Prevents over-trading.';
+  readonly category = 'structural' as const;
   readonly priority = 90;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 20 };
-  readonly version = '1.0.0';
+  readonly version = '1.0.1';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

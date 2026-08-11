@@ -16,11 +16,14 @@ export class RegimeShiftExitDirective implements IDirective {
   readonly id = 'regime-shift-exit';
   readonly name = 'Regime Shift Exit';
   readonly description = 'Detects market structure breakdown via entropy spike. Urgent exit signal.';
+  readonly category = 'structural' as const;
   readonly priority = 80;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 40 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

@@ -11,6 +11,12 @@ const VIEW_META = {
     css: 'src/pages/home-dashboard.css',
     api: ['GET /api/providers/mt5/diagnostics', 'GET /api/providers/mt5/positions', 'GET /api/scoring/ranked'],
   },
+  '/education/glossary': {
+    label: 'Glossary',
+    file: 'src/pages/GlossaryPage.jsx',
+    css: 'src/pages/glossary-page.css',
+    api: [],
+  },
   '/trading/market-context': {
     label: 'Market Context',
     file: 'src/pages/MarketContextPage.jsx',
@@ -251,6 +257,18 @@ const VIEW_META = {
     file: 'src/pages/ThemeLabPage.jsx',
     css: 'src/pages/theme-lab.css',
     api: [],
+  },
+  '/lab/meta-stack-pipeline': {
+    label: 'META.Stack Pipeline',
+    file: 'src/pages/MetaStackPipelinePage.jsx',
+    css: 'src/pages/meta-stack-pipeline.css',
+    api: ['GET /api/health'],
+  },
+  '/settings/settings-database': {
+    label: 'Database Settings',
+    file: 'src/pages/SettingsDatabasePage.jsx',
+    css: 'src/pages/settings-database.css',
+    api: ['GET /api/system/config/stats', 'POST /api/system/config/export'],
   },
 };
 

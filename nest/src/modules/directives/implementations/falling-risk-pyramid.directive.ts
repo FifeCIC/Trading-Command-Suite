@@ -33,9 +33,12 @@ export class FallingRiskPyramidDirective implements IDirective {
     'Detects favorable trending conditions for scaling into winners with decreasing position sizes.';
   readonly priority = 72;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 30 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly category = 'structural' as const;
+  readonly directionBias = 'bullish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

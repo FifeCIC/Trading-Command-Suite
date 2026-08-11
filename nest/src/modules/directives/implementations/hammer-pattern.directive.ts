@@ -30,14 +30,17 @@ const TREND_LOOKBACK = 5;
 export class HammerPatternDirective implements IDirective {
   readonly id = 'hammer-pattern';
   readonly name = 'Hammer Pattern';
+  readonly category = 'pattern' as const;
   readonly description =
     'Detects hammer-style reversal candles — small body with long lower wick rejecting lower prices.';
 
   readonly priority = 50;
-  readonly maxScore = 100;
+  readonly maxScore = 90;
+  readonly minScore = 1;
   readonly minBars = { '1d': 6 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

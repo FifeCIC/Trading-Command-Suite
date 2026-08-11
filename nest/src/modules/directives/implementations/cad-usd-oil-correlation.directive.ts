@@ -52,12 +52,15 @@ export class CadUsdOilCorrelationDirective implements IDirective {
   readonly name = 'CAD/USD Oil Correlation';
   readonly description =
     'Hybrid: continuous DXY base for CAD pairs + oil-price threshold bonuses.';
+  readonly category = 'structural' as const;
   readonly priority = 50;
   readonly maxScore = 125; // 100 base + 25 bonus
+  readonly minScore = 1;
   readonly minBars = { '1d': 20 };
-  readonly version = '2.0.0'; // Hybrid scoring
+  readonly version = '2.0.1';
   readonly requiredDataFeeds = ['oil'];
   readonly readiness = 'beta' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     let dxy = (input as any).dxyValue as number | undefined;

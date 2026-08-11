@@ -1,4 +1,6 @@
-/** Chandelier Exit — highest high - 3× ATR. Long exit signal. MT5 Chandelier. */
+/** Chandelier Exit — highest high - 3× ATR. Long exit signal. MT5 Chandelier.
+ *  Category: ratio — distance-based, no bounded scale.
+ */
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 import { atr } from '../utils/indicators';
@@ -8,11 +10,14 @@ export class ChandelierExitDirective implements IDirective {
   readonly id = 'chandelier-exit';
   readonly name = 'Chandelier Exit';
   readonly description = 'Long exit: highest high(22) - 3×ATR(22). Price below exit = trend weakening. MT5 Chandelier Exit.';
+  readonly category = 'ratio' as const;
   readonly priority = 64;
-  readonly maxScore = 100;
+  readonly maxScore = 80;
+  readonly minScore = 1;
   readonly minBars = { '1d': 26 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const highs = input.bars.map((b) => b.high);

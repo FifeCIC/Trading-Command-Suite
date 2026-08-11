@@ -32,14 +32,17 @@ export class SocialBuzzDirective implements IDirective {
   private readonly logger = new Logger(SocialBuzzDirective.name);
   readonly id = 'social-buzz';
   readonly name = 'Social Buzz';
+  readonly category = 'structural' as const;
   readonly description =
     'Scores social media sentiment and mention volume from Reddit/Twitter. Reads from SocialMention DB table (populated by cron).';
   readonly priority = 40;
   readonly maxScore = 70;
+  readonly minScore = 1;
   readonly minBars = { '1d': 1 };
   readonly version = '1.1.0';
   readonly requiredDataFeeds = ['social'];
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   constructor(
     private readonly prisma: PrismaService,

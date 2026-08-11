@@ -18,11 +18,14 @@ export class BollingerPercentBDirective implements IDirective {
   readonly id = 'bollinger-percent-b';
   readonly name = 'Bollinger %B';
   readonly description = '%B > 0.8 = overbought (bearish). %B < 0.2 = oversold (bullish). Scores reversal probability at extremes.';
+  readonly category = 'oscillator' as const;
   readonly priority = 60;
-  readonly maxScore = 100;
+  readonly maxScore = 90;
+  readonly minScore = 1;
   readonly minBars = { '1d': 22 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

@@ -37,13 +37,16 @@ const SESSION_QUALITY: Record<string, number> = {
 export class SessionTimingFilterDirective implements IDirective {
   readonly id = 'session-timing-filter';
   readonly name = 'Session Timing Filter';
+  readonly category = 'structural' as const;
   readonly description =
     'Session-based quality multiplier. US/London sessions have highest quality. Proven filter.';
   readonly priority = 76;
   readonly maxScore = 120;
+  readonly minScore = 1;
   readonly minBars = { '1d': 1 }; // PROVEN filter — session timing > regime > HTF alignment
   readonly version = '2.0.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   constructor(private readonly marketSessions: MarketSessionsService) {}
 

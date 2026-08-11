@@ -25,13 +25,16 @@ const PRESSURE_LOOKBACK = 12;
 export class CandlePressureDirective implements IDirective {
   readonly id = 'candle-pressure';
   readonly name = 'Candle Pressure Index';
+  readonly category = 'oscillator' as const;
   readonly description =
     'CLV-based buy/sell pressure. CPI > 0.6 = bullish pressure, < 0.4 = bearish.';
   readonly priority = 52;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 10 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

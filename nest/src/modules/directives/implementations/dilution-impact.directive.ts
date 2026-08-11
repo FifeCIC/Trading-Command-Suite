@@ -38,9 +38,12 @@ export class DilutionImpactDirective implements IDirective {
     'Penalises stocks with recent share dilution. No dilution = full score. On-demand import + DB read.';
   readonly priority = 45;
   readonly maxScore = 60;
+  readonly minScore = 1;
   readonly minBars = { '1d': 1 }; // Risk penalty — lower ceiling
-  readonly version = '1.2.0';
+  readonly version = '1.3.0';
   readonly readiness = 'ready' as const;
+  readonly category = 'structural' as const;
+  readonly directionBias = 'neutral' as const;
 
   constructor(
     private readonly prisma: PrismaService,

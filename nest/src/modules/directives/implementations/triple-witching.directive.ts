@@ -10,11 +10,14 @@ export class TripleWitchingDirective implements IDirective {
   readonly id = 'triple-witching';
   readonly name = 'Triple Witching';
   readonly description = 'Quarterly options/futures expiration (Mar/Jun/Sep/Dec 3rd Friday) — elevated volume and volatility warning.';
+  readonly category = 'pattern' as const;
   readonly priority = 25;
   readonly maxScore = 5;
+  readonly minScore = 1;
   readonly minBars = { '1d': 1 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const now = new Date();

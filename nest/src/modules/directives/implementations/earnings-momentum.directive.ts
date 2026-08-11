@@ -31,11 +31,14 @@ export class EarningsMomentumDirective implements IDirective {
   readonly description =
     'Scores earnings surprise magnitude and post-earnings estimate revision trends from stored EarningsEvent records.';
   readonly priority = 55;
-  readonly maxScore = 90;
+  readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 1 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly requiredDataFeeds = ['earnings'];
   readonly readiness = 'ready' as const;
+  readonly category = 'ratio' as const;
+  readonly directionBias = 'bullish' as const;
 
   constructor(private readonly prisma: PrismaService) {}
 

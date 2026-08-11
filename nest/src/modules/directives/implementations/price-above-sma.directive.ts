@@ -27,14 +27,17 @@ const MIN_BARS = SMA_PERIOD + 2;
 export class PriceAboveSmaDirective implements IDirective {
   readonly id = 'price-above-sma';
   readonly name = 'Price Above SMA 50';
+  readonly category = 'oscillator' as const;
   readonly description =
     'Scores price position relative to 50-period SMA. Above = bullish trend. Below = bearish.';
 
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 52 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

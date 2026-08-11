@@ -10,11 +10,14 @@ export class OpexGammaDirective implements IDirective {
   readonly id = 'opex-gamma';
   readonly name = 'OpEx Gamma Pinning';
   readonly description = 'Monthly options expiration (3rd Friday) — gamma pinning suppresses directional movement. NEUTRAL bias.';
+  readonly category = 'pattern' as const;
   readonly priority = 25;
-  readonly maxScore = 10;
+  readonly maxScore = 8;
+  readonly minScore = 1;
   readonly minBars = { '1d': 20 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const now = new Date();

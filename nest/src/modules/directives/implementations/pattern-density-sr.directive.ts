@@ -22,13 +22,16 @@ const PATTERN_LOOKBACK = 30;
 export class PatternDensitySrDirective implements IDirective {
   readonly id = 'pattern-density-sr';
   readonly name = 'Pattern Density S/R';
+  readonly category = 'pattern' as const;
   readonly description =
     'Aggregates repeated pattern detections into support/resistance zones via price bin density scoring.';
   readonly priority = 55;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 40 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

@@ -19,18 +19,7 @@ const STATUS_CONFIG = {
   unknown:           { label: 'Unknown',           color: '#64748b', bg: '#64748b18', icon: '❓' },
 };
 
-function formatTime(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return '—';
-  const now = Date.now();
-  const diff = now - d.getTime();
-  if (diff < 60_000) return 'Just now';
-  if (diff < 3600_000) return `${Math.round(diff / 60_000)}m ago`;
-  if (diff < 86400_000) return `${Math.round(diff / 3600_000)}h ago`;
-  return d.toLocaleDateString();
-}
-
+import { timeAgo } from '../core/format-utils';
 function ProviderCard({ provider, isActive }) {
   const cfg = STATUS_CONFIG[provider.status] || STATUS_CONFIG.unknown;
   const credOk = provider.credentialsConfigured;
@@ -73,7 +62,7 @@ function ProviderCard({ provider, isActive }) {
         </div>
         <div className="ph-card-row">
           <span className="ph-card-key">Last Check</span>
-          <span className="ph-card-val">{formatTime(provider.checkedAt)}</span>
+          <span className="ph-card-val">{timeAgo(provider.checkedAt)}</span>
         </div>
         {provider.latencyMs != null && (
           <div className="ph-card-row">

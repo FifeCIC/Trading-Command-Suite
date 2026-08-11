@@ -29,11 +29,14 @@ export class RsiOverboughtDirective implements IDirective {
   readonly id = 'rsi-overbought';
   readonly name = 'RSI Overbought Warning';
   readonly description = 'Hybrid: continuous base + threshold bonuses for rare overbought events.';
+  readonly category = 'oscillator' as const;
   readonly priority = 50;
-  readonly maxScore = 130;
+  readonly maxScore = 140;
+  readonly minScore = 1;
   readonly minBars = { '1d': 16 };
-  readonly version = '2.0.0';
+  readonly version = '2.0.1';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'bearish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

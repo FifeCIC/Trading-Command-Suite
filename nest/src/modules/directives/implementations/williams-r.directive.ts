@@ -13,11 +13,13 @@ export class WilliamsRDirective implements IDirective {
   readonly id = 'williams-r';
   readonly name = 'Williams %R Oversold';
   readonly description = 'Williams %R < -80 signals oversold reversion. > -20 signals overbought. Derived from MT5 Williams Percent Range.';
+  readonly category = 'oscillator' as const;
   readonly directionBias = 'bearish' as const;
   readonly priority = 75;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 16 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {

@@ -22,12 +22,15 @@ const MIN_BARS = SUPPORT_LOOKBACK + PIVOT_WINDOW + 5;
 export class ConfluenceReversalComboDirective implements IDirective {
   readonly id = 'confluence-reversal-combo';
   readonly name = 'Confluence Reversal Combo';
+  readonly category = 'pattern' as const;
   readonly description = 'Composite: RSI oversold + reversal candle + near support.';
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 38 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

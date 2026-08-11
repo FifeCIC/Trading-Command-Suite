@@ -41,13 +41,16 @@ interface Gap {
 export class PriceTimeGapDirective implements IDirective {
   readonly id = 'price-time-gap';
   readonly name = 'Price Time Gap';
+  readonly category = 'pattern' as const;
   readonly description =
     'Identifies fast-moving price zones with little trading activity. Detects institutional footprints and gap-based signals.';
   readonly priority = 75;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 32 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

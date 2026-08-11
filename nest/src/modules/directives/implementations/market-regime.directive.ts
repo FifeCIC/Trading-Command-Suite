@@ -20,12 +20,15 @@ import {
 export class MarketRegimeDirective implements IDirective {
   readonly id = 'market-regime';
   readonly name = 'Market Regime Detection';
+  readonly category = 'structural' as const;
   readonly description =
     'Ensemble regime classifier: Hurst + ADX + volatility. Scores based on regime clarity and alignment.';
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 20 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
   readonly priority = 70;
   readonly suitability = {
     regimeType: 'any' as const,

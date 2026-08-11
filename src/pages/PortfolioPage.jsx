@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { timeAgo } from '../core/format-utils';
 import OrderModal from '../components/OrderModal';
 
 // ── Available data sources ──────────────────────────────────
@@ -148,14 +149,6 @@ export default function PortfolioPage() {
   const noApiKey = !unavailable && (!data?.positions || data.positions.length === 0) && (actualMode === 'mock' || actualMode === 'none');
   const error = data?.error;
 
-  const timeSinceUpdate = lastUpdated
-    ? Math.round((Date.now() - lastUpdated.getTime()) / 1000)
-    : null;
-  const timeAgo = timeSinceUpdate === null ? 'never'
-    : timeSinceUpdate < 60 ? `${timeSinceUpdate}s ago`
-    : timeSinceUpdate < 3600 ? `${Math.round(timeSinceUpdate / 60)}m ago`
-    : `${Math.round(timeSinceUpdate / 3600)}h ago`;
-
   const handleRefresh = () => {
     if (refreshCooldown > 0) return;
     portfolioQuery.refetch();
@@ -226,7 +219,7 @@ export default function PortfolioPage() {
               {currentT212Mode === 'demo' ? '🟡 DEMO' : '🟢 LIVE'}
             </span>
           )}
-          {summary?.lastRefreshed && <span className="pf-refreshed">Updated: {timeAgo}</span>}
+          {summary?.lastRefreshed && <span className="pf-refreshed">Updated: {lastUpdated ? timeAgo(lastUpdated.toISOString()) : 'never'}</span>}
         </div>
         <div className="pf-header-actions">
           <select className="pf-source-select" value={source} onChange={(e) => setSource(e.target.value)}>

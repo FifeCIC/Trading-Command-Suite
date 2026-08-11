@@ -37,10 +37,13 @@ export class FairValueGapDirective implements IDirective {
   readonly description =
     '3-candlestick imbalance detection. Identifies unfilled price zones that act as magnets.';
   readonly priority = 65;
-  readonly maxScore = 100;
+  readonly maxScore = 90;
+  readonly minScore = 1;
   readonly minBars = { '1d': 7 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly category = 'pattern' as const;
+  readonly directionBias = 'neutral' as const;
   readonly suitability = { regimeType:'any' as const, volatilityLevel:'high' as const, instrumentTypes:['stocks','crypto','indices'] as const, minTimeframe:'M15', preferredSessions:['US','London'] as const };
 
   calculate(input: DirectiveInput): DirectiveResult {

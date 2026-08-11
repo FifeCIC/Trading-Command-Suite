@@ -1,3 +1,20 @@
+/**
+ * ProtocolGatingService — STAGE 1b of the META.Stack pipeline.
+ * =============================================================
+ * ROLE: Score a symbol using only the directives registered to a specific
+ *       protocol. This is the SAME scoring stage as ScoringService, just
+ *       filtered to protocol-specific directive groups. Still computes
+ *       scores — does NOT apply ScoringStrategy gates or make trade decisions.
+ *
+ * PIPELINE POSITION:
+ *   Protocol definition → ProtocolGatingService.scoreWithGating()
+ *   → score returned (cached per tick) → ScoringStrategy applies gates later
+ *
+ * CONTRACT:
+ *   INPUT:  symbol ticker + market bars + protocolId
+ *   OUTPUT: GatedScore { composite, signal, subScores, riskMultiplier }
+ *   NEVER:  evaluates thresholds, opens positions, or persists decisions
+ */
 import { Injectable, Logger } from '@nestjs/common';
 import { DirectivesService } from '../directives/directives.service';
 import { PrismaService } from '../../database/prisma.service';
@@ -532,7 +549,8 @@ export class ProtocolGatingService {
   }
 
   /**
-   * Store a score snapshot for future rarity computations.
+   * Store a score snapshot for future rarity computations AND write
+   * to the canonical Score table so protocol scores appear in the runs API.
    * Fire-and-forget — failures are logged but don't block the response.
    */
   private storeSnapshot(
@@ -542,6 +560,7 @@ export class ProtocolGatingService {
     signal: string,
     rarityPct: number | null,
   ): void {
+    // Write to score_snapshot (rarity history)
     this.prisma.scoreSnapshot.create({
       data: {
         protocolId,
@@ -550,11 +569,33 @@ export class ProtocolGatingService {
         tradingSignal: signal,
         rarityPct,
       },
-    }).then(() => {
-      // Snapshot stored
     }).catch((err: any) => {
       this.logger.warn(`Failed to store score snapshot: ${err.message}`);
     });
+
+    // Write to canonical Score table — protocol scores identified by strategyId = protocolId
+    (async () => {
+      try {
+        const sym = await this.prisma.symbol.findFirst({ where: { ticker: symbol.toUpperCase() }, select: { id: true } });
+        if (!sym) return;
+        await (this.prisma as any).score.create({
+          data: {
+            symbolId: sym.id,
+            strategyId: protocolId, // protocol-scored: strategyId IS the protocolId
+            value: composite,
+            breakdown: {
+              protocolId,
+              signal,
+              rarityPct: rarityPct ?? null,
+              source: 'protocol-gating',
+              timestamp: new Date().toISOString(),
+            },
+          },
+        });
+      } catch (err: any) {
+        this.logger.warn(`Failed to store canonical score: ${err.message}`);
+      }
+    })();
   }
 
   /**

@@ -18,10 +18,13 @@ export class DonchianBreakoutDirective implements IDirective {
   readonly name = 'Donchian Breakout';
   readonly description = 'Donchian Channel breakout. Price > upper = new high breakout. Price < lower = breakdown. Scores momentum.';
   readonly priority = 70;
-  readonly maxScore = 100;
+  readonly maxScore = 90;
+  readonly minScore = 1;
   readonly minBars = { '1d': 22 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly category = 'oscillator' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

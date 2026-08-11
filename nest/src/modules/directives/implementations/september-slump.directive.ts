@@ -10,11 +10,14 @@ export class SeptemberSlumpDirective implements IDirective {
   readonly id = 'september-slump';
   readonly name = 'September Slump';
   readonly description = 'September bearish bias — historically the worst month for equities since 1950.';
+  readonly category = 'pattern' as const;
   readonly priority = 32;
   readonly maxScore = 20;
+  readonly minScore = 1;
   readonly minBars = { '1d': 1 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'bearish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const now = new Date();

@@ -20,18 +20,7 @@ const SIGNAL_CONFIG = {
   defensive: { label: 'Defensive', color: '#94a3b8', bg: '#94a3b818' },
 };
 
-function formatTime(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return '—';
-  const now = Date.now();
-  const diff = now - d.getTime();
-  if (diff < 60_000) return 'Just now';
-  if (diff < 3600_000) return `${Math.round(diff / 60_000)}m ago`;
-  if (diff < 86400_000) return `${Math.round(diff / 3600_000)}h ago`;
-  return d.toLocaleDateString();
-}
-
+import { timeAgo } from '../core/format-utils';
 export default function RecentlyAnalysedSymbolsPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['recently-analysed'],
@@ -103,7 +92,7 @@ export default function RecentlyAnalysedSymbolsPage() {
                       </span>
                     </td>
                     <td className="ra-num">{s.totalRuns}</td>
-                    <td className="ra-time">{formatTime(s.lastAnalysedAt)}</td>
+                    <td className="ra-time">{timeAgo(s.lastAnalysedAt)}</td>
                   </motion.tr>
                 );
               })}

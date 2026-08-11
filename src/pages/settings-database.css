@@ -48,6 +48,9 @@
   color: var(--ink-soft);
 }
 
+.sdb-hoverable { cursor: help; }
+.sdb-hoverable:hover { background: var(--line); }
+
 .sdb-hint {
   margin-top: 0.35rem;
 }

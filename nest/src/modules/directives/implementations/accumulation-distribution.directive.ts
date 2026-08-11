@@ -4,6 +4,7 @@
  * Cumulative CLV * volume. Rising A/D with flat/sideways price = accumulation.
  * Divergence between A/D and price = early reversal signal.
  * Derived from MT5 standard A/D indicator.
+ * Category: ratio — A/D slope divergence, no bounded scale.
  */
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
@@ -16,11 +17,14 @@ export class AccumulationDistributionDirective implements IDirective {
   readonly id = 'accumulation-distribution';
   readonly name = 'Accumulation/Distribution';
   readonly description = 'A/D line divergence from price. Rising A/D with flat price = accumulation. Scores divergence quality.';
+  readonly category = 'ratio' as const;
   readonly priority = 60;
-  readonly maxScore = 100;
+  readonly maxScore = 90;
+  readonly minScore = 1;
   readonly minBars = { '1d': 14 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

@@ -30,12 +30,15 @@ const BODY_AVG_PERIOD = 12;
 export class Mt5EngulfingDirective implements IDirective {
   readonly id = 'mt5-engulfing';
   readonly name = 'MT5 Engulfing Pattern (with RSI confirmation)';
+  readonly category = 'pattern' as const;
   readonly description = 'MT5-sourced engulfing pattern with RSI(37) confirmation. Proven 2-candle reversal logic from MetaQuotes Free Robots.';
   readonly priority = 55;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 14 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars, symbol } = input;

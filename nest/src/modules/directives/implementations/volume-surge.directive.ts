@@ -23,12 +23,14 @@ export class VolumeSurgeDirective implements IDirective {
   readonly id = 'volume-surge';
   readonly name = 'Volume Surge Detection';
   readonly description = 'Detects extreme volume spikes (>3x average). Surge on up day = accumulation, on down day = capitulation.';
+  readonly category = 'ratio' as const;
   readonly directionBias = 'bullish' as const;
 
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 22 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {

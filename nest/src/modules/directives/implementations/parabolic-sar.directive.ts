@@ -7,11 +7,14 @@ export class ParabolicSarDirective implements IDirective {
   readonly id = 'parabolic-sar';
   readonly name = 'Parabolic SAR';
   readonly description = 'SAR below price = uptrend. Flips signal reversal. Step 0.02, max 0.2. MT5 Parabolic SAR.';
+  readonly category = 'oscillator' as const;
   readonly priority = 70;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 12 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
   private readonly AF_STEP = 0.02;
   private readonly AF_MAX = 0.2;
 

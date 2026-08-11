@@ -12,14 +12,7 @@ import PageInfoPopover from '../components/PageInfoPopover';
 function formatMs(ms) { return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`; }
 function formatMb(mb) { return mb < 1000 ? `${mb.toFixed(1)} MB` : `${(mb / 1000).toFixed(1)} GB`; }
 function formatCount(n) { return n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : String(n); }
-function timeAgo(iso) {
-  if (!iso) return '—';
-  const sec = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
-  if (sec < 60) return `${sec}s ago`;
-  if (sec < 3600) return `${Math.round(sec / 60)}m ago`;
-  return `${Math.round(sec / 3600)}h ago`;
-}
-
+import { timeAgo } from '../core/format-utils';
 const STATUS_EMOJI = { ok: '✅', warn: '⚠️', critical: '🔴' };
 const PROVIDER_STATUS = { healthy: '🟢', degraded: '🟡', unhealthy: '🔴', unknown: '⚪' };
 const METHOD_COLOR = { GET: '#22c55e', POST: '#3b82f6', PUT: '#f59e0b', DELETE: '#ef4444' };

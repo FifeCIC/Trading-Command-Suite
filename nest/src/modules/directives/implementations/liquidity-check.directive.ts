@@ -27,13 +27,16 @@ const MIN_BARS = 20;
 export class LiquidityCheckDirective implements IDirective {
   readonly id = 'liquidity-check';
   readonly name = 'Liquidity Check';
+  readonly category = 'structural' as const;
   readonly description =
     'Penalises illiquid symbols. Rewards symbols with stable volume, tight ranges, and low gap frequency.';
   readonly priority = 65;
-  readonly maxScore = 80;
+  readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 20 }; // Risk gate — lower ceiling than directional signals
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

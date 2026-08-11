@@ -265,6 +265,12 @@ export class ScoringController {
     return this.scoreHistoryService.getRunScores(runId);
   }
 
+  /** Lightweight: best score per ticker from the last 30 days. Used by Symbols Ladder. */
+  @Get('latest-scores')
+  async getLatestScores() {
+    return this.scoreHistoryService.getLatestScores();
+  }
+
   @Post('compete')
   @ApiOperation({ summary: 'Run strategy competition — find best next move across all strategies' })
   async compete(@Body() body: { symbols?: string[]; strategies?: string[]; limit?: number }) {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet } from '../core/api/client';
+import { formatCurrency } from '../core/format-utils';
 import EmptyState from '../components/EmptyState';
 import './trading-platforms.css';
 import './accounts-dashboard.css';
@@ -100,12 +101,6 @@ export default function AccountsDashboardPage() {
   const demoTotal = demoMT5.reduce((s, a) => s + (a.balance ?? a.equity ?? 0), 0);
   const allTotal = liveTotal + demoTotal;
 
-  const formatCurrency = (val, currency) => {
-    if (val == null) return '—';
-    const sym = currency === 'GBP' ? '£' : currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '';
-    return `${sym}${Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
   const statusDot = (account) => {
     if (account.connected === false) return '🔴';
     if (account.error) return '🔴';
@@ -179,7 +174,7 @@ export default function AccountsDashboardPage() {
                 </div>
                 <div className="ad-card-body">
                   <span className="ad-card-name">Investment</span>
-                  <span className="ad-card-balance">{formatCurrency(t212Account.total, t212Account.currency)}</span>
+                  <span className="ad-card-balance">{formatCurrency(t212Account.total, { currency: t212Account.currency })}</span>
                   {t212Account.currency && <span className="ad-card-currency">{t212Account.currency}</span>}
                 </div>
                 <div className="ad-card-footer">
@@ -197,7 +192,7 @@ export default function AccountsDashboardPage() {
                 </div>
                 <div className="ad-card-body">
                   <span className="ad-card-name">Trading212 Stocks ISA</span>
-                  <span className="ad-card-balance">{formatCurrency(isaSummary.totalValueGbp, 'GBP')}</span>
+                  <span className="ad-card-balance">{formatCurrency(isaSummary.totalValueGbp, { currency: 'GBP' })}</span>
                   <span className="ad-card-currency">GBP only</span>
                 </div>
                 <div className="ad-card-footer">
@@ -219,7 +214,7 @@ export default function AccountsDashboardPage() {
                 </div>
                 <div className="ad-card-body">
                   <span className="ad-card-name">{data?.capital?.brokerName || 'CFD Account'}</span>
-                  <span className="ad-card-balance">{formatCurrency(data?.capital?.balance, data?.capital?.currency || 'GBP')}</span>
+                  <span className="ad-card-balance">{formatCurrency(data?.capital?.balance, { currency: data?.capital?.currency || 'GBP' })}</span>
                   {data?.capital?.currency && <span className="ad-card-currency">{data.capital.currency}</span>}
                 </div>
                 <div className="ad-card-footer">
@@ -240,7 +235,7 @@ export default function AccountsDashboardPage() {
             <div className="ad-isa-metrics">
               <div>
                 <span>Allowance remaining</span>
-                <strong>{formatCurrency(isaAllowance.remainingGbp, 'GBP')}</strong>
+                <strong>{formatCurrency(isaAllowance.remainingGbp, { currency: 'GBP' })}</strong>
               </div>
               <div>
                 <span>Foreign-listed holdings</span>
@@ -285,7 +280,7 @@ export default function AccountsDashboardPage() {
                     </div>
                     <div className="ad-card-body">
                       <span className="ad-card-name">📄 {acc.name || acc.broker || `Practice ${acc.login}`}</span>
-                      <span className="ad-card-balance">{formatCurrency(acc.balance ?? acc.equity, acc.currency)}</span>
+                      <span className="ad-card-balance">{formatCurrency(acc.balance ?? acc.equity, { currency: acc.currency })}</span>
                       {acc.currency && <span className="ad-card-currency">{acc.currency}</span>}
                     </div>
                     <div className="ad-card-footer">
@@ -305,11 +300,11 @@ export default function AccountsDashboardPage() {
             <h2>Net Totals</h2>
             <div className="ad-total-row">
               <span className="ad-total-label">Live Accounts</span>
-              <span className="ad-total-value">{formatCurrency(liveTotal, 'GBP')}</span>
+              <span className="ad-total-value">{formatCurrency(liveTotal, { currency: 'GBP' })}</span>
             </div>
             <div className="ad-total-row">
               <span className="ad-total-label">All Accounts (incl. practice)</span>
-              <span className="ad-total-value ad-total-all">{formatCurrency(allTotal, 'GBP')}</span>
+              <span className="ad-total-value ad-total-all">{formatCurrency(allTotal, { currency: 'GBP' })}</span>
             </div>
             {sinceLastView && <p className="ad-since-last">{sinceLastView}</p>}
           </section>

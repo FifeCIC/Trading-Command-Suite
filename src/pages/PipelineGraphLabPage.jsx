@@ -580,6 +580,9 @@ export default function PipelineGraphLabPage() {
           <PageInfoPopover>
             Click a node for documentation · Drag to pan · Hover for stats · Real-time health from APIs
           </PageInfoPopover>
+          <span style={{ marginLeft: 12, fontSize: '0.72rem' }}>
+            <a href="/lab/meta-stack-pipeline" style={{ color: 'var(--accent)', textDecoration: 'none' }}>→ META.Stack Pipeline</a>
+          </span>
         </h1>
         </div>
         <div className="pg-legend">

@@ -57,7 +57,7 @@ function hydrateFromApi(raw) {
     // ── Fields from Directives Status that are now merged here ──
     avgScore: raw.avgScore ?? null,
     runs: raw.runs ?? null,
-    bias: raw.bias ?? null,
+    bias: raw.directionBias ?? null,
     classification: raw.classification ?? 'unknown',
     performance: raw.performance ?? 'unknown',
     readiness: raw.readiness ?? 'alpha',

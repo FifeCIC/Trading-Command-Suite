@@ -17,12 +17,14 @@ export class VwapDirective implements IDirective {
   readonly id = 'vwap';
   readonly name = 'VWAP';
   readonly description = 'Price relative to VWAP. Above = bullish intraday sentiment, below = bearish.';
+  readonly category = 'oscillator' as const;
   readonly directionBias = 'bullish' as const;
 
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 5 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {

@@ -4,6 +4,7 @@
  * BASE (0–60): Continuous ADX: 0→0, 25→40, 50+→60. Every tick.
  * BONUS: ADX > 40 → +20 (very strong trend), +DI spread > 20 → +15.
  * MAX: 100.
+ * Category: oscillator — ADX has bounded 0–100 scale.
  */
 
 import { Injectable } from '@nestjs/common';
@@ -23,11 +24,14 @@ export class AdxDirective implements IDirective {
   readonly id = 'adx';
   readonly name = 'Average Directional Index';
   readonly description = 'Hybrid: continuous ADX base + trend strength bonuses.';
+  readonly category = 'oscillator' as const;
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 19 };
-  readonly version = '2.0.0';
+  readonly version = '2.0.1';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const highs = input.bars.map(b => b.high);

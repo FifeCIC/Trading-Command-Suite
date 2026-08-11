@@ -1,16 +1,22 @@
 /**
- * Symbols Ladder — All symbols across all active protocols.
- * ==========================================================
- * Direct approach: protocols → watchlists → symbols.
- * No Score table, no historical runs — just the protocol definitions.
+ * Symbols Ladder — All symbols across all active protocols with scores.
+ * =====================================================================
+ * Protocols → watchlists → symbols, enriched with latest scores from the
+ * Score table. Does NOT trigger scoring — only reads existing data.
+ *
+ * Refreshes silently using keepPreviousData to avoid content blink.
  */
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueries } from '@tanstack/react-query';
+import { keepPreviousData } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
 import './protocols-ladder.css';
+
+import { scoreClass, signalBadge } from '../core/signal-utils';
 
 export default function SymbolsLadderPage() {
   const [sortBy, setSortBy] = useState('protocol');
@@ -31,7 +37,7 @@ export default function SymbolsLadderPage() {
       // linkedWatchlists is a single string like "default", not an array
       const raw = p.linkedWatchlists;
       const ids = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
-      map[p.id] = { name: p.name || p.id, linkedWatchlistIds: ids };
+      map[p.id] = { name: p.name || p.id, linkedWatchlistIds: ids, maxScore: p.maxScore ?? 0 };
     }
     return map;
   }, [protocolsData]);
@@ -76,7 +82,18 @@ export default function SymbolsLadderPage() {
 
   const queriesLoading = watchlistQueries.some(q => q.isLoading);
 
-  // Build entries: protocol → symbol
+  // Latest scores — lightweight: { EURUSD: 1878, XAUUSD: 1829, ... }
+  const { data: scoreMapRaw } = useQuery({
+    queryKey: ['sl-scores'],
+    queryFn: () => apiGet('/api/scoring/latest-scores').catch(() => ({})),
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+    placeholderData: keepPreviousData,
+  });
+
+  const scoreMap = scoreMapRaw || {};
+
+  // Build entries: protocol → symbol, enriched with scores
   const entries = useMemo(() => {
     let result = [];
     for (const [protoId, proto] of Object.entries(protocolMap)) {
@@ -86,21 +103,27 @@ export default function SymbolsLadderPage() {
         for (const sym of symbols) {
           if (!seen.has(sym)) {
             seen.add(sym);
-            result.push({ symbol: sym.toUpperCase(), protocolId: protoId, protocolName: proto.name });
+            const ticker = sym.toUpperCase();
+            const score = scoreMap[ticker] ?? null;
+            result.push({
+              symbol: ticker,
+              protocolId: protoId,
+              protocolName: proto.name,
+              score,
+            });
           }
         }
       }
-      // Protocols without linked watchlist symbols are skipped —
-      // they need watchlist links configured before they appear here.
     }
 
     if (protocolFilter !== 'all') result = result.filter(e => e.protocolId === protocolFilter);
 
-    if (sortBy === 'alpha') result.sort((a, b) => a.symbol.localeCompare(b.symbol));
+    if (sortBy === 'score') result.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+    else if (sortBy === 'alpha') result.sort((a, b) => a.symbol.localeCompare(b.symbol));
     else if (sortBy === 'protocol') result.sort((a, b) => a.protocolName.localeCompare(b.protocolName));
 
     return result;
-  }, [protocolMap, watchlistSymbols, sortBy, protocolFilter]);
+  }, [protocolMap, watchlistSymbols, sortBy, protocolFilter, scoreMap]);
 
   const protoIds = useMemo(() => {
     const set = new Set(entries.map(e => e.protocolId));
@@ -124,6 +147,7 @@ export default function SymbolsLadderPage() {
           Sort:
           <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
             <option value="protocol">By Protocol</option>
+            <option value="score">By Score</option>
             <option value="alpha">A → Z</option>
           </select>
         </label>
@@ -143,16 +167,31 @@ export default function SymbolsLadderPage() {
         <div className="pl-table-wrap">
           <table className="pl-table">
             <thead>
-              <tr><th>#</th><th>Symbol</th><th>Protocol</th></tr>
+              <tr><th>#</th><th>Symbol</th><th>Score</th><th>Signal</th><th>Protocol</th></tr>
             </thead>
             <tbody>
-              {entries.map((e, i) => (
+              {entries.map((e, i) => {
+                const max = protocolMap[e.protocolId]?.maxScore || 1;
+                const pct = e.score != null && max > 0 ? Math.round((e.score / max) * 100) : null;
+                return (
                 <tr key={`${e.protocolId}:${e.symbol}`}>
                   <td className="pl-rank">{i + 1}</td>
                   <td className="pl-symbol">{e.symbol}</td>
-                  <td className="pl-muted">{e.protocolName}</td>
+                  <td>
+                    <span className={scoreClass(pct)}>
+                      {e.score != null ? e.score.toLocaleString() : '—'}
+                    </span>
+                    {e.score != null && max > 0 && (
+                      <span className="pl-score-max"> / {max.toLocaleString()}</span>
+                    )}
+                  </td>
+                  <td>{signalBadge(pct)}</td>
+                  <td className="pl-muted">
+                    <Link to={`/protocols/protocols-registry?proto=${encodeURIComponent(e.protocolId)}`} className="pl-proto-link">{e.protocolName}</Link>
+                  </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

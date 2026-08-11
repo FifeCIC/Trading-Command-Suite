@@ -1,0 +1,195 @@
+/* Glossary Page — glossary-page.css */
+
+.glossary-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.glossary-header {
+  margin-bottom: 1.5rem;
+}
+.glossary-header h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.5rem;
+}
+.glossary-header p {
+  margin: 0;
+  color: var(--ink-soft, #8891a5);
+  font-size: 0.92rem;
+}
+
+/* Search */
+.glossary-search-wrap {
+  margin-bottom: 1rem;
+}
+.glossary-search {
+  width: 100%;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border, #2d3040);
+  background: var(--color-panel, #1a1d2e);
+  color: var(--ink, #e0e0e0);
+  font-size: 0.92rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.glossary-search:focus {
+  border-color: var(--accent, #0ea5a6);
+}
+
+/* Category pills */
+.glossary-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+.glossary-cat {
+  padding: 0.3rem 0.7rem;
+  border-radius: 20px;
+  border: 1px solid var(--color-border, #2d3040);
+  background: var(--color-panel, #1a1d2e);
+  color: var(--ink-soft, #8891a5);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.glossary-cat:hover {
+  border-color: var(--accent, #0ea5a6);
+  color: var(--ink, #e0e0e0);
+}
+.glossary-cat.active {
+  background: var(--accent, #0ea5a6);
+  color: #fff;
+  border-color: var(--accent, #0ea5a6);
+}
+
+/* Count */
+.glossary-count {
+  font-size: 0.82rem;
+  color: var(--ink-soft, #8891a5);
+  margin: 0 0 0.75rem;
+}
+
+/* Term list */
+.glossary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1.5rem;
+}
+
+.glossary-entry {
+  border: 1px solid var(--color-border, #2d3040);
+  border-radius: 8px;
+  background: var(--color-panel, #1a1d2e);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.glossary-entry:hover {
+  border-color: var(--accent-soft, rgba(14,165,166,0.3));
+}
+.glossary-entry.expanded {
+  border-color: var(--accent, #0ea5a6);
+}
+
+.glossary-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  background: none;
+  border: none;
+  color: var(--ink, #e0e0e0);
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-align: left;
+  line-height: 1.4;
+}
+.glossary-entry-header:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.glossary-entry-arrow {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  color: var(--ink-soft, #8891a5);
+  width: 14px;
+  text-align: center;
+}
+
+.glossary-entry-term {
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.glossary-entry-term mark {
+  background: rgba(14,165,166,0.25);
+  color: var(--accent, #0ea5a6);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+.glossary-entry-cat {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 10px;
+  background: rgba(139,92,246,0.15);
+  color: #a78bfa;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.glossary-entry-aliases {
+  font-size: 0.72rem;
+  color: var(--ink-faint, #5a6070);
+  margin-left: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.glossary-entry-body {
+  padding: 0.5rem 0.75rem 0.75rem 2rem;
+  border-top: 1px solid var(--color-border, #2d3040);
+}
+.glossary-entry-body p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--ink-soft, #a1a9b5);
+}
+.glossary-entry-body mark {
+  background: rgba(14,165,166,0.25);
+  color: var(--accent, #0ea5a6);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+.glossary-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--ink-soft, #8891a5);
+}
+.glossary-empty p {
+  margin: 0.25rem 0;
+}
+
+.glossary-footer-count {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--ink-faint, #5a6070);
+}
+
+/* ── Compact mode (for overlay) ── */
+.glossary-compact {
+  max-width: none;
+  padding: 0;
+}
+.glossary-compact .glossary-header {
+  margin-bottom: 0.75rem;
+}
+.glossary-compact .glossary-header h1 {
+  font-size: 1.2rem;
+}

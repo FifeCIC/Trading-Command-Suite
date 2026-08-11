@@ -19,26 +19,7 @@ const EVENT_TYPE_STYLE = {
   protocol: { bg: '#f59e0b18', border: '#f59e0b', label: 'Protocol', icon: '🏗' },
 };
 
-function formatTime(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}
-
-function formatDuration(ms) {
-  if (!ms) return '';
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
-}
-
-function elapsedSince(date) {
-  if (!date) return '—';
-  const sec = Math.round((Date.now() - new Date(date).getTime()) / 1000);
-  if (sec < 5) return 'just now';
-  if (sec < 60) return `${sec}s ago`;
-  if (sec < 3600) return `${Math.round(sec / 60)}m ago`;
-  return `${Math.round(sec / 3600)}h ago`;
-}
-
+import { formatTime, formatDuration, timeAgo } from '../core/format-utils';
 function ProgressBar({ done, total }) {
   const pct = total > 0 ? (done / total) * 100 : 0;
   return (
@@ -65,7 +46,7 @@ function EventRow({ event }) {
         <span className="eq-event-type-badge" style={{ background: style?.bg, color: style?.border }}>
           {style?.icon} {style?.label}
         </span>
-        <span className="eq-event-time">{elapsedSince(event.timestamp)}</span>
+        <span className="eq-event-time">{timeAgo(event.timestamp)}</span>
         {event.symbol && <span className="eq-event-symbol">{event.symbol}</span>}
       </div>
       <div className="eq-event-main">
@@ -240,9 +221,9 @@ export default function ExecutionQueuePage() {
 
                   {/* Timeline */}
                   <div className="eq-job-timeline">
-                    <span className="eq-job-time">Queued: {elapsedSince(job.queuedAt)}</span>
-                    {job.startedAt && <span className="eq-job-time">Started: {formatTime(job.startedAt)}</span>}
-                    {job.completedAt && <span className="eq-job-time">Completed: {formatTime(job.completedAt)}</span>}
+                    <span className="eq-job-time">Queued: {timeAgo(job.queuedAt)}</span>
+                    {job.startedAt && <span className="eq-job-time">Started: {formatTime(job.startedAt, { seconds: true })}</span>}
+                    {job.completedAt && <span className="eq-job-time">Completed: {formatTime(job.completedAt, { seconds: true })}</span>}
                     {job.result?.durationMs > 0 && (
                       <span className="eq-job-duration">Duration: {formatDuration(job.result.durationMs)}</span>
                     )}

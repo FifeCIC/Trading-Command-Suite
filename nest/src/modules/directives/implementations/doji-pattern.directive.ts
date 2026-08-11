@@ -29,10 +29,13 @@ export class DojiPatternDirective implements IDirective {
     'Detects indecision candles where open and close are nearly equal. Scores bullish at support, bearish at resistance.';
 
   readonly priority = 50;
-  readonly maxScore = 100;
+  readonly maxScore = 85;
+  readonly minScore = 1;
   readonly minBars = { '1d': 6 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly category = 'pattern' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

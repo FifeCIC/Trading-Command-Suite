@@ -23,11 +23,14 @@ export class MfiDirective implements IDirective {
   readonly id = 'mfi';
   readonly name = 'Money Flow Index';
   readonly description = 'Hybrid: continuous base + oversold bonuses. Volume-weighted RSI.';
+  readonly category = 'oscillator' as const;
   readonly priority = 50;
-  readonly maxScore = 100;
+  readonly maxScore = 105;
+  readonly minScore = 1;
   readonly minBars = { '1d': 17 };
-  readonly version = '2.0.0';
+  readonly version = '2.0.1';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const highs = input.bars.map(b => b.high);

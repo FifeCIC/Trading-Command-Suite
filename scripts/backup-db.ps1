@@ -78,7 +78,7 @@ $credArgs = @("-u", $DB_USER, "-p$DB_PASS", "-h", $DB_HOST, "-P", $DB_PORT)
 # ── Schema dump (always) ──────────────────────────────────────
 Write-Host "Dumping schema..." -ForegroundColor Cyan
 $schemaFile = Join-Path $backupDir "schema.sql"
-& $mysqldump @credArgs --no-data --routines --triggers --events $DB_NAME 2>&1 | Out-File $schemaFile -Encoding UTF8
+& $mysqldump @credArgs --no-data --no-tablespaces --routines --triggers --events $DB_NAME 2>&1 | Out-File $schemaFile -Encoding UTF8
 Write-Host "  Schema saved: $schemaFile" -ForegroundColor Green
 
 # ── Data dump (compressed with .NET GZipStream) ───────────────
@@ -101,7 +101,7 @@ if ($Full) {
 }
 
 # Pipe mysqldump through .NET GZipStream (no external gzip needed)
-$dumpArgs = @("-u", $DB_USER, "-p$DB_PASS", "-h", $DB_HOST, "-P", $DB_PORT, "--no-create-info", "--single-transaction", "--quick", $DB_NAME) + $tables
+$dumpArgs = @("-u", $DB_USER, "-p$DB_PASS", "-h", $DB_HOST, "-P", $DB_PORT, "--no-create-info", "--no-tablespaces", "--single-transaction", "--quick", $DB_NAME) + $tables
 $proc = Start-Process -FilePath $mysqldump -ArgumentList $dumpArgs -NoNewWindow -PassThru -RedirectStandardOutput "$backupDir\temp.sql" -Wait
 
 if ($proc.ExitCode -ne 0) {

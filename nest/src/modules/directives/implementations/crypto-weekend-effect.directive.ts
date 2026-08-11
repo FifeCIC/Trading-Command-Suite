@@ -21,13 +21,16 @@ import {
 export class CryptoWeekendEffectDirective implements IDirective {
   readonly id = 'crypto-weekend-effect';
   readonly name = 'Crypto Weekend Effect';
+  readonly category = 'pattern' as const;
   readonly description =
     'Accounts for 24/7 crypto weekend dynamics: lower volume, wider spreads, manipulation risk on Saturdays/Sundays. Monday mornings offer recovery opportunities.';
   readonly priority = 30;
   readonly maxScore = 50;
+  readonly minScore = 1;
   readonly minBars = { '1d': 2 };
   readonly version = '2.0.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const now = input.bars?.length ? new Date(input.bars[input.bars.length - 1].timestamp) : new Date();

@@ -20,12 +20,15 @@ const BODY_RANGE_RATIO = 0.35; // Body < 35% of total range
 export class Mt5HammerDirective implements IDirective {
   readonly id = 'mt5-hammer';
   readonly name = 'MT5 Hammer/Shooting Star (with RSI confirmation)';
+  readonly category = 'pattern' as const;
   readonly description = 'MT5-sourced hammer and shooting star reversal patterns with RSI(37) confirmation.';
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 14 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'bullish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

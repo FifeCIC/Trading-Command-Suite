@@ -17,17 +17,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
 import './protocols-ladder.css';
 
-function scoreClass(v) {
-  if (v >= 65) return 'pl-score-high';
-  if (v >= 40) return 'pl-score-med';
-  return 'pl-score-low';
-}
-
-function signalBadge(score) {
-  if (score >= 65) return <span className="pl-badge pl-badge-buy">BUY</span>;
-  if (score >= 40) return <span className="pl-badge pl-badge-hold">HOLD</span>;
-  return <span className="pl-badge pl-badge-sell">SELL</span>;
-}
+import { scoreClass, signalBadge } from '../core/signal-utils';
 
 function scoreBar(pct) {
   const w = Math.max(4, Math.min(100, pct));

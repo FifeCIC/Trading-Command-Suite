@@ -43,10 +43,13 @@ export class FibonacciLevelsDirective implements IDirective {
   readonly description =
     'Detects price position relative to Fibonacci retracement levels (23.6-78.6%) from recent swing points. Scores bounce/reversal signals for trend continuation or failure.';
   readonly priority = 72;
-  readonly maxScore = 120;
+  readonly maxScore = 110;
+  readonly minScore = 1;
   readonly minBars = { '1d': 12 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly category = 'pattern' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

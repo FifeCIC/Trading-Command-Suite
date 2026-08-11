@@ -101,6 +101,7 @@ export const EXPERIENCE_MATRIX = {
     'theme-lab':              { beginner: false, experienced: true,  expert: true },
     'component-lab':          { beginner: false, experienced: false, expert: true },
     // Training
+    'glossary':               { beginner: true,  experienced: true,  expert: true },
     'candle-patterns':       { beginner: true,  experienced: true,  expert: true },
     'order-testing':         { beginner: false, experienced: true,  expert: true },
     'mt5-demo':              { beginner: false, experienced: true,  expert: true },

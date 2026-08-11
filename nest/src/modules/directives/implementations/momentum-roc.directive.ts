@@ -12,11 +12,14 @@ export class MomentumRocDirective implements IDirective {
   readonly id = 'momentum-roc';
   readonly name = 'Momentum (Rate of Change)';
   readonly description = 'Rate of Change over 12 bars. Strong positive/negative RoC signals momentum. Derived from MT5 Momentum.';
+  readonly category = 'oscillator' as const;
   readonly priority = 70;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 16 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map((b) => b.close);

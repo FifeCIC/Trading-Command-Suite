@@ -23,11 +23,14 @@ export class PriceActionDirective implements IDirective {
   readonly id = 'price-action';
   readonly name = 'Price Action';
   readonly description = 'Scores price position relative to MA(20), MA(50), MA(200). Above all = bullish structure.';
+  readonly category = 'pattern' as const;
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 200 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

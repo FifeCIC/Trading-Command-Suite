@@ -21,12 +21,15 @@ export class VolumeRhythmDirective implements IDirective {
   readonly id = 'volume-rhythm';
   readonly name = 'Volume Rhythm';
   readonly description = 'Day-of-week volume pattern analysis. Higher score when up-day volume exceeds down-day volume.';
+  readonly category = 'oscillator' as const;
 
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 10 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

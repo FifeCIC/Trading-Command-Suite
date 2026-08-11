@@ -34,14 +34,17 @@ export class InsiderActivityDirective implements IDirective {
   private readonly logger = new Logger(InsiderActivityDirective.name);
   readonly id = 'insider-activity';
   readonly name = 'Insider Activity';
+  readonly category = 'structural' as const;
   readonly description =
     'Scores insider buying/selling clusters. Cluster buying = strong bullish. On-demand import + DB read.';
   readonly priority = 50;
   readonly maxScore = 85;
+  readonly minScore = 1;
   readonly minBars = { '1d': 1 };
-  readonly version = '1.2.0';
+  readonly version = '1.2.1';
   readonly requiredDataFeeds = ['insider'];
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   constructor(
     private readonly prisma: PrismaService,

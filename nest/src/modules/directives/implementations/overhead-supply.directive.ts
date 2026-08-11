@@ -27,11 +27,14 @@ export class OverheadSupplyPressureDirective implements IDirective {
   readonly id = 'overhead-supply-pressure';
   readonly name = 'Overhead Supply Pressure';
   readonly description = 'Quantifies trapped overhead supply from recent top. Rewards reclaim progress.';
+  readonly category = 'pattern' as const;
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 56 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'bearish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

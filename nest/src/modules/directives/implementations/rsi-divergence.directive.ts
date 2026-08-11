@@ -34,13 +34,16 @@ interface SwingPoint {
 export class RsiDivergenceDirective implements IDirective {
   readonly id = 'rsi-divergence';
   readonly name = 'RSI Divergence Scanner';
+  readonly category = 'oscillator' as const;
   readonly description =
     'Detects bullish/bearish RSI divergence — price making new extremes while RSI fails to confirm. Strong reversal signal.';
   readonly priority = 82;
   readonly maxScore = 110;
+  readonly minScore = 1;
   readonly minBars = { '1d': 31 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map((b) => b.close);

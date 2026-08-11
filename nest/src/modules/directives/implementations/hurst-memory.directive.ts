@@ -23,13 +23,16 @@ const RS_WINDOWS = [8, 16, 32];
 export class HurstMemoryDirective implements IDirective {
   readonly id = 'hurst-memory';
   readonly name = 'Hurst Memory';
+  readonly category = 'oscillator' as const;
   readonly description =
     'Hurst exponent via R/S analysis. H>0.6 trending, H<0.4 mean-reverting.';
   readonly priority = 75;
-  readonly maxScore = 100;
+  readonly maxScore = 95;
+  readonly minScore = 1;
   readonly minBars = { '1d': 50 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

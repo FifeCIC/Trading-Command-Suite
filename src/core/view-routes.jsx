@@ -43,6 +43,8 @@ import ProtocolsPage from '../pages/ProtocolsPage.jsx';
 import ProtocolTrailPage from '../pages/ProtocolTrailPage.jsx';
 import ProtocolsLadderPage from '../pages/ProtocolsLadderPage.jsx';
 import SymbolsLadderPage from '../pages/SymbolsLadderPage.jsx';
+import ProtocolsPerformancePage from '../pages/ProtocolsPerformancePage.jsx';
+import MetaStackPipelinePage from '../pages/MetaStackPipelinePage.jsx';
 import CreateProtocolsPage from '../pages/CreateProtocolsPage.jsx';
 import StrategyLaddersPage from '../pages/StrategyLaddersPage.jsx';
 import StrategyBuilderPage from '../pages/StrategyBuilderPage.jsx';
@@ -121,6 +123,7 @@ import HealthDashboardPage from '../pages/HealthDashboardPage.jsx';
 import CommandsReferencePage from '../pages/CommandsReferencePage.jsx';
 import SetupWizardPage from '../pages/SetupWizardPage.jsx';
 import FaqPage from '../pages/FaqPage.jsx';
+import GlossaryPage from '../pages/GlossaryPage.jsx';
 import SettingsPage from '../pages/SettingsPage.jsx';
 import SettingsDatabasePage from '../pages/SettingsDatabasePage.jsx';
 import SettingsEducationPage from '../pages/SettingsEducationPage.jsx';
@@ -223,6 +226,8 @@ export const VIEW_COMPONENTS = {
   'protocol-trail': ProtocolTrailPage,
   'protocols-ladder': ProtocolsLadderPage,
   'symbols-ladder': SymbolsLadderPage,
+  'protocols-performance': ProtocolsPerformancePage,
+  'meta-stack-pipeline': MetaStackPipelinePage,
   'create-protocols': CreateProtocolsPage,
   'protocol-builder': CreateProtocolsPage,
   'strategy-builder': StrategyBuilderPage,
@@ -301,6 +306,7 @@ export const VIEW_COMPONENTS = {
   'settings': SettingsPage,
   'settings-database': SettingsDatabasePage,
   'settings-education': SettingsEducationPage,
+  'glossary': GlossaryPage,
   'server-controls': ServerControlsPage,
   'reports': ReportsPage,
   'capability-map': CapabilityMapPage,

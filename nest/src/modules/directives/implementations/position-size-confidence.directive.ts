@@ -21,12 +21,15 @@ import {
 export class PositionSizeConfidenceDirective implements IDirective {
   readonly id = 'position-size-confidence';
   readonly name = 'Confidence-Weighted Sizing';
+  readonly category = 'structural' as const;
   readonly description =
     'Rewards high-confidence protocol scores with proportionally larger position sizes.';
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 5 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
   readonly priority = 60;
   readonly suitability = {
     regimeType: 'any' as const,

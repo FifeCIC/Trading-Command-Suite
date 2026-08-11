@@ -30,18 +30,7 @@ const FEATURES = [
   { id: 'journal', label: 'Journal Analysis' },
 ];
 
-function timeAgo(iso) {
-  if (!iso) return '';
-  const diff = Date.now() - new Date(iso).getTime();
-  const s = Math.floor(diff / 1000);
-  if (s < 60) return 'just now';
-  const m = Math.floor(s / 60);
-  if (m < 60) return m + 'm ago';
-  const h = Math.floor(m / 60);
-  if (h < 24) return h + 'h ago';
-  return Math.floor(h / 24) + 'd ago';
-}
-
+import { timeAgo } from '../core/format-utils';
 export default function AILogViewerPage() {
   const [providerFilter, setProviderFilter] = useState('');
   const [featureFilter, setFeatureFilter] = useState('');

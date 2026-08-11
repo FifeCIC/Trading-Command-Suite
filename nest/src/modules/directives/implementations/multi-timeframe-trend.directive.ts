@@ -35,13 +35,16 @@ const MIN_BARS = 20;
 export class MultiTimeframeTrendDirective implements IDirective {
   readonly id = 'multi-timeframe-trend';
   readonly name = 'Multi-Timeframe Trend Alignment';
+  readonly category = 'oscillator' as const;
   readonly description =
     'Scores trend alignment across daily, hourly, and 15M timeframes using EMA structure, ADX strength, and VWAP position. Higher confidence when all timeframes agree.';
   readonly priority = 80;
   readonly maxScore = 120;
+  readonly minScore = 1;
   readonly minBars = { '1d': 20, '1h': 20, '15m': 20 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { dayBars, hourBars, min15Bars } = input;

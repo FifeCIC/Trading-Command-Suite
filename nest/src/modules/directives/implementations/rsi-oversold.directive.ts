@@ -35,13 +35,16 @@ function mapRange(v: number, inMin: number, inMax: number, outMin: number, outMa
 export class RsiOversoldDirective implements IDirective {
   readonly id = 'rsi-oversold';
   readonly name = 'RSI Oversold Reversion';
+  readonly category = 'oscillator' as const;
   readonly description =
     'Hybrid scoring: continuous base (RSI 70→0pts, 30→50pts) + threshold bonuses for rare oversold events.';
   readonly priority = 85;
-  readonly maxScore = 130; // 50 base + 80 extreme bonus
+  readonly maxScore = 140;
+  readonly minScore = 1; // 50 base + 80 extreme bonus
   readonly minBars = { '1d': 16 };
-  readonly version = '2.0.0'; // Hybrid scoring
+  readonly version = '2.0.1'; // Hybrid scoring
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'bullish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map((b) => b.close);

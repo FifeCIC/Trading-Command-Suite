@@ -40,13 +40,16 @@ const EXTREME_GAP = 5.0;   // % — news-driven, unpredictable
 export class GapScannerDirective implements IDirective {
   readonly id = 'gap-scanner';
   readonly name = 'Pre-Market Gap Scanner';
+  readonly category = 'pattern' as const;
   readonly description =
     'Detects overnight/opening price gaps. Small gaps (0.5-2%) tend to fill — fade the gap. Large gaps (>2%) may gap-and-go — follow momentum. Extreme gaps (>5%) are news-driven and unpredictable.';
   readonly priority = 72;
-  readonly maxScore = 100;
+  readonly maxScore = 90;
+  readonly minScore = 1;
   readonly minBars = { '1d': 2 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars, dayBars } = input;

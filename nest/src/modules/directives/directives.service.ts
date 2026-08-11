@@ -13,6 +13,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { DirectiveConfigService } from '../scoring/directive-config.service';
 import {
   ConditionVector,
   DirectiveInput,
@@ -37,7 +38,41 @@ export class DirectivesService {
   constructor(
     private readonly conditionDetector: ConditionDetectorService,
     private readonly prisma: PrismaService,
+    private readonly configService: DirectiveConfigService,
   ) {}
+
+  /** Merge DB-stored directive config over class defaults. Called after all directives registered. */
+  async loadDbOverrides(): Promise<number> {
+    const configs = await this.configService.getAllConfigs();
+    let overridden = 0;
+    for (const [id, directive] of this.registry) {
+      const dbConfig = configs.get(id);
+      if (!dbConfig) continue;
+      let changed = false;
+      if (dbConfig.maxScore !== undefined && directive.maxScore !== dbConfig.maxScore) {
+        (directive as any).maxScore = dbConfig.maxScore;
+        changed = true;
+      }
+      if (dbConfig.minScore !== undefined && (directive as any).minScore !== dbConfig.minScore) {
+        (directive as any).minScore = dbConfig.minScore;
+        changed = true;
+      }
+      if (dbConfig.priority !== undefined && directive.priority !== dbConfig.priority) {
+        (directive as any).priority = dbConfig.priority;
+        changed = true;
+      }
+      if (dbConfig.directionBias && directive.directionBias !== dbConfig.directionBias) {
+        (directive as any).directionBias = dbConfig.directionBias;
+        changed = true;
+      }
+      if (changed) {
+        overridden++;
+        this.logger.debug(`DB override applied to ${id}`);
+      }
+    }
+    if (overridden > 0) this.logger.log(`Loaded DB overrides for ${overridden} directives`);
+    return overridden;
+  }
 
   getLastConditionVector(): ConditionVector | null {
     return this.lastConditionVector;

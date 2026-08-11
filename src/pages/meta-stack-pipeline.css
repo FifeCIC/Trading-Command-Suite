@@ -1,0 +1,85 @@
+/* META.Stack Pipeline Graph — meta-stack-pipeline.css */
+.msp-page { padding: 1rem 1.5rem; color: var(--ink); }
+.msp-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+.msp-header h1 { margin: 0; font-size: 1.15rem; }
+.msp-subtitle { font-size: 0.78rem; color: var(--ink-soft); margin: 0.25rem 0 0; }
+.msp-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--ink-soft); cursor: pointer; }
+.msp-toggle input { accent-color: var(--accent); }
+
+/* Canvas */
+.msp-canvas {
+  position: relative; height: 520px; overflow: auto;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--bg);
+}
+
+/* Lanes */
+.msp-lane {
+  position: absolute; top: 0; height: 100%;
+  border-right: 1px solid;
+  overflow: hidden;
+}
+.msp-lane-header {
+  padding: 8px 12px; font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--line);
+}
+.msp-lane-bg {
+  position: absolute; top: 36px; left: 0; right: 0; bottom: 0;
+  opacity: 0.12; pointer-events: none; padding: 1rem;
+}
+.msp-lane-bg svg { width: 100%; height: 100%; }
+
+/* Nodes */
+.msp-node {
+  position: absolute; left: 8px; right: 8px;
+  padding: 8px 10px; border-radius: 8px; border-width: 2px;
+  background: var(--panel); cursor: pointer;
+  transition: all 0.15s; z-index: 2;
+}
+.msp-node:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.msp-node-selected { box-shadow: 0 0 0 2px var(--accent); }
+.msp-node-planned { opacity: 0.7; }
+.msp-node-label { font-size: 0.78rem; font-weight: 700; color: var(--ink); }
+.msp-node-subtype { font-size: 0.68rem; color: var(--ink-soft); margin-top: 2px; }
+.msp-node-badge {
+  position: absolute; top: 4px; right: 6px;
+  font-size: 0.55rem; font-weight: 700; text-transform: uppercase;
+  padding: 1px 5px; border-radius: 3px;
+  background: rgba(245,158,11,0.15); color: #f59e0b;
+}
+
+/* Arrows */
+.msp-arrows { z-index: 1; }
+
+/* Detail panel */
+.msp-detail {
+  margin-top: 1rem; padding: 1rem;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--panel); position: relative;
+}
+.msp-detail h3 { margin: 0 0 0.5rem; font-size: 0.95rem; }
+.msp-detail-badge {
+  font-size: 0.6rem; text-transform: uppercase; padding: 1px 6px; border-radius: 3px;
+  vertical-align: middle;
+}
+.msp-detail-badge.implemented { background: rgba(34,197,94,0.12); color: #22c55e; }
+.msp-detail-badge.planned { background: rgba(245,158,11,0.12); color: #f59e0b; }
+.msp-detail-desc { font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 0.75rem; }
+.msp-detail-section { margin-bottom: 0.5rem; }
+.msp-detail-section strong { display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px; }
+.msp-detail-code {
+  display: block; font-size: 0.72rem; padding: 2px 0;
+  color: var(--ink); font-family: 'SF Mono', 'Consolas', monospace;
+}
+.msp-detail-close {
+  position: absolute; top: 8px; right: 10px;
+  background: none; border: none; color: var(--ink-soft);
+  font-size: 1rem; cursor: pointer; padding: 2px 6px; min-height: auto;
+}
+.msp-detail-close:hover { color: var(--ink); }
+.msp-detail-link {
+  font-size: 0.78rem; color: var(--accent); text-decoration: none;
+  font-family: 'SF Mono', 'Consolas', monospace;
+}
+.msp-detail-link:hover { text-decoration: underline; }

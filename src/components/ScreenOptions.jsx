@@ -13,6 +13,7 @@ import { apiGet } from '../core/api/client';
 import { usePreferences } from '../core/hooks/usePreferences';
 import { VIEW_EXPLANATIONS } from '../core/view-explanations';
 import EmptyState from './EmptyState';
+import GlossaryPage from '../pages/GlossaryPage';
 import './notification-disc.css';
 import './screen-options.css';
 
@@ -265,6 +266,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
   var [calcOpen, setCalcOpen] = useState(false);
   var [notifOpen, setNotifOpen] = useState(false);
   var [infoOpen, setInfoOpen] = useState(false);
+  var [glossaryOpen, setGlossaryOpen] = useState(false);
   var [dismissed, setDismissed] = useState(new Set());
   var viewExplanation = activeView ? VIEW_EXPLANATIONS[activeView] : null;
 
@@ -448,6 +450,15 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
             )}
           </div>
         )}
+        <button
+          className="ksh-trigger"
+          onClick={() => setGlossaryOpen((v) => !v)}
+          title="Trading Glossary"
+          aria-label="Open trading glossary"
+          style={{ right: 174 }}
+        >
+          📖
+        </button>
         <button
           className={`so-gear-btn ${isOpen ? 'so-gear-active' : ''}`}
           onClick={onToggle}
@@ -646,6 +657,37 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Glossary Overlay ── */}
+      <AnimatePresence>
+        {glossaryOpen && (
+          <motion.div
+            className="ksh-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            onClick={(e) => { if (e.target === e.currentTarget) setGlossaryOpen(false); }}
+          >
+            <motion.div
+              className="ksh-modal"
+              initial={{ opacity: 0, scale: 0.92, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 20 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              style={{ maxWidth: '680px', maxHeight: '85vh' }}
+            >
+              <div className="ksh-header">
+                <h2>📖 Trading Glossary</h2>
+                <button className="ksh-close" onClick={() => setGlossaryOpen(false)} aria-label="Close glossary">×</button>
+              </div>
+              <div className="ksh-body">
+                <GlossaryPage compact />
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </>

@@ -15,6 +15,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
+import { formatCurrency } from '../core/format-utils';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './daily-briefing.css';
 
@@ -24,11 +25,6 @@ const PRIORITY_TIERS = {
   watchlist:{ label: 'Watchlist',color: '#3b82f6', weight: 3 },
   other:    { label: 'General',  color: '#64748b', weight: 4 },
 };
-
-function formatCurrency(n) {
-  if (n == null) return '—';
-  return '$' + Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2 });
-}
 
 function timeUntil(iso) {
   if (!iso) return '';
@@ -167,11 +163,11 @@ export default function DailyBriefingPage() {
       <section className="db-snapshot-grid">
         <div className="db-snap-card">
           <span className="db-snap-label">Balance</span>
-          <span className="db-snap-value">{formatCurrency(diag.balance)}</span>
+          <span className="db-snap-value">{formatCurrency(diag.balance, { abs: true })}</span>
         </div>
         <div className="db-snap-card">
           <span className="db-snap-label">Equity</span>
-          <span className="db-snap-value">{formatCurrency(diag.equity)}</span>
+          <span className="db-snap-value">{formatCurrency(diag.equity, { abs: true })}</span>
         </div>
         <div className="db-snap-card">
           <span className="db-snap-label">Open Positions</span>

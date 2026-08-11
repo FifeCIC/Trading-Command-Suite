@@ -24,14 +24,17 @@ const TREND_LOOKBACK = 5; // Bars to compare OBV vs price trend
 export class ObvDirective implements IDirective {
   readonly id = 'obv';
   readonly name = 'On-Balance Volume';
+  readonly category = 'oscillator' as const;
   readonly description =
     'Cumulative volume indicator. OBV confirming price = accumulation. OBV diverging = potential reversal.';
 
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 12 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

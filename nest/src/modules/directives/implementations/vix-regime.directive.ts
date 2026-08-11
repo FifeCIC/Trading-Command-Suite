@@ -19,11 +19,14 @@ export class VixRegimeDirective implements IDirective {
   readonly id = 'vix-regime';
   readonly name = 'VIX Regime';
   readonly description = 'Market-wide volatility regime. Low VIX = calm, high VIX = defensive.';
+  readonly category = 'structural' as const;
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 20 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const vix = (input as any).vixValue as number | undefined;

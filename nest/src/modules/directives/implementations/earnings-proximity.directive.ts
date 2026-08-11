@@ -29,11 +29,14 @@ export class EarningsProximityDirective implements IDirective {
   readonly name = 'Earnings Proximity';
   readonly description = 'Hybrid: continuous earnings-proximity base + within-window bonuses.';
   readonly priority = 50;
-  readonly maxScore = 80; // 55 base + 25 bonus
+  readonly maxScore = 80;
+  readonly minScore = 1; // 55 base + 25 bonus
   readonly minBars = { '1d': 1 };
-  readonly version = '2.0.0'; // Hybrid scoring
+  readonly version = '2.0.1'; // Hybrid scoring
   readonly requiredDataFeeds = ['earnings'];
   readonly readiness = 'beta' as const;
+  readonly category = 'pattern' as const;
+  readonly directionBias = 'bullish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     // Check for earnings date on the input symbol data

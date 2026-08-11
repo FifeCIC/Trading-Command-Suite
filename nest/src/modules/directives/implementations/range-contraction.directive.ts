@@ -24,13 +24,16 @@ const RANGE_RATIO_THRESHOLD = 0.7; // Current range < 70% of max = contraction
 export class RangeContractionDirective implements IDirective {
   readonly id = 'range-contraction';
   readonly name = 'Range Contraction';
+  readonly category = 'pattern' as const;
   readonly description =
     'Detects compression zones. Maturity grading for coiled-spring breakout signals.';
   readonly priority = 58;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 30 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

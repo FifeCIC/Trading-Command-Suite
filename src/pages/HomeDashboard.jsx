@@ -3,7 +3,6 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiGet } from '../core/api/client';
 import ScreenOptions from '../components/ScreenOptions';
-import MarketContextWidget from '../components/MarketContextWidget';
 import './home-dashboard.css';
 import PageInfoPopover from '../components/PageInfoPopover';
 
@@ -148,13 +147,6 @@ export default function HomeDashboard() {
           </div>
         </div>
       </section>
-
-      {/* ── Market Context Widget ── */}
-      {isApiOnline && (
-        <section className="nd-section">
-          <MarketContextWidget />
-        </section>
-      )}
 
       {!isApiOnline && (
         <section className="nd-section nd-setup">

@@ -10,11 +10,14 @@ export class JanuaryEffectDirective implements IDirective {
   readonly id = 'january-effect';
   readonly name = 'January Effect';
   readonly description = 'January small-cap outperformance bias. Historically the strongest month for small-cap indices.';
+  readonly category = 'pattern' as const;
   readonly priority = 30;
-  readonly maxScore = 15;
+  readonly maxScore = 12;
+  readonly minScore = 1;
   readonly minBars = { '1d': 1 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'bullish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const now = new Date();

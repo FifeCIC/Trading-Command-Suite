@@ -40,13 +40,16 @@ interface DivergencePair {
 export class ObvDivergenceDirective implements IDirective {
   readonly id = 'obv-divergence';
   readonly name = 'OBV Divergence Scanner';
+  readonly category = 'oscillator' as const;
   readonly description =
     'Detects bullish/bearish OBV (On-Balance Volume) divergence — price extremes not confirmed by volume flow. Strongest divergence signal — indicates smart money accumulation/distribution.';
   readonly priority = 86;
   readonly maxScore = 120;
+  readonly minScore = 1;
   readonly minBars = { '1d': 20 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map((b) => b.close);

@@ -1,18 +1,24 @@
 /**
- * Scoring Service
- * ===============
+ * ScoringService — STAGE 1 of the META.Stack pipeline.
+ * ======================================================
+ * ROLE: Compute raw directive scores and store them. Does NOT gate, filter,
+ *       or make trading decisions — those belong to downstream modules.
+ *
+ * PIPELINE POSITION:
+ *   Protocols define WHAT to score → ScoringService computes → Score table (DB)
+ *   → ScoringStrategies apply gates → TradingStrategies evaluate → Execution
+ *
+ * CONTRACT:
+ *   INPUT:  symbol ticker + market bars + directive list
+ *   OUTPUT: scores persisted to Score table + returned as RankedResult
+ *   NEVER:  opens positions, evaluates thresholds, or modifies strategies
+ *
  * Orchestrates the full scoring pipeline:
  * 1. Loads active symbols from DB.
  * 2. Fetches market bars (or uses deterministic fallback if none).
  * 3. Runs all directives via DirectivesService.
  * 4. Aggregates via dominance/cancellation-aware weighted average.
  * 5. Returns ranked output.
- *
- * Dominance & Cancellation Rules:
- * - Directives declare signalClass (bullish/bearish/neutral) and priority (1-100).
- * - A directive with priority >= 80 can suppress lower-priority opposing signals.
- * - When bullish and bearish signals conflict, weighted voting determines bias.
- * - Confluence bonus: when multiple high-priority directives agree, score is amplified.
  */
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';

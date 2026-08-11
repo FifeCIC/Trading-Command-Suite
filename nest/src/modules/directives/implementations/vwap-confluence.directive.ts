@@ -58,13 +58,16 @@ export type VwapMode = 'simple' | 'bands';
 export class VwapConfluenceSimpleDirective implements IDirective {
   readonly id = 'vwap-confluence-simple';
   readonly name = 'VWAP Confluence (Simple AND-Gate)';
+  readonly category = 'oscillator' as const;
   readonly description =
     'Price at VWAP + RSI confirming + volume elevated = high-confidence mean-reversion entry. Prop-firm staple.';
   readonly priority = 78;
   readonly maxScore = 105;
+  readonly minScore = 1;
   readonly minBars = { '1d': 5 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map((b) => b.close);
@@ -139,7 +142,7 @@ export class VwapConfluenceBandsDirective implements IDirective {
     'VWAP ±1σ/±2σ standard deviation bands. Price in -2σ zone = deep discount (strong buy). Price in +2σ zone = overextended (bearish). Precision entries at institutional levels.';
   readonly priority = 76;
   readonly maxScore = 110;
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {

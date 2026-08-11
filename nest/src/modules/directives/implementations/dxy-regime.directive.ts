@@ -60,11 +60,14 @@ export class DxyRegimeDirective implements IDirective {
     'Hybrid: continuous DXY base (108→0pts, 95→100pts) + extreme-DXY bonuses. ' +
     'Gold, majors, commodities, and crypto are all correlated to USD strength.';
   readonly priority = 55;
-  readonly maxScore = 125; // 100 base + 25 extreme bonus
+  readonly maxScore = 125;
+  readonly minScore = 1; // 100 base + 25 extreme bonus
   readonly minBars = { '1d': 20 };
-  readonly version = '2.0.0';
+  readonly version = '2.0.1';
   readonly requiredDataFeeds = ['dxy'];
   readonly readiness = 'beta' as const;
+  readonly category = 'structural' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     let dxy = (input as any).dxyValue as number | undefined;

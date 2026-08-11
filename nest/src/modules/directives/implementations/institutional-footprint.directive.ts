@@ -29,13 +29,16 @@ const VIC_SCALE = 1e-8;
 export class InstitutionalFootprintDirective implements IDirective {
   readonly id = 'institutional-footprint';
   readonly name = 'Institutional Footprint';
+  readonly category = 'structural' as const;
   readonly description =
     'Detects institutional-level volume and price activity patterns. Simplified footprint-only version of price-time-gap.';
   readonly priority = 70;
-  readonly maxScore = 100;
+  readonly maxScore = 85;
+  readonly minScore = 1;
   readonly minBars = { '1d': 17 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

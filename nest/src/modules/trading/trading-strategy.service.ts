@@ -1,3 +1,19 @@
+/**
+ * TradingStrategyService — STAGE 4 of the META.Stack pipeline.
+ * ============================================================
+ * ROLE: Receive evaluated decisions and dispatch trades to brokers.
+ *       Does NOT compute scores, apply gates, or make decisions —
+ *       those all happen upstream in Scoring → AutomationLoop.
+ *
+ * PIPELINE POSITION:
+ *   ScoringService (Stage 1) → AutomationLoop gates+evaluates (Stage 2+3)
+ *   → TradingStrategyService.execute() (Stage 4) → Broker (MT5/T212/etc.)
+ *
+ * CONTRACT:
+ *   INPUT:  strategyId + evaluated signal (BUY/SELL/HOLD from AutomationLoop)
+ *   OUTPUT: trade placed via broker adapter, recorded to Trade table
+ *   NEVER:  computes directive scores, applies risk gates, or decides direction
+ */
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DirectivesService } from '../directives/directives.service';

@@ -183,4 +183,29 @@ export class AppController {
         : 'Setup incomplete — configure providers and create your first protocol.',
     };
   }
+
+  /** Signal thresholds from global_setting — allows runtime adjustment without code changes. */
+  @Get('settings/signals')
+  async getSignalSettings() {
+    let buy = 65, hold = 40;
+    if (this.prisma.isAvailable) {
+      try {
+        const rows = await this.prisma.$queryRawUnsafe<Array<{ key: string; value: string }>>(
+          `SELECT \`key\`, value FROM global_setting WHERE \`key\` IN ('signal.buy_threshold', 'signal.hold_threshold')`,
+        );
+        for (const r of rows) {
+          const v = parseInt(r.value, 10);
+          if (!isNaN(v)) {
+            if (r.key === 'signal.buy_threshold') buy = v;
+            else if (r.key === 'signal.hold_threshold') hold = v;
+          }
+        }
+      } catch { /* DB unavailable — use defaults */ }
+    }
+    return {
+      buy, hold,
+      strongBuy: Math.min(100, buy + 15),
+      strongSell: Math.max(0, hold - 15),
+    };
+  }
 }

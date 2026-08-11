@@ -24,11 +24,14 @@ export class StochasticDirective implements IDirective {
   readonly id = 'stochastic';
   readonly name = 'Stochastic Oscillator';
   readonly description = 'Hybrid: continuous base + oversold bonuses + crossover bonus.';
+  readonly category = 'oscillator' as const;
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 19 };
-  readonly version = '2.0.0';
+  readonly version = '2.0.1';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const highs = input.bars.map(b => b.high);

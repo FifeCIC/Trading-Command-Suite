@@ -20,11 +20,14 @@ export class MacdCrossoverDirective implements IDirective {
   readonly id = 'macd-crossover';
   readonly name = 'MACD Bullish Crossover';
   readonly description = 'Hybrid: continuous histogram base + crossover/acceleration bonuses.';
+  readonly category = 'oscillator' as const;
   readonly priority = 80;
-  readonly maxScore = 110;
+  readonly maxScore = 90;
+  readonly minScore = 1;
   readonly minBars = { '1d': 36 };
-  readonly version = '2.0.0';
+  readonly version = '2.0.1';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map((b) => b.close);

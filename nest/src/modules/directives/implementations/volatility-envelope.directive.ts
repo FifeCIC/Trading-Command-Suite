@@ -35,13 +35,16 @@ interface EnvelopeResult extends DirectiveResult {
 export class VolatilityEnvelopeDirective implements IDirective {
   readonly id = 'volatility-envelope';
   readonly name = 'Volatility Envelope';
+  readonly category = 'oscillator' as const;
   readonly description =
     'Percentile-based range bands. Shows whether current volatility is normal, unusual, or extreme.';
   readonly priority = 55;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 20 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

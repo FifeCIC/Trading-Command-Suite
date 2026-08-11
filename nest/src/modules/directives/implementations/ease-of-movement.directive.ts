@@ -18,10 +18,13 @@ export class EaseOfMovementDirective implements IDirective {
   readonly name = 'Ease of Movement';
   readonly description = 'EoM measures price/volume efficiency. High positive = easy upward movement. Scores trend quality.';
   readonly priority = 55;
-  readonly maxScore = 100;
+  readonly maxScore = 85;
+  readonly minScore = 1;
   readonly minBars = { '1d': 16 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly category = 'oscillator' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const highs = input.bars.map(b => b.high);

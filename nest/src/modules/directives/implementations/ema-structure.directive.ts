@@ -21,9 +21,12 @@ export class EmaStructureDirective implements IDirective {
   readonly description = 'Hybrid: continuous separation base + alignment bonus.';
   readonly priority = 75;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 51 };
-  readonly version = '2.0.0';
+  readonly version = '2.0.1';
   readonly readiness = 'ready' as const;
+  readonly category = 'structural' as const;
+  readonly directionBias = 'bullish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map((b) => b.close);

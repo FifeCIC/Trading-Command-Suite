@@ -44,11 +44,14 @@ export class AnalystAdjustmentsDirective implements IDirective {
   readonly id = 'analyst-adjustments';
   readonly name = 'Analyst Adjustments';
   readonly description = 'Hybrid: continuous analyst-consensus base + strong-buy/trend bonuses.';
+  readonly category = 'structural' as const;
   readonly priority = 45;
   readonly maxScore = 105; // 80 base + 25 bonus
+  readonly minScore = 1;
   readonly minBars = { '1d': 1 };
-  readonly version = '2.0.0'; // Hybrid scoring
+  readonly version = '2.0.1'; // category + bias + minScore
   readonly readiness = 'beta' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const data: AnalystData | undefined = (input as any).analystRecommendation;

@@ -17,11 +17,13 @@ export class MomentumExhaustionDirective implements IDirective {
   readonly id = 'momentum-exhaustion';
   readonly name = 'Momentum Exhaustion';
   readonly description = 'Detects fading momentum — RSI overbought + declining volume. Exit urgency signal.';
+  readonly category = 'oscillator' as const;
   readonly directionBias = 'bullish' as const;
   readonly priority = 65;
-  readonly maxScore = 100;
+  readonly maxScore = 95;
+  readonly minScore = 1;
   readonly minBars = { '1d': 19 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {

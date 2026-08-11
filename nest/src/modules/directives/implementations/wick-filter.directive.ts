@@ -24,11 +24,14 @@ export class WickFilterDirective implements IDirective {
   readonly id = 'wick-filter';
   readonly name = 'Wick Filter';
   readonly description = 'Detects fakeout wicks vs genuine breakouts. Uses ATR, volume, and multi-timeframe logic.';
+  readonly category = 'pattern' as const;
   readonly priority = 55;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 10 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

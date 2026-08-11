@@ -19,11 +19,14 @@ export class WilliamsPercentRDirective implements IDirective {
   readonly id = 'williams-percent-r';
   readonly name = 'Williams %R Reversion';
   readonly description = 'Williams %R oscillator. Bullish when %R < -80 (oversold) with upward curl.';
+  readonly category = 'oscillator' as const;
   readonly priority = 65;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 16 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'bearish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { high, low, close } = this.extractOHLC(input);

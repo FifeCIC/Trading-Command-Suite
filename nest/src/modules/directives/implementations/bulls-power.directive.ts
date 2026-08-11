@@ -1,6 +1,7 @@
 /**
  * Bulls Power (Elder) — measures buying pressure above EMA.
  * Positive = bulls in control. Derived from MT5 Bulls Power.
+ * Category: oscillator — Elder's indicator, bounded range.
  */
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
@@ -11,11 +12,14 @@ export class BullsPowerDirective implements IDirective {
   readonly id = 'bulls-power';
   readonly name = 'Bulls Power (Elder)';
   readonly description = 'High - EMA(13). Positive values signal bullish pressure. Derived from MT5 Bulls Power.';
+  readonly category = 'oscillator' as const;
   readonly priority = 65;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 16 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const highs = input.bars.map((b) => b.high);

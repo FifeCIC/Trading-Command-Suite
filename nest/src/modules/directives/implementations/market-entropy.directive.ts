@@ -24,13 +24,16 @@ const ENTROPY_MAX = Math.log2(BINS); // Max possible entropy = log2(N bins)
 export class MarketEntropyDirective implements IDirective {
   readonly id = 'market-entropy';
   readonly name = 'Market Entropy';
+  readonly category = 'oscillator' as const;
   readonly description =
     'Shannon entropy of price distribution. Low entropy = trending, high = chaotic.';
   readonly priority = 65;
-  readonly maxScore = 100;
+  readonly maxScore = 90;
+  readonly minScore = 1;
   readonly minBars = { '1d': 30 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

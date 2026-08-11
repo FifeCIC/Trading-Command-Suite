@@ -49,15 +49,18 @@ const MICRO_SCORE_SHIFT = 8;
 export class GoldRoundNumbersDirective implements IDirective {
   readonly id = 'gold-round-numbers';
   readonly name = 'Gold Round Numbers';
+  readonly category = 'pattern' as const;
   readonly description =
     'Gold psychological levels at $50/$100 intervals. ' +
     'Gold respects round numbers more consistently than any other asset — ' +
     'market makers and institutional algos cluster orders at these levels.';
   readonly priority = 58;
-  readonly maxScore = 100;
+  readonly maxScore = 90;
+  readonly minScore = 1;
   readonly minBars = { '1d': 2 }; // Only needs current price
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const sym = input.symbol.toUpperCase();

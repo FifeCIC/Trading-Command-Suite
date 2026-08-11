@@ -9,12 +9,15 @@ import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/direc
 export class MondayEffectDirective implements IDirective {
   readonly id = 'monday-effect';
   readonly name = 'Monday Effect';
+  readonly category = 'pattern' as const;
   readonly description = 'Monday bearish bias — statistically the worst day of the week for equities.';
   readonly priority = 25;
-  readonly maxScore = 10;
+  readonly maxScore = 8;
+  readonly minScore = 1;
   readonly minBars = { '1d': 2 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'bearish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const now = new Date();

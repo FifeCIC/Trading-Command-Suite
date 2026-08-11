@@ -2,32 +2,23 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiGet, apiPost } from '../core/api/client'
 import LoadingSkeleton from '../components/LoadingSkeleton'
+import { formatDateTime } from '../core/format-utils'
 import './import-jobs-page.css'
 
 const POLL_INTERVAL_MS = 15_000
 
 /**
- * Format a duration string from two Date values.
+ * Format a duration string from two Date values (local wrapper — shared formatDuration takes ms).
  */
 function formatDuration(start, end) {
   if (!start) return '—'
   const startMs = new Date(start).getTime()
   const endMs = end ? new Date(end).getTime() : Date.now()
   const diffSec = Math.round((endMs - startMs) / 1000)
-
   if (diffSec < 60) return `${diffSec}s`
   const min = Math.floor(diffSec / 60)
   const sec = diffSec % 60
   return sec > 0 ? `${min}m ${sec}s` : `${min}m`
-}
-
-/**
- * Human-readable timestamp
- */
-function formatTime(iso) {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  return d.toLocaleString()
 }
 
 /**
@@ -143,7 +134,7 @@ export default function ImportJobsPage() {
         </div>
         <div className="summary-card summary-card--wide">
           <span className="summary-label">Last Run</span>
-          <span className="summary-value-sm">{lastRun ? formatTime(lastRun) : 'None'}</span>
+          <span className="summary-value-sm">{lastRun ? formatDateTime(lastRun) : 'None'}</span>
         </div>
       </section>
 
@@ -224,7 +215,7 @@ export default function ImportJobsPage() {
 
                   return (
                     <tr key={run.id} className={`run-row run-row--${run.status}`}>
-                      <td className="cell-timestamp">{formatTime(run.requestedAt)}</td>
+                      <td className="cell-timestamp">{formatDateTime(run.requestedAt)}</td>
                       <td className="cell-symbol">
                         <span className="ticker">{run.symbol?.ticker ?? run.symbolId}</span>
                         {run.symbol?.name && (

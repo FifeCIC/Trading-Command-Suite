@@ -33,13 +33,16 @@ const CONFLUENCE_BONUS = 1.3; // 30% bonus when 2+ levels at same price zone
 export class MicroSrLevelsDirective implements IDirective {
   readonly id = 'micro-sr-levels';
   readonly name = 'Micro Support & Resistance Levels';
+  readonly category = 'pattern' as const;
   readonly description =
     'Identifies key short-timeframe S/R levels from prior day extremes, session ranges, VWAP, round numbers, and swing pivots. Scores proximity and bounce/rejection patterns for speed trading.';
   readonly priority = 75;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 2, '1h': 10, '15m': 10, '5m': 5 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars, dayBars, hourBars, min15Bars } = input;

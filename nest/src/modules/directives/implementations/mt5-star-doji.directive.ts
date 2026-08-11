@@ -19,12 +19,15 @@ const DOJI_BODY_RATIO = 0.15; // Body < 15% of range = doji-like
 export class Mt5StarDojiDirective implements IDirective {
   readonly id = 'mt5-star-doji';
   readonly name = 'MT5 Morning/Evening Star (with RSI confirmation)';
+  readonly category = 'pattern' as const;
   readonly description = 'MT5-sourced 3-candle reversal pattern (morning/evening star) with RSI(37) confirmation.';
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 14 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars, symbol } = input;

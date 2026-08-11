@@ -10,11 +10,14 @@ export class SellInMayDirective implements IDirective {
   readonly id = 'sell-in-may';
   readonly name = 'Sell in May';
   readonly description = 'May–October seasonal equity weakness. Historically the worst 6-month stretch for equities.';
+  readonly category = 'pattern' as const;
   readonly priority = 30;
-  readonly maxScore = 15;
+  readonly maxScore = 12;
+  readonly minScore = 1;
   readonly minBars = { '1d': 1 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'bearish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const now = new Date();

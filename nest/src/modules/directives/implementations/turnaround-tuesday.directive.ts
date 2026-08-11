@@ -11,11 +11,14 @@ export class TurnaroundTuesdayDirective implements IDirective {
   readonly id = 'turnaround-tuesday';
   readonly name = 'Turnaround Tuesday';
   readonly description = 'Tuesday reversal bias — tends to reverse Monday direction. Bullish after red Monday, bearish after green Monday.';
+  readonly category = 'pattern' as const;
   readonly priority = 28;
   readonly maxScore = 15;
+  readonly minScore = 1;
   readonly minBars = { '1d': 2 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'bullish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const now = new Date();

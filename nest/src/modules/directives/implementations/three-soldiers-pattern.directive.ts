@@ -27,14 +27,17 @@ const MIN_BODY_RATIO = 0.5; // Body must be ≥ 50% of bar range
 export class ThreeSoldiersPatternDirective implements IDirective {
   readonly id = 'three-soldiers-pattern';
   readonly name = 'Three White Soldiers';
+  readonly category = 'pattern' as const;
   readonly description =
     'Detects three consecutive bullish candles with higher closes — strong trend establishment.';
 
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 6 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'bullish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

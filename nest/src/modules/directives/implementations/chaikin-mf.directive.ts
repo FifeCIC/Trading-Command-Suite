@@ -1,4 +1,6 @@
-/** Chaikin Money Flow — volume-weighted accumulation/distribution over N periods. MT5 CMF. */
+/** Chaikin Money Flow — volume-weighted accumulation/distribution over N periods. MT5 CMF.
+ *  Category: oscillator — CMF has bounded range.
+ */
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
 
@@ -7,11 +9,14 @@ export class ChaikinMfDirective implements IDirective {
   readonly id = 'chaikin-mf';
   readonly name = 'Chaikin Money Flow';
   readonly description = 'Volume-weighted AD over 21 bars. CMF > 0.05 = accumulation. CMF < -0.05 = distribution. MT5 CMF.';
+  readonly category = 'oscillator' as const;
   readonly priority = 72;
-  readonly maxScore = 100;
+  readonly maxScore = 95;
+  readonly minScore = 1;
   readonly minBars = { '1d': 24 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

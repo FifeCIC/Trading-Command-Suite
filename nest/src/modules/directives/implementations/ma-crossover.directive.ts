@@ -28,14 +28,17 @@ const MIN_BARS = SLOW_PERIOD + 5;
 export class MaCrossoverDirective implements IDirective {
   readonly id = 'ma-crossover';
   readonly name = 'MA Crossover';
+  readonly category = 'oscillator' as const;
   readonly description =
     'Detects fast EMA crossing above/below slow EMA. Scores crossover freshness and separation.';
 
   readonly priority = 50;
-  readonly maxScore = 100;
+  readonly maxScore = 90;
+  readonly minScore = 1;
   readonly minBars = { '1d': 35 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

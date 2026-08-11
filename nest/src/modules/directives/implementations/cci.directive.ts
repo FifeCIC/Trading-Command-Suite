@@ -22,12 +22,14 @@ function mapRange(v: number, inMin: number, inMax: number, outMin: number, outMa
 export class CciDirective implements IDirective {
   readonly id = 'cci';
   readonly name = 'Commodity Channel Index';
+  readonly category = 'oscillator' as const;
   readonly description = 'Hybrid: continuous base + deep oversold bonuses + crossover bonus.';
   readonly directionBias = 'bearish' as const;
   readonly priority = 50;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 23 };
-  readonly version = '2.0.0';
+  readonly version = '2.0.1';
   readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {

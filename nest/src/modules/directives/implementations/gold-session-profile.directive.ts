@@ -96,14 +96,17 @@ const DATA_WINDOWS = [
 export class GoldSessionProfileDirective implements IDirective {
   readonly id = 'gold-session-profile';
   readonly name = 'Gold Session Profile';
+  readonly category = 'pattern' as const;
   readonly description =
     'Gold-specific session quality rating. Gold moves differently from forex — ' +
     'London fixes and US data windows drive the largest intraday ranges.';
   readonly priority = 60;
-  readonly maxScore = 100;
+  readonly maxScore = 95;
+  readonly minScore = 1;
   readonly minBars = { '1d': 1 }; // Session-based — only needs current time
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const sym = input.symbol.toUpperCase();

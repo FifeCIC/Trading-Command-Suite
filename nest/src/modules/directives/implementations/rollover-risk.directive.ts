@@ -25,13 +25,16 @@ const ROLLOVER_END_UTC = 23;   // 23:00 UTC
 export class RolloverRiskDirective implements IDirective {
   readonly id = 'rollover-risk';
   readonly name = 'Rollover Risk';
+  readonly category = 'structural' as const;
   readonly description =
     'Detects broker rollover window (22:00–23:00 UTC) where spreads widen 2–5× normal. Scores 0 during this period to gate trades.';
   readonly priority = 90;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 20 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   readonly suitability = {
     regimeType: 'any' as const,

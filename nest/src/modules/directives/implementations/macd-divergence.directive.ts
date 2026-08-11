@@ -43,13 +43,16 @@ interface DivergencePair {
 export class MacdDivergenceDirective implements IDirective {
   readonly id = 'macd-divergence';
   readonly name = 'MACD Divergence Scanner';
+  readonly category = 'oscillator' as const;
   readonly description =
     'Detects bullish/bearish MACD histogram divergence — price making new extremes while MACD momentum fails to confirm. Stronger than RSI divergence.';
   readonly priority = 84;
-  readonly maxScore = 115;
+  readonly maxScore = 105;
+  readonly minScore = 1;
   readonly minBars = { '1d': 52 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map((b) => b.close);

@@ -162,6 +162,53 @@ async function main() {
     console.log(`  ✓ ${seed.name} (${seed.directiveIds.length} directives)`);
   }
   console.log(`  ✓ ${stratCount} strategies seeded.`);
+
+  // ── Global Settings (signal thresholds, etc.) ────────────────────────
+  console.log('\nSeeding global settings…');
+  const globalSettings = [
+    { key: 'signal.buy_threshold', value: '65' },
+    { key: 'signal.hold_threshold', value: '40' },
+  ];
+  for (const setting of globalSettings) {
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO global_setting (\`key\`, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)`,
+      setting.key, setting.value,
+    );
+  }
+  console.log(`  ✓ ${globalSettings.length} global settings seeded (buy=65, hold=40).`);
+
+  // ── App Settings (operational defaults) ─────────────────────────────
+  console.log('\nSeeding app settings…');
+  const appDefaults = {
+    earnings: { importHorizonMonths: 3, autoRefreshDays: 7 },
+    correlation: { refreshMinutes: 360, warningThreshold: 0.7 },
+    seasonality: { weightMultiplier: 1.0 },
+    analyst: { refreshHours: 24 },
+    data: { stalenessHours: 24 },
+    newsImport: {
+      dailyLimit: 100,
+      tiers: [
+        { id: 'positions', enabled: true, maxPerDay: 30, intervalMin: 120 },
+        { id: 'active-protocols', enabled: true, maxPerDay: 20, intervalMin: 240 },
+        { id: 'macro', enabled: true, maxPerDay: 15, intervalMin: 360 },
+        { id: 'sector', enabled: true, maxPerDay: 15, intervalMin: 360 },
+        { id: 'other', enabled: false, maxPerDay: 20, intervalMin: 1440 },
+      ],
+    },
+    healthChecks: {
+      systemVitals: true, dbDiagnostics: true, slowQueries: true,
+      apiTrends: true, providerGrid: true, traceCorrelations: true,
+      diskInfo: true, errorRates: true, cronHeartbeats: true,
+      portStatus: true, autoRefreshSec: 15,
+    },
+  };
+  const existingApp = await prisma.appSetting.findUnique({ where: { id: 'app' } });
+  if (!existingApp) {
+    await prisma.appSetting.create({ data: { id: 'app', value: appDefaults } });
+    console.log('  ✓ App settings seeded (earnings, correlation, seasonality, analyst, data, news import, health checks).');
+  } else {
+    console.log('  • App settings already exist — skipping.');
+  }
 }
 
 main()

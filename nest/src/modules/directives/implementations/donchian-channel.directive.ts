@@ -8,10 +8,13 @@ export class DonchianChannelDirective implements IDirective {
   readonly name = 'Donchian Channel Breakout';
   readonly description = '20-bar high/low channel. Price near upper = bullish breakout. Near lower = bearish. MT5 Donchian.';
   readonly priority = 66;
-  readonly maxScore = 100;
+  readonly maxScore = 95;
+  readonly minScore = 1;
   readonly minBars = { '1d': 22 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly category = 'oscillator' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

@@ -23,13 +23,16 @@ const SWEEP_LOOKBACK = 10;
 export class LiquiditySweepDirective implements IDirective {
   readonly id = 'liquidity-sweep';
   readonly name = 'Liquidity Sweep';
+  readonly category = 'pattern' as const;
   readonly description =
     'Detects stop hunts via wick-ratio thresholds and engulfing confirmation.';
   readonly priority = 68;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 15 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

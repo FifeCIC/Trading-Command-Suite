@@ -17,12 +17,15 @@ const MIN_BARS = PERIOD + 2;
 export class ChaikinMoneyFlowDirective implements IDirective {
   readonly id = 'chaikin-money-flow';
   readonly name = 'Chaikin Money Flow';
+  readonly category = 'oscillator' as const;
   readonly description = 'CMF > 0.2 = accumulation (bullish). < -0.2 = distribution (bearish). Scores institutional flow.';
   readonly priority = 65;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 22 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { high, low, close, volume } = this.extractOHLCV(input);

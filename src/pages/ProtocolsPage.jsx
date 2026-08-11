@@ -3,28 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { apiGet } from '../core/api/client';
 import ProtocolsPageB from './ProtocolsPageB';
+import { getProtocolType } from '../core/protocol-utils';
 import './protocols-page.css';
-
-/** Classify a protocol by its directive/data dependencies */
-function getProtocolType(proto) {
-  const id = (proto.id || '').toLowerCase();
-  const name = (proto.name || '').toLowerCase();
-  const combined = id + ' ' + name;
-
-  if (/news|sentiment|social/i.test(combined)) {
-    return { label: 'News-Reactive', color: '#f59e0b', icon: '📰' };
-  }
-  if (/analyst|earnings|whisper/i.test(combined)) {
-    return { label: 'Analyst-Driven', color: '#3b82f6', icon: '📊' };
-  }
-  if (/insider|congress/i.test(combined)) {
-    return { label: 'Insider-Aware', color: '#a855f7', icon: '🔍' };
-  }
-  if (/macro|dxy|oil|gold|commodity/i.test(combined)) {
-    return { label: 'Macro-Driven', color: '#14b8a6', icon: '🌍' };
-  }
-  return { label: 'Technical-Only', color: '#64748b', icon: '📈' };
-}
 
 export default function ProtocolsPage() {
   // A/B testing: Page B is the default. Page A (original) available at ?variant=A
@@ -88,7 +68,9 @@ export default function ProtocolsPage() {
   }
 
   // Page B is default; Page A only at ?variant=A
-  if (!isVariantA) return <ProtocolsPageB />;
+  // ?proto=PROTOCOL_ID pre-selects a protocol (used by cross-page links)
+  const initialProtocolId = searchParams.get('proto') || undefined;
+  if (!isVariantA) return <ProtocolsPageB initialProtocolId={initialProtocolId} />;
 
   return (
     <div className="protocols-page">

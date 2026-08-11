@@ -28,13 +28,16 @@ interface SwingPoint {
 export class MarketStructureBosDirective implements IDirective {
   readonly id = 'market-structure-bos';
   readonly name = 'Market Structure — Break of Structure';
+  readonly category = 'pattern' as const;
   readonly description =
     'Detects BOS (Break of Structure) and CHOCH (Change of Character) via swing points.';
   readonly priority = 70;
-  readonly maxScore = 100;
+  readonly maxScore = 75;
+  readonly minScore = 1;
   readonly minBars = { '1d': 30 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

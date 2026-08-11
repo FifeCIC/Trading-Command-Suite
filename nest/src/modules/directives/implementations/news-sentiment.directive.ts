@@ -31,12 +31,15 @@ export class NewsSentimentPositiveDirective implements IDirective {
   readonly id = 'news-sentiment-positive';
   readonly name = 'Positive News Sentiment';
   readonly description = 'Hybrid: continuous news-sentiment base + extreme-sentiment bonuses.';
+  readonly category = 'structural' as const;
   readonly priority = 50;
-  readonly maxScore = 100; // 85 base + 15 bonus
+  readonly maxScore = 100;
+  readonly minScore = 1; // 85 base + 15 bonus
   readonly minBars = { '1d': 1 };
   readonly version = '2.0.0'; // Hybrid scoring
   readonly requiredDataFeeds = ['news'];
   readonly readiness = 'beta' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     // Check for sentiment data on bars (would come from news API in production)

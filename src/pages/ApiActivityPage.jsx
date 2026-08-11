@@ -8,11 +8,7 @@ const PROVIDER_ALL = 'ALL';
 // Known trading platform providers — always show in filter
 const KNOWN_PROVIDERS = ['alpaca', 'alphavantage', 'trading212', 'fred', 'ecb', 'mt5'];
 
-function formatTime(value) {
-  if (!value) return '-';
-  return new Date(value).toLocaleTimeString();
-}
-
+import { formatTime } from '../core/format-utils';
 function formatSize(bytes) {
   if (!Number.isFinite(bytes)) return '-';
   return bytes >= 1024 ? `${(bytes / 1024).toFixed(1)}KB` : `${bytes}B`;

@@ -17,11 +17,13 @@ export class TargetAchievedDirective implements IDirective {
   readonly id = 'target-achieved';
   readonly name = 'Target Achieved';
   readonly description = 'Checks if price has reached ATR-based or swing-based profit targets.';
+  readonly category = 'structural' as const;
   readonly directionBias = 'bullish' as const;
   readonly priority = 60;
   readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 24 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {

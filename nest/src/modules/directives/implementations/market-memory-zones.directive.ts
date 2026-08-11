@@ -32,13 +32,16 @@ interface MemoryZone {
 export class MarketMemoryZonesDirective implements IDirective {
   readonly id = 'market-memory-zones';
   readonly name = 'Market Memory Zones';
+  readonly category = 'pattern' as const;
   readonly description =
     'Identifies unfilled-order zones from impulsive moves, structure shifts, and liquidity events.';
   readonly priority = 62;
-  readonly maxScore = 100;
+  readonly maxScore = 85;
+  readonly minScore = 1;
   readonly minBars = { '1d': 30 };
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;
