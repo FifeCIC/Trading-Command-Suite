@@ -368,6 +368,29 @@ export class ProtocolDbService implements OnModuleInit {
   }
 
   /**
+   * Get all ACTIVE protocols as a flat list of slugs.
+   * Used by the automation loop to iterate protocols for direct scoring
+   * (NOT via scoring strategies — see DEVELOPMENT PHASE note in automation-loop.service.ts).
+   *
+   * Returns active slugs. Falls back to all cached slugs if DB is unavailable.
+   */
+  async findAllActive(): Promise<string[]> {
+    try {
+      if (!this.prisma.isAvailable) {
+        // Fallback: all cached protocols
+        return Object.keys(this.getAllCached());
+      }
+      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+        `SELECT slug FROM protocol WHERE active = 1`
+      );
+      return rows.map((r: any) => r.slug);
+    } catch {
+      // Column may not exist yet — return all cached
+      return Object.keys(this.getAllCached());
+    }
+  }
+
+  /**
    * Seed all protocols from the standalone seed data file into the DB.
    * Idempotent — uses upsert on all 3 tables. Safe to call multiple times.
    *

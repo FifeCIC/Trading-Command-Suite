@@ -1,5 +1,228 @@
 /* ── Automation Dashboard ──────────────────────────────────── */
 
+.ad-page {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  color: var(--ink);
+}
+
+.ad-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.ad-header h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ad-header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ── Cards Grid ─────────────────────────────────────────── */
+
+.ad-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.ad-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.ad-card h3 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  margin: 0 0 0.75rem 0;
+}
+
+/* ── Buttons ────────────────────────────────────────────── */
+
+.ad-btn {
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--panel);
+  color: var(--ink);
+  transition: all 0.15s;
+}
+
+.ad-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.ad-btn-start {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
+.ad-btn-pause {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.ad-btn-run {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+/* ── Status Indicators ──────────────────────────────────── */
+
+.ad-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.ad-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.ad-dot-online { background: #22c55e; }
+.ad-dot-offline { background: #ef4444; }
+.ad-dot-idle { background: #f59e0b; }
+
+.ad-stat {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.8rem;
+}
+
+.ad-stat:last-child { border-bottom: none; }
+
+.ad-stat-label { color: var(--ink-soft); }
+.ad-stat-val { font-weight: 600; }
+
+/* ── Broker Cards ───────────────────────────────────────── */
+
+.ad-broker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ad-broker-card {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.78rem;
+}
+
+.ad-broker-name {
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+}
+
+.ad-broker-meta {
+  display: flex;
+  gap: 1rem;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+}
+
+/* ── Table ──────────────────────────────────────────────── */
+
+.ad-table-wrap {
+  overflow-x: auto;
+  margin-top: 0.5rem;
+}
+
+.ad-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.ad-table th {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  border-bottom: 2px solid var(--line);
+}
+
+.ad-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.ad-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+/* ── Activity Feed ──────────────────────────────────────── */
+
+.ad-activity {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.ad-activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.76rem;
+}
+
+.ad-activity-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  margin-top: 0.4rem;
+  flex-shrink: 0;
+}
+
+/* ── Loading ────────────────────────────────────────────── */
+
+.ad-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: var(--ink-soft);
+}
+
+/* ── Offline Banner ─────────────────────────────────────── */
+
+.ad-offline {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  color: #ef4444;
+  font-size: 0.82rem;
+}
+
 .ad-page { padding: 1.5rem 2rem; max-width: none; margin: 0 auto; }
 
 /* Header */

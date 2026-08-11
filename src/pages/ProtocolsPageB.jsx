@@ -14,6 +14,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import PageInfoPopover from '../components/PageInfoPopover';
 import { getProtocolType } from '../core/protocol-utils';
+import { timeAgo, formatDateTime } from '../core/format-utils';
 import './protocols-page-b.css';
 
 export default function ProtocolsPageB({ initialProtocolId }) {
@@ -46,6 +47,17 @@ export default function ProtocolsPageB({ initialProtocolId }) {
   }, [protocols, selected, initialProtocolId]);
 
   const selectedProto = protocols.find(p => p.id === selected?.id) || protocols[0];
+
+  // ── Latest score for selected protocol ──
+  const latestScoreQuery = useQuery({
+    queryKey: ['protocol-latest-score', selectedProto?.id],
+    queryFn: () => apiGet(`/api/scoring/protocols/${selectedProto?.id}/latest-score`),
+    enabled: !!selectedProto?.id,
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+  });
+  const latestScore = latestScoreQuery.data;
+
   const styles = ['All', ...new Set(protocols.map(p => p.tradingStyle).filter(Boolean))];
   const filteredProtocols = useMemo(() => {
     let list = styleFilter === 'All' ? [...protocols] : protocols.filter(p => p.tradingStyle === styleFilter);
@@ -212,6 +224,27 @@ export default function ProtocolsPageB({ initialProtocolId }) {
                 {selectedProto.recommendedTimeframe && <div className="prb-stat"><span className="prb-stat-val">{selectedProto.recommendedTimeframe}</span><span className="prb-stat-lbl">Timeframe</span></div>}
                 <div className="prb-stat"><span className="prb-stat-val">{selectedProto.directiveCount}</span><span className="prb-stat-lbl">Directives</span></div>
                 <div className="prb-stat"><span className="prb-stat-val">{selectedProto.maxScore?.toLocaleString() ?? 'N/A'}</span><span className="prb-stat-lbl">Total Weight</span></div>
+              </div>
+
+              {/* Recent Scoring */}
+              <div className="prb-recent-score">
+                <h3>Most Recent Score</h3>
+                {latestScoreQuery.isLoading ? (
+                  <span className="prb-recent-loading">Loading…</span>
+                ) : latestScore ? (
+                  <div className="prb-recent-body">
+                    <div className="prb-recent-value">
+                      <span className="prb-recent-num">{latestScore.value?.toFixed(0) ?? '—'}</span>
+                      <span className="prb-recent-max">/ {selectedProto.maxScore ?? 100}</span>
+                    </div>
+                    <div className="prb-recent-meta">
+                      <span className="prb-recent-symbol">{latestScore.symbolTicker}</span>
+                      <span className="prb-recent-time" title={formatDateTime(latestScore.timestamp)}>{timeAgo(latestScore.timestamp)}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <span className="prb-recent-none">No scores yet — run a scoring cycle</span>
+                )}
               </div>
 
               {/* Connections */}

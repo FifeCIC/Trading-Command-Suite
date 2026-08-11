@@ -26523,3 +26523,115 @@ oneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone Met
 2026-08-11 00:46:22,618 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
 2026-08-11 00:46:22,641 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
 2026-08-11 00:46:22,641 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-11 01:51:17,097 [INFO] MetaTrader5 package loaded
+2026-08-11 01:51:17,098 [INFO] MetaTrader5 package loaded
+2026-08-11 01:51:17,098 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-11 01:51:17,099 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-11 01:51:17,099 [INFO] Connecting to MT5 at startup...
+2026-08-11 01:51:17,099 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-11 01:51:17,100 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-11 01:51:17,100 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-11 01:51:17,101 [INFO] Connecting to MT5 at startup...
+2026-08-11 01:51:17,101 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-11 01:51:17,105 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-11 01:51:17,108 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-11 01:51:17,131 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-11 01:51:17,131 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-11 02:05:33,688 [INFO] MetaTrader5 package loaded
+2026-08-11 02:05:33,689 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-11 02:05:33,689 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-11 02:05:33,690 [INFO] Connecting to MT5 at startup...
+2026-08-11 02:05:33,691 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-11 02:05:33,690 [INFO] MetaTrader5 package loaded
+2026-08-11 02:05:33,691 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-11 02:05:33,691 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-11 02:05:33,692 [INFO] Connecting to MT5 at startup...
+2026-08-11 02:05:33,692 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-11 02:05:33,693 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-11 02:05:33,695 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-11 02:05:33,703 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-11 02:05:33,704 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-11 02:45:05,818 [INFO] MetaTrader5 package loaded
+2026-08-11 02:45:05,819 [INFO] MetaTrader5 package loaded
+2026-08-11 02:45:05,819 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-11 02:45:05,819 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-11 02:45:05,819 [INFO] Connecting to MT5 at startup...
+2026-08-11 02:45:05,819 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-11 02:45:05,820 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-11 02:45:05,820 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-11 02:45:05,821 [INFO] Connecting to MT5 at startup...
+2026-08-11 02:45:05,821 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-11 02:45:05,824 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-11 02:45:05,827 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-11 02:45:05,835 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-11 02:45:05,836 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-11 02:53:15,597 [INFO] MetaTrader5 package loaded
+2026-08-11 02:53:15,597 [INFO] MetaTrader5 package loaded
+2026-08-11 02:53:15,597 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-11 02:53:15,598 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-11 02:53:15,598 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-11 02:53:15,598 [INFO] Connecting to MT5 at startup...
+01 (http.server, no Flask)...
+2026-08-11 02:53:15,599 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-11 02:53:15,599 [INFO] Connecting to MT5 at startup...
+2026-08-11 02:53:15,599 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-11 02:53:15,610 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-11 02:53:15,613 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-11 02:53:15,620 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-11 02:53:15,622 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-11 02:56:50,509 [INFO] MetaTrader5 package loaded
+2026-08-11 02:56:50,509 [INFO] MetaTrader5 package loaded
+2026-08-11 02:56:50,509 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-11 02:56:50,515 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-11 02:56:50,515 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-11 02:56:50,521 [INFO] Connecting to MT5 at startup...
+2026-08-11 02:56:50,522 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-11 02:56:50,522 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-11 02:56:50,529 [INFO] Connecting to MT5 at startup...
+2026-08-11 02:56:50,534 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-11 02:56:50,538 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-11 02:56:50,541 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-11 02:56:50,548 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-11 02:56:50,554 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-11 02:57:15,165 [INFO] MetaTrader5 package loaded
+2026-08-11 02:57:15,167 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-11 02:57:15,167 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-11 02:57:15,167 [INFO] Connecting to MT5 at startup...
+2026-08-11 02:57:15,168 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-11 02:57:15,170 [INFO] MetaTrader5 package loaded
+2026-08-11 02:57:15,171 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+
+2026-08-11 02:57:15,175 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-11 02:57:15,175 [INFO] Connecting to MT5 at startup...
+2026-08-11 02:57:15,176 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-11 02:57:15,179 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-11 02:57:15,187 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-11 02:57:15,191 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-11 03:00:03,004 [INFO] MetaTrader5 package loaded
+2026-08-11 03:00:03,007 [INFO] MetaTrader5 package loaded
+2026-08-11 03:00:03,011 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-11 03:00:03,011 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-11 03:00:03,016 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-11 03:00:03,016 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-11 03:00:03,017 [INFO] Connecting to MT5 at startup...
+2026-08-11 03:00:03,023 [INFO] Connecting to MT5 at startup...
+2026-08-11 03:00:03,023 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-11 03:00:03,025 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-11 03:00:03,037 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-11 03:00:03,046 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-11 03:00:03,052 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-11 03:00:03,079 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-11 03:01:45,980 [INFO] MetaTrader5 package loaded
+2026-08-11 03:01:45,981 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-11 03:01:45,981 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-11 03:01:45,981 [INFO] Connecting to MT5 at startup...
+2026-08-11 03:01:45,982 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-11 03:01:45,984 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-11 03:01:45,989 [INFO] MetaTrader5 package loaded
+2026-08-11 03:01:45,989 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-11 03:01:45,990 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-11 03:01:45,990 [INFO] Connecting to MT5 at startup...
+2026-08-11 03:01:45,991 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-11 03:01:45,992 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-11 03:01:45,994 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-11 03:01:46,002 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001

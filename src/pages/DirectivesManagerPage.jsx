@@ -255,7 +255,6 @@ export default function DirectivesManagerPage() {
                 <th>Directive</th>
                 <th>Category</th>
                 <th>Status</th>
-                <th>RUNS</th>
                 <th>BIAS</th>
                 <th>Protocols</th>
                 <th>Weighting</th>
@@ -300,7 +299,6 @@ export default function DirectivesManagerPage() {
                           {item.status}
                         </span>
                       </td>
-                      <td>{item.runs ?? '—'}</td>
                       <td style={{ fontWeight: 700, color: item.bias === 'bullish' ? '#22c55e' : item.bias === 'bearish' ? '#ef4444' : 'var(--ink-soft)' }}>{item.bias ?? '—'}</td>
                       <td style={{ color: item.protocolCount > 0 ? 'var(--accent)' : 'var(--ink-soft)' }}>
                         {item.protocolCount || '—'}

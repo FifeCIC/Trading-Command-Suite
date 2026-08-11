@@ -214,6 +214,17 @@ export class ScoringController {
     return this.scoreHistoryService.getRecentlyAnalysed(safe);
   }
 
+  /**
+   * GET /api/scoring/protocols/:id/latest-score
+   * Returns the single most recent score for a protocol (by strategyId).
+   */
+  @Get('protocols/:id/latest-score')
+  @ApiOperation({ summary: 'Get the most recent score for a protocol' })
+  @ApiParam({ name: 'id', description: 'Protocol ID' })
+  async getLatestProtocolScore(@Param('id') id: string) {
+    return this.scoreHistoryService.getLatestProtocolScore(id);
+  }
+
   // ── Q304: Self-Improving Scoring — Accuracy ──
 
   @Get('accuracy')

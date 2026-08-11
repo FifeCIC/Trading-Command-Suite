@@ -395,21 +395,21 @@ export class ScoreHistoryService {
 
   /**
    * GET /api/scoring/latest-scores
-   * Lightweight: returns { [ticker]: bestScore } for all symbols in the last 30 days.
+   * Lightweight: returns { [ticker]: { score, timestamp } } for all symbols in the last 30 days.
    */
-  async getLatestScores(): Promise<Record<string, number>> {
+  async getLatestScores(): Promise<Record<string, { score: number; timestamp: string }>> {
     if (!this.prisma.isAvailable) return {};
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const rows = await this.prisma.score.findMany({
       where: { timestamp: { gte: thirtyDaysAgo } },
-      select: { symbol: { select: { ticker: true } }, value: true },
+      select: { symbol: { select: { ticker: true } }, value: true, timestamp: true },
       orderBy: { value: 'desc' },
     });
-    const map: Record<string, number> = {};
+    const map: Record<string, { score: number; timestamp: string }> = {};
     for (const row of rows as any[]) {
       const ticker = row.symbol?.ticker;
       if (ticker && (!map[ticker] || row.value > map[ticker])) {
-        map[ticker] = row.value;
+        map[ticker] = { score: row.value, timestamp: row.timestamp.toISOString() };
       }
     }
     return map;
@@ -463,5 +463,33 @@ export class ScoreHistoryService {
       })
       .sort((a, b) => new Date(b.lastAnalysedAt).getTime() - new Date(a.lastAnalysedAt).getTime())
       .slice(0, limit);
+  }
+
+  /**
+   * GET /api/scoring/protocols/:id/latest-score
+   * Returns the single most recent score snapshot for a protocol (by strategyId).
+   */
+  async getLatestProtocolScore(protocolId: string): Promise<{
+    value: number;
+    symbolTicker: string;
+    timestamp: string;
+    breakdown: any;
+  } | null> {
+    if (!this.prisma.isAvailable) return null;
+
+    const row = await this.prisma.score.findFirst({
+      where: { strategyId: protocolId },
+      orderBy: { timestamp: 'desc' },
+      include: { symbol: { select: { ticker: true } } },
+    });
+
+    if (!row) return null;
+
+    return {
+      value: row.value,
+      symbolTicker: (row as any).symbol?.ticker || row.symbolId,
+      timestamp: row.timestamp.toISOString(),
+      breakdown: row.breakdown,
+    };
   }
 }

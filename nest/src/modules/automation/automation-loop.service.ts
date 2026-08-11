@@ -1079,120 +1079,93 @@ export class AutomationLoopService implements OnModuleInit {
         return result;
       };
 
-      // 3b. Score watchlist symbols for each enabled scoring strategy using protocol gating
-      //     Results are cached in gatedScoreCache for reuse by step 4.
-      for (const strat of this.scoringStrategies) {
-        if (!strat.enabled) continue;
-        const wlSymbols = await this.getWatchlistSymbols(strat.watchlistName);
-        if (!wlSymbols || wlSymbols.length === 0) continue;
+      // ═══════════════════════════════════════════════════════════════════════
+      // 3b. Protocol-driven scoring — iterate ACTIVE PROTOCOLS directly.
+      //
+      // DEVELOPMENT PHASE (2026-08-11): We are NOT using Scoring Strategies yet.
+      // Scoring Strategies are a future layer that will gate & route protocol
+      // scores into trading decisions. For now, protocols are scored independently
+      // and results are logged for observability / debugging.
+      //
+      // Each protocol resolves its symbols via ProtocolDbService.resolveSymbols():
+      //   - Single-symbol protocols (xau-speed-v1 → XAUUSD, spy-speed-v1 → SPY)
+      //     use the auto-derived symbol from the protocol ID.
+      //   - Multi-symbol protocols (forex-session-v1) use a linked watchlist.
+      //
+      // Results are cached in gatedScoreCache for potential future use by step 4.
+      // ═══════════════════════════════════════════════════════════════════════
+      const activeProtocols = await this.protocolDb.findAllActive();
+      this.logger.log(`  ${activeProtocols.length} active protocols loaded for scoring`);
 
+      for (const protoSlug of activeProtocols) {
         try {
-          let scoredCount = 0;
-          for (const sym of wlSymbols) {
+          // Resolve symbols: single-symbol, watchlist, or auto-derived
+          const symbols = await this.protocolDb.resolveSymbols(protoSlug);
+          if (!symbols || symbols.length === 0) {
+            this.logger.debug(`  Protocol "${protoSlug}": no symbols resolved — skipping`);
+            continue;
+          }
+
+          let protoScored = 0;
+          for (const sym of symbols) {
             try {
-            const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: sym } });
-            if (!dbSym) continue;
+              const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: sym } });
+              if (!dbSym) continue;
 
-            // Dynamic bar fetch based on protocol's directive requirements
-            const requiredBars = this.protocolDb.getRequiredBars(strat.protocolId);
-            const barCount = requiredBars['5m'] || 100;
-            const bars = await this.marketData.getBars(dbSym.id, '5m', barCount);
-            if (!bars || bars.length < 20) continue;
+              // Dynamic bar fetch based on protocol's directive requirements
+              const requiredBars = this.protocolDb.getRequiredBars(protoSlug);
+              const barCount = requiredBars['5m'] || 100;
+              const bars = await this.marketData.getBars(dbSym.id, '5m', barCount);
+              if (!bars || bars.length < 20) continue;
 
-            this.auditLog.logBarsFetched(this.state.tickCount, sym, bars.length,
-              bars[bars.length - 1]?.timestamp?.toISOString?.() ?? null);
+              this.auditLog.logBarsFetched(this.state.tickCount, sym, bars.length,
+                bars[bars.length - 1]?.timestamp?.toISOString?.() ?? null);
 
-            // Score with LONG protocol (cached for step 4 reuse)
-            const longGated = await getGatedScore(sym, strat.protocolId, bars, strat.weightStrategy);
-            if (!longGated || longGated.composite === undefined) continue;
+              // Score the symbol against this protocol
+              const gated = await getGatedScore(sym, protoSlug, bars);
+              if (!gated || gated.composite === undefined) continue;
 
-            let shortGated: any = null;
-            if (strat.shortProtocolId) {
-              shortGated = await getGatedScore(sym, strat.shortProtocolId, bars);
-            }
-            const { side, composite: chosenComposite } = compareProtocolPair(
-              longGated, shortGated, strat.tradeThreshold,
-            );
+              protoScored++;
 
-            scoredCount++;
+              decisions.push({
+                timestamp: new Date().toISOString(),
+                strategyId: '', // protocol-driven, not strategy-driven
+                symbol: sym,
+                brokerId: 'mt5',
+                decision: 'SCORED',
+                reason: `${protoSlug}: composite=${gated.composite} signal=${gated.signal ?? 'N/A'}`,
+                composite: gated.composite,
+                signal: gated.signal ?? 'HOLD',
+              });
 
-            const adjScore = chosenComposite * this.state.globalRiskMultiplier;
-            if (adjScore < strat.tradeThreshold) continue;
-
-            decisions.push({
-              timestamp: new Date().toISOString(),
-              strategyId: strat.id, symbol: sym, brokerId: strat.brokerId,
-              decision: 'SCORED',
-              reason: `${strat.watchlistName} × ${strat.protocolId}` +
-                (shortGated ? ` vs ${strat.shortProtocolId}` : '') +
-                `: long=${longGated.composite}` +
-                (shortGated ? ` short=${shortGated.composite}` : '') +
-                ` → ${side}`,
-              composite: chosenComposite, signal: side,
-            });
-
-            // ── Decision Trail: store the LONG vs SHORT comparison (#474) ──
-            trailRecords.push({
-              tickNumber: this.state.tickCount,
-              strategyId: strat.id, symbol: sym,
-              longProtocolId: strat.protocolId,
-              longComposite: longGated.composite,
-              longSignal: longGated.signal ?? null,
-              shortProtocolId: strat.shortProtocolId ?? null,
-              shortComposite: shortGated?.composite ?? null,
-              shortSignal: shortGated?.signal ?? null,
-              winner: side,
-              chosenComposite,
-              finalSignal: side,
-              reason: `${strat.protocolId}=${longGated.composite}` +
-                (shortGated ? ` vs ${strat.shortProtocolId}=${shortGated.composite}` : '') +
-                ` → ${side} (threshold: ${strat.tradeThreshold})`,
-              actionable: adjScore >= strat.tradeThreshold,
-            });
-
-            this.auditLog.logScored(this.state.tickCount, strat.id, sym,
-              longGated.composite, shortGated?.composite ?? null,
-              side, chosenComposite, adjScore >= strat.tradeThreshold);
-
-            // Phase B.2: Scoring strategies only produce scores — trading dispatch
-            // is handled by step 4 (TradingStrategy evaluation) via dispatchTrade().
-            // The gated results are cached in gatedScoreCache for step 4 to consume.
-
+              this.logger.log(
+                `  ✓ ${protoSlug} × ${sym}: composite=${gated.composite} signal=${gated.signal ?? 'N/A'}`,
+              );
             } catch (symbolErr) {
-              // ── Duplicate error suppression (#378) ──
               const errMsg = (symbolErr as Error).message?.substring(0, 200) || 'Unknown error';
-              const errorKey = `${strat.id}:${sym}:${errMsg}`;
+              const errorKey = `${protoSlug}:${sym}:${errMsg}`;
               const prev = this.suppressedErrors.get(errorKey);
 
               if (prev && prev.lastTick === this.state.tickCount - 1) {
                 prev.lastTick = this.state.tickCount;
                 prev.count++;
               } else if (prev && prev.lastTick < this.state.tickCount - 1) {
-                const ago = Math.round((Date.now() - prev.firstSeenAt.getTime()) / 1000);
                 this.logger.warn(
-                  `${strat.id}:${sym}: ${errMsg} (×${prev.count} since ${prev.firstSeenAt.toISOString().substring(11, 19)}, silenced for ${ago}s)`
+                  `${protoSlug}:${sym}: ${errMsg} (×${prev.count}, silenced)`,
                 );
                 prev.lastTick = this.state.tickCount;
                 prev.count = 1;
-                prev.firstSeenAt = new Date();
               } else {
-                this.logger.warn(`${strat.id}:${sym}: ${errMsg}`);
+                this.logger.warn(`${protoSlug}:${sym}: ${errMsg}`);
                 this.suppressedErrors.set(errorKey, { lastTick: this.state.tickCount, count: 1, firstSeenAt: new Date() });
               }
-
-              decisions.push({
-                timestamp: new Date().toISOString(),
-                strategyId: strat.id, symbol: sym, brokerId: strat.brokerId,
-                decision: 'FAILED',
-                reason: errMsg,
-                composite: 0,
-                signal: 'HOLD',
-              });
             }
           }
-          if (scoredCount > 0) this.logger.log(`  Watchlist "${strat.watchlistName}" (protocol: ${strat.protocolId}): ${scoredCount}/${wlSymbols.length} scored`);
-        } catch (err) {
-          this.logger.error(`Watchlist scoring "${strat.watchlistName}" failed: ${(err as Error).message}`);
+          if (protoScored > 0) {
+            this.logger.log(`  Protocol "${protoSlug}": ${protoScored}/${symbols.length} symbols scored`);
+          }
+        } catch (protoErr) {
+          this.logger.warn(`Protocol "${protoSlug}" scoring failed: ${(protoErr as Error).message}`);
         }
       }
 

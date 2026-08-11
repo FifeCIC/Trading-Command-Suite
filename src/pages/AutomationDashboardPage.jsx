@@ -3,11 +3,13 @@ import { motion } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import PageInfoPopover from '../components/PageInfoPopover';
 import EmptyState from '../components/EmptyState';
 import ToggleSwitch from '../components/ToggleSwitch';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import { formatTime } from '../core/format-utils';
 import { pnlColor } from '../core/signal-utils';
+import './automation-dashboard.css';
 
 export default function AutomationDashboardPage() {
   const [selectedSymbol, setSelectedSymbol] = useState(null);

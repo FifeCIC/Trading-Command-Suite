@@ -272,6 +272,7 @@ export class DirectivesController {
       avgScore: st?.count ? Math.round(st.totalScore / st.count) : null,
       runs: st?.count ?? null,
       bias: st ? (st.bullishCount > st.bearishCount ? 'bullish' : st.bearishCount > st.bullishCount ? 'bearish' : 'neutral') : null,
+      directionBias: (d as any).directionBias || 'neutral',
     };
     });
   }

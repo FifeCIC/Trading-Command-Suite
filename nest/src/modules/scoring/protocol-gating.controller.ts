@@ -76,6 +76,8 @@ export class ProtocolGatingController {
       avgHoldTime?: string;
       winRateTarget?: string;
       idealFor?: string;
+      // Set after construction by async resolveSymbols() below
+      resolvedSymbols?: string[];
     }> = [];
 
     // Code-registered protocols (from DB-backed ProtocolDbService)
@@ -116,7 +118,7 @@ export class ProtocolGatingController {
         source: 'database',
         directiveCount: proto.groups.reduce((s, g) => s + g.directiveIds.length, 0),
         maxScore,
-        active: proto.active !== false, // Respect DB value set by toggle endpoint
+        active: proto.active !== false,
         groups,
         tradingStyle: (proto as any).tradingStyle,
         recommendedTimeframe: (proto as any).recommendedTimeframe,
@@ -125,6 +127,8 @@ export class ProtocolGatingController {
         avgHoldTime: (proto as any).avgHoldTime,
         winRateTarget: (proto as any).winRateTarget,
         idealFor: (proto as any).idealFor,
+        // Placeholder — populated below by resolveSymbols()
+        resolvedSymbols: [] as string[],
       });
     }
 
@@ -206,6 +210,19 @@ export class ProtocolGatingController {
       }
     } catch {
       // Enrichment is best-effort
+    }
+
+    // ── Resolve symbols for each protocol ──
+    // Runs OUTSIDE the enrichment try/catch so a single DB failure doesn't
+    // block all protocols. Uses ProtocolDbService.resolveSymbols() — the same
+    // resolution logic the automation loop uses (single-symbol → auto-derived,
+    // multi-symbol → watchlist lookup).
+    for (const proto of protocols) {
+      try {
+        (proto as any).resolvedSymbols = await this.protocolDb.resolveSymbols(proto.id);
+      } catch {
+        (proto as any).resolvedSymbols = [];
+      }
     }
 
     return { protocols, count: protocols.length };

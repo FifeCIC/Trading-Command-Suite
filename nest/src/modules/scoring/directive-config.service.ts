@@ -48,6 +48,7 @@ export class DirectiveConfigService {
       const prefix = `directive:${directiveId}:`;
       const rows = await this.prisma.globalSetting.findMany({
         where: { key: { startsWith: prefix } },
+        select: { key: true, value: true },
       });
 
       const config: DirectiveConfig = {};
@@ -77,6 +78,7 @@ export class DirectiveConfigService {
     try {
       const rows = await this.prisma.globalSetting.findMany({
         where: { key: { startsWith: 'directive:' } },
+        select: { key: true, value: true },
       });
 
       const map = new Map<string, DirectiveConfig>();
