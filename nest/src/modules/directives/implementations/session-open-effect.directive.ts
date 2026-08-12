@@ -84,14 +84,11 @@ export class SessionOpenEffectDirective implements IDirective {
     preferredSessions: ['US', 'London'] as const,
   };
 
-  // ── Time-gate: only active during US market hours (Mon–Fri) ──
-  // Reference implementation for Q291 — timeframe-aware directive config.
-  readonly activeWindow = {
-    start: '09:00',
-    end: '16:30',
-    timezone: 'America/New_York',
-    daysOfWeek: [1, 2, 3, 4, 5],  // Mon–Fri
-  };
+  // ── REMOVED: activeWindow gate that limited this directive to NY hours only.
+  // The calculate() method already handles proximity detection for ALL three
+  // session opens (Tokyo 00:00, London 08:00, NY 13:30 UTC). Blocking it outside
+  // NY hours meant forex protocols in Asian/London sessions could never benefit
+  // from session-open directional bias. See 2026-08-11 discussion.
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

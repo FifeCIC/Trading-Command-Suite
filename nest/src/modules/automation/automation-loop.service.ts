@@ -1004,68 +1004,11 @@ export class AutomationLoopService implements OnModuleInit {
         return decisions;
       }
 
-      // 3. Score only strategy-relevant symbols via ScoringService.rankAll()
-      //    Pass symbolFilter to avoid wasting time on non-tradeable DB symbols (AAPL, 3LNVl, etc.)
-      let scoreMap = new Map<string, any>();
-      try {
-        const ranked = await this.scoringService.rankAll(undefined, strategySymbols.length + 10, strategySymbols);
-        if (ranked?.ranked) {
-          for (const entry of ranked.ranked) {
-            scoreMap.set(entry.ticker, entry);
-          }
-        }
-
-        // Attach scores to positions
-        for (const pos of allPositions) {
-          const scored = scoreMap.get(pos.symbol) || scoreMap.get(pos.ticker);
-          if (scored) {
-            pos.composite = scored.score;
-            pos.signal = scored.signal;
-            pos.dataStatus = scored.dataStatus;
-          } else {
-            pos.composite = null;
-            pos.signal = 'NO_DATA';
-            pos.dataStatus = 'untracked';
-          }
-        }
-
-        // Log scored positions
-        const scored = allPositions.filter(p => p.composite !== null);
-        this.logger.log(`  Scored ${scored.length}/${allPositions.length} positions`);
-
-        // ── Scoring log: unified logging ──
-        this.scoringLog.logScoringRun({
-          symbolsScored: scored.length,
-          avgScore: scored.length > 0 ? scored.reduce((s, p) => s + p.composite, 0) / scored.length : 0,
-          topSymbol: scored[0]?.symbol,
-          topScore: scored[0]?.composite,
-          durationMs: Date.now() - tickStart,
-        });
-        // Log top 3 signals
-        for (const pos of scored.slice(0, 3)) {
-          if (pos.composite >= 40) {
-            this.scoringLog.logSignal({
-              symbol: pos.symbol, composite: pos.composite,
-              signal: pos.signal, confidence: pos.confidence ?? 50,
-            });
-          }
-        }
-        // ── End scoring log ──
-        for (const pos of scored.slice(0, 5)) {
-          decisions.push({
-            timestamp: new Date().toISOString(),
-            strategyId: '',
-            symbol: pos.symbol,
-            brokerId: pos.brokerId,
-            decision: 'SCORED',
-            reason: `Composite: ${pos.composite}`,
-            composite: pos.composite,
-            signal: pos.signal,
-          });
-        }
-      } catch (err) {
-        this.logger.error(`Scoring failed: ${(err as Error).message}`);
-      }
+      // 3. REMOVED: rankAll() — ran all 104 directives against every symbol.
+      //    This produced thousands of noisy scores (EURUSD=3291, etc.) that had
+      //    no protocol scoping and confused the pipeline. Protocol-gating (step 3b)
+      //    is the single source of truth for SEES scores now.
+      //    See: 2026-08-11 — automation loop protocol-driven refactor.
 
       // ── Helper: get or compute a gated score for a symbol+protocol pair ──
       const getGatedScore = async (sym: string, protocolId: string, bars: any[], ws: 'group-weighted' | 'maxscore-weighted' = 'group-weighted'): Promise<any> => {
@@ -1199,7 +1142,7 @@ export class AutomationLoopService implements OnModuleInit {
         const hasBars = bars && bars.length >= 20;
 
         for (const strategyId of strategyIds) {
-          const strategyDecision = await this.evaluateStrategy(strategyId, allPositions, scoreMap, hasBars ? bars : null);
+          const strategyDecision = await this.evaluateStrategy(strategyId, allPositions, new Map(), hasBars ? bars : null);
           if (strategyDecision) decisions.push(strategyDecision);
         }
       }

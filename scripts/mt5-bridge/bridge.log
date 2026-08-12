@@ -26635,3 +26635,241 @@ oneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone Met
 2026-08-11 03:01:45,992 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
 2026-08-11 03:01:45,994 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
 2026-08-11 03:01:46,002 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-11 13:28:19,371 [INFO] MetaTrader5 package loaded
+2026-08-11 13:28:19,373 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-11 13:28:19,374 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-11 13:28:19,374 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-11 13:28:19,374 [INFO] Connecting to MT5 at startup...
+2026-08-11 13:28:19,374 [INFO] Connecting to MT5 at startup...
+2026-08-11 13:28:19,374 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-11 13:28:19,375 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-11 13:28:19,378 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-11 13:28:19,378 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-11 13:28:19,403 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-11 13:28:19,403 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-11 15:04:10,059 [INFO] MetaTrader5 package loaded
+2026-08-11 15:04:10,059 [INFO] MetaTrader5 package loaded
+2026-08-11 15:04:10,060 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-11 15:04:10,060 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-11 15:04:10,061 [INFO] Connecting to MT5 at startup...
+2026-08-11 15:04:10,061 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-11 15:04:10,061 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-11 15:04:10,061 [INFO] Connecting to MT5 at startup...
+2026-08-11 15:04:10,062 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-11 15:04:10,063 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-11 15:04:10,064 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-11 15:04:10,084 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-11 15:04:10,084 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-11 15:29:37,558 [INFO] MetaTrader5 package loaded
+2026-08-11 15:29:37,558 [INFO] MetaTrader5 package loaded
+2026-08-11 15:29:37,558 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-11 15:29:37,559 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-11 15:29:37,559 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-11 15:29:37,559 [INFO] Connecting to MT5 at startup...
+2026-08-11 15:29:37,563 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-11 15:29:37,563 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-11 15:29:37,564 [INFO] Connecting to MT5 at startup...
+2026-08-11 15:29:37,564 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-11 15:29:37,567 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-11 15:29:37,567 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-11 15:29:37,580 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-11 15:29:37,580 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-11 21:17:28,458 [INFO] MetaTrader5 package loaded
+2026-08-11 21:17:28,459 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-11 21:17:28,459 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-11 21:17:28,459 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-11 21:17:28,459 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-11 21:17:28,459 [INFO] Connecting to MT5 at startup...
+2026-08-11 21:17:28,460 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-11 21:17:28,460 [INFO] Connecting to MT5 at startup...
+2026-08-11 21:17:28,461 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-11 21:17:28,464 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-11 21:17:28,465 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-11 21:17:28,485 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-11 21:17:28,485 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-11 22:22:32,010 [INFO] MetaTrader5 package loaded
+2026-08-11 22:22:32,010 [INFO] MetaTrader5 package loaded
+2026-08-11 22:22:32,011 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-11 22:22:32,011 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-11 22:22:32,012 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-11 22:22:32,012 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-11 22:22:32,012 [INFO] Connecting to MT5 at startup...
+2026-08-11 22:22:32,012 [INFO] Connecting to MT5 at startup...
+2026-08-11 22:22:32,012 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-11 22:22:32,013 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-11 22:22:32,016 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-11 22:22:32,018 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-11 22:22:32,027 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-11 22:22:32,029 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-11 22:23:53,354 [INFO] MetaTrader5 package loaded
+2026-08-11 22:23:53,354 [INFO] MetaTrader5 package loaded
+2026-08-11 22:23:53,355 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-11 22:23:53,355 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-11 22:23:53,355 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-11 22:23:53,356 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-11 22:23:53,356 [INFO] Connecting to MT5 at startup...
+2026-08-11 22:23:53,356 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-11 22:23:53,356 [INFO] Connecting to MT5 at startup...
+2026-08-11 22:23:53,357 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-11 22:23:53,360 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-11 22:23:53,361 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-11 22:23:53,373 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-11 22:23:53,373 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-11 22:24:07,638 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:24:07.562477", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:24:08,041 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:24:08.041161", "action": "order_placed", "ticket": 152466522893, "symbol": "AUDUSD", "type": "buy", "volume": 0.01, "price": 0.7063, "clientOrderId": null}
+2026-08-11 22:26:02,360 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:26:02.359967", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:26:02,431 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:26:02.431338", "action": "order_placed", "ticket": 152466523978, "symbol": "USDJPY", "type": "buy", "volume": 0.01, "price": 159.279, "clientOrderId": null}
+2026-08-11 22:28:02,346 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:28:02.346103", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:28:02,434 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:28:02.433974", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:28:02,482 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:28:02.482889", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:28:02,528 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:28:02.528196", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:28:02,577 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:28:02.577218", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:28:02,636 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:28:02.636256", "action": "order_placed", "ticket": 152466525175, "symbol": "GBPUSD", "type": "buy", "volume": 0.01, "price": 1.35062, "clientOrderId": null}
+2026-08-11 22:30:02,365 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:30:02.365033", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:30:02,464 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:30:02.464311", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:30:02,508 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:30:02.508123", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:30:02,551 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:30:02.551598", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:30:02,599 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:30:02.599088", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:32:02,193 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:32:02.193005", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:32:02,267 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:32:02.267028", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:32:02,311 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:32:02.311368", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:32:02,356 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:32:02.356786", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:32:02,400 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:32:02.400718", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:34:02,576 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:34:02.576176", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:34:02,666 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:34:02.665980", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:34:02,712 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:34:02.712335", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:34:02,757 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:34:02.756952", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:34:02,800 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:34:02.800428", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:36:03,198 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:36:03.198617", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:36:03,282 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:36:03.282671", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:36:03,330 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:36:03.330059", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:36:03,375 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:36:03.375716", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:36:03,421 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:36:03.421383", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:38:01,459 [INFO] MetaTrader5 package loaded
+2026-08-11 22:38:01,460 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-11 22:38:01,461 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-11 22:38:01,461 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-11 22:38:01,462 [INFO] Connecting to MT5 at startup...
+2026-08-11 22:38:01,462 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-11 22:38:01,462 [INFO] Connecting to MT5 at startup...
+2026-08-11 22:38:01,462 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-11 22:38:01,463 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-11 22:38:01,469 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-11 22:38:01,482 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-11 22:38:01,482 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-11 22:38:03,874 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:38:03.874186", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:38:03,969 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:38:03.969776", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:38:04,024 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:38:04.024242", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:38:04,075 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:38:04.075093", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:38:04,126 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:38:04.125968", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:39:59,005 [INFO] MetaTrader5 package loaded
+2026-08-11 22:39:59,006 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-11 22:39:59,007 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-11 22:39:59,011 [INFO] MetaTrader5 package loaded
+2026-08-11 22:39:59,013 [INFO] Connecting to MT5 at startup...
+2026-08-11 22:39:59,013 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-11 22:39:59,019 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-11 22:39:59,019 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-11 22:39:59,022 [INFO] Connecting to MT5 at startup...
+2026-08-11 22:39:59,022 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-11 22:39:59,025 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-11 22:39:59,035 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-11 22:39:59,036 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-11 22:39:59,046 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-11 22:40:07,866 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:40:07.866170", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:40:08,245 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:40:08.245239", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:40:08,522 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:40:08.522709", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:40:08,757 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:40:08.757129", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:40:09,088 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:40:09.088615", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:42:05,989 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:42:05.989881", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:42:06,210 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:42:06.210814", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:42:06,395 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:42:06.395340", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:42:06,589 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:42:06.589555", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:42:06,767 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:42:06.767225", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:44:06,060 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:44:06.060041", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:44:06,284 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:44:06.284436", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:44:06,459 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:44:06.458979", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:44:06,658 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:44:06.658299", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:44:06,844 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:44:06.844700", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:46:06,011 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:46:06.011503", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:46:06,240 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:46:06.240722", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:46:06,421 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:46:06.421133", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:46:06,603 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:46:06.603001", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:46:06,787 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:46:06.787552", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:48:05,969 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:48:05.969287", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:48:06,189 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:48:06.188993", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:48:06,368 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:48:06.368271", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:48:06,542 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:48:06.542190", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:48:06,730 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:48:06.730436", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:50:09,080 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:50:09.080800", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:50:09,394 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:50:09.394035", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:50:09,619 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:50:09.619218", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:50:09,828 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:50:09.828897", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:50:10,043 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:50:10.043142", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:52:05,947 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:52:05.947634", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:52:06,162 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:52:06.162748", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:52:06,350 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:52:06.350898", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:52:06,536 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:52:06.536607", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:52:06,715 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:52:06.715005", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:54:06,140 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:54:06.140087", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:54:06,367 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:54:06.367075", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:54:06,560 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:54:06.560040", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:54:06,780 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:54:06.780685", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:54:06,980 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:54:06.980295", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:56:06,002 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:56:06.002332", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:56:06,235 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:56:06.235358", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:56:06,430 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:56:06.430021", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:56:06,621 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:56:06.621212", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:56:06,801 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:56:06.801209", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:58:05,960 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:58:05.960471", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 22:58:06,182 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:58:06.182326", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:58:06,359 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:58:06.359320", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:58:06,545 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:58:06.545423", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 22:58:06,727 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T22:58:06.726953", "action": "order_failed", "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "error": "No prices", "clientOrderId": null}
+2026-08-11 23:00:06,881 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T23:00:06.881176", "action": "order_failed", "symbol": "NZDUSD", "type": "buy", "volume": 0.01, "error": "(-2, 'Invalid \"comment\" argument')", "clientOrderId": null}
+2026-08-11 23:00:07,120 [INFO] [TRADE JOURNAL] {"timestamp": "2026-08-11T23:00:07.120542", "action": "order_placed", "ticket": 152466537568, "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "price": 4375.63, "clientOrderId": null}
+2026-08-12 00:12:44,336 [INFO] MetaTrader5 package loaded
+2026-08-12 00:12:44,344 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-12 00:12:44,344 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-12 00:12:44,345 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-12 00:12:44,350 [INFO] Connecting to MT5 at startup...
+01 (http.server, no Flask)...
+2026-08-12 00:12:44,360 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-12 00:12:44,360 [INFO] Connecting to MT5 at startup...
+2026-08-12 00:12:44,361 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-12 00:12:44,393 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-12 00:12:44,409 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-12 00:12:44,486 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-12 00:12:44,496 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-12 00:13:40,297 [INFO] MetaTrader5 package loaded
+2026-08-12 00:13:40,298 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-12 00:13:40,298 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-12 00:13:40,298 [INFO] Connecting to MT5 at startup...
+2026-08-12 00:13:40,298 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-12 00:13:40,303 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-12 00:13:40,310 [INFO] MetaTrader5 package loaded
+2026-08-12 00:13:40,312 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-12 00:13:40,313 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-12 00:13:40,313 [INFO] Connecting to MT5 at startup...
+2026-08-12 00:13:40,314 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-12 00:13:40,316 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-12 00:13:40,317 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-12 00:13:40,328 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-12 00:59:17,416 [INFO] MetaTrader5 package loaded
+2026-08-12 00:59:17,417 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-12 00:59:17,417 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-12 00:59:17,418 [INFO] Connecting to MT5 at startup...
+2026-08-12 00:59:17,418 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-12 00:59:17,421 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1368.32
+2026-08-12 00:59:17,428 [INFO] MetaTrader5 package loaded
+2026-08-12 00:59:17,429 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-12 00:59:17,429 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-12 00:59:17,430 [INFO] Connecting to MT5 at startup...
+2026-08-12 00:59:17,431 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-12 00:59:17,431 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-12 00:59:17,434 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-12 00:59:17,444 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-12 00:59:27,313 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-12 01:00:27,347 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-12 01:01:27,355 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-12 01:02:24,284 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'

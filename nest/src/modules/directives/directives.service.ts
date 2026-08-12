@@ -27,6 +27,41 @@ import { ConditionDetectorService } from './condition-detector.service';
 import { getDirectiveSuitability } from './directive-suitability.registry';
 import { isScoringDemo } from '../../config/scoring-mode';
 
+/**
+ * Detect symbols that trade 24 hours (forex, metals, crypto).
+ * These markets don't have "off hours" — all sessions are valid.
+ * Session mismatch penalties should NOT apply to these symbols.
+ *
+ * Detection:
+ *  - 6-char pairs (EURUSD, GBPJPY) → forex
+ *  - XAU/USD, XAG/USD etc. → metals (trade 23/5, essentially 24h)
+ *  - BTC/USD, ETH/USD etc. → crypto (24/7)
+ *  - US30, UK100, GER30 etc. → indices (NOT 24h — follow exchange hours)
+ */
+function is24HourMarket(symbol: string): boolean {
+  const s = (symbol || '').toUpperCase();
+
+  // Forex pairs: exactly 6 chars, first 3 and last 3 are currencies
+  if (/^[A-Z]{6}$/.test(s)) {
+    const base = s.substring(0, 3);
+    const quote = s.substring(3, 6);
+    const currencies = new Set([
+      'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'NZD', 'CAD', 'CHF',
+      'SEK', 'NOK', 'DKK', 'SGD', 'HKD', 'TRY', 'ZAR', 'MXN',
+      'PLN', 'HUF', 'CZK', 'CNH', 'ILS', 'THB', 'RUB', 'INR',
+    ]);
+    if (currencies.has(base) && currencies.has(quote)) return true;
+  }
+
+  // Metals: XAU, XAG, XPT, XPD
+  if (/^X(AU|AG|PT|PD)/.test(s)) return true;
+
+  // Crypto pairs
+  if (/^(BTC|ETH|XRP|SOL|DOGE|ADA|AVAX|MATIC|LINK|DOT|LTC|BCH|UNI)/.test(s)) return true;
+
+  return false;
+}
+
 @Injectable()
 export class DirectivesService {
   private readonly logger = new Logger(DirectivesService.name);
@@ -137,6 +172,7 @@ export class DirectivesService {
             type: (directive as any).category || 'technical',
             weight: directive.maxScore || 100,
             readiness: directive.readiness || 'alpha',
+            active: true,
             config: {
               description: directive.description,
               directionBias: directive.directionBias || 'neutral',
@@ -229,35 +265,20 @@ export class DirectivesService {
           }
         }
 
-        // ── Activation Gate (Q301) — suitability check ──
-        const suitability = directive.suitability ?? getDirectiveSuitability(id);
-        const gateResult = this.evaluateGate(suitability, cv);
-
-        if (gateResult.muted) {
-          results.set(id, {
-            score: 0,
-            confidence: 0,
-            reason: `Muted — ${gateResult.reason}`,
-            signalClass: 'neutral',
-            gated: true,
-            gatedReason: gateResult.reason,
-          });
-          continue;
-        }
+        // ── Activation Gate (Q301) — DISABLED for protocol-level scoring ──
+        // Regime/volatility/session gating belongs in Scoring Strategies (Phase 2),
+        // not at the directive level. Directives should score based on data alone.
+        // See: https://github.com/FifeCIC/Trading-Command-Suite/issues/610
+        //
+        // const suitability = directive.suitability ?? getDirectiveSuitability(id);
+        // const gateResult = this.evaluateGate(suitability, cv, input.symbol);
+        //
+        // if (gateResult.muted) { ... continue; }
+        //
+        // Weight multiplier is always 1.0 — no reduction.
 
         // ── Run the directive (supports async for Finnhub-backed directives) ──
         let result = await directive.calculate(input);
-
-        // ── Apply session/volatility weight adjustments ──
-        if (gateResult.weightMultiplier < 1.0) {
-          result = {
-            ...result,
-            score: Math.round(result.score * gateResult.weightMultiplier),
-            reason: result.reason
-              ? `${result.reason}. ${gateResult.reason}`
-              : gateResult.reason,
-          };
-        }
 
         // ── Apply time modifiers (timeModifiers) ──
         if (directive.timeModifiers && directive.timeModifiers.length > 0) {
@@ -345,6 +366,7 @@ export class DirectivesService {
   private evaluateGate(
     s: SuitabilityProfile,
     cv: ConditionVector,
+    symbol?: string,
   ): { muted: boolean; reason: string; weightMultiplier: number } {
     let weightMultiplier = 1.0;
 
@@ -371,10 +393,15 @@ export class DirectivesService {
     }
 
     // ── Session mismatch → -50% weight ──
+    // SKIPPED for 24-hour markets (forex, metals, crypto) — these have no
+    // "off hours." A forex pair in the Asian session is still actively traded.
+    // Only stocks/ETFs/indices with fixed exchange hours get this penalty.
+    const is24h = is24HourMarket(symbol || '');
     if (
+      !is24h &&
       s.preferredSessions.length > 0 &&
       !s.preferredSessions.includes(cv.activeSession) &&
-      !s.preferredSessions.includes('off-hours') // don't penalize if off-hours is explicitly preferred
+      !s.preferredSessions.includes('off-hours')
     ) {
       weightMultiplier -= 0.50;
     }
@@ -385,6 +412,7 @@ export class DirectivesService {
         parts.push(`volatility mismatch (${s.volatilityLevel} vs ${cv.volatility}, -30%)`);
       }
       if (
+        !is24h &&
         s.preferredSessions.length > 0 &&
         !s.preferredSessions.includes(cv.activeSession) &&
         !s.preferredSessions.includes('off-hours')

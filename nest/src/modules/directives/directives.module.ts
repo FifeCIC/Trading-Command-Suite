@@ -648,6 +648,9 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.dilutionImpact);
     this.directivesService.register(this.rolloverRisk);
 
+    // ── Seed directive table with latest class defaults (activates stubbed directives) ──
+    await this.directivesService.seedToDatabase();
+
     // ── Load DB metadata onto in-memory registry (Epic #510 Phase 2) ──
     await this.directivesService.loadDirectiveMetadata();
 

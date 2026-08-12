@@ -400,30 +400,36 @@ export class ProtocolGatingService {
     }));
 
     // 5. Compute composite based on weightStrategy
+    // ── Post-gate note (2026-08-11): Moved from percentage-based to raw-score-based.
+    // Previously: (tech% × 0.4 + sent% × 0.35) × riskMult → 0-100 scale.
+    // Now:        (techRaw × 0.4 + sentRaw × 0.35) × riskMult → raw scale.
+    // This aligns protocol-gating composites with rankAll() scores so both
+    // produce values in the hundreds (matching directive raw-score ranges).
     let rawBeforeRisk: number;
     if (weightStrategy === 'maxscore-weighted') {
-      // MAXSCORE-WEIGHTED: ignore group weights, use all directive scores proportionally
-      // Composite = (sum of all raw scores / sum of all maxScores) × 100
+      // MAXSCORE-WEIGHTED: use all directive raw scores proportionally
       let totalRaw = 0;
-      let totalMax = 0;
       for (const groupId of Object.keys(subRawTotals)) {
         totalRaw += subRawTotals[groupId] ?? 0;
-        totalMax += subMaxTotals[groupId] ?? 0;
       }
-      rawBeforeRisk = totalMax > 0 ? (totalRaw / totalMax) * 100 : 0;
+      rawBeforeRisk = totalRaw;
     } else {
       // GROUP-WEIGHTED (default): group weights determine category balance
-      rawBeforeRisk = (subScores['technical'] ?? 0) * 0.40 + (subScores['sentiment'] ?? 0) * 0.35;
+      // Use raw totals, not percentages — a directive scoring 102/120 should
+      // contribute 102 × 0.4/groupCount, not 34% × 0.4.
+      const techRaw = subRawTotals['technical'] ?? 0;
+      const sentRaw = subRawTotals['sentiment'] ?? 0;
+      rawBeforeRisk = techRaw * 0.40 + sentRaw * 0.35;
     }
     const riskResult = this.riskEngine.apply(rawBeforeRisk, riskDirectives);
 
     const composite = riskResult.hardGateTriggered
       ? 0
-      : Math.round(Math.max(0, Math.min(100, riskResult.finalScore)));
+      : Math.round(Math.max(0, riskResult.finalScore));
 
-    // directionMode is extracted earlier — see protocol selection above
-    // #337: Strong Buy/Sell thresholds from scoring history
-    const STRONG_THRESHOLD = 80; // >= 80% of max possible → strong signal
+    // #337: Strong Buy/Sell thresholds — now in raw-score space
+    // Strong signals at composite ≥ 500 (was 80% in old 0-100 scale)
+    const STRONG_THRESHOLD = 500;
     let signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
     const isLongDirection = directionMode !== 'SHORT_ONLY';
 
