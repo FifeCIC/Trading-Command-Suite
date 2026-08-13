@@ -68,7 +68,7 @@ export const NAV_TREE = {
     label: 'Protocols',
     views: [
       { id: 'protocols-registry', label: 'Protocols Registry', icon: '📋' },
-      { id: 'directives-manager', label: 'Directives', icon: '◆' },
+      { id: 'directives-registry', label: 'Directives Registry', icon: '◆' },
       { id: 'symbols-ladder', label: 'Symbols Ladder', icon: '📈' },
       { id: 'protocols-ladder', label: 'Protocols Ladder', icon: '🪜' },
       { kind: 'section-header', id: 'tools-header', label: 'Tools', icon: '' },
@@ -76,6 +76,7 @@ export const NAV_TREE = {
       { id: 'configure-directives', label: 'Protocol Editor', icon: '⚙' },
       { id: 'protocol-builder', label: 'Protocol Builder', icon: '🧩' },
       { id: 'protocol-trail', label: 'Protocol Trail', icon: '🔗' },
+      { id: 'singles-monitor', label: 'Singles Monitor', icon: '🖥' },
       { id: 'scoring-debug-lab', label: 'Scoring Debug (Dual Protocol)', icon: '🔬' },
     ],
   },

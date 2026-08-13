@@ -41,6 +41,7 @@ import ExitSignalsPage from '../pages/ExitSignalsPage.jsx';
 import ScoringActivityLogsPage from '../pages/ScoringActivityLogsPage.jsx';
 import ProtocolsPage from '../pages/ProtocolsPage.jsx';
 import ProtocolTrailPage from '../pages/ProtocolTrailPage.jsx';
+import SinglesMonitorPage from '../pages/SinglesMonitorPage.jsx';
 import ProtocolsLadderPage from '../pages/ProtocolsLadderPage.jsx';
 import SymbolsLadderPage from '../pages/SymbolsLadderPage.jsx';
 import ProtocolsPerformancePage from '../pages/ProtocolsPerformancePage.jsx';
@@ -215,7 +216,7 @@ export const VIEW_COMPONENTS = {
   'mt5-status': Mt5StatusPage,
 
   // Scoring
-  'directives-manager': DirectivesManagerPage,
+  'directives-registry': DirectivesManagerPage,
   'directive-impact-audit': DirectiveImpactAuditPage,
   'directive-audit': DirectiveAuditPage,
   'live-ordering-stack': LadderPage,
@@ -224,6 +225,7 @@ export const VIEW_COMPONENTS = {
   'scoring-activity-logs': ScoringActivityLogsPage,
   'protocols-registry': ProtocolsPage,
   'protocol-trail': ProtocolTrailPage,
+  'singles-monitor': SinglesMonitorPage,
   'protocols-ladder': ProtocolsLadderPage,
   'symbols-ladder': SymbolsLadderPage,
   'protocols-performance': ProtocolsPerformancePage,

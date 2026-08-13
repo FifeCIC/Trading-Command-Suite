@@ -282,6 +282,16 @@ export class ScoringController {
     return this.scoreHistoryService.getLatestScores();
   }
 
+  /** Directive-level breakdown of a symbol's protocol score. Used by Protocol Trail and Singles Monitor. */
+  @Get('breakdown/:ticker')
+  async getScoreBreakdown(
+    @Param('ticker') ticker: string,
+    @Query('protocol') protocol?: string,
+    @Query('runId') runId?: string,
+  ) {
+    return this.scoreHistoryService.getScoreBreakdown(ticker, protocol, runId);
+  }
+
   @Post('compete')
   @ApiOperation({ summary: 'Run strategy competition — find best next move across all strategies' })
   async compete(@Body() body: { symbols?: string[]; strategies?: string[]; limit?: number }) {

@@ -15,6 +15,10 @@
   background: var(--panel); color: var(--ink); font-family: inherit; font-size: 0.78rem;
 }
 .pl-count { font-size: 0.72rem; color: var(--ink-soft); margin-left: auto; }
+.pl-refresh {
+  font-size: 0.72rem; color: var(--accent); font-variant-numeric: tabular-nums;
+  white-space: nowrap; font-weight: 600;
+}
 
 /* Table */
 .pl-table-wrap { overflow-x: auto; }
@@ -46,5 +50,7 @@
 .pl-time { white-space: nowrap; }
 .pl-proto-link { color: var(--ink-soft); text-decoration: none; }
 .pl-proto-link:hover { color: var(--accent); text-decoration: underline; }
+.pl-score-link { text-decoration: none; }
+.pl-score-link:hover .pl-score-max { color: var(--accent); }
 .pl-bar { display: inline-block; height: 6px; border-radius: 3px; min-width: 4px; }
 .pl-bar-wrap { display: flex; align-items: center; gap: 6px; }

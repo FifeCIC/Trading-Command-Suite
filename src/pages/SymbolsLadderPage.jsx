@@ -10,7 +10,7 @@
  *
  * Refreshes silently using keepPreviousData to avoid content blink.
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { keepPreviousData } from '@tanstack/react-query';
@@ -18,13 +18,40 @@ import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
+import { TopRowSlotContent } from '../core/top-row-slot';
 import './protocols-ladder.css';
 
 import { scoreClass, signalBadge } from '../core/signal-utils';
 
+/** Seconds to wait after the automation loop tick before refreshing. */
+const REFRESH_AFTER_TICK_MS = 2000;
+
 export default function SymbolsLadderPage() {
   const [sortBy, setSortBy] = useState('score');
   const [protocolFilter, setProtocolFilter] = useState('all');
+  const [countdown, setCountdown] = useState(null);
+
+  // Automation status — gives us nextTickAt so refresh syncs with the loop
+  const { data: automation } = useQuery({
+    queryKey: ['sl-automation'],
+    queryFn: () => apiGet('/api/automation/status').catch(() => null),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+
+  const nextTickAt = automation?.nextTickAt;
+
+  // Countdown to next loop tick — ticks every second
+  useEffect(() => {
+    if (!nextTickAt) { setCountdown(null); return; }
+    const tick = () => {
+      const remain = new Date(nextTickAt).getTime() - Date.now();
+      setCountdown(remain > 0 ? Math.ceil(remain / 1000) : 0);
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [nextTickAt]);
 
   // Active protocols — now includes resolvedSymbols from the server
   const { data: protocolsData, isLoading: pLoading } = useQuery({
@@ -47,12 +74,20 @@ export default function SymbolsLadderPage() {
     return map;
   }, [protocolsData]);
 
-  // Latest scoring runs — the fresh data from the protocol-driven pipeline
+  // Latest scoring runs — refreshed in sync with the automation loop tick.
+  // refetchInterval is dynamic: schedules the next refetch ~2s after nextTickAt,
+  // falling back to 30s if automation status is unavailable.
   const { data: runsData } = useQuery({
     queryKey: ['sl-scores'],
     queryFn: () => apiGet('/api/scoring/runs').catch(() => ({ runs: [] })),
     staleTime: 10_000,
-    refetchInterval: 30_000,
+    refetchInterval: () => {
+      if (nextTickAt) {
+        const delay = new Date(nextTickAt).getTime() - Date.now() + REFRESH_AFTER_TICK_MS;
+        return Math.max(5000, delay); // min 5s floor
+      }
+      return 30_000; // fallback if no automation status
+    },
     placeholderData: keepPreviousData,
   });
 
@@ -69,7 +104,7 @@ export default function SymbolsLadderPage() {
         const key = `${ticker}::${protoId}`;
         // Keep the highest score if multiple runs for same symbol+protocol
         if (!map[key] || s.value > map[key].score) {
-          map[key] = { score: s.value, timestamp: run.timestamp, protocolId: protoId };
+          map[key] = { score: s.value, timestamp: run.timestamp, protocolId: protoId, runId: s.id };
         }
       }
     }
@@ -105,6 +140,7 @@ export default function SymbolsLadderPage() {
           protocolName: proto.name,
           score: data?.score ?? null,
           lastScored: data?.timestamp ?? null,
+          runId: data?.runId ?? null,
         });
       }
     }
@@ -154,11 +190,19 @@ export default function SymbolsLadderPage() {
         <span className="pl-count">{entries.length} symbols</span>
       </div>
 
+      {countdown != null && (
+        <TopRowSlotContent>
+          <span className="pl-refresh" title="Time until the next automation loop tick and ladder refresh">
+            ⟳ {countdown > 0 ? `${countdown}s` : 'refreshing…'}
+          </span>
+        </TopRowSlotContent>
+      )}
+
       {pLoading ? <LoadingSkeleton variant="card" count={8} /> : (
         <div className="pl-table-wrap">
           <table className="pl-table">
             <thead>
-              <tr><th>#</th><th>Symbol</th><th>Score</th><th>Signal</th><th>Protocol</th><th>Time</th></tr>
+              <tr><th>#</th><th>Symbol</th><th>Score</th><th>%</th><th>Signal</th><th>Protocol</th><th>Time</th></tr>
             </thead>
             <tbody>
               {entries.map((e, i) => {
@@ -169,11 +213,28 @@ export default function SymbolsLadderPage() {
                   <td className="pl-rank">{i + 1}</td>
                   <td className="pl-symbol">{e.symbol}</td>
                   <td>
-                    <span className={scoreClass(pct)}>
-                      {e.score != null ? e.score.toLocaleString() : '—'}
-                    </span>
-                    {e.score != null && max > 0 && (
-                      <span className="pl-score-max"> / {max.toLocaleString()}</span>
+                    {e.score != null ? (
+                      <Link
+                        to={`/protocols/protocol-trail?symbol=${encodeURIComponent(e.symbol)}&protocol=${encodeURIComponent(e.protocolId)}${e.runId ? `&runId=${encodeURIComponent(e.runId)}` : ''}`}
+                        className="pl-score-link"
+                        title={`View directive breakdown for ${e.symbol}`}
+                      >
+                        <span className={scoreClass(pct)}>
+                          {e.score.toLocaleString()}
+                        </span>
+                        {max > 0 && (
+                          <span className="pl-score-max"> / {max.toLocaleString()}</span>
+                        )}
+                      </Link>
+                    ) : (
+                      <span className="pl-muted">—</span>
+                    )}
+                  </td>
+                  <td>
+                    {pct != null ? (
+                      <span className={scoreClass(pct)}>{pct}%</span>
+                    ) : (
+                      <span className="pl-muted">—</span>
                     )}
                   </td>
                   <td>{signalBadge(pct)}</td>

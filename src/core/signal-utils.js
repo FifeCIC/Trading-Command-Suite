@@ -90,6 +90,26 @@ export function signalColor(signal) {
   return SIGNAL_COLORS[signal] || SIGNAL_COLORS.MUTED;
 }
 
+/** Map a signal string to a badge tone: 'buy' | 'sell' | 'hold' | 'neutral'. */
+export function signalTone(signal) {
+  if (signal === 'STRONG_BUY' || signal === 'BUY') return 'buy';
+  if (signal === 'STRONG_SELL' || signal === 'SELL') return 'sell';
+  if (signal === 'HOLD') return 'hold';
+  return 'neutral';
+}
+
+/** Human-readable labels for protocol directionMode values (LONG_ONLY → 'Long Only'). */
+export const DIRECTION_MODE_LABELS = {
+  LONG_ONLY: 'Long Only',
+  SHORT_ONLY: 'Short Only',
+  BOTH: 'Both',
+};
+
+/** Convert a directionMode enum value to its human-readable label. */
+export function directionModeLabel(mode) {
+  return DIRECTION_MODE_LABELS[mode] || mode || '';
+}
+
 /** Score bar width + color for inline bar display */
 export function scoreBar(score, max = 100) {
   if (score == null) return { width: 0, background: SIGNAL_COLORS.MUTED };

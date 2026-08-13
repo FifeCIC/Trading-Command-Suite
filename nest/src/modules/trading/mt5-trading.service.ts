@@ -3,6 +3,7 @@ import { TradeRecorderService } from './trade-recorder.service';
 import { StopGuardianService } from './stop-guardian.service';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import { PrismaService } from '../../database/prisma.service';
+import { sanitizeMt5Comment } from '../providers/mt5-comment.util';
 
 export interface Mt5Position {
   ticket: number;
@@ -95,7 +96,7 @@ export class Mt5TradingService {
       };
       if (params.sl) body.sl = params.sl;
       if (params.tp) body.tp = params.tp;
-      if (params.comment) body.comment = params.comment;
+      if (params.comment) body.comment = sanitizeMt5Comment(params.comment);
 
       const res = await fetch(`${this.bridgeUrl}/order`, {
         method: 'POST',
@@ -190,8 +191,10 @@ export class Mt5TradingService {
    *         closed trades WHERE strategy IS NOT NULL for per-strategy P&L/win rate.
    *
    * ⚠️ WARNING: Strategy name is extracted from MT5 position's comment field.
-   * Comment format: "Strategy Name | Score%". Do NOT change the split('|')[0]
-   * logic without ensuring placeOrder()'s comment format stays aligned.
+   * Legacy format: "TCS Strategy Name | Score%". Since the shared sanitizer
+   * (mt5-comment.util.ts) strips '|', new positions use "TCS Strategy Name Score".
+   * Phase 3 moves strategy tracking to the magic number + DB, replacing this
+   * fragile comment parsing entirely. Keep both parses aligned until then.
    * @see nest/src/modules/trading/mt5-trading.service.ts placeOrder() line ~98
    */
   async closePosition(ticket: number): Promise<{ success: boolean; error?: string }> {
@@ -207,10 +210,13 @@ export class Mt5TradingService {
       // Record the close in trade history
       if (pos) {
         const posType = String(pos.type) === '0' || (pos as any).type === 'buy' ? 'buy' : 'sell';
-        // Extract strategy name from MT5 comment (format: "Strategy Name | Score%")
-        const strategyFromComment = pos.comment
-          ? pos.comment.split('|')[0]?.trim()
-          : undefined;
+        // Extract strategy name from MT5 comment.
+        // Legacy: "TCS Strategy | 119%" → split on '|'.
+        // Sanitised (current): "TCS Strategy 119" → strip "TCS " prefix.
+        const rawComment = pos.comment ? pos.comment.trim() : '';
+        const strategyFromComment = rawComment.includes('|')
+          ? rawComment.split('|')[0]?.trim() || undefined
+          : rawComment.replace(/^TCS\s+/i, '').trim() || undefined;
         this.tradeRecorder.record({
           symbol: pos.symbol,
           side: posType === 'buy' ? 'sell' : 'buy', // closing side is opposite

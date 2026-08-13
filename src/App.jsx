@@ -132,6 +132,7 @@ import ScreenOptions from './components/ScreenOptions';
 import PageInfoPopover from './components/PageInfoPopover';
 import VIEW_META from './core/view-meta';
 import { VIEW_EXPLANATIONS } from './core/view-explanations';
+import { TopRowSlotProvider, TopRowSlotHost } from './core/top-row-slot';
 
 import { useNetworkStatus } from './utils/networkStatus';
 import { useUiStore } from './stores/useUiStore';
@@ -212,9 +213,9 @@ function AppShell() {
 
   const isHomePage = location.pathname === '/';
   const primaryArea = symbolId ? 'research' : (isHomePage ? null : (area || 'trading'));
-  // defaultView: use the first registered view for the current area, falling back to directives-manager
+  // defaultView: use the first registered view for the current area, falling back to directives-registry
   const areaViews = NAV_STRUCTURE[area];
-  const defaultView = (areaViews && areaViews.length > 0) ? areaViews[0].id : 'directives-manager';
+  const defaultView = (areaViews && areaViews.length > 0) ? areaViews[0].id : 'directives-registry';
   const secondaryView = symbolId ? 'symbol-detail' : (view || defaultView);
   const [demoPrompt, setDemoPrompt] = useState('Generate a responsive planning concept for eco garden week.');
   const [demoOutput, setDemoOutput] = useState('');
@@ -251,7 +252,7 @@ function AppShell() {
       'speed-scanner': 'speed-scanner',
       'pipeline-graph-lab': 'pipeline-graph-lab',
       'active-symbols': 'active-symbols',
-      'directives-manager': 'directives-manager',
+      'directives-registry': 'directives-registry',
     };
     setScreenOptionsView(VIEW_TO_OPTIONS[viewId] || null);
   }, [primaryArea, secondaryView]);
@@ -1010,21 +1011,26 @@ function AppShell() {
 
       <main id="main-content" className="main-stage" {...withDevTag('main.stage', { area: secondaryView })}>
         <div aria-live="assertive" aria-atomic="true" className="sr-only-alert" role="alert"></div>
-        <div className="main-top-row">
-          <Breadcrumbs />
-          {(() => {
-            const explanation = VIEW_EXPLANATIONS[secondaryView];
-            if (!explanation) return null;
-            return (
-              <div className="main-top-info">
-                <PageInfoPopover>{explanation}</PageInfoPopover>
-              </div>
-            );
-          })()}
-        </div>
-        <ErrorBoundary message="Something went wrong rendering this view.">
-          {renderMainContent()}
-        </ErrorBoundary>
+        <TopRowSlotProvider>
+          <div className="main-top-row">
+            <Breadcrumbs />
+            <div className="main-top-right">
+              {(() => {
+                const explanation = VIEW_EXPLANATIONS[secondaryView];
+                if (!explanation) return null;
+                return (
+                  <div className="main-top-info">
+                    <PageInfoPopover>{explanation}</PageInfoPopover>
+                  </div>
+                );
+              })()}
+              <TopRowSlotHost />
+            </div>
+          </div>
+          <ErrorBoundary message="Something went wrong rendering this view.">
+            {renderMainContent()}
+          </ErrorBoundary>
+        </TopRowSlotProvider>
       </main>
 
       {devOverlayOpen && (

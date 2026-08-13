@@ -34,7 +34,7 @@ export const PAGE_DATA_STATUS = {
   'trading212-portfolio': { status: 'live', source: 'Trading212 API + gated scoring' },
 
   // ── Scoring ──
-  'directives-manager': { status: 'live', source: 'DB + Directive Registry' },
+  'directives-registry': { status: 'live', source: 'DB + Directive Registry' },
   'scoring-overview': { status: 'live', source: 'DB + Directive Registry' },
   'configure-directives': { status: 'live', source: 'DB' },
   'sees-live-stack': { status: 'live', source: 'DB + Directive Engine' },

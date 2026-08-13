@@ -138,7 +138,7 @@ const PIPELINE = [
     dbColumns: 'session, volatility, gapPercent, mtfAlignment',
   },
   {
-    id: 'directives', title: 'Directive Execution', linkTo: '/scoring/directives-manager', linkLabel: 'Directives',
+    id: 'directives', title: 'Directive Execution', linkTo: '/scoring/directives-registry', linkLabel: 'Directives',
     fn: 'DirectivesService.runAll()',
     fnDesc: 'Runs every active directive in the protocol against the symbol. Each directive has independent logic — some need 36+ bars, some check session windows, some query external data. Muted/gated directives return score=0. Time-gated and suitability-gated checks run BEFORE calculation.',
     dbTable: 'directive (registry), score_snapshot (output)',

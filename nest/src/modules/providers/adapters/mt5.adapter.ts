@@ -28,6 +28,7 @@ import {
 } from '../interfaces/provider-adapter.interface';
 import { NotificationService } from '../../notifications/notifications.service';
 import { BridgeEventService } from '../bridge-event.service';
+import { sanitizeMt5Comment } from '../mt5-comment.util';
 
 interface BridgeQuoteResponse {
   symbol: string;
@@ -299,8 +300,8 @@ export class Mt5Adapter implements IProviderAdapter {
   }
 
   async placeOrder(params: BrokerOrderRequest): Promise<BrokerOrderResult> {
-    // MT5 only allows basic ASCII in comments — sanitize
-    const safeComment = (params.comment ?? 'TCS auto').replace(/[^a-zA-Z0-9 -]/g, '').substring(0, 50);
+    // MT5 only allows short ASCII comments — sanitize via shared helper
+    const safeComment = sanitizeMt5Comment(params.comment);
     const body = {
       symbol: params.symbol,
       type: params.side === 'BUY' ? 'buy' : 'sell',

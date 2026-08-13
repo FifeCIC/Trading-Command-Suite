@@ -1,13 +1,19 @@
 ---
-description: "MANDATORY — Every agent MUST write a handoff file when completing work. The Librarian agent batch-processes these to update the QA Testing page, Capability Map, and Architecture Framework. No agent discretion required — always write the file."
+description: "Write a handoff file when closing a GitHub issue, when a change alters a pipeline's data flow/behaviour/capability, or when adding a new feature. Skip cosmetic-only UI work. The Librarian batch-processes handoffs to update the QA Testing page, Capability Map, and Architecture Framework."
 applyTo: "nest/src/**, src/pages/**, src/components/**, src/data/**, src/core/**, scripts/**"
 ---
 
-# Agent Handoff Rule — ALWAYS APPLY
+# Agent Handoff Rule — WRITE WHEN IT MATTERS
 
-When you complete ANY code change (feature, bug fix, refactor, test, documentation), you MUST write a handoff file to `.github/handoffs/` BEFORE calling `task_complete`.
+Write a handoff file to `.github/handoffs/` BEFORE calling `task_complete` **only** when the change is one of:
 
-**Do not make decisions about whether the change is "big enough."** Every change gets a handoff. The Librarian decides what to batch and when.
+1. **Closing a GitHub issue** — work that resolves an issue gets a handoff so the Librarian records it in the QA page, Capability Map, and Architecture Framework.
+2. **Pipeline / behaviour / capability change** — a change that alters a pipeline's data flow or behaviour: new or changed API endpoints, Prisma schema changes, scoring/gating/trading/automation logic, provider adapters, or data contracts.
+3. **New feature** — a genuinely new capability the Capability Map or Architecture Framework should track.
+
+**Skip the handoff** for cosmetic-only work: visual styling, layout, copy/label tweaks, badge/theme adjustments, and trivial refactors with no behavioural change.
+
+Rule of thumb: if the change would not belong on the Capability Map or Architecture Framework, it does not need a handoff.
 
 ## ⚠️ Inline Documentation Comments — ALWAYS APPLY
 

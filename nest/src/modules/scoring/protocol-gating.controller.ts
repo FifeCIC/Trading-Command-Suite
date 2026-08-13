@@ -270,8 +270,8 @@ export class ProtocolGatingController {
         breakouts: {},
         gatingActive: false,
         meta: {
-          additiveEquivalent: 50,
-          gatingDelta: 0,
+          compositePct: 0,
+          maxScore: 0,
           directiveCount: 0,
           gatedCount: 0,
           riskDirectiveCount: 0,

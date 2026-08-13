@@ -239,8 +239,8 @@ const OPTIONS_REGISTRY = {
       },
     ],
   },
-  'directives-manager': {
-    title: 'Directives Manager',
+  'directives-registry': {
+    title: 'Directives Registry',
     sections: [
       {
         id: 'layoutWidth',

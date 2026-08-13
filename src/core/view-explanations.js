@@ -40,7 +40,7 @@ export const VIEW_EXPLANATIONS = {
     'Protocols can be chained into strategies. ' +
     'This view lets you inspect protocol definitions, directive groups, and version history.',
 
-  'directives-manager':
+  'directives-registry':
     'The Directive Registry is the master catalog of all scoring rules. ' +
     'Each directive is a self-contained scoring function — e.g. "RSI below 30 → bullish." ' +
     'Directives are grouped into protocols which are assembled into strategies. ' +

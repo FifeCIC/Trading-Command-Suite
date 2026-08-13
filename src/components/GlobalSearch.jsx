@@ -67,7 +67,7 @@ export default function GlobalSearch() {
     const directives = DIRECTIVE_SEED
       .filter((d) => d.name.toLowerCase().includes(q) || d.id.toLowerCase().includes(q) || d.category?.toLowerCase().includes(q))
       .slice(0, 5)
-      .map((d) => ({ type: 'directive', id: d.id, label: d.name, sub: d.category, navigate: `/scoring/directives-manager` }));
+      .map((d) => ({ type: 'directive', id: d.id, label: d.name, sub: d.category, navigate: `/scoring/directives-registry` }));
 
     const providers = PROVIDERS
       .filter((p) => p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q))

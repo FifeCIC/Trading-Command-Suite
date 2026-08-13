@@ -119,15 +119,15 @@ const VIEW_META = {
     css: 'src/pages/accounts-dashboard.css',
     api: ['GET /api/providers/mt5/accounts', 'GET /api/portfolio/summary', 'GET /api/isa/dashboard'],
   },
-  '/scoring/directives-manager': {
-    label: 'Directives Manager',
+  '/scoring/directives-registry': {
+    label: 'Directives Registry',
     file: 'src/pages/DirectivesManagerPage.jsx',
     css: 'src/pages/directives-manager.css',
     api: ['GET /api/directives'],
   },
   // Canonical URL — part of gradual /scoring/ → /protocols/ migration
-  '/protocols/directives-manager': {
-    label: 'Directives Manager',
+  '/protocols/directives-registry': {
+    label: 'Directives Registry',
     file: 'src/pages/DirectivesManagerPage.jsx',
     css: 'src/pages/directives-manager.css',
     api: ['GET /api/directives'],
@@ -168,6 +168,12 @@ const VIEW_META = {
     file: 'src/pages/ProtocolTrailPage.jsx',
     css: 'src/pages/decision-trail.css',
     api: ['GET /api/scoring/runs'],
+  },
+  '/protocols/singles-monitor': {
+    label: 'Singles Monitor',
+    file: 'src/pages/SinglesMonitorPage.jsx',
+    css: 'src/pages/decision-trail.css',
+    api: ['GET /api/scoring/breakdown/:symbol', 'GET /api/automation/status'],
   },
   '/automation/automation-dashboard': {
     label: 'Automation Dashboard',

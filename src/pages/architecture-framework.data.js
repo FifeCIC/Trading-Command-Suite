@@ -17,6 +17,8 @@ export const STATUS_SNAPSHOT = [
   '2026-07-14–15: Protocol Directionality fully wired (#327) — LONG_ONLY/SHORT_ONLY/BOTH directionMode on PROTOCOL_REGISTRY. 3 SHORT protocols (default-short, built-in-short, mt5-technical-short). 19 directives tagged with directionBias (bullish/bearish). SHORT_DIRECTIVE_GROUPS (bearish-technical, bearish-sentiment, short-risk). Dual-protocol scoring compares LONG vs SHORT per tick — stronger protocol wins, HOLD when tied or both low. Old gateScore() SELL bias eliminated — both scoreMap and no-scoreMap paths in evaluateStrategy now use protocol-gating.',
   '2026-07-14: Protocol-Asset Alignment — auto strategies fixed: shortProtocolId changed from equity default-short → forex built-in-short. Equity protocols (analyst targets, earnings) excluded from forex scoring. Scoring Debug Lab page at /lab/scoring-debug-lab for head-to-head LONG/SHORT visualization with raw totals.',
   '2026-07-14: Raw-Sum Aggregation (#327) — protocol-gating changed from per-directive normalize-then-average to raw-sum aggregation: group score = sum(raw directive scores) / sum(maxScores) × 100. Risk gate weights halved, cumulative multiplier floor capped at 0.5. ENTRY_THRESHOLD lowered to 25, HOLD_FLOOR to 10. subRawTotals and subMaxTotals exposed in API response for transparency.',
+  '2026-08-06/09/11: Handoff batch — #589 Phase 1 (TradingStrategyService.create() auto-links ScoringStrategy from watchlist; broker_config table + BrokerConfigService + GET /api/brokers; hotStock columns on ScoringStrategy), #590 Phase 2 (all 25 TradingStrategy columns exposed in create forms), Symbols Ladder score/maxScore ratio display, and 17-file shared core utility consolidation.',
+  'Singles Monitor + Protocol Trail split — new SinglesMonitorPage at /protocols/singles-monitor (live auto-refresh of one symbol × one protocol, synced to the automation loop tick with top-row countdown). ProtocolTrailPage converted to a fixed HISTORY VIEWER (no refetchInterval) deep-linked via ?symbol=&protocol=&runId=<Score UUID>. Symbols Ladder score links now include runId for exact-run deep-linking. GET /api/scoring/breakdown accepts runId query param (Score table UUID). Registered in nav-tree + view-routes + view-meta.',
 ]
 
 export const ARCHITECTURE_INDEX = [
@@ -178,6 +180,15 @@ export const CURRENT_SLICE = [
   'Gold Speed Chart Offline State (#226) — SpeedChart.jsx now shows a centered offline state with launch instructions, fallback badge, and live price stream when MT5 bridge is unreachable. Candle chart renders normally when MT5 is connected. Files: SpeedChart.jsx, speed-trading.css. ✅',
   'News Import Tier System — Tiered priority model (positions→protocols→macro→sector→other) replaces old monolithic GIANT_SYMBOLS approach. Each tier has independent maxPerDay and intervalMin, configurable via PUT /api/system/settings { newsImport: {...} }. Hourly cron dispatches only due tiers. Daily budget (default 100 articles) enforced globally. Endpoints: GET /api/news/stats (dashboard), GET /api/news/tracked-symbols (resolves per-tier). Files: news-import.service.ts, settings.service.ts, news.controller.ts. ✅',
   'Snapshot Date-Range Comparison (#69) — Snapshot Library fully wired to SnapshotComparisonService. Side-by-side comparison: price cards, score cards, signal badges with changed detection, sub-score breakdowns, biggest directive mover, news count, seasonality shift, and news summaries. Files: SnapshotLibraryPage.jsx, snapshot-library.css. ✅',
+  'TradingStrategyService.create() Auto-Link (#589) — when watchlistId/watchlistName is provided without scoringStrategyId, create() auto-creates (or reuses) a ScoringStrategy and links it. Fixes the "watchlistId silently dropped" bug. maxPyramidTiers/slTpInheritance removed from the old CreateStrategyPage TradingStrategy payload (they are ScoringStrategy columns). Files: trading-strategy.service.ts, CreateStrategyPage.jsx. ✅',
+  'Broker Config Persistence (#589 Phase 1c) — new broker_config table + BrokerConfigService (seeds 4 default brokers on module init: mt5, trading212, paper, capital.com) + BrokerConfigController. GET /api/brokers and GET /api/brokers/:id endpoints. ScoringStrategy gained 4 hotStock columns (hotStockEnabled, hotStockAllocation, hotStockDetectionMode, hotStockMaxHoldHours). StrategyCreatePage now reads brokers from the API with BROKER_FALLBACK. ✅',
+  'Strategy Form Full Column Exposure (#590 Phase 2) — 12 new fields in StrategyCreatePage (description, minRarityBand, requireDirection, maxPositions, maxSize, maxDailyLoss, cooldownMinutes, useRaritySizing, hotStock*), 7 new fields in old CreateStrategyPage. All 25 TradingStrategy columns now reachable from UI. Files: StrategyCreatePage.jsx, CreateStrategyPage.jsx, strategy-create.css, forms.css. ✅',
+  'Symbols Ladder Score-to-Max Ratio — score column now displays raw directive sum against protocol maxScore (sum of directiveMaxScores). maxScore sourced from GET /api/scoring/gated/protocols — same endpoint as Protocols Registry "Max Score" stat. Color normalized via pct = Math.round((score/max)*100). Files: SymbolsLadderPage.jsx, protocols-ladder.css. ✅',
+  'Shared Core Utility Migration — 17 page files consolidated to shared src/core/ utilities (format-utils timeAgo/formatTime/formatDateTime/formatDuration/formatCurrency/pnlColor, signal-utils scoreColor, protocol-utils getProtocolType). formatCurrency enhanced with abs + currency options. Removes ~17 duplicated local functions. ✅',
+  // ── 2026-08-13 — Top-Row Content Slot ──
+  'Top-Row Content Slot — reusable React context slot (src/core/top-row-slot.jsx) lets pages inject content into the app shell main-top-row (next to the breadcrumbs) without the shell knowing about the page. App.jsx wraps main in TopRowSlotProvider and renders TopRowSlotHost inside main-top-right; SymbolsLadderPage registers its auto-refresh countdown via TopRowSlotContent. Two-context design (stable setter + content) prevents render loops; unmount cleanup clears the slot. Added 1rem horizontal padding to .main-top-row. ✅',
+  // ── 2026-08-13 — Singles Monitor + Protocol Trail Split ──
+  'Singles Monitor + Protocol Trail Split — Singles Monitor (/protocols/singles-monitor) is the live counterpart to Protocol Trail (/protocols/protocol-trail). Protocol Trail is now a fixed history viewer deep-linked via ?symbol=&protocol=&runId=<Score UUID>. GET /api/scoring/breakdown/:ticker accepts runId to fetch one exact Score row. Runs endpoint exposes Score UUID as scores[].id for deep-linking. Files: SinglesMonitorPage.jsx, ProtocolTrailPage.jsx, SymbolsLadderPage.jsx, score-history.service.ts, scoring.controller.ts. ✅',
 ]
 
 export const DECISION_WORKFLOW = [
@@ -446,7 +457,7 @@ export const CONTRACT_CARDS = [
   },
 ]
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-07-18'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-08-13'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -687,6 +698,14 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated operator access',
     owner: 'Protocol gating controller',
     contract: 'Returns multiplicatively-gated scores for all portfolio positions. Same gating logic as single-symbol endpoint applied to every holding.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/scoring/breakdown/:ticker',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'ScoringController',
+    contract: 'Directive-level breakdown of a symbol protocol score. Query: ?protocol=<protocolId>&runId=<Score UUID>. runId fetches one exact historical Score row via scoreHistoryService.getScoreBreakdown findUnique instead of the latest. Used by Singles Monitor (live) and Protocol Trail (fixed history deep-link).',
     status: 'active',
   },
   {
@@ -1063,6 +1082,22 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated operator access',
     owner: 'BacktestController',
     contract: 'Compares multiple backtest runs. Body: { runIds: string[] }. Returns best-by-Sharpe identification and per-run metrics table.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/brokers',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'BrokerConfigController',
+    contract: 'Returns all active broker configs ordered by sortOrder. Seeds 4 default brokers (mt5, trading212, paper, capital.com) on first module init. Response: [{ id, displayName, supportedStyles, supportedAssetTypes, tradingEnabled, note, isActive, sortOrder }].',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/brokers/:id',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'BrokerConfigController',
+    contract: 'Returns a single broker config by id (brokerId PK). Falls back to hardcoded defaults if the DB is unavailable.',
     status: 'active',
   },
 ]

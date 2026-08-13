@@ -317,6 +317,7 @@ export class ScoreHistoryService {
           signalSummary: { buy, sell, neutral },
           topSymbol,
           scores: entries.map((e) => ({
+            id: (e as any).id, // Score table UUID — used for deep-linking to a specific run
             ticker: (e as any).symbol?.ticker || e.symbolId,
             value: e.value,
             confidence: 0,
@@ -395,7 +396,15 @@ export class ScoreHistoryService {
 
   /**
    * GET /api/scoring/latest-scores
-   * Lightweight: returns { [ticker]: { score, timestamp } } for all symbols in the last 30 days.
+   * ---------------------------------------------------------------------------
+   * SEMANTICS: "latest" = the MOST RECENT score per ticker (timestamp-ordered),
+   * NOT the highest. Ladders use this endpoint — they must reflect current
+   * activity, never a historical peak.
+   *
+   * For the highest score over a window, see getLatestProtocolScore()
+   * (used by Protocols Registry, labelled as historical/stale).
+   *
+   * Returns { [ticker]: { score, timestamp } } for all symbols in the last 30 days.
    */
   async getLatestScores(): Promise<Record<string, { score: number; timestamp: string }>> {
     if (!this.prisma.isAvailable) return {};
@@ -403,16 +412,77 @@ export class ScoreHistoryService {
     const rows = await this.prisma.score.findMany({
       where: { timestamp: { gte: thirtyDaysAgo } },
       select: { symbol: { select: { ticker: true } }, value: true, timestamp: true },
-      orderBy: { value: 'desc' },
+      orderBy: { timestamp: 'desc' }, // latest first — NOT value desc
     });
     const map: Record<string, { score: number; timestamp: string }> = {};
     for (const row of rows as any[]) {
       const ticker = row.symbol?.ticker;
-      if (ticker && (!map[ticker] || row.value > map[ticker])) {
+      // First row per ticker (timestamp desc) is the latest — take it, skip the rest
+      if (ticker && !map[ticker]) {
         map[ticker] = { score: row.value, timestamp: row.timestamp.toISOString() };
       }
     }
     return map;
+  }
+
+  /**
+   * GET /api/scoring/breakdown/:ticker
+   * ---------------------------------------------------------------------------
+   * SEMANTICS: "latest" = the MOST RECENT score (timestamp-ordered), matching
+   * getLatestScores(). Consistent with Ladders — shows current activity, not
+   * a historical peak. Optionally scoped to a protocol via ?protocol=.
+   *
+   * Returns the latest protocol-gated score with directive-level breakdown
+   * for a symbol. Used by the Protocol Trail page to show WHY each directive
+   * scored the way it did.
+   */
+  async getScoreBreakdown(ticker: string, protocolId?: string, runId?: string): Promise<any | null> {
+    if (!this.prisma.isAvailable) return null;
+
+    // If a specific runId (Score table UUID) is given, fetch that exact row.
+    // Otherwise fall back to the latest score for this ticker+protocol.
+    if (runId) {
+      const row = await this.prisma.score.findUnique({
+        where: { id: runId },
+        select: { id: true, value: true, breakdown: true, timestamp: true, strategyId: true },
+      });
+      if (!row) return null;
+      return {
+        ticker: ticker.toUpperCase(),
+        score: row.value,
+        runId: row.id,
+        strategyId: row.strategyId,
+        timestamp: row.timestamp.toISOString(),
+        breakdown: (row as any).breakdown ?? null,
+      };
+    }
+
+    const sym = await this.prisma.symbol.findFirst({
+      where: { ticker: ticker.toUpperCase() },
+      select: { id: true },
+    });
+    if (!sym) return null;
+
+    const where: any = {
+      symbolId: sym.id,
+      ...(protocolId ? { strategyId: protocolId } : {}),
+    };
+    const row = await this.prisma.score.findFirst({
+      where,
+      orderBy: { timestamp: 'desc' },
+      select: { id: true, value: true, breakdown: true, timestamp: true, strategyId: true },
+    });
+
+    if (!row) return null;
+
+    return {
+      ticker: ticker.toUpperCase(),
+      score: row.value,
+      runId: row.id,
+      strategyId: row.strategyId,
+      timestamp: row.timestamp.toISOString(),
+      breakdown: (row as any).breakdown ?? null,
+    };
   }
 
   /**
@@ -422,7 +492,6 @@ export class ScoreHistoryService {
    */
   async getRecentlyAnalysed(limit = 30): Promise<RecentlyAnalysedSymbol[]> {
     if (!this.prisma.isAvailable) return [];
-
     const scores = await this.prisma.score.findMany({
       select: { symbolId: true, value: true, breakdown: true, timestamp: true },
       orderBy: { timestamp: 'desc' },
@@ -467,7 +536,15 @@ export class ScoreHistoryService {
 
   /**
    * GET /api/scoring/protocols/:id/latest-score
-   * Returns the single most recent score snapshot for a protocol (by strategyId).
+   * ---------------------------------------------------------------------------
+   * SEMANTICS: "latest" = the MOST RECENT score for this protocol (by
+   * strategyId, timestamp-ordered). Used by Protocols Registry.
+   *
+   * NOTE: The Registry is the intended home for the HIGHEST score (labelled
+   * as historical/stale, never a live signal). That is a separate concern —
+   * this endpoint deliberately returns latest, matching Ladder semantics.
+   * If Registry needs "peak over window", add a distinct method rather than
+   * changing this one's meaning.
    */
   async getLatestProtocolScore(protocolId: string): Promise<{
     value: number;

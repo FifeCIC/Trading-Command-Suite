@@ -67,6 +67,15 @@ import { SymbolResolverService } from '../symbols/symbol-resolver.service';
  * Layer 3 (scoring_strategy table): per-strategy tradeThreshold / minComposite.
  *   — each strategy's own execution bar. Overrides Layer 2.
  *   — this is what compareProtocolPair() checks before dispatching.
+ *
+ * ⚠️ SCALE WARNING (2026-08-13) ⚠️
+ * These thresholds (and Layer 3's minComposite in the DB) were calibrated for
+ * the OLD 0-100 composite scale. The composite is now RAW (values in the
+ * hundreds — see protocol-gating.service.ts SCALE WARNING). A minComposite of
+ * 55 on the old scale now passes almost any raw composite (55+), which is why
+ * the app over-produced BUY signals. Do NOT tune these to new absolute values
+ * — the correct fix is percentage-based thresholds (composite / maxScore × 100)
+ * so custom protocols of any maxScore share the same semantics.
  */
 const STYLE_THRESHOLDS: Record<string, number> = {
   scalp: 75,
@@ -464,20 +473,21 @@ export class AutomationLoopService implements OnModuleInit {
     this.logger.log('Auto-start enabled — restoring automation state...');
     // Re-init broker states now that ProvidersModule has registered adapters
     this.initBrokerStates();
-    // Ensure MT5 is enabled for trading (auto-create if missing)
+    // Ensure MT5 broker state exists (auto-create if missing) — but NEVER
+    // auto-enable trading. Trading must be explicitly enabled by the user via
+    // POST /api/automation/config { tradingEnabled: true }.
+    // ⚠️ Previous code forced tradingEnabled=true here on every restart, which
+    // re-enabled auto-trading and caused unexpected MT5 positions (2026-08-12).
     if (!this.state.brokerStates['mt5']) {
       this.state.brokerStates['mt5'] = {
         brokerId: 'mt5',
         enabled: true,
-        tradingEnabled: true,
+        tradingEnabled: false, // NEVER auto-trade — user must opt in
         scoreIntervalMs: 300000,
         tradeThreshold: 3,
-        requireConfirmation: false,
+        requireConfirmation: true,
       };
       this.logger.log('Auto-created MT5 broker state (was missing after initBrokerStates)');
-    } else {
-      this.state.brokerStates['mt5'].enabled = true;
-      this.state.brokerStates['mt5'].tradingEnabled = true;
     }
     try {
       const strategies = await this.strategyService.findAll();

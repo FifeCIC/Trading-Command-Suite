@@ -11,7 +11,7 @@
  * Token budget: ~23K (vs ~38K for full Architecture Framework)
  * 
  * @generated — extracted from architecture-framework.data.js
- * @updated 2026-08-05
+ * @updated 2026-08-13
  */
 export const STATUS_SNAPSHOT = [
   'This page is the implementation front door for architecture-sensitive work.',
@@ -303,10 +303,19 @@ export const CURRENT_SLICE = [
   'Page Data Status Cleanup — Removed stale scoring-runs and strategies-index entries (routes removed in earlier batches). Updated strategy-builder entry to reflect builder swap (#559).',
   'Issues Closed — #555 Signals Workbench (deleted), #559 Protocol Column Fix (Scoring Activity Logs now has separate Protocol + Strategy columns, implemented in batch #558).',
   '2026-08-06 Cleanup — 78 issue body files deleted from .github/issues/. 28 stale scripts removed from scripts/. SetupBanner component for first-run detection. /status/security page removed (#588). TradingStrategyService.create() fixed to accept all 25 columns (#589 Phase 1). Breadcrumbs/pip-trigger/T212/QA/Trading Plans/Calculators/nav/automation layout fixes. JSDoc added to session-tracker + swap-cost services. view-meta.js + nav-tree.js stale entries cleaned.',
+  'TradingStrategyService.create() Auto-Link (#589) — when watchlistId/watchlistName is provided without scoringStrategyId, create() auto-creates (or reuses) a ScoringStrategy and links it. Fixes the "watchlistId silently dropped" bug. maxPyramidTiers/slTpInheritance removed from the old CreateStrategyPage TradingStrategy payload. ✅',
+  'Broker Config Persistence (#589 Phase 1c) — broker_config table + BrokerConfigService (seeds 4 brokers: mt5, trading212, paper, capital.com) + BrokerConfigController (GET /api/brokers, GET /api/brokers/:id). ScoringStrategy gained 4 hotStock columns. StrategyCreatePage reads brokers from API. ✅',
+  'Strategy Form Full Column Exposure (#590 Phase 2) — 12 new fields in StrategyCreatePage + 7 in old CreateStrategyPage. All 25 TradingStrategy columns now reachable from UI. ✅',
+  'Symbols Ladder Score-to-Max Ratio — score column displays raw directive sum against protocol maxScore. Color normalized via pct = Math.round((score/max)*100). ✅',
+  'Shared Core Utility Migration — 17 page files consolidated to shared src/core/ utilities (format-utils, signal-utils, protocol-utils). formatCurrency enhanced with abs + currency options. ✅',
+  // ── 2026-08-13 — Top-Row Content Slot ──
+  'Top-Row Content Slot — reusable React context slot (src/core/top-row-slot.jsx) lets pages inject content into the app shell main-top-row (next to the breadcrumbs) without the shell knowing about the page. App.jsx wraps main in TopRowSlotProvider and renders TopRowSlotHost inside main-top-right; SymbolsLadderPage registers its auto-refresh countdown via TopRowSlotContent. Two-context design (stable setter + content) prevents render loops; unmount cleanup clears the slot. Added 1rem horizontal padding to .main-top-row. ✅',
+  // ── 2026-08-13 — Singles Monitor + Protocol Trail Split ──
+  'Singles Monitor + Protocol Trail Split — Singles Monitor (/protocols/singles-monitor) is the live counterpart to Protocol Trail (/protocols/protocol-trail). Protocol Trail is now a fixed history viewer deep-linked via ?symbol=&protocol=&runId=<Score UUID>. GET /api/scoring/breakdown/:ticker accepts runId to fetch one exact Score row. Runs endpoint exposes Score UUID as scores[].id for deep-linking. Files: SinglesMonitorPage.jsx, ProtocolTrailPage.jsx, SymbolsLadderPage.jsx, score-history.service.ts, scoring.controller.ts. ✅',
 ]
 
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-08-06 (cleanup sprint day 2: 78 issue files + 28 scripts deleted, SetupBanner + health/setup endpoint, #589 TradingStrategyService.create() fix, /status/security removed #588, batch 2 closed #546-#550, #572 Decision Trail closed)'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-08-13 (handoff batch: #589 Phase 1 broker_config + hotStock + auto-link, #590 Phase 2 full column exposure, Symbols Ladder score/max ratio, 17-file shared core utility migration, top-row content slot, Singles Monitor + Protocol Trail split + GET /api/scoring/breakdown/:ticker runId)'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -531,6 +540,14 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated operator access',
     owner: 'Scoring controller',
     contract: 'FLAT SCORING (canonical 2026-07-29). Returns ranked symbols with directive breakdown, confidence, signal classification. Runs ALL 104 directives unfiltered when ?fresh=true; reads DB cache by default (15s cache). Use for dashboards and quick lookups. NOT for trading decisions — use gated/batch.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/scoring/breakdown/:ticker',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'ScoringController',
+    contract: 'Directive-level breakdown of a symbol protocol score. Query: ?protocol=<protocolId>&runId=<Score UUID>. runId fetches one exact historical Score row via scoreHistoryService.getScoreBreakdown findUnique instead of the latest. Used by Singles Monitor (live) and Protocol Trail (fixed history deep-link).',
     status: 'active',
   },
   {
@@ -1067,6 +1084,22 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Public (no auth)',
     owner: 'HealthController',
     contract: 'First-run detection endpoint. Returns { setupComplete: boolean, missingSteps: string[] } based on DB state (providers configured, protocols seeded, strategies created). Used by SetupBanner component to show/hide first-run setup prompt. Added 2026-08-06.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/brokers',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'BrokerConfigController',
+    contract: 'Returns all active broker configs ordered by sortOrder. Seeds 4 default brokers (mt5, trading212, paper, capital.com) on first module init. Response: [{ id, displayName, supportedStyles, supportedAssetTypes, tradingEnabled, note, isActive, sortOrder }]. Added 2026-08-06.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/brokers/:id',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'BrokerConfigController',
+    contract: 'Returns a single broker config by id (brokerId PK). Falls back to hardcoded defaults if the DB is unavailable. Added 2026-08-06.',
     status: 'active',
   },
 ]

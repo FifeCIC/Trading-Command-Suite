@@ -108,8 +108,8 @@ export interface GatedScore {
     riskScore: number;
   };
   meta: {
-    additiveEquivalent: number;
-    gatingDelta: number;
+    compositePct: number;
+    maxScore: number;
     directiveCount: number;
     gatedCount: number;
     riskDirectiveCount: number;
@@ -168,43 +168,32 @@ function protocolNeedsEurUsd(groups: DirectiveGroup[]): boolean {
 // ─── Thresholds ──────────────────────────────────────────
 
 /**
- * Scoring thresholds — determine BUY/HOLD/SELL from composite score.
+ * Signal classification thresholds — PERCENTAGE-BASED (2026-08-13).
  *
- * ⚠️ THREE-LAYER THRESHOLD ARCHITECTURE:
+ * The composite is a simple additive sum of all directive raw scores.
+ * Signal labels are derived from the percentage of the protocol's own
+ * maxScore, so protocols of any size (maxScore=200 or maxScore=2000)
+ * share identical semantics.
  *
- * Layer 1 (HERE — global signal classification):
- *   ENTRY_THRESHOLD (40): composites ≥ 40 are actionable (BUY or SELL).
- *   HOLD_FLOOR (20): composites 20–39 are HOLD. Below 20 is SELL.
- *   These only classify the SIGNAL LABEL. They do NOT control execution.
+ *   compositePct = (composite / protocolMaxScore) × 100
+ *   ≥ 80% → STRONG_BUY / STRONG_SELL
+ *   ≥ 40% → BUY / SELL
+ *   ≥ 20% → HOLD
+ *   < 20% → SELL (LONG_ONLY → HOLD)
  *
- * Layer 2 (automation-loop.service.ts — per-protocol style defaults):
- *   STYLE_THRESHOLDS: scalp=75, speed=80, day=65, swing=55, position=45.
- *   Selected by protocol.tradingStyle via getStyleThreshold().
- *   Used as the default when a strategy has no explicit tradeThreshold.
+ * ⚠️ HISTORICAL NOTE ⚠️
+ * The previous design used ABSOLUTE constants (ENTRY_THRESHOLD=40,
+ * HOLD_FLOOR=20) calibrated for an old 0-100 percentage scale. When the
+ * composite moved to raw scores (hundreds), those constants silently broke
+ * — every composite ≥ 40 was classified BUY/SELL. That caused the
+ * over-production of BUY signals reported on 2026-08-12.
  *
- * Layer 3 (scoring_strategy table — per-strategy execution):
- *   tradeThreshold / minComposite: each strategy's own execution bar.
- *   Stored in the DB. Overrides Layer 2. This is what actually gates
- *   trade dispatch in compareProtocolPair() → dispatchTrade().
- *
- * RESULT: A composite of 45 could be "BUY" (Layer 1) but might not
- * trigger a trade if the strategy's threshold is 55 (Layer 3).
- *
- * These thresholds are the single most impactful constants in the trading
- * pipeline. A wrong value here means every strategy produces wrong signals.
- *
- * Historical context (#327): the original HOLD_FLOOR was 35, which mapped
- * nearly all composites (typically 7-20 after risk multiplier ~0.5) to SELL.
- * Result: 100% SELL bias, 0 BUY signals. The fix shifted HOLD_FLOOR to 20,
- * which maps typical composites to HOLD. Only genuinely weak scores (< 20)
- * now trigger SELL. Real bearish signals still need the dedicated short-side
- * directives in directive-groups.ts.
- *
- * ENTRY_THRESHOLD (40): composite must reach 40+ to trigger a BUY or SELL.
- * Between HOLD_FLOOR (20) and ENTRY_THRESHOLD (40): HOLD — market is neutral.
+ * Absolute thresholds cannot serve custom protocols with wildly different
+ * maxScores. Percentage-based classification is the only scalable design.
+ * The constants below are now percentage points (not absolute scores).
  */
-const ENTRY_THRESHOLD = 40;
-const HOLD_FLOOR = 20;
+const ENTRY_THRESHOLD = 40;   // % of maxScore — BUY/SELL above this
+const HOLD_FLOOR = 20;        // % of maxScore — HOLD above this, SELL below
 
 // ─── Service ─────────────────────────────────────────────
 
@@ -399,61 +388,68 @@ export class ProtocolGatingService {
       reason: b.reason,
     }));
 
-    // 5. Compute composite based on weightStrategy
-    // ── Post-gate note (2026-08-11): Moved from percentage-based to raw-score-based.
-    // Previously: (tech% × 0.4 + sent% × 0.35) × riskMult → 0-100 scale.
-    // Now:        (techRaw × 0.4 + sentRaw × 0.35) × riskMult → raw scale.
-    // This aligns protocol-gating composites with rankAll() scores so both
-    // produce values in the hundreds (matching directive raw-score ranges).
-    let rawBeforeRisk: number;
-    if (weightStrategy === 'maxscore-weighted') {
-      // MAXSCORE-WEIGHTED: use all directive raw scores proportionally
-      let totalRaw = 0;
-      for (const groupId of Object.keys(subRawTotals)) {
-        totalRaw += subRawTotals[groupId] ?? 0;
-      }
-      rawBeforeRisk = totalRaw;
-    } else {
-      // GROUP-WEIGHTED (default): group weights determine category balance
-      // Use raw totals, not percentages — a directive scoring 102/120 should
-      // contribute 102 × 0.4/groupCount, not 34% × 0.4.
-      const techRaw = subRawTotals['technical'] ?? 0;
-      const sentRaw = subRawTotals['sentiment'] ?? 0;
-      rawBeforeRisk = techRaw * 0.40 + sentRaw * 0.35;
+    // 5. Compute composite — SIMPLE ADDITIVE SUM.
+    //
+    // The composite is the plain sum of ALL directive raw scores across every
+    // group (technical + sentiment + risk). No group weights, no multiplier.
+    // A directive scoring 102/120 contributes 102, full stop.
+    //
+    // The max is the plain sum of all directive maxScores (already in
+    // subMaxTotals). So a score of 744 against max 1560 means "744 of 1560
+    // possible points" — transparent, nothing watered down.
+    //
+    // RISK: hard gates (e.g. liquidity catastrophe, budget veto) can still
+    // force composite = 0. But soft risk modifiers (spread, VIX missing, etc.)
+    // are reported as warnings and do NOT reduce the composite. This keeps
+    // risk visible without silently shaving the signal.
+    let totalRaw = 0;
+    for (const groupId of Object.keys(subRawTotals)) {
+      totalRaw += subRawTotals[groupId] ?? 0;
     }
-    const riskResult = this.riskEngine.apply(rawBeforeRisk, riskDirectives);
+
+    const riskResult = this.riskEngine.apply(totalRaw, riskDirectives);
 
     const composite = riskResult.hardGateTriggered
       ? 0
-      : Math.round(Math.max(0, riskResult.finalScore));
+      : Math.round(Math.max(0, totalRaw));
 
-    // #337: Strong Buy/Sell thresholds — now in raw-score space
-    // Strong signals at composite ≥ 500 (was 80% in old 0-100 scale)
-    const STRONG_THRESHOLD = 500;
+    // #337: Signal classification — PERCENTAGE-BASED (2026-08-13).
+    // The composite is now a simple raw sum. Signal thresholds are percentages
+    // of the protocol's own maxScore, so custom protocols of any size share
+    // the same semantics (see threshold block above).
+    const STRONG_PCT = 80; // % of maxScore for STRONG_BUY / STRONG_SELL
+    const totalMax = Object.values(subMaxTotals).reduce((a, b) => a + (b ?? 0), 0);
+    const compositePct = totalMax > 0 ? (composite / totalMax) * 100 : 0;
+
     let signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
     const isLongDirection = directionMode !== 'SHORT_ONLY';
 
-    if (composite >= STRONG_THRESHOLD) {
+    if (compositePct >= STRONG_PCT) {
       signal = isLongDirection ? 'STRONG_BUY' : 'STRONG_SELL';
-    } else if (composite >= ENTRY_THRESHOLD) {
+    } else if (compositePct >= ENTRY_THRESHOLD) {
       signal = isLongDirection ? 'BUY' : 'SELL';
-    } else if (composite >= HOLD_FLOOR) {
+    } else if (compositePct >= HOLD_FLOOR) {
       signal = 'HOLD';
     } else {
       signal = directionMode === 'LONG_ONLY' ? 'HOLD' : 'SELL';
     }
 
-    // Meta: show what additive would have given
+    // Meta: composite is the plain sum — no gating reduction to report.
+    // compositePct is the normalized signal strength used for classification.
     const riskScore = subScores['risk'] ?? 50; // 50 = neutral risk baseline
-    const additiveEquivalent = Math.round(
-      ((subScores['technical'] ?? 0) + (subScores['sentiment'] ?? 0) + riskScore) / 3,
-    );
 
     // Rarity: compute percentile against historical scores for this protocol
     const rarity = await this.computeRarity(protocolId ?? 'default', symbol, composite);
 
     // Store snapshot for future rarity computation (fire-and-forget)
-    this.storeSnapshot(protocolId ?? 'default', symbol, composite, signal, rarity?.percentile ?? null);
+    this.storeSnapshot(protocolId ?? 'default', symbol, composite, signal, rarity?.percentile ?? null, {
+      subScores,
+      subRawTotals,
+      subMaxTotals,
+      breakouts,
+      riskMultiplier: Number(riskResult.multiplier),
+      directionMode,
+    });
 
     return {
       symbol,
@@ -474,8 +470,8 @@ export class ProtocolGatingService {
         riskScore: riskResult.riskScore,
       },
       meta: {
-        additiveEquivalent,
-        gatingDelta: composite - additiveEquivalent,
+        compositePct: Math.round(compositePct),
+        maxScore: totalMax,
         directiveCount: allResults.size,
         gatedCount: allResults.size - alphaCount,
         riskDirectiveCount: breakouts['risk']?.length ?? 0,
@@ -558,6 +554,9 @@ export class ProtocolGatingService {
    * Store a score snapshot for future rarity computations AND write
    * to the canonical Score table so protocol scores appear in the runs API.
    * Fire-and-forget — failures are logged but don't block the response.
+   *
+   * Stores the directive-level breakdown so the Protocol Trail page can
+   * show WHY each directive scored the way it did.
    */
   private storeSnapshot(
     protocolId: string,
@@ -565,6 +564,14 @@ export class ProtocolGatingService {
     composite: number,
     signal: string,
     rarityPct: number | null,
+    breakdownData: {
+      subScores: Record<string, number>;
+      subRawTotals: Record<string, number>;
+      subMaxTotals: Record<string, number>;
+      breakouts: Record<string, DirectiveBreakout[]>;
+      riskMultiplier: number;
+      directionMode: string;
+    },
   ): void {
     // Write to score_snapshot (rarity history)
     this.prisma.scoreSnapshot.create({
@@ -595,6 +602,12 @@ export class ProtocolGatingService {
               rarityPct: rarityPct ?? null,
               source: 'protocol-gating',
               timestamp: new Date().toISOString(),
+              directionMode: breakdownData.directionMode,
+              riskMultiplier: breakdownData.riskMultiplier,
+              subScores: breakdownData.subScores,
+              subRawTotals: breakdownData.subRawTotals,
+              subMaxTotals: breakdownData.subMaxTotals,
+              breakouts: breakdownData.breakouts,
             },
           },
         });

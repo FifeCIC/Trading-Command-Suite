@@ -233,6 +233,17 @@ const KNOWN_FEATURES = {
   'Session Trading Strategies (Tokyo/London/US)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
   'Strategy Seed Data (7 defaults)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
   'Session Market Coverage (USDJPY/EURUSD/SPX500)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  // 2026-08-06/09/11 — Handoff Batch (Strategy Forms, Broker Config, Symbols Ladder, Shared Utils)
+  'ScoringStrategy Auto-Create (watchlist link)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Broker Config Service (broker_config)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'hotStock Columns (ScoringStrategy)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Strategy Form Full Column Exposure (#590)': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Score-to-Max Ratio Display': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Shared Core Utility Migration (17 files)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // 2026-08-13 — Top-Row Content Slot
+  'Top-Row Content Slot': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // 2026-08-13 — Singles Monitor + Protocol Trail Split
+  'Singles Monitor (live single symbol × protocol breakdown)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
 };
 
 // ── Build unified capability rows ──
