@@ -5,6 +5,7 @@ import { MarketDataService } from '../market-data/market-data.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { ProtocolDbService } from './protocol-db.service';
 import { DirectivesService } from '../directives/directives.service';
+import { isDirectiveIncluded } from '../directives/directive-inclusion';
 
 /**
  * Protocol Gating Controller — META.Stack Canonical Scoring
@@ -87,6 +88,14 @@ export class ProtocolGatingController {
       // from legacy seed data (e.g. "Signals Workbench", "Conviction Dip Accumulation")
       if (!proto.groups?.length) continue;
 
+      const directionMode = (proto as any).directionMode || 'LONG_ONLY';
+
+      // Shared inclusion rule — same one the scoring engine uses
+      // (directive-inclusion.ts). Keeps the registry's maxScore /
+      // directiveCount identical to what actually gets scored.
+      const isIncluded = (did: string): boolean =>
+        isDirectiveIncluded(this.directivesService.get(did), directionMode);
+
       const groups = proto.groups.map((g) => ({
         id: g.id,
         name: g.name,
@@ -94,20 +103,20 @@ export class ProtocolGatingController {
         weight: g.weight,
         minMultiplier: g.isRiskGate ? g.minMultiplier : undefined,
         maxMultiplier: g.isRiskGate ? g.maxMultiplier : undefined,
-        directives: g.directiveIds.map((did) => {
+        directives: g.directiveIds.filter(isIncluded).map((did) => {
           const reg = this.directivesService.get(did);
           return {
             id: did,
             name: reg?.name ?? did,
             description: reg?.description ?? '',
-            maxScore: (g as any).directiveMaxScores?.[did] ?? 100,
+            maxScore: reg?.maxScore ?? 100,
           };
         }),
       }));
 
       const maxScore = proto.groups.reduce(
-        (sum, g) => sum + g.directiveIds.reduce(
-          (s, did) => s + ((g as any).directiveMaxScores?.[did] ?? 100), 0,
+        (sum, g) => sum + g.directiveIds.filter(isIncluded).reduce(
+          (s, did) => s + (this.directivesService.get(did)?.maxScore ?? 100), 0,
         ), 0,
       );
 
@@ -116,7 +125,7 @@ export class ProtocolGatingController {
         name: proto.name,
         description: proto.description,
         source: 'database',
-        directiveCount: proto.groups.reduce((s, g) => s + g.directiveIds.length, 0),
+        directiveCount: proto.groups.reduce((s, g) => s + g.directiveIds.filter(isIncluded).length, 0),
         maxScore,
         active: proto.active !== false,
         groups,

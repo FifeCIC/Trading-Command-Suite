@@ -23,7 +23,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { TopRowSlotContent } from '../core/top-row-slot';
 import PageInfoPopover from '../components/PageInfoPopover';
-import { signalTone, directionModeLabel } from '../core/signal-utils';
+import { signalTone, directionModeLabel, signalArrow } from '../core/signal-utils';
 import './decision-trail.css';
 
 const GROUP_LABELS = {
@@ -96,6 +96,14 @@ export default function SinglesMonitorPage() {
   const runId = data?.runId ?? null;
   const scoredAt = data?.timestamp ?? null;
 
+  // Composite strength: score as % of the summed directive max scores.
+  const totalMax = useMemo(
+    () => Object.values(subMaxTotals).reduce((sum, v) => sum + (Number(v) || 0), 0),
+    [subMaxTotals],
+  );
+  const score = Number(data?.score ?? 0);
+  const strengthPct = totalMax > 0 ? Math.round((score / totalMax) * 100) : null;
+
   /** Format an ISO timestamp as a readable date + time (UTC). */
   function formatTimestamp(iso) {
     if (!iso) return '—';
@@ -140,14 +148,40 @@ export default function SinglesMonitorPage() {
         </div>
       ) : (
         <>
-          {/* Score summary + run metadata (merged into one card) */}
+          {/* Score summary hero card */}
           <div className="pt-summary">
             <div className="pt-summary-main">
-              <div className="pt-summary-symbol">{data.ticker || symbol}</div>
-              <div className="pt-summary-score">{data.score}</div>
-              <span className={`pt-badge pt-badge--${signalTone(signal)} pt-badge--signal`}>{signal}</span>
-              {directionLabel && <span className="pt-badge pt-badge--neutral">{directionLabel}</span>}
+              <div className="pt-summary-id">
+                <span className="pt-summary-symbol">{data.ticker || symbol}</span>
+                {data.strategyId && <span className="pt-summary-protocol">{data.strategyId}</span>}
+              </div>
+              <div className="pt-summary-score">
+                {data.score != null ? score.toLocaleString() : '—'}
+                {totalMax > 0 && (
+                  <span className="pt-summary-score-max">/{totalMax.toLocaleString()}</span>
+                )}
+              </div>
+              <div className="pt-summary-tags">
+                <span className={`pt-signal pt-signal--${signalTone(signal)}`}>
+                  <span className="pt-signal-arrow" aria-hidden="true">{signalArrow(signal)}</span>
+                  {signal}
+                </span>
+                {directionLabel && <span className="pt-badge pt-badge--neutral">{directionLabel}</span>}
+              </div>
             </div>
+
+            {strengthPct != null && (
+              <div className="pt-strength">
+                <div className="pt-strength-track">
+                  <div
+                    className={`pt-strength-fill pt-strength-fill--${signalTone(signal)}`}
+                    style={{ width: `${Math.max(2, Math.min(100, strengthPct))}%` }}
+                  />
+                </div>
+                <span className="pt-strength-label">{strengthPct}% signal strength</span>
+              </div>
+            )}
+
             <div className="pt-meta">
               {scoredAt && (
                 <span className="pt-meta-item">
@@ -157,11 +191,6 @@ export default function SinglesMonitorPage() {
               {runId && (
                 <span className="pt-meta-item">
                   <span className="pt-meta-label">Run ID</span> <code>{runId}</code>
-                </span>
-              )}
-              {data.strategyId && (
-                <span className="pt-meta-item">
-                  <span className="pt-meta-label">Protocol</span> {data.strategyId}
                 </span>
               )}
             </div>

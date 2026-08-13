@@ -86,7 +86,7 @@ export const DIRECTIVE_GROUPS: DirectiveGroup[] = [
     minMultiplier: 0.3,
     maxMultiplier: 1.2,
     directiveIds: [
-      'portfolio-performance', 'spy-qqq-relative-strength', 'dilution-impact',
+      'spy-qqq-relative-strength', 'dilution-impact',
       'vix-regime', 'liquidity-check', 'budget-gate', 'rollover-risk', 'dxy-regime',
     ],
   },
@@ -129,7 +129,7 @@ export const SHORT_DIRECTIVE_GROUPS: DirectiveGroup[] = [
     minMultiplier: 0.3,
     maxMultiplier: 1.2,
     directiveIds: [
-      'portfolio-performance', 'spy-qqq-relative-strength', 'dilution-impact',
+      'spy-qqq-relative-strength', 'dilution-impact',
       'vix-strategy', 'liquidity-check', 'budget-gate', 'rollover-risk', 'dxy-regime',
     ],
   },
@@ -193,7 +193,7 @@ export const BTC_SPEED_GROUPS: DirectiveGroup[] = [
     maxMultiplier: 1.2,
     directiveIds: [
       'btc-halving-cycle', 'crypto-weekend-effect', 'vix-regime',
-      'liquidity-check', 'portfolio-performance',
+      'liquidity-check',
     ],
     directiveMaxScores: { 'btc-halving-cycle': 200, 'crypto-weekend-effect': 50 },
   },

@@ -110,6 +110,13 @@ export function directionModeLabel(mode) {
   return DIRECTION_MODE_LABELS[mode] || mode || '';
 }
 
+/** Directional arrow glyph for a signal string: ▲ buy, ▼ sell, — hold/neutral. */
+export function signalArrow(signal) {
+  if (signal === 'STRONG_BUY' || signal === 'BUY') return '▲';
+  if (signal === 'STRONG_SELL' || signal === 'SELL') return '▼';
+  return '—';
+}
+
 /** Score bar width + color for inline bar display */
 export function scoreBar(score, max = 100) {
   if (score == null) return { width: 0, background: SIGNAL_COLORS.MUTED };

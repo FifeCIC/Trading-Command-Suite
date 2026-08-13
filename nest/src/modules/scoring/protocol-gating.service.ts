@@ -26,6 +26,7 @@ import {
   DIRECTIVE_GROUPS,
   DirectiveGroup,
 } from '../directives/directive-groups';
+import { classifyDirectiveInclusion } from '../directives/directive-inclusion';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { MacroSnapshotService } from './macro-snapshot.service';
 import { EurUsdCacheService } from './eurusd-cache.service';
@@ -297,28 +298,24 @@ export class ProtocolGatingService {
       for (const directiveId of group.directiveIds) {
         const result = allResults.get(directiveId);
         if (!result) continue;
-        // Filter by directionBias: don't include opposite-direction directives
         const directive = this.directivesService.get(directiveId);
-        const bias = directive?.directionBias ?? 'neutral';
-        if (directionMode === 'LONG_ONLY' && bias === 'bearish') continue;
-        if (directionMode === 'SHORT_ONLY' && bias === 'bullish') continue;
 
-        // ── Readiness Gate (alpha→beta→ready tier system) ─────────
-        // Alpha = mock/stub/placeholder → EXCLUDED from composite.
-        // Beta  = real math, proxy/limited data → included, flagged.
-        // Ready = verified against live data → included fully.
-        // Readiness is set on IDirective.readiness (directive.interface.ts L149)
-        // and mirrored in the Directive DB table. See docs/readiness-tiers.md.
-        const readiness = (directive as any)?.readiness ?? 'alpha';
-        if (readiness === 'alpha') {
+        // Single source of truth for inclusion (directionBias + readiness).
+        const verdict = classifyDirectiveInclusion(directive, directionMode);
+        if (verdict === 'readiness-alpha') {
+          // Alpha = mock/stub/placeholder → excluded, reported for transparency.
           excludedBreakdown.push({
             directiveId,
             name: directive?.name ?? directiveId,
             reason: 'mock — excluded from composite (readiness: alpha)',
           });
           alphaCount++;
-          continue; // Skip — do not include in scoring
+          continue;
         }
+        if (verdict === 'direction-bias') continue;
+
+        // Included: count readiness tier for reporting.
+        const readiness = (directive as any)?.readiness ?? 'alpha';
         if (readiness === 'beta') betaCount++;
         if (readiness === 'ready') readyCount++;
 

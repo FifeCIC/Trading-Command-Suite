@@ -1764,52 +1764,6 @@ export class MacdDirective implements IDirective {
 }
 
 // ===========================================================================
-// Portfolio
-// ===========================================================================
-
-@Injectable()
-export class PortfolioPerformanceDirective implements IDirective {
-  readonly id = 'portfolio-performance';
-  readonly name = 'Portfolio Performance';
-  readonly description = 'Symbol-level momentum as proxy for portfolio contribution.';
-  readonly priority = 58;
-  readonly maxScore = 90;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
-
-  calculate(input: DirectiveInput): DirectiveResult {
-
-    const closes = input.bars.map(b => b.close);
-    if (closes.length < 21) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: `Need 21+ bars, have ${closes.length}` };
-    const ret5 = (closes[closes.length-1] - closes[closes.length-6]) / Math.max(0.01, closes[closes.length-6]) * 100;
-    const ret10 = (closes[closes.length-1] - closes[closes.length-11]) / Math.max(0.01, closes[closes.length-11]) * 100;
-    const ret20 = (closes[closes.length-1] - closes[closes.length-21]) / Math.max(0.01, closes[closes.length-21]) * 100;
-    const momentum = (ret5 * 0.5 + ret10 * 0.3 + ret20 * 0.2);
-
-    // BASE (15-70): weighted multi-period return
-    const baseScore = Math.round(mapRange(momentum, -8, 8, 15, 70));
-
-    // BONUS: outlier performance
-    let bonusScore = 0;
-    let bonusLabel = '';
-    if (momentum > 5) { bonusScore = 20; bonusLabel = 'exceptional momentum (>5%)'; }
-    else if (momentum > 3) { bonusScore = 10; bonusLabel = 'strong momentum'; }
-    if (momentum < -5) { bonusScore = 15; bonusLabel = 'significant drawdown'; }
-
-    const total = Math.min(this.maxScore, baseScore + bonusScore);
-    const signalClass: 'bullish' | 'bearish' | 'neutral' = momentum > 1 ? 'bullish' : momentum < -1 ? 'bearish' : 'neutral';
-    return {
-      signalClass,
-      score: total,
-      confidence: Number((0.25 + Math.abs(momentum) * 0.05).toFixed(2)),
-      reason: `Portfolio perf: ${momentum.toFixed(1)}% weighted (5d:${ret5.toFixed(1)} 10d:${ret10.toFixed(1)} 20d:${ret20.toFixed(1)}), base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
-      metadata: { baseScore, bonusScore, bonusLabel, momentum, ret5, ret10, ret20 },
-    };
-
-  }
-}
-
-// ===========================================================================
 // Aspirational (strategy docs — no PHP source yet)
 // ===========================================================================
 

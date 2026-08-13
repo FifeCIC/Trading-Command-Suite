@@ -26949,3 +26949,6 @@ oneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone Met
 2026-08-13 17:55:12,735 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
 2026-08-13 17:55:12,740 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
 2026-08-13 17:55:12,746 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-13 22:29:46,366 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-13 22:29:46,789 [ERROR] Error handling /quote: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-13 22:29:46,800 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine

@@ -259,6 +259,47 @@
   line-height: 1.4;
 }
 
+/* ── Corner Glow Surfaces ─────────────────────────────────── */
+.tl-glow-card {
+  position: relative;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  background:
+    radial-gradient(120% 160% at 0% 0%, var(--glow-color, transparent), transparent 55%),
+    linear-gradient(160deg, var(--panel), color-mix(in srgb, var(--panel) 86%, var(--line)));
+}
+.tl-glow-card--accent  { --glow-color: color-mix(in srgb, var(--accent) 16%, transparent); }
+.tl-glow-card--success { --glow-color: color-mix(in srgb, var(--notice-success-text) 16%, transparent); }
+.tl-glow-card--warning { --glow-color: color-mix(in srgb, var(--notice-warning-text) 16%, transparent); }
+.tl-glow-card--danger  { --glow-color: color-mix(in srgb, var(--notice-critical-text) 16%, transparent); }
+.tl-glow-card--info    { --glow-color: color-mix(in srgb, var(--notice-info-text) 16%, transparent); }
+
+.tl-glow-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+.tl-glow-head strong {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.tl-glow-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.tl-glow-card p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
 .tl-card-meta {
   padding: 0.4rem 0.75rem;
   border-top: 1px solid rgba(255, 255, 255, 0.04);

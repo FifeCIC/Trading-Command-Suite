@@ -486,11 +486,6 @@ export const DIRECTIVE_SUITABILITY: Record<string, SuitabilityProfile> = {
     instrumentTypes: ['stocks', 'crypto', 'forex', 'indices', 'commodities'],
     minTimeframe: 'D1', preferredSessions: ['US', 'London', 'Asian'],
   },
-  'portfolio-performance': {
-    regimeType: 'any', volatilityLevel: 'any',
-    instrumentTypes: ['stocks', 'crypto', 'forex', 'indices', 'commodities'],
-    minTimeframe: 'D1', preferredSessions: ['US', 'London', 'Asian'],
-  },
   'isa-reset': {
     regimeType: 'any', volatilityLevel: 'any',
     instrumentTypes: ['stocks', 'crypto', 'forex', 'indices', 'commodities'],

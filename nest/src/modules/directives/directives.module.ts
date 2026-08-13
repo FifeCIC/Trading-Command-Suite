@@ -139,8 +139,6 @@ import {
   TimeBasedSupportDirective,
   // ISA / Special
   IsaResetDirective,
-  // Portfolio
-  PortfolioPerformanceDirective,
   // Additional TradePress (rounding out full 56)
   BasicWeeklyRhythmDirective,
   IntradayUPatternDirective,
@@ -320,7 +318,6 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     TimeBasedSupportDirective,
     // Stubs — Special
     IsaResetDirective,
-    PortfolioPerformanceDirective,
     // Stubs — Additional TradePress (rounding out full 56)
     BasicWeeklyRhythmDirective,
     IntradayUPatternDirective,
@@ -474,7 +471,6 @@ export class DirectivesModule implements OnModuleInit {
     private readonly timeSupport: TimeBasedSupportDirective,
     // Stubs — Special
     private readonly isa: IsaResetDirective,
-    private readonly portfolio: PortfolioPerformanceDirective,
     // Stubs — Additional TradePress
     private readonly basicWeekly: BasicWeeklyRhythmDirective,
     private readonly intradayU: IntradayUPatternDirective,
@@ -612,7 +608,6 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.timeSupport);
     // Stubs — Special
     this.directivesService.register(this.isa);
-    this.directivesService.register(this.portfolio);
     // Stubs — Additional TradePress
     this.directivesService.register(this.basicWeekly);
     this.directivesService.register(this.intradayU);

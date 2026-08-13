@@ -459,7 +459,7 @@ export class ProtocolDbService implements OnModuleInit {
           groups++;
 
           for (const did of group.directiveIds) {
-            const maxScore = group.directiveMaxScores?.[did] ?? 100;
+            const maxScore = this.directivesService.get(did)?.maxScore ?? group.directiveMaxScores?.[did] ?? 100;
             await (this.prisma as any).protocolDirectiveEntry.upsert({
               where: { groupId_directiveId: { groupId: dg.id, directiveId: did } },
               create: {

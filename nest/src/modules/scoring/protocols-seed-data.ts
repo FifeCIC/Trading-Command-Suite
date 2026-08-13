@@ -92,8 +92,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "btc-halving-cycle",
           "crypto-weekend-effect",
           "vix-regime",
-          "liquidity-check",
-          "portfolio-performance"
+          "liquidity-check"
         ],
         "directiveMaxScores": {
           "btc-halving-cycle": 200,
@@ -164,8 +163,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "liquidity-check",
           "vix-regime",
-          "crypto-weekend-effect",
-          "portfolio-performance"
+          "crypto-weekend-effect"
         ],
         "directiveMaxScores": {
           "crypto-weekend-effect": 50
@@ -233,13 +231,9 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.3,
         "directiveIds": [
           "vix-regime",
-          "liquidity-check",
-          "portfolio-performance",
-          "crypto-weekend-effect"
+          "liquidity-check"
         ],
-        "directiveMaxScores": {
-          "crypto-weekend-effect": 50
-        }
+        "directiveMaxScores": {}
       }
     ]
   },
@@ -304,13 +298,9 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.3,
         "directiveIds": [
           "vix-regime",
-          "liquidity-check",
-          "portfolio-performance",
-          "crypto-weekend-effect"
+          "liquidity-check"
         ],
-        "directiveMaxScores": {
-          "crypto-weekend-effect": 50
-        }
+        "directiveMaxScores": {}
       }
     ]
   },
@@ -375,13 +365,9 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.3,
         "directiveIds": [
           "vix-regime",
-          "liquidity-check",
-          "portfolio-performance",
-          "crypto-weekend-effect"
+          "liquidity-check"
         ],
-        "directiveMaxScores": {
-          "crypto-weekend-effect": 50
-        }
+        "directiveMaxScores": {}
       }
     ]
   },
@@ -446,13 +432,9 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.3,
         "directiveIds": [
           "vix-regime",
-          "liquidity-check",
-          "portfolio-performance",
-          "crypto-weekend-effect"
+          "liquidity-check"
         ],
-        "directiveMaxScores": {
-          "crypto-weekend-effect": 50
-        }
+        "directiveMaxScores": {}
       }
     ]
   },
@@ -517,13 +499,9 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.3,
         "directiveIds": [
           "vix-regime",
-          "liquidity-check",
-          "portfolio-performance",
-          "crypto-weekend-effect"
+          "liquidity-check"
         ],
-        "directiveMaxScores": {
-          "crypto-weekend-effect": 50
-        }
+        "directiveMaxScores": {}
       }
     ]
   },
@@ -585,7 +563,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "vix-regime",
           "liquidity-check",
-          "portfolio-performance",
           "session-open-effect"
         ],
         "directiveMaxScores": {}
@@ -650,7 +627,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "vix-regime",
           "liquidity-check",
-          "portfolio-performance",
           "session-open-effect"
         ],
         "directiveMaxScores": {}
@@ -716,8 +692,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "vix-regime",
           "session-open-effect",
-          "liquidity-check",
-          "portfolio-performance"
+          "liquidity-check"
         ],
         "directiveMaxScores": {}
       }
@@ -781,7 +756,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "vix-regime",
           "liquidity-check",
-          "portfolio-performance",
           "session-open-effect"
         ],
         "directiveMaxScores": {}
@@ -847,8 +821,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "vix-regime",
           "session-open-effect",
-          "liquidity-check",
-          "portfolio-performance"
+          "liquidity-check"
         ],
         "directiveMaxScores": {}
       }
@@ -912,7 +885,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "vix-regime",
           "liquidity-check",
-          "portfolio-performance",
           "session-open-effect"
         ],
         "directiveMaxScores": {}
@@ -977,7 +949,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "vix-regime",
           "liquidity-check",
-          "portfolio-performance",
           "session-open-effect"
         ],
         "directiveMaxScores": {}
@@ -1042,7 +1013,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "vix-regime",
           "liquidity-check",
-          "portfolio-performance",
           "earnings-proximity"
         ],
         "directiveMaxScores": {}
@@ -1108,8 +1078,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.4,
         "directiveIds": [
           "vix-regime",
-          "liquidity-check",
-          "portfolio-performance"
+          "liquidity-check"
         ],
         "directiveMaxScores": {}
       }
@@ -1172,8 +1141,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.3,
         "directiveIds": [
           "vix-regime",
-          "liquidity-check",
-          "portfolio-performance"
+          "liquidity-check"
         ],
         "directiveMaxScores": {}
       }
@@ -1239,7 +1207,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "vix-regime",
           "liquidity-check",
-          "portfolio-performance",
           "earnings-momentum"
         ],
         "directiveMaxScores": {}
@@ -1303,8 +1270,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.4,
         "directiveIds": [
           "vix-regime",
-          "liquidity-check",
-          "portfolio-performance"
+          "liquidity-check"
         ],
         "directiveMaxScores": {}
       }
@@ -1370,7 +1336,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "vix-regime",
           "liquidity-check",
-          "portfolio-performance",
           "budget-gate"
         ],
         "directiveMaxScores": {}
@@ -1490,8 +1455,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "vix-regime",
-          "liquidity-check",
-          "portfolio-performance"
+          "liquidity-check"
         ],
         "directiveMaxScores": {}
       }
@@ -1555,7 +1519,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "vix-regime",
           "liquidity-check",
-          "portfolio-performance",
           "session-open-effect",
           "rollover-risk"
         ],
@@ -1621,7 +1584,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "vix-regime",
           "liquidity-check",
-          "portfolio-performance",
           "session-open-effect",
           "rollover-risk"
         ],
@@ -1682,8 +1644,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "vix-regime",
-          "liquidity-check",
-          "portfolio-performance"
+          "liquidity-check"
         ],
         "directiveMaxScores": {}
       }
@@ -1809,7 +1770,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "dxy-regime",
           "vix-regime",
           "liquidity-check",
-          "portfolio-performance",
           "spy-qqq-relative-strength"
         ],
         "directiveMaxScores": {}
@@ -1928,7 +1888,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "vix-regime",
           "liquidity-check",
-          "portfolio-performance",
           "session-open-effect"
         ],
         "directiveMaxScores": {}
@@ -1989,7 +1948,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "vix-regime",
           "liquidity-check",
-          "portfolio-performance",
           "budget-gate"
         ],
         "directiveMaxScores": {}
@@ -2048,8 +2006,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "market-regime",
           "vix-regime",
-          "liquidity-check",
-          "portfolio-performance"
+          "liquidity-check"
         ],
         "directiveMaxScores": {}
       }
@@ -2108,7 +2065,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "vix-regime",
           "liquidity-check",
-          "portfolio-performance",
           "rollover-risk"
         ],
         "directiveMaxScores": {}
@@ -2165,7 +2121,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "vix-regime",
           "liquidity-check",
-          "portfolio-performance",
           "budget-gate"
         ],
         "directiveMaxScores": {}
@@ -2226,7 +2181,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "vix-regime",
           "liquidity-check",
-          "portfolio-performance",
           "budget-gate"
         ],
         "directiveMaxScores": {}
@@ -2379,7 +2333,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "portfolio-performance",
           "spy-qqq-relative-strength",
           "dilution-impact",
           "vix-strategy",

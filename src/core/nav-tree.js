@@ -77,6 +77,7 @@ export const NAV_TREE = {
       { id: 'protocol-builder', label: 'Protocol Builder', icon: '🧩' },
       { id: 'protocol-trail', label: 'Protocol Trail', icon: '🔗' },
       { id: 'singles-monitor', label: 'Singles Monitor', icon: '🖥' },
+      { id: 'directive-viewer', label: 'Directive Viewer', icon: '🔍' },
       { id: 'scoring-debug-lab', label: 'Scoring Debug (Dual Protocol)', icon: '🔬' },
     ],
   },

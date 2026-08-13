@@ -67,6 +67,14 @@ const FADE_CARDS = [
   { label: 'Risk Controls', desc: 'Stop-loss triggers, drawdown limits, exposure caps — hard gates that veto trades.', color: '#ef4444' },
 ];
 
+const GLOW_PRESETS = [
+  { tone: 'accent',  label: 'Accent (default)', dot: 'var(--accent)',              desc: 'Neutral emphasis — the Protocol Trail summary card uses this teal corner glow.' },
+  { tone: 'success', label: 'Positive',         dot: 'var(--notice-success-text)',  desc: 'Green glow makes a status feel healthy — wins, profit, passing checks.' },
+  { tone: 'warning', label: 'Caution',          dot: 'var(--notice-warning-text)',  desc: 'Amber glow draws measured attention — pending actions, approaching limits.' },
+  { tone: 'danger',  label: 'Critical',         dot: 'var(--notice-critical-text)', desc: 'Red glow signals urgency — stop-losses, breaches, failures.' },
+  { tone: 'info',    label: 'Informational',    dot: 'var(--notice-info-text)',     desc: 'Blue glow for neutral updates — new data, insights, routine status.' },
+];
+
 export default function ThemeLabPage() {
   const [activeBg, setActiveBg] = useState(null);
   const navigate = useNavigate();
@@ -211,6 +219,27 @@ export default function ThemeLabPage() {
                 <h3>{n.label}</h3>
               </div>
               <p style={{ color: '#e2e8f0', fontSize: '0.88rem' }}>{n.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Corner Glow Surfaces ─────────────────────────────── */}
+      <section className="tl-section">
+        <h2>Corner Glow Surfaces</h2>
+        <p className="tl-hint">
+          A soft radial glow washing from one corner of a panel — the highlight used by the Protocol Trail
+          summary card (<code>.pt-summary</code>). Intended to raise the <em>presence</em> of a status:
+          green reads as positive, red as critical. Trial these in both light and dark mode before promoting.
+        </p>
+        <div className="tl-card-grid">
+          {GLOW_PRESETS.map((g) => (
+            <div key={g.tone} className={`tl-glow-card tl-glow-card--${g.tone}`}>
+              <div className="tl-glow-head">
+                <span className="tl-glow-dot" style={{ background: g.dot, boxShadow: `0 0 10px ${g.dot}` }} />
+                <strong>{g.label}</strong>
+              </div>
+              <p>{g.desc}</p>
             </div>
           ))}
         </div>

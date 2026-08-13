@@ -84,10 +84,6 @@ export class DirectivesService {
       const dbConfig = configs.get(id);
       if (!dbConfig) continue;
       let changed = false;
-      if (dbConfig.maxScore !== undefined && directive.maxScore !== dbConfig.maxScore) {
-        (directive as any).maxScore = dbConfig.maxScore;
-        changed = true;
-      }
       if (dbConfig.minScore !== undefined && (directive as any).minScore !== dbConfig.minScore) {
         (directive as any).minScore = dbConfig.minScore;
         changed = true;
@@ -753,12 +749,6 @@ export class DirectivesService {
 
         if (!db.active) {
           inactive++;
-        }
-
-        // Override maxScore from DB weight (if different from class default)
-        if (db.weight && (directive as any).maxScore !== db.weight) {
-          (directive as any).maxScore = db.weight;
-          overridden++;
         }
 
         // Merge DB config overrides

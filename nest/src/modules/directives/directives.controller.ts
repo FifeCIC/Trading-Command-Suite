@@ -9,6 +9,8 @@ import { DIRECTIVE_GROUPS, SHORT_DIRECTIVE_GROUPS, BTC_SPEED_GROUPS } from './di
 @ApiTags('directives')
 @Controller('directives')
 export class DirectivesController {
+  private readonly logger = new Logger(DirectivesController.name);
+
   constructor(
     private readonly directivesService: DirectivesService,
     private readonly configService: DirectiveConfigService,
@@ -86,7 +88,7 @@ export class DirectivesController {
       // Risk & Structural
       'position-size-kelly': 'Risk & Structural', 'position-size-confidence': 'Risk & Structural',
       'panic-exhaustion-absorption': 'Risk & Structural', 'time-based-support': 'Risk & Structural',
-      'isa-reset': 'Risk & Structural', 'portfolio-performance': 'Risk & Structural',
+      'isa-reset': 'Risk & Structural',
       'adaptive-risk-monitor': 'Risk & Structural',
       // Exit Signals
       'momentum-exhaustion': 'Exit Signals', 'target-achieved': 'Exit Signals',
@@ -184,7 +186,7 @@ export class DirectivesController {
       'moving-averages', 'volatility-tools', 'friday-positioning', 'midweek-momentum',
       'advanced-weekly-rhythm', 'spy-options-expiry', 'spy-month-end-rebalancing',
       'spy-qqq-relative-strength', 'nvda-earnings-momentum', 'tsla-sentiment-amplifier',
-      'dividend-yield-attractive', 'time-based-support', 'isa-reset', 'portfolio-performance',
+      'dividend-yield-attractive', 'time-based-support', 'isa-reset',
       'basic-weekly-rhythm', 'intraday-u-pattern', 'institutional-timing', 'macd',
       'adaptive-risk-monitor', 'analyst-adjustments', 'conviction-growth',
       'earnings-implementation', 'earnings-whispers', 'like-zacks', 'mean-reversion',
@@ -314,6 +316,138 @@ export class DirectivesController {
       inputs: (directive as any).inputs,
       dependsOn: (directive as any).dependsOn,
       formula: (directive as any).formula,
+    };
+  }
+
+  /**
+   * GET /api/directives/:id/viewer
+   *
+   * One-shot payload for the Directive Viewer page: directive detail,
+   * recent per-directive scores (extracted from Score.breakdown.breakouts),
+   * and the protocols that include this directive.
+   */
+  @Get(':id/viewer')
+  async getDirectiveViewer(@Param('id') id: string) {
+    const directive = this.directivesService.get(id);
+    if (!directive) return { error: `Directive "${id}" not found` };
+
+    // DB metadata (active / nature / readiness)
+    let dbMeta: any = {};
+    try {
+      const dbResult = await this.directivesService.getDbStatuses();
+      const dbRow = dbResult?.find((d: any) => d.id === id);
+      if (dbRow) dbMeta = { active: dbRow.active, nature: dbRow.nature, readiness: dbRow.readiness };
+    } catch { /* DB unavailable */ }
+
+    // Recent per-directive scores from the canonical Score table.
+    let scores: any[] = [];
+    try {
+      const rows = await Promise.race([
+        this.prisma.score.findMany({
+          where: { timestamp: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
+          orderBy: { timestamp: 'desc' },
+          take: 500,
+          select: {
+            value: true,
+            strategyId: true,
+            timestamp: true,
+            breakdown: true,
+            symbol: { select: { ticker: true } },
+          },
+        }),
+        new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error('Score query timed out')), 3000)),
+      ]);
+      for (const row of rows) {
+        const breakouts = (row as any).breakdown?.breakouts;
+        if (!breakouts || typeof breakouts !== 'object') continue;
+        for (const entries of Object.values(breakouts)) {
+          if (!Array.isArray(entries)) continue;
+          for (const e of entries as any[]) {
+            if (e?.directiveId !== id) continue;
+            scores.push({
+              symbol: (row as any).symbol?.ticker ?? null,
+              protocol: (row as any).strategyId ?? null,
+              score: e.score,
+              maxScore: e.maxScore,
+              normalized: e.normalizedScore ?? null,
+              reason: e.reason ?? null,
+              signal: (row as any).breakdown?.signal ?? null,
+              composite: (row as any).value ?? null,
+              timestamp: (row as any).timestamp,
+            });
+          }
+        }
+      }
+      scores.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    } catch (err) {
+      this.logger.warn(`Directive viewer score query failed for ${id}: ${(err as Error).message}`);
+    }
+
+    // Protocols that include this directive (deduped by slug).
+    let protocols: any[] = [];
+    try {
+      const entries = await this.prisma.protocolDirectiveEntry.findMany({
+        where: { directiveId: id },
+        select: {
+          maxScore: true,
+          active: true,
+          group: {
+            select: {
+              groupId: true,
+              weight: true,
+              isRiskGate: true,
+              protocol: { select: { slug: true, name: true, directionMode: true, active: true } },
+            },
+          },
+        },
+      });
+      const protoMap = new Map<string, any>();
+      for (const e of entries) {
+        const p = (e as any).group?.protocol;
+        if (!p) continue;
+        if (!protoMap.has(p.slug)) {
+          protoMap.set(p.slug, {
+            slug: p.slug,
+            name: p.name,
+            directionMode: p.directionMode,
+            active: p.active,
+            groups: [],
+          });
+        }
+        protoMap.get(p.slug).groups.push({
+          groupId: (e as any).group.groupId,
+          weight: (e as any).group.weight,
+          isRiskGate: (e as any).group.isRiskGate,
+          maxScore: (e as any).maxScore,
+          active: (e as any).active,
+        });
+      }
+      protocols = Array.from(protoMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+    } catch (err) {
+      this.logger.warn(`Directive viewer protocol query failed for ${id}: ${(err as Error).message}`);
+    }
+
+    return {
+      id: directive.id,
+      name: directive.name,
+      description: directive.description ?? '',
+      category: (directive as any).category || 'Other',
+      maxScore: directive.maxScore ?? null,
+      priority: directive.priority ?? null,
+      version: directive.version,
+      active: dbMeta.active ?? true,
+      readiness: dbMeta.readiness || (directive as any).readiness || 'alpha',
+      nature: dbMeta.nature,
+      directionBias: (directive as any).directionBias ?? 'neutral',
+      complexity: (directive as any).complexity,
+      requiredDataFeeds: (directive as any).requiredDataFeeds ?? [],
+      formula: (directive as any).formula,
+      inputs: (directive as any).inputs,
+      dependsOn: (directive as any).dependsOn,
+      protocolCount: protocols.length,
+      scoreCount: scores.length,
+      scores,
+      protocols,
     };
   }
 

@@ -34,6 +34,7 @@ import StrategyLibraryPage from '../pages/StrategyLibraryPage.jsx';
 
 // ── Scoring ──
 import DirectivesManagerPage from '../pages/DirectivesManagerPage.jsx';
+import DirectiveViewerPage from '../pages/DirectiveViewerPage.jsx';
 import DirectiveImpactAuditPage from '../pages/DirectiveImpactAuditPage.jsx';
 import LadderPage from '../pages/LadderPage.jsx';
 import SeesArenaPage from '../pages/SeesArenaPage.jsx';
@@ -217,6 +218,7 @@ export const VIEW_COMPONENTS = {
 
   // Scoring
   'directives-registry': DirectivesManagerPage,
+  'directive-viewer': DirectiveViewerPage,
   'directive-impact-audit': DirectiveImpactAuditPage,
   'directive-audit': DirectiveAuditPage,
   'live-ordering-stack': LadderPage,

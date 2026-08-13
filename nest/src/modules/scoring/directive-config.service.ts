@@ -134,8 +134,10 @@ export class DirectiveConfigService {
   // ── Seed ─────────────────────────────────────────────
 
   /**
-   * Seed directive config from class defaults. Only inserts if the key
-   * doesn't already exist — never overwrites user changes.
+   * Seed directive config from class defaults. UPSERTS (overwrites) so the
+   * global_setting table always mirrors the class — the class is the single
+   * source of truth for maxScore/minScore/category/directionBias/priority.
+   * This keeps installation seed data and live DB values in lockstep on boot.
    */
   async seedFromDefaults(directives: Array<{
     id: string;
@@ -160,9 +162,10 @@ export class DirectiveConfigService {
       for (const [field, value] of Object.entries(fields)) {
         const key = this.key(d.id, field);
         try {
-          // INSERT IGNORE — don't overwrite existing user values
+          // UPSERT — sync class defaults into DB so both stay in lockstep.
           await this.prisma.$executeRawUnsafe(
-            `INSERT IGNORE INTO global_setting (\`key\`, value) VALUES (?, ?)`,
+            `INSERT INTO global_setting (\`key\`, value, updatedAt) VALUES (?, ?, NOW())
+             ON DUPLICATE KEY UPDATE value = VALUES(value), updatedAt = NOW()`,
             key, value,
           );
           seeded++;
