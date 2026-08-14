@@ -25,10 +25,10 @@ export class SupportResistanceLevelsDirective implements IDirective {
   readonly description = 'Detects local S/R levels from swing pivots. Near support = bullish, near resistance = bearish.';
   readonly category = 'pattern' as const;
   readonly priority = 50;
-  readonly maxScore = 100;
+  readonly maxScore = 95; // corrected 100→95 2026-08-14 — real max = 65 + (2 - 0)*15 = 95 (bounce branch clamps to 95)
   readonly minScore = 1;
   readonly minBars = { '1d': 35 };
-  readonly version = '1.1.0';
+  readonly version = '1.2.0'; // maxScore corrected + Infinity reason fix
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
 
@@ -111,11 +111,13 @@ export class SupportResistanceLevelsDirective implements IDirective {
       };
     }
 
+    const supportLabel = Number.isFinite(supportDist) ? `${supportDist.toFixed(1)}% below` : 'none below';
+    const resistLabel = Number.isFinite(resistDist) ? `${resistDist.toFixed(1)}% above` : 'none above';
     return {
       signalClass: 'neutral',
       score: 38,
       confidence: 0.3,
-      reason: `Mid-range: support ${supportDist.toFixed(1)}% below, resistance ${resistDist.toFixed(1)}% above. ${swingLows.length} supports, ${swingHighs.length} resistances found.`,
+      reason: `Mid-range: support ${supportLabel}, resistance ${resistLabel}. ${swingLows.length} supports, ${swingHighs.length} resistances found.`,
     };
   }
 }

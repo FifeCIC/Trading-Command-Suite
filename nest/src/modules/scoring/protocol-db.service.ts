@@ -487,7 +487,7 @@ export class ProtocolDbService implements OnModuleInit {
     if (!config) return false;
     for (const group of config.groups) {
       for (const did of group.directiveIds) {
-        if (['dxy-regime', 'gold-macro-correlation', 'cad-usd-oil-correlation', 'vix-regime'].includes(did)) {
+        if (['dxy-regime', 'gold-macro-correlation', 'cad-usd-oil-correlation'].includes(did)) {
           return true;
         }
       }

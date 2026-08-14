@@ -10,7 +10,11 @@
     pwsh -File scripts\gh-wrapper.ps1 issue view 1 --json title,body
 #>
 
-$ghArgs = $args -join ' '
+# Quote arguments containing whitespace so cmd /c doesn't split them.
+# (Previously `$args -join ' '` broke any arg with spaces, e.g. issue titles/body text.)
+$ghArgs = ($args | ForEach-Object {
+    if ($_ -match '\s') { '"' + ($_ -replace '"', '""') + '"' } else { $_ }
+}) -join ' '
 if (-not $ghArgs) {
     Write-Host "Usage: pwsh -File scripts\gh-wrapper.ps1 <gh args>" -ForegroundColor Yellow
     Write-Host "Example: pwsh -File scripts\gh-wrapper.ps1 issue create --title ""Foo"" --body ""Bar""" -ForegroundColor DarkGray

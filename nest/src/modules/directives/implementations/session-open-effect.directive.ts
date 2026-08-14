@@ -69,10 +69,10 @@ export class SessionOpenEffectDirective implements IDirective {
   }
 
   readonly priority = 74;
-  readonly maxScore = 110;
+  readonly maxScore = 60; // corrected 110→60 2026-08-14 — real max = confidence 0.75 × 80
   readonly minScore = 1;
   readonly minBars = { '1d': 30 }; // Directional bias at session opens — high signal value
-  readonly version = '1.1.0';
+  readonly version = '1.2.0'; // maxScore corrected + no-signal floor 15→0
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
 
@@ -125,7 +125,7 @@ export class SessionOpenEffectDirective implements IDirective {
     if (!nearestOpen || minDist > WINDOW_MINUTES) {
       const nextOpenName = nearestOpen?.label ?? 'next session';
       return {
-        score: 15,
+        score: 0, // 2026-08-14: no signal = 0, not a constant 15-point floor
         confidence: 0.4,
         reason: `${minDist} minutes from ${nextOpenName}. Outside active window (${WINDOW_MINUTES}min).`,
         signalClass: 'neutral',

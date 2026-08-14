@@ -11,27 +11,21 @@
  * 10Y yield ↓ (falling)    → bullish gold
  * VIX ↑ (fear)             → bullish gold (safe haven)
  *
- * ── Hybrid Scoring ─────────────────────────────────────────
- * BASE (0–100):  Continuous DXY interpolation: DXY 108→0, DXY 95→100.
- *                Every DXY tick produces a visible score change.
- * BONUS tiers:   yield10Y > 4.5% or < 3.8% → +20 (rate extremes).
- *                VIX > 25 → +15 (fear premium).
- * MAX:           135 (100 base + 35 bonus max).
+ * ── Scoring ────────────────────────────────────────────────
+ * BASE (0–100):  DXY interpolation: DXY 108→0, DXY 95→100.
+ * MAX:           100.
+ *
+ * NOTE (2026-08-14): yield/VIX bonus tiers removed — treasury10Y and
+ * vixValue are never written anywhere in the pipeline, so the +35 bonus
+ * was unreachable and inflated the denominator. A real-yields/VIX feed is
+ * a future data-source gap, not a directive-logic gap.
  *
  * ── Data Sources ─────────────────────────────────────────
- * dxyValue or eurusdValue on DirectiveInput (from DXY pipeline)
- * treasury10Y on DirectiveInput (from Finnhub/FMP, optional)
- * vixValue on DirectiveInput (from VIX regime, optional)
+ * dxyValue or eurusdValue on DirectiveInput (from EURUSD proxy pipeline)
  */
 
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
-
-// ── Thresholds ────────────────────────────────────────────
-
-const YIELD_HIGH = 4.5;   // 10Y > 4.5% = rising rate pressure
-const YIELD_LOW = 3.8;    // 10Y < 3.8% = falling rate tailwind
-const VIX_FEAR = 25;      // VIX > 25 = safe-haven bid
 
 /** Linear interpolation: map value from [inMin,inMax] to [outMin,outMax], clamped. */
 function mapRange(v: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
@@ -47,21 +41,19 @@ export class GoldMacroCorrelationDirective implements IDirective {
   readonly name = 'Gold Macro Correlation';
   readonly category = 'structural' as const;
   readonly description =
-    'Hybrid: continuous DXY base for gold + yield/VIX threshold bonuses.';
+    'DXY (USD strength) base score for gold — weak USD bullish, strong USD bearish.';
   readonly priority = 55;
-  readonly maxScore = 135;
-  readonly minScore = 1; // 100 base + 35 bonus max
+  readonly maxScore = 100;
+  readonly minScore = 1;
   readonly minBars = { '1d': 20 };
-  readonly version = '2.0.1'; // Hybrid scoring
-  readonly requiredDataFeeds = ['dxy', 'treasury10y', 'vix'];
-  readonly readiness = 'beta' as const;
+  readonly version = '2.1.0'; // DXY-only scoring (yield/VIX bonus removed 2026-08-14)
+  readonly requiredDataFeeds = ['dxy'];
+  readonly readiness = 'ready' as const; // promoted beta→ready 2026-08-14 — real DXY input, correct math, dead bonus removed
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     let dxy = (input as any).dxyValue as number | undefined;
     const eurusd = (input as any).eurusdValue as number | undefined;
-    const yield10Y = (input as any).treasury10Y as number | undefined;
-    const vix = (input as any).vixValue as number | undefined;
 
     const sym = input.symbol.toUpperCase();
 
@@ -99,39 +91,20 @@ export class GoldMacroCorrelationDirective implements IDirective {
     // DXY 95 (weak USD)    → base 100 (bullish gold)
     const baseScore = Math.round(mapRange(dxy, 108, 95, 0, 100));
 
-    // ── BONUS (threshold-gated, rare events) ─────────────
-    let bonusScore = 0;
-    const bonusParts: string[] = [];
-
-    // Yield extremes (stackable with VIX)
-    if (yield10Y !== undefined && yield10Y > 0) {
-      if (yield10Y >= YIELD_HIGH || yield10Y <= YIELD_LOW) {
-        bonusScore += 20;
-        bonusParts.push(`yield extreme (${yield10Y}%)`);
-      }
-    }
-
-    // VIX fear premium
-    if (vix !== undefined && vix > 0 && vix >= VIX_FEAR) {
-      bonusScore += 15;
-      bonusParts.push(`VIX=${vix.toFixed(0)}`);
-    }
-
-    const bonusLabel = bonusParts.join(' + ');
-
     // ── Total ─────────────────────────────────────────────
-    const totalScore = baseScore + bonusScore;
+    // (2026-08-14) Yield/VIX bonus tiers removed — treasury10Y/vixValue are
+    // never written anywhere in the pipeline, so the +35 bonus was
+    // unreachable and inflated the denominator.
+    const totalScore = baseScore;
 
     let signalClass: 'bullish' | 'bearish' | 'neutral';
     if (totalScore >= 65) signalClass = 'bullish';
     else if (totalScore <= 35) signalClass = 'bearish';
     else signalClass = 'neutral';
 
-    const hasFullData = yield10Y !== undefined && vix !== undefined;
-    const confidence = hasFullData ? 0.55 : 0.35;
+    const confidence = 0.45;
 
     const parts: string[] = [`base=${baseScore} (${dxySource}=${dxy})`];
-    if (bonusScore > 0) parts.push(`+${bonusScore} bonus (${bonusLabel})`);
     parts.push(`= ${totalScore}/${this.maxScore}`);
 
     return {
@@ -139,7 +112,7 @@ export class GoldMacroCorrelationDirective implements IDirective {
       score: totalScore,
       confidence,
       reason: `${sym}: ${parts.join(' ')}`,
-      metadata: { baseScore, bonusScore, bonusLabel, dxy, dxySource },
+      metadata: { baseScore, dxy, dxySource },
     };
   }
 }

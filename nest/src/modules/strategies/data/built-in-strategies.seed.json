@@ -38,24 +38,6 @@
     "builtIn": true
   },
   {
-    "strategyId": "vix-regime",
-    "strategyName": "VIX Regime Strategy",
-    "description": "Uses VIX levels to determine market regime. Defensive below 20, aggressive above 25. Fades VIX spikes.",
-    "symbols": ["VIX", "SPY"],
-    "directives": [
-      { "id": "vix-regime", "weight": 40 },
-      { "id": "rsi-oversold", "weight": 25 },
-      { "id": "bollinger-pct-b", "weight": 20 },
-      { "id": "volume-surge", "weight": 15 }
-    ],
-    "timeframes": ["1d"],
-    "preferredProvider": "yahoo",
-    "category": "indices",
-    "riskLevel": "medium",
-    "timeHorizon": "day",
-    "builtIn": true
-  },
-  {
     "strategyId": "gold-macro",
     "strategyName": "Gold Macro Correlation",
     "description": "Trades gold (XAUUSD) based on macro correlations — dollar strength, real yields, risk sentiment.",

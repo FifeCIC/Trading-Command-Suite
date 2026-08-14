@@ -308,11 +308,6 @@ export const DIRECTIVE_SUITABILITY: Record<string, SuitabilityProfile> = {
   },
 
   // ── Macro / Regime ──
-  'vix-regime': {
-    regimeType: 'any', volatilityLevel: 'any',
-    instrumentTypes: ['stocks', 'indices'],
-    minTimeframe: 'D1', preferredSessions: ['US'],
-  },
   'vix-strategy': {
     regimeType: 'any', volatilityLevel: 'any',
     instrumentTypes: ['stocks', 'indices'],
@@ -367,11 +362,6 @@ export const DIRECTIVE_SUITABILITY: Record<string, SuitabilityProfile> = {
   },
 
   // ── Fundamentals / Sentiment ──
-  'news-sentiment-positive': {
-    regimeType: 'any', volatilityLevel: 'any',
-    instrumentTypes: ['stocks', 'crypto'],
-    minTimeframe: 'D1', preferredSessions: ['US', 'London', 'Asian'],
-  },
   'news-sentiment': {
     regimeType: 'any', volatilityLevel: 'any',
     instrumentTypes: ['stocks', 'crypto'],

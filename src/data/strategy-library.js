@@ -606,7 +606,6 @@ innovation upside.
 
     directiveMappings: [
       { directiveId: 'market-regime', role: 'Regime Detector', note: 'VIX + SPX 200-day MA regime classification' },
-      { directiveId: 'vix-regime', role: 'Fear Gauge', note: 'VIX thresholds for risk-on/off/crash classification' },
       { directiveId: 'spy-qqq-relative-strength', role: 'Trend Filter', note: 'SPX vs 200-day MA — master trend override' },
       { directiveId: 'budget-gate', role: 'Allocation Gate', note: 'Enforces offensive/defensive basket weightings' },
       { directiveId: 'liquidity-check', role: 'Execution Gate', note: 'Checks ETF liquidity during transition days' },
@@ -811,7 +810,6 @@ morning. The NY afternoon contributes less to Cable than to EURUSD.
       { directiveId: 'speed-momentum', role: 'Entry Signal', note: 'M15 velocity detection for Cable entries' },
       { directiveId: 'atr-dip', role: 'Volatility Calibration', note: 'Cable ATR for stop/profit calculations' },
       { directiveId: 'support-resistance-levels', role: 'Level Protection', note: 'Round number and Fibonacci level detection' },
-      { directiveId: 'news-sentiment-positive', role: 'News Gate', note: 'UK economic release calendar filter' },
       { directiveId: 'time-stop', role: 'Session Exit', note: 'Before NY close or UK market close' },
     ],
 
@@ -911,7 +909,6 @@ the tradeable edge.
       { directiveId: 'cad-usd-oil-correlation', role: 'Primary Signal', note: 'Oil-CAD correlation and divergence detection' },
       { directiveId: 'dxy-regime', role: 'USD Filter', note: 'Broad USD strength/weakness context' },
       { directiveId: 'speed-momentum', role: 'Entry Timing', note: '1H momentum confirmation on USDCAD' },
-      { directiveId: 'news-sentiment-positive', role: 'Event Gate', note: 'BOC, Canadian GDP, oil inventory calendar' },
       { directiveId: 'atr-dip', role: 'Stop Calibration', note: 'ATR-based stop and target sizing' },
     ],
 

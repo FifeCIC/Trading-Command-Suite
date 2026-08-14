@@ -73,7 +73,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "crypto-fear-greed",
-          "news-sentiment-positive",
           "social-buzz"
         ],
         "directiveMaxScores": {
@@ -91,7 +90,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "btc-halving-cycle",
           "crypto-weekend-effect",
-          "vix-regime",
           "liquidity-check"
         ],
         "directiveMaxScores": {
@@ -145,8 +143,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "crypto-fear-greed",
-          "news-sentiment-positive"
+          "crypto-fear-greed"
         ],
         "directiveMaxScores": {
           "crypto-fear-greed": 60
@@ -162,7 +159,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.3,
         "directiveIds": [
           "liquidity-check",
-          "vix-regime",
           "crypto-weekend-effect"
         ],
         "directiveMaxScores": {
@@ -215,7 +211,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "gold-macro-correlation",
           "gold-session-profile"
         ],
@@ -230,7 +225,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.4,
         "maxMultiplier": 1.3,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check"
         ],
         "directiveMaxScores": {}
@@ -282,7 +276,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "gold-macro-correlation",
           "gold-session-profile"
         ],
@@ -297,7 +290,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.4,
         "maxMultiplier": 1.3,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check"
         ],
         "directiveMaxScores": {}
@@ -349,7 +341,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "gold-macro-correlation",
           "gold-session-profile"
         ],
@@ -364,7 +355,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.4,
         "maxMultiplier": 1.3,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check"
         ],
         "directiveMaxScores": {}
@@ -416,7 +406,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "gold-macro-correlation",
           "gold-session-profile"
         ],
@@ -431,7 +420,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.4,
         "maxMultiplier": 1.3,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check"
         ],
         "directiveMaxScores": {}
@@ -483,7 +471,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "gold-macro-correlation",
           "gold-session-profile"
         ],
@@ -498,7 +485,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.4,
         "maxMultiplier": 1.3,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check"
         ],
         "directiveMaxScores": {}
@@ -547,7 +533,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "cad-usd-oil-correlation"
         ],
         "directiveMaxScores": {}
@@ -561,7 +546,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.45,
         "maxMultiplier": 1.3,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check",
           "session-open-effect"
         ],
@@ -611,8 +595,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
-          "vix-regime"
         ],
         "directiveMaxScores": {}
       },
@@ -625,7 +607,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.5,
         "maxMultiplier": 1.25,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check",
           "session-open-effect"
         ],
@@ -675,8 +656,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
-          "vix-regime",
           "analyst-adjustments"
         ],
         "directiveMaxScores": {}
@@ -690,7 +669,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.55,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "vix-regime",
           "session-open-effect",
           "liquidity-check"
         ],
@@ -740,7 +718,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "analyst-adjustments"
         ],
         "directiveMaxScores": {}
@@ -754,7 +731,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.45,
         "maxMultiplier": 1.3,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check",
           "session-open-effect"
         ],
@@ -804,7 +780,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "analyst-adjustments",
           "earnings-proximity"
         ],
@@ -819,7 +794,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.45,
         "maxMultiplier": 1.3,
         "directiveIds": [
-          "vix-regime",
           "session-open-effect",
           "liquidity-check"
         ],
@@ -869,7 +843,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "analyst-adjustments"
         ],
         "directiveMaxScores": {}
@@ -883,7 +856,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.55,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check",
           "session-open-effect"
         ],
@@ -933,7 +905,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "analyst-adjustments"
         ],
         "directiveMaxScores": {}
@@ -947,7 +918,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.5,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check",
           "session-open-effect"
         ],
@@ -997,7 +967,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "social-buzz"
         ],
         "directiveMaxScores": {}
@@ -1011,7 +980,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.4,
         "maxMultiplier": 1.35,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check",
           "earnings-proximity"
         ],
@@ -1077,7 +1045,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.35,
         "maxMultiplier": 1.4,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check"
         ],
         "directiveMaxScores": {}
@@ -1126,7 +1093,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "analyst-adjustments"
         ],
         "directiveMaxScores": {}
@@ -1140,7 +1106,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.35,
         "maxMultiplier": 1.3,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check"
         ],
         "directiveMaxScores": {}
@@ -1189,7 +1154,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "analyst-adjustments",
           "social-buzz",
           "earnings-proximity"
@@ -1205,7 +1169,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.4,
         "maxMultiplier": 1.3,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check",
           "earnings-momentum"
         ],
@@ -1254,7 +1217,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "social-buzz",
           "analyst-adjustments"
         ],
@@ -1269,7 +1231,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.35,
         "maxMultiplier": 1.4,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check"
         ],
         "directiveMaxScores": {}
@@ -1319,7 +1280,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "analyst-adjustments",
           "spy-qqq-relative-strength"
         ],
@@ -1334,7 +1294,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.25,
         "maxMultiplier": 1.4,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check",
           "budget-gate"
         ],
@@ -1379,8 +1338,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
-          "vix-regime"
         ],
         "directiveMaxScores": {}
       },
@@ -1393,7 +1350,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check",
           "sp500-regime"
         ],
@@ -1440,7 +1396,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "gold-macro-correlation",
-          "news-sentiment-positive",
           "analyst-adjustments"
         ],
         "directiveMaxScores": {}
@@ -1454,7 +1409,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check"
         ],
         "directiveMaxScores": {}
@@ -1503,7 +1457,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "analyst-adjustments"
         ],
         "directiveMaxScores": {}
@@ -1517,7 +1470,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.4,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check",
           "session-open-effect",
           "rollover-risk"
@@ -1568,7 +1520,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "analyst-adjustments"
         ],
         "directiveMaxScores": {}
@@ -1582,7 +1533,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.45,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check",
           "session-open-effect",
           "rollover-risk"
@@ -1629,7 +1579,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "cad-usd-oil-correlation",
-          "news-sentiment-positive",
           "analyst-adjustments"
         ],
         "directiveMaxScores": {}
@@ -1643,7 +1592,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check"
         ],
         "directiveMaxScores": {}
@@ -1689,7 +1637,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "session-open-effect",
-          "news-sentiment-positive",
           "analyst-adjustments"
         ],
         "directiveMaxScores": {}
@@ -1704,7 +1651,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "session-open-effect",
-          "vix-regime",
           "liquidity-check",
           "spy-qqq-relative-strength"
         ],
@@ -1754,7 +1700,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive"
         ],
         "directiveMaxScores": {}
       },
@@ -1768,7 +1713,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.25,
         "directiveIds": [
           "dxy-regime",
-          "vix-regime",
           "liquidity-check",
           "spy-qqq-relative-strength"
         ],
@@ -1828,7 +1772,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.4,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "vix-regime",
           "market-regime",
           "liquidity-check"
         ],
@@ -1872,7 +1815,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "analyst-adjustments"
         ],
         "directiveMaxScores": {}
@@ -1886,7 +1828,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.5,
         "maxMultiplier": 1.15,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check",
           "session-open-effect"
         ],
@@ -1932,8 +1873,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "vix-regime",
-          "news-sentiment-positive"
         ],
         "directiveMaxScores": {}
       },
@@ -1946,7 +1885,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.45,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check",
           "budget-gate"
         ],
@@ -1990,8 +1928,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "session-open-effect",
-          "news-sentiment-positive"
+          "session-open-effect"
         ],
         "directiveMaxScores": {}
       },
@@ -2005,7 +1942,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "market-regime",
-          "vix-regime",
           "liquidity-check"
         ],
         "directiveMaxScores": {}
@@ -2049,8 +1985,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "market-regime",
-          "news-sentiment-positive"
+          "market-regime"
         ],
         "directiveMaxScores": {}
       },
@@ -2063,7 +1998,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.35,
         "maxMultiplier": 1.25,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check",
           "rollover-risk"
         ],
@@ -2105,8 +2039,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
-          "vix-regime"
         ],
         "directiveMaxScores": {}
       },
@@ -2119,7 +2051,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.15,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check",
           "budget-gate"
         ],
@@ -2165,7 +2096,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "analyst-adjustments",
-          "news-sentiment-positive",
           "earnings-proximity"
         ],
         "directiveMaxScores": {}
@@ -2179,7 +2109,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.1,
         "directiveIds": [
-          "vix-regime",
           "liquidity-check",
           "budget-gate"
         ],
@@ -2317,7 +2246,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "analyst-adjustments",
-          "news-sentiment-positive",
           "earnings-proximity",
           "earnings-momentum",
           "social-buzz"
@@ -2395,7 +2323,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "conviction-growth"
         ],
         "directiveMaxScores": {}
@@ -2434,7 +2361,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "vix-regime",
           "market-regime"
         ],
         "directiveMaxScores": {}
@@ -2488,7 +2414,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "news-sentiment-positive",
           "conviction-growth"
         ],
         "directiveMaxScores": {}

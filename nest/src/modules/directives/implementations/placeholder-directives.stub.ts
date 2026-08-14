@@ -411,7 +411,7 @@ export class VolatilityToolsDirective implements IDirective {
 
     const total = Math.min(this.maxScore, baseScore + bonusScore);
     return {
-      signalClass: atrPct > 2 ? 'neutral' : 'bullish',
+      signalClass: 'neutral', // 2026-08-14: volatility is direction-neutral — low ATR ≠ bullish
       score: total,
       confidence: Number((0.3 + Math.min(0.3, atrPct * 0.08)).toFixed(2)),
       reason: `Vol: ATR=${atrPct.toFixed(2)}% (p${percentile.toFixed(0)}), base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus' : ''}=${total}/${this.maxScore}`,
@@ -734,21 +734,6 @@ export class ThreeSoldiersPatternDirective implements IDirective {
 // ===========================================================================
 // Macro / Regime
 // ===========================================================================
-
-@Injectable()
-export class VixRegimeDirective implements IDirective {
-  readonly id = 'vix-regime';
-  readonly name = 'VIX Regime';
-  readonly description = 'Broad market regime from VIX: fear/complacency scoring.';
-  readonly priority = 0;
-  readonly maxScore = 100;
-  readonly version = '1.0.0';
-  readonly readiness = 'alpha' as const;
-
-  calculate(_input: DirectiveInput): DirectiveResult {
-    return stubResult(this.id, 'vix-regime.php');
-  }
-}
 
 @Injectable()
 export class CadUsdOilCorrelationDirective implements IDirective {
@@ -1256,21 +1241,6 @@ export class EarningsProximityDirective implements IDirective {
 
   calculate(_input: DirectiveInput): DirectiveResult {
     return stubResult(this.id, 'earnings-proximity.php');
-  }
-}
-
-@Injectable()
-export class NewsSentimentPositiveDirective implements IDirective {
-  readonly id = 'news-sentiment-positive';
-  readonly name = 'Positive News Sentiment';
-  readonly description = 'Aggregated news sentiment momentum from provider.';
-  readonly priority = 0;
-  readonly maxScore = 100;
-  readonly version = '1.0.0';
-  readonly readiness = 'alpha' as const;
-
-  calculate(_input: DirectiveInput): DirectiveResult {
-    return stubResult(this.id, 'news-sentiment-positive.php');
   }
 }
 

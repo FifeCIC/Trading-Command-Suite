@@ -22,6 +22,36 @@
  * - A directive with maxScore=180 naturally carries more weight than one with maxScore=90.
  * - The protocol's total maximum is the sum of all directive maxScores.
  * - There is NO artificial cap at 100 — scores flow from directive ranges.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * DIRECTIVE AUDIT CHECKLIST — six recurring failure modes
+ * (from the 2026-08-14 xau-speed-v1 audit; check EVERY directive
+ *  against these before marking it `ready`.)
+ * ─────────────────────────────────────────────────────────────
+ *  1. Completeness theater — a mock/constant fallback wearing a `ready`
+ *     badge. Symptom: `calculate()` returns a fixed score with a reason like
+ *     "Mock…", "No <feed/API> data…", "not connected…", or reads a field that
+ *     nothing writes. If it can't produce a real signal, it must be `alpha`
+ *     (or deleted) — never `ready`.
+ *  2. Phantom denominator — `maxScore` is higher than the code can actually
+ *     reach. Symptom: a bonus/clamp path that can never fire. Compute the real
+ *     maximum by tracing every branch, then set `maxScore` to it.
+ *  3. Constant floor — the "no signal" path returns a non-zero baseline.
+ *     Symptom: early-return with `score: 15` etc. instead of `0`. No signal
+ *     means score 0 (and usually `signalClass: 'neutral'`).
+ *  4. Direction-blind in LONG_ONLY — a direction-neutral condition (volatility,
+ *     volume magnitude, squeeze/coiling) adds raw points to a directional
+ *     composite. Symptom: score rises regardless of whether the bar went up or
+ *     down. Neutral conditions should be gates/multipliers, not additive points.
+ *  5. signalClass semantics — the emitted class contradicts `directionBias`.
+ *     Symptom: a `directionBias: 'neutral'` directive emitting 'bullish'/'bearish',
+ *     or a bullish-only directive emitting 'bearish' for "no signal".
+ *  6. Data-layer defect — wrong/naive timestamps or a field that is read but
+ *     never written. Symptom: session/time windows shifted, or `input.x` with
+ *     no matching producer.
+ *
+ *  Mechanical guard: run `node nest/scripts/directive-guard.cjs` to scan all
+ *  directives for modes 1, 4, 5 (static) and mode 1 (runtime constant-output).
  */
 
 export interface MarketBar {

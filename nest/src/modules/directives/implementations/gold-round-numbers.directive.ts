@@ -55,10 +55,10 @@ export class GoldRoundNumbersDirective implements IDirective {
     'Gold respects round numbers more consistently than any other asset — ' +
     'market makers and institutional algos cluster orders at these levels.';
   readonly priority = 58;
-  readonly maxScore = 90;
+  readonly maxScore = 75; // corrected 90→75 2026-08-14 — real max = 50 baseline + 25 major-level shift
   readonly minScore = 1;
   readonly minBars = { '1d': 2 }; // Only needs current price
-  readonly version = '1.1.0';
+  readonly version = '1.2.0'; // maxScore corrected
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
 
@@ -131,7 +131,7 @@ export class GoldRoundNumbersDirective implements IDirective {
     }
 
     // Clamp
-    score = Math.max(10, Math.min(90, score));
+    score = Math.max(10, Math.min(75, score));
 
     const signalClass = score > 55 ? 'bullish' : score < 45 ? 'bearish' : 'neutral';
     const confidence = bestDistPct < MAJOR_ZONE_PCT ? 0.7 : bestDistPct < MINOR_ZONE_PCT ? 0.55 : bestDistPct < MICRO_ZONE_PCT ? 0.4 : 0.2;
@@ -140,7 +140,7 @@ export class GoldRoundNumbersDirective implements IDirective {
       signalClass,
       score,
       confidence,
-      reason: `Gold at $${price.toFixed(2)}: ${signals.join(' | ')} → score=${score}/100`,
+      reason: `Gold at $${price.toFixed(2)}: ${signals.join(' | ')} → score=${score}/${this.maxScore}`,
     };
   }
 }

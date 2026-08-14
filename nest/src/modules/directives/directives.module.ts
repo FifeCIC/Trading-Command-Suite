@@ -66,9 +66,7 @@ import { MicroSrLevelsDirective } from './implementations/micro-sr-levels.direct
 import { ConfluenceReversalComboDirective } from './implementations/confluence-reversal.directive';
 import { ZigZagSwingDetectorDirective } from './implementations/zigzag-swing-detector.directive';
 import { FibonacciLevelsDirective } from './implementations/fibonacci-levels.directive';
-import { NewsSentimentPositiveDirective } from './implementations/news-sentiment.directive';
 import { EarningsProximityDirective } from './implementations/earnings-proximity.directive';
-import { VixRegimeDirective } from './implementations/vix-regime.directive';
 import { DxyRegimeDirective } from './implementations/dxy-regime.directive';
 // ── Precious Metals / Commodity-Specific (XAUUSD, XAGUSD) ─────────────────
 // These directives only score gold/silver symbols.  They are registered as
@@ -244,7 +242,6 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     // Patterns (real math — PinBarPatternDirective lives in placeholder-directives.stub.ts)
     PinBarPatternDirective,
     // Implemented — Macro
-    VixRegimeDirective,
     DxyRegimeDirective,
     // MT5 Ported Indicators (Q156) — 17 new directives
     WilliamsRDirective,
@@ -300,7 +297,6 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     NvdaEarningsMomentumDirective,
     TslaSentimentAmplifierDirective,
     // Implemented — Fundamental
-    NewsSentimentPositiveDirective,
     EarningsProximityDirective,
     // Stubs — Fundamental
     DividendYieldAttractiveDirective,
@@ -429,7 +425,6 @@ export class DirectivesModule implements OnModuleInit {
     // Patterns (real math, in stub file)
     private readonly pinBar: PinBarPatternDirective,
     // Stubs — Temporal
-    private readonly vixRegime: VixRegimeDirective,
     private readonly dxyRegime: DxyRegimeDirective,
     private readonly goldMacro: GoldMacroCorrelationDirective,
     private readonly goldRoundNumbers: GoldRoundNumbersDirective,
@@ -454,7 +449,6 @@ export class DirectivesModule implements OnModuleInit {
     private readonly nvdaEarnings: NvdaEarningsMomentumDirective,
     private readonly tslaSentiment: TslaSentimentAmplifierDirective,
     // Implemented — Fundamental
-    private readonly newsSentiment: NewsSentimentPositiveDirective,
     private readonly earningsProx: EarningsProximityDirective,
     // Stubs — Fundamental
     private readonly dividend: DividendYieldAttractiveDirective,
@@ -564,7 +558,6 @@ export class DirectivesModule implements OnModuleInit {
     // PinBar (real math, in stub file)
     this.directivesService.register(this.pinBar);
     // Implemented — Macro
-    this.directivesService.register(this.vixRegime);
     this.directivesService.register(this.dxyRegime);
     // ── Precious Metals (XAUUSD/XAGUSD) — added 2026-07-28 ──
     this.directivesService.register(this.goldMacro);
@@ -591,7 +584,6 @@ export class DirectivesModule implements OnModuleInit {
     this.directivesService.register(this.nvdaEarnings);
     this.directivesService.register(this.tslaSentiment);
     // Implemented — Fundamental
-    this.directivesService.register(this.newsSentiment);
     this.directivesService.register(this.earningsProx);
     // Stubs — Fundamental
     this.directivesService.register(this.dividend);

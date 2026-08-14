@@ -71,7 +71,7 @@ export const DIRECTIVE_GROUPS: DirectiveGroup[] = [
     minMultiplier: 1.0,
     maxMultiplier: 1.0,
     directiveIds: [
-      'analyst-adjustments', 'news-sentiment-positive', 'earnings-proximity',
+      'analyst-adjustments', 'earnings-proximity',
       'earnings-momentum', 'social-buzz', 'insider-activity',
       // Gold macro driver — DXY, real yields, VIX correlation for XAUUSD/XAGUSD:
       'gold-macro-correlation',
@@ -87,7 +87,7 @@ export const DIRECTIVE_GROUPS: DirectiveGroup[] = [
     maxMultiplier: 1.2,
     directiveIds: [
       'spy-qqq-relative-strength', 'dilution-impact',
-      'vix-regime', 'liquidity-check', 'budget-gate', 'rollover-risk', 'dxy-regime',
+      'liquidity-check', 'budget-gate', 'rollover-risk', 'dxy-regime',
     ],
   },
 ];
@@ -116,7 +116,7 @@ export const SHORT_DIRECTIVE_GROUPS: DirectiveGroup[] = [
     minMultiplier: 1.0,
     maxMultiplier: 1.0,
     directiveIds: [
-      'analyst-adjustments', 'news-sentiment-positive', 'earnings-proximity',
+      'analyst-adjustments', 'earnings-proximity',
       'earnings-momentum', 'social-buzz',
     ],
   },
@@ -180,7 +180,7 @@ export const BTC_SPEED_GROUPS: DirectiveGroup[] = [
     isRiskGate: false,
     minMultiplier: 1.0,
     maxMultiplier: 1.0,
-    directiveIds: ['crypto-fear-greed', 'news-sentiment-positive', 'social-buzz'],
+    directiveIds: ['crypto-fear-greed', 'social-buzz'],
     directiveMaxScores: { 'crypto-fear-greed': 60 },
   },
   {
@@ -192,7 +192,7 @@ export const BTC_SPEED_GROUPS: DirectiveGroup[] = [
     minMultiplier: 0.3,
     maxMultiplier: 1.2,
     directiveIds: [
-      'btc-halving-cycle', 'crypto-weekend-effect', 'vix-regime',
+      'btc-halving-cycle', 'crypto-weekend-effect',
       'liquidity-check',
     ],
     directiveMaxScores: { 'btc-halving-cycle': 200, 'crypto-weekend-effect': 50 },

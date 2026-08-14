@@ -77,7 +77,7 @@ export class BollingerBandSqueezeDirective implements IDirective {
     if (bonusScore > 0) parts.push(`+${bonusScore} bonus (${bonusLabel})`);
 
     return {
-      signalClass: totalScore >= 60 ? 'bullish' : 'neutral',
+      signalClass: 'neutral', // 2026-08-14: squeeze is direction-neutral (volatility coiling, not a directional call)
       score: totalScore,
       confidence,
       reason: `BB squeeze: bandwidth at ${percentilePct}th percentile (${currentBW.toFixed(2)}%). ${parts.join(' ')}=${totalScore}/${this.maxScore}`,

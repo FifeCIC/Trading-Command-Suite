@@ -14,7 +14,6 @@ const KNOWN_FEATURES = {
   'gold-macro-correlation': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'cad-usd-oil-correlation': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'earnings-momentum': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'vix-regime': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'correlation-drag': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'rollover-risk': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   // Backend Tech

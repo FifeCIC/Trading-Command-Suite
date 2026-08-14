@@ -8,7 +8,6 @@ const capabilities = [
   { name:'dxy-regime', category:'Directive', area:'Scoring', type:'Directive', status:'LIVE', dataPersistence:'ephemeral', uiSurfaces:1, pipelineIntegration:'scoring', devCompletion:'complete' },
   { name:'gold-macro-correlation', category:'Directive', area:'Scoring', type:'Directive', status:'LIVE', dataPersistence:'ephemeral', uiSurfaces:0, pipelineIntegration:'scoring', devCompletion:'complete' },
   { name:'earnings-momentum', category:'Directive', area:'Scoring', type:'Directive', status:'LIVE', dataPersistence:'stored', uiSurfaces:0, pipelineIntegration:'scoring', devCompletion:'complete' },
-  { name:'vix-regime', category:'Directive', area:'Scoring', type:'Directive', status:'LIVE', dataPersistence:'ephemeral', uiSurfaces:1, pipelineIntegration:'scoring', devCompletion:'complete' },
   { name:'rsi-divergence', category:'Directive', area:'Scoring', type:'Directive', status:'LIVE', dataPersistence:'ephemeral', uiSurfaces:0, pipelineIntegration:'scoring', devCompletion:'complete' },
   { name:'macd-divergence', category:'Directive', area:'Scoring', type:'Directive', status:'LIVE', dataPersistence:'ephemeral', uiSurfaces:0, pipelineIntegration:'scoring', devCompletion:'complete' },
   { name:'obv-divergence', category:'Directive', area:'Scoring', type:'Directive', status:'LIVE', dataPersistence:'ephemeral', uiSurfaces:0, pipelineIntegration:'scoring', devCompletion:'complete' },

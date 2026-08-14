@@ -9,7 +9,7 @@
  * BONUS tiers:   Rare threshold events that create ladder separation.
  *                RSI < 30 → +30 (1.5σ), RSI < 25 → +50 (2σ), RSI < 20 → +80 (3σ).
  * CURL bonus:    +10 if RSI is rising (recovery signal).
- * MAX:           130 (50 base + 80 extreme bonus). Protocol can override.
+ * MAX:           140 (50 base + 80 extreme bonus + 10 curl).
  *
  * See docs/sees-hybrid-scoring.md for the full architecture.
  */
@@ -102,7 +102,7 @@ export class RsiOversoldDirective implements IDirective {
     const curlBonus = curling ? 10 : 0;
 
     const totalScore = baseScore + bonusScore + curlBonus;
-    const signalClass = totalScore >= 60 ? 'bullish' : totalScore >= 40 ? 'neutral' : 'bearish';
+    const signalClass = totalScore >= 60 ? 'bullish' : 'neutral'; // 2026-08-14: never bearish — bullish-only (oversold reversion) directive; low score = "not oversold", not "bearish"
     const confidence = bonusScore > 0
       ? Math.min(0.95, 0.5 + (bonusScore / 80) * 0.4 + (curling ? 0.1 : 0))
       : Math.max(0.15, 0.3 + (baseScore / 50) * 0.2);

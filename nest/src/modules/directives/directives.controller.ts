@@ -76,7 +76,6 @@ export class DirectivesController {
       'spy-month-end-rebalancing': 'Market Context', 'spy-qqq-relative-strength': 'Market Context',
       'market-regime': 'Market Context', 'institutional-timing': 'Market Context',
       // Sentiment & Fundamentals
-      'news-sentiment-positive': 'Sentiment & Fundamentals',
       'dividend-yield-attractive': 'Sentiment & Fundamentals',
       'nvda-earnings-momentum': 'Sentiment & Fundamentals',
       'tsla-sentiment-amplifier': 'Sentiment & Fundamentals',
@@ -109,8 +108,8 @@ export class DirectivesController {
 
       if (d.id.includes('multi') || d.id.includes('combo') || d.id.includes('composite')) { level += 2; factors.push('multi-factor'); }
       if (['atr-dip', 'adx', 'volatility-tools', 'bollinger-band-squeeze', 'volatility-envelope'].includes(d.id)) { level += 1; factors.push('statistical'); }
-      if (['earnings-momentum', 'social-buzz', 'insider-activity', 'dilution-impact', 'news-sentiment-positive', 'earnings-proximity'].includes(d.id)) { level += 1; factors.push('external-data'); }
-      if (['gold-macro-correlation', 'cad-usd-oil-correlation', 'dxy-regime', 'vix-regime'].includes(d.id)) { level += 2; factors.push('multi-source'); }
+      if (['earnings-momentum', 'social-buzz', 'insider-activity', 'dilution-impact', 'earnings-proximity'].includes(d.id)) { level += 1; factors.push('external-data'); }
+      if (['gold-macro-correlation', 'cad-usd-oil-correlation', 'dxy-regime'].includes(d.id)) { level += 2; factors.push('multi-source'); }
       if (['budget-gate', 'liquidity-check', 'rollover-risk', 'position-size-kelly', 'position-size-confidence'].includes(d.id)) { level += 1; factors.push('risk-calculation'); }
       if (['mt5-engulfing', 'mt5-harami', 'mt5-star-doji', 'mt5-hammer'].includes(d.id)) { level += 1; factors.push('pattern-detection'); }
       if (d.priority && d.priority >= 70) { level += 1; factors.push('high-priority'); }
@@ -239,12 +238,12 @@ export class DirectivesController {
       'october-relief': 'calendar', 'opex-gamma': 'calendar', 'triple-witching': 'calendar',
       'election-cycle': 'calendar', 'crypto-weekend-effect': 'calendar',
       // Macro regime — describe market conditions, not tradable signals
-      'vix-regime': 'regime', 'dxy-regime': 'regime', 'market-regime': 'regime',
+      'dxy-regime': 'regime', 'market-regime': 'regime',
       // Symbol-specific — designed for one symbol, won't fire on SPY
       'gold-macro-correlation': 'symbol-specific', 'cad-usd-oil-correlation': 'symbol-specific',
       'btc-halving-cycle': 'symbol-specific', 'crypto-fear-greed': 'symbol-specific',
       // Data-gated — require external data that may not be present
-      'news-sentiment-positive': 'data-gated', 'earnings-proximity': 'data-gated',
+      'earnings-proximity': 'data-gated',
       'earnings-momentum': 'data-gated', 'social-buzz': 'data-gated',
       'insider-activity': 'data-gated',
     };

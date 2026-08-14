@@ -85,7 +85,10 @@ export class VolumeConfirmationDirective implements IDirective {
       score: Math.max(0, Math.min(this.maxScore, Math.round(score))),
       confidence: Number(confidence.toFixed(2)),
       reason,
-      signalClass: ratio >= 1.3 ? 'bullish' : ratio < 0.8 ? 'bearish' : 'neutral',
+      // 2026-08-14: volume magnitude is direction-neutral — this directive does NOT
+      // check bar direction (close vs open), so high volume ≠ bullish and low volume ≠ bearish.
+      // Declared directionBias='neutral'; signalClass must match.
+      signalClass: 'neutral',
     };
   }
 }

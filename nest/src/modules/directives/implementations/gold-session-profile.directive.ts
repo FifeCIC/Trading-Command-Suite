@@ -101,10 +101,10 @@ export class GoldSessionProfileDirective implements IDirective {
     'Gold-specific session quality rating. Gold moves differently from forex — ' +
     'London fixes and US data windows drive the largest intraday ranges.';
   readonly priority = 60;
-  readonly maxScore = 95;
+  readonly maxScore = 90; // corrected 95→90 2026-08-14 — real max = Overlap 85 + US data boost 5
   readonly minScore = 1;
   readonly minBars = { '1d': 1 }; // Session-based — only needs current time
-  readonly version = '1.1.0';
+  readonly version = '1.2.0'; // maxScore corrected
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
 
@@ -184,7 +184,7 @@ export class GoldSessionProfileDirective implements IDirective {
 
     // ── Compute score ─────────────────────────────────────
     let score = activeSession.quality + dataBoost;
-    score = Math.max(10, Math.min(95, score));
+    score = Math.max(10, Math.min(90, score));
 
     // Signal class: high quality = bullish environment, low quality = caution
     let signalClass: 'bullish' | 'bearish' | 'neutral';
