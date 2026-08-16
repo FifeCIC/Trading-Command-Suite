@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Trading212Adapter } from '../providers/adapters/trading212.adapter';
+import { AdapterFactory } from '../providers/adapter-factory';
+import { IProviderAdapter, BrokerPosition, BrokerAccount } from '../providers/interfaces/provider-adapter.interface';
 import { ScoringService } from '../scoring/scoring.service';
 import { PrismaService } from '../../database/prisma.service';
 
@@ -25,12 +27,14 @@ export interface PortfolioPosition {
   pnlPct: number;
   allocation: number;
   initialFillDate: string;
+  broker?: string;
 }
 
 export interface PortfolioResponse {
   summary: PortfolioSummary;
   positions: PortfolioPosition[];
   account: any;
+  accounts?: BrokerAccount[];
 }
 
 @Injectable()
@@ -41,6 +45,7 @@ export class PortfolioService {
     private readonly t212: Trading212Adapter,
     private readonly scoringService: ScoringService,
     private readonly prisma: PrismaService,
+    private readonly adapterFactory: AdapterFactory,
   ) {}
 
   async getPortfolio(source = 'trading212', requestedMode?: string): Promise<PortfolioResponse> {
@@ -51,37 +56,63 @@ export class PortfolioService {
       this.logger.warn(`Frontend requested mode=${requestedMode} but adapter is mode=${this.t212.mode} — using adapter mode`);
     }
 
-    // Fetch positions and account in parallel via unified interface
-    const [brokerPositions, brokerAccount] = await Promise.all([
-      this.t212.getPositions(),
-      this.t212.getAccount(),
-    ]);
-
-    // Map broker positions, or fall back to Position table if adapter returns empty
-    let rawPositions: any[] = brokerPositions;
-    if (rawPositions.length === 0 && this.prisma.isAvailable) {
-      const dbPositions = await this.prisma.position.findMany({
-        where: { provider: 'trading212' },
-        orderBy: { symbol: 'asc' },
-      });
-      if (dbPositions.length > 0) {
-        this.logger.log(`Using ${dbPositions.length} cached positions from Position table`);
-        rawPositions = dbPositions.map(p => ({
-          symbol: p.symbol,
-          ticker: p.symbol,
-          quantity: p.quantity,
-          avgCost: p.avgPrice,
-          currentPrice: p.currentPrice ?? 0,
-          marketValue: (p.currentPrice ?? 0) * p.quantity,
-          unrealizedPnl: p.pnl ?? 0,
-          unrealizedPnlPct: p.avgPrice > 0 ? ((p.currentPrice ?? 0) - p.avgPrice) / p.avgPrice * 100 : 0,
-          openedAt: p.openedAt?.toISOString() ?? new Date().toISOString(),
-        }));
-      }
+    // Resolve which broker adapters to query. source=all → every connected broker.
+    const brokerIds = source === 'all' ? ['trading212', 'mt5'] : [source];
+    const adapters: Array<{ id: string; adapter: IProviderAdapter }> = [];
+    for (const id of brokerIds) {
+      const adapter = this.adapterFactory.create(id);
+      if (adapter?.getPositions) adapters.push({ id, adapter });
+    }
+    if (adapters.length === 0) {
+      this.logger.warn(`Portfolio: no adapter for source=${source} — falling back to trading212`);
+      adapters.push({ id: 'trading212', adapter: this.t212 });
     }
 
+    // Fetch positions + accounts for every selected broker in parallel.
+    const fetched = await Promise.all(
+      adapters.map(async ({ id, adapter }) => {
+        let positions: BrokerPosition[] = await adapter.getPositions!();
+        // Legacy DB fallback for Trading212 when its live adapter returns empty.
+        if ((!positions || positions.length === 0) && id === 'trading212' && this.prisma.isAvailable) {
+          const dbPositions = await this.prisma.position.findMany({
+            where: { provider: 'trading212' },
+            orderBy: { symbol: 'asc' },
+          });
+          if (dbPositions.length > 0) {
+            this.logger.log(`Using ${dbPositions.length} cached positions from Position table`);
+            positions = dbPositions.map((p) => ({
+              brokerId: 'trading212',
+              brokerName: 'Trading212',
+              symbol: p.symbol,
+              ticker: p.symbol,
+              quantity: p.quantity,
+              avgCost: p.avgPrice,
+              currentPrice: p.currentPrice ?? 0,
+              marketValue: (p.currentPrice ?? 0) * p.quantity,
+              unrealizedPnl: p.pnl ?? 0,
+              unrealizedPnlPct: p.avgPrice > 0 ? ((p.currentPrice ?? 0) - p.avgPrice) / p.avgPrice * 100 : 0,
+              currency: 'GBP',
+              openedAt: p.openedAt?.toISOString() ?? new Date().toISOString(),
+            }));
+          }
+        }
+        const account = adapter.getAccount ? await adapter.getAccount() : null;
+        return { id, positions: positions ?? [], account };
+      }),
+    );
+
+    // Merge, tagging each position with its broker for the UI.
+    const rawPositions: Array<BrokerPosition & { broker: string }> = [];
+    for (const f of fetched) {
+      for (const p of f.positions) {
+        rawPositions.push({ ...p, broker: p.brokerName ?? f.id });
+      }
+    }
+    const accounts = fetched.filter((f) => f.account).map((f) => f.account) as BrokerAccount[];
+    const brokerAccount = accounts[0] ?? null;
+
     // BrokerPosition is already normalized — map directly to PortfolioPosition
-    const positions: PortfolioPosition[] = rawPositions.map((p: any) => ({
+    const positions: PortfolioPosition[] = rawPositions.map((p) => ({
       symbol: p.symbol,
       ticker: p.ticker,
       shares: p.quantity,
@@ -92,6 +123,7 @@ export class PortfolioService {
       pnlPct: p.unrealizedPnlPct,
       allocation: 0,
       initialFillDate: p.openedAt,
+      broker: p.broker,
     }));
 
     // Auto-register portfolio symbols in the database so they get scored
@@ -108,7 +140,7 @@ export class PortfolioService {
     // Summary
     const totalCost = positions.reduce((s, pos) => s + pos.shares * pos.avgCost, 0);
     const totalPnl = positions.reduce((s, pos) => s + pos.pnl, 0);
-    const cash = brokerAccount?.balance ?? 0;
+    const cash = accounts.reduce((s, a) => s + (a.balance ?? 0), 0);
     const pnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
 
     const summary: PortfolioSummary = {
@@ -118,15 +150,17 @@ export class PortfolioService {
       totalPnl,
       pnlPct,
       positionCount: positions.length,
-      provider: brokerAccount?.brokerName ?? 'Trading212',
-      mode: isMock ? 'mock' : this.t212.mode,
+      provider: source === 'all'
+        ? (accounts.map((a) => a.brokerName).filter(Boolean).join(' + ') || 'all')
+        : (brokerAccount?.brokerName ?? source),
+      mode: isMock ? 'mock' : ((brokerAccount?.mode ?? this.t212.mode) as PortfolioSummary['mode']),
     };
 
     this.logger.log(
       `Portfolio: ${positions.length} positions, totalValue=${summary.totalValue.toFixed(2)}, mode=${summary.mode}`,
     );
 
-    return { summary, positions, account: brokerAccount as any };
+    return { summary, positions, account: brokerAccount as any, accounts };
   }
 
   /**
