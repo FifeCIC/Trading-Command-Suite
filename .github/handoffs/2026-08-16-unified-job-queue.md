@@ -6,7 +6,7 @@ type: feature
 
 ## What Changed
 
-Added the Phase 0 groundwork for a unified DB-driven job queue (#614): a `ScheduledJob` table, a `JobQueueService` with `pollDueJobs()`/`processJob()` (priority ordering, retry backoff, interval rescheduling), and a once-per-tick poll call from the automation loop. No orchestration yet — handlers are registered per job type and none are wired (deliberately).
+Added the Phase 0 groundwork for a unified DB-driven job queue (#614): a `ScheduledJob` table, a `JobQueueService` with `pollDueJobs()`/`processJob()` (priority ordering, retry backoff, interval rescheduling), and a once-per-tick poll call from the automation loop. Follow-up (2026-08-17): inspection endpoints (`GET /api/automation/jobs` + `/stats`), poll logging, and a real `fetch-bars` handler wired to `BarRefreshService`.
 
 ## Files Changed
 

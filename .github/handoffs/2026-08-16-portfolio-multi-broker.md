@@ -6,7 +6,7 @@ type: bugfix
 
 ## What Changed
 
-Fixed `PortfolioService.getPortfolio()` to honor its `source` parameter — previously it ignored `source` and always returned Trading212 only, so `/api/portfolio?source=all` silently excluded MT5 positions. It now resolves adapters via `AdapterFactory` (`source=all` → trading212 + mt5), fetches positions + accounts in parallel, tags each position with a `broker` field, sums cash across accounts, and reports provider `"Trading212 + MT5"` for `all`.
+Fixed `PortfolioService.getPortfolio()` to honor its `source` parameter — previously it ignored `source` and always returned Trading212 only, so `/api/portfolio?source=all` silently excluded MT5 positions. It now resolves adapters via `AdapterFactory` (`source=all` → trading212 + mt5), fetches positions + accounts in parallel, tags each position with a `broker` field, sums cash across accounts, and reports provider `"Trading212 + MT5"` for `all`. Follow-up (2026-08-17): MT5 positions now carry a real NOTIONAL market value (`volume × contractSize × price`) in their quote currency, and the summary uses per-broker equity (T212 holdings+cash, MT5 account equity) instead of summing notional + cash — with `exposure` and `currencies[]` exposed separately.
 
 ## Files Changed
 

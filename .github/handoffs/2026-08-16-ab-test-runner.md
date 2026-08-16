@@ -6,7 +6,7 @@ type: feature
 
 ## What Changed
 
-Added the A/B Test Runner (#482): an `AbTest` table referencing two MetaStack snapshots (control/variant), a `AbTestService` with lifecycle (create/start/stop/computeResults) enforcing the 1-active + max-4-symbol limits, four REST endpoints, and automation-loop integration that scores both snapshots per tick and dispatches side-tagged trades (`TCS AB-A` / `TCS AB-B` comments).
+Added the A/B Test Runner (#482): an `AbTest` table referencing two MetaStack snapshots (control/variant), a `AbTestService` with lifecycle (create/start/stop/computeResults) enforcing the 1-active + max-4-symbol limits, four REST endpoints, and automation-loop integration that scores both snapshots per tick and dispatches side-tagged trades (`TCS AB-A` / `TCS AB-B` comments). Follow-up (2026-08-17): list/snapshot endpoints, unrealized P&L from live MT5 positions matched by comment tag, lifecycle logging, and an Automation Dashboard panel.
 
 ## Files Changed
 
