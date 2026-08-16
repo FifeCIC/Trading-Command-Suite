@@ -19,6 +19,16 @@ export class AbTestController {
     return this.abTestService.create(body);
   }
 
+  @Get()
+  list() {
+    return this.abTestService.list();
+  }
+
+  @Get('snapshots')
+  listSnapshots() {
+    return this.abTestService.listSnapshots();
+  }
+
   @Post(':id/start')
   start(@Param('id') id: string) {
     return this.abTestService.start(id);

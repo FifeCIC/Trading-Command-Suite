@@ -63,6 +63,9 @@ export class JobQueueService {
     for (const job of due) {
       await this.processJob(job);
     }
+    if (due.length > 0) {
+      this.logger.log(`JobQueue: processed ${due.length} due job(s) [${due.map((j) => j.type).join(', ')}]`);
+    }
     return due;
   }
 
@@ -174,6 +177,45 @@ export class JobQueueService {
     } catch (err) {
       this.logger.warn(`enqueueInterval failed: ${(err as Error).message}`);
       return null;
+    }
+  }
+
+  /** List recent jobs for inspection (newest first). */
+  async getJobs(limit = 50, status?: string): Promise<ScheduledJob[]> {
+    if (!this.prisma.isAvailable) return [];
+    try {
+      return await this.prisma.scheduledJob.findMany({
+        where: status ? { status } : undefined,
+        orderBy: { createdAt: 'desc' },
+        take: Math.min(limit, 200),
+      });
+    } catch (err) {
+      this.logger.warn(`getJobs failed: ${(err as Error).message}`);
+      return [];
+    }
+  }
+
+  /** Aggregate queue stats: counts by status + next due job. */
+  async getStats(): Promise<Record<string, number | string | null>> {
+    if (!this.prisma.isAvailable) return {};
+    try {
+      const grouped = await this.prisma.scheduledJob.groupBy({
+        by: ['status'],
+        _count: { _all: true },
+      });
+      const stats: Record<string, number | string | null> = {};
+      for (const g of grouped) stats[g.status] = g._count._all;
+      const next = await this.prisma.scheduledJob.findFirst({
+        where: { status: 'queued' },
+        orderBy: [{ runAt: 'asc' }],
+        select: { runAt: true, type: true },
+      });
+      stats.nextDueAt = next?.runAt?.toISOString() ?? null;
+      stats.nextDueType = next?.type ?? null;
+      return stats;
+    } catch (err) {
+      this.logger.warn(`getStats failed: ${(err as Error).message}`);
+      return {};
     }
   }
 }

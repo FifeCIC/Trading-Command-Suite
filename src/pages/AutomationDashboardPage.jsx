@@ -83,6 +83,42 @@ export default function AutomationDashboardPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation', 'status'] }),
   });
 
+  // ── A/B Test Runner (#482) ──────────────────────────────
+  const [abForm, setAbForm] = useState({ name: '', controlStackId: '', variantStackId: '', symbols: '' });
+
+  const abTestsQuery = useQuery({
+    queryKey: ['automation', 'ab-tests'],
+    queryFn: () => apiGet('/api/automation/ab-tests').catch(() => []),
+    refetchInterval: 10000,
+  });
+
+  const abSnapshotsQuery = useQuery({
+    queryKey: ['automation', 'ab-snapshots'],
+    queryFn: () => apiGet('/api/automation/ab-tests/snapshots').catch(() => []),
+    staleTime: 60_000,
+  });
+
+  const createAbMutation = useMutation({
+    mutationFn: (body) => apiPost('/api/automation/ab-tests', body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['automation', 'ab-tests'] });
+      setAbForm({ name: '', controlStackId: '', variantStackId: '', symbols: '' });
+    },
+  });
+
+  const startAbMutation = useMutation({
+    mutationFn: (id) => apiPost(`/api/automation/ab-tests/${id}/start`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation', 'ab-tests'] }),
+  });
+
+  const stopAbMutation = useMutation({
+    mutationFn: (id) => apiPost(`/api/automation/ab-tests/${id}/stop`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation', 'ab-tests'] }),
+  });
+
+  const abTests = abTestsQuery.data ?? [];
+  const abSnapshots = abSnapshotsQuery.data ?? [];
+
   const apiOnline = !statusQuery.isError;
   const scores = portfolioScoresQuery.data?.scores ?? [];
   const strategies = statusQuery.data?.activeStrategies ?? [];
@@ -488,6 +524,85 @@ export default function AutomationDashboardPage() {
                     <span className="ad-decision-composite">{d.composite > 0 ? d.composite : ''}</span>
                     <span className="ad-decision-reason" title={d.reason}>{d.reason}</span>
                     <span className="ad-decision-time">{formatTime(d.timestamp)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.section>
+
+          <motion.section className="ad-panel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+            <h2 className="ad-panel-title">🧪 A/B Tests</h2>
+            <div className="ab-test-create">
+              <input
+                className="ab-test-input"
+                placeholder="Test name"
+                value={abForm.name}
+                onChange={(e) => setAbForm({ ...abForm, name: e.target.value })}
+              />
+              <select
+                className="ab-test-input"
+                value={abForm.controlStackId}
+                onChange={(e) => setAbForm({ ...abForm, controlStackId: e.target.value })}
+              >
+                <option value="">Control snapshot…</option>
+                {abSnapshots.map((s) => (
+                  <option key={`c-${s.id}`} value={s.id}>{s.scoringStrategyId} v{s.version}</option>
+                ))}
+              </select>
+              <select
+                className="ab-test-input"
+                value={abForm.variantStackId}
+                onChange={(e) => setAbForm({ ...abForm, variantStackId: e.target.value })}
+              >
+                <option value="">Variant snapshot…</option>
+                {abSnapshots.map((s) => (
+                  <option key={`v-${s.id}`} value={s.id}>{s.scoringStrategyId} v{s.version}</option>
+                ))}
+              </select>
+              <input
+                className="ab-test-input"
+                placeholder="Symbols (comma-sep, max 4)"
+                value={abForm.symbols}
+                onChange={(e) => setAbForm({ ...abForm, symbols: e.target.value })}
+              />
+              <button
+                className="ad-btn ad-btn-run"
+                disabled={!abForm.name || !abForm.controlStackId || !abForm.variantStackId || !abForm.symbols.trim() || createAbMutation.isPending}
+                onClick={() => createAbMutation.mutate({
+                  name: abForm.name,
+                  controlStackId: abForm.controlStackId,
+                  variantStackId: abForm.variantStackId,
+                  symbols: abForm.symbols.split(',').map((s) => s.trim()).filter(Boolean),
+                })}
+              >
+                {createAbMutation.isPending ? '⏳' : '＋'} Create
+              </button>
+            </div>
+            {abTests.length === 0 ? (
+              <p className="ad-panel-hint">No A/B tests yet. Create one to compare two MetaStack snapshots side-by-side.</p>
+            ) : (
+              <div className="ab-test-list">
+                {abTests.slice(0, 8).map((t) => (
+                  <div key={t.id} className={`ab-test-row ab-test-${t.status}`}>
+                    <div className="ab-test-head">
+                      <span className="ab-test-name">{t.name}</span>
+                      <span className={`ab-test-status ab-test-status-${t.status}`}>{t.status}</span>
+                    </div>
+                    <div className="ab-test-meta">{Array.isArray(t.symbols) ? t.symbols.join(', ') : ''}</div>
+                    {t.results && (
+                      <div className="ab-test-results">
+                        <span>A: {t.results.control?.totalPnl ?? 0}</span>
+                        <span>B: {t.results.variant?.totalPnl ?? 0}</span>
+                      </div>
+                    )}
+                    <div className="ab-test-actions">
+                      {t.status === 'draft' && (
+                        <button className="ad-btn ad-btn-start" onClick={() => startAbMutation.mutate(t.id)} disabled={startAbMutation.isPending}>▶ Start</button>
+                      )}
+                      {t.status === 'running' && (
+                        <button className="ad-btn ad-btn-pause" onClick={() => stopAbMutation.mutate(t.id)} disabled={stopAbMutation.isPending}>■ Stop</button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

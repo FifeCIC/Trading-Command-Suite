@@ -505,6 +505,17 @@ export class AutomationLoopService implements OnModuleInit {
     await this.restorePendingActions();
     await this.restoreThrottleState();
     this.barRefresh.start(300_000);  // Refresh marketBar data every 5 min
+
+    // Register the first real job-queue handler (#614 Phase 0) — 'fetch-bars'
+    // dispatches to BarRefreshService, proving the queue → service path.
+    this.jobQueue.registerHandler('fetch-bars', async (job) => {
+      const payload = (job.payload ?? {}) as any;
+      const result = await this.barRefresh.refresh();
+      this.logger.log(
+        `JobQueue[fetch-bars] ${payload?.symbol ? `(${payload.symbol}) ` : ''}refreshed ${result.upserted} bars for ${result.symbols.length} symbols`,
+      );
+    });
+
     this.start();
   }
 

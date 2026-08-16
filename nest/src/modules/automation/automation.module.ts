@@ -12,6 +12,7 @@ import { SymbolDataCacheService } from './symbol-data-cache.service';
 import { ProtocolRunnerService } from './protocol-runner.service';
 import { ExecutionQueueService } from './execution-queue.service';
 import { JobQueueService } from './job-queue.service';
+import { JobQueueController } from './job-queue.controller';
 import { AbTestService } from './ab-test.service';
 import { MultiProtocolRankingService } from './multi-protocol-ranking.service';
 import { TimelineService } from './timeline.service';
@@ -26,7 +27,7 @@ import { AbTestController } from './ab-test.controller';
 @Global()
 @Module({
   imports: [DirectivesModule, CalibrationModule, ScoringModule, ProvidersModule, TradingModule, DiversificationModule, MarketDataModule, SymbolsModule, CalendarModule],
-  controllers: [AutomationController, StopGuardianController, TimelineController, AbTestController],
+  controllers: [AutomationController, StopGuardianController, TimelineController, AbTestController, JobQueueController],
   providers: [
     SymbolDataCacheService,
     ProtocolRunnerService,

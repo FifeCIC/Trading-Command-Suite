@@ -75,6 +75,7 @@ export class AbTestService {
 
     await this.assertSnapshotsExist(test.controlStackId, test.variantStackId);
 
+    this.logger.log(`A/B test "${test.name}" started (${Array.isArray(test.symbols) ? test.symbols.length : 0} symbols)`);
     return this.prisma.abTest.update({
       where: { id },
       data: { status: 'running', startAt: new Date(), endAt: null, results: null },
@@ -87,6 +88,9 @@ export class AbTestService {
     if (!test) throw new NotFoundException(`A/B test ${id} not found`);
 
     const results = await this.computeResults(test);
+    this.logger.log(
+      `A/B test "${test.name}" stopped — control PnL=${results.control.totalPnl} variant PnL=${results.variant.totalPnl}`,
+    );
     return this.prisma.abTest.update({
       where: { id },
       data: { status: 'complete', endAt: new Date(), results },
@@ -111,6 +115,23 @@ export class AbTestService {
   /** The currently running test (null if none). */
   async getActiveTest(): Promise<AbTest | null> {
     return this.prisma.abTest.findFirst({ where: { status: 'running' } });
+  }
+
+  /** List recent A/B tests (newest first). */
+  async list(limit = 25): Promise<AbTest[]> {
+    return this.prisma.abTest.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(limit, 100),
+    });
+  }
+
+  /** List available MetaStack snapshots for the create form. */
+  async listSnapshots(): Promise<Array<{ id: string; scoringStrategyId: string; version: string; createdAt: Date }>> {
+    return this.prisma.metaStackSnapshot.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, scoringStrategyId: true, version: true, createdAt: true },
+      take: 100,
+    });
   }
 
   /**
@@ -199,14 +220,29 @@ export class AbTestService {
     const sideA = trades.filter((t) => t.brokerComment?.includes(SIDE_A_TAG));
     const sideB = trades.filter((t) => t.brokerComment?.includes(SIDE_B_TAG));
 
-    const summarize = (rows: typeof trades) => {
+    // Live unrealized P&L from MT5 positions tagged with the A/B comment.
+    let liveBySide: Record<'A' | 'B', number> = { A: 0, B: 0 };
+    try {
+      const mt5 = this.adapterFactory.create('mt5') as any;
+      const raw = mt5?.getPositionsRaw ? await mt5.getPositionsRaw() : [];
+      for (const p of raw) {
+        const comment = String(p.comment ?? '');
+        if (comment.includes(SIDE_A_TAG)) liveBySide.A += Number(p.profit ?? 0);
+        else if (comment.includes(SIDE_B_TAG)) liveBySide.B += Number(p.profit ?? 0);
+      }
+    } catch (err) {
+      this.logger.warn(`A/B unrealized P&L lookup failed: ${(err as Error).message}`);
+    }
+
+    const summarize = (rows: typeof trades, livePnl: number) => {
       const closed = rows.filter((t) => t.status === 'closed' && t.pnl != null);
+      const open = rows.filter((t) => t.status === 'open');
       const wins = closed.filter((t) => (t.pnl ?? 0) > 0).length;
-      const pnl = closed.reduce((s, t) => s + (t.pnl ?? 0), 0);
-      // Running equity curve for max drawdown
-      let equity = 0;
-      let peak = 0;
-      let maxDrawdown = 0;
+      const realized = closed.reduce((s, t) => s + (t.pnl ?? 0), 0);
+      // Running equity curve for max drawdown (realized + live unrealized)
+      let equity = livePnl;
+      let peak = Math.max(0, equity);
+      let maxDrawdown = peak - equity;
       for (const t of closed) {
         equity += t.pnl ?? 0;
         if (equity > peak) peak = equity;
@@ -215,16 +251,19 @@ export class AbTestService {
       }
       return {
         trades: rows.length,
+        openTrades: open.length,
         closedTrades: closed.length,
         winRate: closed.length ? +(wins / closed.length).toFixed(4) : null,
-        pnl: +pnl.toFixed(2),
+        realizedPnl: +realized.toFixed(2),
+        unrealizedPnl: +livePnl.toFixed(2),
+        totalPnl: +(realized + livePnl).toFixed(2),
         maxDrawdown: +maxDrawdown.toFixed(2),
       };
     };
 
     return {
-      control: summarize(sideA),
-      variant: summarize(sideB),
+      control: summarize(sideA, liveBySide.A),
+      variant: summarize(sideB, liveBySide.B),
       symbols: test.symbols,
       computedAt: new Date().toISOString(),
     };
