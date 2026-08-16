@@ -122,8 +122,15 @@ function ScoreCell({ value, max, pct, trailLink, symbol, mode }) {
 }
 
 export default function SymbolsLadderPage() {
-  const [sortBy, setSortBy] = useState('score');
   const [protocolFilter, setProtocolFilter] = useState('all');
+  // Filter 1/3 (#634): symbol scope — all | single symbol | watchlist
+  const [symbolScope, setSymbolScope] = useState('all');
+  const [scopeSymbol, setScopeSymbol] = useState('');
+  const [scopeWatchlist, setScopeWatchlist] = useState('');
+  // Filter 2/3 (#635): signal — All | BUY | HOLD | SELL
+  const [signalFilter, setSignalFilter] = useState('all');
+  // Filter 3/3 (#636): score age in minutes — 'all' or 1..60
+  const [ageFilter, setAgeFilter] = useState('all');
   const [countdown, setCountdown] = useState(null);
   // Screen Options: how to render score cells (raw | percent | both)
   const [scoreDisplay, setScoreDisplay] = useState(readScoreDisplay);
@@ -167,6 +174,27 @@ export default function SymbolsLadderPage() {
     queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => ({ protocols: [] })),
     staleTime: 60_000,
   });
+
+  // Watchlists for the symbol-scope filter (#634)
+  const { data: watchlists } = useQuery({
+    queryKey: ['sl-watchlists'],
+    queryFn: () => apiGet('/api/watchlists').catch(() => []),
+    staleTime: 120_000,
+  });
+
+  // Full symbol list of the selected watchlist (only fetched when scoped)
+  const { data: watchlistDetail } = useQuery({
+    queryKey: ['sl-watchlist', scopeWatchlist],
+    queryFn: () => apiGet(`/api/watchlists/${scopeWatchlist}`).catch(() => null),
+    enabled: symbolScope === 'watchlist' && !!scopeWatchlist,
+    staleTime: 60_000,
+  });
+  const watchlistSymbols = useMemo(() => {
+    if (symbolScope !== 'watchlist' || !watchlistDetail) return null;
+    return new Set((Array.isArray(watchlistDetail.symbols) ? watchlistDetail.symbols : []).map((s) =>
+      typeof s === 'string' ? s.toUpperCase() : (s?.ticker || s?.symbol || '').toUpperCase()
+    ).filter(Boolean));
+  }, [symbolScope, watchlistDetail]);
 
   // Build: protocolId → { name, symbols[], maxScore }
   const protocolMap = useMemo(() => {
@@ -275,18 +303,45 @@ export default function SymbolsLadderPage() {
 
     if (protocolFilter !== 'all') result = result.filter(e => e.protocolId === protocolFilter);
 
-    if (sortBy === 'score') result.sort((a, b) => (b.rawScore ?? -1) - (a.rawScore ?? -1));
-    else if (sortBy === 'opportunity') result.sort((a, b) => (b.opportunityScore ?? -1) - (a.opportunityScore ?? -1));
-    else if (sortBy === 'alpha') result.sort((a, b) => a.symbol.localeCompare(b.symbol));
-    else if (sortBy === 'protocol') result.sort((a, b) => a.protocolName.localeCompare(b.protocolName));
+    // Filter 1/3 (#634): symbol scope — single symbol / watchlist / all.
+    if (symbolScope === 'symbol' && scopeSymbol) {
+      result = result.filter(e => e.symbol === scopeSymbol);
+    } else if (symbolScope === 'watchlist' && watchlistSymbols) {
+      result = result.filter(e => watchlistSymbols.has(e.symbol));
+    }
+
+    // Filter 2/3 (#635): signal — server-owned BUY/HOLD/SELL.
+    if (signalFilter !== 'all') {
+      result = result.filter(e => e.signal === signalFilter);
+    }
+
+    // Filter 3/3 (#636): score age — drop rows older than the selected minutes.
+    if (ageFilter !== 'all') {
+      const cutoff = Date.now() - Number(ageFilter) * 60_000;
+      result = result.filter(e => e.lastScored && new Date(e.lastScored).getTime() >= cutoff);
+    }
+
+    // The ladder is always score-ranked (#634 removed the Sort dropdown).
+    result.sort((a, b) => (b.rawScore ?? -1) - (a.rawScore ?? -1));
 
     return result;
-  }, [protocolMap, sortBy, protocolFilter, scoreMap]);
+  }, [protocolMap, protocolFilter, symbolScope, scopeSymbol, watchlistSymbols, signalFilter, ageFilter, scoreMap]);
 
   const protoIds = useMemo(() => {
     const set = new Set(entries.map(e => e.protocolId));
     return ['all', ...set].filter(Boolean).sort();
   }, [entries]);
+
+  // Unique symbols across all protocols (for the single-symbol scope dropdown).
+  const allSymbols = useMemo(() => {
+    const set = new Set();
+    for (const proto of Object.values(protocolMap)) {
+      for (const s of proto.symbols) set.add((s || '').toUpperCase());
+    }
+    return [...set].filter(Boolean).sort();
+  }, [protocolMap]);
+
+  const AGE_OPTIONS = ['1', '2', '3', '4', '5', '10', '15', '20', '30', '60'];
 
   return (
     <div className="pl-page">
@@ -300,12 +355,47 @@ export default function SymbolsLadderPage() {
 
       <div className="pl-toolbar">
         <label className="pl-filter">
-          Sort:
-          <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
-            <option value="score">By Signal</option>
-            <option value="opportunity">By Opportunity</option>
-            <option value="protocol">By Protocol</option>
-            <option value="alpha">A → Z</option>
+          Scope:
+          <select value={symbolScope} onChange={e => { setSymbolScope(e.target.value); setScopeSymbol(''); setScopeWatchlist(''); }}>
+            <option value="all">All symbols</option>
+            <option value="symbol">Single symbol</option>
+            <option value="watchlist">Watchlist</option>
+          </select>
+        </label>
+        {symbolScope === 'symbol' && (
+          <label className="pl-filter">
+            Symbol:
+            <select value={scopeSymbol} onChange={e => setScopeSymbol(e.target.value)}>
+              <option value="">Choose…</option>
+              {allSymbols.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </label>
+        )}
+        {symbolScope === 'watchlist' && (
+          <label className="pl-filter">
+            Watchlist:
+            <select value={scopeWatchlist} onChange={e => setScopeWatchlist(e.target.value)}>
+              <option value="">Choose…</option>
+              {(watchlists || []).map(w => (
+                <option key={w.id} value={w.id}>{w.label} ({w.symbolCount})</option>
+              ))}
+            </select>
+          </label>
+        )}
+        <label className="pl-filter">
+          Signal:
+          <select value={signalFilter} onChange={e => setSignalFilter(e.target.value)}>
+            <option value="all">All</option>
+            <option value="BUY">BUY</option>
+            <option value="HOLD">HOLD</option>
+            <option value="SELL">SELL</option>
+          </select>
+        </label>
+        <label className="pl-filter">
+          Score age:
+          <select value={ageFilter} onChange={e => setAgeFilter(e.target.value)}>
+            <option value="all">All</option>
+            {AGE_OPTIONS.map(m => <option key={m} value={m}>≤ {m}m</option>)}
           </select>
         </label>
         <label className="pl-filter">
