@@ -256,6 +256,29 @@ export default function PortfolioPage() {
         <div className="pf-sum-card"><div className="pf-sum-val">{summary?.positionCount || positions.length}</div><div>Positions</div></div>
       </div>
 
+      {summary?.currencies?.length > 1 && (
+        <div className="pf-multi-currency">
+          ⚠️ Mixed currencies detected ({summary.currencies.join(', ')}) — totals are a raw sum, not FX-converted.
+          MT5 totals use account equity; position values are notional exposure.
+        </div>
+      )}
+
+      {source === 'all' && Array.isArray(effectiveData?.accounts) && effectiveData.accounts.length > 1 && (
+        <div className="pf-section">
+          <h2>Broker Breakdown</h2>
+          <div className="pf-broker-grid">
+            {effectiveData.accounts.map((a) => (
+              <div key={a.brokerId} className="pf-broker-card">
+                <div className="pf-broker-name">{a.brokerName}</div>
+                <div className="pf-broker-row"><span>Equity</span><strong>{a.equity?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? '—'} {a.currency || ''}</strong></div>
+                <div className="pf-broker-row"><span>Balance</span><strong>{a.balance?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? '—'} {a.currency || ''}</strong></div>
+                <div className="pf-broker-row"><span>Positions</span><strong>{positions.filter((p) => p.broker === a.brokerName).length}</strong></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {positions.length > 0 && (
         <div className="pf-section">
           <h2>Allocation</h2>
@@ -273,7 +296,7 @@ export default function PortfolioPage() {
         <h2>Positions</h2>
         <table className="pf-table">
           <thead>
-            <tr><th>Symbol</th><th>Shares</th><th>Avg Cost</th><th>Price</th><th>Value</th><th>P&amp;L</th><th>%</th><th>Data</th><th></th></tr>
+            <tr><th>Symbol</th><th>Broker</th><th>Shares</th><th>Avg Cost</th><th>Price</th><th>Value</th><th>P&amp;L</th><th>%</th><th>Data</th><th></th></tr>
           </thead>
           <tbody>
             {positions.map((p, i) => {
@@ -287,10 +310,11 @@ export default function PortfolioPage() {
                 transition={{ duration: 0.25, delay: i * 0.04 }}
               >
                 <td><strong>{p.symbol}</strong></td>
+                <td>{p.broker || '—'}</td>
                 <td>{p.shares?.toLocaleString() || p.quantity?.toLocaleString() || '—'}</td>
                 <td>${(p.avgCost || 0).toFixed(2)}</td>
                 <td>${(p.currentPrice || 0).toFixed(2)}</td>
-                <td>${(p.value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td>${(p.value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {p.currency || ''}</td>
                 <td className={(p.pnl || 0) >= 0 ? 'pf-green' : 'pf-red'}>{(p.pnl || 0) >= 0 ? '+' : ''}${Math.abs(p.pnl || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td className={(p.pnlPct || 0) >= 0 ? 'pf-green' : 'pf-red'}>{(p.pnlPct || 0) >= 0 ? '+' : ''}{(p.pnlPct || 0).toFixed(1)}%</td>
                 <td>

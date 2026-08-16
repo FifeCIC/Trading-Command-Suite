@@ -14,6 +14,10 @@ export interface PortfolioSummary {
   positionCount: number;
   provider: string;
   mode: 'live' | 'demo' | 'mock';
+  /** Total notional exposure across all positions (CFD margin exposure ≠ equity). */
+  exposure?: number;
+  /** Distinct currencies present across positions + accounts (mixed-currency warning). */
+  currencies?: string[];
 }
 
 export interface PortfolioPosition {
@@ -28,6 +32,7 @@ export interface PortfolioPosition {
   allocation: number;
   initialFillDate: string;
   broker?: string;
+  currency?: string;
 }
 
 export interface PortfolioResponse {
@@ -124,6 +129,7 @@ export class PortfolioService {
       allocation: 0,
       initialFillDate: p.openedAt,
       broker: p.broker,
+      currency: p.currency,
     }));
 
     // Auto-register portfolio symbols in the database so they get scored
@@ -131,20 +137,41 @@ export class PortfolioService {
       await this.ensureSymbolsExist(positions);
     }
 
-    // Compute allocations
-    const totalValue = positions.reduce((s, pos) => s + pos.value, 0);
+    // Compute allocations against total position value (position weight).
+    const notionalExposure = positions.reduce((s, pos) => s + pos.value, 0);
     for (const pos of positions) {
-      pos.allocation = totalValue > 0 ? pos.value / totalValue : 0;
+      pos.allocation = notionalExposure > 0 ? pos.value / notionalExposure : 0;
     }
 
-    // Summary
+    // Summary — per-broker portfolio value.
+    // T212: fully-funded stock holdings → positions market value + free cash.
+    // MT5/CFD: margin account → equity already = balance + floating P&L;
+    //   its positions are NOTIONAL exposure (leveraged), so they are NOT added
+    //   to portfolio value — adding notional + balance would double-count.
+    let totalValue = 0;
+    for (const f of fetched) {
+      const positionsValue = f.positions.reduce((s, p) => s + p.marketValue, 0);
+      const acct = f.account;
+      if (!acct) {
+        totalValue += positionsValue;
+      } else if (f.id === 'trading212') {
+        totalValue += positionsValue + (acct.balance ?? 0);
+      } else {
+        totalValue += (acct.equity ?? acct.balance ?? 0);
+      }
+    }
+
     const totalCost = positions.reduce((s, pos) => s + pos.shares * pos.avgCost, 0);
     const totalPnl = positions.reduce((s, pos) => s + pos.pnl, 0);
     const cash = accounts.reduce((s, a) => s + (a.balance ?? 0), 0);
     const pnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
+    const currencies = [...new Set([
+      ...positions.map((p) => p.currency).filter(Boolean),
+      ...accounts.map((a) => a.currency).filter(Boolean),
+    ])] as string[];
 
     const summary: PortfolioSummary = {
-      totalValue: totalValue + cash,
+      totalValue,
       cash,
       totalCost,
       totalPnl,
@@ -154,6 +181,8 @@ export class PortfolioService {
         ? (accounts.map((a) => a.brokerName).filter(Boolean).join(' + ') || 'all')
         : (brokerAccount?.brokerName ?? source),
       mode: isMock ? 'mock' : ((brokerAccount?.mode ?? this.t212.mode) as PortfolioSummary['mode']),
+      exposure: +notionalExposure.toFixed(2),
+      currencies,
     };
 
     this.logger.log(

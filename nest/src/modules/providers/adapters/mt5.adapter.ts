@@ -110,6 +110,16 @@ export class Mt5Adapter implements IProviderAdapter {
     }
   }
 
+  /** Extract the bridge's `error` field from a JSON error body, if present. */
+  private extractBridgeErrorMessage(body: string): string | null {
+    try {
+      const parsed = JSON.parse(body);
+      return typeof parsed?.error === 'string' ? parsed.error : null;
+    } catch {
+      return null;
+    }
+  }
+
   /**
    * Log detailed bridge diagnostics to the system log and logger.
    */
@@ -265,20 +275,53 @@ export class Mt5Adapter implements IProviderAdapter {
     const data = await this.bridgeGet<{ positions: any[]; count: number }>('/positions');
     if (!data?.positions) return [];
 
-    return data.positions.map((p: any) => ({
-      brokerId: this.id!,
-      brokerName: this.name,
-      symbol: p.symbol,
-      ticker: p.symbol,
-      quantity: p.volume,
-      avgCost: p.priceOpen,
-      currentPrice: p.priceCurrent,
-      marketValue: p.priceCurrent * p.volume,
-      unrealizedPnl: p.profit,
-      unrealizedPnlPct: p.priceOpen > 0 ? ((p.priceCurrent - p.priceOpen) / p.priceOpen) * 100 : 0,
-      currency: 'GBP',
-      openedAt: p.openTime || new Date().toISOString(),
-    }));
+    return data.positions.map((p: any) => {
+      const contractSize = p.contractSize ? Number(p.contractSize) : 0;
+      // Notional market value = volume (lots) × contract size × current price.
+      // Falls back to price × volume when the bridge doesn't supply contract size.
+      const marketValue = contractSize > 0
+        ? p.volume * contractSize * p.priceCurrent
+        : p.priceCurrent * p.volume;
+      const currency = this.quoteCurrency(p.symbol, p.currencyProfit);
+      return {
+        brokerId: this.id!,
+        brokerName: this.name,
+        symbol: p.symbol,
+        ticker: p.symbol,
+        quantity: p.volume,
+        avgCost: p.priceOpen,
+        currentPrice: p.priceCurrent,
+        marketValue,
+        unrealizedPnl: p.profit,
+        unrealizedPnlPct: p.priceOpen > 0 ? ((p.priceCurrent - p.priceOpen) / p.priceOpen) * 100 : 0,
+        currency,
+        openedAt: p.openTime || new Date().toISOString(),
+      };
+    });
+  }
+
+  /**
+   * Derive the currency a position's notional value is denominated in.
+   * MT5 instruments are quoted in their "quote" currency — EURUSD→USD,
+   * USDJPY→JPY, XAUUSD/US500/BTC→USD. Falls back to the bridge's
+   * `currencyProfit` hint (account/profit currency) and finally 'USD'.
+   */
+  private quoteCurrency(symbol: string, currencyProfit?: string | null): string {
+    const s = (symbol || '').toUpperCase();
+    if (s.endsWith('USD')) return 'USD'; // EURUSD, GBPUSD, XAUUSD, BTCUSD
+    if (s.startsWith('USD') && s.length === 6) return s.slice(3); // USDJPY→JPY, USDCAD→CAD
+    if (s.endsWith('JPY') || s.endsWith('CHF') || s.endsWith('CAD') || s.endsWith('AUD') || s.endsWith('NZD')) return s.slice(3);
+    return (currencyProfit || 'USD').toUpperCase();
+  }
+
+  /**
+   * Raw bridge positions (with comment/magic/profit) — used by consumers that
+   * need broker-native fields not present on the normalized BrokerPosition
+   * (e.g. A/B test unrealized P&L matched by comment tag).
+   */
+  async getPositionsRaw(): Promise<any[]> {
+    const data = await this.bridgeGet<{ positions: any[]; count: number }>('/positions');
+    return data?.positions ?? [];
   }
 
   async getAccount(): Promise<BrokerAccount | null> {
@@ -312,10 +355,28 @@ export class Mt5Adapter implements IProviderAdapter {
     };
 
     this.logger.log(`MT5 order: ${body.type} ${body.symbol} ×${body.volume} sl=${body.sl} tp=${body.tp} [tripped=${this.tripped} errors=${this.consecutiveErrors}]`);
-    const data = await this.bridgePost<any>('/order', body);
+
+    let data: any;
+    try {
+      data = await this.bridgePost<any>('/order', body);
+    } catch (err) {
+      const message = (err as Error).message;
+      this.logger.warn(`MT5 order FAILED: ${message}`);
+      this.prisma?.order.create({
+        data: {
+          symbol: params.symbol,
+          type: 'market',
+          side: params.side === 'BUY' ? 'buy' : 'sell',
+          quantity: params.quantity,
+          status: 'rejected',
+          provider: 'mt5',
+        },
+      }).catch(() => {});
+      return { success: false, error: message };
+    }
 
     if (!data) {
-      this.logger.warn(`MT5 order FAILED — see bridge_diag event for details [url=${this.bridgeUrl} tripped=${this.tripped} consecutiveErrors=${this.consecutiveErrors}]`);
+      this.logger.warn(`MT5 order FAILED — bridge unreachable (circuit breaker) [url=${this.bridgeUrl} tripped=${this.tripped} consecutiveErrors=${this.consecutiveErrors}]`);
       // Record failed order attempt
       this.prisma?.order.create({
         data: {
@@ -327,7 +388,7 @@ export class Mt5Adapter implements IProviderAdapter {
           provider: 'mt5',
         },
       }).catch(() => {});
-      return { success: false, error: 'Bridge unreachable' };
+      return { success: false, error: 'Bridge unreachable (circuit breaker active)' };
     }
 
     const result: BrokerOrderResult = {
@@ -384,7 +445,9 @@ export class Mt5Adapter implements IProviderAdapter {
           this.tripBreaker(detail);
         }
         this.logBridgeState('disconnected', `HTTP ${res.status}`);
-        return null;
+        // Surface the bridge's real error (e.g. "No prices", "Insufficient margin")
+        // instead of a generic "Bridge unreachable" so callers can act on it.
+        throw new Error(this.extractBridgeErrorMessage(errorBody) ?? detail);
       }
       this.consecutiveErrors = 0;
       this.logBridgeState('connected');

@@ -378,10 +378,14 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 result = []
                 if positions:
                     for p in positions:
+                        info = mt5.symbol_info(p.symbol)
                         result.append({'ticket': p.ticket, 'symbol': p.symbol, 'type': 'buy' if p.type==0 else 'sell',
                             'volume': float(p.volume), 'priceOpen': float(p.price_open), 'priceCurrent': float(p.price_current),
                             'sl': float(p.sl) if p.sl else None, 'tp': float(p.tp) if p.tp else None,
                             'profit': float(p.profit), 'swap': float(p.swap),
+                            'contractSize': float(info.trade_contract_size) if info else None,
+                            'currencyBase': info.currency_base if info else None,
+                            'currencyProfit': info.currency_profit if info else None,
                             'openTime': utc_iso(p.time), 'magic': p.magic, 'comment': p.comment})
                 return json_response(self, {'positions': result, 'count': len(result)})
 
@@ -454,10 +458,14 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 result = []
                 if positions:
                     for p in positions:
+                        info = mt5.symbol_info(p.symbol)
                         result.append({'ticket': p.ticket, 'symbol': p.symbol, 'type': 'buy' if p.type==0 else 'sell',
                             'volume': float(p.volume), 'priceOpen': float(p.price_open), 'priceCurrent': float(p.price_current),
                             'sl': float(p.sl) if p.sl else None, 'tp': float(p.tp) if p.tp else None,
                             'profit': float(p.profit), 'swap': float(p.swap),
+                            'contractSize': float(info.trade_contract_size) if info else None,
+                            'currencyBase': info.currency_base if info else None,
+                            'currencyProfit': info.currency_profit if info else None,
                             'openTime': utc_iso(p.time), 'magic': p.magic, 'comment': p.comment})
                 journal_trade('positions_sync', {'count': len(result)})
                 return json_response(self, {'positions': result, 'count': len(result), 'syncedAt': utc_now_iso()})
@@ -578,6 +586,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                            'buy_stop': mt5.ORDER_TYPE_BUY_STOP, 'sell_stop': mt5.ORDER_TYPE_SELL_STOP}.get(order_type)
                 if mt5_type is None: return json_response(self, {'error': f'Unknown type: {order_type}'}, 400)
 
+                mt5.symbol_select(symbol, True)
                 tick = mt5.symbol_info_tick(symbol)
                 if not tick: return json_response(self, {'error': f'No quote for {symbol}'}, 400)
 
@@ -599,10 +608,10 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 else:
                     logger.warning(f'symbol_info({symbol}) returned None — skipping tradeability checks')
 
-                # Check margin
+                # Check margin — margin_initial is per 1.0 lot, so scale by volume.
                 account = mt5.account_info()
                 if account and account.margin_free is not None:
-                    required_margin = sym_info.margin_initial if sym_info else (volume * 1000)
+                    required_margin = (sym_info.margin_initial * volume) if sym_info else (volume * 1000)
                     if account.margin_free < required_margin:
                         return json_response(self, {'error': f'Insufficient margin: need {required_margin:.2f}, have {account.margin_free:.2f}'}, 400)
                 # ── End pre-flight validation ──
@@ -709,6 +718,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                             sym = op.get('symbol', '').upper()
                             otype = op.get('type', 'buy').lower()
                             vol = float(op.get('volume', 0.01))
+                            mt5.symbol_select(sym, True)
                             tick = mt5.symbol_info_tick(sym)
                             if not tick:
                                 results.append({'index': i, 'success': False, 'error': f'No quote for {sym}'})
