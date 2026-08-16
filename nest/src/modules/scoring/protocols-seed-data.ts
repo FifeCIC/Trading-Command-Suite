@@ -11,7 +11,6 @@ export interface SeedProtocolGroup {
   minMultiplier: number;
   maxMultiplier: number;
   directiveIds: string[];
-  directiveMaxScores: Record<string, number>;
 }
 
 export interface SeedProtocol {
@@ -57,11 +56,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "micro-sr-levels",
           "rsi-overbought",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -74,10 +69,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "crypto-fear-greed",
           "social-buzz"
-        ],
-        "directiveMaxScores": {
-          "crypto-fear-greed": 60
-        }
+        ]
       },
       {
         "id": "risk",
@@ -91,11 +83,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "btc-halving-cycle",
           "crypto-weekend-effect",
           "liquidity-check"
-        ],
-        "directiveMaxScores": {
-          "btc-halving-cycle": 200,
-          "crypto-weekend-effect": 50
-        }
+        ]
       }
     ]
   },
@@ -128,11 +116,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "micro-sr-levels",
           "volatility-tools",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -144,10 +128,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "crypto-fear-greed"
-        ],
-        "directiveMaxScores": {
-          "crypto-fear-greed": 60
-        }
+        ]
       },
       {
         "id": "risk",
@@ -160,10 +141,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "liquidity-check",
           "crypto-weekend-effect"
-        ],
-        "directiveMaxScores": {
-          "crypto-weekend-effect": 50
-        }
+        ]
       }
     ]
   },
@@ -195,12 +173,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "support-resistance-levels",
           "session-open-effect",
           "gold-round-numbers"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "rsi-oversold": 120,
-          "gold-round-numbers": 80
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -213,8 +186,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "gold-macro-correlation",
           "gold-session-profile"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -226,8 +198,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.3,
         "directiveIds": [
           "liquidity-check"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -260,12 +231,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "support-resistance-levels",
           "session-open-effect",
           "gold-round-numbers"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 100,
-          "rsi-oversold": 100,
-          "gold-round-numbers": 80
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -278,8 +244,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "gold-macro-correlation",
           "gold-session-profile"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -291,8 +256,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.3,
         "directiveIds": [
           "liquidity-check"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -325,12 +289,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "support-resistance-levels",
           "session-open-effect",
           "gold-round-numbers"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 90,
-          "rsi-oversold": 90,
-          "gold-round-numbers": 80
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -343,8 +302,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "gold-macro-correlation",
           "gold-session-profile"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -356,8 +314,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.3,
         "directiveIds": [
           "liquidity-check"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -390,12 +347,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "support-resistance-levels",
           "session-open-effect",
           "gold-round-numbers"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 80,
-          "rsi-oversold": 80,
-          "gold-round-numbers": 80
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -408,8 +360,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "gold-macro-correlation",
           "gold-session-profile"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -421,8 +372,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.3,
         "directiveIds": [
           "liquidity-check"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -455,12 +405,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "support-resistance-levels",
           "session-open-effect",
           "gold-round-numbers"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 70,
-          "rsi-oversold": 70,
-          "gold-round-numbers": 80
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -473,8 +418,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "gold-macro-correlation",
           "gold-session-profile"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -486,8 +430,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.3,
         "directiveIds": [
           "liquidity-check"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -518,11 +461,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -534,8 +473,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "cad-usd-oil-correlation"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -548,8 +486,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "liquidity-check",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -580,11 +517,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -595,8 +528,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -609,8 +541,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "liquidity-check",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -641,11 +572,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "speed-momentum",
           "rsi-oversold",
           "rsi-overbought"
-        ],
-        "directiveMaxScores": {
-          "macd-crossover": 110,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -657,8 +584,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "analyst-adjustments"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -671,8 +597,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "session-open-effect",
           "liquidity-check"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -703,11 +628,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -719,8 +640,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "analyst-adjustments"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -733,8 +653,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "liquidity-check",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -765,11 +684,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "support-resistance-levels",
           "rsi-oversold",
           "rsi-overbought"
-        ],
-        "directiveMaxScores": {
-          "macd-crossover": 110,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -780,10 +695,8 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "analyst-adjustments",
-          "earnings-proximity"
-        ],
-        "directiveMaxScores": {}
+          "analyst-adjustments"
+        ]
       },
       {
         "id": "risk",
@@ -796,8 +709,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "session-open-effect",
           "liquidity-check"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -828,11 +740,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -844,8 +752,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "analyst-adjustments"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -858,8 +765,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "liquidity-check",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -890,11 +796,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -906,8 +808,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "analyst-adjustments"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -920,8 +821,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "liquidity-check",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -952,11 +852,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -968,8 +864,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "social-buzz"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -980,10 +875,8 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.4,
         "maxMultiplier": 1.35,
         "directiveIds": [
-          "liquidity-check",
-          "earnings-proximity"
-        ],
-        "directiveMaxScores": {}
+          "liquidity-check"
+        ]
       }
     ]
   },
@@ -1014,11 +907,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -1031,10 +920,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "social-buzz",
           "crypto-fear-greed"
-        ],
-        "directiveMaxScores": {
-          "crypto-fear-greed": 60
-        }
+        ]
       },
       {
         "id": "risk",
@@ -1046,8 +932,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.4,
         "directiveIds": [
           "liquidity-check"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -1078,11 +963,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -1094,8 +975,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "analyst-adjustments"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -1107,8 +987,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.3,
         "directiveIds": [
           "liquidity-check"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -1138,12 +1017,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "bollinger-band-squeeze",
           "rsi-oversold",
           "support-resistance-levels"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "macd-crossover": 110,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -1155,10 +1029,8 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "analyst-adjustments",
-          "social-buzz",
-          "earnings-proximity"
-        ],
-        "directiveMaxScores": {}
+          "social-buzz"
+        ]
       },
       {
         "id": "risk",
@@ -1171,8 +1043,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "liquidity-check",
           "earnings-momentum"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -1202,11 +1073,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "rsi-overbought",
           "support-resistance-levels",
           "volatility-tools"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -1219,8 +1086,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "social-buzz",
           "analyst-adjustments"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -1232,8 +1098,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.4,
         "directiveIds": [
           "liquidity-check"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -1265,11 +1130,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volatility-tools",
           "ema-structure",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -1282,8 +1143,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "analyst-adjustments",
           "spy-qqq-relative-strength"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -1296,8 +1156,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "liquidity-check",
           "budget-gate"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -1326,8 +1185,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volatility-tools",
           "support-resistance-levels",
           "mean-reversion"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "sentiment",
@@ -1338,8 +1196,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -1352,8 +1209,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "liquidity-check",
           "sp500-regime"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -1383,8 +1239,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "rsi-oversold",
           "rsi-overbought"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "sentiment",
@@ -1397,8 +1252,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "gold-macro-correlation",
           "analyst-adjustments"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -1410,8 +1264,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "liquidity-check"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -1442,11 +1295,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -1458,8 +1307,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "analyst-adjustments"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -1473,8 +1321,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "liquidity-check",
           "session-open-effect",
           "rollover-risk"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -1505,11 +1352,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -1521,8 +1364,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "analyst-adjustments"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -1536,8 +1378,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "liquidity-check",
           "session-open-effect",
           "rollover-risk"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -1566,8 +1407,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "volatility-tools",
           "speed-momentum"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "sentiment",
@@ -1580,8 +1420,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "cad-usd-oil-correlation",
           "analyst-adjustments"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -1593,8 +1432,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "liquidity-check"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -1624,8 +1462,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "ema-structure",
           "macd-crossover",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "sentiment",
@@ -1638,8 +1475,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "session-open-effect",
           "analyst-adjustments"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -1653,8 +1489,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "session-open-effect",
           "liquidity-check",
           "spy-qqq-relative-strength"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -1685,11 +1520,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "support-resistance-levels",
           "session-open-effect",
           "volatility-tools"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -1700,8 +1531,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -1715,8 +1545,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "dxy-regime",
           "liquidity-check",
           "spy-qqq-relative-strength"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -1742,12 +1571,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "rsi-divergence",
           "macd-divergence",
           "obv-divergence"
-        ],
-        "directiveMaxScores": {
-          "rsi-divergence": 110,
-          "macd-divergence": 115,
-          "obv-divergence": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -1760,8 +1584,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "volume-confirmation",
           "speed-momentum"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -1774,8 +1597,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "market-regime",
           "liquidity-check"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -1801,10 +1623,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "mtf-confluence-conservative",
           "ema-structure",
           "volume-confirmation"
-        ],
-        "directiveMaxScores": {
-          "mtf-confluence-conservative": 115
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -1816,8 +1635,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "analyst-adjustments"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -1830,8 +1648,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "liquidity-check",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -1857,12 +1674,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "mtf-confluence-weighted",
           "macd-crossover",
           "rsi-oversold"
-        ],
-        "directiveMaxScores": {
-          "mtf-confluence-weighted": 110,
-          "macd-crossover": 110,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -1873,8 +1685,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -1887,8 +1698,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "liquidity-check",
           "budget-gate"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -1914,10 +1724,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "vwap-confluence-simple",
           "vwap",
           "volume-confirmation"
-        ],
-        "directiveMaxScores": {
-          "vwap-confluence-simple": 105
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -1929,8 +1736,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "session-open-effect"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -1943,8 +1749,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "market-regime",
           "liquidity-check"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -1970,11 +1775,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "vwap-confluence-bands",
           "rsi-oversold",
           "volume-surge"
-        ],
-        "directiveMaxScores": {
-          "vwap-confluence-bands": 110,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -1986,8 +1787,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "market-regime"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -2000,8 +1800,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "liquidity-check",
           "rollover-risk"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -2027,8 +1826,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "gap-scanner",
           "volume-confirmation",
           "session-open-effect"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "sentiment",
@@ -2039,8 +1837,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -2053,8 +1850,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "liquidity-check",
           "budget-gate"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -2080,11 +1876,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "earnings-momentum",
           "rsi-oversold",
           "volume-confirmation"
-        ],
-        "directiveMaxScores": {
-          "earnings-momentum": 90,
-          "rsi-oversold": 120
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -2095,10 +1887,8 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "analyst-adjustments",
-          "earnings-proximity"
-        ],
-        "directiveMaxScores": {}
+          "analyst-adjustments"
+        ]
       },
       {
         "id": "risk",
@@ -2111,8 +1901,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "liquidity-check",
           "budget-gate"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -2154,13 +1943,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "momentum-continuation-combo",
           "momentum-exhaustion",
           "overhead-supply-pressure"
-        ],
-        "directiveMaxScores": {
-          "speed-momentum": 120,
-          "rsi-oversold": 120,
-          "macd-crossover": 110,
-          "atr-dip": 95
-        }
+        ]
       },
       {
         "id": "sentiment",
@@ -2174,8 +1957,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "dxy-regime",
           "gold-macro-correlation",
           "cad-usd-oil-correlation"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -2194,11 +1976,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "target-achieved",
           "time-stop",
           "market-regime"
-        ],
-        "directiveMaxScores": {
-          "liquidity-check": 80,
-          "session-open-effect": 110
-        }
+        ]
       }
     ]
   },
@@ -2233,8 +2011,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "obv-divergence",
           "macd-crossover",
           "speed-momentum"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "bearish-sentiment",
@@ -2246,11 +2023,9 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "analyst-adjustments",
-          "earnings-proximity",
           "earnings-momentum",
           "social-buzz"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "short-risk",
@@ -2268,8 +2043,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "budget-gate",
           "rollover-risk",
           "dxy-regime"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -2295,8 +2069,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "dxy-regime",
           "gold-macro-correlation",
           "market-regime"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "technical",
@@ -2311,8 +2084,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "moving-averages",
           "macd",
           "adx"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "sentiment",
@@ -2324,8 +2096,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "conviction-growth"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -2337,8 +2108,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1,
         "directiveIds": [
           "position-size-kelly"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -2362,8 +2132,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "market-regime"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "technical",
@@ -2377,8 +2146,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "adx",
           "bollinger-bands",
           "moving-averages"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -2390,8 +2158,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1,
         "directiveIds": [
           "position-size-kelly"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -2415,8 +2182,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "conviction-growth"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "technical",
@@ -2431,8 +2197,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "macd",
           "atr-dip",
           "price-action"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -2444,8 +2209,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1,
         "directiveIds": [
           "position-size-kelly"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -2470,8 +2234,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "cad-usd-oil-correlation",
           "market-regime"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "technical",
@@ -2485,8 +2248,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "adx",
           "bollinger-band-squeeze",
           "moving-averages"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -2498,8 +2260,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1,
         "directiveIds": [
           "position-size-kelly"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },
@@ -2525,8 +2286,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "market-regime",
           "cad-usd-oil-correlation",
           "gold-macro-correlation"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "technical",
@@ -2540,8 +2300,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "adx",
           "macd",
           "moving-averages"
-        ],
-        "directiveMaxScores": {}
+        ]
       },
       {
         "id": "risk",
@@ -2553,8 +2312,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1,
         "directiveIds": [
           "position-size-kelly"
-        ],
-        "directiveMaxScores": {}
+        ]
       }
     ]
   },

@@ -11,7 +11,7 @@
  */
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet } from '../core/api/client';
+import { apiGet, apiPatch, apiDelete } from '../core/api/client';
 import PageInfoPopover from '../components/PageInfoPopover';
 import { getProtocolType } from '../core/protocol-utils';
 import { timeAgo, formatDateTime } from '../core/format-utils';
@@ -25,6 +25,8 @@ export default function ProtocolsPageB({ initialProtocolId }) {
   const [usageFilter, setUsageFilter] = useState('all');
   const [hideInactive, setHideInactive] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const [editingDirective, setEditingDirective] = useState(null);
+  const [editValue, setEditValue] = useState('');
   const queryClient = useQueryClient();
 
   const protocolsQuery = useQuery({
@@ -57,6 +59,39 @@ export default function ProtocolsPageB({ initialProtocolId }) {
     refetchInterval: 30_000,
   });
   const latestScore = latestScoreQuery.data;
+
+  // ── Per-protocol directive weights (#609) ──
+  const directiveConfigQuery = useQuery({
+    queryKey: ['protocol-directive-config', selectedProto?.id],
+    queryFn: () => apiGet(`/api/scoring/protocols/${selectedProto?.id}/directive-config`),
+    enabled: !!selectedProto?.id,
+    staleTime: 10_000,
+  });
+  const directiveConfig = directiveConfigQuery.data;
+
+  async function handleSaveOverride(directiveId, maxScore) {
+    if (!selectedProto || !Number.isFinite(maxScore)) return;
+    try {
+      await apiPatch(`/api/scoring/protocols/${selectedProto.id}/directive-config`, {
+        directiveId,
+        config: { maxScore },
+      });
+      setEditingDirective(null);
+      queryClient.invalidateQueries({ queryKey: ['protocol-directive-config', selectedProto.id] });
+    } catch (err) {
+      console.error('Failed to save directive override', err);
+    }
+  }
+
+  async function handleResetOverride(directiveId) {
+    if (!selectedProto) return;
+    try {
+      await apiDelete(`/api/scoring/protocols/${selectedProto.id}/directive-config/${directiveId}`);
+      queryClient.invalidateQueries({ queryKey: ['protocol-directive-config', selectedProto.id] });
+    } catch (err) {
+      console.error('Failed to reset directive override', err);
+    }
+  }
 
   const styles = ['All', ...new Set(protocols.map(p => p.tradingStyle).filter(Boolean))];
   const filteredProtocols = useMemo(() => {
@@ -223,7 +258,63 @@ export default function ProtocolsPageB({ initialProtocolId }) {
                 <div className="prb-stat"><span className="prb-stat-val">{selectedProto.directionMode || 'LONG'}</span><span className="prb-stat-lbl">Direction</span></div>
                 {selectedProto.recommendedTimeframe && <div className="prb-stat"><span className="prb-stat-val">{selectedProto.recommendedTimeframe}</span><span className="prb-stat-lbl">Timeframe</span></div>}
                 <div className="prb-stat"><span className="prb-stat-val">{selectedProto.directiveCount}</span><span className="prb-stat-lbl">Directives</span></div>
-                <div className="prb-stat"><span className="prb-stat-val">{selectedProto.maxScore?.toLocaleString() ?? 'N/A'}</span><span className="prb-stat-lbl">Total Weight</span></div>
+                <div className="prb-stat"><span className="prb-stat-val">{directiveConfig?.totalWeight != null ? directiveConfig.totalWeight.toLocaleString() : (selectedProto.maxScore?.toLocaleString() ?? 'N/A')}</span><span className="prb-stat-lbl">Total Weight</span></div>
+              </div>
+
+              {/* Directive Weights (per-protocol config — #609) */}
+              <div className="prb-weights">
+                <h3>Directive Weights</h3>
+                {directiveConfigQuery.isLoading ? (
+                  <span className="prb-recent-loading">Loading…</span>
+                ) : directiveConfig?.directives?.length ? (
+                  <div className="prb-weights-list">
+                    {directiveConfig.directives.map(d => (
+                      <div key={d.id} className="prb-weight-row">
+                        <span className="prb-weight-name" title={d.id}>{d.name || d.id}</span>
+                        {editingDirective === d.id ? (
+                          <div className="prb-weight-editor">
+                            <input
+                              className="prb-weight-input"
+                              type="number"
+                              min="0"
+                              value={editValue}
+                              onChange={e => setEditValue(e.target.value)}
+                              autoFocus
+                            />
+                            <button
+                              className="prb-weight-btn save"
+                              disabled={!editValue || isNaN(parseInt(editValue, 10))}
+                              onClick={() => handleSaveOverride(d.id, parseInt(editValue, 10))}
+                            >Save</button>
+                            <button className="prb-weight-btn" onClick={() => setEditingDirective(null)}>Cancel</button>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="prb-weight-value">
+                              <b>{d.effectiveMaxScore}</b>
+                              <em className={`prb-weight-badge ${d.source}`}>{d.source}</em>
+                            </span>
+                            <span className="prb-weight-actions">
+                              <button
+                                className="prb-weight-btn"
+                                onClick={() => { setEditingDirective(d.id); setEditValue(String(d.effectiveMaxScore)); }}
+                              >Edit</button>
+                              {d.source === 'override' && (
+                                <button className="prb-weight-btn" onClick={() => handleResetOverride(d.id)}>Reset</button>
+                              )}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                    <div className="prb-weights-total">
+                      <span>Total Weight</span>
+                      <b>{directiveConfig.totalWeight?.toLocaleString() ?? 0}</b>
+                    </div>
+                  </div>
+                ) : (
+                  <span className="prb-recent-none">No directives</span>
+                )}
               </div>
 
               {/* Recent Scoring */}

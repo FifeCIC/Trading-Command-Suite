@@ -217,7 +217,7 @@ export default function DailyBriefingPage() {
                   {overnightGainers.map((r, i) => (
                     <div key={i} className="db-mover db-mover-up">
                       <span className="db-mover-rank">#{i + 1}</span>
-                      <a href={`/research/symbol/${r.symbolId || r.ticker}`} className="db-mover-ticker">{r.ticker || r.symbol}</a>
+                      <a href={`/research/symbol/${r.ticker || r.symbol}`} className="db-mover-ticker">{r.ticker || r.symbol}</a>
                       <span className="db-mover-score" style={{color: '#22c55e'}}>{r.score || '—'}</span>
                       <span className="db-mover-signal">{r.signal || '—'}</span>
                     </div>
@@ -235,7 +235,7 @@ export default function DailyBriefingPage() {
                   {overnightLosers.map((r, i) => (
                     <div key={i} className="db-mover db-mover-down">
                       <span className="db-mover-rank">#{i + 1}</span>
-                      <a href={`/research/symbol/${r.symbolId || r.ticker}`} className="db-mover-ticker">{r.ticker || r.symbol}</a>
+                      <a href={`/research/symbol/${r.ticker || r.symbol}`} className="db-mover-ticker">{r.ticker || r.symbol}</a>
                       <span className="db-mover-score" style={{color: '#ef4444'}}>{r.score || '—'}</span>
                       <span className="db-mover-signal">{r.signal || '—'}</span>
                     </div>
@@ -344,7 +344,7 @@ export default function DailyBriefingPage() {
                   {isExpanded && (
                     <div className="db-brief-detail">
                       <div className="db-brief-actions">
-                        <a href={`/research/symbol/${item.symbolId || item.symbol}`} className="db-brief-action">🔍 Research</a>
+                        <a href={`/research/symbol/${item.symbol || item.ticker}`} className="db-brief-action">🔍 Research</a>
                         <button className="db-brief-action" onClick={() => {/* add to watchlist */}}>⭐ Watch</button>
                         <button className="db-brief-action" onClick={() => {/* create alert */}}>🔔 Alert</button>
                       </div>

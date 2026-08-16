@@ -351,6 +351,7 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
   ],
   exports: [
     DirectivesService,
+    DirectiveConfigService,
     ConditionDetectorService,
     TimezoneService,
     // Q228 — Pattern Detector Service needs these

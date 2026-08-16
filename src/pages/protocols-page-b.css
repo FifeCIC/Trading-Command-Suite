@@ -131,3 +131,30 @@
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: var(--accent);
 }
+
+/* Directive Weights (per-protocol config — #609) */
+.prb-weights {
+  border: 1px solid var(--line); border-radius: 8px; padding: 0.6rem 0.75rem; margin-bottom: 0.75rem;
+  background: color-mix(in srgb, var(--accent) 3%, transparent);
+}
+.prb-weights h3 { margin: 0 0 0.4rem; font-size: 0.72rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
+.prb-weights-list { display: flex; flex-direction: column; gap: 0.15rem; }
+.prb-weight-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.28rem 0.4rem; border-radius: 5px; }
+.prb-weight-row:hover { background: var(--line); }
+.prb-weight-name { flex: 1; font-size: 0.78rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prb-weight-value { display: flex; align-items: center; gap: 0.35rem; }
+.prb-weight-value b { font-size: 0.8rem; color: var(--ink); }
+.prb-weight-badge { font-size: 0.6rem; font-style: normal; text-transform: uppercase; letter-spacing: 0.03em; padding: 1px 5px; border-radius: 3px; }
+.prb-weight-badge.global { background: color-mix(in srgb, var(--ink-soft) 15%, transparent); color: var(--ink-soft); }
+.prb-weight-badge.override { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
+.prb-weight-actions { display: flex; gap: 0.3rem; }
+.prb-weight-editor { display: flex; align-items: center; gap: 0.3rem; }
+.prb-weight-input { width: 70px; padding: 0.2rem 0.4rem; border: 1px solid var(--accent); border-radius: 5px; background: var(--panel); color: var(--ink); font-family: inherit; font-size: 0.78rem; }
+.prb-weight-input:focus { outline: none; border-color: var(--accent); }
+.prb-weight-btn { font-size: 0.68rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; cursor: pointer; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-family: inherit; transition: all 0.12s; }
+.prb-weight-btn:hover { border-color: var(--accent); color: var(--accent); }
+.prb-weight-btn.save { background: var(--accent); color: #fff; border-color: var(--accent); }
+.prb-weight-btn.save:hover { opacity: 0.85; color: #fff; }
+.prb-weight-btn:disabled { opacity: 0.5; cursor: default; }
+.prb-weights-total { display: flex; justify-content: space-between; align-items: center; margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--line); font-size: 0.75rem; color: var(--ink-soft); }
+.prb-weights-total b { font-size: 0.85rem; color: var(--ink); }

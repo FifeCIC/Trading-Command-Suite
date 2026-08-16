@@ -21,8 +21,10 @@ import PageInfoPopover from '../components/PageInfoPopover';
 import { TopRowSlotContent } from '../core/top-row-slot';
 import './protocols-ladder.css';
 
-import { scoreClass, signalBadge } from '../core/signal-utils';
+import { scoreClass } from '../core/signal-utils';
 import { formatDateTime } from '../core/format-utils';
+import { buildScoreDisplay } from '../core/score-display';
+import SignalBadge from '../components/SignalBadge';
 
 /** Seconds to wait after the automation loop tick before refreshing. */
 const REFRESH_AFTER_TICK_MS = 2000;
@@ -33,29 +35,29 @@ const REFRESH_AFTER_TICK_MS = 2000;
  * hard-gates the composite to 0, but the protocol still produced a real
  * pre-gate signal. The popover explains the distinction.
  */
-function StatusCell({ entry }) {
+function StatusCell({ display, entry }) {
   const popId = `pl-status-${entry.protocolId}-${entry.symbol}`.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-  if (entry.score == null) {
+  if (!display || display.state === 'unscored') {
     return <span className="pl-muted">—</span>;
   }
 
-  const ms = entry.marketStatus;
-  const closed = ms && ms.open === false;
+  const ms = display.marketStatus;
+  const frozen = display.frozen;
 
-  if (closed) {
+  if (frozen) {
     return (
       <>
         <button type="button" className="pl-status pl-status-closed" popovertarget={popId} title="Why isn't this symbol being scored?">
-          <span className="pl-status-dot" /> Market closed
+          <span className="pl-status-dot" /> {display.state === 'stale' ? 'Stale' : 'Market closed'}
         </button>
         <div id={popId} popover="auto" className="pl-status-popover">
-          <div className="pl-status-pop-title">Market closed</div>
+          <div className="pl-status-pop-title">{display.state === 'stale' ? 'Data stale' : 'Market closed'}</div>
           <div className="pl-status-pop-body">
             <p>{ms?.reason || 'The market is closed — this symbol is not producing fresh bars right now.'}</p>
             {ms?.asOf && <p className="pl-status-pop-meta">Last real bar: {formatDateTime(ms.asOf)}</p>}
             <p className="pl-status-pop-meta">
-              Shown score ({Math.round(entry.rawScore ?? entry.score)}) is the pre-gate signal
+              Shown score ({Math.round(display.score ?? 0)}) is the pre-gate signal
               strength, frozen at the last close — it is not a live tradable signal.
             </p>
           </div>
@@ -79,11 +81,63 @@ function StatusCell({ entry }) {
   );
 }
 
+/** Read the Screen Options "Score Display" preference (raw | percent | both). */
+function readScoreDisplay() {
+  try { return localStorage.getItem('sl-score-display') || 'both'; }
+  catch { return 'both'; }
+}
+
+/**
+ * ScoreCell — renders one score value (Signal or Opportunity) according to the
+ * user's Screen Options preference: raw only, percent only, or both stacked.
+ */
+function ScoreCell({ value, max, pct, trailLink, symbol, mode }) {
+  if (value == null) {
+    return <td><span className="pl-muted">—</span></td>;
+  }
+  const cls = scoreClass(pct);
+  const raw = (
+    <>
+      <span className={cls}>{value.toLocaleString()}</span>
+      {max > 0 && <span className="pl-score-max"> / {max.toLocaleString()}</span>}
+    </>
+  );
+  const pctNode = pct != null ? <span className={cls}>{pct}%</span> : null;
+  return (
+    <td>
+      <Link to={trailLink} className="pl-score-link" title={`View directive breakdown for ${symbol}`}>
+        {mode === 'percent' ? (
+          pctNode ?? <span className="pl-muted">—</span>
+        ) : mode === 'raw' ? (
+          raw
+        ) : (
+          <span className="pl-score-stack">
+            <span className="pl-score-line">{raw}</span>
+            {pctNode}
+          </span>
+        )}
+      </Link>
+    </td>
+  );
+}
+
 export default function SymbolsLadderPage() {
   const [sortBy, setSortBy] = useState('score');
-  const [scoreMode, setScoreMode] = useState('signal');
   const [protocolFilter, setProtocolFilter] = useState('all');
   const [countdown, setCountdown] = useState(null);
+  // Screen Options: how to render score cells (raw | percent | both)
+  const [scoreDisplay, setScoreDisplay] = useState(readScoreDisplay);
+
+  // Poll localStorage for Screen Options changes (same-tab doesn't fire 'storage')
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setScoreDisplay((prev) => {
+        const current = readScoreDisplay();
+        return prev !== current ? current : prev;
+      });
+    }, 250);
+    return () => clearInterval(interval);
+  }, []);
 
   // Automation status — gives us nextTickAt so refresh syncs with the loop
   const { data: automation } = useQuery({
@@ -163,6 +217,7 @@ export default function SymbolsLadderPage() {
         if (!map[key]) {
           map[key] = {
             score: s.value,
+            signal: s.signal ?? null,
             rawScore: s.rawComposite ?? s.value,
             rawMax: s.rawMax ?? null,
             opportunityScore: s.opportunityScore ?? null,
@@ -206,6 +261,7 @@ export default function SymbolsLadderPage() {
           protocolId: protoId,
           protocolName: proto.name,
           score: data?.score ?? null,               // gated composite (0 when market closed)
+          signal: data?.signal ?? null,             // server-owned classification
           rawScore: data?.rawScore ?? data?.score ?? null, // pre-gate signal strength
           rawMax: data?.rawMax ?? null,             // directional denominator (Phase C)
           opportunityScore: data?.opportunityScore ?? null,
@@ -246,17 +302,10 @@ export default function SymbolsLadderPage() {
         <label className="pl-filter">
           Sort:
           <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
-            <option value="score">By Score</option>
+            <option value="score">By Signal</option>
             <option value="opportunity">By Opportunity</option>
             <option value="protocol">By Protocol</option>
             <option value="alpha">A → Z</option>
-          </select>
-        </label>
-        <label className="pl-filter" title="Which score to display: Signal (directional conviction, for timing) or Opportunity (additive, for ranking/screening).">
-          Score:
-          <select value={scoreMode} onChange={e => setScoreMode(e.target.value)}>
-            <option value="signal">Signal</option>
-            <option value="opportunity">Opportunity</option>
           </select>
         </label>
         <label className="pl-filter">
@@ -283,67 +332,37 @@ export default function SymbolsLadderPage() {
         <div className="pl-table-wrap">
           <table className="pl-table">
             <thead>
-              <tr><th>#</th><th>Symbol</th><th>Score</th><th>%</th><th>Signal</th><th>Status</th><th>Protocol</th><th>Time</th></tr>
+              <tr><th>#</th><th>Symbol</th><th>Signal</th><th>Opportunity</th><th>Action</th><th>Status</th><th>Protocol</th><th>Time</th></tr>
             </thead>
             <tbody>
               {entries.map((e, i) => {
-                // Phase C: two scores. Signal = directional conviction (timing);
-                // Opportunity = additive "everything counts" (ranking). Toggle
-                // via the Score: filter. Use each score's own denominator.
-                const isOpp = scoreMode === 'opportunity';
+                // Output layer: one view model decides signal/tone/state/pct.
+                const vm = buildScoreDisplay({
+                  signal: e.signal,
+                  value: e.score,
+                  rawComposite: e.rawScore,
+                  rawMax: e.rawMax,
+                  opportunityScore: e.opportunityScore,
+                  opportunityMax: e.opportunityMax,
+                  marketStatus: e.marketStatus,
+                });
+                // Two scores, both shown with named columns:
+                // Signal = directional conviction (timing); Opportunity =
+                // additive "everything counts" (ranking/screening).
                 const protoMax = protocolMap[e.protocolId]?.maxScore;
-                const max = isOpp
-                  ? (e.opportunityMax ?? protoMax) || 1
-                  : (e.rawMax ?? protoMax) || 1;
-                const displayScore = isOpp
-                  ? e.opportunityScore
-                  : (e.rawScore ?? e.score);
-                const pct = displayScore != null && max > 0 ? Math.round((displayScore / max) * 100) : null;
-                const closed = e.marketStatus && e.marketStatus.open === false;
+                const signalMax = (vm.scoreMax ?? protoMax) || 1;
+                const oppMax = (vm.opportunityMax ?? protoMax) || 1;
+                const trailLink = `/protocols/protocol-trail?symbol=${encodeURIComponent(e.symbol)}&protocol=${encodeURIComponent(e.protocolId)}${e.runId ? `&runId=${encodeURIComponent(e.runId)}` : ''}`;
                 return (
                 <tr key={`${e.protocolId}:${e.symbol}`}>
                   <td className="pl-rank">{i + 1}</td>
                   <td className="pl-symbol">{e.symbol}</td>
+                  <ScoreCell value={vm.score} max={signalMax} pct={vm.pct} trailLink={trailLink} symbol={e.symbol} mode={scoreDisplay} />
+                  <ScoreCell value={vm.opportunityScore} max={oppMax} pct={vm.opportunityPct} trailLink={trailLink} symbol={e.symbol} mode={scoreDisplay} />
                   <td>
-                    {displayScore != null ? (
-                      <Link
-                        to={`/protocols/protocol-trail?symbol=${encodeURIComponent(e.symbol)}&protocol=${encodeURIComponent(e.protocolId)}${e.runId ? `&runId=${encodeURIComponent(e.runId)}` : ''}`}
-                        className="pl-score-link"
-                        title={`View directive breakdown for ${e.symbol}`}
-                      >
-                        <span className={scoreClass(pct)}>
-                          {displayScore.toLocaleString()}
-                        </span>
-                        {max > 0 && (
-                          <span className="pl-score-max"> / {max.toLocaleString()}</span>
-                        )}
-                      </Link>
-                    ) : (
-                      <span className="pl-muted">—</span>
-                    )}
+                    <SignalBadge display={vm} />
                   </td>
-                  <td>
-                    {pct != null ? (
-                      <span className={scoreClass(pct)}>{pct}%</span>
-                    ) : (
-                      <span className="pl-muted">—</span>
-                    )}
-                  </td>
-                  <td>
-                    {isOpp ? (
-                      <span className="pl-muted" title="Directional signal shown when the Score filter is set to 'Signal'.">—</span>
-                    ) : closed ? (
-                      <span
-                        className="pl-badge pl-badge-paused"
-                        title={e.marketStatus?.reason || 'Market closed — no live signal'}
-                      >
-                        PAUSED
-                      </span>
-                    ) : (
-                      signalBadge(pct)
-                    )}
-                  </td>
-                  <td><StatusCell entry={e} /></td>
+                  <td><StatusCell display={vm} entry={e} /></td>
                   <td className="pl-muted">
                     <Link to={`/protocols/protocols-registry?proto=${encodeURIComponent(e.protocolId)}`} className="pl-proto-link">{e.protocolName}</Link>
                   </td>

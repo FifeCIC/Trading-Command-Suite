@@ -54,29 +54,14 @@ const SEED_SOURCES: { name: string; url: string; reliabilityScore: number }[] = 
   { name: 'MarketWatch', url: 'https://www.marketwatch.com', reliabilityScore: 7.0 },
 ];
 
-/** Generate synthetic article samples for demo */
-const SEED_ARTICLES: ArticleHeadline[] = [
-  { sourceId: 'bloomberg', sourceName: 'Bloomberg', headline: 'Fed Signals Patience on Rate Cuts as Inflation Moderates', url: '#', publishedAt: '2026-06-16T09:00:00Z', sentiment: 0.2 },
-  { sourceId: 'reuters', sourceName: 'Reuters', headline: 'Global Markets Steady Ahead of Key Central Bank Decisions', url: '#', publishedAt: '2026-06-16T08:30:00Z', sentiment: 0.1 },
-  { sourceId: 'cnbc', sourceName: 'CNBC', headline: 'Tech Stocks Rally on AI Optimism, NVIDIA Leads Gains', url: '#', publishedAt: '2026-06-16T10:15:00Z', sentiment: 0.4 },
-  { sourceId: 'yahoo', sourceName: 'Yahoo Finance', headline: 'Is the Bull Market Over? Experts Weigh In On What\'s Next', url: '#', publishedAt: '2026-06-16T11:00:00Z', sentiment: -0.1 },
-  { sourceId: 'benzinga', sourceName: 'Benzinga', headline: 'SHOCKING: Why NVIDIA Could CRASH 50% By Next Week', url: '#', publishedAt: '2026-06-16T07:00:00Z', sentiment: -0.6 },
-  { sourceId: 'fool', sourceName: 'Motley Fool', headline: 'You Won\'t Believe What This Analyst Just Said About Tesla', url: '#', publishedAt: '2026-06-16T06:30:00Z', sentiment: 0.0 },
-  { sourceId: 'seekingalpha', sourceName: 'Seeking Alpha', headline: 'Apple: The Secret Growth Story Wall Street Is Missing', url: '#', publishedAt: '2026-06-16T12:00:00Z', sentiment: 0.3 },
-  { sourceId: 'marketwatch', sourceName: 'MarketWatch', headline: 'Treasury Yields Edge Lower as Bond Market Rallies', url: '#', publishedAt: '2026-06-16T09:30:00Z', sentiment: 0.1 },
-  { sourceId: 'benzinga', sourceName: 'Benzinga', headline: 'Tesla Stock PLUNGES — Here\'s What You Need To Know', url: '#', publishedAt: '2026-06-15T14:00:00Z', sentiment: -0.5 },
-  { sourceId: 'fool', sourceName: 'Motley Fool', headline: '3 Stocks That Could Make You a Millionaire by 2030', url: '#', publishedAt: '2026-06-15T10:00:00Z', sentiment: 0.7 },
-  { sourceId: 'cnbc', sourceName: 'CNBC', headline: 'Oil Prices Drop as OPEC+ Considers Output Increase', url: '#', publishedAt: '2026-06-15T08:00:00Z', sentiment: -0.2 },
-  { sourceId: 'bloomberg', sourceName: 'Bloomberg', headline: 'UK Inflation Data Surprises to the Upside — GBP Rallies', url: '#', publishedAt: '2026-06-15T07:00:00Z', sentiment: 0.3 },
-  { sourceId: 'reuters', sourceName: 'Reuters', headline: 'Asia Markets Mixed as China Stimulus Hopes Fade', url: '#', publishedAt: '2026-06-15T06:00:00Z', sentiment: 0.0 },
-  { sourceId: 'benzinga', sourceName: 'Benzinga', headline: 'Another Hedge Fund Just DOUBLED Its Bitcoin Position — Here\'s Why', url: '#', publishedAt: '2026-06-14T15:00:00Z', sentiment: 0.5 },
-  { sourceId: 'seekingalpha', sourceName: 'Seeking Alpha', headline: 'Microsoft Earnings Preview: The Numbers That Matter', url: '#', publishedAt: '2026-06-14T13:00:00Z', sentiment: 0.2 },
-];
+// NOTE: Synthetic demo articles removed 2026-08-16. Fake headlines presented as
+// real news are misleading in a trading app. The collector now starts empty —
+// real articles are served by the DB importer (Finnhub/RSS) via /api/news/feed.
 
 @Injectable()
 export class NewsCollectorService {
   private readonly logger = new Logger(NewsCollectorService.name);
-  private articles: ArticleHeadline[] = [...SEED_ARTICLES];
+  private articles: ArticleHeadline[] = [];
 
   getSources() {
     return SEED_SOURCES.map((s, i) => ({

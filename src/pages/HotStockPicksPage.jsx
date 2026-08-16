@@ -168,7 +168,7 @@ export default function HotStockPicksPage() {
             return (
               <Link
                 key={pick.symbolId}
-                to={`/research/symbol/${pick.symbolId}`}
+                to={`/research/symbol/${pick.ticker}`}
                 className="hsp-card"
               >
                 <div className="hsp-card-top">

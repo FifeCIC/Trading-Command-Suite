@@ -32,6 +32,7 @@ import { AdapterFactory } from '../providers/adapter-factory';
 import { MacroSnapshotService } from './macro-snapshot.service';
 import { EurUsdCacheService } from './eurusd-cache.service';
 import { ProtocolDbService } from './protocol-db.service';
+import { DirectiveConfigService } from './directive-config.service';
 import { isScoringDemo } from '../../config/scoring-mode';
 import {
   RiskGatingEngine,
@@ -230,7 +231,39 @@ export class ProtocolGatingService {
     private readonly macroSnapshot: MacroSnapshotService,
     private readonly eurusdCache: EurUsdCacheService,
     private readonly protocolDb: ProtocolDbService,
+    private readonly configService: DirectiveConfigService,
   ) {}
+
+  /**
+   * Resolve the effective maxScore for every directive in a protocol.
+   * Precedence: protocol override → global config → directive class.
+   *
+   * This is the runtime bridge for #609 (per-protocol config UI) and #637
+   * (timeframe-importance matrix): without this, overrides persist in the DB
+   * but never change the score. The config UI's source badge and this method
+   * MUST stay in agreement — both use the same precedence order.
+   */
+  private async resolveEffectiveMaxScores(
+    protocolId: string | undefined,
+    directiveIds: Set<string>,
+  ): Promise<Map<string, number>> {
+    const effective = new Map<string, number>();
+    if (directiveIds.size === 0) return effective;
+
+    const globalConfigs = await this.configService.getAllConfigs();
+    const overrides = protocolId
+      ? await this.configService.getProtocolOverrides(protocolId)
+      : new Map<string, { maxScore?: number }>();
+
+    for (const directiveId of directiveIds) {
+      const classMax = this.directivesService.get(directiveId)?.maxScore;
+      const globalMax = globalConfigs.get(directiveId)?.maxScore;
+      const overrideMax = overrides.get(directiveId)?.maxScore;
+      effective.set(directiveId, overrideMax ?? globalMax ?? classMax ?? 100);
+    }
+
+    return effective;
+  }
 
   /**
    * Score a single symbol with multiplicative risk gating.
@@ -301,6 +334,14 @@ export class ProtocolGatingService {
       }
     }
 
+    // 1b. Resolve effective maxScores (protocol override → global → class).
+    //     This is what makes the per-protocol config UI (#609) and the
+    //     timeframe matrix (#637) actually change scoring output.
+    const effectiveMaxScores = await this.resolveEffectiveMaxScores(
+      protocolId,
+      protocolDirectiveIds,
+    );
+
     // 2. Run ONLY directives in the active protocol (not all 100+ registered directives)
     const allResults = await this.directivesService.runAll(input, protocolDirectiveIds);
 
@@ -344,7 +385,7 @@ export class ProtocolGatingService {
         if (readiness === 'ready') readyCount++;
 
         groupResults.push(result);
-        maxScores.set(directiveId, directive?.maxScore ?? 100);
+        maxScores.set(directiveId, effectiveMaxScores.get(directiveId) ?? directive?.maxScore ?? 100);
       }
 
       groups.set(group.id, { results: groupResults, config: group, maxScores });

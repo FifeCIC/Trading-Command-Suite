@@ -155,42 +155,6 @@ export class StrategyCompetitionService {
   }
 
   /**
-   * Generate mock signals from the directives service for all symbols.
-   * In production, this would pull from the scoring pipeline.
-   */
-  async generateSignalsFromDirectives(
-    symbols: Array<{ ticker: string }>,
-    strategyId = 'conviction-dip',
-  ): Promise<StrategySignal[]> {
-    const signals: StrategySignal[] = [];
-
-    for (const sym of symbols) {
-      try {
-        // Generate a mock signal using directive count as a proxy
-        const directiveCount = (this.directivesService as any).registry?.size || 32;
-        const mockScore = 40 + Math.random() * 40;
-        const mockAgreement = 0.3 + Math.random() * 0.5;
-
-        signals.push({
-          symbol: sym.ticker,
-          action: mockScore >= 60 ? 'buy' : mockScore >= 40 ? 'hold' : 'sell',
-          score: Number(mockScore.toFixed(1)),
-          normalizedScore: Number(mockScore.toFixed(1)),
-          strategyId,
-          strategyName: 'Conviction Dip Accumulation',
-          confidence: mockAgreement > 0.6 ? 0.75 : mockAgreement > 0.3 ? 0.5 : 0.3,
-          directiveAgreement: Number(mockAgreement.toFixed(2)),
-          timestamp: new Date().toISOString(),
-        });
-      } catch (err) {
-        this.logger.warn(`Failed to generate signal for ${sym.ticker}: ${(err as Error).message}`);
-      }
-    }
-
-    return signals;
-  }
-
-  /**
    * Update strategy performance stats (called by performance module).
    */
   updateStrategyStats(strategyId: string, stats: { winRate: number; totalTrades: number }): void {
@@ -207,7 +171,7 @@ export class StrategyCompetitionService {
   } {
     return {
       activeStrategies: this.strategyStats.size,
-      totalDirectives: 75,
+      totalDirectives: 0, // not tracked — previously a hardcoded 75
       strategiesTracked: this.strategyStats.size,
     };
   }

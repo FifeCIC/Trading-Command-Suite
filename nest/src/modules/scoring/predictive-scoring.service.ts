@@ -122,11 +122,9 @@ export class PredictiveScoringService {
    * Uses symbol-specific base scores for realistic demo.
    */
   private getCurrentScore(symbol: string): number {
-    const base: Record<string, number> = {
-      BTCUSD: 72, NVDA: 78, AAPL: 65, MSFT: 70,
-      TSLA: 52, EURUSD: 58, SPY: 68, GOOGL: 66,
-    };
-    return base[symbol] ?? 50 + Math.floor(Math.random() * 30);
+    // Prototype — no live score wired in. Return 0 so predictions reflect event
+    // impact only, never a fabricated base score.
+    return 0;
   }
 
   /** Simple currency-to-symbol mapping */

@@ -130,6 +130,13 @@ Horizontal flex row of stat cards at page top. Shows aggregate metrics (total P&
 ### 7. Notice Banner
 Component: `app-notice` class in `index.css`. Four variants: `--success`, `--warning`, `--critical`, `--info`. Each uses the corresponding `--notice-*-` CSS variables for background, border, and text color.
 
+### 8. Signal Badge (shared output layer)
+A trading signal (BUY/HOLD/SELL/PAUSED) is rendered by ONE component:
+`src/components/SignalBadge.jsx`, fed by `buildScoreDisplay()` from
+`src/core/score-display.js`. Never re-derive signal/tone/state in a page.
+Frozen rows (market closed or stale data) render a muted "⏸ PAUSED" everywhere —
+never a colored BUY/SELL.
+
 ---
 
 ## 👤 User-Configurable Preferences

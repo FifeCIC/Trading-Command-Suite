@@ -7,7 +7,7 @@
  * This stub returns hardcoded responses — real API integration
  * requires TWS/Gateway connection (localhost:4001/4002).
  *
- * Env var gate: IBKR_MODE=none|mock (defaults to 'mock' for dev)
+ * Env var gate: IBKR_MODE=none|mock (defaults to 'none' — disabled unless explicitly mocked)
  *
  * Registered at failoverPriority: 10 (low — mock data only)
  * Capabilities: quotes, candles, profiles
@@ -34,7 +34,7 @@ export class InteractiveBrokersAdapter implements IProviderAdapter {
   private readonly mode: 'mock' | 'none';
 
   constructor() {
-    this.mode = (process.env.IBKR_MODE || 'mock') as 'mock' | 'none';
+    this.mode = (process.env.IBKR_MODE || 'none') as 'mock' | 'none';
     if (this.mode === 'none') {
       this.logger.warn('IBKR adapter disabled (IBKR_MODE=none)');
     } else {

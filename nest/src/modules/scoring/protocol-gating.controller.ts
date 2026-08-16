@@ -5,6 +5,7 @@ import { MarketDataService } from '../market-data/market-data.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { ProtocolDbService } from './protocol-db.service';
 import { DirectivesService } from '../directives/directives.service';
+import { DirectiveConfigService } from './directive-config.service';
 import { isDirectiveIncluded } from '../directives/directive-inclusion';
 
 /**
@@ -46,6 +47,7 @@ export class ProtocolGatingController {
     private readonly prisma: PrismaService,
     private readonly protocolDb: ProtocolDbService,
     private readonly directivesService: DirectivesService,
+    private readonly configService: DirectiveConfigService,
   ) {}
 
   /**
@@ -84,6 +86,12 @@ export class ProtocolGatingController {
 
     // Code-registered protocols (from DB-backed ProtocolDbService)
     const allProtocols = this.protocolDb.getAllCached();
+
+    // Load directive config (global + per-protocol overrides) once so the
+    // registry maxScore stays in lockstep with the scoring engine (#609/#637).
+    const globalConfigs = await this.configService.getAllConfigs();
+    const allOverrides = await this.configService.getAllProtocolOverrides();
+
     for (const [id, proto] of Object.entries(allProtocols)) {
       // Skip protocols with no directive groups — these are ghost entries
       // from legacy seed data (e.g. "Signals Workbench", "Conviction Dip Accumulation")
@@ -96,6 +104,13 @@ export class ProtocolGatingController {
       // directiveCount identical to what actually gets scored.
       const isIncluded = (did: string): boolean =>
         isDirectiveIncluded(this.directivesService.get(did), directionMode);
+
+      // Effective maxScore = protocol override → global config → class.
+      const overrides = allOverrides.get(id);
+      const effectiveMax = (did: string): number => {
+        const reg = this.directivesService.get(did);
+        return overrides?.get(did)?.maxScore ?? globalConfigs.get(did)?.maxScore ?? reg?.maxScore ?? 100;
+      };
 
       const groups = proto.groups.map((g) => ({
         id: g.id,
@@ -110,14 +125,14 @@ export class ProtocolGatingController {
             id: did,
             name: reg?.name ?? did,
             description: reg?.description ?? '',
-            maxScore: reg?.maxScore ?? 100,
+            maxScore: effectiveMax(did),
           };
         }),
       }));
 
       const maxScore = proto.groups.reduce(
         (sum, g) => sum + g.directiveIds.filter(isIncluded).reduce(
-          (s, did) => s + (this.directivesService.get(did)?.maxScore ?? 100), 0,
+          (s, did) => s + effectiveMax(did), 0,
         ), 0,
       );
 

@@ -80,7 +80,7 @@ export const STRATEGY_PREREQUISITES: StrategyPrerequisites[] = [
     minimumBarCount: 100,
     requiredTimeframes: ['1d'],
     requiredProviders: ['alpaca'],
-    requiredDirectives: ['earnings-proximity', 'rsi-oversold'],
+    requiredDirectives: ['rsi-oversold'],
     premiumRequired: false,
     scope: ['stocks'],
   },

@@ -42,7 +42,7 @@ export default function TradingTimelinePage() {
     <div className="tl-page">
       <header className="tl-header">
         <h2>📅 Trading Timeline</h2>
-        <p>Session opens, economic events, earnings, and SEES predictions — all on one timeline.</p>
+        <p>Market session opens — live. Economic and earnings events will appear once a real calendar feed is wired in.</p>
       </header>
 
       {/* View controls */}
@@ -109,6 +109,7 @@ export default function TradingTimelinePage() {
               {(view === 'Day' || view === '2-Day') && (
                 <div className="tl-priority">
                   <h4>📊 Priority Symbols</h4>
+                  {(!day.prioritySymbols || day.prioritySymbols.length === 0) && <p className="tl-muted">No live scores</p>}
                   {day.prioritySymbols?.map((ps) => (
                     <div key={ps.symbol} className="tl-symbol-row">
                       <span className="tl-symbol-name">{ps.symbol}</span>

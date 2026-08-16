@@ -243,6 +243,25 @@ const KNOWN_FEATURES = {
   'Top-Row Content Slot': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
   // 2026-08-13 — Singles Monitor + Protocol Trail Split
   'Singles Monitor (live single symbol × protocol breakdown)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  // 2026-08-13/14 — Directive Audit + Cleanup Batch
+  'Directive deletion cleanup tooling': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Directive maxScore single source of truth': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Directive Viewer': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Liquidity Check maxScore correction': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Registry maxScore matches scoring filters': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Gold protocol directive cleanup (remove crypto-weekend-effect)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Shared directive inclusion utility': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Directive Guard (mechanical audit tool)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  // 2026-08-16 — Handoff Batch #9 (dual-score, readiness gate, directive hygiene, mock-data purge, MT5 zombie-kill, agent claim)
+  'Agent claim / restart coordination': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Directive duplicate-id elimination + guard': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Dual-score model (Opportunity vs Signal)': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Mock-stub directive elimination': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'MT5 bridge zombie-process cleanup': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'Directive readiness gate': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'earnings-proximity removed from scoring': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Provider mock-data removal': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Seed maxScore single-source enforcement': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
 };
 
 // ── Build unified capability rows ──

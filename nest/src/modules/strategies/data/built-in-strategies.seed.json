@@ -140,7 +140,6 @@
       { "id": "momentum-roc", "weight": 30 },
       { "id": "volume-confirmation", "weight": 25 },
       { "id": "ema-structure", "weight": 20 },
-      { "id": "earnings-proximity", "weight": 15 },
       { "id": "news-sentiment", "weight": 10 }
     ],
     "timeframes": ["1d"],

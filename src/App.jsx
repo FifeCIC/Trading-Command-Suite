@@ -78,7 +78,6 @@ import StrategiesPage from './pages/StrategiesPage';
 import StrategyBuilderPage from './pages/StrategyBuilderPage';
 import StrategyWizardPage from './pages/StrategyWizardPage';
 import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
-import SymbolDetailPage from './pages/SymbolDetailPage';
 import SymbolPage from './pages/SymbolPage';
 import SymbolFocusPage from './pages/SymbolFocusPage';
 import GlobalAllocatorPage from './pages/GlobalAllocatorPage';
@@ -191,8 +190,8 @@ function ContentCard({ title, children }) {
  *
  * Route param mapping:
  *   /:area/:view          → {area, view}          → primaryArea=area, secondaryView=view
- *   /research/symbol/:id  → {symbolId}            → primaryArea='research', secondaryView='symbol-detail'
- *   /symbol/:ticker       → standalone (SymbolFocusPage, no AppShell)
+ *   /research/symbol/:ticker → standalone (SymbolFocusPage, no AppShell)
+ *   /symbol/:ticker          → standalone (SymbolFocusPage, no AppShell)
  *
  * Content rendering (renderMainContent, line ~484):
  *   Looks up VIEW_COMPONENTS[secondaryView] from core/view-routes.jsx (line ~148).
@@ -253,6 +252,7 @@ function AppShell() {
       'pipeline-graph-lab': 'pipeline-graph-lab',
       'active-symbols': 'active-symbols',
       'directives-registry': 'directives-registry',
+      'symbols-ladder': 'symbols-ladder',
     };
     setScreenOptionsView(VIEW_TO_OPTIONS[viewId] || null);
   }, [primaryArea, secondaryView]);
@@ -1114,7 +1114,7 @@ export default function App() {
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <ErrorBoundary message="The application encountered a critical error.">
         <Routes>
-          <Route path="/research/symbol/:symbolId" element={<AppShell />} />
+          <Route path="/research/symbol/:ticker" element={<SymbolFocusPage />} />
           <Route path="/trading/symbol/:ticker" element={<SymbolPage />} />
           <Route path="/symbol/:ticker" element={<SymbolFocusPage />} />
           <Route path="/settings/data-management" element={<DataManagementPage />} />

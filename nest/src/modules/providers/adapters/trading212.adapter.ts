@@ -200,7 +200,7 @@ export class Trading212Adapter implements IProviderAdapter {
   // ── IProviderAdapter implementation ───────────────────────
 
   async getQuote(symbol: string): Promise<ProviderQuote | null> {
-    if (!this.hasCredentials) return this.fallbackQuote(symbol);
+    if (!this.hasCredentials) return null; // No API key — never fabricate quotes
     try {
       await this.waitForRateLimit('quotes');
       const ticker = this.toT212Ticker(symbol);
@@ -231,7 +231,7 @@ export class Trading212Adapter implements IProviderAdapter {
     timeframe = 'ONE_DAY',
     limit = 100,
   ): Promise<MarketBar[]> {
-    if (!this.hasCredentials) return this.fallbackCandles(symbol, limit);
+    if (!this.hasCredentials) return []; // No API key — never fabricate candles
     try {
       await this.waitForRateLimit('candles');
       const ticker = this.toT212Ticker(symbol);
@@ -272,7 +272,7 @@ export class Trading212Adapter implements IProviderAdapter {
   }
 
   async getProfile(symbol: string): Promise<ProviderProfile | null> {
-    if (!this.hasCredentials) return this.fallbackProfile(symbol);
+    if (!this.hasCredentials) return null; // No API key — never fabricate profiles
     try {
       await this.waitForRateLimit('metadata/instruments');
       const ticker = this.toT212Ticker(symbol);
@@ -626,44 +626,4 @@ export class Trading212Adapter implements IProviderAdapter {
     return cleanT212Ticker(ticker);
   }
 
-  // ── fallback: mock data when no credentials ───────────────
-
-  private fallbackQuote(symbol: string): ProviderQuote {
-    const base = this.fallbackPrice(symbol);
-    const spread = base * 0.001;
-    return { symbol, bid: base - spread / 2, ask: base + spread / 2, last: base, timestamp: new Date() };
-  }
-
-  private fallbackCandles(symbol: string, limit: number): MarketBar[] {
-    const bars: MarketBar[] = [];
-    const base = this.fallbackPrice(symbol);
-    const now = Date.now();
-    const hourMs = 60 * 60 * 1000;
-    for (let i = limit - 1; i >= 0; i--) {
-      const ts = new Date(now - i * hourMs);
-      const vol = base * 0.02;
-      const o = base + (Math.random() - 0.5) * vol;
-      const c = base + (Math.random() - 0.5) * vol;
-      bars.push({
-        timestamp: ts,
-        open: o,
-        high: Math.max(o, c) + Math.random() * vol * 0.5,
-        low: Math.min(o, c) - Math.random() * vol * 0.5,
-        close: c,
-        volume: Math.floor(1_000_000 + Math.random() * 5_000_000),
-      });
-    }
-    return bars;
-  }
-
-  private fallbackProfile(symbol: string): ProviderProfile {
-    return { symbol, name: `${symbol} Corp`, exchange: 'NASDAQ', sector: 'Technology', industry: 'Software', marketCap: 50_000_000_000 };
-  }
-
-  private fallbackPrice(symbol: string): number {
-    const prices: Record<string, number> = {
-      AAPL: 198.32, NVDA: 485.25, TSLA: 227.91, MSFT: 462.75, SPY: 530.0, GOOGL: 185.0, AMZN: 195.0, QQQ: 480.0,
-    };
-    return prices[symbol.toUpperCase()] || 100;
-  }
 }

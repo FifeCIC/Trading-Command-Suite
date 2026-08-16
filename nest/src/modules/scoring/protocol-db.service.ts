@@ -459,7 +459,9 @@ export class ProtocolDbService implements OnModuleInit {
           groups++;
 
           for (const did of group.directiveIds) {
-            const maxScore = this.directivesService.get(did)?.maxScore ?? group.directiveMaxScores?.[did] ?? 100;
+            // maxScore is single-sourced from the directive class (2026-08-13 refactor).
+            // The seed file no longer carries per-protocol directiveMaxScores overrides.
+            const maxScore = this.directivesService.get(did)?.maxScore ?? 100;
             await (this.prisma as any).protocolDirectiveEntry.upsert({
               where: { groupId_directiveId: { groupId: dg.id, directiveId: did } },
               create: {

@@ -61,6 +61,23 @@ export const NAV_TREE = {
       { id: 'add-symbol', label: 'Add Symbol', icon: '➕' },
     ],
   },
+  // ── Research area (/research/ prefix) ──
+  // Restored 2026-08-16: area was removed from the nav (pages remained registered
+  // in view-routes.jsx). Individual symbol view: /research/symbol/:ticker.
+  research: {
+    label: 'Research',
+    views: [
+      { id: 'research-overview', label: 'Research Overview', icon: '🔬' },
+      { id: 'symbols-browser', label: 'Symbols Browser', icon: '🔍' },
+      { id: 'earnings-calendar', label: 'Earnings Calendar', icon: '📅' },
+      { id: 'news-intel', label: 'News Intel', icon: '📰' },
+      { id: 'events-calendar', label: 'Events Calendar', icon: '🗓️' },
+      { id: 'stock-investigation', label: 'Stock Investigation', icon: '🕵️' },
+      { id: 'market-correlations', label: 'Market Correlations', icon: '🔗' },
+      { id: 'recently-analysed-symbols', label: 'Recently Analysed', icon: '🕘' },
+      { id: 'analyse-symbol', label: 'Analyse Symbol', icon: '🧪' },
+    ],
+  },
   // ── Protocols area (/protocols/ prefix) ──
   // Fully migrated from legacy /scoring/ area (2026-08-06).
   // API endpoints under /api/scoring/ are NOT affected — only frontend routes.

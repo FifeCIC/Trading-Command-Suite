@@ -1,0 +1,44 @@
+/**
+ * SignalBadge — the ONE component that renders a trading signal.
+ * ===============================================================
+ * Consumes a view model from buildScoreDisplay(). It never re-derives
+ * BUY/HOLD/SELL, tone, or tradeability state itself.
+ *
+ * Usage:
+ *   const vm = buildScoreDisplay(raw);
+ *   <SignalBadge display={vm} />
+ */
+import './signal-badge.css';
+
+export default function SignalBadge({ display, className = '' }) {
+  if (!display || display.state === 'unscored') {
+    return (
+      <span className={`signal-badge signal-badge--muted ${className}`} title="No score produced.">
+        —
+      </span>
+    );
+  }
+
+  if (display.frozen) {
+    return (
+      <span
+        className={`signal-badge signal-badge--paused ${className}`}
+        title={display.frozenTitle || 'Frozen at last close — not a live tradable signal.'}
+      >
+        <span className="signal-badge-arrow" aria-hidden="true">⏸</span>
+        PAUSED
+      </span>
+    );
+  }
+
+  if (!display.signal) {
+    return <span className={`signal-badge signal-badge--neutral ${className}`}>—</span>;
+  }
+
+  return (
+    <span className={`signal-badge signal-badge--${display.tone} ${className}`}>
+      <span className="signal-badge-arrow" aria-hidden="true">{display.arrow}</span>
+      {display.signal}
+    </span>
+  );
+}

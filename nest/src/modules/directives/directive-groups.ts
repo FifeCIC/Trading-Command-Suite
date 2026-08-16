@@ -71,7 +71,10 @@ export const DIRECTIVE_GROUPS: DirectiveGroup[] = [
     minMultiplier: 1.0,
     maxMultiplier: 1.0,
     directiveIds: [
-      'analyst-adjustments', 'earnings-proximity',
+      // NOTE (#626): 'earnings-proximity' intentionally removed — its feed
+      // (input.earningsDate) is not wired, so it can only return a constant
+      // mock score. Kept as alpha + rehomed to the screener in #648.
+      'analyst-adjustments',
       'earnings-momentum', 'social-buzz', 'insider-activity',
       // Gold macro driver — DXY, real yields, VIX correlation for XAUUSD/XAGUSD:
       'gold-macro-correlation',
@@ -116,7 +119,9 @@ export const SHORT_DIRECTIVE_GROUPS: DirectiveGroup[] = [
     minMultiplier: 1.0,
     maxMultiplier: 1.0,
     directiveIds: [
-      'analyst-adjustments', 'earnings-proximity',
+      // NOTE (#626): 'earnings-proximity' intentionally removed (constant mock,
+      // alpha; rehomed to the screener in #648).
+      'analyst-adjustments',
       'earnings-momentum', 'social-buzz',
     ],
   },

@@ -20,7 +20,9 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './decision-trail.css';
 import PageInfoPopover from '../components/PageInfoPopover';
-import { signalTone, directionModeLabel, signalArrow } from '../core/signal-utils';
+import { directionModeLabel } from '../core/signal-utils';
+import { buildScoreDisplay } from '../core/score-display';
+import SignalBadge from '../components/SignalBadge';
 
 const GROUP_LABELS = {
   technical: 'Technical',
@@ -65,14 +67,25 @@ export default function ProtocolTrailPage() {
   const opportunityScore = data?.breakdown?.opportunityScore ?? null;
   const opportunityMax = data?.breakdown?.opportunityMax ?? null;
 
+  // Output layer: one view model decides signal/tone/state/pct.
+  const vm = buildScoreDisplay({
+    signal,
+    value: data?.score ?? null,
+    rawComposite,
+    rawMax,
+    opportunityScore,
+    opportunityMax,
+    marketStatus: data?.breakdown?.marketStatus ?? null,
+  });
+
   // Composite strength: signal (directional) as % of its own denominator.
+  // Legacy rows without a stored rawMax fall back to the summed group max.
   const totalMax = useMemo(
     () => Object.values(subMaxTotals).reduce((sum, v) => sum + (Number(v) || 0), 0),
     [subMaxTotals],
   );
-  const signalScore = rawComposite != null ? rawComposite : Number(data?.score ?? 0);
-  const signalMax = rawMax != null ? rawMax : totalMax;
-  const strengthPct = signalMax > 0 ? Math.round((signalScore / signalMax) * 100) : null;
+  const signalMax = vm.scoreMax ?? totalMax;
+  const strengthPct = signalMax > 0 ? Math.round(((vm.score ?? 0) / signalMax) * 100) : null;
 
   /** Format an ISO timestamp as a readable date + time (UTC). */
   function formatTimestamp(iso) {
@@ -130,7 +143,7 @@ export default function ProtocolTrailPage() {
               </div>
               <div className="pt-summary-score">
                 <span className="pt-summary-score-label" title="Signal — directional conviction (which way, how strongly). Drives BUY/HOLD/SELL.">Signal</span>
-                {signalScore != null ? signalScore.toLocaleString() : '—'}
+                {vm.score != null ? vm.score.toLocaleString() : '—'}
                 {signalMax > 0 && (
                   <span className="pt-summary-score-max">/{signalMax.toLocaleString()}</span>
                 )}
@@ -141,10 +154,7 @@ export default function ProtocolTrailPage() {
                 </div>
               )}
               <div className="pt-summary-tags">
-                <span className={`pt-signal pt-signal--${signalTone(signal)}`}>
-                  <span className="pt-signal-arrow" aria-hidden="true">{signalArrow(signal)}</span>
-                  {signal}
-                </span>
+                <SignalBadge display={vm} />
                 {directionLabel && <span className="pt-badge pt-badge--neutral">{directionLabel}</span>}
               </div>
             </div>
@@ -153,7 +163,7 @@ export default function ProtocolTrailPage() {
               <div className="pt-strength">
                 <div className="pt-strength-track">
                   <div
-                    className={`pt-strength-fill pt-strength-fill--${signalTone(signal)}`}
+                    className={`pt-strength-fill pt-strength-fill--${vm.frozen ? 'neutral' : vm.tone}`}
                     style={{ width: `${Math.max(2, Math.min(100, strengthPct))}%` }}
                   />
                 </div>

@@ -19,7 +19,7 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
-import { stochastic, cci, mfi, adx, rsi, sma, ema, bollingerBands, obv, macd, atr } from '../utils/indicators';
+import { rsi, sma, ema, bollingerBands, macd, atr } from '../utils/indicators';
 
 /** Factory for consistent stub result */
 function stubResult(directiveId: string, phpFile?: string): DirectiveResult {
@@ -45,181 +45,17 @@ function mapRange(v: number, inMin: number, inMax: number, outMin: number, outMa
 // Momentum
 // ===========================================================================
 
-@Injectable()
-export class StochasticDirective implements IDirective {
-  readonly id = 'stochastic';
-  readonly name = 'Stochastic Oscillator';
-  readonly description = '%K/%D crossover in oversold (<20) region.';
-  readonly priority = 74;
-  readonly maxScore = 100;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const { highs, lows, closes } = this.extract(input);
-    if (closes.length < 20) return { score: 0, confidence: 0.1, reason: `Need 20+ bars, have ${closes.length}`, signalClass: 'neutral' };
-    const stoch = stochastic(highs, lows, closes, 14, 3);
-    if (!stoch || stoch.k.length < 2) return { score: 0, confidence: 0.1, reason: 'Stochastic calculation failed', signalClass: 'neutral' };
-    const k = stoch.k[stoch.k.length - 1];
-    const prevK = stoch.k[stoch.k.length - 2];
-    const d = stoch.d[stoch.d.length - 1];
-    const oversold = k < 20 && d < 20;
-    const curling = k > prevK;
-    if (oversold && curling) return { score: 85, confidence: 0.65, reason: `Stochastic oversold: K=${k.toFixed(1)} D=${d.toFixed(1)} curling up`, signalClass: 'bullish' };
-    if (oversold) return { score: 40, confidence: 0.35, reason: `Stochastic oversold but not curling: K=${k.toFixed(1)}`, signalClass: 'neutral' };
-    const depth = Math.max(0, 1 - k / 30);
-    return { score: Math.round(depth * 30), confidence: 0.3, reason: `Stochastic at ${k.toFixed(1)} (not oversold)`, signalClass: 'neutral' };
-  }
-  private extract(input: DirectiveInput) { const bars = input.bars; return { highs: bars.map(b => b.high), lows: bars.map(b => b.low), closes: bars.map(b => b.close) }; }
-}
 
-@Injectable()
-export class CciDirective implements IDirective {
-  readonly id = 'cci';
-  readonly name = 'Commodity Channel Index';
-  readonly description = 'CCI crossing above -100 from oversold.';
-  readonly priority = 72;
-  readonly maxScore = 100;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const { highs, lows, closes } = this.extract(input);
-    if (closes.length < 20) return { score: 0, confidence: 0.1, reason: `Need 20+ bars, have ${closes.length}`, signalClass: 'neutral' };
-    const cciVals = cci(highs, lows, closes, 20);
-    if (!cciVals.length) return { score: 0, confidence: 0.1, reason: 'CCI calculation failed', signalClass: 'neutral' };
-    const c = cciVals[cciVals.length - 1];
-    const prev = cciVals[cciVals.length - 2];
-    const crossingUp = prev <= -100 && c > -100;
-    if (c < -200) return { score: 90, confidence: 0.55, reason: `CCI deeply oversold at ${c.toFixed(0)}`, signalClass: 'bullish' };
-    if (crossingUp) return { score: 75, confidence: 0.6, reason: `CCI crossing above -100: ${c.toFixed(0)}`, signalClass: 'bullish' };
-    if (c < -100) return { score: 40, confidence: 0.3, reason: `CCI oversold at ${c.toFixed(0)}`, signalClass: 'neutral' };
-    return { score: Math.max(0, Math.round(30 - c / 10)), confidence: 0.2, reason: `CCI at ${c.toFixed(0)}`, signalClass: 'neutral' };
-  }
-  private extract(input: DirectiveInput) { const bars = input.bars; return { highs: bars.map(b => b.high), lows: bars.map(b => b.low), closes: bars.map(b => b.close) }; }
-}
 
-@Injectable()
-export class MfiDirective implements IDirective {
-  readonly id = 'mfi';
-  readonly name = 'Money Flow Index';
-  readonly description = 'Volume-weighted RSI, MFI < 20 accumulation signal.';
-  readonly priority = 73;
-  readonly maxScore = 100;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const { highs, lows, closes, volumes } = this.extract(input);
-    if (closes.length < 15) return { score: 0, confidence: 0.1, reason: `Need 15+ bars, have ${closes.length}`, signalClass: 'neutral' };
-    const mfiVals = mfi(highs, lows, closes, volumes, 14);
-    if (!mfiVals.length) return { score: 0, confidence: 0.1, reason: 'MFI calculation failed', signalClass: 'neutral' };
-    const m = mfiVals[mfiVals.length - 1];
-    const prev = mfiVals[mfiVals.length - 2];
-    if (m < 20) return { score: 85, confidence: 0.55, reason: `MFI oversold at ${m.toFixed(1)}`, signalClass: 'bullish' };
-    if (m > 80) return { score: 70, confidence: 0.5, reason: `MFI overbought at ${m.toFixed(1)}`, signalClass: 'bearish' };
-    const turning = m > prev ? 'rising' : 'falling';
-    return { score: Math.round(Math.abs(m - 50) * 0.5), confidence: 0.3, reason: `MFI at ${m.toFixed(1)} (${turning})`, signalClass: m > 50 ? 'bullish' : 'bearish' };
-  }
-  private extract(input: DirectiveInput) { const bars = input.bars; return { highs: bars.map(b => b.high), lows: bars.map(b => b.low), closes: bars.map(b => b.close), volumes: bars.map(b => b.volume || 0) }; }
-}
 
-@Injectable()
-export class AdxDirective implements IDirective {
-  readonly id = 'adx';
-  readonly name = 'Average Directional Index';
-  readonly description = 'ADX > 25 confirms trend, +DI > -DI bullish.';
-  readonly priority = 76;
-  readonly maxScore = 110;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const { highs, lows, closes } = this.extract(input);
-    if (closes.length < 30) return { score: 0, confidence: 0.1, reason: `Need 30+ bars, have ${closes.length}`, signalClass: 'neutral' };
-    const adxResult = adx(highs, lows, closes, 14);
-    if (!adxResult || !adxResult.adx.length) return { score: 0, confidence: 0.1, reason: 'ADX calculation failed', signalClass: 'neutral' };
-    const a = adxResult.adx[adxResult.adx.length - 1];
-    const pdi = adxResult.plusDi[adxResult.plusDi.length - 1];
-    const ndi = adxResult.minusDi[adxResult.minusDi.length - 1];
-    if (a > 25 && pdi > ndi) return { score: 85, confidence: 0.6, reason: `Strong bullish trend: ADX=${a.toFixed(1)} +DI=${pdi.toFixed(1)} > -DI=${ndi.toFixed(1)}`, signalClass: 'bullish' };
-    if (a > 25 && ndi > pdi) return { score: 80, confidence: 0.55, reason: `Strong bearish trend: ADX=${a.toFixed(1)} -DI=${ndi.toFixed(1)} > +DI=${pdi.toFixed(1)}`, signalClass: 'bearish' };
-    if (a < 20) return { score: 20, confidence: 0.4, reason: `No trend: ADX=${a.toFixed(1)} (ranging market)`, signalClass: 'neutral' };
-    return { score: Math.round(Math.min(60, a * 2)), confidence: 0.35, reason: `ADX=${a.toFixed(1)} (weak trend)`, signalClass: pdi > ndi ? 'bullish' : 'bearish' };
-  }
-  private extract(input: DirectiveInput) { const bars = input.bars; return { highs: bars.map(b => b.high), lows: bars.map(b => b.low), closes: bars.map(b => b.close) }; }
-}
 
-@Injectable()
-export class RsiOverboughtDirective implements IDirective {
-  readonly id = 'rsi-overbought';
-  readonly name = 'RSI Overbought Warning';
-  readonly description = 'RSI > 70 with downward curl = bearish signal.';
-  readonly priority = 78;
-  readonly maxScore = 100;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const closes = input.bars.map(b => b.close);
-    if (closes.length < 16) return { score: 0, confidence: 0.1, reason: `Need 16+ bars, have ${closes.length}`, signalClass: 'neutral' };
-    const rsiVals = rsi(closes, 14);
-    if (rsiVals.length < 2) return { score: 0, confidence: 0.1, reason: 'RSI calculation failed', signalClass: 'neutral' };
-    const current = rsiVals[rsiVals.length - 1];
-    const prev = rsiVals[rsiVals.length - 2];
-    const curling = current < prev;
-    if (current > 70 && curling) return { score: 90, confidence: 0.65, reason: `RSI overbought at ${current.toFixed(1)} curling down`, signalClass: 'bearish' };
-    if (current > 70) return { score: 55, confidence: 0.4, reason: `RSI overbought at ${current.toFixed(1)}`, signalClass: 'bearish' };
-    if (current > 60) return { score: Math.round((current - 60) * 1.5), confidence: 0.25, reason: `RSI elevated at ${current.toFixed(1)}`, signalClass: 'neutral' };
-    return { score: 0, confidence: 0.3, reason: `RSI normal at ${current.toFixed(1)}`, signalClass: 'neutral' };
-  }
-}
 
-@Injectable()
-export class MomentumContinuationComboDirective implements IDirective {
-  readonly id = 'momentum-continuation-combo';
-  readonly name = 'Momentum Continuation Combo';
-  readonly description = 'Multi-indicator momentum confluence (RSI + MACD + ADX).';
-  readonly priority = 74;
-  readonly maxScore = 110;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const closes = input.bars.map(b => b.close);
-    const highs = input.bars.map(b => b.high);
-    const lows = input.bars.map(b => b.low);
-    if (closes.length < 35) return { score: 0, confidence: 0.1, reason: `Need 35+ bars, have ${closes.length}`, signalClass: 'neutral' };
-    let confluence = 0;
-    const signals: string[] = [];
-    // RSI momentum
-    const r = rsi(closes, 14);
-    const currentRsi = r[r.length - 1];
-    if (currentRsi > 55 && currentRsi < 75) { confluence += 30; signals.push(`RSI ${currentRsi.toFixed(0)}`); }
-    else if (currentRsi > 75) { confluence -= 10; signals.push(`RSI overbought ${currentRsi.toFixed(0)}`); }
-    else if (currentRsi < 30) { confluence -= 15; signals.push(`RSI oversold ${currentRsi.toFixed(0)}`); }
-    // MACD
-    const m = macd(closes, 12, 26, 9);
-    if (m.macd.length >= 2 && m.signal.length >= 2) {
-      const macdLine = m.macd[m.macd.length - 1];
-      const sigLine = m.signal[m.signal.length - 1];
-      if (macdLine > sigLine && macdLine > 0) { confluence += 30; signals.push('MACD bullish above zero'); }
-      else if (macdLine > sigLine) { confluence += 20; signals.push('MACD bullish'); }
-      else if (macdLine < 0) { confluence -= 10; signals.push('MACD bearish'); }
-    }
-    // ADX trend strength
-    const a = adx(highs, lows, closes, 14);
-    if (a && a.adx.length > 0) {
-      const adxVal = a.adx[a.adx.length - 1];
-      if (adxVal > 25 && a.plusDi[a.plusDi.length-1] > a.minusDi[a.minusDi.length-1]) { confluence += 30; signals.push(`ADX ${adxVal.toFixed(0)} bullish`); }
-      else if (adxVal > 25) { confluence -= 10; signals.push(`ADX ${adxVal.toFixed(0)} bearish`); }
-      else { signals.push(`ADX ${adxVal.toFixed(0)} ranging`); }
-    }
-    const score = Math.round(35 + confluence * 0.7);
-    const signalClass: 'bullish' | 'bearish' | 'neutral' = confluence >= 60 ? 'bullish' : confluence < 10 ? 'bearish' : 'neutral';
-    return { score: Math.min(110, score), confidence: 0.3 + Math.abs(confluence) * 0.004, reason: `Momentum confluence: ${confluence}/90 (${signals.join(', ')})`, signalClass };
-  }
-}
 
 // ===========================================================================
 // Trend
@@ -276,35 +112,7 @@ export class MovingAveragesDirective implements IDirective {
   }
 }
 
-@Injectable()
-export class MaCrossoverDirective implements IDirective {
-  readonly id = 'ma-crossover';
-  readonly name = 'Moving Average Crossover';
-  readonly description = 'Fast MA crossing above slow MA.';
-  readonly priority = 73;
-  readonly maxScore = 95;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const closes = input.bars.map(b => b.close);
-    if (closes.length < 30) return { score: 0, confidence: 0.1, reason: `Need 30+ bars, have ${closes.length}`, signalClass: 'neutral' };
-    const fast = ema(closes, 10);
-    const slow = ema(closes, 30);
-    if (fast.length < 2 || slow.length < 2) return { score: 0, confidence: 0.1, reason: 'EMA calculation failed', signalClass: 'neutral' };
-    const f = fast[fast.length - 1];
-    const s = slow[slow.length - 1];
-    const prevF = fast[fast.length - 2];
-    const prevS = slow[slow.length - 2];
-    const crossedUp = prevF <= prevS && f > s;
-    const crossedDown = prevF >= prevS && f < s;
-    const separation = Math.abs(f - s) / Math.abs(s || 1);
-    if (crossedUp) return { score: 80 + Math.round(separation * 100), confidence: 0.6, reason: `Golden cross: EMA10(${f.toFixed(4)}) crossed above EMA30(${s.toFixed(4)})`, signalClass: 'bullish' };
-    if (crossedDown) return { score: 75, confidence: 0.55, reason: `Death cross: EMA10 crossed below EMA30`, signalClass: 'bearish' };
-    if (f > s) return { score: 40, confidence: 0.3, reason: `EMA10 above EMA30 (bullish)`, signalClass: 'bullish' };
-    return { score: 30, confidence: 0.25, reason: `EMA10 below EMA30`, signalClass: 'bearish' };
-  }
-}
 
 @Injectable()
 export class PriceAboveSma50Directive implements IDirective {
@@ -340,39 +148,7 @@ export class PriceAboveSma50Directive implements IDirective {
 // Volatility
 // ===========================================================================
 
-@Injectable()
-export class BollingerBandSqueezeDirective implements IDirective {
-  readonly id = 'bollinger-band-squeeze';
-  readonly name = 'Bollinger Band Squeeze';
-  readonly description = 'Band width at multi-period low signals expansion.';
-  readonly priority = 70;
-  readonly maxScore = 100;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const closes = input.bars.map(b => b.close);
-    if (closes.length < 50) return { score: 0, confidence: 0.1, reason: `Need 50+ bars, have ${closes.length}`, signalClass: 'neutral' };
-    const bb = bollingerBands(closes, 20, 2);
-    if (!bb || !bb.upper.length) return { score: 0, confidence: 0.1, reason: 'BB calculation failed', signalClass: 'neutral' };
-    // Compute band width for last 20 periods
-    const widths = [];
-    for (let i = Math.max(0, bb.lower.length - 20); i < bb.lower.length; i++) {
-      widths.push((bb.upper[i] - bb.lower[i]) / bb.middle[i]);
-    }
-    const currentWidth = widths[widths.length - 1];
-    const minWidth = Math.min(...widths.slice(0, -1));
-    const avgWidth = widths.slice(0, -1).reduce((a,b) => a+b, 0) / (widths.length - 1);
-    const squeezing = currentWidth < avgWidth * 0.85;
-    if (squeezing && currentWidth <= minWidth * 1.05) {
-      return { score: 80, confidence: 0.5, reason: `BB squeeze at multi-period low: width=${(currentWidth*100).toFixed(2)}% vs avg ${(avgWidth*100).toFixed(2)}%`, signalClass: 'neutral' };
-    }
-    if (currentWidth < avgWidth * 0.9) {
-      return { score: 40, confidence: 0.3, reason: `BB narrowing: width=${(currentWidth*100).toFixed(2)}%`, signalClass: 'neutral' };
-    }
-    return { score: 10, confidence: 0.2, reason: `BB normal width: ${(currentWidth*100).toFixed(2)}%`, signalClass: 'neutral' };
-  }
-}
 
 @Injectable()
 export class VolatilityToolsDirective implements IDirective {
@@ -426,214 +202,21 @@ export class VolatilityToolsDirective implements IDirective {
 // Volume
 // ===========================================================================
 
-@Injectable()
-export class ObvDirective implements IDirective {
-  readonly id = 'obv';
-  readonly name = 'On-Balance Volume';
-  readonly description = 'OBV divergence from price = accumulation/distribution.';
-  readonly priority = 68;
-  readonly maxScore = 95;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const closes = input.bars.map(b => b.close);
-    const volumes = input.bars.map(b => b.volume || 0);
-    if (closes.length < 20) return { score: 0, confidence: 0.1, reason: `Need 20+ bars, have ${closes.length}`, signalClass: 'neutral' };
-    const obvVals = obv(closes, volumes);
-    if (!obvVals.length) return { score: 0, confidence: 0.1, reason: 'OBV calculation failed', signalClass: 'neutral' };
-    // Compare OBV trend vs price trend over last 10 bars
-    const n = obvVals.length;
-    const obvChange = obvVals[n - 1] - obvVals[Math.max(0, n - 10)];
-    const priceChange = closes[n - 1] - closes[Math.max(0, n - 10)];
-    if (priceChange < 0 && obvChange > 0) {
-      return { score: 75, confidence: 0.5, reason: 'Bullish divergence: price falling but OBV rising (accumulation)', signalClass: 'bullish' };
-    }
-    if (priceChange > 0 && obvChange < 0) {
-      return { score: 70, confidence: 0.45, reason: 'Bearish divergence: price rising but OBV falling (distribution)', signalClass: 'bearish' };
-    }
-    const aligned = (priceChange > 0 && obvChange > 0);
-    return { score: aligned ? 40 : 20, confidence: 0.3, reason: `OBV ${aligned ? 'confirming' : 'flat with'} price trend`, signalClass: aligned ? 'bullish' : 'neutral' };
-  }
-}
 
-@Injectable()
-export class VolumeSurgeDirective implements IDirective {
-  readonly id = 'volume-surge';
-  readonly name = 'Volume Surge Detection';
-  readonly description = 'Volume > 2x average with price up = institutional interest.';
-  readonly priority = 69;
-  readonly maxScore = 90;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const bars = input.bars;
-    if (bars.length < 20) return { score: 0, confidence: 0.1, reason: `Need 20+ bars, have ${bars.length}`, signalClass: 'neutral' };
-    const volumes = bars.map(b => b.volume || 0);
-    const avgVol = volumes.slice(-20, -1).reduce((a, b) => a + b, 0) / 19;
-    const currentVol = volumes[volumes.length - 1];
-    const currentBar = bars[bars.length - 1];
-    const priceUp = currentBar.close > currentBar.open;
-    const ratio = avgVol > 0 ? currentVol / avgVol : 1;
-    if (ratio >= 3 && priceUp) return { score: 85, confidence: 0.6, reason: `Volume surge ${ratio.toFixed(1)}x avg with bullish candle`, signalClass: 'bullish' };
-    if (ratio >= 2 && priceUp) return { score: 65, confidence: 0.5, reason: `Volume ${ratio.toFixed(1)}x avg, bullish`, signalClass: 'bullish' };
-    if (ratio >= 2) return { score: 40, confidence: 0.35, reason: `Volume ${ratio.toFixed(1)}x avg`, signalClass: 'neutral' };
-    return { score: Math.round(Math.min(30, ratio * 15)), confidence: 0.2, reason: `Volume ${ratio.toFixed(1)}x avg (normal)`, signalClass: 'neutral' };
-  }
-}
 
-@Injectable()
-export class VolumeRhythmDirective implements IDirective {
-  readonly id = 'volume-rhythm';
-  readonly name = 'Volume Rhythm';
-  readonly description = 'Day-of-week volume patterns and institutional rhythms.';
-  readonly priority = 55;
-  readonly maxScore = 70;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const bars = input.bars;
-    if (bars.length < 30) return { score: 0, confidence: 0.1, reason: `Need 30+ bars, have ${bars.length}`, signalClass: 'neutral' };
-    // Analyze current bar volume vs average for same timeframe
-    const volumes = bars.map(b => b.volume || 0);
-    const avgVol = volumes.slice(0, -1).reduce((a, b) => a + b, 0) / Math.max(1, volumes.length - 1);
-    const currentVol = volumes[volumes.length - 1];
-    const ratio = avgVol > 0 ? currentVol / avgVol : 1;
-    // Higher confidence if pattern is consistent
-    const recentRatios = [];
-    for (let i = Math.max(0, volumes.length - 10); i < volumes.length; i++) {
-      recentRatios.push(volumes[i] / Math.max(1, avgVol));
-    }
-    const consistency = 1 - (Math.max(...recentRatios) - Math.min(...recentRatios)) / 3;
-    if (ratio > 1.5) return { score: Math.round(50 + consistency * 20), confidence: 0.3 + consistency * 0.2, reason: `Above-avg volume: ${ratio.toFixed(1)}x (${(consistency*100).toFixed(0)}% consistent)`, signalClass: 'neutral' };
-    return { score: Math.round(ratio * 20), confidence: 0.2, reason: `Volume ${ratio.toFixed(1)}x avg`, signalClass: 'neutral' };
-  }
-}
 
 // ===========================================================================
 // Candlestick Patterns
 // ===========================================================================
 
-@Injectable()
-export class DojiPatternDirective implements IDirective {
-  readonly id = 'doji-pattern';
-  readonly name = 'Doji Pattern';
-  readonly description = 'Doji at support = potential reversal.';
-  readonly priority = 67;
-  readonly maxScore = 95;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const bars = input.bars;
-    if (bars.length < 5) return { score: 0, confidence: 0.1, reason: `Need 5+ bars, have ${bars.length}`, signalClass: 'neutral' };
-    const last = bars[bars.length - 1];
-    const body = Math.abs(last.close - last.open);
-    const range = last.high - last.low;
-    if (range <= 0) return { score: 0, confidence: 0.1, reason: 'Zero-range bar', signalClass: 'neutral' };
-    const bodyRatio = body / range;
-    const upperShadow = last.high - Math.max(last.open, last.close);
-    const lowerShadow = Math.min(last.open, last.close) - last.low;
-    // True doji: body < 5% of range
-    if (bodyRatio < 0.05) {
-      // Check if near support (lower shadow >= upper shadow)
-      if (lowerShadow >= upperShadow * 1.5) {
-        return { score: 82, confidence: 0.55, reason: `Dragonfly doji: potential bullish reversal (body ${(bodyRatio*100).toFixed(1)}% of range)`, signalClass: 'bullish' };
-      }
-      if (upperShadow >= lowerShadow * 1.5) {
-        return { score: 75, confidence: 0.5, reason: `Gravestone doji: potential bearish reversal`, signalClass: 'bearish' };
-      }
-      return { score: 60, confidence: 0.4, reason: `Doji: indecision (body ${(bodyRatio*100).toFixed(1)}% of range)`, signalClass: 'neutral' };
-    }
-    if (bodyRatio < 0.15) {
-      return { score: 30, confidence: 0.25, reason: `Near-doji: small body`, signalClass: 'neutral' };
-    }
-    return { score: 5, confidence: 0.2, reason: `Normal candle`, signalClass: 'neutral' };
-  }
-}
 
-@Injectable()
-export class HammerPatternDirective implements IDirective {
-  readonly id = 'hammer-pattern';
-  readonly name = 'Hammer Pattern';
-  readonly description = 'Hammer at downtrend low = bullish reversal.';
-  readonly priority = 68;
-  readonly maxScore = 95;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const bars = input.bars;
-    if (bars.length < 10) return { score: 0, confidence: 0.1, reason: `Need 10+ bars, have ${bars.length}`, signalClass: 'neutral' };
-    const last = bars[bars.length - 1];
-    const prev = bars[bars.length - 2];
-    const body = Math.abs(last.close - last.open);
-    const range = last.high - last.low;
-    if (range <= 0 || body === 0) return { score: 0, confidence: 0.1, reason: 'Zero body or range', signalClass: 'neutral' };
-    const lowerShadow = Math.min(last.open, last.close) - last.low;
-    const upperShadow = last.high - Math.max(last.open, last.close);
-    const lowerRatio = lowerShadow / body;
-    const bodyRatio = body / range;
-    // Hammer: lower shadow >= 2x body, small upper shadow, body in upper third
-    const isHammer = lowerRatio >= 2 && upperShadow < body * 0.5 && bodyRatio < 0.4;
-    // Check downtrend: last 5 bars mostly down
-    let downBars = 0;
-    for (let i = bars.length - 6; i < bars.length - 1; i++) {
-      if (i >= 0 && bars[i].close < bars[i].open) downBars++;
-    }
-    const inDowntrend = downBars >= 3;
-    if (isHammer && inDowntrend) {
-      return { score: 85, confidence: 0.6, reason: `Hammer pattern at downtrend low: shadow ${lowerRatio.toFixed(1)}x body`, signalClass: 'bullish' };
-    }
-    if (isHammer) {
-      return { score: 55, confidence: 0.4, reason: `Hammer pattern (no clear downtrend)`, signalClass: 'bullish' };
-    }
-    // Inverted hammer (shooting star at top)
-    const upperRatio = upperShadow / body;
-    if (upperRatio >= 2 && lowerShadow < body * 0.5 && bodyRatio < 0.4) {
-      return { score: 70, confidence: 0.5, reason: `Shooting star: upper shadow ${upperRatio.toFixed(1)}x body`, signalClass: 'bearish' };
-    }
-    return { score: 5, confidence: 0.2, reason: 'No hammer pattern', signalClass: 'neutral' };
-  }
-}
 
-@Injectable()
-export class EngulfingPatternDirective implements IDirective {
-  readonly id = 'engulfing-pattern';
-  readonly name = 'Engulfing Pattern';
-  readonly description = 'Bullish engulfing = strong reversal signal.';
-  readonly priority = 69;
-  readonly maxScore = 100;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const bars = input.bars;
-    if (bars.length < 2) return { score: 0, confidence: 0.1, reason: `Need 2+ bars, have ${bars.length}`, signalClass: 'neutral' };
-    const last = bars[bars.length - 1];
-    const prev = bars[bars.length - 2];
-    const lastBody = last.close - last.open;
-    const prevBody = prev.close - prev.open;
-    const lastHigh = Math.max(last.open, last.close);
-    const lastLow = Math.min(last.open, last.close);
-    const prevHigh = Math.max(prev.open, prev.close);
-    const prevLow = Math.min(prev.open, prev.close);
-    // Bullish engulfing: prev red, last green, last body > prev body, last engulfs prev body
-    const bullish = prevBody < 0 && lastBody > 0 && Math.abs(lastBody) > Math.abs(prevBody) && lastLow <= prevLow && lastHigh >= prevHigh;
-    const bearish = prevBody > 0 && lastBody < 0 && Math.abs(lastBody) > Math.abs(prevBody) && lastLow <= prevLow && lastHigh >= prevHigh;
-    if (bullish) {
-      const strength = Math.round(1 + Math.min(15, (Math.abs(lastBody) / Math.max(0.001, Math.abs(prevBody)) - 1) * 10));
-      return { score: 80 + strength, confidence: 0.6, reason: `Bullish engulfing: body ${(Math.abs(lastBody)/Math.max(0.001, Math.abs(prevBody))).toFixed(1)}x prev`, signalClass: 'bullish' };
-    }
-    if (bearish) {
-      const strength = Math.round(1 + Math.min(15, (Math.abs(lastBody) / Math.max(0.001, Math.abs(prevBody)) - 1) * 10));
-      return { score: 75 + strength, confidence: 0.55, reason: `Bearish engulfing`, signalClass: 'bearish' };
-    }
-    return { score: 5, confidence: 0.25, reason: 'No engulfing pattern', signalClass: 'neutral' };
-  }
-}
 
 @Injectable()
 export class PinBarPatternDirective implements IDirective {
@@ -690,94 +273,19 @@ export class PinBarPatternDirective implements IDirective {
   }
 }
 
-@Injectable()
-export class ThreeSoldiersPatternDirective implements IDirective {
-  readonly id = 'three-soldiers-pattern';
-  readonly name = 'Three White Soldiers';
-  readonly description = 'Three consecutive strong bullish candles.';
-  readonly priority = 65;
-  readonly maxScore = 90;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const bars = input.bars;
-    if (bars.length < 4) return { score: 0, confidence: 0.1, reason: `Need 4+ bars, have ${bars.length}`, signalClass: 'neutral' };
-    const b1 = bars[bars.length - 3];
-    const b2 = bars[bars.length - 2];
-    const b3 = bars[bars.length - 1];
-    const green = (b: typeof b1) => b.close > b.open;
-    const body = (b: typeof b1) => Math.abs(b.close - b.open);
-    const avgBody = (body(b1) + body(b2) + body(b3)) / 3;
-    const range = (b: typeof b1) => b.high - b.low;
-    const allGreen = green(b1) && green(b2) && green(b3);
-    const allRed = !green(b1) && !green(b2) && !green(b3);
-    const ascending = b3.close > b2.close && b2.close > b1.close && b3.open > b2.open && b2.open > b1.open;
-    const descending = b3.close < b2.close && b2.close < b1.close && b3.open < b2.open && b2.open < b1.open;
-    const goodBodies = body(b1) > range(b1) * 0.5 && body(b2) > range(b2) * 0.5 && body(b3) > range(b3) * 0.5;
-    if (allGreen && ascending && goodBodies) {
-      return { score: 80, confidence: 0.6, reason: 'Three white soldiers: strong bullish continuation', signalClass: 'bullish' };
-    }
-    if (allRed && descending && goodBodies) {
-      return { score: 75, confidence: 0.55, reason: 'Three black crows: strong bearish continuation', signalClass: 'bearish' };
-    }
-    if (allGreen && ascending) {
-      return { score: 45, confidence: 0.35, reason: 'Three advancing green candles (weak soldiers)', signalClass: 'bullish' };
-    }
-    if (allRed && descending) {
-      return { score: 40, confidence: 0.3, reason: 'Three declining red candles', signalClass: 'bearish' };
-    }
-    return { score: 5, confidence: 0.25, reason: 'No three-soldiers pattern', signalClass: 'neutral' };
-  }
-}
 
 // ===========================================================================
 // Macro / Regime
 // ===========================================================================
 
-@Injectable()
-export class CadUsdOilCorrelationDirective implements IDirective {
-  readonly id = 'cad-usd-oil-correlation';
-  readonly name = 'CAD/USD Oil Correlation';
-  readonly description = 'CAD petrocurrency vs WTI crude and rate differentials.';
-  readonly priority = 0;
-  readonly maxScore = 100;
-  readonly version = '1.0.0';
-  readonly readiness = 'alpha' as const;
 
-  calculate(_input: DirectiveInput): DirectiveResult {
-    return stubResult(this.id, 'cad-usd-oil-correlation.php');
-  }
-}
 
 // ===========================================================================
 // Temporal / Calendar
 // ===========================================================================
 
-@Injectable()
-export class MondayEffectDirective implements IDirective {
-  readonly id = 'monday-effect';
-  readonly name = 'Monday Effect';
-  readonly description = 'Monday negative bias — historically worst day for equities.';
-  readonly priority = 30;
-  readonly maxScore = 50;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const bars = input.bars;
-    if (bars.length < 2) return { score: 0, confidence: 0.1, reason: 'Need 2+ bars', signalClass: 'neutral' };
-    const lastBar = bars[bars.length - 1];
-    const day = lastBar.timestamp ? new Date(lastBar.timestamp).getUTCDay() : new Date().getUTCDay();
-    if (day === 1) {
-      const prev = bars[bars.length - 2];
-      const gapDown = prev.close > 0 && lastBar.open < prev.close * 0.998;
-      if (gapDown) return { score: 40, confidence: 0.45, reason: 'Monday gap down — bearish opening bias', signalClass: 'bearish' };
-      return { score: 25, confidence: 0.35, reason: 'Monday — historically weak session', signalClass: 'bearish' };
-    }
-    return { score: 5, confidence: 0.25, reason: `Not Monday (day ${day})`, signalClass: 'neutral' };
-  }
-}
 
 @Injectable()
 export class FridayPositioningDirective implements IDirective {
@@ -1045,50 +553,11 @@ export class SpyQqqRelativeStrengthDirective implements IDirective {
 // Crypto
 // ===========================================================================
 
-@Injectable()
-export class CryptoFearGreedDirective implements IDirective {
-  readonly id = 'crypto-fear-greed';
-  readonly name = 'Crypto Fear and Greed Proxy';
-  readonly description = 'BTC momentum/volume/volatility/dominance proxy.';
-  readonly priority = 0;
-  readonly maxScore = 100;
-  readonly version = '1.0.0';
-  readonly readiness = 'alpha' as const;
 
-  calculate(_input: DirectiveInput): DirectiveResult {
-    return stubResult(this.id, 'crypto-fear-greed.php');
-  }
-}
 
-@Injectable()
-export class BtcHalvingCycleDirective implements IDirective {
-  readonly id = 'btc-halving-cycle';
-  readonly name = 'Bitcoin Halving Cycle';
-  readonly description = 'Hardcoded halving dates, 0-180 days post = +15.';
-  readonly priority = 0;
-  readonly maxScore = 100;
-  readonly version = '1.0.0';
-  readonly readiness = 'alpha' as const;
 
-  calculate(_input: DirectiveInput): DirectiveResult {
-    return stubResult(this.id, 'btc-halving-cycle.php');
-  }
-}
 
-@Injectable()
-export class CryptoWeekendEffectDirective implements IDirective {
-  readonly id = 'crypto-weekend-effect';
-  readonly name = 'Crypto Weekend Effect';
-  readonly description = '24/7 crypto weekend volatility patterns.';
-  readonly priority = 0;
-  readonly maxScore = 100;
-  readonly version = '1.0.0';
-  readonly readiness = 'alpha' as const;
 
-  calculate(_input: DirectiveInput): DirectiveResult {
-    return stubResult(this.id, 'crypto-weekend-effect.php');
-  }
-}
 
 // ===========================================================================
 // Equity-Specific
@@ -1229,150 +698,25 @@ export class DividendYieldAttractiveDirective implements IDirective {
   }
 }
 
-@Injectable()
-export class EarningsProximityDirective implements IDirective {
-  readonly id = 'earnings-proximity';
-  readonly name = 'Earnings Proximity';
-  readonly description = 'Distance to next earnings, pre/post drift windows.';
-  readonly priority = 0;
-  readonly maxScore = 100;
-  readonly version = '1.0.0';
-  readonly readiness = 'alpha' as const;
 
-  calculate(_input: DirectiveInput): DirectiveResult {
-    return stubResult(this.id, 'earnings-proximity.php');
-  }
-}
 
 // ===========================================================================
 // Composite
 // ===========================================================================
 
-@Injectable()
-export class ConfluenceReversalComboDirective implements IDirective {
-  readonly id = 'confluence-reversal-combo';
-  readonly name = 'Confluence Reversal Combo';
-  readonly description = 'RSI divergence + candle + volume + support confluence.';
-  readonly priority = 74;
-  readonly maxScore = 110;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const bars = input.bars;
-    const closes = bars.map(b => b.close);
-    if (closes.length < 20) return { score: 0, confidence: 0.1, reason: `Need 20+ bars, have ${closes.length}`, signalClass: 'neutral' };
-    let confluence = 0;
-    const details: string[] = [];
-    // 1. RSI check
-    const r = rsi(closes, 14);
-    const currentRsi = r[r.length - 1];
-    const priceRising = closes[closes.length - 1] > closes[closes.length - 10];
-    const rsiFalling = currentRsi < r[Math.max(0, r.length - 6)];
-    if (currentRsi < 30) { confluence += 35; details.push('RSI oversold'); }
-    else if (currentRsi > 70) { confluence += 30; details.push('RSI overbought'); }
-    else if (priceRising && rsiFalling) { confluence += 20; details.push('bearish RSI divergence'); }
-    // 2. Candle pattern: check last bar for reversal characteristics
-    const last = bars[bars.length - 1];
-    const body = Math.abs(last.close - last.open);
-    const range = last.high - last.low;
-    if (range > 0 && body / range < 0.3) {
-      const lowerWick = Math.min(last.open, last.close) - last.low;
-      const upperWick = last.high - Math.max(last.open, last.close);
-      if (lowerWick > body * 2) { confluence += 25; details.push('long lower wick'); }
-      if (upperWick > body * 2) { confluence += 20; details.push('long upper wick'); }
-    }
-    // 3. Volume surge check
-    const volumes = bars.map(b => b.volume || 0);
-    const avgVol = volumes.slice(0, -1).reduce((a, b) => a + b, 0) / Math.max(1, volumes.length - 1);
-    const currentVol = volumes[volumes.length - 1];
-    if (avgVol > 0 && currentVol > avgVol * 1.5) { confluence += 25; details.push(`volume ${(currentVol/avgVol).toFixed(1)}x avg`); }
-    // 4. Near support/resistance from recent pivot
-    const highs = bars.map(b => b.high);
-    const lows = bars.map(b => b.low);
-    const pivotHigh = Math.max(...highs.slice(-20, -3));
-    const pivotLow = Math.min(...lows.slice(-20, -3));
-    const pivotRange = pivotHigh - pivotLow;
-    if (pivotRange > 0) {
-      const distFromLow = (last.close - pivotLow) / pivotRange;
-      const distFromHigh = (pivotHigh - last.close) / pivotRange;
-      if (distFromLow < 0.1) { confluence += 20; details.push('near support'); }
-      if (distFromHigh < 0.1) { confluence += 15; details.push('near resistance'); }
-    }
-    if (confluence >= 60) {
-      const signalClass = currentRsi < 30 ? 'bullish' : currentRsi > 70 ? 'bearish' : 'neutral';
-      return { score: Math.min(110, confluence + 10), confidence: 0.55, reason: `Reversal confluence (${confluence}): ${details.join(', ')}`, signalClass: signalClass as 'bullish' | 'bearish' | 'neutral' };
-    }
-    if (confluence >= 30) {
-      return { score: confluence, confidence: 0.3, reason: `Partial confluence (${confluence}): ${details.join(', ')}`, signalClass: 'neutral' };
-    }
-    return { score: Math.round(confluence), confidence: 0.2, reason: confluence > 0 ? `Weak signals (${confluence}): ${details.join(', ')}` : 'No reversal signals', signalClass: 'neutral' };
-  }
-}
 
-@Injectable()
-export class PriceActionDirective implements IDirective {
-  readonly id = 'price-action';
-  readonly name = 'Price Action';
-  readonly description = 'HH/HL, market structure, S/R tests from raw price.';
-  readonly priority = 0;
-  readonly maxScore = 100;
-  readonly version = '1.0.0';
-  readonly readiness = 'alpha' as const;
 
-  calculate(_input: DirectiveInput): DirectiveResult {
-    return stubResult(this.id, 'price-action.php');
-  }
-}
 
 // ===========================================================================
 // Risk / Support-Resistance
 // ===========================================================================
 
-@Injectable()
-export class SupportResistanceLevelsDirective implements IDirective {
-  readonly id = 'support-resistance-levels';
-  readonly name = 'Support & Resistance Levels';
-  readonly description = 'Key S/R from historical pivots, bounce quality.';
-  readonly priority = 0;
-  readonly maxScore = 100;
-  readonly version = '1.0.0';
-  readonly readiness = 'alpha' as const;
 
-  calculate(_input: DirectiveInput): DirectiveResult {
-    return stubResult(this.id, 'support-resistance-levels.php');
-  }
-}
 
-@Injectable()
-export class OverheadSupplyPressureDirective implements IDirective {
-  readonly id = 'overhead-supply-pressure';
-  readonly name = 'Overhead Supply Pressure';
-  readonly description = 'Trapped overhead supply from recent top, reclaim progress.';
-  readonly priority = 0;
-  readonly maxScore = 100;
-  readonly version = '1.0.0';
-  readonly readiness = 'alpha' as const;
 
-  calculate(_input: DirectiveInput): DirectiveResult {
-    return stubResult(this.id, 'overhead-supply-pressure.php');
-  }
-}
 
-@Injectable()
-export class PanicExhaustionAbsorptionDirective implements IDirective {
-  readonly id = 'panic-exhaustion-absorption';
-  readonly name = 'Panic Exhaustion & Absorption';
-  readonly description = 'Panic → capitulation → exhaustion → stabilization.';
-  readonly priority = 0;
-  readonly maxScore = 100;
-  readonly version = '1.0.0';
-  readonly readiness = 'alpha' as const;
 
-  calculate(_input: DirectiveInput): DirectiveResult {
-    return stubResult(this.id, 'panic-exhaustion-absorption.php');
-  }
-}
 
 @Injectable()
 export class TimeBasedSupportDirective implements IDirective {
@@ -1472,80 +816,9 @@ export class IsaResetDirective implements IDirective {
 // Additional TradePress Directives (rounding out the full 56)
 // ===========================================================================
 
-@Injectable()
-export class BollingerBandsDirective implements IDirective {
-  readonly id = 'bollinger-bands';
-  readonly name = 'Bollinger Bands';
-  readonly description = 'Price vs bands, bandwidth, %B indicator.';
-  readonly priority = 72;
-  readonly maxScore = 100;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const closes = input.bars.map(b => b.close);
-    if (closes.length < 25) return { score: 0, confidence: 0.1, reason: `Need 25+ bars, have ${closes.length}`, signalClass: 'neutral' };
-    const bb = bollingerBands(closes, 20, 2);
-    if (!bb || !bb.upper.length) return { score: 0, confidence: 0.1, reason: 'BB calculation failed', signalClass: 'neutral' };
-    const lastClose = closes[closes.length - 1];
-    const upper = bb.upper[bb.upper.length - 1];
-    const lower = bb.lower[bb.lower.length - 1];
-    const middle = bb.middle[bb.middle.length - 1];
-    const bandRange = upper - lower;
-    if (bandRange <= 0) return { score: 0, confidence: 0.1, reason: 'Zero band range', signalClass: 'neutral' };
-    // %B = (price - lower) / (upper - lower)
-    const pctB = (lastClose - lower) / bandRange;
-    // Bandwidth = (upper - lower) / middle
-    const bandwidth = bandRange / middle;
-    if (pctB > 1) return { score: 80, confidence: 0.55, reason: `Price above upper BB: %B=${pctB.toFixed(2)} (overbought)`, signalClass: 'bearish' };
-    if (pctB < 0) return { score: 85, confidence: 0.6, reason: `Price below lower BB: %B=${pctB.toFixed(2)} (oversold)`, signalClass: 'bullish' };
-    if (pctB > 0.9) return { score: 55, confidence: 0.4, reason: `Near upper BB: %B=${pctB.toFixed(2)}`, signalClass: 'bearish' };
-    if (pctB < 0.1) return { score: 60, confidence: 0.45, reason: `Near lower BB: %B=${pctB.toFixed(2)}`, signalClass: 'bullish' };
-    if (pctB > 0.5) return { score: 35, confidence: 0.3, reason: `Above middle BB: %B=${pctB.toFixed(2)}, bw=${(bandwidth*100).toFixed(1)}%`, signalClass: 'bullish' };
-    return { score: 25, confidence: 0.25, reason: `Below middle BB: %B=${pctB.toFixed(2)}`, signalClass: 'neutral' };
-  }
-}
 
-@Injectable()
-export class VwapDirective implements IDirective {
-  readonly id = 'vwap';
-  readonly name = 'VWAP (Volume-Weighted Average Price)';
-  readonly description = 'Price relative to VWAP, intraday sentiment.';
-  readonly priority = 70;
-  readonly maxScore = 95;
-  readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
 
-  calculate(input: DirectiveInput): DirectiveResult {
-    const bars = input.bars;
-    if (bars.length < 5) return { score: 0, confidence: 0.1, reason: `Need 5+ bars, have ${bars.length}`, signalClass: 'neutral' };
-    // Compute VWAP: sum(typical_price * volume) / sum(volume)
-    let cumPV = 0;
-    let cumVol = 0;
-    for (const bar of bars) {
-      const typical = (bar.high + bar.low + bar.close) / 3;
-      const vol = bar.volume || 0;
-      cumPV += typical * vol;
-      cumVol += vol;
-    }
-    if (cumVol <= 0) return { score: 0, confidence: 0.1, reason: 'No volume data for VWAP', signalClass: 'neutral' };
-    const vwap = cumPV / cumVol;
-    const lastClose = bars[bars.length - 1].close;
-    const lastV = bars[bars.length - 1].volume || 0;
-    const avgVol = cumVol / bars.length;
-    const deviationPct = ((lastClose - vwap) / vwap) * 100;
-    // Above VWAP with high volume = institutional buying
-    if (deviationPct > 2 && lastV > avgVol * 1.5) {
-      return { score: 80, confidence: 0.55, reason: `Strong above VWAP: +${deviationPct.toFixed(2)}% with above-avg volume`, signalClass: 'bullish' };
-    }
-    if (deviationPct > 1) return { score: 55, confidence: 0.4, reason: `Above VWAP: +${deviationPct.toFixed(2)}%`, signalClass: 'bullish' };
-    if (deviationPct < -2 && lastV > avgVol * 1.5) {
-      return { score: 75, confidence: 0.5, reason: `Strong below VWAP: ${deviationPct.toFixed(2)}% with above-avg volume`, signalClass: 'bearish' };
-    }
-    if (deviationPct < -1) return { score: 50, confidence: 0.35, reason: `Below VWAP: ${deviationPct.toFixed(2)}%`, signalClass: 'bearish' };
-    return { score: Math.round(30 + deviationPct * 5), confidence: 0.25, reason: `VWAP: ${vwap.toFixed(2)}, price ${deviationPct.toFixed(2)}% away`, signalClass: deviationPct > 0 ? 'bullish' : 'bearish' };
-  }
-}
 
 @Injectable()
 export class BasicWeeklyRhythmDirective implements IDirective {

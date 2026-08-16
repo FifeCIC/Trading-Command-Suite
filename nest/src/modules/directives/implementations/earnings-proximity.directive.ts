@@ -12,6 +12,20 @@
  * MAX:           80 (55 base + 25 bonus).
  *
  * TradePress source: includes/scoring-system/directives/earnings-proximity.php
+ *
+ * ── Design decision (#626, 2026-08-16) ─────────────────────
+ * Kept at `readiness: 'alpha'` and deliberately REMOVED from every scoring
+ * protocol/strategy. Reason: `calculate()` reads `input.earningsDate`, which
+ * no producer currently writes, so it would always hit the mock branch and
+ * return a constant 45/100 — a phantom contribution that drags composites
+ * toward neutral and inflates the denominator (the same disease #638 fixed
+ * for gates). `directive-inclusion.ts` rule 1 already excludes `alpha` from
+ * scoring, so the class stays registered (visible to the registry/audit) but
+ * can never score until a real earnings feed is wired.
+ *
+ * Future (#648): rehome as a CATALYST directive in the stock screener — emit
+ * an attention/earnings-proximity signal for watchlist promotion, not a
+ * directional score inside a protocol composite.
  */
 
 import { Injectable } from '@nestjs/common';

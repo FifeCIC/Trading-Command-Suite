@@ -131,6 +131,130 @@ export class DirectiveConfigService {
     }
   }
 
+  // ── Protocol-scoped overrides (Phase 5 — #609) ───────
+
+  private protocolKey(slug: string, directiveId: string, field: string): string {
+    return `protocol:${slug}:${directiveId}:${field}`;
+  }
+
+  /**
+   * Read all per-protocol overrides for one protocol.
+   * Returns Map<directiveId, DirectiveConfig>. Empty map when none exist.
+   */
+  async getProtocolOverrides(slug: string): Promise<Map<string, DirectiveConfig>> {
+    if (!this.prisma.isAvailable) return new Map();
+
+    try {
+      const prefix = `protocol:${slug}:`;
+      const rows = await this.prisma.globalSetting.findMany({
+        where: { key: { startsWith: prefix } },
+        select: { key: true, value: true },
+      });
+
+      const map = new Map<string, DirectiveConfig>();
+      for (const row of rows) {
+        // key format: "protocol:{slug}:{directiveId}:{field}"
+        const parts = row.key.split(':');
+        if (parts.length !== 4) continue;
+        const directiveId = parts[2];
+        const field = parts[3];
+
+        let config = map.get(directiveId);
+        if (!config) { config = {}; map.set(directiveId, config); }
+
+        switch (field) {
+          case 'maxScore': config.maxScore = parseInt(row.value, 10); break;
+          case 'minScore': config.minScore = parseInt(row.value, 10); break;
+          case 'priority': config.priority = parseInt(row.value, 10); break;
+          case 'category': config.category = row.value; break;
+          case 'directionBias': config.directionBias = row.value; break;
+        }
+      }
+      return map;
+    } catch (err) {
+      this.logger.warn(`Failed to read protocol overrides for ${slug}: ${(err as Error).message}`);
+      return new Map();
+    }
+  }
+
+  /** Write one directive's override for a protocol. */
+  async updateProtocolConfig(slug: string, directiveId: string, config: Partial<DirectiveConfig>): Promise<void> {
+    if (!this.prisma.isAvailable) return;
+
+    const entries: Array<{ key: string; value: string }> = [];
+    if (config.maxScore !== undefined) entries.push({ key: this.protocolKey(slug, directiveId, 'maxScore'), value: String(config.maxScore) });
+    if (config.minScore !== undefined) entries.push({ key: this.protocolKey(slug, directiveId, 'minScore'), value: String(config.minScore) });
+    if (config.priority !== undefined) entries.push({ key: this.protocolKey(slug, directiveId, 'priority'), value: String(config.priority) });
+    if (config.category !== undefined) entries.push({ key: this.protocolKey(slug, directiveId, 'category'), value: config.category });
+    if (config.directionBias !== undefined) entries.push({ key: this.protocolKey(slug, directiveId, 'directionBias'), value: config.directionBias });
+
+    for (const { key, value } of entries) {
+      try {
+        await this.prisma.globalSetting.upsert({
+          where: { key },
+          update: { value, updatedAt: new Date() },
+          create: { key, value },
+        });
+      } catch (err) {
+        this.logger.error(`Failed to update ${key}: ${(err as Error).message}`);
+      }
+    }
+  }
+
+  /** Delete all override keys for one directive in one protocol (reset to global). */
+  async deleteProtocolConfig(slug: string, directiveId: string): Promise<void> {
+    if (!this.prisma.isAvailable) return;
+
+    try {
+      const prefix = this.protocolKey(slug, directiveId, '');
+      await this.prisma.globalSetting.deleteMany({
+        where: { key: { startsWith: prefix } },
+      });
+    } catch (err) {
+      this.logger.warn(`Failed to delete protocol config for ${slug}/${directiveId}: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * Batch-read ALL protocol-scoped overrides in one query.
+   * Returns Map<slug, Map<directiveId, DirectiveConfig>>. Used by the registry
+   * so its maxScore display stays in lockstep with the scoring engine.
+   */
+  async getAllProtocolOverrides(): Promise<Map<string, Map<string, DirectiveConfig>>> {
+    if (!this.prisma.isAvailable) return new Map();
+
+    try {
+      const rows = await this.prisma.globalSetting.findMany({
+        where: { key: { startsWith: 'protocol:' } },
+        select: { key: true, value: true },
+      });
+
+      const map = new Map<string, Map<string, DirectiveConfig>>();
+      for (const row of rows) {
+        const parts = row.key.split(':');
+        if (parts.length !== 4) continue;
+        const [, slug, directiveId, field] = parts;
+
+        let inner = map.get(slug);
+        if (!inner) { inner = new Map(); map.set(slug, inner); }
+        let config = inner.get(directiveId);
+        if (!config) { config = {}; inner.set(directiveId, config); }
+
+        switch (field) {
+          case 'maxScore': config.maxScore = parseInt(row.value, 10); break;
+          case 'minScore': config.minScore = parseInt(row.value, 10); break;
+          case 'priority': config.priority = parseInt(row.value, 10); break;
+          case 'category': config.category = row.value; break;
+          case 'directionBias': config.directionBias = row.value; break;
+        }
+      }
+      return map;
+    } catch (err) {
+      this.logger.warn(`Failed to read all protocol overrides: ${(err as Error).message}`);
+      return new Map();
+    }
+  }
+
   // ── Seed ─────────────────────────────────────────────
 
   /**

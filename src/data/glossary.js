@@ -143,6 +143,36 @@ const GLOSSARY = [
     category: 'Scoring',
     aliases: ['signal', 'signal classification'],
   },
+  {
+    term: 'Opportunity Score',
+    definition: 'The additive "everything counts" score — direction, conditions, forecasts, liquidity and analyst notes all add up into one number. Used to rank and screen the whole universe ("find the golden needle in a haystack of silver needles"). It measures how attractive a setup is, not whether it is time to trade.',
+    category: 'Scoring',
+    aliases: ['opportunity', 'opportunity score'],
+  },
+  {
+    term: 'Signal Score',
+    definition: 'The directional conviction score — only directives with a bullish or bearish opinion contribute. It answers "which way, and how strongly, right now", and drives the BUY/HOLD/SELL signal and the automation loop.',
+    category: 'Scoring',
+    aliases: ['signal score', 'directional score'],
+  },
+  {
+    term: 'directional-only composite',
+    definition: 'A composite built only from directives that hold a directional opinion (bullish or bearish), excluding neutral conditions and gates. This is what the Signal Score represents — pure directional conviction rather than the raw additive total.',
+    category: 'Scoring',
+    aliases: ['directional composite', 'directional-only'],
+  },
+  {
+    term: 'directional denominator',
+    definition: 'The maximum possible Signal Score — the sum of weights for directives that carry a direction (bullish/bearish). Because it counts only directional directives, it is smaller than the protocol\'s full weight.',
+    category: 'Scoring',
+    aliases: ['directional max', 'directional ceiling'],
+  },
+  {
+    term: 'dynamic denominator',
+    definition: 'The property of the Signal Score denominator that changes with which directional directives actually fire on a given symbol. When fewer directional directives fire, the denominator is smaller — so the percentage is measured against what actually fired, not the full directional ceiling. (Known refinement: a stable denominator would score against the full ceiling instead.)',
+    category: 'Scoring',
+    aliases: ['dynamic max', 'variable denominator'],
+  },
 
   // ── Risk ──
   {

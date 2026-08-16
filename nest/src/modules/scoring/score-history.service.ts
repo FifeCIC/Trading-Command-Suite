@@ -176,6 +176,7 @@ export class ScoreHistoryService {
         ticker: string;
         value: number;
         confidence: number;
+        signal: string | null;
         rawComposite: number | null;
         rawMax: number | null;
         opportunityScore: number | null;
@@ -330,6 +331,7 @@ export class ScoreHistoryService {
             ticker: (e as any).symbol?.ticker || e.symbolId,
             value: e.value,
             confidence: 0,
+            signal: (e as any).breakdown?.signal ?? null,
             // Pre-gate raw composite + tradability status (#638). The stored
             // `value` is the FINAL gated composite — a closed market hard-gates
             // it to 0 even though the protocol produced a real signal. Ladders

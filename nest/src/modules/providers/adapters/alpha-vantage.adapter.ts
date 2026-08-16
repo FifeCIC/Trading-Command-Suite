@@ -68,13 +68,13 @@ export class AlphaVantageAdapter implements IProviderAdapter {
   // ── IProviderAdapter: Quote ───────────────────────────
 
   async getQuote(symbol: string): Promise<ProviderQuote | null> {
-    if (!this.hasCredentials) return this.getMockQuote(symbol);
+    if (!this.hasCredentials) return null; // No API key — never fabricate quotes
     try {
       const data = await this.fetchJson({ function: 'GLOBAL_QUOTE', symbol });
       const quote = data?.['Global Quote'];
       if (!quote || !quote['05. price']) {
-        this.logger.debug(`AV getQuote(${symbol}): no data, falling back to mock`);
-        return this.getMockQuote(symbol);
+        this.logger.debug(`AV getQuote(${symbol}): no data`);
+        return null;
       }
       return {
         symbol,
@@ -96,7 +96,7 @@ export class AlphaVantageAdapter implements IProviderAdapter {
     timeframe = '1d',
     limit = 100,
   ): Promise<MarketBar[]> {
-    if (!this.hasCredentials) return this.getMockCandles(symbol, limit);
+    if (!this.hasCredentials) return []; // No API key — never fabricate candles
     try {
       // Map timeframe to Alpha Vantage function
       const fn = timeframe === '1d' || timeframe === 'daily'
@@ -143,12 +143,12 @@ export class AlphaVantageAdapter implements IProviderAdapter {
   // ── IProviderAdapter: Profile ─────────────────────────
 
   async getProfile(symbol: string): Promise<ProviderProfile | null> {
-    if (!this.hasCredentials) return this.getMockProfile(symbol);
+    if (!this.hasCredentials) return null; // No API key — never fabricate profiles
     try {
       const data = await this.fetchJson({ function: 'OVERVIEW', symbol });
       if (!data || !data.Symbol) {
-        this.logger.debug(`AV getProfile(${symbol}): no data, falling back to mock`);
-        return this.getMockProfile(symbol);
+        this.logger.debug(`AV getProfile(${symbol}): no data`);
+        return null;
       }
       return {
         symbol: data.Symbol,
@@ -256,56 +256,7 @@ export class AlphaVantageAdapter implements IProviderAdapter {
   getCapabilities(): string[] {
     return this.hasCredentials
       ? ['quotes', 'candles', 'profiles', 'earnings', 'fundamentals']
-      : ['quotes_mock', 'candles_mock', 'profiles_mock'];
+      : [];
   }
 
-  // ── Mock fallbacks (when no API key) ──────────────────
-
-  private getMockQuote(symbol: string): ProviderQuote {
-    const basePrice = this.getBasePriceForSymbol(symbol);
-    const spread = basePrice * 0.001;
-    return {
-      symbol,
-      bid: basePrice - spread / 2,
-      ask: basePrice + spread / 2,
-      last: basePrice,
-      timestamp: new Date(),
-    };
-  }
-
-  private getMockCandles(symbol: string, limit: number): MarketBar[] {
-    const bars: MarketBar[] = [];
-    const basePrice = this.getBasePriceForSymbol(symbol);
-    const now = Date.now();
-    const hourMs = 60 * 60 * 1000;
-
-    for (let i = limit - 1; i >= 0; i--) {
-      const timestamp = new Date(now - i * hourMs);
-      const volatility = basePrice * 0.02;
-      const open = basePrice + (Math.random() - 0.5) * volatility;
-      const close = basePrice + (Math.random() - 0.5) * volatility;
-      const high = Math.max(open, close) + Math.random() * volatility * 0.5;
-      const low = Math.min(open, close) - Math.random() * volatility * 0.5;
-      const volume = Math.floor(1000000 + Math.random() * 5000000);
-      bars.push({ timestamp, open, high, low, close, volume });
-    }
-    return bars;
-  }
-
-  private getMockProfile(symbol: string): ProviderProfile {
-    const profiles: Record<string, Partial<ProviderProfile>> = {
-      AAPL: { name: 'Apple Inc.', sector: 'Technology', industry: 'Consumer Electronics', marketCap: 3000000000000 },
-      NVDA: { name: 'NVIDIA Corporation', sector: 'Technology', industry: 'Semiconductors', marketCap: 2000000000000 },
-      TSLA: { name: 'Tesla Inc.', sector: 'Consumer Cyclical', industry: 'Auto Manufacturers', marketCap: 800000000000 },
-    };
-    const profile = profiles[symbol.toUpperCase()] || {
-      name: `${symbol} Corporation`, sector: 'Technology', industry: 'Software', marketCap: 50000000000,
-    };
-    return { symbol, exchange: 'NASDAQ', ...profile } as ProviderProfile;
-  }
-
-  private getBasePriceForSymbol(symbol: string): number {
-    const prices: Record<string, number> = { AAPL: 175.5, NVDA: 485.25, TSLA: 248.75 };
-    return prices[symbol.toUpperCase()] || 100.0;
-  }
 }

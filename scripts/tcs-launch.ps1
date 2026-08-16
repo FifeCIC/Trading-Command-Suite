@@ -39,6 +39,21 @@ for ($i = 0; $i -lt $activeBrokers.Count; $i++) {
 # ── Kill anything on our ports ─────────────────────────────
 
 Write-Host "`n  Stopping existing services…" -ForegroundColor DarkGray
+
+# Kill MT5 bridges by process identity FIRST. Port-based killing below only
+# catches the process currently holding the LISTEN socket — bridges that
+# crashed-but-didn't-exit, or raced to bind, survive as zombies and keep
+# serving stale candles (issue #643).
+$zombieBridges = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -like '*mt5_bridge_v2.py*' }
+foreach ($bp in $zombieBridges) {
+    try { Stop-Process -Id $bp.ProcessId -Force -ErrorAction Stop } catch {}
+    $null = cmd /c "taskkill /F /PID $($bp.ProcessId) 2>nul"
+}
+if ($zombieBridges) {
+    Write-Host "    Killed $($zombieBridges.Count) MT5 bridge process(es) by identity" -ForegroundColor DarkGray
+}
+
 @(3201) + $bridgePorts + @(5173, 5174) | ForEach-Object {
     $conn = Get-NetTCPConnection -LocalPort $_ -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($conn) { 

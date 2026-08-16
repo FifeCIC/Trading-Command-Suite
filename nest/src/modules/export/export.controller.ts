@@ -10,11 +10,8 @@ export class ExportController {
 
   @Get('portfolio/csv')
   async portfolioCsv(@Res() res: Response): Promise<void> {
-    // Mock portfolio data — replace with real portfolio service injection
-    const data = [
-      { symbol: 'AAPL', shares: 50, avgCost: 175.50, currentPrice: 198.32, value: 9916, pnl: 1141, pnlPct: 13.0 },
-      { symbol: 'NVDA', shares: 30, avgCost: 420.00, currentPrice: 485.25, value: 14557.5, pnl: 1957.5, pnlPct: 15.5 },
-    ];
+    // No fabricated data — empty export until the real portfolio service is wired in.
+    const data: Array<Record<string, any>> = [];
     const csv = this.exportService.toCsv(data, ['symbol', 'shares', 'avgCost', 'currentPrice', 'value', 'pnl', 'pnlPct']);
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="portfolio-${new Date().toISOString().split('T')[0]}.csv"`);
@@ -32,10 +29,7 @@ export class ExportController {
   async scoresJson(@Param('date') date: string, @Res() res: Response): Promise<void> {
     const json = this.exportService.toJson({
       date,
-      scores: [
-        { symbol: 'AAPL', score: 72, signal: 'buy' },
-        { symbol: 'NVDA', score: 65, signal: 'buy' },
-      ],
+      scores: [],
     });
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename="scores-${date}.json"`);
@@ -45,10 +39,10 @@ export class ExportController {
   @Get('strategy/:id/share')
   async strategyShareCard(@Param('id') id: string, @Res() res: Response): Promise<void> {
     const html = this.exportService.toScoreCardHtml({
-      strategyName: 'Conviction Dip Accumulation',
+      strategyName: 'Strategy', // STUB — placeholder until real strategy data is wired
       symbol: id.toUpperCase(),
-      score: 72,
-      signal: 'buy',
+      score: 0,
+      signal: 'hold',
       date: new Date().toLocaleDateString(),
       url: `/trading/sees-live-stack`,
     });

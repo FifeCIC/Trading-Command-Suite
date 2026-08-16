@@ -494,9 +494,9 @@ export default function DashboardPage() {
                   return (
                     <a
                       key={pick.symbolId}
-                      href={`/research/symbol/${pick.symbolId}`}
+                      href={`/research/symbol/${pick.ticker}`}
                       className="dash-hp-item"
-                      onClick={(e) => { e.preventDefault(); navigate(`/research/symbol/${pick.symbolId}`); }}
+                      onClick={(e) => { e.preventDefault(); navigate(`/research/symbol/${pick.ticker}`); }}
                     >
                       <span className="dash-hp-rank">#{i + 1}</span>
                       <span className="dash-hp-ticker">{pick.ticker}</span>

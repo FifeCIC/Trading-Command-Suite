@@ -14,6 +14,9 @@
  *           'bullish'/'bearish', or a one-way bias emitting the opposite class.
  *   MODE 3  Constant floor         — a "no signal"/guard branch returning a
  *           literal non-zero score.
+ *   MODE 6  Duplicate id           — the same directive `id` defined by two
+ *           different classes (different files). One copy is dead code that
+ *           still confuses audits and the registry.
  *
  * Usage:
  *   node nest/scripts/directive-guard.cjs              # static + runtime
@@ -92,6 +95,9 @@ function fieldOf(body, name) {
   return m ? m[1] : null;
 }
 
+/** id -> file that first defined it (for MODE 6 duplicate detection). */
+const idOwners = new Map();
+
 // ── Static checks ─────────────────────────────────────────────────────────
 
 function staticCheckFile(file) {
@@ -103,6 +109,13 @@ function staticCheckFile(file) {
     const readiness = fieldOf(cls.body, 'readiness');
     const bias = fieldOf(cls.body, 'directionBias');
     if (!id) continue; // not a directive class
+
+    // MODE 6 — duplicate id: same id defined by a class in a different file
+    if (idOwners.has(id)) {
+      report(file, id, 6, 'ERROR', `duplicate directive id "${id}" — also defined in ${path.basename(idOwners.get(id))}`);
+    } else {
+      idOwners.set(id, file);
+    }
 
     // MODE 1 — confession lint
     if (readiness === 'ready') {

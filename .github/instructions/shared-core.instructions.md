@@ -34,6 +34,31 @@ The thresholds `>= 65` / `>= 40` were hardcoded identically in every file. If th
 | View metadata (routes, components, CSS) | `src/core/view-meta.js` |
 | View component registration | `src/core/view-routes.jsx` |
 | Protocol data hook (protocols + runs + name lookup) | `src/core/useProtocolData.js` |
+| Signal display model (signal/tone/state/pct from a score row) | `src/core/score-display.js` — `buildScoreDisplay()` |
+| Signal badge component (render a signal from the view model) | `src/components/SignalBadge.jsx` |
+
+---
+
+## 🧠 Design principle — "establish output once"
+
+Pages must NOT decide signal classification, tradeability state, tone, arrow, or
+percentage locally. ONE function makes those decisions:
+
+- `src/core/score-display.js` — `buildScoreDisplay(raw)` turns a raw score payload
+  (from `/api/scoring/runs` or `/api/scoring/breakdown`) into ONE view model:
+  `{ signal, tone, arrow, state, frozen, score, scoreMax, pct, opportunityScore,
+     opportunityMax, opportunityPct, marketStatus }`.
+- `src/components/SignalBadge.jsx` — the ONE component that renders a signal from
+  that view model: `<SignalBadge display={vm} />`.
+
+Rules:
+1. **Server owns classification.** `signal` comes from `breakdown.signal`. Never
+   re-threshold a percentage client-side — `signalBadge(pct)` is banned.
+2. **Tradability is decided once.** `buildScoreDisplay()` derives `state`
+   (LIVE | PAUSED | STALE | UNSCORED) from `marketStatus`. A frozen row is rendered
+   muted ("⏸ PAUSED") on EVERY page — never a confident green BUY.
+3. **Migrate incrementally.** When touching any page that computes `pct`, `closed`,
+   tone, or a badge locally, switch it to `buildScoreDisplay()` + `<SignalBadge>`.
 
 ---
 

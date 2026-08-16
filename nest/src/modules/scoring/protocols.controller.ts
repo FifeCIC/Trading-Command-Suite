@@ -10,6 +10,7 @@
 import { Controller, Get, Post, Put, Patch, Delete, Param, Body, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DirectivesService } from '../directives/directives.service';
+import { DirectiveConfigService } from './directive-config.service';
 import { ScoringSchedulerService } from './scoring-scheduler.service';
 import { resolveDirectiveCatalog } from '../strategies/strategies.controller';
 
@@ -46,6 +47,7 @@ export class ProtocolsController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly directivesService: DirectivesService,
+    private readonly configService: DirectiveConfigService,
     private readonly schedulerService: ScoringSchedulerService,
   ) {}
 
@@ -213,6 +215,95 @@ export class ProtocolsController {
     const versionHistory: Array<{ version: string; changedAt: string; changes: string }> = [];
 
     return { protocol, directives: directiveList, versionHistory };
+  }
+
+  // ── Per-protocol directive config (Phase 5 — #609) ────
+
+  /**
+   * GET /api/scoring/protocols/:slug/directive-config
+   * Effective directive weights for a protocol: global default vs protocol override.
+   */
+  @Get(':slug/directive-config')
+  async getProtocolDirectiveConfig(@Param('slug') slug: string) {
+    const directives: Array<{
+      id: string;
+      name: string;
+      classMaxScore: number;
+      globalMaxScore: number;
+      effectiveMaxScore: number;
+      source: 'override' | 'global';
+    }> = [];
+
+    if (!this.prisma.isAvailable) {
+      return { slug, directives, totalWeight: 0 };
+    }
+
+    const proto = await (this.prisma as any).protocol.findUnique({
+      where: { slug },
+      include: { directiveGroups: { include: { directives: true } } },
+    });
+
+    if (!proto) return { slug, directives, totalWeight: 0 };
+
+    const overrides = await this.configService.getProtocolOverrides(slug);
+
+    // Flatten + dedupe directive ids across groups, preserving group order.
+    const seen = new Set<string>();
+    const entries: Array<{ id: string; maxScore: number }> = [];
+    for (const dg of proto.directiveGroups) {
+      for (const de of dg.directives) {
+        if (seen.has(de.directiveId)) continue;
+        seen.add(de.directiveId);
+        entries.push({ id: de.directiveId, maxScore: de.maxScore });
+      }
+    }
+
+    let totalWeight = 0;
+    for (const e of entries) {
+      const impl = this.directivesService.get(e.id);
+      const classMaxScore = impl?.maxScore ?? e.maxScore ?? 100;
+      const globalCfg = await this.configService.getConfig(e.id);
+      const globalMaxScore = globalCfg.maxScore ?? classMaxScore;
+      const override = overrides.get(e.id);
+      const effectiveMaxScore = override?.maxScore ?? globalMaxScore;
+      totalWeight += effectiveMaxScore;
+      directives.push({
+        id: e.id,
+        name: impl?.name ?? e.id,
+        classMaxScore,
+        globalMaxScore,
+        effectiveMaxScore,
+        source: override?.maxScore !== undefined ? 'override' : 'global',
+      });
+    }
+
+    return { slug, directives, totalWeight };
+  }
+
+  /**
+   * PATCH /api/scoring/protocols/:slug/directive-config
+   * Write a per-protocol override: { directiveId, config: { maxScore, ... } }
+   */
+  @Patch(':slug/directive-config')
+  async updateProtocolDirectiveConfig(
+    @Param('slug') slug: string,
+    @Body() body: { directiveId: string; config: Record<string, any> },
+  ) {
+    await this.configService.updateProtocolConfig(slug, body.directiveId, body.config as any);
+    return this.getProtocolDirectiveConfig(slug);
+  }
+
+  /**
+   * DELETE /api/scoring/protocols/:slug/directive-config/:directiveId
+   * Remove the override — the directive falls back to its global default.
+   */
+  @Delete(':slug/directive-config/:directiveId')
+  async resetProtocolDirectiveConfig(
+    @Param('slug') slug: string,
+    @Param('directiveId') directiveId: string,
+  ) {
+    await this.configService.deleteProtocolConfig(slug, directiveId);
+    return this.getProtocolDirectiveConfig(slug);
   }
 
   /**
