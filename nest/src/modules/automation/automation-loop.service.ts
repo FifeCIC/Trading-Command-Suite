@@ -48,6 +48,7 @@ import { MarketDataService } from '../market-data/market-data.service';
 import { BarRefreshService } from '../market-data/bar-refresh.service';
 import { AuditLogService } from './audit-log.service';
 import { JobQueueService } from './job-queue.service';
+import { AbTestService } from './ab-test.service';
 import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { PositionSyncService } from '../providers/position-sync.service';
 import { WeekendDefenseService } from '../trading/weekend-defense.service';
@@ -450,6 +451,7 @@ export class AutomationLoopService implements OnModuleInit {
     private readonly weekendDefense: WeekendDefenseService,
     private readonly symbolResolver: SymbolResolverService,
     private readonly jobQueue: JobQueueService,
+    private readonly abTestService: AbTestService,
   ) {
     this.initBrokerStates();
     // loadScoringStrategies() is deferred to onModuleInit (needs DB connection)
@@ -1151,6 +1153,14 @@ export class AutomationLoopService implements OnModuleInit {
         }
       }
 
+      // 3c. A/B test evaluation (#482) — when a test is active, score BOTH
+      //     stacks on the test symbols and dispatch side A / side B trades.
+      try {
+        await this.evaluateAbTest(decisions);
+      } catch (err) {
+        this.logger.warn(`A/B test evaluation failed: ${(err as Error).message}`);
+      }
+
       // 4. Evaluate active strategies — grouped by symbol to avoid redundant bar fetches & scoring.
       //    Uses gatedScoreCache populated by step 3b for any symbol+protocol already scored.
       const strategyIdsBySymbol = new Map<string, string[]>();
@@ -1211,6 +1221,104 @@ export class AutomationLoopService implements OnModuleInit {
 
     this.logger.log(`Tick #${this.state.tickCount} completed in ${this.state.lastTickMs}ms — ${decisions.length} decisions`);
     return decisions;
+  }
+
+  /**
+   * A/B test runner (#482) — when an active test exists, evaluate BOTH MetaStack
+   * snapshots (control vs variant) on the test symbols and dispatch side-tagged
+   * trades. Uses the same gated-scoring path as step 3b for fairness.
+   */
+  private async evaluateAbTest(decisions: TickDecision[]): Promise<void> {
+    const test = await this.abTestService.getActiveTest();
+    if (!test) return;
+
+    const snapshots = await this.prisma.metaStackSnapshot.findMany({
+      where: { id: { in: [test.controlStackId, test.variantStackId] } },
+    });
+    const control = snapshots.find((s) => s.id === test.controlStackId);
+    const variant = snapshots.find((s) => s.id === test.variantStackId);
+    if (!control || !variant) {
+      this.logger.warn(`A/B test "${test.name}": missing control or variant snapshot — skipping`);
+      return;
+    }
+
+    const controlCfg = (control.snapshot ?? {}) as any;
+    const variantCfg = (variant.snapshot ?? {}) as any;
+    const symbols = (Array.isArray(test.symbols) ? test.symbols : []) as string[];
+
+    for (const sym of symbols) {
+      const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: sym } });
+      if (!dbSym) continue;
+
+      const requiredBars = Math.max(
+        this.protocolDb.getRequiredBars(controlCfg.protocolId)?.['5m'] ?? 100,
+        this.protocolDb.getRequiredBars(variantCfg.protocolId)?.['5m'] ?? 100,
+      );
+      const bars = await this.marketData.getBars(dbSym.id, '5m', requiredBars);
+      if (!bars || bars.length < 20) continue;
+
+      // Score both stacks against the same symbol + bars.
+      const [scoreA, scoreB] = await Promise.all([
+        this.protocolGating.scoreWithGating(sym, bars, controlCfg.protocolId, undefined, controlCfg.weightStrategy ?? 'group-weighted'),
+        this.protocolGating.scoreWithGating(sym, bars, variantCfg.protocolId, undefined, variantCfg.weightStrategy ?? 'group-weighted'),
+      ]);
+
+      const brokerId = (controlCfg.brokerId ?? variantCfg.brokerId ?? 'mt5') as string;
+      const mode = (controlCfg.mode ?? variantCfg.mode ?? 'manual') as string;
+
+      const evalSide = async (side: 'A' | 'B', cfg: any, score: any): Promise<void> => {
+        if (!score || score.composite === undefined) return;
+        const threshold = cfg.tradeThreshold ?? 60;
+        const direction = score.signal === 'SELL' ? 'SELL' : 'BUY';
+        // A/B trades are BUY-side unless the protocol signals a clear SELL.
+        if (score.composite < threshold) {
+          decisions.push({
+            timestamp: new Date().toISOString(),
+            strategyId: `ab-test:${side}`,
+            symbol: sym,
+            brokerId,
+            decision: 'SCORED',
+            reason: `AB-${side} ${test.name}: composite=${score.composite} < threshold=${threshold}`,
+            composite: score.composite,
+            signal: score.signal ?? 'HOLD',
+          });
+          return;
+        }
+
+        const sideDir: 'BUY' | 'SELL' = direction === 'SELL' ? 'SELL' : 'BUY';
+        const entryPrice = bars[bars.length - 1]?.close ?? 0;
+        const result = await this.abTestService.dispatchSideTrade({
+          test,
+          side,
+          symbol: sym,
+          brokerId,
+          sideDir,
+          quantity: cfg.baseSize ?? 0.01,
+          slPct: cfg.slPct ?? 1.0,
+          tpPct: cfg.tpPct ?? 1.0,
+          entryPrice,
+          mode,
+        });
+
+        decisions.push({
+          timestamp: new Date().toISOString(),
+          strategyId: `ab-test:${side}`,
+          symbol: sym,
+          brokerId,
+          decision: result.success ? 'EXECUTED' : 'FAILED',
+          reason: result.success
+            ? `AB-${side} ${test.name}: ${sideDir} @ ${entryPrice} (${result.ticket ?? 'recorded'})`
+            : `AB-${side} ${test.name}: ${result.error ?? 'unknown'}`,
+          composite: score.composite,
+          signal: score.signal ?? 'BUY',
+          ticket: result.ticket,
+          price: result.price,
+        });
+      };
+
+      await evalSide('A', controlCfg, scoreA);
+      await evalSide('B', variantCfg, scoreB);
+    }
   }
 
   private async evaluateStrategy(

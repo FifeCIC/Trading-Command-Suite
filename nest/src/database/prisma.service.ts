@@ -96,6 +96,21 @@ export class PrismaService
         INDEX idx_scheduled_job_status_runAt (status, runAt),
         INDEX idx_scheduled_job_type (type)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      // A/B Test Runner (#482) — additive, safe every boot.
+      `CREATE TABLE IF NOT EXISTS ab_test (
+        id VARCHAR(36) NOT NULL PRIMARY KEY,
+        name VARCHAR(200) NOT NULL,
+        controlStackId VARCHAR(36) NOT NULL,
+        variantStackId VARCHAR(36) NOT NULL,
+        symbols JSON NULL,
+        startAt DATETIME(3) NULL,
+        endAt DATETIME(3) NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'draft',
+        results JSON NULL,
+        createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+        INDEX idx_ab_test_status (status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ];
 
     for (const sql of tables) {

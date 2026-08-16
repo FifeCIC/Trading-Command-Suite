@@ -1799,3 +1799,21 @@ model ScheduledJob {
   @@index([type])
   @@map("scheduled_job")
 }
+
+// A/B Test Runner (#482) — run two MetaStack snapshots side-by-side.
+model AbTest {
+  id             String    @id @default(uuid()) @db.VarChar(36)
+  name           String    @db.VarChar(200)
+  controlStackId String    @db.VarChar(36) // MetaStackSnapshot id (side A)
+  variantStackId String    @db.VarChar(36) // MetaStackSnapshot id (side B)
+  symbols        Json                       // string[] (max 4)
+  startAt        DateTime?
+  endAt          DateTime?
+  status         String    @default("draft") @db.VarChar(20) // draft | running | complete | cancelled
+  results        Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status])
+  @@map("ab_test")
+}
