@@ -11,6 +11,7 @@ import { CalendarModule } from '../calendar/calendar.module';
 import { SymbolDataCacheService } from './symbol-data-cache.service';
 import { ProtocolRunnerService } from './protocol-runner.service';
 import { ExecutionQueueService } from './execution-queue.service';
+import { JobQueueService } from './job-queue.service';
 import { MultiProtocolRankingService } from './multi-protocol-ranking.service';
 import { TimelineService } from './timeline.service';
 import { AutomationLoopService } from './automation-loop.service';
@@ -28,6 +29,7 @@ import { TimelineController } from './timeline.controller';
     SymbolDataCacheService,
     ProtocolRunnerService,
     ExecutionQueueService,
+    JobQueueService,
     MultiProtocolRankingService,
     TimelineService,
     AutomationLoopService,
@@ -38,6 +40,7 @@ import { TimelineController } from './timeline.controller';
     SymbolDataCacheService,
     ProtocolRunnerService,
     ExecutionQueueService,
+    JobQueueService,
     MultiProtocolRankingService,
     TimelineService,
     AutomationLoopService,

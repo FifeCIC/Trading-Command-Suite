@@ -76,9 +76,26 @@ export class PrismaService
    */
   private async bootstrapSchema(): Promise<void> {
     const tables = [
-      // Bootstrap placeholder — DecisionTrail is now managed by Prisma (#475).
-      // Add future tables here that Prisma db push cannot safely create
-      // (e.g. due to pre-existing conflicts like automation_rule).
+      // Unified Job Queue (#614) — created here so `prisma db push` never
+      // needs to touch pre-existing tables. Additive-only, safe every boot.
+      `CREATE TABLE IF NOT EXISTS scheduled_job (
+        id VARCHAR(36) NOT NULL PRIMARY KEY,
+        type VARCHAR(50) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'queued',
+        priority INT NOT NULL DEFAULT 50,
+        runAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        recurrence VARCHAR(20) NULL,
+        recurrenceMs INT NULL,
+        payload JSON NULL,
+        attempts INT NOT NULL DEFAULT 0,
+        maxAttempts INT NOT NULL DEFAULT 3,
+        lastRunAt DATETIME(3) NULL,
+        lastError TEXT NULL,
+        createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+        INDEX idx_scheduled_job_status_runAt (status, runAt),
+        INDEX idx_scheduled_job_type (type)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ];
 
     for (const sql of tables) {

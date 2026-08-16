@@ -47,6 +47,7 @@ import { DirectivesService } from '../directives/directives.service';
 import { MarketDataService } from '../market-data/market-data.service';
 import { BarRefreshService } from '../market-data/bar-refresh.service';
 import { AuditLogService } from './audit-log.service';
+import { JobQueueService } from './job-queue.service';
 import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { PositionSyncService } from '../providers/position-sync.service';
 import { WeekendDefenseService } from '../trading/weekend-defense.service';
@@ -448,6 +449,7 @@ export class AutomationLoopService implements OnModuleInit {
     private readonly positionSync: PositionSyncService,
     private readonly weekendDefense: WeekendDefenseService,
     private readonly symbolResolver: SymbolResolverService,
+    private readonly jobQueue: JobQueueService,
   ) {
     this.initBrokerStates();
     // loadScoringStrategies() is deferred to onModuleInit (needs DB connection)
@@ -872,6 +874,11 @@ export class AutomationLoopService implements OnModuleInit {
     this.gatedScoreCache.clear();
     this.protocolDb.clearCache();
     this.auditLog.logTickStart(this.state.tickCount);
+
+    // Phase 0 job queue (#614) — poll due jobs once per tick.
+    // Non-blocking best-effort: the queue has its own retry/backoff.
+    this.jobQueue.pollDueJobs().catch(err =>
+      this.logger.warn(`Job queue poll failed: ${(err as Error).message}`));
 
     // Collect positions across all brokers for scoring + snapshot
     let allPositions: any[] = [];
