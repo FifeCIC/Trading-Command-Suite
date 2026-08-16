@@ -58,7 +58,7 @@ export class SupportResistanceLevelsDirective implements IDirective {
     }
 
     if (swingLows.length === 0 && swingHighs.length === 0) {
-      return { signalClass: 'neutral', score: 35, confidence: 0.2, reason: 'No clear support or resistance levels detected in lookback window.' };
+      return { signalClass: 'neutral', score: 0, confidence: 0.2, reason: 'No clear support or resistance levels detected in lookback window.' };
     }
 
     const currentPrice = bars[bars.length - 1].close;
@@ -115,7 +115,7 @@ export class SupportResistanceLevelsDirective implements IDirective {
     const resistLabel = Number.isFinite(resistDist) ? `${resistDist.toFixed(1)}% above` : 'none above';
     return {
       signalClass: 'neutral',
-      score: 38,
+      score: 0,
       confidence: 0.3,
       reason: `Mid-range: support ${supportLabel}, resistance ${resistLabel}. ${swingLows.length} supports, ${swingHighs.length} resistances found.`,
     };

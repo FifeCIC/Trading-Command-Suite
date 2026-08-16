@@ -326,6 +326,38 @@
   font-variant-numeric: tabular-nums;
 }
 
+.pt-summary-score-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent, #0ea5a6);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-family: var(--font-sans, inherit);
+  margin-right: 0.35rem;
+}
+
+.pt-summary-opp {
+  margin-top: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.pt-directive-excluded {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft);
+  background: color-mix(in srgb, var(--ink-soft) 12%, transparent);
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: 0.4rem;
+  cursor: help;
+  white-space: nowrap;
+}
+
 .pt-summary-tags {
   display: flex;
   align-items: center;

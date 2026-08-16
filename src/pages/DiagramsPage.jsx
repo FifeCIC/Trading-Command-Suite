@@ -7,6 +7,33 @@ mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' }
 
 const DIAGRAMS = [
   {
+    id: 'scoring-dual-score',
+    label: 'Dual-Score Scoring Model (Opportunity vs Signal)',
+    desc: 'SEES emits TWO scores instead of one muddled number. Opportunity = additive "everything counts" (direction + conditions + forecasts + liquidity) for ranking/screening across the universe — "find the golden needle in a haystack of silver needles". Signal = directional conviction only (which way, how strongly, right now) for timing — drives BUY/HOLD/SELL and the automation loop. Gates multiply/veto the Signal; neutral conditions count only in Opportunity. Full design: docs/scoring-architecture.md (GH #638).',
+    code: `flowchart TB
+    subgraph Inputs["Directives (all groups)"]
+        DIR["Directional<br/>rsi, momentum, S/R, macro,<br/>analyst, earnings"]
+        CON["Conditions<br/>session quality, volatility,<br/>volume, squeeze"]
+        GATE["Gates<br/>liquidity, budget, regime"]
+    end
+    subgraph Scores["Two Scores"]
+        OPP["OPPORTUNITY<br/>= sum of ALL directive scores<br/>(everything counts)"]
+        SIG["SIGNAL<br/>= sum of directional scores only<br/>(signalClass bullish / bearish)"]
+    end
+    subgraph Use["Two Questions"]
+        U1["Which is the best opportunity?<br/>rank / screen the universe"]
+        U2["Is now the moment, which way?<br/>timing + BUY / HOLD / SELL"]
+    end
+    DIR --> OPP
+    CON --> OPP
+    DIR --> SIG
+    GATE -. "multiply / veto" .-> SIG
+    OPP --> U1
+    SIG --> U2
+    style OPP fill:#0f3460,stroke:#0ea5a6,color:#fff
+    style SIG fill:#16213e,stroke:#22c55e,color:#fff`,
+  },
+  {
     id: 'sees-research',
     label: 'SEES Research Phase',
     desc: 'Data from 10 providers feeds 99+ directives grouped into Technical, Sentiment, and Risk categories. Risk directives multiplicatively gate Tech+Sentiment scores (0.3xâ€“1.2x). Calibration applies symbol-specific weight overrides. Output is a normalized percentage of maxPossibleScore (unbounded, not capped at 100).',

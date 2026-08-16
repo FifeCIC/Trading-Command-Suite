@@ -26,7 +26,8 @@ import {
   DIRECTIVE_GROUPS,
   DirectiveGroup,
 } from '../directives/directive-groups';
-import { classifyDirectiveInclusion } from '../directives/directive-inclusion';
+import { classifyDirectiveInclusion, isDirectiveReady } from '../directives/directive-inclusion';
+import { computeMarketStatus } from '../directives/market-status';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { MacroSnapshotService } from './macro-snapshot.service';
 import { EurUsdCacheService } from './eurusd-cache.service';
@@ -75,6 +76,8 @@ export interface DirectiveBreakout {
   signalClass: string;
   reason: string;
   groupId: string;
+  /** True when this directive contributed to the directional Signal score (Phase C). */
+  inSignal: boolean;
 }
 
 export type RarityBand = 'standard' | 'strong' | 'exceptional' | 'cyclical' | 'black-swan';
@@ -100,6 +103,11 @@ export interface GatedScore {
   riskMultiplier: number;
   breakouts: Record<string, DirectiveBreakout[]>;
   gatingActive: boolean;
+  /** Opportunity score (Phase C dual-score model) — the additive "everything counts"
+   *  total used for SCREENING / ranking across symbols. Includes gates + conditions. */
+  opportunityScore: number;
+  opportunityMax: number;
+  opportunityPct: number;
   rarity?: RarityInfo;
   riskGate?: {
     hardGateTriggered: boolean;
@@ -117,6 +125,18 @@ export interface GatedScore {
     weightStrategy: 'group-weighted' | 'maxscore-weighted';
     /** Readiness tier counts: ready/beta/alpha. Alpha directives are excluded from scoring. */
     readinessBreakdown: { ready: number; beta: number; alpha: number; alphaExcluded: number };
+  };
+  /** Readiness gate (#627) — protocols are only eligible when every included directive is ready. */
+  readinessGate?: {
+    ready: boolean;
+    blockers: { directiveId: string; name: string; readiness: string }[];
+    reason?: string;
+  };
+  /** Market-open status (#638 phase A) — whether the symbol's market is producing fresh data. */
+  marketStatus?: {
+    open: boolean;
+    asOf: string | null;
+    reason?: string;
   };
   /** Directives excluded from the composite due to ALPHA readiness. */
   excludedBreakdown: { directiveId: string; name: string; reason: string }[];
@@ -287,6 +307,7 @@ export class ProtocolGatingService {
     // 3. Group results with maxScore from directive registry
     const groups = new Map<string, { results: DirectiveResult[]; config: DirectiveGroup; maxScores: Map<string, number> }>();
     const excludedBreakdown: { directiveId: string; name: string; reason: string }[] = [];
+    const readinessBlockers: { directiveId: string; name: string; readiness: string }[] = [];
     let alphaCount = 0;
     let betaCount = 0;
     let readyCount = 0;
@@ -316,7 +337,10 @@ export class ProtocolGatingService {
 
         // Included: count readiness tier for reporting.
         const readiness = (directive as any)?.readiness ?? 'alpha';
-        if (readiness === 'beta') betaCount++;
+        if (readiness === 'beta') {
+          betaCount++;
+          readinessBlockers.push({ directiveId, name: directive?.name ?? directiveId, readiness });
+        }
         if (readiness === 'ready') readyCount++;
 
         groupResults.push(result);
@@ -326,14 +350,21 @@ export class ProtocolGatingService {
       groups.set(group.id, { results: groupResults, config: group, maxScores });
     }
 
-    // 3. Compute group sub-scores (raw-total percentage of max possible)
-    // Each directive contributes its RAW score (not normalized to 0-100 first).
-    // Group score = (sum of raw scores / sum of maxScores) × 100.
-    // This preserves directive weight: a maxScore=180 directive naturally
-    // contributes more than a maxScore=90 one.
+    // 3. Compute group sub-scores. Two scores coexist (Phase C dual-score model):
+    //
+    //   SIGNAL      — directional conviction (the timing number). Only
+    //                 directives emitting a directional signalClass (bullish/
+    //                 bearish) in a non-gate group contribute. Gates and
+    //                 direction-neutral conditions are excluded.
+    //   OPPORTUNITY — additive "everything counts" (the screening number).
+    //                 Every directive (including gates + neutral conditions)
+    //                 contributes, like the pre-Phase-C composite. Used to
+    //                 rank attractiveness across a universe.
     const subScores: Record<string, number> = {};
     const subRawTotals: Record<string, number> = {};
     const subMaxTotals: Record<string, number> = {};
+    const oppRawTotals: Record<string, number> = {};
+    const oppMaxTotals: Record<string, number> = {};
     const breakouts: Record<string, DirectiveBreakout[]> = {};
 
     for (const [groupId, { results, config, maxScores }] of groups) {
@@ -343,17 +374,33 @@ export class ProtocolGatingService {
         subScores[groupId] = 0; // No active directives = no contribution
         subRawTotals[groupId] = 0;
         subMaxTotals[groupId] = 0;
+        oppRawTotals[groupId] = 0;
+        oppMaxTotals[groupId] = 0;
         continue;
       }
 
-      let rawSum = 0;
-      let maxSum = 0;
+      const isGateGroup = config.isRiskGate === true;
+      let signalRaw = 0;
+      let signalMax = 0;
+      let oppRaw = 0;
+      let oppMax = 0;
 
       for (const result of results) {
         const directiveId = this.findDirectiveId(allResults, result);
         const maxScore = directiveId ? (maxScores.get(directiveId) ?? 100) : 100;
-        rawSum += result.score;
-        maxSum += maxScore;
+        const directional =
+          result.signalClass === 'bullish' || result.signalClass === 'bearish';
+        const inSignal = !isGateGroup && directional;
+
+        // Opportunity: everything counts.
+        oppRaw += result.score;
+        oppMax += maxScore;
+
+        // Signal: directional only.
+        if (inSignal) {
+          signalRaw += result.score;
+          signalMax += maxScore;
+        }
 
         const directive = directiveId ? this.directivesService.get(directiveId) : null;
 
@@ -366,14 +413,16 @@ export class ProtocolGatingService {
           signalClass: result.signalClass ?? 'neutral',
           reason: result.reason,
           groupId,
+          inSignal,
         });
       }
 
-      // Group percentage = sum of raw scores / sum of maxScores × 100
-      const groupPct = maxSum > 0 ? (rawSum / maxSum) * 100 : 0;
-      subScores[groupId] = Math.round(groupPct);
-      subRawTotals[groupId] = rawSum;
-      subMaxTotals[groupId] = maxSum;
+      // Signal group % = directional raw / directional max.
+      subScores[groupId] = signalMax > 0 ? Math.round((signalRaw / signalMax) * 100) : 0;
+      subRawTotals[groupId] = signalRaw;
+      subMaxTotals[groupId] = signalMax;
+      oppRawTotals[groupId] = oppRaw;
+      oppMaxTotals[groupId] = oppMax;
     }
 
     // 4. Apply tiered risk gating via RiskGatingEngine
@@ -385,38 +434,35 @@ export class ProtocolGatingService {
       reason: b.reason,
     }));
 
-    // 5. Compute composite — SIMPLE ADDITIVE SUM.
+    // 5. Compute both scores (Phase C dual-score model).
     //
-    // The composite is the plain sum of ALL directive raw scores across every
-    // group (technical + sentiment + risk). No group weights, no multiplier.
-    // A directive scoring 102/120 contributes 102, full stop.
-    //
-    // The max is the plain sum of all directive maxScores (already in
-    // subMaxTotals). So a score of 744 against max 1560 means "744 of 1560
-    // possible points" — transparent, nothing watered down.
-    //
-    // RISK: hard gates (e.g. liquidity catastrophe, budget veto) can still
-    // force composite = 0. But soft risk modifiers (spread, VIX missing, etc.)
-    // are reported as warnings and do NOT reduce the composite. This keeps
-    // risk visible without silently shaving the signal.
+    // SIGNAL (composite): directional conviction, risk-gated. Drives the
+    //   BUY/HOLD/SELL classification and the automation loop.
+    // OPPORTUNITY: additive "everything counts", for screening/ranking.
     let totalRaw = 0;
     for (const groupId of Object.keys(subRawTotals)) {
       totalRaw += subRawTotals[groupId] ?? 0;
     }
 
+    let opportunityScore = 0;
+    for (const groupId of Object.keys(oppRawTotals)) {
+      opportunityScore += oppRawTotals[groupId] ?? 0;
+    }
+    const opportunityMax = Object.values(oppMaxTotals).reduce((a, b) => a + (b ?? 0), 0);
+    const opportunityPct = opportunityMax > 0 ? (opportunityScore / opportunityMax) * 100 : 0;
+
     const riskResult = this.riskEngine.apply(totalRaw, riskDirectives);
 
+    const directionalSum = Math.max(0, totalRaw);
     const composite = riskResult.hardGateTriggered
       ? 0
-      : Math.round(Math.max(0, totalRaw));
+      : Math.round(Math.max(0, riskResult.finalScore));
 
-    // #337: Signal classification — PERCENTAGE-BASED (2026-08-13).
-    // The composite is now a simple raw sum. Signal thresholds are percentages
-    // of the protocol's own maxScore, so custom protocols of any size share
-    // the same semantics (see threshold block above).
+    // Signal-strength percentage: pre-gate directional sum against the
+    // directional-only denominator (un-softened by the risk multiplier).
     const STRONG_PCT = 80; // % of maxScore for STRONG_BUY / STRONG_SELL
     const totalMax = Object.values(subMaxTotals).reduce((a, b) => a + (b ?? 0), 0);
-    const compositePct = totalMax > 0 ? (composite / totalMax) * 100 : 0;
+    const compositePct = totalMax > 0 ? (directionalSum / totalMax) * 100 : 0;
 
     let signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
     const isLongDirection = directionMode !== 'SHORT_ONLY';
@@ -438,6 +484,19 @@ export class ProtocolGatingService {
     // Rarity: compute percentile against historical scores for this protocol
     const rarity = await this.computeRarity(protocolId ?? 'default', symbol, composite);
 
+    // Market status (#638 phase A) — whether the symbol's market is producing fresh data.
+    const marketStatus = computeMarketStatus(bars);
+
+    // Readiness gate (#627): a protocol is only eligible when every included
+    // directive is 'ready'. Beta directives are blockers.
+    const readinessGate = {
+      ready: readinessBlockers.length === 0,
+      blockers: readinessBlockers,
+      reason: readinessBlockers.length
+        ? `protocol contains non-ready directives: ${readinessBlockers.map(b => `${b.directiveId} (${b.readiness})`).join(', ')}`
+        : undefined,
+    };
+
     // Store snapshot for future rarity computation (fire-and-forget)
     this.storeSnapshot(protocolId ?? 'default', symbol, composite, signal, rarity?.percentile ?? null, {
       subScores,
@@ -446,6 +505,11 @@ export class ProtocolGatingService {
       breakouts,
       riskMultiplier: Number(riskResult.multiplier),
       directionMode,
+      readinessGate,
+      marketStatus,
+      opportunityScore: Math.round(opportunityScore),
+      opportunityMax,
+      opportunityPct: Math.round(opportunityPct),
     });
 
     return {
@@ -458,6 +522,9 @@ export class ProtocolGatingService {
       riskMultiplier: Number(riskResult.multiplier),
       breakouts,
       gatingActive: true,
+      opportunityScore: Math.round(opportunityScore),
+      opportunityMax,
+      opportunityPct: Math.round(opportunityPct),
       rarity,
       riskGate: {
         hardGateTriggered: riskResult.hardGateTriggered,
@@ -478,6 +545,10 @@ export class ProtocolGatingService {
       },
       // ── Directives excluded from scoring due to ALPHA readiness ──
       excludedBreakdown,
+      // ── Readiness gate (#627) — protocol paused if any included directive is beta ──
+      readinessGate,
+      // ── Market status (#638 phase A) ──
+      marketStatus,
     };
   }
 
@@ -493,6 +564,40 @@ export class ProtocolGatingService {
     );
     // Sort by composite descending for stable ladder display (#432)
     return results.sort((a, b) => b.composite - a.composite);
+  }
+
+  /**
+   * Assess whether a protocol is READY to score (readiness gate #627).
+   * A protocol is only eligible when every INCLUDED directive has
+   * `readiness === 'ready'` — beta directives are blockers, alpha directives
+   * are already excluded from scoring and are NOT blockers.
+   */
+  async assessReadiness(protocolId: string): Promise<{
+    ready: boolean;
+    blockers: { directiveId: string; name: string; readiness: string }[];
+  }> {
+    const config = protocolId ? await this.protocolDb.findBySlug(protocolId) : null;
+    const groups = protocolId ? (config?.groups ?? DIRECTIVE_GROUPS) : DIRECTIVE_GROUPS;
+    const directionMode = config?.directionMode ?? 'LONG_ONLY';
+    const blockers: { directiveId: string; name: string; readiness: string }[] = [];
+
+    for (const group of groups) {
+      for (const directiveId of group.directiveIds) {
+        const directive = this.directivesService.get(directiveId);
+        if (!directive) continue;
+        // Only consider directives that would actually participate in scoring.
+        if (classifyDirectiveInclusion(directive, directionMode) !== 'included') continue;
+        if (!isDirectiveReady(directive)) {
+          blockers.push({
+            directiveId,
+            name: directive.name ?? directiveId,
+            readiness: (directive as any).readiness ?? 'alpha',
+          });
+        }
+      }
+    }
+
+    return { ready: blockers.length === 0, blockers };
   }
 
   /**
@@ -568,6 +673,11 @@ export class ProtocolGatingService {
       breakouts: Record<string, DirectiveBreakout[]>;
       riskMultiplier: number;
       directionMode: string;
+      readinessGate: { ready: boolean; blockers: { directiveId: string; name: string; readiness: string }[]; reason?: string };
+      marketStatus: { open: boolean; asOf: string | null; reason?: string };
+      opportunityScore: number;
+      opportunityMax: number;
+      opportunityPct: number;
     },
   ): void {
     // Write to score_snapshot (rarity history)
@@ -601,10 +711,26 @@ export class ProtocolGatingService {
               timestamp: new Date().toISOString(),
               directionMode: breakdownData.directionMode,
               riskMultiplier: breakdownData.riskMultiplier,
+              // Pre-gate raw composite — the actual signal strength before any
+              // hard gate (e.g. closed-market liquidity) forces composite to 0.
+              // The gate is a tradability check, not part of the score itself.
+              rawComposite: Object.values(breakdownData.subRawTotals).reduce((a: number, b: number) => a + (b ?? 0), 0),
+              // Directional denominator (Phase C #638) — sum of maxScores of the
+              // directives that actually counted. Used by the UI so `score/max`
+              // stays consistent now that neutral/gate maxScores are excluded.
+              rawMax: Object.values(breakdownData.subMaxTotals).reduce((a: number, b: number) => a + (b ?? 0), 0),
+              // Opportunity score (Phase C dual-score model) — additive
+              // "everything counts" total for SCREENING / ranking. Kept
+              // alongside the directional signal.
+              opportunityScore: breakdownData.opportunityScore,
+              opportunityMax: breakdownData.opportunityMax,
+              opportunityPct: breakdownData.opportunityPct,
               subScores: breakdownData.subScores,
               subRawTotals: breakdownData.subRawTotals,
               subMaxTotals: breakdownData.subMaxTotals,
               breakouts: breakdownData.breakouts,
+              readinessGate: breakdownData.readinessGate,
+              marketStatus: breakdownData.marketStatus,
             },
           },
         });

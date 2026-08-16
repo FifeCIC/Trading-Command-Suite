@@ -112,6 +112,6 @@ export class ObvDirective implements IDirective {
       };
     }
 
-    return { score: 30, confidence: 0.3, reason: 'OBV and price flat — no clear signal.' };
+    return { score: 0, confidence: 0.3, reason: 'OBV and price flat — no clear signal.' };
   }
 }

@@ -20,6 +20,7 @@ import {
   DirectiveResult,
   IDirective,
 } from '../interfaces/directive.interface';
+import { computeMarketStatus } from '../market-status';
 
 const MIN_BARS = 20;
 
@@ -46,6 +47,19 @@ export class LiquidityCheckDirective implements IDirective {
         score: 0,
         confidence: 0.1,
         reason: `Insufficient data: need ${MIN_BARS} bars, have ${bars.length}.`,
+        signalClass: 'neutral',
+      };
+    }
+
+    // Stale-data guard (2026-08-15): a frozen market (no new bars) is NOT
+    // "highly liquid". Zero CV/range/gaps here means "closed", not "perfect" —
+    // previously a closed market scored 100/100 "highly liquid".
+    const marketStatus = computeMarketStatus(bars);
+    if (!marketStatus.open) {
+      return {
+        score: 0,
+        confidence: 0.1,
+        reason: `Market closed — liquidity is not scored on stale data. ${marketStatus.reason ?? ''}`,
         signalClass: 'neutral',
       };
     }

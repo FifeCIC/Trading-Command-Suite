@@ -77,6 +77,7 @@ export class ProtocolGatingController {
       avgHoldTime?: string;
       winRateTarget?: string;
       idealFor?: string;
+      readiness?: { ready: boolean; blockers: Array<{ directiveId: string; name: string; readiness: string }> };
       // Set after construction by async resolveSymbols() below
       resolvedSymbols?: string[];
     }> = [];
@@ -120,6 +121,18 @@ export class ProtocolGatingController {
         ), 0,
       );
 
+      // Readiness gate (#627) — surface WHY a protocol is gated.
+      const readinessBlockers: { directiveId: string; name: string; readiness: string }[] = [];
+      for (const g of proto.groups) {
+        for (const did of g.directiveIds) {
+          if (!isIncluded(did)) continue;
+          const reg = this.directivesService.get(did);
+          if (reg && ((reg as any)?.readiness ?? 'alpha') !== 'ready') {
+            readinessBlockers.push({ directiveId: did, name: reg.name ?? did, readiness: (reg as any)?.readiness ?? 'alpha' });
+          }
+        }
+      }
+
       protocols.push({
         id,
         name: proto.name,
@@ -128,6 +141,7 @@ export class ProtocolGatingController {
         directiveCount: proto.groups.reduce((s, g) => s + g.directiveIds.filter(isIncluded).length, 0),
         maxScore,
         active: proto.active !== false,
+        readiness: { ready: readinessBlockers.length === 0, blockers: readinessBlockers },
         groups,
         tradingStyle: (proto as any).tradingStyle,
         recommendedTimeframe: (proto as any).recommendedTimeframe,
@@ -278,6 +292,9 @@ export class ProtocolGatingController {
         riskMultiplier: 0.5,
         breakouts: {},
         gatingActive: false,
+        opportunityScore: 0,
+        opportunityMax: 0,
+        opportunityPct: 0,
         meta: {
           compositePct: 0,
           maxScore: 0,

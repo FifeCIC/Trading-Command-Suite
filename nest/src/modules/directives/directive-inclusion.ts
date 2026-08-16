@@ -50,3 +50,14 @@ export function isDirectiveIncluded(
 ): boolean {
   return classifyDirectiveInclusion(directive, directionMode) === 'included';
 }
+
+/**
+ * A directive is "ready" when its readiness tier is exactly 'ready'.
+ * 'beta' and 'alpha' are not ready — used by the protocol readiness gate (#627):
+ * a protocol is only eligible to score when every INCLUDED directive is ready.
+ */
+export function isDirectiveReady(
+  directive: DirectiveLike | null | undefined,
+): boolean {
+  return (directive?.readiness ?? 'alpha') === 'ready';
+}

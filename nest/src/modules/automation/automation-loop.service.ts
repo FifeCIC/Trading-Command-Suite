@@ -1048,9 +1048,31 @@ export class AutomationLoopService implements OnModuleInit {
       // Results are cached in gatedScoreCache for potential future use by step 4.
       // ═══════════════════════════════════════════════════════════════════════
       const activeProtocols = await this.protocolDb.findAllActive();
-      this.logger.log(`  ${activeProtocols.length} active protocols loaded for scoring`);
 
-      for (const protoSlug of activeProtocols) {
+      // Readiness gate (#627): a protocol is only eligible to score when every
+      // included directive is 'ready'. Beta directives block the protocol.
+      const readyProtocols: string[] = [];
+      for (const slug of activeProtocols) {
+        try {
+          const readiness = await this.protocolGating.assessReadiness(slug);
+          if (readiness.ready) {
+            readyProtocols.push(slug);
+          } else {
+            this.logger.warn(
+              `  Protocol "${slug}" PAUSED — non-ready directives: ${readiness.blockers
+                .map((b) => `${b.directiveId} (${b.readiness})`)
+                .join(', ')}`,
+            );
+          }
+        } catch (e) {
+          this.logger.warn(`  Protocol "${slug}" readiness check failed: ${(e as Error).message}`);
+        }
+      }
+      this.logger.log(
+        `  ${readyProtocols.length} of ${activeProtocols.length} active protocols ready for scoring`,
+      );
+
+      for (const protoSlug of readyProtocols) {
         try {
           // Resolve symbols: single-symbol, watchlist, or auto-derived
           const symbols = await this.protocolDb.resolveSymbols(protoSlug);

@@ -285,7 +285,14 @@ export class BarRefreshService {
         if (!quote?.bid || !quote?.ask) continue;
 
         const midPrice = (quote.bid + quote.ask) / 2;
+        // Floor to the current 5m bucket so the synthetic bar matches the
+        // timestamp MT5 will use for the real closed bar. This makes the
+        // ON DUPLICATE KEY UPDATE hit the same row every refresh (instead of
+        // inserting a new flat bar every 5 min), and lets the real bar
+        // overwrite the placeholder once it closes.
         const now = new Date();
+        now.setUTCSeconds(0, 0);
+        now.setUTCMinutes(Math.floor(now.getUTCMinutes() / 5) * 5);
 
         await this.prisma.$executeRaw`
           INSERT INTO marketbar (id, symbolId, provider, timeframe, timestamp, open, high, low, close, volume)

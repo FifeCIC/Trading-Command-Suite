@@ -172,7 +172,16 @@ export class ScoreHistoryService {
       avgScore: number;
       signalSummary: { buy: number; sell: number; neutral: number };
       topSymbol: { ticker: string; value: number } | null;
-      scores: Array<{ ticker: string; value: number; confidence: number }>;
+      scores: Array<{
+        ticker: string;
+        value: number;
+        confidence: number;
+        rawComposite: number | null;
+        rawMax: number | null;
+        opportunityScore: number | null;
+        opportunityMax: number | null;
+        marketStatus: { open: boolean; asOf: string | null; reason?: string } | null;
+      }>;
     }>;
     total: number;
     page: number;
@@ -321,6 +330,15 @@ export class ScoreHistoryService {
             ticker: (e as any).symbol?.ticker || e.symbolId,
             value: e.value,
             confidence: 0,
+            // Pre-gate raw composite + tradability status (#638). The stored
+            // `value` is the FINAL gated composite — a closed market hard-gates
+            // it to 0 even though the protocol produced a real signal. Ladders
+            // surface that as a status, not as a red zero.
+            rawComposite: (e as any).breakdown?.rawComposite ?? null,
+            rawMax: (e as any).breakdown?.rawMax ?? null,
+            opportunityScore: (e as any).breakdown?.opportunityScore ?? null,
+            opportunityMax: (e as any).breakdown?.opportunityMax ?? null,
+            marketStatus: (e as any).breakdown?.marketStatus ?? null,
           })),
         };
       })
@@ -548,6 +566,9 @@ export class ScoreHistoryService {
    */
   async getLatestProtocolScore(protocolId: string): Promise<{
     value: number;
+    maxScore: number | null;
+    opportunityScore: number | null;
+    opportunityMax: number | null;
     symbolTicker: string;
     timestamp: string;
     breakdown: any;
@@ -562,8 +583,23 @@ export class ScoreHistoryService {
 
     if (!row) return null;
 
+    // Prefer the pre-gate raw composite when present. The stored `value` is the
+    // FINAL gated composite — which a closed-market tradability gate zeroes out
+    // even though the protocol still produced a real signal strength. The
+    // Registry should show the score, not the gate result.
+    const rawComposite = (row.breakdown as any)?.rawComposite;
+    // Directional denominator (Phase C) — the score's own max, so `score/max`
+    // stays consistent now that neutral/gate maxScores are excluded.
+    const rawMax = (row.breakdown as any)?.rawMax;
+    // Opportunity score (Phase C dual-score model) — additive screening total.
+    const opportunityScore = (row.breakdown as any)?.opportunityScore ?? null;
+    const opportunityMax = (row.breakdown as any)?.opportunityMax ?? null;
+
     return {
-      value: row.value,
+      value: typeof rawComposite === 'number' ? rawComposite : row.value,
+      maxScore: typeof rawMax === 'number' ? rawMax : null,
+      opportunityScore: typeof opportunityScore === 'number' ? opportunityScore : null,
+      opportunityMax: typeof opportunityMax === 'number' ? opportunityMax : null,
       symbolTicker: (row as any).symbol?.ticker || row.symbolId,
       timestamp: row.timestamp.toISOString(),
       breakdown: row.breakdown,

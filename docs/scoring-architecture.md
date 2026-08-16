@@ -1,190 +1,126 @@
-# Directive Scoring Architecture
+# Scoring Architecture — Dual-Score Model
 
-> **Status:** Design doc — evolving  
-> **Last updated:** 2026-08-11  
-> **GitHub Issue:** [#608](https://github.com/FifeCIC/Trading-Command-Suite/issues/608)
+> **Status:** Live (2026-08-16) · **Source of truth:** `nest/src/modules/scoring/protocol-gating.service.ts`
+> **GitHub Issue:** [#638](https://github.com/FifeCIC/Trading-Command-Suite/issues/638) "Scoring architecture: separate gates from scores"
 
----
-
-## Core Formula
-
-```
-Score = weightPortion + rawFeedback
-```
-
-| Component | Type | Purpose | Example (RSI=5, bullish, weight=140) |
-|-----------|------|---------|------|
-| **weightPortion** | Math | Rewards the perfect market moment. Derived from Weight × curve(marketValue). | 140 × 1.0 = 140 |
-| **rawFeedback** | Numeric | The indicator's current reading. Constant micro-movement every tick. Confirms the directive is alive. | 5 |
-| **Total** | | | **145** |
-
-### Curve function
-
-```javascript
-// For bullish (scores high when value is LOW):
-weightPortion = weight × (1 − value/scaleMax)^steepness
-
-// For bearish (scores high when value is HIGH):
-weightPortion = weight × (value/scaleMax)^steepness
-
-// With floor — never returns < minScore (typically 1):
-weightPortion = Math.max(minScore, weightPortion)
-```
-
-### Variables the user can adjust
-
-| Variable | Meaning | Stored in | Example |
-|----------|---------|-----------|---------|
-| `weight` | Maximum score this directive can award for perfect conditions | DB key-value | 140 |
-| `scaleMax` | The indicator's ceiling value | DB key-value | 80 (RSI), 1.5 (VI) |
-| `steepness` | How aggressively weight concentrates at extremes | DB key-value | 1.5–2.0 |
-| `minScore` | Floor value — always returns at least this | DB key-value | 1 |
-| `directionBias` | Whether the directive is bullish, bearish, or neutral | Directive class | 'bullish' |
+> This document **replaces** the earlier `weightPortion + rawFeedback` draft (issue #608),
+> which described an aspirational per-directive formula that was never what the code computed.
 
 ---
 
-## Directive Categories
+## The core idea: two questions, two scores
 
-### Category 1 — Oscillator (bounded scale)
+A trading system asks **two different questions**, and they deserve **two different numbers**:
 
-**Fits the curve formula.** Has a known maximum value (0–80, 0–100, 0.5–1.5).
+| Question | Score | Answer it gives |
+|----------|-------|-----------------|
+| **"Which symbol is the best opportunity?"** | **Opportunity Score** | Rank across a universe — "find the golden needle in a haystack of silver needles" |
+| **"Is *now* the right moment for *this* symbol, and which way?"** | **Signal** | Timing + direction for a single symbol |
 
-| Directive | Scale Max | Direction |
-|-----------|-----------|-----------|
-| RSI (oversold) | 80 | bullish |
-| RSI (overbought) | 80 | bearish |
-| CCI | 100 | bearish |
-| Stochastic | 100 | neutral |
-| MFI | 100 | neutral |
-| Williams %R | 100 | bearish |
-| Volatility Index | 1.5 | neutral |
-| Bollinger %B | 1.0 | neutral |
-| ADX | 100 | neutral |
-
-**Template:**
-```typescript
-readonly category = 'oscillator';
-readonly weight = 100;        // DB-overridable
-readonly scaleMax = 80;       // DB-overridable
-readonly steepness = 2.0;     // DB-overridable
-
-calculate(input: DirectiveInput): DirectiveResult {
-  const value = this.getIndicatorValue(input.bars);
-  const pct = Math.pow(1 - value / this.scaleMax, this.steepness);
-  const weightPortion = Math.max(1, Math.round(this.weight * pct));
-  const score = weightPortion + Math.round(value);
-  return { score, confidence: ..., reason: ... };
-}
-```
-
-### Category 2 — Ratio / Unbounded
-
-**No fixed scale.** Uses hardcoded branch thresholds. Ratio can spike unpredictably (A/D ratio, volume surge ratio).
-
-| Directive | Type |
-|-----------|------|
-| accumulation-dist | A/D ratio trend |
-| accumulation-distribution | A/D ratio |
-| volume-surge | Volume ratio |
-| gap-scanner | Gap size ratio |
-
-**Template:**
-```typescript
-readonly category = 'ratio';
-
-calculate(input: DirectiveInput): DirectiveResult {
-  const ratio = this.computeRatio(input.bars);
-  // Hardcoded branches based on ratio thresholds
-  if (ratio > 0.3) return { score: this.weight, ... };
-  if (ratio > 0)   return { score: Math.round(this.weight * 0.7), ... };
-  // ...
-}
-```
-
-### Category 3 — Pattern / Binary
-
-**Detects a specific formation or event.** Returns a flat score or zero. No scale, no curve.
-
-| Directive | Type |
-|-----------|------|
-| doji-pattern | Candlestick pattern |
-| engulfing-pattern | Candlestick pattern |
-| hammer-pattern | Candlestick pattern |
-| fair-value-gap | ICT pattern |
-| santa-claus-rally | Calendar event |
-| january-effect | Calendar event |
-| election-cycle | Calendar event |
-
-**Template:**
-```typescript
-readonly category = 'pattern';
-
-calculate(input: DirectiveInput): DirectiveResult {
-  const detected = this.detect(input.bars);
-  if (detected) return { score: this.weight, confidence: detected.confidence, ... };
-  return { score: this.minScore, confidence: 0.1, reason: 'No pattern detected' };
-}
-```
-
-### Category 4 — Structural / Gate
-
-**Risk gates, budget checks, structural analysis.** Not scored for signal — they gate or modify other scores.
-
-| Directive | Type |
-|-----------|------|
-| budget-gate | Risk gate |
-| liquidity-check | Risk gate |
-| market-regime | Structural |
-| market-structure-bos | Structural |
-
-**Template:**
-```typescript
-readonly category = 'structural';
-readonly isRiskGate = true;
-
-calculate(input: DirectiveInput): DirectiveResult {
-  // Returns a modifier or gate status, not a signal score
-}
-```
+Mixing both into one number produced the old "relaxed scoring": a BUY at 42% that was mostly
+noise from always-on conditions rather than genuine directional conviction.
 
 ---
 
-## Decision Tree (per directive audit)
+## The two scores
+
+### 1. Opportunity Score — *"everything counts"* (selection / screening)
 
 ```
-Is there a bounded indicator scale (0–X)?
-  YES → Category 1 (Oscillator) — use curve formula
-  NO  → Does it detect a specific pattern/event?
-           YES → Category 3 (Pattern) — flat score or zero
-           NO  → Does it gate risk or assess structure?
-                  YES → Category 4 (Structural) — modifier, not score
-                  NO  → Category 2 (Ratio) — hardcoded branches
+OpportunityScore = Σ (all directive raw scores)     — every group, every directive
+OpportunityMax   = Σ (all directive maxScores)      — the protocol's total weight
+OpportunityPct   = OpportunityScore / OpportunityMax × 100
 ```
+
+- **Additive** — direction, conditions, forecasts, liquidity all contribute.
+- **What it's for** — ranking attractiveness across many symbols (screening, watchlist
+  ordering, "which stock deserves a closer look"). This is the original SEES vision.
+- **Not a timing signal** — a high Opportunity Score says "great candidate", not "buy now".
+
+### 2. Signal — *"directional conviction"* (timing)
+
+```
+SignalRaw = Σ (directional directive scores)        — only signalClass ∈ {bullish, bearish}
+SignalMax = Σ (those directives' maxScores)         — directional denominator
+SignalPct = SignalRaw / SignalMax × 100
+
+composite = SignalRaw × risk-multiplier             — soft gates scale it
+          = 0 if a hard gate vetoes (e.g. market closed, liquidity too low)
+```
+
+- **Directional only** — a directive contributes only when it is actually expressing a
+  direction *right now* (`signalClass` = `bullish`/`bearish`).
+- **What it's for** — timing an entry/exit. The `BUY / HOLD / SELL` classification and the
+  automation loop's trade decisions use this.
+- **Gated, not diluted** — risk conditions *multiply* the signal; they never add points.
 
 ---
 
-## Audit Procedure
+## The three roles a directive can play
 
-1. **Categorize** — which of the 4 categories?
-2. **Verify** max score matches actual ceiling of `calculate()`
-3. **Set directionBias** — explicit (never default/empty)
-4. **Assign weight** — 70–120 default band, higher for proven indicators
-5. **Add rawFeedback** — if oscillator, add the indicator's current value
-6. **Define DB keys** — what the user can adjust per directive
+| Role | Examples | Where it goes |
+|------|----------|---------------|
+| **Direction** (additive, both scores) | `rsi-oversold`, `speed-momentum`, `support-resistance-levels`, `gold-macro-correlation`, `analyst-adjustments`, `earnings-momentum` | Opportunity numerator **and** Signal numerator |
+| **Condition** (quality / magnitude — Opportunity only) | `gold-session-profile` (session quality), `bollinger-band-squeeze`, `volatility-tools`, `volume-confirmation` | Opportunity numerator **only** |
+| **Gate** (multiplier / veto) | `liquidity-check`, `budget-gate`, `dxy-regime` | Neither numerator — it multiplies or vetoes the Signal |
+
+**Rule of thumb:** if a directive answers "which way, how strongly" → it's a **Direction**.
+If it answers "is now a good / quality / tradeable moment" → it's a **Condition** or **Gate**.
+
+The runtime marker is the directive's `signalClass`:
+- `bullish` / `bearish` → contributes to the Signal.
+- `neutral` → contributes to the Opportunity only (it's a condition/gate, not a direction).
+
+---
+
+## Why this design (the "why" for users)
+
+1. **Selection ≠ timing.** Institutional investing separates *what to own* (security
+   selection) from *when* (market timing). SEES was trying to do both in one number, which
+   made it muddy. Now they are two explicit, labelled numbers.
+2. **Conditions matter — but not as directional points.** Liquidity, session quality and
+   volatility are real inputs. They tell you *how good a moment is*, not *which way price
+   moves*. Adding them to a directional number was the noise floor.
+3. **A strategy configures the recipe.** The signalling layer (scoring strategies) decides
+   how to combine them, e.g.:
+   - `Opportunity ≥ 70 AND Signal = BUY` → enter (strict).
+   - `rank by Opportunity, enter on the first BUY Signal` → screen-then-time.
+   - Opportunity only → pure screener. Signal only → pure timing on a fixed watchlist.
+
+---
+
+## History of the change (Phase A → C, GH #638)
+
+- **Phase A — tradability gate.** Added `computeMarketStatus()` (market open/closed from
+  bar freshness) and made `liquidity-check` return 0 on stale data, so a closed market no
+  longer scored 100/100 "highly liquid". Fixed synthetic-bar flooding in `BarRefreshService`.
+- **Phase B — no constant floors.** A directive with no signal returns 0. Fixed
+  `gold-round-numbers` (50-midpoint → 0-centred signed scale), `support-resistance-levels`,
+  `gold-session-profile`, `obv`, and unused stubs.
+- **Phase C — gate-vs-score split (dual-score model).** The composite was rebuilt as the
+  directional **Signal**, the risk gate now actually multiplies, and the original additive
+  total was restored as the **Opportunity Score** alongside it.
+
+---
+
+## Where each number appears in the UI
+
+| Surface | Shows |
+|---------|-------|
+| **Symbols Ladder** | Toggle between **Signal** and **Opportunity** via the "Score:" filter; order by either |
+| **Protocols Registry** | "Most Recent Scores" shows **Signal** and **Opportunity** side by side, labelled |
+| **Protocol Trail** | Summary shows **Signal** and **Opportunity**; directives marked **"condition"** when they contribute to Opportunity only |
+| **Automation loop** | Uses the **Signal** composite for trade decisions (gated to 0 when the market is closed) |
 
 ---
 
 ## Glossary
 
-| Term | Feature | Meaning |
-|------|---------|---------|
-| **Weight** | Directives | Maximum score a directive can award. Higher = more influence. Range 10–200+. Stored in DB, user-adjustable. |
-| **Scale** | Directives | Indicator's native value range (RSI 0–80, VI 0.5–1.5). |
-| **Score** | Scoring | Value a directive returns for current market state. 0 to Weight + ScaleMax. |
-| **Brackets** | Directives | Separated ranges within a Scale. Used by Ratio/Pattern categories. Curve category uses continuous formula instead. |
-| **Branches** | Code | If/else paths inside `calculate()`. |
-| **Steepness** | Curve formula | How aggressively weight concentrates at scale extremes. 1.0=linear, 2.0=quadratic, 3.0=exponential. |
-| **rawFeedback** | Scoring | The indicator's raw current value. Added to weight portion for constant micro-movement. |
-| **directionBias** | Directives, Protocols | Bullish/bearish/neutral. Protocols filter by bias. Must be explicit — never empty. |
-| **minScore** | Directives | Floor value. Always returns ≥ this (typically 1). Confirms the directive is alive. |
-| **Category** | Directives | oscillator, ratio, pattern, or structural. Determines which scoring template to use. |
+| Term | Meaning |
+|------|---------|
+| **Composite** | The final gated Signal number (`SignalRaw × risk-multiplier`, 0 on a hard gate). |
+| **rawComposite** | The pre-gate directional Signal (`SignalRaw`), used for display. |
+| **Opportunity Score** | The additive "everything counts" total, used for ranking/screening. |
+| **inSignal** | Per-directive flag in the breakdown: `true` = counted in the Signal, `false` = condition/gate (Opportunity only). |
+| **signalClass** | Runtime direction of a directive: `bullish` / `bearish` / `neutral`. Drives Signal inclusion. |
+| **directionBias** | Declared bias of a directive (bullish/bearish/neutral). Used for protocol-direction filtering. |

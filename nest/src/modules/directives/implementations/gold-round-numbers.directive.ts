@@ -55,10 +55,10 @@ export class GoldRoundNumbersDirective implements IDirective {
     'Gold respects round numbers more consistently than any other asset — ' +
     'market makers and institutional algos cluster orders at these levels.';
   readonly priority = 58;
-  readonly maxScore = 75; // corrected 90→75 2026-08-14 — real max = 50 baseline + 25 major-level shift
-  readonly minScore = 1;
+  readonly maxScore = 25; // 2026-08-16 Phase B (#638): rebased to 0-centered signed scale — max bullish = 25 major-level shift (was 75 = 50 phantom baseline + 25)
+  readonly minScore = 0;
   readonly minBars = { '1d': 2 }; // Only needs current price
-  readonly version = '1.2.0'; // maxScore corrected
+  readonly version = '1.3.0'; // no constant floor — no proximity = 0
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
 
@@ -67,7 +67,7 @@ export class GoldRoundNumbersDirective implements IDirective {
     if (sym !== 'XAUUSD' && sym !== 'XAU' && sym !== 'XAGUSD' && sym !== 'XAG') {
       return {
         signalClass: 'neutral',
-        score: 50,
+        score: 0,
         confidence: 0,
         reason: `${input.symbol} is not a gold/silver symbol — round-number psychology applies primarily to XAUUSD.`,
       };
@@ -77,7 +77,7 @@ export class GoldRoundNumbersDirective implements IDirective {
     if (!bars || bars.length === 0) {
       return {
         signalClass: 'neutral',
-        score: 50,
+        score: 0,
         confidence: 0.1,
         reason: 'No price data available for round-number analysis.',
       };
@@ -85,7 +85,7 @@ export class GoldRoundNumbersDirective implements IDirective {
 
     const price = bars[bars.length - 1].close;
     if (!price || price <= 0) {
-      return { signalClass: 'neutral', score: 50, confidence: 0, reason: 'Invalid price data.' };
+      return { signalClass: 'neutral', score: 0, confidence: 0, reason: 'Invalid price data.' };
     }
 
     // ── Find nearest round numbers ────────────────────────
@@ -98,7 +98,12 @@ export class GoldRoundNumbersDirective implements IDirective {
     const distMicroPct = Math.abs(price - nearestMicro) / price;
 
     // ── Score based on strongest proximity ────────────────
-    let score = 50;
+    // 2026-08-16 Phase B (#638): rebased from a 50-midpoint to a 0-centered
+    // signed scale. "No proximity" = 0 (no signal); bullish support = +;
+    // bearish resistance = −. The old 50 baseline guaranteed a ≥25 floor
+    // that inflated the additive composite with non-directional points.
+    let score = 0;
+    let signalClass: 'bullish' | 'bearish' | 'neutral' = 'neutral';
     const signals: string[] = [];
     let bestLevel = 0;
     let bestDistPct = Infinity;
@@ -109,31 +114,35 @@ export class GoldRoundNumbersDirective implements IDirective {
       bestDistPct = distMajorPct;
       const direction = price > nearestMajor ? 'above (potential support)' : 'below (potential resistance)';
       const bullish = price > nearestMajor;
-      score = 50 + (bullish ? MAJOR_SCORE_SHIFT : -MAJOR_SCORE_SHIFT);
+      score = bullish ? MAJOR_SCORE_SHIFT : -MAJOR_SCORE_SHIFT;
+      signalClass = bullish ? 'bullish' : 'bearish';
       signals.push(`Major level $${nearestMajor}: price ${direction}, ${(distMajorPct * 100).toFixed(2)}% away`);
     } else if (distMinorPct <= MINOR_ZONE_PCT) {
       bestLevel = nearestMinor;
       bestDistPct = distMinorPct;
       const direction = price > nearestMinor ? 'above (potential support)' : 'below (potential resistance)';
       const bullish = price > nearestMinor;
-      score = 50 + (bullish ? MINOR_SCORE_SHIFT : -MINOR_SCORE_SHIFT);
+      score = bullish ? MINOR_SCORE_SHIFT : -MINOR_SCORE_SHIFT;
+      signalClass = bullish ? 'bullish' : 'bearish';
       signals.push(`Minor level $${nearestMinor}: price ${direction}, ${(distMinorPct * 100).toFixed(2)}% away`);
     } else if (distMicroPct <= MICRO_ZONE_PCT) {
       bestLevel = nearestMicro;
       bestDistPct = distMicroPct;
       const direction = price > nearestMicro ? 'above (potential support)' : 'below (potential resistance)';
       const bullish = price > nearestMicro;
-      score = 50 + (bullish ? MICRO_SCORE_SHIFT : -MICRO_SCORE_SHIFT);
+      score = bullish ? MICRO_SCORE_SHIFT : -MICRO_SCORE_SHIFT;
+      signalClass = bullish ? 'bullish' : 'bearish';
       signals.push(`Micro level $${nearestMicro}: price ${direction}, ${(distMicroPct * 100).toFixed(2)}% away`);
     } else {
-      // No level nearby — note the nearest ones for reference
+      // No level nearby — no signal.
+      score = 0;
+      signalClass = 'neutral';
       signals.push(`Between $${nearestMajor - MAJOR_STEP} and $${nearestMajor} (${(distMajorPct * 100).toFixed(1)}% from nearest major)`);
     }
 
-    // Clamp
-    score = Math.max(10, Math.min(75, score));
+    // Clamp — symmetric around 0, no floor.
+    score = Math.max(-MAJOR_SCORE_SHIFT, Math.min(MAJOR_SCORE_SHIFT, score));
 
-    const signalClass = score > 55 ? 'bullish' : score < 45 ? 'bearish' : 'neutral';
     const confidence = bestDistPct < MAJOR_ZONE_PCT ? 0.7 : bestDistPct < MINOR_ZONE_PCT ? 0.55 : bestDistPct < MICRO_ZONE_PCT ? 0.4 : 0.2;
 
     return {

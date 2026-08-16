@@ -90,9 +90,13 @@
   background: color-mix(in srgb, var(--color-profit, #22c55e) 4%, transparent);
 }
 .prb-recent-score h3 { margin: 0 0 0.35rem; font-size: 0.72rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
-.prb-recent-body { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.prb-recent-body { display: flex; flex-direction: column; gap: 0.5rem; }
+.prb-recent-rows { display: flex; flex-direction: column; gap: 0.3rem; }
+.prb-recent-row { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.prb-recent-label { font-size: 0.68rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.03em; font-weight: 600; }
 .prb-recent-value { display: flex; align-items: baseline; gap: 0.2rem; }
 .prb-recent-num { font-size: 1.3rem; font-weight: 700; color: var(--color-profit, #22c55e); }
+.prb-recent-num-opp { color: var(--accent, #0ea5a6); }
 .prb-recent-max { font-size: 0.72rem; color: var(--ink-soft); }
 .prb-recent-meta { display: flex; gap: 0.5rem; align-items: center; }
 .prb-recent-symbol { font-size: 0.75rem; font-weight: 600; color: var(--ink); }

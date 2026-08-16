@@ -59,14 +59,20 @@ export default function ProtocolTrailPage() {
   const directionLabel = directionModeLabel(directionMode);
   const runId = data?.runId ?? null;
   const scoredAt = data?.timestamp ?? null;
+  // Phase C dual-score model: Signal (directional) vs Opportunity (additive).
+  const rawComposite = data?.breakdown?.rawComposite ?? null;
+  const rawMax = data?.breakdown?.rawMax ?? null;
+  const opportunityScore = data?.breakdown?.opportunityScore ?? null;
+  const opportunityMax = data?.breakdown?.opportunityMax ?? null;
 
-  // Composite strength: score as % of the summed directive max scores.
+  // Composite strength: signal (directional) as % of its own denominator.
   const totalMax = useMemo(
     () => Object.values(subMaxTotals).reduce((sum, v) => sum + (Number(v) || 0), 0),
     [subMaxTotals],
   );
-  const score = Number(data?.score ?? 0);
-  const strengthPct = totalMax > 0 ? Math.round((score / totalMax) * 100) : null;
+  const signalScore = rawComposite != null ? rawComposite : Number(data?.score ?? 0);
+  const signalMax = rawMax != null ? rawMax : totalMax;
+  const strengthPct = signalMax > 0 ? Math.round((signalScore / signalMax) * 100) : null;
 
   /** Format an ISO timestamp as a readable date + time (UTC). */
   function formatTimestamp(iso) {
@@ -123,11 +129,17 @@ export default function ProtocolTrailPage() {
                 {data.strategyId && <span className="pt-summary-protocol">{data.strategyId}</span>}
               </div>
               <div className="pt-summary-score">
-                {data.score != null ? score.toLocaleString() : '—'}
-                {totalMax > 0 && (
-                  <span className="pt-summary-score-max">/{totalMax.toLocaleString()}</span>
+                <span className="pt-summary-score-label" title="Signal — directional conviction (which way, how strongly). Drives BUY/HOLD/SELL.">Signal</span>
+                {signalScore != null ? signalScore.toLocaleString() : '—'}
+                {signalMax > 0 && (
+                  <span className="pt-summary-score-max">/{signalMax.toLocaleString()}</span>
                 )}
               </div>
+              {opportunityScore != null && opportunityMax != null && (
+                <div className="pt-summary-opp" title="Opportunity — additive 'everything counts' score (direction + conditions + forecasts). Used for ranking/screening across symbols.">
+                  Opportunity&nbsp;{opportunityScore.toLocaleString()}<span className="pt-summary-score-max">/{opportunityMax.toLocaleString()}</span>
+                </div>
+              )}
               <div className="pt-summary-tags">
                 <span className={`pt-signal pt-signal--${signalTone(signal)}`}>
                   <span className="pt-signal-arrow" aria-hidden="true">{signalArrow(signal)}</span>
@@ -194,6 +206,14 @@ export default function ProtocolTrailPage() {
                       <span className="pt-directive-score">
                         {d.score} / {d.maxScore}
                       </span>
+                      {!d.inSignal && (
+                        <span
+                          className="pt-directive-excluded"
+                          title="Condition/gate — contributes to the Opportunity score, not the directional Signal."
+                        >
+                          condition
+                        </span>
+                      )}
                     </div>
                     <div className="pt-directive-reason">{d.reason || '—'}</div>
                   </motion.div>

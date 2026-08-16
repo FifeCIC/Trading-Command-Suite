@@ -228,14 +228,26 @@ export default function ProtocolsPageB({ initialProtocolId }) {
 
               {/* Recent Scoring */}
               <div className="prb-recent-score">
-                <h3>Most Recent Score</h3>
+                <h3>Most Recent Scores</h3>
                 {latestScoreQuery.isLoading ? (
                   <span className="prb-recent-loading">Loading…</span>
                 ) : latestScore ? (
                   <div className="prb-recent-body">
-                    <div className="prb-recent-value">
-                      <span className="prb-recent-num">{latestScore.value?.toFixed(0) ?? '—'}</span>
-                      <span className="prb-recent-max">/ {selectedProto.maxScore ?? 100}</span>
+                    <div className="prb-recent-rows">
+                      <div className="prb-recent-row">
+                        <span className="prb-recent-label" title="Directional conviction — which way and how strongly, right now. Drives the BUY/HOLD/SELL signal.">Signal</span>
+                        <span className="prb-recent-value">
+                          <span className="prb-recent-num">{latestScore.value?.toFixed(0) ?? '—'}</span>
+                          <span className="prb-recent-max">/ {latestScore.maxScore ?? selectedProto.maxScore ?? 100}</span>
+                        </span>
+                      </div>
+                      <div className="prb-recent-row">
+                        <span className="prb-recent-label" title="Additive 'everything counts' score — direction + conditions + forecasts. Used to rank attractiveness across symbols.">Opportunity</span>
+                        <span className="prb-recent-value">
+                          <span className="prb-recent-num prb-recent-num-opp">{latestScore.opportunityScore?.toFixed(0) ?? '—'}</span>
+                          <span className="prb-recent-max">/ {latestScore.opportunityMax ?? selectedProto.maxScore ?? 100}</span>
+                        </span>
+                      </div>
                     </div>
                     <div className="prb-recent-meta">
                       <span className="prb-recent-symbol">{latestScore.symbolTicker}</span>

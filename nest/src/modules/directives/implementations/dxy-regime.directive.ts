@@ -65,7 +65,7 @@ export class DxyRegimeDirective implements IDirective {
   readonly minBars = { '1d': 20 };
   readonly version = '2.0.1';
   readonly requiredDataFeeds = ['dxy'];
-  readonly readiness = 'beta' as const;
+  readonly readiness = 'ready' as const; // promoted beta→ready 2026-08-15 — real DXY→base mapping, constant floor removed (50→0)
   readonly category = 'structural' as const;
   readonly directionBias = 'neutral' as const;
 
@@ -87,7 +87,7 @@ export class DxyRegimeDirective implements IDirective {
     if (dxy === undefined || dxy <= 0) {
       return {
         signalClass: 'neutral',
-        score: 50,
+        score: 0, // 2026-08-15: no signal = 0, not a constant 50 floor
         confidence: 0.10,
         reason: `No DXY or EURUSD proxy data for ${input.symbol}. Connect MT5 (EURUSD always available), Finnhub forex, or a broker with DXY futures.`,
       };

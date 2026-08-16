@@ -233,7 +233,7 @@ export class MovingAveragesDirective implements IDirective {
   readonly priority = 72;
   readonly maxScore = 100;
   readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
+  readonly readiness = 'ready' as const; // promoted beta→ready 2026-08-15 — real SMA20/50/200 alignment math
 
   calculate(input: DirectiveInput): DirectiveResult {
 
@@ -382,7 +382,7 @@ export class VolatilityToolsDirective implements IDirective {
   readonly priority = 66;
   readonly maxScore = 90;
   readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
+  readonly readiness = 'ready' as const; // promoted beta→ready 2026-08-15 — real ATR(14) math, signalClass neutralised, reachable maxScore
 
   calculate(input: DirectiveInput): DirectiveResult {
 
@@ -1007,7 +1007,7 @@ export class SpyQqqRelativeStrengthDirective implements IDirective {
   readonly priority = 42;
   readonly maxScore = 70;
   readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
+  readonly readiness = 'ready' as const; // promoted beta→ready 2026-08-15 — real 5d/20d momentum-acceleration math (name is aspirational: uses own bars, not SPY/QQQ)
 
   calculate(input: DirectiveInput): DirectiveResult {
 
@@ -1690,7 +1690,7 @@ export class MacdDirective implements IDirective {
   readonly priority = 75;
   readonly maxScore = 110;
   readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
+  readonly readiness = 'ready' as const; // promoted beta→ready 2026-08-15 — real MACD(12,26,9) crossover math
 
   calculate(input: DirectiveInput): DirectiveResult {
 
@@ -1794,7 +1794,7 @@ export class AnalystAdjustmentsDirective implements IDirective {
   readonly priority = 50;
   readonly maxScore = 80;
   readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
+  readonly readiness = 'ready' as const; // promoted beta→ready 2026-08-15 — real price-momentum proxy (registered copy; standalone mock-first file is dead code)
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
@@ -1819,7 +1819,7 @@ export class ConvictionGrowthDirective implements IDirective {
   readonly priority = 66;
   readonly maxScore = 100;
   readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
+  readonly readiness = 'ready' as const; // promoted beta→ready 2026-08-15 — real multi-timeframe EMA/SMA conviction math
 
   calculate(input: DirectiveInput): DirectiveResult {
 
@@ -2026,7 +2026,7 @@ export class MeanReversionDirective implements IDirective {
   readonly priority = 71;
   readonly maxScore = 105;
   readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
+  readonly readiness = 'ready' as const; // promoted beta→ready 2026-08-15 — real Bollinger sigma-distance mean reversion math
 
   calculate(input: DirectiveInput): DirectiveResult {
 
@@ -2130,7 +2130,7 @@ export class Sp500RegimeDirective implements IDirective {
   readonly priority = 70;
   readonly maxScore = 100;
   readonly version = '2.0.0';
-  readonly readiness = 'beta' as const;
+  readonly readiness = 'ready' as const; // promoted beta→ready 2026-08-15 — real SMA200 regime math
 
   calculate(input: DirectiveInput): DirectiveResult {
 
@@ -2232,7 +2232,7 @@ export class WeeklyRhythmStrategyDirective implements IDirective {
     const bars = input.bars;
     if (bars.length < 5) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'Need 5+ bars' };
     const lastBar = bars[bars.length - 1];
-    if (!lastBar.timestamp) return { signalClass: 'neutral', score: 15, confidence: 0.15, reason: 'No timestamp data' };
+    if (!lastBar.timestamp) return { signalClass: 'neutral', score: 0, confidence: 0.15, reason: 'No timestamp data' };
     const day = new Date(lastBar.timestamp).getUTCDay();
     const closes = bars.map(b => b.close);
     const recentReturn = closes.length > 5 ? (closes[closes.length-1] - closes[closes.length-6]) / Math.max(0.01, closes[closes.length-6]) * 100 : 0;

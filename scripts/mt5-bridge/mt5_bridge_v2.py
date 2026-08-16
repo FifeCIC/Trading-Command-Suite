@@ -10,7 +10,7 @@ Usage:
 
 import os, json, logging, time
 from logging.handlers import RotatingFileHandler
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
@@ -33,6 +33,21 @@ logger = logging.getLogger('mt5_bridge_v2')
 logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)
 logger.addHandler(logging.StreamHandler())
+
+# ─── Timestamp helpers (UTC) ──────────────────────────────
+# MT5 returns Unix timestamps (seconds, UTC). Previously we used
+# datetime.fromtimestamp() / datetime.now() WITHOUT a timezone, which emits
+# naive LOCAL wall-clock strings. NestJS then parsed those as machine-local,
+# shifting every time-based directive by the bridge machine's UTC offset
+# (~3-4h). Emit unambiguous UTC (ISO-8601 with 'Z') instead.
+
+def utc_iso(epoch_seconds):
+    """MT5 epoch seconds -> ISO-8601 UTC string with 'Z' suffix."""
+    return datetime.fromtimestamp(epoch_seconds, tz=timezone.utc).isoformat().replace('+00:00', 'Z')
+
+def utc_now_iso():
+    """Current UTC time -> ISO-8601 string with 'Z' suffix."""
+    return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
 
 # ─── MT5 Connection ───────────────────────────────────────
 
@@ -317,7 +332,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     mt5.symbol_select(symbol, True)
                     tick = mt5.symbol_info_tick(symbol)
                 if not tick: return json_response(self, {'error': f'{symbol} not available'}, 404)
-                return json_response(self, {'symbol': symbol, 'bid': tick.bid, 'ask': tick.ask, 'last': tick.last or tick.bid, 'timestamp': datetime.now().isoformat()})
+                return json_response(self, {'symbol': symbol, 'bid': tick.bid, 'ask': tick.ask, 'last': tick.last or tick.bid, 'timestamp': utc_now_iso()})
 
             # /candles?symbol=X&timeframe=1d&limit=100
             if path == '/candles':
@@ -331,7 +346,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 rates = mt5.copy_rates_from_pos(symbol, timeframe_to_mt5(tf), 0, limit)
                 if rates is None or len(rates) == 0:
                     return json_response(self, {'symbol': symbol, 'timeframe': tf, 'bars': []})
-                bars = [{'timestamp': datetime.fromtimestamp(r['time']).isoformat(), 'open': float(r['open']),
+                bars = [{'timestamp': utc_iso(r['time']), 'open': float(r['open']),
                          'high': float(r['high']), 'low': float(r['low']), 'close': float(r['close']),
                          'volume': int(r['tick_volume'])} for r in rates]
                 return json_response(self, {'symbol': symbol, 'timeframe': tf, 'bars': bars})
@@ -367,7 +382,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                             'volume': float(p.volume), 'priceOpen': float(p.price_open), 'priceCurrent': float(p.price_current),
                             'sl': float(p.sl) if p.sl else None, 'tp': float(p.tp) if p.tp else None,
                             'profit': float(p.profit), 'swap': float(p.swap),
-                            'openTime': datetime.fromtimestamp(p.time).isoformat(), 'magic': p.magic, 'comment': p.comment})
+                            'openTime': utc_iso(p.time), 'magic': p.magic, 'comment': p.comment})
                 return json_response(self, {'positions': result, 'count': len(result)})
 
             # /history?days=7
@@ -384,12 +399,12 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     for o in orders:
                         history.append({'ticket': o.ticket, 'symbol': o.symbol, 'type': 'buy' if o.type in (0,2,4) else 'sell',
                             'volume': float(o.volume), 'price': float(o.price_open),
-                            'time': datetime.fromtimestamp(o.time_setup).isoformat(), 'comment': o.comment})
+                            'time': utc_iso(o.time_setup), 'comment': o.comment})
                 if deals:
                     for d in deals:
                         deal_list.append({'ticket': d.ticket, 'symbol': d.symbol, 'type': 'buy' if d.type==0 else 'sell',
                             'volume': float(d.volume), 'price': float(d.price), 'profit': float(d.profit),
-                            'time': datetime.fromtimestamp(d.time).isoformat(), 'comment': d.comment})
+                            'time': utc_iso(d.time), 'comment': d.comment})
                 return json_response(self, {'orders': history, 'deals': deal_list, 'orderCount': len(history), 'dealCount': len(deal_list)})
 
             # /symbol/X/info
@@ -428,7 +443,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 if events:
                     for e in events[:50]:
                         result.append({'id': e.id, 'name': e.name, 'country': e.country, 'currency': e.currency,
-                            'importance': e.importance, 'time': datetime.fromtimestamp(e.time).isoformat() if e.time else None})
+                            'importance': e.importance, 'time': utc_iso(e.time) if e.time else None})
                 return json_response(self, {'events': result, 'count': len(result)})
 
             # /positions/sync — force-refresh from broker
@@ -443,9 +458,9 @@ class BridgeHandler(BaseHTTPRequestHandler):
                             'volume': float(p.volume), 'priceOpen': float(p.price_open), 'priceCurrent': float(p.price_current),
                             'sl': float(p.sl) if p.sl else None, 'tp': float(p.tp) if p.tp else None,
                             'profit': float(p.profit), 'swap': float(p.swap),
-                            'openTime': datetime.fromtimestamp(p.time).isoformat(), 'magic': p.magic, 'comment': p.comment})
+                            'openTime': utc_iso(p.time), 'magic': p.magic, 'comment': p.comment})
                 journal_trade('positions_sync', {'count': len(result)})
-                return json_response(self, {'positions': result, 'count': len(result), 'syncedAt': datetime.now().isoformat()})
+                return json_response(self, {'positions': result, 'count': len(result), 'syncedAt': utc_now_iso()})
 
             # /order/<ticket> — order/position status
             if len(parts) == 2 and parts[0] == 'order':
@@ -461,7 +476,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                         'priceOpen': float(p.price_open), 'priceCurrent': float(p.price_current),
                         'sl': float(p.sl) if p.sl else None, 'tp': float(p.tp) if p.tp else None,
                         'profit': float(p.profit), 'swap': float(p.swap),
-                        'openTime': datetime.fromtimestamp(p.time).isoformat(),
+                        'openTime': utc_iso(p.time),
                         'status': 'open', 'comment': p.comment})
                 # Check pending orders
                 orders = mt5.orders_get(ticket=ticket)
@@ -471,7 +486,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                         'type': 'buy' if o.type in (0,2,4) else 'sell', 'volume': float(o.volume),
                         'priceOpen': float(o.price_open), 'priceCurrent': float(o.price_current),
                         'sl': float(o.sl) if o.sl else None, 'tp': float(o.tp) if o.tp else None,
-                        'openTime': datetime.fromtimestamp(o.time_setup).isoformat(),
+                        'openTime': utc_iso(o.time_setup),
                         'status': 'pending', 'comment': o.comment})
                 # Check history
                 from_date = datetime.now() - timedelta(days=7)
@@ -482,7 +497,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     return json_response(self, {'ticket': h.ticket, 'symbol': h.symbol,
                         'type': 'buy' if h.type in (0,2,4) else 'sell', 'volume': float(h.volume),
                         'priceOpen': float(h.price_open), 'priceCurrent': float(h.price_current),
-                        'openTime': datetime.fromtimestamp(h.time_setup).isoformat(),
+                        'openTime': utc_iso(h.time_setup),
                         'status': h.state == 3 and 'filled' or h.state == 4 and 'cancelled' or 'closed',
                         'comment': h.comment})
                 return json_response(self, {'error': f'Order {ticket} not found'}, 404)
@@ -502,7 +517,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                         if sym and d.symbol.upper() != sym: continue
                         result.append({'ticket': d.ticket, 'symbol': d.symbol, 'type': 'buy' if d.type==0 else 'sell',
                             'volume': float(d.volume), 'price': float(d.price), 'profit': float(d.profit),
-                            'time': datetime.fromtimestamp(d.time).isoformat(), 'comment': d.comment})
+                            'time': utc_iso(d.time), 'comment': d.comment})
                 return json_response(self, {'deals': result, 'count': len(result)})
 
             return json_response(self, {'error': 'not found'}, 404)

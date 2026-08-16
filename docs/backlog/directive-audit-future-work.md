@@ -3,9 +3,23 @@
 Consolidated follow-up list from the directive-by-directive audit of `xau-speed-v1`.
 Items marked "→ GH #" have a GitHub issue. Others are notes or link to an existing issue.
 
+## Phase 1 — tomorrow (2026-08-15, urgent)
+
+Ordered plan from the 2026-08-14 audit wrap-up, extended 2026-08-15 with the weekend findings:
+
+1. **Scoring architecture: separate gates from scores** → GH #638 (urgent)
+   - Additive unweighted composite lets gates/neutral conditions produce a misleading "42% BUY" noise floor. Split GATE (multiplier/pass-fail) from SCORE (directional, additive); no constant floors; weighted composite; fix the signal-strength denominator.
+   - **Extended 2026-08-15** (comment on #638): the canonical missing gate is TRADABILITY. Centralise market-hours in the scoring engine (`protocol-gating.service.ts` should consult `MarketCalendarService.isOpen`); freeze closed-market signals "as of <last close UTC>"; fix `liquidity-check` scoring a closed market as "highly liquid 100/100" (zero volatility ≠ liquidity).
+2. **Enforce readiness gate in code** → GH #627
+   - Protocol must be inactive if any included directive is not `ready` (today only `alpha` is excluded; `beta` still scores).
+3. **Fix MT5 timestamps** → GH #625
+   - Prerequisite before trusting any time-based directive.
+4. **Planning-ahead tools** → GH #640 (discussion)
+   - Wider-timescale scoring (H4/D1/W1, session-agnostic directives) + weekend-aware views + new planning tools (gap projection, watchlist planner). Clearly labelled "planning — not live".
+
 ## Bugs (data / scoring correctness)
 
-1. **MT5 bridge timestamps are not UTC** → GH #625 (bug, mt5-bridge, priority-high)
+1. **MT5 bridge timestamps are not UTC** → GH #625 (bug, mt5-bridge, priority-high) — PHASE 1 (tomorrow)
    - Bridge returns naive wall-clock strings (`"2026-08-14T19:00:00"`, no timezone).
    - `new Date(naive)` parses as machine-local, so session detection is ~3–4h off.
    - Affects ALL time-based directives (`gold-session-profile`, `session-open-effect`, `monday-effect`, `friday-positioning`, …).
@@ -19,13 +33,13 @@ Items marked "→ GH #" have a GitHub issue. Others are notes or link to an exis
 
 ## Process / policy
 
-4. **Readiness gate** → GH #627 (enhancement, area:scoring, priority-medium)
+4. **Readiness gate** → GH #627 (enhancement, area:scoring, priority-medium) — PHASE 1 (tomorrow)
    - Policy: "if a directive is not ready, the protocol is not ready and should not be active."
    - Enforce in registry/scoring: active protocol cannot contain non-`ready` directives.
 
-5. **Automated directive-honesty audit script** → GH #628 (enhancement, area:scoring, priority-medium)
-   - Constant-output test, confession-string lint, producer-trace, readiness evidence.
-   - Prevents future "completeness theater" without relying on agent honesty.
+5. **Automated directive-honesty audit script** → GH #628 — BUILT 2026-08-14 as `nest/scripts/directive-guard.cjs`.
+   - Static confession-lint + producer-trace + signalClass check + constant-floor check; plus a runtime constant-output test over `dist`.
+   - First run: 0 errors, 112 warnings (mock-first stubs + legit date-driven calendar directives). Close #628 after triaging the warnings.
 
 ## Fine-tuning (no issue yet / low priority)
 
@@ -60,5 +74,5 @@ Items marked "→ GH #" have a GitHub issue. Others are notes or link to an exis
 ## Ongoing
 
 8. **Continue directive-by-directive audit** — tracked under GH #608 (Audit All Directives).
-   - Completed: `portfolio-performance` (deleted), `vix-regime` (deleted), `gold-macro-correlation` (fixed + promoted to ready), `gold-session-profile` (fixed maxScore 95→90).
-   - Remaining in `xau-speed-v1` technical/sentiment/risk groups: `bollinger-band-squeeze`, `gold-round-numbers`, `rsi-oversold`, `session-open-effect`, `speed-momentum`, `support-resistance-levels`, `volatility-tools`, `volume-confirmation`, `liquidity-check`, `news-sentiment-positive`.
+   - `xau-speed-v1` fully reviewed 2026-08-14 — all 11 directives CLEAN/FIXED or DELETED (per-directive log in `/memories/repo/directive-audit-progress.md`).
+   - ~85% of all directives remain un-audited. The guard (`nest/scripts/directive-guard.cjs`) now automates first-pass triage.

@@ -104,7 +104,7 @@ export class GoldSessionProfileDirective implements IDirective {
   readonly maxScore = 90; // corrected 95→90 2026-08-14 — real max = Overlap 85 + US data boost 5
   readonly minScore = 1;
   readonly minBars = { '1d': 1 }; // Session-based — only needs current time
-  readonly version = '1.2.0'; // maxScore corrected
+  readonly version = '1.3.0'; // #638 Phase C: signalClass fixed to neutral — session quality is direction-neutral
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
 
@@ -113,7 +113,7 @@ export class GoldSessionProfileDirective implements IDirective {
     if (sym !== 'XAUUSD' && sym !== 'XAU' && sym !== 'XAGUSD' && sym !== 'XAG') {
       return {
         signalClass: 'neutral',
-        score: 50,
+        score: 0,
         confidence: 0,
         reason: `${input.symbol} is not a gold/silver symbol — gold session profile only applies to XAUUSD/XAGUSD.`,
       };
@@ -124,7 +124,7 @@ export class GoldSessionProfileDirective implements IDirective {
     if (!bars || bars.length === 0) {
       return {
         signalClass: 'neutral',
-        score: 50,
+        score: 0,
         confidence: 0.1,
         reason: 'No bar data available for session detection.',
       };
@@ -186,11 +186,10 @@ export class GoldSessionProfileDirective implements IDirective {
     let score = activeSession.quality + dataBoost;
     score = Math.max(10, Math.min(90, score));
 
-    // Signal class: high quality = bullish environment, low quality = caution
-    let signalClass: 'bullish' | 'bearish' | 'neutral';
-    if (score >= 70) signalClass = 'bullish';
-    else if (score <= 35) signalClass = 'bearish';
-    else signalClass = 'neutral';
+    // Signal class: session QUALITY is direction-neutral (#638 Phase C).
+    // A high-quality window says "good time to trade", not "price goes up" —
+    // so it must never contribute directional (bullish/bearish) points.
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = 'neutral';
 
     const confidence = activeSession.quality >= 70 ? 0.65 : activeSession.quality >= 45 ? 0.45 : 0.30;
 

@@ -34,7 +34,7 @@ export class EarningsProximityDirective implements IDirective {
   readonly minBars = { '1d': 1 };
   readonly version = '2.0.1'; // Hybrid scoring
   readonly requiredDataFeeds = ['earnings'];
-  readonly readiness = 'beta' as const;
+  readonly readiness = 'alpha' as const; // demoted beta→alpha 2026-08-15 — mock-first: reads input.earningsDate which nothing writes; always returns mock 45
   readonly category = 'pattern' as const;
   readonly directionBias = 'bullish' as const;
 

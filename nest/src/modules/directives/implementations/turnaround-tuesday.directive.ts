@@ -27,7 +27,7 @@ export class TurnaroundTuesdayDirective implements IDirective {
     if (dayOfWeek !== 2) {
       return {
         signalClass: 'neutral',
-        score: 2,
+        score: 0,
         confidence: 0.3,
         reason: 'Not Tuesday — Turnaround Tuesday not active',
       };
@@ -38,7 +38,7 @@ export class TurnaroundTuesdayDirective implements IDirective {
     if (bars.length < 2) {
       return {
         signalClass: 'neutral',
-        score: 5,
+        score: 0,
         confidence: 0.3,
         reason: 'Turnaround Tuesday — insufficient data to determine Monday direction',
       };
@@ -53,11 +53,11 @@ export class TurnaroundTuesdayDirective implements IDirective {
 
     return {
       signalClass: isReversal ? 'bullish' : 'bearish',
-      score: isReversal ? 12 : 5,
+      score: isReversal ? 12 : 0,
       confidence: 0.5,
       reason: isReversal
         ? 'Turnaround Tuesday — reversing Monday weakness (historical pattern)'
-        : `Turnaround Tuesday — Monday was ${mondayDirection}, less reversal probability`,
+        : `Turnaround Tuesday — Monday was ${mondayDirection}, no bullish reversal setup`,
     };
   }
 }
