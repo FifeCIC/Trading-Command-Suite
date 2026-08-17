@@ -111,6 +111,41 @@ export class PrismaService
         updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
         INDEX idx_ab_test_status (status)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      // ScreenerHit (#645) — source-agnostic catalyst event. Additive, safe every boot.
+      `CREATE TABLE IF NOT EXISTS screener_hit (
+        id VARCHAR(36) NOT NULL PRIMARY KEY,
+        ticker VARCHAR(20) NOT NULL,
+        symbolId VARCHAR(36) NULL,
+        source VARCHAR(20) NOT NULL,
+        catalystType VARCHAR(50) NOT NULL,
+        catalystStrength DOUBLE NOT NULL DEFAULT 0,
+        sourceReliability DOUBLE NOT NULL DEFAULT 50,
+        rawPayloadRef VARCHAR(500) NULL,
+        timestamp DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        INDEX idx_screener_hit_ticker (ticker),
+        INDEX idx_screener_hit_source (source),
+        INDEX idx_screener_hit_timestamp (timestamp)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      // WatchlistItem (#645) — watchlist lifecycle (new → watching → promoted → expired).
+      `CREATE TABLE IF NOT EXISTS watchlist_item (
+        id VARCHAR(36) NOT NULL PRIMARY KEY,
+        watchlistId VARCHAR(36) NULL,
+        ticker VARCHAR(20) NOT NULL,
+        symbolId VARCHAR(36) NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'new',
+        source VARCHAR(20) NULL,
+        screenerHitId VARCHAR(36) NULL,
+        promotedTo VARCHAR(100) NULL,
+        promotedAt DATETIME(3) NULL,
+        expiresAt DATETIME(3) NULL,
+        createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+        UNIQUE KEY uq_watchlist_item_screenerHitId (screenerHitId),
+        INDEX idx_watchlist_item_watchlistId (watchlistId),
+        INDEX idx_watchlist_item_status (status),
+        INDEX idx_watchlist_item_ticker (ticker)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ];
 
     for (const sql of tables) {

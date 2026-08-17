@@ -590,8 +590,59 @@ model Watchlist {
   updatedAt   DateTime @updatedAt
   importedAt  DateTime?
 
+  items       WatchlistItem[]
+
   // FK deferred — ScoringStrategy table created separately (#470)
   // scoringStrategies ScoringStrategy[]
+}
+
+// ── Screener contract (#645) — source-agnostic catalyst model ───────────────
+// A "screener hit" is ATTENTION, not conviction. The screener surfaces
+// catalysts (news / earnings / social / email) into a watchlist; directional
+// conviction is computed later by the existing scoring engine after handover.
+// No market data is required to create or filter a hit.
+model ScreenerHit {
+  id                String   @id @default(uuid()) @db.VarChar(36)
+  ticker            String   @db.VarChar(20)      // unresolved ticker (resolved to symbolId later)
+  symbolId          String?  @db.VarChar(36)      // null until universe expansion
+  source            String   @db.VarChar(20)      // news | earnings | social | email
+  catalystType      String   @db.VarChar(50)      // e.g. earnings-beat, news-mention, social-surge
+  catalystStrength  Float    @default(0)          // 0–100, source-provided
+  sourceReliability Float    @default(50)         // per-source static weight (0–100)
+  rawPayloadRef     String?  @db.VarChar(500)     // link/ref to source payload for audit
+  timestamp         DateTime @default(now())      // when the catalyst occurred
+  createdAt         DateTime @default(now())
+
+  watchlistItem WatchlistItem?
+
+  @@index([ticker])
+  @@index([source])
+  @@index([timestamp])
+}
+
+// Watchlist lifecycle — individual attention items, independent of the
+// named Watchlist list they may belong to. State machine:
+// new → watching → promoted → expired (see docs/SCREENER-CONTRACT.md).
+model WatchlistItem {
+  id            String     @id @default(uuid()) @db.VarChar(36)
+  watchlistId   String?    @db.VarChar(36)
+  ticker        String     @db.VarChar(20)
+  symbolId      String?    @db.VarChar(36)      // resolved later, if at all
+  status        String     @default("new") @db.VarChar(20) // new | watching | promoted | expired
+  source        String?    @db.VarChar(20)      // provenance (which catalyst source)
+  screenerHitId String?    @unique @db.VarChar(36)
+  promotedTo    String?    @db.VarChar(100)     // protocol slug handed to (Phase 3 handoff)
+  promotedAt    DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  watchlist   Watchlist?   @relation(fields: [watchlistId], references: [id], onDelete: SetNull)
+  screenerHit ScreenerHit? @relation(fields: [screenerHitId], references: [id], onDelete: SetNull)
+
+  @@index([watchlistId])
+  @@index([status])
+  @@index([ticker])
 }
 
 model CronMeta {
