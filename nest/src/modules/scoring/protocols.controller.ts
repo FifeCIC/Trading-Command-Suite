@@ -10,6 +10,7 @@
 import { Controller, Get, Post, Put, Patch, Delete, Param, Body, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DirectivesService } from '../directives/directives.service';
+import { classifyDirectiveInclusion } from '../directives/directive-inclusion';
 import { DirectiveConfigService } from './directive-config.service';
 import { ScoringSchedulerService } from './scoring-scheduler.service';
 import { resolveDirectiveCatalog } from '../strategies/strategies.controller';
@@ -335,6 +336,32 @@ export class ProtocolsController {
     }
     try {
       const existing = await (this.prisma as any).protocol.findUnique({ where: { slug: body.slug } });
+
+      // Direction-contract guard (#620): reject composition that would be
+      // silently excluded at scoring time. A `bearish` directive must not be
+      // added to a LONG_ONLY protocol (and a `bullish` one to SHORT_ONLY).
+      // This is the runtime enforcement mirror of the seed validation script
+      // (scripts/validate-protocol-directions.cjs) and uses the same single
+      // source of truth: classifyDirectiveInclusion().
+      if (body.groups && body.groups.length > 0) {
+        const effectiveMode = body.directionMode ?? existing?.directionMode ?? 'LONG_ONLY';
+        const conflicts: string[] = [];
+        for (const g of body.groups) {
+          for (const directiveId of g.directiveIds ?? []) {
+            const impl = this.directivesService.get(directiveId);
+            if (classifyDirectiveInclusion(impl, effectiveMode) === 'direction-bias') {
+              conflicts.push(`${directiveId} (${impl?.directionBias ?? 'unknown'})`);
+            }
+          }
+        }
+        if (conflicts.length > 0) {
+          const unique = [...new Set(conflicts)];
+          return {
+            success: false,
+            error: `Direction-contract conflict: ${unique.join(', ')} cannot be in a ${effectiveMode} protocol`,
+          };
+        }
+      }
 
       let protocolId: string;
       if (existing) {

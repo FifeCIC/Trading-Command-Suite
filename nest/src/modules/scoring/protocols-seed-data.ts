@@ -54,7 +54,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "support-resistance-levels",
           "multi-timeframe-trend",
           "micro-sr-levels",
-          "rsi-overbought",
           "session-open-effect"
         ]
       },
@@ -110,7 +109,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "bollinger-band-squeeze",
           "volume-confirmation",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "multi-timeframe-trend",
           "micro-sr-levels",
@@ -169,7 +167,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "volatility-tools",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect",
           "gold-round-numbers"
@@ -227,7 +224,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "volatility-tools",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect",
           "gold-round-numbers"
@@ -285,7 +281,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "volatility-tools",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect",
           "gold-round-numbers"
@@ -343,7 +338,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "volatility-tools",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect",
           "gold-round-numbers"
@@ -401,7 +395,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "volatility-tools",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect",
           "gold-round-numbers"
@@ -458,7 +451,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "volatility-tools",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
         ]
@@ -514,7 +506,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "volatility-tools",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
         ]
@@ -527,8 +518,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "isRiskGate": false,
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
-        "directiveIds": [
-        ]
+        "directiveIds": []
       },
       {
         "id": "risk",
@@ -570,8 +560,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "support-resistance-levels",
           "speed-momentum",
-          "rsi-oversold",
-          "rsi-overbought"
+          "rsi-oversold"
         ]
       },
       {
@@ -625,7 +614,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "volatility-tools",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
         ]
@@ -682,8 +670,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "speed-momentum",
           "support-resistance-levels",
-          "rsi-oversold",
-          "rsi-overbought"
+          "rsi-oversold"
         ]
       },
       {
@@ -737,7 +724,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "volatility-tools",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
         ]
@@ -793,7 +779,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "volatility-tools",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
         ]
@@ -849,7 +834,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "volatility-tools",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
         ]
@@ -904,7 +888,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "volatility-tools",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
         ]
@@ -960,7 +943,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "volatility-tools",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
         ]
@@ -1070,7 +1052,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "bollinger-band-squeeze",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "volatility-tools"
         ]
@@ -1125,7 +1106,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "bollinger-band-squeeze",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "volatility-tools",
           "ema-structure",
@@ -1179,7 +1159,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "rsi-overbought",
           "bollinger-band-squeeze",
           "volume-confirmation",
           "volatility-tools",
@@ -1195,8 +1174,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "isRiskGate": false,
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
-        "directiveIds": [
-        ]
+        "directiveIds": []
       },
       {
         "id": "risk",
@@ -1237,8 +1215,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "support-resistance-levels",
           "bollinger-band-squeeze",
           "volume-confirmation",
-          "rsi-oversold",
-          "rsi-overbought"
+          "rsi-oversold"
         ]
       },
       {
@@ -1292,7 +1269,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "volatility-tools",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
         ]
@@ -1349,7 +1325,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "volume-confirmation",
           "volatility-tools",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect"
         ]
@@ -1456,7 +1431,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "rsi-oversold",
-          "rsi-overbought",
           "bollinger-band-squeeze",
           "support-resistance-levels",
           "ema-structure",
@@ -1516,7 +1490,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "bollinger-band-squeeze",
           "volume-confirmation",
           "rsi-oversold",
-          "rsi-overbought",
           "support-resistance-levels",
           "session-open-effect",
           "volatility-tools"
@@ -1530,8 +1503,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "isRiskGate": false,
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
-        "directiveIds": [
-        ]
+        "directiveIds": []
       },
       {
         "id": "risk",
@@ -1684,8 +1656,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "isRiskGate": false,
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
-        "directiveIds": [
-        ]
+        "directiveIds": []
       },
       {
         "id": "risk",
@@ -1836,8 +1807,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "isRiskGate": false,
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
-        "directiveIds": [
-        ]
+        "directiveIds": []
       },
       {
         "id": "risk",
@@ -1926,7 +1896,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "directiveIds": [
           "speed-momentum",
           "rsi-oversold",
-          "rsi-overbought",
           "macd-crossover",
           "atr-dip",
           "volume-confirmation",
@@ -1941,8 +1910,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "support-resistance-levels",
           "confluence-reversal-combo",
           "momentum-continuation-combo",
-          "momentum-exhaustion",
-          "overhead-supply-pressure"
+          "momentum-exhaustion"
         ]
       },
       {
@@ -2023,7 +1991,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "analyst-adjustments",
-          "earnings-momentum",
           "social-buzz"
         ]
       },
