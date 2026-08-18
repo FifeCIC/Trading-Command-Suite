@@ -49,6 +49,7 @@ import { AutomationModule } from './modules/automation/automation.module';
 import { PaperTradingModule } from './modules/paper-trading/paper-trading.module';
 import { AIModule } from './modules/ai/ai.module';
 import { WatchlistsModule } from './modules/watchlists/watchlists.module';
+import { SuitabilityModule } from './modules/suitability/suitability.module';
 import { PlannerModule } from './modules/planner/planner.module';
 import { DiversificationModule } from './modules/diversification/diversification.module';
 import { ArchitectureModule } from './modules/architecture/architecture.module';
@@ -109,6 +110,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     PaperTradingModule,
     AIModule,
     WatchlistsModule,
+    SuitabilityModule,
     PlannerModule,
     DiversificationModule,
     ArchitectureModule,
