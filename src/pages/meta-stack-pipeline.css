@@ -48,6 +48,21 @@
   padding: 1px 5px; border-radius: 3px;
   background: rgba(245,158,11,0.15); color: #f59e0b;
 }
+.msp-node-critical .msp-node-label { padding-left: 20px; }
+.msp-step {
+  position: absolute; top: 5px; left: 6px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  font-size: 0.6rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.msp-node-action { background: rgba(245,158,11,0.07); }
+.msp-action-badge {
+  position: absolute; bottom: 4px; right: 6px;
+  font-size: 0.55rem; font-weight: 700; text-transform: uppercase;
+  padding: 1px 5px; border-radius: 3px;
+  background: rgba(245,158,11,0.2); color: #f59e0b;
+}
 
 /* Arrows */
 .msp-arrows { z-index: 1; }

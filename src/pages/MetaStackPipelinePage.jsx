@@ -27,7 +27,7 @@ const LANES = [
 const NODES = [
   // ── Watchlists ──
   {
-    id: 'wl-define', lane: 'watchlists', y: 60, status: 'implemented',
+    id: 'wl-define', lane: 'watchlists', y: 60, status: 'implemented', critical: 1,
     label: 'Define Watchlists', subtype: 'Symbol groups',
     page: '/watchlists/user-watchlists',
     files: ['src/pages/WatchlistsPage.jsx'],
@@ -44,7 +44,7 @@ const NODES = [
 
   // ── Protocols ──
   {
-    id: 'proto-registry', lane: 'protocols', y: 40, status: 'implemented',
+    id: 'proto-registry', lane: 'protocols', y: 40, status: 'implemented', critical: 2,
     label: 'Protocol Registry', subtype: '41 protocols',
     page: '/protocols/protocols-registry',
     files: ['src/pages/ProtocolsPageB.jsx', 'nest/src/modules/scoring/protocol-db.service.ts'],
@@ -73,21 +73,21 @@ const NODES = [
 
   // ── SEES / Scoring ──
   {
-    id: 'sees-bars', lane: 'sees', y: 40, status: 'implemented',
+    id: 'sees-bars', lane: 'sees', y: 40, status: 'implemented', critical: 3,
     label: 'Load Market Bars', subtype: 'MT5 bridge + DB',
     files: ['nest/src/modules/market-data/market-data.service.ts'],
     endpoints: ['GET /api/market-data/latest/:symbol'],
     tables: ['MarketBar'],
   },
   {
-    id: 'sees-score', lane: 'sees', y: 140, status: 'implemented',
+    id: 'sees-score', lane: 'sees', y: 140, status: 'implemented', critical: 4,
     label: 'Compute Scores', subtype: 'All directives per symbol',
     files: ['nest/src/modules/scoring/scoring.service.ts'],
     endpoints: ['GET /api/scoring/ranked', 'POST /api/scoring/gated/batch'],
     tables: ['Score'],
   },
   {
-    id: 'sees-protocol-score', lane: 'sees', y: 250, status: 'implemented',
+    id: 'sees-protocol-score', lane: 'sees', y: 250, status: 'implemented', critical: 5,
     label: 'Protocol-Gated Score', subtype: 'Filtered directives',
     files: ['nest/src/modules/scoring/protocol-gating.service.ts'],
     endpoints: ['GET /api/scoring/gated/:symbol?protocol='],
@@ -101,22 +101,25 @@ const NODES = [
 
   // ── Scoring Strategies ──
   {
-    id: 'ss-create', lane: 'scoring-strategies', y: 40, status: 'implemented',
-    label: 'Create Scoring Strategy', subtype: 'Protocol + watchlist + thresholds',
-    files: ['src/pages/StrategyCreatePage.jsx', 'nest/src/modules/trading/trading-strategy.service.ts (create)'],
-    endpoints: ['POST /api/trading/strategies'],
+    id: 'ss-create', lane: 'scoring-strategies', y: 40, status: 'implemented', critical: 6,
+    label: 'Bind Scoring Strategy', subtype: 'Protocol × watchlist × broker × threshold',
+    action: '0 active today — enable at least one strategy or the loop has nothing to trade',
+    files: ['src/pages/StrategyBuilderPage.jsx', 'nest/src/modules/scoring/scoring-strategy.controller.ts'],
+    endpoints: ['POST /api/scoring/strategies'],
     tables: ['scoring_strategy'],
   },
   {
-    id: 'ss-gate', lane: 'scoring-strategies', y: 160, status: 'planned',
-    label: 'Apply Gates', subtype: 'Threshold + risk + timing',
-    desc: 'Read scores from Score table, apply ScoringStrategy gate rules (tradeThreshold, risk multipliers, timing windows). Produce gated signals.',
-    tables: ['scoring_strategy (tradeThreshold, maxPyramidTiers)'],
+    id: 'ss-gate', lane: 'scoring-strategies', y: 160, status: 'implemented', critical: 7,
+    label: 'Threshold + Direction', subtype: 'tradeThreshold vs composite, LONG vs SHORT',
+    desc: 'Automation loop applies tradeThreshold/minComposite and compares the LONG vs SHORT protocol composite to pick the side. Directive-level "gates" are research only (#657/#658) — hard YES/NO after scoring, never score maths.',
+    files: ['nest/src/modules/automation/automation-loop.service.ts (compareProtocolPair)'],
+    tables: ['scoring_strategy (tradeThreshold, minComposite)'],
   },
   {
-    id: 'ss-signal', lane: 'scoring-strategies', y: 280, status: 'planned',
-    label: 'Generate Signals', subtype: 'BUY / SELL / HOLD',
-    desc: 'Based on gated scores, produce directional signals for downstream Trading Strategies.',
+    id: 'ss-signal', lane: 'scoring-strategies', y: 280, status: 'implemented',
+    label: 'Generate BUY / SELL / HOLD', subtype: 'Every tick',
+    desc: 'The automation loop emits BUY / SELL / HOLD per scored symbol every tick and persists them to decision_log.',
+    tables: ['decision_log'],
   },
   {
     id: 'ss-advanced', lane: 'scoring-strategies', y: 390, status: 'planned',
@@ -126,40 +129,44 @@ const NODES = [
 
   // ── Trading Strategies ──
   {
-    id: 'ts-evaluate', lane: 'trading-strategies', y: 60, status: 'planned',
-    label: 'Evaluate Signals', subtype: 'Risk + cooldown + duplicate',
-    desc: 'Read signals from Scoring Strategies. Apply position limits, cooldown, duplicate guard. Decide to trade or skip.',
-    files: ['nest/src/modules/automation/automation-loop.service.ts (evaluateStrategy)'],
+    id: 'ts-evaluate', lane: 'trading-strategies', y: 60, status: 'implemented', critical: 8,
+    label: 'Evaluate Signal', subtype: 'Cooldown + duplicate + diversification',
+    desc: 'Per-symbol cooldown, duplicate guard, diversification pre-check and weekend defense decide trade vs skip.',
+    files: ['nest/src/modules/automation/automation-loop.service.ts (dispatchTrade)', 'nest/src/modules/trading/duplicate-guard.service.ts'],
   },
   {
-    id: 'ts-schedule', lane: 'trading-strategies', y: 180, status: 'planned',
-    label: 'Schedule Trade', subtype: 'Queue for execution',
-    desc: 'Approved trades enter a queue. Manual mode requires confirmation. Semi-auto queues for review.',
+    id: 'ts-schedule', lane: 'trading-strategies', y: 180, status: 'implemented',
+    label: 'Mode Dispatch', subtype: 'Manual / semi-auto / auto',
+    desc: 'Manual logs only. Semi-auto queues the order to pending_action for review. Auto executes immediately.',
+    tables: ['pending_action'],
   },
   {
-    id: 'ts-size', lane: 'trading-strategies', y: 290, status: 'planned',
-    label: 'Position Sizing', subtype: 'Rarity + risk adjusted',
-    files: ['nest/src/modules/trading/trading-strategy.service.ts'],
+    id: 'ts-size', lane: 'trading-strategies', y: 290, status: 'implemented', critical: 9,
+    label: 'Position Sizing', subtype: 'baseSize × rarity band',
+    desc: 'baseSize multiplied by the rarity band size multiplier (useRaritySizing, default on).',
+    files: ['nest/src/modules/trading/trading-strategy.service.ts (execute)'],
     tables: ['trading_strategy (baseSize, maxSize, useRaritySizing)'],
   },
 
   // ── Trading Bot (Execution) ──
   {
-    id: 'exec-dispatch', lane: 'execution', y: 60, status: 'implemented',
-    label: 'Dispatch Order', subtype: 'MT5 / T212 / Capital.com',
+    id: 'exec-dispatch', lane: 'execution', y: 60, status: 'implemented', critical: 10,
+    label: 'Dispatch Order', subtype: 'MT5 / T212',
+    action: 'Opt in: POST /api/automation/config { tradingEnabled: true } — auto-trade is OFF by default',
     files: ['nest/src/modules/trading/mt5-trading.service.ts'],
     endpoints: ['POST /api/trading/mt5/order'],
   },
   {
-    id: 'exec-record', lane: 'execution', y: 170, status: 'implemented',
+    id: 'exec-record', lane: 'execution', y: 170, status: 'implemented', critical: 11,
     label: 'Record Trade', subtype: 'Trade + Position tables',
     files: ['nest/src/modules/trading/trade-recorder.service.ts'],
     tables: ['Trade', 'Position'],
   },
   {
-    id: 'exec-monitor', lane: 'execution', y: 280, status: 'planned',
-    label: 'Position Monitor', subtype: 'Stop loss + trailing',
-    files: ['nest/src/modules/trading/stop-guardian.service.ts'],
+    id: 'exec-monitor', lane: 'execution', y: 280, status: 'implemented',
+    label: 'Position Monitor', subtype: 'Stop guardian',
+    desc: 'StopGuardian tracks guarded positions and records every SL/TP adjustment.',
+    files: ['nest/src/modules/automation/stop-guardian.service.ts', 'nest/src/modules/trading/stop-guardian.service.ts'],
   },
 ];
 
@@ -200,11 +207,11 @@ export default function MetaStackPipelinePage() {
         <div>
           <h1>META.Stack Pipeline
             <PageInfoPopover>
-              Canonical pipeline: Watchlists → Protocols → SEES Scoring → Scoring Strategies (gates) → Trading Strategies (evaluate) → Trading Bot (execute). Dashed nodes are planned/roadmap.
+              Shortest path to a live trade. Numbered nodes = the critical path (all implemented). Amber nodes need one user action. Dashed = roadmap.
             </PageInfoPopover>
           </h1>
           <p className="msp-subtitle">
-            Each lane is a module. Each node is wired to real files, endpoints, and database tables. Click a node for details.
+            Every numbered step exists in code today. The two amber steps are configuration, not code: enable a scoring strategy, and opt in to trading. Directive-level gates are research (#657/#658).
             {' '}<a href="/lab/pipeline-graph-lab" style={{ color: 'var(--accent)', fontSize: '0.75rem', textDecoration: 'none' }}>→ Detailed Node View</a>
             {' '}<a href="/lab/diagrams" style={{ color: 'var(--ink-soft)', fontSize: '0.75rem', textDecoration: 'none' }}>→ Conceptual Diagrams</a>
           </p>
@@ -239,17 +246,19 @@ export default function MetaStackPipelinePage() {
               .map(node => (
                 <div
                   key={node.id}
-                  className={`msp-node ${node.status === 'planned' ? 'msp-node-planned' : ''} ${selectedNode === node.id ? 'msp-node-selected' : ''}`}
+                  className={`msp-node ${node.status === 'planned' ? 'msp-node-planned' : ''} ${node.critical ? 'msp-node-critical' : ''} ${node.action ? 'msp-node-action' : ''} ${selectedNode === node.id ? 'msp-node-selected' : ''}`}
                   style={{
                     top: node.y,
-                    borderColor: node.status === 'planned' ? lane.color + '66' : lane.color,
+                    borderColor: node.status === 'planned' ? lane.color + '66' : node.action ? '#f59e0b' : lane.color,
                     borderStyle: node.status === 'planned' ? 'dashed' : 'solid',
                   }}
                   onClick={() => setSelectedNode(node.id === selectedNode ? null : node.id)}
                 >
+                  {node.critical && <span className="msp-step">{node.critical}</span>}
                   <div className="msp-node-label">{node.label}</div>
                   <div className="msp-node-subtype">{node.subtype}</div>
                   {node.status === 'planned' && <span className="msp-node-badge">planned</span>}
+                  {node.action && <span className="msp-action-badge">needs you</span>}
                 </div>
               ))}
           </div>
