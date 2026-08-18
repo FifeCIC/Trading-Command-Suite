@@ -283,6 +283,7 @@ export const VIEW_COMPONENTS = {
   'add-symbol': AddSymbolPage,
   'symbols-browser': SymbolsBrowserPage,
   'symbol-detail': SymbolDetailPage,
+  'symbol': SymbolPage,
   'import-jobs': ImportJobsPage,
   'api-activity': ApiActivityPage,
   'api-endpoints': ApiEndpointsPage,

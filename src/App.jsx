@@ -206,16 +206,18 @@ function ContentCard({ title, children }) {
  *           VIEW_COMPONENTS at core/view-routes.jsx.
  */
 function AppShell() {
-  const { area, view, symbolId } = useParams();
+  const { area, view, symbolId, ticker } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
 
   const isHomePage = location.pathname === '/';
-  const primaryArea = symbolId ? 'research' : (isHomePage ? null : (area || 'trading'));
+  // `/trading/symbol/:ticker` renders the symbol page INSIDE the shell chrome.
+  const isSymbolRoute = Boolean(ticker);
+  const primaryArea = isSymbolRoute ? 'trading' : (symbolId ? 'research' : (isHomePage ? null : (area || 'trading')));
   // defaultView: use the first registered view for the current area, falling back to directives-registry
-  const areaViews = NAV_STRUCTURE[area];
+  const areaViews = NAV_STRUCTURE[isSymbolRoute ? 'trading' : area];
   const defaultView = (areaViews && areaViews.length > 0) ? areaViews[0].id : 'directives-registry';
-  const secondaryView = symbolId ? 'symbol-detail' : (view || defaultView);
+  const secondaryView = isSymbolRoute ? 'symbol' : (symbolId ? 'symbol-detail' : (view || defaultView));
   const [demoPrompt, setDemoPrompt] = useState('Generate a responsive planning concept for eco garden week.');
   const [demoOutput, setDemoOutput] = useState('');
   const [activityLog, setActivityLog] = useState([]);
@@ -1115,7 +1117,7 @@ export default function App() {
       <ErrorBoundary message="The application encountered a critical error.">
         <Routes>
           <Route path="/research/symbol/:ticker" element={<SymbolFocusPage />} />
-          <Route path="/trading/symbol/:ticker" element={<SymbolPage />} />
+          <Route path="/trading/symbol/:ticker" element={<AppShell />} />
           <Route path="/symbol/:ticker" element={<SymbolFocusPage />} />
           <Route path="/settings/data-management" element={<DataManagementPage />} />
           <Route path="/lab/top-movers" element={<TopMoversPage />} />

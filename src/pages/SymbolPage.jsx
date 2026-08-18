@@ -95,10 +95,17 @@ export default function SymbolPage() {
     );
   }
 
-  const price = overview?.price ?? overview?.latestPrice ?? null;
-  const change = overview?.change ?? overview?.changePercent ?? null;
-  const companyName = overview?.name ?? overview?.companyName ?? env?.symbol ?? symbol;
-  const symId = overview?.symbolId ?? overview?.id ?? '';
+  // `overview.price` is an object ({ last, change, changePct, … }) from
+  // /api/symbols/:ticker/overview. Normalise before formatting.
+  const priceObj = overview?.price;
+  const price = typeof priceObj === 'number' ? priceObj
+    : (priceObj && typeof priceObj === 'object' && typeof priceObj.last === 'number') ? priceObj.last
+    : (typeof overview?.latestPrice === 'number' ? overview.latestPrice : null);
+  const changeRaw = overview?.changePercent ?? overview?.change ?? priceObj?.changePct ?? null;
+  const change = typeof changeRaw === 'number' ? changeRaw : null;
+  const symMeta = overview?.symbol;
+  const companyName = symMeta?.name ?? overview?.companyName ?? env?.symbol ?? symbol;
+  const symId = overview?.symbolId ?? symMeta?.id ?? '';
 
   return (
     <div className="sym-page">
@@ -122,8 +129,8 @@ export default function SymbolPage() {
               {change >= 0 ? '↑' : '↓'} {Math.abs(change).toFixed(2)}%
             </span>
           )}
-          {overview?.exchange && <span className="sym-chip">{overview.exchange}</span>}
-          {overview?.type && <span className="sym-chip">{overview.type}</span>}
+          {symMeta?.exchange && <span className="sym-chip">{symMeta.exchange}</span>}
+          {symMeta?.type && <span className="sym-chip">{symMeta.type}</span>}
         </div>
       </motion.header>
 
