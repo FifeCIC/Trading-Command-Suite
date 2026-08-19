@@ -7,9 +7,10 @@ import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
+import { buildScoreDisplay } from '../core/score-display';
 import './protocols-ladder.css';
 
-import { scoreClass, signalBadge, pnlClass, pnlSign } from '../core/signal-utils';
+import { scoreClass, pnlClass, pnlSign } from '../core/signal-utils';
 
 export default function ProtocolsPerformancePage() {
   const [sortBy, setSortBy] = useState('score');
@@ -37,20 +38,40 @@ export default function ProtocolsPerformancePage() {
   }, [stratsData]);
 
   const entries = useMemo(() => {
-    const best = new Map();
+    // Latest run per protocol only — stale/ad-hoc runs must not pollute.
+    const latestByProto = new Map();
     for (const run of (runsData?.runs || [])) {
       const pid = run.protocolId || '—';
-      if (run.scores?.length) for (const s of run.scores) {
-        const t = (s.ticker || s.symbol || '—').toUpperCase(); const k = `${pid}:${t}`; const sc = s.value ?? s.score ?? 0;
-        if (!best.has(k) || sc > best.get(k).score) best.set(k, { ticker: t, score: sc, protocolId: pid });
+      if (!run.scores?.length) continue;
+      if (!latestByProto.has(pid)) latestByProto.set(pid, run);
+    }
+    const best = new Map();
+    for (const [pid, run] of latestByProto) {
+      for (const s of run.scores) {
+        const t = (s.ticker || s.symbol || '—').toUpperCase();
+        const k = `${pid}:${t}`;
+        if (!best.has(k)) {
+          best.set(k, {
+            ticker: t,
+            score: s.value ?? s.score ?? 0,
+            signal: s.signal ?? null,
+            rawComposite: s.rawComposite ?? null,
+            rawMax: s.rawMax ?? null,
+            protocolId: pid,
+          });
+        }
       }
     }
     let list = [...best.values()].map(e => {
       const p = pnlMap.get(`${e.protocolId}:${e.ticker}`);
-      return { ...e, protocolName: protoMap[e.protocolId] || e.protocolId, pnl: p?.pnl ?? null, ratio: p?.ratio ?? null };
+      const vm = buildScoreDisplay({
+        signal: e.signal, value: e.score,
+        rawComposite: e.rawComposite, rawMax: e.rawMax,
+      });
+      return { ...e, vm, protocolName: protoMap[e.protocolId] || e.protocolId, pnl: p?.pnl ?? null, ratio: p?.ratio ?? null };
     });
     if (protocolFilter !== 'all') list = list.filter(e => e.protocolId === protocolFilter);
-    if (sortBy === 'score') list.sort((a, b) => b.score - a.score);
+    if (sortBy === 'score') list.sort((a, b) => (b.vm.pct ?? -1) - (a.vm.pct ?? -1));
     else if (sortBy === 'pnl') list.sort((a, b) => (b.pnl ?? -Infinity) - (a.pnl ?? -Infinity));
     else if (sortBy === 'alpha') list.sort((a, b) => a.ticker.localeCompare(b.ticker));
     return list;
@@ -70,7 +91,7 @@ export default function ProtocolsPerformancePage() {
       </div>
       {rLoading ? <LoadingSkeleton variant="card" count={5} /> : (
         <div className="pl-table-wrap"><table className="pl-table"><thead><tr><th>#</th><th>Symbol</th><th>Score</th><th>Signal</th><th>Protocol</th><th>P&amp;L</th><th>Ratio</th></tr></thead><tbody>
-          {entries.map((e, i) => (<tr key={`${e.protocolId}:${e.ticker}`}><td className="pl-rank">{i + 1}</td><td className="pl-symbol">{e.ticker}</td><td><span className={scoreClass(e.score)}>{e.score ?? '—'}</span></td><td>{signalBadge(e.score)}</td><td className="pl-muted">{e.protocolName}</td><td className={pnlClass(e.pnl)}>{pnlSign(e.pnl)}</td><td className="pl-muted">{e.ratio != null ? e.ratio.toFixed(2) : '—'}</td></tr>))}
+          {entries.map((e, i) => (<tr key={`${e.protocolId}:${e.ticker}`}><td className="pl-rank">{i + 1}</td><td className="pl-symbol">{e.ticker}</td><td><span className={scoreClass(e.vm.pct)}>{e.vm.pct != null ? `${e.vm.pct}%` : (e.score ?? '—')}</span></td><td>{e.vm.signal ? <span className={`pl-badge pl-badge-${String(e.vm.signal).replace('STRONG_', '').toLowerCase()}`}>{e.vm.signal}</span> : '—'}</td><td className="pl-muted">{e.protocolName}</td><td className={pnlClass(e.pnl)}>{pnlSign(e.pnl)}</td><td className="pl-muted">{e.ratio != null ? e.ratio.toFixed(2) : '—'}</td></tr>))}
         </tbody></table></div>
       )}
     </div>
