@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import { buildScoreDisplay } from '../core/score-display';
 import './sees-arena.css';
 import PageInfoPopover from '../components/PageInfoPopover';
 
@@ -143,12 +144,12 @@ export default function SeesArenaPage() {
   }, [selectedProtocols, protocolMap, protocols]);
 
   const runComparison = useCallback(async () => {
-    if (!selectedProtocols?.length) return;
+    if (!activeProtocols.length) return;
     setComparing(true);
     try {
       // Collect all symbols from all selected protocols via the new symbols endpoint
       const allSymbols = new Set();
-      for (const pid of selectedProtocols) {
+      for (const pid of activeProtocols) {
         try {
           const res = await apiGet(`/api/scoring/gated/protocols/${pid}/symbols`).catch(() => ({ symbols: [] }));
           for (const s of (res.symbols || [])) {
@@ -162,11 +163,11 @@ export default function SeesArenaPage() {
         setComparing(false);
         return;
       }
-      const r = await apiPost('/api/scoring/arena/compare', { symbols, protocols: selectedProtocols });
+      const r = await apiPost('/api/scoring/arena/compare', { symbols, protocols: activeProtocols });
       setCompResult(r);
     } catch { setCompResult({ error: 'Comparison failed — backend may be offline.' }); }
     setComparing(false);
-  }, [selectedProtocols, protocolMap]);
+  }, [activeProtocols, protocolMap]);
 
   // ── Auto-run on mount if user had it enabled ──
   useEffect(() => {
@@ -194,7 +195,7 @@ export default function SeesArenaPage() {
 
       <>
         <div className="sa-controls">
-          <button className="sa-btn" onClick={() => runComparison()} disabled={comparing || !selectedProtocols?.length}>
+          <button className="sa-btn" onClick={() => runComparison()} disabled={comparing || !activeProtocols.length}>
             {comparing ? '⟳ Comparing...' : '▶ Compare All Watchlist Symbols'}
           </button>
           <label className="sa-autorun-toggle" title="Remember selections and auto-run on return">
@@ -241,12 +242,27 @@ export default function SeesArenaPage() {
                     {activeProtocols.map((pid) => {
                       const ps = row.protocolScores.find((p) => p.protocolId === pid);
                       if (!ps) return <td key={pid}>—</td>;
+                      // Canonical display model — same layer as the ladders.
+                      const vm = buildScoreDisplay({
+                        signal: ps.signal,
+                        value: ps.score,
+                        rawComposite: ps.rawComposite,
+                        rawMax: ps.rawMax,
+                        opportunityScore: ps.opportunityScore,
+                        opportunityMax: ps.opportunityMax,
+                        marketStatus: ps.marketStatus,
+                      });
                       return (<td key={pid}>
-                        <span className={`sa-score-cell ${scoreClass(ps.score, ps.hardGated)}`}
+                        <span className={`sa-score-cell ${scoreClass(vm.pct, ps.hardGated)}`}
                           title={ps.warnings?.join('; ') || (ps.hardGated ? 'Hard-gated' : '')}>
-                          {ps.hardGated ? '⛔' : `${ps.score.toFixed(0)}%`}
+                          {ps.hardGated ? '⛔' : vm.pct != null ? `${vm.pct}%` : '—'}
                         </span><br/>
                         <span className={`sa-sig-badge sa-sig-${ps.signal}`}>{ps.signal}</span>
+                        {vm.state !== 'live' && vm.state !== 'unscored' && (
+                          <span className={`sa-state sa-state-${vm.state}`}>
+                            {vm.state === 'paused' ? 'Closed' : vm.state === 'stale' ? 'Stale' : vm.state}
+                          </span>
+                        )}
                       </td>);
                     })}
                     <td><span className={`sa-consensus sa-con-${row.consensus}`}>
@@ -262,9 +278,21 @@ export default function SeesArenaPage() {
                     <Tooltip content="Average scores + consensus across protocols. High divergence = disagreement — investigate. Strong consensus = clearer signal." />
                   </td>
                   {activeProtocols.map((pid) => {
-                    const vals = compResult.comparison.map((r) => r.protocolScores.find((p) => p.protocolId === pid)?.score || 0);
-                    const avg = vals.length ? vals.reduce((a,b) => a+b,0)/vals.length : 0;
-                    return <td key={pid}><strong>{avg.toFixed(0)}</strong></td>;
+                    const vals = compResult.comparison
+                      .map((r) => {
+                        const ps = r.protocolScores.find((p) => p.protocolId === pid);
+                        if (!ps) return null;
+                        const vm = buildScoreDisplay({
+                          signal: ps.signal, value: ps.score,
+                          rawComposite: ps.rawComposite, rawMax: ps.rawMax,
+                          opportunityScore: ps.opportunityScore, opportunityMax: ps.opportunityMax,
+                          marketStatus: ps.marketStatus,
+                        });
+                        return vm.pct ?? null;
+                      })
+                      .filter((v) => v != null);
+                    const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+                    return <td key={pid}><strong>{vals.length ? `${avg.toFixed(0)}%` : '—'}</strong></td>;
                   })}
                   <td><span className="sa-hint">
                     {compResult.comparison.filter((r) => r.consensus === 'strong_buy' || r.consensus === 'buy').length} buy / {compResult.comparison.length} total

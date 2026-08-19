@@ -318,6 +318,11 @@ export class ArenaController {
         description: string;
         score: number;
         signal: string;
+        rawComposite: number;
+        rawMax: number;
+        opportunityScore: number | null;
+        opportunityMax: number | null;
+        marketStatus: { open: boolean; asOf: string | null; reason?: string } | null;
         hardGated: boolean;
         warnings: string[];
         tradingStyle?: string;
@@ -363,12 +368,28 @@ export class ArenaController {
             protocolId,
           );
 
+          // Canonical output fields — the SAME normalised shape the ladders use
+          // via buildScoreDisplay. Raw composites are not comparable across
+          // protocols (different denominators), so expose raw+max and let the
+          // canonical layer compute the percentage.
+          const rawComposite = Object.values(gated.subRawTotals || {}).reduce(
+            (a: number, b: number) => a + (b ?? 0), 0,
+          );
+          const rawMax = Object.values(gated.subMaxTotals || {}).reduce(
+            (a: number, b: number) => a + (b ?? 0), 0,
+          );
+
           protocolScores.push({
             protocolId,
             name: reg.name,
             description: reg.description,
             score: gated.composite,
             signal: gated.signal,
+            rawComposite,
+            rawMax,
+            opportunityScore: gated.opportunityScore ?? null,
+            opportunityMax: gated.opportunityMax ?? null,
+            marketStatus: gated.marketStatus ?? null,
             hardGated: gated.riskGate?.hardGateTriggered || false,
             warnings: gated.riskGate?.warnings || [],
             tradingStyle: reg.tradingStyle,
@@ -383,6 +404,11 @@ export class ArenaController {
             description: reg.description,
             score: 0,
             signal: 'HOLD',
+            rawComposite: 0,
+            rawMax: 0,
+            opportunityScore: null,
+            opportunityMax: null,
+            marketStatus: null,
             hardGated: true,
             warnings: ['Protocol scoring failed'],
             tradingStyle: reg.tradingStyle,
@@ -394,16 +420,22 @@ export class ArenaController {
 
       if (protocolScores.length === 0) continue;
 
-      // Consensus analysis
-      const scores = protocolScores.map((p) => p.score).filter((s) => s > 0);
-      const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-      const variance = scores.length > 1
-        ? scores.reduce((sum, s) => sum + (s - avg) ** 2, 0) / scores.length
+      // Consensus analysis — compare NORMALISED percentages, not raw composites
+      // (raw sums have per-protocol denominators and are not comparable).
+      const pcts = protocolScores
+        .map((p) => (p.rawMax > 0 ? (p.rawComposite / p.rawMax) * 100 : null))
+        .filter((v): v is number => v != null);
+      const avg = pcts.length > 0 ? pcts.reduce((a, b) => a + b, 0) / pcts.length : 0;
+      const variance = pcts.length > 1
+        ? pcts.reduce((sum, s) => sum + (s - avg) ** 2, 0) / pcts.length
         : 0;
       const divergence = Math.round(Math.sqrt(variance) * 10) / 10; // standard deviation as divergence
 
-      const buyCount = protocolScores.filter((p) => p.signal === 'BUY').length;
-      const sellCount = protocolScores.filter((p) => p.signal === 'SELL').length;
+      // STRONG_BUY / STRONG_SELL are server classifications too — count them.
+      const isBuy = (s: string) => s === 'BUY' || s === 'STRONG_BUY';
+      const isSell = (s: string) => s === 'SELL' || s === 'STRONG_SELL';
+      const buyCount = protocolScores.filter((p) => isBuy(p.signal)).length;
+      const sellCount = protocolScores.filter((p) => isSell(p.signal)).length;
       const total = protocolScores.length;
 
       let consensus: typeof comparison[0]['consensus'] = 'mixed';

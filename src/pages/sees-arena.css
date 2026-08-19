@@ -67,6 +67,13 @@
 .sa-sig-BUY { background: rgba(34,197,94,0.15); color: #22c55e; }
 .sa-sig-SELL { background: rgba(239,68,68,0.12); color: #ef4444; }
 .sa-sig-HOLD { background: rgba(148,163,184,0.12); color: #94a3b8; }
+.sa-sig-STRONG_BUY { background: rgba(34,197,94,0.25); color: #16a34a; }
+.sa-sig-STRONG_SELL { background: rgba(239,68,68,0.22); color: #dc2626; }
+
+/* ── Market state (canonical buildScoreDisplay state) ── */
+.sa-state { display: inline-block; margin-left: 4px; font-size: 0.55rem; font-weight: 700; text-transform: uppercase; padding: 1px 4px; border-radius: 3px; }
+.sa-state-paused { background: rgba(148,163,184,0.15); color: #94a3b8; }
+.sa-state-stale { background: rgba(245,158,11,0.15); color: #f59e0b; }
 
 /* ── Consensus ── */
 .sa-consensus { font-weight: 700; font-size: 0.68rem; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
