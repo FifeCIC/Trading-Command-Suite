@@ -321,8 +321,29 @@ export default function SymbolsLadderPage() {
       result = result.filter(e => e.lastScored && new Date(e.lastScored).getTime() >= cutoff);
     }
 
+    // Attach the canonical display model ONCE — ranking and rendering share it.
+    result = result.map((e) => ({
+      ...e,
+      vm: buildScoreDisplay({
+        signal: e.signal,
+        value: e.score,
+        rawComposite: e.rawScore,
+        rawMax: e.rawMax,
+        opportunityScore: e.opportunityScore,
+        opportunityMax: e.opportunityMax,
+        marketStatus: e.marketStatus,
+      }),
+    }));
+
     // The ladder is always score-ranked (#634 removed the Sort dropdown).
-    result.sort((a, b) => (b.rawScore ?? -1) - (a.rawScore ?? -1));
+    // Rank by the NORMALISED Opportunity % (falling back to Signal %).
+    // Raw composites are not comparable across protocols — each protocol has
+    // its own denominator — which previously ranked GBPUSD 33% above XAUUSD 45%.
+    result.sort((a, b) => {
+      const ka = a.vm.opportunityPct ?? a.vm.pct ?? -1;
+      const kb = b.vm.opportunityPct ?? b.vm.pct ?? -1;
+      return kb - ka;
+    });
 
     return result;
   }, [protocolMap, protocolFilter, symbolScope, scopeSymbol, watchlistSymbols, signalFilter, ageFilter, scoreMap]);
@@ -427,15 +448,7 @@ export default function SymbolsLadderPage() {
             <tbody>
               {entries.map((e, i) => {
                 // Output layer: one view model decides signal/tone/state/pct.
-                const vm = buildScoreDisplay({
-                  signal: e.signal,
-                  value: e.score,
-                  rawComposite: e.rawScore,
-                  rawMax: e.rawMax,
-                  opportunityScore: e.opportunityScore,
-                  opportunityMax: e.opportunityMax,
-                  marketStatus: e.marketStatus,
-                });
+                const vm = e.vm;
                 // Two scores, both shown with named columns:
                 // Signal = directional conviction (timing); Opportunity =
                 // additive "everything counts" (ranking/screening).
