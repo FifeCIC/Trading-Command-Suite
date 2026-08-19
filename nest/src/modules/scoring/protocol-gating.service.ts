@@ -701,6 +701,32 @@ export class ProtocolGatingService {
    * Stores the directive-level breakdown so the Protocol Trail page can
    * show WHY each directive scored the way it did.
    */
+  /** TTL cache of protocol → resolved symbols for the canonical-persist guard. */
+  private resolvedSymbolCache = new Map<string, { at: number; symbols: string[] }>();
+
+  /**
+   * Canonical-symbol guard: ad-hoc evaluation (batch / A-B / explorer) scores
+   * arbitrary tickers through a protocol. Persisting those rows pollutes the
+   * runs feed and rarity history (e.g. JBL appearing under vix-spike-v1).
+   * Only symbols the protocol actually resolves are canonical.
+   */
+  private async isCanonicalProtocolSymbol(protocolId: string, symbol: string): Promise<boolean> {
+    const cached = this.resolvedSymbolCache.get(protocolId);
+    let symbols: string[];
+    if (cached && Date.now() - cached.at < 60_000) {
+      symbols = cached.symbols;
+    } else {
+      try {
+        symbols = (await this.protocolDb.resolveSymbols(protocolId)).map((s) => s.toUpperCase());
+        this.resolvedSymbolCache.set(protocolId, { at: Date.now(), symbols });
+      } catch {
+        return true; // resolution unavailable — let the write attempt proceed
+      }
+    }
+    if (symbols.length === 0) return false; // unresolvable protocol has no canonical symbols
+    return symbols.includes(symbol.toUpperCase());
+  }
+
   private storeSnapshot(
     protocolId: string,
     symbol: string,
@@ -721,21 +747,27 @@ export class ProtocolGatingService {
       opportunityPct: number;
     },
   ): void {
-    // Write to score_snapshot (rarity history)
-    this.prisma.scoreSnapshot.create({
-      data: {
-        protocolId,
-        symbol,
-        composite,
-        tradingSignal: signal,
-        rarityPct,
-      },
-    }).catch((err: any) => {
-      this.logger.warn(`Failed to store score snapshot: ${err.message}`);
-    });
-
-    // Write to canonical Score table — protocol scores identified by strategyId = protocolId
     (async () => {
+      // Canonical-symbol guard — only persist symbols this protocol resolves.
+      if (protocolId && protocolId !== 'default') {
+        const canonical = await this.isCanonicalProtocolSymbol(protocolId, symbol);
+        if (!canonical) return;
+      }
+
+      // Write to score_snapshot (rarity history)
+      this.prisma.scoreSnapshot.create({
+        data: {
+          protocolId,
+          symbol,
+          composite,
+          tradingSignal: signal,
+          rarityPct,
+        },
+      }).catch((err: any) => {
+        this.logger.warn(`Failed to store score snapshot: ${err.message}`);
+      });
+
+      // Write to canonical Score table — protocol scores identified by strategyId = protocolId
       try {
         const sym = await this.prisma.symbol.findFirst({ where: { ticker: symbol.toUpperCase() }, select: { id: true } });
         if (!sym) return;
