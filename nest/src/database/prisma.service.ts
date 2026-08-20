@@ -158,6 +158,25 @@ export class PrismaService
         updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
         INDEX idx_protocol_score_status_state (state)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      // RSS news items — the RssScraperService destination. Was missing from
+      // bootstrap, so RSS articles silently vanished. Feeds the screener
+      // news ingestion (#648).
+      `CREATE TABLE IF NOT EXISTS news_item (
+        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(300) NOT NULL,
+        url VARCHAR(500) NULL,
+        source VARCHAR(100) NOT NULL,
+        sourceHash VARCHAR(32) NOT NULL,
+        publishedAt DATETIME(3) NULL,
+        summary TEXT NULL,
+        symbols VARCHAR(200) NULL,
+        sentiment VARCHAR(50) NULL,
+        severity INT NOT NULL DEFAULT 0,
+        status VARCHAR(20) NOT NULL DEFAULT 'new',
+        createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        UNIQUE KEY uq_news_item_sourceHash (sourceHash),
+        INDEX idx_news_item_publishedAt (publishedAt)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ];
 
     for (const sql of tables) {

@@ -402,6 +402,26 @@ model NewsImportRun {
   @@index([tierId, startedAt])
 }
 
+// RSS news items — RssScraperService destination (ticker-matched headlines).
+// Feeds the screener news ingestion (#648).
+model NewsItem {
+  id          Int       @id @default(autoincrement())
+  title       String    @db.VarChar(300)
+  url         String?   @db.VarChar(500)
+  source      String    @db.VarChar(100)
+  sourceHash  String    @unique @db.VarChar(32)
+  publishedAt DateTime? @db.DateTime(3)
+  summary     String?   @db.Text
+  symbols     String?   @db.VarChar(200)
+  sentiment   String?   @db.VarChar(50)
+  severity    Int       @default(0)
+  status      String    @default("new") @db.VarChar(20)
+  createdAt   DateTime  @default(now()) @db.DateTime(3)
+
+  @@map("news_item")
+  @@index([publishedAt])
+}
+
 model DirectiveOutcome {
   id               String    @id @default(uuid()) @db.VarChar(36)
   directiveId      String    @db.VarChar(100)
@@ -615,6 +635,7 @@ model ScreenerHit {
 
   watchlistItem WatchlistItem?
 
+  @@map("screener_hit")
   @@index([ticker])
   @@index([source])
   @@index([timestamp])
@@ -640,6 +661,7 @@ model WatchlistItem {
   watchlist   Watchlist?   @relation(fields: [watchlistId], references: [id], onDelete: SetNull)
   screenerHit ScreenerHit? @relation(fields: [screenerHitId], references: [id], onDelete: SetNull)
 
+  @@map("watchlist_item")
   @@index([watchlistId])
   @@index([status])
   @@index([ticker])

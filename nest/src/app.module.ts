@@ -43,6 +43,7 @@ import { ApiActivityModule } from './modules/api-activity/api-activity.module';
 import { IsaModule } from './modules/isa/isa.module';
 import { FxModule } from './modules/fx/fx.module';
 import { EarningsModule } from './modules/earnings/earnings.module';
+import { ScreenerModule } from './modules/screener/screener.module';
 import { PlanModule } from './modules/plan/plan.module';
 import { StarsModule } from './modules/stars/stars.module';
 import { AutomationModule } from './modules/automation/automation.module';
@@ -104,6 +105,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     IsaModule,
     FxModule,
     EarningsModule,
+    ScreenerModule,
     PlanModule,
     StarsModule,
     AutomationModule,
