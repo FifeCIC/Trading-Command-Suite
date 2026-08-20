@@ -214,8 +214,7 @@ function protocolNeedsEurUsd(groups: DirectiveGroup[]): boolean {
  * maxScores. Percentage-based classification is the only scalable design.
  * The constants below are now percentage points (not absolute scores).
  */
-const ENTRY_THRESHOLD = 40;   // % of maxScore — BUY/SELL above this
-const HOLD_FLOOR = 20;        // % of maxScore — HOLD above this, SELL below
+const ENTRY_THRESHOLD = 40;   // % of maxScore — BUY/SELL above this; below = HOLD (no directional edge)
 
 // ─── Service ─────────────────────────────────────────────
 
@@ -512,10 +511,12 @@ export class ProtocolGatingService {
       signal = isLongDirection ? 'STRONG_BUY' : 'STRONG_SELL';
     } else if (compositePct >= ENTRY_THRESHOLD) {
       signal = isLongDirection ? 'BUY' : 'SELL';
-    } else if (compositePct >= HOLD_FLOOR) {
-      signal = 'HOLD';
     } else {
-      signal = directionMode === 'LONG_ONLY' ? 'HOLD' : 'SELL';
+      // Below entry threshold = no directional edge, for EVERY direction mode.
+      // HOLD means "no trade right now" — NOT position advice. (Previously
+      // SHORT_ONLY/BOTH emitted SELL below HOLD_FLOOR, which mislabelled
+      // "nothing is firing" as a short signal.)
+      signal = 'HOLD';
     }
 
     // Meta: composite is the plain sum — no gating reduction to report.

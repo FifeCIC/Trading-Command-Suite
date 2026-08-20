@@ -1191,6 +1191,62 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
       }
     ]
   },
+  "vix-short-v1": {
+    "name": "VIX Spike Short V1",
+    "description": "Short-volatility mean-reversion protocol — fades VIX spikes from the short side (overbought vol, elevated ATR). Natural pair to vix-spike-v1: the long side buys spike reversals, this side sells extended vol premium.",
+    "directionMode": "SHORT_ONLY",
+    "tradingStyle": "Mean Reversion / Scalp",
+    "recommendedTimeframe": "1m–5m",
+    "avgHoldTime": "Minutes to 1 hour",
+    "winRateTarget": "55–65%",
+    "idealFor": "Shorting VIX/vol exposure after spike crests. Higher win-rate targets than trend shorts — short-vol has positive carry but fat left tails. Risk gate (SP500 regime) is mandatory.",
+    "derivedFrom": "vix-spike-v1",
+    "groups": [
+      {
+        "id": "short-technical",
+        "name": "Bearish Technical Analysis",
+        "description": "Overbought volatility — fade signals",
+        "weight": 0.4,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "rsi-overbought",
+          "cci",
+          "macd-crossover",
+          "bollinger-band-squeeze",
+          "mean-reversion"
+        ]
+      },
+      {
+        "id": "short-sentiment",
+        "name": "Volatility Structure",
+        "description": "Volatility structure and confirmation",
+        "weight": 0.35,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "volatility-tools",
+          "volume-confirmation",
+          "support-resistance-levels"
+        ]
+      },
+      {
+        "id": "short-risk",
+        "name": "Short-Side Risk",
+        "description": "Short-Side Risk",
+        "weight": 0.25,
+        "isRiskGate": true,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "liquidity-check",
+          "sp500-regime"
+        ]
+      }
+    ]
+  },
   "gold-macro-v1": {
     "name": "Gold Macro Correlation V1",
     "description": "Gold scoring protocol — trend-following with macro correlation (DXY, real rates, inflation). Longer hold periods than speed protocols.",

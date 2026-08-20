@@ -7,6 +7,44 @@ mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' }
 
 const DIAGRAMS = [
   {
+    id: 'signal-state-machine',
+    label: 'Signal Vocabulary & Direction State Machine',
+    desc: 'One vocabulary, three layers. SERVER: directionMode declares what a protocol may emit — LONG_ONLY → BUY only, SHORT_ONLY → SELL only. Classification is percentage-based: >=80% STRONG, >=40% BUY/SELL, below 40% HOLD. HOLD means "no directional edge / no trade right now" — it is NOT position advice. DUAL protocols do not flip by themselves: BUY↔SELL switching comes from PAIRING a LONG and SHORT protocol on a ScoringStrategy (shortProtocolId) — the loop compares both composites and the winner above threshold decides; both below = HOLD. UI states (LIVE/PAUSED/STALE/UNSCORED) are orthogonal to the signal. Database relationships: Protocol.derivedFrom links variants, ScoringStrategy.shortProtocolId pairs long+short for direction validation.',
+    code: `flowchart TB
+    subgraph Server["1. Server classification (protocol-gating)"]
+        PCT["compositePct — directional signal % of max"]
+        PCT -->|">= 80"| STRONG["STRONG_BUY / STRONG_SELL"]
+        PCT -->|"40 - 79"| TRADE["BUY / SELL"]
+        PCT -->|"< 40"| HOLD["HOLD = no trade right now"]
+    end
+    subgraph Mode["2. directionMode contract (Protocol.directionMode)"]
+        LO["LONG_ONLY — emits BUY only"]
+        SO["SHORT_ONLY — emits SELL only"]
+        BO["BOTH — needs a PAIR (dual)"]
+    end
+    subgraph Dual["3. Dual-protocol pairing (ScoringStrategy.shortProtocolId)"]
+        LS["LONG protocol composite"]
+        SS["SHORT protocol composite"]
+        LS --> CMP{"long > short<br/>and >= threshold?"}
+        SS --> CMP
+        CMP -->|"long wins"| BUY["BUY"]
+        CMP -->|"short wins"| SELL["SELL"]
+        CMP -->|"neither"| WAIT["HOLD — both below threshold"]
+    end
+    subgraph UI["4. Display states (orthogonal — buildScoreDisplay)"]
+        U1["LIVE — fresh, tradable"]
+        U2["PAUSED — market closed, frozen at last close"]
+        U3["STALE — data older than 30 min"]
+        U4["UNSCORED — no score produced"]
+    end
+    Mode --> Server
+    HOLD -. "vocabulary: HOLD = no directional edge,<br/>NOT position advice" .-> WAIT
+    style HOLD fill:#16213e,stroke:#f59e0b,color:#fff
+    style WAIT fill:#16213e,stroke:#f59e0b,color:#fff
+    style STRONG fill:#16213e,stroke:#22c55e,color:#fff
+    style TRADE fill:#16213e,stroke:#22c55e,color:#fff`,
+  },
+  {
     id: 'scoring-dual-score',
     label: 'Dual-Score Scoring Model (Opportunity vs Signal)',
     desc: 'SEES emits TWO scores instead of one muddled number. Opportunity = additive "everything counts" (direction + conditions + forecasts + liquidity) for ranking/screening across the universe — "find the golden needle in a haystack of silver needles". Signal = directional conviction only (which way, how strongly, right now) for timing — drives BUY/HOLD/SELL and the automation loop. Gates multiply/veto the Signal; neutral conditions count only in Opportunity. Full design: docs/scoring-architecture.md (GH #638).',
