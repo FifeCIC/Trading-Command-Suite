@@ -20,6 +20,7 @@ import './protocols-page-b.css';
 export default function ProtocolsPageB({ initialProtocolId }) {
   const [selected, setSelected] = useState(null);
   const [styleFilter, setStyleFilter] = useState('All');
+  const [directionFilter, setDirectionFilter] = useState('All');
   const [sortOrder, setSortOrder] = useState('active-first');
   const [searchQuery, setSearchQuery] = useState('');
   const [usageFilter, setUsageFilter] = useState('all');
@@ -102,6 +103,13 @@ export default function ProtocolsPageB({ initialProtocolId }) {
   const styles = ['All', ...new Set(protocols.map(p => p.tradingStyle).filter(Boolean))];
   const filteredProtocols = useMemo(() => {
     let list = styleFilter === 'All' ? [...protocols] : protocols.filter(p => p.tradingStyle === styleFilter);
+    // Direction filter — SHORT_ONLY protocols on one side, everything that can
+    // emit BUY (LONG_ONLY + BOTH) on the other.
+    if (directionFilter === 'Short') {
+      list = list.filter(p => (p.directionMode || 'LONG_ONLY') === 'SHORT_ONLY');
+    } else if (directionFilter === 'Long') {
+      list = list.filter(p => (p.directionMode || 'LONG_ONLY') !== 'SHORT_ONLY');
+    }
     // Search filter — match against name and id
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
@@ -129,7 +137,7 @@ export default function ProtocolsPageB({ initialProtocolId }) {
       list.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
     }
     return list;
-  }, [protocols, styleFilter, sortOrder, searchQuery, usageFilter, hideInactive]);
+  }, [protocols, styleFilter, directionFilter, sortOrder, searchQuery, usageFilter, hideInactive]);
 
   async function handleToggle() {
     if (!selectedProto) return;
@@ -190,6 +198,14 @@ export default function ProtocolsPageB({ initialProtocolId }) {
           Style:
           <select className="prb-filter-select" value={styleFilter} onChange={e => setStyleFilter(e.target.value)}>
             {styles.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
+        <label className="prb-filter-label">
+          Direction:
+          <select className="prb-filter-select" value={directionFilter} onChange={e => setDirectionFilter(e.target.value)}>
+            <option value="All">All</option>
+            <option value="Long">Long</option>
+            <option value="Short">Short</option>
           </select>
         </label>
         <label className="prb-filter-label">
