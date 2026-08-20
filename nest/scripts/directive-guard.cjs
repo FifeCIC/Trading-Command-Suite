@@ -17,10 +17,13 @@
  *   MODE 6  Duplicate id           — the same directive `id` defined by two
  *           different classes (different files). One copy is dead code that
  *           still confuses audits and the registry.
+ *   MODE 7  Readiness evidence (--db) — a `ready` directive must have recorded
+ *           scores in the DB that vary (Score.breakdown.breakouts).
  *
  * Usage:
  *   node nest/scripts/directive-guard.cjs              # static + runtime
  *   node nest/scripts/directive-guard.cjs --static-only # skip runtime (no build)
+ *   node nest/scripts/directive-guard.cjs --db          # + readiness evidence (local MySQL)
  *
  * Exit code: 1 if any ERROR-level finding (mode 1 static on a `ready` directive),
  * 0 otherwise. WARN findings are advisory and do not fail the run.
@@ -109,6 +112,9 @@ function staticCheckFile(file) {
     const readiness = fieldOf(cls.body, 'readiness');
     const bias = fieldOf(cls.body, 'directionBias');
     if (!id) continue; // not a directive class
+
+    // Collect `ready` directives for the MODE 7 readiness-evidence check.
+    if (readiness === 'ready' && !readyDirectives.has(id)) readyDirectives.set(id, file);
 
     // MODE 6 — duplicate id: same id defined by a class in a different file
     if (idOwners.has(id)) {
@@ -233,9 +239,90 @@ function runtimeCheck() {
   console.log(`[guard] runtime constant-output test: ${tested} directive classes exercised.`);
 }
 
+// ── Readiness evidence (MODE 7, --db) ──────────────────────────────────────
+//
+// `ready` requires recorded scores in the DB that vary — the 2026-08-14 audit
+// found directives that were `ready` on paper but had never produced a real,
+// varying score. Recorded scores live in Score.breakdown.breakouts entries
+// ({directiveId, score}). DB is optional/local: CI has no MySQL, so this
+// check runs only with --db.
+
+/** id -> file of every directive marked `ready` (populated by the static pass). */
+const readyDirectives = new Map();
+const MIN_EVIDENCE_RECORDS = 10;
+const MIN_EVIDENCE_DISTINCT = 2;
+
+function loadEnvFile(file) {
+  try {
+    if (!fs.existsSync(file)) return;
+    for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
+      const kv = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+      if (kv && !process.env[kv[1]]) process.env[kv[1]] = kv[2].replace(/^['"]|['"]$/g, '');
+    }
+  } catch { /* unreadable .env */ }
+}
+
+async function readinessEvidenceCheck() {
+  loadEnvFile(path.join(NEST_ROOT, '.env'));
+  if (!process.env.DATABASE_URL) {
+    console.log('[guard] readiness evidence skipped — DATABASE_URL not set (see nest/.env).');
+    return;
+  }
+  let prisma;
+  try {
+    prisma = require(path.join(NEST_ROOT, 'node_modules', '@prisma', 'client'));
+  } catch {
+    console.log('[guard] readiness evidence skipped — @prisma/client not built (run prisma generate).');
+    return;
+  }
+  const client = new prisma.PrismaClient();
+  let rows = [];
+  try {
+    await client.$connect();
+    rows = await client.$queryRawUnsafe(
+      'SELECT breakdown FROM score ORDER BY timestamp DESC LIMIT 5000',
+    );
+  } catch (err) {
+    console.log(`[guard] readiness evidence skipped — DB unavailable: ${err.message}`);
+    return;
+  } finally {
+    try { await client.$disconnect(); } catch { /* ignore */ }
+  }
+
+  // directiveId -> { values: Set<number>, records: number }
+  const evidence = new Map();
+  for (const row of rows) {
+    const b = row.breakdown || {};
+    const breakouts = b.breakouts || {};
+    for (const group of Object.values(breakouts)) {
+      if (!Array.isArray(group)) continue;
+      for (const entry of group) {
+        if (!entry || !entry.directiveId || entry.score == null) continue;
+        let e = evidence.get(entry.directiveId);
+        if (!e) { e = { values: new Set(), records: 0 }; evidence.set(entry.directiveId, e); }
+        e.records++;
+        e.values.add(entry.score);
+      }
+    }
+  }
+
+  let insufficient = 0;
+  for (const [id, file] of readyDirectives) {
+    const e = evidence.get(id);
+    if (!e || e.records === 0) {
+      report(file, id, 7, 'WARN', `readiness='ready' but zero recorded scores in DB — no runtime evidence`);
+      insufficient++;
+    } else if (e.records < MIN_EVIDENCE_RECORDS || e.values.size < MIN_EVIDENCE_DISTINCT) {
+      report(file, id, 7, 'WARN', `readiness='ready' but weak evidence: ${e.records} recorded scores, ${e.values.size} distinct`);
+      insufficient++;
+    }
+  }
+  console.log(`[guard] readiness evidence: ${evidence.size} directives scored in DB, ${insufficient}/${readyDirectives.size} ready directives lack evidence.`);
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────
 
-function main() {
+async function main() {
   const staticOnly = process.argv.includes('--static-only');
   console.log('[guard] scanning directive implementations...\n');
 
@@ -246,6 +333,7 @@ function main() {
   console.log(`[guard] static scan complete: ${files.length} files.\n`);
 
   if (!staticOnly) runtimeCheck();
+  if (process.argv.includes('--db')) await readinessEvidenceCheck();
 
   if (findings.length === 0) {
     console.log('[guard] no findings.');
@@ -262,4 +350,7 @@ function main() {
   process.exit(errors.length > 0 ? 1 : 0);
 }
 
-main();
+main().then(() => { /* readiness-evidence check awaits DB inside */ }).catch((err) => {
+  console.error(`[guard] failed: ${err.message}`);
+  process.exit(1);
+});

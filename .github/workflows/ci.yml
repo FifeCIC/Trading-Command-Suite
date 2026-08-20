@@ -40,3 +40,5 @@ jobs:
       - run: npx prisma generate
       - run: npm run lint --if-present || true
       - run: npm run build
+      - name: Directive honesty guard
+        run: node scripts/directive-guard.cjs --static-only
