@@ -68,7 +68,10 @@ When invoked with `/update-documentation` or when you detect multiple unprocesse
    - `src/data/qa-checklist.js` — add QA test entries
    - `src/core/architecture-reference.js` — add SLICE + route contract entries
 4. **Move processed files** to `.github/handoffs/processed/`
-5. **Report**: "Processed 5 handoffs → +3 capabilities, +4 QA entries, +2 AF slices"
+5. **Notify Discord** (phase 1, #652) — for each processed file:
+   `node scripts/handoff-to-discord.cjs .github/handoffs/processed/<file>`
+   No-op with a clear skip message when no webhook is configured.
+6. **Report**: "Processed 5 handoffs → +3 capabilities, +4 QA entries, +2 AF slices"
 
 Token savings: processing 5 handoffs costs ~70K tokens vs ~325K if each agent self-updated (78% reduction).
 

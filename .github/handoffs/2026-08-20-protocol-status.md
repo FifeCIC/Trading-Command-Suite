@@ -12,7 +12,7 @@ data, non-ready directives) and views showed rows of dashes with no explanation.
 Worse, the automation loop early-returned when there were no positions/strategies,
 so protocol-driven scoring never ran at all in that state.
 
-## What changed
+## What Changed
 
 ### Backend
 - **`protocol_score_status` table** (bootstrap DDL + Prisma model): loop-owned

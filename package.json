@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "check:bundle": "node ./scripts/check-bundle-budget.mjs",
-    "extract:provider-comparisons": "node ./scripts/extract-provider-comparisons.cjs"
+    "extract:provider-comparisons": "node ./scripts/extract-provider-comparisons.cjs",
+    "handoff:discord": "node ./scripts/handoff-to-discord.cjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.20",
