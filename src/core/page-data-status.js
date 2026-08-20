@@ -99,9 +99,6 @@ export const PAGE_DATA_STATUS = {
   'automation-rules': { status: 'live', source: 'DB' },
   'alert-center': { status: 'live', source: 'Alert system + DB (Prisma Alert model, click navigation #442)' },
 
-  // ── Strategy Ladders (detached from Arena) ──
-  'strategy-ladders': { status: 'live', source: 'API stacks data (detached from SEES Arena #434)' },
-
   // ── Development ──
   'architecture-framework': { status: 'live', source: 'Static architecture data' },
   'diagrams': { status: 'live', source: 'Generated diagrams' },

@@ -106,7 +106,6 @@ export const NAV_TREE = {
       { id: 'live-ordering-stack', label: 'Ladder', icon: '◉' },
       { id: 'symbols-ladder', label: 'Symbols Ladder', icon: '📈' },
       { id: 'singles-monitor', label: 'Singles Monitor', icon: '🖥' },
-      { id: 'strategy-ladders', label: 'Strategies Ladder', icon: '🪜' },
       { id: 'scoring-activity-logs', label: 'Scoring Activity Logs', icon: '▤' },
       { id: 'strategy-builder', label: 'Strategy Builder', icon: '⚙' },
     ],

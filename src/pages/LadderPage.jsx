@@ -15,7 +15,7 @@
  * @uses SignalBadge         (src/components/SignalBadge.jsx)
  */
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
@@ -23,9 +23,29 @@ import SignalBadge from '../components/SignalBadge';
 import { buildScoreDisplay } from '../core/score-display';
 import { useProtocolStatuses } from '../core/protocol-status';
 import { useProtocolData } from '../core/useProtocolData';
+import { usePersistentState, usePersistentChoice } from '../hooks/usePersistentState';
 import './ladder.css';
 
 const AGE_OPTIONS = ['1', '2', '3', '4', '5', '10', '15', '20', '30', '60'];
+
+const DIRECTION_OPTIONS = [
+  ['all', 'All'],
+  ['long', 'LONG'],
+  ['short', 'SHORT'],
+];
+
+/**
+ * Is a protocol applicable to the given direction view?
+ * BOTH protocols trade both directions, so they apply to LONG and SHORT alike.
+ * LONG_ONLY / SHORT_ONLY only apply to their own view.
+ */
+function isDirectionApplicable(p, direction) {
+  if (direction === 'all') return true;
+  const mode = p.directionMode || 'LONG_ONLY';
+  if (direction === 'long') return mode !== 'SHORT_ONLY';
+  if (direction === 'short') return mode !== 'LONG_ONLY';
+  return true;
+}
 
 /** Relative time — "12s ago", "5m ago", "2h ago". */
 function timeAgo(iso) {
@@ -79,11 +99,33 @@ function ScoreBlock({ label, score, max, pct, mode, active }) {
 export default function LadderPage() {
   const { protocols, runs, isLoading } = useProtocolData();
   const { statusMap } = useProtocolStatuses();
-  const [selectedIds, setSelectedIds] = useState([]);
-  // Score-age filter (minutes) — same staleness filter as the Symbols Ladder.
-  const [ageFilter, setAgeFilter] = useState('all');
-  // Rank by Signal % or Opportunity %.
-  const [rankBy, setRankBy] = useState('signal');
+  // Filter / sort selections persist across navigation.
+  const [selectedIds, setSelectedIds] = usePersistentState('ladder:selectedIds', []);
+  const [ageFilter, setAgeFilter] = usePersistentChoice('ladder:ageFilter', 'all', ['all', ...AGE_OPTIONS]);
+  const [rankBy, setRankBy] = usePersistentChoice('ladder:rankBy', 'signal', ['signal', 'opp']);
+
+  // Direction view — All / LONG / SHORT. Driven by the ?direction= URL param
+  // (written back so the view is shareable) and persisted across navigation.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [direction, setDirection] = usePersistentChoice('ladder:direction', 'all', ['all', 'long', 'short']);
+
+  // Apply the ?direction= URL param on mount (validated against allowed values).
+  useEffect(() => {
+    const urlDir = (searchParams.get('direction') || '').toLowerCase();
+    if (urlDir && ['all', 'long', 'short'].includes(urlDir)) {
+      setDirection(urlDir);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Change the view, keeping the URL in sync so LONG/SHORT are shareable.
+  const changeDirection = (d) => {
+    setDirection(d);
+    const next = new URLSearchParams(searchParams);
+    if (d === 'all') next.delete('direction');
+    else next.set('direction', d.toUpperCase());
+    setSearchParams(next, { replace: true });
+  };
 
   // Screen Options: how to render each card's score (raw | percent | both).
   const [scoreDisplay, setScoreDisplay] = useState(readScoreDisplay);
@@ -116,14 +158,30 @@ export default function LadderPage() {
     [activeProtocols, statusMap],
   );
 
-  // Auto-select the first selectable protocol (matches the sidebar ordering).
-  useEffect(() => {
-    if (selectedIds.length === 0 && selectableProtocols.length > 0) {
-      setSelectedIds([selectableProtocols[0].id]);
-    }
-  }, [selectedIds, selectableProtocols]);
+  // Partition selectable protocols by whether they apply to the current
+  // direction view. In All mode every protocol is applicable.
+  const applicableProtocols = useMemo(
+    () => selectableProtocols.filter((p) => isDirectionApplicable(p, direction)),
+    [selectableProtocols, direction],
+  );
+  const nonApplicableProtocols = useMemo(
+    () => selectableProtocols.filter((p) => !isDirectionApplicable(p, direction)),
+    [selectableProtocols, direction],
+  );
 
-  const selectedProtocols = selectableProtocols.filter((p) => selectedIds.includes(p.id));
+  // Prune selections to applicable protocols and auto-select the first one when
+  // nothing applicable is selected (e.g. after switching LONG → SHORT).
+  useEffect(() => {
+    const applicableIds = new Set(applicableProtocols.map((p) => p.id));
+    const kept = selectedIds.filter((id) => applicableIds.has(id));
+    if (kept.length !== selectedIds.length) {
+      setSelectedIds(kept);
+    } else if (kept.length === 0 && applicableProtocols.length > 0) {
+      setSelectedIds([applicableProtocols[0].id]);
+    }
+  }, [direction, applicableProtocols, selectedIds, setSelectedIds]);
+
+  const selectedProtocols = applicableProtocols.filter((p) => selectedIds.includes(p.id));
 
   const toggleProtocol = (id) => {
     setSelectedIds((prev) =>
@@ -252,7 +310,7 @@ export default function LadderPage() {
             />
           )}
         </div>
-        <span className="lad-time">{e.time ? timeAgo(e.time) : 'no score'}</span>
+        <span className="lad-time"><span className="lad-time-label">Scored: </span>{e.time ? timeAgo(e.time) : 'no score'}</span>
       </div>
     </motion.div>
   );
@@ -290,12 +348,14 @@ export default function LadderPage() {
       <div className="lad-split">
         {/* Left — protocol selection list */}
         <aside className="lad-proto-col">
-          <h2 className="lad-proto-title">Active Protocols</h2>
-          {selectableProtocols.length === 0 ? (
-            <p className="lad-proto-empty">No active protocols.</p>
+          <h2 className="lad-proto-title">
+            {direction === 'all' ? 'Active Protocols' : 'Applicable Protocols'}
+          </h2>
+          {applicableProtocols.length === 0 ? (
+            <p className="lad-proto-empty">No {direction === 'all' ? 'active' : 'applicable'} protocols.</p>
           ) : (
             <ul className="lad-proto-list">
-              {selectableProtocols.map((p) => (
+              {applicableProtocols.map((p) => (
                 <li key={p.id}>
                   <label className="lad-proto-item">
                     <input
@@ -310,11 +370,40 @@ export default function LadderPage() {
               ))}
             </ul>
           )}
+
+          {direction !== 'all' && nonApplicableProtocols.length > 0 && (
+            <>
+              <h3 className="lad-proto-subtitle">Non-Applicable Protocols</h3>
+              <ul className="lad-proto-list">
+                {nonApplicableProtocols.map((p) => (
+                  <li key={p.id} className="lad-proto-item--disabled">
+                    <label className="lad-proto-item">
+                      <input type="checkbox" disabled />
+                      <span className="lad-proto-name">{p.name ?? p.id}</span>
+                      <span className="lad-proto-count">{(p.resolvedSymbols || []).length}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </aside>
 
         {/* Right — cards stacked in score order */}
         <main className="lad-cards-col">
           <div className="lad-toolbar">
+            <div className="lad-direction" role="group" aria-label="Direction">
+              {DIRECTION_OPTIONS.map(([val, label]) => (
+                <button
+                  key={val}
+                  type="button"
+                  className={`lad-dir-btn ${direction === val ? 'lad-dir-btn--active' : ''}`}
+                  onClick={() => changeDirection(val)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <label className="lad-filter">
               Score by:
               <select value={rankBy} onChange={(e) => setRankBy(e.target.value)}>

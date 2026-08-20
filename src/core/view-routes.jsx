@@ -49,7 +49,6 @@ import SymbolsLadderPage from '../pages/SymbolsLadderPage.jsx';
 import ProtocolsPerformancePage from '../pages/ProtocolsPerformancePage.jsx';
 import MetaStackPipelinePage from '../pages/MetaStackPipelinePage.jsx';
 import CreateProtocolsPage from '../pages/CreateProtocolsPage.jsx';
-import StrategyLaddersPage from '../pages/StrategyLaddersPage.jsx';
 import StrategyBuilderPage from '../pages/StrategyBuilderPage.jsx';
 import StrategyWizardPage from '../pages/StrategyWizardPage.jsx';
 
@@ -232,7 +231,6 @@ export const VIEW_COMPONENTS = {
   'protocol-builder': CreateProtocolsPage,
   'strategy-builder': StrategyBuilderPage,
   'strategy-wizard': StrategyWizardPage,
-  'strategy-ladders': StrategyLaddersPage,
   'scoring-overview': ScoringOverviewPage,
   'signals-overview': SignalsOverviewPage,
 

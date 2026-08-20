@@ -25,6 +25,20 @@
 .lad-filter { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: var(--ink-soft); font-weight: 600; }
 .lad-filter select { min-height: 32px; padding: 0 0.5rem; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); font-family: inherit; font-size: 0.8rem; }
 .lad-filter select:focus { outline: none; border-color: var(--accent); }
+
+/* Direction segmented control (All / LONG / SHORT) */
+.lad-direction { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.lad-dir-btn { border: none; background: var(--panel); color: var(--ink-soft); font-family: inherit; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 0.42rem 0.8rem; cursor: pointer; }
+.lad-dir-btn + .lad-dir-btn { border-left: 1px solid var(--line); }
+.lad-dir-btn:hover { color: var(--ink); }
+.lad-dir-btn--active { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+
+/* Non-applicable protocol section (opposite-direction protocols) */
+.lad-proto-subtitle { margin: 0.8rem 0 0.4rem; padding-top: 0.6rem; border-top: 1px dashed var(--line); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-muted, #94a3b8); }
+.lad-proto-item--disabled .lad-proto-item { opacity: 0.5; cursor: not-allowed; }
+.lad-proto-item--disabled .lad-proto-item:hover { background: transparent; }
+.lad-proto-item--disabled input { cursor: not-allowed; }
+
 .lad-stack { display: flex; flex-direction: column; gap: 0.6rem; }
 
 .lad-proto-tag { font-size: 0.62rem; color: var(--ink-soft); background: color-mix(in srgb, var(--ink-soft) 14%, transparent); padding: 1px 6px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
@@ -61,6 +75,7 @@
 .lad-state--stale { color: var(--color-warning, #f59e0b); }
 .lad-state--unscored { color: var(--color-muted, #94a3b8); }
 .lad-time { color: var(--ink-soft); }
+.lad-time-label { color: var(--color-muted, #94a3b8); font-weight: 700; text-transform: uppercase; font-size: 0.62rem; letter-spacing: 0.04em; }
 
 .lad-empty { padding: 3rem 1rem; text-align: center; border: 1px dashed var(--line); border-radius: 10px; }
 .lad-empty-title { font-size: 0.95rem; font-weight: 700; margin: 0 0 0.3rem; }

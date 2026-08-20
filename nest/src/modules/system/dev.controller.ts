@@ -7,7 +7,7 @@
  */
 
 import { Controller, Post, Body, Logger } from '@nestjs/common';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { readFileSync } from 'fs';
 
 @Controller('dev')
@@ -20,6 +20,11 @@ export class DevController {
     const { file, line, query } = body;
     if (!file) return { error: 'file path required' };
 
+    // Whitelist charset: blocks traversal, absolute paths, and shell metacharacters
+    // (Windows needs shell:true for code.cmd, so the arg must be injection-proof)
+    if (!/^[\w./-]+$/.test(file) || file.includes('..')) {
+      return { error: 'Path must be relative to workspace root' };
+    }
     if (!file.startsWith('src/') && !file.startsWith('nest/') && !file.startsWith('scripts/') && !file.startsWith('docs/')) {
       return { error: 'Path must be relative to workspace root' };
     }
@@ -39,11 +44,12 @@ export class DevController {
       } catch { /* file unreadable */ }
     }
 
-    const targetLine = line || matchedLine;
+    const targetLine = Number.isInteger(Number(line)) && Number(line) > 0 ? Number(line) : matchedLine;
     const goto = targetLine ? `${fullPath}:${targetLine}` : fullPath;
 
     return new Promise((resolve) => {
-      exec(`code --goto "${goto}"`, (err) => {
+      // execFile (not exec): no shell, so the path can't inject commands
+      execFile('code', ['--goto', goto], { shell: process.platform === 'win32' }, (err) => {
         if (err) {
           resolve({ opened: false, error: err.message, path: goto });
         } else {

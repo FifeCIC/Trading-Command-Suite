@@ -34,6 +34,12 @@ function savePrefs(prefs) {
 }
 
 /* ── Helpers ── */
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
 function providerColor(status) {
   if (status === 'healthy' || status === 'connected') return 'var(--market-open, #22c55e)';
   if (status === 'degraded' || status === 'slow') return 'var(--market-closing, #eab308)';
@@ -190,7 +196,9 @@ export default function MarketTape() {
     const articles = newsQuery.data?.articles || [];
     const latest = articles[0];
     if (latest) {
-      const headline = (latest.title || '').substring(0, 80) + ((latest.title || '').length > 80 ? '…' : '');
+      // escapeHtml: provider-supplied titles go into innerHTML — XSS vector without this
+      const rawTitle = latest.title || '';
+      const headline = escapeHtml(rawTitle.substring(0, 80) + (rawTitle.length > 80 ? '…' : ''));
       const link = '/research/news-intel';
       sections.push({
         key: 'news', label: 'News',
@@ -205,8 +213,8 @@ export default function MarketTape() {
     const deals = tradeQuery.data?.deals || [];
     const lastDeal = deals[0];
     if (lastDeal) {
-      const dir = lastDeal.type === 'DEAL_TYPE_BUY' ? 'BUY' : lastDeal.type === 'DEAL_TYPE_SELL' ? 'SELL' : lastDeal.type || '';
-      const sym = lastDeal.symbol || '';
+      const dir = lastDeal.type === 'DEAL_TYPE_BUY' ? 'BUY' : lastDeal.type === 'DEAL_TYPE_SELL' ? 'SELL' : escapeHtml(lastDeal.type || '');
+      const sym = escapeHtml(lastDeal.symbol || '');
       const pnl = lastDeal.profit ?? 0;
       const pnlColor = pnl >= 0 ? '#22c55e' : '#ef4444';
       sections.push({

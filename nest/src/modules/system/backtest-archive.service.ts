@@ -19,6 +19,19 @@ import * as zlib from 'zlib';
 const ARCHIVE_DIR = resolve(process.cwd(), 'data', 'backtest-archive');
 const INDEX_FILE = join(ARCHIVE_DIR, 'index.json');
 
+// Whitelist: table/dateCol come from HTTP query params and are interpolated
+// into raw SQL (SELECT + DELETE). Without this, any table could be dumped and
+// wiped — or worse, backtick injection. Keep in sync with data-retention TABLE_CONFIG.
+const ARCHIVABLE_TABLES: Record<string, Set<string>> = {
+  directiveoutcome: new Set(['predictedAt']),
+  score: new Set(['timestamp']),
+  score_snapshot: new Set(['snappedAt']),
+  marketbar: new Set(['timestamp']),
+  strategy_evaluation: new Set(['evaluatedAt']),
+  decision_log: new Set(['timestamp']),
+  automation_event: new Set(['timestamp']),
+};
+
 interface ArchiveEntry {
   id: string;
   table: string;
@@ -54,6 +67,14 @@ export class BacktestArchiveService {
     retentionDays: number,
   ): Promise<{ exported: number; filePath: string | null }> {
     if (!this.prisma.isAvailable) return { exported: 0, filePath: null };
+
+    if (!ARCHIVABLE_TABLES[table]?.has(dateCol)) {
+      this.logger.warn(`Rejected archive request for non-whitelisted table/column: ${table}.${dateCol}`);
+      throw new Error(`Table '${table}' with date column '${dateCol}' is not archivable`);
+    }
+    if (!Number.isInteger(retentionDays) || retentionDays < 1) {
+      throw new Error('retentionDays must be a positive integer');
+    }
 
     const cutoff = new Date(Date.now() - retentionDays * 86400000);
     const cutoffStr = cutoff.toISOString().slice(0, 19).replace('T', ' ');

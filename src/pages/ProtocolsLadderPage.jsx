@@ -20,11 +20,12 @@ import PageInfoPopover from '../components/PageInfoPopover';
 import './protocols-ladder.css';
 
 import { scoreClass, DIRECTION_MODE_LABELS } from '../core/signal-utils';
+import { usePersistentState, usePersistentChoice } from '../hooks/usePersistentState';
 
 export default function ProtocolsLadderPage() {
-  const [sortBy, setSortBy] = useState('top-symbol');
-  const [aggSize, setAggSize] = useState(3);
-  const [directionFilter, setDirectionFilter] = useState('all');
+  const [sortBy, setSortBy] = usePersistentChoice('protocols-ladder:sortBy', 'top-symbol', ['top-symbol', 'aggregate', 'avg']);
+  const [aggSize, setAggSize] = usePersistentChoice('protocols-ladder:aggSize', 3, [3, 5, 7]);
+  const [directionFilter, setDirectionFilter] = usePersistentChoice('protocols-ladder:direction', 'all', ['all', ...Object.keys(DIRECTION_MODE_LABELS)]);
 
   const { protocols: registry, runs, protoName, isLoading } = useProtocolData();
   const { statusMap, statuses } = useProtocolStatuses();

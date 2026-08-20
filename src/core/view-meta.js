@@ -83,12 +83,6 @@ const VIEW_META = {
     css: 'src/pages/protocols-ladder.css',
     api: ['GET /api/scoring/runs'],
   },
-  '/scoring/strategy-ladders': {
-    label: 'Strategies Ladder',
-    file: 'src/pages/StrategyLaddersPage.jsx',
-    css: 'src/pages/sees-arena.css',
-    api: ['GET /api/scoring/arena'],
-  },
   '/scoring/protocol-builder': {
     label: 'Protocol Builder',
     file: 'src/pages/CreateProtocolsPage.jsx',
