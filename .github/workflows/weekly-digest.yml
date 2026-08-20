@@ -1,0 +1,20 @@
+name: Weekly digest → Discord
+
+on:
+  schedule:
+    # Mondays 09:00 UTC — "This week in Trading Command Suite"
+    - cron: '0 9 * * 1'
+  workflow_dispatch: {}
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Post weekly digest to Discord
+        run: node scripts/weekly-digest-discord.cjs
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
