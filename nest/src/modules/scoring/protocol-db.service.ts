@@ -26,6 +26,7 @@ export interface ProtocolConfig {
   avgHoldTime?: string;
   winRateTarget?: string;
   idealFor?: string;
+  note?: string | null;
   seasonalAffinity?: any;
   /** How to resolve symbols for this protocol. If absent, derived from protocol ID. */
   symbolResolution?: { type: 'single'; symbol: string } | { type: 'watchlist'; name: string };
@@ -298,14 +299,18 @@ export class ProtocolDbService implements OnModuleInit {
       });
       if (!dbProtocols?.length) return {};
 
-      // Read active status via raw SQL — Prisma client may not have the column yet
+      // Read active status + note via raw SQL — Prisma client may not have the columns yet
       let activeMap: Record<string, boolean> = {};
+      let noteMap: Record<string, string | null> = {};
       try {
         const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
-          `SELECT slug, active FROM protocol`
+          `SELECT slug, active, note FROM protocol`
         );
-        for (const r of rows) activeMap[r.slug] = !!r.active;
-      } catch { /* column may not exist yet */ }
+        for (const r of rows) {
+          activeMap[r.slug] = !!r.active;
+          noteMap[r.slug] = r.note ?? null;
+        }
+      } catch { /* columns may not exist yet */ }
 
       const result: Record<string, ProtocolConfig> = {};
       for (const p of dbProtocols) {
@@ -333,6 +338,7 @@ export class ProtocolDbService implements OnModuleInit {
           avgHoldTime: p.avgHoldTime ?? undefined,
           winRateTarget: p.winRateTarget ?? undefined,
           idealFor: p.idealFor ?? undefined,
+          note: noteMap[p.slug] ?? null,
           seasonalAffinity: p.seasonalAffinity ?? undefined,
         };
       }

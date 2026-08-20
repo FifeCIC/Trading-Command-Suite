@@ -146,6 +146,18 @@ export class PrismaService
         INDEX idx_watchlist_item_status (status),
         INDEX idx_watchlist_item_ticker (ticker)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      // Protocol scoring status — loop-owned runtime state explaining WHY a
+      // protocol is or isn't scoring (scoring | no-symbols | no-data | paused).
+      `CREATE TABLE IF NOT EXISTS protocol_score_status (
+        protocolId VARCHAR(100) NOT NULL PRIMARY KEY,
+        state VARCHAR(30) NOT NULL,
+        reason TEXT NULL,
+        symbolsResolved INT NOT NULL DEFAULT 0,
+        symbolsScored INT NOT NULL DEFAULT 0,
+        lastTickAt DATETIME(3) NULL,
+        updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+        INDEX idx_protocol_score_status_state (state)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ];
 
     for (const sql of tables) {
@@ -153,6 +165,20 @@ export class PrismaService
         await this.$executeRawUnsafe(sql);
       } catch (err) {
         this.logger.warn(`Schema bootstrap failed: ${(err as Error).message}`);
+      }
+    }
+
+    // Additive column upgrades — MySQL lacks `ADD COLUMN IF NOT EXISTS`, so
+    // each ALTER is best-effort and ignored when the column already exists.
+    const alters = [
+      // Protocol note — human-readable state explanation (why disabled etc.)
+      `ALTER TABLE protocol ADD COLUMN note TEXT NULL`,
+    ];
+    for (const sql of alters) {
+      try {
+        await this.$executeRawUnsafe(sql);
+      } catch {
+        // column already exists
       }
     }
   }

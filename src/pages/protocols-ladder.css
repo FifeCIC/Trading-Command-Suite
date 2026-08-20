@@ -28,6 +28,40 @@
   color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.03em;
   border-bottom: 2px solid var(--line); background: var(--panel);
 }
+
+/* Table-header popover — hover the header for an explanation (matches .pt-pop). */
+.pl-th { position: relative; cursor: help; }
+.pl-th-pop {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  margin-top: 6px;
+  width: max-content;
+  max-width: 280px;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--ink-soft);
+  line-height: 1.45;
+  text-transform: none;
+  letter-spacing: 0;
+  box-shadow: var(--shadow-card);
+  z-index: 30;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+  pointer-events: none;
+}
+.pl-th:hover .pl-th-pop,
+.pl-th:focus-visible .pl-th-pop {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
 .pl-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--line); color: var(--ink); }
 .pl-table tbody tr:hover { background: var(--line); }
 .pl-table tbody tr { background: var(--panel); }
@@ -35,19 +69,23 @@
 .pl-symbol { font-weight: 700; color: var(--ink); }
 
 /* Score classes */
-.pl-score-high { color: #22c55e; font-weight: 700; }
-.pl-score-med { color: #f59e0b; font-weight: 600; }
-.pl-score-low { color: #ef4444; }
+.pl-score-high { color: var(--color-buy); font-weight: 700; }
+.pl-score-med { color: var(--color-warning); font-weight: 600; }
+.pl-score-low { color: var(--color-sell); }
 .pl-score-max { color: var(--ink-soft); font-weight: 400; font-size: 0.8rem; }
 .pl-score-pct { color: var(--ink-soft); font-size: 0.8rem; }
 .pl-score-stack { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; line-height: 1.25; }
 .pl-score-line { display: inline-flex; align-items: baseline; gap: 2px; }
 
 /* Badges */
-.pl-badge { font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; }
-.pl-badge-buy { background: rgba(34,197,94,0.12); color: #22c55e; }
-.pl-badge-sell { background: rgba(239,68,68,0.12); color: #ef4444; }
-.pl-badge-hold { background: rgba(245,158,11,0.12); color: #f59e0b; }
+.pl-badge {
+  display: inline-flex; align-items: center;
+  font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 4px; border: 1px solid; white-space: nowrap;
+}
+.pl-badge-buy { background: color-mix(in srgb, var(--color-buy) 12%, transparent); color: var(--color-buy); border-color: var(--color-buy); }
+.pl-badge-sell { background: color-mix(in srgb, var(--color-sell) 12%, transparent); color: var(--color-sell); border-color: var(--color-sell); }
+.pl-badge-hold { background: color-mix(in srgb, var(--color-warning) 12%, transparent); color: var(--color-warning); border-color: var(--color-warning); }
 
 .pl-muted { color: var(--ink-soft); font-size: 0.78rem; }
 .pl-time { white-space: nowrap; }
@@ -57,20 +95,34 @@
 .pl-score-link:hover .pl-score-max { color: var(--accent); }
 .pl-bar { display: inline-block; height: 6px; border-radius: 3px; min-width: 4px; }
 .pl-bar-wrap { display: flex; align-items: center; gap: 6px; }
+.pl-highest { display: flex; align-items: center; }
+.pl-highest-symbol { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-highest-score { text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pl-highest-badge { flex: 1; display: flex; justify-content: flex-end; }
 
 /* Signal — paused (market closed, no live signal) */
-.pl-badge-paused { background: rgba(100,116,139,0.16); color: #64748b; }
+.pl-badge-paused { background: color-mix(in srgb, var(--color-muted) 12%, transparent); color: var(--color-muted); border-color: var(--color-muted); }
 
 /* Status column */
+/* Status column chip. Must be a <button> (for the popover) but the global
+   `button { min-height: 44px; padding: 0.6rem 0.9rem }` rule would balloon
+   it — override height + min-height + vertical padding so it renders the
+   same compact chip as the signal badges in the Action column. */
 .pl-status {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 0.68rem; font-weight: 700; padding: 3px 9px;
-  border-radius: 999px; border: none; cursor: help;
-  font-family: inherit; white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  height: 18px; min-height: 18px; padding: 0 9px; border-radius: 4px; border: 1px solid; cursor: help;
+  font-family: inherit; white-space: nowrap; background: transparent;
+  font-size: 0.68rem; font-weight: 700; text-transform: uppercase; line-height: 1;
 }
 .pl-status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-.pl-status-live { background: rgba(34,197,94,0.12); color: #22c55e; }
-.pl-status-closed { background: rgba(245,158,11,0.14); color: #f59e0b; }
+.pl-status-live {
+  background: color-mix(in srgb, var(--color-buy) 12%, transparent); color: var(--color-buy);
+  border-color: var(--color-buy);
+}
+.pl-status-closed {
+  background: color-mix(in srgb, var(--color-warning) 12%, transparent); color: var(--color-warning);
+  border-color: var(--color-warning);
+}
 .pl-status:hover { filter: brightness(1.1); }
 
 /* Status popover */
@@ -90,3 +142,18 @@
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ── Protocol scoring-status chips (loop-owned states) ─────────────── */
+.pl-status-ok    { background: color-mix(in srgb, var(--color-buy) 12%, transparent); color: var(--color-buy); border-color: var(--color-buy); }
+.pl-status-warn  { background: color-mix(in srgb, var(--color-warning) 12%, transparent); color: var(--color-warning); border-color: var(--color-warning); }
+.pl-status-bad   { background: color-mix(in srgb, var(--color-sell) 12%, transparent); color: var(--color-sell); border-color: var(--color-sell); }
+.pl-status-muted { background: color-mix(in srgb, var(--color-muted) 12%, transparent); color: var(--color-muted); border-color: var(--color-muted); }
+
+.pl-stall-reason { font-size: 0.72rem; color: var(--ink-soft); font-style: italic; }
+
+/* Disabled protocols — visible at the bottom with their explanatory notes */
+.pl-disabled { margin-top: 1rem; border-top: 2px dashed var(--line); padding-top: 0.75rem; }
+.pl-disabled h2 { margin: 0 0 0.5rem; font-size: 0.8rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.03em; }
+.pl-disabled-row { display: flex; align-items: baseline; gap: 0.75rem; padding: 0.3rem 0; font-size: 0.78rem; }
+.pl-disabled-row .pl-proto-link { font-weight: 700; color: var(--ink); }
+.pl-disabled-note { color: var(--ink-soft); }

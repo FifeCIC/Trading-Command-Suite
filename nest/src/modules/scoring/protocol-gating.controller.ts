@@ -79,6 +79,7 @@ export class ProtocolGatingController {
       avgHoldTime?: string;
       winRateTarget?: string;
       idealFor?: string;
+      note?: string | null;
       readiness?: { ready: boolean; blockers: Array<{ directiveId: string; name: string; readiness: string }> };
       // Set after construction by async resolveSymbols() below
       resolvedSymbols?: string[];
@@ -165,6 +166,7 @@ export class ProtocolGatingController {
         avgHoldTime: (proto as any).avgHoldTime,
         winRateTarget: (proto as any).winRateTarget,
         idealFor: (proto as any).idealFor,
+        note: (proto as any).note ?? null,
         // Placeholder — populated below by resolveSymbols()
         resolvedSymbols: [] as string[],
       });
@@ -264,6 +266,77 @@ export class ProtocolGatingController {
     }
 
     return { protocols, count: protocols.length };
+  }
+
+  /**
+   * GET /api/scoring/gated/protocols/status
+   *
+   * Live scoring state for every protocol — the app-wide single source of
+   * truth for WHY a protocol is or isn't scoring. The automation loop owns
+   * the protocol_score_status rows; this endpoint merges them with registry
+   * config (active, note) and derives pending/disabled.
+   */
+  @Get('protocols/status')
+  async protocolStatuses() {
+    const all = this.protocolDb.getAllCached();
+
+    let activeMap: Record<string, boolean> = {};
+    let noteMap: Record<string, string | null> = {};
+    try {
+      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+        `SELECT slug, active, note FROM protocol`,
+      );
+      for (const r of rows) {
+        activeMap[r.slug] = !!r.active;
+        noteMap[r.slug] = r.note ?? null;
+      }
+    } catch { /* columns may not exist yet */ }
+
+    const statusMap: Record<string, any> = {};
+    try {
+      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+        `SELECT protocolId, state, reason, symbolsResolved, symbolsScored, lastTickAt, updatedAt FROM protocol_score_status`,
+      );
+      for (const r of rows) statusMap[r.protocolId] = r;
+    } catch { /* table not yet created */ }
+
+    const statuses: Array<{
+      protocolId: string;
+      name: string;
+      active: boolean;
+      note: string | null;
+      status: {
+        state: string;
+        reason: string | null;
+        symbolsResolved: number;
+        symbolsScored: number;
+        lastTickAt: string | null;
+      } | null;
+    }> = [];
+
+    for (const [id, proto] of Object.entries(all)) {
+      // Same ghost-entry rule as listProtocols — protocols without directive
+      // groups are legacy seed artifacts, not real protocols.
+      if (!proto.groups?.length) continue;
+      const row = statusMap[id];
+      statuses.push({
+        protocolId: id,
+        name: proto.name || id,
+        active: activeMap[id] ?? proto.active !== false,
+        note: noteMap[id] ?? null,
+        status: row
+          ? {
+              state: row.state,
+              reason: row.reason ?? null,
+              symbolsResolved: Number(row.symbolsResolved ?? 0),
+              symbolsScored: Number(row.symbolsScored ?? 0),
+              lastTickAt: row.lastTickAt ? new Date(row.lastTickAt).toISOString() : null,
+            }
+          : null,
+      });
+    }
+
+    return { statuses, count: statuses.length };
   }
 
   /**

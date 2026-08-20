@@ -1028,11 +1028,11 @@ export class AutomationLoopService implements OnModuleInit {
       // Combine with live broker positions for the full working set
       const allSymbols = [...new Set([...allPositions.map(p => p.symbol), ...strategySymbols])];
 
-      if (allSymbols.length === 0) {
-        this.state.lastTickMs = Date.now() - tickStart;
-        this.state.nextTickAt = new Date(Date.now() + this.state.tickIntervalMs).toISOString();
-        return decisions;
-      }
+      // NOTE: no early-return when allSymbols is empty. Protocol-driven
+      // scoring (step 3b) must run even with 0 positions/strategies — the
+      // protocols are the live scoring path right now, and an early return
+      // here made every active protocol silently stop scoring. Step 4 is
+      // gated on the working set below instead.
 
       // 3. REMOVED: rankAll() — ran all 104 directives against every symbol.
       //    This produced thousands of noisy scores (EURUSD=3291, etc.) that had
@@ -1071,6 +1071,16 @@ export class AutomationLoopService implements OnModuleInit {
 
       // Readiness gate (#627): a protocol is only eligible to score when every
       // included directive is 'ready'. Beta directives block the protocol.
+      //
+      // Scoring-status tracking — persisted below so protocol views can
+      // explain WHY a protocol isn't scoring. States:
+      //   scoring | no-symbols | no-data | paused | error (absent = pending).
+      const scoringStatus = new Map<string, {
+        state: string;
+        reason?: string;
+        symbolsResolved?: number;
+        symbolsScored?: number;
+      }>();
       const readyProtocols: string[] = [];
       for (const slug of activeProtocols) {
         try {
@@ -1078,14 +1088,15 @@ export class AutomationLoopService implements OnModuleInit {
           if (readiness.ready) {
             readyProtocols.push(slug);
           } else {
-            this.logger.warn(
-              `  Protocol "${slug}" PAUSED — non-ready directives: ${readiness.blockers
-                .map((b) => `${b.directiveId} (${b.readiness})`)
-                .join(', ')}`,
-            );
+            const blockerText = readiness.blockers
+              .map((b) => `${b.directiveId} (${b.readiness})`)
+              .join(', ');
+            this.logger.warn(`  Protocol "${slug}" PAUSED — non-ready directives: ${blockerText}`);
+            scoringStatus.set(slug, { state: 'paused', reason: `Non-ready directives: ${blockerText}` });
           }
         } catch (e) {
           this.logger.warn(`  Protocol "${slug}" readiness check failed: ${(e as Error).message}`);
+          scoringStatus.set(slug, { state: 'paused', reason: `Readiness check failed: ${(e as Error).message}` });
         }
       }
       this.logger.log(
@@ -1098,6 +1109,10 @@ export class AutomationLoopService implements OnModuleInit {
           const symbols = await this.protocolDb.resolveSymbols(protoSlug);
           if (!symbols || symbols.length === 0) {
             this.logger.debug(`  Protocol "${protoSlug}": no symbols resolved — skipping`);
+            scoringStatus.set(protoSlug, {
+              state: 'no-symbols',
+              reason: 'No symbols configured — needs a symbol assignment, linked watchlist, or derive rule',
+            });
             continue;
           }
 
@@ -1158,10 +1173,65 @@ export class AutomationLoopService implements OnModuleInit {
           }
           if (protoScored > 0) {
             this.logger.log(`  Protocol "${protoSlug}": ${protoScored}/${symbols.length} symbols scored`);
+            scoringStatus.set(protoSlug, {
+              state: 'scoring',
+              symbolsResolved: symbols.length,
+              symbolsScored: protoScored,
+              reason: protoScored < symbols.length
+                ? `${protoScored}/${symbols.length} symbols scored (rest lack bars)`
+                : undefined,
+            });
+          } else {
+            scoringStatus.set(protoSlug, {
+              state: 'no-data',
+              symbolsResolved: symbols.length,
+              symbolsScored: 0,
+              reason: `All ${symbols.length} symbols lack 5m bars — not in bar-refresh set or broker has no data`,
+            });
           }
         } catch (protoErr) {
           this.logger.warn(`Protocol "${protoSlug}" scoring failed: ${(protoErr as Error).message}`);
+          scoringStatus.set(protoSlug, {
+            state: 'error',
+            reason: `Scoring failed: ${(protoErr as Error).message?.substring(0, 200)}`,
+          });
         }
+      }
+
+      // ── Persist protocol scoring status — loop-owned single source of truth
+      //    for WHY a protocol is or isn't scoring. Protocol views merge this
+      //    with the registry for honest Active/Stalled/Paused/Disabled badges.
+      try {
+        const statusNow = new Date();
+        for (const slug of activeProtocols) {
+          const st = scoringStatus.get(slug);
+          if (!st) continue;
+          await (this.prisma as any).$queryRawUnsafe(
+            `INSERT INTO protocol_score_status
+               (protocolId, state, reason, symbolsResolved, symbolsScored, lastTickAt, updatedAt)
+             VALUES (?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE state=VALUES(state), reason=VALUES(reason),
+               symbolsResolved=VALUES(symbolsResolved), symbolsScored=VALUES(symbolsScored),
+               lastTickAt=VALUES(lastTickAt), updatedAt=VALUES(updatedAt)`,
+            slug,
+            st.state,
+            st.reason ?? null,
+            st.symbolsResolved ?? 0,
+            st.symbolsScored ?? 0,
+            statusNow,
+            statusNow,
+          );
+        }
+        // Prune rows for protocols that are no longer active.
+        if (activeProtocols.length > 0) {
+          const placeholders = activeProtocols.map(() => '?').join(',');
+          await (this.prisma as any).$queryRawUnsafe(
+            `DELETE FROM protocol_score_status WHERE protocolId NOT IN (${placeholders})`,
+            ...activeProtocols,
+          );
+        }
+      } catch (statusErr) {
+        this.logger.warn(`Protocol scoring-status persistence failed: ${(statusErr as Error).message}`);
       }
 
       // 3c. A/B test evaluation (#482) — when a test is active, score BOTH
@@ -1174,6 +1244,8 @@ export class AutomationLoopService implements OnModuleInit {
 
       // 4. Evaluate active strategies — grouped by symbol to avoid redundant bar fetches & scoring.
       //    Uses gatedScoreCache populated by step 3b for any symbol+protocol already scored.
+      //    Only runs when there is a working set (positions/strategies) to evaluate.
+      if (allSymbols.length > 0) {
       const strategyIdsBySymbol = new Map<string, string[]>();
       for (const strategyId of this.state.activeStrategyIds) {
         try {
@@ -1206,6 +1278,7 @@ export class AutomationLoopService implements OnModuleInit {
           if (strategyDecision) decisions.push(strategyDecision);
         }
       }
+      } // end working-set guard (step 4)
 
     } catch (err) {
       this.logger.error(`Tick #${this.state.tickCount} failed: ${(err as Error).message}`);

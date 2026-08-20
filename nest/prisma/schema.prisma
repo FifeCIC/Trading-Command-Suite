@@ -1713,6 +1713,7 @@ model Protocol {
   avgHoldTime          String?  @db.VarChar(50)
   winRateTarget        String?  @db.VarChar(20)
   idealFor             String?  @db.Text
+  note                 String?  @db.Text  // Human-readable state explanation (e.g. why disabled)
   derivedFrom          String?  @db.VarChar(100)  // Parent protocol slug — links variants for A/B testing
   isDefault            Boolean  @default(false)
   seasonalAffinity     Json?                                      // monthly weights + date ranges
@@ -1725,6 +1726,21 @@ model Protocol {
   @@map("protocol")
   @@index([slug])
   @@index([directionMode])
+}
+
+// Loop-owned runtime state explaining WHY a protocol is or isn't scoring.
+// States: scoring | no-symbols | no-data | paused | error. Row absent = pending.
+model ProtocolScoreStatus {
+  protocolId      String    @id @db.VarChar(100)
+  state           String    @db.VarChar(30)
+  reason          String?   @db.Text
+  symbolsResolved Int       @default(0)
+  symbolsScored   Int       @default(0)
+  lastTickAt      DateTime? @db.DateTime(3)
+  updatedAt       DateTime  @default(now()) @updatedAt @db.DateTime(3)
+
+  @@map("protocol_score_status")
+  @@index([state])
 }
 
 model ProtocolDirectiveGroup {

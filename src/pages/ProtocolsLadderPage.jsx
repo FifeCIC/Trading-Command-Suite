@@ -14,17 +14,29 @@ import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useProtocolData } from '../core/useProtocolData';
+import { useProtocolStatuses, buildProtocolStatus } from '../core/protocol-status';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
 import './protocols-ladder.css';
 
-import { scoreClass } from '../core/signal-utils';
+import { scoreClass, DIRECTION_MODE_LABELS } from '../core/signal-utils';
 
 export default function ProtocolsLadderPage() {
   const [sortBy, setSortBy] = useState('top-symbol');
   const [aggSize, setAggSize] = useState(3);
+  const [directionFilter, setDirectionFilter] = useState('all');
 
   const { protocols: registry, runs, protoName, isLoading } = useProtocolData();
+  const { statusMap, statuses } = useProtocolStatuses();
+
+  // Short human-readable labels for why a protocol has no scores on the ladder.
+  const STALL_SHORT = {
+    'no-data': 'no data',
+    'no-symbols': 'not configured',
+    paused: 'paused',
+    error: 'error',
+    pending: 'pending',
+  };
 
   // Merge scoring data into the active protocol registry.
   // Only active protocols appear — inactive ones are skipped.
@@ -87,6 +99,10 @@ export default function ProtocolsLadderPage() {
         protocolId: p.id,
         protocolName: p.name || p.id,
         active: p.active !== false,
+        vs: buildProtocolStatus(
+          { active: p.active !== false, note: p.note ?? statusMap[p.id]?.note },
+          statusMap[p.id]?.status,
+        ),
         topSymbol: agg?.topSymbol || '—',
         topScore: agg?.topScore ?? 0,
         topSignal: agg?.topSignal ?? null,
@@ -94,18 +110,26 @@ export default function ProtocolsLadderPage() {
         symbolCount: agg?.symbolCount ?? 0,
         avgScore: agg?.avgScore ?? 0,
         hasData: !!agg,
+        directionMode: p.directionMode || 'BOTH',
       });
     }
 
-    // Sort
-    if (sortBy === 'top-symbol') result.sort((a, b) => b.topScore - a.topScore);
-    else if (sortBy === 'aggregate') result.sort((a, b) => b.topNScore - a.topNScore);
-    else if (sortBy === 'avg') result.sort((a, b) => b.avgScore - a.avgScore);
-    else if (sortBy === 'count') result.sort((a, b) => b.symbolCount - a.symbolCount);
-    else if (sortBy === 'alpha') result.sort((a, b) => a.protocolName.localeCompare(b.protocolName));
+    // Filter by direction mode (LONG_ONLY / SHORT_ONLY / BOTH).
+    const filtered = directionFilter === 'all'
+      ? result
+      : result.filter(p => (p.directionMode || 'BOTH') === directionFilter);
 
-    return result;
-  }, [registry, runs, sortBy, aggSize, protoName]);
+    // Sort — ladders order only on scoring strength.
+    if (sortBy === 'top-symbol') filtered.sort((a, b) => b.topScore - a.topScore);
+    else if (sortBy === 'aggregate') filtered.sort((a, b) => b.topNScore - a.topNScore);
+    else if (sortBy === 'avg') filtered.sort((a, b) => b.avgScore - a.avgScore);
+
+    return filtered;
+  }, [registry, runs, sortBy, aggSize, protoName, directionFilter, statusMap]);
+
+  const stalledCount = protocols.filter(p => p.vs && ['no-data', 'no-symbols', 'paused', 'error'].includes(p.vs.state)).length;
+  const disabledList = statuses.filter(s => s.active === false && s.note);
+  const disabledNoNote = statuses.filter(s => s.active === false && !s.note).length;
 
   return (
     <div className="pl-page">
@@ -124,8 +148,6 @@ export default function ProtocolsLadderPage() {
             <option value="top-symbol">Top Symbol</option>
             <option value="aggregate">Aggregate (Top {aggSize})</option>
             <option value="avg">Avg Score</option>
-            <option value="count">Symbol Count</option>
-            <option value="alpha">A → Z</option>
           </select>
         </label>
         {sortBy === 'aggregate' && (
@@ -138,7 +160,18 @@ export default function ProtocolsLadderPage() {
             </select>
           </label>
         )}
-        <span className="pl-count">{protocols.length} protocols</span>
+        <label className="pl-filter">
+          Direction:
+          <select value={directionFilter} onChange={e => setDirectionFilter(e.target.value)}>
+            <option value="all">All</option>
+            {Object.entries(DIRECTION_MODE_LABELS).map(([mode, label]) => (
+              <option key={mode} value={mode}>{label}</option>
+            ))}
+          </select>
+        </label>
+        <span className="pl-count">
+          {protocols.length} protocols{stalledCount > 0 ? ` · ${stalledCount} stalled` : ''}
+        </span>
       </div>
 
       {isLoading ? <LoadingSkeleton variant="card" count={5} /> : (
@@ -148,6 +181,7 @@ export default function ProtocolsLadderPage() {
               <tr>
                 <th>#</th>
                 <th>Protocol</th>
+                <th>Status</th>
                 <th>Highest Scorer</th>
                 <th>Highest Score</th>
                 <th>
@@ -169,6 +203,14 @@ export default function ProtocolsLadderPage() {
                   <td className="pl-symbol">
                     <Link to={`/protocols/protocols-registry?proto=${encodeURIComponent(p.protocolId)}`} className="pl-proto-link">{p.protocolName}</Link>
                   </td>
+                  <td>
+                    <span
+                      className={`pl-status pl-status-${p.vs?.kind || 'muted'}`}
+                      title={[p.vs?.reason, p.vs?.note].filter(Boolean).join(' · ') || p.vs?.help || ''}
+                    >
+                      {p.vs?.label || '—'}
+                    </span>
+                  </td>
                   <td className={p.hasData ? '' : 'pl-muted'}>
                     {p.hasData ? (
                       <span className="pl-highest">
@@ -181,7 +223,11 @@ export default function ProtocolsLadderPage() {
                           <span className={`pl-badge pl-badge-${String(p.topSignal).replace('STRONG_', '').toLowerCase()}`}>{p.topSignal}</span>
                         ) : null}
                       </span>
-                    ) : '—'}
+                    ) : (
+                      <span className="pl-stall-reason" title={p.vs?.reason || p.vs?.note || ''}>
+                        {STALL_SHORT[p.vs?.state] || '—'}
+                      </span>
+                    )}
                   </td>
                   <td className={p.hasData ? '' : 'pl-muted'}>
                     {p.hasData ? <span className={`pl-highest-score ${scoreClass(p.topScore)}`}>{p.topScore}</span> : '—'}
@@ -193,6 +239,25 @@ export default function ProtocolsLadderPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {disabledList.length > 0 && (
+        <div className="pl-disabled">
+          <h2>Disabled protocols</h2>
+          {disabledList.map(d => (
+            <div key={d.protocolId} className="pl-disabled-row">
+              <Link to={`/protocols/protocols-registry?proto=${encodeURIComponent(d.protocolId)}`} className="pl-proto-link">{d.name}</Link>
+              <span className="pl-disabled-note">{d.note}</span>
+            </div>
+          ))}
+          {disabledNoNote > 0 && (
+            <div className="pl-disabled-row">
+              <Link to="/protocols/protocols-registry" className="pl-proto-link">
+                +{disabledNoNote} more disabled protocol{disabledNoNote === 1 ? '' : 's'} (no note) — see registry
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>
