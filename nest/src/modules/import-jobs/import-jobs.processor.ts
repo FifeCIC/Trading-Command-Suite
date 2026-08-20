@@ -3,109 +3,72 @@ import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { PrismaService } from '../../database/prisma.service';
 import { IMPORT_QUEUE, ImportJobPayload } from './import-jobs.constants';
+import { ImportJobsService } from './import-jobs.service';
 
-const PROVIDER_KEY_MAP: Record<string, string> = {
-  alpaca: 'ALPACA_API_KEY',
-  alphavantage: 'ALPHA_VANTAGE_API_KEY',
-  trading212: 'TRADING212_API_KEY',
-};
-
+/**
+ * BullMQ worker for the `market-imports` queue.
+ *
+ * NO-DEMO-DATA POLICY: this processor NEVER fabricates bars and never stamps
+ * provider health itself. It delegates to ImportJobsService.importRealBars(),
+ * which pulls real OHLCV data from the provider chain (MT5 → Alpha Vantage →
+ * Trading212 → Yahoo) and only marks a provider healthy after real bars were
+ * stored. If no provider returns real data, the run is marked `failed`.
+ *
+ * Note: the queue is currently disabled (QueueModule returns a lazy "disabled"
+ * connection and ImportJobsService.enqueueImport() executes imports directly),
+ * so this worker is inert in local dev. It must stay real so that re-enabling
+ * the queue in production is safe.
+ */
 @Processor(IMPORT_QUEUE)
 export class ImportJobsProcessor extends WorkerHost {
   private readonly logger = new Logger(ImportJobsProcessor.name);
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly importJobs: ImportJobsService,
+  ) {
     super();
   }
 
   async process(
     job: Job<ImportJobPayload>,
   ): Promise<{ runId: string; status: string }> {
-    const startedAt = new Date();
-
-    await this.prisma.importRun.update({
-      where: { id: job.data.runId },
-      data: {
-        status: 'running',
-        startedAt,
-      },
-    });
+    const { runId, symbolId, timeframe } = job.data;
 
     try {
-      const now = new Date();
-      const latestBar = await this.prisma.marketBar.findFirst({
-        where: {
-          symbolId: job.data.symbolId,
-          timeframe: job.data.timeframe,
-        },
-        orderBy: [{ timestamp: 'desc' }],
-      });
+      const result = await this.importJobs.importRealBars(symbolId, timeframe);
 
-      const basePrice = latestBar?.close ?? 100;
-      const drift = (Math.random() - 0.5) * 2;
-      const close = Math.max(1, Number((basePrice + drift).toFixed(2)));
-      const high = Number((close + Math.random() * 0.8).toFixed(2));
-      const low = Number((close - Math.random() * 0.8).toFixed(2));
-      const open = Number(((high + low) / 2).toFixed(2));
-      const volume = Math.max(1, Math.floor(50000 + Math.random() * 500000));
-
-      await this.prisma.marketBar.create({
-        data: {
-          symbolId: job.data.symbolId,
-          provider: job.data.provider,
-          timeframe: job.data.timeframe,
-          timestamp: now,
-          open,
-          high,
-          low,
-          close,
-          volume,
-        },
-      });
-
-      const keyName = PROVIDER_KEY_MAP[job.data.provider.toLowerCase()];
-      const credentialsOk = keyName ? Boolean(process.env[keyName]) : false;
-
-      await this.prisma.providerHealth.upsert({
-        where: { provider: job.data.provider },
-        update: {
-          status: 'healthy',
-          message: `Import completed for run ${job.data.runId}`,
-          checkedAt: now,
-          credentialsOk,
-          endpoint: job.data.provider,
-        },
-        create: {
-          provider: job.data.provider,
-          status: 'healthy',
-          message: `Import completed for run ${job.data.runId}`,
-          checkedAt: now,
-          credentialsOk,
-          endpoint: job.data.provider,
-        },
-      });
-
+      const completed = result.source === 'real';
       await this.prisma.importRun.update({
-        where: { id: job.data.runId },
+        where: { id: runId },
         data: {
-          status: 'completed',
+          status: completed ? 'completed' : 'failed',
           completedAt: new Date(),
+          error: completed
+            ? null
+            : `No provider returned real bars for this symbol (source: ${result.source})`,
         },
       });
+
+      if (!completed) {
+        this.logger.warn(
+          `Import run ${runId}: no real data imported — marked failed, no bars written`,
+        );
+      }
 
       return {
-        runId: job.data.runId,
-        status: 'completed',
+        runId,
+        status: completed ? 'completed' : 'failed',
       };
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : 'Unknown import processor error';
-      this.logger.error(`Import run ${job.data.runId} failed: ${message}`);
+      this.logger.error(`Import run ${runId} failed: ${message}`);
 
       await this.prisma.importRun.update({
-        where: { id: job.data.runId },
+        where: { id: runId },
         data: {
           status: 'failed',
           completedAt: new Date(),

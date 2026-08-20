@@ -144,7 +144,7 @@ export class Trading212Adapter implements IProviderAdapter {
     if (this.mode !== 'none') {
       this.logger.log(`Trading212 adapter initialised — mode=${this.mode} base=${this.baseUrl} key=${this.apiKey ? '✓' : '✗'}`);
     } else {
-      this.logger.warn('Trading212 adapter: no API keys configured — mock data only');
+      this.logger.warn('Trading212 adapter: no API keys configured — disabled (all requests fail-fast, no data fabricated)');
     }
   }
 
