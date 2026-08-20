@@ -1,7 +1,9 @@
 import { Controller, Get, Post, Body, Param, Query, Logger } from '@nestjs/common';
 import { SignalsService } from './signals.service';
 import { SignalEnvelopeService } from './signal-envelope.service';
+import { SignalActionsService } from './signal-actions.service';
 import { SignalLadderDto } from './dto/signal-ladder.dto';
+import { ManualTradeDto } from './dto/manual-trade.dto';
 
 /**
  * Signals Controller — Enriched Signal Envelopes
@@ -35,6 +37,7 @@ export class SignalsController {
   constructor(
     private readonly signalsService: SignalsService,
     private readonly envelopeService: SignalEnvelopeService,
+    private readonly signalActions: SignalActionsService,
   ) {}
 
   /**
@@ -154,6 +157,28 @@ export class SignalsController {
   @Get('latest/:symbol')
   getLatest(@Param('symbol') symbol: string) {
     return this.signalsService.getLatestSignal(symbol);
+  }
+
+  /**
+   * GET /api/signals/:id/action
+   *
+   * Bot-action state for a signal: none | pending | filled.
+   * The signal id is the Score row UUID (the runs API exposes it as runId).
+   */
+  @Get(':id/action')
+  async getSignalAction(@Param('id') id: string) {
+    return this.signalActions.getBotAction(id);
+  }
+
+  /**
+   * POST /api/signals/:id/trade
+   *
+   * Place a MANUAL trade for a signal through the same safety chain the bot
+   * uses (duplicate guard, diversification, cooldown, market-status gate).
+   */
+  @Post(':id/trade')
+  async tradeSignal(@Param('id') id: string, @Body() body: ManualTradeDto) {
+    return this.signalActions.placeManualTrade(id, body);
   }
 
   @Post()

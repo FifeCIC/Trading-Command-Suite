@@ -544,6 +544,22 @@ export const CURRENT_ROUTE_CONTRACTS = [
     status: 'active',
   },
   {
+    route: 'GET /signals/:id/action',
+    method: 'GET',
+    permission: 'Authenticated local operator access',
+    owner: 'Signal actions service (#662)',
+    contract: 'Bot-action state for a signal (Score row UUID): none | pending | filled, correlated via decision_log and trade records.',
+    status: 'active',
+  },
+  {
+    route: 'POST /signals/:id/trade',
+    method: 'POST',
+    permission: 'Authenticated local operator access',
+    owner: 'Signal actions service (#662)',
+    contract: 'Places a MANUAL trade for a signal through the same safety chain as the bot (market-status gate, duplicate guard, diversification, 60s cooldown) then records it as origin=manual.',
+    status: 'active',
+  },
+  {
     route: 'GET /api/symbols',
     method: 'GET',
     permission: 'Authenticated operator access',
