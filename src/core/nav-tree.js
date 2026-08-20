@@ -86,26 +86,37 @@ export const NAV_TREE = {
     views: [
       { id: 'protocols-registry', label: 'Protocols Registry', icon: '📋' },
       { id: 'directives-registry', label: 'Directives Registry', icon: '◆' },
-      { id: 'symbols-ladder', label: 'Symbols Ladder', icon: '📈' },
       { id: 'protocols-ladder', label: 'Protocols Ladder', icon: '🪜' },
       { kind: 'section-header', id: 'tools-header', label: 'Tools', icon: '' },
       { id: 'sees-arena', label: 'Protocol Comparison', icon: '⚖️' },
       { id: 'configure-directives', label: 'Protocol Editor', icon: '⚙' },
       { id: 'protocol-builder', label: 'Protocol Builder', icon: '🧩' },
       { id: 'protocol-trail', label: 'Protocol Trail', icon: '🔗' },
-      { id: 'singles-monitor', label: 'Singles Monitor', icon: '🖥' },
       { id: 'directive-viewer', label: 'Directive Viewer', icon: '🔍' },
-      { id: 'scoring-debug-lab', label: 'Scoring Debug (Dual Protocol)', icon: '🔬' },
+      { id: 'dual-protocol-inspector', label: 'Dual-Protocol Inspector', icon: '🔬' },
     ],
   },
-  scoringStrategies: {
-    label: 'Scoring Strategies',
+  // ── Scoring area (/scoring/ prefix) ──
+  // Monitoring SEES: every ladder, all scores (incl. poor ones). Renamed from
+  // /scoringStrategies/ (2026-08-19). Symbols Ladder + Singles Monitor moved here
+  // from the Protocols area. API endpoints under /api/scoring/ are unaffected.
+  scoring: {
+    label: 'Scoring',
     views: [
       { id: 'live-ordering-stack', label: 'Ladder', icon: '◉' },
-      { id: 'exit-signals', label: 'Exit Signals', icon: '🚪' },
+      { id: 'symbols-ladder', label: 'Symbols Ladder', icon: '📈' },
+      { id: 'singles-monitor', label: 'Singles Monitor', icon: '🖥' },
       { id: 'strategy-ladders', label: 'Strategies Ladder', icon: '🪜' },
       { id: 'scoring-activity-logs', label: 'Scoring Activity Logs', icon: '▤' },
       { id: 'strategy-builder', label: 'Strategy Builder', icon: '⚙' },
+    ],
+  },
+  // ── Signals area (/signals/ prefix) ──
+  // Best-of opportunities with trade actions + bot-action indicators (new 2026-08-19).
+  signals: {
+    label: 'Signals',
+    views: [
+      { id: 'signals-overview', label: 'Signals', icon: '🚩' },
     ],
   },
   trading: {
@@ -116,6 +127,7 @@ export const NAV_TREE = {
       { id: 'positions-monitor', label: 'Positions Monitor', icon: '◈' },
       { id: 'trading-strategies', label: 'Trading Strategies', icon: '◆' },
       { id: 'trading-plans', label: 'Trading Plans', icon: '📋' },
+      { id: 'exit-signals', label: 'Exit Signals', icon: '🚪' },
       { kind: 'section-header', id: 'legacy-strategies', label: '— Legacy Strategy Pages —', icon: '' },
       { id: 'market-context', label: 'Market Context', icon: '🌐' },
       { id: 'strategy-library', label: 'Strategy Library', icon: '📚' },
@@ -160,16 +172,15 @@ export const NAV_TREE = {
       { id: 'commands', label: 'Commands Reference', icon: '💻' },
       { id: 'system-log', label: 'System Log', icon: '📋' },
       // ── Platform ──
-      { id: 'platform-api-management', label: 'API Management', icon: '⚙' },
       { id: 'platform-comparisons', label: 'API Comparisons', icon: '▤' },
       { id: 'platform-api-efficiency', label: 'API Efficiency', icon: '◈' },
       // ── System Maps ──
+      { id: 'meta-stack-explorer', label: 'META.Stack Explorer', icon: '🔍' },
+      { id: 'meta-stack-pipeline', label: 'META.Stack Pipeline', icon: '🔗' },
       { id: 'meta-stack-status', label: 'META.Stack Status', icon: '🎯' },
       { id: 'architecture-framework', label: 'Architecture', icon: '⬡' },
       { id: 'file-inventory', label: 'File Inventory', icon: '📁' },
       { id: 'analytics', label: 'Analytics', icon: '▦' },
-      { id: 'audit-log', label: 'Audit Log', icon: '▤' },
-      { id: 'ai-logs', label: 'AI Logs', icon: '📋' },
       { id: 'capability-map', label: 'Capability Map', icon: '🗺️' },
     ],
   },
@@ -180,18 +191,10 @@ export const NAV_TREE = {
       { id: 'lab', label: 'Lab Sandbox', icon: '🔬' },
       { id: 'lab-landing', label: 'Lab Directory', icon: '🗂️' },
       // ── META.Stack Pipeline ──
-      { id: 'meta-stack-explorer', label: 'META.Stack Explorer', icon: '🔍' },
-      { id: 'metastack-display', label: 'META.Stack Display', icon: '📐' },
-      { id: 'metastack-performance', label: 'MetaStack Performance', icon: '📊' },
       { id: 'pipeline-graph-lab', label: 'Pipeline Graph', icon: '🗺️' },
-      { id: 'meta-stack-pipeline', label: 'META.Stack Pipeline', icon: '🔗' },
-      { id: 'ab-testing', label: 'A/B Protocol Testing', icon: '⚖️' },
-      { id: 'directive-audit', label: 'Directive Audit', icon: '🔬' },
-      { id: 'snapshot-replay', label: 'Snapshot Replay', icon: '⏮' },
       // ── Engineering Tools ──
       { id: 'feature-lab', label: 'Feature Lab', icon: '🔬' },
       { id: 'component-lab', label: 'Component Lab', icon: '🧩' },
-      { id: 'charts-lab', label: 'Charts Lab', icon: '📊' },
       { id: 'diagrams', label: 'Diagrams', icon: '▦' },
       { id: 'triple-screen', label: 'Triple-Screen Cockpit', icon: '🖥️' },
       { id: 'responsive-layout-lab', label: 'Responsive Layout Lab', icon: '📐' },
@@ -203,6 +206,9 @@ export const NAV_TREE = {
       { id: 'theme-lab-popover', label: 'Popover API', icon: '◉' },
       // ── Prototypes ──
       { id: '_divider_prototypes', label: 'Prototypes', icon: '🧪', kind: 'section-header' },
+      { id: 'ab-testing', label: 'A/B Protocol Testing', icon: '⚖️' },
+      { id: 'snapshot-replay', label: 'Snapshot Replay', icon: '⏮' },
+      { id: 'charts-lab', label: 'Charts Lab', icon: '📊' },
       { id: 'speed-trading', label: 'Speed Trading', icon: '⚡' },
       { id: 'gold-speed', label: 'Gold Speed', icon: '🔬' },
       { id: 'mt5-trading', label: 'MT5 Trading (Lab)', icon: '🔬' },

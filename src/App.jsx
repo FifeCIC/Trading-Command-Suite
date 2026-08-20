@@ -61,7 +61,6 @@ import LadderPage from './pages/LadderPage';
 import SeesArenaPage from './pages/SeesArenaPage';
 import ABTestingPage from './pages/ABTestingPage';
 import AICostsPage from './pages/AICostsPage';
-import AILogViewerPage from './pages/AILogViewerPage';
 import PerformanceLabPage from './pages/PerformanceLabPage';
 import AlertCenterPage from './pages/AlertCenterPage';
 import AutomationDashboardPage from './pages/AutomationDashboardPage';
@@ -79,7 +78,6 @@ import StrategyBuilderPage from './pages/StrategyBuilderPage';
 import StrategyWizardPage from './pages/StrategyWizardPage';
 import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
 import SymbolPage from './pages/SymbolPage';
-import SymbolFocusPage from './pages/SymbolFocusPage';
 import GlobalAllocatorPage from './pages/GlobalAllocatorPage';
 import DataManagementPage from './pages/DataManagementPage';
 import TopMoversPage from './pages/TopMoversPage';
@@ -147,6 +145,18 @@ import { VIEW_COMPONENTS } from './core/view-routes.jsx';
 
 const NAV_STRUCTURE = getNavStructure();
 
+// Redirect the legacy /scoringStrategies/ area (renamed to /scoring/ 2026-08-19).
+function ScoringStrategiesRedirect() {
+  const { view } = useParams();
+  return <Navigate to={`/scoring/${view || ''}`} replace />;
+}
+
+// Collapse the legacy /symbol/:ticker alias onto the canonical /research/symbol/:ticker.
+function SymbolRedirect() {
+  const { ticker } = useParams();
+  return <Navigate to={`/research/symbol/${encodeURIComponent(ticker || '')}`} replace />;
+}
+
 const THEME_CARDS = [
   { id: 'ai-original', name: 'AI Original', description: 'Dark navy, blue accent — doomchart inspired.', colors: ['#0a0e17', '#5b8def', '#e6ecf7'] },
   { id: 'core', name: 'Core', description: 'Clean, neutral palette.', colors: ['#f4f7fb', '#0ea5a6', '#0f172a'] },
@@ -213,9 +223,14 @@ function AppShell() {
   const isHomePage = location.pathname === '/';
   // `/trading/symbol/:ticker` renders the symbol page INSIDE the shell chrome.
   const isSymbolRoute = Boolean(ticker);
-  const primaryArea = isSymbolRoute ? 'trading' : (symbolId ? 'research' : (isHomePage ? null : (area || 'trading')));
+  // Symbol routes use literal prefixes (research/symbol, trading/symbol) so the
+  // `area` param is undefined — derive the sidebar area from the pathname.
+  const symbolArea = location.pathname.startsWith('/research/symbol/') ? 'research'
+    : location.pathname.startsWith('/trading/symbol/') ? 'trading'
+    : 'trading';
+  const primaryArea = isSymbolRoute ? symbolArea : (symbolId ? 'research' : (isHomePage ? null : (area || 'trading')));
   // defaultView: use the first registered view for the current area, falling back to directives-registry
-  const areaViews = NAV_STRUCTURE[isSymbolRoute ? 'trading' : area];
+  const areaViews = NAV_STRUCTURE[primaryArea];
   const defaultView = (areaViews && areaViews.length > 0) ? areaViews[0].id : 'directives-registry';
   const secondaryView = isSymbolRoute ? 'symbol' : (symbolId ? 'symbol-detail' : (view || defaultView));
   const [demoPrompt, setDemoPrompt] = useState('Generate a responsive planning concept for eco garden week.');
@@ -1048,53 +1063,6 @@ function AppShell() {
         </aside>
       )}
 
-      <footer className="app-footer">
-        <div className="footer-grid">
-          <div className="footer-col footer-col-brand">
-            <img src="/tcs-logo.png" alt="Trading Command Suite" className="footer-logo" />
-            <h4>Trading Command Suite</h4>
-            <p className="footer-tagline">Algorithmic analysis & portfolio management platform.</p>
-            <p className="footer-credit">Created by <strong>Ryan Bayne</strong></p>
-            <p className="footer-version">v{healthQuery.data?.version || 'nest-0.1.0'}</p>
-          </div>
-          <div className="footer-col">
-            <h4>Quick Links</h4>
-            <button type="button" onClick={() => navigate('/scoring/live-ordering-stack')}>SEES Live Stack</button>
-            <button type="button" onClick={() => navigate('/scoring/create-protocols')}>Strategy Builder</button>
-            <button type="button" onClick={() => navigate('/research/news-intel')}>News Intel</button>
-            <button type="button" onClick={() => navigate('/trading/portfolio-overview')}>Portfolio</button>
-          </div>
-          <div className="footer-col">
-            <h4>Resources</h4>
-            <button type="button" onClick={() => navigate('/builder/architecture-framework')}>Architecture</button>
-            <button type="button" onClick={() => navigate('/status/capability-map')}>Capability Map</button>
-            <button type="button" onClick={() => navigate('/lab/theme-lab')}>Theme Lab</button>
-            <button type="button" onClick={() => navigate('/settings')}>Settings</button>
-          </div>
-          <div className="footer-col">
-            <h4>Status</h4>
-            <div className="footer-status-row">
-              <span className={`footer-dot ${isApiOnline ? 'on' : 'off'}`} />
-              <span>API: {isApiOnline ? 'Online' : 'Offline'}</span>
-            </div>
-            <div className="footer-status-row">
-              <span className={`footer-dot ${isDbOnline ? 'on' : 'off'}`} />
-              <span>DB: {isDbOnline ? 'Connected' : 'Offline'}</span>
-            </div>
-            <div className="footer-status-row">
-              <span className="footer-dot on" />
-              <span>Providers: {availableAdapters.length} active</span>
-            </div>
-          </div>
-        </div>
-        <div className="footer-bottom">
-          <span>© 2026 Ryan Bayne. All rights reserved.</span>
-          <span className="footer-bottom-links">
-            <button type="button" onClick={onDownloadRuntimeReport}>Export Report</button>
-          </span>
-        </div>
-      </footer>
-
       <ScreenOptions
         activeView={screenOptionsView}
         isOpen={screenOptionsOpen}
@@ -1116,13 +1084,27 @@ export default function App() {
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <ErrorBoundary message="The application encountered a critical error.">
         <Routes>
-          <Route path="/research/symbol/:ticker" element={<SymbolFocusPage />} />
+          <Route path="/research/symbol/:ticker" element={<AppShell />} />
           <Route path="/trading/symbol/:ticker" element={<AppShell />} />
-          <Route path="/symbol/:ticker" element={<SymbolFocusPage />} />
+          <Route path="/symbol/:ticker" element={<SymbolRedirect />} />
           <Route path="/settings/data-management" element={<DataManagementPage />} />
           <Route path="/lab/top-movers" element={<TopMoversPage />} />
           <Route path="/settings/health-check" element={<SystemHealthPage />} />
           <Route path="/lab/platform-comparisons" element={<PlatformComparisonsPage />} />
+          <Route path="/protocols/symbols-ladder" element={<Navigate to="/scoring/symbols-ladder" replace />} />
+          <Route path="/protocols/singles-monitor" element={<Navigate to="/scoring/singles-monitor" replace />} />
+          <Route path="/scoring/exit-signals" element={<Navigate to="/trading/exit-signals" replace />} />
+          <Route path="/lab/scoring-debug-lab" element={<Navigate to="/lab/dual-protocol-inspector" replace />} />
+          <Route path="/lab/meta-stack-explorer" element={<Navigate to="/status/meta-stack-explorer" replace />} />
+          <Route path="/lab/meta-stack-pipeline" element={<Navigate to="/status/meta-stack-pipeline" replace />} />
+          <Route path="/status/platform-api-management" element={<Navigate to="/status" replace />} />
+          <Route path="/status/audit-log" element={<Navigate to="/status" replace />} />
+          <Route path="/status/ai-logs" element={<Navigate to="/status" replace />} />
+          <Route path="/lab/metastack-display" element={<Navigate to="/lab/triple-screen" replace />} />
+          <Route path="/lab/metastack-performance" element={<Navigate to="/lab" replace />} />
+          <Route path="/lab/directive-audit" element={<Navigate to="/lab" replace />} />
+          <Route path="/scoringStrategies/:view" element={<ScoringStrategiesRedirect />} />
+          <Route path="/scoringStrategies" element={<Navigate to="/scoring" replace />} />
           <Route path="/:area/:view" element={<AppShell />} />
           <Route path="/:area" element={<AppShell />} />
           <Route path="/" element={<HomeDashboard />} />

@@ -44,7 +44,13 @@ export default function ProtocolsPageB({ initialProtocolId }) {
   useEffect(() => {
     if (protocols.length > 0 && !selected) {
       const target = initialProtocolId ? protocols.find(p => p.id === initialProtocolId) : null;
-      setSelected(target || protocols[0]);
+      if (target) { setSelected(target); return; }
+      // Default to the first protocol in the sidebar list (active-first order),
+      // not the raw API order — the raw array can lead with an inactive protocol
+      // (e.g. btc-speed-v1) that isn't at the top of the registry sidebar.
+      const firstVisible = [...protocols]
+        .sort((a, b) => (b.active ? 1 : 0) - (a.active ? 1 : 0))[0];
+      setSelected(firstVisible || protocols[0]);
     }
   }, [protocols, selected, initialProtocolId]);
 

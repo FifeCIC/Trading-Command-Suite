@@ -266,7 +266,7 @@ export default function StrategyLibraryPage() {
                     <button
                       className="sl-activate-btn"
                       disabled={strategy.status === 'concept'}
-                      onClick={() => navigate(`/lab/meta-stack-explorer`)}
+                      onClick={() => navigate(`/status/meta-stack-explorer`)}
                     >
                       {strategy.status === 'concept' ? 'Coming Soon' : 'Activate Strategy →'}
                     </button>

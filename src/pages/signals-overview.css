@@ -1,0 +1,61 @@
+/* Signals Overview — /signals/ landing page.
+   Theme-synced using --panel, --line, --ink, --ink-soft, --accent, --bg. */
+.sig-page { padding: 1.25rem 1.5rem; max-width: 1100px; margin: 0 auto; color: var(--ink); }
+.sig-header { margin-bottom: 0.75rem; }
+.sig-header h1 { margin: 0; font-size: 1.15rem; color: var(--ink); }
+.sig-intro { font-size: 0.85rem; color: var(--ink-soft); line-height: 1.55; max-width: 64ch; margin: 0 0 1.25rem; }
+
+.sig-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.9rem;
+}
+.sig-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1rem 1.1rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+}
+.sig-card-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.sig-card-desc {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+.sig-card-status {
+  align-self: flex-start;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.sig-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+.sig-link {
+  font-size: 0.78rem;
+  color: var(--accent);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.4rem 0.7rem;
+  background: var(--panel);
+}
+.sig-link:hover { text-decoration: underline; border-color: var(--accent); }

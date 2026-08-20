@@ -18,7 +18,7 @@
  *   - Popover for deeper technical detail (DB tables, columns, values)
  *   - Nested sub-stages for complex sections (directives, risk gate)
  *
- * Route: /lab/meta-stack-explorer
+ * Route: /status/meta-stack-explorer
  * Data:  POST /api/scoring/gated/batch (live)
  */
 import { useState, useMemo, useEffect, useRef } from 'react';

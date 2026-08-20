@@ -1,41 +1,77 @@
-/* SignalBadge — shared signal pill (theme tokens only, no hardcoded hex). */
+/* SignalBadge — shared indicator badge (theme tokens only, no hardcoded hex).
+   ===========================================================================
+   This is the CANONICAL badge in the app's UI language — the single
+   "accepted group" every signal, status and recommendation label matches:
+
+   - Bordered chip: 1px solid border in the tone colour, ~12% tinted
+     background, tone-coloured text, 4px radius, uppercase bold.
+   - One base style, many tones. Tones map to semantic tokens so they
+     adapt to every theme pack and light/dark mode.
+   - Shared by <SignalBadge>, the ladder status pills (.pl-status) and the
+     Speed Scanner recommendation badges — never add a second badge style
+     for a page; extend the tone range here instead.
+
+   Tone families:
+     buy / sell / hold / neutral      — trading signals (SignalBadge)
+     live / closed / stale            — market status pills (ladder)
+     paused / muted                   — frozen / no data
+     trade / caution / no-trade       — recommendations (Speed Scanner) */
 .signal-badge {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 2px 7px;
+  justify-content: center;
+  gap: 4px;
+  padding: 2px 8px;
   border-radius: 4px;
+  border: 1px solid;
+  font-size: 0.68rem;
+  font-weight: 700;
   text-transform: uppercase;
-  line-height: 1;
+  line-height: 1.1;
   white-space: nowrap;
+  vertical-align: middle;
+  width: fit-content;
 }
-.signal-badge--buy {
+.signal-badge--buy,
+.signal-badge--live,
+.signal-badge--trade {
   background: color-mix(in srgb, var(--color-buy) 12%, transparent);
   color: var(--color-buy);
+  border-color: var(--color-buy);
 }
-.signal-badge--sell {
+.signal-badge--sell,
+.signal-badge--no-trade {
   background: color-mix(in srgb, var(--color-sell) 12%, transparent);
   color: var(--color-sell);
+  border-color: var(--color-sell);
 }
-.signal-badge--hold {
+.signal-badge--hold,
+.signal-badge--caution,
+.signal-badge--closed {
   background: color-mix(in srgb, var(--color-warning) 12%, transparent);
   color: var(--color-warning);
+  border-color: var(--color-warning);
 }
 .signal-badge--neutral {
   background: color-mix(in srgb, var(--color-neutral) 12%, transparent);
   color: var(--color-neutral);
+  border-color: var(--color-neutral);
 }
-.signal-badge--paused {
-  background: color-mix(in srgb, var(--color-muted) 16%, transparent);
-  color: var(--color-muted);
-}
-.signal-badge--muted {
+.signal-badge--muted,
+.signal-badge--paused,
+.signal-badge--stale {
   background: color-mix(in srgb, var(--color-muted) 12%, transparent);
   color: var(--color-muted);
+  border-color: var(--color-muted);
 }
+/* Icon / arrow — centred box so glyphs and SVGs align optically. */
 .signal-badge-arrow {
-  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
+}
+.signal-badge-arrow svg {
+  display: block;
+  flex-shrink: 0;
 }

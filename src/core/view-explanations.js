@@ -34,12 +34,6 @@ export const VIEW_EXPLANATIONS = {
     'Use the filters to narrow by sector, exchange, or score range. ' +
     'Click any symbol to drill into its directive breakdown.',
 
-  'metastack-display':
-    'META.Stack is the protocol system — building blocks of trading logic. ' +
-    'Each protocol defines a set of directives (rules) that score symbols. ' +
-    'Protocols can be chained into strategies. ' +
-    'This view lets you inspect protocol definitions, directive groups, and version history.',
-
   'directives-registry':
     'The Directive Registry is the master catalog of all scoring rules. ' +
     'Each directive is a self-contained scoring function — e.g. "RSI below 30 → bullish." ' +

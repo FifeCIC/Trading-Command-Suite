@@ -1,3 +1,5 @@
+import PageInfoPopover from '../components/PageInfoPopover';
+
 export default function ThemeLabPopover() {
   return (
     <div className="tl-page">

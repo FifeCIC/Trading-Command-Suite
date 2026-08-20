@@ -1,6 +1,9 @@
 import { Controller, Post, Get, Body, Logger } from '@nestjs/common';
 import { DeepSeekService, DeepSeekMessage } from './deepseek.service';
+import { GeminiService } from './gemini.service';
 import { PortfolioLabService } from './portfolio-lab.service';
+
+type AIProvider = 'deepseek' | 'gemini';
 
 @Controller('lab')
 export class AIController {
@@ -8,29 +11,43 @@ export class AIController {
 
   constructor(
     private readonly deepseek: DeepSeekService,
+    private readonly gemini: GeminiService,
     private readonly lab: PortfolioLabService,
   ) {}
 
+  /** Select the AI provider service based on the request body's provider field. */
+  private provider(body?: { provider?: AIProvider }): DeepSeekService | GeminiService {
+    return body?.provider === 'gemini' ? this.gemini : this.deepseek;
+  }
+
   /** Step 1 test: verify DeepSeek connectivity */
   @Post('ping')
-  async ping() {
-    if (!this.deepseek.isConfigured) {
-      return { ok: false, error: 'DEEPSEEK_API_KEY not set in environment' };
+  async ping(@Body() body?: { provider?: AIProvider }) {
+    const svc = this.provider(body);
+    if (!svc.isConfigured) {
+      return {
+        ok: false,
+        error: `${svc === this.gemini ? 'GEMINI' : 'DEEPSEEK'}_API_KEY not set in environment`,
+      };
     }
-    return this.deepseek.ping();
+    return svc.ping();
   }
 
   /** Step 1 test: send a custom message */
   @Post('chat')
-  async chat(@Body() body: { messages?: DeepSeekMessage[]; message?: string }) {
-    if (!this.deepseek.isConfigured) {
-      return { ok: false, error: 'DEEPSEEK_API_KEY not set in environment' };
+  async chat(@Body() body: { messages?: DeepSeekMessage[]; message?: string; provider?: AIProvider }) {
+    const svc = this.provider(body);
+    if (!svc.isConfigured) {
+      return {
+        ok: false,
+        error: `${svc === this.gemini ? 'GEMINI' : 'DEEPSEEK'}_API_KEY not set in environment`,
+      };
     }
     try {
       const messages = body.messages ?? [
         { role: 'user', content: body.message || 'Hello' },
       ];
-      const result = await this.deepseek.chat(messages);
+      const result = await svc.chat(messages);
       return { ok: true, ...result };
     } catch (err) {
       return { ok: false, error: (err as Error).message };
@@ -44,9 +61,14 @@ export class AIController {
     scores: Array<{ symbol: string; score: number; signal: string; strength: string; dataStatus: string }>;
     cash?: number;
     question?: string; // optional user question to guide analysis
+    provider?: AIProvider;
   }) {
-    if (!this.deepseek.isConfigured) {
-      return { ok: false, error: 'DEEPSEEK_API_KEY not set' };
+    const svc = this.provider(body);
+    if (!svc.isConfigured) {
+      return {
+        ok: false,
+        error: `${svc === this.gemini ? 'GEMINI' : 'DEEPSEEK'}_API_KEY not set`,
+      };
     }
 
     // Run deterministic classification first
@@ -83,7 +105,7 @@ GUIDELINES:
       : 'Analyze my portfolio and recommend specific actions.';
 
     try {
-      const result = await this.deepseek.chat(
+      const result = await svc.chat(
         [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage },
@@ -116,9 +138,14 @@ GUIDELINES:
     composite: number;
     protocolName?: string;
     directives?: Array<{ name: string; score: number; reason: string }>;
+    provider?: AIProvider;
   }) {
-    if (!this.deepseek.isConfigured) {
-      return { ok: false, error: 'DEEPSEEK_API_KEY not set' };
+    const svc = this.provider(body);
+    if (!svc.isConfigured) {
+      return {
+        ok: false,
+        error: `${svc === this.gemini ? 'GEMINI' : 'DEEPSEEK'}_API_KEY not set`,
+      };
     }
 
     const directiveSummary = (body.directives || [])
@@ -139,7 +166,7 @@ ${directiveSummary || 'No directive details available'}
 Give a 2-3 sentence explanation of WHY this trade makes sense (or why it's risky). Mention the strongest supporting and opposing factors. Be honest — if the signal is weak or contradictory, say so. Keep it under 150 words.`;
 
     try {
-      const result = await this.deepseek.chat(
+      const result = await svc.chat(
         [{ role: 'user', content: prompt }],
         { temperature: 0.3, maxTokens: 300 },
       );

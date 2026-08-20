@@ -334,11 +334,6 @@ export const PLUGIN_TAB_SKELETONS = {
     subtitle: 'Advisor-guided focus recommendations with rationale trails.',
     domain: 'Focus / Advisor',
   },
-  'platform-api-management': {
-    title: 'API Management',
-    subtitle: 'Trading platform API controls, keys, and provider routing rules.',
-    domain: 'Trading Platforms / Management',
-  },
   'platform-api-efficiency': {
     title: 'API Efficiency',
     subtitle: 'Efficiency diagnostics for provider calls, pacing, and batching.',
@@ -353,11 +348,6 @@ export const PLUGIN_TAB_SKELETONS = {
     title: 'Trading Platform Switches',
     subtitle: 'Platform switch controls with safety checks and migration traces.',
     domain: 'Trading Platforms / Operations',
-  },
-  'audit-log': {
-    title: 'Audit Log',
-    subtitle: 'Operational event audit stream and change traceability.',
-    domain: 'Ops / Governance',
   },
   'qa-lab': {
     title: 'QA Lab',

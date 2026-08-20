@@ -14,6 +14,45 @@ import { DirectiveGroup } from '../directives/directive-groups';
 import { DirectivesService } from '../directives/directives.service';
 import { PROTOCOL_SEED_DATA } from './protocols-seed-data';
 
+/**
+ * Protocol symbol-derivation rules — shared with SymbolResolverService
+ * (bar-refresh coverage, #665). Single source of truth for the
+ * "auto-derive symbols from protocol ID" behaviour.
+ */
+export const SINGLE_SYMBOL_HINTS: Array<{ match: string; symbol: string }> = [
+  { match: 'btc', symbol: 'BTCUSD' },
+  { match: 'xau', symbol: 'XAUUSD' },
+  { match: 'gold', symbol: 'XAUUSD' },
+  { match: 'oil', symbol: 'USOIL' },
+  { match: 'spy', symbol: 'SPY' },
+  { match: 'spx', symbol: 'SPY' },
+  { match: 'qqq', symbol: 'QQQ' },
+  { match: 'dow', symbol: 'US30' },
+  { match: 'ftse', symbol: 'UK100' },
+  { match: 'tsla', symbol: 'TSLA' },
+  { match: 'doge', symbol: 'DOGEUSD' },
+  { match: 'china', symbol: 'CHN50' },
+  { match: 'vix', symbol: 'VIX' },
+];
+
+export const WATCHLIST_HINTS: Array<{ match: string; watchlist: string }> = [
+  { match: 'forex', watchlist: 'forex-majors' },
+  { match: 'session', watchlist: 'forex-majors' },
+  { match: 'dxy', watchlist: 'forex-majors' },
+  { match: 'momentum', watchlist: 'momentum-stocks' },
+  { match: 'pandemic', watchlist: 'pandemics' },
+  { match: 'leverage', watchlist: 'leverage' },
+];
+
+/** Pure: single symbol derived from a protocol slug, or null. */
+export function deriveSingleSymbolFromSlug(slug: string): string | null {
+  const id = slug.toLowerCase();
+  for (const hint of SINGLE_SYMBOL_HINTS) {
+    if (id.includes(hint.match)) return hint.symbol;
+  }
+  return null;
+}
+
 export interface ProtocolConfig {
   groups: DirectiveGroup[];
   name: string;
@@ -138,30 +177,14 @@ export class ProtocolDbService implements OnModuleInit {
     const id = protocolId.toLowerCase();
 
     // Single-symbol protocols — obvious from their name
-    if (id.includes('btc')) return ['BTCUSD'];
-    if (id.includes('xau') || id.includes('gold')) return ['XAUUSD'];
-    if (id.includes('oil')) return ['USOIL'];
-    if (id.includes('spy') || id.includes('spx')) return ['SPY'];
-    if (id.includes('qqq')) return ['QQQ'];
-    if (id.includes('dow')) return ['US30'];
-    if (id.includes('ftse')) return ['UK100'];
-    if (id.includes('tsla')) return ['TSLA'];
-    if (id.includes('doge')) return ['DOGEUSD'];
-    if (id.includes('china')) return ['CHN50'];
-    if (id.includes('vix')) return ['VIX'];
+    const single = deriveSingleSymbolFromSlug(protocolId);
+    if (single) return [single];
 
     // Multi-symbol protocols — linked to named watchlists
-    if (id.includes('forex') || id.includes('session') || id.includes('dxy')) {
-      return this.getWatchlistSymbols('forex-majors');
-    }
-    if (id.includes('momentum')) {
-      return this.getWatchlistSymbols('momentum-stocks');
-    }
-    if (id.includes('pandemic')) {
-      return this.getWatchlistSymbols('pandemics');
-    }
-    if (id.includes('leverage')) {
-      return this.getWatchlistSymbols('leverage');
+    for (const hint of WATCHLIST_HINTS) {
+      if (id.includes(hint.match)) {
+        return this.getWatchlistSymbols(hint.watchlist);
+      }
     }
 
     // Fallback: try a watchlist with matching name

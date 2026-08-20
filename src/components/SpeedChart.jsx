@@ -96,11 +96,15 @@ export default function SpeedChart({
       : all.slice(0, -1).slice(-maxBars);
     const current = all[all.length - 1];
 
-    // Convert to SpeedChart bar format
-    const allBars = [...completed, current].map(c => ({
-      timestamp: new Date(c.time * 1000).toISOString(),
-      open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume || 0,
-    }));
+    // Convert to SpeedChart bar format.
+    // Guard against invalid candle timestamps (would make toISOString throw
+    // "Invalid time value" and crash the chart).
+    const allBars = [...completed, current]
+      .filter(c => Number.isFinite(Number(c?.time)))
+      .map(c => ({
+        timestamp: new Date(Number(c.time) * 1000).toISOString(),
+        open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume || 0,
+      }));
     return { allBars, completed, current };
   }, [ticks, intervalMs, maxBars, historicalCandles, useExternalData]);
 

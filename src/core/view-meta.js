@@ -59,8 +59,8 @@ const VIEW_META = {
     css: 'src/pages/strategy-create.css',
     api: ['GET /api/scoring/gated/protocols', 'GET /api/watchlists', 'POST /api/trading/strategies'],
   },
-  '/lab/scoring-debug-lab': {
-    label: 'Scoring Debug (Dual Protocol)',
+  '/lab/dual-protocol-inspector': {
+    label: 'Dual-Protocol Inspector',
     file: 'src/pages/ScoringDebugLab.jsx',
     css: 'src/pages/scoring-debug-lab.css',
     api: ['GET /api/scoring/gated/protocols', 'GET /api/scoring/gated/:symbol'],
@@ -71,7 +71,7 @@ const VIEW_META = {
     css: 'src/pages/protocols-ladder.css',
     api: ['GET /api/scoring/runs'],
   },
-  '/protocols/symbols-ladder': {
+  '/scoring/symbols-ladder': {
     label: 'Symbols Ladder',
     file: 'src/pages/SymbolsLadderPage.jsx',
     css: 'src/pages/protocols-ladder.css',
@@ -132,7 +132,7 @@ const VIEW_META = {
     css: 'src/pages/directives-manager.css',
     api: ['GET /api/directives'],
   },
-  '/scoring/exit-signals': {
+  '/trading/exit-signals': {
     label: 'Exit Signals',
     file: 'src/pages/ExitSignalsPage.jsx',
     css: 'src/pages/exit-signals.css',
@@ -157,19 +157,13 @@ const VIEW_META = {
     css: 'src/pages/protocols.css',
     api: ['GET /api/scoring/gated/protocols', 'GET /api/scoring/protocols'],
   },
-  '/lab/directive-audit': {
-    label: 'Directive Audit',
-    file: 'src/pages/DirectiveAuditPage.jsx',
-    css: 'src/pages/directive-audit.css',
-    api: ['GET /api/backtest/directive-audit'],
-  },
   '/protocols/protocol-trail': {
     label: 'Protocol Trail',
     file: 'src/pages/ProtocolTrailPage.jsx',
     css: 'src/pages/decision-trail.css',
     api: ['GET /api/scoring/runs'],
   },
-  '/protocols/singles-monitor': {
+  '/scoring/singles-monitor': {
     label: 'Singles Monitor',
     file: 'src/pages/SinglesMonitorPage.jsx',
     css: 'src/pages/decision-trail.css',
@@ -271,7 +265,7 @@ const VIEW_META = {
     css: 'src/pages/theme-lab.css',
     api: [],
   },
-  '/lab/meta-stack-pipeline': {
+  '/status/meta-stack-pipeline': {
     label: 'META.Stack Pipeline',
     file: 'src/pages/MetaStackPipelinePage.jsx',
     css: 'src/pages/meta-stack-pipeline.css',
@@ -342,17 +336,23 @@ const VIEW_META = {
     api: [],
   },
 
-  // ── Scoring Strategies ──
-  '/scoringStrategies/live-ordering-stack': {
+  // ── Scoring ──
+  '/scoring/live-ordering-stack': {
     label: 'Ladder',
     file: 'src/pages/LadderPage.jsx',
     css: 'src/pages/ladder.css',
     api: [],
   },
-  '/scoringStrategies/scoring-activity-logs': {
+  '/scoring/scoring-activity-logs': {
     label: 'Scoring Activity Logs',
     file: 'src/pages/ScoringActivityLogsPage.jsx',
     css: 'src/pages/scoring-activity-logs.css',
+    api: [],
+  },
+  '/signals/signals-overview': {
+    label: 'Signals',
+    file: 'src/pages/SignalsOverviewPage.jsx',
+    css: 'src/pages/signals-overview.css',
     api: [],
   },
 
@@ -415,12 +415,6 @@ const VIEW_META = {
     css: 'src/pages/file-inventory-page.css',
     api: [],
   },
-  '/status/ai-logs': {
-    label: 'AI Logs',
-    file: 'src/pages/AILogViewerPage.jsx',
-    css: 'src/pages/ai-log-viewer.css',
-    api: [],
-  },
 
   // ── Lab ──
   '/lab/timeline': {
@@ -459,7 +453,7 @@ const VIEW_META = {
     css: 'src/pages/diagrams.css',
     api: [],
   },
-  '/lab/meta-stack-explorer': {
+  '/status/meta-stack-explorer': {
     label: 'META.Stack Explorer',
     file: 'src/pages/MetaStackExplorerPage.jsx',
     css: 'src/pages/meta-stack-explorer.css',
@@ -565,18 +559,6 @@ const VIEW_META = {
     label: 'Daily Summary Report',
     file: 'src/pages/DailySummaryReportPage.jsx',
     css: 'src/pages/daily-summary-report.css',
-    api: [],
-  },
-  '/lab/metastack-display': {
-    label: 'META.Stack Display',
-    file: 'src/pages/MetaStackDisplayPage.jsx',
-    css: 'src/pages/metastack-display.css',
-    api: [],
-  },
-  '/lab/metastack-performance': {
-    label: 'MetaStack Performance',
-    file: 'src/pages/MetaStackPerformancePage.jsx',
-    css: 'src/pages/metastack-performance.css',
     api: [],
   },
   '/lab/portfolio-lab': {

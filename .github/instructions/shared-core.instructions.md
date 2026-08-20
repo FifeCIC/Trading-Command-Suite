@@ -82,7 +82,7 @@ All colours MUST use CSS variables from the theme. Never hardcode a hex value fo
 ## 🔗 Visual Roadmap Pages
 
 Before making architectural decisions, check these pages (open in browser):
-- `/lab/meta-stack-pipeline` — canonical pipeline: Watchlists → Protocols → SEES → Scoring Strategies → Trading Strategies → Execution
+- `/status/meta-stack-pipeline` — canonical pipeline: Watchlists → Protocols → SEES → Scoring Strategies → Trading Strategies → Execution
 - `/lab/pipeline-graph-lab` — detailed node view with files, endpoints, and tables per module
 - `/lab/diagrams` — conceptual diagrams (⚠️ reference only, may be outdated)
 

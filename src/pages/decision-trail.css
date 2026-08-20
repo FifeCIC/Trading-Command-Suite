@@ -326,25 +326,69 @@
   font-variant-numeric: tabular-nums;
 }
 
-.pt-summary-score-label {
+.pt-summary-stats {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.75rem;
+  flex-wrap: wrap;
+}
+
+.pt-summary-stat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.pt-summary-label {
+  position: relative;
+  width: max-content;
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--accent, #0ea5a6);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   font-family: var(--font-sans, inherit);
-  margin-right: 0.35rem;
+  cursor: help;
 }
 
-.pt-summary-opp {
-  margin-top: 0.4rem;
-  font-size: 0.82rem;
-  font-weight: 600;
+/* Hover/focus popover on the score labels (Signal + Opportunity).
+   Both labels use this same popover so the two scores read as one theme. */
+.pt-pop {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  margin-top: 6px;
+  width: max-content;
+  max-width: 280px;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.72rem;
   color: var(--ink-soft);
-  font-variant-numeric: tabular-nums;
+  line-height: 1.45;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  box-shadow: var(--shadow-card);
+  z-index: 30;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+  pointer-events: none;
+}
+.pt-summary-label:hover .pt-pop,
+.pt-summary-label:focus-visible .pt-pop {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
 }
 
 .pt-directive-excluded {
+  display: inline-block;
+  margin-top: 0.45rem;
   font-size: 0.62rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -353,7 +397,6 @@
   background: color-mix(in srgb, var(--ink-soft) 12%, transparent);
   padding: 1px 6px;
   border-radius: 999px;
-  margin-left: 0.4rem;
   cursor: help;
   white-space: nowrap;
 }

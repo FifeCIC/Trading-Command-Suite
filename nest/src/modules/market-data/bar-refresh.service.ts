@@ -52,6 +52,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
+import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import { SymbolResolverService } from '../symbols/symbol-resolver.service';
 
 // Avoid importing the concrete adapter class
@@ -112,6 +113,7 @@ export class BarRefreshService {
     private readonly prisma: PrismaService,
     private readonly adapterFactory: AdapterFactory,
     private readonly symbolResolver: SymbolResolverService,
+    private readonly mt5Conn: Mt5ConnectionManager,
   ) {}
 
   /** Start periodic live refresh. Safe to call multiple times. */
@@ -241,11 +243,63 @@ export class BarRefreshService {
       return { upserted: 0, symbols, errors: ['MT5 adapter unavailable'] };
     }
 
+    // Multi-broker fallback (#665) — when the primary bridge has no candles
+    // or only stale ones (broker-side gaps), try the other configured
+    // bridges and keep the freshest set.
+    const primaryUrl = process.env.MT5_BRIDGE_URL || 'http://localhost:5000';
+    const fallbackUrls = this.mt5Conn.getBrokerIds()
+      .map((id) => this.mt5Conn.getUrl(id))
+      .filter((url) => url !== primaryUrl);
+    const TF_STALE_MS: Record<string, number> = {
+      '5m': 2 * 3600_000,
+      '15m': 4 * 3600_000,
+      '1h': 12 * 3600_000,
+      '4h': 24 * 3600_000,
+      '1d': 72 * 3600_000,
+    };
+    const newestOf = (bs: any[]) => Math.max(
+      ...bs.map((b: any) => new Date(b.timestamp).getTime()).filter((t: number) => !Number.isNaN(t)),
+    );
+    const isStaleSet = (bs: any[], tf: string) => {
+      if (!bs || !bs.length) return true;
+      const threshold = TF_STALE_MS[tf] ?? 24 * 3600_000;
+      return Date.now() - newestOf(bs) > threshold;
+    };
+    const fetchBridgeCandles = async (url: string, symbol: string, tf: string, count: number): Promise<any[]> => {
+      try {
+        const res = await fetch(
+          `${url}/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(tf)}&count=${count}`,
+          { signal: AbortSignal.timeout(10_000) },
+        );
+        if (!res.ok) return [];
+        const data: any = await res.json();
+        if (!Array.isArray(data?.bars)) return [];
+        return data.bars.map((b: any) => ({
+          timestamp: b.timestamp,
+          open: b.open,
+          high: b.high,
+          low: b.low,
+          close: b.close,
+          volume: b.volume ?? 0,
+        }));
+      } catch {
+        return [];
+      }
+    };
+
     // Fetch and upsert bars for each symbol+timeframe combo
     for (const symbol of symbols) {
       for (const tf of TIMEFRAMES) {
         try {
-          const bars = await broker.getCandles(symbol, tf, limit);
+          let bars = await broker.getCandles(symbol, tf, limit);
+          const primaryBad = !bars || bars.length === 0 || isStaleSet(bars, tf);
+          if (primaryBad && fallbackUrls.length > 0) {
+            for (const url of fallbackUrls) {
+              const alt = await fetchBridgeCandles(url, symbol, tf, limit);
+              if (!alt || !alt.length) continue;
+              if (!bars || !bars.length || newestOf(alt) > newestOf(bars)) bars = alt;
+            }
+          }
           if (!bars || bars.length === 0) continue;
 
           const dbSymbol = await this.prisma.symbol.findFirst({ where: { ticker: symbol } });

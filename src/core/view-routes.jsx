@@ -40,6 +40,7 @@ import LadderPage from '../pages/LadderPage.jsx';
 import SeesArenaPage from '../pages/SeesArenaPage.jsx';
 import ExitSignalsPage from '../pages/ExitSignalsPage.jsx';
 import ScoringActivityLogsPage from '../pages/ScoringActivityLogsPage.jsx';
+import SignalsOverviewPage from '../pages/SignalsOverviewPage.jsx';
 import ProtocolsPage from '../pages/ProtocolsPage.jsx';
 import ProtocolTrailPage from '../pages/ProtocolTrailPage.jsx';
 import SinglesMonitorPage from '../pages/SinglesMonitorPage.jsx';
@@ -51,7 +52,6 @@ import CreateProtocolsPage from '../pages/CreateProtocolsPage.jsx';
 import StrategyLaddersPage from '../pages/StrategyLaddersPage.jsx';
 import StrategyBuilderPage from '../pages/StrategyBuilderPage.jsx';
 import StrategyWizardPage from '../pages/StrategyWizardPage.jsx';
-import DirectiveAuditPage from '../pages/DirectiveAuditPage.jsx';
 
 // ── Automation ──
 import AutomationDashboardPage from '../pages/AutomationDashboardPage.jsx';
@@ -159,8 +159,6 @@ import PerformanceLabPage from '../pages/PerformanceLabPage.jsx';
 import SnapshotReplayPage from '../pages/SnapshotReplayPage.jsx';
 import TripleScreenPage from '../pages/TripleScreenPage.jsx';
 import HotStockPicksPage from '../pages/HotStockPicksPage.jsx';
-import MetaStackPerformancePage from '../pages/MetaStackPerformancePage.jsx';
-import MetaStackDisplayPage from '../pages/MetaStackDisplayPage.jsx';
 import PortfolioLabPage from '../pages/PortfolioLabPage.jsx';
 import ScoringDebugLab from '../pages/ScoringDebugLab.jsx';
 
@@ -174,7 +172,6 @@ import UserWatchlistsPage from '../pages/UserWatchlistsPage.jsx';
 // ── Other ──
 import ABTestingPage from '../pages/ABTestingPage.jsx';
 import AICostsPage from '../pages/AICostsPage.jsx';
-import AILogViewerPage from '../pages/AILogViewerPage.jsx';
 import AlertCenterPage from '../pages/AlertCenterPage.jsx';
 import DailyBriefingPage from '../pages/DailyBriefingPage.jsx';
 import DailySummaryReportPage from '../pages/DailySummaryReportPage.jsx';
@@ -220,7 +217,6 @@ export const VIEW_COMPONENTS = {
   'directives-registry': DirectivesManagerPage,
   'directive-viewer': DirectiveViewerPage,
   'directive-impact-audit': DirectiveImpactAuditPage,
-  'directive-audit': DirectiveAuditPage,
   'live-ordering-stack': LadderPage,
   'sees-arena': SeesArenaPage,
   'exit-signals': ExitSignalsPage,
@@ -238,6 +234,7 @@ export const VIEW_COMPONENTS = {
   'strategy-wizard': StrategyWizardPage,
   'strategy-ladders': StrategyLaddersPage,
   'scoring-overview': ScoringOverviewPage,
+  'signals-overview': SignalsOverviewPage,
 
   // Automation
   'automation-dashboard': AutomationDashboardPage,
@@ -346,12 +343,9 @@ export const VIEW_COMPONENTS = {
   'decision-trail': DecisionTrailPage,
   'ab-testing': ABTestingPage,
   'ai-costs': AICostsPage,
-  'ai-logs': AILogViewerPage,
   'daily-summary-report': DailySummaryReportPage,
-  'metastack-display': MetaStackDisplayPage,
-  'metastack-performance': MetaStackPerformancePage,
   'portfolio-lab': PortfolioLabPage,
-  'scoring-debug-lab': ScoringDebugLab,
+  'dual-protocol-inspector': ScoringDebugLab,
   'snapshots': SnapshotLibraryPage,
 
   // Training

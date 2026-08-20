@@ -28,6 +28,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { deriveSingleSymbolFromSlug, WATCHLIST_HINTS } from '../scoring/protocol-db.service';
 
 // ── Static reference lists ────────────────────────────────────────
 
@@ -57,6 +58,7 @@ export type SymbolTier =
   | 'positions'
   | 'active-strategies'
   | 'active-protocols'
+  | 'protocol-symbols'
   | 'watchlist-starred'
   | 'macro'
   | 'sector'
@@ -151,6 +153,8 @@ export class SymbolResolverService {
         return this.resolveActiveStrategies();
       case 'active-protocols':
         return this.resolveActiveProtocols();
+      case 'protocol-symbols':
+        return this.resolveProtocolSymbols();
       case 'watchlist-starred':
         return this.resolveWatchlistStarred();
       case 'macro':
@@ -164,6 +168,79 @@ export class SymbolResolverService {
       default:
         return [];
     }
+  }
+
+  /**
+   * Tier: symbols active protocols resolve — mirrors ProtocolDbService.resolveSymbols
+   * paths without a scoring-module dependency: assignments → watchlist.protocolId
+   * → single-symbol/named-watchlist hints from protocol-db.service (#665).
+   * This is what keeps protocol symbols fed with market bars.
+   */
+  private async resolveProtocolSymbols(): Promise<string[]> {
+    const set = new Set<string>();
+    try {
+      if (!this.prisma.isAvailable) return [];
+      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+        `SELECT slug FROM protocol WHERE active = 1`,
+      );
+      const slugs: string[] = rows.map((r: any) => r.slug).filter(Boolean);
+      if (!slugs.length) return [];
+      const ph = slugs.map(() => '?').join(',');
+
+      // Path 1 — symbol-protocol assignments
+      try {
+        const assigns: any[] = await (this.prisma as any).$queryRawUnsafe(
+          `SELECT symbol FROM symbol_protocol_assignment WHERE protocolId IN (${ph})`,
+          ...slugs,
+        );
+        for (const a of assigns) set.add(String(a.symbol).toUpperCase());
+      } catch { /* table may not exist */ }
+
+      // Path 2 — watchlist linked via watchlist.protocolId
+      try {
+        const wls: any[] = await (this.prisma as any).$queryRawUnsafe(
+          `SELECT symbols FROM watchlist WHERE protocolId IN (${ph})`,
+          ...slugs,
+        );
+        for (const w of wls) this.collectWatchlistSymbols(w.symbols, set);
+      } catch { /* column may not exist */ }
+
+      // Path 3 — derivation hints (shared with ProtocolDbService)
+      for (const slug of slugs) {
+        const single = deriveSingleSymbolFromSlug(slug);
+        if (single) set.add(single);
+        for (const hint of WATCHLIST_HINTS) {
+          if (slug.toLowerCase().includes(hint.match)) {
+            await this.collectNamedWatchlist(hint.watchlist, set);
+            break;
+          }
+        }
+      }
+    } catch { /* best effort */ }
+    return [...set];
+  }
+
+  /** Parse a watchlist `symbols` JSON value into tickers. */
+  private collectWatchlistSymbols(symbolsRaw: any, set: Set<string>): void {
+    try {
+      const parsed = typeof symbolsRaw === 'string' ? JSON.parse(symbolsRaw) : symbolsRaw;
+      if (!Array.isArray(parsed)) return;
+      for (const s of parsed) {
+        const ticker = typeof s === 'string' ? s : s?.ticker || s?.symbol;
+        if (ticker) set.add(String(ticker).toUpperCase());
+      }
+    } catch { /* best effort */ }
+  }
+
+  /** Resolve a named watchlist (fuzzy match, same query as ProtocolDbService). */
+  private async collectNamedWatchlist(name: string, set: Set<string>): Promise<void> {
+    try {
+      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+        `SELECT symbols FROM watchlist WHERE LOWER(REPLACE(REPLACE(name, '-', ' '), '_', ' ')) = LOWER(REPLACE(REPLACE(?, '-', ' '), '_', ' ')) LIMIT 1`,
+        name,
+      );
+      if (rows[0]) this.collectWatchlistSymbols(rows[0].symbols, set);
+    } catch { /* best effort */ }
   }
 
   /** Tier: open positions across all brokers. */
@@ -302,7 +379,7 @@ export class SymbolResolverService {
 
 const FEATURE_TIER_MAP: Record<ResolutionFeature, SymbolTier[]> = {
   'news':         ['positions', 'active-protocols', 'macro', 'sector', 'all-active'],
-  'bar-refresh':  ['positions', 'active-strategies', 'forex-floor'],
+  'bar-refresh':  ['positions', 'active-strategies', 'forex-floor', 'protocol-symbols'],
   'scoring':      ['active-strategies'],
   'automation':   ['positions', 'active-strategies', 'watchlist-starred'],
 };

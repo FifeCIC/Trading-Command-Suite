@@ -5,6 +5,7 @@ import { apiPost } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './speed-scanner.css';
+import '../components/signal-badge.css';
 
 const SCAN_INTERVALS = [5000, 10000, 15000, 30000, 60000];
 const TREND_COLORS = {
@@ -13,10 +14,12 @@ const TREND_COLORS = {
   weak: '#f59e0b',
   sideways: '#ef4444',
 };
-const REC_COLORS = {
-  trade: '#22c55e',
-  caution: '#f59e0b',
-  pause: '#ef4444',
+// Map a recommendation to the shared badge tone (see signal-badge.css).
+// The tone classes own the colours — no local hex map, so the theme stays unified.
+const REC_TONES = {
+  trade: 'trade',
+  caution: 'caution',
+  pause: 'no-trade',
 };
 
 export default function SpeedScannerPage() {
@@ -254,7 +257,7 @@ export default function SpeedScannerPage() {
           const t = sym.trend ?? {};
           const isTop = sym.symbol === topPick;
           const trendColor = TREND_COLORS[t.clarity] || '#6b7280';
-          const recColor = REC_COLORS[t.recommendation] || '#6b7280';
+          const recTone = REC_TONES[t.recommendation] || 'muted';
 
           return (
             <motion.div
@@ -328,7 +331,7 @@ export default function SpeedScannerPage() {
 
               {/* Recommendation */}
               <div className="ss-rec-col">
-                <span className="ss-rec-badge" style={{ background: recColor + '20', color: recColor, borderColor: recColor }}>
+                <span className={`signal-badge signal-badge--${recTone}`}>
                   {t.recommendation ?? '—'}
                 </span>
                 {t.recommendationReason && (

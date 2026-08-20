@@ -1,22 +1,22 @@
 /**
- * META.Stack Display — Pipeline Overview Dashboard
- * =================================================
- * High-level cards showing key information for each of the 6 pipeline stages
- * (Symbols → Strategy → Signals → Risk Rules → Execution → Results) for the
- * currently selected Trading Strategy.
+ * MetaStackPipeline — reusable META.Stack pipeline content (Focused + Technical).
+ * ==============================================================================
+ * Extracted from MetaStackDisplayPage (2026-08-19) so it can be embedded in the
+ * Triple-Screen Cockpit too. Renders the 6-stage pipeline (Symbols → Strategy →
+ * Signals → Risk Rules → Execution → Results) as two card rows:
  *
- * Role in the META.Stack design cycle (see issue #501):
- *   Tier 2 of 3 — sits between Explorer (deep trace) and Triple-Screen (rich layout).
- *   Provides quick health checks and smooth switching between META.Stacks.
- *   Serves as fallback iterator when Triple-Screen has issues.
+ *   - Focused View: high-level "what" for the selected META.Stack
+ *   - Technical Detail: the "how" (ids, config, live scores)
  *
- * Development priority:
- *   1. Explorer walkthrough (validate pipeline correctness)
- *   2. This page — polish after Explorer is stable
- *   3. Triple-Screen layout (future)
+ * Props:
+ *   title       — card header title (default "MetaStack Display")
+ *   subtitle    — header subtitle
+ *   showHeader  — set false when embedding inside a page that has its own header
+ *                 (keeps the META.Stack selector visible)
  *
- * Route: /lab/metastack-display
- * Data:  GET /api/scoring/metastacks/ratings
+ * Route: embedded in /lab/triple-screen (was the standalone /lab/metastack-display)
+ * Data:  GET /api/scoring/metastacks/ratings, GET /api/scoring/protocols,
+ *        GET /api/watchlists, GET /api/speed/scan
  */
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -24,7 +24,7 @@ import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import { translateMetaStack } from '../core/translators/focused-translator';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import './metastack-display.css';
+import '../pages/metastack-display.css';
 
 var PIPELINE_STAGES = [
   { id: 'watchlist', label: 'Symbols', icon: '★' },
@@ -35,7 +35,7 @@ var PIPELINE_STAGES = [
   { id: 'performance', label: 'Results', icon: '◈' },
 ];
 
-export default function MetaStackDisplayPage() {
+export default function MetaStackPipeline({ title = 'MetaStack Display', subtitle = 'M.E.T.A. — Modular Expert Trading Architecture', showHeader = true }) {
   var [selectedStackId, setSelectedStackId] = useState(null);
 
   var stacksQuery = useQuery({
@@ -63,7 +63,6 @@ export default function MetaStackDisplayPage() {
   });
   var protocols = protocolsQuery.data ? (protocolsQuery.data.protocols || []) : [];
 
-  // ── Fetch watchlists for name resolution ──
   var watchlistsQuery = useQuery({
     queryKey: ['watchlists-list'],
     queryFn: function () { return apiGet('/api/watchlists').catch(function () { return []; }); },
@@ -71,16 +70,11 @@ export default function MetaStackDisplayPage() {
   });
   var watchlists = Array.isArray(watchlistsQuery.data) ? watchlistsQuery.data : [];
 
-  // ── Build live lookup maps from API data ──
   var liveMaps = useMemo(function () {
     var protoMap = {};
-    protocols.forEach(function (p) {
-      protoMap[p.id] = { title: p.name || p.title, desc: p.description || p.desc };
-    });
+    protocols.forEach(function (p) { protoMap[p.id] = { title: p.name || p.title, desc: p.description || p.desc }; });
     var wlMap = {};
-    watchlists.forEach(function (w) {
-      wlMap[w.id] = { title: w.label || w.name || w.title, desc: w.description || w.desc };
-    });
+    watchlists.forEach(function (w) { wlMap[w.id] = { title: w.label || w.name || w.title, desc: w.description || w.desc }; });
     return { protocols: protoMap, watchlists: wlMap };
   }, [protocols, watchlists]);
 
@@ -97,10 +91,12 @@ export default function MetaStackDisplayPage() {
   return (
     <div className="msd-page">
       <header className="msd-header">
-        <div>
-          <h2>MetaStack Display</h2>
-          <p className="msd-subtitle">M.E.T.A. — Modular Expert Trading Architecture</p>
-        </div>
+        {showHeader && (
+          <div>
+            <h2>{title}</h2>
+            <p className="msd-subtitle">{subtitle}</p>
+          </div>
+        )}
         <div className="msd-header-right">
           {stacksQuery.isLoading ? (
             <span className="msd-loading-text">Loading</span>
@@ -126,7 +122,6 @@ export default function MetaStackDisplayPage() {
 
       {selectedStack && focused && (
         <div className="msd-scroll">
-          {/* ── Focused row ── */}
           <div className="msd-row-label">Focused View</div>
           <div className="msd-row msd-row-focused">
             {PIPELINE_STAGES.map(function (stage, i) {
@@ -143,9 +138,7 @@ export default function MetaStackDisplayPage() {
                       <span className="msd-card-icon">{stage.icon}</span>
                       <span className="msd-card-title">{stage.label}</span>
                     </div>
-                    <div className="msd-card-body">
-                      {renderFocusedStage(stage.id, focused)}
-                    </div>
+                    <div className="msd-card-body">{renderFocusedStage(stage.id, focused)}</div>
                   </motion.div>
                   {!isLast && <div className="msd-connector">→</div>}
                 </div>
@@ -153,7 +146,6 @@ export default function MetaStackDisplayPage() {
             })}
           </div>
 
-          {/* ── Technical row ── */}
           <div className="msd-row-label msd-row-label-tech">Technical Detail</div>
           <div className="msd-row msd-row-technical">
             {PIPELINE_STAGES.map(function (stage, i) {
@@ -169,9 +161,7 @@ export default function MetaStackDisplayPage() {
                     <div className="msd-card-head msd-card-head-tech">
                       <span className="msd-card-title">{stage.label}</span>
                     </div>
-                    <div className="msd-card-body">
-                      {renderTechnicalStage(stage.id, selectedStack, protocols, rawScores)}
-                    </div>
+                    <div className="msd-card-body">{renderTechnicalStage(stage.id, selectedStack, protocols, rawScores)}</div>
                   </motion.div>
                   {!isLast && <div className="msd-connector msd-connector-tech">→</div>}
                 </div>
@@ -196,7 +186,6 @@ function renderFocusedStage(stageId, f) {
           <div className="msd-f-slug">{f.watchlistSlug}</div>
         </div>
       );
-
     case 'protocol':
       return (
         <div className="msd-focused-body">
@@ -205,7 +194,6 @@ function renderFocusedStage(stageId, f) {
           <div className="msd-f-slug">{f.protocolSlug}</div>
         </div>
       );
-
     case 'scoring':
       return (
         <div className="msd-focused-body">
@@ -224,29 +212,15 @@ function renderFocusedStage(stageId, f) {
           )}
         </div>
       );
-
     case 'parameters':
       return (
         <div className="msd-focused-body">
-          <div className="msd-param">
-            <span className="msd-param-label">Trade size</span>
-            <span className="msd-param-val">{f.baseSize} lots</span>
-          </div>
-          <div className="msd-param">
-            <span className="msd-param-label">Stop loss</span>
-            <span className="msd-param-val">{f.slDescription}</span>
-          </div>
-          <div className="msd-param">
-            <span className="msd-param-label">Take profit</span>
-            <span className="msd-param-val">{f.tpDescription}</span>
-          </div>
-          <div className="msd-param">
-            <span className="msd-param-label">Requires</span>
-            <span className="msd-param-val">{f.tradeThreshold} signals agree</span>
-          </div>
+          <div className="msd-param"><span className="msd-param-label">Trade size</span><span className="msd-param-val">{f.baseSize} lots</span></div>
+          <div className="msd-param"><span className="msd-param-label">Stop loss</span><span className="msd-param-val">{f.slDescription}</span></div>
+          <div className="msd-param"><span className="msd-param-label">Take profit</span><span className="msd-param-val">{f.tpDescription}</span></div>
+          <div className="msd-param"><span className="msd-param-label">Requires</span><span className="msd-param-val">{f.tradeThreshold} signals agree</span></div>
         </div>
       );
-
     case 'broker':
       return (
         <div className="msd-focused-body">
@@ -255,7 +229,6 @@ function renderFocusedStage(stageId, f) {
           <div className="msd-f-slug">{f.brokerSlug}</div>
         </div>
       );
-
     case 'performance':
       return (
         <div className="msd-focused-body">
@@ -266,25 +239,15 @@ function renderFocusedStage(stageId, f) {
                 <span className="msd-perf-label">{f.bandLabel}</span>
               </div>
               <div className="msd-perf-stats">
-                <div className="msd-perf-stat">
-                  <span className="msd-perf-num">{f.totalTrades}</span>
-                  <span className="msd-perf-unit">trades</span>
-                </div>
-                <div className="msd-perf-stat">
-                  <span className="msd-perf-num">{f.winRate || '—'}</span>
-                  <span className="msd-perf-unit">win rate</span>
-                </div>
+                <div className="msd-perf-stat"><span className="msd-perf-num">{f.totalTrades}</span><span className="msd-perf-unit">trades</span></div>
+                <div className="msd-perf-stat"><span className="msd-perf-num">{f.winRate || '—'}</span><span className="msd-perf-unit">win rate</span></div>
               </div>
             </div>
           ) : (
-            <div className="msd-empty">
-              <span className="msd-empty-icon">○</span>
-              <span>No trades yet</span>
-            </div>
+            <div className="msd-empty"><span className="msd-empty-icon">○</span><span>No trades yet</span></div>
           )}
         </div>
       );
-
     default:
       return null;
   }
@@ -301,7 +264,6 @@ function renderTechnicalStage(stageId, stack, protocols, scores) {
           <div className="msd-tech-item"><span>Source</span><span>Database</span></div>
         </div>
       );
-
     case 'protocol':
       return (
         <div className="msd-tech-list">
@@ -312,8 +274,7 @@ function renderTechnicalStage(stageId, stack, protocols, scores) {
           )}
         </div>
       );
-
-    case 'scoring':
+    case 'scoring': {
       var hasScores = Array.isArray(scores) && scores.length > 0;
       return (
         <div className="msd-tech-list">
@@ -331,7 +292,7 @@ function renderTechnicalStage(stageId, stack, protocols, scores) {
           )}
         </div>
       );
-
+    }
     case 'parameters':
       return (
         <div className="msd-tech-list">
@@ -341,7 +302,6 @@ function renderTechnicalStage(stageId, stack, protocols, scores) {
           <div className="msd-tech-item"><span>Threshold</span><span className="msd-tech-mono">{stack.tradeThreshold || 3}</span></div>
         </div>
       );
-
     case 'broker':
       return (
         <div className="msd-tech-list">
@@ -350,8 +310,7 @@ function renderTechnicalStage(stageId, stack, protocols, scores) {
           <div className="msd-tech-item"><span>Bridge</span><span className="msd-tech-mono">localhost:5000</span></div>
         </div>
       );
-
-    case 'performance':
+    case 'performance': {
       var hasTrades = stack.totalTrades > 0;
       return (
         <div className="msd-tech-list">
@@ -361,7 +320,7 @@ function renderTechnicalStage(stageId, stack, protocols, scores) {
           <div className="msd-tech-item"><span>P&amp;L</span><span className="msd-tech-mono">{stack.totalPnl !== 0 ? 'GBP ' + stack.totalPnl.toFixed(2) : '—'}</span></div>
         </div>
       );
-
+    }
     default:
       return null;
   }

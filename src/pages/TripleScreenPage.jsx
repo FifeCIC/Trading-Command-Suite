@@ -1,12 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { motion } from 'motion/react';
+import MetaStackPipeline from '../components/MetaStackPipeline';
 import './triple-screen.css';
-
-const SCREEN_SLOTS = [
-  { id: 'left', label: 'Screen Left', shortcut: 'Win+Shift+Left', desc: 'Watchlists, positions, account summary' },
-  { id: 'center', label: 'Screen Center', shortcut: 'Primary', desc: 'Charts, price action, DOM, time and sales' },
-  { id: 'right', label: 'Screen Right', shortcut: 'Win+Shift+Right', desc: 'Execution, orders, alerts, scoring feed' },
-];
 
 export default function TripleScreenPage() {
   const [tripleWindow, setTripleWindow] = useState(null);
@@ -108,7 +102,7 @@ export default function TripleScreenPage() {
   }, [isTripleMode]);
 
   return (
-    <div className={'ts-page ' + (isTripleMode ? 'ts-mode-triple' : 'ts-mode-preview')}>
+    <>
       {!isTripleMode && (
         <>
           <header className="ts-header">
@@ -148,62 +142,13 @@ export default function TripleScreenPage() {
             </div>
           )}
 
-          <div className="ts-preview-grid">
-            {SCREEN_SLOTS.map(function (slot, i) {
-              return (
-                <motion.div
-                  key={slot.id}
-                  className={'ts-preview-slot ts-slot-' + slot.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.08 }}
-                >
-                  <div className="ts-slot-header">
-                    <span className="ts-slot-label">{slot.label}</span>
-                    <span className="ts-slot-key">{slot.shortcut}</span>
-                  </div>
-                  <p className="ts-slot-desc">{slot.desc}</p>
-                  <div className="ts-slot-placeholder">
-                    <span>Widget slot - drag panels here</span>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-
-          <div className="ts-notes">
-            <h4>How it works</h4>
-            <ol>
-              <li>Click <strong>Launch Triple Screen</strong> - opens a new window spanning all monitors</li>
-              <li>Drag the window to cover 3 screens (or use Win+Shift+Left/Right if already positioned)</li>
-              <li>Each screen column is an independent panel area</li>
-              <li>Widgets can be dragged between panels via the DetachableWidget system</li>
-              <li>BroadcastChannel keeps main window and triple window in sync</li>
-            </ol>
-          </div>
+          <MetaStackPipeline title="Triple-Screen Cockpit" subtitle="Multi-monitor META.Stack pipeline layout" />
         </>
       )}
 
       {isTripleMode && (
-        <div className="ts-triple-layout">
-          {SCREEN_SLOTS.map(function (slot) {
-            return (
-              <div key={slot.id} className={'ts-screen-panel ts-panel-' + slot.id}>
-                <div className="ts-panel-titlebar">
-                  <span>{slot.label}</span>
-                  <span className="ts-panel-hint">{slot.desc}</span>
-                </div>
-                <div className="ts-panel-body">
-                  <div className="ts-panel-placeholder">
-                    <span className="ts-placeholder-label">{slot.label}</span>
-                    <span className="ts-placeholder-desc">{slot.desc}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <MetaStackPipeline title="Triple-Screen Cockpit" subtitle="Multi-monitor META.Stack pipeline layout" />
       )}
-    </div>
+    </>
   );
 }

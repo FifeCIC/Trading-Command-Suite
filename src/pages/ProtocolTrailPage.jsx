@@ -141,18 +141,31 @@ export default function ProtocolTrailPage() {
                 <span className="pt-summary-symbol">{data.ticker || symbol}</span>
                 {data.strategyId && <span className="pt-summary-protocol">{data.strategyId}</span>}
               </div>
-              <div className="pt-summary-score">
-                <span className="pt-summary-score-label" title="Signal — directional conviction (which way, how strongly). Drives BUY/HOLD/SELL.">Signal</span>
-                {vm.score != null ? vm.score.toLocaleString() : '—'}
-                {signalMax > 0 && (
-                  <span className="pt-summary-score-max">/{signalMax.toLocaleString()}</span>
+              <div className="pt-summary-stats">
+                <div className="pt-summary-stat">
+                  <span className="pt-summary-label" tabIndex={0}>
+                    Signal
+                    <span className="pt-pop" role="tooltip">Signal — directional conviction (which way, how strongly). Drives BUY/HOLD/SELL.</span>
+                  </span>
+                  <span className="pt-summary-score">
+                    {vm.score != null ? vm.score.toLocaleString() : '—'}
+                    {signalMax > 0 && (
+                      <span className="pt-summary-score-max">/{signalMax.toLocaleString()}</span>
+                    )}
+                  </span>
+                </div>
+                {opportunityScore != null && opportunityMax != null && (
+                  <div className="pt-summary-stat">
+                    <span className="pt-summary-label" tabIndex={0}>
+                      Opportunity
+                      <span className="pt-pop" role="tooltip">Opportunity — additive 'everything counts' score (direction + conditions + forecasts). Used for ranking/screening across symbols.</span>
+                    </span>
+                    <span className="pt-summary-score">
+                      {opportunityScore.toLocaleString()}<span className="pt-summary-score-max">/{opportunityMax.toLocaleString()}</span>
+                    </span>
+                  </div>
                 )}
               </div>
-              {opportunityScore != null && opportunityMax != null && (
-                <div className="pt-summary-opp" title="Opportunity — additive 'everything counts' score (direction + conditions + forecasts). Used for ranking/screening across symbols.">
-                  Opportunity&nbsp;{opportunityScore.toLocaleString()}<span className="pt-summary-score-max">/{opportunityMax.toLocaleString()}</span>
-                </div>
-              )}
               <div className="pt-summary-tags">
                 <SignalBadge display={vm} />
                 {directionLabel && <span className="pt-badge pt-badge--neutral">{directionLabel}</span>}
@@ -216,16 +229,16 @@ export default function ProtocolTrailPage() {
                       <span className="pt-directive-score">
                         {d.score} / {d.maxScore}
                       </span>
-                      {!d.inSignal && (
-                        <span
-                          className="pt-directive-excluded"
-                          title="Condition/gate — contributes to the Opportunity score, not the directional Signal."
-                        >
-                          condition
-                        </span>
-                      )}
                     </div>
                     <div className="pt-directive-reason">{d.reason || '—'}</div>
+                    {!d.inSignal && (
+                      <span
+                        className="pt-directive-excluded"
+                        title="Condition/gate — contributes to the Opportunity score, not the directional Signal."
+                      >
+                        condition
+                      </span>
+                    )}
                   </motion.div>
                 ))}
               </div>

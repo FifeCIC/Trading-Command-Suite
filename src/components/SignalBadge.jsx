@@ -25,7 +25,12 @@ export default function SignalBadge({ display, className = '' }) {
         className={`signal-badge signal-badge--paused ${className}`}
         title={display.frozenTitle || 'Frozen at last close — not a live tradable signal.'}
       >
-        <span className="signal-badge-arrow" aria-hidden="true">⏸</span>
+        <span className="signal-badge-arrow" aria-hidden="true">
+          <svg width="9" height="9" viewBox="0 0 9 9" fill="currentColor" focusable="false">
+            <rect x="1" y="0.5" width="2.5" height="8" rx="1" />
+            <rect x="5.5" y="0.5" width="2.5" height="8" rx="1" />
+          </svg>
+        </span>
         PAUSED
       </span>
     );

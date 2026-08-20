@@ -276,6 +276,24 @@ const OPTIONS_REGISTRY = {
       },
     ],
   },
+  'live-ordering-stack': {
+    title: 'Ladder',
+    sections: [
+      {
+        id: 'scoreDisplay',
+        label: 'Score Display',
+        description: 'How each card\u2019s score value renders.',
+        type: 'radio',
+        key: 'lad-score-display',
+        defaultValue: 'both',
+        options: [
+          { value: 'both', label: 'Raw + Percent', desc: 'Raw score with the percentage stacked underneath' },
+          { value: 'raw', label: 'Raw Only', desc: 'Just the raw score out of its denominator (e.g. 91 / 180)' },
+          { value: 'percent', label: 'Percent Only', desc: 'Just the percentage (e.g. 33%)' },
+        ],
+      },
+    ],
+  },
 };
 
 export default function ScreenOptions({ activeView, onSettingsChange, isOpen, onToggle, isBookmarked, onToggleBookmark, statusLevel, isMt5Online, isApiOnline, isDbOnline }) {

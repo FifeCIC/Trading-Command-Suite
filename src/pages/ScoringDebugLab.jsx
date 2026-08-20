@@ -44,7 +44,7 @@ export default function ScoringDebugLab() {
   return (
     <div className="sdl-page">
       <header className="sdl-header">
-        <h2>🔬 Scoring Debug — Dual-Protocol Inspector</h2>
+        <h2>🔬 Dual-Protocol Inspector</h2>
         <p className="muted">
           Compare LONG (built-in-default) vs SHORT (default-short) protocol scores in real time.
           This is a Lab tool to explore the dual-protocol scoring pipeline.
