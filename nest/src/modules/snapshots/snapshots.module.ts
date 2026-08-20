@@ -2,6 +2,7 @@ import { Controller, Get, Post, Delete, Param, Body, Query, Logger } from '@nest
 import { PrismaService } from '../../database/prisma.service';
 import { SnapshotComparisonService } from './snapshot-comparison.service';
 import { MarketDataService } from '../market-data/market-data.service';
+import { resolveMt5BridgeUrl } from '../providers/mt5/mt5-bridge.config';
 
 @Controller('snapshots')
 export class SnapshotsController {
@@ -76,7 +77,7 @@ export class SnapshotsController {
     // Fallback: try MT5 bridge if no DB data
     if (candleData.length === 0) {
       try {
-        const mt5Url = `${process.env.MT5_BRIDGE_URL || 'http://localhost:5000'}/candles`;
+        const mt5Url = `${resolveMt5BridgeUrl()}/candles`;
         const res = await fetch(`${mt5Url}?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}&limit=200`);
         const mt5Data = await res.json();
         if (Array.isArray(mt5Data)) {

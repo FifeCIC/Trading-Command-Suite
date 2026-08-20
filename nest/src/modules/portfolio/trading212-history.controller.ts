@@ -1,5 +1,6 @@
 import { Controller, Get, Query, Logger } from '@nestjs/common';
 import { PortfolioService } from './portfolio.service';
+import { resolveMt5BridgeUrl } from '../providers/mt5/mt5-bridge.config';
 
 @Controller('portfolio/trading212')
 export class Trading212HistoryController {
@@ -13,7 +14,7 @@ export class Trading212HistoryController {
     // For now, fetch from MT5 bridge as T212 order history isn't available yet
     // When T212 adapter adds getOrders(), switch to that
     try {
-      const bridgeUrl = process.env.MT5_BRIDGE_URL || 'http://localhost:5000';
+      const bridgeUrl = resolveMt5BridgeUrl();
       const res = await fetch(`${bridgeUrl}/history/deals?days=${daysNum}`, {
         signal: AbortSignal.timeout(10000),
       });

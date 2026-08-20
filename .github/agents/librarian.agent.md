@@ -31,6 +31,10 @@ Maintain `src/core/page-data-status.js` and the Capability Map page (Q295):
 - Update directive coverage counts when new directives ship
 - Update provider status when adapters change
 - Sync discussion status from `.agenticmemory/discussions/`
+- **Capability metadata lives in the DB `capability` table (single source of
+  truth). For new/updated capabilities, POST to `/api/capabilities` (upsert by
+  name) — do NOT edit `src/data/known-features.js`. That file only seeds the
+  table via `nest/scripts/seed-capabilities.cjs` for fresh environments.**
 
 ### 4. Prompt Lifecycle Management
 Prompts live in `G:\...\Trading-Command-Suite-Documentation\.agenticmemory\prompts\`:

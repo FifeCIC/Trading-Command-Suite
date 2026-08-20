@@ -7,267 +7,23 @@ import { PAGE_DATA_STATUS } from '../core/page-data-status';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import './capability-map.css';
 
-// ── Known feature annotations ──────────────────────────
-const KNOWN_FEATURES = {
-  // Directives
-  'dxy-regime': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'gold-macro-correlation': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'cad-usd-oil-correlation': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'earnings-momentum': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'correlation-drag': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'rollover-risk': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  // Backend Tech
-  'SEES Scoring Engine': { dataPersistence: 'stored', uiSurfaces: 4, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Speed Scan Service': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Gated Scoring Pipeline': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'MicroTrendDetector (ADX+Wilder)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'RiskGatingEngine (Tiered)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'ExitSignalService (Multi-factor)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'RateLimitGovernor (9 providers)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'TimezoneService (IANA-aware)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Protocol System (44 protocols, DB-driven)': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Directive Registry (102 directives, DB-backed metadata)': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Multi-Protocol SEES Arena': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Trading Strategy Stacks (real)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Sector Rotation + Protocol Strat': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Portfolio Service (T212)': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Trading212 Import Service': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Scoring Scheduler': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Score History Service': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Scoring Runs (search+paginate)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Outcome Tracker (Q304)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Seasonal Affinity Service': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Correlation Service': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Research Overview (priority-wtd)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'StockInvestigation (Finnhub)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Planner (allocations+styles)': { dataPersistence: 'stored', uiSurfaces: 3, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Backtest Service': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
-  'Alert Service': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'TradingGatesService (3-Gate Pipeline)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'Risk Service (Drawdown Alerts)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'Automation (9 endpoints)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  // Platform
-  'MT5 Bridge': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'Trading212 API': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'Finnhub': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'DeepSeek AI': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  // Frontend
-  'Portfolio Lab': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'planned', devCompletion: 'complete' },
-  'DXY Sensitivity Protocol': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Speed Scanner': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Protocol Comparison Heatmap': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Signal Ladder + Directive Drilldown': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Execution Queue (Timeline + Retry)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'User Preferences (Display+Risk)': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Exit Signals Page': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Market Correlations (Live 90d)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  // Sprint 2026-07-03 — Divergence Suite
-  'rsi-divergence': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'macd-divergence': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'obv-divergence': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  // Sprint 2026-07-03 — VWAP Confluence
-  'vwap-confluence-simple': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'vwap-confluence-bands': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  // Sprint 2026-07-03 — MTF Confluence
-  'mtf-confluence-conservative': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'mtf-confluence-weighted': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  // Sprint 2026-07-03 — Gap Scanner
-  'gap-scanner': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  // Sprint 2026-07-03 — Paper Trading + Monte Carlo
-  'PaperTradingService': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'MonteCarloService': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  // Sprint 2026-07-03 — Automation Bridge
-  'ScoringStrategy (DB-persisted)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Trading Scheduler (Live Scoring)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
-  // Frontend additions
-  'Market Status Ticker': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Market Context Page': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Provider Health Page': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  // 2026-07-03/04 — Degradation & Market Awareness
-  'Provider Degradation Service': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'MarketContextService (7-Day)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Scoring Degradation Monitor': { dataPersistence: 'ephemeral', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'PerformanceService (Prisma, equity curve)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Insider Activity (DB-backed, on-demand)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Dilution Impact (DB-backed, on-demand)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Seasonality Heatmap': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Recently Analysed Symbols': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Create Strategy Page': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  // 2026-07-04/07 — Data Pipeline & Providers
-  'Data Import Orchestrator (unified freshness)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Freshness Service + Price Refresh': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Portfolio Price Service (live pricing)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Trading212 Import Pipeline': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Crypto Provider Router (Binance default)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Binance Adapter': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Polygon.io Adapter': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Protocol Consensus Service (multi-protocol)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Scoring Log Service (unified logging)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Process Manager Service': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
-  // UI Components & Pages
-  'Gap Scanner Page': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'QA Testing Page + Checklist': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Preference Lab': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Symbol Detail Page': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Feature Lab Demos (TP/Session/Trailing Stop)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Detachable Widget System': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Sticky Header Component': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  // 2026-07-07/08 — Alerts, Backtest, Duplicate Guard
-  'AlertTriggerService (9 triggers)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'DuplicateGuardService': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'Backtest News Exclusion (#105)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Backtest Equity Curve (#103)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Backtest Run Compare (#104)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  // 2026-07-08/09 — M.E.T.A. System
-  'M.E.T.A. Ratings Engine': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'M.E.T.A. Signature Verification': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
-  // 2026-07-14 — Protocol Direction Architecture
-  'Protocol Direction Mode (LONG/SHORT)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Directive Direction Bias Filtering': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Dual-Protocol Scoring (LONG vs SHORT)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
-  // 2026-07-15/16 — Bridge, UI, Diversification, Symbol Focus
-  'Bridge Event Logging (circuit breaker)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'Font Size Scaling Preference': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Per-Broker P&L Dashboard': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Duplicate Error Suppression': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'Global Diversification System': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Symbol Focus Page': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  // 2026-07-16 — Accessibility, UX, Data, Scoping
-  'Active Symbols Company Names (#305)': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Calculator Screen Options (#376)': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Color-Blind Friendly Mode (#358)': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Conditional EURUSD Fetch (#394)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Daily Briefing (#368)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
-  'Data Quick Wins (#356)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Exit Signals UX (#321)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Focus Indicator Preference (#359)': { dataPersistence: 'localStorage', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Forex Cross-Pair Auto Strategies (#380)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Keyboard Navigation Skip Link (#360)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'MT5 Trading Offline Fix (#313)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'News Sentiment + Protocol Badges (#367)': { dataPersistence: 'ephemeral', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'partial' },
-  'Notification Disc (#378)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
-  'Protocol Comparison Refactor (#393)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Protocol Name Resolution (#395)': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Protocol-Scoped Directives (#389)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Meta-Directives (#369)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Screen Reader Live Regions (#361)': { dataPersistence: 'ephemeral', uiSurfaces: 5, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Tap Target Audit (#362)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Weight Strategy Selection (#392)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Pipeline Graph (NodeMapper)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Design Token System (#252)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'EmptyState Component (#255)': { dataPersistence: 'localStorage', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
-  // 2026-07-17 — A/B Testing, AI Costs, Dashboard
-  'A/B Protocol Testing': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
-  'AI Cost Monitoring': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
-  'AI Log Viewer': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
-  'Dashboard Recent Trades': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  // 2026-07-18 — News Import, Gold Speed Chart, Snapshot Comparison
-  'News Import Tier System': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'partial' },
-  'Gold Speed Chart Offline State': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Snapshot Date-Range Comparison': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  // 2026-07-18 — Bar Refresh, Outcome Dedup, Symbol Enrichment, Directives Config
-  'BarRefresh Live vs Record Mode': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'OutcomeTracker Time-Window Deduplication': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Symbol Company Name Enrichment': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Protocol Directive Editor (Configure Directives)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  // 2026-07-17 — Decision Trail Browser
-  'Decision Trail Browser': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
-  // 2026-07-21/22 — Health Dashboard + Diagnostics
-  'System Health Diagnostics': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Health Dashboard (6 diagnostic panels)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Health Settings (10 check toggles)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Agent CLI Health Check': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Commands Reference (27 CLI)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  // 2026-07-22 — Speed Scanner Protocol + Patterns (#459)
-  'Speed Scanner Pattern Detection': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Speed Scanner Protocol Resolution (UUID→slug)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  // 2026-07-22 — Trade Pipeline Traceability (#446)
-  'Trade Pipeline (MT5 fields + traceability)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'TradeRecorderService (full MT5 capture)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  // 2026-07-22 — Agent Governance
-  'Agent Close Checklist Rules': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Agent Attention Log (shared blockers)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
-  // 2026-06-21 — Execution Queue Live Events (#457)
-  'Execution Queue Live Events (Unified)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  // 2026-07-25/28 — Epic #510, Capital.com, Strategy Library, Cleanup
-  'DB-Driven Directives (Epic #510)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'DB-Driven Protocols (37 seeded)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Capital.com Adapter (CFD Broker)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'PositionSyncService (Broker-Agnostic)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'Strategy Library (9 strategies)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Gold Scalp Protocol (xau-speed-v1)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'USDCAD Oil-Pair Protocol (usdcad-oil-v1)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Forex Session Protocol (forex-session-v1)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'META.Stack Status Dashboard': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Auto-Trading Safety (15 disabled)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'AI Cost Tracking (Usage API)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'partial' },
-  'Bundle Optimization (uplot dropped, mermaid lazy)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'SpeedChart Unification (Candlestick merged)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Diagram Accuracy (31 diagrams, 4 new)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'META.Stack Explorer (14-stage checklist)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Deprecated MT5 Order Pathway Cleanup': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'Console Warning Cleanup (10+ fixed)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Dead Code Cleanup (3,900 lines removed)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
-  // 2026-07-29 — Readiness Tiers, Swap/Gap/Defense, IBKR
-  'Readiness Tier System (87/10/7)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'ALPHA Directive Exclusion from Composite': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Interactive Brokers Adapter (Mock)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'Swap Cost Calculator (Triple-Swap)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'Weekend Gap Risk Service (42 gaps)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'risk', devCompletion: 'complete' },
-  'Weekend Defense Checklist (EOW)': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'Config Hot-Reload (20ms, no restart)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Score Momentum Indicator (Phase 5)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'partial' },
-  'Phase Restructuring (80 issues)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'NestJS Zero-Error Build (104 directives + 10 adapters)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
-  // 2026-07-29 — Handoff Batch #6
-  'SymbolResolverService (8 tiers, 4 presets)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Scoring Paths Canonical (5 surfaces)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Activity Feed (Automation Dashboard)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Config Reload Policy (Two-Tier)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Strategy Page Consolidation (9→4)': { dataPersistence: 'config', uiSurfaces: 4, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Backtest UI Unification Plan (Phase 2-5)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'partial' },
-  // 2026-07-31 — Session Strategies + Protocol Variants
-  'XAUUSD Protocol Variants (A/B, 4 timeframes)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Protocol derivedFrom (A/B Tracking)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Session Trading Strategies (Tokyo/London/US)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Strategy Seed Data (7 defaults)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Session Market Coverage (USDJPY/EURUSD/SPX500)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
-  // 2026-08-06/09/11 — Handoff Batch (Strategy Forms, Broker Config, Symbols Ladder, Shared Utils)
-  'ScoringStrategy Auto-Create (watchlist link)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Broker Config Service (broker_config)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'hotStock Columns (ScoringStrategy)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Strategy Form Full Column Exposure (#590)': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'Score-to-Max Ratio Display': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Shared Core Utility Migration (17 files)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
-  // 2026-08-13 — Top-Row Content Slot
-  'Top-Row Content Slot': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
-  // 2026-08-13 — Singles Monitor + Protocol Trail Split
-  'Singles Monitor (live single symbol × protocol breakdown)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  // 2026-08-13/14 — Directive Audit + Cleanup Batch
-  'Directive deletion cleanup tooling': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Directive maxScore single source of truth': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Directive Viewer': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Liquidity Check maxScore correction': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Registry maxScore matches scoring filters': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Gold protocol directive cleanup (remove crypto-weekend-effect)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Shared directive inclusion utility': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Directive Guard (mechanical audit tool)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  // 2026-08-16 — Handoff Batch #9 (dual-score, readiness gate, directive hygiene, mock-data purge, MT5 zombie-kill, agent claim)
-  'Agent claim / restart coordination': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Directive duplicate-id elimination + guard': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Dual-score model (Opportunity vs Signal)': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Mock-stub directive elimination': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'MT5 bridge zombie-process cleanup': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
-  'Directive readiness gate': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'earnings-proximity removed from scoring': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  'Provider mock-data removal': { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
-  'Seed maxScore single-source enforcement': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-};
+import { KNOWN_FEATURES } from '../data/known-features';
 
 // ── Build unified capability rows ──
 
-function buildCapabilityRows(directives, providers) {
+function buildCapabilityRows(directives, providers, dbMap) {
   const rows = [];
+
+  // DB (capability table) first, static seed literal as fallback.
+  const lookupKnown = (...names) => {
+    for (const n of names) {
+      const db = dbMap?.get(n);
+      if (db) return db;
+      const k = KNOWN_FEATURES[n];
+      if (k) return k;
+    }
+    return {};
+  };
 
   const def = { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'partial' };
 
@@ -291,7 +47,7 @@ function buildCapabilityRows(directives, providers) {
   // ── Directives (from API or fallback) ──
   if (directives && Array.isArray(directives)) {
     directives.forEach((d) => {
-      const known = KNOWN_FEATURES[d.id] || KNOWN_FEATURES[d.name] || {};
+      const known = lookupKnown(d.id, d.name);
       rows.push({
         ...def,
         category: 'Directive',
@@ -308,7 +64,7 @@ function buildCapabilityRows(directives, providers) {
   // ── Providers ──
   (providers || []).forEach((p) => {
     const name = p.displayName || p.name || p.provider || 'Unknown';
-    const known = KNOWN_FEATURES[name] || KNOWN_FEATURES[p.provider] || {};
+    const known = lookupKnown(name, p.provider);
     rows.push({
       ...def,
       category: 'Provider',
@@ -364,7 +120,7 @@ function buildCapabilityRows(directives, providers) {
     { name: 'Bridge Events (MT5)', count: 1 },
     { name: 'Daily Briefing (morning/evening)', count: 1 },
   ].forEach((mod) => {
-    const known = KNOWN_FEATURES[mod.name] || {};
+    const known = lookupKnown(mod.name);
     rows.push({
       ...def,
       category: 'API Module',
@@ -433,7 +189,7 @@ function buildCapabilityRows(directives, providers) {
     'Commands Reference (27 CLI)',
     'Health Settings (10 check toggles)',
   ].forEach((name) => {
-    const known = KNOWN_FEATURES[name] || {};
+    const known = lookupKnown(name);
     rows.push({
       ...def,
       category: 'Frontend Feature',
@@ -466,7 +222,7 @@ function buildCapabilityRows(directives, providers) {
     'Web (Cross-browser)',
     'PWA (Mobile)',
   ].forEach((name) => {
-    const known = KNOWN_FEATURES[name] || {};
+    const known = lookupKnown(name);
     rows.push({
       ...def,
       category: 'Platform Support',
@@ -514,7 +270,7 @@ function buildCapabilityRows(directives, providers) {
     'System Health Diagnostics',
     'TradeRecorderService (full MT5 capture)',
   ].forEach((name) => {
-    const known = KNOWN_FEATURES[name] || {};
+    const known = lookupKnown(name);
     rows.push({
       ...def,
       category: 'Backend Tech',
@@ -605,11 +361,11 @@ export default function CapabilityMapPage() {
   const providers = Array.isArray(provData?.providers) ? provData.providers : Array.isArray(provData) ? provData : [];
 
   const allRows = useMemo(() => {
-    const localRows = buildCapabilityRows(directives, providers);
+    const dbMap = dbCapabilities.length > 0 ? new Map(dbCapabilities.map(c => [c.name, c])) : null;
+    const localRows = buildCapabilityRows(directives, providers, dbMap);
     
     // If DB capabilities are available, merge them with locally-built rows
-    if (dbCapabilities.length > 0) {
-      const dbMap = new Map(dbCapabilities.map(c => [c.name, c]));
+    if (dbMap) {
       const localNames = new Set(localRows.map(r => r.name));
       
       // Convert DB capabilities to row format

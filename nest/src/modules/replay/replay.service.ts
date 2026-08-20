@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DirectivesService } from '../directives/directives.service';
 import { ScoringService } from '../scoring/scoring.service';
+import { resolveMt5BridgeUrl } from '../providers/mt5/mt5-bridge.config';
 
 export interface ReplayConfig {
   symbol: string;
@@ -184,7 +185,7 @@ export class ReplayService {
   ): Promise<ReplayBar[]> {
     try {
       const res = await fetch(
-        `http://localhost:5000/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}&limit=${limit}`,
+        `${resolveMt5BridgeUrl()}/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}&limit=${limit}`,
       );
       const data = await res.json();
       return (data.bars || []).map((b: any) => ({

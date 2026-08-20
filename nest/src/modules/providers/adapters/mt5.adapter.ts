@@ -2,13 +2,14 @@
  * MT5 Provider Adapter
  * =====================
  * Communicates with the MT5 Python bridge via HTTP.
- * The bridge runs as a Flask server on localhost:5000 and connects
+ * The bridge runs as a Flask server on localhost and connects
  * to the MetaTrader 5 desktop application via the MetaTrader5 Python package.
  *
  * Bridge script: scripts/mt5-bridge/mt5_bridge.py
+ * Bridge URL: resolved via Mt5BridgeConfig (MT5_BRIDGE_URL env).
  *
  * Config (.env):
- *   MT5_BRIDGE_URL=http://localhost:5000
+ *   MT5_BRIDGE_URL=http://localhost:5000 (default — see mt5-bridge.config.ts)
  *   MT5_ACCOUNT=your_account_number
  *   MT5_PASSWORD=your_password
  *   MT5_SERVER=ICMarkets-Demo
@@ -29,6 +30,7 @@ import {
 import { NotificationService } from '../../notifications/notifications.service';
 import { BridgeEventService } from '../bridge-event.service';
 import { sanitizeMt5Comment } from '../mt5-comment.util';
+import { resolveMt5BridgeUrl } from '../mt5/mt5-bridge.config';
 
 interface BridgeQuoteResponse {
   symbol: string;
@@ -78,7 +80,7 @@ export class Mt5Adapter implements IProviderAdapter {
     private readonly bridgeEvents?: BridgeEventService,
     private readonly prisma?: PrismaService,
   ) {
-    this.bridgeUrl = process.env.MT5_BRIDGE_URL || 'http://localhost:5000';
+    this.bridgeUrl = resolveMt5BridgeUrl();
   }
 
   private get authHeaders(): Record<string, string> {

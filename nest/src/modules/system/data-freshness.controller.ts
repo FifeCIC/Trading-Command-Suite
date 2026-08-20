@@ -1,5 +1,6 @@
 import { Controller, Get, Logger } from '@nestjs/common';
 import { getProviderRateConfig, RefreshPolicy } from '../../common/rate-limit/provider-rate-limits';
+import { resolveMt5BridgeUrl } from '../providers/mt5/mt5-bridge.config';
 
 interface SourceStatus {
   id: string;
@@ -46,7 +47,7 @@ export class DataFreshnessController {
     // ── MT5 Bridge ──────────────────────────────────────────
     try {
       const mt5Config = getProviderRateConfig('mt5');
-      const BRIDGE_URL = process.env.MT5_BRIDGE_URL || 'http://localhost:5000';
+      const BRIDGE_URL = resolveMt5BridgeUrl();
       const mt5Ok = await fetch(`${BRIDGE_URL}/health`)
         .then((r) => r.ok)
         .catch(() => false);

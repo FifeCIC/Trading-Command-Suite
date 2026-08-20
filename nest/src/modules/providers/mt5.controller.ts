@@ -3,13 +3,14 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdapterFactory } from './adapter-factory';
 import { Mt5Adapter } from './adapters/mt5.adapter';
 import { Mt5ConnectionManager } from './mt5/mt5-connection-manager.service';
+import { resolveMt5BridgeUrl } from './mt5/mt5-bridge.config';
 import { PrismaService } from '../../database/prisma.service';
 
 @ApiTags('providers')
 @Controller('providers/mt5')
 export class Mt5Controller {
   private readonly logger = new Logger(Mt5Controller.name);
-  private readonly BRIDGE_URL = process.env.MT5_BRIDGE_URL || 'http://localhost:5000';
+  private readonly BRIDGE_URL = resolveMt5BridgeUrl();
 
   constructor(
     private readonly adapterFactory: AdapterFactory,

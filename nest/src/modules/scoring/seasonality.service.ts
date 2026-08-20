@@ -5,8 +5,9 @@
  * the percentage of candles that closed higher than they opened.
  */
 import { Injectable, Logger } from '@nestjs/common';
+import { resolveMt5BridgeUrl } from '../providers/mt5/mt5-bridge.config';
 
-const BRIDGE_URL = process.env.MT5_BRIDGE_URL || 'http://localhost:5001';
+const BRIDGE_URL = resolveMt5BridgeUrl();
 
 interface HeatmapCell {
   bullishPct: number;

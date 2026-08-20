@@ -10,6 +10,7 @@ import { AlphaVantageAdapter } from './adapters/alpha-vantage.adapter';
 import { Trading212Adapter } from './adapters/trading212.adapter';
 import { Mt5Adapter } from './adapters/mt5.adapter';
 import { Mt5ConnectionManager } from './mt5/mt5-connection-manager.service';
+import { Mt5BridgeConfig, resolveMt5BridgeUrl } from './mt5/mt5-bridge.config';
 import { YahooFinanceAdapter } from './adapters/yahoo-finance.adapter';
 import { PolygonAdapter } from './adapters/polygon.adapter';
 import { FinnhubAdapter } from './adapters/finnhub.adapter';
@@ -38,6 +39,7 @@ import { PositionSyncService } from './position-sync.service';
     ProviderDegradationService,
     CryptoProviderRouter,
     Mt5ConnectionManager,
+    Mt5BridgeConfig,
     BridgeEventService,
     AlpacaAdapter,
     AlphaVantageAdapter,
@@ -54,7 +56,7 @@ import { PositionSyncService } from './position-sync.service';
     ProviderCacheService,
     PositionSyncService,
   ],
-  exports: [ProvidersService, AdapterFactory, FinnhubAdapter, FmpAdapter, Mt5Adapter, AlphaVantageAdapter, RateLimitGovernor, ProviderDegradationService, CryptoProviderRouter, BinanceAdapter, CapitalComAdapter, InteractiveBrokersAdapter, Mt5ConnectionManager, BridgeEventService, ProviderCacheService, PositionSyncService],
+  exports: [ProvidersService, AdapterFactory, FinnhubAdapter, FmpAdapter, Mt5Adapter, AlphaVantageAdapter, RateLimitGovernor, ProviderDegradationService, CryptoProviderRouter, BinanceAdapter, CapitalComAdapter, InteractiveBrokersAdapter, Mt5ConnectionManager, Mt5BridgeConfig, BridgeEventService, ProviderCacheService, PositionSyncService],
 })
 export class ProvidersModule implements OnModuleInit {
   constructor(
@@ -87,7 +89,7 @@ export class ProvidersModule implements OnModuleInit {
     this.adapterFactory.register('mt5', Mt5Adapter, {
       name: 'MetaTrader 5',
       apiKeyEnv: 'MT5_ACCOUNT',
-      baseUrl: process.env.MT5_BRIDGE_URL || 'http://localhost:5001',
+      baseUrl: resolveMt5BridgeUrl(),
       capabilities: ['quotes', 'candles', 'trades'],
       failoverPriority: 40,
     });

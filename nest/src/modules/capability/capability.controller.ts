@@ -1,41 +1,56 @@
-import { Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { CreateCapabilityDto } from './dto/create-capability.dto';
 
+/**
+ * Capability Map CRUD — typed Prisma, body DTO.
+ * The capability table is the single source of truth for capability metadata;
+ * the Librarian workflow POSTs here instead of editing frontend literals.
+ * POST is an upsert by name so repeated handoff batches are idempotent.
+ */
 @Controller('capabilities')
 export class CapabilityController {
   constructor(private prisma: PrismaService) {}
 
   @Get()
   async getAll(@Query('category') category?: string, @Query('area') area?: string) {
-    let sql = 'SELECT * FROM capability WHERE 1=1';
-    const params: any[] = [];
-    if (category) { sql += ' AND category = ?'; params.push(category); }
-    if (area) { sql += ' AND area = ?'; params.push(area); }
-    sql += ' ORDER BY category, name';
-    return (this.prisma as any).$queryRawUnsafe(sql, ...params);
+    return this.prisma.capability.findMany({
+      where: {
+        ...(category ? { category } : {}),
+        ...(area ? { area } : {}),
+      },
+      orderBy: [{ category: 'asc' }, { name: 'asc' }],
+    });
   }
 
   @Post()
-  async add(
-    @Query('name') name: string,
-    @Query('category') category: string,
-    @Query('area') area: string,
-    @Query('type') type: string,
-    @Query('status') status: string,
-    @Query('notes') notes?: string,
-    @Query('dataPersistence') dataPersistence?: string,
-    @Query('uiSurfaces') uiSurfaces?: string,
-    @Query('pipelineIntegration') pipelineIntegration?: string,
-    @Query('devCompletion') devCompletion?: string,
-  ) {
-    const id = require('crypto').randomUUID();
-    await (this.prisma as any).$queryRawUnsafe(
-      `INSERT INTO capability (id, name, category, area, type, status, notes, dataPersistence, uiSurfaces, pipelineIntegration, devCompletion)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      id, name, category || 'General', area || 'Backend', type || 'Service',
-      status || 'ALPHA', notes || null, dataPersistence || 'ephemeral',
-      uiSurfaces ? parseInt(uiSurfaces) : 0, pipelineIntegration || 'none', devCompletion || 'partial'
-    );
-    return { id, name, status: 'created' };
+  async add(@Body() dto: CreateCapabilityDto) {
+    const data = {
+      name: dto.name,
+      category: dto.category ?? 'General',
+      area: dto.area ?? 'Backend',
+      type: dto.type ?? 'Service',
+      status: dto.status ?? 'ALPHA',
+      notes: dto.notes ?? null,
+      dataPersistence: dto.dataPersistence ?? 'ephemeral',
+      uiSurfaces: dto.uiSurfaces ?? 0,
+      pipelineIntegration: dto.pipelineIntegration ?? 'none',
+      devCompletion: dto.devCompletion ?? 'partial',
+    };
+
+    const existing = await this.prisma.capability.findFirst({
+      where: { name: dto.name },
+      select: { id: true },
+    });
+    if (existing) {
+      const updated = await this.prisma.capability.update({
+        where: { id: existing.id },
+        data,
+      });
+      return { id: updated.id, name: updated.name, status: 'updated' };
+    }
+
+    const created = await this.prisma.capability.create({ data });
+    return { id: created.id, name: created.name, status: 'created' };
   }
 }

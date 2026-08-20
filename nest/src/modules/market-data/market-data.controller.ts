@@ -8,6 +8,7 @@ import { PriceRefreshService } from './price-refresh.service';
 import { MarketDataService } from './market-data.service';
 import { BarRefreshService } from './bar-refresh.service';
 import { CacheInterceptor } from '../../common/interceptors/cache.interceptor';
+import { Mt5BridgeConfig } from '../providers/mt5/mt5-bridge.config';
 
 @ApiTags('market-data')
 @Controller('market-data')
@@ -19,6 +20,7 @@ export class MarketDataController {
     private readonly importJobsService: ImportJobsService,
     private readonly modeService: ModeService,
     private readonly barRefresh: BarRefreshService,
+    private readonly mt5Config: Mt5BridgeConfig,
   ) {}
 
   private modeMeta() {
@@ -117,7 +119,7 @@ export class MarketDataController {
   ) {
     try {
       const res = await fetch(
-        `http://localhost:5000/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}&limit=${Math.min(Number(limit), 1000)}`,
+        this.mt5Config.candlesUrl(symbol, timeframe, Math.min(Number(limit), 1000)),
         { signal: AbortSignal.timeout(10000) },
       );
       if (!res.ok) {

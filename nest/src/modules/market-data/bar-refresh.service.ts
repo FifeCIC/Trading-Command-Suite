@@ -53,6 +53,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
+import { resolveMt5BridgeUrl } from '../providers/mt5/mt5-bridge.config';
 import { SymbolResolverService } from '../symbols/symbol-resolver.service';
 
 // Avoid importing the concrete adapter class
@@ -246,7 +247,7 @@ export class BarRefreshService {
     // Multi-broker fallback (#665) — when the primary bridge has no candles
     // or only stale ones (broker-side gaps), try the other configured
     // bridges and keep the freshest set.
-    const primaryUrl = process.env.MT5_BRIDGE_URL || 'http://localhost:5000';
+    const primaryUrl = resolveMt5BridgeUrl();
     const fallbackUrls = this.mt5Conn.getBrokerIds()
       .map((id) => this.mt5Conn.getUrl(id))
       .filter((url) => url !== primaryUrl);
