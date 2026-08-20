@@ -11,7 +11,7 @@
  * Refreshes silently using keepPreviousData to avoid content blink.
  */
 import { useState, useMemo, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { keepPreviousData } from '@tanstack/react-query';
 import { motion } from 'motion/react';
@@ -21,7 +21,7 @@ import PageInfoPopover from '../components/PageInfoPopover';
 import { TopRowSlotContent } from '../core/top-row-slot';
 import './protocols-ladder.css';
 
-import { scoreClass } from '../core/signal-utils';
+import { scoreClass, DIRECTION_MODE_LABELS } from '../core/signal-utils';
 import { formatDateTime } from '../core/format-utils';
 import { buildScoreDisplay } from '../core/score-display';
 import SignalBadge from '../components/SignalBadge';
@@ -122,15 +122,25 @@ function ScoreCell({ value, max, pct, trailLink, symbol, mode }) {
 }
 
 export default function SymbolsLadderPage() {
-  const [protocolFilter, setProtocolFilter] = useState('all');
+  // Deep-linkable filter state (#631, Option D) — variant B (default) reads
+  // the filters from the URL and keeps them in sync so any ladder scope is
+  // bookmarkable/shareable. Variant A (`?variant=A`) is the legacy ladder:
+  // filters stay in local state only, URL untouched. Toggle via ABSwitcher.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isVariantA = searchParams.get('variant') === 'A';
+  const urlInit = (key) => (isVariantA ? null : searchParams.get(key));
+
+  const [protocolFilter, setProtocolFilter] = useState(urlInit('protocol') || 'all');
   // Filter 1/3 (#634): symbol scope — all | single symbol | watchlist
-  const [symbolScope, setSymbolScope] = useState('all');
-  const [scopeSymbol, setScopeSymbol] = useState('');
-  const [scopeWatchlist, setScopeWatchlist] = useState('');
+  const [symbolScope, setSymbolScope] = useState(urlInit('scope') || 'all');
+  const [scopeSymbol, setScopeSymbol] = useState(urlInit('symbol') || '');
+  const [scopeWatchlist, setScopeWatchlist] = useState(urlInit('watchlist') || '');
   // Filter 2/3 (#635): signal — All | BUY | HOLD | SELL
-  const [signalFilter, setSignalFilter] = useState('all');
+  const [signalFilter, setSignalFilter] = useState(urlInit('signal') || 'all');
   // Filter 3/3 (#636): score age in minutes — 'all' or 1..60
-  const [ageFilter, setAgeFilter] = useState('all');
+  const [ageFilter, setAgeFilter] = useState(urlInit('age') || 'all');
+  // Filter 4/4: direction mode — all | LONG_ONLY | SHORT_ONLY | BOTH
+  const [directionFilter, setDirectionFilter] = useState(urlInit('dir') || 'all');
   const [countdown, setCountdown] = useState(null);
   // Screen Options: how to render score cells (raw | percent | both)
   const [scoreDisplay, setScoreDisplay] = useState(readScoreDisplay);
@@ -145,6 +155,28 @@ export default function SymbolsLadderPage() {
     }, 250);
     return () => clearInterval(interval);
   }, []);
+
+  // Deep-link sync (#631) — keep the query string in lockstep with the
+  // filters (variant B only). Copying from the current params preserves
+  // unrelated keys such as `variant`. Replace, not push: every keystroke in
+  // a filter must not spam the history stack.
+  useEffect(() => {
+    if (isVariantA) return;
+    const next = new URLSearchParams(searchParams);
+    const sync = (key, value) => {
+      if (value && value !== 'all' && value !== '') next.set(key, value);
+      else next.delete(key);
+    };
+    sync('protocol', protocolFilter);
+    sync('scope', symbolScope);
+    sync('symbol', scopeSymbol);
+    sync('watchlist', scopeWatchlist);
+    sync('signal', signalFilter);
+    sync('age', ageFilter);
+    sync('dir', directionFilter);
+    const qs = next.toString();
+    if (qs !== searchParams.toString()) setSearchParams(next, { replace: true });
+  }, [isVariantA, searchParams, setSearchParams, protocolFilter, symbolScope, scopeSymbol, scopeWatchlist, signalFilter, ageFilter, directionFilter]);
 
   // Automation status — gives us nextTickAt so refresh syncs with the loop
   const { data: automation } = useQuery({
@@ -205,6 +237,7 @@ export default function SymbolsLadderPage() {
         name: p.name || p.id,
         symbols: p.resolvedSymbols || [],
         maxScore: p.maxScore ?? 0,
+        directionMode: p.directionMode || 'BOTH',
       };
     }
     return map;
@@ -321,6 +354,11 @@ export default function SymbolsLadderPage() {
       result = result.filter(e => e.lastScored && new Date(e.lastScored).getTime() >= cutoff);
     }
 
+    // Filter 4/4: direction — only protocols in the selected direction mode.
+    if (directionFilter !== 'all') {
+      result = result.filter(e => (protocolMap[e.protocolId]?.directionMode || 'BOTH') === directionFilter);
+    }
+
     // Attach the canonical display model ONCE — ranking and rendering share it.
     result = result.map((e) => ({
       ...e,
@@ -346,7 +384,7 @@ export default function SymbolsLadderPage() {
     });
 
     return result;
-  }, [protocolMap, protocolFilter, symbolScope, scopeSymbol, watchlistSymbols, signalFilter, ageFilter, scoreMap]);
+  }, [protocolMap, protocolFilter, symbolScope, scopeSymbol, watchlistSymbols, signalFilter, ageFilter, directionFilter, scoreMap]);
 
   const protoIds = useMemo(() => {
     const set = new Set(entries.map(e => e.protocolId));
@@ -410,6 +448,15 @@ export default function SymbolsLadderPage() {
             <option value="BUY">BUY</option>
             <option value="HOLD">HOLD</option>
             <option value="SELL">SELL</option>
+          </select>
+        </label>
+        <label className="pl-filter">
+          Direction:
+          <select value={directionFilter} onChange={e => setDirectionFilter(e.target.value)}>
+            <option value="all">All</option>
+            {Object.entries(DIRECTION_MODE_LABELS).map(([mode, label]) => (
+              <option key={mode} value={mode}>{label}</option>
+            ))}
           </select>
         </label>
         <label className="pl-filter">
