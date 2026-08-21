@@ -27075,3 +27075,9 @@ oneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone Met
 2026-08-20 13:40:47,358 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
 2026-08-20 13:40:47,369 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
 2026-08-20 13:41:00,521 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-21 07:55:44,536 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-21 07:55:50,809 [ERROR] Error handling /quote: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-21 07:55:51,220 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-21 07:55:51,577 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-21 10:41:25,065 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-21 20:59:20,218 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine

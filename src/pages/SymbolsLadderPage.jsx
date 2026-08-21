@@ -22,7 +22,7 @@ import { TopRowSlotContent } from '../core/top-row-slot';
 import './protocols-ladder.css';
 
 import { scoreClass, DIRECTION_MODE_LABELS } from '../core/signal-utils';
-import { formatDateTime } from '../core/format-utils';
+import { formatDateTime, timeAgo } from '../core/format-utils';
 import { buildScoreDisplay } from '../core/score-display';
 import SignalBadge from '../components/SignalBadge';
 
@@ -294,22 +294,7 @@ export default function SymbolsLadderPage() {
     return map;
   }, [runsData]);
 
-  /** Relative time: "12s ago", "5m ago", "2h ago" */
-  function timeAgo(iso) {
-    if (!iso) return '—';
-    const sec = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-    if (sec < 0) return 'just now';
-    if (sec < 60) return `${sec}s ago`;
-    const min = Math.floor(sec / 60);
-    if (min < 60) return `${min}m ago`;
-    const hr = Math.floor(min / 60);
-    if (hr < 24) return `${hr}h ago`;
-    const d = Math.floor(hr / 24);
-    if (d < 30) return `${d}d ago`;
-    return `${Math.floor(d / 30)}mo ago`;
-  }
-
-  // Build entries: protocol → resolvedSymbols, enriched with scores from /api/scoring/runs
+  // : protocol → resolvedSymbols, enriched with scores from /api/scoring/runs
   const entries = useMemo(() => {
     let result = [];
     for (const [protoId, proto] of Object.entries(protocolMap)) {

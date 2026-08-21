@@ -5,6 +5,7 @@ import { apiGet } from '../core/api/client'
 import LoadingSkeleton from '../components/LoadingSkeleton'
 import EmptyState from '../components/EmptyState'
 import ApiOfflineBanner from '../components/ApiOfflineBanner'
+import { formatDateTime } from '../core/format-utils'
 import {
   ACTIVATION_GATE_SYSTEM,
   AI_GUARDRAILS,
@@ -167,19 +168,6 @@ function scrollToSection(sectionId) {
 function toTimestamp(value) {
   const ts = Date.parse(value || '')
   return Number.isNaN(ts) ? 0 : ts
-}
-
-function formatDateTime(value) {
-  if (!value) {
-    return 'n/a'
-  }
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return String(value)
-  }
-
-  return date.toLocaleString()
 }
 
 function countBy(items, keySelector) {

@@ -92,19 +92,30 @@ export default function DevOverlay({
     if (!inspectMode) return;
 
     let hoveredEl = null;
-    const HEADERS = new Set(['H1','H2','H3','H4','H5','H6','TH','LABEL','LEGEND']);
+    // Source-mappable elements. Headings map to source lines best, but interactive
+    // controls (buttons, links, toggles) are also selectable so their handler/label
+    // can be located in the file.
+    const MAPPABLE = new Set(['H1','H2','H3','H4','H5','H6','TH','LABEL','LEGEND','BUTTON','A','SUMMARY','DT','OPTION']);
 
     function onMouseMove(e) {
       if (hoveredEl) {
         hoveredEl.style.outline = '';
         hoveredEl = null;
       }
-      const el = document.elementFromPoint(e.clientX, e.clientY);
+      let el = document.elementFromPoint(e.clientX, e.clientY);
       if (!el || el === document.body || el === document.documentElement) return;
-      
-      // In 'open' mode, only highlight headings — they map to source lines best
-      if (inspectAction === 'open' && !HEADERS.has(el.tagName)) return;
-      
+
+      // In 'open' mode, only target mappable elements — climb to the nearest
+      // mappable ancestor so a button's nested text still resolves to the button.
+      if (inspectAction === 'open') {
+        let cur = el;
+        while (cur && cur !== document.body) {
+          if (MAPPABLE.has(cur.tagName)) { el = cur; break; }
+          cur = cur.parentElement;
+        }
+        if (!cur || cur === document.body) return;
+      }
+
       hoveredEl = el;
       el.style.outline = '2px solid #f59e0b';
       el.style.outlineOffset = '1px';
@@ -252,7 +263,7 @@ export default function DevOverlay({
             className="dev-action-btn"
             style={{ marginTop: '0.35rem' }}
           >
-            {inspectMode && inspectAction === 'open' ? '🔍 Click a heading to jump to its line...' : '🔍 Inspect & Open'}
+            {inspectMode && inspectAction === 'open' ? '🔍 Click a heading or control to jump to its line...' : '🔍 Inspect & Open'}
           </button>
           <button
             type="button"

@@ -16,6 +16,7 @@ import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import Notice from '../components/Notice';
+import { formatDuration } from '../core/format-utils';
 import './strategy-dashboard.css';
 import PageInfoPopover from '../components/PageInfoPopover';
 
@@ -23,15 +24,6 @@ const STATUS_COLORS = {
   running: '#22c55e', paused: '#f59e0b', stopped: '#64748b',
   error: '#ef4444', active: '#22c55e', enabled: '#3b82f6', disabled: '#64748b',
 };
-
-function formatDuration(ms) {
-  if (!ms || ms <= 0) return '—';
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  if (h > 24) return `${Math.floor(h / 24)}d ${h % 24}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
 
 export default function StrategyDashboardPage() {
   const [expanded, setExpanded] = useState(null);

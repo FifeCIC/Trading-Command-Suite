@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { formatDateTime } from '../core/format-utils';
 import './data-management.css';
 
 export default function DataManagementPage() {
@@ -51,12 +52,7 @@ export default function DataManagementPage() {
   const tables = Object.entries(stats);
   const totalRows = tables.reduce((s, [, v]) => s + (v.count || 0), 0);
 
-  function formatDate(d) {
-    if (!d) return '—';
-    return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-  }
-
-  function daysAgo(d) {
+  const daysAgo = (d) => {
     if (!d) return null;
     return Math.round((Date.now() - new Date(d).getTime()) / 86400000);
   }
@@ -140,10 +136,10 @@ export default function DataManagementPage() {
                       </span>
                     </td>
                     <td className="dm-cell-date">
-                      {formatDate(info.oldest)}
+                      {formatDateTime(info.oldest)}
                       {age != null && <span className="dm-cell-age"> ({age}d ago)</span>}
                     </td>
-                    <td className="dm-cell-date">{formatDate(info.newest)}</td>
+                    <td className="dm-cell-date">{formatDateTime(info.newest)}</td>
                     <td>
                       <span className={`dm-retention-badge ${isStale ? 'dm-retention-stale' : ''}`}>
                         {info.retentionDays}d

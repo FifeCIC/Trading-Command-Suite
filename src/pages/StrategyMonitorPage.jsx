@@ -19,6 +19,7 @@ import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
+import { formatDuration } from '../core/format-utils';
 import './strategy-monitor.css';
 import './strategies-list.css';
 
@@ -34,15 +35,6 @@ const STATUS_COLORS = {
   running: '#22c55e', paused: '#f59e0b', stopped: '#64748b',
   active: '#22c55e', enabled: '#3b82f6', disabled: '#64748b',
 };
-
-function formatDuration(ms) {
-  if (!ms || ms <= 0) return '—';
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  if (h > 24) return `${Math.floor(h / 24)}d ${h % 24}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
 
 function PnlBadge({ value }) {
   const cls = value >= 0 ? 'sm-pnl-up' : 'sm-pnl-down';

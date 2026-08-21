@@ -16,6 +16,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import ToggleSwitch from '../components/ToggleSwitch';
+import { formatPnl } from '../core/format-utils';
 import './strategies-list.css';
 
 const API = '/api/trading/strategies';
@@ -26,12 +27,6 @@ const STATUS_COLORS = {
   active: '#22c55e', enabled: '#3b82f6',
   paused: '#f59e0b', disabled: '#64748b', stopped: '#64748b',
 };
-
-function formatPnl(v) {
-  if (v == null) return '—';
-  const sign = v >= 0 ? '+' : '';
-  return `${sign}${Number(v).toFixed(2)}`;
-}
 
 export default function StrategiesListPage() {
   const [selectedId, setSelectedId] = useState(null);

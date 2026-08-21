@@ -24,6 +24,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import { TopRowSlotContent } from '../core/top-row-slot';
 import PageInfoPopover from '../components/PageInfoPopover';
 import { signalTone, directionModeLabel, signalArrow } from '../core/signal-utils';
+import { formatTimestamp } from '../core/format-utils';
 import './decision-trail.css';
 
 const GROUP_LABELS = {
@@ -103,16 +104,6 @@ export default function SinglesMonitorPage() {
   );
   const score = Number(data?.score ?? 0);
   const strengthPct = totalMax > 0 ? Math.round((score / totalMax) * 100) : null;
-
-  /** Format an ISO timestamp as a readable date + time (UTC). */
-  function formatTimestamp(iso) {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
-    const date = d.toISOString().slice(0, 10);
-    const time = d.toISOString().slice(11, 19);
-    return `${date} ${time} UTC`;
-  }
 
   return (
     <div className="dt-page">

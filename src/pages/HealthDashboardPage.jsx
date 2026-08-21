@@ -9,10 +9,7 @@ import PageInfoPopover from '../components/PageInfoPopover';
 
 // ── Helpers ──────────────────────────────────────────────
 
-function formatMs(ms) { return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`; }
-function formatMb(mb) { return mb < 1000 ? `${mb.toFixed(1)} MB` : `${(mb / 1000).toFixed(1)} GB`; }
-function formatCount(n) { return n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : String(n); }
-import { timeAgo } from '../core/format-utils';
+import { timeAgo, formatMs, formatMb, formatCount } from '../core/format-utils';
 const STATUS_EMOJI = { ok: '✅', warn: '⚠️', critical: '🔴' };
 const PROVIDER_STATUS = { healthy: '🟢', degraded: '🟡', unhealthy: '🔴', unknown: '⚪' };
 const METHOD_COLOR = { GET: '#22c55e', POST: '#3b82f6', PUT: '#f59e0b', DELETE: '#ef4444' };

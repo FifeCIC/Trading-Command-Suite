@@ -14,16 +14,10 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import PageInfoPopover from '../components/PageInfoPopover';
 import { directionModeLabel, signalTone } from '../core/signal-utils';
+import { formatTimestamp } from '../core/format-utils';
 import './directive-viewer.css';
 
 const READINESS_LABELS = { ready: 'READY', beta: 'BETA', alpha: 'ALPHA' };
-
-function formatTimestamp(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return `${d.toISOString().slice(0, 10)} ${d.toISOString().slice(11, 19)} UTC`;
-}
 
 export default function DirectiveViewerPage() {
   const [searchParams] = useSearchParams();

@@ -2,23 +2,16 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiGet, apiPost } from '../core/api/client'
 import LoadingSkeleton from '../components/LoadingSkeleton'
-import { formatDateTime } from '../core/format-utils'
+import { formatDateTime, formatDuration } from '../core/format-utils'
 import './import-jobs-page.css'
 
 const POLL_INTERVAL_MS = 15_000
 
-/**
- * Format a duration string from two Date values (local wrapper — shared formatDuration takes ms).
- */
-function formatDuration(start, end) {
+/** Format duration from two ISO timestamps (wraps shared formatDuration). */
+function formatDurationBetween(start, end) {
   if (!start) return '—'
-  const startMs = new Date(start).getTime()
-  const endMs = end ? new Date(end).getTime() : Date.now()
-  const diffSec = Math.round((endMs - startMs) / 1000)
-  if (diffSec < 60) return `${diffSec}s`
-  const min = Math.floor(diffSec / 60)
-  const sec = diffSec % 60
-  return sec > 0 ? `${min}m ${sec}s` : `${min}m`
+  const ms = (end ? new Date(end).getTime() : Date.now()) - new Date(start).getTime()
+  return formatDuration(ms)
 }
 
 /**
@@ -208,7 +201,7 @@ export default function ImportJobsPage() {
               <tbody>
                 {runs.map((run) => {
                   const meta = statusMeta(run.status)
-                  const duration = formatDuration(
+                  const duration = formatDurationBetween(
                     run.startedAt || run.requestedAt,
                     run.completedAt,
                   )

@@ -24,15 +24,35 @@ import { buildScoreDisplay } from '../core/score-display';
 import { useProtocolStatuses } from '../core/protocol-status';
 import { useProtocolData } from '../core/useProtocolData';
 import { usePersistentState, usePersistentChoice } from '../hooks/usePersistentState';
+import { timeAgo } from '../core/format-utils';
 import './ladder.css';
 
 const AGE_OPTIONS = ['1', '2', '3', '4', '5', '10', '15', '20', '30', '60'];
 
 const DIRECTION_OPTIONS = [
-  ['all', 'All'],
+  ['all', 'BOTH'],
   ['long', 'LONG'],
   ['short', 'SHORT'],
 ];
+
+const MARKET_OPTIONS = [
+  ['open', 'Open'],
+  ['all', 'All'],
+  ['closed', 'Closed'],
+];
+
+/**
+ * Does a card's market state match the market filter?
+ * - 'open' (default): only symbols backed by an open market (marketStatus.open === true)
+ * - 'closed': only symbols with a confirmed closed market
+ * - 'all': everything (incl. unknown-market / unscored rows)
+ */
+function marketMatches(e, filter) {
+  const open = e.vm.marketStatus?.open;
+  if (filter === 'open') return open === true;
+  if (filter === 'closed') return open === false;
+  return true;
+}
 
 /**
  * Is a protocol applicable to the given direction view?
@@ -47,23 +67,22 @@ function isDirectionApplicable(p, direction) {
   return true;
 }
 
-/** Relative time — "12s ago", "5m ago", "2h ago". */
-function timeAgo(iso) {
-  if (!iso) return '—';
-  const sec = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (sec < 0) return 'just now';
-  if (sec < 60) return `${sec}s ago`;
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  return `${Math.floor(hr / 24)}d ago`;
-}
-
 /** Read the Screen Options "Score Display" preference (raw | percent | both). */
 function readScoreDisplay() {
   try { return localStorage.getItem('lad-score-display') || 'both'; }
   catch { return 'both'; }
+}
+
+/**
+ * One-time migration helper: the pre-direction-selection build stored a single
+ * flat array of protocol ids (the BOTH view). Read it so those selections carry
+ * into the BOTH bucket of the new per-direction memory.
+ */
+function readLegacySelectedIds() {
+  try {
+    const old = JSON.parse(localStorage.getItem('tcs:view-state:ladder:selectedIds') || 'null');
+    return Array.isArray(old) ? old : [];
+  } catch { return []; }
 }
 
 /**
@@ -99,10 +118,20 @@ function ScoreBlock({ label, score, max, pct, mode, active }) {
 export default function LadderPage() {
   const { protocols, runs, isLoading } = useProtocolData();
   const { statusMap } = useProtocolStatuses();
-  // Filter / sort selections persist across navigation.
-  const [selectedIds, setSelectedIds] = usePersistentState('ladder:selectedIds', []);
+  // Filter / sort selections persist across navigation. Protocol selections are
+  // stored PER direction, so toggling BOTH/LONG/SHORT restores each view's own
+  // chosen protocols instead of wiping them.
+  const [selectedByDir, setSelectedByDir] = usePersistentState('ladder:selectedByDir', {
+    all: readLegacySelectedIds(),
+    long: [],
+    short: [],
+  });
   const [ageFilter, setAgeFilter] = usePersistentChoice('ladder:ageFilter', 'all', ['all', ...AGE_OPTIONS]);
   const [rankBy, setRankBy] = usePersistentChoice('ladder:rankBy', 'signal', ['signal', 'opp']);
+
+  // Market status filter — default Open, so the ladder shows only symbols
+  // backed by an open market. Persists across navigation.
+  const [marketFilter, setMarketFilter] = usePersistentChoice('ladder:market', 'open', ['open', 'all', 'closed']);
 
   // Direction view — All / LONG / SHORT. Driven by the ?direction= URL param
   // (written back so the view is shareable) and persisted across navigation.
@@ -169,24 +198,31 @@ export default function LadderPage() {
     [selectableProtocols, direction],
   );
 
-  // Prune selections to applicable protocols and auto-select the first one when
-  // nothing applicable is selected (e.g. after switching LONG → SHORT).
+  // The active selection set is the current direction's own bucket.
+  const selectedIds = selectedByDir[direction] || [];
+
+  // Prune ONLY the current direction's selections to applicable protocols and
+  // auto-select the first one when nothing applicable is selected. Other
+  // directions' selections are left untouched so they're restored on toggle-back.
   useEffect(() => {
     const applicableIds = new Set(applicableProtocols.map((p) => p.id));
-    const kept = selectedIds.filter((id) => applicableIds.has(id));
-    if (kept.length !== selectedIds.length) {
-      setSelectedIds(kept);
+    const cur = selectedByDir[direction] || [];
+    const kept = cur.filter((id) => applicableIds.has(id));
+    if (kept.length !== cur.length) {
+      setSelectedByDir((prev) => ({ ...prev, [direction]: kept }));
     } else if (kept.length === 0 && applicableProtocols.length > 0) {
-      setSelectedIds([applicableProtocols[0].id]);
+      setSelectedByDir((prev) => ({ ...prev, [direction]: [applicableProtocols[0].id] }));
     }
-  }, [direction, applicableProtocols, selectedIds, setSelectedIds]);
+  }, [direction, applicableProtocols, selectedByDir, setSelectedByDir]);
 
   const selectedProtocols = applicableProtocols.filter((p) => selectedIds.includes(p.id));
 
   const toggleProtocol = (id) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+    setSelectedByDir((prev) => {
+      const cur = (prev && prev[direction]) || [];
+      const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
+      return { ...prev, [direction]: next };
+    });
   };
 
   // Build symbol→score lookup from the scoring runs (latest run per symbol+protocol).
@@ -237,6 +273,10 @@ export default function LadderPage() {
       }
     }
 
+    // Market status filter — default (Open) hides closed-market symbols so the
+    // ladder shows only cards backed by an open market.
+    const list = marketFilter === 'all' ? all : all.filter((e) => marketMatches(e, marketFilter));
+
     const sorter = (a, b) => {
       if (a.hasScore !== b.hasScore) return a.hasScore ? -1 : 1;
       const key = rankBy === 'opp' ? 'opportunityPct' : 'pct';
@@ -248,16 +288,16 @@ export default function LadderPage() {
     // Score-age filter — matches the Symbols Ladder's staleness filter.
     // Unscored rows have no timestamp, so they never pass a non-'all' age.
     if (ageFilter === 'all') {
-      all.sort(sorter);
-      return { passing: all, excluded: [] };
+      list.sort(sorter);
+      return { passing: list, excluded: [] };
     }
     const cutoff = Date.now() - Number(ageFilter) * 60_000;
-    const pass = all.filter((e) => e.time && new Date(e.time).getTime() >= cutoff);
-    const excl = all.filter((e) => !(e.time && new Date(e.time).getTime() >= cutoff));
+    const pass = list.filter((e) => e.time && new Date(e.time).getTime() >= cutoff);
+    const excl = list.filter((e) => !(e.time && new Date(e.time).getTime() >= cutoff));
     pass.sort(sorter);
     excl.sort(sorter);
     return { passing: pass, excluded: excl };
-  }, [selectedProtocols, scoreMap, ageFilter, rankBy]);
+  }, [selectedProtocols, scoreMap, ageFilter, rankBy, marketFilter]);
 
   const scoredCount = passing.filter((e) => e.hasScore).length;
 
@@ -418,6 +458,12 @@ export default function LadderPage() {
                 {AGE_OPTIONS.map((m) => <option key={m} value={m}>≤ {m}m</option>)}
               </select>
             </label>
+            <label className="lad-filter">
+              Market:
+              <select value={marketFilter} onChange={(e) => setMarketFilter(e.target.value)}>
+                {MARKET_OPTIONS.map(([val, label]) => <option key={val} value={val}>{label}</option>)}
+              </select>
+            </label>
           </div>
           {selectedIds.length === 0 ? (
             <div className="lad-empty">
@@ -426,8 +472,16 @@ export default function LadderPage() {
             </div>
           ) : passing.length === 0 && excluded.length === 0 ? (
             <div className="lad-empty">
-              <p className="lad-empty-title">No symbols for the selected protocols.</p>
-              <p>None of the selected protocols have resolved symbols to rank yet.</p>
+              <p className="lad-empty-title">
+                {marketFilter === 'open'
+                  ? 'No open-market symbols for the selected protocols.'
+                  : 'No symbols for the selected protocols.'}
+              </p>
+              <p>
+                {marketFilter === 'open'
+                  ? 'All matched cards are for a closed market. Switch the Market filter to All or Closed to see them.'
+                  : 'None of the selected protocols have resolved symbols to rank yet.'}
+              </p>
             </div>
           ) : (
             <>

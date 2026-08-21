@@ -8,8 +8,8 @@ const PROVIDER_ALL = 'ALL';
 // Known trading platform providers — always show in filter
 const KNOWN_PROVIDERS = ['alpaca', 'alphavantage', 'trading212', 'fred', 'ecb', 'mt5'];
 
-import { formatTime } from '../core/format-utils';
-function formatSize(bytes) {
+import { formatTime, formatSize } from '../core/format-utils';
+function formatSizeShort(bytes) {
   if (!Number.isFinite(bytes)) return '-';
   return bytes >= 1024 ? `${(bytes / 1024).toFixed(1)}KB` : `${bytes}B`;
 }
@@ -143,7 +143,7 @@ export default function ApiActivityPage() {
                       </span>
                     </td>
                     <td>{record.durationMs}ms</td>
-                    <td>{formatSize(record.responseSize)}</td>
+                    <td>{formatSizeShort(record.responseSize)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client.js';
 import { useState, useMemo } from 'react';
+import { formatSize } from '../core/format-utils';
 import './file-inventory-page.css';
 
 export default function FileInventoryPage() {
@@ -51,12 +52,6 @@ export default function FileInventoryPage() {
   const sortIndicator = (key) => {
     if (sortKey !== key) return '';
     return sortDir === 'asc' ? ' ▲' : ' ▼';
-  };
-
-  const formatSize = (bytes) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const dirs = useMemo(() => {

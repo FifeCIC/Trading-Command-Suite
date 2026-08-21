@@ -35,6 +35,10 @@ const DEFAULTS = {
   hidePracticeData: false,       // Hide practice/paper trading data across views (#450)
   showTrainingGuidance: true,    // Show beginner-friendly explanations and tips (#445)
   dismissedGuides: {},            // Map of guideId → ISO timestamp for dismissed training containers
+  // News Tape — market tape news headline configuration
+  newsTapeGlobal: true,           // Show globally-impacting (macro) headline in the market tape
+  newsTapeSymbol: true,           // Show symbol-priority (positions/scored) headline in the market tape
+  newsTapeRotateSec: 30,          // Seconds between headline rotation (global ↔ symbol)
   // Performance
   pollingInterval: 30,
   chartAnimation: true,

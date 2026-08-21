@@ -16,6 +16,8 @@
 .sal-row td { padding: 0.45rem 0.5rem; border-bottom: 1px solid rgba(128,128,128,0.08); }
 .sal-row.expanded td { background: rgba(14,165,166,0.06); }
 .sal-symbol { font-weight: 700; }
+.sal-symbol-link { color: var(--accent); text-decoration: none; cursor: pointer; }
+.sal-symbol-link:hover { text-decoration: underline; }
 .sal-time { color: var(--ink-soft); font-size: 0.68rem; }
 .sal-dir { font-size: 0.6rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px; }
 .sal-dir.long { background: rgba(34,197,94,0.12); color: #22c55e; }

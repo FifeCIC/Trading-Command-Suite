@@ -102,6 +102,54 @@ export class NewsController {
     }
   }
 
+  // ── Market Tape headline (prioritized: global + symbol) ──
+
+  @Get('tape')
+  async getTape() {
+    // Priority symbol sets from the shared resolver:
+    //  - macro            → globally-impacting symbols (FX, indices, gold…) = the "global" headline
+    //  - positions        → symbols with an open position (highest priority for the symbol headline)
+    //  - active-protocols → symbols actively scored (fallback priority for the symbol headline)
+    const [macroSymbols, positionSymbols, scoredSymbols] = await Promise.all([
+      this.importService.resolveTierSymbols('macro'),
+      this.importService.resolveTierSymbols('positions'),
+      this.importService.resolveTierSymbols('active-protocols'),
+    ]);
+
+    const [globalArticles, positionArticles, scoredArticles] = await Promise.all([
+      this.importService.getLatestForSymbols(macroSymbols, 1),
+      this.importService.getLatestForSymbols(positionSymbols, 1),
+      this.importService.getLatestForSymbols(scoredSymbols, 1),
+    ]);
+
+    const mapArticle = (a: any, priority?: string) => {
+      if (!a) return null;
+      return {
+        title: a.headline,
+        symbol: a.symbol,
+        category: a.category,
+        time: a.publishedAt?.toISOString(),
+        url: a.url || '#',
+        sentiment: a.sentiment,
+        impact: a.impact,
+        source: (a.source as any)?.name || 'Unknown',
+        snippet: a.summary || '',
+        priority: priority || null,
+      };
+    };
+
+    // Symbol headline prefers an open position first, else a scored symbol.
+    const symbolArticle = mapArticle(positionArticles[0], 'position')
+      || mapArticle(scoredArticles[0], 'scored');
+
+    return {
+      global: mapArticle(globalArticles[0]),
+      symbol: symbolArticle,
+      counts: { macro: macroSymbols.length, positions: positionSymbols.length, scored: scoredSymbols.length },
+      live: true,
+    };
+  }
+
   // ── Import ──
 
   @Get('import/last')

@@ -1,8 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { usePreferences } from '../core/hooks/usePreferences';
 import './market-tape.css';
 import { computeSessionStates, nextSessionLabel } from '../core/session-utils';
+import { timeAgo } from '../core/format-utils';
 
 /* ── Preference key ── */
 const PREFS_KEY = 'tcs:market-tape';
@@ -56,6 +58,7 @@ function timeUntil(dateStr) {
   return `${m}m`;
 }
 
+
 function fmtUptime(seconds) {
   if (!seconds || seconds <= 0) return '—';
   const d = Math.floor(seconds / 86400);
@@ -79,6 +82,15 @@ function computeSessions() {
 export default function MarketTape() {
   const [prefs, setPrefs] = useState(loadPrefs);
   const [prefsOpen, setPrefsOpen] = useState(false);
+  const { prefs: userPrefs } = usePreferences();
+
+  // Rotate between the global and symbol-priority headlines.
+  const [newsIdx, setNewsIdx] = useState(0);
+  useEffect(() => {
+    const rotSec = Math.max(5, Number(userPrefs.newsTapeRotateSec) || 30);
+    const id = setInterval(() => setNewsIdx((i) => i + 1), rotSec * 1000);
+    return () => clearInterval(id);
+  }, [userPrefs.newsTapeRotateSec]);
 
   const toggleSection = useCallback((key) => {
     setPrefs((prev) => {
@@ -107,10 +119,10 @@ export default function MarketTape() {
     refetchInterval: 30_000, staleTime: 15_000, retry: 1,
   });
 
-  // New: news headline
+  // New: news headline — prioritized tape headlines (global + symbol-priority)
   const newsQuery = useQuery({
     queryKey: ['market-tape', 'news'],
-    queryFn: () => apiGet('/api/news/feed?limit=1').catch(() => null),
+    queryFn: () => apiGet('/api/news/tape').catch(() => null),
     refetchInterval: 120_000, staleTime: 60_000, retry: 1,
     enabled: prefs.news,
   });
@@ -178,7 +190,7 @@ export default function MarketTape() {
     const positions = (auto.brokerStates && typeof auto.brokerStates === 'object')
       ? Object.values(auto.brokerStates).reduce((sum, b) => sum + (b.positionCount || 0), 0) : 0;
     const pulse = auto.loopEnabled ? 'Live' : 'Paused';
-    const lastTick = auto.lastTickAt ? timeUntil(auto.lastTickAt) + ' ago' : '—';
+    const lastTick = auto.lastTickAt ? timeAgo(auto.lastTickAt) : '—';
     sections.push({
       key: 'auto', label: 'Auto',
       content: `${pulse} · ${strategies} strategies · ${positions} positions · Last tick ${lastTick}`,
@@ -191,18 +203,25 @@ export default function MarketTape() {
     sections.push({ key: 'next', label: 'Next', content: nextSessionLabel(sessions), color: 'var(--ink-soft, #64748b)' });
   }
 
-  // 6. News headline (new)
+  // 6. News headline — prioritized tape headlines (global 🌐 + symbol-priority)
   if (prefs.news && newsQuery.data) {
-    const articles = newsQuery.data?.articles || [];
-    const latest = articles[0];
-    if (latest) {
-      // escapeHtml: provider-supplied titles go into innerHTML — XSS vector without this
-      const rawTitle = latest.title || '';
+    const { global, symbol } = newsQuery.data || {};
+    const candidates = [];
+    if (userPrefs.newsTapeGlobal && global) candidates.push({ ...global, kind: 'global' });
+    if (userPrefs.newsTapeSymbol && symbol) candidates.push({ ...symbol, kind: 'symbol' });
+    if (candidates.length > 0) {
+      const active = candidates[newsIdx % candidates.length];
+      const rawTitle = active.title || '';
       const headline = escapeHtml(rawTitle.substring(0, 80) + (rawTitle.length > 80 ? '…' : ''));
-      const link = '/research/news-intel';
+      const tag = active.kind === 'symbol'
+        ? `<span style="color:var(--accent);font-weight:700">${escapeHtml(active.symbol || '')}</span>`
+        : '<span style="color:var(--accent);font-weight:700">🌐</span>';
+      const isExternal = active.url && active.url !== '#';
+      const url = isExternal ? active.url : '/research/news-intel';
+      const target = isExternal ? ' target="_blank" rel="noopener noreferrer"' : '';
       sections.push({
         key: 'news', label: 'News',
-        htmlContent: `📰 <a href="${link}" style="color:inherit;text-decoration:none">${headline}</a>`,
+        htmlContent: `📰 ${tag} <a href="${url}"${target} style="color:inherit;text-decoration:none">${headline}</a>`,
         color: 'var(--ink-soft, #94a3b8)',
       });
     }

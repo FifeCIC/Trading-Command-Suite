@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
@@ -189,7 +190,18 @@ export default function ScoringActivityLogsPage() {
                       >
                         <td className="sal-time">{new Date(run.timestamp).toLocaleString()}</td>
                         <td>
-                          <span className="sal-symbol">{run.protocolName || run.protocolId || '—'}</span>
+                          {run.protocolId || run.protocolName ? (
+                            <Link
+                              className="sal-symbol sal-symbol-link"
+                              to={`/protocols/protocols-registry?proto=${encodeURIComponent(run.protocolId || run.protocolName)}`}
+                              title="Open protocol in the Protocols page"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {run.protocolName || run.protocolId || '—'}
+                            </Link>
+                          ) : (
+                            <span className="sal-symbol">—</span>
+                          )}
                         </td>
                         <td>
                           <span className="sal-symbol">{run.strategyName || 'Unknown'}</span>

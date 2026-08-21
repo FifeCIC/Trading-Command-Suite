@@ -23,6 +23,7 @@ import PageInfoPopover from '../components/PageInfoPopover';
 import { directionModeLabel } from '../core/signal-utils';
 import { buildScoreDisplay } from '../core/score-display';
 import SignalBadge from '../components/SignalBadge';
+import { formatTimestamp } from '../core/format-utils';
 
 const GROUP_LABELS = {
   technical: 'Technical',
@@ -86,16 +87,6 @@ export default function ProtocolTrailPage() {
   );
   const signalMax = vm.scoreMax ?? totalMax;
   const strengthPct = signalMax > 0 ? Math.round(((vm.score ?? 0) / signalMax) * 100) : null;
-
-  /** Format an ISO timestamp as a readable date + time (UTC). */
-  function formatTimestamp(iso) {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
-    const date = d.toISOString().slice(0, 10);
-    const time = d.toISOString().slice(11, 19);
-    return `${date} ${time} UTC`;
-  }
 
   // Flatten all directive breakouts across groups
   const allDirectives = useMemo(() => {

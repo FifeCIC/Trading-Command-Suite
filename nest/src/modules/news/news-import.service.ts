@@ -470,6 +470,23 @@ export class NewsImportService {
   }
 
   /**
+   * Get the most recent articles for a SET of symbols (market-tape use).
+   * Unlike getArticles() (single symbol filter), this queries any article whose
+   * primary ticker is in the given set — used by GET /api/news/tape to surface a
+   * headline for the priority symbols (open positions first, then scored symbols).
+   */
+  async getLatestForSymbols(symbols: string[], limit = 3): Promise<any[]> {
+    if (!symbols || symbols.length === 0) return [];
+    const normalized = [...new Set(symbols.map((s) => String(s).toUpperCase()))];
+    return this.prisma.newsArticle.findMany({
+      where: { symbol: { in: normalized } },
+      orderBy: { publishedAt: 'desc' },
+      take: limit,
+      include: { source: { select: { name: true, reliabilityScore: true } } },
+    });
+  }
+
+  /**
    * Get sentiment summary for a symbol.
    */
   async getSentimentSummary(symbol?: string) {

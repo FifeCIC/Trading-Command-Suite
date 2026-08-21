@@ -120,6 +120,40 @@ export default function SettingsPage() {
       </section>
 
       <section className="settings-section">
+        <h2>News Tape</h2>
+        <SettingRow label="Globally-impacting headline" hint="Show the top-level (macro) news headline in the market tape.">
+          <div className="inline-actions">
+            <button
+              type="button"
+              className={prefs.newsTapeGlobal ? 'cta' : ''}
+              onClick={() => set('newsTapeGlobal', !prefs.newsTapeGlobal)}
+            >
+              {prefs.newsTapeGlobal ? '✓ On' : 'Off'}
+            </button>
+          </div>
+        </SettingRow>
+        <SettingRow label="Symbol-priority headline" hint="Show a headline for symbols with open positions or actively scored (open positions first).">
+          <div className="inline-actions">
+            <button
+              type="button"
+              className={prefs.newsTapeSymbol ? 'cta' : ''}
+              onClick={() => set('newsTapeSymbol', !prefs.newsTapeSymbol)}
+            >
+              {prefs.newsTapeSymbol ? '✓ On' : 'Off'}
+            </button>
+          </div>
+        </SettingRow>
+        <SettingRow label="Rotation interval" hint="Seconds between headline rotation in the tape.">
+          <select value={prefs.newsTapeRotateSec} onChange={(e) => set('newsTapeRotateSec', Number(e.target.value))}>
+            <option value={15}>15s</option>
+            <option value={30}>30s</option>
+            <option value={60}>60s</option>
+            <option value={120}>2m</option>
+          </select>
+        </SettingRow>
+      </section>
+
+      <section className="settings-section">
         <h2>QA Testing</h2>
         <SettingRow label="QA Checks" hint={`${qaCount} page${qaCount !== 1 ? 's' : ''} marked as QA tested on the Capability Map.`}>
           <button
