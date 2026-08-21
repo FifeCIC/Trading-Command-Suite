@@ -4,8 +4,9 @@ import './strategies-page.css'
 import PageInfoPopover from '../components/PageInfoPopover';
 
 /**
- * Seed strategy data matching docs/CANONICAL-DIRECTIVE-REFERENCE.md
- * and docs/STRATEGY-AGGREGATION-CONTRACT.md.
+ * Seed strategy data matching docs/CANONICAL-DIRECTIVE-REFERENCE.md.
+ * (The old STRATEGY-AGGREGATION-CONTRACT.md was retired 2026-08-21 — its
+ * weighted-aggregation role is now covered by protocol directive groups.)
  */
 const STRATEGY_SEED = [
   {
