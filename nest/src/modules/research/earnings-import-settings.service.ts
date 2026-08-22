@@ -218,6 +218,12 @@ export class EarningsImportSettingsService {
   }
 
   // ── Import run state ──────────────────────────────────────────
+  //
+  // `running` is IN-MEMORY only (per process) — it powers the UI's "import
+  // running" poll. It resets on restart, which is fine: the scheduled_job row
+  // itself is the durable source of truth. Settings and the last-import
+  // summary live in global_setting (key/value JSON) rather than dedicated
+  // tables — no schema migration needed and the payloads are small.
 
   markRunning(): void {
     this.running = true;

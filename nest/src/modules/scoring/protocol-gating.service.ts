@@ -292,6 +292,11 @@ export class ProtocolGatingService {
     // Scoring REQUIRES a protocol — the unscoped 'default' pipeline was removed
     // (2026-08-22). Without a protocol, scoring would run every directive as a
     // kitchen-sink and persist risky data. Refuse instead.
+    //
+    // ⚠️ For future callers: resolve a real protocol BEFORE calling this
+    // (speed-scan uses symbol_protocol_assignment; ladder/portfolio SKIP
+    // unassigned symbols rather than scoring them). Never pass a fallback slug —
+    // that recreates the problem this guard fixes.
     if (!protocolId) {
       throw new BadRequestException(
         'Scoring requires a protocol — unscoped default scoring was removed. Pass a protocolId.',

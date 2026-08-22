@@ -51,9 +51,16 @@ export default function EarningsCalendarPage() {
   const statusQuery = useQuery({
     queryKey: ['earnings-import-status'],
     queryFn: fetchEarningsImportStatus,
+    // Poll every 4s while an import runs (cheap count query), else every 30s.
     refetchInterval: (q) => (q.state.data?.running ? 4000 : 30000),
   });
 
+  // ── Settings edit flow ──────────────────────────────────────────
+  // Edits are staged in settingsDraft and only sent to the API on
+  // "Save settings". The panel reads `s` = draft ?? server copy, so the
+  // summary row reflects in-progress edits without touching the backend.
+  // Saving PUTs the draft, clears it, and refetches both queries — the
+  // backend reschedules the scheduled_job row on the PUT itself.
   const savedSettings = settingsQuery.data ?? {};
   const s = settingsDraft ?? savedSettings;
   const setField = (patch) => {
@@ -76,6 +83,8 @@ export default function EarningsCalendarPage() {
   const doImport = async () => {
     setSettingsMsg('Import started — it runs in the background.');
     try {
+      // Fire-and-forget: the backend returns { started } immediately and the
+      // import runs detached; progress is read from the status query's poll.
       const res = await importEarnings();
       if (!res?.started) setSettingsMsg('An import is already running.');
       statusQuery.refetch();
