@@ -48,6 +48,113 @@
   cursor: pointer;
 }
 
+.rn-composer-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.rn-composer-spacer {
+  flex: 1;
+}
+
+.rn-mass-btn {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.rn-mass-btn:hover {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+/* ── Mass import modal ── */
+.rn-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+}
+
+.rn-modal {
+  width: min(560px, 92vw);
+  max-height: 80vh;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.rn-modal-title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.rn-modal-sub {
+  margin: 0;
+  color: var(--textDim);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.rn-modal-tickers {
+  color: var(--textFaint);
+  font-size: 0.78rem;
+}
+
+.rn-batch {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+.rn-watchlist-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.rn-watchlist-name {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 0.45rem 0.7rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+
+.rn-modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.rn-cancel-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--textDim);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
 .rn-add-btn:disabled {
   opacity: 0.45;
   cursor: default;

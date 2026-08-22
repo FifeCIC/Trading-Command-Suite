@@ -11,6 +11,22 @@ type EnqueueImportInput = {
   source: string;
 };
 
+/** Common Yahoo Finance exchange suffixes, tried in order for foreign tickers. */
+const YAHOO_EXCHANGE_SUFFIXES = [
+  '.CO',  // Copenhagen
+  '.DE',  // Xetra / Frankfurt
+  '.PA',  // Paris
+  '.L',   // London
+  '.AS',  // Amsterdam
+  '.MI',  // Milan
+  '.ST',  // Stockholm
+  '.TO',  // Toronto
+  '.AX',  // Australia
+  '.SI',  // Singapore
+  '.T',   // Tokyo
+  '.SW',  // Switzerland
+];
+
 @Injectable()
 export class ImportJobsService {
   private readonly logger = new Logger(ImportJobsService.name);
@@ -56,7 +72,27 @@ export class ImportJobsService {
         const tickerToUse = aliases[providerId] || symbol.ticker;
 
         this.logger.log(`Fetching ${limit} ${timeframe} bars for ${tickerToUse} from ${providerId}...`);
-        const bars = await adapter.getCandles(tickerToUse, timeframe, limit);
+        let bars = await adapter.getCandles(tickerToUse, timeframe, limit);
+
+        // Foreign-listed tickers: Yahoo wants an exchange suffix (VWS → VWS.CO).
+        // When the bare ticker returns nothing and has no suffix, retry common
+        // exchanges in order until one resolves. Only for equity-like symbols.
+        if (
+          providerId === 'yahoo'
+          && (!bars || bars.length === 0)
+          && !tickerToUse.includes('.')
+          && (symbol.type === 'stock' || symbol.type === 'etf' || !symbol.type)
+        ) {
+          for (const suffix of YAHOO_EXCHANGE_SUFFIXES) {
+            const candidate = `${tickerToUse}${suffix}`;
+            const tryBars = await adapter.getCandles(candidate, timeframe, limit);
+            if (tryBars && tryBars.length > 0) {
+              this.logger.log(`Yahoo resolved ${tickerToUse} → ${candidate}`);
+              bars = tryBars;
+              break;
+            }
+          }
+        }
 
         if (!bars || bars.length === 0) {
           this.logger.debug(`${providerId} returned no bars for ${tickerToUse}`);

@@ -80,6 +80,12 @@ export default function ResearchNotesPage() {
   const [popout, setPopout] = useState(null); // { ticker, x, y }
   const [registering, setRegistering] = useState(null); // ticker being registered
   const [registerMsg, setRegisterMsg] = useState(null); // { ticker, ok }
+  const [massOpen, setMassOpen] = useState(false);
+  const [watchlistChecked, setWatchlistChecked] = useState(false);
+  const [watchlistName, setWatchlistName] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [batchState, setBatchState] = useState(null); // /api/imports/batch/status
+  const pollTimer = useRef(null);
   const popoutTimer = useRef(null);
   const dragControls = useDragControls();
   const didInitOpen = useRef(false);
@@ -112,6 +118,9 @@ export default function ResearchNotesPage() {
       setOpenIds(new Set([notes[notes.length - 1].id]));
     }
   }, [notes]);
+
+  // Clear any pending batch-status poll timer on unmount.
+  useEffect(() => () => { if (pollTimer.current) clearTimeout(pollTimer.current); }, []);
 
   const toggleOpen = (id) => {
     setOpenIds((prev) => {
@@ -159,7 +168,13 @@ export default function ResearchNotesPage() {
     setRegistering(ticker);
     setRegisterMsg(null);
     try {
-      const res = await apiPost('/api/symbols', { ticker, name: ticker });
+      // CreateSymbolDto requires exchange + type (whitelist strips partial bodies).
+      const res = await apiPost('/api/symbols', {
+        ticker,
+        name: ticker,
+        exchange: 'Unknown',
+        type: 'stock',
+      });
       const symbolId = res?.symbol?.id;
       // Request market-data import for the new symbol (fire and forget).
       if (symbolId) {
@@ -171,6 +186,55 @@ export default function ResearchNotesPage() {
       setRegisterMsg({ ticker, ok: false });
     } finally {
       setRegistering(null);
+    }
+  };
+
+  // ── Mass import ─────────────────────────────────────────────
+  // Union of tickers detected across ALL notes, minus registered ones.
+  const unregisteredTickers = useMemo(() => {
+    const set = new Set();
+    for (const note of notes) {
+      for (const { ticker } of detectTickers(note.content)) {
+        if (!registry.has(ticker)) set.add(ticker);
+      }
+    }
+    return [...set].sort();
+  }, [notes, registry]);
+
+  const pollBatchStatus = () => {
+    apiGet('/api/imports/batch/status')
+      .then((s) => {
+        setBatchState(s);
+        if (s?.running) pollTimer.current = setTimeout(pollBatchStatus, 2000);
+        else queryClient.invalidateQueries({ queryKey: ['symbols-tickers'] });
+      })
+      .catch(() => {});
+  };
+
+  const runMassImport = async () => {
+    if (unregisteredTickers.length === 0) return;
+    setImporting(true);
+    setBatchState(null);
+    try {
+      if (watchlistChecked && watchlistName.trim()) {
+        await apiPost('/api/watchlists', {
+          name: watchlistName.trim(),
+          symbols: unregisteredTickers,
+          source: 'research-notes',
+        });
+      }
+      await apiPost('/api/imports/batch', {
+        tickers: unregisteredTickers,
+        timeframe: '1d',
+        limit: 365,
+      });
+      setWatchlistChecked(false);
+      setWatchlistName('');
+      pollBatchStatus();
+    } catch {
+      setBatchState({ running: false, errors: ['Batch failed to start'] });
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -196,9 +260,17 @@ export default function ResearchNotesPage() {
           placeholder="Paste news, emails, social posts, discord chats…"
           rows={4}
         />
-        <button className="rn-add-btn" onClick={addNote} disabled={!draft.trim()}>
-          Add note
-        </button>
+        <div className="rn-composer-row">
+          {openIds.size > 0 && (
+            <button className="rn-mass-btn" onClick={() => setMassOpen(true)} title="Import every unregistered ticker found in your notes">
+              ⤵ Mass import symbols
+            </button>
+          )}
+          <span className="rn-composer-spacer" />
+          <button className="rn-add-btn" onClick={addNote} disabled={!draft.trim()}>
+            Add note
+          </button>
+        </div>
       </div>
 
       {notes.length === 0 ? (
@@ -260,14 +332,64 @@ export default function ResearchNotesPage() {
         </Reorder.Group>
       )}
 
+      {massOpen && (
+        <div className="rn-overlay" onClick={() => setMassOpen(false)}>
+          <div className="rn-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="rn-modal-title">Mass symbol import</h2>
+            <p className="rn-modal-sub">
+              <strong>{unregisteredTickers.length}</strong> unregistered ticker{unregisteredTickers.length === 1 ? '' : 's'} detected across your notes will be imported.
+              {unregisteredTickers.length > 0 && (
+                <span className="rn-modal-tickers">
+                  {' '}{unregisteredTickers.slice(0, 25).join(', ')}{unregisteredTickers.length > 25 ? '…' : ''}
+                </span>
+              )}
+            </p>
+            {batchState && (
+              <div className="rn-batch">
+                {batchState.running
+                  ? `Importing… ${batchState.done}/${batchState.total}${batchState.currentSymbol ? ` — now: ${batchState.currentSymbol}` : ''}`
+                  : batchState.errors?.length
+                    ? `Finished with ${batchState.errors.length} error(s): ${batchState.errors.slice(0, 5).join(' · ')}`
+                    : 'Import finished.'}
+              </div>
+            )}
+            <label className="rn-watchlist-row">
+              <input
+                type="checkbox"
+                checked={watchlistChecked}
+                onChange={(e) => setWatchlistChecked(e.target.checked)}
+              />
+              <span>Add these symbols to a new Watchlist</span>
+            </label>
+            {watchlistChecked && (
+              <input
+                className="rn-watchlist-name"
+                value={watchlistName}
+                onChange={(e) => setWatchlistName(e.target.value)}
+                placeholder={`Research ${new Date().toISOString().slice(0, 10)}`}
+              />
+            )}
+            <div className="rn-modal-actions">
+              <button
+                className="rn-add-btn"
+                onClick={runMassImport}
+                disabled={importing || unregisteredTickers.length === 0}
+              >
+                {importing ? 'Starting…' : 'Import'}
+              </button>
+              <button className="rn-cancel-btn" onClick={() => setMassOpen(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {popout && (
         <div
           className="rn-popout"
           style={{ left: popout.x, top: popout.y }}
           onMouseEnter={() => { if (popoutTimer.current) clearTimeout(popoutTimer.current); }}
           onMouseLeave={onTickerLeave}
-        >
-          <div className="rn-popout-head">
+        >          <div className="rn-popout-head">
             <span className="rn-popout-ticker">{popout.ticker}</span>
             {registerMsg?.ticker === popout.ticker && (
               <span className="rn-popout-msg">{registerMsg.ok ? '✓ registered' : '✗ failed'}</span>
