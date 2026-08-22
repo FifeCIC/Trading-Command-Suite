@@ -179,6 +179,7 @@ $fullCount    = ($final | Where-Object { $_.Name -match "full" }).Count
 Write-Host "Backup retention: $compactCount compact + $fullCount full = $([math]::Round($finalMB,0))MB / ${MaxStorageGB}GB cap" -ForegroundColor DarkGray
 
 # ── Manifest ──────────────────────────────────────────────────
+$tableList = if ($tables.Count -gt 0) { $tables -join ', ' } else { '(all tables)' }
 $manifestFile = Join-Path $BACKUP_ROOT "BACKUP-MANIFEST.txt"
 @"
 TCS Database Backup Manifest
