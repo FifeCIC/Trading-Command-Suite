@@ -94,11 +94,6 @@ export const PLUGIN_TAB_SKELETONS = {
     subtitle: 'Deep diagnostics and debug controls for scoring internals.',
     domain: 'Scoring / Development',
   },
-  'research-overview': {
-    title: 'Research Overview',
-    subtitle: 'Aggregate research signal posture spanning macro, events, and sentiment.',
-    domain: 'Research / Overview',
-  },
   'sector-rotation': {
     title: 'Sector Rotation',
     subtitle: 'Cross-sector momentum and rotation context for watchlist bias.',

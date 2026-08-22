@@ -48,7 +48,6 @@ import ExecutionQueuePage from './pages/ExecutionQueuePage';
 import ImportJobsPage from './pages/ImportJobsPage';
 import Mt5StatusPage from './pages/Mt5StatusPage';
 import NewsIntelPage from './pages/NewsIntelPage';
-import ResearchOverviewPage from './pages/ResearchOverviewPage';
 import PlatformComparisonsPage from './pages/PlatformComparisonsPage';
 import PluginTabSkeletonPage from './pages/PluginTabSkeletonPage';
 import TradingStrategiesPage from './pages/TradingStrategiesPage';

@@ -42,7 +42,6 @@ export const EXPERIENCE_MATRIX = {
     'scoring-runs':          { beginner: false, experienced: true,  expert: true },
     'scoring-activity-logs': { beginner: false, experienced: true,  expert: true },
     // Research
-    'research-overview':     { beginner: false, experienced: true,  expert: true },
     'symbols-browser':       { beginner: true,  experienced: true,  expert: true },
     'sector-rotation':       { beginner: false, experienced: false, expert: true },
     'market-correlations':   { beginner: false, experienced: false, expert: true },

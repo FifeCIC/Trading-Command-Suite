@@ -67,7 +67,6 @@ export const NAV_TREE = {
   research: {
     label: 'Research',
     views: [
-      { id: 'research-overview', label: 'Research Overview', icon: '🔬' },
       { id: 'symbols-browser', label: 'Symbols Browser', icon: '🔍' },
       { id: 'earnings-calendar', label: 'Earnings Calendar', icon: '📅' },
       { id: 'news-intel', label: 'News Intel', icon: '📰' },
