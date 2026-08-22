@@ -1,13 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
 import { ProvidersService } from '../providers/providers.service';
 import { NasdaqEarningsService } from './nasdaq-earnings.service';
 import { EarningsImportSettingsService, EarningsImportSettings } from './earnings-import-settings.service';
 import { EarningsEvent } from '../providers/interfaces/provider-adapter.interface';
+import { JobQueueService } from '../automation/job-queue.service';
+
+const EARNINGS_IMPORT_JOB = 'earnings-import';
 
 @Injectable()
-export class ResearchImportService {
+export class ResearchImportService implements OnModuleInit {
   private readonly logger = new Logger(ResearchImportService.name);
   private finnhubUnavailableLogged = false;
   private earningsImportRunning = false;
@@ -27,14 +30,87 @@ export class ResearchImportService {
     private readonly providers: ProvidersService,
     private readonly nasdaqEarnings: NasdaqEarningsService,
     private readonly settingsService: EarningsImportSettingsService,
+    private readonly jobQueue: JobQueueService,
   ) {}
 
+  onModuleInit(): void {
+    // Register the scheduled_job handler — the unified queue (#614) polls this
+    // on every automation tick, so no fixed @Cron is needed.
+    this.jobQueue.registerHandler(EARNINGS_IMPORT_JOB, async () => {
+      const summary = await this.importEarningsCalendar(false);
+      this.logger.log(`Scheduled earnings import finished: ${JSON.stringify(summary)}`);
+      // Chain the next occurrence (re-reads settings — schedule may have changed).
+      await this.scheduleNextImportRun();
+    });
+    // Ensure a queued job exists after restart (self-perpetuating chain).
+    this.scheduleNextImportRun().catch((err) =>
+      this.logger.warn(`Initial earnings schedule failed: ${(err as Error).message}`),
+    );
+  }
+
   /**
-   * Daily at 07:00 — fetch earnings calendar and upsert into DB, honoring the
-   * user's import settings (scope / min market cap / session / horizon).
-   * `force=true` runs even when auto-import is disabled (manual trigger).
+   * Compute the next scheduled occurrence from settings and (re)enqueue a
+   * one-time scheduled_job row for it. Stale queued rows of this type are
+   * removed first so the schedule stays single-sourced from settings.
+   * Called on boot, on settings change, and after every completed run.
    */
-  @Cron(CronExpression.EVERY_DAY_AT_7AM)
+  async scheduleNextImportRun(): Promise<Date | null> {
+    const settings = await this.settingsService.getSettings();
+
+    if (!settings.autoImportEnabled) {
+      try {
+        await this.prisma.scheduledJob.deleteMany({
+          where: { type: EARNINGS_IMPORT_JOB, status: 'queued' },
+        });
+      } catch { /* table may not exist */ }
+      this.logger.log('Earnings auto-import disabled — no scheduled job queued');
+      return null;
+    }
+
+    const runAt = this.computeNextOccurrence(settings.scheduleTime, settings.scheduleDays);
+    try {
+      await this.prisma.scheduledJob.deleteMany({
+        where: { type: EARNINGS_IMPORT_JOB, status: 'queued' },
+      });
+      await this.jobQueue.enqueue({
+        type: EARNINGS_IMPORT_JOB,
+        runAt,
+        priority: 40,
+        maxAttempts: 3,
+      });
+      this.logger.log(
+        `Earnings import scheduled: next run ${runAt.toISOString()} (${settings.scheduleDays} @ ${settings.scheduleTime})`,
+      );
+      return runAt;
+    } catch (err) {
+      this.logger.warn(`Failed to schedule earnings import: ${(err as Error).message}`);
+      return null;
+    }
+  }
+
+  /** Next occurrence of HH:MM local time on the configured day pattern. */
+  private computeNextOccurrence(scheduleTime: string, scheduleDays: 'daily' | 'weekdays'): Date {
+    const [h, m] = scheduleTime.split(':').map((n) => parseInt(n, 10));
+    const next = new Date();
+    next.setHours(h, m, 0, 0);
+
+    const isAllowed = (d: Date) => scheduleDays === 'daily' || (d.getDay() !== 0 && d.getDay() !== 6);
+
+    // Advance day by day until we land on an allowed day at/after now.
+    let guard = 0;
+    while ((next <= new Date() || !isAllowed(next)) && guard < 8) {
+      next.setDate(next.getDate() + 1);
+      next.setHours(h, m, 0, 0);
+      guard++;
+    }
+    return next;
+  }
+
+  /**
+   * Fetch the earnings calendar and upsert into DB, honoring the user's import
+   * settings (scope / min market cap / session / horizon / known-session).
+   * Runs via the unified job queue (scheduled_job row) or manually (force).
+   */
   async importEarningsCalendar(
     force = false,
   ): Promise<{
@@ -220,17 +296,30 @@ export class ResearchImportService {
     storedEvents: number;
     settings: EarningsImportSettings;
     lastImport: Record<string, unknown> | null;
+    nextRunAt: string | null;
   }> {
     let storedEvents = 0;
     try {
       const count: any = await this.prisma.earningsEvent.count();
       storedEvents = count ?? 0;
     } catch { /* table may not exist */ }
+
+    let nextRunAt: string | null = null;
+    try {
+      const next = await this.prisma.scheduledJob.findFirst({
+        where: { type: EARNINGS_IMPORT_JOB, status: 'queued' },
+        orderBy: { runAt: 'asc' },
+        select: { runAt: true },
+      });
+      nextRunAt = next?.runAt?.toISOString() ?? null;
+    } catch { /* table may not exist */ }
+
     return {
       running: this.earningsImportRunning,
       storedEvents,
       settings: await this.settingsService.getSettings(),
       lastImport: await this.settingsService.getLastImport(),
+      nextRunAt,
     };
   }
 

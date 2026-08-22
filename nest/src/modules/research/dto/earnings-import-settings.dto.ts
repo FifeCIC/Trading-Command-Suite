@@ -5,6 +5,8 @@ import {
   IsIn,
   IsNumber,
   IsOptional,
+  IsString,
+  Matches,
   Max,
   Min,
 } from 'class-validator';
@@ -43,4 +45,17 @@ export class EarningsImportSettingsDto {
   @IsArray()
   @ArrayMaxSize(2)
   sources?: string[];
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^([01]?\d|2[0-3]):[0-5]\d$/, { message: 'scheduleTime must be HH:MM (24h)' })
+  scheduleTime?: string;
+
+  @IsOptional()
+  @IsIn(['daily', 'weekdays'])
+  scheduleDays?: 'daily' | 'weekdays';
+
+  @IsOptional()
+  @IsBoolean()
+  requireKnownSession?: boolean;
 }

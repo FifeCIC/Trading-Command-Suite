@@ -82,11 +82,16 @@ export class ResearchController {
 
   /**
    * PUT /api/research/earnings/settings
-   * Patch one or more import settings.
+   * Patch one or more import settings. Re-schedules the queued import job.
    */
   @Put('earnings/settings')
   async updateEarningsSettings(@Body() dto: EarningsImportSettingsDto) {
-    return this.earningsImportSettings.updateSettings(dto);
+    const settings = await this.earningsImportSettings.updateSettings(dto);
+    // Schedule fields may have changed — recompute the next run.
+    await this.researchImport.scheduleNextImportRun().catch((err) =>
+      this.logger.warn(`Rescheduling earnings import failed: ${(err as Error).message}`),
+    );
+    return settings;
   }
 
   /**

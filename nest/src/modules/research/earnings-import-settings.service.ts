@@ -27,6 +27,9 @@ export interface EarningsImportSettings {
   minMarketCap: number; // USD, 0 = off
   timeOfDay: 'all' | 'bmo' | 'amc';
   sources: string[]; // preferred order
+  scheduleTime: string; // 'HH:MM' local time for the scheduled run
+  scheduleDays: 'daily' | 'weekdays';
+  requireKnownSession: boolean; // drop events with unknown BMO/AMC session
 }
 
 export const DEFAULT_EARNINGS_IMPORT_SETTINGS: EarningsImportSettings = {
@@ -36,6 +39,9 @@ export const DEFAULT_EARNINGS_IMPORT_SETTINGS: EarningsImportSettings = {
   minMarketCap: 0,
   timeOfDay: 'all',
   sources: ['finnhub', 'nasdaq'],
+  scheduleTime: '07:00',
+  scheduleDays: 'daily',
+  requireKnownSession: false,
 };
 
 const SETTINGS_KEY = 'earnings_import_settings';
@@ -72,6 +78,12 @@ export class EarningsImportSettingsService {
           sources: Array.isArray(parsed.sources)
             ? parsed.sources.filter((s: string) => KNOWN_SOURCES.includes(s))
             : DEFAULT_EARNINGS_IMPORT_SETTINGS.sources,
+          scheduleTime: /^([01]?\d|2[0-3]):[0-5]\d$/.test(parsed.scheduleTime ?? '')
+            ? parsed.scheduleTime
+            : DEFAULT_EARNINGS_IMPORT_SETTINGS.scheduleTime,
+          scheduleDays: ['daily', 'weekdays'].includes(parsed.scheduleDays)
+            ? parsed.scheduleDays
+            : DEFAULT_EARNINGS_IMPORT_SETTINGS.scheduleDays,
         };
       }
     } catch (err) {
@@ -82,14 +94,33 @@ export class EarningsImportSettingsService {
 
   async updateSettings(patch: Partial<EarningsImportSettings>): Promise<EarningsImportSettings> {
     const current = await this.getSettings();
+
+    // Explicit field mapping (NOT {...current, ...patch}) — the validation pipe
+    // creates own `undefined` properties for omitted optional DTO fields, which
+    // would silently wipe current values in a spread.
     const next: EarningsImportSettings = {
-      ...current,
-      ...patch,
-      horizonMonths: Math.min(12, Math.max(1, Math.round(Number(patch.horizonMonths ?? current.horizonMonths)) || 3)),
+      autoImportEnabled:
+        typeof patch.autoImportEnabled === 'boolean' ? patch.autoImportEnabled : current.autoImportEnabled,
+      horizonMonths: Math.min(
+        12,
+        Math.max(1, Math.round(Number(patch.horizonMonths ?? current.horizonMonths)) || 3),
+      ),
+      scope: patch.scope ?? current.scope,
       minMarketCap: Math.max(0, Number(patch.minMarketCap ?? current.minMarketCap) || 0),
+      timeOfDay: patch.timeOfDay ?? current.timeOfDay,
       sources: Array.isArray(patch.sources) && patch.sources.length
         ? patch.sources.filter((s) => KNOWN_SOURCES.includes(s))
         : current.sources,
+      scheduleTime: /^([01]?\d|2[0-3]):[0-5]\d$/.test(patch.scheduleTime ?? '')
+        ? patch.scheduleTime!
+        : current.scheduleTime,
+      scheduleDays: ['daily', 'weekdays'].includes(patch.scheduleDays ?? '')
+        ? (patch.scheduleDays as 'daily' | 'weekdays')
+        : current.scheduleDays,
+      requireKnownSession:
+        typeof patch.requireKnownSession === 'boolean'
+          ? patch.requireKnownSession
+          : current.requireKnownSession,
     };
 
     await this.prisma.globalSetting.upsert({
@@ -98,7 +129,7 @@ export class EarningsImportSettingsService {
       create: { key: SETTINGS_KEY, value: JSON.stringify(next) },
     });
     this.logger.log(
-      `Earnings import settings updated: scope=${next.scope}, minCap=${next.minMarketCap}, session=${next.timeOfDay}, auto=${next.autoImportEnabled}, horizon=${next.horizonMonths}m`,
+      `Earnings import settings updated: scope=${next.scope}, minCap=${next.minMarketCap}, session=${next.timeOfDay}, auto=${next.autoImportEnabled}, horizon=${next.horizonMonths}m, schedule=${next.scheduleDays}@${next.scheduleTime}`,
     );
     return next;
   }
@@ -172,6 +203,11 @@ export class EarningsImportSettingsService {
         e.marketCap < settings.minMarketCap
       ) {
         stats.droppedMarketCap++;
+        continue;
+      }
+
+      if (settings.requireKnownSession && !e.timeOfDay) {
+        stats.droppedSession++;
         continue;
       }
 

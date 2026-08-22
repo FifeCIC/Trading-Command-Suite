@@ -87,6 +87,8 @@ export default function EarningsCalendarPage() {
 
   const lastImport = statusQuery.data?.lastImport;
   const scopeLabel = scopeLabelMap(s.scope);
+  const nextRunAt = statusQuery.data?.nextRunAt;
+  const nextRunText = nextRunAt ? new Date(nextRunAt).toLocaleString() : null;
   const sessionLabel = { all: 'Any session', bmo: 'Before open', amc: 'After close' }[s.timeOfDay] ?? s.timeOfDay;
 
   const events = data?.events ?? [];
@@ -149,7 +151,8 @@ export default function EarningsCalendarPage() {
         <summary className="ec-settings-summary">
           <span>Import settings</span>
           <span className="ec-settings-current">
-            {scopeLabel} · {sessionLabel} · {s.minMarketCap > 0 ? `≥$${(s.minMarketCap / 1e9).toFixed(1)}B` : 'any cap'} · auto {s.autoImportEnabled ? 'on' : 'off'}
+            {scopeLabel} · {sessionLabel} · {s.minMarketCap > 0 ? `≥$${(s.minMarketCap / 1e9).toFixed(1)}B` : 'any cap'}
+            {s.requireKnownSession ? ' · known session only' : ''} · {s.autoImportEnabled ? `${s.scheduleDays} ${s.scheduleTime}` : 'auto off'}
           </span>
         </summary>
         <div className="ec-settings-body">
@@ -210,8 +213,46 @@ export default function EarningsCalendarPage() {
                 checked={s.autoImportEnabled !== false}
                 onChange={(e) => setField({ autoImportEnabled: e.target.checked })}
               />
-              {' '}Auto-import daily at 07:00
+              {' '}Auto-import via the job queue (scheduled_job)
             </label>
+            <p className="ec-field-hint">
+              Runs through the unified job queue on every automation tick — visible under Automation → Jobs.
+            </p>
+          </div>
+
+          <div className="ec-field">
+            <label>Schedule time</label>
+            <input
+              type="time"
+              className="ec-input"
+              value={s.scheduleTime ?? '07:00'}
+              onChange={(e) => e.target.value && setField({ scheduleTime: e.target.value })}
+            />
+          </div>
+
+          <div className="ec-field">
+            <label>Schedule days</label>
+            <div className="ec-chip-tabs">
+              {['daily', 'weekdays'].map((d) => (
+                <button key={d} type="button" className={`ec-chip ${s.scheduleDays === d ? 'ec-chip-active' : ''}`} onClick={() => setField({ scheduleDays: d })}>
+                  {d === 'daily' ? 'Every day' : 'Weekdays only'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="ec-field">
+            <label>
+              <input
+                type="checkbox"
+                checked={s.requireKnownSession === true}
+                onChange={(e) => setField({ requireKnownSession: e.target.checked })}
+              />
+              {' '}Only events with a known session (BMO/AMC)
+            </label>
+            <p className="ec-field-hint">
+              Drops reports whose pre/post-market session is unknown — keeps the calendar cleaner.
+            </p>
           </div>
 
           <div className="ec-settings-actions">
@@ -226,7 +267,8 @@ export default function EarningsCalendarPage() {
               : lastImport
                 ? `Last import ${lastImport.filters?.scope ?? '—'} @ ${lastImport.at} — ${lastImport.total ?? 0} stored of ${lastImport.fetched ?? 0} fetched`
                   + ` (${lastImport.dropped?.droppedScope ?? 0} scope / ${lastImport.dropped?.droppedSession ?? 0} session / ${lastImport.dropped?.droppedMarketCap ?? 0} cap dropped, source ${lastImport.source ?? '—'})`
-                : 'No import recorded yet — the daily 07:00 cron or Import now will populate the database.'}
+                : 'No import recorded yet — the scheduled job or Import now will populate the database.'}
+            {nextRunText ? ` Next scheduled run: ${nextRunText}.` : ''}
             <span className="ec-stored-count"> · {statusQuery.data?.storedEvents ?? 0} events in DB</span>
           </div>
         </div>

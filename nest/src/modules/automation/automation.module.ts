@@ -25,6 +25,7 @@ import { TimelineController } from './timeline.controller';
 import { AbTestController } from './ab-test.controller';
 
 @Global()
+@Global()
 @Module({
   imports: [DirectivesModule, CalibrationModule, ScoringModule, ProvidersModule, TradingModule, DiversificationModule, MarketDataModule, SymbolsModule, CalendarModule],
   controllers: [AutomationController, StopGuardianController, TimelineController, AbTestController, JobQueueController],
