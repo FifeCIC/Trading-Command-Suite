@@ -17,6 +17,50 @@
 .ec-chip:hover { border-color: var(--accent, #0ea5a6); color: var(--ink, #e2e8f0); }
 .ec-chip-active { background: rgba(14,165,166,0.15); border-color: var(--accent, #0ea5a6); color: var(--accent, #0ea5a6); }
 
+/* ── Import settings card ─────────────────────────────────── */
+.ec-settings-card {
+  border: 1px solid var(--line, #1e2a45);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+}
+.ec-settings-summary {
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  padding: 0.65rem 1rem; cursor: pointer; font-size: 0.82rem; font-weight: 600;
+  user-select: none; list-style: none;
+}
+.ec-settings-summary::-webkit-details-marker { display: none; }
+.ec-settings-current { font-weight: 400; font-size: 0.72rem; color: var(--ink-soft, #94a3b8); }
+.ec-settings-body {
+  border-top: 1px solid var(--line, #1e2a45);
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.9rem;
+}
+.ec-field-hint { font-size: 0.68rem; color: var(--ink-soft, #94a3b8); margin: 0.15rem 0 0; line-height: 1.35; }
+.ec-input {
+  padding: 0.4rem 0.55rem; font-size: 0.8rem;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--line, #1e2a45);
+  border-radius: 6px; color: var(--ink, #e2e8f0); width: 100%; box-sizing: border-box;
+}
+.ec-settings-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.ec-btn {
+  padding: 0.42rem 0.9rem; font-size: 0.78rem; border-radius: 6px; cursor: pointer;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--line, #1e2a45); color: var(--ink, #e2e8f0);
+}
+.ec-btn:hover { border-color: var(--accent, #0ea5a6); }
+.ec-btn-primary { background: var(--accent, #0ea5a6); border-color: var(--accent, #0ea5a6); color: #04151a; font-weight: 600; }
+.ec-btn-primary:hover { filter: brightness(1.1); }
+.ec-settings-msg { font-size: 0.75rem; color: var(--accent, #0ea5a6); }
+.ec-import-status {
+  grid-column: 1 / -1;
+  font-size: 0.72rem; color: var(--ink-soft, #94a3b8);
+  border-top: 1px dashed var(--line, #1e2a45); padding-top: 0.6rem;
+}
+.ec-stored-count { color: var(--ink-soft, #94a3b8); }
+
 /* ── Week sections ────────────────────────────────────────── */
 .ec-week { margin-bottom: 1.5rem; }
 .ec-week-label { font-size: 0.95rem; margin: 0 0 0.5rem; display: flex; align-items: center; gap: 0.5rem; }

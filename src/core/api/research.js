@@ -1,4 +1,4 @@
-import { apiGet } from './client';
+import { apiGet, apiPost, apiPut } from './client';
 
 /**
  * Fetch earnings calendar from Finnhub (via NestJS proxy).
@@ -11,6 +11,38 @@ export function fetchEarningsCalendar({ symbol, months } = {}) {
   if (months) params.set('months', String(months));
   const qs = params.toString();
   return apiGet(`/api/research/earnings/calendar${qs ? '?' + qs : ''}`);
+}
+
+/**
+ * Earnings import settings (scope / market cap / session / auto-import).
+ * @returns {Promise<{ autoImportEnabled, horizonMonths, scope, minMarketCap, timeOfDay, sources }>}
+ */
+export function fetchEarningsSettings() {
+  return apiGet('/api/research/earnings/settings');
+}
+
+/**
+ * Patch one or more earnings import settings.
+ * @param {object} patch
+ */
+export function updateEarningsSettings(patch) {
+  return apiPut('/api/research/earnings/settings', patch);
+}
+
+/**
+ * Trigger a background earnings import (honors import settings).
+ * @returns {Promise<{ started: boolean, message: string }>}
+ */
+export function importEarnings() {
+  return apiPost('/api/research/earnings/import');
+}
+
+/**
+ * Import status: running flag, stored event count, settings snapshot, last run.
+ * @returns {Promise<{ running, storedEvents, settings, lastImport }>}
+ */
+export function fetchEarningsImportStatus() {
+  return apiGet('/api/research/earnings/status');
 }
 
 /**

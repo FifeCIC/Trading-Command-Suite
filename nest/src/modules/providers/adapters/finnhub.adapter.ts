@@ -251,25 +251,70 @@ export class FinnhubAdapter implements IProviderAdapter {
 
   // ── Earnings Calendar ────────────────────────────────
 
-  async getEarningsCalendar(symbol?: string, horizonMonths = 3): Promise<EarningsEvent[]> {
-    const from = new Date().toISOString().split('T')[0];
-    const to = new Date(Date.now() + horizonMonths * 30 * 86400000).toISOString().split('T')[0];
-    this.logger.log(`Finnhub: fetching earnings calendar ${from} → ${to}${symbol ? ' for ' + symbol : ''}`);
+  /**
+   * Fetch one calendar window. Finnhub caps responses at 1500 events and
+   * returns them newest-first — a single 90-day call silently truncates
+   * older dates (observed 2026-08-22: a 90-day call returned only the last
+   * 15 days). Chunk the horizon into 10-day windows; if a window hits the
+   * cap, recursively split it down to 3-day granularity.
+   */
+  private async fetchEarningsWindow(from: string, to: string): Promise<any[]> {
     const data = await this.finnhubGet<any>(
       `/calendar/earnings?from=${from}&to=${to}`,
     );
-    if (!data?.earningsCalendar) return [];
-    const events: EarningsEvent[] = data.earningsCalendar.map((e: any) => ({
-      symbol: e.symbol,
-      name: e.name || undefined,
-      reportDate: e.date,
-      epsEstimate: e.epsEstimate ?? null,
-      epsActual: e.epsActual ?? null,
-      revenueEstimate: e.revenueEstimate ?? null,
-      revenueActual: e.revenueActual ?? null,
-      timeOfDay: e.hour === 'bmo' ? 'Before Open' : e.hour === 'amc' ? 'After Close' : null,
-      source: 'finnhub',
-    } as EarningsEvent));
+    return data?.earningsCalendar ? data.earningsCalendar : [];
+  }
+
+  async getEarningsCalendar(symbol?: string, horizonMonths = 3): Promise<EarningsEvent[]> {
+    const totalDays = Math.ceil(horizonMonths * 30.44);
+    const CHUNK_DAYS = 10;
+    const CAP = 1500;
+    const events: EarningsEvent[] = [];
+    const seen = new Set<string>();
+    const start = new Date();
+    this.logger.log(
+      `Finnhub: fetching earnings calendar for ${totalDays} days (${Math.ceil(totalDays / CHUNK_DAYS)} windows${symbol ? ', symbol=' + symbol : ''})`,
+    );
+
+    const collectRange = async (fromDate: Date, days: number, depth = 0): Promise<void> => {
+      const from = fromDate.toISOString().split('T')[0];
+      const to = new Date(fromDate.getTime() + (days - 1) * 86400000)
+        .toISOString().split('T')[0];
+      const chunk = await this.fetchEarningsWindow(from, to);
+
+      // Hit the response cap → split the window to get complete coverage.
+      if (chunk.length >= CAP && days > 3 && depth < 4) {
+        const half = Math.ceil(days / 2);
+        await collectRange(fromDate, half, depth + 1);
+        await collectRange(new Date(fromDate.getTime() + half * 86400000), days - half, depth + 1);
+        return;
+      }
+
+      for (const e of chunk) {
+        const key = `${e.symbol}|${e.date}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        events.push({
+          symbol: e.symbol,
+          name: e.name || undefined,
+          reportDate: e.date,
+          epsEstimate: e.epsEstimate ?? null,
+          epsActual: e.epsActual ?? null,
+          revenueEstimate: e.revenueEstimate ?? null,
+          revenueActual: e.revenueActual ?? null,
+          timeOfDay: e.hour === 'bmo' ? 'Before Open' : e.hour === 'amc' ? 'After Close' : null,
+          source: 'finnhub',
+        } as EarningsEvent);
+      }
+    };
+
+    for (let offset = 0; offset < totalDays; offset += CHUNK_DAYS) {
+      await collectRange(
+        new Date(start.getTime() + offset * 86400000),
+        Math.min(CHUNK_DAYS, totalDays - offset),
+      );
+    }
+
     // Filter by symbol if provided (Finnhub returns all earnings)
     const filtered = symbol
       ? events.filter((e) => e.symbol?.toUpperCase() === symbol.toUpperCase())

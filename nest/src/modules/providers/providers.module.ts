@@ -116,7 +116,7 @@ export class ProvidersModule implements OnModuleInit {
       baseUrl: 'https://finnhub.io/api/v1',
       capabilities: ['quotes', 'candles', 'profiles', 'news', 'fundamentals'],
       failoverPriority: 50,
-      enabled: false,  // Key expires too quickly — disabled 2026-07-10
+      enabled: true, // Re-enabled 2026-08-22 — key verified live (earnings calendar returns 500+ events)
     });
 
     this.adapterFactory.register('twelvedata', TwelveDataAdapter, {

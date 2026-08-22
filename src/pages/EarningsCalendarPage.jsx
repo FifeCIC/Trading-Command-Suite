@@ -1,6 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchEarningsCalendar } from '../core/api/research.js';
+import {
+  fetchEarningsCalendar,
+  fetchEarningsSettings,
+  fetchEarningsImportStatus,
+  updateEarningsSettings,
+  importEarnings,
+} from '../core/api/research.js';
 import './earnings-calendar.css';
 
 function getWeekLabel(dateStr) {
@@ -19,16 +25,69 @@ function formatRev(val) {
   return `${val}`;
 }
 
+function scopeLabelMap(sc) {
+  return { all: 'All symbols', watchlist: 'Watchlist only', portfolio: 'Portfolio only' }[sc] ?? sc;
+}
+
 export default function EarningsCalendarPage() {
   const [sectorFilter, setSectorFilter] = useState('all');
   const [expandedSym, setExpandedSym] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(3); // default 3 months
+  const [settingsDraft, setSettingsDraft] = useState(null);
+  const [settingsMsg, setSettingsMsg] = useState(null);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['earnings-calendar', selectedMonth],
     queryFn: () => fetchEarningsCalendar({ months: selectedMonth }),
     staleTime: 15 * 60 * 1000, // 15 min — earnings calendar doesn't change rapidly
   });
+
+  const settingsQuery = useQuery({
+    queryKey: ['earnings-settings'],
+    queryFn: fetchEarningsSettings,
+    staleTime: 60 * 1000,
+  });
+
+  const statusQuery = useQuery({
+    queryKey: ['earnings-import-status'],
+    queryFn: fetchEarningsImportStatus,
+    refetchInterval: (q) => (q.state.data?.running ? 4000 : 30000),
+  });
+
+  const savedSettings = settingsQuery.data ?? {};
+  const s = settingsDraft ?? savedSettings;
+  const setField = (patch) => {
+    setSettingsDraft((prev) => ({ ...(prev ?? savedSettings), ...patch }));
+  };
+
+  const saveSettings = async () => {
+    try {
+      const saved = await updateEarningsSettings(settingsDraft ?? {});
+      setSettingsDraft(null);
+      setSettingsMsg('Settings saved.');
+      settingsQuery.refetch();
+      statusQuery.refetch();
+      setTimeout(() => setSettingsMsg(null), 4000);
+    } catch (e) {
+      setSettingsMsg(`Save failed: ${e?.message || e}`);
+    }
+  };
+
+  const doImport = async () => {
+    setSettingsMsg('Import started — it runs in the background.');
+    try {
+      const res = await importEarnings();
+      if (!res?.started) setSettingsMsg('An import is already running.');
+      statusQuery.refetch();
+    } catch (e) {
+      setSettingsMsg(`Import failed to start: ${e?.message || e}`);
+    }
+    setTimeout(() => setSettingsMsg(null), 6000);
+  };
+
+  const lastImport = statusQuery.data?.lastImport;
+  const scopeLabel = scopeLabelMap(s.scope);
+  const sessionLabel = { all: 'Any session', bmo: 'Before open', amc: 'After close' }[s.timeOfDay] ?? s.timeOfDay;
 
   const events = data?.events ?? [];
   const sectors = useMemo(() => {
@@ -55,7 +114,7 @@ export default function EarningsCalendarPage() {
         <header className="ec-header">
           <h1>Earnings Calendar</h1>
         </header>
-        <div className="ec-loading">Loading earnings data from Finnhub…</div>
+        <div className="ec-loading">Loading earnings calendar…</div>
       </div>
     );
   }
@@ -80,10 +139,98 @@ export default function EarningsCalendarPage() {
       <header className="ec-header">
         <h1>Earnings Calendar</h1>
         <p className="ec-subtitle">
-          {data?.count ?? 0} upcoming earnings reports from Finnhub.
+          {data?.count ?? 0} upcoming earnings reports from {data?.source === 'nasdaq' ? 'Nasdaq (fallback)' : 'Finnhub'}.
           <span className="ec-source"> Data refreshes every 15 min.</span>
         </p>
       </header>
+
+      {/* ── Import Settings Panel ── */}
+      <details className="ec-settings-card">
+        <summary className="ec-settings-summary">
+          <span>Import settings</span>
+          <span className="ec-settings-current">
+            {scopeLabel} · {sessionLabel} · {s.minMarketCap > 0 ? `≥$${(s.minMarketCap / 1e9).toFixed(1)}B` : 'any cap'} · auto {s.autoImportEnabled ? 'on' : 'off'}
+          </span>
+        </summary>
+        <div className="ec-settings-body">
+          <div className="ec-field">
+            <label>Import scope</label>
+            <div className="ec-chip-tabs">
+              {['all', 'watchlist', 'portfolio'].map((sc) => (
+                <button key={sc} type="button" className={`ec-chip ${s.scope === sc ? 'ec-chip-active' : ''}`} onClick={() => setField({ scope: sc })}>
+                  {scopeLabelMap(sc)}
+                </button>
+              ))}
+            </div>
+            <p className="ec-field-hint">
+              'all' imports every symbol the sources report; watchlist/portfolio only keeps symbols you already track.
+            </p>
+          </div>
+
+          <div className="ec-field">
+            <label>Session</label>
+            <div className="ec-chip-tabs">
+              {['all', 'bmo', 'amc'].map((td) => (
+                <button key={td} type="button" className={`ec-chip ${s.timeOfDay === td ? 'ec-chip-active' : ''}`} onClick={() => setField({ timeOfDay: td })}>
+                  {{ all: 'Any session', bmo: 'Before open', amc: 'After close' }[td]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="ec-field">
+            <label>Min market cap ($B, 0 = off)</label>
+            <input
+              type="number"
+              className="ec-input"
+              min="0"
+              step="0.1"
+              value={s.minMarketCap > 0 ? (s.minMarketCap / 1e9).toFixed(1) : ''}
+              placeholder="0"
+              onChange={(e) => setField({ minMarketCap: Math.max(0, parseFloat(e.target.value) || 0) * 1e9 })}
+            />
+            <p className="ec-field-hint">
+              Applied where the source provides market cap (Nasdaq does, Finnhub doesn't) — unknown-cap events are kept.
+            </p>
+          </div>
+
+          <div className="ec-field">
+            <label>Import horizon</label>
+            <select className="ec-input" value={s.horizonMonths ?? 3} onChange={(e) => setField({ horizonMonths: parseInt(e.target.value, 10) })}>
+              {[1, 2, 3, 6, 12].map((m) => (
+                <option key={m} value={m}>{m} month{m > 1 ? 's' : ''}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="ec-field">
+            <label>
+              <input
+                type="checkbox"
+                checked={s.autoImportEnabled !== false}
+                onChange={(e) => setField({ autoImportEnabled: e.target.checked })}
+              />
+              {' '}Auto-import daily at 07:00
+            </label>
+          </div>
+
+          <div className="ec-settings-actions">
+            <button type="button" className="ec-btn ec-btn-primary" onClick={saveSettings}>Save settings</button>
+            <button type="button" className="ec-btn" onClick={doImport}>Import now</button>
+            <span className="ec-settings-msg">{settingsMsg ?? ''}</span>
+          </div>
+
+          <div className="ec-import-status">
+            {statusQuery.data?.running
+              ? '⏳ Import running — polling status…'
+              : lastImport
+                ? `Last import ${lastImport.filters?.scope ?? '—'} @ ${lastImport.at} — ${lastImport.total ?? 0} stored of ${lastImport.fetched ?? 0} fetched`
+                  + ` (${lastImport.dropped?.droppedScope ?? 0} scope / ${lastImport.dropped?.droppedSession ?? 0} session / ${lastImport.dropped?.droppedMarketCap ?? 0} cap dropped, source ${lastImport.source ?? '—'})`
+                : 'No import recorded yet — the daily 07:00 cron or Import now will populate the database.'}
+            <span className="ec-stored-count"> · {statusQuery.data?.storedEvents ?? 0} events in DB</span>
+          </div>
+        </div>
+      </details>
 
       <div className="ec-filters">
         <div className="ec-field">

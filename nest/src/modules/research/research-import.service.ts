@@ -2,17 +2,21 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
 import { ProvidersService } from '../providers/providers.service';
+import { NasdaqEarningsService } from './nasdaq-earnings.service';
+import { EarningsImportSettingsService, EarningsImportSettings } from './earnings-import-settings.service';
+import { EarningsEvent } from '../providers/interfaces/provider-adapter.interface';
 
 @Injectable()
 export class ResearchImportService {
   private readonly logger = new Logger(ResearchImportService.name);
   private finnhubUnavailableLogged = false;
+  private earningsImportRunning = false;
 
   /** Returns the Finnhub adapter, or null — logs once if unavailable. */
   private getFinnhub(): any {
     const adapter = this.providers.getAdapter('finnhub');
     if (!adapter && !this.finnhubUnavailableLogged) {
-      this.logger.warn('Finnhub adapter not available — skipping Finnhub-dependent imports (logged once)');
+      this.logger.warn('Finnhub adapter not available — earnings imports will use the Nasdaq fallback (logged once)');
       this.finnhubUnavailableLogged = true;
     }
     return adapter;
@@ -21,24 +25,106 @@ export class ResearchImportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly providers: ProvidersService,
+    private readonly nasdaqEarnings: NasdaqEarningsService,
+    private readonly settingsService: EarningsImportSettingsService,
   ) {}
 
   /**
-   * Daily at 07:00 — fetch earnings calendar for next 3 months and upsert into DB.
+   * Daily at 07:00 — fetch earnings calendar and upsert into DB, honoring the
+   * user's import settings (scope / min market cap / session / horizon).
+   * `force=true` runs even when auto-import is disabled (manual trigger).
    */
   @Cron(CronExpression.EVERY_DAY_AT_7AM)
-  async importEarningsCalendar() {
-    this.logger.log('Starting daily earnings calendar import...');
+  async importEarningsCalendar(
+    force = false,
+  ): Promise<{
+    skipped?: boolean;
+    reason?: string;
+    inserted: number;
+    updated: number;
+    total: number;
+    fetched: number;
+    dropped: Record<string, number>;
+    source: string | null;
+    filters: Record<string, unknown>;
+  }> {
+    if (this.earningsImportRunning) {
+      this.logger.warn('Earnings import already running — skipping duplicate trigger');
+      return { inserted: 0, updated: 0, total: 0, fetched: 0, dropped: {}, source: null, filters: {} };
+    }
+
+    const settings = await this.settingsService.getSettings();
+    if (!force && !settings.autoImportEnabled) {
+      this.logger.log('Earnings auto-import disabled in settings — skipping scheduled run');
+      return { skipped: true, reason: 'Auto-import disabled in settings', inserted: 0, updated: 0, total: 0, fetched: 0, dropped: {}, source: null, filters: {} };
+    }
+
+    this.earningsImportRunning = true;
+    this.settingsService.markRunning();
+    this.logger.log(
+      `Starting earnings calendar import (horizon=${settings.horizonMonths}m, scope=${settings.scope}, minCap=${settings.minMarketCap}, session=${settings.timeOfDay})...`,
+    );
     const startTime = Date.now();
 
     try {
+      const horizon = settings.horizonMonths;
+
+      // ── Sources: Finnhub (primary, full horizon) + Nasdaq (keyless cross-check) ──
       const finnhub = this.getFinnhub();
-      if (!finnhub) return;
-      const events = await (finnhub as any).getEarningsCalendar(undefined, 3);
+      const events: EarningsEvent[] = [];
+      const seenKeys = new Set<string>();
+      let finnhubCount = 0;
+      let nasdaqCount = 0;
+
+      if (finnhub && typeof (finnhub as any).getEarningsCalendar === 'function') {
+        const fhEvents: EarningsEvent[] = await (finnhub as any).getEarningsCalendar(undefined, horizon);
+        for (const e of fhEvents || []) {
+          events.push(e);
+          seenKeys.add(`${e.symbol}|${e.reportDate}`);
+        }
+        finnhubCount = events.length;
+      }
+
+      const nasdaqEvents = await this.nasdaqEarnings.getCalendar(horizon);
+      for (const e of nasdaqEvents) {
+        const key = `${e.symbol}|${e.reportDate}`;
+        if (seenKeys.has(key)) continue; // Finnhub already covers this event
+        seenKeys.add(key);
+        events.push(e);
+        nasdaqCount++;
+      }
+
+      const source = events.length
+        ? (finnhubCount > 0 && nasdaqCount > 0 ? 'finnhub+nasdaq' : finnhubCount > 0 ? 'finnhub' : 'nasdaq')
+        : null;
+
+      if (!source || events.length === 0) {
+        this.logger.warn('Earnings import: no events from Finnhub or Nasdaq — nothing stored');
+        return { inserted: 0, updated: 0, total: 0, fetched: 0, dropped: {}, source: null, filters: {} };
+      }
+
+      // ── Settings filters: scope → session → market cap ──
+      const scopeSymbols = await this.settingsService.loadScopeSymbols(settings.scope);
+      const { kept, stats } = this.settingsService.applyFilters(events, settings, scopeSymbols);
+      if (kept.length === 0) {
+        this.logger.warn(
+          `Earnings import: settings filters removed all ${events.length} events (${JSON.stringify(stats)}) — nothing stored`,
+        );
+        const summary = {
+          inserted: 0, updated: 0, total: 0, fetched: events.length,
+          dropped: { ...stats }, source, filters: { scope: settings.scope, minMarketCap: settings.minMarketCap, timeOfDay: settings.timeOfDay },
+          at: new Date().toISOString(), durationMs: Date.now() - startTime,
+        };
+        await this.settingsService.recordLastImport(summary);
+        return summary;
+      }
+
       let inserted = 0;
       let updated = 0;
 
-      for (const evt of events) {
+      // Upsert in concurrent batches of 20 — sequential Prisma upserts of 5k+
+      // events exceed the HTTP timeout when triggered manually.
+      const upsertOne = async (evt: EarningsEvent): Promise<'inserted' | 'updated' | 'skipped'> => {
         const existing = await this.prisma.earningsEvent.findFirst({
           where: {
             symbol: evt.symbol,
@@ -67,20 +153,85 @@ export class ResearchImportService {
             where: { id: existing.id },
             data,
           });
-          updated++;
-        } else {
-          await this.prisma.earningsEvent.create({ data });
-          inserted++;
+          return 'updated';
+        }
+        await this.prisma.earningsEvent.create({ data });
+        return 'inserted';
+      };
+
+      const BATCH = 20;
+      for (let i = 0; i < kept.length; i += BATCH) {
+        const results = await Promise.all(
+          kept.slice(i, i + BATCH).map((evt) =>
+            upsertOne(evt).catch((err) => {
+              this.logger.warn(`Earnings upsert failed for ${evt.symbol}: ${(err as Error).message}`);
+              return 'skipped' as const;
+            }),
+          ),
+        );
+        for (const r of results) {
+          if (r === 'inserted') inserted++;
+          else if (r === 'updated') updated++;
         }
       }
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
       this.logger.log(
-        `Earnings import complete: ${inserted} new, ${updated} updated, ${events.length} total (${duration}s)`,
+        `Earnings import complete (${source}): ${inserted} new, ${updated} updated, ${kept.length} stored of ${events.length} fetched (${JSON.stringify(stats)} dropped, ${duration}s)`,
       );
+      const summary = {
+        inserted,
+        updated,
+        total: kept.length,
+        fetched: events.length,
+        dropped: { ...stats },
+        source,
+        filters: { scope: settings.scope, minMarketCap: settings.minMarketCap, timeOfDay: settings.timeOfDay, horizonMonths: settings.horizonMonths },
+        at: new Date().toISOString(),
+        durationMs: Date.now() - startTime,
+      };
+      await this.settingsService.recordLastImport(summary);
+      return summary;
     } catch (err) {
       this.logger.error(`Earnings import failed: ${(err as Error).message}`);
+      return { inserted: 0, updated: 0, total: 0, fetched: 0, dropped: {}, source: null, filters: {} };
+    } finally {
+      this.earningsImportRunning = false;
+      this.settingsService.markIdle();
     }
+  }
+
+  /**
+   * Non-blocking trigger for the manual import endpoint. Manual triggers run
+   * even when auto-import is disabled (force=true).
+   * Returns false when an import is already running.
+   */
+  triggerEarningsImport(): boolean {
+    if (this.earningsImportRunning) return false;
+    this.importEarningsCalendar(true)
+      .then((summary) => this.logger.log(`Manual earnings import finished: ${JSON.stringify(summary)}`))
+      .catch((err) => this.logger.error(`Manual earnings import failed: ${(err as Error).message}`));
+    return true;
+  }
+
+  /** Import progress for the status endpoint — cheap single count query. */
+  async getEarningsImportStatus(): Promise<{
+    running: boolean;
+    storedEvents: number;
+    settings: EarningsImportSettings;
+    lastImport: Record<string, unknown> | null;
+  }> {
+    let storedEvents = 0;
+    try {
+      const count: any = await this.prisma.earningsEvent.count();
+      storedEvents = count ?? 0;
+    } catch { /* table may not exist */ }
+    return {
+      running: this.earningsImportRunning,
+      storedEvents,
+      settings: await this.settingsService.getSettings(),
+      lastImport: await this.settingsService.getLastImport(),
+    };
   }
 
   /**

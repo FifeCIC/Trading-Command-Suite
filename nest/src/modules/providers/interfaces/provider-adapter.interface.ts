@@ -247,6 +247,7 @@ export interface EarningsEvent {
   surprisePercent?: number | null;
   timeOfDay?: 'Before Open' | 'After Close' | 'During' | null;
   currency?: string;
+  marketCap?: number | null; // USD — only some sources provide this (Nasdaq does, Finnhub doesn't)
   source: string;
 }
 

@@ -10,12 +10,14 @@ import { AnalystTargetsService } from './analyst-targets.service';
 import { RssScraperService } from './rss-scraper.service';
 import { AlphaVantageNewsService } from './alpha-vantage-news.service';
 import { FinnhubNewsService } from './finnhub-news.service';
+import { NasdaqEarningsService } from './nasdaq-earnings.service';
+import { EarningsImportSettingsService } from './earnings-import-settings.service';
 import { ProvidersModule } from '../providers/providers.module';
 
 @Module({
   imports: [ProvidersModule],
   controllers: [ResearchController, ResearchNotesController, InvestigationController],
-  providers: [ResearchImportService, InvestigationService, ResearchOverviewService, AnalystTargetsService, RssScraperService, AlphaVantageNewsService, FinnhubNewsService, ResearchNotesService],
+  providers: [ResearchImportService, InvestigationService, ResearchOverviewService, AnalystTargetsService, RssScraperService, AlphaVantageNewsService, FinnhubNewsService, NasdaqEarningsService, EarningsImportSettingsService, ResearchNotesService],
   exports: [InvestigationService, ResearchImportService],
 })
 export class ResearchModule {}
