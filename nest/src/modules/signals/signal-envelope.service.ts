@@ -515,9 +515,37 @@ export class SignalEnvelopeService {
 
   /**
    * Get a single symbol's envelope with full directive drilldown.
+   *
+   * Without an explicit protocol, only symbols that an ACTIVE protocol
+   * actually resolves may be scored — page views of arbitrary symbols
+   * (e.g. a symbol just registered on a fresh watchlist) must NOT fall
+   * through to the 'default' protocol and persist default Score rows.
    */
   async getDrilldown(ticker: string, protocolId?: string): Promise<SignalEnvelope> {
+    if (!protocolId) {
+      const covered = await this.isCoveredByActiveProtocol(ticker);
+      if (!covered) {
+        const env = this.emptyEnvelope(ticker);
+        env.preTradeBlockers = ['Not included in any active protocol — no score produced'];
+        return env;
+      }
+    }
     return this.buildEnvelope(ticker, protocolId);
+  }
+
+  /** True when at least one ACTIVE protocol resolves this ticker as a symbol. */
+  private async isCoveredByActiveProtocol(ticker: string): Promise<boolean> {
+    try {
+      const clean = ticker.toUpperCase();
+      const active = await this.protocolDb.findAllActive();
+      for (const slug of active) {
+        const symbols = (await this.protocolDb.resolveSymbols(slug)).map((s) => s.toUpperCase());
+        if (symbols.includes(clean)) return true;
+      }
+    } catch {
+      return false;
+    }
+    return false;
   }
 
   /**
