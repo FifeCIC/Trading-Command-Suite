@@ -958,6 +958,59 @@ model AnalystTarget {
   @@index([source, fetchedAt])
 }
 
+model EarningsWhisperBatch {
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  source     String   @default("earnings-whispers") @db.VarChar(40)
+  rawEmail   String   @map("raw_email") @db.LongText
+  entryCount Int      @default(0) @map("entry_count")
+  status     String   @default("parsed") @db.VarChar(20)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  entries EarningsWhisper[]
+
+  @@map("earnings_whisper_batch")
+  @@index([createdAt])
+}
+
+model EarningsWhisper {
+  id                     String   @id @default(uuid()) @db.VarChar(36)
+  batchId                String?  @map("batch_id") @db.VarChar(36)
+  batch                  EarningsWhisperBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  symbol                 String   @db.VarChar(20)
+  name                   String?  @db.VarChar(200)
+  headline               String?  @db.VarChar(255)
+  reportDate             DateTime @map("report_date")
+  reportTime             String?  @map("report_time") @db.VarChar(40)
+  reportDateLabel        String?  @map("report_date_label") @db.VarChar(80)
+  consensusEps           Float?   @map("consensus_eps")
+  consensusRevenue       Float?   @map("consensus_revenue")
+  consensusRevenueLabel  String?  @map("consensus_revenue_label") @db.VarChar(60)
+  whisperEps             Float?   @map("whisper_eps")
+  guidanceEpsLow         Float?   @map("guidance_eps_low")
+  guidanceEpsHigh        Float?   @map("guidance_eps_high")
+  guidanceRevLow         Float?   @map("guidance_rev_low")
+  guidanceRevHigh        Float?   @map("guidance_rev_high")
+  beatPct                Float?   @map("beat_pct")
+  beatSide               String?  @map("beat_side") @db.VarChar(10)
+  shortInterestChangePct Float?   @map("short_interest_change_pct")
+  shortInterestDirection String?  @map("short_interest_direction") @db.VarChar(10)
+  impliedMovePct         Float?   @map("implied_move_pct")
+  recentAvgMovePct       Float?   @map("recent_avg_move_pct")
+  stockChangePct         Float?   @map("stock_change_pct")
+  priceVs200dmaPct       Float?   @map("price_vs_200dma_pct")
+  dma200Price            Float?   @map("dma_200_price")
+  meta                   Json?
+  rawText                String   @map("raw_text") @db.LongText
+  aiSummary              String?  @map("ai_summary") @db.Text
+  parsedAt               DateTime @default(now()) @map("parsed_at")
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  @@map("earnings_whisper")
+  @@index([symbol, reportDate])
+  @@index([batchId])
+  @@index([createdAt])
+}
+
 model ScoreSnapshot {
   id         String   @id @default(uuid()) @db.VarChar(36)
   protocolId String   @db.VarChar(36)

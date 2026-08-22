@@ -11,6 +11,24 @@ const VIEW_META = {
     css: 'src/pages/home-dashboard.css',
     api: ['GET /api/providers/mt5/diagnostics', 'GET /api/providers/mt5/positions', 'GET /api/scoring/ranked'],
   },
+  '/research/symbols-browser': {
+    label: 'Symbols Browser',
+    file: 'src/pages/SymbolsBrowserPage.jsx',
+    css: 'src/pages/symbols-browser.css',
+    api: ['GET /api/symbols', 'GET /api/market-data/freshness', 'GET /api/symbols/:ticker/snapshot', 'GET /api/symbols/positions'],
+  },
+  '/research/earnings-calendar': {
+    label: 'Earnings Calendar',
+    file: 'src/pages/EarningsCalendarPage.jsx',
+    css: 'src/pages/earnings-calendar.css',
+    api: ['GET /api/research/earnings/calendar'],
+  },
+  '/research/earnings-whispers': {
+    label: 'Earnings Whispers',
+    file: 'src/pages/EarningsWhispersPage.jsx',
+    css: 'src/pages/earnings-whispers.css',
+    api: ['POST /api/earnings-whispers/parse', 'GET /api/earnings-whispers'],
+  },
   '/education/glossary': {
     label: 'Glossary',
     file: 'src/pages/GlossaryPage.jsx',

@@ -67,6 +67,7 @@ import TechnicalIndicatorsPage from '../pages/TechnicalIndicatorsPage.jsx';
 import PatternScannerPage from '../pages/PatternScannerPage.jsx';
 import MacroMonitorPage from '../pages/MacroMonitorPage.jsx';
 import EarningsCalendarPage from '../pages/EarningsCalendarPage.jsx';
+import EarningsWhispersPage from '../pages/EarningsWhispersPage.jsx';
 import PriceForecastPage from '../pages/PriceForecastPage.jsx';
 import SectorRotationPage from '../pages/SectorRotationPage.jsx';
 import MarketCorrelationsPage from '../pages/MarketCorrelationsPage.jsx';
@@ -251,6 +252,7 @@ export const VIEW_COMPONENTS = {
   'pattern-scanner': PatternScannerPage,
   'macro-monitor': MacroMonitorPage,
   'earnings-calendar': EarningsCalendarPage,
+  'earnings-whispers': EarningsWhispersPage,
   'price-forecast': PriceForecastPage,
   'sector-rotation': SectorRotationPage,
   'market-correlations': MarketCorrelationsPage,

@@ -1,0 +1,285 @@
+.ew-page {
+  max-width: none;
+  margin: 0;
+  padding: 1.25rem 1.5rem 2rem;
+  color: var(--ink);
+}
+
+.ew-page-header h1 {
+  margin: 0 0 0.2rem;
+  font-size: 1.4rem;
+}
+
+.ew-page-header p {
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  max-width: 70ch;
+  line-height: 1.5;
+}
+
+/* --- Input panel --- */
+
+.ew-input-panel {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  padding: 0.85rem;
+  margin-bottom: 0.85rem;
+}
+
+.ew-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.ew-input-row label {
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+
+.ew-save-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ew-parse-btn {
+  margin-left: auto;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  padding: 0.4rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.ew-parse-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.ew-parse-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ew-email-textarea {
+  width: 100%;
+  min-height: 220px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg, rgba(0, 0, 0, 0.1));
+  color: var(--ink);
+  padding: 0.6rem 0.7rem;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.ew-email-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.ew-error {
+  color: #ef4444;
+  font-size: 0.82rem;
+  margin: 0.5rem 0 0;
+}
+
+/* --- Panels --- */
+
+.ew-results-panel,
+.ew-stored-panel {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  padding: 0.85rem;
+  margin-bottom: 0.85rem;
+}
+
+.ew-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.6rem;
+}
+
+.ew-panel-header h2 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.ew-panel-meta {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+.ew-saved-badge,
+.ew-preview-badge {
+  border-radius: 999px;
+  border: 1px solid;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ew-saved-badge {
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.ew-preview-badge {
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+}
+
+/* --- Results table --- */
+
+.ew-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 0.7rem;
+}
+
+.ew-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ew-table thead th {
+  text-align: left;
+  font-size: 0.66rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--line);
+  padding: 0.45rem 0.55rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ew-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.42rem 0.55rem;
+  vertical-align: top;
+  color: var(--ink);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.ew-row:hover {
+  background: color-mix(in srgb, var(--accent) 5%, var(--panel));
+}
+
+.ew-table strong {
+  color: var(--accent);
+}
+
+/* --- Entry details --- */
+
+.ew-entry-detail {
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  padding: 0.4rem 0.6rem;
+}
+
+.ew-entry-detail summary {
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ew-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.ew-entry-grid > div {
+  font-size: 0.8rem;
+  color: var(--ink);
+}
+
+.ew-detail-label {
+  display: block;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  margin-bottom: 0.1rem;
+}
+
+.ew-raw-text {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+/* --- Stored batches --- */
+
+.ew-empty {
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+.ew-batch-list {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.ew-batch-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.82rem;
+}
+
+.ew-batch-date {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.ew-batch-count {
+  color: var(--ink-soft);
+}
+
+.ew-batch-status {
+  margin-left: auto;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  padding: 0.1rem 0.5rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 768px) {
+  .ew-parse-btn { margin-left: 0; }
+}

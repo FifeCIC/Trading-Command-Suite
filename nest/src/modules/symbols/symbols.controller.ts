@@ -134,6 +134,13 @@ export class SymbolsController {
     return { ...this.modeMeta(), symbols, count: symbols.length };
   }
 
+  @Get('positions')
+  @ApiOperation({ summary: 'Current position/holdings map keyed by symbol (DB-only, for the Symbols Browser)' })
+  async positions() {
+    const positions = await this.symbolsService.getPositionMap();
+    return { ...this.modeMeta(), positions };
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a symbol by id' })
   @ApiOkResponse({ description: 'Single symbol' })
@@ -166,6 +173,13 @@ export class SymbolsController {
   async getOverview(@Param('ticker') ticker: string) {
     const overview = await this.symbolsService.getOverview(ticker);
     return { ...this.modeMeta(), ...overview };
+  }
+
+  @Get(':ticker/snapshot')
+  @ApiOperation({ summary: 'Get symbol snapshot for the browser detail rail (company + ranges)' })
+  async getSnapshot(@Param('ticker') ticker: string) {
+    const data = await this.symbolsService.getSnapshot(ticker);
+    return { ...this.modeMeta(), ...data };
   }
 
   @Get(':ticker/protocols')

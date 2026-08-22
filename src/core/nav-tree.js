@@ -70,6 +70,7 @@ export const NAV_TREE = {
       { id: 'symbols-browser', label: 'Symbols Browser', icon: '🔍' },
       { id: 'research-notes', label: 'Notes', icon: '📝' },
       { id: 'earnings-calendar', label: 'Earnings Calendar', icon: '📅' },
+      { id: 'earnings-whispers', label: 'Earnings Whispers', icon: '🤫' },
       { id: 'news-intel', label: 'News Intel', icon: '📰' },
       { id: 'events-calendar', label: 'Events Calendar', icon: '🗓️' },
       { id: 'stock-investigation', label: 'Stock Investigation', icon: '🕵️' },

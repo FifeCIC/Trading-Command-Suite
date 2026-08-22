@@ -478,6 +478,22 @@ export const CONTRACT_REGISTER_LAST_UPDATED = '2026-08-16'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
+    route: 'POST /api/research/earnings/import',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'ResearchController',
+    contract: 'Triggers the earnings calendar DB import in the background (Finnhub full-horizon + Nasdaq keyless cross-check). Returns immediately: { started, message }. Progress via GET /api/research/earnings/status.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/research/earnings/status',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'ResearchController',
+    contract: 'Import progress for the earnings calendar: { running, storedEvents }. Used to confirm manual imports have completed.',
+    status: 'active',
+  },
+  {
     route: 'POST /api/scoring/gated/batch',
     method: 'POST',
     permission: 'Authenticated operator access',
@@ -651,6 +667,30 @@ export const CURRENT_ROUTE_CONTRACTS = [
     permission: 'Authenticated operator access',
     owner: 'Symbols controller',
     contract: 'Returns all symbols with active status. Supports CRUD via POST/PATCH.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/symbols/positions',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'Symbols controller',
+    contract: 'DB-only current position/holdings map for the Symbols Browser. Reads the stored Position table (no external provider calls). Response: { mode, services, positions: [{ symbol, hasPosition, quantity, avgPrice, currentPrice, pnl, pnlPct, provider }] }. Matched to symbols by uppercased ticker.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/earnings-whispers/parse',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'EarningsWhispersController',
+    contract: 'Parse an Earnings Whispers email dump. Body: { text, save? }. Rule-based parser splits by ### headings and extracts per-symbol consensus EPS/revenue, whisper EPS, guidance, beat %, short interest, implied move, vs 200dma, report date/time. Returns { count, entries, saved, batchId }. When save=true, persists a batch + entries to earnings_whisper_batch/earnings_whisper.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/earnings-whispers',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'EarningsWhispersController',
+    contract: 'List recent Earnings Whispers batches and entries (newest first). Response: { batches, entries }. Backs the Research → Earnings Whispers page.',
     status: 'active',
   },
   {
@@ -2006,6 +2046,18 @@ export const DATABASE_SCHEMA = {
       description: 'Completed trade records',
       fields: ['id (PK)', 'symbolId (FK)', 'strategyId (FK)', 'entryPrice', 'exitPrice', 'quantity', 'realizedPnL', 'entryTime', 'exitTime', 'duration'],
       relationships: ['← Symbol (many-to-one)', '← Strategy (many-to-one)'],
+    },
+    {
+      table: 'EarningsWhisperBatch',
+      description: 'One row per Earnings Whispers email dump (raw text + entry count). Source of truth for batch imports.',
+      fields: ['id (PK)', 'source', 'rawEmail (LONGTEXT)', 'entryCount', 'status', 'createdAt'],
+      relationships: ['→ EarningsWhisper (one-to-many)'],
+    },
+    {
+      table: 'EarningsWhisper',
+      description: 'Per-symbol parsed metadata from Earnings Whispers emails: consensus EPS/revenue, whisper EPS, guidance, beat %, short interest, implied move, vs 200dma. Linked to batch. Basis for long-term prediction-accuracy tracking vs EarningsEvent actuals.',
+      fields: ['id (PK)', 'batchId (FK)', 'symbol', 'name', 'headline', 'reportDate', 'reportTime', 'consensusEps', 'consensusRevenue', 'whisperEps', 'guidanceEpsLow/High', 'guidanceRevLow/High', 'beatPct', 'beatSide', 'shortInterestChangePct', 'shortInterestDirection', 'impliedMovePct', 'recentAvgMovePct', 'stockChangePct', 'priceVs200dmaPct', 'dma200Price', 'meta (JSON)', 'rawText (LONGTEXT)', 'aiSummary', 'parsedAt', 'createdAt'],
+      relationships: ['← EarningsWhisperBatch (many-to-one)'],
     },
   ],
   keyRelationships: [

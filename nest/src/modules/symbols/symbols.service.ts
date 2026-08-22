@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma, Symbol } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { ModeService } from '../../config/mode.service';
+import { AdapterFactory } from '../providers/adapter-factory';
 import { CreateSymbolDto } from './dto/create-symbol.dto';
 import { UpdateSymbolDto } from './dto/update-symbol.dto';
 import { readFileSync, existsSync } from 'fs';
@@ -14,6 +15,7 @@ export class SymbolsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly modeService: ModeService,
+    private readonly adapterFactory: AdapterFactory,
   ) {}
 
   async create(dto: CreateSymbolDto): Promise<Symbol> {
@@ -190,6 +192,120 @@ export class SymbolsService {
         pnl: Number(p.unrealizedPnl || 0),
       })),
       freshness,
+    };
+  }
+
+  /**
+   * Current-holdings map from the stored Position table (DB-only — no external
+   * provider calls, so it is safe for page render). Every stored Position row is a
+   * current open position/holding; keyed for cross-referencing the Symbols Browser
+   * (match by uppercased ticker).
+   */
+  async getPositionMap() {
+    if (!this.prisma.isAvailable) return [];
+    try {
+      const rows = await this.prisma.position.findMany({
+        orderBy: { symbol: 'asc' },
+      });
+      return rows.map((p) => {
+        const pnl = p.pnl ?? (p.currentPrice != null && p.avgPrice > 0
+          ? (p.currentPrice - p.avgPrice) * p.quantity
+          : null);
+        const pnlPct = p.avgPrice > 0 && p.currentPrice != null
+          ? ((p.currentPrice - p.avgPrice) / p.avgPrice) * 100
+          : null;
+        return {
+          symbol: p.symbol,
+          hasPosition: true,
+          quantity: p.quantity,
+          avgPrice: p.avgPrice,
+          currentPrice: p.currentPrice,
+          pnl,
+          pnlPct,
+          provider: p.provider,
+        };
+      });
+    } catch (error) {
+      this.logger.warn(`Could not load positions for symbols browser: ${String(error)}`);
+      return [];
+    }
+  }
+
+  /**
+   * Single-symbol snapshot for the Symbols Browser detail rail — company basics,
+   * best-effort provider profile (sector/industry/market cap), and day + historical
+   * high/low derived from stored daily bars. Never blocks on the external provider
+   * (profile fetch is best-effort and null-safe).
+   */
+  async getSnapshot(ticker: string) {
+    const upperTicker = ticker.toUpperCase();
+
+    const symbol = await this.prisma.symbol.findFirst({
+      where: { ticker: upperTicker },
+    });
+    if (!symbol) throw new NotFoundException(`Symbol ${upperTicker} not found`);
+
+    // Best-effort company profile (sector / industry / market cap)
+    let sector: string | null = null;
+    let industry: string | null = null;
+    let marketCap: number | null = null;
+    try {
+      const adapter = this.adapterFactory.create('finnhub') as any;
+      if (adapter && typeof adapter.getProfile === 'function') {
+        const profile = await adapter.getProfile(upperTicker);
+        sector = profile?.sector ?? null;
+        industry = profile?.industry ?? null;
+        if (profile?.marketCap) marketCap = Number(profile.marketCap);
+      }
+    } catch { /* profile unavailable — leave null */ }
+
+    try {
+      const metric = await this.prisma.companyMetric.findUnique({
+        where: { symbol: upperTicker },
+      });
+      if (metric?.marketCap) marketCap = Number(metric.marketCap);
+    } catch { /* no company metric */ }
+
+    // Day + historical ranges from stored daily bars
+    let price: number | null = null;
+    let dayHigh: number | null = null;
+    let dayLow: number | null = null;
+    let historicalHigh: number | null = null;
+    let historicalLow: number | null = null;
+    try {
+      const bars = await (this.prisma as any).marketBar.findMany({
+        where: { symbolId: symbol.id, timeframe: '1d' },
+        orderBy: { timestamp: 'asc' },
+      }) as { high: number; low: number; close: number }[];
+      if (bars.length > 0) {
+        historicalHigh = Math.max(...bars.map((b) => Number(b.high)));
+        historicalLow = Math.min(...bars.map((b) => Number(b.low)));
+        const latest = bars[bars.length - 1];
+        dayHigh = Number(latest.high);
+        dayLow = Number(latest.low);
+        price = Number(latest.close);
+      }
+    } catch { /* no bars */ }
+
+    return {
+      symbol: {
+        id: symbol.id,
+        ticker: symbol.ticker,
+        name: symbol.name,
+        exchange: symbol.exchange,
+        type: symbol.type,
+        active: symbol.active,
+      },
+      company: {
+        name: symbol.name,
+        exchange: symbol.exchange,
+        type: symbol.type,
+        sector,
+        industry,
+        marketCap,
+      },
+      price,
+      ranges: { dayHigh, dayLow, historicalHigh, historicalLow },
     };
   }
 

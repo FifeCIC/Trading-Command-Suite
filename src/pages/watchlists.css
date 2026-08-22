@@ -232,21 +232,28 @@
 
 .wl-symbol-remove {
   position: absolute;
-  top: -5px;
-  right: -5px;
-  background: var(--panel, #1a1d2e);
-  border: 1px solid var(--line, #334155);
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  font-size: 0.65rem;
-  color: var(--ink-soft, #94a3b8);
+  inset: 0;
+  border-radius: 8px;
+  background: rgba(14, 165, 166, 0.92);
+  border: 1px solid var(--accent, #0ea5a6);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  line-height: 1;
-  padding: 0;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s, background 0.12s, border-color 0.12s;
 }
-.wl-symbol-remove:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
+/* On hover of the chip, show the remove overlay centered over the whole chip */
+.wl-symbol-chip-wrap:hover .wl-symbol-remove {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* Hide the chip text while the remove overlay is shown */
+.wl-symbol-chip-wrap:hover .wl-symbol-chip {
+  opacity: 0;
+}
+.wl-symbol-remove:hover { background: #ef4444; border-color: #ef4444; }
