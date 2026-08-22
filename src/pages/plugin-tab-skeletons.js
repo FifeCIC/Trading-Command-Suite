@@ -94,6 +94,16 @@ export const PLUGIN_TAB_SKELETONS = {
     subtitle: 'Deep diagnostics and debug controls for scoring internals.',
     domain: 'Scoring / Development',
   },
+  'symbols-browser': {
+    title: 'Symbols Browser',
+    subtitle: 'Browse and filter the symbol registry.',
+    domain: 'Research / Discovery',
+  },
+  'research-notes': {
+    title: 'Research Notes',
+    subtitle: 'Paste-bin for research clippings with ticker detection and popout actions.',
+    domain: 'Research / Workflow',
+  },
   'sector-rotation': {
     title: 'Sector Rotation',
     subtitle: 'Cross-sector momentum and rotation context for watchlist bias.',

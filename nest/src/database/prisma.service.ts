@@ -177,6 +177,16 @@ export class PrismaService
         UNIQUE KEY uq_news_item_sourceHash (sourceHash),
         INDEX idx_news_item_publishedAt (publishedAt)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      // Research notes — free-text clippings pasted by the user (news, email,
+      // social, discord). Ticker detection happens on the frontend.
+      `CREATE TABLE IF NOT EXISTS research_note (
+        id VARCHAR(36) NOT NULL PRIMARY KEY,
+        content TEXT NOT NULL,
+        sortOrder INT NOT NULL DEFAULT 0,
+        createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+        INDEX idx_research_note_sortOrder (sortOrder)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ];
 
     for (const sql of tables) {

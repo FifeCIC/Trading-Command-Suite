@@ -59,6 +59,7 @@ import AutomationRulesPage from '../pages/AutomationRulesPage.jsx';
 import ExecutionQueuePage from '../pages/ExecutionQueuePage.jsx';
 
 // ── Research ──
+import ResearchNotesPage from '../pages/ResearchNotesPage.jsx';
 import StockInvestigationPage from '../pages/StockInvestigationPage.jsx';
 import SupportResistancePage from '../pages/SupportResistancePage.jsx';
 import VolatilityAnalysisPage from '../pages/VolatilityAnalysisPage.jsx';
@@ -242,6 +243,7 @@ export const VIEW_COMPONENTS = {
   'risk-controls': RiskControlsPage,
 
   // Research
+  'research-notes': ResearchNotesPage,
   'stock-investigation': StockInvestigationPage,
   'support-resistance': SupportResistancePage,
   'volatility-analysis': VolatilityAnalysisPage,

@@ -1,0 +1,241 @@
+/* Research Notes — paste-bin with accordion, drag reorder, ticker popout */
+
+.rn-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  max-width: 920px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.rn-header h1 {
+  margin: 0;
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.rn-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.rn-textarea {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 0.75rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.rn-add-btn {
+  align-self: flex-end;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rn-add-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.rn-empty {
+  color: var(--textDim);
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.rn-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rn-item {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.rn-item--open {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.rn-item-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.6rem;
+}
+
+.rn-drag {
+  cursor: grab;
+  color: var(--textFaint);
+  user-select: none;
+  padding: 0.2rem 0.25rem;
+  touch-action: none;
+}
+
+.rn-drag:active {
+  cursor: grabbing;
+}
+
+.rn-item-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+}
+
+.rn-chevron {
+  color: var(--textFaint);
+  font-size: 0.75rem;
+}
+
+.rn-item-title {
+  font-size: 0.88rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rn-item-meta {
+  font-size: 0.7rem;
+  color: var(--textFaint);
+  white-space: nowrap;
+}
+
+.rn-delete-btn {
+  background: none;
+  border: none;
+  color: var(--textFaint);
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.rn-delete-btn:hover {
+  color: var(--riskHigh);
+  background: color-mix(in srgb, var(--riskHigh) 12%, transparent);
+}
+
+.rn-item-body {
+  border-top: 1px solid var(--border);
+  padding: 0.75rem;
+}
+
+.rn-content-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.rn-ticker {
+  color: var(--accent);
+  font-weight: 600;
+  cursor: help;
+  border-bottom: 1px dashed color-mix(in srgb, var(--accent) 60%, transparent);
+  padding: 0 1px;
+}
+
+.rn-ticker:hover {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.rn-ticker[data-registered='no'] {
+  color: var(--riskHigh);
+  border-bottom-style: dotted;
+}
+
+/* ── Ticker popout ── */
+.rn-popout {
+  position: fixed;
+  z-index: 400;
+  width: 240px;
+  background: var(--panel);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.rn-popout-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rn-popout-ticker {
+  font-weight: 700;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.rn-popout-msg {
+  font-size: 0.7rem;
+  color: var(--riskNormal);
+}
+
+.rn-popout-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.rn-popout-action {
+  display: block;
+  text-align: left;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  text-decoration: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.rn-popout-action:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.rn-popout-action--primary {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.rn-popout-action--primary:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
