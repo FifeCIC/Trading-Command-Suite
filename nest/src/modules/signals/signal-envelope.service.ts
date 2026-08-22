@@ -116,6 +116,22 @@ export class SignalEnvelopeService {
     symbols: string[],
     protocolId?: string,
   ): Promise<SignalLadder> {
+    // A protocol is required — the unscoped 'default' pipeline was removed (2026-08-22)
+    if (!protocolId) {
+      return {
+        generatedAt: new Date().toISOString(),
+        protocolId: null,
+        protocolName: null,
+        totalSymbols: 0,
+        buyCount: 0,
+        sellCount: 0,
+        holdCount: 0,
+        envelopes: [],
+        topConflicts: [],
+        message: 'A protocol is required for ladder scoring — unscoped default scoring was removed.',
+      } as SignalLadder & { message: string };
+    }
+
     const envelopes: SignalEnvelope[] = [];
 
     for (const ticker of symbols) {

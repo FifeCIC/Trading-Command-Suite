@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, Logger, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, Patch, Param, Body, Logger, Query } from '@nestjs/common';
 import { ProtocolGatingService, GatedScore } from './protocol-gating.service';
 import { PrismaService } from '../../database/prisma.service';
 import { MarketDataService } from '../market-data/market-data.service';
@@ -412,21 +412,41 @@ export class ProtocolGatingController {
       return [];
     }
 
-    const holdings = await Promise.all(
-      positions.map(async (p) => {
-        const sym = await this.prisma.symbol.findFirst({
-          where: { ticker: p.symbol },
-        });
-        // Use built-in-default protocol's bar requirements for portfolio scoring
-        const requiredBars = this.protocolDb.getRequiredBars('built-in-default');
-        const bars = sym
-          ? await this.marketData.getBars(sym.id, '1d', requiredBars['1d'] || 200)
-          : [];
-        return { symbol: p.symbol, bars: bars || [] };
-      }),
-    );
+    // Each position is scored with ITS OWN assigned protocol. Positions without
+    // a protocol assignment are skipped — unscoped default scoring was removed (2026-08-22).
+    const results: GatedScore[] = [];
+    for (const p of positions) {
+      const sym = await this.prisma.symbol.findFirst({
+        where: { ticker: p.symbol },
+      });
+      if (!sym) {
+        this.logger.warn(`Portfolio position ${p.symbol} has no symbol record — skipped`);
+        continue;
+      }
 
-    return this.protocolGating.scorePortfolio(holdings);
+      let slug: string | null = null;
+      try {
+        const assignment = await (this.prisma as any).symbolProtocolAssignment.findFirst({
+          where: { symbol: p.symbol },
+          orderBy: { priority: 'asc' },
+          include: { protocol: { select: { slug: true } } },
+        });
+        slug = assignment?.protocol?.slug ?? null;
+      } catch { /* assignment table may not exist */ }
+
+      if (!slug) {
+        this.logger.warn(`Portfolio position ${p.symbol} has no protocol assignment — skipped (unscoped scoring removed)`);
+        continue;
+      }
+
+      const requiredBars = this.protocolDb.getRequiredBars(slug);
+      const bars = await this.marketData.getBars(sym.id, '1d', requiredBars['1d'] || 200);
+      if (!bars || bars.length === 0) continue;
+
+      results.push(await this.protocolGating.scoreWithGating(p.symbol, bars as any, slug));
+    }
+
+    return results.sort((a, b) => b.composite - a.composite);
   }
 
   /**
@@ -449,9 +469,14 @@ export class ProtocolGatingController {
   async getBatchGated(@Body() body: { tickers: string[]; protocolId?: string }): Promise<GatedScore[]> {
     if (!body.tickers?.length) return [];
 
-    const protocolBars = body.protocolId
-      ? this.protocolDb.getRequiredBars(body.protocolId)
-      : { '1d': 200 };
+    // A protocol is required — unscoped default scoring was removed (2026-08-22)
+    if (!body.protocolId) {
+      throw new BadRequestException(
+        'protocolId is required for gated batch scoring — unscoped default scoring was removed.',
+      );
+    }
+
+    const protocolBars = this.protocolDb.getRequiredBars(body.protocolId);
     const holdings = await Promise.all(
       body.tickers.map(async (ticker) => {
         const sym = await this.prisma.symbol.findFirst({

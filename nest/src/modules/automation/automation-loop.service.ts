@@ -1589,8 +1589,10 @@ export class AutomationLoopService implements OnModuleInit {
         // No scoreMap entry — use protocol-gating with cache
         try {
           const bars = await getBars();
-          if (bars) {
-            const longGated = await getGated(effectiveProtocolId || 'default', bars);
+          if (!effectiveProtocolId) {
+            this.logger.debug(`Strategy ${strategyId} has no protocol linked — skipping unscoped scoring`);
+          } else if (bars) {
+            const longGated = await getGated(effectiveProtocolId, bars);
             let shortGated: any = null;
             if (effectiveShortProtocolId) {
               shortGated = await getGated(effectiveShortProtocolId, bars);

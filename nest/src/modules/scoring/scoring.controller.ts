@@ -76,8 +76,15 @@ export class ScoringController {
       ? Math.min(Math.max(parsedLimit, 1), 100)
       : 20;
 
-    // ?fresh=true → run the full pipeline (speed trading, testing, on-demand)
+    // ?fresh=true → run the full pipeline (speed trading, testing, on-demand).
+    // Requires a scope — unscoped default scoring was removed (2026-08-22).
     if (fresh === 'true') {
+      if (!strategyId && !protocol) {
+        return {
+          message: 'Fresh scoring requires a strategy_id or protocol — unscoped default scoring was removed.',
+          ranked: [],
+        };
+      }
       return this.scoringService.rankAll(strategyId, safeLimit, undefined, protocol);
     }
 

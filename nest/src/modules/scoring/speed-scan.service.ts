@@ -134,7 +134,7 @@ const SYMBOL_PROTOCOL_MAP: Record<string, string> = {
  *
  * Also returns `active` status so the frontend can filter inactive protocols.
  */
-async function resolveProtocolForSymbol(symbol: string, prisma: any): Promise<{ slug: string; active: boolean }> {
+async function resolveProtocolForSymbol(symbol: string, prisma: any): Promise<{ slug: string; active: boolean } | null> {
   // Try DB first — join to Protocol table to get the slug (NOT the UUID) + active status
   try {
     if (prisma.isAvailable) {
@@ -155,7 +155,7 @@ async function resolveProtocolForSymbol(symbol: string, prisma: any): Promise<{ 
       ['TECS','SQQQ','SPXS','SOXS','FNGD','YANG','SRTY'].includes(symbol)) {
     return { slug: 'leverage-v2', active: true };
   }
-  return { slug: 'default', active: true };
+  return null; // no protocol assigned — unscoped 'default' scoring removed (2026-08-22)
 }
 
 /** Default Tier A/B speed trading symbols */
@@ -221,7 +221,11 @@ export class SpeedScanService {
           this.marketData.getBars(symId, '15m', 30).catch(() => null),
         ]);
 
-        const { slug: protocol, active: protocolActive } = await resolveProtocolForSymbol(symbol, this.prisma);
+        const resolved = await resolveProtocolForSymbol(symbol, this.prisma);
+        if (!resolved) {
+          return { symbol, skipped: true, reason: 'No protocol assigned — unscoped default scoring removed' };
+        }
+        const { slug: protocol, active: protocolActive } = resolved;
         const score = await this.protocolGating.scoreWithGating(
           symbol,
           marketBars as any,

@@ -53,7 +53,7 @@ const COMMANDS = [
   { cat: 'trading', cmd: 'curl -s http://localhost:3201/api/providers/mt5/diagnostics', desc: 'MT5 bridge diagnostics + positions' },
   { cat: 'trading', cmd: 'curl -s http://localhost:3201/api/portfolio?source=mt5', desc: 'MT5 portfolio positions' },
   { cat: 'trading', cmd: 'curl -s http://localhost:3201/api/portfolio?source=trading212', desc: 'Trading212 portfolio positions' },
-  { cat: 'trading', cmd: 'curl -s http://localhost:3201/api/scoring/gated/ranked?protocol=built-in-default', desc: 'Ranked scores for a protocol' },
+  { cat: 'trading', cmd: 'curl -s http://localhost:3201/api/scoring/gated/ranked?protocol=mt5-technical-core-v1', desc: 'Ranked scores for a protocol' },
 ];
 
 // ── Component ───────────────────────────────────────────

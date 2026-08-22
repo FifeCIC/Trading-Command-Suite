@@ -15,7 +15,7 @@
  *   OUTPUT: GatedScore { composite, signal, subScores, riskMultiplier }
  *   NEVER:  evaluates thresholds, opens positions, or persists decisions
  */
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DirectivesService } from '../directives/directives.service';
 import { PrismaService } from '../../database/prisma.service';
 import {
@@ -289,11 +289,21 @@ export class ProtocolGatingService {
     },
     weightStrategy: 'group-weighted' | 'maxscore-weighted' = 'group-weighted',
   ): Promise<GatedScore> {
-    // Select protocol groups first — DB-first with hardcoded fallback (#388)
-    const protocolConfig = protocolId ? (await this.protocolDb.findBySlug(protocolId)) : null;
-    const activeGroups = protocolId
-      ? (protocolConfig?.groups ?? DIRECTIVE_GROUPS)
-      : DIRECTIVE_GROUPS;
+    // Scoring REQUIRES a protocol — the unscoped 'default' pipeline was removed
+    // (2026-08-22). Without a protocol, scoring would run every directive as a
+    // kitchen-sink and persist risky data. Refuse instead.
+    if (!protocolId) {
+      throw new BadRequestException(
+        'Scoring requires a protocol — unscoped default scoring was removed. Pass a protocolId.',
+      );
+    }
+    const protocolConfig = await this.protocolDb.findBySlug(protocolId);
+    if (!protocolConfig || !protocolConfig.groups || protocolConfig.groups.length === 0) {
+      throw new NotFoundException(
+        `Protocol "${protocolId}" not found or has no directive groups — refusing unscoped scoring.`,
+      );
+    }
+    const activeGroups = protocolConfig.groups;
 
     // ── DXY data provisioning (EURUSD proxy) ─────────────────────
     // MT5 always provides EURUSD. DXY futures (ICE index) are rarely available
@@ -524,7 +534,7 @@ export class ProtocolGatingService {
     const riskScore = subScores['risk'] ?? 50; // 50 = neutral risk baseline
 
     // Rarity: compute percentile against historical scores for this protocol
-    const rarity = await this.computeRarity(protocolId ?? 'default', symbol, composite);
+    const rarity = await this.computeRarity(protocolId, symbol, composite);
 
     // Market status (#638 phase A) — whether the symbol's market is producing fresh data.
     const marketStatus = computeMarketStatus(bars);
@@ -540,7 +550,7 @@ export class ProtocolGatingService {
     };
 
     // Store snapshot for future rarity computation (fire-and-forget)
-    this.storeSnapshot(protocolId ?? 'default', symbol, composite, signal, rarity?.percentile ?? null, {
+    this.storeSnapshot(protocolId, symbol, composite, signal, rarity?.percentile ?? null, {
       subScores,
       subRawTotals,
       subMaxTotals,
@@ -599,8 +609,13 @@ export class ProtocolGatingService {
    */
   async scorePortfolio(
     holdings: Array<{ symbol: string; bars: import('../directives/interfaces/directive.interface').MarketBar[] }>,
-    protocolId?: string,
+    protocolId: string,
   ): Promise<GatedScore[]> {
+    if (!protocolId) {
+      throw new BadRequestException(
+        'Portfolio scoring requires a protocol — unscoped default scoring was removed.',
+      );
+    }
     const results = await Promise.all(
       holdings.map((h) => this.scoreWithGating(h.symbol, h.bars, protocolId)),
     );
@@ -750,10 +765,8 @@ export class ProtocolGatingService {
   ): void {
     (async () => {
       // Canonical-symbol guard — only persist symbols this protocol resolves.
-      if (protocolId && protocolId !== 'default') {
-        const canonical = await this.isCanonicalProtocolSymbol(protocolId, symbol);
-        if (!canonical) return;
-      }
+      const canonical = await this.isCanonicalProtocolSymbol(protocolId, symbol);
+      if (!canonical) return;
 
       // Write to score_snapshot (rarity history)
       this.prisma.scoreSnapshot.create({

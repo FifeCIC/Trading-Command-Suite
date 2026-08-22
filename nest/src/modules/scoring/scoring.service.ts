@@ -409,9 +409,9 @@ export class ScoringService implements OnModuleInit {
       // Raw total — unbounded, flows from directive score ranges
       const finalScore = Math.max(0, totalScore + confluenceBonus);
 
-      // Apply seasonal affinity modifier (protocol-calendar)
-      // Uses the 'default' protocol for general portfolio scoring
-      const seasonalMultiplier = this.seasonalAffinity.getMultiplier('default');
+      // Apply seasonal affinity modifier (protocol-calendar).
+      // No 'default' protocol exists — use a neutral label for unscoped flat scoring.
+      const seasonalMultiplier = this.seasonalAffinity.getMultiplier('unscoped');
       const seasonAdjustedScore = finalScore * seasonalMultiplier;
 
       // Normalized score: percentage of achievable maximum for THIS symbol
@@ -676,37 +676,6 @@ export class ScoringService implements OnModuleInit {
       directivesTotal: totalDirectives,
       timestamp: new Date().toISOString(),
     };
-  }
-
-  /**
-   * Find the first active strategy, or create the default "Conviction Dip Accumulation" strategy.
-   * Returns null when Prisma is unavailable.
-   */
-  private async findOrCreateDefaultStrategy(): Promise<{ id: string } | null> {
-    if (!this.prisma.isAvailable) return null;
-
-    const existing = await this.prisma.strategy.findFirst({
-      where: { active: true },
-      select: { id: true },
-    });
-
-    if (existing) return existing;
-
-    return this.prisma.strategy.create({
-      data: {
-        name: 'Conviction Dip Accumulation',
-        description:
-          'Soft long-only, share-buying. Accumulate on quality dips; hold through normal drawdown.',
-        config: {
-          entryThreshold: 60,
-          watchThreshold: 40,
-          defenseThreshold: 25,
-          weights: {}, // Directive maxScores now define weighting — no longer stored in strategy config
-        },
-        active: true,
-      },
-      select: { id: true },
-    });
   }
 
   /**

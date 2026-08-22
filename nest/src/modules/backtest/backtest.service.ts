@@ -162,7 +162,7 @@ export class BacktestService {
     const sizingLabel = positionModel.startsWith('kelly')
       ? `${positionModel}(cap=${kellyCapPct}%)`
       : positionModel;
-    this.logger.log(`Backtest: ${symbol} ${days}d ${timeframe} protocol=${protocolId ?? 'default'} brackets=${doBrackets} slip=${slippage} spread=${spread} commission=${commission} sizing=${sizingLabel} acct=${accountSize} risk=${riskPct}%`);
+    this.logger.log(`Backtest: ${symbol} ${days}d ${timeframe} protocol=${protocolId ?? 'unscoped'} brackets=${doBrackets} slip=${slippage} spread=${spread} commission=${commission} sizing=${sizingLabel} acct=${accountSize} risk=${riskPct}%`);
 
     // Load all bars
     const rows = await this.prisma.marketBar.findMany({
@@ -390,7 +390,7 @@ export class BacktestService {
             exitReason,
             score: Number(score.toFixed(1)),
             signal,
-            protocolId: protocolId ?? 'default',
+            protocolId: protocolId ?? 'unscoped',
             positionSize,
             commission: Number(totalCommission.toFixed(4)),
           });
@@ -427,7 +427,7 @@ export class BacktestService {
     const result: BacktestResult = {
       id: `${symbol}-${Date.now()}`,
       symbol: symbol.toUpperCase(),
-      protocolId: protocolId ?? 'default',
+      protocolId: protocolId ?? 'unscoped',
       period: `${bars[windowSize].timestamp.toISOString().split('T')[0]} to ${bars[bars.length - 1].timestamp.toISOString().split('T')[0]}`,
       totalDays: days,
       timeframe,
@@ -487,7 +487,7 @@ export class BacktestService {
         const run = await this.prisma.backtestRun.create({
           data: {
             symbolId: symbolRow.id,
-            protocolId: protocolId ?? 'default',
+            protocolId: protocolId ?? 'unscoped',
             timeframe,
             startDate: bars[windowSize].timestamp,
             endDate: bars[bars.length - 1].timestamp,

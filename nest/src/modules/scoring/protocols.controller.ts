@@ -132,26 +132,8 @@ export class ProtocolsController {
       }
     }
 
-    // Fallback: show the default protocol (all directives)
-    if (protocols.length === 0) {
-      const allDirectives = this.directivesService.list();
-      const protocolMax = allDirectives.reduce((sum, d) => sum + d.maxScore, 0);
-
-      protocols.push({
-        id: 'default',
-        name: 'Conviction Dip Accumulation',
-        description: 'Default protocol: all registered directives with maxScore-based weighting.',
-        active: true,
-        directiveCount: allDirectives.length,
-        maxPossibleScore: protocolMax,
-        lastRunAt: null,
-        lastRunDurationMs: null,
-        lastRunSymbols: 0,
-        status: 'idle',
-        createdAt: new Date().toISOString(),
-      });
-    }
-
+    // No synthetic 'default' protocol — unscoped default scoring was removed (2026-08-22).
+    // When no protocols exist, return an empty list.
     const schedulerStatus = this.schedulerService.getStatus();
 
     return {
@@ -170,7 +152,7 @@ export class ProtocolsController {
     let protocol: ProtocolSummary | null = null;
     const directiveList: Array<{ id: string; name: string; maxScore: number; priority: number }> = [];
 
-    if (this.prisma.isAvailable && id !== 'default') {
+    if (this.prisma.isAvailable) {
       try {
         const s = await this.prisma.strategy.findUnique({
           where: { id },
