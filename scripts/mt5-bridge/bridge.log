@@ -27508,3 +27508,4 @@ oneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone Met
 2026-08-22 23:41:50,884 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
 2026-08-22 23:45:17,331 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
 2026-08-22 23:46:06,253 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-23 00:26:55,501 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'

@@ -198,6 +198,8 @@ This file costs ~200-400 tokens to write. If the agent self-updated the QA page,
 
 ## What the Librarian Does
 
+> ⚠️ **DELETE, don't archive.** After a handoff is processed it is **deleted** — do NOT move it into a `processed/` folder. Git history is the permanent record.
+
 When processing handoffs, the Librarian invokes the `update-architecture-framework` skill (`.github/skills/update-architecture-framework/SKILL.md`) which handles:
 - Updating `src/core/architecture-reference.js` (AI-readable system map)
 - Updating `src/pages/architecture-framework.data.js` (human-facing UI page)

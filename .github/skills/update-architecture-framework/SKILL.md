@@ -19,7 +19,7 @@ Trigger this skill after:
 
 ## Files to Update
 
-Start by reading all unprocessed handoff files from `.github/handoffs/` (excluding `README.md` and files in `processed/`). Extract the Architecture Framework entries from each.
+Start by reading all unprocessed handoff files from `.github/handoffs/` (excluding `README.md`). Extract the Architecture Framework entries from each.
 
 Then update:
 
@@ -108,7 +108,7 @@ export const YOUR_DATA_CONSTANT = [
 ## Verification
 
 1. Run `npm --prefix c:/wamp64/www/trading-command-suite run build` — must pass
-2. Move processed handoff files from `.github/handoffs/` to `.github/handoffs/processed/`
+2. **Delete** the processed handoff files — do NOT keep a `processed/` archive. Git history is the permanent record.
 3. Load `http://localhost:5188/builder/architecture-framework` and confirm the new section appears in the index
 4. Verify search terms match what a developer would type
 5. Mark the relevant section(s) as verified using the drift-detection ✓ buttons on the page

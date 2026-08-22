@@ -255,8 +255,13 @@ export class FinnhubAdapter implements IProviderAdapter {
    * Fetch one calendar window. Finnhub caps responses at 1500 events and
    * returns them newest-first — a single 90-day call silently truncates
    * older dates (observed 2026-08-22: a 90-day call returned only the last
-   * 15 days). Chunk the horizon into 10-day windows; if a window hits the
-   * cap, recursively split it down to 3-day granularity.
+   * 15 days).
+   *
+   * Chunking strategy: 10-day windows keep each request well under the cap
+   * for all but the heaviest weeks (~400–700 events). If a window still hits
+   * the cap, it is recursively split (halved) down to 3-day granularity;
+   * `depth < 4` bounds the recursion — 90 days never needs more than 5 levels.
+   * Windows are sorted/deduped by the caller.
    */
   private async fetchEarningsWindow(from: string, to: string): Promise<any[]> {
     const data = await this.finnhubGet<any>(

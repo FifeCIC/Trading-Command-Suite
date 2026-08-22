@@ -19,9 +19,10 @@ import { RiskModule } from '../risk/risk.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { DatabaseModule } from '../../database/database.module';
 import { ProvidersModule } from '../providers/providers.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [DirectivesModule, RiskModule, NotificationsModule, DatabaseModule, ProvidersModule],
+  imports: [DirectivesModule, RiskModule, NotificationsModule, DatabaseModule, ProvidersModule, AuthModule],
   controllers: [Mt5TradingController, SessionTrackerController, TradingStrategyController, TradeHistoryController, BrokerConfigController],
   providers: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopGuardianService, SwapCostService, WeekendDefenseService],
   exports: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopGuardianService, SwapCostService, WeekendDefenseService],

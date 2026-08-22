@@ -34,8 +34,16 @@ export class ResearchImportService implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    // Register the scheduled_job handler — the unified queue (#614) polls this
-    // on every automation tick, so no fixed @Cron is needed.
+    // ── Queue wiring (#614) — design considerations ───────────────────
+    // The earnings import is scheduled through the unified scheduled_job
+    // queue, polled by the automation loop on every tick.
+    //  • One-time CHAINED jobs, not recurrence='interval': interval jobs
+    //    drift (fixed ms from completion) and ignore schedule-time changes.
+    //    A chained one-time job is recomputed from settings after every run.
+    //  • The chain can die (process down at run time, failed enqueue), so
+    //    onModuleInit re-ensures a queued row after every restart.
+    //  • importEarningsCalendar never throws — it catches internally — so a
+    //    bad import run still reschedules and the chain always survives.
     this.jobQueue.registerHandler(EARNINGS_IMPORT_JOB, async () => {
       const summary = await this.importEarningsCalendar(false);
       this.logger.log(`Scheduled earnings import finished: ${JSON.stringify(summary)}`);
@@ -50,9 +58,12 @@ export class ResearchImportService implements OnModuleInit {
 
   /**
    * Compute the next scheduled occurrence from settings and (re)enqueue a
-   * one-time scheduled_job row for it. Stale queued rows of this type are
-   * removed first so the schedule stays single-sourced from settings.
-   * Called on boot, on settings change, and after every completed run.
+   * one-time scheduled_job row for it.
+   *
+   * Stale queued rows of this type are deleted first: the schedule must be
+   * single-sourced from settings, and there must never be MORE THAN ONE queued
+   * 'earnings-import' job — duplicates would run imports back-to-back.
+   * Called on boot, on settings change (PUT), and after every completed run.
    */
   async scheduleNextImportRun(): Promise<Date | null> {
     const settings = await this.settingsService.getSettings();
@@ -88,7 +99,12 @@ export class ResearchImportService implements OnModuleInit {
     }
   }
 
-  /** Next occurrence of HH:MM local time on the configured day pattern. */
+  /**
+   * Next occurrence of HH:MM LOCAL time on the configured day pattern.
+   * The stored scheduled_job.runAt is UTC — e.g. 06:00Z = 07:00 local (BST).
+   * The `guard < 8` bound is a safety net: scanning for weekdays can advance
+   * at most 7 days, so 8 iterations always terminates.
+   */
   private computeNextOccurrence(scheduleTime: string, scheduleDays: 'daily' | 'weekdays'): Date {
     const [h, m] = scheduleTime.split(':').map((n) => parseInt(n, 10));
     const next = new Date();
@@ -110,6 +126,16 @@ export class ResearchImportService implements OnModuleInit {
    * Fetch the earnings calendar and upsert into DB, honoring the user's import
    * settings (scope / min market cap / session / horizon / known-session).
    * Runs via the unified job queue (scheduled_job row) or manually (force).
+   *
+   * Considerations for anyone changing this:
+   *  • Upserts are keyed on (symbol, reportDate, source) — re-runs are
+   *    idempotent and only refresh estimates on existing rows.
+   *  • 20-way concurrent upsert batches: sequential Prisma upserts of 5k+
+   *    events exceeded the 30s HTTP timeout on manual triggers.
+   *  • NEVER THROW — the job-queue handler relies on that to keep the
+   *    rescheduling chain alive after a failed run.
+   *  • markRunning/markIdle power the UI's "import running" polling, and
+   *    recordLastImport feeds the status line on the calendar page.
    */
   async importEarningsCalendar(
     force = false,

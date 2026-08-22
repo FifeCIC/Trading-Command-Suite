@@ -186,6 +186,11 @@ export default function EarningsWhispersPage() {
                 {b.createdAt ? new Date(b.createdAt).toLocaleString() : '—'}
               </span>
               <span className="ew-batch-count">{b.entryCount} entries</span>
+              {/* sourceName/sourceSlug come from the `sources` table joined
+                  by the API (batch.source). Rows imported before the
+                  multi-source migration were backfilled to Earnings Whispers,
+                  so null here means the source row was deleted, not that the
+                  data is broken. */}
               <span className="ew-batch-count">{b.sourceName ?? 'Unknown source'}</span>
               <span className="ew-batch-status">{b.status}</span>
             </div>

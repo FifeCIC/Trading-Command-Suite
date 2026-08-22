@@ -205,7 +205,9 @@ export class Mt5TradingService {
 
       const res = await fetch(`${this.bridgeUrl}/close/${ticket}`, { method: 'POST' });
       const data = await res.json();
-      const success = data.retcode === 10009;
+      // MT5 returns multiple success retcodes: 10008 (placed), 10009 (done),
+      // 10010 (partial). Treat all as success; anything else is a failure.
+      const success = [10008, 10009, 10010].includes(data.retcode);
 
       // Record the close in trade history
       if (pos) {
@@ -246,7 +248,8 @@ export class Mt5TradingService {
         body: JSON.stringify({ volume }),
       });
       const data = await res.json();
-      return { success: data.retcode === 10009, error: data.comment };
+      // Same success retcodes as closePosition (10008 placed / 10009 done / 10010 partial)
+      return { success: [10008, 10009, 10010].includes(data.retcode), error: data.comment };
     } catch (err) {
       return { success: false, error: (err as Error).message };
     }
@@ -260,7 +263,8 @@ export class Mt5TradingService {
         body: JSON.stringify({ ticket, sl, tp }),
       });
       const data = await res.json();
-      return { success: data.retcode === 10009, error: data.comment };
+      // Modify can also return 10008 (placed) / 10009 (done) — treat both as success
+      return { success: [10008, 10009, 10010].includes(data.retcode), error: data.comment };
     } catch (err) {
       return { success: false, error: (err as Error).message };
     }

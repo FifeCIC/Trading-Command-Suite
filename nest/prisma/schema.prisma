@@ -962,6 +962,22 @@ model AnalystTarget {
 // Generalised storage for per-symbol earnings predictions/analysis from any
 // source (Earnings Whispers, Zacks, Benzinga, …). Sources are normalised in
 // the `sources` table and referenced by ID from both the batch and the rows.
+//
+// ⚠️ CHANGE GUIDANCE — read before touching these models:
+//  - `Source` must keep BOTH relation fields (`batches` and `analyses`):
+//    Prisma requires every relation to declare its opposite field, and a
+//    missing one fails `prisma validate` with P1012 (validation, not lint).
+//  - Every snake_case column needs an explicit `@map()`. A missing @map
+//    compiles fine but throws P2022 "column does not exist" at runtime the
+//    first time that column is written. Add @map as you add columns.
+//  - Revenue amounts are NORMALISED TO BILLIONS: `consensusRevenue` and
+//    `guidanceRevLow/High` are converted by the parser (millions → /1000).
+//    Consumers must not assume raw email units. The *_label columns keep
+//    the original human units (e.g. "$2.71B").
+//  - `sourceId` is nullable with onDelete:SetNull on purpose: historical
+//    batches/rows must survive source deletion, and the backfill migration
+//    needs NULL-able columns before assigning the seed source. Do not make
+//    these required without a backfill strategy.
 
 model Source {
   id          String   @id @default(uuid()) @db.VarChar(36)
@@ -985,6 +1001,8 @@ model EarningsAnalysisBatch {
   id         String   @id @default(uuid()) @db.VarChar(36)
   sourceId   String?  @map("source_id") @db.VarChar(36)
   source     Source?  @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  // The full email dump as pasted — kept verbatim so future AI enrichment or
+  // a re-parse never depends on the partial row-level extraction below.
   rawText    String   @map("raw_text") @db.LongText
   entryCount Int      @default(0) @map("entry_count")
   status     String   @default("parsed") @db.VarChar(20)
@@ -1006,6 +1024,9 @@ model EarningsAnalysis {
   symbol                 String   @db.VarChar(20)
   name                   String?  @db.VarChar(200)
   headline               String?  @db.VarChar(255)
+  // NOT NULL in the DB: date-only parses are stored at noon UTC (avoids
+  // timezone date-shift when read back), and unparseable dates fall back to
+  // now() rather than failing the import. See toDbRow() in the service.
   reportDate             DateTime @map("report_date")
   reportTime             String?  @map("report_time") @db.VarChar(40)
   reportDateLabel        String?  @map("report_date_label") @db.VarChar(80)
@@ -1027,6 +1048,8 @@ model EarningsAnalysis {
   priceVs200dmaPct       Float?   @map("price_vs_200dma_pct")
   dma200Price            Float?   @map("dma_200_price")
   meta                   Json?
+  // The per-symbol paragraph this row was extracted from (never truncated).
+  // Accuracy tracking and AI enrichment re-read this instead of `meta`.
   rawText                String   @map("raw_text") @db.LongText
   aiSummary              String?  @map("ai_summary") @db.Text
   parsedAt               DateTime @default(now()) @map("parsed_at")

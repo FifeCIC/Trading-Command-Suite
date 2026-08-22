@@ -9,6 +9,14 @@
  * Every extractor is best-effort: a missing field stays null rather than
  * throwing. The full source paragraph is always preserved in `rawText`, and any
  * other scraps are kept in `meta` so nothing is lost for later AI enrichment.
+ *
+ * ⚠️ CHANGE GUIDANCE — adding a new parsed field touches FOUR places:
+ *   1. `ParsedEarningsWhisper` (below)
+ *   2. an extractor (or the per-field code inside parseEarningsWhispers)
+ *   3. `EarningsWhispersService.toDbRow()` (DB mapping)
+ *   4. `nest/prisma/schema.prisma` EarningsAnalysis model + its `@map()`
+ * Then run `npx prisma generate` and rebuild the backend — forgetting the
+ * @map or the regenerate yields a silent null column or a P2022 at save time.
  */
 
 const MONTHS: Record<string, number> = {
@@ -132,6 +140,11 @@ function extractBlocks(raw: string): WhisperBlock[] {
   for (let i = 0; i < anchors.length; i++) {
     const a = anchors[i];
     const next = anchors[i + 1];
+    // Blocks are sliced nameStart→next nameStart, NOT ticker→ticker: the
+    // company name usually PRECEDES the ticker link, so slicing from the
+    // ticker would chop it off the paragraph the extractors search. The
+    // nameStart of the NEXT block is used as the end so adjacent paragraphs
+    // don't overlap.
     const start = Math.max(0, a.nameStart);
     const end = next ? next.nameStart : raw.length;
     const body = raw.slice(start, end).replace(/^#{1,4}\s+.+$/gm, '').trim();

@@ -3,6 +3,12 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { parseEarningsWhispers, type ParsedEarningsWhisper } from './earnings-whispers.parser';
 
+/**
+ * The slug is the stable identity of the source row. The migration seeds a
+ * row with this exact slug (and the deterministic UUID `11111111-…`), and
+ * resolveSourceId() looks it up by slug — so seed and runtime agree. If you
+ * add a NEW feed, add its own slug + constant rather than reusing this one.
+ */
 const DEFAULT_SOURCE_SLUG = 'earnings-whispers';
 
 @Injectable()
@@ -24,6 +30,9 @@ export class EarningsWhispersService {
     if (save && this.prisma.isAvailable && entries.length > 0) {
       try {
         const sourceId = await this.resolveSourceId(DEFAULT_SOURCE_SLUG);
+        // Batch is created FIRST, then rows via createMany, so a batch always
+        // exists before its entries. entryCount is denormalised from the
+        // parsed list so lists can render counts without COUNT over rows.
         const batch = await this.prisma.earningsAnalysisBatch.create({
           data: {
             sourceId,
@@ -73,7 +82,16 @@ export class EarningsWhispersService {
     return { batches, entries };
   }
 
-  /** Find (or create) the source row for a slug. */
+  /**
+   * Find (or create) the source row for a slug.
+   *
+   * The find→create pair is not race-safe (two concurrent parses could both
+   * miss and attempt INSERT, the loser hitting the unique constraint). That
+   * is accepted: parses are user-initiated and rare, and a race only logs a
+   * save warning — it cannot corrupt data. Keep the fallback
+   * name/url/description in sync with the seed row in
+   * prisma/manual-migration-earnings-analysis.ts.
+   */
   private async resolveSourceId(slug: string): Promise<string> {
     const existing = await this.prisma.source.findUnique({ where: { slug } });
     if (existing) return existing.id;
@@ -101,6 +119,9 @@ export class EarningsWhispersService {
       symbol: e.symbol,
       name: e.name,
       headline: e.headline,
+      // DB column is NOT NULL: date-only parses are stored at noon UTC
+      // (avoids timezone date-shift when read back), and unparseable dates
+      // fall back to now() rather than failing the whole import.
       reportDate: e.reportDate ? new Date(`${e.reportDate}T12:00:00.000Z`) : new Date(),
       reportTime: e.reportTime,
       reportDateLabel: e.reportDateLabel,

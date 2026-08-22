@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Delete, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { IsString, IsIn, IsNumber, IsOptional, Min } from 'class-validator';
 import { Mt5TradingService } from './mt5-trading.service';
+import { RequireAuthGuard } from '../auth/guards/require-auth.guard';
 
 class OrderDto {
   @IsString() symbol!: string;
@@ -15,6 +16,7 @@ class PartialDto { @IsNumber() @Min(0.001) volume!: number; }
 class ModifyDto { @IsOptional() @IsNumber() sl?: number; @IsOptional() @IsNumber() tp?: number; }
 
 @Controller('trading/mt5')
+@UseGuards(RequireAuthGuard)
 export class Mt5TradingController {
   constructor(private readonly mt5: Mt5TradingService) {}
 
@@ -33,7 +35,10 @@ export class Mt5TradingController {
     @Query('timeframe') timeframe = '1m',
     @Query('limit') limit = '100',
   ) {
-    const url = `${(this.mt5 as any).bridgeUrl}/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}&limit=${limit}`;
+    // Clamp the limit before proxying to the bridge — the raw query string was
+    // passed straight through, bypassing the service-level Math.min(limit, 1000).
+    const cappedLimit = Math.max(1, Math.min(parseInt(limit, 10) || 100, 1000));
+    const url = `${(this.mt5 as any).bridgeUrl}/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(timeframe)}&limit=${cappedLimit}`;
     const res = await fetch(url);
     return res.json();
   }

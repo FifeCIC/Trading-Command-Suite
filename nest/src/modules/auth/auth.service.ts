@@ -21,14 +21,30 @@ export class AuthService {
   constructor() {
     // Auto-create admin on first start
     if (!this.users.has(this.adminUser)) {
-      this.users.set(this.adminUser, { password: this.adminPass, role: 'admin' });
+      this.users.set(this.adminUser, { password: this.hashPassword(this.adminPass), role: 'admin' });
       this.logger.log(`Admin user auto-created: ${this.adminUser}`);
     }
   }
 
+  /** Hash a password with a per-user random salt (scrypt) — never store plaintext. */
+  private hashPassword(password: string): string {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+    return `${salt}:${hash}`;
+  }
+
+  /** Constant-time comparison of a candidate password against a stored salt:hash. */
+  private verifyPassword(password: string, stored: string): boolean {
+    const [salt, hash] = stored.split(':');
+    if (!salt || !hash) return false;
+    const candidate = crypto.scryptSync(password, salt, 64);
+    const expected = Buffer.from(hash, 'hex');
+    return candidate.length === expected.length && crypto.timingSafeEqual(candidate, expected);
+  }
+
   async validateUser(username: string, password: string): Promise<User | null> {
     const user = this.users.get(username);
-    if (!user || user.password !== password) return null;
+    if (!user || !this.verifyPassword(password, user.password)) return null;
     return { id: username, username, role: user.role as 'admin' | 'user' };
   }
 
@@ -41,15 +57,24 @@ export class AuthService {
 
   async register(username: string, password: string): Promise<User> {
     if (this.users.has(username)) throw new UnauthorizedException('User already exists');
-    this.users.set(username, { password, role: 'user' });
+    this.users.set(username, { password: this.hashPassword(password), role: 'user' });
     return { id: username, username, role: 'user' };
   }
 
   verifyToken(token: string): User | null {
     try {
-      const payload = JSON.parse(Buffer.from(token, 'base64').toString());
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      const [headerB64, payloadB64, signature] = parts;
+      // Verify HMAC-SHA256 signature before trusting any payload field.
+      const expected = crypto.createHmac('sha256', this.jwtSecret).update(`${headerB64}.${payloadB64}`).digest('base64url');
+      const sigBuf = Buffer.from(signature, 'base64url');
+      const expBuf = Buffer.from(expected, 'base64url');
+      if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) return null;
+      const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
+      if (typeof payload.exp !== 'number' || payload.exp < Math.floor(Date.now() / 1000)) return null;
       const user = this.users.get(payload.sub);
-      if (!user || payload.exp < Date.now()) return null;
+      if (!user) return null;
       return { id: payload.sub, username: payload.sub, role: user.role as 'admin' | 'user' };
     } catch { return null; }
   }
@@ -79,7 +104,16 @@ export class AuthService {
   }
 
   private signToken(user: User): string {
-    const payload = { sub: user.username, role: user.role, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 };
-    return Buffer.from(JSON.stringify(payload)).toString('base64');
+    const now = Math.floor(Date.now() / 1000);
+    const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({
+      sub: user.username,
+      role: user.role,
+      iat: now,
+      exp: now + 7 * 24 * 60 * 60, // 7 days
+    })).toString('base64url');
+    const signingInput = `${header}.${payload}`;
+    const signature = crypto.createHmac('sha256', this.jwtSecret).update(signingInput).digest('base64url');
+    return `${signingInput}.${signature}`;
   }
 }

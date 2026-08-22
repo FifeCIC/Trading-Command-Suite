@@ -7,13 +7,26 @@
  *   - Adds + backfills `source_id` FKs, renames raw_email → raw_text.
  *   - Drops the old hardcoded `source` string column.
  * Run with: npx ts-node prisma/manual-migration-earnings-analysis.ts
+ *
+ * WHY MANUAL (not `prisma migrate`): this project ships schema changes as
+ * idempotent raw-SQL scripts (see manual-migration-earnings.ts etc.) so they
+ * can be re-run safely against an already-migrated database. `prisma migrate`
+ * would diff against a migration-history table these scripts bypass. Every
+ * step below is guarded by tableExists()/columnExists() checks and the seed
+ * uses INSERT IGNORE — re-running is a no-op on completed work.
+ *
+ * ⚠️ After this script: run `npx prisma generate` and rebuild the backend —
+ * the new model names only exist in the generated Prisma client.
  */
 
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Deterministic UUID so the script is re-runnable.
+// Deterministic UUID (not uuid()) so re-runs INSERT the same row and the
+// backfill UPDATEs below point at the same identity every time. The service's
+// resolveSourceId() finds this row via the slug, not the id — the id is fixed
+// mainly so DB dumps and cross-table joins stay readable.
 const EW_SOURCE_ID = '11111111-1111-4111-8111-111111111111';
 
 async function tableExists(table: string): Promise<boolean> {
@@ -79,6 +92,9 @@ async function main() {
       'ALTER TABLE earnings_analysis_batch ADD COLUMN source_id VARCHAR(36) NULL AFTER id, ADD INDEX idx_eab_source (source_id)',
     );
   }
+  // Backfill provenance: every pre-migration row came from Earnings Whispers
+  // (no other source existed before the `sources` table), so NULL source_ids
+  // get the EW source rather than a generic "unknown".
   await prisma.$executeRawUnsafe(
     'UPDATE earnings_analysis_batch SET source_id = ? WHERE source_id IS NULL',
     EW_SOURCE_ID,
@@ -96,6 +112,7 @@ async function main() {
       'ALTER TABLE earnings_analysis ADD COLUMN source_id VARCHAR(36) NULL AFTER batch_id, ADD INDEX idx_ea_source_created (source_id, created_at)',
     );
   }
+  // Same provenance backfill as the batch table above.
   await prisma.$executeRawUnsafe(
     'UPDATE earnings_analysis SET source_id = ? WHERE source_id IS NULL',
     EW_SOURCE_ID,

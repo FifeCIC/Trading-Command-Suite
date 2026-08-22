@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, Post, Delete, Body } from '@nestjs/common';
+import { Controller, Get, Param, Query, Post, Delete, Body, UseGuards } from '@nestjs/common';
 import { SymbolDataCacheService } from './symbol-data-cache.service';
 import { ProtocolRunnerService } from './protocol-runner.service';
 import { ExecutionQueueService } from './execution-queue.service';
@@ -6,12 +6,14 @@ import { MultiProtocolRankingService } from './multi-protocol-ranking.service';
 import { AutomationLoopService } from './automation-loop.service';
 import { AuditLogService } from './audit-log.service';
 import { PrismaService } from '../../database/prisma.service';
+import { RequireAuthGuard } from '../auth/guards/require-auth.guard';
 import type { CacheStats, CacheDebugEntry } from './symbol-data-cache.service';
 import type { ProtocolRunConfig, RunResult } from './protocol-runner.service';
 import type { QueueJob, QueueStats } from './execution-queue.service';
 import type { CrossProtocolRanking } from './multi-protocol-ranking.service';
 
 @Controller('automation')
+@UseGuards(RequireAuthGuard)
 export class AutomationController {
   constructor(
     private readonly cache: SymbolDataCacheService,
