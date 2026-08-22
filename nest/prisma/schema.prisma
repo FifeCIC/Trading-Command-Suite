@@ -958,24 +958,51 @@ model AnalystTarget {
   @@index([source, fetchedAt])
 }
 
-model EarningsWhisperBatch {
+// ─── Earnings Analysis (multi-source earnings intel) ──────────────────
+// Generalised storage for per-symbol earnings predictions/analysis from any
+// source (Earnings Whispers, Zacks, Benzinga, …). Sources are normalised in
+// the `sources` table and referenced by ID from both the batch and the rows.
+
+model Source {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  name        String   @unique @db.VarChar(200)
+  slug        String   @unique @db.VarChar(50)
+  kind        String   @default("earnings") @db.VarChar(30)
+  url         String?  @db.VarChar(500)
+  description String?  @db.VarChar(500)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  batches  EarningsAnalysisBatch[]
+  analyses EarningsAnalysis[]
+
+  @@map("sources")
+  @@index([kind])
+}
+
+model EarningsAnalysisBatch {
   id         String   @id @default(uuid()) @db.VarChar(36)
-  source     String   @default("earnings-whispers") @db.VarChar(40)
-  rawEmail   String   @map("raw_email") @db.LongText
+  sourceId   String?  @map("source_id") @db.VarChar(36)
+  source     Source?  @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  rawText    String   @map("raw_text") @db.LongText
   entryCount Int      @default(0) @map("entry_count")
   status     String   @default("parsed") @db.VarChar(20)
   createdAt  DateTime @default(now()) @map("created_at")
 
-  entries EarningsWhisper[]
+  entries EarningsAnalysis[]
 
-  @@map("earnings_whisper_batch")
+  @@map("earnings_analysis_batch")
+  @@index([sourceId, createdAt])
   @@index([createdAt])
 }
 
-model EarningsWhisper {
+model EarningsAnalysis {
   id                     String   @id @default(uuid()) @db.VarChar(36)
   batchId                String?  @map("batch_id") @db.VarChar(36)
-  batch                  EarningsWhisperBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  batch                  EarningsAnalysisBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  sourceId               String?  @map("source_id") @db.VarChar(36)
+  source                 Source?  @relation(fields: [sourceId], references: [id], onDelete: SetNull)
   symbol                 String   @db.VarChar(20)
   name                   String?  @db.VarChar(200)
   headline               String?  @db.VarChar(255)
@@ -1005,9 +1032,10 @@ model EarningsWhisper {
   parsedAt               DateTime @default(now()) @map("parsed_at")
   createdAt              DateTime @default(now()) @map("created_at")
 
-  @@map("earnings_whisper")
+  @@map("earnings_analysis")
   @@index([symbol, reportDate])
   @@index([batchId])
+  @@index([sourceId, createdAt])
   @@index([createdAt])
 }
 

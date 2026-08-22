@@ -186,6 +186,7 @@ export default function EarningsWhispersPage() {
                 {b.createdAt ? new Date(b.createdAt).toLocaleString() : '—'}
               </span>
               <span className="ew-batch-count">{b.entryCount} entries</span>
+              <span className="ew-batch-count">{b.sourceName ?? 'Unknown source'}</span>
               <span className="ew-batch-status">{b.status}</span>
             </div>
           ))}
