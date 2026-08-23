@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { DEFAULT_NEWS_CATEGORY_ALLOWLIST } from '../news/news-taxonomy';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -13,6 +14,13 @@ export interface NewsTierConfig {
 export interface NewsImportSettings {
   dailyLimit: number;
   tiers: NewsTierConfig[];
+  /** Categories accepted at import time — everything else is never stored.
+   *  See news-taxonomy.ts for the category rules and the default list. */
+  categoryAllowlist: string[];
+  /** Impact floor for stored articles. Default 'low' (no filter) — the
+   *  category allowlist does the real work; raising to 'medium'/'high' drops
+   *  low-impact items (use carefully: loses neutral-sentiment predictions). */
+  minImpact: 'low' | 'medium' | 'high';
 }
 
 export interface AppSettings {
@@ -39,7 +47,7 @@ export interface HealthChecksConfig {
   autoRefreshSec: number;
 }
 
-const NEWS_IMPORT_DEFAULTS: NewsImportSettings = {
+export const NEWS_IMPORT_DEFAULTS: NewsImportSettings = {
   dailyLimit: 100,
   tiers: [
     { id: 'positions', enabled: true, maxPerDay: 30, intervalMin: 120 },
@@ -48,6 +56,8 @@ const NEWS_IMPORT_DEFAULTS: NewsImportSettings = {
     { id: 'sector', enabled: true, maxPerDay: 15, intervalMin: 360 },
     { id: 'other', enabled: false, maxPerDay: 20, intervalMin: 1440 },
   ],
+  categoryAllowlist: [...DEFAULT_NEWS_CATEGORY_ALLOWLIST],
+  minImpact: 'low',
 };
 
 const DEFAULTS: AppSettings = {

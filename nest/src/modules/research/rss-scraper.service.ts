@@ -15,6 +15,7 @@
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { classifyNewsCategory, DEFAULT_NEWS_CATEGORY_ALLOWLIST } from '../news/news-taxonomy';
 import * as crypto from 'crypto';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -117,6 +118,14 @@ export class RssScraperService implements OnModuleInit {
       // Match tickers in title + snippet
       const text = `${article.title} ${article.contentSnippet || ''}`.toUpperCase();
       const matchedSymbols = WATCH_TICKERS.filter(t => text.includes(t));
+
+      // Default import filters (see news-taxonomy.ts):
+      //  1. No matched ticker → not about anything we track → never stored
+      //     (e.g. "Krafton agrees to pay Subnautica 2 bonuses").
+      //  2. Category outside the allowlist (product/commentary fluff) → skip.
+      if (matchedSymbols.length === 0) return false;
+      const category = classifyNewsCategory(article.title, article.contentSnippet || '');
+      if (!DEFAULT_NEWS_CATEGORY_ALLOWLIST.includes(category)) return false;
 
       await (this.prisma as any).newsItem?.create({
         data: {

@@ -37,6 +37,16 @@ export class NewsController {
     return this.newsService.getWeeklySummary();
   }
 
+  /**
+   * GET /api/news/settings — active import filters (category allowlist,
+   * impact floor, tier budgets). Editable via PUT /api/system/settings
+   * under the `newsImport` key.
+   */
+  @Get('settings')
+  getSettings() {
+    return this.importService.getTierConfig();
+  }
+
   // ── News Feed (DB-first, live Finnhub fallback) ──
 
   @Get('feed')
@@ -47,15 +57,23 @@ export class NewsController {
     @Query('category') category?: string,
     @Query('limit') limit?: string,
   ) {
-    // Try DB first
-    const dbArticles = await this.importService.getArticles({
+    // Try DB first — prefer the last 7 days. If the store is stale (nothing
+    // within the window, e.g. imports have been dry for a while), widen to the
+    // whole corpus so stored news is never hidden behind a date filter. The
+    // frontend uses `stale` to label such results as older than 7 days.
+    const filterBase = {
       symbol,
       source,
       sentiment,
       category,
       limit: limit ? parseInt(limit, 10) : 50,
-      days: 7,
-    });
+    };
+    let dbArticles = await this.importService.getArticles({ ...filterBase, days: 7 });
+    let stale = false;
+    if (dbArticles.length === 0) {
+      stale = true;
+      dbArticles = await this.importService.getArticles(filterBase);
+    }
 
     if (dbArticles.length > 0) {
       const articles = dbArticles.map((a) => ({
@@ -71,7 +89,7 @@ export class NewsController {
         snippet: a.summary || '',
         url: a.url || '#',
       }));
-      return { articles, live: true, source: 'db', count: articles.length };
+      return { articles, live: true, source: 'db', count: articles.length, stale };
     }
 
     // Fallback to live Finnhub

@@ -9,6 +9,7 @@
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { classifyNewsCategory, DEFAULT_NEWS_CATEGORY_ALLOWLIST } from '../news/news-taxonomy';
 import * as crypto from 'crypto';
 
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
@@ -68,6 +69,11 @@ export class FinnhubNewsService implements OnModuleInit {
 
   private async store(article: any, symbol: string): Promise<boolean> {
     if (!this.prisma.isAvailable) return false;
+
+    // Default import filters — categories outside the allowlist (product
+    // fluff, market commentary) are never stored. See news-taxonomy.ts.
+    const category = classifyNewsCategory(article.headline || '', article.summary || '');
+    if (!DEFAULT_NEWS_CATEGORY_ALLOWLIST.includes(category)) return false;
 
     const hash = crypto.createHash('sha256')
       .update(`fh:${article.url || article.headline}`)

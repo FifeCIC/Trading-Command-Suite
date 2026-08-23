@@ -2,8 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
-import { SettingsService, type NewsImportSettings, type NewsTierConfig } from '../system/settings.service';
+import { SettingsService, NEWS_IMPORT_DEFAULTS, type NewsImportSettings, type NewsTierConfig } from '../system/settings.service';
 import { SymbolResolverService, MACRO_SYMBOLS, SECTOR_SYMBOLS } from '../symbols/symbol-resolver.service';
+import {
+  classifyNewsCategory,
+  assessNewsImpact,
+} from './news-taxonomy';
 
 /**
  * News Import Service
@@ -14,76 +18,12 @@ import { SymbolResolverService, MACRO_SYMBOLS, SECTOR_SYMBOLS } from '../symbols
  *   1. Resolve which symbols to track (active + positions + starred + giants + key people)
  *   2. Fetch per-symbol news from Finnhub adapter
  *   3. Deduplicate by URL (unique constraint on NewsArticle.url)
- *   4. Categorize by content patterns
- *   5. Store in NewsArticle table
- *   6. Log run stats in NewsImportRun
+ *   4. Categorize by content patterns (shared news-taxonomy.ts)
+ *   5. Apply default import filters (category allowlist + impact floor) —
+ *      filtered articles are counted but NEVER stored
+ *   6. Store in NewsArticle table
+ *   7. Log run stats in NewsImportRun
  */
-
-// ── Category Definitions ──
-
-const CATEGORY_RULES: { category: string; patterns: RegExp[] }[] = [
-  {
-    category: 'earnings',
-    patterns: [
-      /earnings?/i, /revenue/i, /eps/i, /quarterly results/i,
-      /beat|miss/i, /guidance/i, /outlook/i, /forecast/i,
-    ],
-  },
-  {
-    category: 'fed',
-    patterns: [
-      /\bfed\b/i, /federal reserve/i, /fomc/i, /powell/i,
-      /interest rate/i, /rate (cut|hike|decision)/i,
-      /monetary policy/i, /inflation/i, /cpi/i, /ppi/i,
-      /treasury/i, /bond/i, /\byield\b/i,
-    ],
-  },
-  {
-    category: 'geopolitical',
-    patterns: [
-      /tariff/i, /trade war/i, /sanction/i, /embargo/i,
-      /war/i, /conflict/i, /election/i, /congress/i,
-      /white house/i, /regulation/i, /sec/i, /cfpb/i,
-    ],
-  },
-  {
-    category: 'product',
-    patterns: [
-      /launch/i, /announce/i, /unveil/i, /release/i,
-      /new (chip|phone|model|product|feature)/i,
-      /ai (chip|accelerator|model|training)/i,
-      /gpu/i, /\bh200\b/i, /\bb200\b/i, /blackwell/i,
-    ],
-  },
-  {
-    category: 'executive',
-    patterns: [
-      /\bceo\b/i, /\bcfo\b/i, /executive/i, /board/i,
-      /musk/i, /\btesla\b/i, /\bspacex\b/i,
-      /bezos/i, /buffett/i, /dimon/i, /cook\b/i,
-      /huang\b/i, /\bnvidia\b/i, /altman/i,
-    ],
-  },
-  {
-    category: 'sector',
-    patterns: [
-      /sector/i, /rotation/i, /industry/i, /semiconductor/i,
-      /tech (stock|sector)/i, /energy sector/i, /financial/i,
-      /healthcare/i, /real estate/i, /consumer/i,
-    ],
-  },
-];
-
-// ── Key People (headline scanning) ──
-
-const KEY_PEOPLE_PATTERNS: RegExp[] = [
-  /elon musk/i, /donald trump/i, /jerome powell/i, /janet yellen/i,
-  /warren buffett/i, /jeff bezos/i, /tim cook\b/i, /jensen huang/i,
-  /sam altman/i, /jamie dimon/i, /cathie wood/i, /michael saylor/i,
-  /gary gensler/i, /volodymyr zelenskyy/i, /xi jinping/i,
-  /vladimir putin/i, /mark zuckerberg/i, /sundar pichai/i,
-  /satya nadella/i, /brian armstrong/i,
-];
 
 // ── Tier-Based Symbol Lists ──
 // Replaces the hardcoded GIANT_SYMBOLS constant.
@@ -93,17 +33,6 @@ const KEY_PEOPLE_PATTERNS: RegExp[] = [
 // ── Known ticker pattern for headline scanning ──
 
 const TICKER_PATTERN = /\b[A-Z]{1,5}\b/g;
-
-// ── Fluff keywords (carried from NewsCollectorService) ──
-
-const FLUFF_KEYWORDS = [
-  'shocking', 'plunge', 'skyrocket', 'collapse', 'panic', 'fear',
-  'greed', 'bubble', 'crash', 'meltdown', 'bloodbath', 'massacre',
-  'explode', 'wipeout', 'apocalypse', 'armageddon', 'carnage',
-  'freefall', 'turmoil', 'chaos', 'doom', 'catastrophe',
-  'unstoppable', 'guaranteed', 'secret', "they don't want you",
-  "you won't believe", 'this changes everything',
-];
 
 // ── Service ──
 
@@ -266,11 +195,25 @@ export class NewsImportService {
 
   /**
    * Get the current tier configuration, merged from settings with defaults.
+   * New settings keys (categoryAllowlist, minImpact) may be absent from
+   * previously-stored settings JSON — merge defensively.
    */
   async getTierConfig(): Promise<NewsImportSettings> {
     try {
       const settings = await this.settingsService.get();
-      return settings.newsImport;
+      const stored: Partial<NewsImportSettings> = settings.newsImport ?? {};
+      return {
+        ...NEWS_IMPORT_DEFAULTS,
+        ...stored,
+        tiers: Array.isArray(stored.tiers) && stored.tiers.length ? stored.tiers : NEWS_IMPORT_DEFAULTS.tiers,
+        categoryAllowlist:
+          Array.isArray(stored.categoryAllowlist) && stored.categoryAllowlist.length
+            ? stored.categoryAllowlist
+            : [...NEWS_IMPORT_DEFAULTS.categoryAllowlist],
+        minImpact: ['low', 'medium', 'high'].includes(stored.minImpact as string)
+          ? (stored.minImpact as 'low' | 'medium' | 'high')
+          : NEWS_IMPORT_DEFAULTS.minImpact,
+      };
     } catch {
       // Fallback defaults if settings unavailable
       return {
@@ -282,6 +225,8 @@ export class NewsImportService {
           { id: 'sector', enabled: true, maxPerDay: 15, intervalMin: 360 },
           { id: 'other', enabled: false, maxPerDay: 20, intervalMin: 1440 },
         ],
+        categoryAllowlist: [...NEWS_IMPORT_DEFAULTS.categoryAllowlist],
+        minImpact: 'low',
       };
     }
   }
@@ -336,6 +281,8 @@ export class NewsImportService {
    */
   async runImport(symbols?: string[], tierId?: string): Promise<any> {
     const targetSymbols = symbols?.length ? symbols : await this.resolveTrackedSymbols();
+    // Import filters come from settings (defaults applied) — loaded once per run.
+    const config = await this.getTierConfig();
 
     const run = await this.prisma.newsImportRun.create({
       data: {
@@ -350,6 +297,8 @@ export class NewsImportService {
     let newArticles = 0;
     let duplicates = 0;
     let errors = 0;
+    let filteredByCategory = 0;
+    let filteredByImpact = 0;
     const errorMessages: string[] = [];
 
     const adapter = this.adapterFactory.create('finnhub');
@@ -370,9 +319,24 @@ export class NewsImportService {
           try {
             const url = raw.url || `finnhub://${raw.id}`;
             const headline = raw.headline || '';
-            const category = this.classifyCategory(headline, raw.summary || '');
+            const category = classifyNewsCategory(headline, raw.summary || '');
             const sentiment = typeof raw.sentiment === 'number' ? raw.sentiment : 0;
-            const impact = this.assessImpact(headline, raw.summary || '', sentiment);
+            const impact = assessNewsImpact(headline, raw.summary || '', sentiment, category);
+
+            // ── Default import filters (applied BEFORE storage) ──
+            // Categories outside the allowlist are junk for this app
+            // (product fluff, market commentary) — never stored.
+            if (!config.categoryAllowlist.includes(category)) {
+              filteredByCategory++;
+              continue;
+            }
+            // Impact floor — default 'low' means no filter; the allowlist
+            // does the real work. Low-impact predictions still pass because
+            // assessNewsImpact gives directive categories a medium floor.
+            if (config.minImpact !== 'low' && impact === 'low') {
+              filteredByImpact++;
+              continue;
+            }
 
             // Build or find source record
             const sourceName = raw.source || 'Finnhub';
@@ -418,7 +382,7 @@ export class NewsImportService {
 
     await this.finishRun(run.id, 'completed', { fetched, newArticles, duplicates, errors, errorMessages });
     this.logger.log(
-      `News import complete: ${targetSymbols.length} symbols, ${fetched} fetched, ${newArticles} new, ${duplicates} dupes, ${errors} errors`,
+      `News import complete: ${targetSymbols.length} symbols, ${fetched} fetched, ${newArticles} new, ${duplicates} dupes, ${filteredByCategory} category-filtered, ${filteredByImpact} impact-filtered, ${errors} errors`,
     );
 
     // Bump tier daily count
@@ -488,16 +452,23 @@ export class NewsImportService {
 
   /**
    * Get sentiment summary for a symbol.
+   *
+   * Prefers the last 7 days; when the store is stale (no rows in the window)
+   * it falls back to the whole corpus so the counts match the articles the
+   * feed endpoint actually displays (see getFeed's widening fallback).
    */
   async getSentimentSummary(symbol?: string) {
-    const where: any = {};
-    if (symbol) where.symbol = symbol.toUpperCase();
-    where.publishedAt = { gte: new Date(Date.now() - 7 * 86_400_000) };
+    const baseWhere: any = {};
+    if (symbol) baseWhere.symbol = symbol.toUpperCase();
 
-    const articles = await this.prisma.newsArticle.findMany({
-      where,
-      select: { sentiment: true, category: true },
+    const select = { sentiment: true, category: true } as const;
+    let articles = await this.prisma.newsArticle.findMany({
+      where: { ...baseWhere, publishedAt: { gte: new Date(Date.now() - 7 * 86_400_000) } },
+      select,
     });
+    if (articles.length === 0) {
+      articles = await this.prisma.newsArticle.findMany({ where: baseWhere, select });
+    }
 
     const positive = articles.filter((a) => a.sentiment > 0.15).length;
     const negative = articles.filter((a) => a.sentiment < -0.15).length;
@@ -525,12 +496,24 @@ export class NewsImportService {
 
   /**
    * Get available categories with counts.
+   *
+   * Same staleness fallback as getSentimentSummary: 7-day window first, whole
+   * corpus when nothing recent exists, so the category tabs always reflect
+   * the stored articles the feed can display.
    */
   async getCategories() {
-    const rows: any[] = await this.prisma.$queryRawUnsafe(
+    // NOTE: MySQL COUNT(*) reaches Prisma as a BigInt (CAST AS SIGNED doesn't
+    // help — the driver maps any BIGINT column to BigInt), so counts must be
+    // converted with Number() before JSON serialisation (see getSourceCounts).
+    const recent: any[] = await this.prisma.$queryRawUnsafe(
       `SELECT category, COUNT(*) as count FROM NewsArticle WHERE publishedAt >= DATE_SUB(NOW(), INTERVAL 7 DAY) GROUP BY category ORDER BY count DESC`,
     );
-    return rows;
+    const rows = recent.length > 0
+      ? recent
+      : await this.prisma.$queryRawUnsafe(
+          `SELECT category, COUNT(*) as count FROM NewsArticle GROUP BY category ORDER BY count DESC`,
+        );
+    return (rows as any[]).map((r) => ({ category: r.category, count: Number(r.count) }));
   }
 
   /**
@@ -554,31 +537,9 @@ export class NewsImportService {
   }
 
   // ── Helpers ──
-
-  private classifyCategory(headline: string, summary: string): string {
-    const text = `${headline} ${summary}`;
-    for (const rule of CATEGORY_RULES) {
-      for (const pattern of rule.patterns) {
-        if (pattern.test(text)) return rule.category;
-      }
-    }
-    // Check key people
-    for (const pattern of KEY_PEOPLE_PATTERNS) {
-      if (pattern.test(text)) return 'executive';
-    }
-    return 'general';
-  }
-
-  private assessImpact(headline: string, summary: string, sentiment: number): string {
-    const text = `${headline} ${summary}`.toLowerCase();
-    // High-impact signals
-    if (/\b(crash|plunge|skyrocket|surge|collapse|breakthrough|crisis)\b/i.test(text)) return 'high';
-    if (Math.abs(sentiment) > 0.5) return 'high';
-    // Medium
-    if (/\b(rally|drop|slide|jump|spike|warn|cut|hike)\b/i.test(text)) return 'medium';
-    if (Math.abs(sentiment) > 0.25) return 'medium';
-    return 'low';
-  }
+  // (Classification + impact assessment moved to news-taxonomy.ts so every
+  // news pipeline — tiered import, per-symbol polling, RSS — applies the
+  // same rules. Do NOT re-add local category rules here.)
 
   /**
    * Scan headline for mentioned ticker symbols (beyond the primary symbol).
