@@ -150,7 +150,14 @@ export default function EarningsCalendarPage() {
       <header className="ec-header">
         <h1>Earnings Calendar</h1>
         <p className="ec-subtitle">
-          {data?.count ?? 0} upcoming earnings reports from {data?.source === 'nasdaq' ? 'Nasdaq (fallback)' : 'Finnhub'}.
+          {data?.count ?? 0} upcoming earnings reports from{' '}
+          {data?.source === 'db'
+            ? 'stored data (imported from Finnhub + Nasdaq)'
+            : data?.source === 'nasdaq'
+              ? 'Nasdaq (live fallback)'
+              : data?.source === 'finnhub'
+                ? 'Finnhub (live)'
+                : 'no source'}.
           <span className="ec-source"> Data refreshes every 15 min.</span>
         </p>
       </header>

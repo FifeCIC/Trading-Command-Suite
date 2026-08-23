@@ -6,6 +6,7 @@ import { NasdaqEarningsService } from './nasdaq-earnings.service';
 import { ResearchImportService } from './research-import.service';
 import { EarningsImportSettingsService } from './earnings-import-settings.service';
 import { EarningsImportSettingsDto } from './dto/earnings-import-settings.dto';
+import { PrismaService } from '../../database/prisma.service';
 
 @Controller('research')
 export class ResearchController {
@@ -18,6 +19,7 @@ export class ResearchController {
     private readonly nasdaqEarnings: NasdaqEarningsService,
     private readonly researchImport: ResearchImportService,
     private readonly earningsImportSettings: EarningsImportSettingsService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Get('overview')
@@ -25,32 +27,101 @@ export class ResearchController {
     return this.overviewService.getOverview();
   }
 
+  /**
+   * GET /api/research/earnings/calendar
+   *
+   * DB-FIRST by design (2026-08-23): the scheduled import stores events in
+   * earnings_event, so the page reads STORED data and never depends on a live
+   * external call. Live Finnhub → Nasdaq fetches are only a cold-start
+   * fallback when the table is empty, and upstream failures can never 500
+   * the page — they degrade to an empty list with an `error` field.
+   *
+   * Considerations:
+   *  • earnings_event is populated by the scheduled_job 'earnings-import'
+   *    handler (settings-driven) and by manual "Import now".
+   *  • Rows can exist for the same (symbol, date) under different sources —
+   *    dedupe in JS, preferring Finnhub rows.
+   *  • `months` filters the window; DB events older than the horizon are
+   *    naturally excluded by the reportDate range.
+   */
   @Get('earnings/calendar')
   async getEarningsCalendar(
     @Query('symbol') symbol?: string,
     @Query('months') months?: string,
   ) {
     const horizonMonths = months ? parseInt(months, 10) : 3;
+    const horizonDays = Math.ceil(horizonMonths * 31);
 
-    // Primary: Finnhub (single call covers the whole horizon).
+    // ── 1. Stored data (primary) ──────────────────────────────────
+    try {
+      const from = new Date();
+      from.setHours(0, 0, 0, 0);
+      const to = new Date();
+      to.setDate(to.getDate() + horizonDays);
+      to.setHours(23, 59, 59, 999);
+
+      const stored = await this.prisma.earningsEvent.findMany({
+        where: {
+          reportDate: { gte: from, lte: to },
+          ...(symbol ? { symbol: symbol.toUpperCase() } : {}),
+        },
+        orderBy: { reportDate: 'asc' },
+      });
+
+      if (stored.length > 0) {
+        // Dedupe by (symbol, reportDate) — prefer finnhub rows when both exist.
+        const seen = new Map<string, any>();
+        for (const e of stored) {
+          const key = `${e.symbol}|${e.reportDate.toISOString().split('T')[0]}`;
+          if (!seen.has(key) || e.source === 'finnhub') seen.set(key, e);
+        }
+        const events = Array.from(seen.values()).map((e) => ({
+          symbol: e.symbol,
+          name: e.name ?? null,
+          reportDate: e.reportDate.toISOString().split('T')[0],
+          timeOfDay: e.timeOfDay ?? null,
+          epsEstimate: e.epsEstimate ?? null,
+          revenueEstimate: e.revenueEstimate ?? null,
+          source: e.source,
+        }));
+        return { source: 'db', horizonMonths, count: events.length, events };
+      }
+    } catch (err) {
+      this.logger.warn(`DB earnings read failed: ${(err as Error).message}`);
+    }
+
+    // ── 2. Cold-start fallback: live Finnhub → Nasdaq ─────────────
+    let liveEvents: any[] = [];
+    let source = 'none';
+    let liveError: string | null = null;
+
     const adapter = this.providers.getAdapter('finnhub');
-    let events: any[] =
-      adapter && typeof (adapter as any).getEarningsCalendar === 'function'
-        ? await (adapter as any).getEarningsCalendar(symbol, horizonMonths)
-        : [];
-    let source = 'finnhub';
+    if (adapter && typeof (adapter as any).getEarningsCalendar === 'function') {
+      try {
+        liveEvents = await (adapter as any).getEarningsCalendar(symbol, horizonMonths);
+        if (Array.isArray(liveEvents) && liveEvents.length > 0) source = 'finnhub';
+      } catch (err) {
+        liveError = `finnhub: ${(err as Error).message}`;
+        this.logger.warn(`Live Finnhub earnings fetch failed: ${(err as Error).message}`);
+      }
+    }
 
-    // Fallback: Nasdaq public calendar (no key) — guarantees the page is never empty.
-    if (!Array.isArray(events) || events.length === 0) {
-      events = await this.nasdaqEarnings.getCalendar(horizonMonths, symbol);
-      source = 'nasdaq';
+    if (!Array.isArray(liveEvents) || liveEvents.length === 0) {
+      try {
+        liveEvents = await this.nasdaqEarnings.getCalendar(horizonMonths, symbol);
+        if (liveEvents.length > 0) source = 'nasdaq';
+        else if (!liveError) liveError = 'No events from Finnhub or Nasdaq';
+      } catch (err) {
+        liveError = `${liveError ? liveError + '; ' : ''}nasdaq: ${(err as Error).message}`;
+      }
     }
 
     return {
       source,
       horizonMonths,
-      count: events.length,
-      events,
+      count: Array.isArray(liveEvents) ? liveEvents.length : 0,
+      events: Array.isArray(liveEvents) ? liveEvents : [],
+      error: liveError,
     };
   }
 
