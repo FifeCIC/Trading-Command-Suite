@@ -116,14 +116,17 @@ export class Trading212Adapter implements IProviderAdapter {
 
     if (explicitMode === 'live' || explicitMode === 'demo') {
       this.mode = explicitMode;
-    } else if (process.env.TRADING212_LIVE_API_KEY) {
-      // Auto-detect: if a live key is set, assume live
-      this.mode = 'live';
     } else if (process.env.TRADING212_DEMO_API_KEY || process.env.TRADING212_API_KEY) {
-      // If only demo/generic key is set, assume demo
+      // No explicit mode: default to DEMO. Live requires TRADING212_MODE=live —
+      // never auto-connect to a live account from a stray env key (issue #24).
       this.mode = 'demo';
     } else {
       this.mode = 'none';
+    }
+
+    // Safety: a live key without an explicit live mode must NOT trade live.
+    if (this.mode !== 'live' && process.env.TRADING212_LIVE_API_KEY) {
+      this.logger.warn('Trading212: live API key present but TRADING212_MODE is not "live" — staying in non-live mode.');
     }
 
     // Resolve the correct key + secret for this mode
@@ -155,9 +158,9 @@ export class Trading212Adapter implements IProviderAdapter {
   }
 
   private authHeaders(): Record<string, string> {
-    if (this.apiKey && this.apiSecret) {
-      return { Authorization: 'Basic ' + Buffer.from(`${this.apiKey}:${this.apiSecret}`).toString('base64') };
-    }
+    // Trading212 uses the API key directly as the Authorization header value
+    // (no "Basic", no "Bearer", no secret). The old key:secret Basic auth was
+    // malformed for T212 and would 401 (issue #34).
     return { Authorization: this.apiKey || '' };
   }
 

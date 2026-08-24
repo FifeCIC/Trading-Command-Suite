@@ -26,7 +26,7 @@ export default function NewsIntelPage() {
 
   // ── Feed ──
 
-  const { data: feedData, isLoading, isError } = useQuery({
+  const { data: feedData, isLoading, isError, refetch } = useQuery({
     queryKey: ['news', 'feed', symbolFilter, sentimentFilter, sourceFilter, categoryFilter],
     queryFn: () => {
       const params = new URLSearchParams();
@@ -114,6 +114,17 @@ export default function NewsIntelPage() {
     [articles],
   );
 
+  // Header subtitle — reflects WHERE the articles came from so users can tell
+  // stored data (db) from the live provider fallback (finnhub), and whether
+  // the stored data is older than the usual 7-day window (`stale` flag).
+  const subtitle = isLive
+    ? `${feedData?.source === 'db' ? 'Stored' : 'Live'} feed (${dataSource}${feedData?.stale ? ' · older than 7 days' : ''}) — ${articles.length} articles`
+    : isError
+      ? 'API unreachable — is the backend running?'
+      : feedData
+        ? 'No stored articles — live provider unavailable'
+        : 'Connecting...';
+
   // ── Render ──
 
   return (
@@ -122,13 +133,16 @@ export default function NewsIntelPage() {
         <div className="ni-header-top">
           <div>
             <h1>News Intel</h1>
-            <p className="ni-subtitle">
-              {isLive
-                ? `Live feed (${dataSource}) — ${articles.length} articles`
-                : isError
-                  ? 'No data — try importing below'
-                  : 'Connecting...'}
-            </p>
+            <p className="ni-subtitle">{subtitle}</p>
+            {/* Sentiment counts live in the header (not a third control row) —
+                they summarise the SAME stored corpus the feed displays. */}
+            <div className="ni-summary">
+              <span className="ni-summary-label">Feed Sentiment:</span>
+              <span className="ni-summary-val ni-sent-pos">▲ {sCounts.positive} Positive</span>
+              <span className="ni-summary-val ni-sent-neg">▼ {sCounts.negative} Negative</span>
+              <span className="ni-summary-val ni-sent-neu">● {sCounts.neutral} Neutral</span>
+              <span className="ni-summary-total">{sCounts.total || articles.length} articles</span>
+            </div>
           </div>
           <div className="ni-import-section">
             {lastRun && (
@@ -196,19 +210,27 @@ export default function NewsIntelPage() {
         </div>
       </div>
 
-      {/* ── Sentiment Summary ── */}
-      <div className="ni-summary">
-        <span className="ni-summary-label">Feed Sentiment:</span>
-        <span className="ni-summary-val ni-sent-pos">▲ {sCounts.positive} Positive</span>
-        <span className="ni-summary-val ni-sent-neg">▼ {sCounts.negative} Negative</span>
-        <span className="ni-summary-val ni-sent-neu">● {sCounts.neutral} Neutral</span>
-        <span className="ni-summary-total">{sCounts.total || articles.length} articles</span>
-      </div>
+      {/* ── Error / still-connecting banner ──
+          Any settled-without-data state gets an actionable banner instead of
+          a misleading "no articles" message: real API failures (502), the
+          retry-backoff window, and the rare paused query state. */}
+      {!isLoading && !feedData && (
+        <div className="ni-error-banner">
+          {isError
+            ? "Couldn't reach the news API — check the backend is running."
+            : 'Still connecting to the news API…'}{' '}
+          <button type="button" onClick={() => refetch()}>↻ Retry</button>
+        </div>
+      )}
 
-      {/* ── Empty State ── */}
-      {articles.length === 0 && (
+      {/* ── Empty State (only when the query SETTLED with zero results) ── */}
+      {!isLoading && feedData && articles.length === 0 && (
         <div className="ni-empty">
-          <p>No articles found. Try importing news or adjusting filters.</p>
+          <p>
+            {feedData?.live === false
+              ? 'No stored articles and the live provider is unavailable.'
+              : 'No articles found. Try importing news or adjusting filters.'}
+          </p>
           <button className="ni-import-btn" onClick={triggerImport} disabled={importing}>
             {importing ? '⏳ Importing...' : '📥 Import Now'}
           </button>

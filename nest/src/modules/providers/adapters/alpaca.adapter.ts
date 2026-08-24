@@ -17,9 +17,14 @@ export class AlpacaAdapter implements IProviderAdapter {
   private readonly dataUrl = 'https://data.alpaca.markets';
 
   private authHeaders(): Record<string, string> {
+    // Fail loud instead of sending empty credentials and silently getting 401s.
+    // All callers call checkCredentials() first, so this is defense in depth.
+    if (!this.apiKey || !this.apiSecret) {
+      throw new Error('Alpaca credentials not configured');
+    }
     return {
-      'APCA-API-KEY-ID': this.apiKey || '',
-      'APCA-API-SECRET-KEY': this.apiSecret || '',
+      'APCA-API-KEY-ID': this.apiKey,
+      'APCA-API-SECRET-KEY': this.apiSecret,
     };
   }
 

@@ -59,6 +59,8 @@ export interface StrategySummary {
 export class TradingStrategyService {
   private readonly logger = new Logger(TradingStrategyService.name);
   private lastTradeTime = new Map<string, Date>(); // strategyId → last trade time
+  /** Monotonic peak equity — only increases, so drawdown is measured against a real peak. */
+  private peakEquity: number | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -454,6 +456,21 @@ export class TradingStrategyService {
     }
     size = Math.round(size * 10000) / 10000; // Round to 4 decimals
 
+    // Never dispatch a zero/negative volume order. Rarity sizing (black-swan
+    // band) intentionally multiplies size by 0 — skip the trade instead of
+    // sending an invalid 0-lot order to the broker.
+    if (size <= 0) {
+      this.logger.warn(`Trade skipped for ${strategy.symbol}: position size ${size} (invalid after sizing)`);
+      return {
+        executed: false,
+        reason: 'Position size is 0 after sizing (e.g. black-swan rarity) — trade skipped',
+        signal: evalResult.signal,
+        composite: evalResult.composite,
+        suggestedSize: 0,
+        evaluationId: evalResult.evaluationId,
+      };
+    }
+
     // Mode dispatch
     if (strategy.mode === 'manual') {
       // Log only — human must execute
@@ -514,7 +531,9 @@ export class TradingStrategyService {
         volume: size,
         sl: slPrice,
         tp: tpPrice,
-        comment: `TCS ${strategy.name} | ${evalResult.composite}%`,
+        // Name only — the shared sanitizer strips '|' and '%', so embedding
+        // "| composite%" pollutes the strategy name parsed back on close.
+        comment: `TCS ${strategy.name}`,
       });
 
       this.lastTradeTime.set(strategyId, new Date());
@@ -649,9 +668,14 @@ export class TradingStrategyService {
         return { allowed: false, reason: posCheck.reason };
       }
 
-      // Drawdown check — use account balance as peak proxy
+      // Drawdown check — track peak equity (only increases) so drawdown is real.
+      // Previously peak was hardcoded to current equity, making drawdown always 0%
+      // and permanently disabling the maxDrawdown: 0.25 risk limit.
+      if (this.peakEquity === null || portfolioValue > this.peakEquity) {
+        this.peakEquity = portfolioValue;
+      }
       const drawdownCheck = this.riskService.checkDrawdown(
-        Math.max(portfolioValue, portfolioValue), // TODO: track peak equity properly
+        this.peakEquity,
         portfolioValue,
         riskProfile,
       );

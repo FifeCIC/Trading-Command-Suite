@@ -29,6 +29,12 @@ const VIEW_META = {
     css: 'src/pages/earnings-whispers.css',
     api: ['POST /api/earnings-whispers/parse', 'GET /api/earnings-whispers'],
   },
+  '/research/news-intel': {
+    label: 'News Intel',
+    file: 'src/pages/NewsIntelPage.jsx',
+    css: 'src/pages/news-intel.css',
+    api: ['GET /api/news/feed', 'GET /api/news/categories', 'GET /api/news/sentiment-summary', 'GET /api/news/import/last', 'POST /api/news/import/run'],
+  },
   '/education/glossary': {
     label: 'Glossary',
     file: 'src/pages/GlossaryPage.jsx',

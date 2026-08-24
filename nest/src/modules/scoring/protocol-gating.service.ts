@@ -621,11 +621,28 @@ export class ProtocolGatingService {
         'Portfolio scoring requires a protocol — unscoped default scoring was removed.',
       );
     }
-    const results = await Promise.all(
-      holdings.map((h) => this.scoreWithGating(h.symbol, h.bars, protocolId)),
-    );
+    // Bound concurrency (issue #21): a large watchlist no longer fires N simultaneous
+    // directive runs + DB queries (which exhausted the connection pool and caused
+    // cascading timeouts). One symbol's failure is also isolated (issue #33) so it
+    // doesn't fail the whole portfolio — failed symbols are skipped with a warning.
+    const CONCURRENCY = 5;
+    const results: GatedScore[] = [];
+    let cursor = 0;
+    const worker = async (): Promise<void> => {
+      while (cursor < holdings.length) {
+        const idx = cursor++;
+        const h = holdings[idx];
+        try {
+          const gated = await this.scoreWithGating(h.symbol, h.bars, protocolId);
+          if (gated) results[idx] = gated;
+        } catch (err) {
+          this.logger.warn(`scorePortfolio: ${h.symbol} failed — skipping: ${(err as Error).message}`);
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, holdings.length) }, () => worker()));
     // Sort by composite descending for stable ladder display (#432)
-    return results.sort((a, b) => b.composite - a.composite);
+    return results.filter(Boolean).sort((a, b) => b.composite - a.composite);
   }
 
   /**
@@ -829,7 +846,10 @@ export class ProtocolGatingService {
       } catch (err: any) {
         this.logger.warn(`Failed to store canonical score: ${err.message}`);
       }
-    })();
+    })().catch((err: any) => {
+      // Fire-and-forget snapshot write — never emit an unhandled rejection.
+      this.logger.warn(`storeSnapshot failed: ${err?.message ?? err}`);
+    });
   }
 
   /**

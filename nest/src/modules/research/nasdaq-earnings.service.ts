@@ -48,6 +48,14 @@ function parseMarketCap(value?: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+/** '8/25/2025' → '2025-08-25' (US date format) */
+function parseUsDate(value?: string): string | null {
+  if (!value) return null;
+  const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  return `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+}
+
 /** 'Jun/2026' → '2026-06-30' (last day of fiscal month) */
 function parseFiscalEnding(value?: string): string | null {
   if (!value) return null;
@@ -105,6 +113,8 @@ export class NasdaqEarningsService {
             timeOfDay,
             currency: 'USD',
             marketCap: parseMarketCap(r.marketCap),
+            lastYearEps: parseEps(r.lastYearEPS),
+            lastYearDate: parseUsDate(r.lastYearRptDt) || undefined,
             source: 'nasdaq',
           } as EarningsEvent;
         })

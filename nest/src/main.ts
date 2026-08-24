@@ -64,8 +64,11 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      // Allow any localhost port (Vite may use 5173-5179), plus production port
-      if (!origin || /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
+      // Restrict to known local origins: Vite dev ports (5173-5179) and the local
+      // Intranet (port 80). Non-browser requests (no Origin header) pass through.
+      // Previously ANY localhost port was allowed, letting any locally-running app
+      // make authenticated-looking cross-origin calls to the trading API.
+      if (!origin || /^https?:\/\/(localhost|127\.0\.0\.1):(80|517[3-9])$/.test(origin)) {
         callback(null, true);
       } else {
         callback(null, false);

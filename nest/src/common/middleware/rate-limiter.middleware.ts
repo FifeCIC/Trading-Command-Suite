@@ -79,8 +79,12 @@ export class RateLimiterMiddleware implements NestMiddleware {
       return next();
     }
 
-    // Check if we've called this endpoint too recently
-    const tracker = this.endpointTimers.get(path);
+    // Check if we've called this endpoint too recently.
+    // Keyed by client IP + path so one client can't exhaust a provider's rate
+    // limit while another is also polling. (Still per-process: counters reset on
+    // restart — a fully shared limiter would need Redis/DB.)
+    const clientKey = `${req.ip || 'unknown'}|${path}`;
+    const tracker = this.endpointTimers.get(clientKey);
     if (tracker) {
       const elapsed = now - tracker.lastCallTime;
       if (elapsed < tracker.intervalMs) {
@@ -99,7 +103,7 @@ export class RateLimiterMiddleware implements NestMiddleware {
     }
 
     // Update tracker
-    this.endpointTimers.set(path, {
+    this.endpointTimers.set(clientKey, {
       lastCallTime: now,
       intervalMs: matchInterval,
       label: matchLabel,

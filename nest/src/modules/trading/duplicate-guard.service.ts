@@ -50,6 +50,18 @@ export class DuplicateGuardService {
     let existingPositions = 0;
     let recentTrades = 0;
 
+    // Fail-closed: if the DB is unavailable we cannot verify duplicates, so we
+    // BLOCK the trade rather than silently allowing duplicate positions.
+    if (!this.prisma.isAvailable) {
+      this.logger.warn(`Duplicate guard: DB unavailable — failing closed for ${ticker} on ${brokerId}`);
+      return {
+        blocked: true,
+        reason: `Database unavailable — cannot verify duplicates for ${ticker} on ${brokerId}`,
+        existingPositions: 0,
+        recentTrades: 0,
+      };
+    }
+
     // 1. Check open positions for this symbol+broke
     if (this.prisma.isAvailable) {
       try {

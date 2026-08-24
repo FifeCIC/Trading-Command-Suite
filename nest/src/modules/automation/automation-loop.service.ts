@@ -111,12 +111,17 @@ interface ProtocolComparison {
  * @param threshold  - Minimum composite score required to trigger a trade
  */
 function compareProtocolPair(
-  longGated: { composite: number; signal?: string } | null | undefined,
-  shortGated: { composite: number } | null | undefined,
+  longGated: { composite: number; signal?: string; meta?: { compositePct?: number } } | null | undefined,
+  shortGated: { composite: number; meta?: { compositePct?: number } } | null | undefined,
   threshold: number,
 ): ProtocolComparison {
-  const longComposite = longGated?.composite ?? 0;
-  const shortComposite = shortGated?.composite ?? 0;
+  // Use the normalized 0-100 percentage when available (protocol-gating returns
+  // meta.compositePct). Thresholds were calibrated for a 0-100 scale, but the raw
+  // composite is now in the hundreds — comparing raw against a 0-100 threshold
+  // makes every threshold trivially pass (see SCALE WARNING above). Falls back to
+  // raw composite when meta.compositePct is absent.
+  const longComposite = longGated?.meta?.compositePct ?? longGated?.composite ?? 0;
+  const shortComposite = shortGated?.meta?.compositePct ?? shortGated?.composite ?? 0;
 
   if (shortGated != null) {
     // Dual-protocol: LONG vs SHORT comparison
@@ -379,7 +384,9 @@ export class AutomationLoopService implements OnModuleInit {
     this.auditLog.logDispatch(this.state.tickCount, strategyId, symbol, side, baseSize, sl, tp, entryPrice);
     const result = await broker.placeOrder({
       symbol, side: side as 'BUY'|'SELL', quantity: baseSize, sl, tp,
-      comment: `TCS ${strategyName} | ${composite}%`,
+      // Name only — the sanitizer strips '|'/'%', so "| composite%" polluted
+      // the strategy name parsed back on close (see mt5-comment.util.ts).
+      comment: `TCS ${strategyName}`,
     });
     this.auditLog.logOrderResult(this.state.tickCount, strategyId, symbol,
       result.success, result.ticket as number|undefined,
@@ -388,7 +395,7 @@ export class AutomationLoopService implements OnModuleInit {
       this.lastAnyTradeAt = Date.now();
       this.lastSymbolTrade.set(symbol, Date.now());
       try {
-        this.tradeRecorder.record({
+        await this.tradeRecorder.record({
           symbol, side: side.toLowerCase(), quantity: baseSize,
           entryPrice: result.price || entryPrice || 0, pnl: 0,
           provider: brokerId, status: 'open', origin: 'strategy',
@@ -396,7 +403,7 @@ export class AutomationLoopService implements OnModuleInit {
           scoringStrategyId: strategyId,
           ticket: result.ticket as number | undefined,
           sl, tp,
-          brokerComment: `TCS ${strategyName} | ${composite}%`,
+          brokerComment: `TCS ${strategyName}`,
         } as any);
       } catch {}
       // ── Trade-point portfolio snapshot (#477) ──
@@ -458,10 +465,11 @@ export class AutomationLoopService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    // Auto-restore loop + MT5 trading if AUTO_START_AUTOMATION env is not 'false' (defaults true)
-    const autoStart = process.env.AUTO_START_AUTOMATION !== 'false';
+    // Auto-restore the loop ONLY if AUTO_START_AUTOMATION is explicitly 'true' (fail-closed).
+    // Trading is NEVER auto-enabled regardless — it resets to false on every restart.
+    const autoStart = process.env.AUTO_START_AUTOMATION === 'true';
     if (!autoStart) {
-      this.logger.log('Auto-start disabled (AUTO_START_AUTOMATION=false) — loop requires manual start');
+      this.logger.log('Auto-start disabled (AUTO_START_AUTOMATION !== "true") — loop requires manual start');
       return;
     }
     // Wait for DB
@@ -1775,6 +1783,17 @@ export class AutomationLoopService implements OnModuleInit {
       }
       size = Math.round(size * 10000) / 10000;
 
+      // Never dispatch a zero/negative volume order (e.g. black-swan rarity sizing)
+      if (size <= 0) {
+        return {
+          timestamp: new Date().toISOString(),
+          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
+          decision: 'SKIP', reason: `Position size ${size} — trade skipped (invalid size)`,
+          composite: evalResult.composite ?? pos?.composite ?? 0, signal: evalResult.signal || pos?.signal,
+          quantity: size,
+        };
+      }
+
       // Compute SL/TP prices from ScoringStrategy
       const slPct = effectiveSlPct;
       const tpPct = effectiveTpPct;
@@ -1871,7 +1890,7 @@ export class AutomationLoopService implements OnModuleInit {
           quantity: size,
           sl: slPrice,
           tp: tpPrice,
-          comment: `TCS ${strategy.name} | ${evalResult.composite}%`,
+          comment: `TCS ${strategy.name}`,
         });
 
         this.lastTradeTime.set(strategyId, Date.now());
@@ -1881,7 +1900,7 @@ export class AutomationLoopService implements OnModuleInit {
         // Record trade
         if (result.success) {
           try {
-            this.tradeRecorder.record({
+            await this.tradeRecorder.record({
               symbol: strategy.symbol,
               side: evalResult.signal?.toLowerCase() || 'buy',
               quantity: size,
@@ -1920,13 +1939,81 @@ export class AutomationLoopService implements OnModuleInit {
     return { ...this.state, pendingActions: [...this.state.pendingActions] };
   }
 
-  confirmAction(actionId: string): { confirmed: boolean; message: string } {
+  async confirmAction(actionId: string): Promise<{ confirmed: boolean; message: string; ticket?: string | number; price?: number }> {
     const idx = this.state.pendingActions.findIndex(a => a.id === actionId);
     if (idx === -1) return { confirmed: false, message: 'Action not found or expired' };
+    const action = this.state.pendingActions[idx];
+
+    // Expired actions are rejected outright
+    if (new Date(action.expiresAt).getTime() < Date.now()) {
+      this.state.pendingActions.splice(idx, 1);
+      this.removePendingAction(actionId).catch(() => {});
+      return { confirmed: false, message: 'Action expired — no longer valid' };
+    }
+
+    const strategy = this.scoringStrategies.find(s => s.id === action.strategyId);
+    const broker = this.adapterFactory.create(action.brokerId || 'mt5');
+    if (!broker || !broker.placeOrder) {
+      return { confirmed: false, message: `Broker ${action.brokerId || 'mt5'} does not support orders` };
+    }
+
+    // Current price for SL/TP bracket — market order without bracket if unavailable
+    let entryPrice = 0;
+    try {
+      const quote = await broker.getQuote(action.symbol);
+      entryPrice = quote?.last ?? quote?.ask ?? quote?.bid ?? 0;
+    } catch { /* fall through with entryPrice=0 */ }
+
+    const slPct = (strategy as any)?.slPct ?? 1.0;
+    const tpPct = (strategy as any)?.tpPct ?? 1.0;
+    const sl = entryPrice > 0
+      ? action.side === 'BUY' ? entryPrice * (1 - slPct / 100) : entryPrice * (1 + slPct / 100)
+      : 0;
+    const tp = entryPrice > 0
+      ? action.side === 'BUY' ? entryPrice * (1 + tpPct / 100) : entryPrice * (1 - tpPct / 100)
+      : 0;
+
+    const result = await broker.placeOrder({
+      symbol: action.symbol,
+      side: action.side as 'BUY' | 'SELL',
+      quantity: action.quantity,
+      sl,
+      tp,
+      comment: `TCS ${strategy?.name ?? action.strategyId}`,
+    });
+
+    // Action is consumed regardless of outcome (avoids stale confirm buttons)
     this.state.pendingActions.splice(idx, 1);
-    // Actual execution would happen here — for now just acknowledge
-    this.logger.log(`Action ${actionId} confirmed`);
-    return { confirmed: true, message: 'Action confirmed' };
+    this.removePendingAction(actionId).catch(() => {});
+
+    if (!result.success) {
+      this.logger.warn(`Action ${actionId} confirm FAILED: ${result.error || 'Unknown error'}`);
+      return { confirmed: false, message: `Order failed: ${result.error || 'Unknown error'}` };
+    }
+
+    this.lastAnyTradeAt = Date.now();
+    this.lastSymbolTrade.set(action.symbol, Date.now());
+    this.logger.log(`Action ${actionId} confirmed → ${action.side} ${action.symbol} ticket ${result.ticket}`);
+
+    try {
+      await this.tradeRecorder.record({
+        symbol: action.symbol,
+        side: action.side.toLowerCase(),
+        quantity: action.quantity,
+        entryPrice: result.price || entryPrice || 0,
+        pnl: 0,
+        provider: action.brokerId || 'mt5',
+        status: 'open',
+        origin: 'strategy',
+        source: 'meta-stack',
+        scoringStrategyId: action.strategyId,
+        ticket: result.ticket as number | undefined,
+        sl,
+        tp,
+      } as any);
+    } catch { /* non-critical */ }
+
+    return { confirmed: true, message: `Action confirmed — ticket ${result.ticket}`, ticket: result.ticket, price: result.price };
   }
 
   rejectAction(actionId: string): { rejected: boolean; message: string } {

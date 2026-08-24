@@ -925,6 +925,9 @@ model EarningsEvent {
   revenueEstimate  Float?   @map("revenue_estimate")
   revenueActual    Float?   @map("revenue_actual")
   surprisePercent  Float?   @map("surprise_percent")
+  lastYearEps      Float?   @map("last_year_eps") // same quarter prior year (Nasdaq only)
+  lastYearDate     DateTime? @map("last_year_date") // date of the prior-year report
+  marketCap        Float?   @map("market_cap") // USD — Nasdaq provides it, Finnhub doesn't
   timeOfDay        String?  @map("time_of_day") @db.VarChar(20)
   currency         String?  @db.VarChar(10)
   source           String   @db.VarChar(30)

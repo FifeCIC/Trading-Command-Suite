@@ -25,6 +25,7 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import * as crypto from 'crypto';
 import {
   IProviderAdapter,
   BrokerAccount,
@@ -111,11 +112,7 @@ export class CapitalComAdapter implements IProviderAdapter {
         'X-CAP-API-KEY': this.apiKey,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        identifier: this.login,
-        password: this.password,
-        encryptedPassword: false,
-      }),
+      body: JSON.stringify(await this.buildSessionBody()),
       signal: AbortSignal.timeout(15_000),
     });
 
@@ -137,6 +134,56 @@ export class CapitalComAdapter implements IProviderAdapter {
       clientId: data.clientId || '',
       expiresAt: Date.now() + 9 * 60 * 60 * 1000, // 9 hour safety margin
     };
+  }
+
+  /**
+   * Build the /session request body. By default the password is sent as plaintext
+   * (over HTTPS). Set CAPITAL_COM_ENCRYPT_PASSWORD=true to use Capital.com's
+   * RSA-encrypted password flow instead (issue #23). If encryption fails, we
+   * fall back to plaintext and log a warning — auth never breaks silently.
+   */
+  private async buildSessionBody(): Promise<Record<string, unknown>> {
+    const body: Record<string, unknown> = {
+      identifier: this.login,
+      password: this.password,
+      encryptedPassword: false,
+    };
+    if (process.env.CAPITAL_COM_ENCRYPT_PASSWORD === 'true') {
+      try {
+        const enc = await this.encryptPassword(this.password);
+        body.password = enc.password;
+        body.key = enc.key;
+        body.encryptedPassword = true;
+        this.logger.log('Capital.com: using RSA-encrypted password');
+      } catch (err) {
+        this.logger.warn(`Capital.com password encryption failed — falling back to plaintext: ${(err as Error).message}`);
+      }
+    }
+    return body;
+  }
+
+  /**
+   * Capital.com RSA password encryption flow:
+   *   GET /api/v1/session/encryptionKey → RSA public key
+   *   Client generates an AES-128 key, RSA-encrypts it, AES-ECB-encrypts the password.
+   */
+  private async encryptPassword(password: string): Promise<{ password: string; key: string }> {
+    const res = await fetch(`${this.baseUrl}/api/v1/session/encryptionKey`, {
+      headers: { 'X-CAP-API-KEY': this.apiKey },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) throw new Error(`encryptionKey endpoint HTTP ${res.status}`);
+    const data = await res.json();
+    const rsaPublicPem = data.encryptionKey;
+    if (!rsaPublicPem) throw new Error('No encryptionKey in response');
+    const aesKey = crypto.randomBytes(16);
+    const encryptedKey = crypto.publicEncrypt(
+      { key: rsaPublicPem, padding: crypto.constants.RSA_PKCS1_PADDING },
+      aesKey,
+    );
+    const cipher = crypto.createCipheriv('aes-128-ecb', aesKey, null);
+    const encryptedPassword = Buffer.concat([cipher.update(password, 'utf8'), cipher.final()]);
+    return { password: encryptedPassword.toString('base64'), key: encryptedKey.toString('base64') };
   }
 
   // ── Auth Headers ─────────────────────────────────────────
@@ -246,7 +293,9 @@ export class CapitalComAdapter implements IProviderAdapter {
     if (!data?.positions) return [];
 
     return data.positions.map((p: any) => ({
-      symbol: p.position?.dealId || p.market?.epic || '',
+      // Use the instrument epic (tradeable symbol) — NOT the internal dealId,
+      // which is an order reference invisible to watchlists and risk management (issue #30).
+      symbol: p.market?.epic || p.position?.dealId || '',
       quantity: p.position?.size || 0,
       avgCost: p.position?.level || 0,
       currentPrice: p.market?.bid || 0,
@@ -308,7 +357,7 @@ export class CapitalComAdapter implements IProviderAdapter {
     if (!data?.prices?.length) return [];
 
     return data.prices.map((p: any) => ({
-      timestamp: new Date(p.snapshotTimeUtc || p.snapshotTime).toISOString(),
+      timestamp: new Date(p.snapshotTimeUtc || p.snapshotTime),
       open: p.openPrice?.bid || 0,
       high: p.highPrice?.bid || 0,
       low: p.lowPrice?.bid || 0,

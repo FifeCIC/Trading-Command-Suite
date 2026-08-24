@@ -69,6 +69,15 @@ export class ResearchController {
       });
 
       if (stored.length > 0) {
+        // Tracked set: symbols in watchlists or portfolio — used by the UI to
+        // highlight reports for names the user already trades/watches.
+        let tracked = new Set<string>();
+        try {
+          const wl = await this.earningsImportSettings.loadScopeSymbols('watchlist');
+          const pf = await this.earningsImportSettings.loadScopeSymbols('portfolio');
+          tracked = new Set<string>([...(wl ?? []), ...(pf ?? [])]);
+        } catch { /* non-fatal */ }
+
         // Dedupe by (symbol, reportDate) — prefer finnhub rows when both exist.
         const seen = new Map<string, any>();
         for (const e of stored) {
@@ -82,6 +91,10 @@ export class ResearchController {
           timeOfDay: e.timeOfDay ?? null,
           epsEstimate: e.epsEstimate ?? null,
           revenueEstimate: e.revenueEstimate ?? null,
+          lastYearEps: e.lastYearEps ?? null,
+          lastYearDate: e.lastYearDate ? e.lastYearDate.toISOString().split('T')[0] : null,
+          marketCap: e.marketCap ?? null,
+          tracked: tracked.has(e.symbol.toUpperCase()),
           source: e.source,
         }));
         return { source: 'db', horizonMonths, count: events.length, events };

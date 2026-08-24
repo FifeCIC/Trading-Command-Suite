@@ -9,6 +9,10 @@
 .ec-field { display: flex; flex-direction: column; gap: 0.3rem; }
 .ec-field label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft, #94a3b8); }
 .ec-chip-tabs { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.ec-chip-sep {
+  width: 1px; align-self: stretch; margin: 0.15rem 0.35rem;
+  background: var(--line, #1e2a45);
+}
 .ec-chip {
   padding: 0.3rem 0.65rem; font-size: 0.74rem;
   background: rgba(255,255,255,0.04); border: 1px solid var(--line, #1e2a45);
@@ -16,6 +20,18 @@
 }
 .ec-chip:hover { border-color: var(--accent, #0ea5a6); color: var(--ink, #e2e8f0); }
 .ec-chip-active { background: rgba(14,165,166,0.15); border-color: var(--accent, #0ea5a6); color: var(--accent, #0ea5a6); }
+.ec-chip-sep { width: 1px; align-self: stretch; background: var(--line, #1e2a45); margin: 0 0.25rem; }
+
+/* ── Display filters ─────────────────────────────────────── */
+.ec-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.9rem; margin-bottom: 1rem; }
+
+/* ── Table highlights ────────────────────────────────────── */
+.ec-row-today { background: rgba(14,165,166,0.08) !important; }
+.ec-tracked-star { color: #f5b942; margin-right: 0.3rem; font-size: 0.8rem; }
+.ec-delta { font-size: 0.68rem; }
+.ec-delta-up { color: #3ecf8e; }
+.ec-delta-down { color: #f06c6c; }
+.ec-cap { color: var(--ink-soft, #94a3b8); }
 
 /* ── Import settings card ─────────────────────────────────── */
 .ec-settings-card {

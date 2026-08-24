@@ -29,7 +29,11 @@ const EnvSchema = z.object({
 const parsed = EnvSchema.safeParse(import.meta.env);
 
 if (!parsed.success) {
-  throw new Error(`Invalid environment config: ${parsed.error.message}`);
+  // Do NOT crash the dev server on a bad env var — log and fall back to defaults.
+  console.warn(
+    '[env] Invalid environment config — using defaults: ' +
+      parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
+  );
 }
 
-export const env = parsed.data;
+export const env = parsed.success ? parsed.data : EnvSchema.parse({});

@@ -125,9 +125,11 @@ export class RiskGatingEngine {
       weightedRiskSum += rule.severity;
     }
 
-    // Cap total risk penalty — don't let multiple moderate risks compound below 0.5
-    // A neutral market with no actual crises shouldn't lose more than half its signal
-    cumulativeMultiplier = Math.max(0.5, cumulativeMultiplier);
+    // Safety floor ONLY — prevents runaway compounding producing zero/negative
+    // scores. No 0.5 cap: multiple moderate risks SHOULD compound (e.g. high
+    // correlation + high volatility + near rollover) and drive the score toward
+    // the threshold that blocks the trade. Hard gates still veto fully above this.
+    cumulativeMultiplier = Math.max(0.05, cumulativeMultiplier);
 
     // Compute aggregate risk score (0-100, inverted: 0 = safe, 100 = extreme risk)
     const riskScore = totalRiskWeight > 0

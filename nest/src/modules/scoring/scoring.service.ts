@@ -48,8 +48,20 @@ import {
  * No artificial cap at 100 — scores flow from directive ranges.
  */
 
-const ENTRY_THRESHOLD = 60;
-const WATCH_THRESHOLD = 40;
+const ENTRY_THRESHOLD = 40;  // % of max — entry (matches protocol BUY/SELL)
+const WATCH_THRESHOLD = 20;  // % of max — watch (matches protocol HOLD)
+
+// ⚠️ Aligned with ProtocolGatingService (also 40/20, percentage-based). Both are
+// percentages of a protocol's max score, so a symbol shows the same signal in
+// flat scoring (dashboard) as in protocol scoring (automation loop). Previously
+// flat scoring used 60/40 while protocol scoring used 40 — the same symbol could
+// show HOLD in one view and BUY in another.
+
+/** Cooldown for per-symbol entry notifications — prevents duplicate alerts. */
+const ENTRY_NOTIFY_COOLDOWN_MS = 30 * 60 * 1000; // 30 min
+
+/** Backoff for live bar-refresh on sparse symbols — prevents a bridge fetch + DB import every tick. */
+const LIVE_REFRESH_COOLDOWN_MS = 15 * 60 * 1000; // 15 min
 
 export interface DirectiveBreakdown {
   directiveId: string;
@@ -117,6 +129,10 @@ export interface RankedResult {
 @Injectable()
 export class ScoringService implements OnModuleInit {
   private readonly logger = new Logger(ScoringService.name);
+  /** Last entry-notification timestamp per ticker (dedup — issue #26). */
+  private lastEntryNotified = new Map<string, number>();
+  /** Last live bar-refresh attempt per symbolId (backoff — issue #31). */
+  private lastLiveRefresh = new Map<string, number>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -436,11 +452,17 @@ export class ScoringService implements OnModuleInit {
         this.logger.warn(`Scoring: ${symbol.ticker} has no bars — returning no_data`);
       }
 
-      // Fire notification on entry signal
+      // Fire notification on entry signal — deduped per symbol (30-min cooldown)
+      // so a symbol that stays above threshold doesn't fire 15 identical alerts.
       if (signal === 'entry') {
-        this.notificationService.notifyEntrySignal(symbol.ticker, Number(normScore.toFixed(1))).catch(err => {
-          this.logger.warn(`Entry notification failed for ${symbol.ticker}: ${err.message}`);
-        });
+        const now = Date.now();
+        const last = this.lastEntryNotified.get(symbol.ticker) ?? 0;
+        if (now - last >= ENTRY_NOTIFY_COOLDOWN_MS) {
+          this.lastEntryNotified.set(symbol.ticker, now);
+          this.notificationService.notifyEntrySignal(symbol.ticker, Number(normScore.toFixed(1))).catch(err => {
+            this.logger.warn(`Entry notification failed for ${symbol.ticker}: ${err.message}`);
+          });
+        }
       }
 
       // Compute per-symbol coverage from active vs total directives
@@ -518,10 +540,12 @@ export class ScoringService implements OnModuleInit {
    */
   async rankFromDb(limit = 20): Promise<RankedResult> {
     const modeInfo = this.modeService.getModeInfo();
+    // Directive count drives coverage figures — derived, never hardcoded (issue #25).
+    const directiveCount = this.directivesService.list().length;
     const base = {
       mode: modeInfo.mode,
       services: { database: modeInfo.database, queue: modeInfo.queue, redis: modeInfo.redis },
-      strategy: { name: 'DB-Read (pre-computed)', entryThreshold: ENTRY_THRESHOLD, watchThreshold: WATCH_THRESHOLD, maxPossibleScore: 100, directiveCount: this.directivesService.list().length },
+      strategy: { name: 'DB-Read (pre-computed)', entryThreshold: ENTRY_THRESHOLD, watchThreshold: WATCH_THRESHOLD, maxPossibleScore: 100, directiveCount },
     };
 
     if (!this.prisma.isAvailable) {
@@ -558,14 +582,14 @@ export class ScoringService implements OnModuleInit {
             score: s.value,
             normalizedScore: Math.min(100, s.value),
             maxPossibleScore: 100,
-            totalDirectives: 102,
-            activeDirectives: 102,
+            totalDirectives: directiveCount,
+            activeDirectives: directiveCount,
             coverage: 1,
             degraded: false,
             degradedProviders: [],
             confidence: 0.5,
             freshness: 'cached',
-            signal: s.value >= 60 ? 'BUY' : s.value >= 40 ? 'HOLD' : 'SELL',
+            signal: s.value >= ENTRY_THRESHOLD ? 'BUY' : s.value >= WATCH_THRESHOLD ? 'HOLD' : 'SELL',
             dataStatus: 'live' as const,
             breakdown: [],
             timestamp: s.timestamp?.toISOString?.() ?? new Date().toISOString(),
@@ -593,14 +617,14 @@ export class ScoringService implements OnModuleInit {
           score: s.composite ?? 0,
           normalizedScore: Math.min(100, s.composite ?? 0),
           maxPossibleScore: 100,
-          totalDirectives: 102,
-          activeDirectives: 102,
+          totalDirectives: directiveCount,
+          activeDirectives: directiveCount,
           coverage: 1,
           degraded: false,
           degradedProviders: [],
           confidence: 0.5,
           freshness: 'cached',
-          signal: s.tradingSignal ?? (s.composite >= 60 ? 'BUY' : s.composite >= 40 ? 'HOLD' : 'SELL'),
+          signal: s.tradingSignal ?? (s.composite >= ENTRY_THRESHOLD ? 'BUY' : s.composite >= WATCH_THRESHOLD ? 'HOLD' : 'SELL'),
           dataStatus: 'live' as const,
           breakdown: [],
           timestamp: s.snappedAt?.toISOString?.() ?? new Date().toISOString(),
@@ -749,6 +773,17 @@ export class ScoringService implements OnModuleInit {
     };
   }
 
+  /** Backoff gate for live bar-refresh — returns true once per cooldown window per symbol. */
+  private isLiveRefreshDue(symbolId: string): boolean {
+    const now = Date.now();
+    const last = this.lastLiveRefresh.get(symbolId) ?? 0;
+    if (now - last >= LIVE_REFRESH_COOLDOWN_MS) {
+      this.lastLiveRefresh.set(symbolId, now);
+      return true;
+    }
+    return false;
+  }
+
   private async loadBars(symbolId: string, ticker?: string): Promise<MarketBar[]> {
     try {
       const rows = await this.prisma.marketBar.findMany({
@@ -769,7 +804,9 @@ export class ScoringService implements OnModuleInit {
       }
 
       // ── Live Data Fallback ──
-      if (ticker && rows.length < 30) {
+      // Backoff (issue #31): at most one live refresh per cooldown per symbol, so
+      // persistently sparse symbols don't fire a bridge fetch + DB import every tick.
+      if (ticker && rows.length < 30 && this.isLiveRefreshDue(symbolId)) {
         // Check if this is a crypto ticker — use the crypto router
         if (this.cryptoRouter.isCrypto(ticker)) {
           try {

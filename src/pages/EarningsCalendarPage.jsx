@@ -29,10 +29,42 @@ function scopeLabelMap(sc) {
   return { all: 'All symbols', watchlist: 'Watchlist only', portfolio: 'Portfolio only' }[sc] ?? sc;
 }
 
+function localDateStr(d) {
+  const x = new Date(d);
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+}
+
+/** True when reportDate falls inside the selected time window. */
+function inWindow(dateStr, w) {
+  if (w === 'all') return true;
+  const d = new Date(dateStr + 'T00:00:00');
+  const t0 = new Date(localDateStr(new Date()) + 'T00:00:00');
+  const diff = Math.round((d - t0) / 86400000);
+  if (w === 'today') return diff === 0;
+  if (w === 'tomorrow') return diff === 1;
+  if (w === 'week') return diff >= 0 && diff <= 6;
+  if (w === 'nextWeek') return diff >= 7 && diff <= 13;
+  return true;
+}
+
+function capBucket(cap) {
+  if (cap == null) return null;
+  if (cap >= 200e9) return 'mega';
+  if (cap >= 10e9) return 'large';
+  if (cap >= 2e9) return 'mid';
+  return 'small';
+}
+
+const CAP_LABELS = { mega: 'Mega ≥$200B', large: 'Large $10–200B', mid: 'Mid $2–10B', small: 'Small <$2B' };
+
 export default function EarningsCalendarPage() {
   const [sectorFilter, setSectorFilter] = useState('all');
   const [expandedSym, setExpandedSym] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(3); // default 3 months
+  const [windowFilter, setWindowFilter] = useState('all'); // all|today|tomorrow|week|nextWeek
+  const [sessionFilter, setSessionFilter] = useState('all'); // all|bmo|amc
+  const [capFilter, setCapFilter] = useState('all'); // all|mega|large|mid|small
+  const [estimatesOnly, setEstimatesOnly] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState(null);
   const [settingsMsg, setSettingsMsg] = useState(null);
 
@@ -108,7 +140,18 @@ export default function EarningsCalendarPage() {
   }, [events]);
 
   const grouped = useMemo(() => {
-    const filtered = sectorFilter === 'all' ? events : events.filter((e) => e.sector === sectorFilter);
+    const filtered = events.filter((e) => {
+      if (sectorFilter !== 'all' && e.sector !== sectorFilter) return false;
+      if (!inWindow(e.reportDate, windowFilter)) return false;
+      if (sessionFilter === 'bmo' && e.timeOfDay !== 'Before Open') return false;
+      if (sessionFilter === 'amc' && e.timeOfDay !== 'After Close') return false;
+      if (capFilter !== 'all') {
+        const bucket = capBucket(e.marketCap);
+        if (bucket !== capFilter) return false; // null-cap rows drop when a bucket is chosen
+      }
+      if (estimatesOnly && e.epsEstimate == null) return false;
+      return true;
+    });
     const groups = {};
     filtered.forEach((e) => {
       const wk = getWeekLabel(e.reportDate);
@@ -116,7 +159,7 @@ export default function EarningsCalendarPage() {
       groups[wk].push(e);
     });
     return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [events, sectorFilter]);
+  }, [events, sectorFilter, windowFilter, sessionFilter, capFilter, estimatesOnly]);
 
   // ── Loading State ──
   if (isLoading) {
@@ -292,24 +335,80 @@ export default function EarningsCalendarPage() {
 
       <div className="ec-filters">
         <div className="ec-field">
-          <label>Horizon</label>
+          <label>Horizon / Sector</label>
+          {/* Single chip row: month chips followed by the sector chips (moved
+              here from the separate Sector field so the filters sit on one
+              line). Each group still drives its own filter state. */}
           <div className="ec-chip-tabs">
             {[1, 2, 3].map((m) => (
-              <button key={m} type="button" className={`ec-chip ${selectedMonth === m ? 'ec-chip-active' : ''}`} onClick={() => setSelectedMonth(m)}>
+              <button key={`m-${m}`} type="button" className={`ec-chip ${selectedMonth === m ? 'ec-chip-active' : ''}`} onClick={() => setSelectedMonth(m)}>
                 {m} month{m > 1 ? 's' : ''}
               </button>
             ))}
-          </div>
-        </div>
-        <div className="ec-field">
-          <label>Sector</label>
-          <div className="ec-chip-tabs">
+            <span className="ec-chip-sep" aria-hidden="true" />
             {sectors.map((s) => (
-              <button key={s} type="button" className={`ec-chip ${sectorFilter === s ? 'ec-chip-active' : ''}`} onClick={() => setSectorFilter(s)}>
+              <button key={`s-${s}`} type="button" className={`ec-chip ${sectorFilter === s ? 'ec-chip-active' : ''}`} onClick={() => setSectorFilter(s)}>
                 {s === 'all' ? 'All Sectors' : s}
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="ec-field">
+          <label>Time window</label>
+          <div className="ec-chip-tabs">
+            {[
+              ['all', 'All'],
+              ['today', 'Today'],
+              ['tomorrow', 'Tomorrow'],
+              ['week', 'This Week'],
+              ['nextWeek', 'Next Week'],
+            ].map(([w, label]) => (
+              <button key={`w-${w}`} type="button" className={`ec-chip ${windowFilter === w ? 'ec-chip-active' : ''}`} onClick={() => setWindowFilter(w)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="ec-field">
+          <label>Session</label>
+          <div className="ec-chip-tabs">
+            {[
+              ['all', 'Any'],
+              ['bmo', '☀️ BMO'],
+              ['amc', '🌙 AMC'],
+            ].map(([s2, label]) => (
+              <button key={`sd-${s2}`} type="button" className={`ec-chip ${sessionFilter === s2 ? 'ec-chip-active' : ''}`} onClick={() => setSessionFilter(s2)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="ec-field">
+          <label>Market cap</label>
+          <div className="ec-chip-tabs">
+            {[
+              ['all', 'Any'],
+              ['mega', 'Mega'],
+              ['large', 'Large'],
+              ['mid', 'Mid'],
+              ['small', 'Small'],
+            ].map(([c, label]) => (
+              <button key={`c-${c}`} type="button" className={`ec-chip ${capFilter === c ? 'ec-chip-active' : ''}`} onClick={() => setCapFilter(c)} title={CAP_LABELS[c]}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="ec-field">
+          <label>
+            <input type="checkbox" checked={estimatesOnly} onChange={(e) => setEstimatesOnly(e.target.checked)} />
+            {' '}Estimates only
+          </label>
+          <p className="ec-field-hint">Hides reports with no analyst EPS coverage.</p>
         </div>
       </div>
 
@@ -329,20 +428,48 @@ export default function EarningsCalendarPage() {
               <thead>
                 <tr>
                   <th>Symbol</th><th>Company</th><th>Date</th><th>Time</th>
-                  <th className="ec-right">EPS Est</th><th className="ec-right">Rev Est</th>
+                  <th className="ec-right">EPS Est</th>
+                  <th className="ec-right">Prior EPS</th>
+                  <th className="ec-right">Rev Est</th>
+                  <th className="ec-right">Mkt Cap</th>
                 </tr>
               </thead>
               <tbody>
                 {reports.map((r, idx) => {
                   const isExpanded = expandedSym === r.symbol;
+                  const isToday = r.reportDate === localDateStr(new Date());
+                  const priorPct =
+                    r.epsEstimate != null && r.lastYearEps != null && r.lastYearEps !== 0
+                      ? Math.round(((r.epsEstimate - r.lastYearEps) / Math.abs(r.lastYearEps)) * 100)
+                      : null;
                   return (
-                    <tr key={r.symbol + '-' + idx} className={`ec-row ${isExpanded ? 'ec-row-expanded' : ''}`} onClick={() => setExpandedSym(isExpanded ? null : r.symbol)}>
-                      <td className="ec-sym">{r.symbol}</td>
+                    <tr
+                      key={r.symbol + '-' + idx}
+                      className={`ec-row ${isExpanded ? 'ec-row-expanded' : ''} ${isToday ? 'ec-row-today' : ''}`}
+                      onClick={() => setExpandedSym(isExpanded ? null : r.symbol)}
+                    >
+                      <td className="ec-sym">
+                        {r.tracked ? <span className="ec-tracked-star" title="In your watchlist or portfolio">★</span> : null}
+                        {r.symbol}
+                      </td>
                       <td>{r.name || r.companyName || r.symbol}</td>
-                      <td>{r.reportDate}</td>
-                      <td><span className={`ec-time-badge ${r.timeOfDay === 'After Close' ? 'ec-time-pm' : r.timeOfDay === 'Before Open' ? 'ec-time-am' : 'ec-time-na'}`}>{r.timeOfDay || 'Unknown'}</span></td>
+                      <td>{r.reportDate}{isToday ? ' (today)' : ''}</td>
+                      <td>
+                        <span className={`ec-time-badge ${r.timeOfDay === 'After Close' ? 'ec-time-pm' : r.timeOfDay === 'Before Open' ? 'ec-time-am' : 'ec-time-na'}`}>
+                          {r.timeOfDay === 'Before Open' ? '☀️ Before Open' : r.timeOfDay === 'After Close' ? '🌙 After Close' : 'Unscheduled'}
+                        </span>
+                      </td>
                       <td className="ec-right ec-mono">{r.epsEstimate != null ? `$${r.epsEstimate}` : '—'}</td>
+                      <td className="ec-right ec-mono">
+                        {r.lastYearEps != null ? `$${r.lastYearEps}` : '—'}
+                        {priorPct != null ? (
+                          <span className={priorPct >= 0 ? 'ec-delta ec-delta-up' : 'ec-delta ec-delta-down'} title={`${priorPct >= 0 ? '+' : ''}${priorPct}% vs prior-year quarter`}>
+                            {' '}{priorPct >= 0 ? '▲' : '▼'}{Math.abs(priorPct)}%
+                          </span>
+                        ) : null}
+                      </td>
                       <td className="ec-right ec-mono">{formatRev(r.revenueEstimate)}</td>
+                      <td className="ec-right ec-mono ec-cap">{r.marketCap != null ? formatRev(r.marketCap) : '—'}</td>
                     </tr>
                   );
                 })}
