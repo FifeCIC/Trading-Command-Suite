@@ -38,6 +38,15 @@ export function importEarnings() {
 }
 
 /**
+ * Delete stored FUTURE earnings rows that no longer match the current import
+ * settings ("Save & apply"). Past rows are kept (surprise-history corpus).
+ * @returns {Promise<{ scanned: number, removed: number, kept: number, filters: object }>}
+ */
+export function purgeEarningsData() {
+  return apiPost('/api/research/earnings/purge');
+}
+
+/**
  * Import status: running flag, stored event count, settings snapshot, last run.
  * @returns {Promise<{ running, storedEvents, settings, lastImport }>}
  */

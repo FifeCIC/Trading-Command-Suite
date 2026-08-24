@@ -353,6 +353,72 @@ export class ResearchImportService implements OnModuleInit {
   }
 
   /**
+   * PURGE: delete stored FUTURE events that would not pass the current import
+   * settings — the "Save & apply" action on the calendar page. Re-applies the
+   * same filter chain the import uses (scope → session → market cap →
+   * known-session), so stored data and settings always agree.
+   *
+   * Considerations:
+   *  • Only FUTURE rows (reportDate >= today) are touched. Past rows stay —
+   *    they are the surprise-history corpus the EPS epic (#679) needs.
+   *  • Rows failing only the minMarketCap check but with NULL cap are KEPT
+   *    (same "keep unknown" semantics as the import path).
+   *  • Deletes happen in one batch — purging 5k rows in a loop is slow.
+   */
+  async purgeNonMatching(): Promise<{
+    scanned: number;
+    removed: number;
+    kept: number;
+    filters: Record<string, unknown>;
+  }> {
+    const settings = await this.settingsService.getSettings();
+    const scopeSymbols = await this.settingsService.loadScopeSymbols(settings.scope);
+
+    const from = new Date();
+    from.setHours(0, 0, 0, 0);
+
+    const rows = await this.prisma.earningsEvent.findMany({
+      where: { reportDate: { gte: from } },
+      select: { id: true, symbol: true, reportDate: true, source: true, timeOfDay: true, marketCap: true },
+    });
+
+    // Map DB rows to the EarningsEvent shape the filter chain expects.
+    const asEvents = rows.map((r) => ({
+      symbol: r.symbol,
+      reportDate: r.reportDate.toISOString().split('T')[0],
+      source: r.source,
+      timeOfDay: r.timeOfDay as EarningsEvent['timeOfDay'],
+      marketCap: r.marketCap,
+    })) as EarningsEvent[];
+
+    const { kept } = this.settingsService.applyFilters(asEvents, settings, scopeSymbols);
+    const keepKeys = new Set(kept.map((e) => `${e.symbol}|${e.reportDate}|${e.source}`));
+    const removeIds = rows
+      .filter((r) => !keepKeys.has(`${r.symbol}|${r.reportDate.toISOString().split('T')[0]}|${r.source}`))
+      .map((r) => r.id);
+
+    if (removeIds.length > 0) {
+      await this.prisma.earningsEvent.deleteMany({ where: { id: { in: removeIds } } });
+    }
+
+    const result = {
+      scanned: rows.length,
+      removed: removeIds.length,
+      kept: rows.length - removeIds.length,
+      filters: {
+        scope: settings.scope,
+        minMarketCap: settings.minMarketCap,
+        timeOfDay: settings.timeOfDay,
+        requireKnownSession: settings.requireKnownSession,
+      },
+    };
+    this.logger.log(
+      `Earnings purge: ${result.removed} removed, ${result.kept} kept (of ${result.scanned} future rows) — ${JSON.stringify(result.filters)}`,
+    );
+    return result;
+  }
+
+  /**
    * Weekly on Sunday at 08:00 — fetch analyst price targets.
    * NOTE: Finnhub free tier does NOT include price-target data.
    * This will log a warning until a premium key is configured.

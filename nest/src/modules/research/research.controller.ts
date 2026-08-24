@@ -156,6 +156,17 @@ export class ResearchController {
   }
 
   /**
+   * POST /api/research/earnings/purge
+   * Delete stored FUTURE earnings rows that no longer match the current
+   * import settings (the "Save & apply" button). Past rows are kept — they
+   * are the surprise-history corpus.
+   */
+  @Post('earnings/purge')
+  async purgeEarnings() {
+    return this.researchImport.purgeNonMatching();
+  }
+
+  /**
    * GET /api/research/earnings/settings
    * Import filters — scope, min market cap, session, auto-import toggle.
    */

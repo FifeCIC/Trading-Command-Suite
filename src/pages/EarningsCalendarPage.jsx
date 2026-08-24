@@ -1,13 +1,17 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchEarningsCalendar,
   fetchEarningsSettings,
   fetchEarningsImportStatus,
   updateEarningsSettings,
   importEarnings,
+  purgeEarningsData,
 } from '../core/api/research.js';
 import './earnings-calendar.css';
+
+/** Hard cap on rendered rows — 5k+ DOM rows chokes the page. */
+const RENDER_CAP = 400;
 
 function getWeekLabel(dateStr) {
   const d = new Date(dateStr);
@@ -112,6 +116,25 @@ export default function EarningsCalendarPage() {
     }
   };
 
+  const saveAndApply = async () => {
+    setSettingsMsg('Saving settings & purging non-matching rows…');
+    try {
+      await updateEarningsSettings(settingsDraft ?? {});
+      setSettingsDraft(null);
+      const purgeRes = await purgeEarningsData();
+      setSettingsMsg(
+        `Settings saved. Purged ${purgeRes?.removed ?? 0} rows (${purgeRes?.kept ?? 0} kept).`,
+      );
+      settingsQuery.refetch();
+      statusQuery.refetch();
+      queryClient.invalidateQueries({ queryKey: ['earnings-calendar'] });
+      setShowAll(false);
+    } catch (e) {
+      setSettingsMsg(`Save & apply failed: ${e?.message || e}`);
+    }
+    setTimeout(() => setSettingsMsg(null), 8000);
+  };
+
   const doImport = async () => {
     setSettingsMsg('Import started — it runs in the background.');
     try {
@@ -139,8 +162,12 @@ export default function EarningsCalendarPage() {
     return ['all', ...Array.from(set).sort()];
   }, [events]);
 
-  const grouped = useMemo(() => {
-    const filtered = events.filter((e) => {
+  // ── Filtering + display cap ─────────────────────────────────
+  // 5k+ rows is a real DOM problem (multi-MB snapshots, janky scroll).
+  // Compute the filtered set first, then cap RENDERING at RENDER_CAP with a
+  // "Show all" opt-in — grouping/filtering always sees the full set.
+  const filteredEvents = useMemo(() => {
+    return events.filter((e) => {
       if (sectorFilter !== 'all' && e.sector !== sectorFilter) return false;
       if (!inWindow(e.reportDate, windowFilter)) return false;
       if (sessionFilter === 'bmo' && e.timeOfDay !== 'Before Open') return false;
@@ -152,14 +179,18 @@ export default function EarningsCalendarPage() {
       if (estimatesOnly && e.epsEstimate == null) return false;
       return true;
     });
+  }, [events, sectorFilter, windowFilter, sessionFilter, capFilter, estimatesOnly]);
+
+  const grouped = useMemo(() => {
+    const visible = showAll ? filteredEvents : filteredEvents.slice(0, RENDER_CAP);
     const groups = {};
-    filtered.forEach((e) => {
+    visible.forEach((e) => {
       const wk = getWeekLabel(e.reportDate);
       if (!groups[wk]) groups[wk] = [];
       groups[wk].push(e);
     });
     return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [events, sectorFilter, windowFilter, sessionFilter, capFilter, estimatesOnly]);
+  }, [filteredEvents, showAll]);
 
   // ── Loading State ──
   if (isLoading) {
@@ -316,6 +347,7 @@ export default function EarningsCalendarPage() {
 
           <div className="ec-settings-actions">
             <button type="button" className="ec-btn ec-btn-primary" onClick={saveSettings}>Save settings</button>
+            <button type="button" className="ec-btn ec-btn-danger" onClick={saveAndApply} title="Save settings and delete stored rows that no longer match them (future reports only)">Save &amp; apply (purge)</button>
             <button type="button" className="ec-btn" onClick={doImport}>Import now</button>
             <span className="ec-settings-msg">{settingsMsg ?? ''}</span>
           </div>
@@ -417,6 +449,16 @@ export default function EarningsCalendarPage() {
         <div className="ec-empty">
           <p>No upcoming earnings found{data?.count > 0 ? ' for this filter' : ''}.</p>
           <p className="ec-empty-hint">Try a longer horizon or remove the sector filter.</p>
+        </div>
+      )}
+
+      {/* ── Display cap notice ── */}
+      {filteredEvents.length > RENDER_CAP && !showAll && (
+        <div className="ec-cap-notice">
+          Showing the first {RENDER_CAP} of {filteredEvents.length} reports to keep the page fast.
+          <button type="button" className="ec-chip" onClick={() => setShowAll(true)}>
+            Show all {filteredEvents.length} (may be slow)
+          </button>
         </div>
       )}
 
