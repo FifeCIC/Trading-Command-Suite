@@ -71,6 +71,7 @@ export default function EarningsCalendarPage() {
   const [estimatesOnly, setEstimatesOnly] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState(null);
   const [settingsMsg, setSettingsMsg] = useState(null);
+  const [showAll, setShowAll] = useState(false); // renders all rows (heavy — opt-in)
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['earnings-calendar', selectedMonth],
