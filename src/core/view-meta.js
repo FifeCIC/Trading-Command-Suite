@@ -462,7 +462,7 @@ const VIEW_META = {
   '/lab/gold-speed': {
     label: 'Gold Speed',
     file: 'src/pages/GoldSpeedTradingPage.jsx',
-    css: 'src/pages/gold-speed.css',
+    css: 'src/pages/speed-cockpit.css',
     api: [],
   },
   '/lab/diagrams': {

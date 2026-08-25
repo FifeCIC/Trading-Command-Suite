@@ -61,6 +61,34 @@ function capBucket(cap) {
 
 const CAP_LABELS = { mega: 'Mega ≥$200B', large: 'Large $10–200B', mid: 'Mid $2–10B', small: 'Small <$2B' };
 
+// ── Table sorting ────────────────────────────────────────
+// One accessor per column; null/undefined/'' always sorts LAST regardless
+// of direction (so '—' rows sink instead of interleaving with data).
+const SORT_ACCESSORS = {
+  symbol: (r) => r.symbol ?? '',
+  company: (r) => (r.name || r.companyName || r.symbol || '').toLowerCase(),
+  date: (r) => r.reportDate ?? '',
+  time: (r) => ({ 'Before Open': 0, 'After Close': 1 })[r.timeOfDay] ?? 2,
+  epsEst: (r) => r.epsEstimate,
+  priorEps: (r) => r.lastYearEps,
+  revEst: (r) => r.revenueEstimate,
+  mktCap: (r) => r.marketCap,
+};
+
+function compareRows(a, b, key, dir) {
+  const va = SORT_ACCESSORS[key](a);
+  const vb = SORT_ACCESSORS[key](b);
+  const aNull = va == null || va === '';
+  const bNull = vb == null || vb === '';
+  if (aNull && bNull) return 0;
+  if (aNull) return 1;
+  if (bNull) return -1;
+  const cmp = typeof va === 'number'
+    ? va - vb
+    : String(va).localeCompare(String(vb), undefined, { numeric: true });
+  return dir === 'asc' ? cmp : -cmp;
+}
+
 export default function EarningsCalendarPage() {
   const [sectorFilter, setSectorFilter] = useState('all');
   const [expandedSym, setExpandedSym] = useState(null);
@@ -72,6 +100,16 @@ export default function EarningsCalendarPage() {
   const [settingsDraft, setSettingsDraft] = useState(null);
   const [settingsMsg, setSettingsMsg] = useState(null);
   const [showAll, setShowAll] = useState(false); // renders all rows (heavy — opt-in)
+  const [sortKey, setSortKey] = useState(null); // column id, or null = API order
+  const [sortDir, setSortDir] = useState('asc');
+
+  /** Click a header: same column toggles asc⇄desc, new column starts asc. */
+  const toggleSort = (key) => {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortKey(key); setSortDir('asc'); }
+  };
+  const sortIcon = (key) => (sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '');
+  const ariaSort = (key) => (sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none');
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['earnings-calendar', selectedMonth],
@@ -182,8 +220,15 @@ export default function EarningsCalendarPage() {
     });
   }, [events, sectorFilter, windowFilter, sessionFilter, capFilter, estimatesOnly]);
 
+  // Sorting runs BEFORE the render cap so "first N" honours the sort order
+  // (e.g. top market caps, not just the earliest dates).
+  const sortedEvents = useMemo(() => {
+    if (!sortKey) return filteredEvents;
+    return [...filteredEvents].sort((a, b) => compareRows(a, b, sortKey, sortDir));
+  }, [filteredEvents, sortKey, sortDir]);
+
   const grouped = useMemo(() => {
-    const visible = showAll ? filteredEvents : filteredEvents.slice(0, RENDER_CAP);
+    const visible = showAll ? sortedEvents : sortedEvents.slice(0, RENDER_CAP);
     const groups = {};
     visible.forEach((e) => {
       const wk = getWeekLabel(e.reportDate);
@@ -191,7 +236,7 @@ export default function EarningsCalendarPage() {
       groups[wk].push(e);
     });
     return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [filteredEvents, showAll]);
+  }, [sortedEvents, showAll]);
 
   // ── Loading State ──
   if (isLoading) {
@@ -470,11 +515,30 @@ export default function EarningsCalendarPage() {
             <table className="ec-table">
               <thead>
                 <tr>
-                  <th>Symbol</th><th>Company</th><th>Date</th><th>Time</th>
-                  <th className="ec-right">EPS Est</th>
-                  <th className="ec-right">Prior EPS</th>
-                  <th className="ec-right">Rev Est</th>
-                  <th className="ec-right">Mkt Cap</th>
+                  <th aria-sort={ariaSort('symbol')}>
+                    <button type="button" className={`ec-th-sort ${sortKey === 'symbol' ? 'ec-sort-active' : ''}`} onClick={() => toggleSort('symbol')}>Symbol{sortIcon('symbol')}</button>
+                  </th>
+                  <th aria-sort={ariaSort('company')}>
+                    <button type="button" className={`ec-th-sort ${sortKey === 'company' ? 'ec-sort-active' : ''}`} onClick={() => toggleSort('company')}>Company{sortIcon('company')}</button>
+                  </th>
+                  <th aria-sort={ariaSort('date')}>
+                    <button type="button" className={`ec-th-sort ${sortKey === 'date' ? 'ec-sort-active' : ''}`} onClick={() => toggleSort('date')}>Date{sortIcon('date')}</button>
+                  </th>
+                  <th aria-sort={ariaSort('time')}>
+                    <button type="button" className={`ec-th-sort ${sortKey === 'time' ? 'ec-sort-active' : ''}`} onClick={() => toggleSort('time')}>Time{sortIcon('time')}</button>
+                  </th>
+                  <th className="ec-right" aria-sort={ariaSort('epsEst')}>
+                    <button type="button" className={`ec-th-sort ${sortKey === 'epsEst' ? 'ec-sort-active' : ''}`} onClick={() => toggleSort('epsEst')}>EPS Est{sortIcon('epsEst')}</button>
+                  </th>
+                  <th className="ec-right" aria-sort={ariaSort('priorEps')}>
+                    <button type="button" className={`ec-th-sort ${sortKey === 'priorEps' ? 'ec-sort-active' : ''}`} onClick={() => toggleSort('priorEps')}>Prior EPS{sortIcon('priorEps')}</button>
+                  </th>
+                  <th className="ec-right" aria-sort={ariaSort('revEst')}>
+                    <button type="button" className={`ec-th-sort ${sortKey === 'revEst' ? 'ec-sort-active' : ''}`} onClick={() => toggleSort('revEst')}>Rev Est{sortIcon('revEst')}</button>
+                  </th>
+                  <th className="ec-right" aria-sort={ariaSort('mktCap')}>
+                    <button type="button" className={`ec-th-sort ${sortKey === 'mktCap' ? 'ec-sort-active' : ''}`} onClick={() => toggleSort('mktCap')}>Mkt Cap{sortIcon('mktCap')}</button>
+                  </th>
                 </tr>
               </thead>
               <tbody>

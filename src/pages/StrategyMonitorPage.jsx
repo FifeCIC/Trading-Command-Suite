@@ -20,6 +20,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import { formatDuration } from '../core/format-utils';
+import { scoreClass, signalColor } from '../core/signal-utils';
 import './strategy-monitor.css';
 import './strategies-list.css';
 
@@ -156,10 +157,10 @@ export default function StrategyMonitorPage() {
           {/* Stat cards */}
           <div className="sm-stat-grid">
             <div className="sm-stat"><span className="sm-stat-val">{overview.total}</span><span className="sm-stat-label">Total</span></div>
-            <div className="sm-stat"><span className="sm-stat-val" style={{ color: '#22c55e' }}>{overview.active}</span><span className="sm-stat-label">Active</span></div>
+            <div className="sm-stat"><span className="sm-stat-val pl-score-high">{overview.active}</span><span className="sm-stat-label">Active</span></div>
             <div className="sm-stat"><span className="sm-stat-val" style={{ color: '#3b82f6' }}>{overview.trading}</span><span className="sm-stat-label">Trading</span></div>
             <div className="sm-stat"><span className="sm-stat-val" style={{ color: '#8b5cf6' }}>{overview.scoring}</span><span className="sm-stat-label">Scoring</span></div>
-            <div className="sm-stat"><span className="sm-stat-val" style={{ color: overview.avgScore >= 60 ? '#22c55e' : '#f59e0b' }}>{overview.avgScore}</span><span className="sm-stat-label">Avg Score</span></div>
+            <div className="sm-stat"><span className={`sm-stat-val ${scoreClass(overview.avgScore)}`}>{overview.avgScore}</span><span className="sm-stat-label">Avg Score</span></div>
           </div>
 
           {mt5Diag?.connected && (
@@ -185,7 +186,7 @@ export default function StrategyMonitorPage() {
                       <span className="sm-chip">{s.protocolId || '—'}</span>
                     </div>
                     {s.lastComposite != null && (
-                      <div className="sm-card-score" style={{ color: s.lastComposite >= 60 ? '#22c55e' : s.lastComposite >= 40 ? '#f59e0b' : '#ef4444' }}>
+                      <div className={`sm-card-score ${scoreClass(s.lastComposite)}`}>
                         {s.lastComposite}
                       </div>
                     )}
@@ -259,7 +260,7 @@ export default function StrategyMonitorPage() {
                     {s.lastComposite != null && (
                       <div className="sl-card-score">
                         <span className="sl-score-label">Last Score</span>
-                        <span className="sl-score-value" style={{ color: s.lastComposite >= 60 ? '#22c55e' : s.lastComposite >= 40 ? '#f59e0b' : '#ef4444' }}>
+                        <span className={`sl-score-value ${scoreClass(s.lastComposite)}`}>
                           {s.lastComposite}
                         </span>
                       </div>
@@ -325,7 +326,7 @@ export default function StrategyMonitorPage() {
                   <div key={i} className="sm-ladder-row">
                     <span className="sm-ladder-rank">#{i + 1}</span>
                     <span className="sm-ladder-name">{entry.name || entry.strategy || entry.id || '—'}</span>
-                    <span className="sm-ladder-score" style={{ color: (entry.score || 0) >= 60 ? '#22c55e' : '#f59e0b' }}>
+                    <span className={`sm-ladder-score ${scoreClass(entry.score ?? null)}`}>
                       {entry.score ?? '—'}
                     </span>
                     {entry.protocol && <span className="sm-ladder-proto">{entry.protocol}</span>}
@@ -362,10 +363,10 @@ export default function StrategyMonitorPage() {
                       {sig.timestamp ? new Date(sig.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}
                     </span>
                     <span className="sm-sig-td sm-sig-symbol">{sig.symbol}</span>
-                    <span className="sm-sig-td sm-sig-score" style={{ color: (sig.composite || sig.score || 0) >= 60 ? '#22c55e' : (sig.composite || sig.score || 0) >= 40 ? '#f59e0b' : '#64748b' }}>
+                    <span className={`sm-sig-td sm-sig-score ${scoreClass(sig.composite ?? sig.score ?? null)}`}>
                       {sig.composite ?? sig.score ?? '—'}
                     </span>
-                    <span className="sm-sig-td sm-sig-signal" style={{ color: sig.signal === 'BUY' ? '#22c55e' : sig.signal === 'SELL' ? '#ef4444' : '#f59e0b' }}>
+                    <span className="sm-sig-td sm-sig-signal" style={{ color: signalColor(sig.signal) }}>
                       {sig.signal || 'HOLD'}
                     </span>
                     <span className="sm-sig-td sm-sig-proto">{sig.protocol || sig.protocolId || '—'}</span>

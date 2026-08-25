@@ -248,6 +248,8 @@ export interface EarningsEvent {
   timeOfDay?: 'Before Open' | 'After Close' | 'During' | null;
   currency?: string;
   marketCap?: number | null; // USD — only some sources provide this (Nasdaq does, Finnhub doesn't)
+  lastYearEps?: number | null; // same quarter prior year (Nasdaq provides lastYearEPS)
+  lastYearDate?: string; // report date of that prior-year quarter (Nasdaq lastYearRptDt)
   source: string;
 }
 

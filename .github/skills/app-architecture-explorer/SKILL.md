@@ -58,7 +58,7 @@ Maps `secondaryView` strings to React components. ~90+ entries. If a page isn't 
 
 - **Theme system:** CSS variables scoped to theme packs (`src/theme/packs/`). Key variables: `--ink`, `--panel`, `--line`, `--accent`, `--ink-soft`.
 - **`color-mix()`** used throughout for hover states (e.g., `color-mix(in srgb, var(--accent) 8%, var(--panel))`).
-- **Global styles:** `src/App.css`, `src/index.css`. `.btn` class at `App.css:64`.
+- **Global styles:** `src/index.css` (tokens + utilities incl. `.pl-score-*` score colours; former `src/App.css` removed 2026-08-24 as dead code).
 - **Page styles:** Each page imports its own CSS file. Some pages scope styles under a parent class (e.g., `.trading-platforms-page .btn`).
 - **Theme packs:** `src/theme/packs/ai-original.css`, `scifi.css`, etc. Imported in `App.jsx`.
 
@@ -114,4 +114,4 @@ When adding a new page:
 | Zustand UI store | `src/stores/useUiStore.js` |
 | API client | `src/core/api/client.js` |
 | Theme packs | `src/theme/packs/*.css` |
-| Global CSS | `src/App.css` |
+| Global CSS | `src/index.css` |

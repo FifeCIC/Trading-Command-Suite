@@ -14,7 +14,7 @@ import { apiGet } from '../core/api/client';
 import SpeedChart from '../components/SpeedChart';
 import SpeedDecisionPanel from '../components/SpeedDecisionPanel';
 import EmptyState from '../components/EmptyState';
-import './btc-speed.css';
+import './speed-cockpit.css';
 
 const SYMBOL = 'BTCUSD';
 const SIZE_PRESETS = [1, 5, 10];

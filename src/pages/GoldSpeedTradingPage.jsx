@@ -13,7 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import SpeedChart from '../components/SpeedChart';
 import SpeedDecisionPanel from '../components/SpeedDecisionPanel';
-import './gold-speed.css';
+import './speed-cockpit.css';
 
 const SYMBOL = 'XAUUSD';
 const SIZE_PRESETS = [1, 5, 10];

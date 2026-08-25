@@ -1,0 +1,181 @@
+/* ═══════════════════════════════════════════════════════════
+   Speed Cockpit — shared styles for the Gold Speed + BTC Speed pages.
+   Consolidates the former gold-speed.css / btc-speed.css (near-identical
+   copies that differed only by class prefix and brand accent).
+   Brand accent is injected per page via --cockpit-accent below.
+   ═══════════════════════════════════════════════════════════ */
+
+.gold-page, .btc-page {
+  --cockpit-accent: var(--color-warning); /* gold default; btc overrides below */
+  padding: 16px;
+  max-width: var(--page-max-width, 1400px);
+  margin: 0 auto;
+  color: var(--ink);
+  position: relative;
+}
+.btc-page { --cockpit-accent: #f7931a; }
+
+/* ── Lockout ─────────────────────────────────────────── */
+.gold-lockout, .btc-lockout {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+}
+.gold-lockout-box, .btc-lockout-box { text-align: center; color: var(--color-loss); }
+.gold-lockout-box h1, .btc-lockout-box h1 { font-size: 2.5rem; margin: 0; }
+.gold-lockout-box p, .btc-lockout-box p { font-size: 1.2rem; color: var(--color-loss); }
+
+/* ── Pause banner ────────────────────────────────────── */
+.gold-pause, .btc-pause-banner {
+  text-align: center; padding: 6px; background: rgba(245, 158, 11, 0.15);
+  color: var(--color-warning); font-size: 0.78rem; font-weight: 600;
+  border-radius: 6px; margin-bottom: 12px;
+}
+
+/* ── Header ──────────────────────────────────────────── */
+.gold-header, .btc-header {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.gold-header-left, .btc-header-left { display: flex; align-items: center; gap: 12px; }
+.gold-title, .btc-title {
+  font-size: 1.2rem; font-weight: 700; color: var(--cockpit-accent); margin: 0;
+  display: flex; align-items: center; gap: 8px;
+}
+.gold-live-dot, .btc-live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-muted); }
+.gold-live-dot.live, .btc-live-dot.live { background: #10b981; animation: cockpit-pulse 1.5s infinite; }
+@keyframes cockpit-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* ── TF buttons ──────────────────────────────────────── */
+.gold-tf-row, .btc-tf-row { display: flex; gap: 4px; }
+.gold-tf-btn, .btc-tf-btn {
+  padding: 4px 10px; border-radius: 5px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink-soft); font-size: 0.72rem;
+  font-weight: 600; cursor: pointer; transition: all 0.15s;
+}
+.gold-tf-btn:hover, .btc-tf-btn:hover { border-color: var(--cockpit-accent); color: var(--ink); }
+.gold-tf-btn.active, .btc-tf-btn.active {
+  background: var(--cockpit-accent); color: #000; border-color: var(--cockpit-accent);
+}
+
+.gold-header-center, .btc-header-center { display: flex; align-items: center; gap: 8px; }
+.gold-size-label, .btc-size-label { font-size: 0.7rem; color: var(--ink-soft); font-weight: 600; }
+.gold-size-select, .btc-size-select {
+  padding: 4px 8px; border-radius: 5px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink); font-size: 0.78rem;
+}
+
+/* ── Buy / Sell ──────────────────────────────────────── */
+.gold-action-btn, .btc-action-btn {
+  padding: 8px 18px; border-radius: 8px; border: none;
+  font-size: 0.85rem; font-weight: 700; cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.15s;
+}
+.gold-action-btn:active, .btc-action-btn:active { transform: scale(0.96); }
+.gold-buy, .btc-buy { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+.gold-buy:hover, .btc-buy:hover { box-shadow: 0 0 12px rgba(16, 185, 129, 0.4); }
+.gold-buy.flash, .btc-buy.flash { box-shadow: 0 0 24px rgba(16, 185, 129, 0.7); }
+.gold-sell, .btc-sell { background: var(--color-loss); color: #fff; }
+.gold-sell:hover, .btc-sell:hover { box-shadow: 0 0 12px rgba(239, 68, 68, 0.4); }
+.gold-sell.flash, .btc-sell.flash { box-shadow: 0 0 24px rgba(239, 68, 68, 0.7); }
+
+/* ── Header right ────────────────────────────────────── */
+.gold-header-right, .btc-header-right { display: flex; align-items: center; gap: 8px; }
+.gold-meta-btn, .btc-meta-btn {
+  padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink-soft); font-size: 0.72rem;
+  cursor: pointer; transition: all 0.15s;
+}
+.gold-meta-btn:hover, .btc-meta-btn:hover { border-color: var(--cockpit-accent); color: var(--ink); }
+.gold-meta-btn.recording, .btc-meta-btn.recording {
+  border-color: var(--color-loss); color: var(--color-loss); animation: cockpit-pulse 1.5s infinite;
+}
+.gold-chart-toggle, .btc-chart-toggle { display: flex; gap: 2px; }
+.gold-chart-btn, .btc-chart-btn {
+  padding: 4px 8px; border-radius: 4px; border: 1px solid var(--line);
+  background: var(--panel); font-size: 0.75rem; cursor: pointer;
+}
+.gold-chart-btn.active, .btc-chart-btn.active { background: var(--cockpit-accent); border-color: var(--cockpit-accent); }
+
+/* ── Price Strip ─────────────────────────────────────── */
+.gold-price-strip, .btc-price-strip {
+  display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  margin-bottom: 12px; font-variant-numeric: tabular-nums;
+}
+.gold-price-symbol, .btc-price-symbol { font-weight: 700; font-size: 0.85rem; color: var(--cockpit-accent); }
+.gold-price-mid, .btc-price-mid { font-size: 1.3rem; font-weight: 700; color: var(--ink); }
+.gold-price-mid.up, .btc-price-mid.up { color: #10b981; }
+.gold-price-mid.down, .btc-price-mid.down { color: var(--color-loss); }
+.gold-price-bid, .btc-price-bid { font-size: 0.72rem; color: var(--color-loss); }
+.gold-price-ask, .btc-price-ask { font-size: 0.72rem; color: #10b981; }
+.btc-price-spread { font-size: 0.68rem; color: var(--ink-soft); }
+.gold-sparkline, .btc-sparkline { width: 80px; height: 20px; margin-left: auto; }
+
+/* ── Main layout ─────────────────────────────────────── */
+.gold-main, .btc-main { display: grid; grid-template-columns: 260px 1fr; gap: 12px; margin-bottom: 12px; }
+@media (max-width: 800px) { .gold-main, .btc-main { grid-template-columns: 1fr; } }
+.btc-decision { min-width: 0; }
+.gold-chart, .btc-chart {
+  min-height: 400px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; overflow: hidden;
+}
+
+/* ── Scanner ─────────────────────────────────────────── */
+.gold-scan, .btc-scan {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; margin-bottom: 12px; overflow: hidden;
+}
+.gold-scan-header {
+  padding: 10px 14px; font-size: 0.8rem; font-weight: 600;
+  color: var(--ink); border-bottom: 1px solid var(--line);
+}
+.btc-scan-header {
+  display: flex; justify-content: space-between; padding: 10px 14px;
+  font-size: 0.8rem; font-weight: 600; color: var(--ink);
+  cursor: pointer; user-select: none;
+}
+.gold-scan-body, .btc-scan-body { padding: 0 14px 10px; }
+.gold-scan-row, .btc-scan-row {
+  display: flex; align-items: center; gap: 10px; padding: 6px 8px;
+  border-radius: 6px; font-size: 0.78rem;
+}
+.gold-scan-row:hover, .btc-scan-row:hover { background: var(--line); }
+.gold-scan-row.active, .btc-scan-row.active {
+  background: color-mix(in srgb, var(--cockpit-accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cockpit-accent) 20%, transparent);
+}
+.gold-scan-rank, .btc-scan-rank { color: var(--ink-soft); font-weight: 600; min-width: 24px; }
+.gold-scan-symbol, .btc-scan-symbol { font-weight: 600; color: var(--ink); min-width: 70px; }
+.gold-scan-score, .btc-scan-score { font-weight: 700; font-size: 0.85rem; }
+.gold-scan-score.strong, .btc-scan-score.strong { color: #10b981; }
+.gold-scan-score.weak, .btc-scan-score.weak { color: var(--color-loss); }
+.gold-scan-signal, .btc-scan-signal { font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 3px; }
+.gold-scan-signal.buy, .btc-scan-signal.buy { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.gold-scan-signal.sell, .btc-scan-signal.sell { background: rgba(239, 68, 68, 0.15); color: var(--color-loss); }
+.gold-scan-signal.hold, .btc-scan-signal.hold { background: rgba(100, 116, 139, 0.15); color: var(--color-neutral); }
+.gold-scan-error, .btc-scan-error { color: var(--color-loss); font-size: 0.75rem; padding: 4px; }
+.btc-scan-empty { color: var(--ink-soft); font-size: 0.75rem; padding: 4px; }
+
+/* ── Action Log ──────────────────────────────────────── */
+.gold-log, .btc-log {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; overflow: hidden; max-height: 200px;
+}
+.gold-log-header, .btc-log-header {
+  padding: 8px 14px; font-size: 0.7rem; font-weight: 600; color: var(--ink-soft);
+  text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--line);
+}
+.gold-log-entries, .btc-log-entries { padding: 4px 0; overflow-y: auto; max-height: 160px; }
+.gold-log-entry, .btc-log-entry {
+  display: flex; gap: 10px; padding: 3px 14px; font-size: 0.72rem;
+  font-family: 'SF Mono', 'Cascadia Code', monospace;
+}
+.gold-log-time, .btc-log-time { color: var(--ink-soft); min-width: 65px; }
+.gold-log-msg, .btc-log-msg { color: var(--ink); }
+.btc-log-empty { padding: 12px 14px; color: var(--ink-soft); font-size: 0.75rem; }
+
+/* ── Footer ──────────────────────────────────────────── */
+.gold-footer, .btc-footer {
+  display: flex; justify-content: space-between; padding: 8px 0;
+  font-size: 0.65rem; color: var(--ink-soft);
+}

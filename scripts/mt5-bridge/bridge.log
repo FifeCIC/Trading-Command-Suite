@@ -27557,3 +27557,50 @@ oneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone Met
 2026-08-24 19:44:00,118 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
 2026-08-24 19:57:47,683 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
 2026-08-24 20:09:07,983 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-24 20:45:40,753 [INFO] MetaTrader5 package loaded
+2026-08-24 20:45:40,754 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-24 20:45:40,754 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-24 20:45:40,754 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-24 20:45:40,754 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-24 20:45:40,754 [INFO] Connecting to MT5 at startup...
+2026-08-24 20:45:40,755 [INFO] Connecting to MT5 at startup...
+2026-08-24 20:45:40,755 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-24 20:45:40,755 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-24 20:45:40,837 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1323.3
+2026-08-24 20:45:40,842 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-24 20:45:40,912 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-24 20:46:59,709 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-24 20:47:59,746 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-24 20:48:59,756 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-24 20:49:59,775 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-24 21:01:22,237 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-25 03:25:16,718 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-25 03:25:24,329 [ERROR] Error handling /account: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-25 03:25:27,126 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-25 03:25:27,621 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-25 03:25:28,768 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-25 08:17:10,056 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-25 12:24:15,646 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-25 12:24:22,800 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-25 12:24:22,843 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-25 12:24:23,132 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-25 14:05:40,876 [INFO] MetaTrader5 package loaded
+2026-08-25 14:05:40,877 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-25 14:05:40,878 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-25 14:05:40,878 [INFO] Connecting to MT5 at startup...
+2026-08-25 14:05:40,878 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-25 14:05:40,878 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-25 14:05:40,878 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-25 14:05:40,879 [INFO] Connecting to MT5 at startup...
+2026-08-25 14:05:40,879 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-25 14:05:40,904 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-08-25 14:05:40,962 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-25 14:05:49,287 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1323.3
+2026-08-25 14:05:49,359 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-25 14:17:46,256 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-25 14:55:45,588 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-25 14:55:45,710 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-25 20:00:22,531 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-25 21:42:31,729 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-25 21:42:31,749 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-25 21:42:31,789 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'

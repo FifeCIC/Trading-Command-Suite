@@ -17,6 +17,7 @@ import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import Notice from '../components/Notice';
 import { formatDuration } from '../core/format-utils';
+import { pnlClass } from '../core/signal-utils';
 import './strategy-dashboard.css';
 import PageInfoPopover from '../components/PageInfoPopover';
 
@@ -128,10 +129,10 @@ export default function StrategyDashboardPage() {
         </div>
         <div className="sd-header-stats">
           <span className="sd-hs-item">{strategyCards.length} strategies</span>
-          <span className="sd-hs-item" style={{color: '#22c55e'}}>{activeCount} active</span>
-          {pausedCount > 0 && <span className="sd-hs-item" style={{color: '#f59e0b'}}>{pausedCount} paused</span>}
+          <span className="sd-hs-item pl-score-high">{activeCount} active</span>
+          {pausedCount > 0 && <span className="sd-hs-item pl-score-med">{pausedCount} paused</span>}
           <span className="sd-hs-item">{totalPositions} positions</span>
-          <span className="sd-hs-item" style={{color: totalPnl >= 0 ? '#22c55e' : '#ef4444'}}>
+          <span className={`sd-hs-item ${pnlClass(totalPnl)}`}>
             {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)}
           </span>
         </div>
@@ -167,7 +168,7 @@ export default function StrategyDashboardPage() {
                 <div className="sd-card-metrics">
                   <div className="sd-metric">
                     <span className="sd-metric-label">P&amp;L</span>
-                    <span className="sd-metric-value" style={{ color: card.pnl >= 0 ? '#22c55e' : '#ef4444' }}>
+                    <span className={`sd-metric-value ${pnlClass(card.pnl)}`}>
                       {card.pnl >= 0 ? '+' : ''}{card.pnl.toFixed(2)}
                     </span>
                   </div>
@@ -181,7 +182,7 @@ export default function StrategyDashboardPage() {
                   </div>
                   <div className="sd-metric">
                     <span className="sd-metric-label">P&amp;L/day</span>
-                    <span className="sd-metric-value" style={{ color: card.pnl >= 0 ? '#22c55e' : '#ef4444' }}>
+                    <span className={`sd-metric-value ${pnlClass(card.pnl)}`}>
                       {card.runDurationMs > 86400000
                         ? `${card.pnl >= 0 ? '+' : ''}${(card.pnl / (card.runDurationMs / 86400000)).toFixed(2)}`
                         : '—'}

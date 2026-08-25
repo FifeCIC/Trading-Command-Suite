@@ -99,6 +99,15 @@
   padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line, #1e2a45);
   background: rgba(0,0,0,0.12);
 }
+/* Sortable header button — inherits th typography; whole header is the hit target */
+.ec-th-sort {
+  background: none; border: none; padding: 0; margin: 0;
+  color: inherit; font: inherit; font-size: inherit; font-weight: inherit;
+  text-transform: inherit; letter-spacing: inherit;
+  cursor: pointer; white-space: nowrap;
+}
+.ec-th-sort:hover { color: var(--accent, #0ea5a6); }
+.ec-th-sort.ec-sort-active { color: var(--accent, #0ea5a6); }
 .ec-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .ec-table tbody tr { cursor: pointer; transition: background 0.15s; }
 .ec-table tbody tr:hover { background: rgba(255,255,255,0.03); }

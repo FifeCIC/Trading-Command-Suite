@@ -423,6 +423,15 @@ input[type='radio'] {
 .pf-unavailable p { margin: 0.2rem 0; font-size: 0.85rem; color: var(--ink-soft); }
 .pf-unavailable .pf-hint { font-size: 0.78rem; color: var(--accent); margin-top: 0.5rem; }
 
+/* ── Global score/pnl colour utilities ───────────────────
+   Canonical classes returned by scoreClass()/pnlClass() in
+   src/core/signal-utils.js. Previously defined only in protocols-ladder.css,
+   so pages using scoreClass elsewhere rendered scores unstyled. */
+.pl-score-high { color: var(--color-buy); font-weight: 700; }
+.pl-score-med  { color: var(--color-warning); font-weight: 600; }
+.pl-score-low  { color: var(--color-sell); }
+.pl-muted      { color: var(--color-muted); }
+
 /* ── Shared: app-empty (EmptyState component) ── */
 .app-empty {
   padding: 2.5rem 2rem;
