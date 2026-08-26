@@ -4,6 +4,7 @@ import { ProtocolGatingService, GatedScore, DirectiveBreakout } from '../scoring
 import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { MarketDataService } from '../market-data/market-data.service';
 import { ScoreHistoryService } from '../scoring/score-history.service';
+import { AdapterFactory } from '../providers/adapter-factory';
 
 /** Strategy ID used when persisting Signals Workbench scores. */
 const SIGNALS_WORKBENCH_STRATEGY_ID = 'signals-workbench';
@@ -63,6 +64,16 @@ export interface SignalEnvelope {
   preTradeReady: boolean;
   preTradeBlockers: string[];
   scoredAt: string;
+  // ── #684 Signals v1 — best-of metadata ──
+  protocolId: string | null;
+  protocolName: string | null;
+  directionMode: 'LONG_ONLY' | 'SHORT_ONLY' | 'BOTH';
+  scoreId: string | null;          // persisted Score row id — required for /:id/action + /:id/trade
+  signalPct: number | null;        // pre-gate directional % (classification basis)
+  opportunityPct: number | null;   // additive screening %
+  combinedStrength: number;        // 0.5×signalPct + 0.5×opportunityPct — the best-of rank
+  marketStatus: { open: boolean; asOf: string | null; reason?: string } | null;
+  holdsCfd: boolean;               // MT5 position exists for this symbol
 }
 
 export interface SignalLadder {
@@ -97,6 +108,20 @@ export interface MultiProtocolLadder {
   }>;
 }
 
+/**
+ * Best-of response (#684) — every active protocol scored, one card per
+ * symbol per direction (best protocol wins), action-only, ranked by
+ * combined strength. No symbol or protocol selection required.
+ */
+export interface SignalBestResponse {
+  generatedAt: string;
+  activeProtocols: number;
+  totalSymbols: number;
+  buyCount: number;
+  sellCount: number;
+  envelopes: SignalEnvelope[];
+}
+
 @Injectable()
 export class SignalEnvelopeService {
   private readonly logger = new Logger(SignalEnvelopeService.name);
@@ -107,6 +132,7 @@ export class SignalEnvelopeService {
     private readonly protocolDb: ProtocolDbService,
     private readonly marketData: MarketDataService,
     private readonly scoreHistory: ScoreHistoryService,
+    private readonly adapterFactory: AdapterFactory,
   ) {}
 
   /**
@@ -168,9 +194,14 @@ export class SignalEnvelopeService {
 
     // ── Persist scores to DB so they appear in scoring-runs / scoring-activity-logs ──
     const strategyId = protocolId || SIGNALS_WORKBENCH_STRATEGY_ID;
-    this.persistScores(envelopes, strategyId).catch(err =>
-      this.logger.warn(`Failed to persist signal scores: ${(err as Error).message}`),
-    );
+    try {
+      const ids = await this.persistScores(envelopes, strategyId);
+      for (const env of envelopes) {
+        if (ids[env.symbol]) env.scoreId = ids[env.symbol];
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to persist signal scores: ${(err as Error).message}`);
+    }
 
     return {
       generatedAt: new Date().toISOString(),
@@ -274,14 +305,18 @@ export class SignalEnvelopeService {
       protocolId,
     );
 
-    return this.enrichEnvelope(cleanTicker, gated);
+    return this.enrichEnvelope(cleanTicker, gated, protocolId);
   }
 
   /**
    * Enrich a GatedScore into a SignalEnvelope with confidence rails,
    * directive grouping, and conflict detection.
    */
-  private enrichEnvelope(symbol: string, gated: GatedScore): SignalEnvelope {
+  private enrichEnvelope(
+    symbol: string,
+    gated: GatedScore,
+    protocolId?: string,
+  ): SignalEnvelope {
     // Build group panels from breakouts
     const groups = this.buildGroups(gated);
 
@@ -293,6 +328,16 @@ export class SignalEnvelopeService {
 
     // Pre-trade readiness
     const { preTradeReady, preTradeBlockers } = this.evaluatePreTrade(gated, conflicts);
+
+    // #684 — combined strength: best of Signal and Opportunity.
+    // Signal % is the classification basis (pre-gate directional).
+    const directionMode = gated.directionMode ?? 'LONG_ONLY';
+    const signalPct = gated.meta?.compositePct ?? null;
+    const opportunityPct = gated.opportunityPct ?? null;
+    const combinedStrength =
+      signalPct != null && opportunityPct != null
+        ? Math.round((signalPct + opportunityPct) / 2)
+        : (signalPct ?? opportunityPct ?? 0);
 
     return {
       symbol,
@@ -319,6 +364,16 @@ export class SignalEnvelopeService {
       preTradeReady,
       preTradeBlockers,
       scoredAt: new Date().toISOString(),
+      // ── #684 Signals v1 metadata ──
+      protocolId: protocolId ?? null,
+      protocolName: protocolId ? this.getProtocolName(protocolId) : null,
+      directionMode,
+      scoreId: null, // assigned after persistence (persistScores returns ids)
+      signalPct,
+      opportunityPct,
+      combinedStrength,
+      marketStatus: gated.marketStatus ?? null,
+      holdsCfd: false, // assigned by buildBestLadder from MT5 positions
     };
   }
 
@@ -526,6 +581,15 @@ export class SignalEnvelopeService {
       preTradeReady: false,
       preTradeBlockers: ['No market data available'],
       scoredAt: new Date().toISOString(),
+      protocolId: null,
+      protocolName: null,
+      directionMode: 'LONG_ONLY',
+      scoreId: null,
+      signalPct: null,
+      opportunityPct: null,
+      combinedStrength: 0,
+      marketStatus: null,
+      holdsCfd: false,
     };
   }
 
@@ -567,11 +631,14 @@ export class SignalEnvelopeService {
   /**
    * Persist scored envelopes to the Score table so they appear in
    * scoring-runs and scoring-activity-logs pages.
+   * Returns a map of symbol → persisted Score row id (#684 — the id is
+   * required by GET /api/signals/:id/action and POST /api/signals/:id/trade).
    */
   private async persistScores(
     envelopes: SignalEnvelope[],
     strategyId: string,
-  ): Promise<void> {
+  ): Promise<Record<string, string>> {
+    const ids: Record<string, string> = {};
     const strategy = await this.ensureStrategy(strategyId);
 
     for (const env of envelopes) {
@@ -586,7 +653,7 @@ export class SignalEnvelopeService {
         });
         if (!sym) continue;
 
-        await this.scoreHistory.storeSnapshot(
+        const snapshot = await this.scoreHistory.storeSnapshot(
           sym.id,
           strategy.id,
           env.composite,
@@ -601,6 +668,7 @@ export class SignalEnvelopeService {
             blockerCount: env.preTradeBlockers.length,
           },
         );
+        if (snapshot?.id) ids[env.symbol] = snapshot.id;
       } catch (err) {
         this.logger.warn(
           `Failed to persist score for ${env.symbol}: ${(err as Error).message}`,
@@ -611,6 +679,157 @@ export class SignalEnvelopeService {
     this.logger.log(
       `Persisted ${envelopes.filter(e => e.confidence > 0).length} signal scores to DB (strategy: ${strategyId})`,
     );
+    return ids;
+  }
+
+  /**
+   * Build the Signals v1 best-of ladder (#684).
+   * ===========================================
+   * Every ACTIVE protocol is scored; one card survives per symbol per
+   * direction (the best protocol wins on combined strength). HOLD envelopes
+   * and no-data envelopes are dropped — signals are for action only.
+   * Dismissed (symbol, protocol) pairs are filtered out.
+   */
+  async buildBestLadder(): Promise<SignalBestResponse> {
+    const slugs = await this.protocolDb.findAllActive();
+    const byKey = new Map<string, SignalEnvelope>();
+
+    for (const slug of slugs) {
+      const config = this.protocolDb.getCached(slug) ?? (await this.protocolDb.findBySlug(slug));
+      if (!config) continue;
+
+      const direction = config.directionMode === 'SHORT_ONLY' ? 'short' : 'long';
+
+      let tickers: string[];
+      try {
+        tickers = await this.protocolDb.resolveSymbols(slug);
+      } catch {
+        continue;
+      }
+
+      for (const ticker of tickers) {
+        const key = `${ticker.toUpperCase()}|${direction}`;
+        try {
+          const env = await this.buildEnvelope(ticker, slug);
+          // Action-only (#684): skip HOLD and no-data envelopes.
+          if (env.signal === 'HOLD') continue;
+          if (env.composite === 50 && env.confidence === 0) continue;
+
+          const existing = byKey.get(key);
+          if (!existing || env.combinedStrength > existing.combinedStrength) {
+            byKey.set(key, env);
+          }
+        } catch (err) {
+          this.logger.warn(`Best ladder skip ${ticker}/${slug}: ${(err as Error).message}`);
+        }
+      }
+    }
+
+    const envelopes = [...byKey.values()];
+
+    // ── MT5 CFD position context (#684) ──
+    let held = new Set<string>();
+    try {
+      const mt5 = this.adapterFactory.create('mt5');
+      if (mt5?.getPositions) {
+        const positions = await mt5.getPositions();
+        held = new Set(positions.map(p => (p.symbol || '').toUpperCase()));
+      }
+    } catch {
+      /* broker offline — holdsCfd stays false */
+    }
+    for (const env of envelopes) {
+      env.holdsCfd = held.has(env.symbol.toUpperCase());
+    }
+
+    // ── Persist + assign score ids (required for /:id/action and /:id/trade) ──
+    const byProtocol = new Map<string, SignalEnvelope[]>();
+    for (const env of envelopes) {
+      const pid = env.protocolId ?? SIGNALS_WORKBENCH_STRATEGY_ID;
+      if (!byProtocol.has(pid)) byProtocol.set(pid, []);
+      byProtocol.get(pid)!.push(env);
+    }
+    for (const [pid, envs] of byProtocol) {
+      try {
+        const ids = await this.persistScores(envs, pid);
+        for (const env of envs) {
+          if (ids[env.symbol]) env.scoreId = ids[env.symbol];
+        }
+      } catch (err) {
+        this.logger.warn(`Best-ladder persistence failed for ${pid}: ${(err as Error).message}`);
+      }
+    }
+
+    // ── Dismissal filter (#684) — default horizon 1h, Screen Option can extend ──
+    let dismissed = new Set<string>();
+    try {
+      const rows: any[] = await (this.prisma as any).signalDismissal.findMany({
+        where: { dismissedUntil: { gt: new Date() } },
+        select: { symbol: true, protocolId: true },
+      });
+      dismissed = new Set(rows.map(r => `${r.symbol.toUpperCase()}|${r.protocolId}`));
+    } catch {
+      /* table may not exist yet */
+    }
+
+    const visible = envelopes
+      .filter(e => !dismissed.has(`${e.symbol}|${e.protocolId}`))
+      .sort((a, b) => b.combinedStrength - a.combinedStrength);
+
+    const buyCount = visible.filter(e => e.signal.startsWith('BUY')).length;
+    const sellCount = visible.filter(e => e.signal.startsWith('SELL')).length;
+
+    return {
+      generatedAt: new Date().toISOString(),
+      activeProtocols: slugs.length,
+      totalSymbols: visible.length,
+      buyCount,
+      sellCount,
+      envelopes: visible,
+    };
+  }
+
+  /**
+   * Dismiss a signal for `hours` (default 1). Keyed on symbol+protocol so a
+   * dismissal survives reloads and re-scoring runs (#684).
+   */
+  async dismissSignal(
+    symbol: string,
+    protocolId: string | undefined,
+    hours = 1,
+  ): Promise<{ symbol: string; protocolId: string; dismissedUntil: string }> {
+    const cleanSymbol = symbol.toUpperCase();
+    const pid = protocolId || 'any';
+    const dismissedUntil = new Date(Date.now() + hours * 3_600_000);
+
+    try {
+      await (this.prisma as any).signalDismissal.upsert({
+        where: { symbol_protocolId: { symbol: cleanSymbol, protocolId: pid } },
+        create: { symbol: cleanSymbol, protocolId: pid, dismissedUntil },
+        update: { dismissedUntil },
+      });
+    } catch (err) {
+      this.logger.warn(`Dismiss failed for ${cleanSymbol}/${pid}: ${(err as Error).message}`);
+    }
+
+    return { symbol: cleanSymbol, protocolId: pid, dismissedUntil: dismissedUntil.toISOString() };
+  }
+
+  /** Active dismissals — used by the page's "show dismissed" toggle (#684). */
+  async getDismissals(): Promise<Array<{ symbol: string; protocolId: string; dismissedUntil: string }>> {
+    try {
+      const rows: any[] = await (this.prisma as any).signalDismissal.findMany({
+        where: { dismissedUntil: { gt: new Date() } },
+        orderBy: { dismissedUntil: 'desc' },
+      });
+      return rows.map((r: any) => ({
+        symbol: r.symbol,
+        protocolId: r.protocolId,
+        dismissedUntil: r.dismissedUntil instanceof Date ? r.dismissedUntil.toISOString() : String(r.dismissedUntil),
+      }));
+    } catch {
+      return [];
+    }
   }
 
   /**

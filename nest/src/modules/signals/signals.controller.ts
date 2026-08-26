@@ -4,6 +4,7 @@ import { SignalEnvelopeService } from './signal-envelope.service';
 import { SignalActionsService } from './signal-actions.service';
 import { SignalLadderDto } from './dto/signal-ladder.dto';
 import { ManualTradeDto } from './dto/manual-trade.dto';
+import { DismissSignalDto } from './dto/dismiss-signal.dto';
 
 /**
  * Signals Controller — Enriched Signal Envelopes
@@ -132,6 +133,42 @@ export class SignalsController {
     @Query('protocol') protocol?: string,
   ) {
     return this.envelopeService.getDrilldown(symbol.toUpperCase(), protocol);
+  }
+
+  /**
+   * GET /api/signals/best (#684)
+   *
+   * The Signals v1 view — every active protocol scored, one card per symbol
+   * per direction (best protocol wins), action-only (no HOLD), dismissed
+   * signals filtered, ranked by combined strength (signal + opportunity).
+   */
+  @Get('best')
+  async getBest() {
+    return this.envelopeService.buildBestLadder();
+  }
+
+  /**
+   * GET /api/signals/dismissals (#684)
+   *
+   * Active dismissals — powers the "show dismissed" toggle.
+   */
+  @Get('dismissals')
+  async getDismissals() {
+    return this.envelopeService.getDismissals();
+  }
+
+  /**
+   * POST /api/signals/dismiss (#684)
+   *
+   * Hide a signal for N hours (default 1). Keyed on symbol + protocolId.
+   */
+  @Post('dismiss')
+  async dismiss(@Body() body: DismissSignalDto) {
+    return this.envelopeService.dismissSignal(
+      body.symbol,
+      body.protocolId,
+      body.hours ?? 1,
+    );
   }
 
   // ── Legacy endpoints (kept for backward compat) ──────

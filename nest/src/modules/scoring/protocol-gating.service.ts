@@ -141,6 +141,12 @@ export interface GatedScore {
   };
   /** Directives excluded from the composite due to ALPHA readiness. */
   excludedBreakdown: { directiveId: string; name: string; reason: string }[];
+  /**
+   * Protocol direction intent (#684): 'LONG_ONLY' | 'SHORT_ONLY' | 'BOTH'.
+   * BUY/SELL labels already encode this — the raw mode is returned so the
+   * Signals UI can distinguish "open short (CFD)" from "close long (stock)".
+   */
+  directionMode: 'LONG_ONLY' | 'SHORT_ONLY' | 'BOTH';
 }
 
 // ─── Rarity Bands ────────────────────────────────────────
@@ -606,6 +612,9 @@ export class ProtocolGatingService {
       readinessGate,
       // ── Market status (#638 phase A) ──
       marketStatus,
+      // ── Direction (#684) — protocol's intent, needed so the Signals UI can
+      // distinguish "open a short" from "close a long". Defaults to LONG_ONLY. ──
+      directionMode,
     };
   }
 

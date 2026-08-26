@@ -2025,3 +2025,17 @@ model AbTest {
   @@index([status])
   @@map("ab_test")
 }
+
+// Signal Dismissal (#684) — Signals v1: hide a signal for N hours.
+// Keyed on symbol+protocol so dismissals survive reloads and re-scoring.
+model SignalDismissal {
+  id             String   @id @default(uuid()) @db.VarChar(36)
+  symbol         String   @db.VarChar(20)
+  protocolId     String   @db.VarChar(50) // 'any' when no protocol specified
+  dismissedUntil DateTime
+  createdAt      DateTime @default(now())
+
+  @@unique([symbol, protocolId])
+  @@index([dismissedUntil])
+  @@map("signal_dismissal")
+}

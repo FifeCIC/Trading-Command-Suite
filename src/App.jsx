@@ -269,6 +269,9 @@ function AppShell() {
       'active-symbols': 'active-symbols',
       'directives-registry': 'directives-registry',
       'symbols-ladder': 'symbols-ladder',
+      'symbols-browser': 'symbols-browser',
+      'screener': 'screener',
+      'signals-overview': 'signals-overview',
     };
     setScreenOptionsView(VIEW_TO_OPTIONS[viewId] || null);
   }, [primaryArea, secondaryView]);

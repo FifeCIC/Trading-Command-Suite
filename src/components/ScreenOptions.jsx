@@ -14,6 +14,7 @@ import { usePreferences } from '../core/hooks/usePreferences';
 import { VIEW_EXPLANATIONS } from '../core/view-explanations';
 import EmptyState from './EmptyState';
 import GlossaryPage from '../pages/GlossaryPage';
+import { SB_OPTIONAL_COLUMNS, sbColumnKey } from '../core/symbols-browser-columns';
 import './notification-disc.css';
 import './screen-options.css';
 
@@ -276,6 +277,45 @@ const OPTIONS_REGISTRY = {
       },
     ],
   },
+  'symbols-browser': {
+    title: 'Symbols Browser',
+    sections: [
+      {
+        id: 'tableColumns',
+        label: 'Table Columns',
+        description: 'Choose which columns appear in the table. Changes apply immediately.',
+        type: 'columns',
+        options: SB_OPTIONAL_COLUMNS.map(function (col) {
+          return {
+            key: sbColumnKey(col),
+            label: col.label,
+            desc: col.desc || '',
+            defaultValue: !!col.def,
+          };
+        }),
+      },
+    ],
+  },
+  'screener': {
+    title: 'Screener',
+    sections: [
+      {
+        id: 'topPicks',
+        label: 'Top Picks Count',
+        description: 'How many highest-attention rows are highlighted as top picks.',
+        type: 'radio',
+        key: 'scr-top-picks',
+        defaultValue: '10',
+        options: [
+          { value: '5', label: '5', desc: 'Five top picks — minimal noise' },
+          { value: '10', label: '10', desc: 'Ten top picks — default' },
+          { value: '15', label: '15', desc: 'Fifteen top picks' },
+          { value: '20', label: '20', desc: 'Twenty top picks' },
+          { value: '25', label: '25', desc: 'Twenty-five top picks — maximum surface' },
+        ],
+      },
+    ],
+  },
   'live-ordering-stack': {
     title: 'Ladder',
     sections: [
@@ -294,7 +334,58 @@ const OPTIONS_REGISTRY = {
       },
     ],
   },
+  'signals-overview': {
+    title: 'Signals',
+    sections: [
+      {
+        id: 'dismissHours',
+        label: 'Dismissal Window',
+        description: 'How many hours a dismissed signal stays hidden before it returns to the ladder.',
+        type: 'radio',
+        key: 'sig-dismiss-hours',
+        defaultValue: '1',
+        options: [
+          { value: '1', label: '1 hour', desc: 'Default — back after an hour' },
+          { value: '2', label: '2 hours', desc: 'Hide until after lunch' },
+          { value: '4', label: '4 hours', desc: 'Half a trading day' },
+          { value: '8', label: '8 hours', desc: 'Full session' },
+          { value: '24', label: '24 hours', desc: 'Until tomorrow' },
+        ],
+      },
+    ],
+  },
 };
+
+/**
+ * Read every registry value for a view from localStorage, applying defaults.
+ * Handles plain sections (key on the section) and column-toggle groups
+ * (each option carries its own key).
+ */
+function readRegistryValues(registry) {
+  var initial = {};
+  if (!registry) return initial;
+  for (var i = 0; i < registry.sections.length; i++) {
+    var section = registry.sections[i];
+    if (section.type === 'columns' && Array.isArray(section.options)) {
+      for (var j = 0; j < section.options.length; j++) {
+        var opt = section.options[j];
+        try {
+          initial[opt.key] = localStorage.getItem(opt.key);
+          if (initial[opt.key] == null) initial[opt.key] = String(opt.defaultValue);
+        } catch (e) {
+          initial[opt.key] = String(opt.defaultValue);
+        }
+      }
+    } else if (section.key) {
+      try {
+        initial[section.key] = localStorage.getItem(section.key) || section.defaultValue;
+      } catch (e) {
+        initial[section.key] = section.defaultValue;
+      }
+    }
+  }
+  return initial;
+}
 
 export default function ScreenOptions({ activeView, onSettingsChange, isOpen, onToggle, isBookmarked, onToggleBookmark, statusLevel, isMt5Online, isApiOnline, isDbOnline }) {
   var { prefs, set: setPref } = usePreferences();
@@ -365,33 +456,11 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
 
   // Read view-specific values from localStorage
   var [values, setValues] = useState(function () {
-    var initial = {};
-    if (registry) {
-      for (var i = 0; i < registry.sections.length; i++) {
-        var section = registry.sections[i];
-        try {
-          initial[section.key] = localStorage.getItem(section.key) || section.defaultValue;
-        } catch (e) {
-          initial[section.key] = section.defaultValue;
-        }
-      }
-    }
-    return initial;
+    return readRegistryValues(registry);
   });
 
   useEffect(function () {
-    if (registry) {
-      var next = {};
-      for (var i = 0; i < registry.sections.length; i++) {
-        var section = registry.sections[i];
-        try {
-          next[section.key] = localStorage.getItem(section.key) || section.defaultValue;
-        } catch (e) {
-          next[section.key] = section.defaultValue;
-        }
-      }
-      setValues(next);
-    }
+    setValues(readRegistryValues(registry));
   }, [activeView]);
 
   var handleViewChange = useCallback(function (key, value) {
@@ -642,6 +711,32 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                                       <span className="so-radio-label">{opt.label}</span>
                                       <span className="so-radio-desc">{opt.desc}</span>
                                     </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          )}
+                          {section.type === 'checkbox' && (
+                            <label className="so-checkbox-option">
+                              <input
+                                type="checkbox"
+                                checked={values[section.key] === 'true' || values[section.key] === true}
+                                onChange={function (e) { handleViewChange(section.key, String(e.target.checked)); }}
+                              />
+                              <span>{section.description || section.label}</span>
+                            </label>
+                          )}
+                          {section.type === 'columns' && (
+                            <div className="so-columns-grid">
+                              {section.options.map(function (opt) {
+                                return (
+                                  <label key={opt.key} className="so-checkbox-option" title={opt.desc}>
+                                    <input
+                                      type="checkbox"
+                                      checked={values[opt.key] === 'true' || values[opt.key] === true}
+                                      onChange={function (e) { handleViewChange(opt.key, String(e.target.checked)); }}
+                                    />
+                                    <span>{opt.label}</span>
                                   </label>
                                 );
                               })}
