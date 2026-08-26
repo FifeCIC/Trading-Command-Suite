@@ -1855,6 +1855,7 @@ model Protocol {
   winRateTarget        String?  @db.VarChar(20)
   idealFor             String?  @db.Text
   note                 String?  @db.Text  // Human-readable state explanation (e.g. why disabled)
+  theory               String?  @db.Text  // #689 — written intent: target behaviour, why these groups, what a good day looks like
   derivedFrom          String?  @db.VarChar(100)  // Parent protocol slug — links variants for A/B testing
   isDefault            Boolean  @default(false)
   seasonalAffinity     Json?                                      // monthly weights + date ranges

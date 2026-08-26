@@ -138,6 +138,14 @@ export default function ProtocolsPage() {
 
             <p className="protocols-description">{selectedProto.description}</p>
 
+            {/* ── Theory (#689) — written intent, distinct from description ── */}
+            {selectedProto.theory && (
+              <div className="protocols-theory">
+                <h3>Theory</h3>
+                <p className="protocols-theory-text">{selectedProto.theory}</p>
+              </div>
+            )}
+
             {/* ── Merged Stats Grid ── */}
             <div className="protocols-stats">
               {selectedProto.tradingStyle && (

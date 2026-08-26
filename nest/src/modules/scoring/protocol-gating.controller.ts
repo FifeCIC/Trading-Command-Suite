@@ -80,6 +80,7 @@ export class ProtocolGatingController {
       winRateTarget?: string;
       idealFor?: string;
       note?: string | null;
+      theory?: string | null; // #689 — written intent (target behaviour, why these groups, what a good day looks like)
       readiness?: { ready: boolean; blockers: Array<{ directiveId: string; name: string; readiness: string }> };
       // Set after construction by async resolveSymbols() below
       resolvedSymbols?: string[];
@@ -167,6 +168,7 @@ export class ProtocolGatingController {
         winRateTarget: (proto as any).winRateTarget,
         idealFor: (proto as any).idealFor,
         note: (proto as any).note ?? null,
+        theory: (proto as any).theory ?? null,
         // Placeholder — populated below by resolveSymbols()
         resolvedSymbols: [] as string[],
       });

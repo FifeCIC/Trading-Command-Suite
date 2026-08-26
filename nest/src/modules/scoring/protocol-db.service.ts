@@ -66,6 +66,8 @@ export interface ProtocolConfig {
   winRateTarget?: string;
   idealFor?: string;
   note?: string | null;
+  /** #689 — written intent: target behaviour, why these groups, what a good day looks like. */
+  theory?: string | null;
   seasonalAffinity?: any;
   /** How to resolve symbols for this protocol. If absent, derived from protocol ID. */
   symbolResolution?: { type: 'single'; symbol: string } | { type: 'watchlist'; name: string };
@@ -283,6 +285,14 @@ export class ProtocolDbService implements OnModuleInit {
         seasonalAffinity: protocol.seasonalAffinity ?? undefined,
       };
 
+      // #689 — `theory` is not in the Prisma client model yet; read via raw SQL.
+      try {
+        const row: any[] = await (this.prisma as any).$queryRawUnsafe(
+          `SELECT theory FROM protocol WHERE slug = ?`, slug,
+        );
+        if (row.length > 0) (config as any).theory = row[0].theory ?? null;
+      } catch { /* column may not exist yet */ }
+
       this.cache.set(slug, config);
       return config;
     } catch (err) {
@@ -322,16 +332,18 @@ export class ProtocolDbService implements OnModuleInit {
       });
       if (!dbProtocols?.length) return {};
 
-      // Read active status + note via raw SQL — Prisma client may not have the columns yet
+      // Read active status + note + theory via raw SQL — Prisma client may not have the columns yet
       let activeMap: Record<string, boolean> = {};
       let noteMap: Record<string, string | null> = {};
+      let theoryMap: Record<string, string | null> = {};
       try {
         const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
-          `SELECT slug, active, note FROM protocol`
+          `SELECT slug, active, note, theory FROM protocol`
         );
         for (const r of rows) {
           activeMap[r.slug] = !!r.active;
           noteMap[r.slug] = r.note ?? null;
+          theoryMap[r.slug] = r.theory ?? null;
         }
       } catch { /* columns may not exist yet */ }
 
@@ -362,6 +374,7 @@ export class ProtocolDbService implements OnModuleInit {
           winRateTarget: p.winRateTarget ?? undefined,
           idealFor: p.idealFor ?? undefined,
           note: noteMap[p.slug] ?? null,
+          theory: theoryMap[p.slug] ?? null, // #689 — written intent, shown as the Theory section
           seasonalAffinity: p.seasonalAffinity ?? undefined,
         };
       }

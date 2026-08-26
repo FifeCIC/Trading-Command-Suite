@@ -274,6 +274,14 @@ export default function ProtocolsPageB({ initialProtocolId }) {
 
               <p className="prb-description">{selectedProto.description}</p>
 
+              {/* Theory (#689) — written intent, distinct from description */}
+              {selectedProto.theory && (
+                <div className="prb-theory">
+                  <h3>Theory</h3>
+                  <p className="prb-theory-text">{selectedProto.theory}</p>
+                </div>
+              )}
+
               {/* Stats */}
               <div className="prb-stats">
                 {selectedProto.tradingStyle && <div className="prb-stat"><span className="prb-stat-val">{selectedProto.tradingStyle}</span><span className="prb-stat-lbl">Style</span></div>}
