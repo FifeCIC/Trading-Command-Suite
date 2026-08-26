@@ -16,15 +16,12 @@
  */
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { DirectivesService } from '../directives/directives.service';
 import { Mt5TradingService } from './mt5-trading.service';
 import { ConditionDetectorService } from '../directives/condition-detector.service';
 import { RiskService } from '../risk/risk.service';
 import { NotificationService } from '../notifications/notifications.service';
-import {
-  DIRECTIVE_GROUPS,
-} from '../directives/directive-groups';
-import { DirectiveInput, MarketBar } from '../directives/interfaces/directive.interface';
+import { ProtocolGatingService } from '../scoring/protocol-gating.service';
+import { MarketBar } from '../directives/interfaces/directive.interface';
 
 export interface StrategySummary {
   id: string;
@@ -64,11 +61,11 @@ export class TradingStrategyService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly directivesService: DirectivesService,
     private readonly mt5: Mt5TradingService,
     private readonly conditionDetector: ConditionDetectorService,
     private readonly riskService: RiskService,
     private readonly notificationService: NotificationService,
+    private readonly protocolGating: ProtocolGatingService,
   ) {}
 
   // ── CRUD ──────────────────────────────────────────────
@@ -336,9 +333,27 @@ export class TradingStrategyService {
       }));
     }
 
-    // Gated scoring — uses default directive groups (protocol-specific groups resolved at ScoringStrategy level)
-    const groups = DIRECTIVE_GROUPS;
-    const { composite, signal, rarity } = await this.gateScore(symbol, bars, groups);
+    // Gated scoring — PROTOCOL-SCOPED (#531). The unscoped kitchen-sink
+    // DIRECTIVE_GROUPS fallback was removed with the default protocol
+    // (user policy: scoring without a protocol generates risky data).
+    if (!protocolId) {
+      this.logger.warn(`Strategy ${strategy.name} has no protocol linked — evaluation skipped`);
+      return { evaluated: false, reason: 'No protocol linked' };
+    }
+
+    let gated: any;
+    try {
+      gated = await this.protocolGating.scoreWithGating(symbol, bars, protocolId);
+    } catch (err) {
+      this.logger.warn(`Protocol scoring failed for ${symbol}/${protocolId}: ${(err as Error).message}`);
+      return { evaluated: false, reason: `Protocol scoring failed: ${(err as Error).message}` };
+    }
+
+    // Store the pre-gate percentage so the Strategy Monitor and the loop
+    // speak the same scale (0-100, classification basis).
+    const composite = Math.round(gated?.meta?.compositePct ?? gated?.composite ?? 0);
+    const signal = gated?.signal ?? 'HOLD';
+    const rarity = gated?.rarity ?? null;
 
     // Direction check
     let directionPassed = true;
@@ -716,68 +731,6 @@ export class TradingStrategyService {
       }
     }
     return { evaluated: count };
-  }
-
-  private async gateScore(
-    symbol: string,
-    bars: MarketBar[],
-    groups: any[],
-  ): Promise<{ composite: number; signal: string; rarity: any | null }> {
-    const input: DirectiveInput = { symbol, bars };
-    const allResults = await this.directivesService.runAll(input);
-
-    let technicalScore = 50;
-    let sentimentScore = 50;
-    let riskScore = 50;
-
-    for (const group of groups) {
-      let totalNorm = 0;
-      let count = 0;
-      for (const directiveId of group.directiveIds) {
-        const result = allResults.get(directiveId);
-        if (!result) continue;
-        const directive = this.directivesService.get(directiveId);
-        const maxScore = directive?.maxScore ?? 100;
-        totalNorm += maxScore > 0 ? (result.score / maxScore) * 100 : 0;
-        count++;
-      }
-      const avg = count > 0 ? totalNorm / count : 50;
-      if (group.id === 'technical') technicalScore = avg;
-      else if (group.id === 'sentiment') sentimentScore = avg;
-      else if (group.id === 'risk') riskScore = avg;
-    }
-
-    const riskGroup = groups.find((g: any) => g.id === 'risk');
-    let riskMultiplier = riskScore / 100;
-    if (riskGroup) {
-      riskMultiplier = Math.max(riskGroup.minMultiplier, Math.min(riskGroup.maxMultiplier, riskMultiplier));
-    }
-
-    const raw = (technicalScore * 0.40 + sentimentScore * 0.35) * riskMultiplier;
-    const composite = Math.round(Math.max(0, Math.min(100, raw)));
-    const signal = composite >= 65 ? 'BUY' : composite >= 35 ? 'HOLD' : 'SELL';
-
-    // Rarity (simplified — full implementation in ProtocolGatingService)
-    let rarity: any = null;
-    try {
-      const history = await this.prisma.scoreSnapshot.findMany({
-        where: { snappedAt: { gte: new Date(Date.now() - 365 * 86400000) } },
-        select: { composite: true },
-        orderBy: { composite: 'asc' },
-        take: 500,
-      });
-      if (history.length >= 10) {
-        const scores = history.map(h => h.composite);
-        let below = 0;
-        for (const s of scores) { if (s < composite) below++; }
-        const pct = Math.round((below / scores.length) * 100);
-        const band = pct >= 99 ? 'black-swan' : pct >= 95 ? 'cyclical' : pct >= 85 ? 'exceptional' : pct >= 70 ? 'strong' : 'standard';
-        const multipliers: Record<string, number> = { 'standard': 1.0, 'strong': 1.5, 'exceptional': 2.0, 'cyclical': 2.5, 'black-swan': 0 };
-        rarity = { percentile: pct, band, sizeMultiplier: multipliers[band] ?? 1.0 };
-      }
-    } catch { /* rarity unavailable */ }
-
-    return { composite, signal, rarity };
   }
 
   private getDirection(bars: MarketBar[]): string {

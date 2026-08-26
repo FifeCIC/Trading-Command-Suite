@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { Mt5TradingService } from './mt5-trading.service';
 import { Mt5TradingController } from './mt5-trading.controller';
 import { SessionTrackerService } from './session-tracker.service';
@@ -20,9 +20,10 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { DatabaseModule } from '../../database/database.module';
 import { ProvidersModule } from '../providers/providers.module';
 import { AuthModule } from '../auth/auth.module';
+import { ScoringModule } from '../scoring/scoring.module';
 
 @Module({
-  imports: [DirectivesModule, RiskModule, NotificationsModule, DatabaseModule, ProvidersModule, AuthModule],
+  imports: [DirectivesModule, RiskModule, NotificationsModule, DatabaseModule, ProvidersModule, AuthModule, forwardRef(() => ScoringModule)],
   controllers: [Mt5TradingController, SessionTrackerController, TradingStrategyController, TradeHistoryController, BrokerConfigController],
   providers: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopGuardianService, SwapCostService, WeekendDefenseService],
   exports: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopGuardianService, SwapCostService, WeekendDefenseService],
