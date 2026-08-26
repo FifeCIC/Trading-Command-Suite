@@ -235,6 +235,13 @@
   flex-shrink: 0;
 }
 
+/* Column toggle group (view-specific, e.g. Symbols Browser table columns) */
+.so-columns-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 12px;
+}
+
 /* Footer */
 .so-footer {
   padding: 10px 18px;

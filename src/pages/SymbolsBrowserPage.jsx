@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '../core/api/client'
 import StarToggle from '../components/StarToggle'
 import { formatCurrency, formatPct } from '../core/format-utils'
+import { SB_COLUMNS, readSBColumnVisibility } from '../core/symbols-browser-columns'
 import './symbols-browser.css'
 
 const SYMBOL_TYPES = ['stock', 'crypto', 'forex']
@@ -62,12 +63,42 @@ export default function SymbolsBrowserPage() {
       list = list.filter((sym) => sym.ticker.toLowerCase().includes(q) || sym.name.toLowerCase().includes(q))
     }
     list.sort((a, b) => {
-      const aVal = (a[sortKey] ?? '').toString().toLowerCase()
-      const bVal = (b[sortKey] ?? '').toString().toLowerCase()
-      return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+      const accessors = {
+        ticker: (sym) => sym.ticker ?? '',
+        name: (sym) => sym.name ?? '',
+        exchange: (sym) => sym.exchange ?? '',
+        type: (sym) => sym.type ?? '',
+        active: (sym) => (sym.active ? 1 : 0),
+        tags: (sym) => (Array.isArray(sym.tags) ? sym.tags.join(', ') : ''),
+        aliases: (sym) => (sym.aliases && typeof sym.aliases === 'object' ? Object.keys(sym.aliases).join(', ') : ''),
+        position: (sym) => (positionFor(sym) ? 1 : 0),
+        provider: (sym) => positionFor(sym)?.provider ?? '',
+        quantity: (sym) => positionFor(sym)?.quantity ?? null,
+        avgPrice: (sym) => positionFor(sym)?.avgPrice ?? null,
+        currentPrice: (sym) => positionFor(sym)?.currentPrice ?? null,
+        pnl: (sym) => positionFor(sym)?.pnl ?? null,
+        pnlPct: (sym) => positionFor(sym)?.pnlPct ?? null,
+        fresh: (sym) => freshnessBySymbol[sym.id]?.status ?? '',
+        freshAge: (sym) => freshnessBySymbol[sym.id]?.ageMinutes ?? null,
+        freshTimeframe: (sym) => freshnessBySymbol[sym.id]?.timeframe ?? '',
+        freshLatest: (sym) => freshnessBySymbol[sym.id]?.latestTimestamp ?? null,
+        created: (sym) => sym.createdAt ?? null,
+        updated: (sym) => sym.updatedAt ?? null,
+        id: (sym) => sym.id ?? '',
+      }
+      const get = accessors[sortKey] || ((sym) => sym[sortKey] ?? '')
+      const av = get(a)
+      const bv = get(b)
+      if (av == null && bv == null) return 0
+      if (av == null) return 1 // nulls always sort last
+      if (bv == null) return -1
+      let cmp
+      if (typeof av === 'number' && typeof bv === 'number') cmp = av - bv
+      else cmp = String(av).toLowerCase().localeCompare(String(bv).toLowerCase(), undefined, { numeric: true })
+      return sortDir === 'asc' ? cmp : -cmp
     })
     return list
-  }, [syms, filterType, search, sortKey, sortDir])
+  }, [syms, filterType, search, sortKey, sortDir, posRows, freshes])
 
   // Auto-select the first symbol (falls back gracefully when the current
   // selection is filtered out) — mirrors the directives-registry behaviour.
@@ -89,6 +120,23 @@ export default function SymbolsBrowserPage() {
   const selectedFreshness = selected ? freshnessBySymbol[selected.id] : null
   const selectedPos = positionFor(selected)
 
+  // Optional table columns — configured via Screen Options (gear) → Table Columns.
+  const [columns, setColumns] = useState(readSBColumnVisibility)
+
+  // Poll localStorage for Screen Options changes (same-tab doesn't fire 'storage' event).
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const next = readSBColumnVisibility()
+      setColumns((prev) => {
+        for (const key of Object.keys(next)) {
+          if (prev[key] !== next[key]) return next
+        }
+        return prev
+      })
+    }, 250)
+    return () => clearInterval(interval)
+  }, [])
+
   function toggleSort(key) {
     if (sortKey === key) { setSortDir((d) => (d === 'asc' ? 'desc' : 'asc')) }
     else { setSortKey(key); setSortDir('asc') }
@@ -99,6 +147,80 @@ export default function SymbolsBrowserPage() {
     if (st === 'fresh') return 'ok'
     if (st === 'stale') return 'warn'
     return 'neutral'
+  }
+
+  /** Render one table cell for a symbol + column. */
+  function renderCell(sym, col, fr, pos) {
+    switch (col.key) {
+      case 'star':
+        return <StarToggle itemType="symbol" itemId={sym.id} size={16} />
+      case 'ticker':
+        return <strong>{sym.ticker}</strong>
+      case 'name':
+        return sym.name
+      case 'exchange':
+        return sym.exchange
+      case 'type':
+        return <span className="sb-chip sb-chip--neutral">{sym.type}</span>
+      case 'active':
+        return sym.active
+          ? <span className="sb-chip sb-chip--ok">Active</span>
+          : <span className="sb-chip sb-chip--warn">Inactive</span>
+      case 'tags': {
+        const tags = Array.isArray(sym.tags) ? sym.tags : []
+        return tags.length ? <span className="sb-tags-text">{tags.join(', ')}</span> : <span className="pnl-none">—</span>
+      }
+      case 'aliases': {
+        const keys = sym.aliases && typeof sym.aliases === 'object' ? Object.keys(sym.aliases) : []
+        return keys.length ? <span className="sb-tags-text">{keys.join(', ')}</span> : <span className="pnl-none">—</span>
+      }
+      case 'position':
+        return pos
+          ? <span className="sb-chip sb-chip--ok" title={`Held via ${pos.provider} · ${pos.quantity} units`}>Held</span>
+          : <span className="pnl-none">—</span>
+      case 'provider':
+        return pos ? pos.provider : <span className="pnl-none">—</span>
+      case 'quantity':
+        return pos && pos.quantity != null
+          ? pos.quantity.toLocaleString(undefined, { maximumFractionDigits: 4 })
+          : <span className="pnl-none">—</span>
+      case 'avgPrice':
+        return pos && pos.avgPrice != null ? formatCurrency(pos.avgPrice) : <span className="pnl-none">—</span>
+      case 'currentPrice':
+        return pos && pos.currentPrice != null ? formatCurrency(pos.currentPrice) : <span className="pnl-none">—</span>
+      case 'pnl':
+        return pos && pos.pnl != null
+          ? (
+            <span className={`pnl-cell ${pos.pnl >= 0 ? 'pnl--pos' : 'pnl--neg'}`} title={pos.pnlPct != null ? `P&L ${formatPct(pos.pnlPct)}` : undefined}>
+              {formatCurrency(pos.pnl, { showZero: true })}
+            </span>
+          )
+          : <span className="pnl-none">—</span>
+      case 'pnlPct':
+        return pos && pos.pnlPct != null
+          ? <span className={`pnl-cell ${pos.pnlPct >= 0 ? 'pnl--pos' : 'pnl--neg'}`}>{formatPct(pos.pnlPct)}</span>
+          : <span className="pnl-none">—</span>
+      case 'fresh':
+        return (
+          <span className={`sb-chip sb-chip--${freshnessTone(fr?.status)}`}>
+            {fr?.status ?? '...'}
+          </span>
+        )
+      case 'freshAge':
+        return fr?.ageMinutes != null ? `${fr.ageMinutes.toFixed(0)} min` : <span className="pnl-none">—</span>
+      case 'freshTimeframe':
+        return fr?.timeframe ? fr.timeframe : <span className="pnl-none">—</span>
+      case 'freshLatest':
+        return fr?.latestTimestamp ? new Date(fr.latestTimestamp).toLocaleString() : <span className="pnl-none">—</span>
+      case 'created':
+        return sym.createdAt ? new Date(sym.createdAt).toLocaleDateString() : <span className="pnl-none">—</span>
+      case 'updated':
+        return sym.updatedAt ? new Date(sym.updatedAt).toLocaleDateString() : <span className="pnl-none">—</span>
+      case 'id':
+        return <code className="sb-id-code">{sym.id}</code>
+      default:
+        return null
+    }
   }
 
   return (
@@ -139,14 +261,24 @@ export default function SymbolsBrowserPage() {
           <table className="symbols-table">
             <thead>
               <tr>
-                <th className="sb-col-star">⭐</th>
-                <th onClick={() => toggleSort('ticker')} className="il-clickable">Ticker{sortIcon('ticker')}</th>
-                <th onClick={() => toggleSort('name')} className="il-clickable">Name{sortIcon('name')}</th>
-                <th onClick={() => toggleSort('exchange')} className="il-clickable">Exchange{sortIcon('exchange')}</th>
-                <th>Type</th>
-                <th>Position</th>
-                <th>P&L</th>
-                <th>Freshness</th>
+                {SB_COLUMNS.filter((c) => columns[c.key]).map((c) => {
+                  const sortable = c.key !== 'star'
+                  const sorted = sortable && sortKey === c.key
+                  return (
+                    <th
+                      key={c.key}
+                      aria-sort={sorted ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
+                      className={[
+                        c.key === 'star' ? 'sb-col-star' : '',
+                        sortable ? 'sb-th-sortable' : '',
+                        sorted ? 'sb-sorted' : '',
+                      ].filter(Boolean).join(' ') || undefined}
+                      onClick={sortable ? () => toggleSort(c.key) : undefined}
+                    >
+                      {c.label}{sortable ? sortIcon(c.key) : ''}
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
             <tbody>
@@ -163,30 +295,15 @@ export default function SymbolsBrowserPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2, delay: Math.min(i * 0.015, 0.3) }}
                   >
-                    <td onClick={(e) => e.stopPropagation()}><StarToggle itemType="symbol" itemId={sym.id} size={16} /></td>
-                    <td><strong>{sym.ticker}</strong></td>
-                    <td>{sym.name}</td>
-                    <td>{sym.exchange}</td>
-                    <td><span className="sb-chip sb-chip--neutral">{sym.type}</span></td>
-                    <td>
-                      {pos
-                        ? <span className="sb-chip sb-chip--ok" title={`Held via ${pos.provider} · ${pos.quantity} units`}>Held</span>
-                        : <span className="pnl-none">—</span>}
-                    </td>
-                    <td>
-                      {pos && pos.pnl != null
-                        ? (
-                          <span className={`pnl-cell ${pos.pnl >= 0 ? 'pnl--pos' : 'pnl--neg'}`} title={pos.pnlPct != null ? `P&L ${formatPct(pos.pnlPct)}` : undefined}>
-                            {formatCurrency(pos.pnl, { showZero: true })}
-                          </span>
-                        )
-                        : <span className="pnl-none">—</span>}
-                    </td>
-                    <td>
-                      <span className={`sb-chip sb-chip--${freshnessTone(fr?.status)}`}>
-                        {fr?.status ?? '...'}
-                      </span>
-                    </td>
+                    {SB_COLUMNS.filter((c) => columns[c.key]).map((c) => (
+                      <td
+                        key={c.key}
+                        className={c.key === 'star' ? 'sb-col-star' : undefined}
+                        onClick={c.key === 'star' ? (e) => e.stopPropagation() : undefined}
+                      >
+                        {renderCell(sym, c, fr, pos)}
+                      </td>
+                    ))}
                   </motion.tr>
                 )
               })}

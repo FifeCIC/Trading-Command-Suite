@@ -50,6 +50,7 @@ export const PAGE_DATA_STATUS = {
   // ── Research ──
   'research-notes': { status: 'live', source: 'DB (research_note) + /api/symbols registry + import refresh' },
   'symbols-browser': { status: 'live', source: 'DB + Providers' },
+  'screener': { status: 'live', source: 'ScreenerHit catalysts (#682) + /api/screener/ranked' },
   'snapshots': { status: 'live', source: 'MarketData DB + MT5 Bridge import' },
   'sector-rotation': { status: 'live', source: 'Finnhub sectors' },
   'fluff-detector': { status: 'live', source: 'News sentiment analysis' },

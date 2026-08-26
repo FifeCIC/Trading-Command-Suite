@@ -1,0 +1,244 @@
+/* Screener — attention-ranked catalysts (#682 Phase 4.3) */
+
+.screener-page {
+  max-width: none;
+  margin: 0;
+  padding: 1.25rem 1.5rem 2rem;
+  color: var(--ink);
+}
+
+.screener-page .sc-page-header h1 {
+  margin: 0 0 0.2rem;
+  font-size: 1.4rem;
+}
+
+.screener-page .sc-page-header p {
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+}
+
+/* --- Transparency strip (#682 decision 9) --- */
+
+.sc-transparency {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.85rem;
+}
+
+.sc-trans-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 0.4rem 0.8rem;
+  min-width: 110px;
+}
+
+.sc-trans-item strong {
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.sc-trans-item span {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+.sc-trans-hit strong { color: var(--color-buy); }
+.sc-trans-quiet strong { color: var(--ink-soft); }
+
+/* --- Toolbar --- */
+
+.sc-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  padding: 0.6rem 0.85rem;
+  margin-bottom: 0.85rem;
+}
+
+.sc-toolbar-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 180px;
+}
+
+.sc-toolbar-search label {
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.sc-toolbar-search input {
+  flex: 1;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg, rgba(0, 0, 0, 0.1));
+  color: var(--ink);
+  padding: 0.45rem 0.65rem;
+  min-width: 0;
+}
+
+.sc-toolbar-search input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.sc-toolbar-chips {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* --- Chips --- */
+
+.sc-chip {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.sc-chip:hover { color: var(--accent); border-color: var(--accent); }
+.sc-chip-active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.sc-chip--news { border-color: rgba(59, 130, 246, 0.4); color: #3b82f6; }
+.sc-chip--earnings { border-color: rgba(139, 92, 246, 0.4); color: #8b5cf6; }
+
+/* --- Table --- */
+
+.sc-table-wrap {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow-x: auto;
+  background: var(--panel);
+}
+
+.sc-state {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  padding: 1rem;
+  margin: 0;
+}
+
+.sc-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sc-table thead th {
+  text-align: left;
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--line);
+  padding: 0.45rem 0.6rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sc-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.45rem 0.6rem;
+  vertical-align: middle;
+  color: var(--ink);
+  font-size: 0.82rem;
+}
+
+.sc-table thead th.sc-th-sortable { cursor: pointer; }
+.sc-table thead th.sc-th-sortable:hover { color: var(--accent); }
+
+.sc-table strong { color: var(--accent); font-size: 0.85rem; }
+.sc-col-pick { width: 40px; text-align: center; }
+
+.sc-ticker-cell { white-space: nowrap; }
+
+.sc-in-db {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft);
+  vertical-align: middle;
+}
+
+.sc-table tbody tr.sc-top-pick {
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+  border-left: 2px solid var(--accent);
+}
+
+.sc-table tbody tr:hover {
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel));
+}
+
+/* Attention cell */
+
+.sc-attn-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 90px;
+}
+
+.sc-attn-num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  min-width: 2rem;
+  text-align: right;
+}
+
+.sc-attn-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+  max-width: 80px;
+}
+
+.sc-attn-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.sc-when {
+  white-space: nowrap;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 768px) {
+  .sc-toolbar { flex-direction: column; align-items: stretch; }
+}

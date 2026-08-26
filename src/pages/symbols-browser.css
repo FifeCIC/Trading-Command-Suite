@@ -164,6 +164,24 @@
   width: 32px;
 }
 
+/* --- Sortable headers + optional columns --- */
+
+.symbols-table thead th.sb-th-sortable { cursor: pointer; }
+.symbols-table thead th.sb-th-sortable:hover { color: var(--accent); }
+.symbols-table thead th.sb-sorted { color: var(--accent); }
+
+.sb-tags-text {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+
+.sb-id-code {
+  font-family: monospace;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  word-break: break-all;
+}
+
 /* --- Detail rail (mirrors directive-detail-rail) --- */
 
 .symbol-detail-rail {

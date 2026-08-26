@@ -167,6 +167,137 @@ export class ScreenerService implements OnModuleInit {
     return Math.min(100, Math.max(1, Math.round(40 + Math.abs(sentiment) * 50 + impactBonus)));
   }
 
+  /**
+   * Attention-weight ranking (#647 / epic #682 Phase 4.1) — computed on read,
+   * never stored. Groups ScreenerHits per ticker and ranks by
+   * `strength × reliability × recency`:
+   *
+   *   - Earnings hits carry a FUTURE event date → recency is proximity to the
+   *     event (closer = higher).
+   *   - News hits carry a PAST timestamp → recency is age decay
+   *     (half-life 24h).
+   *
+   * Also returns transparency counts (#682 decision 9): how many DB symbols
+   * have catalysts vs how many are quiet, so the UI can show what the app
+   * filtered out in the background.
+   */
+  async ranked(limit = 100, source?: string) {
+    const baseWhere: any = {};
+    if (source) baseWhere.source = source;
+
+    // Two windows, both ordered so the most ACTIONABLE hits survive the take
+    // cap: future events ascending (nearest first — proximity matters most),
+    // recent past events descending (freshest first). A single global
+    // timestamp-desc query would push the nearest earnings dates out past the
+    // 2000-row cap and surface the farthest ones instead.
+    const now = new Date();
+    const newsCutoff = new Date(now.getTime() - 7 * 86_400_000);
+
+    let rows;
+    try {
+      const [futureRows, pastRows] = await Promise.all([
+        this.prisma.screenerHit.findMany({
+          where: { ...baseWhere, timestamp: { gte: now } },
+          orderBy: { timestamp: 'asc' },
+          take: 2000,
+        }),
+        this.prisma.screenerHit.findMany({
+          where: { ...baseWhere, timestamp: { lt: now, gte: newsCutoff } },
+          orderBy: { timestamp: 'desc' },
+          take: 2000,
+        }),
+      ]);
+      rows = [...futureRows, ...pastRows];
+    } catch {
+      rows = [];
+    }
+
+    const nowMs = now.getTime();
+    const groups = new Map<string, typeof rows>();
+    for (const h of rows) {
+      const t = String(h.ticker || '').trim().toUpperCase();
+      if (!t) continue;
+      if (!groups.has(t)) groups.set(t, []);
+      groups.get(t)!.push(h);
+    }
+
+    const ranked = [];
+    for (const [ticker, hits] of groups) {
+      const strength = Math.max(...hits.map((h) => Number(h.catalystStrength) || 0));
+      const reliability = Math.max(...hits.map((h) => Number(h.sourceReliability) || 50));
+      const times = hits.map((h) => new Date(h.timestamp).getTime());
+      const latest = Math.max(...times);
+      const nextFuture = times.filter((ts) => ts > nowMs).sort((a, b) => a - b)[0];
+
+      let recency: number;
+      if (nextFuture != null) {
+        // Earnings-style: future event → proximity weighting (closer = higher).
+        const daysAway = Math.max(0, (nextFuture - nowMs) / 86_400_000);
+        recency = 1 / (1 + daysAway);
+      } else {
+        // News-style: past event → age decay, half-life 24h.
+        const ageHours = Math.max(0, (nowMs - latest) / 3_600_000);
+        recency = Math.pow(0.5, ageHours / 24);
+      }
+
+      const rawWeight = (strength / 100) * (reliability / 100) * recency * 100;
+      ranked.push({
+        ticker,
+        sources: [...new Set(hits.map((h) => h.source))],
+        catalystTypes: [...new Set(hits.map((h) => h.catalystType))],
+        hitCount: hits.length,
+        strength,
+        reliability,
+        recency: Number(recency.toFixed(3)),
+        attentionWeight: 0, // normalised below (relative to the strongest catalyst)
+        rawAttentionWeight: Number(rawWeight.toFixed(2)),
+        latestTimestamp: new Date(latest).toISOString(),
+        nextEventAt: nextFuture != null ? new Date(nextFuture).toISOString() : null,
+        bestHitRef: hits[0].rawPayloadRef ?? null,
+      });
+    }
+
+    // Attention is RELATIVE — normalise to 0–100 against the strongest current
+    // catalyst so the UI never shows an all-zero board when every event is far
+    // out (e.g. earnings 3 months away → tiny raw weights but a clear ranking).
+    const maxRaw = Math.max(0, ...ranked.map((r) => r.rawAttentionWeight));
+    for (const r of ranked) {
+      r.attentionWeight = maxRaw > 0 ? Math.round((r.rawAttentionWeight / maxRaw) * 100) : 0;
+    }
+    ranked.sort((a, b) => b.attentionWeight - a.attentionWeight);
+
+    // Transparency counts (best-effort — never block ranking on them).
+    let universe = { totalSymbols: 0, hitSymbols: 0, quietSymbols: 0 };
+    let inDbTickers = new Set<string>();
+    try {
+      const totalSymbols = await this.prisma.symbol.count({ where: { active: true } });
+      const hitTickers = [...new Set(ranked.map((r) => r.ticker))];
+      const inDb = await this.prisma.symbol.findMany({
+        where: { ticker: { in: hitTickers } },
+        select: { ticker: true },
+      });
+      inDbTickers = new Set(inDb.map((s) => s.ticker.toUpperCase()));
+      universe = {
+        totalSymbols,
+        hitSymbols: inDbTickers.size,
+        quietSymbols: Math.max(0, totalSymbols - inDbTickers.size),
+      };
+    } catch { /* leave zeroed */ }
+
+    // Flag rows the user can actually act on (symbol exists in their DB) —
+    // the rest are discovery candidates surfaced by the attention funnel.
+    for (const r of ranked) {
+      r.inDb = inDbTickers.has(r.ticker);
+    }
+
+    return {
+      universe,
+      totalHits: rows.length,
+      rankedCount: ranked.length,
+      ranked: ranked.slice(0, limit),
+    };
+  }
+
   private async exists(source: string, ticker: string, ref: string): Promise<boolean> {
     const row = await this.prisma.screenerHit.findFirst({
       where: { source, ticker, rawPayloadRef: ref },

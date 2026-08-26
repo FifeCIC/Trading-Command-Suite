@@ -44,6 +44,7 @@ export const EXPERIENCE_MATRIX = {
     // Research
     'research-notes':        { beginner: true,  experienced: true,  expert: true },
     'symbols-browser':       { beginner: true,  experienced: true,  expert: true },
+    'screener':              { beginner: true,  experienced: true,  expert: true },
     'sector-rotation':       { beginner: false, experienced: false, expert: true },
     'market-correlations':   { beginner: false, experienced: false, expert: true },
     'news-intel':            { beginner: true,  experienced: true,  expert: true },

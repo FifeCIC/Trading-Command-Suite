@@ -35,6 +35,19 @@ export class ScreenerController {
     return { hits: rows, count: rows.length };
   }
 
+  /**
+   * Ranked catalysts (epic #682 Phase 4.1) — hits grouped per ticker and
+   * ordered by attention weight, plus universe transparency counts.
+   */
+  @Get('ranked')
+  async ranked(
+    @Query('limit') limit?: string,
+    @Query('source') source?: string,
+  ) {
+    const take = Math.min(Math.max(parseInt(limit || '100', 10) || 100, 1), 200);
+    return this.screener.ranked(take, source);
+  }
+
   @Post('ingest')
   async ingest() {
     const result = await this.screener.runIngestion();

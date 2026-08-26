@@ -17,6 +17,12 @@ const VIEW_META = {
     css: 'src/pages/symbols-browser.css',
     api: ['GET /api/symbols', 'GET /api/market-data/freshness', 'GET /api/symbols/:ticker/snapshot', 'GET /api/symbols/positions'],
   },
+  '/research/screener': {
+    label: 'Screener',
+    file: 'src/pages/ScreenerPage.jsx',
+    css: 'src/pages/screener.css',
+    api: ['GET /api/screener/ranked', 'GET /api/screener/hits'],
+  },
   '/research/earnings-calendar': {
     label: 'Earnings Calendar',
     file: 'src/pages/EarningsCalendarPage.jsx',

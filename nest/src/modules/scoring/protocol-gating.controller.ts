@@ -374,6 +374,7 @@ export class ProtocolGatingController {
         symbol: ticker,
         composite: 50,
         signal: 'HOLD',
+        directionMode: 'LONG_ONLY' as const,
         subScores: { technical: 50, sentiment: 50, risk: 50 },
         subRawTotals: {},
         subMaxTotals: {},

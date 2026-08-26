@@ -101,6 +101,7 @@ import CacheMonitorPage from '../pages/CacheMonitorPage.jsx';
 import ActiveSymbolsPage from '../pages/ActiveSymbolsPage.jsx';
 import AddSymbolPage from '../pages/AddSymbolPage.jsx';
 import SymbolsBrowserPage from '../pages/SymbolsBrowserPage.jsx';
+import ScreenerPage from '../pages/ScreenerPage.jsx';
 import SymbolDetailPage from '../pages/SymbolDetailPage.jsx';
 import ImportJobsPage from '../pages/ImportJobsPage.jsx';
 import ApiActivityPage from '../pages/ApiActivityPage.jsx';
@@ -279,6 +280,7 @@ export const VIEW_COMPONENTS = {
   'active-symbols': ActiveSymbolsPage,
   'add-symbol': AddSymbolPage,
   'symbols-browser': SymbolsBrowserPage,
+  'screener': ScreenerPage,
   'symbol-detail': SymbolDetailPage,
   'symbol': SymbolPage,
   'import-jobs': ImportJobsPage,
