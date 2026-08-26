@@ -4,6 +4,8 @@ import { AppService } from './app.service';
 import { ModeService } from './config/mode.service';
 import { PrismaService } from './database/prisma.service';
 import { ProvidersService } from './modules/providers/providers.service';
+import { Mt5ConnectionManager } from './modules/providers/mt5/mt5-connection-manager.service';
+import { StopGuardianService } from './modules/automation/stop-guardian.service';
 
 describe('AppController', () => {
   let appController: AppController;
@@ -27,6 +29,16 @@ describe('AppController', () => {
           provide: ProvidersService,
           useValue: { getHealth: jest.fn().mockResolvedValue({ providers: [] }) },
         },
+        // AppController gained Mt5ConnectionManager + StopGuardianService deps;
+        // provide minimal mocks matching what getServerInfo() reads.
+        {
+          provide: Mt5ConnectionManager,
+          useValue: { getAllBrokerHealths: jest.fn().mockResolvedValue([]) },
+        },
+        {
+          provide: StopGuardianService,
+          useValue: { state: { enabled: false, guardedPositions: [], lastTickAt: null, tickCount: 0 } },
+        },
       ],
     }).compile();
 
@@ -34,8 +46,14 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return server info with expected shape', async () => {
+      // getHello() was replaced by getServerInfo() (see app.controller.ts).
+      const result = await appController.getServerInfo();
+      expect(result).toHaveProperty('server');
+      expect(result).toHaveProperty('uptime');
+      expect(result).toHaveProperty('database');
+      expect(result).toHaveProperty('mt5Bridge');
+      expect(result).toHaveProperty('stopGuardian');
     });
   });
 

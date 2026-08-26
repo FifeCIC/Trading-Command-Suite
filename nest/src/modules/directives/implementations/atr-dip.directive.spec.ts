@@ -62,6 +62,8 @@ describe('AtrDipDirective', () => {
 
     const result = directive.calculate({ symbol: 'TEST', bars });
     expect(result.score).toBeLessThanOrEqual(10);
-    expect(result.reason).toContain('Deep drop');
+    // Hybrid v2.0.1 reason format: "Dip: {n} ATR from high {h}. base=...". The old
+    // "Deep drop" phrase was removed — assert the new prefix (atr-dip.directive.ts).
+    expect(result.reason).toContain('Dip:');
   });
 });

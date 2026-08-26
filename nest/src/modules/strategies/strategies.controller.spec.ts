@@ -41,7 +41,9 @@ describe('resolveDirectiveCatalog', () => {
     expect(result.directives).toHaveLength(1);
     expect(result.directives[0]).toMatchObject({
       id: 'rsi-oversold',
-      name: 'RSI Oversold',
+      // Protocol-derived catalogs format the slug via formatDirectiveName()
+      // ('rsi-oversold' → 'Rsi Oversold') — NOT the directivesService name.
+      name: 'Rsi Oversold',
       active: true,
     });
   });

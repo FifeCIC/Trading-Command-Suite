@@ -47,9 +47,11 @@ describe('RsiOversoldDirective', () => {
     // Gentle decline that targets RSI around 30
     const bars = makeBars(Array.from({ length: 20 }, (_, i) => 100 - i * 0.8));
     const result = directive.calculate({ symbol: 'TEST', bars });
-    // At or near threshold — should not crash, score in 0-50 range
+    // At or near threshold — should not crash. Hybrid scoring (base 0-50 +
+    // bonus up to 80 + curl 10) has maxScore 140, NOT 100 — see
+    // rsi-oversold.directive.ts. Assert against the declared maxScore.
     expect(result.score).toBeGreaterThanOrEqual(0);
-    expect(result.score).toBeLessThanOrEqual(100);
+    expect(result.score).toBeLessThanOrEqual(140);
     expect(result.confidence).toBeGreaterThan(0);
   });
 });

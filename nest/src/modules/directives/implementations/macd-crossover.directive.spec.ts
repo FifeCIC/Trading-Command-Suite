@@ -23,12 +23,13 @@ describe('MacdCrossoverDirective', () => {
   });
 
   it('scores high on fresh bullish crossover', () => {
-    // Decline then sharp recovery to force MACD crossover
-    const decline = Array.from({ length: 26 }, (_, i) => 100 - i * 0.5);
-    const recovery = Array.from({ length: 12 }, (_, i) => 87 + i * 1.5);
-    const bars = makeBars([...decline, ...recovery]);
+    // Long decline, then a sharp recovery concentrated in the FINAL bar so the
+    // MACD histogram crosses zero on the last bar (freshCross → +30 bonus).
+    // Under hybrid v2.0.1 the old decline+ramp data no longer crosses at the
+    // last bar (it yielded score 26, no bonus) — see macd-crossover.directive.ts.
+    const decline = Array.from({ length: 40 }, (_, i) => 100 - i * 1.25);
+    const bars = makeBars([...decline, 85]);
     const result = directive.calculate({ symbol: 'TEST', bars });
-    // After a decline and recovery, MACD should show bullish momentum
     expect(result.score).toBeGreaterThan(30);
     expect(result.confidence).toBeGreaterThan(0.3);
   });

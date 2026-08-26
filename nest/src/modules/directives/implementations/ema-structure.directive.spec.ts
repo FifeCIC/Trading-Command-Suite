@@ -28,7 +28,9 @@ describe('EmaStructureDirective', () => {
     const result = directive.calculate({ symbol: 'TEST', bars });
     expect(result.score).toBeGreaterThan(60);
     expect(result.confidence).toBeGreaterThan(0.6);
-    expect(result.reason).toContain('Full alignment');
+    // Hybrid v2.0.1 reason uses lowercase "full alignment" (e.g.
+    // "full alignment + strong separation") — see ema-structure.directive.ts.
+    expect(result.reason).toContain('full alignment');
   });
 
   it('scores low with no alignment (downtrend)', () => {
