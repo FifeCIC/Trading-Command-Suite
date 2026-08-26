@@ -11,6 +11,7 @@ name: Lint Check
 on:
   pull_request:
     branches: [master]
+  workflow_dispatch:
 
 jobs:
   lint:
