@@ -1,5 +1,10 @@
 # Trading Command Suite — Lint Workflow
 # Runs ESLint checks on PRs and reports results.
+#
+# ⚠️ DEPENDENCY INSTALL: uses `npm install` (NOT `npm ci`) on purpose — the
+# committed lockfiles are Windows-generated and incomplete for Linux CI
+# (@emnapi/* gap from Vite 8 Rolldown bindings). `npm install` tolerates it.
+# Restore `npm ci` ONLY after regenerating both lockfiles on Linux/WSL/Docker.
 
 name: Lint Check
 
@@ -30,7 +35,8 @@ jobs:
 
       # ── Frontend lint ──
       - name: Install frontend dependencies
-        run: npm ci
+        # npm ci fails on Linux (Windows-generated lock missing @emnapi/*).
+        run: npm install
 
       - name: ESLint frontend
         run: npm run lint
@@ -39,7 +45,8 @@ jobs:
       # ── Backend lint ──
       - name: Install backend dependencies
         working-directory: ./nest
-        run: npm ci
+        # npm install — lock is Windows-generated; npm ci fails cross-platform.
+        run: npm install
 
       - name: Generate Prisma client
         working-directory: ./nest

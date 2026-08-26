@@ -109,6 +109,8 @@ NODE_ENV=development
 
 **"No symbols in database"**: Run `npx prisma db seed` in nest/ folder.
 
+**"CI / GitHub Actions runs fail at dependency install"**: Every push-triggered run of `ci.yml`, `lint.yml`, and `test.yml` can fail with `npm error code EUSAGE ... Missing: @emnapi/core@1.11.3 from lock file`. Cause: the committed `package-lock.json` files are generated on **Windows** and are incomplete for **Linux** CI — Vite 8's Rolldown native bindings depend on `@emnapi/*` (e.g. `@emnapi/core@1.11.3`) which Windows npm never locks. Fix: the workflows already use `npm install` (which tolerates the gap) instead of `npm ci`. To make `npm ci` work again, regenerate both lockfiles on Linux/WSL/Docker (`npm install` in the repo root and in `nest/`), commit them, then flip the workflows back to `npm ci`.
+
 ## Architecture
 
 - **Frontend**: React 18 + Vite + TanStack Query + Zustand + React Router

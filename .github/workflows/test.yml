@@ -1,6 +1,14 @@
 # Trading Command Suite — CI Test Workflow
 # Runs on push to master and all PRs.
 # Validates: install, lint, test, and build for both frontend + backend.
+#
+# ⚠️ DEPENDENCY INSTALL: uses `npm install` (NOT `npm ci`) on purpose. The
+# committed package-lock.json files are generated on Windows and are
+# incomplete for Linux CI — Vite 8's Rolldown native bindings depend on
+# @emnapi/* (e.g. @emnapi/core@1.11.3) that Windows npm never locks, so
+# `npm ci` fails on Linux with EUSAGE. `npm install` tolerates the gap.
+# Restore `npm ci` ONLY after regenerating both lockfiles on Linux/WSL/Docker
+# (see DEVELOPMENT.md → Common Issues).
 
 name: CI Test
 
@@ -33,7 +41,10 @@ jobs:
 
       # ── Frontend (Vite/React) ──
       - name: Install frontend dependencies
-        run: npm ci
+        # npm ci fails on Linux: committed lockfile is Windows-generated and
+        # lacks the Linux-required @emnapi/* entries (Vite 8 Rolldown native
+        # deps). npm install tolerates the gap and resolves per-platform.
+        run: npm install
 
       - name: Lint frontend
         run: npm run lint
@@ -45,7 +56,8 @@ jobs:
       # ── Backend (NestJS) ──
       - name: Install backend dependencies
         working-directory: ./nest
-        run: npm ci
+        # Same cross-platform lockfile reason as frontend — see above.
+        run: npm install
 
       - name: Generate Prisma client
         working-directory: ./nest
