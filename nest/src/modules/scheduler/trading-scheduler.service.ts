@@ -201,10 +201,9 @@ export class TradingSchedulerService {
   }
 
   private async maybeAutoExecute(run: SchedulerRun): Promise<void> {
-    // Safety: only auto-execute if automation loop is running and has scoring strategies
-    const hasAutoStrategies = this.automationLoop.scoringStrategies.some(
-      s => s.enabled && s.tradingEnabled && s.mode === 'auto'
-    );
+    // Safety: only auto-execute when the loop has auto-mode trading strategies
+    // on a broker with trading enabled (paper-safe otherwise).
+    const hasAutoStrategies = this.automationLoop.hasAutoTradingEnabled();
     if (!hasAutoStrategies) {
       run.autoExecuted = false;
       run.steps.push({ name: 'auto-execute', status: 'skipped', detail: 'No auto-trade strategies enabled — paper-safe mode' });

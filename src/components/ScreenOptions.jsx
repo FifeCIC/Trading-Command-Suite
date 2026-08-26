@@ -15,6 +15,7 @@ import { VIEW_EXPLANATIONS } from '../core/view-explanations';
 import EmptyState from './EmptyState';
 import GlossaryPage from '../pages/GlossaryPage';
 import { SB_OPTIONAL_COLUMNS, sbColumnKey } from '../core/symbols-browser-columns';
+import { SCR_OPTIONAL_COLUMNS, scrColumnKey } from '../core/screener-columns';
 import './notification-disc.css';
 import './screen-options.css';
 
@@ -299,6 +300,20 @@ const OPTIONS_REGISTRY = {
   'screener': {
     title: 'Screener',
     sections: [
+      {
+        id: 'tableColumns',
+        label: 'Table Columns',
+        description: 'Choose which columns appear in the table. Changes apply immediately.',
+        type: 'columns',
+        options: SCR_OPTIONAL_COLUMNS.map(function (col) {
+          return {
+            key: scrColumnKey(col),
+            label: col.label,
+            desc: col.desc || '',
+            defaultValue: !!col.def,
+          };
+        }),
+      },
       {
         id: 'topPicks',
         label: 'Top Picks Count',

@@ -277,4 +277,10 @@ export const KNOWN_FEATURES = {
   'Research Notes page': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'data', devCompletion: 'complete' },
   'Earnings calendar settings + multi-source import': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'data', devCompletion: 'complete' },
   'MT5 bridge config unification + capability map seed': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // 2026-08-26 — Handoff Batch #11
+  'Catalyst Screener (attention-ranked + news lean)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'partial' },
+  'Signals Best-of Ladder (v1)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
+  'FX Session META.Stacks live (6 pairs scoring)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'partial' },
+  'Protocol Theory (written intent on protocols)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+  'USDJPY META.Stack auto trading (protocol-scoped strategy evaluation)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
 };

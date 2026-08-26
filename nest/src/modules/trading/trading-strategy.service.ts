@@ -40,6 +40,8 @@ export interface StrategySummary {
   tpPct?: number | null;
   cooldownMinutes?: number;
   maxPositions?: number;
+  /** #344 pyramid averaging — moved here from ScoringStrategy (2026-08-27). */
+  maxPyramidTiers?: number;
   lastEvaluatedAt: string | null;
   lastSignal: string | null;
   lastComposite: number | null;
@@ -100,6 +102,7 @@ export class TradingStrategyService {
         tpPct: s.tpPct,
         cooldownMinutes: s.cooldownMinutes,
         maxPositions: s.maxPositions,
+        maxPyramidTiers: (s as any).maxPyramidTiers ?? 1,
         lastEvaluatedAt: lastEval?.evaluatedAt ? new Date(lastEval.evaluatedAt).toISOString() : null,
         lastSignal: lastEval?.signal ?? null,
         lastComposite: lastEval?.composite ?? null,

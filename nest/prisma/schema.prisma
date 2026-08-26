@@ -1175,6 +1175,7 @@ model TradingStrategy {
   useRaritySizing Boolean @default(true)
   maxSize       Float?
   maxPositions  Int      @default(1)
+  maxPyramidTiers Int    @default(1)  // #344 pyramid averaging — moved from ScoringStrategy (2026-08-27)
   maxDailyLoss  Float?
   cooldownMinutes Int    @default(5)
   mode          String   @default("manual") @db.VarChar(20)

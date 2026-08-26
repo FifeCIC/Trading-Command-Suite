@@ -434,8 +434,12 @@ export class AutomationLoopService implements OnModuleInit {
     priorityQueue: [],
   };
 
-  /** Scoring strategies: protocol + watchlist pairings */
-  scoringStrategies: ScoringStrategy[] = [];
+  /**
+   * NOTE (2026-08-27, user-approved): the Scoring Strategy middle layer is
+   * no longer consumed by the loop. The pipeline is Protocol → Trading
+   * Strategy → Execution. The scoring_strategy table remains for MetaStack
+   * versioning/performance (#295) but the loop does not read it.
+   */
 
   constructor(
     private readonly adapterFactory: AdapterFactory,
@@ -461,7 +465,6 @@ export class AutomationLoopService implements OnModuleInit {
     private readonly abTestService: AbTestService,
   ) {
     this.initBrokerStates();
-    // loadScoringStrategies() is deferred to onModuleInit (needs DB connection)
   }
 
   async onModuleInit() {
@@ -509,7 +512,6 @@ export class AutomationLoopService implements OnModuleInit {
         }
       }
     } catch (e) { this.logger.warn(`Failed to patch strategies: ${(e as Error).message}`); }
-    await this.loadScoringStrategies();
     await this.restorePendingActions();
     await this.restoreThrottleState();
     this.barRefresh.start(300_000);  // Refresh marketBar data every 5 min
@@ -546,93 +548,12 @@ export class AutomationLoopService implements OnModuleInit {
 
   // ── DB Persistence ──────────────────────────────────
 
-  /** Load scoring strategies from DB on startup. Auto-creates from trading strategies if empty. */
-  async loadScoringStrategies() {
-    try {
-      if (!this.prisma.isAvailable) return;
-      let rows = await this.prisma.scoringStrategy.findMany({ orderBy: { createdAt: 'asc' } });
-
-      // ── Auto-create ScoringStrategies for any protocol used by a TradingStrategy that lacks one ──
-      const strategies = await this.strategyService.findAll();
-      const activeStrats = strategies.filter((s: any) => s.active);
-      const uniqueProtocols = new Map<string, any>();
-
-      for (const strat of activeStrats) {
-        if (!strat.protocolId) continue;
-        if (!uniqueProtocols.has(strat.protocolId)) {
-          uniqueProtocols.set(strat.protocolId, strat);
-        }
-      }
-
-      let created = 0;
-      for (const [protocolId, strat] of uniqueProtocols) {
-        const ssId = `auto-${protocolId}`;
-        const exists = rows.find((r: any) => r.id === ssId || r.protocolId === protocolId);
-        if (!exists) {
-          try {
-            await this.prisma.scoringStrategy.upsert({
-              where: { id: ssId },
-              create: {
-                id: ssId,
-                name: `${protocolId} — Auto`,
-                protocolId,
-                watchlistName: 'default',
-                brokerId: strat.brokerId || 'mt5',
-                mode: 'semi-auto',
-                tradeThreshold: strat.minComposite || getStyleThreshold(this.protocolDb.getCached(protocolId)?.tradingStyle),
-                baseSize: strat.baseSize ?? 0.01,
-                slPct: strat.slPct ?? 1.0,
-                tpPct: strat.tpPct ?? 1.0,
-                enabled: true,
-                tradingEnabled: false,
-              },
-              update: {},
-            });
-            created++;
-          } catch (err) {
-            this.logger.warn(`Failed to auto-create ScoringStrategy for ${protocolId}: ${(err as Error).message}`);
-          }
-        }
-      }
-
-      if (created > 0) {
-        this.logger.log(`Auto-created ${created} ScoringStrategies for unlinked protocols`);
-        rows = await this.prisma.scoringStrategy.findMany({ orderBy: { createdAt: 'asc' } });
-      }
-
-      // Map and deduplicate: one strategy per protocolId
-      const seen = new Map<string, ScoringStrategy>();
-      for (const r of rows) {
-        if (!seen.has(r.protocolId)) {
-          seen.set(r.protocolId, {
-            id: r.id,
-            name: r.name,
-            protocolId: r.protocolId,
-            shortProtocolId: (r as any).shortProtocolId ?? undefined,
-            watchlistName: r.watchlistName,
-            brokerId: r.brokerId,
-            mode: r.mode as 'manual' | 'semi-auto' | 'auto',
-            tradeThreshold: r.tradeThreshold,
-            baseSize: r.baseSize,
-            slPct: r.slPct,
-            tpPct: r.tpPct,
-            maxPyramidTiers: (r as any).maxPyramidTiers ?? 1,
-            slTpInheritance: (r as any).slTpInheritance ?? 'inherit',
-            weightStrategy: (r as any).weightStrategy ?? 'group-weighted',
-            enabled: r.enabled,
-            tradingEnabled: r.tradingEnabled,
-          });
-        }
-      }
-      this.scoringStrategies = Array.from(seen.values());
-
-      this.logger.log(`Loaded ${this.scoringStrategies.length} scoring strategies (${rows.length} DB rows, deduplicated)`);
-    } catch (err) {
-      this.logger.warn(`Failed to load scoring strategies from DB: ${(err as Error).message}`);
-    }
-  }
-
-  /** Persist a scoring strategy to DB */
+  /**
+   * Persist a scoring strategy to DB. Kept for the CRUD endpoints and the
+   * MetaStack versioning/performance systems (#295) — the LOOP no longer
+   * reads scoring strategies (2026-08-27 decision: pipeline is
+   * Protocol → Trading Strategy → Execution).
+   */
   async saveScoringStrategy(strat: ScoringStrategy) {
     try {
       if (!this.prisma.isAvailable) return;
@@ -1672,10 +1593,9 @@ export class AutomationLoopService implements OnModuleInit {
       // ── Pyramid Averaging (#344) ──
       // When a position already exists, check if we can stack additional entries
       // if the position is in profit, SL is set, and maxPyramidTiers allows it.
-      const scoringStrategy = this.scoringStrategies.find(
-        (s: any) => s.protocolId === effectiveProtocolId
-      );
-      const pyramidTiers = (scoringStrategy as any)?.maxPyramidTiers ?? 1;
+      // NOTE: pyramid config moved to the TradingStrategy (2026-08-27) —
+      // the loop no longer reads the scoring_strategy table.
+      const pyramidTiers = (strategy as any)?.maxPyramidTiers ?? 1;
       const isPositionInProfit = (pos as any).profit > 0;
       const hasStopLoss = (pos as any).sl > 0 || (pos as any).stopLoss > 0;
 
@@ -1700,7 +1620,7 @@ export class AutomationLoopService implements OnModuleInit {
       }
 
       // Count existing entries for this position (volume as proxy for tier count)
-      const currentTier = Math.ceil((pos.volume || 1) / (scoringStrategy?.baseSize || 0.01));
+      const currentTier = Math.ceil((pos.volume || 1) / ((strategy as any)?.baseSize || 0.01));
       if (currentTier >= pyramidTiers) {
         return {
           timestamp: new Date().toISOString(),
@@ -1711,7 +1631,7 @@ export class AutomationLoopService implements OnModuleInit {
       }
 
       // ── Pyramid entry permitted — re-score to confirm signal still valid ──
-      const pyramidThreshold = (scoringStrategy as any)?.tradeThreshold ?? 60;
+      const pyramidThreshold = (strategy as any)?.minComposite ?? 60;
       const pyramidComposite = pos.composite * this.state.globalRiskMultiplier;
       if (pyramidComposite < pyramidThreshold) {
         return {
@@ -1723,7 +1643,7 @@ export class AutomationLoopService implements OnModuleInit {
       }
 
       // Pyramid entry approved — dispatch with reduced size for safety
-      const pyramidSize = (scoringStrategy?.baseSize || 0.01) * 0.5; // Half-size for pyramid entries
+      const pyramidSize = ((strategy as any)?.baseSize || 0.01) * 0.5; // Half-size for pyramid entries
       this.logger.log(`🔺 PYRAMID ${strategy.symbol}: tier ${currentTier + 1}/${pyramidTiers} profit=${(pos as any).profit} score=${pyramidComposite.toFixed(1)}`);
 
       this.dispatchTrade({
@@ -1935,6 +1855,18 @@ export class AutomationLoopService implements OnModuleInit {
 
   // ── Dashboard Helpers ────────────────────────────────
 
+  /**
+   * Safety guard for scheduler-style auto-execution (2026-08-27): true only
+   * when an active auto-mode TRADING strategy exists AND some broker has
+   * trading enabled. Replaces the old scoringStrategies-based check.
+   */
+  hasAutoTradingEnabled(): boolean {
+    const strategies = this.state.activeStrategies || [];
+    const hasAuto = strategies.some((s: any) => s.mode === 'auto' && s.active !== false);
+    const tradingOn = Object.values(this.state.brokerStates).some((bs: any) => bs?.tradingEnabled);
+    return hasAuto && tradingOn;
+  }
+
   getState(): LoopState {
     return { ...this.state, pendingActions: [...this.state.pendingActions] };
   }
@@ -1951,7 +1883,6 @@ export class AutomationLoopService implements OnModuleInit {
       return { confirmed: false, message: 'Action expired — no longer valid' };
     }
 
-    const strategy = this.scoringStrategies.find(s => s.id === action.strategyId);
     const broker = this.adapterFactory.create(action.brokerId || 'mt5');
     if (!broker || !broker.placeOrder) {
       return { confirmed: false, message: `Broker ${action.brokerId || 'mt5'} does not support orders` };
@@ -1964,8 +1895,10 @@ export class AutomationLoopService implements OnModuleInit {
       entryPrice = quote?.last ?? quote?.ask ?? quote?.bid ?? 0;
     } catch { /* fall through with entryPrice=0 */ }
 
-    const slPct = (strategy as any)?.slPct ?? 1.0;
-    const tpPct = (strategy as any)?.tpPct ?? 1.0;
+    // NOTE (2026-08-27): confirm no longer resolves SL/TP from scoring
+    // strategies — safe defaults here, loop dispatch carries exact values.
+    const slPct = 1.0;
+    const tpPct = 1.0;
     const sl = entryPrice > 0
       ? action.side === 'BUY' ? entryPrice * (1 - slPct / 100) : entryPrice * (1 + slPct / 100)
       : 0;
@@ -1979,7 +1912,7 @@ export class AutomationLoopService implements OnModuleInit {
       quantity: action.quantity,
       sl,
       tp,
-      comment: `TCS ${strategy?.name ?? action.strategyId}`,
+      comment: `TCS ${action.strategyId}`,
     });
 
     // Action is consumed regardless of outcome (avoids stale confirm buttons)

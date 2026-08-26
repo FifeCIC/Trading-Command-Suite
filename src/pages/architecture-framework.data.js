@@ -235,6 +235,12 @@ export const CURRENT_SLICE = [
   'Remove Research Overview page — frontend removed; backend /api/research/overview kept for reuse.',
   'Earnings calendar settings — Finnhub re-enabled + chunked windows; NasdaqEarningsService fallback; import settings in global_setting + daily cron.',
   'Default protocol removed — scoreWithGating() throws without protocolId; per-position protocol resolution; 34,960 score_snapshot rows cleaned. No unscoped path remains.',
+  // ── 2026-08-26 — Handoff Batch #11 ──
+  'Catalyst Screener page (#682, Phases 4.1-4.4) — /research/screener; GET /api/screener/ranked + GET /api/screener/stories + POST /api/screener/promote (reuses GET /api/screener/hits for catalyst history). Ranking: attentionWeight = strength × reliability × recency, dual decay (future earnings 1/(1+daysAway) proximity; past news 0.5^(hours/24) half-life), computed on read, never stored. Attention ≠ conviction — no SEES scores. Per-story news lean LONG/SHORT/NEUTRAL (stored sentiment when present, else conservative word-boundary headline-lexicon fallback — stored pipelines carry no sentiment). Universe transparency counts (total / with catalysts / quiet). Promote-to-watchlist (1:1 screenerHitId provenance, idempotent, "Screener" default watchlist on demand). Protocol-fit chips via SuitabilityService (type inferred from slug until #646). Catalyst-type filter chips, symbol-detail panel, Screen Options columns via src/core/screener-columns.js (scr-col-*). ⚠️ AnimatePresence exit-freeze bug (motion 12.40) — plain conditional rendering + CSS-only entrance (.sc-panel-enter). Partial: expiry/cleanup of old ScreenerHits pending #690.',
+  'Signals v1 best-of ladder (#684) — /signals is now a live best-of opportunities ladder: every active protocol scored, one actionable card per symbol per direction (best protocol wins), ranked by combinedStrength (0.5×signal + 0.5×opportunity), manual CFD trade buttons through the bot safety chain, per-signal dismissal. Endpoints: GET /api/signals/best + GET /api/signals/dismissals + POST /api/signals/dismiss (DTO: symbol, protocolId?, hours? 1-168). New SignalDismissal Prisma model (symbol+protocolId unique, dismissedUntil index). Envelope now carries protocolId/directionMode/scoreId/signalPct/opportunityPct/combinedStrength/marketStatus/holdsCfd via buildBestLadder(); protocol-gating.service.ts adds directionMode to GatedScore interface + return. Partial: stock actions deferred to #686 (Trading212 validation).',
+  'FX Session META.Stacks live (#526-#531) — six pairs now scoring each tick under forex-session-v1: Sydney AUDUSD, GBPUSD Session, Wellington NZDUSD, USDCAD Forex Session, Zurich USDCHF + Tokyo USDJPY. DB activation only (no code change); dataStatus=ready, protocol-scoped compositePct, HOLD 20-35 at quiet market. Execution gated by brokerStates.mt5.tradingEnabled=false. Partial: scoring live; execution awaits tradingEnabled.',
+  'Protocol Theory (#689) — new theory String? @db.Text column on Protocol. Written intent: target behaviour, why these groups, what a good day looks like, known weaknesses. Seeded for 9 of 42 protocols (incl. four diagnosed-silent index protocols); Theory section on Protocols Registry (both A and B variants); long-form in Drive docs/theories/PROTOCOL-THEORY.md. GET /api/scoring/gated/protocols now includes theory. Partial: 9 of 42 seeded.',
+  'USDJPY META.Stack + protocol-scoped strategy evaluation (#531) — Tokyo USDJPY Session re-activated (forex-session-v1, auto mode); 7k+ 5m bars fresh through today (pending_bars blocker resolved). Bug fixed: strategy evaluation was scoring with legacy kitchen-sink DIRECTIVE_GROUPS (banned default scoring) and mislabelling composites (SELL at composite 6); now protocol-scoped via ProtocolGatingService.scoreWithGating with strategy.protocolId; stores pre-gate compositePct so Strategy Monitor and automation loop share the 0-100 scale. Removed legacy gateScore() + DIRECTIVE_GROUPS + unused DirectivesService injection. Complete.',
 ]
 
 export const DECISION_WORKFLOW = [
@@ -503,7 +509,7 @@ export const CONTRACT_CARDS = [
   },
 ]
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-08-22'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-08-26'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -1378,6 +1384,54 @@ export const CURRENT_ROUTE_CONTRACTS = [
     contract: 'Upserts a capability row by name; now takes a class-validator body DTO (CreateCapabilityDto) instead of query-string mutation. Updated 2026-08-20.',
     status: 'active',
   },
+  {
+    route: 'GET /api/screener/ranked',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'ScreenerController',
+    contract: 'Attention-ranked catalyst list for the Catalyst Screener page (#682, Phases 4.1-4.4). Ranking: attentionWeight = strength × reliability × recency — dual decay (future earnings 1/(1+daysAway) proximity, past news 0.5^(hours/24) half-life) — computed on read, never stored. Attention ≠ conviction; no SEES scores. Includes universe transparency counts (total / with catalysts / quiet). Added 2026-08-26.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/screener/stories',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'ScreenerController',
+    contract: 'Per-story catalyst detail: news lean LONG/SHORT/NEUTRAL (stored sentiment when present, otherwise conservative word-boundary headline-lexicon fallback — stored pipelines carry no sentiment), protocol-fit chips via SuitabilityService (type inferred from slug until #646). Added 2026-08-26 (#682).',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/screener/promote',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'ScreenerController',
+    contract: 'Promotes a screener catalyst to a watchlist (1:1 screenerHitId provenance, idempotent). Creates the "Screener" default watchlist on demand. Added 2026-08-26 (#682).',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/signals/best',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'SignalsController',
+    contract: 'Best-of opportunities ladder (#684): every active protocol scored, one actionable card per symbol per direction (best protocol wins), ranked by combinedStrength (0.5×signal + 0.5×opportunity). Envelope carries protocolId/directionMode/scoreId/signalPct/opportunityPct/combinedStrength/marketStatus/holdsCfd via buildBestLadder(). Added 2026-08-26.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/signals/dismissals',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'SignalsController',
+    contract: 'Lists per-signal dismissals from the best-of ladder (SignalDismissal rows; symbol+protocolId unique, protocolId nullable = symbol-wide). Added 2026-08-26 (#684).',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/signals/dismiss',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'SignalsController',
+    contract: 'Dismisses a signal from the best-of ladder for a horizon. DTO: symbol, protocolId?, hours? (1-168). Writes SignalDismissal with dismissedUntil (dismissedUntil index); hides the card until expiry. Added 2026-08-26 (#684).',
+    status: 'active',
+  },
 ]
 
 export const CURRENT_FLOW_CONTRACTS = [
@@ -1955,9 +2009,15 @@ export const KNOWN_GAPS = [
   '2026-08-20: Signal actions (#662) — live order placement is left to the Signals UI user action; do not auto-fire.',
   '2026-08-22: Default protocol removed — any new scoring surface MUST pass a protocolId; symbols without a symbol_protocol_assignment row are simply not scored (deliberate, no unscoped path).',
   '2026-08-22: Research area leads with Symbols Browser after Research Overview removal; news-foundation review pending (high-impact news → position re-evaluation).',
+  '2026-08-26: ScreenerHits unbounded growth (#690) — no expiry/cleanup yet; catalyst history accumulates without pruning.',
+  '2026-08-26: Protocol-fit type inference pending per-protocol columns (#646) — screener protocol-fit chips derive type from symbol slug until then.',
+  '2026-08-26: Protocol theory seeded for only 9 of 42 protocols (#689) — remaining 33 protocols have no written intent yet.',
+  '2026-08-26: Signals stock actions deferred to #686 — best-of ladder CFD trades live; stock actions await Trading212 validation.',
+  '2026-08-26: FX execution gated until brokerStates.mt5.tradingEnabled — six forex-session-v1 pairs score live but cannot execute.',
 ]
 
 export const REVISION_LOG = [
+  '2026-08-26: Handoff batch #11 — 5 handoffs processed. Screener page (#682 Phases 4.1-4.4): attention-ranked catalysts + per-story news lean + promote-to-watchlist + protocol-fit chips. Signals v1 best-of ladder (#684): combined-strength ranking, CFD actions, per-signal dismissal (SignalDismissal). Six FX session pairs live under forex-session-v1 (#526-#531), execution gated. Protocol theory (#689): written intent on 9/42 protocols. USDJPY META.Stack (#531): strategy evaluation now protocol-scoped — no kitchen-sink default scoring in the trading path.',
   '2026-08-22: Handoff batch #10 — 28 handoffs processed. A/B Test Runner (#482); MT5 order-path + UTC timestamp fixes (#625); multi-broker portfolio aggregation; per-protocol directive config (#609) + scoring honors overrides; timeframe directive matrix (design); unified job queue Phase 0 (#614); direction-contract enforcement; screener contract (#645) + catalyst ingestion (#648); suitability filter; bar-refresh protocol symbols + multi-broker fallback (#665); directive honesty guard (#628); Discord handoff webhook (#652) + weekly digest (#653); import processor no-fake-data; MT5 bridge config unification + capability map seed; protocol scoring status; signal actions (#662); Symbols Ladder deep links (#631); VIX SHORT protocol + signal vocabulary (#669-671); envelope no-default-scoring; research notes page + mass import; Research Overview removed; earnings calendar settings (Finnhub re-enabled + Nasdaq fallback); default protocol removed.',
   '2026-08-16: Handoff batch #9 — 9 handoffs processed. Dual-score model (Opportunity vs Signal) shipped across protocol-gating, score-history, score-display buildScoreDisplay() + SignalBadge + Symbols Ladder columns. Readiness gate (isDirectiveReady/assessReadiness) pauses non-ready protocols. Directive registry hygiene: 42 duplicate ids removed + guard MODE 6; 124 dead directiveMaxScores blocks stripped (maxScore class-derived). Mock data purge across provider adapters, export, news, timeline, predictive-scoring, strategy-competition. MT5 bridge zombie-kill (identity + port 5001). earnings-proximity alpha + removed from all protocols; news-sentiment-positive deleted. Agent claim/restart tooling (agent-claim.cjs). Closes #626/#627/#641/#643/#651.',
   '2026-08-13/14: Directive audit + cleanup batch — 11 handoffs processed. Deleted portfolio-performance, news-sentiment-positive, vix-regime (dead/mock-first stubs); removed crypto-weekend-effect from 5 gold protocols. Fixed liquidity-check (80→100) and gold-macro-correlation (135→100). Directive class maxScore made single source of truth (DB override paths removed). New shared directive-inclusion.ts utility. New Directive Viewer page + GET /api/directives/:id/viewer. New directive-guard.cjs audit tool + delete-directive.cjs/remove-seed-directive.cjs cleanup scripts. xau-speed-v1 registry maxScore 1600→1235, XAUUSD signal HOLD→BUY. GH #638/#627/#625/#626 filed by other agents.',
@@ -2127,6 +2187,13 @@ export const DATABASE_SCHEMA = {
       fields: ['id (PK)', 'watchlistId?', 'ticker', 'symbolId?', 'status', 'source?', 'screenerHitId?', 'promotedTo?', 'promotedAt?', 'expiresAt?'],
       relationships: ['watchlistId → Watchlist.id'],
       status: 'implemented (2026-08-17)',
+    },
+    {
+      table: 'SignalDismissal',
+      description: 'Per-signal dismissal from the best-of ladder (#684). symbol+protocolId unique (protocolId nullable = symbol-wide); dismissedUntil index drives hide-for-horizon (1-168h).',
+      fields: ['id (PK)', 'symbol', 'protocolId?', 'dismissedUntil', 'createdAt'],
+      relationships: [],
+      status: 'implemented (2026-08-26)',
     },
     {
       table: 'NewsItem',

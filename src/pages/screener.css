@@ -192,6 +192,143 @@
   vertical-align: middle;
 }
 
+/* Protocol-fits chip (#646 suitability) */
+
+.sc-fits {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: #22c55e;
+  vertical-align: middle;
+  cursor: help;
+}
+
+/* Watch / promote actions (#682 Phase 4.4) */
+
+.sc-col-action { width: 90px; }
+
+.sc-watch-btn {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.18rem 0.45rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.sc-watch-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+.sc-watching {
+  font-size: 0.68rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.sc-promote-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.sc-promote-select,
+.sc-promote-input {
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg, rgba(0, 0, 0, 0.1));
+  color: var(--ink);
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+  min-width: 0;
+}
+
+.sc-promote-select { flex: 1; max-width: 320px; }
+.sc-promote-input { flex: 1; max-width: 200px; }
+
+.sc-promote-confirm {
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sc-promote-confirm:hover:not(:disabled) { filter: brightness(1.15); }
+.sc-promote-confirm:disabled { opacity: 0.6; cursor: default; }
+
+.sc-promote-err {
+  color: #ef4444;
+  font-size: 0.75rem;
+  margin: 0.4rem 0 0;
+}
+
+/* Catalyst-type filter chips (#682 Phase 4.3) */
+
+.sc-chip-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-right: 0.15rem;
+  align-self: center;
+}
+
+/* Symbol detail panel — catalyst history (#682 Phase 4.3) */
+
+.sc-panel-subhead {
+  margin: 0.6rem 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.sc-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.sc-history-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--panel) 60%, transparent);
+  border: 1px solid var(--line);
+}
+
+.sc-history-type {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.sc-history-nums {
+  color: var(--ink-soft);
+}
+
 .sc-table tbody tr.sc-top-pick {
   background: color-mix(in srgb, var(--accent) 8%, var(--panel));
   border-left: 2px solid var(--accent);
@@ -237,6 +374,115 @@
   white-space: nowrap;
   color: var(--ink-soft);
   font-size: 0.78rem;
+}
+
+/* --- News lean (#682 Phase 4.2) --- */
+
+.sc-lean {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.sc-lean--long { border-color: rgba(34, 197, 94, 0.4); color: #22c55e; }
+.sc-lean--short { border-color: rgba(239, 68, 68, 0.4); color: #ef4444; }
+.sc-lean--neutral { border-color: var(--line); color: var(--ink-soft); }
+
+.sc-table tbody tr { cursor: pointer; }
+
+.sc-table tbody tr.sc-row-selected {
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+  border-left: 2px solid var(--accent);
+}
+
+/* --- Stories panel --- */
+
+.sc-stories-panel {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 0.85rem;
+}
+
+/* CSS-only entrance (no exit animation — AnimatePresence exits froze on this
+   page and left invisible click-blocking ghosts; see #682 Phase 4.4). */
+.sc-panel-enter {
+  animation: sc-panel-in 0.16s ease-out;
+}
+
+@keyframes sc-panel-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sc-stories-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.sc-stories-header h2 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.sc-stories-close {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.sc-stories-close:hover { color: var(--ink); background: var(--line); }
+
+.sc-stories-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.sc-story {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0.4rem;
+  border-radius: 6px;
+}
+
+.sc-story:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+
+.sc-story-headline {
+  flex: 1;
+  color: var(--ink);
+  font-size: 0.82rem;
+  text-decoration: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sc-story-headline:hover { color: var(--accent); }
+
+.sc-story-meta {
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+  white-space: nowrap;
 }
 
 @media (max-width: 768px) {

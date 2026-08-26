@@ -509,12 +509,18 @@ export class AutomationController {
     return { brokerId: body.brokerId, config: bs };
   }
 
-  // ── Scoring Strategies ───────────────────────────────
+  // ── Scoring Strategies (CRUD kept for MetaStack versioning/UI — #295) ──
+  // NOTE (2026-08-27): the LOOP no longer reads scoring strategies; these
+  // endpoints manage the table only, DB-first.
 
   /** GET /api/automation/scoring-strategies */
   @Get('scoring-strategies')
-  getScoringStrategies() {
-    return this.loop.scoringStrategies;
+  async getScoringStrategies() {
+    try {
+      return await (this.prisma as any).scoringStrategy.findMany({ orderBy: { createdAt: 'asc' } });
+    } catch {
+      return [];
+    }
   }
 
   /** POST /api/automation/scoring-strategies */
@@ -547,7 +553,6 @@ export class AutomationController {
       enabled: true,
       tradingEnabled: false,
     };
-    this.loop.scoringStrategies.push(strat);
     await this.loop.saveScoringStrategy(strat);
     return strat;
   }
@@ -555,7 +560,6 @@ export class AutomationController {
   /** DELETE /api/automation/scoring-strategies/:id */
   @Delete('scoring-strategies/:id')
   async removeScoringStrategy(@Param('id') id: string) {
-    this.loop.scoringStrategies = this.loop.scoringStrategies.filter(s => s.id !== id);
     await this.loop.deleteScoringStrategy(id);
     return { removed: id };
   }
@@ -563,7 +567,8 @@ export class AutomationController {
   /** POST /api/automation/scoring-strategies/:id/toggle */
   @Post('scoring-strategies/:id/toggle')
   async toggleScoringStrategy(@Param('id') id: string, @Body() body: { enabled?: boolean; tradingEnabled?: boolean }) {
-    const s = this.loop.scoringStrategies.find(s => s.id === id);
+    const rows: any[] = await (this.prisma as any).scoringStrategy.findMany({ where: { id } });
+    const s = rows[0];
     if (!s) return { error: 'Not found' };
     if (body.enabled !== undefined) s.enabled = body.enabled;
     if (body.tradingEnabled !== undefined) s.tradingEnabled = body.tradingEnabled;
