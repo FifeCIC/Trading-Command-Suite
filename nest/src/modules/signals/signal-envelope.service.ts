@@ -550,7 +550,9 @@ export class SignalEnvelopeService {
       blockers.push('High-severity directive conflict');
     }
     if (gated.composite < 65) {
-      blockers.push(`Composite below entry threshold (${gated.composite.toFixed(0)}/65)`);
+      // #687: classification uses the pre-gate percentage, not this gated
+      // composite — phrase it as caution, not as a contradiction of the badge.
+      blockers.push(`Gated composite below 65 (${gated.composite.toFixed(0)}) — trade with caution`);
     }
     if (gated.signal === 'SELL' && gated.composite > 50) {
       blockers.push('Mixed signal — SELL but composite above midpoint');

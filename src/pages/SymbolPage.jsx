@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import StarToggle from '../components/StarToggle';
+import { stripWarningGlyph } from '../core/signal-utils';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './symbol-page.css';
@@ -186,7 +187,7 @@ export default function SymbolPage() {
               )}
               {env.riskGate.warnings.length > 0 && (
                 <div className="sym-risk-warnings">
-                  {env.riskGate.warnings.map((w, i) => <span key={i} className="sym-risk-warn">⚠ {w}</span>)}
+                  {env.riskGate.warnings.map((w, i) => <span key={i} className="sym-risk-warn">⚠ {stripWarningGlyph(w)}</span>)}
                 </div>
               )}
             </>

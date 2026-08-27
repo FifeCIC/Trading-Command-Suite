@@ -114,7 +114,7 @@ export class SessionOpenEffectDirective implements IDirective {
     for (const session of sessions) {
       const openInstant = this.localOpenInstant(session.scope, barTime);
       let dist = (barTime.getTime() - openInstant.getTime()) / 60000;
-      if (dist < 0) dist += 24 * 60; // Wrap around
+      if (dist < 0) dist += 24 * 60; // Wrap around — measure to the NEXT occurrence
       if (dist < minDist) {
         minDist = dist;
         nearestOpen = session;
@@ -124,10 +124,12 @@ export class SessionOpenEffectDirective implements IDirective {
     // Only active within ±WINDOW_MINUTES of the session open
     if (!nearestOpen || minDist > WINDOW_MINUTES) {
       const nextOpenName = nearestOpen?.label ?? 'next session';
+      // #687: the raw minute distance is unreliable (DST-derived opens, next-day
+      // wrapping) — state the fact plainly instead of a nonsense minute count.
       return {
         score: 0, // 2026-08-14: no signal = 0, not a constant 15-point floor
         confidence: 0.4,
-        reason: `${minDist} minutes from ${nextOpenName}. Outside active window (${WINDOW_MINUTES}min).`,
+        reason: `${nextOpenName} — outside active window (±${WINDOW_MINUTES}min).`,
         signalClass: 'neutral',
       };
     }

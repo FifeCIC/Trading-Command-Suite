@@ -25,6 +25,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import SignalBadge from '../components/SignalBadge';
 import { buildScoreDisplay } from '../core/score-display';
 import { timeAgo } from '../core/format-utils';
+import { stripWarningGlyph } from '../core/signal-utils';
 import {
   fetchBestSignals,
   fetchSignalDismissals,
@@ -215,7 +216,7 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
       )}
 
       {envelope.riskGate?.warnings?.length > 0 && (
-        <div className="sig-opp-warnings">⚠ {envelope.riskGate.warnings.slice(0, 2).join(' · ')}</div>
+        <div className="sig-opp-warnings">⚠ {envelope.riskGate.warnings.slice(0, 2).map(stripWarningGlyph).join(' · ')}</div>
       )}
       {blocked && <div className="sig-opp-blockers">🚫 {envelope.preTradeBlockers.slice(0, 2).join(' · ')}</div>}
 

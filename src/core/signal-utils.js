@@ -29,6 +29,15 @@ export function getThresholds() {
 // Legacy named exports for backward compat — these update when setSignalThresholds is called.
 export const SIGNAL = { get BUY() { return _buyThreshold; }, get HOLD() { return _holdThreshold; } };
 
+/**
+ * Strip a leading warning glyph (⚠ / ⚠️ / 🚫) from risk-gate warning text.
+ * Warning strings arrive pre-embellished from the engine; cards that prefix
+ * their own icon call this to avoid doubled glyphs (#687).
+ */
+export function stripWarningGlyph(text) {
+  return String(text ?? '').replace(/^\s*(?:⚠️?|🚫|❌)\s*/, '');
+}
+
 // ── Canonical colors ──────────────────────────────────────
 export const SIGNAL_COLORS = {
   BUY:  '#22c55e',
