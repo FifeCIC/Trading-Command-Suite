@@ -31,6 +31,7 @@ import {
   dismissSignal,
   fetchSignalAction,
   tradeSignal,
+  createSignalPlan,
 } from '../core/api/signals';
 import './signals-overview.css';
 
@@ -109,6 +110,30 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
       setError(e?.message || 'Trade failed');
       setConfirming(false);
     },
+  });
+
+  // Signals → Trading handover: queue as a draft plan with signal context (#702).
+  const planMutation = useMutation({
+    mutationFn: () => createSignalPlan(envelope.scoreId, {
+      direction: isBuy ? 'LONG' : 'SHORT',
+      protocolName: envelope.protocolName || null,
+      context: {
+        combinedStrength: envelope.combinedStrength,
+        signalPct: envelope.signalPct,
+        opportunityPct: envelope.opportunityPct,
+        confidence: envelope.confidence,
+        topDirectives: directives,
+        warnings: envelope.riskGate?.warnings || [],
+      },
+    }),
+    onSuccess: (r) => {
+      if (r?.success === false) {
+        setError(r.message || 'Plan already exists for this signal');
+      } else {
+        setResult({ type: 'plan', text: 'Plan created', planId: r?.planId });
+      }
+    },
+    onError: (e) => setError(e?.message || 'Plan creation failed'),
   });
 
   const startConfirm = () => {
@@ -209,6 +234,15 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
         )}
         <button
           type="button"
+          className="sig-opp-btn sig-opp-btn--plan"
+          onClick={() => planMutation.mutate()}
+          disabled={planMutation.isPending || !envelope.scoreId}
+          title="Queue into the Trading area as a draft plan"
+        >
+          {planMutation.isPending ? '…' : 'Plan'}
+        </button>
+        <button
+          type="button"
           className="sig-opp-btn sig-opp-btn--dismiss"
           onClick={() => dismissMutation.mutate()}
           disabled={dismissMutation.isPending}
@@ -225,7 +259,11 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            {error || result.text}
+            {error || (result?.type === 'plan' ? (
+              <span>
+                Plan created — <Link to="/trading/trading-plans">open in Trading Plans</Link>
+              </span>
+            ) : result?.text)}
           </motion.div>
         )}
       </AnimatePresence>

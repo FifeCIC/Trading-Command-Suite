@@ -5,6 +5,7 @@ import { DuplicateGuardService } from '../trading/duplicate-guard.service';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
 import { GlobalDiversificationService } from '../diversification/global-diversification.service';
 import { ManualTradeDto } from './dto/manual-trade.dto';
+import { SignalPlanDto } from './dto/signal-plan.dto';
 
 export type BotActionState = 'none' | 'pending' | 'filled';
 
@@ -238,5 +239,97 @@ export class SignalActionsService {
       tp: tp ?? null,
       status: 'open',
     };
+  }
+
+  /**
+   * POST /api/signals/:id/plan (#702)
+   *
+   * Signals → Trading handover: queue the signal into the Trading area as a
+   * draft trading plan that carries the full signal context (direction,
+   * protocol, combined strength, top drivers, warnings) so the Trading area
+   * can show exactly where the plan came from.
+   *
+   * One plan per signal — duplicates are rejected with the existing plan id.
+   */
+  async createSignalPlan(signalId: string, body: SignalPlanDto) {
+    const { symbol, protocolId, scoredAt } = await this.loadSignal(signalId);
+
+    const direction = (body.direction || 'LONG').toUpperCase();
+    const ctx = body.context || {};
+    const combined = ctx.combinedStrength ?? null;
+    const signalPct = ctx.signalPct ?? null;
+    const opportunityPct = ctx.opportunityPct ?? null;
+    const confidence = ctx.confidence ?? null;
+    const top = (ctx.topDirectives || []).slice(0, 3);
+    const protocolLabel = body.protocolName || protocolId || 'signal';
+
+    // Dedupe — one plan per symbol+protocol+direction. The signalId is a
+    // Score-run id (a new row per scoring run), so it cannot be the key.
+    const existing: any[] = await (this.prisma as any).$queryRawUnsafe(
+      `SELECT id FROM tradingplan
+       WHERE JSON_UNQUOTE(JSON_EXTRACT(content, '$.source')) = 'signals'
+         AND JSON_UNQUOTE(JSON_EXTRACT(content, '$.symbol')) = ?
+         AND IFNULL(JSON_UNQUOTE(JSON_EXTRACT(content, '$.protocolId')), '') = ?
+         AND JSON_UNQUOTE(JSON_EXTRACT(content, '$.direction')) = ?
+       LIMIT 1`,
+      symbol,
+      protocolId ?? '',
+      direction,
+    ).catch(() => []);
+    if (existing?.length) {
+      return { success: false, existingPlanId: existing[0].id, message: 'This signal already has a trading plan' };
+    }
+
+    const drivers = top.map((d: any) => d.name).filter(Boolean).join(', ');
+    const notes = [
+      `Signals handover — ${direction} ${symbol} via ${protocolLabel}`,
+      combined != null ? `Combined strength ${combined}` : null,
+      signalPct != null ? `Signal ${signalPct}%` : null,
+      opportunityPct != null ? `Opportunity ${opportunityPct}%` : null,
+      confidence != null ? `Confidence ${confidence}` : null,
+      drivers ? `Top drivers: ${drivers}` : null,
+    ].filter(Boolean).join(' · ');
+
+    const plan = await (this.prisma as any).tradingPlan.create({
+      data: {
+        title: `${symbol} ${direction} — ${protocolLabel}`,
+        type: 'signal',
+        content: {
+          source: 'signals',
+          signalId,
+          symbol,
+          direction,
+          protocolId: protocolId ?? null,
+          protocolName: body.protocolName ?? null,
+          combinedStrength: combined,
+          signalPct,
+          opportunityPct,
+          confidence,
+          scoredAt: scoredAt ? scoredAt.toISOString() : null,
+          topDirectives: top,
+          warnings: ctx.warnings || [],
+        },
+        notes,
+        status: 'draft',
+        symbols: [symbol],
+      },
+    });
+
+    // First plan step: the pending entry this signal suggests.
+    await (this.prisma as any).planStep
+      .create({
+        data: {
+          planId: plan.id,
+          action: direction === 'SHORT' ? 'sell' : 'buy',
+          symbol,
+          conditions: `Signal handover: ${direction} via ${protocolLabel} (combined ${combined ?? 'n/a'})`,
+          notes: drivers ? `Top drivers: ${drivers}` : null,
+          sortOrder: 0,
+        },
+      })
+      .catch((err: any) => this.logger.warn(`Plan step create failed: ${err?.message}`));
+
+    this.logger.log(`Signal ${signalId.slice(0, 8)} handed over to plan ${plan.id} (${symbol} ${direction})`);
+    return { success: true, planId: plan.id, title: plan.title };
   }
 }

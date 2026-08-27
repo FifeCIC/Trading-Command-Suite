@@ -33,3 +33,12 @@ export function fetchSignalAction(signalId) {
 export function tradeSignal(signalId, body) {
   return apiPost(`/api/signals/${signalId}/trade`, body);
 }
+
+/**
+ * POST /api/signals/:id/plan — Signals → Trading handover (#702).
+ * Queues the signal as a draft trading plan carrying the signal context.
+ * body: { direction: 'LONG'|'SHORT', protocolName?, context? }
+ */
+export function createSignalPlan(signalId, body) {
+  return apiPost(`/api/signals/${signalId}/plan`, body);
+}

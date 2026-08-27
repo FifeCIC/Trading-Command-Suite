@@ -235,6 +235,15 @@
   padding: 0.55rem 0.8rem;
 }
 .sig-opp-btn--dismiss:hover { color: var(--ink); border-color: var(--ink-soft); }
+.sig-opp-btn--plan {
+  flex: 0 0 auto;
+  background: transparent;
+  color: var(--accent, #4d94ff);
+  border-color: var(--accent, #4d94ff);
+  padding: 0.55rem 0.8rem;
+}
+.sig-opp-btn--plan:hover { background: var(--accent-dim, #1a3350); }
+.sig-opp-feedback a { color: var(--accent, #4d94ff); text-decoration: underline; }
 
 .sig-opp-feedback {
   font-size: 0.72rem;

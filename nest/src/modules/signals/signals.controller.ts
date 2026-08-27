@@ -5,6 +5,7 @@ import { SignalActionsService } from './signal-actions.service';
 import { SignalLadderDto } from './dto/signal-ladder.dto';
 import { ManualTradeDto } from './dto/manual-trade.dto';
 import { DismissSignalDto } from './dto/dismiss-signal.dto';
+import { SignalPlanDto } from './dto/signal-plan.dto';
 
 /**
  * Signals Controller — Enriched Signal Envelopes
@@ -216,6 +217,18 @@ export class SignalsController {
   @Post(':id/trade')
   async tradeSignal(@Param('id') id: string, @Body() body: ManualTradeDto) {
     return this.signalActions.placeManualTrade(id, body);
+  }
+
+  /**
+   * POST /api/signals/:id/plan (#702)
+   *
+   * Signals → Trading handover: queue the signal into the Trading area as a
+   * draft trading plan carrying the signal context (direction, protocol,
+   * combined strength, top drivers).
+   */
+  @Post(':id/plan')
+  async planSignal(@Param('id') id: string, @Body() body: SignalPlanDto) {
+    return this.signalActions.createSignalPlan(id, body);
   }
 
   @Post()

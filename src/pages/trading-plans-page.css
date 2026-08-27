@@ -145,6 +145,54 @@
   border-left: 3px solid var(--accent, #0066cc);
 }
 
+/* Signal handover context (#702) */
+.plan-signal-context {
+  background: var(--surface-alt, #1e1e1e);
+  border: 1px solid var(--border-dim, #2a2a2a);
+  border-left: 3px solid #10b981;
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+.plan-signal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.plan-signal-dir {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 9px;
+}
+.plan-signal-dir--long { background: rgba(22, 163, 74, 0.15); color: #4ade80; }
+.plan-signal-dir--short { background: rgba(220, 38, 38, 0.15); color: #f87171; }
+.plan-signal-proto {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-dim, #888);
+}
+.plan-signal-metrics {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--text-dim, #aaa);
+  margin-bottom: 8px;
+}
+.plan-signal-metrics em { font-style: normal; opacity: 0.75; margin-right: 3px; }
+.plan-signal-metrics strong { color: var(--text, #eee); }
+.plan-signal-drivers { display: flex; flex-wrap: wrap; gap: 6px; }
+.plan-signal-chip {
+  font-size: 11px;
+  padding: 2px 9px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
 .plan-content pre {
   background: var(--surface-alt, #1e1e1e);
   padding: 16px;

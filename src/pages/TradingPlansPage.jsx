@@ -72,7 +72,7 @@ export default function TradingPlansPage() {
   };
 
   const statusColors = { draft: '#ffaa00', active: '#00cc66', executed: '#4488ff', archived: '#888888' };
-  const typeLabels = { plan: 'Plan', triage: 'Triage', averaging: 'Averaging', 'weekend-defense': 'Weekend Defense', entry: 'Entry', exit: 'Exit' };
+  const typeLabels = { signal: 'Signal', plan: 'Plan', triage: 'Triage', averaging: 'Averaging', 'weekend-defense': 'Weekend Defense', entry: 'Entry', exit: 'Exit' };
 
   return (
     <div className="trading-plans-page">
@@ -160,6 +160,30 @@ export default function TradingPlansPage() {
               <span>{new Date(selected.createdAt).toLocaleString()}</span>
             </div>
             {selected.notes && <div className="plan-notes">{selected.notes}</div>}
+            {selected.content?.source === 'signals' && (
+              <div className="plan-signal-context">
+                <div className="plan-signal-head">
+                  <span className={`plan-signal-dir plan-signal-dir--${String(selected.content.direction).toLowerCase()}`}>
+                    {selected.content.direction}
+                  </span>
+                  <strong>{selected.content.symbol}</strong>
+                  <span className="plan-signal-proto">{selected.content.protocolName || selected.content.protocolId}</span>
+                </div>
+                <div className="plan-signal-metrics">
+                  <span><em>Combined</em> <strong>{selected.content.combinedStrength ?? '—'}</strong></span>
+                  <span><em>Signal</em> <strong>{selected.content.signalPct != null ? `${selected.content.signalPct}%` : '—'}</strong></span>
+                  <span><em>Opportunity</em> <strong>{selected.content.opportunityPct != null ? `${selected.content.opportunityPct}%` : '—'}</strong></span>
+                  <span><em>Confidence</em> <strong>{selected.content.confidence ?? '—'}</strong></span>
+                </div>
+                {(selected.content.topDirectives || []).length > 0 && (
+                  <div className="plan-signal-drivers">
+                    {(selected.content.topDirectives || []).slice(0, 3).map((d, i) => (
+                      <span key={i} className="plan-signal-chip" title={d.reason || d.name}>{d.name}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="plan-content">
               <h4>Plan</h4>
               <pre>{JSON.stringify(selected.content, null, 2)}</pre>
