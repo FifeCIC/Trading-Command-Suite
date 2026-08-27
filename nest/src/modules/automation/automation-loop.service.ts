@@ -907,7 +907,8 @@ export class AutomationLoopService implements OnModuleInit {
         // ── Data Readiness Check: annotate each strategy with dataStatus ──
         for (const strat of activeStrategies) {
           try {
-            const protocolId = strat.protocolId || (strat as any).scoringStrategy?.protocolId;
+            // Protocol resolved from the trading strategy itself (2026-08-27)
+            const protocolId = strat.protocolId;
             if (!protocolId) {
               strat.dataStatus = 'blocked';
               strat.dataStatusReason = 'No protocol linked';
@@ -1378,54 +1379,28 @@ export class AutomationLoopService implements OnModuleInit {
         };
       }
 
-      // ── Require ScoringStrategy FK (Phase D.2 enforced) ──
-      // TradingStrategy MUST link to a ScoringStrategy to trade.
-      // Deprecated fields (protocolId, slPct, tpPct, baseSize) on TradingStrategy are no longer used.
-      const scoringStrategyId = (strategy as any).scoringStrategyId as string | undefined;
-      if (!scoringStrategyId) {
-        return {
-          timestamp: new Date().toISOString(),
-          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'SKIP', reason: 'No ScoringStrategy linked — cannot trade',
-          composite: 0,
-        };
-      }
-
-      // Fetch ScoringStrategy params (no fallback to deprecated TradingStrategy fields)
-      let effectiveProtocolId = '';
-      let effectiveShortProtocolId: string | undefined;
-      let effectiveBaseSize = 0.01;
-      let effectiveSlPct = 1.0;
-      let effectiveTpPct = 1.0;
-
-      if (this.prisma.isAvailable) {
-        try {
-          const ss = await (this.prisma as any).scoringStrategy.findUnique({
-            where: { id: scoringStrategyId },
-            select: { protocolId: true, shortProtocolId: true, baseSize: true, slPct: true, tpPct: true },
-          });
-          if (ss) {
-            effectiveProtocolId = ss.protocolId;
-            effectiveShortProtocolId = ss.shortProtocolId || undefined;
-            effectiveBaseSize = ss.baseSize ?? 0.01;
-            effectiveSlPct = ss.slPct ?? 1.0;
-            effectiveTpPct = ss.tpPct ?? 1.0;
-          }
-        } catch { /* use defaults */ }
-      }
+      // ── Resolve execution params from the TRADING STRATEGY itself (2026-08-27) ──
+      // Decision: the loop no longer reads the scoring_strategy table — the
+      // pipeline is Protocol → Trading Strategy → Execution. scoring_strategy
+      // remains only for MetaStack versioning/performance (#295).
+      const effectiveProtocolId = strategy.protocolId || '';
+      const effectiveShortProtocolId = strategy.shortProtocolId || undefined;
+      const effectiveBaseSize = strategy.baseSize ?? 0.01;
+      const effectiveSlPct = strategy.slPct ?? 1.0;
+      const effectiveTpPct = strategy.tpPct ?? 1.0;
 
       if (!effectiveProtocolId) {
         return {
           timestamp: new Date().toISOString(),
           strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'SKIP', reason: 'ScoringStrategy has no protocolId — cannot score',
+          decision: 'SKIP', reason: 'No protocol linked — cannot score',
           composite: 0,
         };
       }
 
       // ── Helper: get bars (pre-fetched or fetch now) ──
-      // Timeframe resolved from Protocol → ScoringStrategy (Phase D.2). Protocol.recommendedTimeframe
-      // is the authority — directive suitability is validated against it. Falls back to strategy.timeframe.
+      // Timeframe resolved from Protocol.recommendedTimeframe (authority),
+      // falling back to the trading strategy's timeframe field.
       const protocolConfig = this.protocolDb.getCached(effectiveProtocolId);
       const effectiveTimeframe = protocolConfig?.recommendedTimeframe || strategy.timeframe || '5m';
       const getBars = async (): Promise<any[] | null> => {
@@ -1595,8 +1570,7 @@ export class AutomationLoopService implements OnModuleInit {
       // if the position is in profit, SL is set, and maxPyramidTiers allows it.
       // NOTE: pyramid config moved to the TradingStrategy (2026-08-27) —
       // the loop no longer reads the scoring_strategy table.
-      const pyramidTiers = (strategy as any)?.maxPyramidTiers ?? 1;
-      const isPositionInProfit = (pos as any).profit > 0;
+      const pyramidTiers = (strategy as any)?.maxPyramidTiers ?? 1;      const isPositionInProfit = (pos as any).profit > 0;
       const hasStopLoss = (pos as any).sl > 0 || (pos as any).stopLoss > 0;
 
       if (pyramidTiers <= 1) {
@@ -1693,7 +1667,7 @@ export class AutomationLoopService implements OnModuleInit {
         };
       }
 
-      // Compute position size from ScoringStrategy config
+      // Compute position size from the trading strategy's own config
       let size = effectiveBaseSize;
       if ((strategy as any).useRaritySizing && evalResult.rarity) {
         size *= (evalResult.rarity.sizeMultiplier || 1);
@@ -1714,7 +1688,7 @@ export class AutomationLoopService implements OnModuleInit {
         };
       }
 
-      // Compute SL/TP prices from ScoringStrategy
+      // Compute SL/TP prices from the trading strategy's own config
       const slPct = effectiveSlPct;
       const tpPct = effectiveTpPct;
       const slPrice = evalResult.signal === 'BUY' ? pos.currentPrice * (1 - slPct / 100) : pos.currentPrice * (1 + slPct / 100);
