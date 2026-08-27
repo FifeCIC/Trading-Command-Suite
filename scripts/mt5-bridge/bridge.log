@@ -27672,3 +27672,26 @@ oneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone Met
 2026-08-26 23:19:26,022 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
 2026-08-26 23:19:26,119 [ERROR] Error handling /positions: [WinError 10053] An established connection was aborted by the software in your host machine
 2026-08-26 23:19:26,215 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-08-27 10:20:08,136 [INFO] MetaTrader5 package loaded
+2026-08-27 10:20:08,137 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-08-27 10:20:08,137 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-08-27 10:20:08,137 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-08-27 10:20:08,137 [INFO] Connecting to MT5 at startup...
+2026-08-27 10:20:08,138 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-08-27 10:20:08,138 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-08-27 10:20:08,138 [INFO] Connecting to MT5 at startup...
+2026-08-27 10:20:08,138 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-08-27 10:20:08,140 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1341.41
+2026-08-27 10:20:08,182 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-08-27 10:20:08,193 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-08-27 10:20:25,408 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-27 10:21:25,423 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-27 10:26:56,022 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-27 10:29:49,215 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-27 12:49:25,897 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-27 22:05:57,042 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-27 22:13:12,562 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-27 23:03:19,304 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-27 23:05:42,662 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-27 23:18:51,676 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-08-27 23:27:42,463 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'

@@ -29,7 +29,7 @@
  *   5. Dispatch trades via TradingStrategyService [delegated]
  */
 
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { PrismaService } from '../../database/prisma.service';
@@ -171,6 +171,9 @@ export interface LoopState {
   globalRiskMultiplier: number;
   recentDecisions: TickDecision[];
   priorityQueue: PriorityQueueEntry[];
+  /** #615 — META.Stack layer kill switches (mandate hierarchy). */
+  protocolsEnabled: boolean;
+  tradingEnabled: boolean;
 }
 
 export interface BrokerLoopState {
@@ -333,6 +336,13 @@ export class AutomationLoopService implements OnModuleInit {
   }): Promise<void> {
     const { strategyId, strategyName, symbol, brokerId, side, composite, baseSize, slPct, tpPct, entryPrice, mode, protocolId, decisions } = params;
 
+    // #615 mandate: Trading layer OFF → signals still generated, never dispatched.
+    if (!this.state.tradingEnabled) {
+      this.auditLog.logBlocked(this.state.tickCount, strategyId, symbol, 'Trading layer disabled — dispatch blocked');
+      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'BLOCKED', reason: 'Trading layer disabled', composite, signal: side });
+      return;
+    }
+
     // Cooldown checks
     const lastSymTrade = this.lastSymbolTrade.get(symbol);
     if (lastSymTrade && (Date.now() - lastSymTrade) < 60000) {
@@ -432,6 +442,9 @@ export class AutomationLoopService implements OnModuleInit {
     globalRiskMultiplier: 1.0,
     recentDecisions: [],
     priorityQueue: [],
+    // #615 safe defaults: scoring ON, trading OFF until explicitly enabled.
+    protocolsEnabled: true,
+    tradingEnabled: false,
   };
 
   /**
@@ -468,6 +481,9 @@ export class AutomationLoopService implements OnModuleInit {
   }
 
   async onModuleInit() {
+    // #615 — restore layer kill switches (fail-safe defaults: protocols ON, trading OFF).
+    await this.restoreLayerFlags();
+
     // Auto-restore the loop ONLY if AUTO_START_AUTOMATION is explicitly 'true' (fail-closed).
     // Trading is NEVER auto-enabled regardless — it resets to false on every restart.
     const autoStart = process.env.AUTO_START_AUTOMATION === 'true';
@@ -816,6 +832,13 @@ export class AutomationLoopService implements OnModuleInit {
     this.gatedScoreCache.clear();
     this.protocolDb.clearCache();
     this.auditLog.logTickStart(this.state.tickCount);
+
+    // #615 mandate: Protocols OFF → no scoring, no trading.
+    if (!this.state.protocolsEnabled) {
+      this.auditLog.logSkip(this.state.tickCount, 'protocols-layer', '—', 'Protocols layer disabled — scoring skipped');
+      this.logger.log(`Tick #${this.state.tickCount} skipped — protocols layer disabled`);
+      return decisions;
+    }
 
     // Phase 0 job queue (#614) — poll due jobs once per tick.
     // Non-blocking best-effort: the queue has its own retry/backoff.
@@ -2055,7 +2078,58 @@ export class AutomationLoopService implements OnModuleInit {
     for (const bs of Object.values(this.state.brokerStates)) {
       bs.tradingEnabled = false;
     }
+    // #615 — the trading layer itself is also switched off and persisted.
+    void this.setLayer('trading', false);
     this.logger.warn('EMERGENCY STOP — loop killed, trading disabled, pending actions cleared');
     return { stopped: true, message: 'Emergency stop complete. All trading disabled. Pending actions cleared.' };
+  }
+
+  /**
+   * #615 — META.Stack layer kill switches.
+   *
+   * Mandate hierarchy (Protocol → Trading, post-2026-08-27 retirement of the
+   * scoring-strategy layer):
+   *   - Protocols OFF  → tick skips scoring entirely (no scoring, no trading)
+   *   - Trading OFF    → scores/signals still produced, dispatch blocked
+   *
+   * Flags persist in global_setting; the restart default remains protocols ON,
+   * trading OFF unless the stored value says otherwise (explicit user action).
+   */
+  async setLayer(layer: 'protocols' | 'trading', enabled: boolean): Promise<{ layer: string; enabled: boolean }> {
+    if (layer === 'protocols') {
+      this.state.protocolsEnabled = enabled;
+    } else if (layer === 'trading') {
+      this.state.tradingEnabled = enabled;
+    } else {
+      throw new BadRequestException(`Unknown layer: ${layer} — expected 'protocols' or 'trading'`);
+    }
+    try {
+      await (this.prisma as any).globalSetting.upsert({
+        where: { key: `automation.${layer}Enabled` },
+        create: { key: `automation.${layer}Enabled`, value: String(enabled) },
+        update: { value: String(enabled) },
+      });
+    } catch (err) {
+      this.logger.warn(`Layer flag persist failed: ${(err as Error).message}`);
+    }
+    this.logger.warn(`META.Stack layer '${layer}' ${enabled ? 'ENABLED' : 'DISABLED'}`);
+    return { layer, enabled };
+  }
+
+  /** #615 — restore persisted layer flags (safe defaults if missing/unreadable). */
+  private async restoreLayerFlags() {
+    if (!this.prisma.isAvailable) return;
+    try {
+      const rows: any[] = await (this.prisma as any).globalSetting.findMany({
+        where: { key: { in: ['automation.protocolsEnabled', 'automation.tradingEnabled'] } },
+      });
+      for (const r of rows) {
+        if (r.key === 'automation.protocolsEnabled') this.state.protocolsEnabled = r.value === 'true';
+        if (r.key === 'automation.tradingEnabled') this.state.tradingEnabled = r.value === 'true';
+      }
+      this.logger.log(`Layer flags restored — protocols=${this.state.protocolsEnabled}, trading=${this.state.tradingEnabled}`);
+    } catch (err) {
+      this.logger.warn(`Layer flag restore failed: ${(err as Error).message}`);
+    }
   }
 }

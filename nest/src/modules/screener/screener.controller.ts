@@ -7,6 +7,7 @@
  * GET  /api/screener/stories  — per-ticker news stories with lean (#682 4.2).
  * POST /api/screener/promote  — promote a ticker into a watchlist (#682 4.4).
  * POST /api/screener/ingest   — run the news + earnings ingestion now.
+ * POST /api/screener/cleanup  — retention prune (same as the daily cron) (#690).
  */
 import { Body, Controller, Get, Post, Query, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
@@ -77,5 +78,13 @@ export class ScreenerController {
       `Manual screener ingestion: news +${result.news.created}, earnings +${result.earnings.created}`,
     );
     return result;
+  }
+
+  /** Manual retention prune trigger (#690) — same logic as the daily cron. */
+  @Post('cleanup')
+  async cleanup() {
+    const removed = await this.screener.pruneExpiredHits();
+    this.logger.log(`Manual screener cleanup: removed ${removed} hits`);
+    return { removed };
   }
 }

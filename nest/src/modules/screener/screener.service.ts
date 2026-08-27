@@ -66,6 +66,28 @@ export function normalizeAttentionWeights<T extends { rawAttentionWeight: number
   return rows;
 }
 
+/**
+ * ScreenerHit retention window in days (#690) — default 30, overridable via
+ * the SCREENER_HIT_RETENTION_DAYS env var. Invalid / zero / negative values
+ * fall back to the default so a bad env value can never disable retention
+ * (which would silently resurrect unbounded growth).
+ */
+export function screenerRetentionDays(envValue?: string | number | null): number {
+  const parsed = Number(envValue);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 30;
+}
+
+/**
+ * Prune cutoff instant (#690): hits whose catalyst `timestamp` predates this
+ * are candidates for deletion. Keyed on `timestamp` (when the catalyst
+ * occurred) rather than `createdAt` so an earnings hit inserted weeks ago for
+ * a date still in the future survives — otherwise ranked()'s future window
+ * would lose it until the next ingestion pass re-created it.
+ */
+export function screenerRetentionCutoff(nowMs: number, retentionDays: number): Date {
+  return new Date(nowMs - retentionDays * 86_400_000);
+}
+
 @Injectable()
 export class ScreenerService implements OnModuleInit {
   private readonly logger = new Logger(ScreenerService.name);
@@ -104,6 +126,50 @@ export class ScreenerService implements OnModuleInit {
       `Screener ingestion: news +${news.created}/${news.created + news.skipped}, earnings +${earnings.created}/${earnings.created + earnings.skipped}`,
     );
     return { news, earnings };
+  }
+
+  /**
+   * Daily retention cleanup (#690) — prune ScreenerHits outside every live
+   * window. Anything with catalyst `timestamp` older than the retention
+   * window is outside ranked()'s two windows (future asc + past 7d) by
+   * construction, so cleanup is invisible to the ranking — except that hits
+   * backing a non-expired WatchlistItem are ALWAYS preserved (promote()
+   * stores a unique 1:1 screenerHitId; provenance must survive cleanup).
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_4AM)
+  async scheduledCleanup(): Promise<void> {
+    try {
+      const removed = await this.pruneExpiredHits();
+      this.logger.log(
+        `Screener cleanup: removed ${removed} hits older than ${screenerRetentionDays(process.env.SCREENER_HIT_RETENTION_DAYS)}d`,
+      );
+    } catch (err) {
+      this.logger.warn(`Screener cleanup failed: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * Retention prune (#690) — returns how many rows were removed
+   * (transparency counter). Explicit retentionDays wins over the env var;
+   * WatchlistItem references with status != 'expired' are never deleted.
+   */
+  async pruneExpiredHits(retentionDays?: number): Promise<number> {
+    const days = screenerRetentionDays(retentionDays ?? process.env.SCREENER_HIT_RETENTION_DAYS);
+    const cutoff = screenerRetentionCutoff(Date.now(), days);
+    const protectedRefs = await this.prisma.watchlistItem.findMany({
+      where: { screenerHitId: { not: null }, status: { not: 'expired' } },
+      select: { screenerHitId: true },
+    });
+    const keepIds = protectedRefs
+      .map((w) => w.screenerHitId)
+      .filter((id): id is string => Boolean(id));
+    const result = await this.prisma.screenerHit.deleteMany({
+      where: {
+        timestamp: { lt: cutoff },
+        id: { notIn: keepIds },
+      },
+    });
+    return result.count;
   }
 
   /**

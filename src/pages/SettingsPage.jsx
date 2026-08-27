@@ -358,6 +358,7 @@ export default function SettingsPage() {
         </SettingRow>
 
         <AutomationRulesSection />
+        <MetaStackControlSection />
       </section>
 
       <section className="settings-section">
@@ -454,14 +455,50 @@ function HealthChecksSection() {
   );
 }
 
-function AutomationRulesSection() {
-  const { data } = useQuery({
+/** #615 — META.Stack layer kill switches: Protocols / Trading. */
+function MetaStackControlSection() {
+  const qc = useQueryClient();
+  const { data: status } = useQuery({
+    queryKey: ['automation-layers'],
+    queryFn: () => apiGet('/api/automation/status').catch(() => null),
+    refetchInterval: 15_000,
+  });
+  const layers = status?.layers || { protocolsEnabled: true, tradingEnabled: false };
+  const toggle = async (layer, enabled) => {
+    await apiPost('/api/automation/layer', { layer, enabled }).catch(() => {});
+    qc.invalidateQueries({ queryKey: ['automation-layers'] });
+  };
+  return (
+    <>
+      <h3 style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--ink-soft)' }}>META.Stack Control</h3>
+      <SettingRow
+        label="Protocols / Scoring"
+        hint="OFF stops protocol scoring entirely — no scoring, no signals, no trading. ON resumes the pipeline."
+      >
+        <div className="inline-actions">
+          <button type="button" className={layers.protocolsEnabled ? 'cta' : ''} onClick={() => toggle('protocols', true)}>On</button>
+          <button type="button" className={!layers.protocolsEnabled ? 'cta' : ''} onClick={() => toggle('protocols', false)}>Off</button>
+        </div>
+      </SettingRow>
+      <SettingRow
+        label="Trading"
+        hint="OFF keeps scoring and signals but blocks every dispatch. Defaults OFF after every restart — no restart can silently re-enable trading."
+      >
+        <div className="inline-actions">
+          <button type="button" className={layers.tradingEnabled ? 'cta' : ''} onClick={() => toggle('trading', true)}>On</button>
+          <button type="button" className={!layers.tradingEnabled ? 'cta' : ''} onClick={() => toggle('trading', false)}>Off</button>
+        </div>
+      </SettingRow>
+    </>
+  );
+}
+
+function AutomationRulesSection() {  const { data } = useQuery({
     queryKey: ['automation-rules-settings'],
     queryFn: () => apiGet('/api/automation/rules').catch(() => []),
     staleTime: 60_000,
   });
   const rules = Array.isArray(data) ? data : [];
-
   return (
     <>
       <h3 style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--ink-soft)' }}>Automation Rules</h3>

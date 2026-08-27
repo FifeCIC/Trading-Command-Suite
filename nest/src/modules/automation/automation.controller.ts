@@ -383,6 +383,10 @@ export class AutomationController {
       nextTickAt: loopState.nextTickAt,
       lastTickMs: loopState.lastTickMs,
       globalRiskMultiplier: loopState.globalRiskMultiplier,
+      layers: {
+        protocolsEnabled: loopState.protocolsEnabled ?? true,
+        tradingEnabled: loopState.tradingEnabled ?? false,
+      },
       brokerStates: loopState.brokerStates,
       activeStrategies,
       pendingActions: loopState.pendingActions,
@@ -445,6 +449,12 @@ export class AutomationController {
   @Post('emergency-stop')
   emergencyStop() {
     return this.loop.emergencyStop();
+  }
+
+  /** POST /api/automation/layer — META.Stack layer kill switch (#615) */
+  @Post('layer')
+  async setLayer(@Body() body: { layer: string; enabled: boolean }) {
+    return this.loop.setLayer(body.layer as 'protocols' | 'trading', Boolean(body.enabled));
   }
 
   /** POST /api/automation/confirm-action — approve queued trade */

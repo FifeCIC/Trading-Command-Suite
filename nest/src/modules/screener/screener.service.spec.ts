@@ -2,6 +2,8 @@ import {
   screenerRecency,
   screenerRawWeight,
   normalizeAttentionWeights,
+  screenerRetentionDays,
+  screenerRetentionCutoff,
 } from './screener.service';
 
 const HOUR = 3_600_000;
@@ -92,6 +94,35 @@ describe('ScreenerService — attention decay modes (#647 / epic #682 Phase 4.1)
       normalizeAttentionWeights(rows);
       const sorted = [...rows].sort((a, b) => (b.attentionWeight ?? 0) - (a.attentionWeight ?? 0));
       expect(sorted.map((r) => r.rawAttentionWeight)).toEqual([90, 30, 10]);
+    });
+  });
+
+  describe('screenerRetentionDays / screenerRetentionCutoff (#690)', () => {
+    it('defaults to 30 days when unset', () => {
+      expect(screenerRetentionDays(undefined)).toBe(30);
+      expect(screenerRetentionDays(null)).toBe(30);
+      expect(screenerRetentionDays('')).toBe(30);
+    });
+
+    it('accepts a numeric env override', () => {
+      expect(screenerRetentionDays('60')).toBe(60);
+      expect(screenerRetentionDays('7.5')).toBe(7.5);
+    });
+
+    it('rejects invalid, zero and negative values back to the default', () => {
+      expect(screenerRetentionDays('abc')).toBe(30);
+      expect(screenerRetentionDays('0')).toBe(30);
+      expect(screenerRetentionDays('-5')).toBe(30);
+    });
+
+    it('cutoff is exactly now minus the retention window', () => {
+      const now = Date.UTC(2026, 7, 27, 0, 0, 0);
+      expect(screenerRetentionCutoff(now, 30).getTime()).toBe(now - 30 * DAY);
+    });
+
+    it('cutoff at the default 30d sits outside ranked() past window (7d) by construction', () => {
+      const now = Date.now();
+      expect(screenerRetentionCutoff(now, 30).getTime()).toBeLessThan(now - 7 * DAY);
     });
   });
 });
