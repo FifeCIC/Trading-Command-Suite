@@ -99,7 +99,7 @@ export default function ProtocolsPage() {
               >
                 <div className="protocols-item-name">
                   {p.name}
-                  <span className={`protocols-item-conn ${p.isFullyConnected ? 'connected' : p.connectionCount > 0 ? 'partial' : 'none'}`} title={p.isFullyConnected ? 'Fully connected — trading enabled' : p.connectionCount > 0 ? `${p.connectionCount} strategy(s), monitoring only` : 'No scoring strategies linked'} />
+                  <span className={`protocols-item-conn ${p.isFullyConnected ? 'connected' : p.connectionCount > 0 ? 'partial' : 'none'}`} title={p.isFullyConnected ? 'Fully connected — trading enabled' : p.connectionCount > 0 ? `${p.connectionCount} strategy(s), monitoring only` : 'No trading strategies linked'} />
                 </div>
                 <div className="protocols-item-meta">
                   <span className="protocols-type-mini" style={{ color: getProtocolType(p).color, borderColor: getProtocolType(p).color }}>

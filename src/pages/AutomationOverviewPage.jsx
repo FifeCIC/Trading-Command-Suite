@@ -2,7 +2,7 @@
  * Automation Overview — Strategy Chain & Services Snapshot
  * =========================================================
  * Parent-child view of the automation pipeline:
- *   Trading Strategies → Scoring Strategies → Protocols
+ *   Trading Strategies → Protocols
  *
  * Plus a quick snapshot of automation services (loop, brokers, tick info).
  *
@@ -38,11 +38,6 @@ export default function AutomationOverviewPage() {
     queryFn: () => apiGet('/api/automation/status').catch(() => ({})),
     refetchInterval: 30_000,
   });
-  const scoringStratsQuery = useQuery({
-    queryKey: ['ao-scoring-strategies'],
-    queryFn: () => apiGet('/api/automation/scoring-strategies').catch(() => []),
-    staleTime: 60_000,
-  });
   const tradingStratsQuery = useQuery({
     queryKey: ['ao-trading-strategies'],
     queryFn: () => apiGet('/api/trading/strategies').catch(() => []),
@@ -61,13 +56,11 @@ export default function AutomationOverviewPage() {
 
   const isLoading =
     autoQuery.isLoading &&
-    scoringStratsQuery.isLoading &&
     tradingStratsQuery.isLoading;
 
   if (isLoading) return <div className="ao-page"><LoadingSkeleton variant="text" lines={12} /></div>;
 
   const autoStatus = autoQuery.data || {};
-  const scoringStrats = Array.isArray(scoringStratsQuery.data) ? scoringStratsQuery.data : [];
   const tradingStrats = Array.isArray(tradingStratsQuery.data) ? tradingStratsQuery.data : [];
   const protocols = protocolsQuery.data?.protocols || [];
   const providerList = providersQuery.data?.providers || [];
@@ -75,12 +68,11 @@ export default function AutomationOverviewPage() {
   const brokerStates = autoStatus.brokerStates || {};
   const recentDecisions = autoStatus.recentDecisions || [];
 
-  // Group chains: Trading Strategy → Scoring Strategy → Protocol
+  // Group chains: Trading Strategy → Protocol (scoring_strategy retired 2026-08-27)
   const chains = tradingStrats.map(ts => {
-    const ss = scoringStrats.find(s => s.protocolId === ts.protocolId) || null;
     const proto = protocols.find(p => p.id === ts.protocolId) || null;
     const loopState = activeStrategies.find(a => a.id === ts.id);
-    return { trading: ts, scoring: ss, protocol: proto, loopState };
+    return { trading: ts, protocol: proto, loopState };
   });
 
   // Active chains first, then inactive
@@ -151,7 +143,7 @@ export default function AutomationOverviewPage() {
       <section className="ao-chains">
         <h2>Strategy Chains ({sortedChains.length})</h2>
         <p className="ao-hint">
-          Grouped by Trading Strategy → Scoring Strategy → Protocol.
+          Grouped by Trading Strategy → Protocol.
           Active strategies are in the automation loop.
         </p>
 
@@ -176,6 +168,8 @@ export default function AutomationOverviewPage() {
                   <div className="ao-chain-level-meta">
                     <span>{chain.trading.symbol} · {chain.trading.timeframe || '1h'}</span>
                     {chain.trading.mode && <span>{chain.trading.mode}</span>}
+                    {chain.trading.minComposite != null && <span>≥ {chain.trading.minComposite}</span>}
+                    {chain.trading.baseSize != null && <span>{chain.trading.baseSize} lots · SL {chain.trading.slPct}% · TP {chain.trading.tpPct}%</span>}
                     {chain.loopState?.lastSignal && (
                       <span className={`ao-signal ao-signal-${chain.loopState.lastSignal?.toLowerCase()}`}>
                         {chain.loopState.lastSignal}
@@ -184,33 +178,7 @@ export default function AutomationOverviewPage() {
                   </div>
                 </div>
 
-                {/* ── Scoring Strategy (child) ── */}
-                <div className="ao-chain-level ao-chain-scoring">
-                  <div className="ao-chain-level-head">
-                    <span className="ao-chain-arrow">├─</span>
-                    <StatusDot on={chain.scoring?.enabled} />
-                    <strong>{chain.scoring?.name || '—'}</strong>
-                    {chain.scoring?.enabled ? (
-                      <span className="ao-badge ao-badge-active">Active</span>
-                    ) : (
-                      <span className="ao-badge ao-badge-idle">Disabled</span>
-                    )}
-                    {chain.scoring?.id && <span className="ao-chain-id">SS: {chain.scoring.id.slice(0, 8)}</span>}
-                  </div>
-                  <div className="ao-chain-level-meta">
-                    {chain.scoring && (
-                      <>
-                        <span>Threshold: {chain.scoring.tradeThreshold || 0}</span>
-                        <span>Watchlist: {chain.scoring.watchlistName || '—'}</span>
-                        <span>Size: {chain.scoring.baseSize || '—'} lots</span>
-                        {chain.scoring.tradingEnabled === false && <span className="ao-warn">Trading OFF</span>}
-                      </>
-                    )}
-                    {!chain.scoring && <span className="ao-muted">No scoring strategy linked</span>}
-                  </div>
-                </div>
-
-                {/* ── Protocol (grandchild) ── */}
+                {/* ── Protocol (child) ── */}
                 <div className="ao-chain-level ao-chain-protocol">
                   <div className="ao-chain-level-head">
                     <span className="ao-chain-arrow">├─</span>

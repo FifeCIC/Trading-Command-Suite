@@ -13,10 +13,10 @@ import './settings-database.css';
 /** Table purpose descriptions — shown on hover */
 const TABLE_PURPOSES = {
   score:               'Every scoring event. Append-only log. strategyId=protocolId for protocol scores, strategy UUID for strategy scores. Used by runs API, directive impact, research.',
-  score_snapshot:      'Latest protocol-gated score per protocol+symbol. Used for rarity percentile computation (current score vs 1-year history). NOT filtered by Scoring Strategy gates.',
-  strategy:            'Legacy strategy definitions from WordPress era. Being migrated to TradingStrategy + ScoringStrategy.',
-  trading_strategy:    'Trading strategy configs: symbol, broker, SL/TP, position sizing. Linked to ScoringStrategy via scoringStrategyId FK.',
-  scoring_strategy:    'Scoring strategy configs: protocol, watchlist, thresholds, gates. Links protocol definitions to trading rules.',
+  score_snapshot:      'Latest protocol-gated score per protocol+symbol. Used for rarity percentile computation (current score vs 1-year history).',
+  strategy:            'Legacy strategy definitions from WordPress era. Being migrated to TradingStrategy.',
+  trading_strategy:    'Trading strategy configs: symbol, broker, SL/TP, position sizing, thresholds. The canonical loop source (2026-08-27); scoringStrategyId is a soft link for versioning only.',
+  scoring_strategy:    'Retired from the trading loop (2026-08-27). Kept for MetaStack versioning/performance (#295) — not read by the automation loop.',
   protocol:            'Protocol definitions with metadata (tradingStyle, directionMode, timeframes). Linked to directive groups.',
   protocol_directive_group: 'Directive groups within a protocol (technical, sentiment, risk). Each group has a weight and directive list.',
   protocol_directive_entry: 'Individual directives within a protocol group. Links directive IDs to groups.',

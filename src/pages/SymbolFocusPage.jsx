@@ -3,7 +3,7 @@
  * Route: /symbol/:ticker
  *
  * Shows the full pipeline for one symbol:
- * Protocols → Scoring Strategies → Trading Strategies → Live Activity → Trade Outcomes
+ * Protocols → Trading Strategies → Live Activity → Trade Outcomes
  * Only displays information if the symbol is included in an active protocol.
  * Live-updates via polling every 10 seconds.
  */
@@ -64,7 +64,7 @@ export default function SymbolFocusPage() {
     );
   }
 
-  const { protocols, scoringStrategies, tradingStrategies, recentDecisions, recentEvaluations } = data;
+  const { protocols, tradingStrategies, recentDecisions, recentEvaluations } = data;
 
   // ── Helpers ──
   const fmtCurrency = (v) => {
@@ -73,7 +73,6 @@ export default function SymbolFocusPage() {
   };
 
   const protocolList = Object.values(protocols || {});
-  const hasScoring = scoringStrategies?.length > 0;
   const hasTrading = tradingStrategies?.length > 0;
   const hasDecisions = recentDecisions?.length > 0;
   const hasEvaluations = recentEvaluations?.length > 0;
@@ -126,58 +125,6 @@ export default function SymbolFocusPage() {
                       </span>
                       <span>{p.tradingStyle || '—'}</span>
                       <span>{p.groupCount} directive groups</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </motion.section>
-
-          {/* Scoring Strategies */}
-          <motion.section className="sf-card" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-            <h2>🎯 Scoring Strategies ({scoringStrategies?.length || 0})</h2>
-            {!hasScoring ? (
-              <p className="sf-muted">No scoring strategies include this symbol's watchlist.</p>
-            ) : (
-              <div className="sf-strat-list">
-                {scoringStrategies.map((s) => (
-                  <div key={s.id} className={`sf-strat-item ${s.tradingEnabled ? 'sf-strat-trading' : ''}`}>
-                    <div className="sf-strat-head">
-                      <span className="sf-strat-name">{s.name}</span>
-                      <span className={`sf-mode-badge ${MODE_BADGES[s.mode]?.cls || ''}`}>
-                        {MODE_BADGES[s.mode]?.label || s.mode}
-                      </span>
-                      {s.tradingEnabled && <span className="sf-trading-badge">TRADING</span>}
-                    </div>
-                    <div className="sf-strat-details">
-                      <div className="sf-strat-detail">
-                        <span className="sf-detail-label">Protocol</span>
-                        <span className="sf-detail-val">{s.protocolId}</span>
-                      </div>
-                      {s.shortProtocolId && (
-                        <div className="sf-strat-detail">
-                          <span className="sf-detail-label">Short</span>
-                          <span className="sf-detail-val">{s.shortProtocolId}</span>
-                        </div>
-                      )}
-                      <div className="sf-strat-detail">
-                        <span className="sf-detail-label">Watchlist</span>
-                        <span className="sf-detail-val">{s.watchlistName}</span>
-                      </div>
-                      <div className="sf-strat-detail">
-                        <span className="sf-detail-label">Broker</span>
-                        <span className="sf-detail-val">{s.brokerId}</span>
-                      </div>
-                      <div className="sf-strat-detail">
-                        <span className="sf-detail-label">Threshold</span>
-                        <span className="sf-detail-val">{s.tradeThreshold}%</span>
-                      </div>
-                      <div className="sf-strat-detail">
-                        <span className="sf-detail-label">Status</span>
-                        <span className={`sf-detail-val ${s.enabled ? 'sf-ok' : 'sf-err'}`}>
-                          {s.enabled ? 'Enabled' : 'Disabled'}
-                        </span>
-                      </div>
                     </div>
                   </div>
                 ))}

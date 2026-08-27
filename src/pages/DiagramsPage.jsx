@@ -1196,11 +1196,10 @@ const DIAGRAMS = [
                 PS["ðŸ”´ SHORT Protocol<br/>e.g. built-in-short<br/>directionMode: SHORT_ONLY"]
             end
             D["ðŸ“‹ Watchlist<br/>What to trade"]
-            E["ðŸŽ¯ Scoring Strategy<br/>Thresholds + Risk Params<br/>shortProtocolId for dual-direction"]
-            F["ðŸ“Š Trading Strategy<br/>Execution Rules<br/>Auto-selects LONG vs SHORT"]
+            E["ðŸ“Š Trading Strategy<br/>Thresholds + Sizing + SL/TP<br/>shortProtocolId for dual-direction"]
             G["â­ Performance Rating<br/>â˜…â˜…â˜…â˜…â˜… per MetaStack"]
             D --> ProtocolPair
-            ProtocolPair --> E --> F --> G
+            ProtocolPair --> E --> G
         end
         C --> MS
     end
