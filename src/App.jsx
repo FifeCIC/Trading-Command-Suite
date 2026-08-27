@@ -51,7 +51,6 @@ import NewsIntelPage from './pages/NewsIntelPage';
 import PlatformComparisonsPage from './pages/PlatformComparisonsPage';
 import PluginTabSkeletonPage from './pages/PluginTabSkeletonPage';
 import TradingStrategiesPage from './pages/TradingStrategiesPage';
-import StrategyDashboardPage from './pages/StrategyDashboardPage';
 import StrategyComparisonPage from './pages/StrategyComparisonPage';
 import RiskControlsPage from './pages/RiskControlsPage';
 import CacheMonitorPage from './pages/CacheMonitorPage';
@@ -73,7 +72,6 @@ import OrderTestingPage from './pages/OrderTestingPage';
 import TradingTimelinePage from './pages/TradingTimelinePage';
 import SettingsPage from './pages/SettingsPage';
 import StrategiesPage from './pages/StrategiesPage';
-import StrategyBuilderPage from './pages/StrategyBuilderPage';
 import StrategyWizardPage from './pages/StrategyWizardPage';
 import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
 import SymbolPage from './pages/SymbolPage';
@@ -1099,6 +1097,7 @@ export default function App() {
           <Route path="/lab/scoring-debug-lab" element={<Navigate to="/lab/dual-protocol-inspector" replace />} />
           <Route path="/lab/meta-stack-explorer" element={<Navigate to="/status/meta-stack-explorer" replace />} />
           <Route path="/lab/meta-stack-pipeline" element={<Navigate to="/status/meta-stack-pipeline" replace />} />
+          <Route path="/planner/allocator" element={<Navigate to="/lab/allocator" replace />} />
           <Route path="/status/platform-api-management" element={<Navigate to="/status" replace />} />
           <Route path="/status/audit-log" element={<Navigate to="/status" replace />} />
           <Route path="/status/ai-logs" element={<Navigate to="/status" replace />} />

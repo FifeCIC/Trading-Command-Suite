@@ -4,7 +4,7 @@
  * Tabbed monitoring hub consolidating overview, comparison, and ladders.
  *
  * Tabs:
- *   Overview  — live metrics grid, strategy health cards (from StrategyDashboardPage)
+ *   Overview  — live metrics grid, strategy health cards (consolidated 2026-08-27)
  *   Compare   — P&L comparison across strategies (from StrategyComparisonPage)
  *   Ladders   — protocol-scored strategy rankings (from StrategyLaddersPage)
  *
@@ -375,7 +375,7 @@ export default function StrategyMonitorPage() {
                 ))}
               </div>
             ) : (
-              <EmptyState icon="📡" title="No signals yet" description="Signals appear when scoring strategies pass symbols through their gates. Run the scoring pipeline to populate." />
+              <EmptyState icon="📡" title="No signals yet" description="Signals appear when trading strategies pass their threshold checks. Run the scoring pipeline to populate." />
             )
           )}
         </motion.div>

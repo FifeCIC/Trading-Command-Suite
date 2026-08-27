@@ -186,7 +186,7 @@ export class ProtocolGatingController {
          * code registry (via ProtocolDbService.getAllCached()) and the DB
          * (strategy table). Before this fix, DB entries were pushed as
          * duplicates, causing duplicate React keys and double-counted
-         * protocols in the frontend (ProtocolsPage, CreateStrategyPage).
+         * protocols in the frontend (ProtocolsPage, StrategyCreatePage).
          *
          * Merge strategy: if the DB row has the same id as a code-registry
          * entry, overlay `active` and mark `source: 'database'`. Otherwise,

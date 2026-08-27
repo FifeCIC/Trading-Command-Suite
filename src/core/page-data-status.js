@@ -15,7 +15,7 @@ export const PAGE_DATA_STATUS = {
   'trading-strategies': { status: 'live', source: 'DB (seed data, promoted from Legacy + sortable columns #566)' },
   'strategies-index': { status: 'removed', note: 'Merged into strategy-monitor (#560, 2026-08-04)' },
   'strategy-monitor': { status: 'live', source: 'DB (tabbed hub: overview/compare/ladders, #504)' },
-  'strategy-builder': { status: 'live', source: 'Scoring strategy builder with groups + gate toggle + threshold per group (#559, #560)' },
+  'strategy-builder': { status: 'removed', note: 'Scoring-strategy layer retired from the trading loop (2026-08-27) — use Protocol Builder + Create Strategy' },
   'strategy-create': { status: 'live', source: 'Tabbed creation: form + wizard (#504)' },
   'mt5-trading': { status: 'live', source: 'MT5 Bridge' },
   'calculators': { status: 'mock', note: 'Client-side only' },

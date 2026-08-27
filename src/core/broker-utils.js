@@ -4,7 +4,7 @@
  * All broker metadata comes from GET /api/brokers (DB-backed).
  * No hardcoded broker maps in individual pages.
  *
- * @see src/pages/CreateStrategyPage.jsx
+ * @see src/pages/StrategyCreatePage.jsx
  * @see src/pages/StrategyCreatePage.jsx
  */
 

@@ -133,7 +133,7 @@ export default function GlobalAllocatorPage() {
           <span className="stat-value">{strategies.filter(s => s.active).length}</span>
         </div>
         <div className="stat-card">
-          <span className="stat-label">Scoring Strats</span>
+          <span className="stat-label">Scoring Protocols</span>
           <span className="stat-value">{scoringStrats.filter(s => s.enabled).length}</span>
         </div>
         <div className={`stat-card ${crossBrokerDupes.length > 0 ? 'stat-warn' : 'stat-ok'}`}>

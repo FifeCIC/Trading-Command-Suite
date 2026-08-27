@@ -41,8 +41,8 @@ export const VIEW_EXPLANATIONS = {
     'Enable/disable directives to tune what drives your scores.',
 
   'strategy-comparison':
-    'Side-by-side comparison of strategy performance. ' +
-    'Each strategy is a chain of protocols run against a symbol universe. ' +
+    'Side-by-side comparison of trading strategy performance. ' +
+    'Each trading strategy is one symbol scored by one protocol on one broker. ' +
     'Compare total trades, win rate, P&L, and drawdown to find the best-performing strategies. ' +
     'Click a strategy to see its full trade history and protocol breakdown.',
 

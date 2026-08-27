@@ -181,14 +181,14 @@ const PIPELINE = [
   { isMarker: true, type: 'sees-end', label: 'SEES End' },
   // ── Post-scoring: Strategy layers ──
   {
-    id: 'scoring-strategy', title: 'Scoring Strategy Rules', linkTo: '/trading/create-strategy', linkLabel: 'Create Strategy',
+    id: 'scoring-strategy', title: 'Trading Strategy Rules', linkTo: '/trading/strategy-create', linkLabel: 'Create Strategy',
     fn: 'AutomationLoopService.evaluateStrategy() → gate checks',
-    fnDesc: 'Active scoring strategies have additional rules beyond the raw protocol score. Gates can involve: directive-based strict gates (grouped directives that must all agree), trade threshold comparison (composite must exceed tradeThreshold), budget gate (daily loss limits), and mode-based filtering (manual/semi-auto/auto). A strategy can permit or block a trade independently of the signal.',
-    dbTable: 'scoring_strategy, automation_rule',
-    dbColumns: 'tradeThreshold, mode (manual|semi-auto|auto), baseSize, slPct, tpPct, maxPyramidTiers',
+    fnDesc: 'Active trading strategies carry rules beyond the raw protocol score: trade threshold comparison (composite must exceed minComposite), budget gate (daily loss limits), and mode-based filtering (manual/semi-auto/auto). A strategy can permit or block a trade independently of the signal. (The scoring_strategy layer was retired from the trading loop 2026-08-27 — its config now lives on the trading strategy.)',
+    dbTable: 'trading_strategy, automation_rule',
+    dbColumns: 'minComposite, mode (manual|semi-auto|auto), baseSize, slPct, tpPct, maxPyramidTiers',
     isComplex: true,
     subs: [
-      { id: 'trade-threshold', label: 'Trade Threshold', desc: 'Composite must be ≥ tradeThreshold (default 60) for the strategy to permit a trade.', color: '#3b82f6' },
+      { id: 'trade-threshold', label: 'Trade Threshold', desc: 'Composite must be ≥ minComposite (default 65) for the strategy to permit a trade.', color: '#3b82f6' },
       { id: 'budget-gate-strat', label: 'Budget Gate (Strategy)', desc: 'Daily loss limit check — if cumulative P&L exceeds budget, strategy blocks all new trades.', color: '#ef4444' },
       { id: 'mode-gate', label: 'Mode Gate', desc: 'manual = user must approve, semi-auto = auto-score + manual execute, auto = full automation', color: '#f59e0b' },
       { id: 'directive-gates', label: 'Directive Group Gates', desc: 'Certain grouped directives act as strict gates — all must agree on direction for trade permission.', color: '#8b5cf6' },

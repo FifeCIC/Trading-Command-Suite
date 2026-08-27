@@ -18,7 +18,7 @@ const LANES = [
   { id: 'watchlists', label: 'Watchlists', color: '#3b82f6', x: 20, w: 200 },
   { id: 'protocols', label: 'Protocols', color: '#22c55e', x: 240, w: 200 },
   { id: 'sees', label: 'SEES / Scoring', color: '#8b5cf6', x: 460, w: 200 },
-  { id: 'scoring-strategies', label: 'Scoring Strategies', color: '#f59e0b', x: 680, w: 220 },
+  { id: 'scoring-strategies', label: 'Strategy Binding', color: '#f59e0b', x: 680, w: 220 },
   { id: 'trading-strategies', label: 'Trading Strategies', color: '#ef4444', x: 920, w: 220 },
   { id: 'execution', label: 'Trading Bot', color: '#06b6d4', x: 1160, w: 200 },
 ];
@@ -99,21 +99,21 @@ const NODES = [
     tables: ['Score (strategyId, symbolId, value, breakdown)'],
   },
 
-  // ── Scoring Strategies ──
+  // ── Strategy Binding (scoring-strategy layer retired 2026-08-27) ──
   {
     id: 'ss-create', lane: 'scoring-strategies', y: 40, status: 'implemented', critical: 6,
-    label: 'Bind Scoring Strategy', subtype: 'Protocol × watchlist × broker × threshold',
-    action: '0 active today — enable at least one strategy or the loop has nothing to trade',
-    files: ['src/pages/StrategyBuilderPage.jsx', 'nest/src/modules/scoring/scoring-strategy.controller.ts'],
-    endpoints: ['POST /api/scoring/strategies'],
-    tables: ['scoring_strategy'],
+    label: 'Bind Trading Strategy', subtype: 'Protocol × symbol × broker × threshold',
+    action: '6 active FX session strategies today',
+    files: ['src/pages/StrategyCreatePage.jsx', 'nest/src/modules/trading/trading-strategy.service.ts'],
+    endpoints: ['POST /api/trading/strategies'],
+    tables: ['trading_strategy'],
   },
   {
     id: 'ss-gate', lane: 'scoring-strategies', y: 160, status: 'implemented', critical: 7,
-    label: 'Threshold + Direction', subtype: 'tradeThreshold vs composite, LONG vs SHORT',
-    desc: 'Automation loop applies tradeThreshold/minComposite and compares the LONG vs SHORT protocol composite to pick the side. Directive-level "gates" are research only (#657/#658) — hard YES/NO after scoring, never score maths.',
+    label: 'Threshold + Direction', subtype: 'minComposite vs composite, LONG vs SHORT',
+    desc: 'Automation loop applies trading-strategy minComposite and compares the LONG vs SHORT protocol composite to pick the side. Directive-level "gates" are research only (#657/#658) — hard YES/NO after scoring, never score maths.',
     files: ['nest/src/modules/automation/automation-loop.service.ts (compareProtocolPair)'],
-    tables: ['scoring_strategy (tradeThreshold, minComposite)'],
+    tables: ['trading_strategy (minComposite)'],
   },
   {
     id: 'ss-signal', lane: 'scoring-strategies', y: 280, status: 'implemented',
@@ -124,7 +124,7 @@ const NODES = [
   {
     id: 'ss-advanced', lane: 'scoring-strategies', y: 390, status: 'planned',
     label: 'Advanced SEES', subtype: 'Additional directive layers',
-    desc: 'Scoring strategies may include additional directive runs (news, sentiment, earnings) depending on sophistication.',
+    desc: 'Trading strategies may include additional directive runs (news, sentiment, earnings) depending on sophistication.',
   },
 
   // ── Trading Strategies ──
@@ -211,7 +211,7 @@ export default function MetaStackPipelinePage() {
             </PageInfoPopover>
           </h1>
           <p className="msp-subtitle">
-            Every numbered step exists in code today. The two amber steps are configuration, not code: enable a scoring strategy, and opt in to trading. Directive-level gates are research (#657/#658).
+            Every numbered step exists in code today. The two amber steps are configuration, not code: bind a trading strategy, and opt in to trading. Directive-level gates are research (#657/#658).
             {' '}<a href="/lab/pipeline-graph-lab" style={{ color: 'var(--accent)', fontSize: '0.75rem', textDecoration: 'none' }}>→ Detailed Node View</a>
             {' '}<a href="/lab/diagrams" style={{ color: 'var(--ink-soft)', fontSize: '0.75rem', textDecoration: 'none' }}>→ Conceptual Diagrams</a>
           </p>

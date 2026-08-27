@@ -109,7 +109,6 @@ export const NAV_TREE = {
       { id: 'symbols-ladder', label: 'Symbols Ladder', icon: '📈' },
       { id: 'singles-monitor', label: 'Singles Monitor', icon: '🖥' },
       { id: 'scoring-activity-logs', label: 'Scoring Activity Logs', icon: '▤' },
-      { id: 'strategy-builder', label: 'Strategy Builder', icon: '⚙' },
     ],
   },
   // ── Signals area (/signals/ prefix) ──
@@ -127,14 +126,12 @@ export const NAV_TREE = {
       { id: 'strategy-create', label: 'Create Strategy', icon: '⊞' },
       { id: 'positions-monitor', label: 'Positions Monitor', icon: '◈' },
       { id: 'trading-strategies', label: 'Trading Strategies', icon: '◆' },
+      { id: 'strategy-comparison', label: 'Trading Strategy Comparison', icon: '⚖' },
       { id: 'trading-plans', label: 'Trading Plans', icon: '📋' },
       { id: 'exit-signals', label: 'Exit Signals', icon: '🚪' },
       { kind: 'section-header', id: 'legacy-strategies', label: '— Legacy Strategy Pages —', icon: '' },
       { id: 'market-context', label: 'Market Context', icon: '🌐' },
       { id: 'strategy-library', label: 'Strategy Library', icon: '📚' },
-      { id: 'strategy-dashboard', label: 'Strategy Dashboard (old)', icon: '📊' },
-      { id: 'create-strategy', label: 'Create Strategy (old)', icon: '⊞' },
-      { id: 'strategy-comparison', label: 'Strategy Comparison (old)', icon: '⚖' },
       { id: 'performance-lab', label: 'Trading Performance', icon: '📊' },
       { id: 'trade-journal', label: 'Trade Journal', icon: '▤' },
       { id: 'calculators', label: 'Calculators', icon: '⊞' },
@@ -207,6 +204,7 @@ export const NAV_TREE = {
       { id: 'theme-lab-popover', label: 'Popover API', icon: '◉' },
       // ── Prototypes ──
       { id: '_divider_prototypes', label: 'Prototypes', icon: '🧪', kind: 'section-header' },
+      { id: 'allocator', label: 'Strategy Allocator', icon: '📊' },
       { id: 'ab-testing', label: 'A/B Protocol Testing', icon: '⚖️' },
       { id: 'snapshot-replay', label: 'Snapshot Replay', icon: '⏮' },
       { id: 'charts-lab', label: 'Charts Lab', icon: '📊' },
@@ -226,7 +224,6 @@ export const NAV_TREE = {
   planner: {
     label: 'Planner',
     views: [
-      { id: 'allocator', label: 'Strategy Allocator', icon: '📊' },
       { id: 'personal-finances', label: 'Personal Finances', icon: '💰' },
       { id: 'trading-styles', label: 'Trading Styles', icon: '🎨' },
       { id: 'objectives', label: 'Objectives', icon: '🎯' },

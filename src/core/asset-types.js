@@ -7,7 +7,7 @@
  *
  * DO NOT copy this function into individual pages. Import from here.
  *
- * @see src/pages/CreateStrategyPage.jsx
+ * @see src/pages/StrategyCreatePage.jsx
  * @see src/pages/StrategyCreatePage.jsx
  */
 

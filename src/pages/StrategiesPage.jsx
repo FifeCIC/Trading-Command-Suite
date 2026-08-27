@@ -78,7 +78,7 @@ export default function StrategiesPage() {
       <header className="strategies-header">
         <h1>Strategy Management
           <PageInfoPopover>
-            View available scoring strategies, inspect directive weights and
+            View available trading strategies, inspect directive weights and
           thresholds, and select the active strategy. Strategy data is
            static / seed data for MVP.
           </PageInfoPopover>

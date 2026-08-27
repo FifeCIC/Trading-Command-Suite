@@ -65,14 +65,8 @@ const VIEW_META = {
     css: 'src/pages/trading-strategies.css',
     api: ['GET /api/trading/strategies', 'GET /api/portfolio'],
   },
-  '/trading/create-strategy': {
-    label: 'Create Strategy',
-    file: 'src/pages/CreateStrategyPage.jsx',
-    css: 'src/pages/create-strategy.css',
-    api: ['POST /api/trading/strategies', 'GET /api/scoring/gated/protocols', 'GET /api/watchlists'],
-  },
   '/trading/strategy-comparison': {
-    label: 'Strategy Comparison',
+    label: 'Trading Strategy Comparison',
     file: 'src/pages/StrategyComparisonPage.jsx',
     css: 'src/pages/strategy-comparison.css',
     api: ['GET /api/trading/strategy-comparison'],
@@ -118,12 +112,6 @@ const VIEW_META = {
     file: 'src/pages/CreateProtocolsPage.jsx',
     css: 'src/pages/create-protocols.css',
     api: ['GET /api/directives', 'GET /api/watchlists', 'POST /api/scoring/protocols'],
-  },
-  '/scoring/strategy-builder': {
-    label: 'Strategy Builder',
-    file: 'src/pages/StrategyBuilderPage.jsx',
-    css: 'src/pages/create-protocols.css',
-    api: ['GET /api/scoring/protocols', 'POST /api/scoring/strategies'],
   },
   '/trading/trade-journal': {
     label: 'Trade Journal',
@@ -617,7 +605,7 @@ const VIEW_META = {
     css: 'src/pages/objectives.css',
     api: [],
   },
-  '/planner/allocator': {
+  '/lab/allocator': {
     label: 'Strategy Allocator',
     file: 'src/pages/GlobalAllocatorPage.jsx',
     css: 'src/pages/global-allocator.css',

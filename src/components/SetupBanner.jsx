@@ -40,9 +40,9 @@ const STEPS = [
   {
     id: 'hasStrategies',
     icon: '⚙',
-    label: 'Create Scoring Strategy',
-    desc: 'Configure gates and thresholds',
-    href: '/scoring/strategy-builder',
+    label: 'Create Trading Strategy',
+    desc: 'Bind a protocol to a symbol with thresholds and sizing',
+    href: '/trading/strategy-create',
   },
 ];
 

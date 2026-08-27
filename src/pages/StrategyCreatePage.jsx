@@ -4,7 +4,7 @@
  * Tabbed creation consolidating form-based and wizard-based flows.
  *
  * Tabs:
- *   Form    — structured form with broker compatibility, risk defaults (from CreateStrategyPage)
+ *   Form    — structured form with broker compatibility, risk defaults (consolidated 2026-08-27)
  *   Wizard  — step-by-step guided creation (from StrategyWizardPage)
  *
  * Data: /api/scoring/gated/protocols, /api/watchlists, /api/trading/strategies
@@ -183,7 +183,7 @@ export default function StrategyCreatePage() {
         <div>
           <h1>Create Strategy
           <PageInfoPopover>
-            Form or wizard — configure a new trading or scoring strategy
+            Form or wizard — configure a new trading strategy
           </PageInfoPopover>
         </h1>
         </div>

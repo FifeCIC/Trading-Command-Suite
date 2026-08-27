@@ -5,7 +5,7 @@ import { PrismaService } from '../../database/prisma.service';
  * BrokerConfigService — persisted broker capabilities.
  *
  * Replaces the hardcoded PROTOCOL_BROKER_MAP that was duplicated across
- * CreateStrategyPage.jsx and StrategyCreatePage.jsx.
+ * StrategyCreatePage.jsx.
  *
  * On module init, seeds the broker_config table with default values if empty.
  */

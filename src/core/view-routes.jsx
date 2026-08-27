@@ -15,7 +15,6 @@
 
 // ── Trading ──
 import TradingStrategiesPage from '../pages/TradingStrategiesPage.jsx';
-import StrategyDashboardPage from '../pages/StrategyDashboardPage.jsx';
 import StrategyComparisonPage from '../pages/StrategyComparisonPage.jsx';
 import StrategyMonitorPage from '../pages/StrategyMonitorPage.jsx';
 import StrategyCreatePage from '../pages/StrategyCreatePage.jsx';
@@ -29,7 +28,6 @@ import PortfolioPage from '../pages/PortfolioPage.jsx';
 import PortfolioEventsPage from '../pages/PortfolioEventsPage.jsx';
 import TradeHistoryPage from '../pages/TradeHistoryPage.jsx';
 import PositionsMonitorPage from '../pages/PositionsMonitorPage.jsx';
-import CreateStrategyPage from '../pages/CreateStrategyPage.jsx';
 import StrategyLibraryPage from '../pages/StrategyLibraryPage.jsx';
 
 // ── Scoring ──
@@ -49,7 +47,6 @@ import SymbolsLadderPage from '../pages/SymbolsLadderPage.jsx';
 import ProtocolsPerformancePage from '../pages/ProtocolsPerformancePage.jsx';
 import MetaStackPipelinePage from '../pages/MetaStackPipelinePage.jsx';
 import CreateProtocolsPage from '../pages/CreateProtocolsPage.jsx';
-import StrategyBuilderPage from '../pages/StrategyBuilderPage.jsx';
 import StrategyWizardPage from '../pages/StrategyWizardPage.jsx';
 
 // ── Automation ──
@@ -208,7 +205,7 @@ export const VIEW_COMPONENTS = {
   'portfolio-events': PortfolioEventsPage,
   'trade-history': TradeHistoryPage,
   'positions-monitor': PositionsMonitorPage,
-  'create-strategy': CreateStrategyPage,
+  'create-strategy': StrategyCreatePage,
   'strategy-library': StrategyLibraryPage,
   'mt5-trading': Mt5TradingPage,
   'mt5-demo-trading': Mt5TradingPage,
@@ -231,7 +228,6 @@ export const VIEW_COMPONENTS = {
   'meta-stack-pipeline': MetaStackPipelinePage,
   'create-protocols': CreateProtocolsPage,
   'protocol-builder': CreateProtocolsPage,
-  'strategy-builder': StrategyBuilderPage,
   'strategy-wizard': StrategyWizardPage,
   'scoring-overview': ScoringOverviewPage,
   'signals-overview': SignalsOverviewPage,
