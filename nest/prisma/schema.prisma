@@ -2028,16 +2028,43 @@ model AbTest {
   @@map("ab_test")
 }
 
-// Signal Dismissal (#684) — Signals v1: hide a signal for N hours.
+// Signal Dismissal (#684, #693) — Signals v1: hide a signal for N hours.
 // Keyed on symbol+protocol so dismissals survive reloads and re-scoring.
+// Strength columns capture what the user saw at dismissal time — the
+// calibration input for the Signals feedback loop (#693).
 model SignalDismissal {
-  id             String   @id @default(uuid()) @db.VarChar(36)
-  symbol         String   @db.VarChar(20)
-  protocolId     String   @db.VarChar(50) // 'any' when no protocol specified
-  dismissedUntil DateTime
-  createdAt      DateTime @default(now())
+  id               String   @id @default(uuid()) @db.VarChar(36)
+  symbol           String   @db.VarChar(20)
+  protocolId       String   @db.VarChar(50) // 'any' when no protocol specified
+  dismissedUntil   DateTime
+  combinedStrength Int?
+  signalPct        Int?
+  opportunityPct   Int?
+  dismissCount     Int      @default(1)
+  createdAt        DateTime @default(now())
 
   @@unique([symbol, protocolId])
   @@index([dismissedUntil])
   @@map("signal_dismissal")
+}
+
+// Signal Rank Snapshot (#693) — Signals feedback loop: one row per visible
+// best-of card per run (throttled to once per hour). Persists the rank and
+// strength so forward outcomes can validate the combined-strength ranking.
+model SignalRankSnapshot {
+  id               String   @id @default(uuid()) @db.VarChar(36)
+  symbol           String   @db.VarChar(20)
+  protocolId       String   @db.VarChar(50)
+  direction        String   @db.VarChar(10)
+  rank             Int
+  combinedStrength Int
+  signalPct        Int?
+  opportunityPct   Int?
+  confidence       Int?
+  scoreId          String?  @db.VarChar(36)
+  runAt            DateTime @default(now())
+
+  @@index([runAt])
+  @@index([symbol, protocolId])
+  @@map("signal_rank_snapshot")
 }

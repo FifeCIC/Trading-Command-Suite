@@ -17,8 +17,18 @@ export function fetchSignalDismissals() {
 }
 
 /** POST /api/signals/dismiss — hide a signal for N hours (default 1). */
-export function dismissSignal({ symbol, protocolId, hours = 1 }) {
-  return apiPost('/api/signals/dismiss', { symbol, protocolId, hours });
+export function dismissSignal({ symbol, protocolId, hours = 1, strengths }) {
+  return apiPost('/api/signals/dismiss', {
+    symbol,
+    protocolId,
+    hours,
+    ...(strengths || {}),
+  });
+}
+
+/** GET /api/signals/analytics — feedback-loop observability (#693). */
+export function fetchSignalAnalytics() {
+  return apiGet('/api/signals/analytics');
 }
 
 /** GET /api/signals/:id/action — bot-action state (none | pending | filled). */

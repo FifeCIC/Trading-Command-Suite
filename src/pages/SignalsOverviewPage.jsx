@@ -28,6 +28,7 @@ import { timeAgo } from '../core/format-utils';
 import {
   fetchBestSignals,
   fetchSignalDismissals,
+  fetchSignalAnalytics,
   dismissSignal,
   fetchSignalAction,
   tradeSignal,
@@ -88,7 +89,16 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
   });
 
   const dismissMutation = useMutation({
-    mutationFn: () => dismissSignal({ symbol: envelope.symbol, protocolId: envelope.protocolId, hours: dismissHours }),
+    mutationFn: () => dismissSignal({
+      symbol: envelope.symbol,
+      protocolId: envelope.protocolId,
+      hours: dismissHours,
+      strengths: {
+        combinedStrength: envelope.combinedStrength,
+        signalPct: envelope.signalPct,
+        opportunityPct: envelope.opportunityPct,
+      },
+    }),
     onSuccess: () => {
       setResult({ type: 'dismissed', text: `Dismissed for ${dismissHours}h` });
       onDismissed();
@@ -271,6 +281,116 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
   );
 }
 
+/**
+ * Signal Loop panel (#693) — non-executive feedback-loop observability.
+ * Dismissal analytics, real-trade outcomes, and rank validation. Read-only:
+ * nothing on this panel changes trading behaviour.
+ */
+function SignalLoopPanel({ data, loading, error }) {
+  if (loading && !data) {
+    return (
+      <section className="sig-loop">
+        <details>
+          <summary>↺ Signal feedback loop</summary>
+          <p className="sig-empty-sub">Loading…</p>
+        </details>
+      </section>
+    );
+  }
+  if (error && !data) {
+    return (
+      <section className="sig-loop">
+        <details>
+          <summary>↺ Signal feedback loop</summary>
+          <p className="sig-empty-sub">Analytics unavailable.</p>
+        </details>
+      </section>
+    );
+  }
+  if (!data) return null;
+
+  const { dismissals, outcomes, ranks } = data;
+  const winRate = outcomes.winRate;
+
+  return (
+    <section className="sig-loop">
+      <details>
+        <summary>
+          ↺ Signal feedback loop <span className="sig-loop-sub">observability — nothing here changes trading</span>
+        </summary>
+        <div className="sig-loop-body">
+          <div className="sig-loop-stats">
+            <div className="sig-loop-stat">
+              <strong>{dismissals.total}</strong>
+              <em>Dismissals ({dismissals.active} active)</em>
+            </div>
+            <div className="sig-loop-stat">
+              <strong>{outcomes.traded}</strong>
+              <em>Signal trades ({outcomes.open} open)</em>
+            </div>
+            <div className="sig-loop-stat">
+              <strong>{winRate != null ? `${winRate}%` : '—'}</strong>
+              <em>Closed win rate ({outcomes.won}W / {outcomes.lost}L)</em>
+            </div>
+            <div className="sig-loop-stat">
+              <strong>{ranks.avgRankTraded ?? '—'}</strong>
+              <em>Avg rank traded{ranks.avgRankAll != null ? ` vs all ${ranks.avgRankAll}` : ''}</em>
+            </div>
+          </div>
+
+          <div className="sig-loop-cols">
+            <div className="sig-loop-col">
+              <h3>Top dismissed protocols</h3>
+              {dismissals.byProtocol.length === 0 && <p className="sig-empty-sub">No dismissals recorded yet.</p>}
+              <table className="sig-loop-table">
+                <tbody>
+                  {dismissals.byProtocol.map((r) => (
+                    <tr key={r.protocolId}>
+                      <td title={r.protocolId}>{r.protocolId}</td>
+                      <td className="sig-loop-num">{r.count}</td>
+                      <td className="sig-loop-num dim">{r.avgStrength != null ? `avg ${r.avgStrength}` : ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {dismissals.bands.length > 0 && (
+                <div className="sig-loop-bands">
+                  {dismissals.bands.map((b) => (
+                    <span key={b.band} className="sig-loop-chip" title="Dismissals by combined strength at dismissal time">
+                      {b.band}: {b.count}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="sig-loop-col">
+              <h3>Signal trades by protocol</h3>
+              {outcomes.byProtocol.length === 0 && <p className="sig-empty-sub">No signal trades recorded yet.</p>}
+              <table className="sig-loop-table">
+                <tbody>
+                  {outcomes.byProtocol.map((r) => (
+                    <tr key={r.protocolId}>
+                      <td title={r.protocolId}>{r.protocolId}</td>
+                      <td className="sig-loop-num">{r.count}</td>
+                      <td className="sig-loop-num dim">{r.closed > 0 ? `${r.won}/${r.closed} won` : ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="sig-loop-note">
+                {ranks.snapshots > 0
+                  ? `${ranks.snapshots} rank snapshots collected (hourly). Traded cards' avg rank vs all cards validates the 0.5/0.5 combined-strength weighting.`
+                  : 'Rank snapshots are collected hourly — first validation data appears after an hour.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </details>
+    </section>
+  );
+}
+
 export default function SignalsOverviewPage() {
   const queryClient = useQueryClient();
   const [showDismissed, setShowDismissed] = useState(false);
@@ -287,6 +407,13 @@ export default function SignalsOverviewPage() {
     queryFn: fetchSignalDismissals,
     refetchInterval: REFRESH_MS,
     enabled: showDismissed,
+  });
+
+  // Feedback-loop observability (#693) — non-executive analytics.
+  const analyticsQuery = useQuery({
+    queryKey: ['signals-analytics'],
+    queryFn: fetchSignalAnalytics,
+    refetchInterval: 5 * REFRESH_MS,
   });
 
   const refresh = () => {
@@ -374,6 +501,12 @@ export default function SignalsOverviewPage() {
           ))}
         </section>
       )}
+
+      <SignalLoopPanel
+        data={analyticsQuery.data}
+        loading={analyticsQuery.isLoading}
+        error={analyticsQuery.isError}
+      />
 
       <div className="sig-links">
         <Link to="/scoring/symbols-ladder" className="sig-link">View the full Symbols Ladder (Scoring)</Link>

@@ -776,6 +776,33 @@ export class SignalEnvelopeService {
       .filter(e => !dismissed.has(`${e.symbol}|${e.protocolId}`))
       .sort((a, b) => b.combinedStrength - a.combinedStrength);
 
+    // ── Rank snapshot (#693) — hourly throttle. Persists the visible ranking so
+    // forward outcomes can validate combinedStrength without paper assumptions. ──
+    try {
+      const last: any[] = await (this.prisma as any).$queryRawUnsafe(
+        'SELECT MAX(runAt) AS lastRun FROM signal_rank_snapshot',
+      );
+      const lastRun = last?.[0]?.lastRun;
+      if (!lastRun || Date.now() - new Date(lastRun).getTime() >= 60 * 60_000) {
+        await (this.prisma as any).signalRankSnapshot.createMany({
+          data: visible.map((e, i) => ({
+            symbol: e.symbol,
+            protocolId: e.protocolId ?? 'any',
+            direction: e.directionMode === 'SHORT_ONLY' ? 'SHORT' : 'LONG',
+            rank: i + 1,
+            combinedStrength: Math.round(e.combinedStrength || 0),
+            signalPct: e.signalPct != null ? Math.round(e.signalPct) : null,
+            opportunityPct: e.opportunityPct != null ? Math.round(e.opportunityPct) : null,
+            confidence: e.confidence != null ? Math.round(e.confidence) : null,
+            scoreId: e.scoreId ?? null,
+          })),
+        });
+        this.logger.log(`Rank snapshot persisted: ${visible.length} cards`);
+      }
+    } catch (err) {
+      this.logger.warn(`Rank snapshot failed: ${(err as Error).message}`);
+    }
+
     const buyCount = visible.filter(e => e.signal.startsWith('BUY')).length;
     const sellCount = visible.filter(e => e.signal.startsWith('SELL')).length;
 
@@ -792,11 +819,15 @@ export class SignalEnvelopeService {
   /**
    * Dismiss a signal for `hours` (default 1). Keyed on symbol+protocol so a
    * dismissal survives reloads and re-scoring runs (#684).
+   *
+   * Strength fields (#693) capture what the user saw at dismissal time —
+   * stored for dismissal analytics and threshold calibration.
    */
   async dismissSignal(
     symbol: string,
     protocolId: string | undefined,
     hours = 1,
+    strengths?: { combinedStrength?: number; signalPct?: number; opportunityPct?: number },
   ): Promise<{ symbol: string; protocolId: string; dismissedUntil: string }> {
     const cleanSymbol = symbol.toUpperCase();
     const pid = protocolId || 'any';
@@ -805,8 +836,21 @@ export class SignalEnvelopeService {
     try {
       await (this.prisma as any).signalDismissal.upsert({
         where: { symbol_protocolId: { symbol: cleanSymbol, protocolId: pid } },
-        create: { symbol: cleanSymbol, protocolId: pid, dismissedUntil },
-        update: { dismissedUntil },
+        create: {
+          symbol: cleanSymbol,
+          protocolId: pid,
+          dismissedUntil,
+          combinedStrength: strengths?.combinedStrength ?? null,
+          signalPct: strengths?.signalPct ?? null,
+          opportunityPct: strengths?.opportunityPct ?? null,
+        },
+        update: {
+          dismissedUntil,
+          combinedStrength: strengths?.combinedStrength ?? undefined,
+          signalPct: strengths?.signalPct ?? undefined,
+          opportunityPct: strengths?.opportunityPct ?? undefined,
+          dismissCount: { increment: 1 },
+        },
       });
     } catch (err) {
       this.logger.warn(`Dismiss failed for ${cleanSymbol}/${pid}: ${(err as Error).message}`);
@@ -830,6 +874,131 @@ export class SignalEnvelopeService {
     } catch {
       return [];
     }
+  }
+
+  /**
+   * GET /api/signals/analytics (#693)
+   *
+   * Non-executive feedback-loop observability:
+   *   - dismissal analytics (totals, per protocol, per strength band)
+   *   - forward outcomes correlated against REAL trades (source='signals')
+   *   - rank validation: latest snapshot rank of traded symbols vs all symbols
+   *
+   * Observability only — no auto-trading changes are driven by this data yet.
+   */
+  async getAnalytics() {
+    const q = async (sql: string): Promise<any[]> => {
+      try {
+        return (await (this.prisma as any).$queryRawUnsafe(sql)) as any[];
+      } catch (err) {
+        this.logger.warn(`analytics query failed: ${(err as Error).message}`);
+        return [];
+      }
+    };
+    const first = (rows: any[]) => rows?.[0] ?? {};
+
+    const [
+      dSummary,
+      dByProtocol,
+      dBands,
+      oSummary,
+      oByProtocol,
+      rankAll,
+      rankTraded,
+    ] = await Promise.all([
+      q(`SELECT CAST(COUNT(*) AS SIGNED) AS total,
+                CAST(SUM(dismissedUntil > NOW()) AS SIGNED) AS active,
+                CAST(SUM(combinedStrength IS NOT NULL) AS SIGNED) AS withStrength
+         FROM signal_dismissal`),
+      q(`SELECT protocolId,
+                CAST(SUM(dismissCount) AS SIGNED) AS n,
+                CAST(ROUND(AVG(combinedStrength)) AS SIGNED) AS avgStrength
+         FROM signal_dismissal
+         GROUP BY protocolId
+         ORDER BY n DESC LIMIT 8`),
+      q(`SELECT CASE
+                  WHEN combinedStrength < 50 THEN '0-49'
+                  WHEN combinedStrength < 60 THEN '50-59'
+                  WHEN combinedStrength < 70 THEN '60-69'
+                  ELSE '70+'
+                END AS band,
+                CAST(COUNT(*) AS SIGNED) AS n
+         FROM signal_dismissal
+         WHERE combinedStrength IS NOT NULL
+         GROUP BY band`),
+      q(`SELECT CAST(COUNT(*) AS SIGNED) AS traded,
+                CAST(SUM(status = 'open') AS SIGNED) AS openCount,
+                CAST(SUM(status <> 'open') AS SIGNED) AS closedCount,
+                CAST(SUM(status <> 'open' AND pnl > 0) AS SIGNED) AS won,
+                CAST(SUM(status <> 'open' AND pnl <= 0) AS SIGNED) AS lost
+         FROM trade
+         WHERE source = 'signals'`),
+      q(`SELECT scoringStrategyId AS protocolId,
+                CAST(COUNT(*) AS SIGNED) AS n,
+                CAST(SUM(status <> 'open') AS SIGNED) AS closed,
+                CAST(SUM(status <> 'open' AND pnl > 0) AS SIGNED) AS won
+         FROM trade
+         WHERE source = 'signals'
+         GROUP BY scoringStrategyId
+         ORDER BY n DESC LIMIT 8`),
+      q(`SELECT CAST(COUNT(*) AS SIGNED) AS snapshots,
+                CAST(ROUND(AVG(rn)) AS SIGNED) AS avgRankAll
+         FROM (
+           SELECT s1.\`rank\` AS rn FROM signal_rank_snapshot s1
+           JOIN (SELECT symbol, direction, MAX(runAt) AS maxRun
+                 FROM signal_rank_snapshot GROUP BY symbol, direction) s2
+             ON s1.symbol = s2.symbol AND s1.direction = s2.direction AND s1.runAt = s2.maxRun
+         ) x`),
+      q(`SELECT CAST(ROUND(AVG(rn)) AS SIGNED) AS avgRankTraded,
+                CAST(COUNT(*) AS SIGNED) AS tradedSymbols
+         FROM (
+           SELECT s1.\`rank\` AS rn FROM signal_rank_snapshot s1
+           JOIN (SELECT symbol, direction, MAX(runAt) AS maxRun
+                 FROM signal_rank_snapshot GROUP BY symbol, direction) s2
+             ON s1.symbol = s2.symbol AND s1.direction = s2.direction AND s1.runAt = s2.maxRun
+           WHERE s1.symbol IN (SELECT DISTINCT symbol FROM trade WHERE source = 'signals')
+         ) x`),
+    ]);
+
+    const o = first(oSummary);
+    const closed = Number(o.closedCount ?? 0);
+    const won = Number(o.won ?? 0);
+
+    return {
+      generatedAt: new Date().toISOString(),
+      mode: 'observability',
+      dismissals: {
+        total: Number(first(dSummary).total ?? 0),
+        active: Number(first(dSummary).active ?? 0),
+        withStrength: Number(first(dSummary).withStrength ?? 0),
+        byProtocol: dByProtocol.map((r: any) => ({
+          protocolId: r.protocolId,
+          count: Number(r.n ?? 0),
+          avgStrength: r.avgStrength != null ? Number(r.avgStrength) : null,
+        })),
+        bands: dBands.map((r: any) => ({ band: r.band, count: Number(r.n ?? 0) })),
+      },
+      outcomes: {
+        traded: Number(o.traded ?? 0),
+        open: Number(o.openCount ?? 0),
+        closed,
+        won,
+        lost: Number(o.lost ?? 0),
+        winRate: closed > 0 ? Math.round((won / closed) * 100) : null,
+        byProtocol: oByProtocol.map((r: any) => ({
+          protocolId: r.protocolId,
+          count: Number(r.n ?? 0),
+          closed: Number(r.closed ?? 0),
+          won: Number(r.won ?? 0),
+        })),
+      },
+      ranks: {
+        snapshots: Number(first(rankAll).snapshots ?? 0),
+        avgRankAll: first(rankAll).avgRankAll != null ? Number(first(rankAll).avgRankAll) : null,
+        avgRankTraded: first(rankTraded).avgRankTraded != null ? Number(first(rankTraded).avgRankTraded) : null,
+        tradedSymbols: Number(first(rankTraded).tradedSymbols ?? 0),
+      },
+    };
   }
 
   /**

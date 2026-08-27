@@ -149,6 +149,17 @@ export class SignalsController {
   }
 
   /**
+   * GET /api/signals/analytics (#693)
+   *
+   * Non-executive feedback-loop observability: dismissal analytics, forward
+   * outcomes correlated against real trades, and rank validation.
+   */
+  @Get('analytics')
+  async getAnalytics() {
+    return this.envelopeService.getAnalytics();
+  }
+
+  /**
    * GET /api/signals/dismissals (#684)
    *
    * Active dismissals — powers the "show dismissed" toggle.
@@ -162,6 +173,7 @@ export class SignalsController {
    * POST /api/signals/dismiss (#684)
    *
    * Hide a signal for N hours (default 1). Keyed on symbol + protocolId.
+   * Strength fields are stored for the #693 feedback loop.
    */
   @Post('dismiss')
   async dismiss(@Body() body: DismissSignalDto) {
@@ -169,6 +181,11 @@ export class SignalsController {
       body.symbol,
       body.protocolId,
       body.hours ?? 1,
+      {
+        combinedStrength: body.combinedStrength,
+        signalPct: body.signalPct,
+        opportunityPct: body.opportunityPct,
+      },
     );
   }
 

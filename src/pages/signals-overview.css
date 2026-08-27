@@ -245,6 +245,75 @@
 .sig-opp-btn--plan:hover { background: var(--accent-dim, #1a3350); }
 .sig-opp-feedback a { color: var(--accent, #4d94ff); text-decoration: underline; }
 
+/* Signal feedback loop (#693) — non-executive observability panel */
+.sig-loop {
+  margin-top: 1rem;
+  border: 1px solid var(--line, #2a2a2a);
+  border-radius: 10px;
+  background: var(--surface-alt, #171717);
+}
+.sig-loop summary {
+  cursor: pointer;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink, #ddd);
+}
+.sig-loop-sub { font-weight: 400; opacity: 0.6; font-size: 0.72rem; margin-left: 0.5rem; }
+.sig-loop-body { padding: 0 0.9rem 0.9rem; }
+.sig-loop-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+.sig-loop-stat {
+  background: var(--surface, #1a1a1a);
+  border: 1px solid var(--line, #2a2a2a);
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.sig-loop-stat strong { font-size: 1.05rem; color: var(--ink, #eee); }
+.sig-loop-stat em { font-style: normal; font-size: 0.68rem; color: var(--ink-soft, #999); }
+.sig-loop-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 800px) { .sig-loop-cols { grid-template-columns: 1fr; } }
+.sig-loop-col h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft, #999);
+}
+.sig-loop-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
+.sig-loop-table td {
+  padding: 0.25rem 0.4rem;
+  border-bottom: 1px solid var(--line-dim, #222);
+  color: var(--ink-soft, #bbb);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 150px;
+}
+.sig-loop-num { text-align: right; width: 48px; }
+.sig-loop-num.dim { opacity: 0.65; width: 78px; }
+.sig-loop-bands { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem; }
+.sig-loop-chip {
+  font-size: 0.68rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 9px;
+  background: rgba(77, 148, 255, 0.1);
+  border: 1px solid rgba(77, 148, 255, 0.25);
+  color: var(--ink-soft, #aaa);
+}
+.sig-loop-note { font-size: 0.68rem; color: var(--ink-soft, #888); margin: 0.5rem 0 0; }
+
 .sig-opp-feedback {
   font-size: 0.72rem;
   padding: 0.4rem 0.6rem;
