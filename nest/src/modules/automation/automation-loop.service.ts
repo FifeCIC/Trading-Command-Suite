@@ -174,6 +174,9 @@ export interface LoopState {
   /** #615 — META.Stack layer kill switches (mandate hierarchy). */
   protocolsEnabled: boolean;
   tradingEnabled: boolean;
+  /** #704 — decision_log write-on-change counters. */
+  decisionLogPersisted: number;
+  decisionLogSuppressed: number;
 }
 
 export interface BrokerLoopState {
@@ -261,6 +264,8 @@ export class AutomationLoopService implements OnModuleInit {
   private lastTradeTime = new Map<string, number>();
   /** Per-symbol trade cooldown — allows multiple symbols to trade per tick. */
   private lastSymbolTrade = new Map<string, number>();
+  /** #704 — last-persisted decision signature per strategy|symbol (write-on-change). */
+  private lastDecisionWrite = new Map<string, string>();
 
   /** Tracks repeated errors across ticks to suppress duplicate logging.
    *  Key = `${strategyId}:${symbol}:${errorMessage}` */
@@ -445,6 +450,8 @@ export class AutomationLoopService implements OnModuleInit {
     // #615 safe defaults: scoring ON, trading OFF until explicitly enabled.
     protocolsEnabled: true,
     tradingEnabled: false,
+    decisionLogPersisted: 0,
+    decisionLogSuppressed: 0,
   };
 
   /**
@@ -1958,10 +1965,28 @@ export class AutomationLoopService implements OnModuleInit {
    * Emergency stop — kills loop, flushes pending actions.
    * Does NOT automatically close positions (broker-dependent).
    */
-  /** Persist tick decisions to DB for audit trail survival across restarts. */
+  /** Persist tick decisions to DB for audit trail survival across restarts.
+   *  #704 — HOLD/SCORED rows are write-on-change: identical consecutive ticks
+   *  (same decision|signal|rounded composite) are suppressed and counted. */
   private persistDecisions(decisions: TickDecision[], tickNumber: number) {
     if (!this.prisma.isAvailable) return;
-    const records = decisions.map(d => ({
+
+    const significant = new Set(['EXECUTED', 'FAILED', 'BLOCKED', 'QUEUED']);
+    const keep: TickDecision[] = [];
+    for (const d of decisions) {
+      const key = `${d.strategyId}|${d.symbol}`;
+      const sig = `${d.decision}|${d.signal ?? ''}|${Math.round(d.composite ?? 0)}`;
+      if (significant.has(d.decision) || this.lastDecisionWrite.get(key) !== sig) {
+        this.lastDecisionWrite.set(key, sig);
+        keep.push(d);
+      } else {
+        this.state.decisionLogSuppressed++;
+      }
+    }
+    this.state.decisionLogPersisted += keep.length;
+    if (keep.length === 0) return;
+
+    const records = keep.map(d => ({
       timestamp: d.timestamp ? new Date(d.timestamp) : new Date(),
       tickNumber,
       strategyId: d.strategyId,
@@ -1977,11 +2002,11 @@ export class AutomationLoopService implements OnModuleInit {
 
     // Fire-and-forget — don't block the tick on DB writes
     this.prisma.decisionLog.createMany({ data: records }).then(
-      () => this.logger.debug(`Persisted ${records.length} decisions to decision_log`),
+      () => this.logger.debug(`Persisted ${records.length} decisions to decision_log (${this.state.decisionLogSuppressed} suppressed this session)`),
     ).catch(err => this.logger.warn(`Failed to persist decisions: ${err.message}`));
 
     // Also log order attempts for EXECUTED/FAILED decisions
-    const orderDecisions = decisions.filter(d => d.decision === 'EXECUTED' || d.decision === 'FAILED');
+    const orderDecisions = keep.filter(d => d.decision === 'EXECUTED' || d.decision === 'FAILED');
     for (const d of orderDecisions) {
       const side = d.signal?.toLowerCase();
       if (!side || (side !== 'buy' && side !== 'sell')) continue;

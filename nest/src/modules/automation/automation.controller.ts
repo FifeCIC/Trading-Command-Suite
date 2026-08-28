@@ -387,6 +387,10 @@ export class AutomationController {
         protocolsEnabled: loopState.protocolsEnabled ?? true,
         tradingEnabled: loopState.tradingEnabled ?? false,
       },
+      decisionLogStats: {
+        persisted: loopState.decisionLogPersisted ?? 0,
+        suppressed: loopState.decisionLogSuppressed ?? 0,
+      },
       brokerStates: loopState.brokerStates,
       activeStrategies,
       pendingActions: loopState.pendingActions,
