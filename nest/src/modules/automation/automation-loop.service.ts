@@ -266,6 +266,8 @@ export class AutomationLoopService implements OnModuleInit {
   private lastSymbolTrade = new Map<string, number>();
   /** #704 — last-persisted decision signature per strategy|symbol (write-on-change). */
   private lastDecisionWrite = new Map<string, string>();
+  /** #695 — last paper-trade signature per strategy|symbol (dry-run dedupe). */
+  private lastPaperSig = new Map<string, string>();
 
   /** Tracks repeated errors across ticks to suppress duplicate logging.
    *  Key = `${strategyId}:${symbol}:${errorMessage}` */
@@ -1503,6 +1505,19 @@ export class AutomationLoopService implements OnModuleInit {
                     protocolId: effectiveProtocolId,
                     decisions: [],  // result handled via returned decision below
                   });
+                } else {
+                  // #695 — trading off: capture what WOULD have traded (dry-run).
+                  await this.recordPaperTrade({
+                    strategyId,
+                    symbol: strategy.symbol,
+                    side,
+                    composite: chosenComposite,
+                    baseSize: effectiveBaseSize,
+                    slPct: effectiveSlPct,
+                    tpPct: effectiveTpPct,
+                    entryPrice: bars[bars.length - 1]?.close || 0,
+                    protocolId: effectiveProtocolId,
+                  });
                 }
               }
 
@@ -1556,6 +1571,19 @@ export class AutomationLoopService implements OnModuleInit {
                   mode: strategy.mode,
                   protocolId: effectiveProtocolId,
                   decisions: [],
+                });
+              } else {
+                // #695 — trading off: capture what WOULD have traded (dry-run).
+                await this.recordPaperTrade({
+                  strategyId,
+                  symbol: strategy.symbol,
+                  side,
+                  composite: chosenComposite,
+                  baseSize: effectiveBaseSize,
+                  slPct: effectiveSlPct,
+                  tpPct: effectiveTpPct,
+                  entryPrice: bars[bars.length - 1]?.close || 0,
+                  protocolId: effectiveProtocolId,
                 });
               }
             }
@@ -1965,6 +1993,42 @@ export class AutomationLoopService implements OnModuleInit {
    * Emergency stop — kills loop, flushes pending actions.
    * Does NOT automatically close positions (broker-dependent).
    */
+  /**
+   * #695 — dry-run capture: when trading is off, record what WOULD have
+   * traded into paper_trade (write-on-change, same dedupe idea as #704).
+   * Raw SQL — no Prisma model needed (db push is broken).
+   */
+  private async recordPaperTrade(params: {
+    strategyId: string;
+    symbol: string;
+    side: string;
+    composite: number;
+    baseSize: number;
+    slPct: number;
+    tpPct: number;
+    entryPrice: number;
+    protocolId: string | null;
+  }) {
+    try {
+      const { strategyId, symbol, side, composite, baseSize, slPct, tpPct, entryPrice, protocolId } = params;
+      const sig = `${side}|${Math.round(composite)}`;
+      if (this.lastPaperSig.get(`${strategyId}|${symbol}`) === sig) return;
+      this.lastPaperSig.set(`${strategyId}|${symbol}`, sig);
+
+      const sl = side === 'BUY' ? entryPrice * (1 - slPct / 100) : entryPrice * (1 + slPct / 100);
+      const tp = side === 'BUY' ? entryPrice * (1 + tpPct / 100) : entryPrice * (1 - tpPct / 100);
+      const id = `pt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      await (this.prisma as any).$executeRawUnsafe(
+        `INSERT INTO paper_trade (id, strategyId, symbol, side, composite, entryPrice, sl, tp, baseSize, protocolId, tickNumber, createdAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        id, strategyId, symbol, side, Math.round(composite), entryPrice || null, sl, tp, baseSize, protocolId ?? null, this.state.tickCount,
+      );
+      this.logger.log(`📝 PAPER ${side} ${symbol} composite ${Math.round(composite)} (dry-run, trading off)`);
+    } catch (err) {
+      this.logger.warn(`Paper trade capture failed: ${(err as Error).message}`);
+    }
+  }
+
   /** Persist tick decisions to DB for audit trail survival across restarts.
    *  #704 — HOLD/SCORED rows are write-on-change: identical consecutive ticks
    *  (same decision|signal|rounded composite) are suppressed and counted. */

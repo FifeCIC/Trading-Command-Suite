@@ -219,6 +219,35 @@ export default function AutomationOverviewPage() {
           </div>
         </section>
       )}
+
+      {/* ── Paper signals — dry-run candidates while trading is off (#695) ── */}
+      <section className="ao-paper">
+        <h2>📝 Paper signals (dry-run)</h2>
+        <p className="ao-paper-note">
+          What would have traded while the Trading layer is off. Nothing here was executed — review this record before enabling trading.
+        </p>
+        {(!paperQuery.data || paperQuery.data.recent?.length === 0) ? (
+          <p className="ao-paper-empty">
+            No paper candidates yet — no strategy has crossed an entry threshold with trading off.
+          </p>
+        ) : (
+          <div className="ao-paper-table">
+            <div className="ao-paper-row ao-paper-head">
+              <span>When</span><span>Strategy</span><span>Side</span><span>Composite</span><span>Entry</span><span>SL / TP</span>
+            </div>
+            {paperQuery.data.recent.slice(0, 12).map((p, i) => (
+              <div key={i} className={`ao-paper-row ao-paper-${String(p.side).toLowerCase()}`}>
+                <span>{new Date(p.createdAt).toLocaleTimeString()}</span>
+                <span title={p.strategyId}>{String(p.strategyId).slice(0, 8)}</span>
+                <span>{p.side}</span>
+                <span>{p.composite}</span>
+                <span>{p.entryPrice != null ? Number(p.entryPrice).toFixed(5) : '—'}</span>
+                <span>{p.sl != null ? Number(p.sl).toFixed(5) : '—'} / {p.tp != null ? Number(p.tp).toFixed(5) : '—'}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

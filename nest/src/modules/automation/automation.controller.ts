@@ -461,6 +461,53 @@ export class AutomationController {
     return this.loop.setLayer(body.layer as 'protocols' | 'trading', Boolean(body.enabled));
   }
 
+  /** GET /api/automation/paper — dry-run candidates while trading is off (#695). */
+  @Get('paper')
+  async getPaperTrades() {
+    try {
+      const recent: any[] = await (this.prisma as any).$queryRawUnsafe(
+        `SELECT id, strategyId, symbol, side,
+                CAST(composite AS SIGNED) AS composite,
+                entryPrice, sl, tp, baseSize, protocolId,
+                CAST(tickNumber AS SIGNED) AS tickNumber, createdAt
+         FROM paper_trade ORDER BY createdAt DESC LIMIT 100`,
+      );
+      const summary: any[] = await (this.prisma as any).$queryRawUnsafe(
+        `SELECT strategyId, symbol, side, CAST(COUNT(*) AS SIGNED) AS n,
+                CAST(MAX(composite) AS SIGNED) AS maxComposite, MAX(createdAt) AS lastAt
+         FROM paper_trade GROUP BY strategyId, symbol, side ORDER BY lastAt DESC LIMIT 20`,
+      );
+      // MySQL aggregates can surface as BigInt via raw queries — sanitize.
+      const safe = (v: any): any => (typeof v === 'bigint' ? Number(v) : v);
+      return {
+        recent: recent.map((r: any) => ({
+          id: safe(r.id),
+          strategyId: safe(r.strategyId),
+          symbol: safe(r.symbol),
+          side: safe(r.side),
+          composite: safe(r.composite),
+          entryPrice: safe(r.entryPrice),
+          sl: safe(r.sl),
+          tp: safe(r.tp),
+          baseSize: safe(r.baseSize),
+          protocolId: safe(r.protocolId),
+          tickNumber: safe(r.tickNumber),
+          createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt ?? ''),
+        })),
+        summary: summary.map((s: any) => ({
+          strategyId: safe(s.strategyId),
+          symbol: safe(s.symbol),
+          side: safe(s.side),
+          n: safe(s.n),
+          maxComposite: safe(s.maxComposite),
+          lastAt: s.lastAt instanceof Date ? s.lastAt.toISOString() : String(s.lastAt ?? ''),
+        })),
+      };
+    } catch {
+      return { recent: [], summary: [] };
+    }
+  }
+
   /** POST /api/automation/confirm-action — approve queued trade */
   @Post('confirm-action')
   confirmAction(@Body() body: { actionId: string }) {
