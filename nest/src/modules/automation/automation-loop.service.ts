@@ -1424,6 +1424,17 @@ export class AutomationLoopService implements OnModuleInit {
     };
   }
 
+  /**
+   * Evaluate one strategy for the current tick.
+   *
+   * ⚠️ DIRECTION (2026-08-31, #714): this strategy-side scoring path is
+   * SCHEDULED FOR RETIREMENT. The agreed architecture is ONE scoring line —
+   * trading strategies are a series of gates, not scorers. The loop will
+   * become a queue processor: signal records route into per-strategy queues
+   * (via strategy_protocol subscriptions) and the Expert Trading Bot
+   * dispatches from those queues. Until that lands, this method keeps the
+   * legacy path working (best-of across the strategy's subscribed protocols).
+   */
   private async evaluateStrategy(
     strategyId: string,
     positions: any[],
