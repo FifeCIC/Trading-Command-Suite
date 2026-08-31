@@ -25,7 +25,7 @@ Strategy-owned protocol subscriptions (Part 1 of #712) — the data foundation f
 - **persistence:** stored
 - **uiSurfaces:** 1 (Trading Strategies sidebar)
 - **pipeline:** trading
-- **completion:** partial (Part 2 — loop consumption — pending, #712)
+- **completion:** partial (loop consumption shipped 2e94717; subscription CRUD + strategy-editor multi-select pending, #712)
 
 ## QA Test Entry
 
@@ -37,4 +37,4 @@ Strategy-owned protocol subscriptions (Part 1 of #712) — the data foundation f
 ## Architecture Framework Entry
 
 - **section:** routes
-- **summary:** New table `strategy_protocol` (TradingStrategy 1─n StrategyProtocol n─1 Protocol). List API now exposes `protocols[]` per strategy. Loop still consumes legacy protocolId/shortProtocolId until Part 2 (#712).
+- **summary:** New table `strategy_protocol` (TradingStrategy 1─n StrategyProtocol n─1 Protocol). List API exposes `protocols[]` per strategy. Loop consumes subscriptions via `resolveBestSignal()` (best-of per direction pool, `compareProtocolPair` for the side); legacy protocolId/shortProtocolId are the fallback when no subscription rows exist. Subscription CRUD endpoints + editor multi-select pending (#712).
