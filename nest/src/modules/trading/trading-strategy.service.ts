@@ -74,6 +74,25 @@ export class TradingStrategyService {
 
   // ── CRUD ──────────────────────────────────────────────
 
+  // #712 — strategy-owned protocol subscriptions.
+  async getProtocolSubscriptions(strategyId: string) {
+    return (this.prisma as any).strategyProtocol
+      .findMany({ where: { strategyId }, orderBy: { sortOrder: 'asc' } })
+      .catch(() => []);
+  }
+
+  async addProtocolSubscription(strategyId: string, protocolId: string, role = 'long') {
+    const existing: any = await (this.prisma as any).strategyProtocol
+      .findFirst({ where: { strategyId, protocolId, role } })
+      .catch(() => null);
+    if (existing) return existing;
+    return (this.prisma as any).strategyProtocol.create({ data: { strategyId, protocolId, role } });
+  }
+
+  async removeProtocolSubscription(strategyId: string, subId: string) {
+    return (this.prisma as any).strategyProtocol.deleteMany({ where: { id: subId, strategyId } });
+  }
+
   async findAll(): Promise<StrategySummary[]> {
     const strategies = await this.prisma.tradingStrategy.findMany({
       orderBy: { createdAt: 'desc' },

@@ -37,6 +37,24 @@ export class TradingStrategyController {
   @Post(':id/toggle')
   async toggle(@Param('id') id: string) { return this.service.toggle(id); }
 
+  /** GET /api/trading/strategies/:id/protocols — subscription list (#712). */
+  @Get(':id/protocols')
+  async getProtocols(@Param('id') id: string) {
+    return this.service.getProtocolSubscriptions(id);
+  }
+
+  /** POST /api/trading/strategies/:id/protocols — subscribe a protocol (#712). */
+  @Post(':id/protocols')
+  async addProtocol(@Param('id') id: string, @Body() body: { protocolId: string; role?: string }) {
+    return this.service.addProtocolSubscription(id, body.protocolId, body.role ?? 'long');
+  }
+
+  /** DELETE /api/trading/strategies/:id/protocols/:subId — remove a subscription (#712). */
+  @Delete(':id/protocols/:subId')
+  async removeProtocol(@Param('id') id: string, @Param('subId') subId: string) {
+    return this.service.removeProtocolSubscription(id, subId);
+  }
+
   @Post(':id/evaluate')
   async evaluate(@Param('id') id: string) {
     try {

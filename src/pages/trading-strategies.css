@@ -495,3 +495,39 @@
 .ts-sub-long .ts-sub-role { color: #4ade80; background: rgba(22, 163, 74, 0.15); }
 .ts-sub-short .ts-sub-role { color: #f87171; background: rgba(220, 38, 38, 0.15); }
 .ts-sub-both .ts-sub-role { color: #fbbf24; background: rgba(217, 119, 6, 0.15); }
+
+/* Subscription add/remove controls (#712) */
+.ts-sub-remove {
+  background: transparent;
+  border: none;
+  color: var(--ink-soft, #999);
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.1rem;
+}
+.ts-sub-remove:hover { color: #ef4444; }
+.ts-sub-add { display: flex; gap: 0.3rem; margin-top: 0.5rem; }
+.ts-sub-select {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.7rem;
+  padding: 0.25rem 0.35rem;
+  background: var(--surface, #1a1a1a);
+  color: var(--ink, #ddd);
+  border: 1px solid var(--line, #2a2a2a);
+  border-radius: 5px;
+}
+.ts-sub-role-select { flex: 0 0 4.5rem; }
+.ts-sub-add-btn {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  background: var(--accent, #0066cc);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.ts-sub-add-btn:disabled { opacity: 0.4; cursor: not-allowed; }

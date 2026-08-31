@@ -29,6 +29,20 @@ export default function TradingStrategiesPage() {
   const [saving, setSaving] = useState(false);           // save in progress
   const [sortKey, setSortKey] = useState('symbol');
   const [sortDir, setSortDir] = useState('asc');
+  const [subDraft, setSubDraft] = useState({ protocolId: '', role: 'long' });
+
+  const loadStrategies = async () => {
+    try {
+      const r = await fetch(TRADING);
+      const data = r.ok ? await r.json() : [];
+      const list = Array.isArray(data) ? data : (data.viable || data.strategies || []);
+      setTrading(list);
+    } catch {
+      setTrading([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -50,6 +64,24 @@ export default function TradingStrategiesPage() {
       });
     return () => { cancelled = true; };
   }, []);
+
+  // #712 — subscription CRUD (add/remove protocols feeding this strategy).
+  const handleAddSub = async () => {
+    if (!selected?.id || !subDraft.protocolId) return;
+    await fetch(`${TRADING}/${selected.id}/protocols`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ protocolId: subDraft.protocolId, role: subDraft.role }),
+    }).catch(() => {});
+    setSubDraft({ protocolId: '', role: 'long' });
+    await loadStrategies();
+  };
+
+  const handleRemoveSub = async (subId) => {
+    if (!selected?.id || !subId) return;
+    await fetch(`${TRADING}/${selected.id}/protocols/${subId}`, { method: 'DELETE' }).catch(() => {});
+    await loadStrategies();
+  };
 
   // Portfolio positions for cross-referencing
   const portfolioQuery = useQuery({
@@ -316,11 +348,50 @@ export default function TradingStrategiesPage() {
                             <div key={`${sub.protocolId}-${i}`} className={`ts-sub-row ts-sub-${String(sub.role).toLowerCase()}`}>
                               <span className="ts-sub-name">{meta?.name || sub.protocolId}</span>
                               <span className="ts-sub-role">{sub.role}</span>
+                              {sub.id && (
+                                <button
+                                  type="button"
+                                  className="ts-sub-remove"
+                                  title={`Remove ${meta?.name || sub.protocolId}`}
+                                  onClick={() => handleRemoveSub(sub.id)}
+                                >
+                                  ×
+                                </button>
+                              )}
                             </div>
                           );
                         })}
                       </div>
                     )}
+                    <div className="ts-sub-add">
+                      <select
+                        className="ts-sub-select"
+                        value={subDraft.protocolId}
+                        onChange={e => setSubDraft(d => ({ ...d, protocolId: e.target.value }))}
+                      >
+                        <option value="">+ protocol…</option>
+                        {Object.values(protocolMap).map(p => (
+                          <option key={p.id} value={p.id}>{p.name || p.id}</option>
+                        ))}
+                      </select>
+                      <select
+                        className="ts-sub-select ts-sub-role-select"
+                        value={subDraft.role}
+                        onChange={e => setSubDraft(d => ({ ...d, role: e.target.value }))}
+                      >
+                        <option value="long">long</option>
+                        <option value="short">short</option>
+                        <option value="both">both</option>
+                      </select>
+                      <button
+                        type="button"
+                        className="ts-sub-add-btn"
+                        onClick={handleAddSub}
+                        disabled={!subDraft.protocolId}
+                      >
+                        Add
+                      </button>
+                    </div>
                   </div>
                 </section>
 
