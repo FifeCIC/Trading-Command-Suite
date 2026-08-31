@@ -75,9 +75,9 @@
 }
 .sl-faulty-banner-btn:hover { background: #ef4444; color: #fff; }
 
-/* Clickable chips + score links on monitor cards */
-.sl-chip-link { cursor: pointer; }
-.sl-chip-link:hover { text-decoration: underline; }
+/* Clickable chips + score links on monitor cards — keep chip look */
+.sl-chip-link { cursor: pointer; text-decoration: none; }
+.sl-chip-link:hover { text-decoration: none; filter: brightness(1.4); }
 a.sl-score-value { text-decoration: none; }
 a.sl-score-value:hover { text-decoration: underline; }
 .sl-score-label { display: inline-flex; align-items: center; gap: 0.2rem; }
