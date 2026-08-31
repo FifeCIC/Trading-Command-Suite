@@ -1367,6 +1367,63 @@ export class AutomationLoopService implements OnModuleInit {
     }
   }
 
+  /**
+   * #712 — resolve the best actionable signal for a strategy across its
+   * protocol subscriptions. Each direction pool (long / short, with 'both'
+   * feeding either) is scored and the strongest composite wins, then
+   * compareProtocolPair picks the side against the strategy threshold.
+   * Falls back to the legacy single protocolId/shortProtocolId fields when
+   * no subscriptions exist.
+   */
+  private async resolveBestSignal(
+    strategy: any,
+    bars: any[],
+    subs: Array<{ protocolId: string; role: string }>,
+    getGated: (protocolId: string, bars: any[]) => Promise<any>,
+  ): Promise<{
+    side: 'BUY' | 'SELL' | 'HOLD';
+    composite: number;
+    chosenProtocolId: string;
+    longProtocolId: string | null;
+    shortProtocolId: string | null;
+  }> {
+    const legacyLong = strategy.protocolId || '';
+    const legacyShort = strategy.shortProtocolId || undefined;
+
+    const longPool = subs.length > 0
+      ? [...new Set(subs.filter(s => s.role === 'long' || s.role === 'both').map(s => s.protocolId))]
+      : (legacyLong ? [legacyLong] : []);
+    const shortPool = subs.length > 0
+      ? [...new Set(subs.filter(s => s.role === 'short' || s.role === 'both').map(s => s.protocolId))]
+      : (legacyShort ? [legacyShort] : []);
+
+    const bestOf = async (pool: string[]) => {
+      let best: any = null;
+      let bestId: string | null = null;
+      for (const pid of pool) {
+        try {
+          const g = await getGated(pid, bars);
+          if (!g) continue;
+          const c = g?.meta?.compositePct ?? g?.composite ?? 0;
+          const bestC = best ? (best.meta?.compositePct ?? best.composite ?? 0) : -Infinity;
+          if (c > bestC) { best = g; bestId = pid; }
+        } catch { /* one protocol failing doesn't block the rest */ }
+      }
+      return { best, bestId };
+    };
+
+    const [longRes, shortRes] = [await bestOf(longPool), await bestOf(shortPool)];
+    const { side, composite } = compareProtocolPair(longRes.best, shortRes.best, strategy.minComposite ?? 3);
+    return {
+      side,
+      composite,
+      longProtocolId: longRes.bestId,
+      shortProtocolId: shortRes.bestId,
+      chosenProtocolId:
+        (side === 'SELL' ? shortRes.bestId : longRes.bestId) ?? longRes.bestId ?? shortRes.bestId ?? legacyLong,
+    };
+  }
+
   private async evaluateStrategy(
     strategyId: string,
     positions: any[],
@@ -1421,7 +1478,18 @@ export class AutomationLoopService implements OnModuleInit {
       const effectiveSlPct = strategy.slPct ?? 1.0;
       const effectiveTpPct = strategy.tpPct ?? 1.0;
 
-      if (!effectiveProtocolId) {
+      // #712 — strategy-owned protocol subscriptions. Falls back to the
+      // legacy single protocolId/shortProtocolId fields when none exist.
+      let subs: Array<{ protocolId: string; role: string }> = [];
+      try {
+        const rows: any[] = await (this.prisma as any).strategyProtocol.findMany({
+          where: { strategyId },
+          orderBy: { sortOrder: 'asc' },
+        });
+        subs = rows.map((r: any) => ({ protocolId: r.protocolId, role: r.role }));
+      } catch { /* table may not exist yet — legacy fields still work */ }
+
+      if (!effectiveProtocolId && subs.length === 0) {
         return {
           timestamp: new Date().toISOString(),
           strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
@@ -1477,14 +1545,8 @@ export class AutomationLoopService implements OnModuleInit {
           try {
             const bars = await getBars();
             if (bars) {
-              const longGated = await getGated(effectiveProtocolId, bars);
-              let shortGated: any = null;
-              if (effectiveShortProtocolId) {
-                shortGated = await getGated(effectiveShortProtocolId, bars);
-              }
-              const { side, composite: chosenComposite } = compareProtocolPair(
-                longGated, shortGated, (strategy.minComposite ?? 3),
-              );
+              const { side, composite: chosenComposite, chosenProtocolId, longProtocolId, shortProtocolId } =
+                await this.resolveBestSignal(strategy, bars, subs, getGated);
 
               // ── Auto-execute via shared dispatch (Phase B.2) ──
               if (side !== 'HOLD' && strategy.mode === 'auto') {
@@ -1502,7 +1564,7 @@ export class AutomationLoopService implements OnModuleInit {
                     tpPct: effectiveTpPct,
                     entryPrice: bars[bars.length - 1]?.close || 0,
                     mode: strategy.mode,
-                    protocolId: effectiveProtocolId,
+                    protocolId: chosenProtocolId,
                     decisions: [],  // result handled via returned decision below
                   });
                 } else {
@@ -1516,7 +1578,7 @@ export class AutomationLoopService implements OnModuleInit {
                     slPct: effectiveSlPct,
                     tpPct: effectiveTpPct,
                     entryPrice: bars[bars.length - 1]?.close || 0,
-                    protocolId: effectiveProtocolId,
+                    protocolId: chosenProtocolId,
                   });
                 }
               }
@@ -1526,8 +1588,8 @@ export class AutomationLoopService implements OnModuleInit {
                 strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
                 decision: side !== 'HOLD' ? 'SCORED' : 'SKIP',
                 reason: side !== 'HOLD'
-                  ? `Gated: ${effectiveProtocolId}` + (shortGated ? ` vs ${effectiveShortProtocolId || ''}` : '') + ` → ${side} (${chosenComposite})`
-                  : `Gated: both sides low → HOLD`,
+                  ? `Gated: ${chosenProtocolId} → ${side} (${chosenComposite}) [${subs.length || 1} protocol(s)]`
+                  : `Gated: ${longProtocolId ?? '—'} vs ${shortProtocolId ?? '—'} low → HOLD`,
                 composite: chosenComposite, signal: side,
               };
             }
@@ -1538,17 +1600,11 @@ export class AutomationLoopService implements OnModuleInit {
         // No scoreMap entry — use protocol-gating with cache
         try {
           const bars = await getBars();
-          if (!effectiveProtocolId) {
+          if (!effectiveProtocolId && subs.length === 0) {
             this.logger.debug(`Strategy ${strategyId} has no protocol linked — skipping unscoped scoring`);
           } else if (bars) {
-            const longGated = await getGated(effectiveProtocolId, bars);
-            let shortGated: any = null;
-            if (effectiveShortProtocolId) {
-              shortGated = await getGated(effectiveShortProtocolId, bars);
-            }
-            const { side, composite: chosenComposite } = compareProtocolPair(
-              longGated, shortGated, (strategy.minComposite ?? 3),
-            );
+            const { side, composite: chosenComposite, chosenProtocolId, longProtocolId, shortProtocolId } =
+              await this.resolveBestSignal(strategy, bars, subs, getGated);
 
             // Persist evaluation to DB (best-effort)
             try { await this.strategyService.evaluate(strategyId); } catch {}
@@ -1569,7 +1625,7 @@ export class AutomationLoopService implements OnModuleInit {
                   tpPct: effectiveTpPct,
                   entryPrice: bars[bars.length - 1]?.close || 0,
                   mode: strategy.mode,
-                  protocolId: effectiveProtocolId,
+                  protocolId: chosenProtocolId,
                   decisions: [],
                 });
               } else {
@@ -1583,7 +1639,7 @@ export class AutomationLoopService implements OnModuleInit {
                   slPct: effectiveSlPct,
                   tpPct: effectiveTpPct,
                   entryPrice: bars[bars.length - 1]?.close || 0,
-                  protocolId: effectiveProtocolId,
+                  protocolId: chosenProtocolId,
                 });
               }
             }
@@ -1593,8 +1649,8 @@ export class AutomationLoopService implements OnModuleInit {
               strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
               decision: side !== 'HOLD' ? 'SCORED' : 'SKIP',
               reason: side !== 'HOLD'
-                ? `Gated: ${effectiveProtocolId}` + (shortGated ? ` vs ${effectiveShortProtocolId || ''}` : '') + ` → ${side} (${chosenComposite})`
-                : `Gated: both sides low → HOLD`,
+                ? `Gated: ${chosenProtocolId} → ${side} (${chosenComposite}) [${subs.length || 1} protocol(s)]`
+                : `Gated: ${longProtocolId ?? '—'} vs ${shortProtocolId ?? '—'} low → HOLD`,
               composite: chosenComposite, signal: side,
             };
           }
