@@ -21,7 +21,6 @@ import './strategy-monitor.css';
 import './strategies-list.css';
 
 export default function StrategyMonitorPage() {
-  const [stratFilter, setStratFilter] = useState('all');
   const [selectedStratId, setSelectedStratId] = useState(null);
 
   // ── Shared data ──
@@ -60,16 +59,11 @@ export default function StrategyMonitorPage() {
   const tickCount = autoStatus?.tickCount || 0;
   const lastTickMs = autoStatus?.lastTickMs || 0;
 
-  // ── Strategies tab filters ──
-  const filteredStrats = useMemo(() => {
-    if (stratFilter === 'all') return stratList;
-    if (stratFilter === 'active') return stratList.filter(s => s.active !== false);
-    if (stratFilter === 'trading') return stratList.filter(s => s.symbol);
-    if (stratFilter === 'scoring') return stratList.filter(s => s.watchlistName);
-    if (stratFilter === 'faulty') return stratList.filter(s => s.dataStatus && s.dataStatus !== 'ready');
-    return stratList;
-  }, [stratList, stratFilter]);
-  const faultyStrats = useMemo(() => stratList.filter(s => s.dataStatus && s.dataStatus !== 'ready'), [stratList]);
+  // ── Monitored set: active trading strategies only (this is a Monitor view) ──
+  const monitoredStrats = useMemo(
+    () => stratList.filter(s => s.active !== false && Boolean(s.symbol)),
+    [stratList],
+  );
 
   // ── Render ─────────────────────────────────────────────
 
@@ -106,31 +100,15 @@ export default function StrategyMonitorPage() {
 
         {/* Filter bar */}
         <div className="sm-strat-filters">
-          {['all', 'active', 'trading', 'scoring', 'faulty'].map(f => (
-            <button
-              key={f}
-              className={`sl-filter-chip ${stratFilter === f ? 'sl-filter-active' : ''} ${f === 'faulty' ? 'sl-filter-faulty' : ''}`}
-              onClick={() => setStratFilter(f)}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
+          <span className="sm-monitor-note">Monitoring active trading strategies only ({monitoredStrats.length})</span>
         </div>
 
-        {/* Faulty banner */}
-        {faultyStrats.length > 0 && stratFilter !== 'faulty' && (
-          <div className="sl-faulty-banner">
-            <span>⚠️ {faultyStrats.length} strateg{faultyStrats.length !== 1 ? 'ies' : 'y'} with data issues</span>
-            <button className="sl-faulty-banner-btn" onClick={() => setStratFilter('faulty')}>View faulty</button>
-          </div>
-        )}
-
-        {/* Strategy cards — sl-card style */}
-        {stratLoading ? <LoadingSkeleton variant="card" count={6} /> : filteredStrats.length === 0 ? (
-          <EmptyState icon="◆" title="No strategies" description="No strategies match this filter." />
+        {/* Strategy cards — active trading only */}
+        {stratLoading ? <LoadingSkeleton variant="card" count={6} /> : monitoredStrats.length === 0 ? (
+          <EmptyState icon="◆" title="No active trading strategies" description="Activate a trading strategy to see monitoring data." />
         ) : (
           <div className="sl-grid">
-            {filteredStrats.map((s, i) => {
+            {monitoredStrats.map((s, i) => {
               const isActive = s.active !== false;
               const isTrading = Boolean(s.symbol);
               const isScoring = Boolean(s.watchlistName);
