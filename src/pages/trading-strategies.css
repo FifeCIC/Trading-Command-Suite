@@ -469,3 +469,29 @@
   from { opacity: 0.4; }
   to { opacity: 1; }
 }
+
+/* Protocol subscriptions — strategy-owned signal sources (2026-08-31) */
+.ts-sub-list { display: flex; flex-direction: column; gap: 0.3rem; }
+.ts-sub-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 6px;
+  background: var(--surface, #1a1a1a);
+  border: 1px solid var(--line, #2a2a2a);
+  font-size: 0.75rem;
+}
+.ts-sub-name { color: var(--ink, #eee); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ts-sub-role {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.12rem 0.45rem;
+  border-radius: 8px;
+  text-transform: uppercase;
+}
+.ts-sub-long .ts-sub-role { color: #4ade80; background: rgba(22, 163, 74, 0.15); }
+.ts-sub-short .ts-sub-role { color: #f87171; background: rgba(220, 38, 38, 0.15); }
+.ts-sub-both .ts-sub-role { color: #fbbf24; background: rgba(217, 119, 6, 0.15); }

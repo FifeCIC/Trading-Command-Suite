@@ -110,6 +110,17 @@ export default function TradingStrategiesPage() {
 
   const intel = selected ? buildIntel(selected, protocolMap) : null;
 
+  // Strategy-owned protocol subscriptions (2026-08-31). Falls back to the
+  // legacy single protocolId/shortProtocolId link until subscriptions exist.
+  const subscriptions = selected
+    ? (Array.isArray(selected.protocols) && selected.protocols.length > 0
+        ? selected.protocols
+        : [
+            ...(selected.protocolId ? [{ protocolId: selected.protocolId, role: 'long' }] : []),
+            ...(selected.shortProtocolId ? [{ protocolId: selected.shortProtocolId, role: 'short' }] : []),
+          ])
+    : [];
+
   const handleToggle = (id) => {
     fetch(`${TRADING}/${id}/toggle`, { method: 'POST' })
       .then(r => r.json())
@@ -289,12 +300,27 @@ export default function TradingStrategiesPage() {
               <div className="ts-sidebar-detail">
                 <h2>{selected.symbol} — {selected.name}</h2>
 
-                {/* Protocol */}
+                {/* Protocols — signal sources (strategy-owned subscriptions) */}
                 <section className="ts-detail-section">
-                  <h3>Protocol</h3>
+                  <h3>Protocols <span className="ts-req-label">(signal sources)</span></h3>
                   <div className="ts-detail-card">
-                    <strong>{intel?.label}</strong>
-                    <p>{intel?.description}</p>
+                    {subscriptions.length === 0 ? (
+                      <p className="ts-intensity-desc">
+                        No protocol subscriptions yet — this strategy has no signal sources.
+                      </p>
+                    ) : (
+                      <div className="ts-sub-list">
+                        {subscriptions.map((sub, i) => {
+                          const meta = protocolMap[sub.protocolId];
+                          return (
+                            <div key={`${sub.protocolId}-${i}`} className={`ts-sub-row ts-sub-${String(sub.role).toLowerCase()}`}>
+                              <span className="ts-sub-name">{meta?.name || sub.protocolId}</span>
+                              <span className="ts-sub-role">{sub.role}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </section>
 

@@ -1156,19 +1156,19 @@ model TradingStrategy {
   name          String   @db.VarChar(200)
   description   String?  @db.Text
   version       String   @default("1.0.0") @db.VarChar(20)  // Semver for A/B tracking (#295)
-  // ⬇ DEPRECATED (Phase D.2): All values now sourced from ScoringStrategy via scoringStrategyId FK.
-  //   These fields remain in the DB for backward compatibility but are NOT read by the automation loop.
-  //   Remove after full migration window (all TradingStrategies linked to ScoringStrategies).
+  // Canonical since 2026-08-27 (scoring-strategy retirement): the loop reads
+  // these directly. Multi-protocol consumption moves to StrategyProtocol
+  // subscriptions; these stay as the legacy single long/short link until the
+  // loop consumes subscriptions.
   protocolId    String?  @db.VarChar(36)
   shortProtocolId String? @db.VarChar(36)
-  scoringStrategyId String? @db.VarChar(36) // FK → ScoringStrategy — REQUIRED for trading
+  scoringStrategyId String? @db.VarChar(36) // soft link for versioning/performance only (#295)
   symbol        String   @db.VarChar(20)
   brokerId      String   @default("mt5") @db.VarChar(50)
-  timeframe     String   @db.VarChar(10)   @default("5m")  // ⬇ DEPRECATED: use Protocol.recommendedTimeframe via ScoringStrategy FK
+  timeframe     String   @db.VarChar(10)   @default("5m")
   minComposite  Float    @default(65)
   minRarityBand String?  @db.VarChar(20)
   requireDirection String? @db.VarChar(10)
-  // ⬇ DEPRECATED: prefer ScoringStrategy values via FK
   slPct         Float?   @default(1.0)
   tpPct         Float?   @default(1.0)
   baseSize      Float?   @default(0.01)
@@ -1191,9 +1191,30 @@ model TradingStrategy {
   // FK deferred — ScoringStrategy table created separately (#470)
   // scoringStrategy ScoringStrategy? @relation(fields: [scoringStrategyId], references: [id])
   evaluations StrategyEvaluation[]
+  protocols   StrategyProtocol[]
 
   @@index([scoringStrategyId])
   @@map("trading_strategy")
+}
+
+// StrategyProtocol — protocol subscriptions of a trading strategy (2026-08-31).
+// One strategy consumes signals from N protocols; `role` tags the direction
+// ('long' | 'short' | 'both'). The loop will consume these (replacing the
+// legacy single protocolId/shortProtocolId link).
+model StrategyProtocol {
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  strategyId String   @db.VarChar(36)
+  protocolId String   @db.VarChar(100)
+  role       String   @default("long") @db.VarChar(10)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  strategy TradingStrategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  @@unique([strategyId, protocolId, role])
+  @@index([strategyId])
+  @@index([protocolId])
+  @@map("strategy_protocol")
 }
 
 model StrategyEvaluation {

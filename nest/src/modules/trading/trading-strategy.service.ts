@@ -29,6 +29,8 @@ export interface StrategySummary {
   version?: string | null;
   protocolId: string | null;
   shortProtocolId?: string | null;
+  /** #703-era protocol subscriptions (2026-08-31) — the multi-protocol signal sources. */
+  protocols?: Array<{ id: string; protocolId: string; role: string }>;
   symbol: string;
   timeframe: string;
   mode: string;
@@ -80,6 +82,7 @@ export class TradingStrategyService {
           orderBy: { evaluatedAt: 'desc' },
           take: 1,
         },
+        protocols: { orderBy: { sortOrder: 'asc' } },
       },
     });
 
@@ -91,6 +94,11 @@ export class TradingStrategyService {
         version: (s as any).version ?? null,
         protocolId: s.protocolId,
         shortProtocolId: (s as any).shortProtocolId ?? null,
+        protocols: ((s as any).protocols || []).map((p: any) => ({
+          id: p.id,
+          protocolId: p.protocolId,
+          role: p.role,
+        })),
         symbol: s.symbol,
         timeframe: s.timeframe,
         mode: s.mode,
