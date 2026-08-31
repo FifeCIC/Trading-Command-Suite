@@ -65,6 +65,20 @@ export default function StrategyMonitorPage() {
     [stratList],
   );
 
+  // ── Broker chips — dynamic from automation brokerStates (mt5, trading212, …) ──
+  const brokerStates = autoStatus?.brokerStates || {};
+  const brokerChips = Object.entries(brokerStates).map(([brokerId, bs]) => {
+    const label = String(brokerId).toUpperCase();
+    const connected = Boolean(bs?.enabled);
+    const trading = Boolean(bs?.tradingEnabled);
+    const balance = brokerId === 'mt5' ? mt5Diag?.balance : null;
+    const account = brokerId === 'mt5' ? mt5Diag?.accountName : null;
+    const status = trading ? 'Trading' : connected ? 'Connected' : 'Offline';
+    const color = trading ? '#22c55e' : connected ? '#f59e0b' : '#64748b';
+    const icon = trading ? '🟢' : connected ? '🟡' : '⚫';
+    return { brokerId, label, status, color, icon, balance, account };
+  });
+
   // ── Render ─────────────────────────────────────────────
 
   return (
@@ -89,17 +103,22 @@ export default function StrategyMonitorPage() {
           <div className="sm-stat"><span className="sm-stat-val pl-score-high">{overview.active}</span><span className="sm-stat-label">Active</span></div>
           <div className="sm-stat"><span className="sm-stat-val" style={{ color: '#3b82f6' }}>{overview.trading}</span><span className="sm-stat-label">Trading</span></div>
           <div className="sm-stat"><span className={`sm-stat-val ${scoreClass(overview.avgScore)}`}>{overview.avgScore}</span><span className="sm-stat-label">Avg Score</span></div>
-          <div
-            className="sm-stat"
-            title={mt5Diag?.connected ? `MT5 Connected · ${mt5Diag.accountName || 'Account'}` : 'MT5 not connected'}
-          >
-            <span className="sm-stat-val" style={{ color: mt5Diag?.connected ? '#22c55e' : '#64748b' }}>
-              {mt5Diag?.connected ? '🟢 MT5' : '⚫ MT5'}
-            </span>
-            <span className="sm-stat-label">
-              {mt5Diag?.connected ? (mt5Diag.balance != null ? `Balance ${mt5Diag.balance}` : 'Connected') : 'Offline'}
-            </span>
-          </div>
+          {brokerChips.map(bc => (
+            <div
+              key={bc.brokerId}
+              className="sm-stat"
+              title={bc.account ? `${bc.label} · ${bc.account} · ${bc.status}` : `${bc.label} · ${bc.status}`}
+            >
+              <span className="sm-stat-val" style={{ color: bc.color }}>{bc.icon} {bc.label}</span>
+              <span className="sm-stat-label">
+                {bc.status === 'Trading'
+                  ? 'Trading'
+                  : bc.balance != null
+                    ? `Balance ${bc.balance}`
+                    : bc.status}
+              </span>
+            </div>
+          ))}
         </div>
 
         {/* Filter bar */}
