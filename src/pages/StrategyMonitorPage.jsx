@@ -88,7 +88,6 @@ export default function StrategyMonitorPage() {
           <div className="sm-stat"><span className="sm-stat-val">{overview.total}</span><span className="sm-stat-label">Total</span></div>
           <div className="sm-stat"><span className="sm-stat-val pl-score-high">{overview.active}</span><span className="sm-stat-label">Active</span></div>
           <div className="sm-stat"><span className="sm-stat-val" style={{ color: '#3b82f6' }}>{overview.trading}</span><span className="sm-stat-label">Trading</span></div>
-          <div className="sm-stat"><span className="sm-stat-val" style={{ color: '#8b5cf6' }}>{overview.scoring}</span><span className="sm-stat-label">Scoring</span></div>
           <div className="sm-stat"><span className={`sm-stat-val ${scoreClass(overview.avgScore)}`}>{overview.avgScore}</span><span className="sm-stat-label">Avg Score</span></div>
         </div>
 
