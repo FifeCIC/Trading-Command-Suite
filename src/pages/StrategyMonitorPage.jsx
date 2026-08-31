@@ -89,13 +89,18 @@ export default function StrategyMonitorPage() {
           <div className="sm-stat"><span className="sm-stat-val pl-score-high">{overview.active}</span><span className="sm-stat-label">Active</span></div>
           <div className="sm-stat"><span className="sm-stat-val" style={{ color: '#3b82f6' }}>{overview.trading}</span><span className="sm-stat-label">Trading</span></div>
           <div className="sm-stat"><span className={`sm-stat-val ${scoreClass(overview.avgScore)}`}>{overview.avgScore}</span><span className="sm-stat-label">Avg Score</span></div>
-        </div>
-
-        {mt5Diag?.connected && (
-          <div className="sm-mt5-banner">
-            🟢 MT5 Connected · {mt5Diag.accountName || 'Account'} · Balance: {mt5Diag.balance ?? '—'}
+          <div
+            className="sm-stat"
+            title={mt5Diag?.connected ? `MT5 Connected · ${mt5Diag.accountName || 'Account'}` : 'MT5 not connected'}
+          >
+            <span className="sm-stat-val" style={{ color: mt5Diag?.connected ? '#22c55e' : '#64748b' }}>
+              {mt5Diag?.connected ? '🟢 MT5' : '⚫ MT5'}
+            </span>
+            <span className="sm-stat-label">
+              {mt5Diag?.connected ? (mt5Diag.balance != null ? `Balance ${mt5Diag.balance}` : 'Connected') : 'Offline'}
+            </span>
           </div>
-        )}
+        </div>
 
         {/* Filter bar */}
         <div className="sm-strat-filters">
