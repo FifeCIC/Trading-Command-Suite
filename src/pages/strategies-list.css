@@ -74,3 +74,10 @@
   transition: background 0.15s, color 0.15s;
 }
 .sl-faulty-banner-btn:hover { background: #ef4444; color: #fff; }
+
+/* Clickable chips + score links on monitor cards */
+.sl-chip-link { cursor: pointer; }
+.sl-chip-link:hover { text-decoration: underline; }
+a.sl-score-value { text-decoration: none; }
+a.sl-score-value:hover { text-decoration: underline; }
+.sl-score-label { display: inline-flex; align-items: center; gap: 0.2rem; }

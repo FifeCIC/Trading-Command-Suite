@@ -11,11 +11,13 @@
  */
 
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
+import PageInfoPopover from '../components/PageInfoPopover';
 import { scoreClass } from '../core/signal-utils';
 import './strategy-monitor.css';
 import './strategies-list.css';
@@ -121,11 +123,6 @@ export default function StrategyMonitorPage() {
           ))}
         </div>
 
-        {/* Filter bar */}
-        <div className="sm-strat-filters">
-          <span className="sm-monitor-note">Monitoring active trading strategies only ({monitoredStrats.length})</span>
-        </div>
-
         {/* Strategy cards — active trading only */}
         {stratLoading ? <LoadingSkeleton variant="card" count={6} /> : monitoredStrats.length === 0 ? (
           <EmptyState icon="◆" title="No active trading strategies" description="Activate a trading strategy to see monitoring data." />
@@ -154,17 +151,48 @@ export default function StrategyMonitorPage() {
                     </span>
                   </div>
                   <div className="sl-card-meta">
-                    {s.symbol && <span className="sl-chip">{s.symbol}</span>}
+                    {s.symbol && (
+                      <Link
+                        to="/scoring/symbols-ladder"
+                        className="sl-chip sl-chip-link"
+                        title={`Open ${s.symbol} in the symbols ladder`}
+                        onClick={e => e.stopPropagation()}
+                      >
+                        {s.symbol}
+                      </Link>
+                    )}
                     {s.watchlistName && <span className="sl-chip sl-chip-wl">{s.watchlistName}</span>}
-                    <span className="sl-chip sl-chip-proto">{s.protocolId || '—'}</span>
+                    <Link
+                      to="/protocols/protocols-registry"
+                      className="sl-chip sl-chip-proto sl-chip-link"
+                      title={`Open protocol registry — this strategy consumes ${s.protocolId || 'no protocol'}`}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      {s.protocolId || '—'}
+                    </Link>
                     <span className="sl-chip sl-chip-broker">{s.brokerId || '—'}</span>
                   </div>
                   {s.lastComposite != null && (
                     <div className="sl-card-score">
-                      <span className="sl-score-label">Last Score</span>
-                      <span className={`sl-score-value ${scoreClass(s.lastComposite)}`}>
-                        {s.lastComposite}
+                      <span className="sl-score-label">
+                        Last Score
+                        <PageInfoPopover>
+                          <strong>Protocol-scoped gated composite (0–100%).</strong>
+                          <br />
+                          The strategy's latest evaluation, expressed as a percentage of the protocol's
+                          maximum score. The Scoring ladder shows a different, dual scale — raw Signal
+                          (x/max) plus raw Opportunity (x/max) with percentages — so numbers there
+                          look larger. Click the score to see the live ordering stack.
+                        </PageInfoPopover>
                       </span>
+                      <Link
+                        to="/scoring/live-ordering-stack"
+                        className={`sl-score-value ${scoreClass(s.lastComposite)}`}
+                        title="Open the live ordering stack (Scoring)"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        {s.lastComposite}
+                      </Link>
                     </div>
                   )}
                   {s.dataStatus && s.dataStatus !== 'ready' && (
