@@ -12,9 +12,11 @@
 
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'motion/react';
-import { apiGet } from '../core/api/client';
+import { apiGet, apiPost } from '../core/api/client';
+import { dismissSignal } from '../core/api/signals';
+import { timeAgo } from '../core/format-utils';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import PageInfoPopover from '../components/PageInfoPopover';
@@ -24,6 +26,11 @@ import './strategies-list.css';
 
 export default function StrategyMonitorPage() {
   const [selectedStratId, setSelectedStratId] = useState(null);
+  const [expandedBotId, setExpandedBotId] = useState(null);
+  const [queueSearch, setQueueSearch] = useState('');
+  const [queueSort, setQueueSort] = useState('depth');
+  const [rowResults, setRowResults] = useState({});
+  const queryClient = useQueryClient();
 
   // ── Shared data ──
   const { data: strategies = [], isLoading: stratLoading } = useQuery({
@@ -43,6 +50,88 @@ export default function StrategyMonitorPage() {
     queryKey: ['monitor-mt5'],
     queryFn: () => apiGet('/api/providers/mt5/diagnostics').catch(() => null),
     refetchInterval: 30_000,
+  });
+
+  // ── Signal queues (#714 Stage 2) — pending entries per trading bot ──
+  const { data: queueEntries = [], isLoading: queueLoading } = useQuery({
+    queryKey: ['monitor-queues'],
+    queryFn: () => apiGet('/api/trading/strategies/queues').catch(() => []),
+    refetchInterval: 15_000,
+  });
+  const queueList = Array.isArray(queueEntries) ? queueEntries : [];
+
+  const queueBots = useMemo(() => {
+    const byStrat = new Map();
+    for (const e of queueList) {
+      if (!byStrat.has(e.strategyId)) {
+        byStrat.set(e.strategyId, {
+          strategyId: e.strategyId,
+          name: e.strategyName || e.strategyId,
+          symbol: e.strategySymbol,
+          mode: e.strategyMode,
+          active: e.strategyActive,
+          entries: [],
+        });
+      }
+      byStrat.get(e.strategyId).entries.push(e);
+    }
+    const q = (queueSearch || '').trim().toUpperCase();
+    let bots = [...byStrat.values()].map(b => {
+      const entries = q
+        ? b.entries.filter(e => e.symbol?.toUpperCase().includes(q)
+            || (e.protocolId || '').toUpperCase().includes(q)
+            || b.name.toUpperCase().includes(q))
+        : b.entries;
+      return { ...b, entries, depth: entries.length, top: Math.max(...entries.map(e => e.combinedStrength || 0), 0) };
+    });
+    if (q) bots = bots.filter(b => b.entries.length > 0);
+    bots = bots.sort((a, b) => queueSort === 'strength'
+      ? b.top - a.top
+      : b.depth - a.depth || b.top - a.top);
+    return bots;
+  }, [queueList, queueSearch, queueSort]);
+
+  const queueDepthByStrategy = useMemo(() => {
+    const m = new Map();
+    for (const e of queueList) m.set(e.strategyId, (m.get(e.strategyId) || 0) + 1);
+    return m;
+  }, [queueList]);
+
+  // Execute a queued signal — triggers the bot's existing execute path.
+  const executeMutation = useMutation({
+    mutationFn: ({ strategyId, entryId }) => apiPost(`/api/trading/strategies/${strategyId}/execute`),
+    onSuccess: (res, vars) => {
+      const text = res?.executed
+        ? '✅ Executed'
+        : `⛔ ${res?.reason || (res?.evaluated ? 'Conditions not met' : 'Not executed')}`;
+      setRowResults(prev => ({ ...prev, [vars.entryId]: text }));
+      queryClient.invalidateQueries({ queryKey: ['monitor-queues'] });
+    },
+    onError: (err, vars) => {
+      setRowResults(prev => ({ ...prev, [vars.entryId]: `❌ ${err?.message || 'Execute failed'}` }));
+    },
+  });
+
+  // Dismiss a queued signal — propagates into the queue (#714) and Signals (#684).
+  const dismissMutation = useMutation({
+    mutationFn: ({ entry }) => dismissSignal({
+      symbol: entry.symbol,
+      protocolId: entry.protocolId,
+      hours: 1,
+      strengths: {
+        combinedStrength: entry.combinedStrength,
+        signalPct: entry.signalPct,
+        opportunityPct: entry.opportunityPct,
+      },
+    }),
+    onSuccess: (_, vars) => {
+      setRowResults(prev => ({ ...prev, [vars.entry.id]: '🚫 Dismissed 1h' }));
+      queryClient.invalidateQueries({ queryKey: ['monitor-queues'] });
+      queryClient.invalidateQueries({ queryKey: ['signals-best'] });
+    },
+    onError: (err, vars) => {
+      setRowResults(prev => ({ ...prev, [vars.entry.id]: `❌ ${err?.message || 'Dismiss failed'}` }));
+    },
   });
 
   // ── Compute overview stats ──
@@ -171,6 +260,14 @@ export default function StrategyMonitorPage() {
                       {s.protocolId || '—'}
                     </Link>
                     <span className="sl-chip sl-chip-broker">{s.brokerId || '—'}</span>
+                    {queueDepthByStrategy.get(s.id) > 0 && (
+                      <span
+                        className="sl-chip sl-chip-queue"
+                        title={`${queueDepthByStrategy.get(s.id)} pending signal(s) — see Signal Queues below`}
+                      >
+                        ⏳ {queueDepthByStrategy.get(s.id)} queued
+                      </span>
+                    )}
                   </div>
                   {s.lastComposite != null && (
                     <div className="sl-card-score">
@@ -216,6 +313,125 @@ export default function StrategyMonitorPage() {
             })}
           </div>
         )}
+
+        {/* Signal Queues (#714 Stage 2) — bots as queues of signals */}
+        <section className="sm-queues">
+          <div className="sm-queues-header">
+            <h2>
+              Signal Queues
+              <PageInfoPopover>
+                <strong>Every trading bot is a queue of signals.</strong>
+                <br />
+                The one scoring line routes actionable signals into each bot's queue based on
+                its protocol subscriptions. Re-signals refresh the entry; when a symbol stops
+                signalling the entry is voided. Dismissals propagate both ways.
+              </PageInfoPopover>
+            </h2>
+            <div className="sm-queues-controls">
+              <input
+                className="smq-search"
+                placeholder="Filter symbol, protocol, bot…"
+                value={queueSearch}
+                onChange={e => setQueueSearch(e.target.value)}
+              />
+              <select className="smq-sort" value={queueSort} onChange={e => setQueueSort(e.target.value)}>
+                <option value="depth">Sort: Queue depth</option>
+                <option value="strength">Sort: Strength</option>
+              </select>
+            </div>
+          </div>
+
+          {queueLoading && queueList.length === 0 ? <LoadingSkeleton variant="card" count={2} /> : queueBots.length === 0 ? (
+            <EmptyState
+              icon="⏳"
+              title={queueList.length === 0 ? 'No pending signals' : 'No bots match the filter'}
+              description={queueList.length === 0
+                ? 'When the scoring line signals a symbol a trading bot subscribes to, it will appear here.'
+                : 'Try a different symbol, protocol, or bot name.'}
+            />
+          ) : (
+            <div className="smq-list">
+              {queueBots.map((bot, i) => {
+                const expanded = expandedBotId === bot.strategyId;
+                return (
+                  <motion.div
+                    key={bot.strategyId}
+                    className={`smq-bot ${expanded ? 'smq-bot--open' : ''}`}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.03 }}
+                  >
+                    <button
+                      type="button"
+                      className="smq-bot-row"
+                      onClick={() => setExpandedBotId(expanded ? null : bot.strategyId)}
+                      aria-expanded={expanded}
+                    >
+                      <span className="smq-chevron">{expanded ? '▾' : '▸'}</span>
+                      <span className="smq-bot-dot" style={{ background: bot.active !== false ? '#22c55e' : '#64748b' }} />
+                      <strong className="smq-bot-name">{bot.name}</strong>
+                      {bot.symbol && <span className="smq-bot-symbol">{bot.symbol}</span>}
+                      <span className="smq-bot-mode">{bot.mode || '—'}</span>
+                      <span className="smq-depth" title="Pending signals in this bot's queue">
+                        {bot.depth} pending
+                      </span>
+                    </button>
+                    {expanded && (
+                      <div className="smq-entries">
+                        {bot.entries.map(e => (
+                          <div key={e.id} className="smq-entry">
+                            <span className="smq-entry-symbol">
+                              <Link to="/scoring/symbols-ladder" className="sl-chip-link">{e.symbol}</Link>
+                            </span>
+                            <span className={`smq-entry-dir smq-entry-dir--${(e.direction || 'long').toLowerCase()}`}>
+                              {e.direction === 'SHORT' ? 'SELL' : e.direction === 'LONG' ? 'BUY' : e.direction || '—'}
+                            </span>
+                            <span className="smq-entry-proto">
+                              <Link to="/protocols/protocols-registry" className="sl-chip-link">{e.protocolId}</Link>
+                            </span>
+                            <span className="smq-entry-scores" title="SEES dual score at signal time — composite · signal · opportunity">
+                              <span className={scoreClass(e.compositePct)}>{e.compositePct ?? '—'}</span>
+                              <i>C</i>
+                              <span className={scoreClass(e.signalPct)}>{e.signalPct ?? '—'}</span>
+                              <i>S</i>
+                              <span className={scoreClass(e.opportunityPct)}>{e.opportunityPct ?? '—'}</span>
+                              <i>O</i>
+                            </span>
+                            <span className={`smq-entry-strength ${scoreClass(e.combinedStrength)}`} title="Combined strength">
+                              {e.combinedStrength}
+                            </span>
+                            <span className="smq-entry-age" title={e.createdAt}>{timeAgo(e.createdAt)}</span>
+                            <span className="smq-entry-actions">
+                              <button
+                                type="button"
+                                className="smq-btn smq-btn--go"
+                                disabled={executeMutation.isPending || dismissMutation.isPending}
+                                title="Run this bot now (respects mode, cooldown and position limits)"
+                                onClick={() => executeMutation.mutate({ strategyId: bot.strategyId, entryId: e.id })}
+                              >
+                                ▶ Execute
+                              </button>
+                              <button
+                                type="button"
+                                className="smq-btn smq-btn--dismiss"
+                                disabled={executeMutation.isPending || dismissMutation.isPending}
+                                title="Dismiss for 1h — removes this queue entry and the Signals card"
+                                onClick={() => dismissMutation.mutate({ entry: e })}
+                              >
+                                ✕
+                              </button>
+                            </span>
+                            {rowResults[e.id] && <span className="smq-entry-result">{rowResults[e.id]}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </motion.div>
 
     </div>

@@ -13,6 +13,10 @@ export class TradingStrategyController {
   @Get('with-ratios')
   async findAllWithRatios() { return this.service.findAllWithRatios(); }
 
+  /** GET /api/trading/strategies/queues — all pending bot queues (#714 Stage 2). */
+  @Get('queues')
+  async getAllQueues() { return this.service.getAllQueues(); }
+
   /**
    * POST /api/trading/strategies/seed — idempotent seed of default strategies.
    * Creates scoring strategies + trading strategies for all session pairs.

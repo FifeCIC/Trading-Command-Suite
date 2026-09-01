@@ -110,6 +110,42 @@ export class TradingStrategyService {
     }
   }
 
+  /**
+   * #714 Stage 2 — all pending queue entries across every trading bot,
+   * joined with strategy info for the Strategy Monitor queue view.
+   */
+  async getAllQueues() {
+    try {
+      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+        `SELECT q.id, q.strategyId, ts.name AS strategyName, ts.symbol AS strategySymbol,
+                ts.active AS strategyActive, ts.mode AS strategyMode, ts.brokerId,
+                q.symbol, q.protocolId, q.direction, q.\`signal\`,
+                CAST(q.compositePct AS SIGNED) AS compositePct,
+                CAST(q.signalPct AS SIGNED) AS signalPct,
+                CAST(q.opportunityPct AS SIGNED) AS opportunityPct,
+                CAST(q.combinedStrength AS SIGNED) AS combinedStrength,
+                q.scoreId, q.status, q.createdAt, q.updatedAt
+         FROM strategy_signal_queue q
+         JOIN trading_strategy ts ON ts.id = q.strategyId
+         WHERE q.status = 'pending'
+         ORDER BY q.createdAt DESC`,
+      );
+      const num = (v: unknown) => (v == null ? null : Number(v));
+      return rows.map((r: any) => ({
+        ...r,
+        compositePct: num(r.compositePct),
+        signalPct: num(r.signalPct),
+        opportunityPct: num(r.opportunityPct),
+        combinedStrength: num(r.combinedStrength),
+        strategyActive: Boolean(r.strategyActive),
+        createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt ?? ''),
+        updatedAt: r.updatedAt instanceof Date ? r.updatedAt.toISOString() : String(r.updatedAt ?? ''),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
   async addProtocolSubscription(strategyId: string, protocolId: string, role = 'long') {
     const existing: any = await (this.prisma as any).strategyProtocol
       .findFirst({ where: { strategyId, protocolId, role } })
