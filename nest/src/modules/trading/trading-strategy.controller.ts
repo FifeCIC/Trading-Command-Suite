@@ -55,6 +55,12 @@ export class TradingStrategyController {
     return this.service.removeProtocolSubscription(id, subId);
   }
 
+  /** GET /api/trading/strategies/:id/queue — pending signal queue (#714). */
+  @Get(':id/queue')
+  async getQueue(@Param('id') id: string) {
+    return this.service.getSignalQueue(id);
+  }
+
   @Post(':id/evaluate')
   async evaluate(@Param('id') id: string) {
     try {

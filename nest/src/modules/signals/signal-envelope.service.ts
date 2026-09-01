@@ -5,6 +5,7 @@ import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { MarketDataService } from '../market-data/market-data.service';
 import { ScoreHistoryService } from '../scoring/score-history.service';
 import { AdapterFactory } from '../providers/adapter-factory';
+import { SignalQueueService, RoutableSignal } from './signal-queue.service';
 
 /** Strategy ID used when persisting Signals Workbench scores. */
 const SIGNALS_WORKBENCH_STRATEGY_ID = 'signals-workbench';
@@ -133,6 +134,7 @@ export class SignalEnvelopeService {
     private readonly marketData: MarketDataService,
     private readonly scoreHistory: ScoreHistoryService,
     private readonly adapterFactory: AdapterFactory,
+    private readonly signalQueue: SignalQueueService,
   ) {}
 
   /**
@@ -696,6 +698,12 @@ export class SignalEnvelopeService {
     const slugs = await this.protocolDb.findAllActive();
     const byKey = new Map<string, SignalEnvelope>();
 
+    // #714 Stage 1 — routing records for the trading-bot queues. Collected
+    // BEFORE the best-of merge so every protocol's actionable signal is
+    // routable, even when it lost the display slot for its symbol+direction.
+    const scoredPairs = new Set<string>();
+    const routingRecords: RoutableSignal[] = [];
+
     for (const slug of slugs) {
       const config = this.protocolDb.getCached(slug) ?? (await this.protocolDb.findBySlug(slug));
       if (!config) continue;
@@ -713,9 +721,25 @@ export class SignalEnvelopeService {
         const key = `${ticker.toUpperCase()}|${direction}`;
         try {
           const env = await this.buildEnvelope(ticker, slug);
-          // Action-only (#684): skip HOLD and no-data envelopes.
+          const sym = ticker.toUpperCase();
+          scoredPairs.add(`${slug}|${sym}`);
+          // Action-only (#684): skip HOLD and no-data envelopes for display.
           if (env.signal === 'HOLD') continue;
           if (env.composite === 50 && env.confidence === 0) continue;
+
+          // #714 — every actionable per-protocol record is routable, even
+          // when it loses the display merge below.
+          routingRecords.push({
+            protocolId: slug,
+            symbol: sym,
+            direction: env.signal.startsWith('SELL') ? 'SHORT' : 'LONG',
+            signal: env.signal.startsWith('SELL') ? 'SELL' : 'BUY',
+            compositePct: env.composite != null ? Math.round(env.composite) : null,
+            signalPct: env.signalPct != null ? Math.round(env.signalPct) : null,
+            opportunityPct: env.opportunityPct != null ? Math.round(env.opportunityPct) : null,
+            combinedStrength: env.combinedStrength != null ? Math.round(env.combinedStrength) : null,
+            scoreId: null, // assigned after persistScores below
+          });
 
           const existing = byKey.get(key);
           if (!existing || env.combinedStrength > existing.combinedStrength) {
@@ -777,6 +801,16 @@ export class SignalEnvelopeService {
     const visible = envelopes
       .filter(e => !dismissed.has(`${e.symbol}|${e.protocolId}`))
       .sort((a, b) => b.combinedStrength - a.combinedStrength);
+
+    // #714 Stage 1 — route this run's actionable records into trading-bot
+    // queues (dedupe-refresh, void on non-signalling re-scores). Honours the
+    // same dismissals that hide cards. Additive — never touches `visible`.
+    try {
+      const routeable = routingRecords.filter(r => !dismissed.has(`${r.symbol}|${r.protocolId}`));
+      await this.signalQueue.syncQueues(routeable, scoredPairs);
+    } catch (err) {
+      this.logger.warn(`Signal queue routing failed: ${(err as Error).message}`);
+    }
 
     // ── Rank snapshot (#693) — hourly throttle. Persists the visible ranking so
     // forward outcomes can validate combinedStrength without paper assumptions. ──
@@ -854,6 +888,8 @@ export class SignalEnvelopeService {
           dismissCount: { increment: 1 },
         },
       });
+      // #714 — dismissal propagates into the trading-bot queues.
+      await this.signalQueue.removePendingForSignal(cleanSymbol, pid === 'any' ? undefined : pid);
     } catch (err) {
       this.logger.warn(`Dismiss failed for ${cleanSymbol}/${pid}: ${(err as Error).message}`);
     }

@@ -81,6 +81,35 @@ export class TradingStrategyService {
       .catch(() => []);
   }
 
+  /** #714 — pending signal queue for one trading bot (strongest first). */
+  async getSignalQueue(strategyId: string) {
+    try {
+      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+        `SELECT id, strategyId, symbol, protocolId, direction, \`signal\`,
+                CAST(compositePct AS SIGNED) AS compositePct,
+                CAST(signalPct AS SIGNED) AS signalPct,
+                CAST(opportunityPct AS SIGNED) AS opportunityPct,
+                CAST(combinedStrength AS SIGNED) AS combinedStrength,
+                scoreId, status, createdAt, updatedAt
+         FROM strategy_signal_queue
+         WHERE strategyId = ? AND status = 'pending'
+         ORDER BY COALESCE(combinedStrength, 0) DESC, createdAt ASC`,
+        strategyId,
+      );
+      return rows.map((r: any) => ({
+        ...r,
+        compositePct: r.compositePct == null ? null : Number(r.compositePct),
+        signalPct: r.signalPct == null ? null : Number(r.signalPct),
+        opportunityPct: r.opportunityPct == null ? null : Number(r.opportunityPct),
+        combinedStrength: r.combinedStrength == null ? null : Number(r.combinedStrength),
+        createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt ?? ''),
+        updatedAt: r.updatedAt instanceof Date ? r.updatedAt.toISOString() : String(r.updatedAt ?? ''),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
   async addProtocolSubscription(strategyId: string, protocolId: string, role = 'long') {
     const existing: any = await (this.prisma as any).strategyProtocol
       .findFirst({ where: { strategyId, protocolId, role } })
