@@ -207,6 +207,19 @@ export default function MetaStackPipelinePage() {
     queryClient.invalidateQueries({ queryKey: ['msp-layers'] });
   };
 
+  // #714 Stage 3 — Expert Trading Bot queue processing + pacing.
+  const { data: botQueue } = useQuery({
+    queryKey: ['msp-botqueue'],
+    queryFn: () => apiGet('/api/automation/bot-queue').catch(() => null),
+    refetchInterval: 15_000,
+  });
+  const botEnabled = botQueue?.enabled ?? true;
+  const botDelay = botQueue?.interTradeDelayMinutes ?? 10;
+  const setBotQueue = async (patch) => {
+    await apiPost('/api/automation/bot-queue', patch).catch(() => {});
+    queryClient.invalidateQueries({ queryKey: ['msp-botqueue'] });
+  };
+
   const visibleNodes = useMemo(() =>
     showPlanned ? NODES : NODES.filter(n => n.status === 'implemented'),
     [showPlanned]
@@ -256,6 +269,27 @@ export default function MetaStackPipelinePage() {
           >
             {layers.tradingEnabled ? 'ON — click to stop dispatch' : 'OFF — click to enable dispatch'}
           </button>
+        </span>
+        <span className={`msp-layer-pill ${botEnabled ? 'on' : 'off'}`}>
+          Expert Bot (queues)
+          <button
+            type="button"
+            className="msp-layer-btn"
+            title="Processes each bot's signal queue. Trading OFF means paper capture only."
+            onClick={() => setBotQueue({ enabled: !botEnabled })}
+          >
+            {botEnabled ? 'ON — click to pause queue processing' : 'OFF — click to resume'}
+          </button>
+          <label className="msp-bot-delay" title="Minimum minutes between bot trades">
+            delay{' '}
+            <input
+              type="number"
+              min="0"
+              max="240"
+              value={botDelay}
+              onChange={e => setBotQueue({ interTradeDelayMinutes: parseInt(e.target.value || '0', 10) })}
+            />m
+          </label>
         </span>
         <span className="msp-layer-note">
           Protocols OFF stops scoring entirely. Trading OFF still produces signals but nothing is dispatched. Trading defaults OFF after restart.

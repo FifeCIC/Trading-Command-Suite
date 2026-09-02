@@ -145,3 +145,10 @@
   color: var(--ink-soft, #888);
   flex: 1 1 100%;
 }
+
+/* #714 Stage 3 — Expert Bot queue pill */
+.msp-bot-delay { display: inline-flex; align-items: center; gap: 4px; font-size: 0.66rem; color: var(--ink-soft); margin-left: 2px; }
+.msp-bot-delay input {
+  width: 44px; background: var(--panel); border: 1px solid var(--line); color: var(--ink);
+  border-radius: 4px; padding: 1px 4px; font-size: 0.66rem;
+}

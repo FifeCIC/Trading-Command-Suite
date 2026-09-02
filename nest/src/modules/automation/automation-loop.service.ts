@@ -174,6 +174,10 @@ export interface LoopState {
   /** #615 — META.Stack layer kill switches (mandate hierarchy). */
   protocolsEnabled: boolean;
   tradingEnabled: boolean;
+  /** #714 Stage 3 — Expert Trading Bot queue processing + pacing. */
+  botQueueEnabled: boolean;
+  botInterTradeDelayMinutes: number;
+  lastBotTradeAt: string | null;
   /** #704 — decision_log write-on-change counters. */
   decisionLogPersisted: number;
   decisionLogSuppressed: number;
@@ -268,6 +272,9 @@ export class AutomationLoopService implements OnModuleInit {
   private lastDecisionWrite = new Map<string, string>();
   /** #695 — last paper-trade signature per strategy|symbol (dry-run dedupe). */
   private lastPaperSig = new Map<string, string>();
+  /** #714 Stage 3 — bot pacing: last queue-driven trade per strategy + globally. */
+  private lastBotTradeAt = new Map<string, number>();
+  private lastBotTradeAnyAt = 0;
 
   /** Tracks repeated errors across ticks to suppress duplicate logging.
    *  Key = `${strategyId}:${symbol}:${errorMessage}` */
@@ -452,6 +459,10 @@ export class AutomationLoopService implements OnModuleInit {
     // #615 safe defaults: scoring ON, trading OFF until explicitly enabled.
     protocolsEnabled: true,
     tradingEnabled: false,
+    // #714 Stage 3 — bot queue ON (paper-only while trading layer is OFF).
+    botQueueEnabled: true,
+    botInterTradeDelayMinutes: 10,
+    lastBotTradeAt: null,
     decisionLogPersisted: 0,
     decisionLogSuppressed: 0,
   };
@@ -1242,6 +1253,15 @@ export class AutomationLoopService implements OnModuleInit {
       }
       } // end working-set guard (step 4)
 
+      // ── #714 Stage 3: Expert Trading Bot — process signal queues AFTER the
+      //    legacy strategy evaluation. Additive: the legacy path keeps running
+      //    untouched until the queue path is proven. Shared cooldown maps
+      //    (lastSymbolTrade/lastAnyTradeAt) guarantee only ONE trade per symbol
+      //    per minute across BOTH paths, so a legacy dispatch wins the race and
+      //    the queue dispatch for the same symbol skips itself. Real trades only
+      //    fire when the trading layer is ON (otherwise paper capture).
+      await this.processSignalQueues(decisions);
+
     } catch (err) {
       this.logger.error(`Tick #${this.state.tickCount} failed: ${(err as Error).message}`);
     }
@@ -1952,6 +1972,182 @@ export class AutomationLoopService implements OnModuleInit {
     }
   }
 
+  /**
+   * #714 Stage 3 — Expert Trading Bot queue processor.
+   *
+   * ONE scoring line: this method NEVER re-scores. It reads the strongest
+   * pending entry from each active auto-mode bot's strategy_signal_queue and
+   * dispatches it through the shared safety chain (dispatchTrade) using the
+   * queue's SEES snapshot (direction + combinedStrength + protocolId).
+   *
+   * Gates, in order (all read-only checks before any mutation):
+   *   1. botQueueEnabled setting (#714 kill switch for this path only)
+   *   2. strategy mode must be auto (manual/semi-auto = user UI buttons)
+   *   3. data readiness (same dataStatus annotation as the legacy path)
+   *   4. minComposite — snapshot strength vs the strategy's own bar
+   *   5. strategy cooldown (shared lastTradeTime map)
+   *   6. bot pacing — inter-trade delay (default 10m, persisted setting)
+   *   7. trading layer / broker trading off → paper capture (#695), no trade
+   *   8. dispatchTrade safety chain (layer, 60s symbol + 3s global cooldown,
+   *      duplicate guard, diversification, mode dispatch)
+   *
+   * Consumed only on EXECUTED/QUEUED (status → 'executing'). BLOCKED and
+   * FAILED entries stay pending for the next tick. Every failure is non-fatal.
+   */
+  private async processSignalQueues(decisions: TickDecision[]): Promise<void> {
+    try {
+      if (!this.state.botQueueEnabled) return;
+      const strategies = (this.state.activeStrategies || []).filter((s: any) => s.active !== false);
+      if (strategies.length === 0) return;
+
+      const pendingRows: any[] = await (this.prisma as any).$queryRawUnsafe(
+        `SELECT q.id, q.strategyId, q.symbol, q.protocolId, q.direction, q.\`signal\`,
+                CAST(q.compositePct AS SIGNED) AS compositePct,
+                CAST(q.combinedStrength AS SIGNED) AS combinedStrength,
+                q.scoreId, q.createdAt
+         FROM strategy_signal_queue q
+         JOIN trading_strategy ts ON ts.id = q.strategyId
+         WHERE q.status = 'pending' AND ts.active = 1
+         ORDER BY COALESCE(q.combinedStrength, 0) DESC, q.createdAt ASC`,
+      ).catch(() => []);
+      if (!Array.isArray(pendingRows) || pendingRows.length === 0) return;
+
+      const stratById = new Map(strategies.map((s: any) => [s.id, s]));
+      const heads = new Map<string, any>();
+      for (const r of pendingRows) {
+        if (heads.has(r.strategyId) || !stratById.has(r.strategyId)) continue;
+        heads.set(r.strategyId, { ...r, strategy: stratById.get(r.strategyId) });
+      }
+
+      const delayMs = (this.state.botInterTradeDelayMinutes || 10) * 60000;
+
+      // Recent 5m close for SL/TP computation (same feed as the legacy path).
+      const getClose = async (symbol: string, protocolId: string): Promise<number> => {
+        try {
+          const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: symbol } });
+          if (!dbSym) return 0;
+          const requiredBars = this.protocolDb.getRequiredBars(protocolId);
+          const bars = await this.marketData.getBars(dbSym.id, '5m', requiredBars['5m'] || 100);
+          return bars?.length ? Number(bars[bars.length - 1].close) || 0 : 0;
+        } catch {
+          return 0;
+        }
+      };
+
+      for (const head of heads.values()) {
+        const strategy = head.strategy;
+        const symbol = head.symbol;
+        const strength = Number(head.combinedStrength ?? 0);
+        // Legacy scale: minComposite is calibrated for the protocol composite
+        // percentage (meta.compositePct), so the gate uses compositePct — the
+        // same number the retired scoring path compared. combinedStrength stays
+        // for logs/display only.
+        const gatePct = Number(head.compositePct ?? 0);
+        const side: 'BUY' | 'SELL' = head.direction === 'SHORT' ? 'SELL' : 'BUY';
+
+        // Gate 2 — auto bots only; manual/semi-auto stay for the UI buttons.
+        if (strategy.mode !== 'auto') continue;
+
+        // Gate 3 — data readiness (same annotation as legacy evaluateStrategy).
+        if (strategy.dataStatus === 'pending_bars' || strategy.dataStatus === 'blocked') continue;
+
+        // Gate 4 — minComposite bar on the SNAPSHOT (no re-scoring).
+        const minC = Number(strategy.minComposite ?? 0);
+        if (minC > 0 && gatePct < minC) {
+          decisions.push({
+            timestamp: new Date().toISOString(),
+            strategyId: strategy.id, symbol, brokerId: strategy.brokerId || 'mt5',
+            decision: 'SKIP',
+            reason: `[QueueBot] ${symbol} composite ${gatePct} < minComposite ${minC} — stays queued`,
+            composite: gatePct, signal: side,
+          });
+          continue;
+        }
+
+        // Gate 5 — strategy cooldown (shared with the legacy path).
+        const lastTrade = this.lastTradeTime.get(strategy.id);
+        const cooldownMs = (strategy.cooldownMinutes || 5) * 60000;
+        if (lastTrade && (Date.now() - lastTrade) < cooldownMs) continue;
+
+        // Gate 6 — bot pacing (persisted inter-trade delay).
+        const lastBot = Math.max(this.lastBotTradeAt.get(strategy.id) || 0, this.lastBotTradeAnyAt || 0);
+        if (lastBot && (Date.now() - lastBot) < delayMs) {
+          decisions.push({
+            timestamp: new Date().toISOString(),
+            strategyId: strategy.id, symbol, brokerId: strategy.brokerId || 'mt5',
+            decision: 'SKIP',
+            reason: `[QueueBot] pacing — next trade in ${Math.ceil((delayMs - (Date.now() - lastBot)) / 60000)}m`,
+            composite: gatePct, signal: side,
+          });
+          continue;
+        }
+
+        const entryPrice = await getClose(symbol, head.protocolId);
+        const baseSize = strategy.baseSize ?? 0.01;
+        const slPct = strategy.slPct ?? 1.0;
+        const tpPct = strategy.tpPct ?? 1.0;
+
+        // Gate 7 — trading OFF → paper capture, entry stays pending.
+        if (!this.state.tradingEnabled || !this.state.brokerStates[strategy.brokerId || 'mt5']?.tradingEnabled) {
+          await this.recordPaperTrade({
+            strategyId: strategy.id,
+            symbol,
+            side,
+            composite: gatePct,
+            baseSize,
+            slPct,
+            tpPct,
+            entryPrice,
+            protocolId: head.protocolId,
+          });
+          decisions.push({
+            timestamp: new Date().toISOString(),
+            strategyId: strategy.id, symbol, brokerId: strategy.brokerId || 'mt5',
+            decision: 'SKIP',
+            reason: `[QueueBot] ${side} ${symbol} captured as paper (trading layer OFF) — stays queued`,
+            composite: gatePct, signal: side,
+          });
+          continue;
+        }
+
+        // Gate 8 — shared dispatch chain (layer, cooldowns, duplicate, diversification).
+        const before = decisions.length;
+        await this.dispatchTrade({
+          strategyId: strategy.id,
+          strategyName: strategy.name || strategy.id,
+          symbol,
+          brokerId: strategy.brokerId || 'mt5',
+          side,
+          composite: gatePct,
+          baseSize,
+          slPct,
+          tpPct,
+          entryPrice,
+          mode: strategy.mode,
+          protocolId: head.protocolId,
+          decisions,
+        });
+        const last = decisions.length > before ? decisions[decisions.length - 1] : null;
+        if (last && last.strategyId === strategy.id && (last.decision === 'EXECUTED' || last.decision === 'QUEUED')) {
+          await (this.prisma as any).$executeRawUnsafe(
+            `UPDATE strategy_signal_queue SET status = 'executing', updatedAt = NOW() WHERE id = ? AND status = 'pending'`,
+            head.id,
+          ).catch(() => {});
+          this.lastBotTradeAt.set(strategy.id, Date.now());
+          this.lastBotTradeAnyAt = Date.now();
+          this.state.lastBotTradeAt = new Date().toISOString();
+          this.logger.warn(
+            `🤖 QueueBot ${strategy.name} ${last.decision} ${side} ${symbol} strength=${strength} protocol=${head.protocolId} — queue entry consumed`,
+          );
+        } else if (last && last.decision === 'BLOCKED') {
+          this.logger.log(`[QueueBot] ${strategy.name} ${symbol} blocked: ${last.reason} — entry stays pending`);
+        }
+      }
+    } catch (err) {
+      this.logger.warn(`Signal queue processing failed: ${(err as Error).message}`);
+    }
+  }
+
   // ── Dashboard Helpers ────────────────────────────────
 
   /**
@@ -2080,7 +2276,6 @@ export class AutomationLoopService implements OnModuleInit {
       const { strategyId, symbol, side, composite, baseSize, slPct, tpPct, entryPrice, protocolId } = params;
       const sig = `${side}|${Math.round(composite)}`;
       if (this.lastPaperSig.get(`${strategyId}|${symbol}`) === sig) return;
-      this.lastPaperSig.set(`${strategyId}|${symbol}`, sig);
 
       const sl = side === 'BUY' ? entryPrice * (1 - slPct / 100) : entryPrice * (1 + slPct / 100);
       const tp = side === 'BUY' ? entryPrice * (1 + tpPct / 100) : entryPrice * (1 - tpPct / 100);
@@ -2090,6 +2285,9 @@ export class AutomationLoopService implements OnModuleInit {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         id, strategyId, symbol, side, Math.round(composite), entryPrice || null, sl, tp, baseSize, protocolId ?? null, this.state.tickCount,
       );
+      // Mark only AFTER a successful insert — a failed attempt must not
+      // poison the dedupe map (e.g. table missing on first deployment).
+      this.lastPaperSig.set(`${strategyId}|${symbol}`, sig);
       this.logger.log(`📝 PAPER ${side} ${symbol} composite ${Math.round(composite)} (dry-run, trading off)`);
     } catch (err) {
       this.logger.warn(`Paper trade capture failed: ${(err as Error).message}`);
@@ -2283,9 +2481,61 @@ export class AutomationLoopService implements OnModuleInit {
         if (r.key === 'automation.protocolsEnabled') this.state.protocolsEnabled = r.value === 'true';
         if (r.key === 'automation.tradingEnabled') this.state.tradingEnabled = r.value === 'true';
       }
-      this.logger.log(`Layer flags restored — protocols=${this.state.protocolsEnabled}, trading=${this.state.tradingEnabled}`);
+      // #714 Stage 3 — bot queue + pacing settings (defaults: ON, 10m).
+      const botRows: any[] = await (this.prisma as any).globalSetting.findMany({
+        where: { key: { in: ['automation.botQueueEnabled', 'automation.botInterTradeDelayMinutes'] } },
+      });
+      for (const r of botRows) {
+        if (r.key === 'automation.botQueueEnabled') this.state.botQueueEnabled = r.value !== 'false';
+        if (r.key === 'automation.botInterTradeDelayMinutes') {
+          const mins = parseInt(String(r.value), 10);
+          if (Number.isFinite(mins) && mins >= 0) this.state.botInterTradeDelayMinutes = mins;
+        }
+      }
+      this.logger.log(
+        `Layer flags restored — protocols=${this.state.protocolsEnabled}, trading=${this.state.tradingEnabled}` +
+        `, botQueue=${this.state.botQueueEnabled}, botDelay=${this.state.botInterTradeDelayMinutes}m`,
+      );
     } catch (err) {
       this.logger.warn(`Layer flag restore failed: ${(err as Error).message}`);
     }
+  }
+
+  /**
+   * #714 Stage 3 — bot queue configuration (kill switch + pacing).
+   * Persisted in global_setting so restarts keep the choice.
+   */
+  async setBotQueueConfig(body: { enabled?: boolean; interTradeDelayMinutes?: number }) {
+    if (body.enabled !== undefined) {
+      this.state.botQueueEnabled = body.enabled;
+      await (this.prisma as any).globalSetting.upsert({
+        where: { key: 'automation.botQueueEnabled' },
+        create: { key: 'automation.botQueueEnabled', value: String(body.enabled) },
+        update: { value: String(body.enabled) },
+      }).catch((err: any) => this.logger.warn(`botQueueEnabled persist failed: ${err.message}`));
+    }
+    if (body.interTradeDelayMinutes !== undefined) {
+      const mins = Math.max(0, Math.floor(body.interTradeDelayMinutes));
+      this.state.botInterTradeDelayMinutes = mins;
+      await (this.prisma as any).globalSetting.upsert({
+        where: { key: 'automation.botInterTradeDelayMinutes' },
+        create: { key: 'automation.botInterTradeDelayMinutes', value: String(mins) },
+        update: { value: String(mins) },
+      }).catch((err: any) => this.logger.warn(`botInterTradeDelayMinutes persist failed: ${err.message}`));
+    }
+    this.logger.warn(`QueueBot config — enabled=${this.state.botQueueEnabled}, interTradeDelay=${this.state.botInterTradeDelayMinutes}m`);
+    return {
+      enabled: this.state.botQueueEnabled,
+      interTradeDelayMinutes: this.state.botInterTradeDelayMinutes,
+      lastBotTradeAt: this.state.lastBotTradeAt,
+    };
+  }
+
+  getBotQueueConfig() {
+    return {
+      enabled: this.state.botQueueEnabled,
+      interTradeDelayMinutes: this.state.botInterTradeDelayMinutes,
+      lastBotTradeAt: this.state.lastBotTradeAt,
+    };
   }
 }

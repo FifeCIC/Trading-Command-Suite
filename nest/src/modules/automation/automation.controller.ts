@@ -570,6 +570,21 @@ export class AutomationController {
     return { brokerId: body.brokerId, config: bs };
   }
 
+  /**
+   * #714 Stage 3 — Expert Trading Bot queue configuration.
+   * GET  /api/automation/bot-queue  — current settings
+   * POST /api/automation/bot-queue  — { enabled?, interTradeDelayMinutes? }
+   */
+  @Get('bot-queue')
+  getBotQueue() {
+    return this.loop.getBotQueueConfig();
+  }
+
+  @Post('bot-queue')
+  setBotQueue(@Body() body: { enabled?: boolean; interTradeDelayMinutes?: number }) {
+    return this.loop.setBotQueueConfig(body);
+  }
+
   // ── Scoring Strategies (CRUD kept for MetaStack versioning/UI — #295) ──
   // NOTE (2026-08-27): the LOOP no longer reads scoring strategies; these
   // endpoints manage the table only, DB-first.
