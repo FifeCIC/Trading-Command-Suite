@@ -120,7 +120,7 @@ export default function DashboardPage() {
   const newsInactiveCount = newsSources.length - newsActiveCount;
 
   return (
-    <>
+    <div className="dash-page">
       <SetupBanner />
       {/* ── Market Context Widget ── */}
       <MarketContextWidget />
@@ -516,6 +516,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

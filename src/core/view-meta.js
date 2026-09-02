@@ -586,7 +586,13 @@ const VIEW_META = {
     api: [],
   },
 
-  // ── Planner ──
+  // ── Development ──
+  '/development/roadmap': {
+    label: 'Dynamic Roadmap',
+    file: 'src/pages/RoadmapPage.jsx',
+    css: 'src/pages/roadmap-page.css',
+    api: ['GET /api/roadmap'],
+  },
   '/planner/personal-finances': {
     label: 'Personal Finances',
     file: 'src/pages/PersonalFinancesPage.jsx',
@@ -613,6 +619,12 @@ const VIEW_META = {
   },
 
   // ── Settings ──
+  '/settings/monitoring': {
+    label: 'Monitoring',
+    file: 'src/pages/MonitoringPage.jsx',
+    css: 'src/pages/settings.css',
+    api: ['GET /api/alerts/count', 'GET /api/alerts/settings'],
+  },
   '/settings/risk-controls': {
     label: 'Risk Controls',
     file: 'src/pages/RiskControlsPage.jsx',

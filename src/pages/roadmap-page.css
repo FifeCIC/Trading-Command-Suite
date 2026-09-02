@@ -1,0 +1,178 @@
+/* RoadmapPage — page shell around the portable board (epic #681). */
+
+.rm-page {
+  padding: 1.25rem 1.5rem;
+  color: var(--ink);
+}
+
+.rm-page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.rm-page-head h1 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.rm-page-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  max-width: 70ch;
+}
+
+.rm-add-sprint {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.rm-add-sprint input {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  padding: 0.4rem 0.6rem;
+  font-size: 0.78rem;
+  min-width: 180px;
+}
+
+.rm-add-sprint input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.rm-add-sprint button {
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 6px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rm-add-sprint button:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.rm-add-sprint button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rm-page-error {
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+  font-size: 0.78rem;
+  margin-bottom: 1rem;
+}
+
+.rm-page-loading {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  padding: 1rem 0;
+}
+
+/* ── Filter row (2026-09-02) ── */
+.rm-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.rm-filter-group {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.rm-filter-btn {
+  background: transparent;
+  border: none;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.35rem 0.8rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.rm-filter-btn + .rm-filter-btn {
+  border-left: 1px solid var(--line);
+}
+
+.rm-filter-btn:hover {
+  color: var(--ink);
+}
+
+.rm-filter-active {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.rm-filter-active:hover {
+  color: var(--accent);
+}
+
+.rm-filter-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  cursor: pointer;
+  user-select: none;
+}
+
+.rm-filter-check input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.rm-filter-select {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-family: inherit;
+  padding: 0.3rem 0.5rem;
+}
+
+.rm-filter-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.rm-filter-search {
+  margin-left: auto;
+  min-width: 200px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-family: inherit;
+  padding: 0.3rem 0.6rem;
+}
+
+.rm-filter-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}

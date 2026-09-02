@@ -283,4 +283,13 @@ export const KNOWN_FEATURES = {
   'FX Session META.Stacks live (6 pairs scoring)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'partial' },
   'Protocol Theory (written intent on protocols)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
   'USDJPY META.Stack auto trading (protocol-scoped strategy evaluation)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  // 2026-08-27 → 09-02 — Handoff Batch #12
+  'META.Stack control plane (layer kill switches)': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'automation', devCompletion: 'complete' },
+  'Single-strategy pipeline (scoring strategy retired from loop)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'Dry-run paper capture (would-have-traded)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'Strategy protocol subscriptions (multi-protocol sources)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
+  'Signals feedback loop (rank + dismissal analytics)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'signals', devCompletion: 'complete' },
+  'Signals → Trading plan handover': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'signals', devCompletion: 'complete' },
+  'Expert Trading Bot (signal queues, loop-processed)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
+  'Single scoring line (no strategy-side scoring in loop)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'signals', devCompletion: 'complete' },
 };

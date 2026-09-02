@@ -1,0 +1,209 @@
+/* RoadmapBoard — portable kanban × gantt board (epic #681, Phase C).
+   Theme-aware: only --panel/--line/--ink/--ink-soft/--accent/--bg tokens. */
+
+.rm-scroll {
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.rm-board {
+  display: flex;
+  gap: 0.75rem;
+  position: relative;
+  min-width: max-content;
+  padding: 0.25rem 0 2rem;
+  align-items: flex-start;
+}
+
+.rm-edge-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+  width: 100%;
+  height: 100%;
+}
+
+.rm-edge {
+  fill: none;
+  stroke: var(--accent);
+  stroke-opacity: 0.35;
+  stroke-width: 1.5px;
+  stroke-dasharray: 4 3;
+}
+
+.rm-column {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  min-width: 250px;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.15s;
+}
+
+.rm-column-reject {
+  border-color: rgba(220, 38, 38, 0.55);
+}
+
+.rm-col-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.rm-col-head h3 {
+  font-size: 0.78rem;
+  margin: 0;
+  color: var(--ink);
+  font-weight: 700;
+  flex: 1;
+  cursor: text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rm-col-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.2rem 0.4rem;
+  outline: none;
+}
+
+.rm-col-count {
+  font-size: 0.65rem;
+  color: var(--ink-soft);
+  background: var(--bg-elev, var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.05rem 0.45rem;
+}
+
+.rm-col-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0.5rem;
+}
+
+.rm-card {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  padding: 0.35rem 0.5rem;
+  border-radius: 7px;
+  background: var(--bg-elev, var(--panel));
+  border: 1px solid var(--line);
+  font-size: 0.7rem;
+  color: var(--ink);
+  cursor: grab;
+  transition: border-color 0.12s, opacity 0.12s;
+}
+
+.rm-card:hover {
+  border-color: var(--accent);
+}
+
+.rm-card:active {
+  cursor: grabbing;
+}
+
+.rm-card-dragging {
+  opacity: 0.4;
+}
+
+.rm-card-closed {
+  opacity: 0.55;
+}
+
+.rm-drop-before {
+  box-shadow: 0 -2px 0 0 var(--accent);
+}
+
+.rm-card-num {
+  color: var(--ink-soft);
+  font-size: 0.62rem;
+  min-width: 2.4rem;
+}
+
+.rm-card-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rm-card-title:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.rm-card-badges {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.rm-badge {
+  font-size: 0.6rem;
+  padding: 0 5px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  line-height: 1.35;
+}
+
+.rm-badge-chain {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.rm-badge-closed {
+  color: var(--ink-soft);
+}
+
+.rm-card-lastclosed {
+  opacity: 0.7;
+  border-style: dashed;
+}
+
+.rm-badge-lastclosed {
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+.rm-badge-owner {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.rm-col-empty {
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+  text-align: center;
+  padding: 0.8rem 0.4rem;
+  border: 1px dashed var(--line);
+  border-radius: 7px;
+}
+
+.rm-violation {
+  margin: 0.4rem 0.5rem 0;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.66rem;
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.35);
+}

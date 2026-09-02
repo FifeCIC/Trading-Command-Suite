@@ -181,6 +181,8 @@ import PersonalFinancesPage from '../pages/PersonalFinancesPage.jsx';
 import TradingStylesPage from '../pages/TradingStylesPage.jsx';
 import ObjectivesPage from '../pages/ObjectivesPage.jsx';
 import GlobalAllocatorPage from '../pages/GlobalAllocatorPage.jsx';
+import RoadmapPage from '../pages/RoadmapPage.jsx';
+import MonitoringPage from '../pages/MonitoringPage.jsx';
 import DashboardPage from '../pages/DashboardPage.jsx';
 import HomeDashboard from '../pages/HomeDashboard.jsx';
 
@@ -356,6 +358,8 @@ export const VIEW_COMPONENTS = {
 
   // Other
   'theme-packs': ThemePage,
+  'monitoring': MonitoringPage,
+  'roadmap': RoadmapPage,
   'personal-finances': PersonalFinancesPage,
   'trading-styles': TradingStylesPage,
   'objectives': ObjectivesPage,

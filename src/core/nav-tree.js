@@ -17,6 +17,7 @@
  *   - status     → Status (system health, platform, risk, security)
  *   - lab        → Lab (sandbox, theme lab, motion lab, component lab)
  *   - settings   → Settings (general, database, theme packs, preferences)
+ *   - development → Development (developer tools: dynamic roadmap, more to come)
  */
 
 export const NAV_TREE = {
@@ -233,12 +234,20 @@ export const NAV_TREE = {
     label: 'Settings',
     views: [
       { id: 'settings', label: 'General', icon: '⚙' },
+      { id: 'monitoring', label: 'Monitoring', icon: '🛰' },
       { id: 'settings-database', label: 'Database', icon: '⊞' },
       { id: 'settings-education', label: 'Education', icon: '◉' },
       { id: 'theme-packs', label: 'Theme Packs', icon: '🎨' },
       { id: 'user-preferences', label: 'User Preferences', icon: '⚙' },
       { id: 'risk-controls', label: 'Risk Controls', icon: '◈' },
       { id: 'platform-switches', label: 'Platform Switches', icon: '⇢' },
+    ],
+  },
+  // ── Development — developer-only tooling, separated on the right ──
+  development: {
+    label: 'Development',
+    views: [
+      { id: 'roadmap', label: 'Roadmap', icon: '🗺' },
     ],
   },
 };

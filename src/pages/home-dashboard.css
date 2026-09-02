@@ -400,6 +400,9 @@
   .nav-dashboard {
     padding: 1rem;
   }
+  .dash-page {
+    padding: 1rem;
+  }
   .nd-nav-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -409,6 +412,11 @@
 }
 
 /* ── Dashboard 2-Column Grid ────────────────────────────── */
+/* Page container — .main-stage has no padding by design; each view
+   brings its own (matches .sig-page / .sm-page conventions). */
+.dash-page { padding: 1.25rem 1.5rem; }
+.dash-page .mcw-widget { margin-bottom: 1rem; }
+
 .dash-grid {
   display: grid;
   grid-template-columns: 1fr 340px;

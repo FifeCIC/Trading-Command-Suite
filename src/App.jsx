@@ -610,27 +610,6 @@ function AppShell() {
       );
     }
 
-    if (secondaryView === 'roadmap') {
-      return (
-        <div className="content-grid">
-          <ContentCard title="Near-Term">
-            <ul>
-              <li>Plugin registry tooling and module validation pipeline.</li>
-              <li>Central analytics collector integration.</li>
-              <li>Expanded sci-fi component kit and templates.</li>
-            </ul>
-          </ContentCard>
-          <ContentCard title="Long-Term">
-            <ul>
-              <li>Cross-app federation for intranet-wide observability.</li>
-              <li>Adaptive runtime profiles by deployment type.</li>
-              <li>Premium tooling services and implementation support.</li>
-            </ul>
-          </ContentCard>
-        </div>
-      );
-    }
-
     return (
       <section className="demo-panel">
         <h2>Support Trading Command Suite</h2>
@@ -730,7 +709,22 @@ function AppShell() {
             <span className="topbar-nav-sep" aria-hidden="true" />
             {/* Area navigation */}
             {Object.entries(NAV_TREE)
-              .filter(([id]) => !['dashboard', 'trading212'].includes(id))
+              .filter(([id]) => !['dashboard', 'trading212', 'development'].includes(id))
+              .map(([id, area]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={primaryArea === id ? 'nav-active' : ''}
+                  onClick={() => onPrimarySelect(id)}
+                  title={area.label}
+                >
+                  {area.label}
+                </button>
+              ))}
+            {/* Developer tooling — separated on the right */}
+            <span className="topbar-nav-sep" aria-hidden="true" />
+            {Object.entries(NAV_TREE)
+              .filter(([id]) => id === 'development')
               .map(([id, area]) => (
                 <button
                   key={id}

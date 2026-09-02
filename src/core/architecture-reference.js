@@ -364,10 +364,20 @@ export const CURRENT_SLICE = [
   'FX Session META.Stacks live (#526-#531) — six pairs now scoring each tick under forex-session-v1: Sydney AUDUSD, GBPUSD Session, Wellington NZDUSD, USDCAD Forex Session, Zurich USDCHF + Tokyo USDJPY. DB activation only (no code change); dataStatus=ready, protocol-scoped compositePct, HOLD 20-35 at quiet market. Execution gated by brokerStates.mt5.tradingEnabled=false. Partial: scoring live; execution awaits tradingEnabled.',
   'Protocol Theory (#689) — new theory String? @db.Text column on Protocol. Written intent: target behaviour, why these groups, what a good day looks like, known weaknesses. Seeded for 9 of 42 protocols (incl. four diagnosed-silent index protocols); Theory section on Protocols Registry (both A and B variants); long-form in Drive docs/theories/PROTOCOL-THEORY.md. GET /api/scoring/gated/protocols now includes theory. Partial: 9 of 42 seeded.',
   'USDJPY META.Stack + protocol-scoped strategy evaluation (#531) — Tokyo USDJPY Session re-activated (forex-session-v1, auto mode); 7k+ 5m bars fresh through today (pending_bars blocker resolved). Bug fixed: strategy evaluation was scoring with legacy kitchen-sink DIRECTIVE_GROUPS (banned default scoring) and mislabelling composites (SELL at composite 6); now protocol-scoped via ProtocolGatingService.scoreWithGating with strategy.protocolId; stores pre-gate compositePct so Strategy Monitor and automation loop share the 0-100 scale. Removed legacy gateScore() + DIRECTIVE_GROUPS + unused DirectivesService injection. Complete.',
+  // ── 2026-09-02 — Handoff Batch #12 ──
+  'META.Stack control plane (#615) — layer kill switches protocolsEnabled/tradingEnabled (fail-safe: protocols ON, trading OFF), persisted in global_setting; trading OFF blocks dispatch before the safety chain; protocols OFF skips scoring; emergencyStop switches trading off. Routes POST /api/automation/layer; UI in Settings→Automation + META.Stack Pipeline layer strip.',
+  'Scoring-strategy layer retired from the loop (2026-08-27 user decision) — canonical pipeline Protocol → Trading Strategy → Execution; scoring_strategy kept only for MetaStack versioning/performance (#295).',
+  'Strategy view consolidation (2026-08-27) — deleted StrategyBuilderPage, StrategyDashboardPage, old CreateStrategyPage (fields reachable via StrategyCreatePage); Strategy Comparison promoted; Strategy Allocator → Lab Prototypes ("Scoring Protocols").',
+  'Dry-run paper capture (#695) — paper_trade + GET /api/automation/paper records would-have-traded while trading OFF (dedupe by strategy|symbol).',
+  'Strategy protocol subscriptions (#712) — strategy_protocol table, TradingStrategy 1─n; one strategy consumes signals from multiple protocols; list API exposes protocols[]; loop routing via queue subscriptions (fallback to legacy protocolId/shortProtocolId).',
+  'Signals feedback loop (#693) — signal_rank_snapshot (hourly), signal_dismissal enriched with strength + dismissCount; GET /api/signals/analytics; non-executive observability panel on /signals.',
+  'Signals→Trading plan handover (#702) — POST /api/signals/:id/plan creates a TradingPlan type="signal" with full context; dedupe symbol+protocolId+direction.',
+  'Expert Trading Bot / signal queues (#714 S1-S3) — strategy_signal_queue per bot (SEES snapshot), routed from the ONE scoring line (buildBestLadder); void rule (signal gone ⇒ entry dropped); dismissal removes queue rows; queue view on Strategy Monitor; loop processSignalQueues dispatches heads through shared dispatchTrade chain; pacing (interTradeDelayMinutes default 10); one trade per symbol/min across both paths.',
+  'Single scoring line (#714 final) — evaluateStrategy/resolveBestSignal/compareProtocolPair DELETED; loop = buildBestLadder (score/persist/sync queues) → processSignalQueues (gates/dispatch). Strategies are gates, not scorers. strategy_evaluation written via recordEvaluation from queue snapshots (paper/execution). Manual POST /api/trading/strategies/:id/evaluate remains a user-triggered UI affordance only.',
 ]
 
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-08-26 (handoff batch #11: screener page 4.1-4.4, signals v1 best-of ladder, six FX session pairs scoring, protocol theory, protocol-scoped strategy evaluation)'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-09-02 (handoff batch #12: single scoring line + Expert Trading Bot queues #714, control plane layers #615, scoring-strategy retirement, paper dry-run #695, protocol subscriptions #712, signals feedback #693, plan handover #702)'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {
@@ -1426,6 +1436,70 @@ export const CURRENT_ROUTE_CONTRACTS = [
     contract: 'Dismisses a signal from the best-of ladder for a horizon. DTO: symbol, protocolId?, hours? (1-168). Writes SignalDismissal with dismissedUntil (dismissedUntil index); hides the card until expiry. Added 2026-08-26 (#684).',
     status: 'active',
   },
+  {
+    route: 'POST /api/automation/layer',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'AutomationController',
+    contract: 'META.Stack control plane (#615): toggles protocols|trading layer kill switches, persisted in global_setting. Fail-safe: protocols ON, trading OFF — a restart never silently re-enables trading. Trading OFF blocks dispatch before the safety chain; protocols OFF skips scoring; emergencyStop switches trading off. Status includes layers. Added 2026-09-02.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/automation/paper',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'AutomationController',
+    contract: 'Dry-run paper capture (#695): last 100 would-have-traded candidates + per-strategy/symbol/side summary (BigInt-safe). Added 2026-09-02.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/automation/bot-queue',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'AutomationController',
+    contract: 'Reads bot-queue settings (#714 S3): botQueueEnabled (default ON) + botInterTradeDelayMinutes (default 10). Added 2026-09-02.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/automation/bot-queue',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'AutomationController',
+    contract: 'Updates bot-queue settings (#714 S3): botQueueEnabled (default ON) + botInterTradeDelayMinutes (default 10). Added 2026-09-02.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/trading/strategies/queues',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'TradingStrategyController',
+    contract: 'Aggregate pending queue entries across bots (#714 S2), joined with strategy name/symbol/mode/active. Added 2026-09-02.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/trading/strategies/:id/queue',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'TradingStrategyController',
+    contract: 'Pending queue for one bot (#714 S1), strongest first (dual-score snapshot). Added 2026-09-02.',
+    status: 'active',
+  },
+  {
+    route: 'GET /api/signals/analytics',
+    method: 'GET',
+    permission: 'Authenticated read access',
+    owner: 'SignalsController',
+    contract: 'Signals feedback loop observability (#693): dismissal totals (protocol + strength band), real trade outcomes (source="signals"), rank validation. Non-executive. Added 2026-09-02.',
+    status: 'active',
+  },
+  {
+    route: 'POST /api/signals/:id/plan',
+    method: 'POST',
+    permission: 'Authenticated operator access',
+    owner: 'SignalsController',
+    contract: 'Signals→Trading handover (#702): creates a TradingPlan (type="signal") carrying signal context; dedupe on symbol+protocolId+direction. Added 2026-09-02.',
+    status: 'active',
+  },
 ]
 
 
@@ -1602,10 +1676,10 @@ export const DATABASE_SCHEMA = {
     },
     {
       table: 'SignalDismissal',
-      description: 'Per-signal dismissal from the best-of ladder (#684). symbol+protocolId unique (protocolId nullable = symbol-wide); dismissedUntil index drives hide-for-horizon (1-168h).',
-      fields: ['id (PK)', 'symbol', 'protocolId?', 'dismissedUntil', 'createdAt'],
+      description: 'Per-signal dismissal from the best-of ladder (#684). symbol+protocolId unique (protocolId nullable = symbol-wide); dismissedUntil index drives hide-for-horizon (1-168h). Enriched (#693, 2026-09-02) with dismissal-time strength snapshot: combinedStrength/signalPct/opportunityPct + dismissCount.',
+      fields: ['id (PK)', 'symbol', 'protocolId?', 'dismissedUntil', 'combinedStrength?', 'signalPct?', 'opportunityPct?', 'dismissCount', 'createdAt'],
       relationships: [],
-      status: 'implemented (2026-08-26)',
+      status: 'implemented (2026-08-26; enriched #693)',
     },
     {
       table: 'NewsItem',
@@ -1634,6 +1708,34 @@ export const DATABASE_SCHEMA = {
       fields: ['id (PK)', 'symbol', 'reportDate', 'estimate', 'source', 'importedAt'],
       relationships: [],
       status: 'implemented (2026-08-22)',
+    },
+    {
+      table: 'PaperTrade',
+      description: 'Dry-run "would-have-traded" capture (#695). paper_trade is a RAW SQL table — NOT in schema.prisma ("prisma db push broken"); created via raw DDL. Written while trading OFF; dedupe by strategy|symbol.',
+      fields: ['id (PK)', 'strategyId', 'symbol', 'side', 'composite', 'entryPrice', 'sl', 'tp', 'baseSize', 'protocolId', 'tickNumber', 'createdAt'],
+      relationships: [],
+      status: 'implemented (2026-09-02) — raw SQL, not in schema.prisma',
+    },
+    {
+      table: 'StrategySignalQueue',
+      description: 'Expert Trading Bot queue (#714 S1) — one pending entry per strategyId+protocolId+symbol carrying the full SEES snapshot (compositePct, signalPct, opportunityPct, combinedStrength, scoreId); status pending/executing. Routed from buildBestLadder() (the single scoring line). strategy_signal_queue is a RAW SQL table — NOT in schema.prisma.',
+      fields: ['strategyId + protocolId + symbol (unique pending entry)', 'compositePct', 'signalPct', 'opportunityPct', 'combinedStrength', 'scoreId', 'status (pending/executing)'],
+      relationships: [],
+      status: 'implemented (2026-09-02) — raw SQL, not in schema.prisma',
+    },
+    {
+      table: 'StrategyProtocol',
+      description: 'Multi-protocol signal subscriptions for a trading strategy (#712). strategyId + protocolId + role (long|short|both) + sortOrder; TradingStrategy 1─n. In schema.prisma (StrategyProtocol model). Loop routing via queue subscriptions with fallback to legacy protocolId/shortProtocolId.',
+      fields: ['strategyId (FK)', 'protocolId (FK)', 'role (long|short|both)', 'sortOrder'],
+      relationships: ['→ TradingStrategy (strategyId)', '→ Protocol (protocolId)'],
+      status: 'implemented (2026-09-02)',
+    },
+    {
+      table: 'SignalRankSnapshot',
+      description: 'Hourly best-of rank persistence (#693): rank, symbol, protocol, direction, strengths, scoreId. In schema.prisma.',
+      fields: ['rank', 'symbol', 'protocol', 'direction', 'strengths (JSON)', 'scoreId'],
+      relationships: [],
+      status: 'implemented (2026-09-02) — hourly cadence',
     },
   ],
   plannedMetaTables: [

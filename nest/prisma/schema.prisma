@@ -2089,3 +2089,27 @@ model SignalRankSnapshot {
   @@index([symbol, protocolId])
   @@map("signal_rank_snapshot")
 }
+
+// Dynamic Roadmap (#681) — interactive planning state. Issue metadata
+// itself comes from the build-time sync dataset; these tables persist
+// only what the board changes: columns, positions, owners, dependencies.
+model RoadmapCard {
+  number     Int      @id
+  columnId   String   @db.VarChar(40)
+  position   Decimal  @db.Decimal(20, 6)
+  ownerAgent String?  @db.VarChar(50)
+  blockedBy  Json
+  updatedAt  DateTime @updatedAt
+
+  @@index([columnId])
+  @@map("roadmap_card")
+}
+
+model RoadmapColumn {
+  id        String   @id @db.VarChar(40)
+  title     String   @db.VarChar(100)
+  kind      String   @default("sprint") @db.VarChar(20)
+  createdAt DateTime @default(now())
+
+  @@map("roadmap_column")
+}

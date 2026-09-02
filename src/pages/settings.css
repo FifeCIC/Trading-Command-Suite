@@ -2,7 +2,7 @@
   max-width: 720px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
-  color: #e0e0e0;
+  color: var(--ink);
 }
 
 .settings-header h1 {
@@ -11,7 +11,7 @@
 }
 
 .settings-header p {
-  color: #888;
+  color: var(--ink-soft);
   margin: 0 0 2rem;
 }
 
@@ -21,10 +21,10 @@
 
 .settings-section h2 {
   font-size: 1rem;
-  color: #aaa;
+  color: var(--ink);
   margin: 0 0 0.75rem;
   padding-bottom: 0.4rem;
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid var(--line);
 }
 
 .setting-row {
@@ -43,47 +43,59 @@
 .setting-info p {
   margin: 0.15rem 0 0;
   font-size: 0.75rem;
-  color: #666;
+  color: var(--ink-soft);
 }
 
 .setting-control code {
-  background: #1a1a1a;
+  background: var(--bg-elev, var(--panel));
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   font-size: 0.8rem;
-  color: #00f5ff;
+  color: var(--accent);
   white-space: nowrap;
 }
 
 .settings-footer {
   margin-top: 2rem;
   padding-top: 1rem;
-  border-top: 1px solid #2a2a2a;
+  border-top: 1px solid var(--line);
   font-size: 0.75rem;
-  color: #555;
+  color: var(--ink-soft);
 }
 
 .settings-footer code {
-  background: #1a1a1a;
+  background: var(--bg-elev, var(--panel));
   padding: 0.1rem 0.3rem;
   border-radius: 3px;
-  color: #888;
+  color: var(--ink-soft);
 }
 
 /* Input styles for User Preferences */
 .settings-input {
   padding: 0.35rem 0.5rem;
-  border: 1px solid var(--line, var(--color-border));
+  border: 1px solid var(--line);
   border-radius: 6px;
-  background: var(--panel, var(--color-panel));
-  color: var(--ink, #e2e8f0);
+  background: var(--panel);
+  color: var(--ink);
   font-family: inherit;
   font-size: 0.78rem;
   width: 200px;
 }
-.settings-input:focus { outline: none; border-color: var(--accent, #0ea5a6); }
+.settings-input:focus { outline: none; border-color: var(--accent); }
 .settings-input-sm { width: 80px; text-align: center; }
 .settings-section-desc { font-size: var(--text-xs, 0.7rem); color: var(--ink-soft, #888); margin: 0 0 0.5rem; }
+
+/* Selects — previously browser-default, now theme-synced */
+.settings-select {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.78rem;
+}
+.settings-select:focus { outline: none; border-color: var(--accent); }
 
 /* ── Section sub-heading ── */
 .settings-subheading {

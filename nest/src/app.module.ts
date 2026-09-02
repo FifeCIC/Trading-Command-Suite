@@ -56,6 +56,7 @@ import { PlannerModule } from './modules/planner/planner.module';
 import { DiversificationModule } from './modules/diversification/diversification.module';
 import { ArchitectureModule } from './modules/architecture/architecture.module';
 import { CapabilityModule } from './modules/capability/capability.module';
+import { RoadmapModule } from './modules/roadmap/roadmap.module';
 import { RateLimiterMiddleware } from './common/middleware/rate-limiter.middleware';
 import { MetricsMiddleware } from './common/middleware/metrics.middleware';
 
@@ -119,6 +120,7 @@ import { MetricsMiddleware } from './common/middleware/metrics.middleware';
     DiversificationModule,
     ArchitectureModule,
     CapabilityModule,
+    RoadmapModule,
   ],
   controllers: [AppController],
   providers: [AppService],

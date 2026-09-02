@@ -1,0 +1,18 @@
+{
+  "repo": "FifeCIC/Trading-Command-Suite",
+  "defaultColumns": [
+    { "id": "phase-1", "title": "Phase 1 — Core", "kind": "phase" },
+    { "id": "phase-2", "title": "Phase 2 — Signals", "kind": "phase" },
+    { "id": "phase-3", "title": "Phase 3 — Trading", "kind": "phase" },
+    { "id": "phase-4", "title": "Phase 4 — Backtesting", "kind": "phase" },
+    { "id": "roadmap", "title": "Roadmap", "kind": "phase" },
+    { "id": "triage", "title": "Triage", "kind": "triage" }
+  ],
+  "labelToColumn": {
+    "phase-1": "phase-1",
+    "phase-2": "phase-2",
+    "phase-3": "phase-3",
+    "phase-4": "phase-4",
+    "Roadmap": "roadmap"
+  }
+}
