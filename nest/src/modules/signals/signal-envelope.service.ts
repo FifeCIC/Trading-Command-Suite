@@ -123,6 +123,14 @@ export interface SignalBestResponse {
   envelopes: SignalEnvelope[];
 }
 
+/** Per-protocol scoring status produced by buildBestLadder (#714). */
+export interface ProtocolScoreStatus {
+  state: string;
+  reason?: string;
+  symbolsResolved?: number;
+  symbolsScored?: number;
+}
+
 @Injectable()
 export class SignalEnvelopeService {
   private readonly logger = new Logger(SignalEnvelopeService.name);
@@ -694,9 +702,14 @@ export class SignalEnvelopeService {
    * and no-data envelopes are dropped — signals are for action only.
    * Dismissed (symbol, protocol) pairs are filtered out.
    */
-  async buildBestLadder(): Promise<SignalBestResponse> {
+  async buildBestLadder(options?: { allowedProtocols?: Set<string> }): Promise<SignalBestResponse & { protocolStatus: Record<string, ProtocolScoreStatus> }> {
     const slugs = await this.protocolDb.findAllActive();
+    const allowed = options?.allowedProtocols;
     const byKey = new Map<string, SignalEnvelope>();
+
+    // Per-protocol scoring status — returned so the loop can persist
+    // protocol_score_status without a second scoring pass (#714 single line).
+    const protocolStatus: Record<string, ProtocolScoreStatus> = {};
 
     // #714 Stage 1 — routing records for the trading-bot queues. Collected
     // BEFORE the best-of merge so every protocol's actionable signal is
@@ -705,6 +718,13 @@ export class SignalEnvelopeService {
     const routingRecords: RoutableSignal[] = [];
 
     for (const slug of slugs) {
+      // #627 readiness gate — the loop passes its assessed-ready set so
+      // non-ready (beta) directives never produce signals.
+      if (allowed && !allowed.has(slug)) {
+        protocolStatus[slug] = { state: 'paused', reason: 'Readiness gate — directives not ready' };
+        continue;
+      }
+
       const config = this.protocolDb.getCached(slug) ?? (await this.protocolDb.findBySlug(slug));
       if (!config) continue;
 
@@ -714,15 +734,27 @@ export class SignalEnvelopeService {
       try {
         tickers = await this.protocolDb.resolveSymbols(slug);
       } catch {
+        protocolStatus[slug] = { state: 'error', reason: 'resolveSymbols failed' };
+        continue;
+      }
+      if (!tickers || tickers.length === 0) {
+        protocolStatus[slug] = {
+          state: 'no-symbols',
+          symbolsResolved: 0,
+          symbolsScored: 0,
+          reason: 'No symbols configured — needs a symbol assignment, linked watchlist, or derive rule',
+        };
         continue;
       }
 
+      let protoScored = 0;
       for (const ticker of tickers) {
         const key = `${ticker.toUpperCase()}|${direction}`;
         try {
           const env = await this.buildEnvelope(ticker, slug);
           const sym = ticker.toUpperCase();
           scoredPairs.add(`${slug}|${sym}`);
+          protoScored++;
           // Action-only (#684): skip HOLD and no-data envelopes for display.
           if (env.signal === 'HOLD') continue;
           if (env.composite === 50 && env.confidence === 0) continue;
@@ -749,6 +781,22 @@ export class SignalEnvelopeService {
           this.logger.warn(`Best ladder skip ${ticker}/${slug}: ${(err as Error).message}`);
         }
       }
+
+      protocolStatus[slug] = protoScored > 0
+        ? {
+            state: 'scoring',
+            symbolsResolved: tickers.length,
+            symbolsScored: protoScored,
+            reason: protoScored < tickers.length
+              ? `${protoScored}/${tickers.length} symbols scored (rest failed)`
+              : undefined,
+          }
+        : {
+            state: 'no-data',
+            symbolsResolved: tickers.length,
+            symbolsScored: 0,
+            reason: `All ${tickers.length} symbols failed to score — missing bars or no data`,
+          };
     }
 
     const envelopes = [...byKey.values()];
@@ -849,6 +897,7 @@ export class SignalEnvelopeService {
       buyCount,
       sellCount,
       envelopes: visible,
+      protocolStatus,
     };
   }
 

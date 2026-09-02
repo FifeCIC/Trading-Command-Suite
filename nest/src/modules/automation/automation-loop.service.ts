@@ -53,6 +53,7 @@ import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { PositionSyncService } from '../providers/position-sync.service';
 import { WeekendDefenseService } from '../trading/weekend-defense.service';
 import { SymbolResolverService } from '../symbols/symbol-resolver.service';
+import { SignalEnvelopeService } from '../signals/signal-envelope.service';
 
 /**
  * Layer 2 of the 3-layer threshold architecture.
@@ -68,7 +69,8 @@ import { SymbolResolverService } from '../symbols/symbol-resolver.service';
  *
  * Layer 3 (scoring_strategy table): per-strategy tradeThreshold / minComposite.
  *   — each strategy's own execution bar. Overrides Layer 2.
- *   — this is what compareProtocolPair() checks before dispatching.
+ *   — #714 (2026-09-02): the bar is now checked by processSignalQueues against
+ *     the signal record's compositePct — no strategy-side scoring exists.
  *
  * ⚠️ SCALE WARNING (2026-08-13) ⚠️
  * These thresholds (and Layer 3's minComposite in the DB) were calibrated for
@@ -95,56 +97,6 @@ function getStyleThreshold(tradingStyle?: string): number {
   if (style.includes('swing')) return STYLE_THRESHOLDS.swing;
   if (style.includes('position')) return STYLE_THRESHOLDS.position;
   return 60;
-}
-
-interface ProtocolComparison {
-  side: 'BUY' | 'SELL' | 'HOLD';
-  composite: number;
-}
-
-/**
- * Compare LONG vs SHORT protocol scores to determine trade direction.
- * Shared by all call sites that evaluate dual-protocol strategies.
- *
- * @param longGated  - Gated score result from the LONG protocol
- * @param shortGated - Gated score result from the SHORT protocol (null if single-protocol)
- * @param threshold  - Minimum composite score required to trigger a trade
- */
-function compareProtocolPair(
-  longGated: { composite: number; signal?: string; meta?: { compositePct?: number } } | null | undefined,
-  shortGated: { composite: number; meta?: { compositePct?: number } } | null | undefined,
-  threshold: number,
-): ProtocolComparison {
-  // Use the normalized 0-100 percentage when available (protocol-gating returns
-  // meta.compositePct). Thresholds were calibrated for a 0-100 scale, but the raw
-  // composite is now in the hundreds — comparing raw against a 0-100 threshold
-  // makes every threshold trivially pass (see SCALE WARNING above). Falls back to
-  // raw composite when meta.compositePct is absent.
-  const longComposite = longGated?.meta?.compositePct ?? longGated?.composite ?? 0;
-  const shortComposite = shortGated?.meta?.compositePct ?? shortGated?.composite ?? 0;
-
-  if (shortGated != null) {
-    // Dual-protocol: LONG vs SHORT comparison
-    if (longComposite > shortComposite && longComposite >= threshold) {
-      return { side: 'BUY', composite: longComposite };
-    }
-    if (shortComposite > longComposite && shortComposite >= threshold) {
-      return { side: 'SELL', composite: shortComposite };
-    }
-    // Neither meets threshold — HOLD with highest composite for logging
-    return { side: 'HOLD', composite: Math.max(longComposite, shortComposite) };
-  }
-
-  // Single-protocol: use the long protocol's signal, but enforce the
-  // composite threshold (previously fire-on-signal-alone gap — the dual-
-  // protocol branch required composite >= threshold but this branch didn't,
-  // allowing below-threshold trades to execute on signal direction alone).
-  const signal = (longGated as any)?.signal;
-  const belowThreshold = longComposite < threshold;
-  if (belowThreshold || (signal !== 'BUY' && signal !== 'SELL')) {
-    return { side: 'HOLD', composite: longComposite };
-  }
-  return { side: signal, composite: longComposite };
 }
 
 export interface PriorityQueueEntry {
@@ -276,14 +228,6 @@ export class AutomationLoopService implements OnModuleInit {
   private lastBotTradeAt = new Map<string, number>();
   private lastBotTradeAnyAt = 0;
 
-  /** Tracks repeated errors across ticks to suppress duplicate logging.
-   *  Key = `${strategyId}:${symbol}:${errorMessage}` */
-  private suppressedErrors = new Map<string, { lastTick: number; count: number; firstSeenAt: Date }>();
-
-  /** Per-tick cache of protocol-gated scores. Key = `${symbol}|${protocolId}`.
-   *  Populated by step 3b, consumed by step 4 to avoid redundant directive execution. */
-  private gatedScoreCache = new Map<string, import('../scoring/protocol-gating.service').GatedScore>();
-
   /** Get watchlist symbols — DB-first with case-insensitive matching + JSON fallback. */
   private async getWatchlistSymbols(name: string): Promise<string[] | null> {
     // Try DB — case-insensitive, normalizes hyphens/underscores to spaces
@@ -314,13 +258,13 @@ export class AutomationLoopService implements OnModuleInit {
   }
 
   /**
-   * Shared trade dispatch — STEP 5 of 5 in the tick lifecycle.
+   * Shared trade dispatch — the ONLY trade path in the tick lifecycle.
    *
    * PIPELINE POSITION:
    *   Step 1: Timeline risk check → global risk multiplier
    *   Step 2: Fetch positions + load active strategies
-   *   Step 3: Score symbols via SEES (rankAll / protocol-gating)
-   *   Step 4: evaluateStrategy() → compareProtocolPair() → decides BUY/SELL/HOLD
+   *   Step 3: ONE scoring line (buildBestLadder) → signal records → queues
+   *   Step 4: processSignalQueues → queue heads → gates (no re-scoring)
    *   Step 5 (HERE): dispatchTrade() — gates + execution
    *
    * SAFETY GATES (in order — each must pass before the next is checked):
@@ -496,6 +440,7 @@ export class AutomationLoopService implements OnModuleInit {
     private readonly symbolResolver: SymbolResolverService,
     private readonly jobQueue: JobQueueService,
     private readonly abTestService: AbTestService,
+    private readonly signalEnvelope: SignalEnvelopeService,
   ) {
     this.initBrokerStates();
   }
@@ -849,7 +794,6 @@ export class AutomationLoopService implements OnModuleInit {
     const decisions: TickDecision[] = [];
     const trailRecords: any[] = [];  // DecisionTrail rows (#474)
     this.directivesService.clearTickCache();
-    this.gatedScoreCache.clear();
     this.protocolDb.clearCache();
     this.auditLog.logTickStart(this.state.tickCount);
 
@@ -1001,44 +945,26 @@ export class AutomationLoopService implements OnModuleInit {
       // Combine with live broker positions for the full working set
       const allSymbols = [...new Set([...allPositions.map(p => p.symbol), ...strategySymbols])];
 
-      // NOTE: no early-return when allSymbols is empty. Protocol-driven
-      // scoring (step 3b) must run even with 0 positions/strategies — the
-      // protocols are the live scoring path right now, and an early return
-      // here made every active protocol silently stop scoring. Step 4 is
-      // gated on the working set below instead.
+      // NOTE: no early-return when allSymbols is empty. The one scoring line
+      // (buildBestLadder, step 3b) must run even with 0 positions/strategies —
+      // protocols are the live scoring path and an early return here made every
+      // active protocol silently stop scoring.
 
       // 3. REMOVED: rankAll() — ran all 104 directives against every symbol.
-      //    This produced thousands of noisy scores (EURUSD=3291, etc.) that had
-      //    no protocol scoping and confused the pipeline. Protocol-gating (step 3b)
-      //    is the single source of truth for SEES scores now.
+      //    That produced thousands of noisy scores (EURUSD=3291, etc.) with no
+      //    protocol scoping. buildBestLadder() (step 3b) is the single source
+      //    of truth for SEES scores now.
       //    See: 2026-08-11 — automation loop protocol-driven refactor.
-
-      // ── Helper: get or compute a gated score for a symbol+protocol pair ──
-      const getGatedScore = async (sym: string, protocolId: string, bars: any[], ws: 'group-weighted' | 'maxscore-weighted' = 'group-weighted'): Promise<any> => {
-        const cacheKey = `${sym}|${protocolId}|${ws}`;
-        const cached = this.gatedScoreCache.get(cacheKey);
-        if (cached) return cached;
-        const result = await this.protocolGating.scoreWithGating(sym, bars, protocolId, undefined, ws);
-        if (result && result.composite !== undefined) {
-          this.gatedScoreCache.set(cacheKey, result);
-        }
-        return result;
-      };
+      //    2026-09-02 (#714) — strategy-side scoring retired; the queue path
+      //    is the only trade path.
 
       // ═══════════════════════════════════════════════════════════════════════
-      // 3b. Protocol-driven scoring — iterate ACTIVE PROTOCOLS directly.
+      // 3b. ONE scoring line — SignalEnvelopeService.buildBestLadder().
       //
-      // DEVELOPMENT PHASE (2026-08-11): We are NOT using Scoring Strategies yet.
-      // Scoring Strategies are a future layer that will gate & route protocol
-      // scores into trading decisions. For now, protocols are scored independently
-      // and results are logged for observability / debugging.
-      //
-      // Each protocol resolves its symbols via ProtocolDbService.resolveSymbols():
-      //   - Single-symbol protocols (xau-speed-v1 → XAUUSD, spy-speed-v1 → SPY)
-      //     use the auto-derived symbol from the protocol ID.
-      //   - Multi-symbol protocols (forex-session-v1) use a linked watchlist.
-      //
-      // Results are cached in gatedScoreCache for potential future use by step 4.
+      // Scores each ready protocol × symbol, persists signal score records,
+      // refreshes the trading-bot queues (routing + void rule), and returns
+      // per-protocol scoring status. Readiness-gated protocols are excluded
+      // so beta/non-ready directives never produce signals (#627).
       // ═══════════════════════════════════════════════════════════════════════
       const activeProtocols = await this.protocolDb.findAllActive();
 
@@ -1076,99 +1002,28 @@ export class AutomationLoopService implements OnModuleInit {
         `  ${readyProtocols.length} of ${activeProtocols.length} active protocols ready for scoring`,
       );
 
-      for (const protoSlug of readyProtocols) {
-        try {
-          // Resolve symbols: single-symbol, watchlist, or auto-derived
-          const symbols = await this.protocolDb.resolveSymbols(protoSlug);
-          if (!symbols || symbols.length === 0) {
-            this.logger.debug(`  Protocol "${protoSlug}": no symbols resolved — skipping`);
-            scoringStatus.set(protoSlug, {
-              state: 'no-symbols',
-              reason: 'No symbols configured — needs a symbol assignment, linked watchlist, or derive rule',
-            });
-            continue;
-          }
-
-          let protoScored = 0;
-          for (const sym of symbols) {
-            try {
-              const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: sym } });
-              if (!dbSym) continue;
-
-              // Dynamic bar fetch based on protocol's directive requirements
-              const requiredBars = this.protocolDb.getRequiredBars(protoSlug);
-              const barCount = requiredBars['5m'] || 100;
-              const bars = await this.marketData.getBars(dbSym.id, '5m', barCount);
-              if (!bars || bars.length < 20) continue;
-
-              this.auditLog.logBarsFetched(this.state.tickCount, sym, bars.length,
-                bars[bars.length - 1]?.timestamp?.toISOString?.() ?? null);
-
-              // Score the symbol against this protocol
-              const gated = await getGatedScore(sym, protoSlug, bars);
-              if (!gated || gated.composite === undefined) continue;
-
-              protoScored++;
-
-              decisions.push({
-                timestamp: new Date().toISOString(),
-                strategyId: '', // protocol-driven, not strategy-driven
-                symbol: sym,
-                brokerId: 'mt5',
-                decision: 'SCORED',
-                reason: `${protoSlug}: composite=${gated.composite} signal=${gated.signal ?? 'N/A'}`,
-                composite: gated.composite,
-                signal: gated.signal ?? 'HOLD',
-              });
-
-              this.logger.log(
-                `  ✓ ${protoSlug} × ${sym}: composite=${gated.composite} signal=${gated.signal ?? 'N/A'}`,
-              );
-            } catch (symbolErr) {
-              const errMsg = (symbolErr as Error).message?.substring(0, 200) || 'Unknown error';
-              const errorKey = `${protoSlug}:${sym}:${errMsg}`;
-              const prev = this.suppressedErrors.get(errorKey);
-
-              if (prev && prev.lastTick === this.state.tickCount - 1) {
-                prev.lastTick = this.state.tickCount;
-                prev.count++;
-              } else if (prev && prev.lastTick < this.state.tickCount - 1) {
-                this.logger.warn(
-                  `${protoSlug}:${sym}: ${errMsg} (×${prev.count}, silenced)`,
-                );
-                prev.lastTick = this.state.tickCount;
-                prev.count = 1;
-              } else {
-                this.logger.warn(`${protoSlug}:${sym}: ${errMsg}`);
-                this.suppressedErrors.set(errorKey, { lastTick: this.state.tickCount, count: 1, firstSeenAt: new Date() });
-              }
-            }
-          }
-          if (protoScored > 0) {
-            this.logger.log(`  Protocol "${protoSlug}": ${protoScored}/${symbols.length} symbols scored`);
-            scoringStatus.set(protoSlug, {
-              state: 'scoring',
-              symbolsResolved: symbols.length,
-              symbolsScored: protoScored,
-              reason: protoScored < symbols.length
-                ? `${protoScored}/${symbols.length} symbols scored (rest lack bars)`
-                : undefined,
-            });
-          } else {
-            scoringStatus.set(protoSlug, {
-              state: 'no-data',
-              symbolsResolved: symbols.length,
-              symbolsScored: 0,
-              reason: `All ${symbols.length} symbols lack 5m bars — not in bar-refresh set or broker has no data`,
-            });
-          }
-        } catch (protoErr) {
-          this.logger.warn(`Protocol "${protoSlug}" scoring failed: ${(protoErr as Error).message}`);
-          scoringStatus.set(protoSlug, {
-            state: 'error',
-            reason: `Scoring failed: ${(protoErr as Error).message?.substring(0, 200)}`,
+      let bestLadder: { envelopes: any[]; protocolStatus: Record<string, { state: string; reason?: string; symbolsResolved?: number; symbolsScored?: number }> } | null = null;
+      try {
+        bestLadder = await this.signalEnvelope.buildBestLadder({ allowedProtocols: new Set(readyProtocols) });
+        for (const [slug, st] of Object.entries(bestLadder?.protocolStatus || {})) {
+          if (!scoringStatus.has(slug)) scoringStatus.set(slug, st);
+        }
+        // Decision-log observability — one SCORED row per visible signal.
+        for (const env of bestLadder?.envelopes ?? []) {
+          decisions.push({
+            timestamp: new Date().toISOString(),
+            strategyId: '', // protocol-driven, not strategy-driven
+            symbol: env.symbol,
+            brokerId: 'mt5',
+            decision: 'SCORED',
+            reason: `${env.protocolId ?? 'any'}: composite=${env.composite} signal=${env.signal}`,
+            composite: env.composite ?? 0,
+            signal: env.signal ?? 'HOLD',
           });
         }
+        this.logger.log(`  One scoring line: ${bestLadder?.envelopes?.length ?? 0} actionable signals, queues synced`);
+      } catch (err) {
+        this.logger.warn(`One scoring line (buildBestLadder) failed: ${(err as Error).message}`);
       }
 
       // ── Persist protocol scoring status — loop-owned single source of truth
@@ -1215,51 +1070,11 @@ export class AutomationLoopService implements OnModuleInit {
         this.logger.warn(`A/B test evaluation failed: ${(err as Error).message}`);
       }
 
-      // 4. Evaluate active strategies — grouped by symbol to avoid redundant bar fetches & scoring.
-      //    Uses gatedScoreCache populated by step 3b for any symbol+protocol already scored.
-      //    Only runs when there is a working set (positions/strategies) to evaluate.
-      if (allSymbols.length > 0) {
-      const strategyIdsBySymbol = new Map<string, string[]>();
-      for (const strategyId of this.state.activeStrategyIds) {
-        try {
-          const s = await this.strategyService.findOne(strategyId);
-          if (!s || !s.active) continue;
-          const sym = s.symbol;
-          if (!strategyIdsBySymbol.has(sym)) strategyIdsBySymbol.set(sym, []);
-          strategyIdsBySymbol.get(sym)!.push(strategyId);
-        } catch { /* strategy may have been deleted */ }
-      }
+      // 4. REMOVED (2026-09-02, #714) — strategy-side scoring (evaluateStrategy /
+      //    compareProtocolPair) is retired. The Expert Trading Bot below is the
+      //    ONLY trading path: queue heads, gates, dispatch. No re-scoring.
 
-      for (const [sym, strategyIds] of strategyIdsBySymbol) {
-        // Fetch bars once per symbol — compute max required across all strategies for this symbol
-        const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: sym } });
-        let maxBars = 100; // default
-        if (dbSym) {
-          for (const sid of strategyIds) {
-            const strat = await this.strategyService.findOne(sid).catch(() => null);
-            if (strat?.protocolId) {
-              const req = this.protocolDb.getRequiredBars(strat.protocolId);
-              maxBars = Math.max(maxBars, req['5m'] || 100);
-            }
-          }
-        }
-        const bars = dbSym ? await this.marketData.getBars(dbSym.id, '5m', maxBars) : null;
-        const hasBars = bars && bars.length >= 20;
-
-        for (const strategyId of strategyIds) {
-          const strategyDecision = await this.evaluateStrategy(strategyId, allPositions, new Map(), hasBars ? bars : null);
-          if (strategyDecision) decisions.push(strategyDecision);
-        }
-      }
-      } // end working-set guard (step 4)
-
-      // ── #714 Stage 3: Expert Trading Bot — process signal queues AFTER the
-      //    legacy strategy evaluation. Additive: the legacy path keeps running
-      //    untouched until the queue path is proven. Shared cooldown maps
-      //    (lastSymbolTrade/lastAnyTradeAt) guarantee only ONE trade per symbol
-      //    per minute across BOTH paths, so a legacy dispatch wins the race and
-      //    the queue dispatch for the same symbol skips itself. Real trades only
-      //    fire when the trading layer is ON (otherwise paper capture).
+      // ── #714: Expert Trading Bot — consume signal queues. ──
       await this.processSignalQueues(decisions);
 
     } catch (err) {
@@ -1388,590 +1203,10 @@ export class AutomationLoopService implements OnModuleInit {
   }
 
   /**
-   * #712 — resolve the best actionable signal for a strategy across its
-   * protocol subscriptions. Each direction pool (long / short, with 'both'
-   * feeding either) is scored and the strongest composite wins, then
-   * compareProtocolPair picks the side against the strategy threshold.
-   * Falls back to the legacy single protocolId/shortProtocolId fields when
-   * no subscriptions exist.
+   * #714 (2026-09-02): resolveBestSignal + evaluateStrategy are RETIRED.
+   * The one scoring line (buildBestLadder) routes signals into queues and
+   * processSignalQueues dispatches them — strategies are gates, not scorers.
    */
-  private async resolveBestSignal(
-    strategy: any,
-    bars: any[],
-    subs: Array<{ protocolId: string; role: string }>,
-    getGated: (protocolId: string, bars: any[]) => Promise<any>,
-  ): Promise<{
-    side: 'BUY' | 'SELL' | 'HOLD';
-    composite: number;
-    chosenProtocolId: string;
-    longProtocolId: string | null;
-    shortProtocolId: string | null;
-  }> {
-    const legacyLong = strategy.protocolId || '';
-    const legacyShort = strategy.shortProtocolId || undefined;
-
-    const longPool = subs.length > 0
-      ? [...new Set(subs.filter(s => s.role === 'long' || s.role === 'both').map(s => s.protocolId))]
-      : (legacyLong ? [legacyLong] : []);
-    const shortPool = subs.length > 0
-      ? [...new Set(subs.filter(s => s.role === 'short' || s.role === 'both').map(s => s.protocolId))]
-      : (legacyShort ? [legacyShort] : []);
-
-    const bestOf = async (pool: string[]) => {
-      let best: any = null;
-      let bestId: string | null = null;
-      for (const pid of pool) {
-        try {
-          const g = await getGated(pid, bars);
-          if (!g) continue;
-          const c = g?.meta?.compositePct ?? g?.composite ?? 0;
-          const bestC = best ? (best.meta?.compositePct ?? best.composite ?? 0) : -Infinity;
-          if (c > bestC) { best = g; bestId = pid; }
-        } catch { /* one protocol failing doesn't block the rest */ }
-      }
-      return { best, bestId };
-    };
-
-    const [longRes, shortRes] = [await bestOf(longPool), await bestOf(shortPool)];
-    const { side, composite } = compareProtocolPair(longRes.best, shortRes.best, strategy.minComposite ?? 3);
-    return {
-      side,
-      composite,
-      longProtocolId: longRes.bestId,
-      shortProtocolId: shortRes.bestId,
-      chosenProtocolId:
-        (side === 'SELL' ? shortRes.bestId : longRes.bestId) ?? longRes.bestId ?? shortRes.bestId ?? legacyLong,
-    };
-  }
-
-  /**
-   * Evaluate one strategy for the current tick.
-   *
-   * ⚠️ DIRECTION (2026-08-31, #714): this strategy-side scoring path is
-   * SCHEDULED FOR RETIREMENT. The agreed architecture is ONE scoring line —
-   * trading strategies are a series of gates, not scorers. The loop will
-   * become a queue processor: signal records route into per-strategy queues
-   * (via strategy_protocol subscriptions) and the Expert Trading Bot
-   * dispatches from those queues. Until that lands, this method keeps the
-   * legacy path working (best-of across the strategy's subscribed protocols).
-   */
-  private async evaluateStrategy(
-    strategyId: string,
-    positions: any[],
-    scoreMap: Map<string, any>,
-    preFetchedBars?: any[] | null,
-  ): Promise<TickDecision | null> {
-    try {
-      const strategyCheck = await this.strategyService.findOne(strategyId);
-      if (!strategyCheck || !strategyCheck.active) return null;
-      const strategy = strategyCheck as NonNullable<typeof strategyCheck>;
-
-      // ── Data Readiness Gate (Layer B Phase 2) ──
-      // Skip evaluation if bars haven't accumulated or feeds aren't connected.
-      const loopStrat = this.state.activeStrategies?.find((s: any) => s.id === strategyId);
-      const dataStatus = (loopStrat as any)?.dataStatus;
-      if (dataStatus === 'pending_bars') {
-        return {
-          timestamp: new Date().toISOString(),
-          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'SKIP', reason: `⏳ PENDING: ${(loopStrat as any)?.dataStatusReason || 'Waiting for bar data'}`,
-          composite: 0,
-        };
-      }
-      if (dataStatus === 'blocked') {
-        return {
-          timestamp: new Date().toISOString(),
-          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'BLOCKED', reason: `🚫 ${(loopStrat as any)?.dataStatusReason || 'Data requirements not met'}`,
-          composite: 0,
-        };
-      }
-
-      // Cooldown
-      const lastTrade = this.lastTradeTime.get(strategyId);
-      const cooldownMs = (strategy.cooldownMinutes || 5) * 60000;
-      if (lastTrade && (Date.now() - lastTrade) < cooldownMs) {
-        return {
-          timestamp: new Date().toISOString(),
-          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'SKIP', reason: `Cooldown active`,
-          composite: 0,
-        };
-      }
-
-      // ── Resolve execution params from the TRADING STRATEGY itself (2026-08-27) ──
-      // Decision: the loop no longer reads the scoring_strategy table — the
-      // pipeline is Protocol → Trading Strategy → Execution. scoring_strategy
-      // remains only for MetaStack versioning/performance (#295).
-      const effectiveProtocolId = strategy.protocolId || '';
-      const effectiveShortProtocolId = strategy.shortProtocolId || undefined;
-      const effectiveBaseSize = strategy.baseSize ?? 0.01;
-      const effectiveSlPct = strategy.slPct ?? 1.0;
-      const effectiveTpPct = strategy.tpPct ?? 1.0;
-
-      // #712 — strategy-owned protocol subscriptions. Falls back to the
-      // legacy single protocolId/shortProtocolId fields when none exist.
-      let subs: Array<{ protocolId: string; role: string }> = [];
-      try {
-        const rows: any[] = await (this.prisma as any).strategyProtocol.findMany({
-          where: { strategyId },
-          orderBy: { sortOrder: 'asc' },
-        });
-        subs = rows.map((r: any) => ({ protocolId: r.protocolId, role: r.role }));
-      } catch { /* table may not exist yet — legacy fields still work */ }
-
-      if (!effectiveProtocolId && subs.length === 0) {
-        return {
-          timestamp: new Date().toISOString(),
-          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'SKIP', reason: 'No protocol linked — cannot score',
-          composite: 0,
-        };
-      }
-
-      // ── Helper: get bars (pre-fetched or fetch now) ──
-      // Timeframe resolved from Protocol.recommendedTimeframe (authority),
-      // falling back to the trading strategy's timeframe field.
-      const protocolConfig = this.protocolDb.getCached(effectiveProtocolId);
-      const effectiveTimeframe = protocolConfig?.recommendedTimeframe || strategy.timeframe || '5m';
-      const getBars = async (): Promise<any[] | null> => {
-        if (preFetchedBars && preFetchedBars.length >= 20) return preFetchedBars;
-        const dbSym = await this.prisma.symbol.findFirst({ where: { ticker: strategy.symbol } });
-        if (!dbSym) return null;
-        const requiredBars = this.protocolDb.getRequiredBars(effectiveProtocolId);
-        const barCount = requiredBars[effectiveTimeframe] || 100;
-        const bars = await this.marketData.getBars(dbSym.id, effectiveTimeframe, barCount);
-        return bars && bars.length >= 20 ? bars : null;
-      };
-
-      // ── Helper: get gated score from cache or compute ──
-      // Derive weightStrategy from the trading strategy's protocol (defaults to group-weighted)
-      const ws: 'group-weighted' | 'maxscore-weighted' = 'group-weighted';
-      const getGated = async (protocolId: string, bars: any[]): Promise<any> => {
-        const cacheKey = `${strategy.symbol}|${protocolId}|${ws}`;
-        const cached = this.gatedScoreCache.get(cacheKey);
-        if (cached) return cached;
-        const result = await this.protocolGating.scoreWithGating(strategy.symbol, bars, protocolId, undefined, ws);
-        if (result && result.composite !== undefined) {
-          this.gatedScoreCache.set(cacheKey, result);
-        }
-        return result;
-      };
-
-      // Find scored position first, fall back to scoreMap
-      const pos = positions.find(p =>
-        p.symbol === strategy.symbol && p.brokerId === (strategy.brokerId || 'mt5')
-      );
-      const lookupScore = scoreMap.get(strategy.symbol);
-      
-      if (!pos || pos.composite === null) {
-        // No position — use scoreMap as fallback
-        if (lookupScore && lookupScore.score !== null && lookupScore.score !== undefined) {
-          const adjScore = lookupScore.score * this.state.globalRiskMultiplier;
-          const brokerState = this.state.brokerStates[strategy.brokerId || 'mt5'];
-          const threshold = strategy.minComposite ?? brokerState?.tradeThreshold ?? getStyleThreshold(this.protocolDb.getCached(effectiveProtocolId)?.tradingStyle);
-          const passed = adjScore >= threshold;
-          
-          // ── Score with protocol-gating (uses cache) ──
-          try {
-            const bars = await getBars();
-            if (bars) {
-              const { side, composite: chosenComposite, chosenProtocolId, longProtocolId, shortProtocolId } =
-                await this.resolveBestSignal(strategy, bars, subs, getGated);
-
-              // ── Auto-execute via shared dispatch (Phase B.2) ──
-              if (side !== 'HOLD' && strategy.mode === 'auto') {
-                const bs = this.state.brokerStates[strategy.brokerId || 'mt5'];
-                if (bs?.tradingEnabled) {
-                  await this.dispatchTrade({
-                    strategyId,
-                    strategyName: strategy.name,
-                    symbol: strategy.symbol,
-                    brokerId: strategy.brokerId || 'mt5',
-                    side,
-                    composite: chosenComposite,
-                    baseSize: effectiveBaseSize,
-                    slPct: effectiveSlPct,
-                    tpPct: effectiveTpPct,
-                    entryPrice: bars[bars.length - 1]?.close || 0,
-                    mode: strategy.mode,
-                    protocolId: chosenProtocolId,
-                    decisions: [],  // result handled via returned decision below
-                  });
-                } else {
-                  // #695 — trading off: capture what WOULD have traded (dry-run).
-                  await this.recordPaperTrade({
-                    strategyId,
-                    symbol: strategy.symbol,
-                    side,
-                    composite: chosenComposite,
-                    baseSize: effectiveBaseSize,
-                    slPct: effectiveSlPct,
-                    tpPct: effectiveTpPct,
-                    entryPrice: bars[bars.length - 1]?.close || 0,
-                    protocolId: chosenProtocolId,
-                  });
-                }
-              }
-
-              return {
-                timestamp: new Date().toISOString(),
-                strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-                decision: side !== 'HOLD' ? 'SCORED' : 'SKIP',
-                reason: side !== 'HOLD'
-                  ? `Gated: ${chosenProtocolId} → ${side} (${chosenComposite}) [${subs.length || 1} protocol(s)]`
-                  : `Gated: ${longProtocolId ?? '—'} vs ${shortProtocolId ?? '—'} low → HOLD`,
-                composite: chosenComposite, signal: side,
-              };
-            }
-          } catch (err) {
-            this.logger.debug(`Protocol-gating failed for ${strategy.symbol}, using scoreMap fallback: ${(err as Error).message}`);
-          }
-        }
-        // No scoreMap entry — use protocol-gating with cache
-        try {
-          const bars = await getBars();
-          if (!effectiveProtocolId && subs.length === 0) {
-            this.logger.debug(`Strategy ${strategyId} has no protocol linked — skipping unscoped scoring`);
-          } else if (bars) {
-            const { side, composite: chosenComposite, chosenProtocolId, longProtocolId, shortProtocolId } =
-              await this.resolveBestSignal(strategy, bars, subs, getGated);
-
-            // Persist evaluation to DB (best-effort)
-            try { await this.strategyService.evaluate(strategyId); } catch {}
-
-            // ── Auto-execute via shared dispatch (Phase B.2) ──
-            if (side !== 'HOLD' && strategy.mode === 'auto') {
-              const bs = this.state.brokerStates[strategy.brokerId || 'mt5'];
-              if (bs?.tradingEnabled) {
-                await this.dispatchTrade({
-                  strategyId,
-                  strategyName: strategy.name,
-                  symbol: strategy.symbol,
-                  brokerId: strategy.brokerId || 'mt5',
-                  side,
-                  composite: chosenComposite,
-                  baseSize: effectiveBaseSize,
-                  slPct: effectiveSlPct,
-                  tpPct: effectiveTpPct,
-                  entryPrice: bars[bars.length - 1]?.close || 0,
-                  mode: strategy.mode,
-                  protocolId: chosenProtocolId,
-                  decisions: [],
-                });
-              } else {
-                // #695 — trading off: capture what WOULD have traded (dry-run).
-                await this.recordPaperTrade({
-                  strategyId,
-                  symbol: strategy.symbol,
-                  side,
-                  composite: chosenComposite,
-                  baseSize: effectiveBaseSize,
-                  slPct: effectiveSlPct,
-                  tpPct: effectiveTpPct,
-                  entryPrice: bars[bars.length - 1]?.close || 0,
-                  protocolId: chosenProtocolId,
-                });
-              }
-            }
-
-            return {
-              timestamp: new Date().toISOString(),
-              strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-              decision: side !== 'HOLD' ? 'SCORED' : 'SKIP',
-              reason: side !== 'HOLD'
-                ? `Gated: ${chosenProtocolId} → ${side} (${chosenComposite}) [${subs.length || 1} protocol(s)]`
-                : `Gated: ${longProtocolId ?? '—'} vs ${shortProtocolId ?? '—'} low → HOLD`,
-              composite: chosenComposite, signal: side,
-            };
-          }
-        } catch (err) {
-          this.logger.debug(`Protocol-gating failed for ${strategy.symbol} (no scoreMap): ${(err as Error).message}`);
-        }
-        return {
-          timestamp: new Date().toISOString(),
-          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'SKIP', reason: 'No score available',
-          composite: 0,
-        };
-      }
-
-      // Timeline block check for this symbol
-      const symEvents = this.state.activeTimelineEvents.filter(
-        (e: any) => e.scope === 'symbol' && e.symbol === strategy.symbol
-      );
-      const blockEvent = symEvents.find((e: any) => e.action === 'block');
-      if (blockEvent) {
-        return {
-          timestamp: new Date().toISOString(),
-          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'BLOCKED', reason: `Timeline: ${blockEvent.label}`,
-          composite: pos.composite, signal: pos.signal,
-        };
-      }
-
-      // ── Pyramid Averaging (#344) ──
-      // When a position already exists, check if we can stack additional entries
-      // if the position is in profit, SL is set, and maxPyramidTiers allows it.
-      // NOTE: pyramid config moved to the TradingStrategy (2026-08-27) —
-      // the loop no longer reads the scoring_strategy table.
-      const pyramidTiers = (strategy as any)?.maxPyramidTiers ?? 1;      const isPositionInProfit = (pos as any).profit > 0;
-      const hasStopLoss = (pos as any).sl > 0 || (pos as any).stopLoss > 0;
-
-      if (pyramidTiers <= 1) {
-        // Pyramid disabled — fall through to standard position evaluation below
-      } else if (!isPositionInProfit) {
-        return {
-          timestamp: new Date().toISOString(),
-          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'SKIP', reason: 'Position not in profit — pyramid requires profit',
-          composite: pos.composite, signal: pos.signal,
-        };
-      }
-
-      if (!hasStopLoss) {
-        return {
-          timestamp: new Date().toISOString(),
-          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'SKIP', reason: 'No stop-loss set — pyramid requires risk management',
-          composite: pos.composite, signal: pos.signal,
-        };
-      }
-
-      // Count existing entries for this position (volume as proxy for tier count)
-      const currentTier = Math.ceil((pos.volume || 1) / ((strategy as any)?.baseSize || 0.01));
-      if (currentTier >= pyramidTiers) {
-        return {
-          timestamp: new Date().toISOString(),
-          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'SKIP', reason: `Pyramid tier limit reached (${currentTier}/${pyramidTiers})`,
-          composite: pos.composite, signal: pos.signal,
-        };
-      }
-
-      // ── Pyramid entry permitted — re-score to confirm signal still valid ──
-      const pyramidThreshold = (strategy as any)?.minComposite ?? 60;
-      const pyramidComposite = pos.composite * this.state.globalRiskMultiplier;
-      if (pyramidComposite < pyramidThreshold) {
-        return {
-          timestamp: new Date().toISOString(),
-          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'SKIP', reason: `Pyramid re-score ${pyramidComposite.toFixed(1)} < threshold ${pyramidThreshold}`,
-          composite: pos.composite, signal: pos.signal,
-        };
-      }
-
-      // Pyramid entry approved — dispatch with reduced size for safety
-      const pyramidSize = ((strategy as any)?.baseSize || 0.01) * 0.5; // Half-size for pyramid entries
-      this.logger.log(`🔺 PYRAMID ${strategy.symbol}: tier ${currentTier + 1}/${pyramidTiers} profit=${(pos as any).profit} score=${pyramidComposite.toFixed(1)}`);
-
-      this.dispatchTrade({
-        strategyId,
-        strategyName: strategy.name || strategyId,
-        symbol: strategy.symbol,
-        brokerId: strategy.brokerId || 'mt5',
-        side: pos.signal as 'BUY' | 'SELL',
-        composite: pyramidComposite,
-        baseSize: pyramidSize,
-        slPct: strategy.slPct ?? 1.0,
-        tpPct: strategy.tpPct ?? 1.0,
-        entryPrice: (pos as any).currentPrice ?? 0,
-        mode: strategy.mode,
-        protocolId: effectiveProtocolId,
-        decisions: [],
-      });
-
-      return {
-        timestamp: new Date().toISOString(),
-        strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-        decision: 'PYRAMID', reason: `Pyramid entry tier ${currentTier + 1}/${pyramidTiers} — profit confirmed, SL active, score ${pyramidComposite.toFixed(1)}`,
-        composite: pyramidComposite, signal: pos.signal,
-      };
-
-      // Threshold check
-      const brokerState = this.state.brokerStates[strategy.brokerId || 'mt5'];
-      const threshold = brokerState?.tradeThreshold ?? 60;
-      const adjustedComposite = pos.composite * this.state.globalRiskMultiplier;
-      if (adjustedComposite < threshold) {
-        return {
-          timestamp: new Date().toISOString(),
-          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'SKIP', reason: `Score ${pos.composite} × risk ${this.state.globalRiskMultiplier.toFixed(2)} = ${adjustedComposite.toFixed(1)} < threshold ${threshold}`,
-          composite: pos.composite, signal: pos.signal,
-        };
-      }
-
-      // Full evaluation via strategy service
-      const evalResult = await this.strategyService.evaluate(strategyId);
-      if (!evalResult.evaluated || !evalResult.passed) {
-        return {
-          timestamp: new Date().toISOString(),
-          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'SKIP', reason: evalResult.evaluated ? 'Conditions not met' : (evalResult.reason || 'Evaluation failed'),
-          composite: evalResult.composite || pos.composite, signal: evalResult.signal || pos.signal,
-        };
-      }
-
-      // Compute position size from the trading strategy's own config
-      let size = effectiveBaseSize;
-      if ((strategy as any).useRaritySizing && evalResult.rarity) {
-        size *= (evalResult.rarity.sizeMultiplier || 1);
-      }
-      if ((strategy as any).maxSize) {
-        size = Math.min(size, (strategy as any).maxSize);
-      }
-      size = Math.round(size * 10000) / 10000;
-
-      // Never dispatch a zero/negative volume order (e.g. black-swan rarity sizing)
-      if (size <= 0) {
-        return {
-          timestamp: new Date().toISOString(),
-          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'SKIP', reason: `Position size ${size} — trade skipped (invalid size)`,
-          composite: evalResult.composite ?? pos?.composite ?? 0, signal: evalResult.signal || pos?.signal,
-          quantity: size,
-        };
-      }
-
-      // Compute SL/TP prices from the trading strategy's own config
-      const slPct = effectiveSlPct;
-      const tpPct = effectiveTpPct;
-      const slPrice = evalResult.signal === 'BUY' ? pos.currentPrice * (1 - slPct / 100) : pos.currentPrice * (1 + slPct / 100);
-      const tpPrice = evalResult.signal === 'BUY' ? pos.currentPrice * (1 + tpPct / 100) : pos.currentPrice * (1 - tpPct / 100);
-
-      // Dispatch by mode
-      if (strategy.mode === 'manual') {
-        return {
-          timestamp: new Date().toISOString(),
-          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'SIGNAL', reason: 'Manual mode — logged for review',
-          composite: evalResult.composite ?? 0, signal: evalResult.signal,
-          quantity: size,
-        };
-      }
-
-      if (strategy.mode === 'semi-auto') {
-        const actionId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        const action: PendingAction = {
-          id: actionId, strategyId, symbol: strategy.symbol,
-          brokerId: strategy.brokerId || 'mt5',
-          side: evalResult.signal || 'BUY',
-          quantity: size,
-          composite: evalResult.composite ?? 0,
-          createdAt: new Date().toISOString(),
-          expiresAt: new Date(Date.now() + 5 * 60000).toISOString(),
-        };
-        this.state.pendingActions.push(action);
-        this.persistPendingAction(action).catch(() => {});
-        return {
-          timestamp: new Date().toISOString(),
-          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: 'QUEUED', reason: 'Awaiting confirmation',
-          composite: evalResult.composite ?? 0, signal: evalResult.signal,
-          actionId,
-        };
-      }
-
-      if (strategy.mode === 'auto') {
-        const brokerState = this.state.brokerStates[strategy.brokerId || 'mt5'];
-        if (!brokerState?.tradingEnabled) {
-          return {
-            timestamp: new Date().toISOString(),
-            strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-            decision: 'SKIP', reason: 'Trading disabled for this broker',
-            composite: evalResult.composite ?? 0, signal: evalResult.signal,
-          };
-        }
-
-        // Per-symbol cooldown (60s) + short global safety (3s)
-        const lastSymTrade = this.lastSymbolTrade.get(strategy.symbol) ?? 0;
-        if (lastSymTrade > 0 && (Date.now() - lastSymTrade) < 60000) {
-          return {
-            timestamp: new Date().toISOString(),
-            strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-            decision: 'SKIP', reason: `${strategy.symbol} traded ${Math.round((Date.now() - (lastSymTrade || 0)) / 1000)}s ago`,
-            composite: evalResult.composite ?? 0, signal: evalResult.signal,
-          };
-        }
-        if (this.lastAnyTradeAt && (Date.now() - this.lastAnyTradeAt) < 3000) {
-          return {
-            timestamp: new Date().toISOString(),
-            strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-            decision: 'SKIP', reason: 'Global safety cooldown (3s)',
-            composite: evalResult.composite ?? 0, signal: evalResult.signal,
-          };
-        }
-
-        // Execute
-        const broker = this.adapterFactory.create(strategy.brokerId || 'mt5');
-        if (!broker) {
-          return {
-            timestamp: new Date().toISOString(),
-            strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-            decision: 'FAILED', reason: `Broker ${strategy.brokerId} does not support orders`,
-            composite: evalResult.composite ?? 0, signal: evalResult.signal,
-          };
-        }
-        // TS doesn't narrow after `if (!broker)` due to create() return type
-        const b = broker!;
-        if (!b.placeOrder) {
-          return {
-            timestamp: new Date().toISOString(),
-            strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-            decision: 'FAILED', reason: `Broker ${strategy.brokerId} missing placeOrder`,
-            composite: evalResult.composite ?? 0, signal: evalResult.signal,
-          };
-        }
-
-        const result = await b.placeOrder!({
-          symbol: strategy.symbol,
-          side: evalResult.signal as 'BUY' | 'SELL',
-          quantity: size,
-          sl: slPrice,
-          tp: tpPrice,
-          comment: `TCS ${strategy.name}`,
-        });
-
-        this.lastTradeTime.set(strategyId, Date.now());
-        this.lastAnyTradeAt = Date.now();
-        this.lastSymbolTrade.set(strategy.symbol, Date.now());
-
-        // Record trade
-        if (result.success) {
-          try {
-            await this.tradeRecorder.record({
-              symbol: strategy.symbol,
-              side: evalResult.signal?.toLowerCase() || 'buy',
-              quantity: size,
-              entryPrice: result.price || 0,
-              pnl: 0,
-              provider: strategy.brokerId || 'mt5',
-              status: 'open',
-              origin: 'strategy',
-              source: 'meta-stack',
-              scoringStrategyId: strategyId,
-            } as any);
-          } catch { /* non-critical */ }
-        }
-
-        return {
-          timestamp: new Date().toISOString(),
-          strategyId, symbol: strategy.symbol, brokerId: strategy.brokerId || 'mt5',
-          decision: result.success ? 'EXECUTED' : 'FAILED',
-          reason: result.success ? `Ticket ${result.ticket}` : (result.error || 'Unknown error'),
-          composite: evalResult.composite ?? 0, signal: evalResult.signal,
-          ticket: result.ticket, price: result.price,
-          quantity: size,
-        };
-      }
-
-      return null;
-    } catch (err) {
-      this.logger.error(`Strategy ${strategyId} evaluation failed: ${(err as Error).message}`);
-      return null;
-    }
-  }
-
   /**
    * #714 Stage 3 — Expert Trading Bot queue processor.
    *
@@ -2048,7 +1283,7 @@ export class AutomationLoopService implements OnModuleInit {
         // Gate 2 — auto bots only; manual/semi-auto stay for the UI buttons.
         if (strategy.mode !== 'auto') continue;
 
-        // Gate 3 — data readiness (same annotation as legacy evaluateStrategy).
+        // Gate 3 — data readiness (same annotation as the strategy loader).
         if (strategy.dataStatus === 'pending_bars' || strategy.dataStatus === 'blocked') continue;
 
         // Gate 4 — minComposite bar on the SNAPSHOT (no re-scoring).
@@ -2100,6 +1335,10 @@ export class AutomationLoopService implements OnModuleInit {
             entryPrice,
             protocolId: head.protocolId,
           });
+          // Monitor continuity — latest evaluation reflects the queue snapshot.
+          this.strategyService.recordEvaluation(strategy.id, {
+            symbol, composite: gatePct, signal: side, direction: head.direction,
+          }).catch(() => {});
           decisions.push({
             timestamp: new Date().toISOString(),
             strategyId: strategy.id, symbol, brokerId: strategy.brokerId || 'mt5',
@@ -2136,6 +1375,12 @@ export class AutomationLoopService implements OnModuleInit {
           this.lastBotTradeAt.set(strategy.id, Date.now());
           this.lastBotTradeAnyAt = Date.now();
           this.state.lastBotTradeAt = new Date().toISOString();
+          this.strategyService.recordEvaluation(strategy.id, {
+            symbol, composite: gatePct, signal: side, direction: head.direction,
+            traded: last.decision === 'EXECUTED',
+            tradeTicket: typeof last.ticket === 'number' ? last.ticket : null,
+            tradeResult: last.reason ?? null,
+          }).catch(() => {});
           this.logger.warn(
             `🤖 QueueBot ${strategy.name} ${last.decision} ${side} ${symbol} strength=${strength} protocol=${head.protocolId} — queue entry consumed`,
           );

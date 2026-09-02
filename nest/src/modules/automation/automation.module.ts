@@ -9,6 +9,7 @@ import { MarketDataModule } from '../market-data/market-data.module';
 import { SymbolsModule } from '../symbols/symbols.module';
 import { CalendarModule } from '../calendar/calendar.module';
 import { AuthModule } from '../auth/auth.module';
+import { SignalsModule } from '../signals/signals.module';
 import { SymbolDataCacheService } from './symbol-data-cache.service';
 import { ProtocolRunnerService } from './protocol-runner.service';
 import { ExecutionQueueService } from './execution-queue.service';
@@ -39,7 +40,7 @@ import { AbTestController } from './ab-test.controller';
  */
 @Global()
 @Module({
-  imports: [DirectivesModule, CalibrationModule, ScoringModule, ProvidersModule, TradingModule, DiversificationModule, MarketDataModule, SymbolsModule, CalendarModule, AuthModule],
+  imports: [DirectivesModule, CalibrationModule, ScoringModule, ProvidersModule, TradingModule, DiversificationModule, MarketDataModule, SymbolsModule, CalendarModule, AuthModule, SignalsModule],
   controllers: [AutomationController, StopGuardianController, TimelineController, AbTestController, JobQueueController],
   providers: [
     SymbolDataCacheService,

@@ -158,6 +158,34 @@ export class TradingStrategyService {
     return (this.prisma as any).strategyProtocol.deleteMany({ where: { id: subId, strategyId } });
   }
 
+  /**
+   * #714 (2026-09-02) — record a queue-driven evaluation WITHOUT re-scoring.
+   * Powers the Strategy Monitor's Last Score / Last Signal from the signal
+   * queue snapshot (the same values processSignalQueues gates on).
+   */
+  async recordEvaluation(strategyId: string, data: {
+    symbol: string;
+    composite: number;
+    signal: string;
+    direction?: string | null;
+    traded?: boolean;
+    tradeTicket?: number | null;
+    tradeResult?: string | null;
+  }) {
+    return this.prisma.strategyEvaluation.create({
+      data: {
+        strategyId,
+        symbol: data.symbol,
+        composite: data.composite,
+        signal: data.signal,
+        direction: data.direction ?? null,
+        traded: data.traded ?? false,
+        tradeTicket: data.tradeTicket ?? null,
+        tradeResult: data.tradeResult ?? null,
+      },
+    });
+  }
+
   async findAll(): Promise<StrategySummary[]> {
     const strategies = await this.prisma.tradingStrategy.findMany({
       orderBy: { createdAt: 'desc' },
