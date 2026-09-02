@@ -10,7 +10,20 @@ async function fetchWithTimeout(url, options = {}) {
   try {
     const res = await fetch(url, { ...options, signal: controller.signal });
     if (!res.ok) {
-      throw new Error(`Request failed with ${res.status}`);
+      // Surface the server's own message instead of a bare status code.
+      // Nest errors are { message, error, statusCode } — business-rule
+      // 400s (market closed, duplicate, diversification…) carry the reason
+      // in `message` and were previously discarded here.
+      let detail = '';
+      try {
+        const data = await res.json();
+        const msg = data?.message ?? data?.error;
+        if (typeof msg === 'string') detail = `: ${msg}`;
+        else if (Array.isArray(msg)) detail = `: ${msg.join('; ')}`;
+      } catch { /* non-JSON error body — keep the bare status */ }
+      const err = new Error(`Request failed with ${res.status}${detail}`);
+      err.status = res.status;
+      throw err;
     }
     return res.json();
   } catch (err) {

@@ -361,3 +361,18 @@
   margin: 0 0.4rem 0.4rem 0;
 }
 .sig-link:hover { text-decoration: underline; border-color: var(--accent); }
+
+/* Signal reference chip — copyable Score UUID (#714 follow-up) */
+.sig-opp-ref {
+  margin-left: auto;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink-soft);
+  font-size: 0.6rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 1px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sig-opp-ref:hover { color: var(--ink); border-color: var(--ink-soft); }

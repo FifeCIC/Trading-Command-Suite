@@ -66,6 +66,15 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
   const [confirming, setConfirming] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  /** Copy the signal's canonical reference (Score UUID) to the clipboard. */
+  const copyRef = async () => {
+    if (!envelope.scoreId) return;
+    try { await navigator.clipboard.writeText(envelope.scoreId); } catch { /* clipboard unavailable */ }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  };
 
   // NOTE: marketStatus is deliberately omitted from the badge view model.
   // Best-of scores use 1d bars, which are always >30m old — buildScoreDisplay
@@ -155,6 +164,13 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
 
   const blocked = envelope.preTradeBlockers?.length > 0;
   const botAction = actionQuery.data?.action || 'none';
+  // Pre-flight: why a trade would 400 right now (checked before the click,
+  // mirroring the server's safety chain — market gate + pre-trade readiness).
+  const tradeBlockedReason = !marketOpen
+    ? (envelope.marketStatus?.reason || 'Market closed — trade blocked')
+    : blocked
+      ? envelope.preTradeBlockers.slice(0, 2).join(' · ')
+      : null;
 
   return (
     <motion.article
@@ -168,11 +184,28 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
         <span className="sig-opp-ticker">{envelope.symbol}</span>
         <SignalBadge display={vm} />
         <span className={`sig-opp-dir sig-opp-dir--${dir.cls}`}>{dir.label}</span>
-        {!marketOpen && <span className="sig-opp-closed" title="Market closed — trade is blocked until open">CLOSED</span>}
+        {!marketOpen && (
+          <span
+            className="sig-opp-closed"
+            title={`Market closed — trade blocked: ${envelope.marketStatus?.reason || 'closed'}`}
+          >
+            CLOSED
+          </span>
+        )}
         <span className="sig-opp-proto" title={`Protocol: ${envelope.protocolId}`}>
           {envelope.protocolName || envelope.protocolId}
         </span>
         <span className="sig-opp-time">{timeAgo(envelope.scoredAt)}</span>
+        {envelope.scoreId && (
+          <button
+            type="button"
+            className="sig-opp-ref"
+            title={`Signal ref ${envelope.scoreId} — click to copy`}
+            onClick={copyRef}
+          >
+            {copied ? '✓ copied' : `⧉ ${envelope.scoreId.slice(-8)}`}
+          </button>
+        )}
       </header>
 
       <div className="sig-opp-scores">
@@ -237,8 +270,14 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
             type="button"
             className={`sig-opp-btn ${isBuy ? 'sig-opp-btn--buy' : 'sig-opp-btn--sell'}`}
             onClick={startConfirm}
-            disabled={!envelope.scoreId}
-            title={!envelope.scoreId ? 'No persisted score to trade against' : `Open ${isBuy ? 'long' : 'short'} CFD on MT5`}
+            disabled={!envelope.scoreId || Boolean(tradeBlockedReason)}
+            title={
+              tradeBlockedReason
+                ? `Blocked: ${tradeBlockedReason}`
+                : !envelope.scoreId
+                  ? 'No persisted score to trade against'
+                  : `Open ${isBuy ? 'long' : 'short'} CFD on MT5`
+            }
           >
             {isBuy ? '▲ Buy CFD' : '▼ Sell CFD'}
           </button>
