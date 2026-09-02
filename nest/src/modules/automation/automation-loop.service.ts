@@ -1,32 +1,37 @@
 /**
- * AutomationLoopService — STAGE 2+3 of the META.Stack pipeline.
+ * AutomationLoopService — ORCHESTRATOR of the META.Stack pipeline tick.
  * ==============================================================
- * ROLE: Orchestrates the full tick: score → gate → evaluate → execute.
- *       Does NOT compute scores itself — delegates to ScoringService and
- *       ProtocolGatingService. Does NOT execute trades directly — delegates
- *       to TradingStrategyService.
+ * ROLE: one scoring line + one trade path per tick.
+ *   - Does NOT compute directive scores (delegates to SignalEnvelope/
+ *     ProtocolGating). Does NOT place broker orders (delegates to the shared
+ *     dispatchTrade safety chain).
+ *
+ * ⚠️ CONCEPT (2026-09-02, #714) — read before changing this file:
+ *   "Strategy" = the WHOLE pipeline: Protocol (signal thesis) + Trading Bot
+ *   (execution policy). A `TradingStrategy` DB row is really a BOT — an
+ *   execution/money-management policy named by BEHAVIOUR, not by symbol
+ *   (e.g. "Quick Win CFD", not "Sydney AUDUSD"). Bots subscribe to protocols
+ *   (strategy_protocol) as signal sources; their queues (strategy_signal_queue)
+ *   fill from the ONE scoring line; each bot processes its OWN queue.
+ *   The loop NEVER re-scores a strategy — evaluateStrategy / resolveBestSignal /
+ *   compareProtocolPair were RETIRED. Dual LONG-vs-SHORT winner-pick is gone by
+ *   design (direction is declared by the protocol). Do NOT reintroduce
+ *   strategy-side scoring or a second scoring line.
  *
  * PIPELINE POSITION:
- *   ScoringService/ProtocolGating (Stage 1) → DB
- *   → AutomationLoop (Stage 2: gate via ScoringStrategies)
- *   → AutomationLoop (Stage 3: evaluate via TradingStrategies)
- *   → TradingStrategyService.execute() (Stage 4)
+ *   SignalEnvelope/ProtocolGating (score) → DB signal records
+ *   → AutomationLoop tick:
+ *       3b. buildBestLadder()   = ONE scoring line (score, persist, sync queues)
+ *       4.  processSignalQueues() = queue heads → gates → dispatchTrade
+ *   → dispatchTrade safety chain → broker adapters
  *
- * BOUNDARY: This service READS scores and MAKES decisions. It does not
- *           compute directive-level scores or place broker orders.
+ * BOUNDARY: READS scores/signals and MAKES dispatch decisions; does NOT
+ *           compute directive-level scores or place broker orders itself.
  *
  * Uses manual setInterval (not @nestjs/schedule cron) for:
  *  - Dynamic interval changes per broker
  *  - Immediate pause/resume without restart
  *  - Run-on-demand from dashboard
- *
- * Tick flow:
- *   1. Check Timeline → global risk multiplier
- *   2. Fetch all broker portfolios via AdapterFactory
- *   3. Score via ScoringService.rankAll() [delegated]
- *   3b. Score watchlist symbols per ScoringStrategy with protocol gating [delegated]
- *   4. Evaluate active TradingStrategies against scored results
- *   5. Dispatch trades via TradingStrategyService [delegated]
  */
 
 import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
