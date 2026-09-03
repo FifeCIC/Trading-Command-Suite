@@ -538,9 +538,12 @@ export class SignalEnvelopeService {
       });
     }
 
-    // Score divergence: check if any NON-GATE group's score deviates significantly
+    // Score divergence: check if any NON-GATE, ACTIVE group's score deviates
+    // significantly. Inactive groups (no directive results) are omitted from
+    // subScores by the gating engine; this filter is defence-in-depth.
+    const inactiveIds = new Set(gated.inactiveGroupIds ?? []);
     const scores = Object.entries(gated.subScores)
-      .filter(([gid, v]) => !gateIds.has(gid) && v !== 50);
+      .filter(([gid, v]) => !gateIds.has(gid) && !inactiveIds.has(gid) && v !== 50);
     if (scores.length >= 2) {
       const vals = scores.map(([, v]) => v);
       const max = Math.max(...vals);
@@ -583,7 +586,9 @@ export class SignalEnvelopeService {
       // composite — phrase it as caution, not as a contradiction of the badge.
       blockers.push(`Gated composite below 65 (${gated.composite.toFixed(0)}) — trade with caution`);
     }
-    if (gated.signal === 'SELL' && gated.composite > 50) {
+    if (gated.directionMode !== 'SHORT_ONLY' && gated.signal === 'SELL' && gated.composite > 50) {
+      // Only "mixed" when a long-capable protocol emits SELL while scoring
+      // strong — for SHORT_ONLY protocols a strong SELL is the healthy outcome.
       blockers.push('Mixed signal — SELL but composite above midpoint');
     }
 

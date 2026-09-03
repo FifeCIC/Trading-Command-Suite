@@ -183,3 +183,14 @@
 .prb-weight-btn:disabled { opacity: 0.5; cursor: default; }
 .prb-weights-total { display: flex; justify-content: space-between; align-items: center; margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--line); font-size: 0.75rem; color: var(--ink-soft); }
 .prb-weights-total b { font-size: 0.85rem; color: var(--ink); }
+
+/* Config health (#716 follow-up) */
+.prb-health-chip {
+  font-size: 0.58rem; font-weight: 700; color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12); border-radius: 3px; padding: 0 4px;
+  white-space: nowrap; cursor: help;
+}
+.prb-health { border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 6px; padding: 0.5rem 0.7rem; margin: 0.6rem 0; background: rgba(245, 158, 11, 0.06); }
+.prb-health h3 { font-size: 0.75rem; margin: 0 0 0.35rem; color: #f59e0b; }
+.prb-health-line { font-size: 0.7rem; margin: 2px 0; color: var(--ink-soft); }
+.prb-health-line.prb-health-error { color: #f87171; }

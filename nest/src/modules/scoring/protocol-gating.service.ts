@@ -109,6 +109,11 @@ export interface GatedScore {
   opportunityScore: number;
   opportunityMax: number;
   opportunityPct: number;
+  /** Group ids that produced NO directive results this run (empty groups in config,
+   *  all-alpha exclusions, or no data). They are omitted from subScores so they read
+   *  as neutral (not 0) downstream — a missing group must not manufacture divergences
+   *  or depress composites (#716 follow-up, 2026-09-03). */
+  inactiveGroupIds: string[];
   rarity?: RarityInfo;
   riskGate?: {
     hardGateTriggered: boolean;
@@ -427,12 +432,18 @@ export class ProtocolGatingService {
     const oppRawTotals: Record<string, number> = {};
     const oppMaxTotals: Record<string, number> = {};
     const breakouts: Record<string, DirectiveBreakout[]> = {};
+    const inactiveGroupIds: string[] = [];
 
     for (const [groupId, { results, config, maxScores }] of groups) {
       breakouts[groupId] = [];
 
       if (results.length === 0) {
-        subScores[groupId] = 0; // No active directives = no contribution
+        // Inactive group — NOT a zero score. The group isn't participating
+        // (empty directiveIds in config, all directives excluded, or no data).
+        // Omit it from subScores so divergence detection and risk baselines
+        // read it as neutral; a config with an empty group should be flagged
+        // by ProtocolHealthService, not silently score 0 forever.
+        inactiveGroupIds.push(groupId);
         subRawTotals[groupId] = 0;
         subMaxTotals[groupId] = 0;
         oppRawTotals[groupId] = 0;
@@ -479,9 +490,19 @@ export class ProtocolGatingService {
       }
 
       // Signal group % = directional raw / directional max.
-      subScores[groupId] = signalMax > 0 ? Math.round((signalRaw / signalMax) * 100) : 0;
-      subRawTotals[groupId] = signalRaw;
-      subMaxTotals[groupId] = signalMax;
+      // A group with NO directional contribution (all-neutral outcomes,
+      // insufficient data, or a gate group) is NOT a zero score — it is
+      // not participating in the signal. Omitting it keeps divergence
+      // detection honest: data absence must not read as disagreement.
+      if (signalMax === 0) {
+        inactiveGroupIds.push(groupId);
+        subRawTotals[groupId] = 0;
+        subMaxTotals[groupId] = 0;
+      } else {
+        subScores[groupId] = Math.round((signalRaw / signalMax) * 100);
+        subRawTotals[groupId] = signalRaw;
+        subMaxTotals[groupId] = signalMax;
+      }
       oppRawTotals[groupId] = oppRaw;
       oppMaxTotals[groupId] = oppMax;
     }
@@ -588,6 +609,7 @@ export class ProtocolGatingService {
       opportunityScore: Math.round(opportunityScore),
       opportunityMax,
       opportunityPct: Math.round(opportunityPct),
+      inactiveGroupIds,
       rarity,
       riskGate: {
         hardGateTriggered: riskResult.hardGateTriggered,

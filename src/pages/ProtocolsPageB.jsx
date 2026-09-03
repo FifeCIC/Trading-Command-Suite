@@ -36,6 +36,23 @@ export default function ProtocolsPageB({ initialProtocolId }) {
     staleTime: 30_000,
   });
 
+  // Config health (#716 follow-up) — static validation of group/directive wiring.
+  const healthQuery = useQuery({
+    queryKey: ['protocols-health'],
+    queryFn: () => apiGet('/api/scoring/gated/protocols/health').catch(() => ({ issues: [] })),
+    staleTime: 60_000,
+    refetchInterval: 300_000,
+  });
+  const healthIssues = healthQuery.data?.issues || [];
+  const issuesByProtocol = useMemo(() => {
+    const m = new Map();
+    for (const i of healthIssues) {
+      if (!m.has(i.protocolId)) m.set(i.protocolId, []);
+      m.get(i.protocolId).push(i);
+    }
+    return m;
+  }, [healthIssues]);
+
   const protocols = useMemo(() => {
     const raw = Array.isArray(protocolsQuery.data?.protocols) ? protocolsQuery.data.protocols : [];
     const seen = new Set();
@@ -56,6 +73,7 @@ export default function ProtocolsPageB({ initialProtocolId }) {
   }, [protocols, selected, initialProtocolId]);
 
   const selectedProto = protocols.find(p => p.id === selected?.id) || protocols[0];
+  const selectedIssues = issuesByProtocol.get(selectedProto?.id) || [];
 
   // ── Latest score for selected protocol ──
   const latestScoreQuery = useQuery({
@@ -244,6 +262,14 @@ export default function ProtocolsPageB({ initialProtocolId }) {
               <div className="prb-item-name">
                 {p.name}
                 <span className={`prb-active-dot ${p.active ? 'on' : 'off'}`} title={p.active ? 'Protocol enabled' : 'Protocol disabled'} />
+                {(issuesByProtocol.get(p.id) || []).length > 0 && (
+                  <span
+                    className="prb-health-chip"
+                    title={(issuesByProtocol.get(p.id) || []).map(i => i.message).join('\n')}
+                  >
+                    ⚠ {(issuesByProtocol.get(p.id) || []).length}
+                  </span>
+                )}
               </div>
               <div className="prb-item-meta">
                 <span className="prb-item-style" style={{ color: getProtocolType(p).color }}>{p.tradingStyle || '—'}</span>
@@ -273,6 +299,18 @@ export default function ProtocolsPageB({ initialProtocolId }) {
               </div>
 
               <p className="prb-description">{selectedProto.description}</p>
+
+              {/* Config health (#716 follow-up) — why a protocol may score oddly */}
+              {selectedIssues.length > 0 && (
+                <div className="prb-health">
+                  <h3>Config issues</h3>
+                  {selectedIssues.map((i, idx) => (
+                    <p key={idx} className={`prb-health-line prb-health-${i.severity}`}>
+                      {i.severity === 'error' ? '🚫' : '⚠'} {i.message}
+                    </p>
+                  ))}
+                </div>
+              )}
 
               {/* Theory (#689) — written intent, distinct from description */}
               {selectedProto.theory && (

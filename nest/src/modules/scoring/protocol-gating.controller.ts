@@ -6,6 +6,7 @@ import { PortfolioService } from '../portfolio/portfolio.service';
 import { ProtocolDbService } from './protocol-db.service';
 import { DirectivesService } from '../directives/directives.service';
 import { DirectiveConfigService } from './directive-config.service';
+import { ProtocolHealthService } from './protocol-health.service';
 import { isDirectiveIncluded } from '../directives/directive-inclusion';
 
 /**
@@ -48,7 +49,21 @@ export class ProtocolGatingController {
     private readonly protocolDb: ProtocolDbService,
     private readonly directivesService: DirectivesService,
     private readonly configService: DirectiveConfigService,
+    private readonly health: ProtocolHealthService,
   ) {}
+
+  /**
+   * GET /api/scoring/gated/protocols/health
+   *
+   * Static protocol-config validation (#716 follow-up, 2026-09-03): flags
+   * empty groups, unknown directives, duplicates, zero-weight groups, and
+   * missing risk gates BEFORE they corrupt scoring output. Also logged on boot.
+   */
+  @Get('protocols/health')
+  async protocolsHealth() {
+    const issues = await this.health.validateAll();
+    return { generatedAt: new Date().toISOString(), issues };
+  }
 
   /**
    * GET /api/scoring/gated/protocols
@@ -386,6 +401,7 @@ export class ProtocolGatingController {
         opportunityScore: 0,
         opportunityMax: 0,
         opportunityPct: 0,
+        inactiveGroupIds: [],
         meta: {
           compositePct: 0,
           maxScore: 0,
