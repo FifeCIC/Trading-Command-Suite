@@ -64,6 +64,13 @@ import {
  *    score-based ranking without category bias.
  *
  * The weightStrategy is stored on ScoringStrategy and defaults to 'group-weighted'.
+ *
+ * ⚠️ IMPLEMENTATION NOTE (2026-09-03): the composite today is the RAW sum of
+ * directional directive scores (risk-multiplied), NOT the weighted formula
+ * above. `config.weight` is not applied in scoreWithGating's assembly — empty
+ * or low-weight groups therefore cannot drag the composite, but the weights
+ * shown in the registry are aspirational until #718 lands per-protocol gates.
+ * Do not tune group weights expecting the documented formula to hold.
  */
 
 // ─── Result Types ────────────────────────────────────────
@@ -98,6 +105,12 @@ export interface GatedScore {
   symbol: string;
   composite: number;
   signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
+  /** Group id → 0-100 directional percentage.
+   *  CONTRACT: an ABSENT key means the group is not participating (empty config,
+   *  no directional contribution, or a gate group) — it must read as NEUTRAL
+   *  downstream (e.g. `subScores['risk'] ?? 50`), never as 0. A present 0 is a
+   *  real "zero directional conviction", a distinct thing from "not scored".
+   *  See inactiveGroupIds for the explicit list. */
   subScores: Record<string, number>;
   subRawTotals: Record<string, number>;
   subMaxTotals: Record<string, number>;
