@@ -9,7 +9,7 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import RoadmapBoard from '../components/roadmap/RoadmapBoard';
 import { apiGet, apiPatch, apiPost } from '../core/api/client';
-import { applyMove } from '../core/roadmap/roadmap-core';
+import { applyMove, compareCards } from '../core/roadmap/roadmap-core';
 import './roadmap-page.css';
 
 const GITHUB_ISSUE_URL = 'https://github.com/FifeCIC/Trading-Command-Suite/issues';
@@ -30,8 +30,38 @@ export default function RoadmapPage() {
   const [sortMode, setSortMode] = useState('priority'); // 'priority' | 'number'
   const [search, setSearch] = useState('');
 
-  const sortFn = (a, b) =>
-    sortMode === 'number' ? a.number - b.number : (a.position ?? 0) - (b.position ?? 0);
+  const sortFn = (a, b) => compareCards(a, b, sortMode);
+
+  // ── Column lifecycle (2026-09-03) ──────────────────────────────
+  // Completed columns (have cards, zero open) are hidden so the next
+  // column rolls into the "Next Sprint" position automatically.
+  const activeColumns = useMemo(() => {
+    return board.columns.filter((col) => {
+      if (col.id === 'discussion') return true; // always visible
+      const cards = board.cards.filter((c) => c.columnId === col.id);
+      if (cards.length === 0) return true; // empty columns stay visible
+      return cards.some((c) => c.state !== 'closed'); // has open work
+    });
+  }, [board.columns, board.cards]);
+
+  const completedColumns = useMemo(() => {
+    return board.columns.filter((col) => {
+      if (col.id === 'discussion') return false;
+      const cards = board.cards.filter((c) => c.columnId === col.id);
+      return cards.length > 0 && !cards.some((c) => c.state !== 'closed');
+    });
+  }, [board.columns, board.cards]);
+
+  // The SECOND active column displays as "Next Sprint" while keeping
+  // its real name underneath — when it completes and hides, the next
+  // column becomes the new "Next Sprint" automatically.
+  const displayColumns = useMemo(
+    () =>
+      activeColumns.map((c, i) =>
+        i === 1 ? { ...c, title: 'Next Sprint', originalTitle: c.title } : c,
+      ),
+    [activeColumns],
+  );
 
   const visibleCards = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -204,13 +234,24 @@ export default function RoadmapPage() {
         <div className="rm-page-loading">Loading roadmap…</div>
       ) : (
         <RoadmapBoard
-          columns={board.columns}
+          columns={displayColumns}
           cards={visibleCards}
-          sortMode={sortMode === 'number' ? 'number' : 'position'}
+          sortMode={sortMode}
           onMove={handleMove}
           onRenameColumn={(id, title) => renameMutation.mutate({ id, title })}
           onOpenCard={(card) => window.open(`${GITHUB_ISSUE_URL}/${card.number}`, '_blank', 'noopener')}
         />
+      )}
+
+      {completedColumns.length > 0 && (
+        <div className="rm-completed-strip">
+          <span className="rm-completed-label">✓ Completed</span>
+          {completedColumns.map((c) => (
+            <span key={c.id} className="rm-completed-chip" title={c.title}>
+              {c.title}
+            </span>
+          ))}
+        </div>
       )}
     </div>
   );

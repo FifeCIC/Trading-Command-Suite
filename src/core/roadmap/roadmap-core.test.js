@@ -11,6 +11,8 @@ import {
   applyMove,
   validateMove,
   sortCardsByPosition,
+  priorityRank,
+  compareCards,
 } from './roadmap-core.js';
 
 const COLUMNS = ['phase-1', 'phase-2', 'phase-3', 'roadmap', 'triage'];
@@ -139,4 +141,29 @@ test('sortCardsByPosition — column then position', () => {
   ];
   const sorted = sortCardsByPosition(cards).map((c) => c.number);
   assert.deepEqual(sorted, [3, 2, 1]);
+});
+
+test('priorityRank — label tiers, unlabelled last', () => {
+  assert.equal(priorityRank({ labels: ['priority-high', 'bug'] }), 0);
+  assert.equal(priorityRank({ labels: ['priority-medium'] }), 1);
+  assert.equal(priorityRank({ labels: ['priority-low'] }), 2);
+  assert.equal(priorityRank({ labels: ['enhancement'] }), 3);
+  assert.equal(priorityRank({}), 3);
+});
+
+test('compareCards — number mode ignores priority and position', () => {
+  const a = { number: 10, position: 1, labels: ['priority-high'] };
+  const b = { number: 20, position: 0, labels: [] };
+  assert.ok(compareCards(a, b, 'number') < 0);
+});
+
+test('compareCards — priority tier wins, then position', () => {
+  const high = { number: 99, position: 9, labels: ['priority-high'] };
+  const low = { number: 1, position: 0, labels: ['priority-low'] };
+  const none = { number: 2, position: 1, labels: [] };
+  assert.ok(compareCards(high, low, 'priority') < 0);
+  assert.ok(compareCards(low, none, 'priority') < 0);
+  const midA = { number: 3, position: 2, labels: ['priority-medium'] };
+  const midB = { number: 4, position: 0, labels: ['priority-medium'] };
+  assert.ok(compareCards(midB, midA, 'priority') < 0); // same tier → position
 });

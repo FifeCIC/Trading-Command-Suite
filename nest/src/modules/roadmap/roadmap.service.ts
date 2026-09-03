@@ -247,13 +247,31 @@ export class RoadmapService {
   }
 
   /** Renames default columns by upserting an override; sprint columns
-   *  update in place. */
+   *  update in place. Preserves the default kind when creating the override. */
   async renameColumn(id: string, title: string) {
+    const defaultCol = this.loadDataset().columns.find((c) => c.id === id);
     await this.prisma.roadmapColumn.upsert({
       where: { id },
       update: { title },
-      create: { id, title, kind: 'phase' },
+      create: { id, title, kind: defaultCol?.kind ?? 'sprint' },
     });
+    return this.getBoard();
+  }
+
+  /** Delete a sprint column. Refuses while cards still reference it, and
+   *  default (config) columns can never be deleted. */
+  async deleteColumn(id: string) {
+    const defaultCol = this.loadDataset().columns.find((c) => c.id === id);
+    if (defaultCol) {
+      throw new BadRequestException(`Default column ${id} cannot be deleted`);
+    }
+    const cardCount = await this.prisma.roadmapCard.count({ where: { columnId: id } });
+    if (cardCount > 0) {
+      throw new BadRequestException(
+        `Column ${id} still holds ${cardCount} card(s) — move them out first`,
+      );
+    }
+    await this.prisma.roadmapColumn.delete({ where: { id } });
     return this.getBoard();
   }
 }

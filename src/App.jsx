@@ -1098,6 +1098,9 @@ export default function App() {
           <Route path="/lab/metastack-display" element={<Navigate to="/lab/triple-screen" replace />} />
           <Route path="/lab/metastack-performance" element={<Navigate to="/lab" replace />} />
           <Route path="/lab/directive-audit" element={<Navigate to="/lab" replace />} />
+          {/* QA area retired 2026-09-03 — QA Checklist moved to Development */}
+          <Route path="/qa/:view" element={<Navigate to="/development/qa-testing" replace />} />
+          <Route path="/qa" element={<Navigate to="/development/qa-testing" replace />} />
           <Route path="/scoringStrategies/:view" element={<ScoringStrategiesRedirect />} />
           <Route path="/scoringStrategies" element={<Navigate to="/scoring" replace />} />
           <Route path="/:area/:view" element={<AppShell />} />

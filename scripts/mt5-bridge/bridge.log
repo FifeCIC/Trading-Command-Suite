@@ -27759,3 +27759,40 @@ oneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone Met
 2026-09-02 11:03:28,866 [ERROR] Error handling /quote: [WinError 10053] An established connection was aborted by the software in your host machine
 2026-09-02 11:03:28,952 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
 2026-09-02 11:03:29,019 [ERROR] Error handling /health: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-09-02 14:32:55,193 [INFO] [TRADE JOURNAL] {"timestamp": "2026-09-02T14:32:55.190791", "action": "order_placed", "ticket": 152573993240, "symbol": "AUDUSD", "type": "buy", "volume": 0.01, "price": 0.71598, "clientOrderId": null}
+2026-09-02 22:48:14,044 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-09-02 22:48:21,587 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-09-02 22:48:22,734 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-09-02 22:48:34,448 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-09-02 22:48:35,263 [ERROR] Error handling /candles: [WinError 10053] An established connection was aborted by the software in your host machine
+2026-09-03 14:20:44,033 [INFO] MetaTrader5 package loaded
+2026-09-03 14:20:44,035 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-09-03 14:20:44,035 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-03 14:20:44,035 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-09-03 14:20:44,035 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-03 14:20:44,035 [INFO] Connecting to MT5 at startup...
+2026-09-03 14:20:44,035 [INFO] Connecting to MT5 at startup...
+2026-09-03 14:20:44,035 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-09-03 14:20:44,035 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-03 14:20:44,040 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-09-03 14:20:44,040 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1341.41
+2026-09-03 14:20:44,066 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-03 14:20:44,066 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-09-03 17:14:43,190 [ERROR] Error handling /history: 'TradeOrder' object has no attribute 'volume'
+2026-09-03 18:02:48,840 [INFO] MetaTrader5 package loaded
+2026-09-03 18:02:48,841 [INFO] Bridge instance #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-03 18:02:48,841 [INFO] Bridge instance #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-09-03 18:02:48,841 [INFO] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-03 18:02:48,841 [INFO] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-09-03 18:02:48,841 [INFO] Connecting to MT5 at startup...
+2026-09-03 18:02:48,841 [INFO] Connecting to MT5 at startup...
+2026-09-03 18:02:48,841 [INFO] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-03 18:02:48,842 [INFO] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-09-03 18:02:48,850 [INFO] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1341.41
+2026-09-03 18:02:48,856 [INFO] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-09-03 18:02:48,879 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-09-03 18:02:48,879 [INFO] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-03 18:04:09,869 [INFO] [TRADE JOURNAL] {"timestamp": "2026-09-03T18:04:09.869745", "action": "order_placed", "ticket": 152581796145, "symbol": "XAUUSD", "type": "buy", "volume": 0.01, "price": 4485.58, "clientOrderId": null}
+2026-09-03 18:58:33,316 [INFO] [TRADE JOURNAL] {"timestamp": "2026-09-03T18:58:33.314787", "action": "order_placed", "ticket": 152582025597, "symbol": "USDJPY", "type": "buy", "volume": 0.01, "price": 155.452, "clientOrderId": null}
+2026-09-03 19:49:30,848 [INFO] [TRADE JOURNAL] {"timestamp": "2026-09-03T19:49:30.840055", "action": "order_placed", "ticket": 152582228436, "symbol": "XAUUSD", "type": "sell", "volume": 0.01, "price": 4478.47, "clientOrderId": null}
+2026-09-03 19:49:55,825 [INFO] [TRADE JOURNAL] {"timestamp": "2026-09-03T19:49:55.825438", "action": "order_placed", "ticket": 152582230042, "symbol": "AUDUSD", "type": "buy", "volume": 0.01, "price": 0.7206, "clientOrderId": null}

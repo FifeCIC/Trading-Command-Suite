@@ -402,7 +402,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 if orders:
                     for o in orders:
                         history.append({'ticket': o.ticket, 'symbol': o.symbol, 'type': 'buy' if o.type in (0,2,4) else 'sell',
-                            'volume': float(o.volume), 'price': float(o.price_open),
+                            'volume': float(o.volume_initial), 'price': float(o.price_open),
                             'time': utc_iso(o.time_setup), 'comment': o.comment})
                 if deals:
                     for d in deals:
@@ -491,7 +491,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 if orders:
                     o = orders[0]
                     return json_response(self, {'ticket': o.ticket, 'symbol': o.symbol,
-                        'type': 'buy' if o.type in (0,2,4) else 'sell', 'volume': float(o.volume),
+                        'type': 'buy' if o.type in (0,2,4) else 'sell', 'volume': float(o.volume_initial),
                         'priceOpen': float(o.price_open), 'priceCurrent': float(o.price_current),
                         'sl': float(o.sl) if o.sl else None, 'tp': float(o.tp) if o.tp else None,
                         'openTime': utc_iso(o.time_setup),
@@ -503,7 +503,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 if history:
                     h = history[0]
                     return json_response(self, {'ticket': h.ticket, 'symbol': h.symbol,
-                        'type': 'buy' if h.type in (0,2,4) else 'sell', 'volume': float(h.volume),
+                        'type': 'buy' if h.type in (0,2,4) else 'sell', 'volume': float(h.volume_initial),
                         'priceOpen': float(h.price_open), 'priceCurrent': float(h.price_current),
                         'openTime': utc_iso(h.time_setup),
                         'status': h.state == 3 and 'filled' or h.state == 4 and 'cancelled' or 'closed',

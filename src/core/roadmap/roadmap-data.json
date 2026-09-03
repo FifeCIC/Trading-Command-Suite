@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-08-31T13:22:56.093Z",
+  "generatedAt": "2026-09-03T16:26:08.968Z",
   "columns": [
     {
-      "id": "phase-1",
-      "title": "Phase 1 — Core",
-      "kind": "phase"
+      "id": "discussion",
+      "title": "Discussions/Review",
+      "kind": "discussion"
     },
     {
       "id": "phase-2",
@@ -20,16 +20,6 @@
       "id": "phase-4",
       "title": "Phase 4 — Backtesting",
       "kind": "phase"
-    },
-    {
-      "id": "roadmap",
-      "title": "Roadmap",
-      "kind": "phase"
-    },
-    {
-      "id": "triage",
-      "title": "Triage",
-      "kind": "triage"
     }
   ],
   "cards": [
@@ -178,7 +168,7 @@
       "updatedAt": "2026-08-27T22:53:06Z",
       "closedAt": "2026-07-29T13:06:21Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 11,
@@ -222,7 +212,7 @@
       "updatedAt": "2026-08-27T22:54:59Z",
       "closedAt": "2026-07-04T14:08:27Z",
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 14,
@@ -237,7 +227,7 @@
       "updatedAt": "2026-07-29T13:06:24Z",
       "closedAt": "2026-07-29T13:06:23Z",
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 15,
@@ -252,7 +242,7 @@
       "updatedAt": "2026-08-27T22:55:02Z",
       "closedAt": "2026-07-04T14:08:31Z",
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 16,
@@ -267,7 +257,7 @@
       "updatedAt": "2026-08-27T22:55:04Z",
       "closedAt": "2026-07-04T14:08:35Z",
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 17,
@@ -298,7 +288,7 @@
       "updatedAt": "2026-08-27T22:55:06Z",
       "closedAt": "2026-07-04T14:08:42Z",
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 19,
@@ -313,7 +303,7 @@
       "updatedAt": "2026-08-27T22:55:08Z",
       "closedAt": "2026-07-04T14:08:46Z",
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 20,
@@ -328,7 +318,7 @@
       "updatedAt": "2026-08-27T22:55:10Z",
       "closedAt": "2026-07-04T14:08:50Z",
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 21,
@@ -343,7 +333,7 @@
       "updatedAt": "2026-08-27T22:55:12Z",
       "closedAt": "2026-07-04T14:08:55Z",
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 22,
@@ -358,7 +348,7 @@
       "updatedAt": "2026-08-27T22:55:14Z",
       "closedAt": "2026-07-04T14:08:59Z",
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 23,
@@ -1814,7 +1804,7 @@
       "updatedAt": "2026-08-27T22:55:16Z",
       "closedAt": "2026-07-04T14:09:14Z",
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 123,
@@ -1875,7 +1865,7 @@
       "updatedAt": "2026-07-22T19:45:24Z",
       "closedAt": "2026-07-22T19:45:24Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 127,
@@ -2502,7 +2492,7 @@
       "updatedAt": "2026-08-27T22:53:42Z",
       "closedAt": "2026-07-02T12:57:41Z",
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 169,
@@ -2517,7 +2507,7 @@
       "updatedAt": "2026-08-27T22:53:44Z",
       "closedAt": "2026-07-02T12:57:44Z",
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 170,
@@ -3323,7 +3313,7 @@
       "updatedAt": "2026-08-27T23:10:28Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 225,
@@ -3649,7 +3639,7 @@
       "updatedAt": "2026-08-27T22:11:14Z",
       "closedAt": "2026-07-07T01:03:22Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 249,
@@ -3665,7 +3655,7 @@
       "updatedAt": "2026-07-07T01:03:24Z",
       "closedAt": "2026-07-07T01:03:24Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 250,
@@ -3682,7 +3672,7 @@
       "updatedAt": "2026-08-27T22:11:12Z",
       "closedAt": "2026-07-07T00:56:34Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 251,
@@ -4168,7 +4158,7 @@
       "updatedAt": "2026-08-03T18:17:46Z",
       "closedAt": "2026-08-03T18:17:46Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 284,
@@ -4233,7 +4223,7 @@
       "updatedAt": "2026-08-27T22:53:46Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 288,
@@ -4753,7 +4743,7 @@
       "updatedAt": "2026-07-22T19:41:26Z",
       "closedAt": "2026-07-22T19:41:26Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 324,
@@ -4783,7 +4773,7 @@
       "updatedAt": "2026-08-27T22:53:48Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 326,
@@ -4798,7 +4788,7 @@
       "updatedAt": "2026-07-22T19:43:35Z",
       "closedAt": "2026-07-22T19:43:35Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 327,
@@ -4815,7 +4805,7 @@
       "updatedAt": "2026-07-22T22:45:09Z",
       "closedAt": "2026-07-22T22:45:09Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 328,
@@ -4997,7 +4987,7 @@
       "updatedAt": "2026-08-27T22:11:04Z",
       "closedAt": "2026-07-22T18:46:00Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 340,
@@ -5162,7 +5152,7 @@
       "updatedAt": "2026-08-04T01:02:16Z",
       "closedAt": "2026-08-04T01:02:16Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 351,
@@ -5275,7 +5265,7 @@
       "updatedAt": "2026-08-27T22:55:33Z",
       "closedAt": "2026-07-16T23:00:10Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 359,
@@ -5404,7 +5394,7 @@
       "updatedAt": "2026-07-16T19:33:36Z",
       "closedAt": "2026-07-16T19:33:25Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 368,
@@ -5835,7 +5825,7 @@
       "updatedAt": "2026-08-27T22:53:08Z",
       "closedAt": "2026-07-16T20:21:10Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 398,
@@ -5958,7 +5948,7 @@
       "updatedAt": "2026-08-27T22:56:20Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 406,
@@ -5973,7 +5963,7 @@
       "updatedAt": "2026-07-17T19:33:52Z",
       "closedAt": "2026-07-17T19:33:52Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 407,
@@ -5988,7 +5978,7 @@
       "updatedAt": "2026-07-17T19:33:50Z",
       "closedAt": "2026-07-17T19:33:50Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 408,
@@ -6003,7 +5993,7 @@
       "updatedAt": "2026-07-17T19:06:53Z",
       "closedAt": "2026-07-17T19:06:53Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 409,
@@ -6063,7 +6053,7 @@
       "updatedAt": "2026-07-22T01:23:43Z",
       "closedAt": "2026-07-22T01:23:43Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 413,
@@ -6078,7 +6068,7 @@
       "updatedAt": "2026-08-27T22:53:10Z",
       "closedAt": "2026-07-29T13:55:17Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 414,
@@ -6135,7 +6125,7 @@
       "updatedAt": "2026-08-27T23:08:33Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 418,
@@ -6165,7 +6155,7 @@
       "updatedAt": "2026-07-18T16:50:26Z",
       "closedAt": "2026-07-18T16:50:26Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 420,
@@ -6180,7 +6170,7 @@
       "updatedAt": "2026-08-27T22:56:24Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 421,
@@ -6195,7 +6185,7 @@
       "updatedAt": "2026-07-22T18:41:44Z",
       "closedAt": "2026-07-22T18:41:44Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 422,
@@ -6209,7 +6199,7 @@
       "updatedAt": "2026-07-22T19:45:44Z",
       "closedAt": "2026-07-22T19:45:44Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 423,
@@ -6264,7 +6254,7 @@
       "updatedAt": "2026-07-21T00:12:40Z",
       "closedAt": "2026-07-21T00:12:40Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 427,
@@ -6279,7 +6269,7 @@
       "updatedAt": "2026-07-21T20:28:09Z",
       "closedAt": "2026-07-21T20:28:09Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 428,
@@ -6294,7 +6284,7 @@
       "updatedAt": "2026-07-21T20:22:23Z",
       "closedAt": "2026-07-21T20:22:23Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 429,
@@ -6309,7 +6299,7 @@
       "updatedAt": "2026-07-21T20:32:16Z",
       "closedAt": "2026-07-21T20:32:16Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 430,
@@ -6324,7 +6314,7 @@
       "updatedAt": "2026-07-21T20:21:49Z",
       "closedAt": "2026-07-21T20:21:49Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 431,
@@ -6339,7 +6329,7 @@
       "updatedAt": "2026-07-21T20:22:24Z",
       "closedAt": "2026-07-21T20:22:24Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 432,
@@ -6354,7 +6344,7 @@
       "updatedAt": "2026-07-22T17:54:39Z",
       "closedAt": "2026-07-22T17:54:39Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 433,
@@ -6369,7 +6359,7 @@
       "updatedAt": "2026-07-21T20:22:12Z",
       "closedAt": "2026-07-21T20:22:12Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 434,
@@ -6384,7 +6374,7 @@
       "updatedAt": "2026-07-21T20:22:28Z",
       "closedAt": "2026-07-21T20:22:28Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 435,
@@ -6415,7 +6405,7 @@
       "updatedAt": "2026-07-21T20:22:30Z",
       "closedAt": "2026-07-21T20:22:30Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 437,
@@ -6430,7 +6420,7 @@
       "updatedAt": "2026-07-21T20:22:35Z",
       "closedAt": "2026-07-21T20:22:34Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 438,
@@ -6475,7 +6465,7 @@
       "updatedAt": "2026-07-21T20:22:36Z",
       "closedAt": "2026-07-21T20:22:36Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 441,
@@ -6490,7 +6480,7 @@
       "updatedAt": "2026-07-21T20:22:38Z",
       "closedAt": "2026-07-21T20:22:38Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 442,
@@ -6505,7 +6495,7 @@
       "updatedAt": "2026-07-21T20:22:21Z",
       "closedAt": "2026-07-21T20:22:21Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 443,
@@ -6535,7 +6525,7 @@
       "updatedAt": "2026-07-21T20:22:19Z",
       "closedAt": "2026-07-21T20:22:19Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 445,
@@ -6550,7 +6540,7 @@
       "updatedAt": "2026-08-27T22:56:26Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 446,
@@ -6582,7 +6572,7 @@
       "updatedAt": "2026-07-21T20:22:06Z",
       "closedAt": "2026-07-21T20:22:06Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 448,
@@ -6597,7 +6587,7 @@
       "updatedAt": "2026-07-21T20:21:51Z",
       "closedAt": "2026-07-21T20:21:51Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 449,
@@ -6612,7 +6602,7 @@
       "updatedAt": "2026-08-27T22:56:28Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 450,
@@ -6627,7 +6617,7 @@
       "updatedAt": "2026-07-21T20:22:10Z",
       "closedAt": "2026-07-21T20:22:10Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 451,
@@ -6642,7 +6632,7 @@
       "updatedAt": "2026-07-21T20:21:54Z",
       "closedAt": "2026-07-21T20:21:54Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 452,
@@ -6659,7 +6649,7 @@
       "updatedAt": "2026-08-27T22:10:37Z",
       "closedAt": "2026-07-21T11:24:59Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 453,
@@ -6706,7 +6696,7 @@
       "updatedAt": "2026-07-21T20:22:00Z",
       "closedAt": "2026-07-21T20:22:00Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 456,
@@ -6769,7 +6759,7 @@
       "updatedAt": "2026-07-22T00:46:10Z",
       "closedAt": "2026-07-22T00:46:10Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 460,
@@ -6784,7 +6774,7 @@
       "updatedAt": "2026-07-21T20:21:53Z",
       "closedAt": "2026-07-21T20:21:53Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 461,
@@ -6801,7 +6791,7 @@
       "updatedAt": "2026-08-27T22:10:27Z",
       "closedAt": "2026-07-21T20:21:58Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 462,
@@ -6816,7 +6806,7 @@
       "updatedAt": "2026-07-21T20:21:57Z",
       "closedAt": "2026-07-21T20:21:57Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 463,
@@ -6846,7 +6836,7 @@
       "updatedAt": "2026-07-21T20:22:04Z",
       "closedAt": "2026-07-21T20:22:04Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 465,
@@ -6876,7 +6866,7 @@
       "updatedAt": "2026-07-21T20:22:02Z",
       "closedAt": "2026-07-21T20:22:02Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 467,
@@ -6925,7 +6915,7 @@
       "updatedAt": "2026-08-27T23:08:28Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 470,
@@ -6941,7 +6931,7 @@
       "updatedAt": "2026-08-27T22:10:20Z",
       "closedAt": "2026-07-27T00:39:25Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 471,
@@ -6957,7 +6947,7 @@
       "updatedAt": "2026-08-27T22:10:18Z",
       "closedAt": "2026-07-29T22:57:35Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 472,
@@ -6973,7 +6963,7 @@
       "updatedAt": "2026-08-27T22:10:16Z",
       "closedAt": "2026-07-28T17:44:21Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 474,
@@ -6988,7 +6978,7 @@
       "updatedAt": "2026-07-22T23:51:59Z",
       "closedAt": "2026-07-22T23:51:59Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 475,
@@ -7003,7 +6993,7 @@
       "updatedAt": "2026-07-23T01:32:05Z",
       "closedAt": "2026-07-23T01:32:05Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 476,
@@ -7019,7 +7009,7 @@
       "updatedAt": "2026-08-27T22:10:13Z",
       "closedAt": "2026-07-24T18:45:59Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 477,
@@ -7035,7 +7025,7 @@
       "updatedAt": "2026-08-27T22:10:11Z",
       "closedAt": "2026-07-24T20:09:00Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 478,
@@ -7051,7 +7041,7 @@
       "updatedAt": "2026-07-22T19:58:24Z",
       "closedAt": "2026-07-22T19:58:24Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 479,
@@ -7066,7 +7056,7 @@
       "updatedAt": "2026-07-22T22:44:10Z",
       "closedAt": "2026-07-22T22:44:10Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 480,
@@ -7081,7 +7071,7 @@
       "updatedAt": "2026-07-22T22:44:59Z",
       "closedAt": "2026-07-22T22:44:59Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 481,
@@ -7096,7 +7086,7 @@
       "updatedAt": "2026-07-23T00:10:37Z",
       "closedAt": "2026-07-23T00:10:37Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 482,
@@ -7111,7 +7101,7 @@
       "updatedAt": "2026-08-16T22:50:00Z",
       "closedAt": "2026-08-16T22:50:00Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 483,
@@ -7156,7 +7146,7 @@
       "updatedAt": "2026-07-24T16:41:30Z",
       "closedAt": "2026-07-24T16:41:30Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 486,
@@ -7170,7 +7160,7 @@
       "updatedAt": "2026-07-24T15:58:08Z",
       "closedAt": "2026-07-24T15:58:08Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 487,
@@ -7184,7 +7174,7 @@
       "updatedAt": "2026-07-26T21:04:44Z",
       "closedAt": "2026-07-26T21:04:44Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 488,
@@ -7198,7 +7188,7 @@
       "updatedAt": "2026-07-26T17:30:11Z",
       "closedAt": "2026-07-26T17:30:11Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 489,
@@ -7212,7 +7202,7 @@
       "updatedAt": "2026-07-24T15:58:10Z",
       "closedAt": "2026-07-24T15:58:10Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 490,
@@ -7226,7 +7216,7 @@
       "updatedAt": "2026-07-24T16:41:16Z",
       "closedAt": "2026-07-24T16:41:16Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 491,
@@ -7240,7 +7230,7 @@
       "updatedAt": "2026-07-24T16:41:19Z",
       "closedAt": "2026-07-24T16:41:19Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 492,
@@ -7254,7 +7244,7 @@
       "updatedAt": "2026-08-27T22:53:12Z",
       "closedAt": "2026-07-26T15:55:07Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 493,
@@ -7268,7 +7258,7 @@
       "updatedAt": "2026-08-27T22:53:14Z",
       "closedAt": "2026-07-26T15:55:09Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 494,
@@ -7282,7 +7272,7 @@
       "updatedAt": "2026-07-26T15:55:11Z",
       "closedAt": "2026-07-26T15:55:11Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 495,
@@ -7296,7 +7286,7 @@
       "updatedAt": "2026-08-27T22:53:16Z",
       "closedAt": "2026-07-26T17:12:28Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 496,
@@ -7310,7 +7300,7 @@
       "updatedAt": "2026-07-24T14:12:36Z",
       "closedAt": "2026-07-24T14:12:36Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 497,
@@ -7353,7 +7343,7 @@
       "updatedAt": "2026-08-27T22:53:18Z",
       "closedAt": "2026-07-26T15:21:38Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 500,
@@ -7368,7 +7358,7 @@
       "updatedAt": "2026-07-26T17:24:51Z",
       "closedAt": "2026-07-26T17:24:51Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 501,
@@ -7382,7 +7372,7 @@
       "updatedAt": "2026-08-27T22:53:20Z",
       "closedAt": "2026-07-26T15:35:48Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 502,
@@ -7396,7 +7386,7 @@
       "updatedAt": "2026-08-27T22:53:22Z",
       "closedAt": "2026-07-26T14:29:29Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 503,
@@ -7411,7 +7401,7 @@
       "updatedAt": "2026-08-27T22:53:24Z",
       "closedAt": "2026-07-26T21:02:13Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 504,
@@ -7426,7 +7416,7 @@
       "updatedAt": "2026-08-27T22:53:27Z",
       "closedAt": "2026-07-29T20:35:41Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 505,
@@ -7440,7 +7430,7 @@
       "updatedAt": "2026-08-27T22:53:29Z",
       "closedAt": "2026-07-27T00:17:20Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 506,
@@ -7454,7 +7444,7 @@
       "updatedAt": "2026-08-27T22:53:31Z",
       "closedAt": "2026-07-26T23:07:17Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 507,
@@ -7468,7 +7458,7 @@
       "updatedAt": "2026-08-27T22:53:34Z",
       "closedAt": "2026-07-26T17:40:47Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 508,
@@ -7482,7 +7472,7 @@
       "updatedAt": "2026-08-27T22:53:36Z",
       "closedAt": "2026-07-26T15:21:36Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 509,
@@ -7497,7 +7487,7 @@
       "updatedAt": "2026-08-27T22:53:56Z",
       "closedAt": "2026-07-29T18:10:25Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 510,
@@ -7512,7 +7502,7 @@
       "updatedAt": "2026-08-27T22:53:38Z",
       "closedAt": "2026-07-26T15:21:17Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 511,
@@ -7570,7 +7560,7 @@
       "updatedAt": "2026-08-29T20:15:22Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 515,
@@ -7587,7 +7577,7 @@
       "updatedAt": "2026-08-27T22:56:33Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 516,
@@ -7602,7 +7592,7 @@
       "updatedAt": "2026-07-29T14:02:52Z",
       "closedAt": "2026-07-29T14:02:52Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 517,
@@ -7617,7 +7607,7 @@
       "updatedAt": "2026-07-29T14:02:54Z",
       "closedAt": "2026-07-29T14:02:54Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 518,
@@ -7632,7 +7622,7 @@
       "updatedAt": "2026-07-29T17:26:14Z",
       "closedAt": "2026-07-29T17:26:14Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 519,
@@ -7648,7 +7638,7 @@
       "updatedAt": "2026-07-29T18:30:30Z",
       "closedAt": "2026-07-29T18:30:30Z",
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 520,
@@ -7735,7 +7725,7 @@
       "updatedAt": "2026-08-27T22:10:09Z",
       "closedAt": "2026-07-29T23:11:35Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 526,
@@ -8632,7 +8622,7 @@
       "updatedAt": "2026-08-27T22:12:47Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 585,
@@ -8662,7 +8652,7 @@
       "updatedAt": "2026-08-05T12:29:10Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 587,
@@ -8677,7 +8667,7 @@
       "updatedAt": "2026-08-27T22:55:19Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 588,
@@ -8692,7 +8682,7 @@
       "updatedAt": "2026-08-27T23:08:08Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 589,
@@ -8707,7 +8697,7 @@
       "updatedAt": "2026-08-06T21:04:01Z",
       "closedAt": "2026-08-06T21:04:01Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 590,
@@ -8722,7 +8712,7 @@
       "updatedAt": "2026-08-27T22:53:40Z",
       "closedAt": "2026-08-06T21:04:03Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 591,
@@ -8768,7 +8758,7 @@
       "updatedAt": "2026-08-06T18:30:39Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 594,
@@ -8783,7 +8773,7 @@
       "updatedAt": "2026-08-27T23:08:06Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 595,
@@ -8800,7 +8790,7 @@
       "updatedAt": "2026-08-27T23:08:04Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 596,
@@ -8865,7 +8855,7 @@
       "updatedAt": "2026-08-27T23:07:45Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 600,
@@ -8880,7 +8870,7 @@
       "updatedAt": "2026-08-27T23:07:44Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 601,
@@ -8974,7 +8964,7 @@
       "updatedAt": "2026-08-27T22:12:43Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 607,
@@ -8990,7 +8980,7 @@
       "updatedAt": "2026-08-27T22:12:19Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 608,
@@ -9005,7 +8995,7 @@
       "updatedAt": "2026-08-17T17:46:06Z",
       "closedAt": "2026-08-17T17:46:06Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 609,
@@ -9050,7 +9040,7 @@
       "updatedAt": "2026-08-27T23:07:38Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 612,
@@ -9064,7 +9054,7 @@
       "updatedAt": "2026-08-27T23:07:37Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 613,
@@ -9078,7 +9068,7 @@
       "updatedAt": "2026-08-27T23:07:36Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 614,
@@ -9093,7 +9083,7 @@
       "updatedAt": "2026-08-16T22:44:13Z",
       "closedAt": "2026-08-16T22:44:13Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 615,
@@ -9136,7 +9126,7 @@
       "updatedAt": "2026-08-27T23:05:55Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 618,
@@ -9151,7 +9141,7 @@
       "updatedAt": "2026-08-27T23:05:54Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 619,
@@ -9165,7 +9155,7 @@
       "updatedAt": "2026-08-16T18:00:25Z",
       "closedAt": "2026-08-16T18:00:25Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 620,
@@ -9245,7 +9235,7 @@
       ],
       "assignee": null,
       "createdAt": "2026-08-14T13:28:12Z",
-      "updatedAt": "2026-08-31T13:01:56Z",
+      "updatedAt": "2026-09-02T13:32:53Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9342,7 +9332,7 @@
       "updatedAt": "2026-08-27T23:05:51Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 631,
@@ -9374,7 +9364,7 @@
       "updatedAt": "2026-08-27T23:05:50Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 633,
@@ -9452,7 +9442,7 @@
       "updatedAt": "2026-08-16T20:34:18Z",
       "closedAt": "2026-08-16T20:34:18Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 638,
@@ -9480,7 +9470,7 @@
       "updatedAt": "2026-08-27T23:05:17Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 640,
@@ -9510,7 +9500,7 @@
       "updatedAt": "2026-08-16T17:43:45Z",
       "closedAt": "2026-08-16T17:43:45Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 642,
@@ -9555,7 +9545,7 @@
       "updatedAt": "2026-08-15T23:35:29Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 645,
@@ -9649,7 +9639,7 @@
       "updatedAt": "2026-08-27T23:05:13Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 651,
@@ -9665,7 +9655,7 @@
       "updatedAt": "2026-08-16T17:48:57Z",
       "closedAt": "2026-08-16T17:48:57Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 652,
@@ -9681,7 +9671,7 @@
       "updatedAt": "2026-08-20T18:37:54Z",
       "closedAt": "2026-08-20T18:37:54Z",
       "comments": 0,
-      "columnId": "phase-1"
+      "columnId": "triage"
     },
     {
       "number": 653,
@@ -9696,7 +9686,7 @@
       "updatedAt": "2026-08-27T22:53:54Z",
       "closedAt": "2026-08-20T18:41:12Z",
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 654,
@@ -9711,7 +9701,7 @@
       "updatedAt": "2026-08-27T23:05:12Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 655,
@@ -9726,7 +9716,7 @@
       "updatedAt": "2026-08-27T23:05:11Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 656,
@@ -9819,7 +9809,7 @@
       "updatedAt": "2026-08-27T23:05:08Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 662,
@@ -9891,7 +9881,7 @@
       "updatedAt": "2026-08-27T22:12:21Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 667,
@@ -10000,7 +9990,7 @@
       "updatedAt": "2026-08-27T23:04:34Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 674,
@@ -10013,7 +10003,7 @@
       ],
       "assignee": null,
       "createdAt": "2026-08-21T22:57:32Z",
-      "updatedAt": "2026-08-27T23:04:33Z",
+      "updatedAt": "2026-09-02T13:32:51Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -10116,7 +10106,7 @@
       ],
       "assignee": null,
       "createdAt": "2026-08-25T22:06:50Z",
-      "updatedAt": "2026-08-31T13:20:45Z",
+      "updatedAt": "2026-09-03T13:45:53Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -10156,14 +10146,14 @@
     {
       "number": 684,
       "title": "[Epic] Signals v1 — best-of opportunities view (action cards, combined-strength ranking, CFD actions)",
-      "state": "open",
+      "state": "closed",
       "labels": [
         "epic"
       ],
       "assignee": null,
       "createdAt": "2026-08-26T13:23:10Z",
-      "updatedAt": "2026-08-27T22:12:30Z",
-      "closedAt": null,
+      "updatedAt": "2026-09-02T12:34:50Z",
+      "closedAt": "2026-09-02T12:34:50Z",
       "comments": 0,
       "columnId": "triage"
     },
@@ -10227,7 +10217,7 @@
       "updatedAt": "2026-08-27T22:12:28Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 689,
@@ -10328,7 +10318,7 @@
       ],
       "assignee": null,
       "createdAt": "2026-08-26T23:31:44Z",
-      "updatedAt": "2026-08-31T13:01:54Z",
+      "updatedAt": "2026-09-02T12:35:19Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -10415,7 +10405,7 @@
       "updatedAt": "2026-08-29T20:15:46Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "roadmap"
+      "columnId": "triage"
     },
     {
       "number": 701,
@@ -10591,7 +10581,7 @@
     {
       "number": 712,
       "title": "Strategy-owned protocol subscriptions — multi-protocol signal sources",
-      "state": "open",
+      "state": "closed",
       "labels": [
         "enhancement",
         "trading",
@@ -10600,7 +10590,100 @@
       ],
       "assignee": null,
       "createdAt": "2026-08-31T12:42:22Z",
-      "updatedAt": "2026-08-31T13:10:57Z",
+      "updatedAt": "2026-09-02T12:33:13Z",
+      "closedAt": "2026-09-02T12:33:13Z",
+      "comments": 0,
+      "columnId": "phase-3"
+    },
+    {
+      "number": 713,
+      "title": "Roadmap board: card-level owner + dependency editing UI (epic #681 follow-up)",
+      "state": "open",
+      "labels": [
+        "enhancement"
+      ],
+      "assignee": null,
+      "createdAt": "2026-08-31T18:23:56Z",
+      "updatedAt": "2026-08-31T18:23:56Z",
+      "closedAt": null,
+      "comments": 0,
+      "columnId": "triage"
+    },
+    {
+      "number": 714,
+      "title": "Design: Unified signal pipeline — strategies consume signals, no second scoring",
+      "state": "open",
+      "labels": [
+        "trading",
+        "discussion",
+        "phase-3",
+        "META.Stack"
+      ],
+      "assignee": null,
+      "createdAt": "2026-08-31T20:02:34Z",
+      "updatedAt": "2026-09-02T12:35:17Z",
+      "closedAt": null,
+      "comments": 0,
+      "columnId": "phase-3"
+    },
+    {
+      "number": 715,
+      "title": "Signals v1 acceptance: manual CFD trade through a signal card (MT5 demo)",
+      "state": "open",
+      "labels": [
+        "trading",
+        "phase-3"
+      ],
+      "assignee": null,
+      "createdAt": "2026-09-02T12:34:14Z",
+      "updatedAt": "2026-09-02T12:34:14Z",
+      "closedAt": null,
+      "comments": 0,
+      "columnId": "phase-3"
+    },
+    {
+      "number": 716,
+      "title": "Investigation: all four live signals blocked — risk-group subscores read 0",
+      "state": "closed",
+      "labels": [
+        "trading",
+        "phase-3"
+      ],
+      "assignee": null,
+      "createdAt": "2026-09-03T11:48:56Z",
+      "updatedAt": "2026-09-03T12:37:56Z",
+      "closedAt": "2026-09-03T12:37:56Z",
+      "comments": 0,
+      "columnId": "phase-3"
+    },
+    {
+      "number": 717,
+      "title": "[Plan] Structured signal-outcome logging — typed entries, global log + meta tables",
+      "state": "closed",
+      "labels": [
+        "trading",
+        "discussion",
+        "phase-3"
+      ],
+      "assignee": null,
+      "createdAt": "2026-09-03T11:49:15Z",
+      "updatedAt": "2026-09-03T12:38:13Z",
+      "closedAt": "2026-09-03T12:38:13Z",
+      "comments": 0,
+      "columnId": "phase-3"
+    },
+    {
+      "number": 718,
+      "title": "Signal-quality calibration follow-ups — per-protocol entry gate + missing-data group neutrality",
+      "state": "open",
+      "labels": [
+        "trading",
+        "discussion",
+        "phase-3"
+      ],
+      "assignee": null,
+      "createdAt": "2026-09-03T12:37:19Z",
+      "updatedAt": "2026-09-03T12:37:19Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"

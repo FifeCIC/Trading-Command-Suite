@@ -235,7 +235,7 @@ const VIEW_META = {
     css: 'src/pages/watchlists.css',
     api: ['GET /api/watchlists', 'POST /api/watchlists'],
   },
-  '/qa/qa-testing': {
+  '/development/qa-testing': {
     label: 'QA Testing',
     file: 'src/pages/QaTestingPage.jsx',
     css: 'src/pages/qa-testing.css',

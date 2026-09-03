@@ -150,3 +150,31 @@ export function sortCardsByPosition(cards) {
     return (a.position ?? 0) - (b.position ?? 0);
   });
 }
+
+/**
+ * Priority tier from GitHub labels: priority-high → medium → low → unlabelled.
+ * Used by the "Order: Priority" sort mode so priority means something
+ * visible even before cards are dragged (position alone mirrors issue order).
+ */
+export function priorityRank(card) {
+  const labels = card.labels || [];
+  if (labels.includes('priority-high')) return 0;
+  if (labels.includes('priority-medium')) return 1;
+  if (labels.includes('priority-low')) return 2;
+  return 3;
+}
+
+/**
+ * Card comparator for the board's sort modes:
+ *   'number'   — issue number ascending
+ *   'priority' — priority label tier first, then board position
+ *   'position' — board position only (fractional drag order)
+ */
+export function compareCards(a, b, mode = 'position') {
+  if (mode === 'number') return a.number - b.number;
+  if (mode === 'priority') {
+    const tier = priorityRank(a) - priorityRank(b);
+    if (tier !== 0) return tier;
+  }
+  return (a.position ?? 0) - (b.position ?? 0);
+}

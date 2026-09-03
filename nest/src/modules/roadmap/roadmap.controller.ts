@@ -7,8 +7,9 @@
  * POST   /api/roadmap/cards/:number/deps  — { blockedBy: number[] }
  * POST   /api/roadmap/columns             — { title, kind? } (sprints)
  * PATCH  /api/roadmap/columns/:id         — { title } (rename)
+ * DELETE /api/roadmap/columns/:id         — remove a sprint column (empty only)
  */
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
 import { RoadmapService } from './roadmap.service';
 
 @Controller('roadmap')
@@ -52,5 +53,10 @@ export class RoadmapController {
   @Patch('columns/:id')
   rename(@Param('id') id: string, @Body() body: { title?: string }) {
     return this.roadmap.renameColumn(id, body.title || 'Untitled');
+  }
+
+  @Delete('columns/:id')
+  removeColumn(@Param('id') id: string) {
+    return this.roadmap.deleteColumn(id);
   }
 }

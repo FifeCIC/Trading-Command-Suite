@@ -38,12 +38,6 @@ export const NAV_TREE = {
       { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
     ],
   },
-  qa: {
-    label: 'QA',
-    views: [
-      { id: 'qa-testing', label: 'QA Checklist', icon: '🧪' },
-    ],
-  },
   // ── Accounts (was Trading212) ──
   trading212: {
     label: 'Accounts',
@@ -248,6 +242,7 @@ export const NAV_TREE = {
     label: 'Development',
     views: [
       { id: 'roadmap', label: 'Roadmap', icon: '🗺' },
+      { id: 'qa-testing', label: 'QA Checklist', icon: '🧪' },
     ],
   },
 };

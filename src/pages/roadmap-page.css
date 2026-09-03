@@ -176,3 +176,32 @@
   outline: none;
   border-color: var(--accent);
 }
+
+/* ── Completed columns strip (2026-09-03) ── */
+.rm-completed-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+}
+
+.rm-completed-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin-right: 0.25rem;
+}
+
+.rm-completed-chip {
+  font-size: 0.68rem;
+  color: var(--ink-soft);
+  background: var(--bg-elev, var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.15rem 0.55rem;
+  opacity: 0.85;
+}

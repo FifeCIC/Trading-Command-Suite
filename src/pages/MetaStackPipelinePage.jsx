@@ -8,8 +8,8 @@
  * Lane colors distinguish modules. Dashed borders = planned/roadmap.
  */
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiPost } from '../core/api/client';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '../core/api/client';
 import PageInfoPopover from '../components/PageInfoPopover';
 import './meta-stack-pipeline.css';
 
@@ -186,7 +186,6 @@ function laneBgIcon(laneId) {
 export default function MetaStackPipelinePage() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [showPlanned, setShowPlanned] = useState(true);
-  const queryClient = useQueryClient();
 
   // Live stats (optional — for implemented nodes)
   const { data: health } = useQuery({
@@ -194,31 +193,6 @@ export default function MetaStackPipelinePage() {
     queryFn: () => apiGet('/api/health').catch(() => null),
     staleTime: 30_000,
   });
-
-  // #615 — META.Stack layer kill switches (Protocols / Trading).
-  const { data: layerState } = useQuery({
-    queryKey: ['msp-layers'],
-    queryFn: () => apiGet('/api/automation/status').catch(() => null),
-    refetchInterval: 15_000,
-  });
-  const layers = layerState?.layers || { protocolsEnabled: true, tradingEnabled: false };
-  const toggleLayer = async (layer, enabled) => {
-    await apiPost('/api/automation/layer', { layer, enabled }).catch(() => {});
-    queryClient.invalidateQueries({ queryKey: ['msp-layers'] });
-  };
-
-  // #714 Stage 3 — Expert Trading Bot queue processing + pacing.
-  const { data: botQueue } = useQuery({
-    queryKey: ['msp-botqueue'],
-    queryFn: () => apiGet('/api/automation/bot-queue').catch(() => null),
-    refetchInterval: 15_000,
-  });
-  const botEnabled = botQueue?.enabled ?? true;
-  const botDelay = botQueue?.interTradeDelayMinutes ?? 10;
-  const setBotQueue = async (patch) => {
-    await apiPost('/api/automation/bot-queue', patch).catch(() => {});
-    queryClient.invalidateQueries({ queryKey: ['msp-botqueue'] });
-  };
 
   const visibleNodes = useMemo(() =>
     showPlanned ? NODES : NODES.filter(n => n.status === 'implemented'),
@@ -248,54 +222,6 @@ export default function MetaStackPipelinePage() {
         </label>
       </header>
 
-      <div className="msp-layer-strip">
-        <span className="msp-layer-label">META.Stack layers</span>
-        <span className={`msp-layer-pill ${layers.protocolsEnabled ? 'on' : 'off'}`}>
-          Protocols / Scoring
-          <button
-            type="button"
-            className="msp-layer-btn"
-            onClick={() => toggleLayer('protocols', !layers.protocolsEnabled)}
-          >
-            {layers.protocolsEnabled ? 'ON — click to stop scoring' : 'OFF — click to score'}
-          </button>
-        </span>
-        <span className={`msp-layer-pill ${layers.tradingEnabled ? 'on' : 'off'}`}>
-          Trading
-          <button
-            type="button"
-            className="msp-layer-btn"
-            onClick={() => toggleLayer('trading', !layers.tradingEnabled)}
-          >
-            {layers.tradingEnabled ? 'ON — click to stop dispatch' : 'OFF — click to enable dispatch'}
-          </button>
-        </span>
-        <span className={`msp-layer-pill ${botEnabled ? 'on' : 'off'}`}>
-          Expert Bot (queues)
-          <button
-            type="button"
-            className="msp-layer-btn"
-            title="Processes each bot's signal queue. Trading OFF means paper capture only."
-            onClick={() => setBotQueue({ enabled: !botEnabled })}
-          >
-            {botEnabled ? 'ON — click to pause queue processing' : 'OFF — click to resume'}
-          </button>
-          <label className="msp-bot-delay" title="Minimum minutes between bot trades">
-            delay{' '}
-            <input
-              type="number"
-              min="0"
-              max="240"
-              value={botDelay}
-              onChange={e => setBotQueue({ interTradeDelayMinutes: parseInt(e.target.value || '0', 10) })}
-            />m
-          </label>
-        </span>
-        <span className="msp-layer-note">
-          Protocols OFF stops scoring entirely. Trading OFF still produces signals but nothing is dispatched. Trading defaults OFF after restart.
-        </span>
-      </div>
-
       <div className="msp-canvas">
         {/* Lane headers */}
         {LANES.map(lane => (
@@ -309,8 +235,8 @@ export default function MetaStackPipelinePage() {
               background: lane.color + '08',
             }}
           >
-            <div className="msp-lane-header" style={{ color: lane.color }}>
-              {lane.label}
+            <div className="msp-lane-header">
+              <span className="msp-lane-title" style={{ color: lane.color }}>{lane.label}</span>
             </div>
             {laneBgIcon(lane.id)}
 
