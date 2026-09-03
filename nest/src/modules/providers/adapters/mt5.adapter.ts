@@ -378,7 +378,14 @@ export class Mt5Adapter implements IProviderAdapter {
     }
 
     if (!data) {
-      this.logger.warn(`MT5 order FAILED — bridge unreachable (circuit breaker) [url=${this.bridgeUrl} tripped=${this.tripped} consecutiveErrors=${this.consecutiveErrors}]`);
+      // bridgePost returns null for BOTH a tripped breaker (cooldown skip)
+      // and a network-level failure. Label the two honestly — "circuit
+      // breaker active" means the cooldown is holding; anything else is the
+      // bridge simply not responding.
+      const reason = this.tripped
+        ? 'Bridge unreachable (circuit breaker active)'
+        : 'Bridge unreachable (no response)';
+      this.logger.warn(`MT5 order FAILED — ${reason} [url=${this.bridgeUrl} tripped=${this.tripped} consecutiveErrors=${this.consecutiveErrors}]`);
       // Record failed order attempt
       this.prisma?.order.create({
         data: {
@@ -390,7 +397,7 @@ export class Mt5Adapter implements IProviderAdapter {
           provider: 'mt5',
         },
       }).catch(() => {});
-      return { success: false, error: 'Bridge unreachable (circuit breaker active)' };
+      return { success: false, error: reason };
     }
 
     const result: BrokerOrderResult = {
