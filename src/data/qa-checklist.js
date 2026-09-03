@@ -2552,6 +2552,41 @@ const QA_CHECKLIST = [
     priority: 'medium',
     versionNote: '2026-09-02 — #693 signal_rank_snapshot + enriched signal_dismissal',
   },
+  // 2026-09-02/03 — Handoff Batch #13
+  // ═══════════════════════════════════════════════════
+  {
+    id: 'qa-close-001',
+    area: 'Signals/Trading',
+    system: 'Signals v1 + queue routing',
+    name: 'Issue-closure verification (#684/#712)',
+    procedure: 'Run a tick with a two-protocol bot; dismiss a source signal; trigger paper capture.',
+    expected: 'Queue routing per bot via strategy_protocol subscriptions; dismiss propagation removes queue rows; paper capture records heads; single scoring line only — no legacy protocolId/shortProtocolId path.',
+    category: 'Regression',
+    priority: 'high',
+    versionNote: '2026-09-02 — #684/#712 closed; live MT5 demo-fill item → #715',
+  },
+  {
+    id: 'qa-health-001',
+    area: 'Scoring/Protocols',
+    system: 'Protocol config health',
+    name: 'Empty groups neutral + registry flags config faults',
+    procedure: 'Open Protocols Registry → ⚠ chips on faulty protocols with issue text. Trigger /api/signals/best → no divergences reference groups with zero directives. GET /api/scoring/gated/protocols/health.',
+    expected: 'Faults surfaced at config level (empty groups, unknown directives, duplicates, zero-weight, missing risk gate); scoring treats missing/no-direction groups as non-participating (inactiveGroupIds); mixed-signal blocker does not fire for SHORT_ONLY protocols.',
+    category: 'Feature',
+    priority: 'high',
+    versionNote: '2026-09-03 — #718 ProtocolHealthService',
+  },
+  {
+    id: 'qa-outcome-001',
+    area: 'Signals',
+    system: 'Signal outcome logging',
+    name: 'Conflicts reflect real disagreement; outcomes logged',
+    procedure: 'Run a tick; check signals cards show conflict detail with directive names; XAUUSD/other strong signals no longer blocked by fake risk-0 divergences. Query /api/signals/outcomes/count?symbol=&days=7.',
+    expected: 'Gate groups excluded from conflict detection; only genuine blockers block; signal_outcome_log/meta rows keyed to Score ids with typed entryKeys (conflict-high, below-gate, ...).',
+    category: 'Feature',
+    priority: 'high',
+    versionNote: '2026-09-03 — #716/#717 signal_outcome tables',
+  },
 ];
 
 export default QA_CHECKLIST;

@@ -374,10 +374,15 @@ export const CURRENT_SLICE = [
   'Signals→Trading plan handover (#702) — POST /api/signals/:id/plan creates a TradingPlan type="signal" with full context; dedupe symbol+protocolId+direction.',
   'Expert Trading Bot / signal queues (#714 S1-S3) — strategy_signal_queue per bot (SEES snapshot), routed from the ONE scoring line (buildBestLadder); void rule (signal gone ⇒ entry dropped); dismissal removes queue rows; queue view on Strategy Monitor; loop processSignalQueues dispatches heads through shared dispatchTrade chain; pacing (interTradeDelayMinutes default 10); one trade per symbol/min across both paths.',
   'Single scoring line (#714 final) — evaluateStrategy/resolveBestSignal/compareProtocolPair DELETED; loop = buildBestLadder (score/persist/sync queues) → processSignalQueues (gates/dispatch). Strategies are gates, not scorers. strategy_evaluation written via recordEvaluation from queue snapshots (paper/execution). Manual POST /api/trading/strategies/:id/evaluate remains a user-triggered UI affordance only.',
+  // ── 2026-09-02/03 — Handoff Batch #13 ──
+  'Signals v1 complete + subscription-driven queue routing (#684/#712 CLOSED) — buildBestLadder routes every actionable per-protocol record into per-bot queues via strategy_protocol subscriptions; processSignalQueues dispatches heads; legacy protocolId/shortProtocolId unused by the trading path; each protocol scores with its own bar requirements (multi-timeframe concern gone). Live MT5 demo-fill acceptance item deferred to #715 (real user action per #662).',
+  'Inactive groups read NEUTRAL, never zero (#716/#718) — protocol-gating omits no-result AND no-direction groups from subScores (tracked in GatedScore.inactiveGroupIds); divergence detection skips gate + inactive groups; mixed-signal blocker no longer fires for SHORT_ONLY protocols (strong SELL is healthy there).',
+  'ProtocolHealthService — static config validation on boot + GET /api/scoring/gated/protocols/health; ⚠ chips in Protocols Registry (Page B) + Config issues block. 7 real config faults surfaced across 5 protocols (vix-spike-v1 empty Sentiment, spy-speed-v1 empty Market Context, session-open-effect double-counted ×3, signals-workbench no risk gate) — surfaced, NOT auto-fixed. 4 of 5 signals trade-ready; VIX long blocked only by the genuine 58<65 gate.',
+  'Signal outcome logging + conflict honesty (#716/#717) — gate groups (isRiskGate) excluded from conflict detection (fake high-severity divergences gone); signal_outcome_log + signal_outcome_meta (typed blockers/conflicts/warnings, stable entryKeys) via SignalOutcomeService write-on-change; GET /api/signals/outcomes/count aggregates; signals cards render conflict severity + directive names.',
 ]
 
 
-export const CONTRACT_REGISTER_LAST_UPDATED = '2026-09-02 (handoff batch #12: single scoring line + Expert Trading Bot queues #714, control plane layers #615, scoring-strategy retirement, paper dry-run #695, protocol subscriptions #712, signals feedback #693, plan handover #702)'
+export const CONTRACT_REGISTER_LAST_UPDATED = '2026-09-03 (handoff batch #13: inactive-group neutrality + ProtocolHealthService #718, signal outcome logging + conflict honesty #716/#717, Signals v1 + subscription queue closure #684/#712)'
 
 export const CURRENT_ROUTE_CONTRACTS = [
   {

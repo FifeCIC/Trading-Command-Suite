@@ -292,4 +292,8 @@ export const KNOWN_FEATURES = {
   'Signals → Trading plan handover': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'signals', devCompletion: 'complete' },
   'Expert Trading Bot (signal queues, loop-processed)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'partial' },
   'Single scoring line (no strategy-side scoring in loop)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'signals', devCompletion: 'complete' },
+  // 2026-09-02/03 — Handoff Batch #13
+  'Signals v1 complete + subscription queue routing': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'signals', devCompletion: 'complete' },
+  'Protocol config health + neutral inactive groups': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Signal outcome logging + conflict honesty': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'signals', devCompletion: 'complete' },
 };
