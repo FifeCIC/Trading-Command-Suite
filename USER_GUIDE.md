@@ -50,6 +50,11 @@ Trading Command Suite is a trading analysis platform combining a **NestJS backen
 | **Positions Monitor** | Active position tracking |
 | **Trade Journal** | Record and review trades |
 
+> ⚠️ **Navigation note (2026-09-03):** the app's navigation has grown well beyond the three areas
+> listed above (12 areas / ~100 views now: Signals, Protocols, Trading Bots, Automation, Scoring,
+> Data, Research, etc.). Use the in-app sidebar and the Architecture Framework page
+> (`/builder/architecture-framework`) for the current structure. This section predates the current nav.
+
 ---
 
 ## Interpreting SEES Scores
@@ -88,27 +93,27 @@ The Architecture Framework page provides system-level documentation:
 
 ## Provider Health
 
-Monitor the status of data providers:
+Monitor the status of data providers (10+ registered adapters as of 2026-09-03):
 
-- **Alpaca**: Paper trading API for real market data
-- **Alpha Vantage**: Free-tier technical indicators
-- **Trading 212**: Broker integration (in progress)
+- **MT5**: live execution broker (healthy in local dev)
+- **Alpaca**: market data + paper trading; becoming the **primary stock-trading broker** (epic #697)
+- **Yahoo / Polygon / Finnhub / TwelveData / FMP / Binance / Capital.com / Interactive Brokers**: data + provider adapters
+- **Trading 212**: development discontinued (issue #696) — retained in the registry only
 
-Each provider shows: adapter type, credential status, health status, and latency.
+Each provider shows: adapter type, credential status, health status, and latency. MT5 + Alpaca are
+broker adapters; the rest are data providers.
 
 ---
 
 ## Modes
 
-### Fallback Mode (default)
-- Runs without database or external APIs
-- Uses deterministic (hash-based) scores
-- Suitable for development and UI testing
+### Fallback Mode (default in local dev)
+- `"mode":"fallback"` in `/api/health` = Redis/queue unavailable — this is NORMAL locally
+- The MySQL database stays connected and the API works normally
+- Do not restart NestJS to "fix" fallback mode
 
 ### Full Mode
-- Requires MySQL database connection
-- Can connect to Alpaca/Alpha Vantage for real data
-- Produces actual directive-driven scores
+- With MySQL connected and providers configured (MT5, Alpaca, etc.) scores come from real market data
 
 ---
 

@@ -129,6 +129,12 @@ The Refresh button:
 
 ## Implementation Checklist
 
+> **Status (2026-09-03):** most items below remain OPEN — an accurate reflection, not a doc error. The
+> biggest outstanding divergence is the frontend: `refetchInterval` polling is still used on most data
+> pages (30–120s) rather than the "remove refetchInterval + manual Refresh" policy. Backend rate
+> limiting exists (`rate-limit-tracker.ts`, `rate-limit-governor.service.ts`,
+> `rate-limiter.middleware.ts`). Treat this checklist as the backlog for the refresh-policy work.
+
 - [x] `provider-rate-limits.ts` — shared rate config for all providers
 - [x] `RateLimiterMiddleware` — inbound throttling on provider routes
 - [x] `Trading212Adapter.waitForRateLimit()` — outbound per-endpoint throttling

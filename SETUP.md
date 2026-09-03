@@ -90,11 +90,14 @@ $env:DATABASE_URL = "mysql://tradingcs:tradingcs_dev_2026@localhost:3306/trading
 npm --prefix C:\wamp64\www\trading-command-suite\nest run prisma db seed
 ```
 
-This seeds:
-- 3 test symbols (AAPL, NVDA, TSLA)
-- 9 strategy templates
-- FAQ entries
-- 5-year historical data for NVDA, crypto, and forex pairs (if seed scripts present)
+This seeds initial reference data. Seed contents are maintained in the `nest` codebase and have grown
+well beyond the original "3 test symbols" — see the seed modules for the current list (symbols,
+protocols via `POST /api/scoring/gated/protocols/seed`, trading bots via
+`POST /api/trading/strategies/seed`, FAQ entries, historical data).
+
+> ⚠️ **Schema drift:** some runtime tables (`paper_trade`, `strategy_signal_queue`, …) were created via
+> raw SQL and are NOT in `schema.prisma`, so `prisma db push` will not (re)create them. Account for
+> this when standing up a fresh database.
 
 ### Regenerate Prisma client (after schema changes)
 
@@ -117,13 +120,26 @@ All backend env vars are in `nest/.env`:
 | `ALPACA_KEY` | Optional | Alpaca paper API key for real market data |
 | `ALPACA_SECRET` | Optional | Alpaca paper API secret |
 
-If no Alpaca credentials are set, the backend runs in **fallback mode** with deterministic (hash-based) scores. It still works — scores just aren't from real market data.
+**Fallback mode** (shown as `"mode":"fallback"` in `/api/health`) means Redis/queue is unavailable —
+this is NORMAL for local dev. The MySQL database stays connected and the API works; scores come from
+real market data when providers are configured. Do not restart NestJS to "fix" fallback mode.
 
 ---
 
 ## 4. Run
 
-### Backend (NestJS)
+### Quickstart — full stack (recommended)
+
+The whole stack (MT5 Bridge → NestJS → Vite) starts/stops as one unit:
+
+```powershell
+pwsh -File scripts\tcs-launch.ps1    # start all three services
+pwsh -File scripts\tcs-stop.ps1      # stop all three services
+```
+
+Frontend lands on **http://localhost:5173**, API on **http://localhost:3201**.
+
+### Backend (NestJS) only
 
 ```bash
 # From project root

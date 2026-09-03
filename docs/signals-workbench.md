@@ -7,7 +7,7 @@ The Signals Workbench is the bridge between the scoring pipeline and trade execu
 ## Architecture
 
 ```
-Directives (87+) → ProtocolGatingService.scoreWithGating()
+Directives (100+, 104 as of 2026-08) → ProtocolGatingService.scoreWithGating()
     → GatedScore { composite, signal, subScores, breakouts, riskGate, rarity }
         → SignalEnvelopeService.buildLadder()
             → SignalEnvelope { confidence, groups, conflicts, preTradeReady }
