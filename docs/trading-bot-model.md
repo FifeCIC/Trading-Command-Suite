@@ -103,6 +103,11 @@ per symbol; `>1` allows follow-ups when the existing position is green and its b
 actually set at breakeven-or-better (mirrored for SHORT). See #721 and
 `docs/diagrams/manual-signal-trade-flow.md` (Google Drive) for the full decision flow.
 
+Execution feasibility is assessed **twice with the same library** (#723): once at signal
+GENERATION so the card shows execution blockers with change-hints before any click, and again
+at EXECUTION as the authoritative re-check. Every blocker carries a hint of what the user could
+change to reach a different outcome — no dead-end messages.
+
 ## 7. Issue trail
 
 - #714 (queues / single scoring line) · #712 (protocol subscriptions) · #674 (redefinition epic) ·
