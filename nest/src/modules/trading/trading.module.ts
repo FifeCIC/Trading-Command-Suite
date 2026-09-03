@@ -10,11 +10,13 @@ import { BrokerConfigService } from './broker-config.service';
 import { BrokerConfigController } from './broker-config.controller';
 import { TradeRecorderService } from './trade-recorder.service';
 import { DuplicateGuardService } from './duplicate-guard.service';
+import { ExecutionFeasibilityService } from './execution-feasibility.service';
 import { StopGuardianService } from './stop-guardian.service';
 import { TradeHistoryController } from './trade-history.controller';
 import { SwapCostService } from './swap-cost.service';
 import { WeekendDefenseService } from './weekend-defense.service';
 import { DirectivesModule } from '../directives/directives.module';
+import { DiversificationModule } from '../diversification/diversification.module';
 import { RiskModule } from '../risk/risk.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { DatabaseModule } from '../../database/database.module';
@@ -23,9 +25,9 @@ import { AuthModule } from '../auth/auth.module';
 import { ScoringModule } from '../scoring/scoring.module';
 
 @Module({
-  imports: [DirectivesModule, RiskModule, NotificationsModule, DatabaseModule, ProvidersModule, AuthModule, forwardRef(() => ScoringModule)],
+  imports: [DirectivesModule, DiversificationModule, RiskModule, NotificationsModule, DatabaseModule, ProvidersModule, AuthModule, forwardRef(() => ScoringModule)],
   controllers: [Mt5TradingController, SessionTrackerController, TradingStrategyController, TradeHistoryController, BrokerConfigController],
-  providers: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopGuardianService, SwapCostService, WeekendDefenseService],
-  exports: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopGuardianService, SwapCostService, WeekendDefenseService],
+  providers: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopGuardianService, SwapCostService, WeekendDefenseService, ExecutionFeasibilityService],
+  exports: [Mt5TradingService, SessionTrackerService, MarketContextService, TradingStrategyService, BrokerConfigService, TradeRecorderService, DuplicateGuardService, StopGuardianService, SwapCostService, WeekendDefenseService, ExecutionFeasibilityService],
 })
 export class TradingModule {}

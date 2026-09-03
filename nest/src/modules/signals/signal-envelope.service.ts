@@ -7,6 +7,7 @@ import { ScoreHistoryService } from '../scoring/score-history.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { SignalQueueService, RoutableSignal } from './signal-queue.service';
 import { SignalOutcomeService } from './signal-outcome.service';
+import { ExecutionFeasibilityService, FeasibilityBlocker } from '../trading/execution-feasibility.service';
 
 /** Strategy ID used when persisting Signals Workbench scores. */
 const SIGNALS_WORKBENCH_STRATEGY_ID = 'signals-workbench';
@@ -76,6 +77,9 @@ export interface SignalEnvelope {
   combinedStrength: number;        // 0.5×signalPct + 0.5×opportunityPct — the best-of rank
   marketStatus: { open: boolean; asOf: string | null; reason?: string } | null;
   holdsCfd: boolean;               // MT5 position exists for this symbol
+  /** #723 — execution blockers assessed at GENERATION time (same library that
+   *  re-checks at execution). Each carries a change-hint. */
+  executionBlockers?: FeasibilityBlocker[];
 }
 
 export interface SignalLadder {
@@ -145,6 +149,7 @@ export class SignalEnvelopeService {
     private readonly adapterFactory: AdapterFactory,
     private readonly signalQueue: SignalQueueService,
     private readonly signalOutcomes: SignalOutcomeService,
+    private readonly feasibility: ExecutionFeasibilityService,
   ) {}
 
   /**
@@ -626,6 +631,7 @@ export class SignalEnvelopeService {
       combinedStrength: 0,
       marketStatus: null,
       holdsCfd: false,
+      executionBlockers: [],
     };
   }
 
@@ -716,6 +722,7 @@ export class SignalEnvelopeService {
             blockers: env.preTradeBlockers,
             conflicts: env.conflicts,
             warnings: env.riskGate?.warnings ?? [],
+            executionBlockers: env.executionBlockers ?? [],
           }).catch(() => {});
         }
       } catch (err) {
@@ -838,19 +845,39 @@ export class SignalEnvelopeService {
 
     const envelopes = [...byKey.values()];
 
-    // ── MT5 CFD position context (#684) ──
+    // ── MT5 CFD position context (#684) + #723 execution blockers ──
     let held = new Set<string>();
+    let mt5Positions: any[] = [];
     try {
       const mt5 = this.adapterFactory.create('mt5');
       if (mt5?.getPositions) {
-        const positions = await mt5.getPositions();
-        held = new Set(positions.map(p => (p.symbol || '').toUpperCase()));
+        mt5Positions = (await mt5.getPositions()) ?? [];
+        held = new Set(mt5Positions.map(p => (p.symbol || '').toUpperCase()));
       }
     } catch {
       /* broker offline — holdsCfd stays false */
     }
     for (const env of envelopes) {
       env.holdsCfd = held.has(env.symbol.toUpperCase());
+    }
+
+    // #723 — feasibility at generation: the SAME assessment the execution
+    // path re-runs. Uses the positions already fetched above + the cached
+    // broker symbol list, so the card explains blockers before any click.
+    try {
+      for (const env of envelopes) {
+        const res = await this.feasibility.assess({
+          symbol: env.symbol,
+          side: env.signal.startsWith('SELL') ? 'SELL' : 'BUY',
+          brokerId: 'mt5',
+          protocolId: env.protocolId,
+          positions: mt5Positions,
+          marketStatus: env.marketStatus,
+        });
+        env.executionBlockers = res.blockers;
+      }
+    } catch (err) {
+      this.logger.warn(`Execution feasibility annotation failed: ${(err as Error).message}`);
     }
 
     // ── Persist + assign score ids (required for /:id/action and /:id/trade) ──

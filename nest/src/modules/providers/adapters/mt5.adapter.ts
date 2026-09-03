@@ -255,6 +255,27 @@ export class Mt5Adapter implements IProviderAdapter {
     return null;
   }
 
+  /** Cached broker symbol list — powers the #723 symbol-availability gate.
+   *  TTL 5 min; on failure returns the last known list (or null = unknown). */
+  private symbolsCache: { names: Set<string>; fetchedAt: number } | null = null;
+  async getSymbols(): Promise<Set<string> | null> {
+    try {
+      const now = Date.now();
+      if (this.symbolsCache && now - this.symbolsCache.fetchedAt < 300_000) {
+        return this.symbolsCache.names;
+      }
+      const data = await this.bridgeGet<{ symbols: Array<{ name: string }>; count: number }>('/symbols');
+      if (!data?.symbols?.length) return this.symbolsCache?.names ?? null;
+      this.symbolsCache = {
+        names: new Set(data.symbols.map(s => String(s.name).toUpperCase())),
+        fetchedAt: now,
+      };
+      return this.symbolsCache.names;
+    } catch {
+      return this.symbolsCache?.names ?? null;
+    }
+  }
+
   async healthCheck(): Promise<boolean> {
     const data = await this.bridgeGet<BridgeHealthResponse>('/health');
     if (!data) return false;

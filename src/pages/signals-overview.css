@@ -392,3 +392,11 @@
   text-decoration: none;
 }
 .sig-opp-btn--placed:hover { filter: brightness(1.15); }
+
+/* Execution blockers (#723) — generation-time feasibility with change-hints */
+.sig-opp-exec {
+  display: flex; flex-direction: column; gap: 2px;
+  font-size: 0.66rem; color: #f87171;
+  border-left: 2px solid rgba(248, 113, 113, 0.45);
+  padding: 2px 0 2px 8px; margin: 2px 0 4px;
+}

@@ -23,6 +23,8 @@ export interface OutcomeInput {
   blockers: string[];
   conflicts: Array<{ type: string; severity: string; description: string; directives: string[] }>;
   warnings: string[];
+  /** #723 — generation-time execution blockers (same library re-checks at execution). */
+  executionBlockers?: Array<{ key: string; message: string; hint: string }>;
 }
 
 /** Stable blocker keys — never change these without migrating old rows. */
@@ -75,9 +77,9 @@ export class SignalOutcomeService {
         out.blockers.length, out.conflicts.length, out.warnings.length,
       );
 
-      const rows: Array<[string, string, string | null, string, string | null]> = [];
+      const rows: Array<[string, string, string | null, string, string | null, string | null]> = [];
       for (const b of out.blockers) {
-        rows.push(['blocker', blockerKey(b), null, b, null]);
+        rows.push(['blocker', blockerKey(b), null, b, null, null]);
       }
       for (const c of out.conflicts) {
         rows.push([
@@ -86,17 +88,21 @@ export class SignalOutcomeService {
           c.severity,
           c.description,
           c.directives.length > 0 ? c.directives.join(',') : null,
+          null,
         ]);
       }
       for (const w of out.warnings) {
-        rows.push(['warning', 'warning', null, w.slice(0, 500), null]);
+        rows.push(['warning', 'warning', null, w.slice(0, 500), null, null]);
+      }
+      for (const eb of out.executionBlockers ?? []) {
+        rows.push(['execution-blocker', eb.key, null, eb.message.slice(0, 500), null, eb.hint?.slice(0, 255) ?? null]);
       }
       if (rows.length > 0) {
-        let sql = `INSERT INTO signal_outcome_meta (id, logId, entryType, entryKey, severity, message, directiveIds, createdAt) VALUES `;
+        let sql = `INSERT INTO signal_outcome_meta (id, logId, entryType, entryKey, severity, message, directiveIds, hint, createdAt) VALUES `;
         const values: any[] = [];
         rows.forEach((r, i) => {
-          sql += `${i > 0 ? ',' : ''} (UUID(), ?, ?, ?, ?, ?, ?, NOW())`;
-          values.push(logId, r[0], r[1], r[2], r[3], r[4]);
+          sql += `${i > 0 ? ',' : ''} (UUID(), ?, ?, ?, ?, ?, ?, ?, NOW())`;
+          values.push(logId, r[0], r[1], r[2], r[3], r[4], r[5]);
         });
         await (this.prisma as any).$executeRawUnsafe(sql, ...values);
       }

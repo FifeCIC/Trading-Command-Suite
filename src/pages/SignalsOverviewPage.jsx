@@ -86,7 +86,9 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
   });
   const marketOpen = envelope.marketStatus ? envelope.marketStatus.open !== false : true;
   const dir = directionLabel(envelope.directionMode);
-  const isBuy = envelope.signal.startsWith('BUY');
+  // BUY/STRONG_BUY → long; SELL/STRONG_SELL → short; SHORT_ONLY protocols always short.
+  const isBuy = envelope.directionMode !== 'SHORT_ONLY'
+    && !String(envelope.signal || '').toUpperCase().includes('SELL');
   const directives = topDirectives(envelope);
 
   // Bot-action state for this signal (none | pending | filled).
@@ -166,13 +168,15 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
 
   const blocked = envelope.preTradeBlockers?.length > 0;
   const botAction = actionQuery.data?.action || 'none';
+  // #723 — generation-time execution blockers (same library re-checks at click).
+  const execBlockers = envelope.executionBlockers || [];
+  const execBlocked = execBlockers.length > 0;
   // Pre-flight: why a trade would 400 right now (checked before the click,
-  // mirroring the server's safety chain — market gate + pre-trade readiness).
-  const tradeBlockedReason = !marketOpen
-    ? (envelope.marketStatus?.reason || 'Market closed — trade blocked')
-    : blocked
-      ? envelope.preTradeBlockers.slice(0, 2).join(' · ')
-      : null;
+  // mirroring the server's safety chain — market gate + pre-trade readiness
+  // + execution feasibility).
+  const tradeBlockedReason = execBlockers[0]?.message
+    || (!marketOpen ? (envelope.marketStatus?.reason || 'Market closed — trade blocked') : null)
+    || (blocked ? envelope.preTradeBlockers.slice(0, 2).join(' · ') : null);
 
   return (
     <motion.article
@@ -254,6 +258,15 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
         <div className="sig-opp-warnings">⚠ {envelope.riskGate.warnings.slice(0, 2).map(stripWarningGlyph).join(' · ')}</div>
       )}
       {blocked && <div className="sig-opp-blockers">🚫 {envelope.preTradeBlockers.slice(0, 2).join(' · ')}</div>}
+      {execBlocked && (
+        <div className="sig-opp-exec">
+          {execBlockers.map((b, i) => (
+            <span key={i} title={b.hint}>
+              ⛔ {b.message}{b.hint ? ` — ${b.hint}` : ''}
+            </span>
+          ))}
+        </div>
+      )}
       {envelope.conflicts?.length > 0 && (
         <div className="sig-opp-conflicts">
           {envelope.conflicts.map((c, i) => (
@@ -293,7 +306,7 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
             disabled={!envelope.scoreId || Boolean(tradeBlockedReason)}
             title={
               tradeBlockedReason
-                ? `Blocked: ${tradeBlockedReason}`
+                ? `Blocked: ${tradeBlockedReason}${execBlockers[0]?.hint ? ` — ${execBlockers[0].hint}` : ''}`
                 : !envelope.scoreId
                   ? 'No persisted score to trade against'
                   : `Open ${isBuy ? 'long' : 'short'} CFD on MT5`

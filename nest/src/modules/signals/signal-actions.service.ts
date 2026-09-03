@@ -1,9 +1,8 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
-import { DuplicateGuardService } from '../trading/duplicate-guard.service';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
-import { GlobalDiversificationService } from '../diversification/global-diversification.service';
+import { ExecutionFeasibilityService } from '../trading/execution-feasibility.service';
 import { ManualTradeDto } from './dto/manual-trade.dto';
 import { SignalPlanDto } from './dto/signal-plan.dto';
 
@@ -29,8 +28,7 @@ export class SignalActionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly adapterFactory: AdapterFactory,
-    private readonly duplicateGuard: DuplicateGuardService,
-    private readonly diversification: GlobalDiversificationService,
+    private readonly feasibility: ExecutionFeasibilityService,
     private readonly tradeRecorder: TradeRecorderService,
   ) {}
 
@@ -132,36 +130,26 @@ export class SignalActionsService {
    * broker.placeOrder with SL/TP, then recorded as origin=manual.
    */
   async placeManualTrade(signalId: string, body: ManualTradeDto) {
-    const { symbol, protocolId } = await this.loadSignal(signalId);
+    const { symbol, protocolId, marketStatus } = await this.loadSignal(signalId);
 
     const ticker = (body.symbol || symbol || '').toUpperCase();
     const protocol = body.protocolId || protocolId || null;
     const brokerId = body.brokerId || 'mt5';
     if (!ticker) throw new BadRequestException('No symbol resolved for this signal');
 
-    // 1. Market-status gate (the score's own tradability state)
-    const marketStatus = (await this.loadSignal(signalId)).marketStatus;
-    if (marketStatus && marketStatus.open === false) {
-      throw new BadRequestException(`Market closed for ${ticker} — manual trade blocked (${marketStatus.reason || 'closed'})`);
-    }
-
-    // 2. Duplicate guard — same check the bot runs
-    const dup = await this.duplicateGuard.checkDuplicate(ticker, brokerId, protocol ?? undefined);
-    if (dup.blocked) throw new BadRequestException(dup.reason || 'Duplicate position');
-
-    // 3. Diversification pre-check — same check the bot runs
-    const div = await this.diversification.checkPreTrade(ticker, brokerId);
-    if (div.blocked) throw new BadRequestException(`Diversification: ${div.reason}`);
-
-    // 4. 60s symbol cooldown — DB-backed mirror of the bot's cooldown
-    const recentTrade = await (this.prisma as any).trade
-      .findFirst({
-        where: { symbol: ticker, openedAt: { gte: new Date(Date.now() - 60_000) } },
-        orderBy: { openedAt: 'desc' },
-      })
-      .catch(() => null);
-    if (recentTrade) {
-      throw new BadRequestException(`${ticker} traded within the last 60s — cooldown active`);
+    // #723 — the SAME feasibility assessment that annotated the signal at
+    // generation time, re-run as the authoritative execution check (state can
+    // change between generation and click). One library, two phases.
+    const feas = await this.feasibility.assess({
+      symbol: ticker,
+      side: body.side,
+      brokerId,
+      protocolId: protocol,
+      marketStatus: marketStatus as any,
+    });
+    if (!feas.feasible) {
+      const first = feas.blockers[0];
+      throw new BadRequestException(first.message);
     }
 
     const broker = this.adapterFactory.create(brokerId);
