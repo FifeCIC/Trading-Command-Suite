@@ -122,7 +122,9 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
       if (r?.success === false) {
         setError(r.error || 'Order failed');
       } else {
-        setResult({ type: 'trade', text: `Order placed${r?.orderId ? ` #${r.orderId}` : ''}` });
+        // Replace the trade button with the placed order — clicking it opens
+        // Positions Monitor with the position highlighted. No double-trade.
+        setResult({ type: 'trade', text: `Order placed #${r?.orderId}`, orderId: r?.orderId });
       }
       setConfirming(false);
     },
@@ -182,7 +184,7 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
     >
       <header className="sig-opp-head">
         <span className="sig-opp-ticker">{envelope.symbol}</span>
-        <SignalBadge display={vm} />
+        <SignalBadge display={vm} arrowOnly />
         <span className={`sig-opp-dir sig-opp-dir--${dir.cls}`}>{dir.label}</span>
         {!marketOpen && (
           <span
@@ -264,7 +266,15 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
       )}
 
       <footer className="sig-opp-actions">
-        {confirming ? (
+        {result?.type === 'trade' ? (
+          <Link
+            to={`/trading/positions-monitor?highlight=${encodeURIComponent(String(result.orderId ?? ''))}`}
+            className="sig-opp-btn sig-opp-btn--placed"
+            title="View this position in Positions Monitor"
+          >
+            ✓ {result.text}
+          </Link>
+        ) : confirming ? (
           <button
             type="button"
             className="sig-opp-btn sig-opp-btn--confirm"

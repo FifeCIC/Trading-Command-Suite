@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
@@ -17,7 +18,18 @@ function RiskBar({ pct, label }) {
   );
 }
 
-function CFDPosition({ pos, index, onClose, isClosing }) {
+function CFDPosition({ pos, index, onClose, isClosing, highlight }) {
+  const cardRef = useRef(null);
+  const isHighlighted = highlight != null && String(pos.ticket) === String(highlight);
+
+  // Scroll the highlighted position into view (e.g. from a Signals card link).
+  useEffect(() => {
+    if (isHighlighted) {
+      const t = setTimeout(() => cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+      return () => clearTimeout(t);
+    }
+  }, [isHighlighted]);
+
   const riskPct = pos.riskPct || (
     pos.currentPrice && pos.avgCost
       ? Math.abs(((pos.currentPrice - pos.avgCost) / pos.avgCost) * 100)
@@ -29,7 +41,8 @@ function CFDPosition({ pos, index, onClose, isClosing }) {
 
   return (
     <motion.div
-      className={`pm-pos-card ${isProfit ? 'pm-win' : 'pm-lose'}`}
+      ref={cardRef}
+      className={`pm-pos-card ${isHighlighted ? 'pm-pos-card--highlight' : ''} ${isProfit ? 'pm-win' : 'pm-lose'}`}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.4) }}
@@ -190,6 +203,10 @@ export default function PositionsMonitorPage() {
   const [sortKey, setSortKey] = useState('pnl-desc');
   const [closingTicket, setClosingTicket] = useState(null);
   const qc = useQueryClient();
+
+  // ?highlight=<ticket> — deep-link from a Signals card's placed order.
+  const [searchParams] = useSearchParams();
+  const highlightTicket = searchParams.get('highlight');
 
   // MT5 positions
   const mt5Query = useQuery({
@@ -359,6 +376,7 @@ export default function PositionsMonitorPage() {
               index={i}
               onClose={handleClose}
               isClosing={closingTicket === p.ticket}
+              highlight={highlightTicket}
             />
           ))}
         </div>
