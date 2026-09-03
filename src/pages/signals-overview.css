@@ -376,3 +376,11 @@
   white-space: nowrap;
 }
 .sig-opp-ref:hover { color: var(--ink); border-color: var(--ink-soft); }
+
+/* Conflict detail (#716) — directive names + descriptions */
+.sig-opp-conflicts {
+  display: flex; flex-direction: column; gap: 2px;
+  font-size: 0.64rem; color: #f59e0b;
+  border-left: 2px solid rgba(245, 158, 11, 0.4);
+  padding: 2px 0 2px 8px; margin: 2px 0 4px;
+}

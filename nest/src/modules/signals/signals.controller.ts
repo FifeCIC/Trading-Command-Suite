@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Param, Query, Logger } from '@nestjs/commo
 import { SignalsService } from './signals.service';
 import { SignalEnvelopeService } from './signal-envelope.service';
 import { SignalActionsService } from './signal-actions.service';
+import { SignalOutcomeService } from './signal-outcome.service';
 import { SignalLadderDto } from './dto/signal-ladder.dto';
 import { ManualTradeDto } from './dto/manual-trade.dto';
 import { DismissSignalDto } from './dto/dismiss-signal.dto';
@@ -40,6 +41,7 @@ export class SignalsController {
     private readonly signalsService: SignalsService,
     private readonly envelopeService: SignalEnvelopeService,
     private readonly signalActions: SignalActionsService,
+    private readonly outcomeService: SignalOutcomeService,
   ) {}
 
   /**
@@ -167,6 +169,27 @@ export class SignalsController {
   @Get('dismissals')
   async getDismissals() {
     return this.envelopeService.getDismissals();
+  }
+
+  /**
+   * GET /api/signals/outcomes/count (#717)
+   *
+   * Count signal-outcome scenarios over a window: blockers/conflicts/warnings
+   * keyed by stable entryKey. ?symbol=&protocolId=&entryKey=&days=7
+   */
+  @Get('outcomes/count')
+  async countOutcomes(
+    @Query('symbol') symbol?: string,
+    @Query('protocolId') protocolId?: string,
+    @Query('entryKey') entryKey?: string,
+    @Query('days') days?: string,
+  ) {
+    return this.outcomeService.countOutcomes({
+      symbol: symbol || undefined,
+      protocolId: protocolId || undefined,
+      entryKey: entryKey || undefined,
+      days: days ? parseInt(days, 10) : undefined,
+    });
   }
 
   /**

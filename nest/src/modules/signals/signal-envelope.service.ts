@@ -6,6 +6,7 @@ import { MarketDataService } from '../market-data/market-data.service';
 import { ScoreHistoryService } from '../scoring/score-history.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { SignalQueueService, RoutableSignal } from './signal-queue.service';
+import { SignalOutcomeService } from './signal-outcome.service';
 
 /** Strategy ID used when persisting Signals Workbench scores. */
 const SIGNALS_WORKBENCH_STRATEGY_ID = 'signals-workbench';
@@ -143,6 +144,7 @@ export class SignalEnvelopeService {
     private readonly scoreHistory: ScoreHistoryService,
     private readonly adapterFactory: AdapterFactory,
     private readonly signalQueue: SignalQueueService,
+    private readonly signalOutcomes: SignalOutcomeService,
   ) {}
 
   /**
@@ -333,8 +335,9 @@ export class SignalEnvelopeService {
     // Compute confidence from multiple signals
     const confidence = this.computeConfidence(gated);
 
-    // Detect conflicts
-    const conflicts = this.detectConflicts(gated);
+    // Detect conflicts — gate groups excluded (#716): their subScore is
+    // structurally 0 and must not manufacture divergences.
+    const conflicts = this.detectConflicts(gated, protocolId);
 
     // Pre-trade readiness
     const { preTradeReady, preTradeBlockers } = this.evaluatePreTrade(gated, conflicts);
@@ -494,11 +497,27 @@ export class SignalEnvelopeService {
   /**
    * Detect directive conflicts: bull vs bear disagreement,
    * score divergence, or timeframe mismatches.
+   *
+   * #716 — gate groups (isRiskGate) are a MULTIPLIER path, not conviction.
+   * Their subScore is structurally 0 (no directional contribution by design
+   * in protocol-gating's signal aggregation). Including them here turned
+   * every well-scoring signal into a fake "High-severity directive conflict"
+   * (e.g. sentiment 77 vs risk 0 = 77pt spread). Gate groups are excluded
+   * from both the bull/bear counts and the divergence spread.
    */
-  private detectConflicts(gated: GatedScore): SignalEnvelope['conflicts'] {
+  private detectConflicts(gated: GatedScore, protocolId?: string): SignalEnvelope['conflicts'] {
     const conflicts: SignalEnvelope['conflicts'] = [];
 
-    const allBreakouts = Object.values(gated.breakouts).flat();
+    const gateIds = new Set<string>();
+    if (protocolId) {
+      for (const g of this.protocolDb.getCached(protocolId)?.groups ?? []) {
+        if (g.isRiskGate) gateIds.add(g.id);
+      }
+    }
+
+    const allBreakouts = Object.entries(gated.breakouts)
+      .filter(([gid]) => !gateIds.has(gid))
+      .flatMap(([, list]) => list);
     const bullish = allBreakouts.filter(b => b.signalClass === 'bullish');
     const bearish = allBreakouts.filter(b => b.signalClass === 'bearish');
 
@@ -519,9 +538,9 @@ export class SignalEnvelopeService {
       });
     }
 
-    // Score divergence: check if any group's score deviates significantly
+    // Score divergence: check if any NON-GATE group's score deviates significantly
     const scores = Object.entries(gated.subScores)
-      .filter(([, v]) => v !== 50);
+      .filter(([gid, v]) => !gateIds.has(gid) && v !== 50);
     if (scores.length >= 2) {
       const vals = scores.map(([, v]) => v);
       const max = Math.max(...vals);
@@ -680,7 +699,20 @@ export class SignalEnvelopeService {
             blockerCount: env.preTradeBlockers.length,
           },
         );
-        if (snapshot?.id) ids[env.symbol] = snapshot.id;
+        if (snapshot?.id) {
+          ids[env.symbol] = snapshot.id;
+          // #717 — persist WHY this signal is (or isn't) trade-ready,
+          // keyed to the signal's Score id (write-on-change).
+          this.signalOutcomes.recordOutcome({
+            scoreId: snapshot.id,
+            symbol: env.symbol,
+            protocolId: env.protocolId ?? (strategyId !== SIGNALS_WORKBENCH_STRATEGY_ID ? strategyId : null),
+            preTradeReady: env.preTradeReady,
+            blockers: env.preTradeBlockers,
+            conflicts: env.conflicts,
+            warnings: env.riskGate?.warnings ?? [],
+          }).catch(() => {});
+        }
       } catch (err) {
         this.logger.warn(
           `Failed to persist score for ${env.symbol}: ${(err as Error).message}`,

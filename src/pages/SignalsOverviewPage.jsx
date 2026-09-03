@@ -252,6 +252,16 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
         <div className="sig-opp-warnings">⚠ {envelope.riskGate.warnings.slice(0, 2).map(stripWarningGlyph).join(' · ')}</div>
       )}
       {blocked && <div className="sig-opp-blockers">🚫 {envelope.preTradeBlockers.slice(0, 2).join(' · ')}</div>}
+      {envelope.conflicts?.length > 0 && (
+        <div className="sig-opp-conflicts">
+          {envelope.conflicts.map((c, i) => (
+            <span key={i} title={`${c.type} · ${c.severity} severity`}>
+              {c.severity === 'high' ? '⚔' : '△'} {c.description}
+              {c.directives?.length > 0 ? ` — ${c.directives.join(', ')}` : ''}
+            </span>
+          ))}
+        </div>
+      )}
 
       <footer className="sig-opp-actions">
         {confirming ? (
