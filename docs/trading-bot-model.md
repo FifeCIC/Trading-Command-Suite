@@ -83,9 +83,28 @@ Realistic shape (your NVDA example):
 - ❌ Reintroduce the dual LONG-vs-SHORT winner-pick (`compareProtocolPair`) — direction is the
   protocol's job; the bot does not compare two protocols.
 - ❌ Treat a `TradingStrategy` row as "a symbol pair to trade" — it is an **execution policy**.
+- ❌ Build a separate execution path for MANUAL trades — manual trades call the SAME execution
+  library as the bot (sizing, stops, pyramid, cooldowns, trailing), configured by the #720
+  defaults when no bot matches. Decisions locked in #721.
 - ✅ Keep the one-scoring-line + per-bot queue model documented in `automation-loop.service.ts`.
+
+## 6b. Execution-policy library (2026-09-03, #721)
+
+The bot owns ALL trade-scenario functions — sizing, stop policy, pyramid/scale-in, cooldowns,
+trailing management. Manual trades (Signals cards) are just another caller of the same classes
+with the #720 default config. Two-layer stops, one rule everywhere:
+
+- **Broker-side protective stop** — relaxed, always set on every position (initial AND follow-ups)
+  so an app failure never leaves a position unprotected at the broker.
+- **App-managed trailing stop** — tighter, adjusted by the app while it runs.
+
+Pyramid/scale-in policy is the single `TradingStrategy.maxPyramidTiers` knob: `1` = one position
+per symbol; `>1` allows follow-ups when the existing position is green and its broker SL is
+actually set at breakeven-or-better (mirrored for SHORT). See #721 and
+`docs/diagrams/manual-signal-trade-flow.md` (Google Drive) for the full decision flow.
 
 ## 7. Issue trail
 
 - #714 (queues / single scoring line) · #712 (protocol subscriptions) · #674 (redefinition epic) ·
-  #624 (terminology) · #574 (execution semantics) · #695 (FX go-live gate).
+  #624 (terminology) · #574 (execution semantics) · #695 (FX go-live gate) · #721 (duplicate-position
+  policy) · #720 (manual-trade defaults) · #719 (broker symbol availability).
