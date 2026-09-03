@@ -3,6 +3,11 @@
 > Saved from architectural discussion on 2026-06-24.
 > Content originally produced as a response to "what should a Watchlist + Protocol pair be called?"
 
+> ⚠️ **Superseded (2026-09-03):** the conceptual model has moved on. A `TradingStrategy` row is now
+> understood as a **Trading Bot** (an execution policy), not a "Watchlist + Protocol pairing".
+> See the canonical model in `docs/trading-bot-model.md` (#674 / #624). This page is kept as the
+> historical rationale for the earlier naming.
+
 ---
 
 ## The SEES Strategy

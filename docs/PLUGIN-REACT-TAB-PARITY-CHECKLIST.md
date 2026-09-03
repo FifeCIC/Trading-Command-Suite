@@ -1,5 +1,10 @@
 # Plugin React Tab Parity Checklist
 
+> ⚠️ **SUPERSEDED (2026-09-03):** the TradePress ↔ React "tab parity" migration is complete and the app
+> has moved far beyond mirroring the WordPress plugin (now ~100 views across 12 areas of its own). This
+> checklist is a historical snapshot of the P15 migration and is no longer meaningful to regenerate.
+> A generator (`scripts/p15-sync-parity.cjs`) still references this file — treat both as P15-era leftovers.
+
 Status: synced from current React shell  
 Sprint prompt: P15  
 Last updated: 2026-06-10

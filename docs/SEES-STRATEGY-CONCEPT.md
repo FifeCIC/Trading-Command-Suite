@@ -48,7 +48,8 @@ The stack is **not a static report**. It refreshes continuously as market data f
 
 Running every directive against every symbol produces noise — 4,000+ evaluations that blur into an unactionable soup. A SEES Strategy constrains the problem:
 
-- **Fewer directives** — protocols use 15–25 directives, not all 87
+- **Fewer directives** — protocols use 15–25 directives, not all 100+ (104 as of 2026-08; see
+  `docs/trading-bot-model.md` for the current Protocol + Bot model)
 - **Relevant symbols** — only the ones in your watchlist are scored
 - **Purposeful weighting** — directives are grouped and weighted by role (Technical 40%, Sentiment 35%, Risk 25%)
 - **Risk gating** — risk directives multiplicatively gate the final score, so a symbol with perfect technicals but extreme volatility gets suppressed

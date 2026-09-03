@@ -3,7 +3,8 @@
 **Document Type:** Training / Theory  
 **Protocol:** `BTC-SPEED-V1`  
 **Date:** 2026-06-23  
-**Status:** Design Phase  
+**Status:** Implemented — `btc-speed-v1` is registered in `protocols-seed-data.ts` and surfaced via the
+BtcSpeedTradingPage (updated 2026-09-03; retained as the theory/rationale reference).  
 
 ---
 

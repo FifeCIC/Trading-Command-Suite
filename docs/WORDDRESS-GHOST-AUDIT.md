@@ -1,5 +1,11 @@
 # WordPress Ghost Audit — 2026-06-13
 
+> ✅ **Closed out (2026-09-03):** every "Pending Review" item below has been resolved — the WP-origin
+> pages (Listener Testing, Shortcodes, BugNet, Workflow Wizards, Education settings, etc.) no longer
+> exist in `src/core/nav-tree.js`. Only `Calculators` and `Education` remain (both KEEP verdicts). This
+> doc now serves as a guardrail: when adding pages, do not reintroduce these WordPress concepts.
+> Decisions are also recorded in QA issues (Q170/Q173/Q181/Q184/Q190).
+
 ## Purpose
 Identify pages and concepts ported from the WordPress plugin architecture that don't belong in a NestJS + React app. For review before any deletions.
 

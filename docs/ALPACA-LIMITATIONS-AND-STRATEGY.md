@@ -2,6 +2,11 @@
 
 > Stop designing for data we don't have. Build for what's available.
 
+> ⚠️ **Superseded (2026-09-03):** Alpaca is now the **primary broker** for stock trading + portfolio
+> management (open epic #697). The "3-symbols-max / 15-min scoring" free-tier constraints below were
+> the original design guardrail and are being lifted by the full-support work. Keep this doc as the
+> historical rationale for the conservative sizing design — do not treat it as current guidance.
+
 ---
 
 ## Alpaca Free Tier — What You Actually Get
