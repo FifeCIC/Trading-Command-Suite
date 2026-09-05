@@ -7,7 +7,7 @@ export class TrainingController {
   constructor(private readonly patternDetector: PatternDetectorService) {}
 
   @Get('candle-patterns')
-  async getCandlePatterns(
+  getCandlePatterns(
     @Query('symbol') symbol = 'EURUSD',
     @Query('bars') barsStr = '100',
   ) {
@@ -24,7 +24,7 @@ export class TrainingController {
   }
 
   @Get('candle-patterns/history')
-  async getPatternHistory(
+  getPatternHistory(
     @Query('symbol') symbol = 'EURUSD',
     @Query('from') from?: string,
     @Query('to') to?: string,
@@ -44,7 +44,7 @@ export class TrainingController {
   }
 
   @Get('pattern-accuracy/:patternId')
-  async getPatternAccuracy() {
+  getPatternAccuracy() {
     // Placeholder — will read from Q215 accuracy tracking when available
     return {
       patternId: 'doji-pattern',
