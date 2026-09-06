@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-03T16:26:08.968Z",
+  "generatedAt": "2026-09-06T16:44:30.502Z",
   "columns": [
     {
       "id": "discussion",
@@ -72,11 +72,14 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Directives",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-06-08T16:47:32Z",
-      "updatedAt": "2026-08-06T22:05:09Z",
+      "updatedAt": "2026-09-03T19:33:37Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -160,8 +163,7 @@
       "title": "Dark theme terminal refinements (post-MVP polish)",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-06-10T21:24:08Z",
@@ -204,8 +206,7 @@
       "title": "Public launch: GitHub Wiki seed pages",
       "state": "closed",
       "labels": [
-        "documentation",
-        "Roadmap"
+        "documentation"
       ],
       "assignee": null,
       "createdAt": "2026-06-10T22:05:04Z",
@@ -219,8 +220,7 @@
       "title": "Legacy intake processing: remaining items",
       "state": "closed",
       "labels": [
-        "documentation",
-        "Roadmap"
+        "documentation"
       ],
       "assignee": null,
       "createdAt": "2026-06-10T22:05:15Z",
@@ -234,8 +234,7 @@
       "title": "Q55: System Log Viewer",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "Roadmap"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-06-11T20:59:02Z",
@@ -249,8 +248,7 @@
       "title": "Voice Updates and Voice Commands for Trading Alerts",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "Roadmap"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-06-16T13:44:51Z",
@@ -280,8 +278,7 @@
       "state": "closed",
       "labels": [
         "documentation",
-        "enhancement",
-        "Roadmap"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-06-17T21:11:16Z",
@@ -295,8 +292,7 @@
       "title": "W001 — Multi-Agent Stock Analysis Report Generator",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "Roadmap"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-06-17T21:11:26Z",
@@ -310,8 +306,7 @@
       "title": "W002 — Public Signal Feed API",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "Roadmap"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-06-17T21:11:34Z",
@@ -325,8 +320,7 @@
       "title": "W003 — Public-Facing UI Shell",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "Roadmap"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-06-17T21:11:44Z",
@@ -340,8 +334,7 @@
       "title": "W004 — Public API Key Management + Rate Limiting",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "Roadmap"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-06-17T21:11:53Z",
@@ -1796,8 +1789,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "priority-low",
-        "Roadmap"
+        "priority-low"
       ],
       "assignee": null,
       "createdAt": "2026-07-01T11:05:53Z",
@@ -1857,8 +1849,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "priority-low",
-        "phase-1"
+        "priority-low"
       ],
       "assignee": null,
       "createdAt": "2026-07-01T11:06:19Z",
@@ -2294,8 +2285,7 @@
       "title": "Implement gold-macro-correlation directive (unstub)",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "good first issue"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-01T19:52:28Z",
@@ -2411,7 +2401,6 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "question",
         "priority-high"
       ],
       "assignee": null,
@@ -2469,9 +2458,7 @@
       "number": 167,
       "title": "[ARCHIVE] REVISION_LOG — 2026-06-17 through 2026-07-01",
       "state": "closed",
-      "labels": [
-        "revision-log"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-02T12:11:54Z",
       "updatedAt": "2026-07-02T12:12:03Z",
@@ -2483,10 +2470,7 @@
       "number": 168,
       "title": "[PHASE-2] Training System — Paper Trading + Journaling + Scenario-Based Instruction",
       "state": "closed",
-      "labels": [
-        "discussion",
-        "Roadmap"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-02T12:57:03Z",
       "updatedAt": "2026-08-27T22:53:42Z",
@@ -2498,10 +2482,7 @@
       "number": 169,
       "title": "[PHASE-2] Trading Guidance — Emotional & Psychological Awareness",
       "state": "closed",
-      "labels": [
-        "discussion",
-        "Roadmap"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-02T12:57:30Z",
       "updatedAt": "2026-08-27T22:53:44Z",
@@ -2544,8 +2525,7 @@
       "title": "Known Gaps — Architecture Framework",
       "state": "closed",
       "labels": [
-        "documentation",
-        "known-gap"
+        "documentation"
       ],
       "assignee": null,
       "createdAt": "2026-07-02T22:34:49Z",
@@ -2559,8 +2539,7 @@
       "title": "Revision Log — Architecture Framework",
       "state": "closed",
       "labels": [
-        "documentation",
-        "revision-log"
+        "documentation"
       ],
       "assignee": null,
       "createdAt": "2026-07-02T22:35:03Z",
@@ -2626,8 +2605,7 @@
       "state": "closed",
       "labels": [
         "trading",
-        "epic",
-        "sprint"
+        "epic"
       ],
       "assignee": null,
       "createdAt": "2026-07-03T01:11:19Z",
@@ -3067,8 +3045,7 @@
       "title": "UI: Remove WordPress-plugin-like green/amber styling remnants",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "discussion"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-05T01:13:30Z",
@@ -3096,10 +3073,7 @@
       "number": 209,
       "title": "Discussion: Clarify 7-day trading awareness concept and session timing",
       "state": "closed",
-      "labels": [
-        "question",
-        "discussion"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-05T01:14:25Z",
       "updatedAt": "2026-07-05T23:06:44Z",
@@ -3188,8 +3162,7 @@
       "title": "SEES Advanced: Clarify page purpose and differentiate from Live Ordering Stack",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "discussion"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-05T01:16:43Z",
@@ -3219,8 +3192,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "priority-medium",
-        "discussion"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-05T01:16:57Z",
@@ -3306,11 +3278,12 @@
       "title": "LAB: Drag and Drop Parser Tool",
       "state": "open",
       "labels": [
-        "Roadmap"
+        "priority-low",
+        "experimental"
       ],
       "assignee": null,
       "createdAt": "2026-07-06T01:02:56Z",
-      "updatedAt": "2026-08-27T23:10:28Z",
+      "updatedAt": "2026-09-05T18:02:44Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -3535,8 +3508,7 @@
       "title": "Active Strategies list doesn't distinguish Scoring vs Trading strategies",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "discussion"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-06T18:29:37Z",
@@ -3551,8 +3523,7 @@
       "state": "closed",
       "labels": [
         "bug",
-        "strategy",
-        "discussion"
+        "strategy"
       ],
       "assignee": null,
       "createdAt": "2026-07-06T18:29:39Z",
@@ -3566,8 +3537,7 @@
       "title": "Calendar-driven alerts need automated imports",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "discussion"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-06T18:29:41Z",
@@ -3582,8 +3552,7 @@
       "state": "closed",
       "labels": [
         "bug",
-        "strategy",
-        "discussion"
+        "strategy"
       ],
       "assignee": null,
       "createdAt": "2026-07-06T18:29:54Z",
@@ -3599,12 +3568,13 @@
       "labels": [
         "enhancement",
         "strategy",
-        "discussion",
-        "phase-3"
+        "priority-low",
+        "phase-3",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-07-06T18:29:56Z",
-      "updatedAt": "2026-07-29T00:04:01Z",
+      "updatedAt": "2026-09-05T19:49:49Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -3631,8 +3601,7 @@
       "labels": [
         "enhancement",
         "trading",
-        "priority-high",
-        "phase-1"
+        "priority-high"
       ],
       "assignee": null,
       "createdAt": "2026-07-07T00:49:35Z",
@@ -3647,8 +3616,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "priority-high",
-        "phase-1"
+        "priority-high"
       ],
       "assignee": null,
       "createdAt": "2026-07-07T00:49:56Z",
@@ -3664,8 +3632,7 @@
       "labels": [
         "enhancement",
         "trading",
-        "priority-high",
-        "phase-1"
+        "priority-high"
       ],
       "assignee": null,
       "createdAt": "2026-07-07T00:50:16Z",
@@ -3792,15 +3759,14 @@
       "labels": [
         "enhancement",
         "strategy",
-        "discussion",
-        "phase-3"
+        "epic"
       ],
       "assignee": null,
       "createdAt": "2026-07-07T17:12:07Z",
-      "updatedAt": "2026-07-29T00:03:59Z",
+      "updatedAt": "2026-09-05T19:58:57Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "phase-3"
+      "columnId": "triage"
     },
     {
       "number": 261,
@@ -3809,11 +3775,12 @@
       "labels": [
         "enhancement",
         "strategy",
+        "priority-low",
         "phase-3"
       ],
       "assignee": null,
       "createdAt": "2026-07-07T17:13:44Z",
-      "updatedAt": "2026-07-29T00:03:58Z",
+      "updatedAt": "2026-09-03T19:33:29Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -3824,11 +3791,12 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-low",
         "phase-3"
       ],
       "assignee": null,
       "createdAt": "2026-07-07T17:13:46Z",
-      "updatedAt": "2026-07-29T00:03:56Z",
+      "updatedAt": "2026-09-03T19:33:28Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -3840,11 +3808,13 @@
       "labels": [
         "enhancement",
         "strategy",
-        "phase-3"
+        "priority-low",
+        "phase-3",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-07-07T17:13:47Z",
-      "updatedAt": "2026-07-29T00:03:55Z",
+      "updatedAt": "2026-09-03T19:33:26Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -3855,11 +3825,12 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-low",
         "phase-3"
       ],
       "assignee": null,
       "createdAt": "2026-07-07T17:13:49Z",
-      "updatedAt": "2026-07-29T00:03:54Z",
+      "updatedAt": "2026-09-03T19:33:24Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -3871,30 +3842,32 @@
       "labels": [
         "enhancement",
         "strategy",
-        "phase-3"
+        "priority-low",
+        "phase-3",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-07-07T17:13:50Z",
-      "updatedAt": "2026-07-29T00:03:52Z",
+      "updatedAt": "2026-09-03T19:33:22Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
     },
     {
       "number": 266,
-      "title": "[L3] Agentic AI Advisor — AI reviews portfolio changes",
+      "title": "Agentic AI Advisor — AI reviews portfolio changes",
       "state": "open",
       "labels": [
         "enhancement",
-        "discussion",
-        "phase-3"
+        "priority-low",
+        "ai-system"
       ],
       "assignee": null,
       "createdAt": "2026-07-07T17:13:52Z",
-      "updatedAt": "2026-07-29T00:03:51Z",
+      "updatedAt": "2026-09-05T19:57:32Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "phase-3"
+      "columnId": "triage"
     },
     {
       "number": 267,
@@ -3903,11 +3876,12 @@
       "labels": [
         "enhancement",
         "strategy",
+        "priority-low",
         "phase-3"
       ],
       "assignee": null,
       "createdAt": "2026-07-07T17:13:53Z",
-      "updatedAt": "2026-07-29T00:03:49Z",
+      "updatedAt": "2026-09-03T19:33:15Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -3918,11 +3892,12 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-low",
         "phase-3"
       ],
       "assignee": null,
       "createdAt": "2026-07-07T17:13:55Z",
-      "updatedAt": "2026-07-29T00:03:48Z",
+      "updatedAt": "2026-09-03T19:33:13Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -3948,11 +3923,12 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-medium",
         "phase-3"
       ],
       "assignee": null,
       "createdAt": "2026-07-08T01:23:47Z",
-      "updatedAt": "2026-08-29T20:15:20Z",
+      "updatedAt": "2026-09-03T19:33:12Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -3992,11 +3968,15 @@
       "labels": [
         "enhancement",
         "strategy",
-        "META.Stack"
+        "priority-low",
+        "epic",
+        "META.Stack",
+        "Protocols",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-07-08T01:59:45Z",
-      "updatedAt": "2026-08-06T22:05:05Z",
+      "updatedAt": "2026-09-03T19:33:10Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -4008,11 +3988,13 @@
       "labels": [
         "enhancement",
         "strategy",
-        "META.Stack"
+        "priority-medium",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-07-08T02:00:37Z",
-      "updatedAt": "2026-08-06T22:05:01Z",
+      "updatedAt": "2026-09-03T19:33:07Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -4024,11 +4006,13 @@
       "labels": [
         "enhancement",
         "strategy",
-        "META.Stack"
+        "priority-medium",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-07-08T02:00:39Z",
-      "updatedAt": "2026-08-06T22:04:58Z",
+      "updatedAt": "2026-09-03T19:33:05Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -4040,11 +4024,13 @@
       "labels": [
         "enhancement",
         "strategy",
-        "META.Stack"
+        "priority-medium",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-07-08T02:00:40Z",
-      "updatedAt": "2026-08-06T22:04:54Z",
+      "updatedAt": "2026-09-03T19:33:04Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -4056,11 +4042,13 @@
       "labels": [
         "enhancement",
         "strategy",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Directives"
       ],
       "assignee": null,
       "createdAt": "2026-07-08T02:00:42Z",
-      "updatedAt": "2026-08-06T22:04:51Z",
+      "updatedAt": "2026-09-03T19:33:02Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -4086,12 +4074,14 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-low",
         "epic",
-        "META.Stack"
+        "META.Stack",
+        "Directives"
       ],
       "assignee": null,
       "createdAt": "2026-07-08T02:24:38Z",
-      "updatedAt": "2026-08-27T22:13:06Z",
+      "updatedAt": "2026-09-03T19:33:00Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -4102,12 +4092,12 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "dependencies",
+        "priority-medium",
         "phase-2"
       ],
       "assignee": null,
       "createdAt": "2026-07-08T02:25:14Z",
-      "updatedAt": "2026-08-27T23:10:26Z",
+      "updatedAt": "2026-09-05T18:00:17Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -4119,11 +4109,13 @@
       "labels": [
         "enhancement",
         "strategy",
-        "META.Stack"
+        "priority-medium",
+        "META.Stack",
+        "Directives"
       ],
       "assignee": null,
       "createdAt": "2026-07-08T02:25:43Z",
-      "updatedAt": "2026-08-27T23:10:24Z",
+      "updatedAt": "2026-09-03T19:32:56Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -4135,11 +4127,13 @@
       "labels": [
         "enhancement",
         "strategy",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Directives"
       ],
       "assignee": null,
       "createdAt": "2026-07-08T02:26:12Z",
-      "updatedAt": "2026-08-27T23:10:23Z",
+      "updatedAt": "2026-09-03T19:32:54Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -4150,8 +4144,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "priority-high",
-        "phase-1"
+        "priority-high"
       ],
       "assignee": null,
       "createdAt": "2026-07-08T02:41:03Z",
@@ -4182,12 +4175,13 @@
       "labels": [
         "enhancement",
         "strategy",
-        "discussion",
-        "phase-2"
+        "priority-low",
+        "phase-2",
+        "Directives"
       ],
       "assignee": null,
       "createdAt": "2026-07-08T02:41:46Z",
-      "updatedAt": "2026-08-27T22:54:21Z",
+      "updatedAt": "2026-09-05T19:49:46Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -4199,15 +4193,16 @@
       "labels": [
         "enhancement",
         "strategy",
-        "discussion",
-        "phase-2"
+        "priority-low",
+        "Directives",
+        "data-system"
       ],
       "assignee": null,
       "createdAt": "2026-07-08T02:41:51Z",
-      "updatedAt": "2026-08-27T22:54:23Z",
+      "updatedAt": "2026-09-05T19:56:37Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "phase-2"
+      "columnId": "triage"
     },
     {
       "number": 287,
@@ -4215,12 +4210,11 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "priority-low",
-        "Roadmap"
+        "priority-low"
       ],
       "assignee": null,
       "createdAt": "2026-07-08T02:42:12Z",
-      "updatedAt": "2026-08-27T22:53:46Z",
+      "updatedAt": "2026-09-05T18:02:43Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -4273,9 +4267,7 @@
       "number": 291,
       "title": "Fix overlapping Screen Options gear and keyboard shortcuts ? button",
       "state": "closed",
-      "labels": [
-        "suitable-for:flash"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-09T00:34:56Z",
       "updatedAt": "2026-07-10T13:36:51Z",
@@ -4288,8 +4280,7 @@
       "title": "MarketTape shows [object Object] instead of strategy count",
       "state": "closed",
       "labels": [
-        "bug",
-        "suitable-for:flash"
+        "bug"
       ],
       "assignee": null,
       "createdAt": "2026-07-09T00:50:25Z",
@@ -4333,12 +4324,13 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-low",
         "epic",
         "META.Stack"
       ],
       "assignee": null,
       "createdAt": "2026-07-10T14:27:54Z",
-      "updatedAt": "2026-08-06T22:04:35Z",
+      "updatedAt": "2026-09-03T19:32:48Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -4646,8 +4638,7 @@
       "title": "UI/UX: Configure Directives — clarify purpose, fix empty state, needs discussion",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "discussion"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-11T02:01:39Z",
@@ -4690,8 +4681,7 @@
       "title": "UI/UX: Signals Workbench — clarify purpose, adopt Ladder naming (vs M.E.T.A. Stack)",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "discussion"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-11T02:01:57Z",
@@ -4719,8 +4709,7 @@
       "title": "UI/UX: SEES Arena — protocol execution scope, disable data-insufficient, Ladder naming, strategy clarity",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "discussion"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-11T02:02:06Z",
@@ -4735,8 +4724,7 @@
       "state": "closed",
       "labels": [
         "priority-high",
-        "epic",
-        "phase-1"
+        "epic"
       ],
       "assignee": null,
       "createdAt": "2026-07-11T02:02:41Z",
@@ -4766,11 +4754,13 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "Roadmap"
+        "priority-low",
+        "experimental",
+        "phase-10"
       ],
       "assignee": null,
       "createdAt": "2026-07-11T15:55:16Z",
-      "updatedAt": "2026-08-27T22:53:48Z",
+      "updatedAt": "2026-09-05T18:02:42Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -4779,10 +4769,7 @@
       "number": 326,
       "title": "[Clarify] Scoring pipeline architecture — flat vs gated, which drives trading?",
       "state": "closed",
-      "labels": [
-        "question",
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-13T00:02:23Z",
       "updatedAt": "2026-07-22T19:43:35Z",
@@ -4796,9 +4783,7 @@
       "state": "closed",
       "labels": [
         "strategy",
-        "known-gap",
-        "epic",
-        "phase-1"
+        "epic"
       ],
       "assignee": null,
       "createdAt": "2026-07-13T01:19:54Z",
@@ -4812,8 +4797,7 @@
       "title": "[UI] Screen options: hide title/description + Dashboard breadcrumb",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "known-gap"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-13T01:55:30Z",
@@ -4841,8 +4825,7 @@
       "title": "[UI] Scoring Runs & Activity Logs — accordion, multi-select, percentage column, merge/consolidate views",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "known-gap"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-13T01:56:00Z",
@@ -4855,10 +4838,7 @@
       "number": 331,
       "title": "[Discuss] Directive meta for sell/short signals — does low score = sell or stay flat?",
       "state": "closed",
-      "labels": [
-        "question",
-        "discussion"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-13T01:56:11Z",
       "updatedAt": "2026-07-17T20:10:03Z",
@@ -4872,8 +4852,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "trading",
-        "discussion"
+        "trading"
       ],
       "assignee": null,
       "createdAt": "2026-07-13T01:56:22Z",
@@ -4889,8 +4868,7 @@
       "labels": [
         "bug",
         "enhancement",
-        "trading",
-        "discussion"
+        "trading"
       ],
       "assignee": null,
       "createdAt": "2026-07-13T01:56:35Z",
@@ -4905,8 +4883,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "trading",
-        "discussion"
+        "trading"
       ],
       "assignee": null,
       "createdAt": "2026-07-13T01:56:55Z",
@@ -4920,8 +4897,7 @@
       "title": "[UI] Dashboard redesign + AI insight logging + calculators + accounts clarity",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "discussion"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-13T01:57:06Z",
@@ -4935,8 +4911,7 @@
       "title": "[UI] Automation pages — dashboard layout, speed scanner explainer, bot rules rename, duplicate comparison view",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "known-gap"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-13T01:57:17Z",
@@ -4949,9 +4924,7 @@
       "number": 337,
       "title": "[Discuss] Strong Buy/Sell thresholds + statistical rarity detection from scoring history",
       "state": "closed",
-      "labels": [
-        "discussion"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-13T01:57:39Z",
       "updatedAt": "2026-07-17T20:06:05Z",
@@ -4979,8 +4952,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "trading",
-        "phase-1"
+        "trading"
       ],
       "assignee": null,
       "createdAt": "2026-07-14T21:58:29Z",
@@ -5099,9 +5071,7 @@
       "number": 347,
       "title": "[Discuss] Strategy comparison views — consolidation deferred pending Multi-Strategy Compare fix",
       "state": "closed",
-      "labels": [
-        "discussion"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-14T22:23:06Z",
       "updatedAt": "2026-07-17T15:08:55Z",
@@ -5114,8 +5084,7 @@
       "title": "[Discuss] TIMEFRAME — move to protocol level, remove from trading strategy",
       "state": "closed",
       "labels": [
-        "trading",
-        "discussion"
+        "trading"
       ],
       "assignee": null,
       "createdAt": "2026-07-14T22:23:09Z",
@@ -5144,8 +5113,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "epic",
-        "phase-1"
+        "epic"
       ],
       "assignee": null,
       "createdAt": "2026-07-14T22:26:25Z",
@@ -5257,8 +5225,7 @@
       "title": "[A11y] Color-blind friendly mode — pattern/icon alternatives to red/green",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-14T22:59:12Z",
@@ -5342,8 +5309,7 @@
       "title": "[Data] Database backup script — compact daily + full weekly to Google Drive",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "sprint"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-15T00:11:49Z",
@@ -5357,8 +5323,7 @@
       "title": "[Data] Prune bloated tables — directiveoutcome retention + apiactivitylog rotation",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "sprint"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-15T00:12:05Z",
@@ -5386,8 +5351,7 @@
       "title": "[Feature] News sentiment status, protocol dependency badges, auto-deactivation of broken protocols",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-15T10:54:31Z",
@@ -5428,9 +5392,7 @@
       "number": 370,
       "title": "[Investigate] WebSocket streaming for MT5 bridge — evaluate cost vs benefit",
       "state": "closed",
-      "labels": [
-        "question"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-15T10:56:21Z",
       "updatedAt": "2026-07-17T13:32:48Z",
@@ -5457,12 +5419,15 @@
       "title": "[Epic] Speed Trading Automation — adaptive loop timing, speed execution loop, event-driven triggers",
       "state": "open",
       "labels": [
+        "priority-medium",
         "epic",
-        "phase-3"
+        "phase-3",
+        "Protocols",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-07-15T11:24:50Z",
-      "updatedAt": "2026-08-27T22:13:00Z",
+      "updatedAt": "2026-09-03T19:32:44Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -5585,9 +5550,7 @@
       "number": 381,
       "title": "[Investigate] MT5 account constraints — leverage, margin, position limits, demo reset schedule",
       "state": "closed",
-      "labels": [
-        "question"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-15T18:26:47Z",
       "updatedAt": "2026-07-16T21:50:21Z",
@@ -5817,8 +5780,7 @@
       "title": "Phase 2: Application installation & seeding procedure — watchlist JSON → DB, initial config, first-run experience",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-16T14:38:17Z",
@@ -5834,8 +5796,7 @@
       "labels": [
         "strategy",
         "priority-high",
-        "epic",
-        "sprint"
+        "epic"
       ],
       "assignee": null,
       "createdAt": "2026-07-16T14:41:14Z",
@@ -5850,8 +5811,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "strategy",
-        "sprint"
+        "strategy"
       ],
       "assignee": null,
       "createdAt": "2026-07-16T14:42:11Z",
@@ -5866,8 +5826,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "strategy",
-        "sprint"
+        "strategy"
       ],
       "assignee": null,
       "createdAt": "2026-07-16T14:42:13Z",
@@ -5882,8 +5841,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "strategy",
-        "sprint"
+        "strategy"
       ],
       "assignee": null,
       "createdAt": "2026-07-16T14:42:14Z",
@@ -5897,8 +5855,7 @@
       "title": "Phase A.4: Wire readWatchlist() to DB with JSON fallback",
       "state": "closed",
       "labels": [
-        "bug",
-        "sprint"
+        "bug"
       ],
       "assignee": null,
       "createdAt": "2026-07-16T14:42:16Z",
@@ -5925,9 +5882,7 @@
       "number": 404,
       "title": "[Discuss] View Data Copy Disc -- which views get a share button?",
       "state": "closed",
-      "labels": [
-        "discussion"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-17T00:34:58Z",
       "updatedAt": "2026-07-17T19:37:32Z",
@@ -5938,15 +5893,16 @@
     {
       "number": 405,
       "title": "[Feature] Intranet Social Media Bridge -- one-click multi-platform posting",
-      "state": "open",
+      "state": "closed",
       "labels": [
         "enhancement",
-        "Roadmap"
+        "priority-low",
+        "experimental"
       ],
       "assignee": null,
       "createdAt": "2026-07-17T00:35:04Z",
-      "updatedAt": "2026-08-27T22:56:20Z",
-      "closedAt": null,
+      "updatedAt": "2026-09-03T19:43:14Z",
+      "closedAt": "2026-09-03T19:43:14Z",
       "comments": 0,
       "columnId": "triage"
     },
@@ -5955,8 +5911,7 @@
       "title": "[Feature] News Pipeline — real-time news ingestion with agentic AI severity rating",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-17T13:47:25Z",
@@ -5970,8 +5925,7 @@
       "title": "[News] RSS Feed Scraper — Yahoo Finance, MarketWatch, Seeking Alpha",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-17T13:47:38Z",
@@ -5985,8 +5939,7 @@
       "title": "[News] Alpha Vantage NEWS_SENTIMENT — curated market news + sentiment",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-17T13:47:52Z",
@@ -6001,11 +5954,12 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-medium",
         "phase-2"
       ],
       "assignee": null,
       "createdAt": "2026-07-17T13:48:06Z",
-      "updatedAt": "2026-08-27T23:10:21Z",
+      "updatedAt": "2026-09-03T19:32:41Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -6016,11 +5970,12 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-medium",
         "phase-2"
       ],
       "assignee": null,
       "createdAt": "2026-07-17T13:48:19Z",
-      "updatedAt": "2026-08-27T23:10:20Z",
+      "updatedAt": "2026-09-03T19:32:39Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -6031,11 +5986,12 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-low",
         "phase-2"
       ],
       "assignee": null,
       "createdAt": "2026-07-17T13:48:34Z",
-      "updatedAt": "2026-08-27T23:10:18Z",
+      "updatedAt": "2026-09-03T19:32:37Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -6045,8 +6001,7 @@
       "title": "[Feature] Signals Workbench refactor — multi-protocol comparison + DB-backed symbol validation",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-17T23:02:36Z",
@@ -6060,8 +6015,7 @@
       "title": "Architecture - Shared Symbol Tier Resolver",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-18T01:06:33Z",
@@ -6118,11 +6072,11 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "Roadmap"
+        "priority-low"
       ],
       "assignee": null,
       "createdAt": "2026-07-18T01:12:34Z",
-      "updatedAt": "2026-08-27T23:08:33Z",
+      "updatedAt": "2026-09-05T18:02:41Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -6147,8 +6101,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-18T12:37:26Z",
@@ -6162,12 +6115,11 @@
       "title": "Discussion: Agent Self-Awareness, Error Monitoring & Priority Alerting",
       "state": "open",
       "labels": [
-        "discussion",
-        "Roadmap"
+        "priority-low"
       ],
       "assignee": null,
       "createdAt": "2026-07-18T15:07:58Z",
-      "updatedAt": "2026-08-27T22:56:24Z",
+      "updatedAt": "2026-09-05T19:49:45Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -6177,8 +6129,7 @@
       "title": "Epic: UI Audit → META.Stack Hardening → Triple-Screen Cockpit",
       "state": "closed",
       "labels": [
-        "priority-high",
-        "phase-1"
+        "priority-high"
       ],
       "assignee": null,
       "createdAt": "2026-07-18T16:44:35Z",
@@ -6191,9 +6142,7 @@
       "number": 422,
       "title": "Epic: System Performance & Diagnostics — 2026-07-20 Findings",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-19T23:40:32Z",
       "updatedAt": "2026-07-22T19:45:44Z",
@@ -6246,8 +6195,7 @@
       "title": "\\ Active Symbols page polish,layout fixes and triple-screen prep\\",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T00:06:04Z",
@@ -6261,8 +6209,7 @@
       "title": "\\ Watchlist management -- delete,edit,lock indicators,remove symbols\\",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T00:27:29Z",
@@ -6276,8 +6223,7 @@
       "title": "\\ Directives Manager UI cleanup -- remove accordion,TESTS,AVG SCORE columns\\",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T00:31:22Z",
@@ -6291,8 +6237,7 @@
       "title": "\\ Directive explanation view -- template-based charts and documentation\\",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T00:31:33Z",
@@ -6306,8 +6251,7 @@
       "title": "\\ Configure Directives -- lock indicators,Remove button,protocol version\\",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T00:34:54Z",
@@ -6321,8 +6265,7 @@
       "title": "\\ Ladder -- quick wins: rename,weak pairing notice,filter inactive protocols\\",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T00:40:02Z",
@@ -6336,8 +6279,7 @@
       "title": "\\ Ladder -- data wiring and state investigation\\",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T00:40:13Z",
@@ -6351,8 +6293,7 @@
       "title": "\\ SEES Arena -- add percentage signs and filter inactive protocols\\",
       "state": "closed",
       "labels": [
-        "priority-low",
-        "phase-1"
+        "priority-low"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T00:43:46Z",
@@ -6366,8 +6307,7 @@
       "title": "\\ Detach Strategy Ladders from SEES Arena into dedicated view\\",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T00:43:53Z",
@@ -6383,11 +6323,12 @@
       "labels": [
         "enhancement",
         "priority-low",
-        "META.Stack"
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T00:44:08Z",
-      "updatedAt": "2026-08-06T22:04:32Z",
+      "updatedAt": "2026-09-03T19:32:31Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -6397,8 +6338,7 @@
       "title": "\\ Protocols page -- layout consolidation: merge stat rows,move Protocol ID\\",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T00:48:36Z",
@@ -6412,8 +6352,7 @@
       "title": "\\ Protocols page -- directive tooltips with popover-style design\\",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T00:48:46Z",
@@ -6457,8 +6396,7 @@
       "title": "Alert Center -- database persistence (Prisma model, stop using in-memory)",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T00:55:30Z",
@@ -6472,8 +6410,7 @@
       "title": "Merge alert system and notification bell into one pipeline",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T00:55:37Z",
@@ -6487,8 +6424,7 @@
       "title": "Alert Center -- click navigation and ticker links",
       "state": "closed",
       "labels": [
-        "priority-low",
-        "phase-1"
+        "priority-low"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T00:55:46Z",
@@ -6517,8 +6453,7 @@
       "state": "closed",
       "labels": [
         "bug",
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T10:23:53Z",
@@ -6532,12 +6467,12 @@
       "title": "Discussion: Trading Terminology Glossary - inline tooltips, training page, user profile filtering",
       "state": "open",
       "labels": [
-        "discussion",
-        "Roadmap"
+        "priority-low",
+        "user-experience"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T10:25:59Z",
-      "updatedAt": "2026-08-27T22:56:26Z",
+      "updatedAt": "2026-09-05T19:54:52Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -6564,8 +6499,7 @@
       "title": "Trading Strategies page: TF tooltip, font sizes, POS column, multi-broker accounts",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T10:39:45Z",
@@ -6579,8 +6513,7 @@
       "title": "Dashboard: Market Sessions popover and fix News Sentiment Unverified status",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T10:39:52Z",
@@ -6594,12 +6527,13 @@
       "title": "Discussion: AI Portfolio Advice Generator and Unified Agent Service",
       "state": "open",
       "labels": [
-        "discussion",
-        "Roadmap"
+        "priority-low",
+        "experimental",
+        "ai-system"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T10:40:00Z",
-      "updatedAt": "2026-08-27T22:56:28Z",
+      "updatedAt": "2026-09-05T19:54:07Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -6609,8 +6543,7 @@
       "title": "Screen Options: Practice Account data toggle (cross-view)",
       "state": "closed",
       "labels": [
-        "priority-low",
-        "phase-1"
+        "priority-low"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T10:40:08Z",
@@ -6624,8 +6557,7 @@
       "title": "Dashboard: P&L broker naming, LIVE/PRACTICE labels, zero-balance cleanup",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T10:44:42Z",
@@ -6641,8 +6573,7 @@
       "labels": [
         "bug",
         "trading",
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T10:49:31Z",
@@ -6674,11 +6605,12 @@
       "labels": [
         "enhancement",
         "trading",
+        "priority-medium",
         "phase-3"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T10:52:08Z",
-      "updatedAt": "2026-08-27T23:08:32Z",
+      "updatedAt": "2026-09-03T19:32:26Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -6688,8 +6620,7 @@
       "title": "Market Tape: settings, news headlines, recent trades, uptime display",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T10:52:23Z",
@@ -6705,11 +6636,13 @@
       "labels": [
         "enhancement",
         "trading",
-        "phase-3"
+        "priority-low",
+        "phase-3",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T10:52:32Z",
-      "updatedAt": "2026-08-29T20:15:19Z",
+      "updatedAt": "2026-09-03T19:32:24Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -6734,16 +6667,14 @@
       "title": "Discussion: Trade Journal scrapbook -- quick-thoughts widget and richer entries",
       "state": "open",
       "labels": [
-        "trading",
-        "discussion",
-        "phase-3"
+        "priority-low"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T10:56:49Z",
-      "updatedAt": "2026-08-27T22:56:10Z",
+      "updatedAt": "2026-09-05T19:53:23Z",
       "closedAt": null,
       "comments": 0,
-      "columnId": "phase-3"
+      "columnId": "triage"
     },
     {
       "number": 459,
@@ -6751,8 +6682,7 @@
       "state": "closed",
       "labels": [
         "bug",
-        "priority-high",
-        "phase-1"
+        "priority-high"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T11:01:07Z",
@@ -6766,8 +6696,7 @@
       "title": "View info popovers: info disc in Screen Options for all views",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T11:01:16Z",
@@ -6783,8 +6712,7 @@
       "labels": [
         "bug",
         "trading",
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T11:04:17Z",
@@ -6798,8 +6726,7 @@
       "title": "Automation Dashboard: layout fixes, green dots, modern toggle component",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T11:09:24Z",
@@ -6813,7 +6740,6 @@
       "title": "Discussion: Automation loop real-time activity log",
       "state": "closed",
       "labels": [
-        "discussion",
         "phase-3"
       ],
       "assignee": null,
@@ -6828,8 +6754,7 @@
       "title": "Delete Algorithm Lab, salvage Pipeline Stages to SEES landing page with Training mode toggle",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T11:12:00Z",
@@ -6858,8 +6783,7 @@
       "title": "Backtest page: move to Training, symbol autocomplete, days options, 500 error fix, news menu",
       "state": "closed",
       "labels": [
-        "priority-medium",
-        "phase-1"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T11:16:12Z",
@@ -6874,9 +6798,7 @@
       "state": "closed",
       "labels": [
         "trading",
-        "discussion",
-        "phase-4",
-        "Roadmap"
+        "phase-4"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T11:16:20Z",
@@ -6892,11 +6814,12 @@
       "labels": [
         "enhancement",
         "trading",
+        "priority-low",
         "phase-2"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T23:50:27Z",
-      "updatedAt": "2026-08-27T23:08:29Z",
+      "updatedAt": "2026-09-03T19:32:21Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -6907,12 +6830,12 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "epic",
-        "Roadmap"
+        "priority-low",
+        "epic"
       ],
       "assignee": null,
       "createdAt": "2026-07-21T23:54:32Z",
-      "updatedAt": "2026-08-27T23:08:28Z",
+      "updatedAt": "2026-09-05T18:02:38Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -6923,8 +6846,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "trading",
-        "phase-1"
+        "trading"
       ],
       "assignee": null,
       "createdAt": "2026-07-22T01:04:34Z",
@@ -6939,8 +6861,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "trading",
-        "phase-1"
+        "trading"
       ],
       "assignee": null,
       "createdAt": "2026-07-22T01:04:46Z",
@@ -6955,8 +6876,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "trading",
-        "phase-1"
+        "trading"
       ],
       "assignee": null,
       "createdAt": "2026-07-22T01:04:58Z",
@@ -6970,8 +6890,7 @@
       "title": "[#350 Phase 1] decision_trail table — store LONG vs SHORT comparison per tick",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-22T19:49:56Z",
@@ -6985,8 +6904,7 @@
       "title": "[#350 Phase 2] Link decision_trail → scoring → strategy → trade chain",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-22T19:50:07Z",
@@ -7001,8 +6919,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "trading",
-        "phase-1"
+        "trading"
       ],
       "assignee": null,
       "createdAt": "2026-07-22T19:50:18Z",
@@ -7017,8 +6934,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "trading",
-        "phase-1"
+        "trading"
       ],
       "assignee": null,
       "createdAt": "2026-07-22T19:50:28Z",
@@ -7033,8 +6949,7 @@
       "state": "closed",
       "labels": [
         "bug",
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-22T19:50:41Z",
@@ -7048,8 +6963,7 @@
       "title": "[#327 Phase 1] Bearish directive groups + directionality model",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-22T19:50:57Z",
@@ -7063,8 +6977,7 @@
       "title": "[#327 Phase 2] HOLD mechanics + Scoring Strategy ↔ Trading Strategy separation",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-22T19:51:10Z",
@@ -7078,8 +6991,7 @@
       "title": "[#295 Phase 1] MetaStack Snapshots & Versioning — schema + APIs",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-22T19:51:22Z",
@@ -7093,8 +7005,7 @@
       "title": "[#295 Phase 2] A/B Test Runner",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-22T19:51:44Z",
@@ -7109,11 +7020,12 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-low",
         "META.Stack"
       ],
       "assignee": null,
       "createdAt": "2026-07-22T19:51:56Z",
-      "updatedAt": "2026-08-27T23:08:27Z",
+      "updatedAt": "2026-09-03T19:32:17Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7124,11 +7036,12 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-low",
         "META.Stack"
       ],
       "assignee": null,
       "createdAt": "2026-07-22T19:52:05Z",
-      "updatedAt": "2026-08-27T23:08:25Z",
+      "updatedAt": "2026-09-03T19:32:16Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7138,8 +7051,7 @@
       "title": "[Epic] Inline Style → CSS Migration — make the app fully theme-aware",
       "state": "closed",
       "labels": [
-        "epic",
-        "phase-1"
+        "epic"
       ],
       "assignee": null,
       "createdAt": "2026-07-24T13:59:37Z",
@@ -7152,9 +7064,7 @@
       "number": 486,
       "title": "[#485 Phase 1] Inline-style cleanup — high-traffic pages",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-24T13:59:59Z",
       "updatedAt": "2026-07-24T15:58:08Z",
@@ -7166,9 +7076,7 @@
       "number": 487,
       "title": "[#485 Phase 2] Inline-style cleanup — shared components",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-24T14:00:01Z",
       "updatedAt": "2026-07-26T21:04:44Z",
@@ -7180,9 +7088,7 @@
       "number": 488,
       "title": "[#485 Phase 3] Inline-style cleanup — remaining pages by area",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-24T14:00:02Z",
       "updatedAt": "2026-07-26T17:30:11Z",
@@ -7194,9 +7100,7 @@
       "number": 489,
       "title": "[#485 Phase 2] Inline-style cleanup — shared components",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-24T14:05:17Z",
       "updatedAt": "2026-07-24T15:58:10Z",
@@ -7208,9 +7112,7 @@
       "number": 490,
       "title": "[#485 Phase 3] Inline-style cleanup — remaining pages by area",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-24T14:05:28Z",
       "updatedAt": "2026-07-24T16:41:16Z",
@@ -7222,9 +7124,7 @@
       "number": 491,
       "title": "[#485 Phase 4] Inline-style cleanup — seed files, stubs, low-traffic",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-24T14:05:36Z",
       "updatedAt": "2026-07-24T16:41:19Z",
@@ -7236,9 +7136,7 @@
       "number": 492,
       "title": "Move Architecture page to Status — convert to sitemap, remove roadmapping",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-24T14:10:14Z",
       "updatedAt": "2026-08-27T22:53:12Z",
@@ -7250,9 +7148,7 @@
       "number": 493,
       "title": "Move Diagrams page to Lab — make dynamic with real-time data",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-24T14:10:32Z",
       "updatedAt": "2026-08-27T22:53:14Z",
@@ -7264,9 +7160,7 @@
       "number": 494,
       "title": "Move META.Stack Explorer to Lab — priority pass",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-24T14:10:34Z",
       "updatedAt": "2026-07-26T15:55:11Z",
@@ -7278,9 +7172,7 @@
       "number": 495,
       "title": "Move File Inventory to Status — add filters for libraries and special folders",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-24T14:10:35Z",
       "updatedAt": "2026-08-27T22:53:16Z",
@@ -7292,9 +7184,7 @@
       "number": 496,
       "title": "[#485 Phase 0] Design token foundation — typography, spacing, radius scales",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-24T14:12:26Z",
       "updatedAt": "2026-07-24T14:12:36Z",
@@ -7307,7 +7197,6 @@
       "title": "[Discuss] Scoring paths audit — 4 endpoints, which is canonical?",
       "state": "closed",
       "labels": [
-        "discussion",
         "phase-2"
       ],
       "assignee": null,
@@ -7335,9 +7224,7 @@
       "number": 499,
       "title": "[Cleanup] Duplicate notification logic — NotificationDisc vs ScreenOptions",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-25T00:04:42Z",
       "updatedAt": "2026-08-27T22:53:18Z",
@@ -7350,8 +7237,7 @@
       "title": "[Investigate] Automation orders failing — bridgePost returned null",
       "state": "closed",
       "labels": [
-        "bug",
-        "phase-1"
+        "bug"
       ],
       "assignee": null,
       "createdAt": "2026-07-25T00:04:51Z",
@@ -7364,9 +7250,7 @@
       "number": 501,
       "title": "[Consolidate] Two META.Stack pages — MetaStackDisplay vs MetaStackExplorer",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-25T00:05:00Z",
       "updatedAt": "2026-08-27T22:53:20Z",
@@ -7378,9 +7262,7 @@
       "number": 502,
       "title": "[Cleanup] Delete 22 dead pages",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-25T01:24:11Z",
       "updatedAt": "2026-08-27T22:53:22Z",
@@ -7392,10 +7274,7 @@
       "number": 503,
       "title": "[Discuss] Consolidate 3 dashboards into 1",
       "state": "closed",
-      "labels": [
-        "discussion",
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-25T01:24:21Z",
       "updatedAt": "2026-08-27T22:53:24Z",
@@ -7407,10 +7286,7 @@
       "number": 504,
       "title": "[Discuss] Consolidate 9 strategy-related pages",
       "state": "closed",
-      "labels": [
-        "discussion",
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-25T01:24:28Z",
       "updatedAt": "2026-08-27T22:53:27Z",
@@ -7422,9 +7298,7 @@
       "number": 505,
       "title": "[Cleanup] Consolidate 16 Lab pages into 3-4",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-25T01:24:44Z",
       "updatedAt": "2026-08-27T22:53:29Z",
@@ -7436,9 +7310,7 @@
       "number": 506,
       "title": "[Cleanup] Consolidate 8 chart wrapper components into 1-2",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-25T01:24:55Z",
       "updatedAt": "2026-08-27T22:53:31Z",
@@ -7450,9 +7322,7 @@
       "number": 507,
       "title": "[Cleanup] CSS normalization — naming + duplicate files",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-25T01:24:57Z",
       "updatedAt": "2026-08-27T22:53:34Z",
@@ -7464,9 +7334,7 @@
       "number": 508,
       "title": "[Cleanup] Heavy dependency optimization — mermaid + uplot",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-25T01:24:58Z",
       "updatedAt": "2026-08-27T22:53:36Z",
@@ -7478,10 +7346,7 @@
       "number": 509,
       "title": "[Discuss] Define which config changes require app restart/reload",
       "state": "closed",
-      "labels": [
-        "discussion",
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-07-25T15:34:49Z",
       "updatedAt": "2026-08-27T22:53:56Z",
@@ -7494,8 +7359,7 @@
       "title": "[Epic] DB-Driven Architecture — directives, protocols, strategies from database",
       "state": "closed",
       "labels": [
-        "epic",
-        "phase-1"
+        "epic"
       ],
       "assignee": null,
       "createdAt": "2026-07-25T15:36:07Z",
@@ -7522,11 +7386,13 @@
       "state": "open",
       "labels": [
         "strategy",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-07-26T17:19:27Z",
-      "updatedAt": "2026-08-06T22:04:18Z",
+      "updatedAt": "2026-09-03T19:32:14Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7537,11 +7403,13 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "phase-3"
+        "priority-medium",
+        "phase-3",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-07-26T23:05:38Z",
-      "updatedAt": "2026-08-27T23:08:24Z",
+      "updatedAt": "2026-09-03T19:32:12Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -7551,13 +7419,13 @@
       "title": "Public Release: Multi-Broker Onboarding & DB-Driven Accounts",
       "state": "open",
       "labels": [
-        "Roadmap",
+        "priority-low",
         "accounts",
         "phase-10"
       ],
       "assignee": null,
       "createdAt": "2026-07-28T16:44:37Z",
-      "updatedAt": "2026-08-29T20:15:22Z",
+      "updatedAt": "2026-09-05T18:02:37Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7568,13 +7436,11 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "Roadmap",
-        "url-registry",
-        "infra"
+        "priority-low"
       ],
       "assignee": null,
       "createdAt": "2026-07-28T16:44:43Z",
-      "updatedAt": "2026-08-27T22:56:33Z",
+      "updatedAt": "2026-09-05T18:02:36Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7584,8 +7450,7 @@
       "title": "Layer A: Directive Readiness Tiers — Stop the Pretending",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-28T23:22:16Z",
@@ -7599,8 +7464,7 @@
       "title": "Layer B: Capability Contracts & Activation Gates — Refuse to Pretend",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-28T23:22:48Z",
@@ -7614,8 +7478,7 @@
       "title": "Layer C: Hybrid Base+Bonus Scoring — Scores That Move With the Market",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-07-28T23:22:56Z",
@@ -7630,7 +7493,6 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "Roadmap",
         "experimental"
       ],
       "assignee": null,
@@ -7717,8 +7579,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "trading",
-        "phase-1"
+        "trading"
       ],
       "assignee": null,
       "createdAt": "2026-07-29T22:57:46Z",
@@ -7734,11 +7595,13 @@
       "labels": [
         "trading",
         "strategy",
-        "META.Stack"
+        "priority-medium",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-03T15:13:05Z",
-      "updatedAt": "2026-08-26T22:58:54Z",
+      "updatedAt": "2026-09-03T19:32:06Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7750,11 +7613,13 @@
       "labels": [
         "trading",
         "strategy",
-        "META.Stack"
+        "priority-medium",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-03T15:13:12Z",
-      "updatedAt": "2026-08-26T22:58:56Z",
+      "updatedAt": "2026-09-03T19:32:03Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7766,11 +7631,13 @@
       "labels": [
         "trading",
         "strategy",
-        "META.Stack"
+        "priority-medium",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-03T15:13:13Z",
-      "updatedAt": "2026-08-26T22:58:58Z",
+      "updatedAt": "2026-09-03T19:32:02Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7782,11 +7649,13 @@
       "labels": [
         "trading",
         "strategy",
-        "META.Stack"
+        "priority-medium",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-03T15:13:21Z",
-      "updatedAt": "2026-08-26T22:58:59Z",
+      "updatedAt": "2026-09-03T19:32:00Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7798,11 +7667,13 @@
       "labels": [
         "trading",
         "strategy",
-        "META.Stack"
+        "priority-medium",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-03T15:13:23Z",
-      "updatedAt": "2026-08-26T22:59:01Z",
+      "updatedAt": "2026-09-03T19:31:58Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7815,11 +7686,13 @@
         "mt5-bridge",
         "trading",
         "strategy",
-        "META.Stack"
+        "priority-medium",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-03T15:13:32Z",
-      "updatedAt": "2026-08-26T22:51:55Z",
+      "updatedAt": "2026-09-03T19:31:56Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7831,11 +7704,14 @@
       "labels": [
         "trading",
         "strategy",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Protocols",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-03T15:13:33Z",
-      "updatedAt": "2026-08-06T22:03:58Z",
+      "updatedAt": "2026-09-03T19:31:54Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7848,11 +7724,13 @@
         "trading",
         "strategy",
         "priority-high",
-        "META.Stack"
+        "META.Stack",
+        "Protocols",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-03T15:13:43Z",
-      "updatedAt": "2026-08-06T22:05:25Z",
+      "updatedAt": "2026-09-03T19:31:52Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7881,11 +7759,12 @@
       "labels": [
         "enhancement",
         "strategy",
+        "priority-low",
         "META.Stack"
       ],
       "assignee": null,
       "createdAt": "2026-08-03T15:57:46Z",
-      "updatedAt": "2026-08-27T22:12:29Z",
+      "updatedAt": "2026-09-03T19:31:50Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7896,12 +7775,13 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "discussion",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "monitoring-system"
       ],
       "assignee": null,
       "createdAt": "2026-08-03T15:57:47Z",
-      "updatedAt": "2026-08-27T22:12:28Z",
+      "updatedAt": "2026-09-05T19:51:15Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7914,11 +7794,13 @@
         "documentation",
         "enhancement",
         "strategy",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-03T16:17:32Z",
-      "updatedAt": "2026-08-27T22:12:27Z",
+      "updatedAt": "2026-09-03T19:31:47Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7929,12 +7811,13 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "discussion",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T00:25:07Z",
-      "updatedAt": "2026-08-27T22:12:58Z",
+      "updatedAt": "2026-09-05T19:49:41Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7946,11 +7829,13 @@
       "labels": [
         "enhancement",
         "strategy",
-        "META.Stack"
+        "priority-medium",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T01:15:03Z",
-      "updatedAt": "2026-08-27T22:12:57Z",
+      "updatedAt": "2026-09-03T19:31:43Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7962,11 +7847,13 @@
       "labels": [
         "enhancement",
         "strategy",
-        "META.Stack"
+        "priority-medium",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T01:15:04Z",
-      "updatedAt": "2026-08-27T22:12:56Z",
+      "updatedAt": "2026-09-03T19:31:41Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7978,11 +7865,13 @@
       "labels": [
         "enhancement",
         "strategy",
-        "META.Stack"
+        "priority-medium",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T01:15:06Z",
-      "updatedAt": "2026-08-27T22:12:55Z",
+      "updatedAt": "2026-09-03T19:31:39Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -7995,11 +7884,12 @@
         "enhancement",
         "strategy",
         "priority-high",
-        "META.Stack"
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T01:15:07Z",
-      "updatedAt": "2026-08-27T22:12:54Z",
+      "updatedAt": "2026-09-03T19:31:37Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8011,11 +7901,13 @@
       "labels": [
         "enhancement",
         "strategy",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T01:15:09Z",
-      "updatedAt": "2026-08-27T22:12:53Z",
+      "updatedAt": "2026-09-03T19:31:35Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8180,9 +8072,7 @@
       "number": 555,
       "title": "Discussion: Signals Workbench — Clarify purpose, fix Ladder/Compare output",
       "state": "closed",
-      "labels": [
-        "discussion"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-08-04T01:30:36Z",
       "updatedAt": "2026-08-05T01:40:11Z",
@@ -8209,8 +8099,7 @@
       "title": "Discussion + Rebuild: Strategy Ladders — Redesign as single unified ladder (signals vs all)",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "discussion"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T01:33:22Z",
@@ -8223,9 +8112,7 @@
       "number": 558,
       "title": "Discussion: Scoring Runs — Duplicate of Activity Logs? Delete or adapt to live feed?",
       "state": "closed",
-      "labels": [
-        "discussion"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-08-04T01:33:23Z",
       "updatedAt": "2026-08-05T01:11:51Z",
@@ -8252,8 +8139,7 @@
       "title": "Discussion + Rebuild: Protocol Builder vs Strategy Builder — URLs swapped, clarify + rebuild",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "discussion"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T01:33:26Z",
@@ -8342,8 +8228,7 @@
       "title": "Clarification: Trading Strategies — SPRINT has contradictory keep vs delete entries",
       "state": "closed",
       "labels": [
-        "trading",
-        "discussion"
+        "trading"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T01:35:47Z",
@@ -8357,8 +8242,7 @@
       "title": "Clarification: Strategy Comparison — SPRINT has contradictory delete vs promote entries",
       "state": "closed",
       "labels": [
-        "trading",
-        "discussion"
+        "trading"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T01:37:29Z",
@@ -8448,12 +8332,14 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "discussion",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Protocols",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T01:40:19Z",
-      "updatedAt": "2026-08-27T22:12:25Z",
+      "updatedAt": "2026-09-05T19:49:40Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8463,11 +8349,11 @@
       "title": "Discussion: Execution Queue — Clarify execution meaning, event types, naming",
       "state": "open",
       "labels": [
-        "discussion"
+        "priority-low"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T01:40:21Z",
-      "updatedAt": "2026-08-27T22:12:24Z",
+      "updatedAt": "2026-09-05T19:49:39Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8507,8 +8393,7 @@
       "state": "closed",
       "labels": [
         "enhancement",
-        "trading",
-        "discussion"
+        "trading"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T01:40:28Z",
@@ -8535,11 +8420,12 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-low",
         "epic"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T20:15:35Z",
-      "updatedAt": "2026-08-27T22:12:49Z",
+      "updatedAt": "2026-09-03T19:31:29Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8552,11 +8438,12 @@
         "enhancement",
         "strategy",
         "priority-high",
-        "META.Stack"
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T20:40:31Z",
-      "updatedAt": "2026-08-27T22:12:53Z",
+      "updatedAt": "2026-09-03T19:31:27Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8568,11 +8455,13 @@
       "labels": [
         "enhancement",
         "strategy",
-        "META.Stack"
+        "priority-medium",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T20:40:32Z",
-      "updatedAt": "2026-08-27T22:12:52Z",
+      "updatedAt": "2026-09-03T19:31:25Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8584,11 +8473,13 @@
       "labels": [
         "enhancement",
         "strategy",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T20:40:34Z",
-      "updatedAt": "2026-08-27T22:12:50Z",
+      "updatedAt": "2026-09-03T19:31:22Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8599,12 +8490,13 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-low",
         "epic",
         "META.Stack"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T21:11:16Z",
-      "updatedAt": "2026-08-27T22:12:50Z",
+      "updatedAt": "2026-09-03T19:31:20Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8615,11 +8507,12 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "Roadmap"
+        "priority-low",
+        "experimental"
       ],
       "assignee": null,
       "createdAt": "2026-08-04T21:56:13Z",
-      "updatedAt": "2026-08-27T22:12:47Z",
+      "updatedAt": "2026-09-05T18:02:35Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8631,11 +8524,12 @@
       "labels": [
         "enhancement",
         "trading",
+        "priority-low",
         "epic"
       ],
       "assignee": null,
       "createdAt": "2026-08-05T01:42:16Z",
-      "updatedAt": "2026-08-27T22:12:49Z",
+      "updatedAt": "2026-09-03T19:31:17Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8643,14 +8537,15 @@
     {
       "number": 586,
       "title": "Potential Summary Approach",
-      "state": "open",
+      "state": "closed",
       "labels": [
-        "Roadmap"
+        "priority-low",
+        "experimental"
       ],
       "assignee": null,
       "createdAt": "2026-08-05T12:29:10Z",
-      "updatedAt": "2026-08-05T12:29:10Z",
-      "closedAt": null,
+      "updatedAt": "2026-09-03T19:43:11Z",
+      "closedAt": "2026-09-03T19:43:11Z",
       "comments": 0,
       "columnId": "triage"
     },
@@ -8659,12 +8554,12 @@
       "title": "Wall-Street Predictions",
       "state": "open",
       "labels": [
-        "discussion",
-        "Roadmap"
+        "priority-low",
+        "experimental"
       ],
       "assignee": null,
       "createdAt": "2026-08-05T12:30:59Z",
-      "updatedAt": "2026-08-27T22:55:19Z",
+      "updatedAt": "2026-09-05T19:49:38Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8675,11 +8570,11 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "Roadmap"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-08-06T00:18:29Z",
-      "updatedAt": "2026-08-27T23:08:08Z",
+      "updatedAt": "2026-09-05T18:02:33Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8689,8 +8584,7 @@
       "title": "[Phase 1] DB/UI Contract Audit — Fix immediate data gaps",
       "state": "closed",
       "labels": [
-        "bug",
-        "phase-1"
+        "bug"
       ],
       "assignee": null,
       "createdAt": "2026-08-06T00:54:56Z",
@@ -8704,8 +8598,7 @@
       "title": "[Phase 2] DB/UI Contract Audit — Expose hidden DB columns in UI",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-08-06T00:54:57Z",
@@ -8719,12 +8612,12 @@
       "title": "Development Process Review — Agent usage, rules, and contract enforcement",
       "state": "open",
       "labels": [
-        "discussion",
+        "priority-low",
         "epic"
       ],
       "assignee": null,
       "createdAt": "2026-08-06T00:55:18Z",
-      "updatedAt": "2026-08-27T23:08:07Z",
+      "updatedAt": "2026-09-05T19:49:38Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8737,11 +8630,12 @@
         "enhancement",
         "mt5-bridge",
         "trading",
+        "priority-low",
         "epic"
       ],
       "assignee": null,
       "createdAt": "2026-08-06T01:47:33Z",
-      "updatedAt": "2026-08-27T22:12:23Z",
+      "updatedAt": "2026-09-03T19:31:07Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8751,11 +8645,11 @@
       "title": "TradingView API Integration",
       "state": "open",
       "labels": [
-        "Roadmap"
+        "priority-low"
       ],
       "assignee": null,
       "createdAt": "2026-08-06T18:30:39Z",
-      "updatedAt": "2026-08-06T18:30:39Z",
+      "updatedAt": "2026-09-05T18:02:33Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8766,11 +8660,11 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "Roadmap"
+        "priority-low"
       ],
       "assignee": null,
       "createdAt": "2026-08-06T18:45:28Z",
-      "updatedAt": "2026-08-27T23:08:06Z",
+      "updatedAt": "2026-09-05T18:02:32Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8782,12 +8676,12 @@
       "labels": [
         "enhancement",
         "mt5-bridge",
-        "Roadmap",
+        "priority-low",
         "accounts"
       ],
       "assignee": null,
       "createdAt": "2026-08-06T19:48:45Z",
-      "updatedAt": "2026-08-27T23:08:04Z",
+      "updatedAt": "2026-09-05T18:02:31Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8800,11 +8694,13 @@
         "enhancement",
         "strategy",
         "priority-high",
-        "META.Stack"
+        "META.Stack",
+        "Protocols",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-06T21:04:21Z",
-      "updatedAt": "2026-08-27T23:08:03Z",
+      "updatedAt": "2026-09-03T19:31:00Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8816,11 +8712,13 @@
       "labels": [
         "enhancement",
         "strategy",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-06T21:04:22Z",
-      "updatedAt": "2026-08-27T23:08:01Z",
+      "updatedAt": "2026-09-03T19:30:58Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8833,11 +8731,12 @@
         "enhancement",
         "strategy",
         "priority-high",
-        "META.Stack"
+        "META.Stack",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-06T21:04:23Z",
-      "updatedAt": "2026-08-27T23:08:00Z",
+      "updatedAt": "2026-09-03T19:30:56Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8845,15 +8744,16 @@
     {
       "number": 599,
       "title": "Protocol highest recorded score on protocols-registry",
-      "state": "open",
+      "state": "closed",
       "labels": [
         "enhancement",
-        "Roadmap"
+        "priority-low",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-06T22:23:46Z",
-      "updatedAt": "2026-08-27T23:07:45Z",
-      "closedAt": null,
+      "updatedAt": "2026-09-03T19:43:15Z",
+      "closedAt": "2026-09-03T19:43:15Z",
       "comments": 0,
       "columnId": "triage"
     },
@@ -8863,11 +8763,12 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "Roadmap"
+        "priority-low",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-06T22:23:55Z",
-      "updatedAt": "2026-08-27T23:07:44Z",
+      "updatedAt": "2026-09-05T18:02:30Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8878,11 +8779,14 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "phase-7"
+        "priority-low",
+        "phase-7",
+        "Protocols",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-06T22:54:27Z",
-      "updatedAt": "2026-08-27T23:07:43Z",
+      "updatedAt": "2026-09-03T19:30:49Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8893,12 +8797,14 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-medium",
         "phase-2",
-        "META.Stack"
+        "META.Stack",
+        "Directives"
       ],
       "assignee": null,
       "createdAt": "2026-08-07T00:02:27Z",
-      "updatedAt": "2026-08-27T23:07:41Z",
+      "updatedAt": "2026-09-03T19:30:47Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -8940,12 +8846,14 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-medium",
         "phase-2",
-        "META.Stack"
+        "META.Stack",
+        "Directives"
       ],
       "assignee": null,
       "createdAt": "2026-08-08T01:56:30Z",
-      "updatedAt": "2026-08-27T22:54:32Z",
+      "updatedAt": "2026-09-03T19:30:45Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -8956,12 +8864,12 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "Roadmap",
+        "priority-low",
         "META.Stack"
       ],
       "assignee": null,
       "createdAt": "2026-08-08T01:56:32Z",
-      "updatedAt": "2026-08-27T22:12:43Z",
+      "updatedAt": "2026-09-05T18:02:30Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8972,12 +8880,13 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "Roadmap",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Directives"
       ],
       "assignee": null,
       "createdAt": "2026-08-08T01:56:33Z",
-      "updatedAt": "2026-08-27T22:12:19Z",
+      "updatedAt": "2026-09-05T18:02:29Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -8987,8 +8896,7 @@
       "title": "Audit All Directives — `maxScore` vs Actual Ceiling",
       "state": "closed",
       "labels": [
-        "epic",
-        "phase-1"
+        "epic"
       ],
       "assignee": null,
       "createdAt": "2026-08-09T14:04:40Z",
@@ -9017,12 +8925,15 @@
       "state": "open",
       "labels": [
         "strategy",
+        "priority-low",
         "research",
-        "phase-7"
+        "phase-7",
+        "Protocols",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-11T14:28:01Z",
-      "updatedAt": "2026-08-27T23:07:40Z",
+      "updatedAt": "2026-09-03T19:30:40Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9032,12 +8943,13 @@
       "title": "Protocol Priority Booster — Session-Aware Orchestration Layer",
       "state": "open",
       "labels": [
-        "Roadmap",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-11T23:11:47Z",
-      "updatedAt": "2026-08-27T23:07:38Z",
+      "updatedAt": "2026-09-05T18:02:28Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9047,11 +8959,11 @@
       "title": "Silent failure detection — table crash health checks and breakdown notifications",
       "state": "open",
       "labels": [
-        "Roadmap"
+        "priority-low"
       ],
       "assignee": null,
       "createdAt": "2026-08-12T22:40:40Z",
-      "updatedAt": "2026-08-27T23:07:37Z",
+      "updatedAt": "2026-09-05T18:02:28Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9061,11 +8973,11 @@
       "title": "Migrate all MyISAM tables to InnoDB for crash recovery",
       "state": "open",
       "labels": [
-        "Roadmap"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-08-12T22:41:00Z",
-      "updatedAt": "2026-08-27T23:07:36Z",
+      "updatedAt": "2026-09-05T18:02:27Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9075,8 +8987,7 @@
       "title": "Phase 0 — Unified Job Queue Groundwork",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-08-13T00:53:18Z",
@@ -9105,11 +9016,12 @@
       "title": "MT5 trade-ID linking via magic number (replace fragile comment parsing)",
       "state": "open",
       "labels": [
+        "priority-medium",
         "requires:pro"
       ],
       "assignee": null,
       "createdAt": "2026-08-13T14:24:30Z",
-      "updatedAt": "2026-08-27T23:05:56Z",
+      "updatedAt": "2026-09-03T19:30:32Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9119,11 +9031,11 @@
       "title": "Settings & configuration audit — inventory every option, tier by importance, design prominence",
       "state": "open",
       "labels": [
-        "Roadmap"
+        "priority-low"
       ],
       "assignee": null,
       "createdAt": "2026-08-13T14:26:17Z",
-      "updatedAt": "2026-08-27T23:05:55Z",
+      "updatedAt": "2026-09-05T18:02:26Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9134,11 +9046,11 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "Roadmap"
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-08-13T17:21:08Z",
-      "updatedAt": "2026-08-27T23:05:54Z",
+      "updatedAt": "2026-09-05T18:02:25Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9147,9 +9059,7 @@
       "number": 619,
       "title": "Regenerate protocol seed data — remove dead per-protocol directiveMaxScores",
       "state": "closed",
-      "labels": [
-        "phase-1"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-08-13T21:49:05Z",
       "updatedAt": "2026-08-16T18:00:25Z",
@@ -9179,13 +9089,14 @@
       "labels": [
         "enhancement",
         "trading",
-        "discussion",
+        "priority-low",
         "phase-2",
-        "META.Stack"
+        "META.Stack",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-14T13:27:53Z",
-      "updatedAt": "2026-08-27T22:12:41Z",
+      "updatedAt": "2026-09-05T19:49:37Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -9197,7 +9108,6 @@
       "labels": [
         "enhancement",
         "strategy",
-        "discussion",
         "META.Stack"
       ],
       "assignee": null,
@@ -9213,12 +9123,13 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "discussion",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-14T13:28:05Z",
-      "updatedAt": "2026-08-27T22:12:42Z",
+      "updatedAt": "2026-09-05T19:49:36Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9231,11 +9142,13 @@
         "documentation",
         "enhancement",
         "strategy",
-        "META.Stack"
+        "priority-medium",
+        "META.Stack",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-14T13:28:12Z",
-      "updatedAt": "2026-09-02T13:32:53Z",
+      "updatedAt": "2026-09-03T19:30:23Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9308,11 +9221,12 @@
       "labels": [
         "enhancement",
         "priority-medium",
-        "phase-3"
+        "phase-3",
+        "Directives"
       ],
       "assignee": null,
       "createdAt": "2026-08-14T15:30:12Z",
-      "updatedAt": "2026-08-27T23:05:53Z",
+      "updatedAt": "2026-09-03T19:30:22Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -9325,11 +9239,12 @@
         "enhancement",
         "strategy",
         "priority-medium",
-        "Roadmap"
+        "Protocols",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-14T15:30:20Z",
-      "updatedAt": "2026-08-27T23:05:51Z",
+      "updatedAt": "2026-09-05T18:02:24Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9356,12 +9271,13 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "Roadmap",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-14T21:45:37Z",
-      "updatedAt": "2026-08-27T23:05:50Z",
+      "updatedAt": "2026-09-05T18:02:24Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9372,12 +9288,14 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-low",
         "phase-2",
-        "META.Stack"
+        "META.Stack",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-14T21:45:38Z",
-      "updatedAt": "2026-08-27T23:05:49Z",
+      "updatedAt": "2026-09-03T19:30:16Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -9434,7 +9352,6 @@
       "state": "closed",
       "labels": [
         "documentation",
-        "phase-1",
         "META.Stack"
       ],
       "assignee": null,
@@ -9462,12 +9379,13 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "Roadmap",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-14T22:04:12Z",
-      "updatedAt": "2026-08-27T23:05:17Z",
+      "updatedAt": "2026-09-05T18:02:23Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9477,12 +9395,12 @@
       "title": "Planning-ahead tools: weekend-aware views and wider-timescale scoring for closed markets",
       "state": "open",
       "labels": [
-        "discussion",
+        "priority-low",
         "phase-3"
       ],
       "assignee": null,
       "createdAt": "2026-08-15T16:12:06Z",
-      "updatedAt": "2026-08-27T22:12:40Z",
+      "updatedAt": "2026-09-05T19:49:35Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -9492,8 +9410,7 @@
       "title": "Duplicate directive classes: standalone + stub define same id with different code/readiness",
       "state": "closed",
       "labels": [
-        "bug",
-        "phase-1"
+        "bug"
       ],
       "assignee": null,
       "createdAt": "2026-08-15T21:43:05Z",
@@ -9508,11 +9425,12 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "priority-low"
+        "priority-low",
+        "Directives"
       ],
       "assignee": null,
       "createdAt": "2026-08-15T21:43:14Z",
-      "updatedAt": "2026-08-27T22:12:39Z",
+      "updatedAt": "2026-09-03T19:30:11Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9538,11 +9456,12 @@
       "state": "open",
       "labels": [
         "strategy",
-        "Roadmap"
+        "priority-low",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-15T23:35:29Z",
-      "updatedAt": "2026-08-15T23:35:29Z",
+      "updatedAt": "2026-09-05T18:02:22Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9616,12 +9535,14 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-medium",
         "phase-3",
-        "META.Stack"
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-16T17:02:33Z",
-      "updatedAt": "2026-08-27T23:05:15Z",
+      "updatedAt": "2026-09-03T19:30:07Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -9632,11 +9553,12 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "Roadmap"
+        "priority-low",
+        "phase-10"
       ],
       "assignee": null,
       "createdAt": "2026-08-16T17:02:36Z",
-      "updatedAt": "2026-08-27T23:05:13Z",
+      "updatedAt": "2026-09-05T18:02:21Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9646,9 +9568,7 @@
       "title": "Build agent-claim.cjs - activate the issue-claim + restart-coordination state machine",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1",
-        "infra"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-08-16T17:42:49Z",
@@ -9662,9 +9582,7 @@
       "title": "Phase 1: Discord activity - basic handoff-close update via webhook",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "phase-1",
-        "infra"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-08-16T20:23:13Z",
@@ -9678,8 +9596,7 @@
       "title": "Phase 2: Weekly digest -> Discord (first social channel)",
       "state": "closed",
       "labels": [
-        "enhancement",
-        "Roadmap"
+        "enhancement"
       ],
       "assignee": null,
       "createdAt": "2026-08-16T20:23:15Z",
@@ -9694,11 +9611,12 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "Roadmap"
+        "priority-low",
+        "phase-10"
       ],
       "assignee": null,
       "createdAt": "2026-08-16T20:23:17Z",
-      "updatedAt": "2026-08-27T23:05:12Z",
+      "updatedAt": "2026-09-05T18:02:20Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9709,11 +9627,12 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "Roadmap"
+        "priority-low",
+        "phase-10"
       ],
       "assignee": null,
       "createdAt": "2026-08-16T20:23:18Z",
-      "updatedAt": "2026-08-27T23:05:11Z",
+      "updatedAt": "2026-09-05T18:02:20Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9724,12 +9643,13 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "infra",
-        "phase-6"
+        "priority-low",
+        "phase-6",
+        "phase-10"
       ],
       "assignee": null,
       "createdAt": "2026-08-16T20:23:33Z",
-      "updatedAt": "2026-08-27T23:05:09Z",
+      "updatedAt": "2026-09-05T18:00:35Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9739,13 +9659,15 @@
       "title": "Discussion: Data-driven gates — make directive gates/hurdles configurable",
       "state": "open",
       "labels": [
-        "discussion",
+        "priority-low",
         "META.Stack",
-        "research"
+        "research",
+        "Directives",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-17T19:28:35Z",
-      "updatedAt": "2026-08-27T22:12:38Z",
+      "updatedAt": "2026-09-05T19:49:35Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9755,13 +9677,14 @@
       "title": "Discussion: Surface the hurdle chain (multiplierChain + warnings) — see which gates a symbol cleared/failed",
       "state": "open",
       "labels": [
-        "discussion",
+        "priority-low",
         "META.Stack",
-        "research"
+        "research",
+        "Directives"
       ],
       "assignee": null,
       "createdAt": "2026-08-17T20:48:50Z",
-      "updatedAt": "2026-08-27T22:12:37Z",
+      "updatedAt": "2026-09-05T19:49:34Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9771,11 +9694,13 @@
       "title": "Analytics: MSTR + BTC Potential Strategy Lead and Directives",
       "state": "open",
       "labels": [
-        "strategy"
+        "strategy",
+        "priority-low",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-18T11:59:02Z",
-      "updatedAt": "2026-08-27T22:12:25Z",
+      "updatedAt": "2026-09-03T19:29:53Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9786,11 +9711,13 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "research"
+        "priority-medium",
+        "research",
+        "Directives"
       ],
       "assignee": null,
       "createdAt": "2026-08-18T19:17:16Z",
-      "updatedAt": "2026-08-27T22:12:36Z",
+      "updatedAt": "2026-09-03T19:29:51Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9801,12 +9728,12 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "epic",
-        "Roadmap"
+        "priority-low",
+        "epic"
       ],
       "assignee": null,
       "createdAt": "2026-08-19T09:29:22Z",
-      "updatedAt": "2026-08-27T23:05:08Z",
+      "updatedAt": "2026-09-05T18:02:19Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9830,11 +9757,13 @@
       "title": "Trading A Surge",
       "state": "open",
       "labels": [
-        "strategy"
+        "strategy",
+        "priority-low",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-19T12:08:36Z",
-      "updatedAt": "2026-08-20T20:08:06Z",
+      "updatedAt": "2026-09-03T19:29:47Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9844,11 +9773,13 @@
       "title": "$10 or 10% Pyramid",
       "state": "open",
       "labels": [
-        "strategy"
+        "strategy",
+        "priority-low",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-19T21:02:42Z",
-      "updatedAt": "2026-08-27T22:08:40Z",
+      "updatedAt": "2026-09-03T19:29:44Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9874,11 +9805,12 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "Roadmap"
+        "priority-medium",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-20T13:29:51Z",
-      "updatedAt": "2026-08-27T22:12:21Z",
+      "updatedAt": "2026-09-05T18:02:18Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9889,11 +9821,12 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-low",
         "phase-6"
       ],
       "assignee": null,
       "createdAt": "2026-08-20T18:29:11Z",
-      "updatedAt": "2026-08-27T23:04:41Z",
+      "updatedAt": "2026-09-03T19:29:40Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9904,59 +9837,66 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-low",
         "phase-6"
       ],
       "assignee": null,
       "createdAt": "2026-08-20T18:29:16Z",
-      "updatedAt": "2026-08-27T23:04:39Z",
+      "updatedAt": "2026-09-03T19:29:37Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
     },
     {
       "number": 669,
-      "title": "Create QQQ SHORT protocol (qqq-short-v1) — seed data + DB + LONG-SHORT pairing",
+      "title": "Create QQQ SHORT protocol (qqq-short-v1) - standalone SHORT protocol (seed data + DB)",
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-medium",
         "phase-2",
-        "META.Stack"
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-20T21:09:41Z",
-      "updatedAt": "2026-08-27T23:04:38Z",
+      "updatedAt": "2026-09-03T19:29:35Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
     },
     {
       "number": 670,
-      "title": "Create SPY SHORT protocol (spy-short-v1) — seed data + DB + LONG-SHORT pairing",
+      "title": "Create SPY SHORT protocol (spy-short-v1) - standalone SHORT protocol (seed data + DB)",
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-medium",
         "phase-2",
-        "META.Stack"
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-20T21:09:43Z",
-      "updatedAt": "2026-08-27T23:04:37Z",
+      "updatedAt": "2026-09-03T19:29:31Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
     },
     {
       "number": 671,
-      "title": "Create XAUUSD SHORT protocol (xau-short-v1) — seed data + DB + LONG-SHORT pairing",
+      "title": "Create XAUUSD SHORT protocol (xau-short-v1) - standalone SHORT protocol (seed data + DB)",
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-medium",
         "phase-2",
-        "META.Stack"
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-20T21:09:45Z",
-      "updatedAt": "2026-08-27T23:04:36Z",
+      "updatedAt": "2026-09-03T19:29:29Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -9981,13 +9921,13 @@
       "title": "Position-aware scoring throttle — pause scoring for symbols with open positions (entry-management dependent)",
       "state": "open",
       "labels": [
-        "discussion",
-        "Roadmap",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-21T18:26:58Z",
-      "updatedAt": "2026-08-27T23:04:34Z",
+      "updatedAt": "2026-09-05T19:49:33Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -9997,13 +9937,16 @@
       "title": "[Epic] Scoring Strategy redefinition — scope, hard gates, signal policy",
       "state": "open",
       "labels": [
+        "priority-low",
         "epic",
         "META.Stack",
-        "phase-7"
+        "phase-7",
+        "Protocols",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-21T22:57:32Z",
-      "updatedAt": "2026-09-02T13:32:51Z",
+      "updatedAt": "2026-09-03T19:29:24Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -10012,9 +9955,7 @@
       "number": 675,
       "title": "revision-log: Symbols Browser Position & P&L columns",
       "state": "closed",
-      "labels": [
-        "revision-log"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-08-22T19:54:46Z",
       "updatedAt": "2026-08-22T19:54:53Z",
@@ -10027,12 +9968,16 @@
       "title": "Earnings Whispers Tips and Consensus Considerations",
       "state": "open",
       "labels": [
+        "priority-low",
+        "experimental",
         "phase-6",
-        "research"
+        "research",
+        "Directives",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-22T22:29:49Z",
-      "updatedAt": "2026-08-22T22:29:49Z",
+      "updatedAt": "2026-09-03T19:36:52Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -10041,9 +9986,7 @@
       "number": 677,
       "title": "revision-log: Earnings Whispers page + parser + storage",
       "state": "closed",
-      "labels": [
-        "revision-log"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-08-22T22:34:37Z",
       "updatedAt": "2026-08-22T22:34:42Z",
@@ -10055,9 +9998,7 @@
       "number": 678,
       "title": "Revision log — Earnings Analysis multi-source generalization",
       "state": "closed",
-      "labels": [
-        "revision-log"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-08-22T23:02:07Z",
       "updatedAt": "2026-08-22T23:02:08Z",
@@ -10070,12 +10011,13 @@
       "title": "[Epic] EPS Estimate Change vs Actual EPS — the core earnings signal (long & short preparation)",
       "state": "open",
       "labels": [
-        "discussion",
-        "epic"
+        "priority-low",
+        "epic",
+        "Directives"
       ],
       "assignee": null,
       "createdAt": "2026-08-24T20:53:22Z",
-      "updatedAt": "2026-08-24T20:53:22Z",
+      "updatedAt": "2026-09-05T19:49:32Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -10085,13 +10027,13 @@
       "title": "[Epic] Earnings Calendar Funnel — from 80/day to 10-15 strong opportunities",
       "state": "open",
       "labels": [
-        "discussion",
+        "priority-low",
         "epic",
         "phase-6"
       ],
       "assignee": null,
       "createdAt": "2026-08-25T11:30:29Z",
-      "updatedAt": "2026-08-25T11:41:07Z",
+      "updatedAt": "2026-09-05T19:49:32Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -10099,15 +10041,15 @@
     {
       "number": 681,
       "title": "[Epic] Dynamic Roadmap — reusable planning core (kanban x gantt hybrid)",
-      "state": "open",
+      "state": "closed",
       "labels": [
-        "discussion",
+        "priority-low",
         "epic"
       ],
       "assignee": null,
       "createdAt": "2026-08-25T22:06:50Z",
-      "updatedAt": "2026-09-03T13:45:53Z",
-      "closedAt": null,
+      "updatedAt": "2026-09-06T16:26:29Z",
+      "closedAt": "2026-09-06T16:26:29Z",
       "comments": 0,
       "columnId": "triage"
     },
@@ -10117,13 +10059,14 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-medium",
         "phase-2",
         "epic",
         "META.Stack"
       ],
       "assignee": null,
       "createdAt": "2026-08-26T10:21:19Z",
-      "updatedAt": "2026-08-27T22:54:43Z",
+      "updatedAt": "2026-09-03T19:29:14Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -10133,12 +10076,14 @@
       "title": "Discussion: wire ScoringStrategy.gateConfig (group-level gates) or retire it",
       "state": "open",
       "labels": [
-        "known-gap",
-        "phase-7"
+        "priority-low",
+        "phase-7",
+        "Protocols",
+        "Strategies"
       ],
       "assignee": null,
       "createdAt": "2026-08-26T10:21:20Z",
-      "updatedAt": "2026-08-31T13:01:59Z",
+      "updatedAt": "2026-09-05T18:00:46Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -10162,12 +10107,14 @@
       "title": "Discussion: Signal % ceilings — why composites rarely exceed ~40-50%, is 36% actually good?",
       "state": "open",
       "labels": [
-        "discussion",
-        "research"
+        "priority-low",
+        "research",
+        "Directives",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-26T13:23:17Z",
-      "updatedAt": "2026-08-31T13:01:50Z",
+      "updatedAt": "2026-09-05T19:49:30Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -10177,9 +10124,7 @@
       "title": "Trading212 API end-to-end validation — unlock Buy/Sell Stock actions in Signals",
       "state": "closed",
       "labels": [
-        "wontfix",
-        "trading",
-        "dependencies"
+        "trading"
       ],
       "assignee": null,
       "createdAt": "2026-08-26T13:23:31Z",
@@ -10209,12 +10154,13 @@
       "state": "open",
       "labels": [
         "enhancement",
-        "Roadmap",
-        "META.Stack"
+        "priority-low",
+        "META.Stack",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-26T20:06:02Z",
-      "updatedAt": "2026-08-27T22:12:28Z",
+      "updatedAt": "2026-09-05T18:02:16Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -10225,11 +10171,13 @@
       "state": "open",
       "labels": [
         "documentation",
-        "enhancement"
+        "enhancement",
+        "priority-medium",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-26T20:06:13Z",
-      "updatedAt": "2026-08-27T22:12:32Z",
+      "updatedAt": "2026-09-03T19:29:04Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -10269,13 +10217,14 @@
       "title": "Discussion: Rebuild a news-sentiment signal on the screener's per-story lean",
       "state": "open",
       "labels": [
-        "discussion",
+        "priority-low",
         "phase-2",
-        "phase-6"
+        "phase-6",
+        "Directives"
       ],
       "assignee": null,
       "createdAt": "2026-08-26T23:31:39Z",
-      "updatedAt": "2026-08-27T22:56:05Z",
+      "updatedAt": "2026-09-05T19:49:29Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -10284,9 +10233,7 @@
       "number": 693,
       "title": "Discussion: Signals best-of outcome feedback loop (rank validation + dismissal analytics)",
       "state": "closed",
-      "labels": [
-        "discussion"
-      ],
+      "labels": [],
       "assignee": null,
       "createdAt": "2026-08-26T23:31:41Z",
       "updatedAt": "2026-08-27T20:55:02Z",
@@ -10299,11 +10246,13 @@
       "title": "Discussion: Bring screener attention-weight into SEES as a catalyst input (not conviction)",
       "state": "open",
       "labels": [
-        "phase-6"
+        "priority-low",
+        "phase-6",
+        "Directives"
       ],
       "assignee": null,
       "createdAt": "2026-08-26T23:31:43Z",
-      "updatedAt": "2026-08-27T22:54:14Z",
+      "updatedAt": "2026-09-03T19:29:00Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -10314,11 +10263,12 @@
       "state": "open",
       "labels": [
         "trading",
-        "discussion"
+        "priority-medium",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-08-26T23:31:44Z",
-      "updatedAt": "2026-09-02T12:35:19Z",
+      "updatedAt": "2026-09-05T19:49:28Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -10329,12 +10279,12 @@
       "state": "open",
       "labels": [
         "trading",
-        "discussion",
+        "priority-low",
         "accounts"
       ],
       "assignee": null,
       "createdAt": "2026-08-27T13:56:23Z",
-      "updatedAt": "2026-08-27T22:09:35Z",
+      "updatedAt": "2026-09-05T19:49:27Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -10364,12 +10314,13 @@
       "labels": [
         "enhancement",
         "trading",
+        "priority-medium",
         "phase-3",
         "accounts"
       ],
       "assignee": null,
       "createdAt": "2026-08-27T13:56:27Z",
-      "updatedAt": "2026-08-27T22:56:14Z",
+      "updatedAt": "2026-09-03T19:28:53Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -10381,12 +10332,13 @@
       "labels": [
         "enhancement",
         "trading",
+        "priority-medium",
         "phase-3",
         "accounts"
       ],
       "assignee": null,
       "createdAt": "2026-08-27T13:56:30Z",
-      "updatedAt": "2026-08-27T22:56:16Z",
+      "updatedAt": "2026-09-03T19:28:51Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -10394,16 +10346,15 @@
     {
       "number": 700,
       "title": "[Roadmap] Phase redefinition — Phase 4 becomes Polishing, add Phase 10 = Public Release",
-      "state": "open",
+      "state": "closed",
       "labels": [
-        "discussion",
-        "epic",
-        "Roadmap"
+        "priority-low",
+        "epic"
       ],
       "assignee": null,
       "createdAt": "2026-08-27T13:56:32Z",
-      "updatedAt": "2026-08-29T20:15:46Z",
-      "closedAt": null,
+      "updatedAt": "2026-09-03T19:43:09Z",
+      "closedAt": "2026-09-03T19:43:09Z",
       "comments": 0,
       "columnId": "triage"
     },
@@ -10413,12 +10364,13 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-low",
         "phase-3",
         "accounts"
       ],
       "assignee": null,
       "createdAt": "2026-08-27T13:56:35Z",
-      "updatedAt": "2026-08-27T22:56:18Z",
+      "updatedAt": "2026-09-03T19:28:48Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -10444,13 +10396,13 @@
       "title": "[Epic] Operational Telemetry & Logging Hygiene",
       "state": "open",
       "labels": [
+        "priority-low",
         "phase-2",
-        "epic",
-        "infra"
+        "epic"
       ],
       "assignee": null,
       "createdAt": "2026-08-28T19:40:47Z",
-      "updatedAt": "2026-08-29T20:29:08Z",
+      "updatedAt": "2026-09-05T18:00:35Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -10460,9 +10412,7 @@
       "title": "decision_log write-on-change — suppress unchanged HOLD/SCORED rows",
       "state": "closed",
       "labels": [
-        "phase-2",
-        "suitable-for:flash",
-        "infra"
+        "phase-2"
       ],
       "assignee": null,
       "createdAt": "2026-08-28T19:40:49Z",
@@ -10477,11 +10427,12 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-medium",
         "phase-2"
       ],
       "assignee": null,
       "createdAt": "2026-08-28T19:40:52Z",
-      "updatedAt": "2026-08-28T19:40:52Z",
+      "updatedAt": "2026-09-03T19:28:44Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -10491,12 +10442,12 @@
       "title": "Summary-trace logging + diagnostic full-log mode",
       "state": "open",
       "labels": [
-        "discussion",
+        "priority-low",
         "phase-3"
       ],
       "assignee": null,
       "createdAt": "2026-08-28T19:41:07Z",
-      "updatedAt": "2026-08-28T19:41:07Z",
+      "updatedAt": "2026-09-05T19:49:27Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -10506,12 +10457,12 @@
       "title": "Notification upsert flow — secondary info doubles as notifications",
       "state": "open",
       "labels": [
-        "discussion",
+        "priority-low",
         "phase-3"
       ],
       "assignee": null,
       "createdAt": "2026-08-28T19:41:10Z",
-      "updatedAt": "2026-08-28T19:41:10Z",
+      "updatedAt": "2026-09-05T19:48:22Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -10522,11 +10473,12 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-medium",
         "phase-2"
       ],
       "assignee": null,
       "createdAt": "2026-08-28T19:41:11Z",
-      "updatedAt": "2026-08-28T19:41:11Z",
+      "updatedAt": "2026-09-03T19:28:39Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -10537,13 +10489,12 @@
       "state": "open",
       "labels": [
         "mt5-bridge",
-        "phase-2",
-        "suitable-for:flash",
-        "infra"
+        "priority-medium",
+        "phase-2"
       ],
       "assignee": null,
       "createdAt": "2026-08-28T19:41:28Z",
-      "updatedAt": "2026-08-28T19:41:28Z",
+      "updatedAt": "2026-09-05T18:01:17Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -10553,12 +10504,13 @@
       "title": "Log-table schema normalization — symbol_id FK in log tables",
       "state": "open",
       "labels": [
-        "discussion",
-        "phase-3"
+        "priority-low",
+        "phase-3",
+        "reviewed"
       ],
       "assignee": null,
       "createdAt": "2026-08-28T19:41:30Z",
-      "updatedAt": "2026-08-28T19:41:30Z",
+      "updatedAt": "2026-09-05T19:44:59Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -10569,11 +10521,12 @@
       "state": "open",
       "labels": [
         "enhancement",
+        "priority-low",
         "phase-2"
       ],
       "assignee": null,
       "createdAt": "2026-08-28T19:41:32Z",
-      "updatedAt": "2026-08-28T19:41:32Z",
+      "updatedAt": "2026-09-03T19:28:34Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-2"
@@ -10600,11 +10553,12 @@
       "title": "Roadmap board: card-level owner + dependency editing UI (epic #681 follow-up)",
       "state": "open",
       "labels": [
-        "enhancement"
+        "enhancement",
+        "priority-medium"
       ],
       "assignee": null,
       "createdAt": "2026-08-31T18:23:56Z",
-      "updatedAt": "2026-08-31T18:23:56Z",
+      "updatedAt": "2026-09-03T19:28:32Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -10615,13 +10569,16 @@
       "state": "open",
       "labels": [
         "trading",
-        "discussion",
+        "priority-low",
         "phase-3",
-        "META.Stack"
+        "META.Stack",
+        "Protocols",
+        "Strategies",
+        "reviewed"
       ],
       "assignee": null,
       "createdAt": "2026-08-31T20:02:34Z",
-      "updatedAt": "2026-09-02T12:35:17Z",
+      "updatedAt": "2026-09-05T19:12:56Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -10632,11 +10589,12 @@
       "state": "open",
       "labels": [
         "trading",
+        "priority-medium",
         "phase-3"
       ],
       "assignee": null,
       "createdAt": "2026-09-02T12:34:14Z",
-      "updatedAt": "2026-09-02T12:34:14Z",
+      "updatedAt": "2026-09-03T19:28:28Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -10662,7 +10620,6 @@
       "state": "closed",
       "labels": [
         "trading",
-        "discussion",
         "phase-3"
       ],
       "assignee": null,
@@ -10678,15 +10635,115 @@
       "state": "open",
       "labels": [
         "trading",
-        "discussion",
-        "phase-3"
+        "priority-medium",
+        "phase-3",
+        "Protocols"
       ],
       "assignee": null,
       "createdAt": "2026-09-03T12:37:19Z",
-      "updatedAt": "2026-09-03T12:37:19Z",
+      "updatedAt": "2026-09-05T19:11:03Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
+    },
+    {
+      "number": 719,
+      "title": "Signals pre-flight: broker symbol availability gate — don't offer trades the broker can't fill",
+      "state": "closed",
+      "labels": [
+        "trading",
+        "priority-medium",
+        "phase-3",
+        "Protocols"
+      ],
+      "assignee": null,
+      "createdAt": "2026-09-03T16:58:30Z",
+      "updatedAt": "2026-09-03T19:40:32Z",
+      "closedAt": "2026-09-03T19:40:32Z",
+      "comments": 0,
+      "columnId": "phase-3"
+    },
+    {
+      "number": 720,
+      "title": "Signals manual-trade defaults — expose size/SL/TP in Settings",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "trading",
+        "priority-medium",
+        "phase-3"
+      ],
+      "assignee": null,
+      "createdAt": "2026-09-03T17:27:06Z",
+      "updatedAt": "2026-09-03T19:28:22Z",
+      "closedAt": null,
+      "comments": 0,
+      "columnId": "phase-3"
+    },
+    {
+      "number": 721,
+      "title": "Duplicate-position policy for manual trades — profit-locked-in scale-in vs one-per-symbol (CFD vs stock)",
+      "state": "open",
+      "labels": [
+        "trading",
+        "priority-medium",
+        "phase-3",
+        "Protocols",
+        "Strategies",
+        "reviewed"
+      ],
+      "assignee": null,
+      "createdAt": "2026-09-03T18:04:12Z",
+      "updatedAt": "2026-09-05T18:52:41Z",
+      "closedAt": null,
+      "comments": 0,
+      "columnId": "phase-3"
+    },
+    {
+      "number": 722,
+      "title": "Discussion: bot-queue settings lost their only UI surface",
+      "state": "open",
+      "labels": [
+        "priority-medium",
+        "Strategies",
+        "reviewed"
+      ],
+      "assignee": null,
+      "createdAt": "2026-09-03T18:50:30Z",
+      "updatedAt": "2026-09-05T18:53:55Z",
+      "closedAt": null,
+      "comments": 0,
+      "columnId": "triage"
+    },
+    {
+      "number": 723,
+      "title": "Shared execution-feasibility checks at signal generation AND execution — one library, blockers with change-hints",
+      "state": "closed",
+      "labels": [
+        "trading",
+        "priority-low",
+        "phase-3",
+        "Protocols",
+        "Strategies"
+      ],
+      "assignee": null,
+      "createdAt": "2026-09-03T18:56:12Z",
+      "updatedAt": "2026-09-03T19:40:11Z",
+      "closedAt": "2026-09-03T19:40:11Z",
+      "comments": 0,
+      "columnId": "phase-3"
+    },
+    {
+      "number": 724,
+      "title": "chore(ci): SARIF report for CI failures — import into DeepSeek",
+      "state": "open",
+      "labels": [],
+      "assignee": null,
+      "createdAt": "2026-09-05T21:22:46Z",
+      "updatedAt": "2026-09-05T21:22:46Z",
+      "closedAt": null,
+      "comments": 0,
+      "columnId": "triage"
     }
   ]
 }
