@@ -6,6 +6,7 @@
  */
 
 import { Controller, Get, Post, Delete, Param, Body, Logger, NotFoundException, ConflictException, HttpCode } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { Trading212Adapter } from '../providers/adapters/trading212.adapter';
 import { readFileSync, readdirSync, existsSync } from 'fs';
@@ -97,7 +98,7 @@ export class WatchlistsController {
           data: {
             id: data.id,
             name: data.label,
-            symbols: data.symbols,
+            symbols: data.symbols as unknown as Prisma.InputJsonValue,
             source: data.source,
             importedAt: data.importedAt,
           },
@@ -144,7 +145,7 @@ export class WatchlistsController {
           data: {
             id: safeId,
             name: body.listName.trim(),
-            symbols,
+            symbols: symbols as unknown as Prisma.InputJsonValue,
             source: 'Trading212 CSV',
             importedAt: new Date(),
           },
@@ -252,13 +253,13 @@ export class WatchlistsController {
     const wl = existing
       ? await this.prisma.watchlist.update({
           where: { id },
-          data: { name: body.name, symbols: body.symbols, source: body.source || 'manual' },
+          data: { name: body.name, symbols: body.symbols as unknown as Prisma.InputJsonValue, source: body.source || 'manual' },
         })
       : await this.prisma.watchlist.create({
           data: {
             id,
             name: body.name,
-            symbols: body.symbols,
+            symbols: body.symbols as unknown as Prisma.InputJsonValue,
             source: body.source || 'manual',
             importedAt: new Date(),
           },
@@ -283,7 +284,7 @@ export class WatchlistsController {
       await this.prisma.watchlist.update({
         where: { id: 'trading212-portfolio' },
         data: {
-          symbols,
+          symbols: symbols as unknown as Prisma.InputJsonValue,
           source: 'trading212',
           kind: 'built-in',
           importedAt: new Date(),
@@ -369,7 +370,7 @@ export class WatchlistsController {
 
     await this.prisma.watchlist.update({
       where: { id },
-      data: { symbols: filtered },
+      data: { symbols: filtered as unknown as Prisma.InputJsonValue },
     });
     return { removed: true, ticker: upperTicker, remaining: filtered.length };
   }
