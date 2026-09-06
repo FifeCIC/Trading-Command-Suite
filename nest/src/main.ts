@@ -3,6 +3,7 @@ import { Logger } from '@nestjs/common';
 import type { NextFunction, Request, Response } from 'express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { APP_VERSION } from './version';
 import { QueueConfigService } from './config/queue-config.service';
 import { LoggingValidationPipe } from './common/pipes/validation.pipe';
 import { PrismaService } from './database/prisma.service';
@@ -85,7 +86,7 @@ async function bootstrap() {
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Trader Core API')
     .setDescription('NestJS backend for Trader.CORE')
-    .setVersion('0.1.0')
+    .setVersion(APP_VERSION)
     .build();
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, swaggerDocument);
@@ -101,7 +102,7 @@ async function bootstrap() {
   const port = process.env.PORT ?? 3201;
   logger.log('');
   logger.log('='.repeat(44));
-  logger.log(`  Trading Command Suite v${process.env.npm_package_version || '0.1.0'}`);
+  logger.log(`  Trading Command Suite v${APP_VERSION}`);
   logger.log(`  Database:   ${prisma.isAvailable ? '✅ Connected' : '❌ Not connected (degraded mode)'}`);
   logger.log(`  Alpaca:     ${process.env.ALPACA_API_KEY ? '✅ Configured' : '⚠️  Not configured (set ALPACA_API_KEY)'}`);
   logger.log(`  MT5:        ❌ Bridge not running`);

@@ -5,6 +5,7 @@ import { PrismaService } from './database/prisma.service';
 import { ProvidersService } from './modules/providers/providers.service';
 import { Mt5ConnectionManager } from './modules/providers/mt5/mt5-connection-manager.service';
 import { StopGuardianService } from './modules/automation/stop-guardian.service';
+import { APP_VERSION } from './version';
 
 @Controller()
 export class AppController {
@@ -48,7 +49,7 @@ export class AppController {
 
     return {
       server: 'Trading Command Suite — NestJS API',
-      version: process.env.npm_package_version || '0.1.0',
+      version: APP_VERSION,
       uptime: uptimeFmt,
       uptimeSeconds: uptimeSec,
       database: this.prisma.isAvailable ? 'connected' : 'disconnected',
@@ -78,7 +79,7 @@ export class AppController {
   getVersion() {
     const modeInfo = this.modeService.getModeInfo();
     return {
-      version: 'nest-0.1.0',
+      version: APP_VERSION,
       status: 'ok',
       timestamp: new Date().toISOString(),
       mode: modeInfo.mode,

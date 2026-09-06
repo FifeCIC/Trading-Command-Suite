@@ -192,6 +192,35 @@ Added SHA-256 fingerprint tracking to MetaStack ratings so users can detect when
 - **summary:** MetaStack Fingerprint — SHA-256 hash of component state (protocol, watchlist symbols, broker, thresholds, SL/TP). Detects configuration drift so UI can warn when performance history is stale. Files: stack-performance.service.ts, scoring.controller.ts. Endpoint: GET /api/scoring/metastacks/:id/fingerprint.
 ```
 
+## Project Version — BUMP ON EVERY HANDOFF
+
+The UI shows a **stale version forever** if you only bump one file. There are TWO
+`package.json` files and they MUST stay in sync:
+
+- `package.json` (repo root) — frontend build
+- `nest/package.json` — backend. **This is the runtime source of truth**: the backend
+  reads it at boot (`nest/src/version.ts` → `APP_VERSION`) and serves it at `GET /`,
+  `GET /api/version`, and in Swagger. The UI footer/dev-stat reads `/api/version`.
+
+**Every handoff bumps the version** (semver), so a handoff that changes behaviour or
+adds capability is never silent:
+- **patch** (0.3.0 → 0.3.1): bugfix, small cleanup, docs
+- **minor** (0.3.0 → 0.4.0): new feature / subsystem / capability, behaviour change
+- **major** (0.3.0 → 1.0.0): breaking change or phase milestone
+
+Steps:
+1. Decide patch vs minor vs major from the change above (default: minor for features,
+   patch for fixes).
+2. Bump `nest/package.json` `version` **and** root `package.json` `version` to the SAME
+   value — never bump one without the other.
+3. Rebuild the backend so the running `dist/` picks it up:
+   `npm --prefix nest run build`.
+4. Verify: `curl http://localhost:3201/api/version` returns the new version.
+
+⚠️ Never hardcode a version literal in a controller or `main.ts` — import `APP_VERSION`
+from `nest/src/version.ts`. (The old `'0.1.0'` / `'nest-0.1.0'` literals are why the
+version never appeared to increase.)
+
 ## Why This Exists
 
 This file costs ~200-400 tokens to write. If the agent self-updated the QA page, Capability Map, and Architecture Framework directly, it would cost ~60K tokens (reading 3 large files). When 5 features are batched, the Librarian processes all handoffs in one run — 66K tokens vs 325K (78% savings).
