@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-06T20:02:24.152Z",
+  "generatedAt": "2026-09-06T21:20:53.274Z",
   "columns": [
     {
       "id": "discussion",
@@ -8760,7 +8760,7 @@
     {
       "number": 600,
       "title": "Persist protocol highest-ever score as stored metric",
-      "state": "open",
+      "state": "closed",
       "labels": [
         "enhancement",
         "priority-low",
@@ -8768,8 +8768,8 @@
       ],
       "assignee": null,
       "createdAt": "2026-08-06T22:23:55Z",
-      "updatedAt": "2026-09-05T18:02:30Z",
-      "closedAt": null,
+      "updatedAt": "2026-09-06T20:59:02Z",
+      "closedAt": "2026-09-06T20:59:02Z",
       "comments": 0,
       "columnId": "triage"
     },
@@ -10114,7 +10114,7 @@
       ],
       "assignee": null,
       "createdAt": "2026-08-26T13:23:17Z",
-      "updatedAt": "2026-09-05T19:49:30Z",
+      "updatedAt": "2026-09-06T21:18:47Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
@@ -10632,7 +10632,7 @@
     {
       "number": 718,
       "title": "Signal-quality calibration follow-ups — per-protocol entry gate + missing-data group neutrality",
-      "state": "open",
+      "state": "closed",
       "labels": [
         "trading",
         "priority-medium",
@@ -10641,8 +10641,8 @@
       ],
       "assignee": null,
       "createdAt": "2026-09-03T12:37:19Z",
-      "updatedAt": "2026-09-05T19:11:03Z",
-      "closedAt": null,
+      "updatedAt": "2026-09-06T20:25:17Z",
+      "closedAt": "2026-09-06T20:25:17Z",
       "comments": 0,
       "columnId": "phase-3"
     },
@@ -10761,6 +10761,22 @@
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
+    },
+    {
+      "number": 726,
+      "title": "Persist normalised signal % into score_snapshot",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "trading",
+        "Protocols"
+      ],
+      "assignee": null,
+      "createdAt": "2026-09-06T21:19:55Z",
+      "updatedAt": "2026-09-06T21:19:55Z",
+      "closedAt": null,
+      "comments": 0,
+      "columnId": "triage"
     }
   ]
 }
