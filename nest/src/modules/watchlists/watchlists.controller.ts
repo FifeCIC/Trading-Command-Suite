@@ -5,10 +5,10 @@
  * Existing JSON files migrated on first DB access if needed.
  */
 
-import { Controller, Get, Post, Delete, Patch, Param, Body, Logger, NotFoundException, ConflictException, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, Logger, NotFoundException, ConflictException, HttpCode } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Trading212Adapter } from '../providers/adapters/trading212.adapter';
-import { readFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join } from 'path';
 
 const WATCHLISTS_DIR = join(__dirname, '..', '..', '..', '..', '..', 'src', 'data', 'watchlists');
@@ -18,6 +18,51 @@ interface WatchlistEntry {
   name?: string;
   exchange?: string;
   type?: string;
+}
+
+type RawWatchlistFile = unknown;
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function parseWatchlistFile(raw: RawWatchlistFile, fallbackName: string) {
+  const result = {
+    id: fallbackName,
+    label: fallbackName,
+    symbols: [] as WatchlistEntry[],
+    source: 'Trading212 CSV',
+    importedAt: new Date(),
+  };
+
+  if (!isPlainObject(raw)) return result;
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.id === 'string') result.id = obj.id;
+  if (typeof obj.label === 'string') result.label = obj.label;
+  if (typeof obj.source === 'string') result.source = obj.source;
+  if (typeof obj.importedAt === 'string' || typeof obj.importedAt === 'number') {
+    const d = new Date(obj.importedAt as string | number);
+    if (!Number.isNaN(d.getTime())) result.importedAt = d;
+  }
+
+  if (Array.isArray(obj.symbols)) {
+    const symbols: WatchlistEntry[] = [];
+    for (const s of obj.symbols) {
+      if (!isPlainObject(s)) continue;
+      const si = s as Record<string, unknown>;
+      const ticker = typeof si.ticker === 'string' ? si.ticker : (typeof si === 'string' ? String(si) : undefined);
+      if (!ticker) continue;
+      symbols.push({
+        ticker: ticker.toUpperCase(),
+        name: typeof si.name === 'string' ? si.name : undefined,
+        exchange: typeof si.exchange === 'string' ? si.exchange : undefined,
+        type: typeof si.type === 'string' ? si.type : undefined,
+      });
+    }
+    result.symbols = symbols;
+  }
+
+  return result;
 }
 
 @Controller('watchlists')
@@ -46,19 +91,21 @@ export class WatchlistsController {
     for (const f of files) {
       try {
         const raw = readFileSync(join(WATCHLISTS_DIR, f), 'utf-8');
-        const data = JSON.parse(raw);
+        const parsedRaw: unknown = JSON.parse(raw);
+        const data = parseWatchlistFile(parsedRaw, f.replace('.json', ''));
         await this.prisma.watchlist.create({
           data: {
-            id: data.id || f.replace('.json', ''),
-            name: data.label || f,
-            symbols: data.symbols || [],
-            source: data.source || 'Trading212 CSV',
-            importedAt: data.importedAt ? new Date(data.importedAt) : new Date(),
+            id: data.id,
+            name: data.label,
+            symbols: data.symbols,
+            source: data.source,
+            importedAt: data.importedAt,
           },
         });
         this.logger.log(`  ✓ Migrated: ${data.label || f}`);
-      } catch (err: any) {
-        this.logger.warn(`  ✗ Skipped ${f}: ${err.message}`);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        this.logger.warn(`  ✗ Skipped ${f}: ${message}`);
       }
     }
   }
@@ -97,7 +144,7 @@ export class WatchlistsController {
           data: {
             id: safeId,
             name: body.listName.trim(),
-            symbols: symbols as any,
+            symbols,
             source: 'Trading212 CSV',
             importedAt: new Date(),
           },
@@ -105,8 +152,9 @@ export class WatchlistsController {
         watchlistId = wl.id;
         saved = true;
         this.logger.log(`Imported to DB: ${wl.name} (${symbols.length} symbols)`);
-      } catch (err: any) {
-        this.logger.error(`Failed to save watchlist: ${err.message}`);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        this.logger.error(`Failed to save watchlist: ${message}`);
       }
     }
 
@@ -204,13 +252,13 @@ export class WatchlistsController {
     const wl = existing
       ? await this.prisma.watchlist.update({
           where: { id },
-          data: { name: body.name, symbols: body.symbols as any, source: body.source || 'manual' },
+          data: { name: body.name, symbols: body.symbols, source: body.source || 'manual' },
         })
       : await this.prisma.watchlist.create({
           data: {
             id,
             name: body.name,
-            symbols: body.symbols as any,
+            symbols: body.symbols,
             source: body.source || 'manual',
             importedAt: new Date(),
           },
@@ -224,7 +272,7 @@ export class WatchlistsController {
   @Post('trading212-portfolio/sync')
   async syncTrading212Portfolio() {
     try {
-      const positions = await this.t212.getPositions();
+      const positions = await this.t212.getPositions() as Array<{ ticker: string; symbol: string }>;
       const symbols = positions.map((p) => ({
         ticker: p.ticker.toUpperCase(),
         name: p.symbol,
@@ -235,7 +283,7 @@ export class WatchlistsController {
       await this.prisma.watchlist.update({
         where: { id: 'trading212-portfolio' },
         data: {
-          symbols: symbols as any,
+          symbols,
           source: 'trading212',
           kind: 'built-in',
           importedAt: new Date(),
@@ -244,9 +292,10 @@ export class WatchlistsController {
 
       this.logger.log(`Synced Trading212 Portfolio: ${symbols.length} positions`);
       return { synced: true, symbolCount: symbols.length, syncedAt: new Date().toISOString() };
-    } catch (err: any) {
-      this.logger.error(`Failed to sync T212 portfolio: ${err.message}`);
-      return { synced: false, error: err.message };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Failed to sync T212 portfolio: ${message}`);
+      return { synced: false, error: message };
     }
   }
 
@@ -257,19 +306,20 @@ export class WatchlistsController {
       const strategies = await (this.prisma as any).scoringStrategy.findMany({
         where: { watchlistId: id, enabled: true },
         select: { id: true, name: true, protocolId: true },
-      });
+      }) as Array<{ id: string; name: string; protocolId?: string }>;
       if (strategies.length === 0) return { locked: false, strategies: [] };
 
       // Check for active positions linked to strategies' protocols
-      const protocolIds = [...new Set(strategies.map((s: any) => s.protocolId).filter(Boolean))];
+      const protocolIds = [...new Set(strategies.map((s) => s.protocolId).filter(Boolean))] as string[];
       const activePositions = protocolIds.length > 0
         ? await (this.prisma as any).position.count({ where: { protocolId: { in: protocolIds }, quantity: { gt: 0 } } })
         : 0;
 
       const locked = activePositions > 0;
-      return { locked, strategies: strategies.map((s: any) => s.name), activePositions };
-    } catch (err: any) {
-      return { locked: false, error: err.message };
+      return { locked, strategies: strategies.map((s) => s.name), activePositions };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { locked: false, error: message };
     }
   }
 
@@ -284,14 +334,14 @@ export class WatchlistsController {
     const strategies = await (this.prisma as any).scoringStrategy.findMany({
       where: { watchlistId: id, enabled: true },
       select: { name: true, protocolId: true },
-    });
+    }) as Array<{ name: string; protocolId?: string }>;
     if (strategies.length > 0) {
-      const protocolIds = [...new Set(strategies.map((s: any) => s.protocolId).filter(Boolean))];
+      const protocolIds = [...new Set(strategies.map((s) => s.protocolId).filter(Boolean))] as string[];
       const activePositions = protocolIds.length > 0
         ? await (this.prisma as any).position.count({ where: { protocolId: { in: protocolIds }, quantity: { gt: 0 } } })
         : 0;
       if (activePositions > 0) {
-        throw new ConflictException(`Watchlist is locked — used by ${strategies.map((s: any) => s.name).join(', ')} with ${activePositions} active positions`);
+        throw new ConflictException(`Watchlist is locked — used by ${strategies.map((s) => s.name).join(', ')} with ${activePositions} active positions`);
       }
     }
 
@@ -305,9 +355,13 @@ export class WatchlistsController {
     const wl = await this.prisma.watchlist.findUnique({ where: { id } });
     if (!wl) throw new NotFoundException(`Watchlist "${id}" not found`);
 
-    const symbols = (wl.symbols as any[]) || [];
+    const symbols = (Array.isArray(wl.symbols) ? wl.symbols : []) as Array<Record<string, unknown> | string>;
     const upperTicker = ticker.toUpperCase();
-    const filtered = symbols.filter((s: any) => (s.ticker || s).toUpperCase() !== upperTicker);
+    const filtered = symbols.filter((s) => {
+      if (typeof s === 'string') return s.toUpperCase() !== upperTicker;
+      if (isPlainObject(s) && typeof s.ticker === 'string') return s.ticker.toUpperCase() !== upperTicker;
+      return true;
+    });
 
     if (filtered.length === symbols.length) {
       return { removed: false, message: `Symbol "${upperTicker}" not found in watchlist` };
@@ -315,7 +369,7 @@ export class WatchlistsController {
 
     await this.prisma.watchlist.update({
       where: { id },
-      data: { symbols: filtered as any },
+      data: { symbols: filtered },
     });
     return { removed: true, ticker: upperTicker, remaining: filtered.length };
   }

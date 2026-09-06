@@ -7,6 +7,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { createHmac } from 'crypto';
 
 export interface WebhookLog {
   id: string;
@@ -43,15 +44,14 @@ export class WebhooksService {
 
     // Simple HMAC-SHA256 validation
     try {
-      const { createHmac } = require('crypto');
       const expected = createHmac('sha256', secret).update(body).digest('hex');
       const valid = signature === expected;
       if (!valid) {
         this.logger.warn(`Invalid signature for webhook from ${source}`);
       }
       return valid;
-    } catch {
-      this.logger.warn(`Signature validation error for ${source}`);
+    } catch (err) {
+      this.logger.warn(`Signature validation error for ${source}: ${err?.message ?? String(err)}`);
       return false;
     }
   }
@@ -93,8 +93,9 @@ export class WebhooksService {
    * Queue a webhook payload for async processing.
    * In production, this would push to a message queue.
    */
-  async queueProcessing(payload: Record<string, unknown>, source: string): Promise<void> {
+  queueProcessing(payload: Record<string, unknown>, source: string): Promise<void> {
     this.logger.log(`Queued ${source} webhook for processing: ${JSON.stringify(payload).slice(0, 200)}`);
     // TODO: Integrate with QueueModule for async processing
+    return Promise.resolve();
   }
 }
