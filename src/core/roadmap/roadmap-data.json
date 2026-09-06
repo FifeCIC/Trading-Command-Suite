@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-06T16:44:30.502Z",
+  "generatedAt": "2026-09-06T20:02:24.152Z",
   "columns": [
     {
       "id": "discussion",
@@ -10594,7 +10594,7 @@
       ],
       "assignee": null,
       "createdAt": "2026-09-02T12:34:14Z",
-      "updatedAt": "2026-09-03T19:28:28Z",
+      "updatedAt": "2026-09-06T16:56:41Z",
       "closedAt": null,
       "comments": 0,
       "columnId": "phase-3"
@@ -10666,7 +10666,7 @@
     {
       "number": 720,
       "title": "Signals manual-trade defaults — expose size/SL/TP in Settings",
-      "state": "open",
+      "state": "closed",
       "labels": [
         "enhancement",
         "trading",
@@ -10675,8 +10675,8 @@
       ],
       "assignee": null,
       "createdAt": "2026-09-03T17:27:06Z",
-      "updatedAt": "2026-09-03T19:28:22Z",
-      "closedAt": null,
+      "updatedAt": "2026-09-06T17:53:39Z",
+      "closedAt": "2026-09-06T17:53:38Z",
       "comments": 0,
       "columnId": "phase-3"
     },
@@ -10744,6 +10744,23 @@
       "closedAt": null,
       "comments": 0,
       "columnId": "triage"
+    },
+    {
+      "number": 725,
+      "title": "[Enhancement] Smart adaptive entry gate — per-protocol learned ceiling",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "trading",
+        "phase-3",
+        "Protocols"
+      ],
+      "assignee": null,
+      "createdAt": "2026-09-06T19:59:26Z",
+      "updatedAt": "2026-09-06T19:59:26Z",
+      "closedAt": null,
+      "comments": 0,
+      "columnId": "phase-3"
     }
   ]
 }
