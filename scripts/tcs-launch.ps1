@@ -134,16 +134,27 @@ for ($i = 0; $i -lt $activeBrokers.Count; $i++) {
     $brokerId = $activeBrokers[$i]
     $bridgePort = 5000 + $i
     $brokerServer = $envVars["MT5_SERVER_$brokerId"] ?? '?'
-    $services += @{ Name = "MT5 #${brokerId} (${brokerServer})"; Port = $bridgePort; Color = 'Yellow' }
+    # Carry the REAL per-port log paths (RedirectStandardOutput/Err above) so the
+    # "didn't start" message points at an actual file — the bridge writes to
+    # mt5-bridge-<port>.log, NOT a constructed '<Name>.log' under TEMP.
+    $services += @{ Name = "MT5 #${brokerId} (${brokerServer})"; Port = $bridgePort; Color = 'Yellow'; Log = "$env:TEMP\mt5-bridge-${bridgePort}.log"; ErrLog = "$env:TEMP\mt5-bridge-${bridgePort}-err.log" }
 }
-$services += @{ Name = 'NestJS API'; Port = 3201; Color = 'Cyan' }
+$services += @{ Name = 'NestJS API'; Port = 3201; Color = 'Cyan'; Log = "$env:TEMP\nest-api.log"; ErrLog = "$env:TEMP\nest-api-err.log" }
 if (-not $SkipFrontend) {
-    $services += @{ Name = 'Vite'; Port = 5173; Color = 'Green' }
+    $services += @{ Name = 'Vite'; Port = 5173; Color = 'Green'; Log = "$env:TEMP\vite.log"; ErrLog = "$env:TEMP\vite-err.log" }
 }
 
 $allUp = $false
 $down = @()
-for ($i = 1; $i -le 15; $i++) {
+# MT5 bridges bind their LISTEN socket only AFTER connecting to the terminal
+# (they call initialize() then start listening last — mt5_bridge_v2.py). On a
+# cold terminal start the first init can fail with an IPC timeout and retry,
+# which can exceed the old fixed 30s window and produce a false "didn't start".
+# So we wait up to 90s, but after the first 30s we ONLY keep waiting while the
+# remaining down services are MT5 bridges (grace). A non-bridge service that is
+# still down after 30s is treated as a real failure and reported immediately.
+$bridgeGraceStart = 15  # iterations (2s each) before bridge-only grace begins
+for ($i = 1; $i -le 45; $i++) {
     Start-Sleep -Seconds 2
     $up = @()
     $down = @()
@@ -152,6 +163,10 @@ for ($i = 1; $i -le 15; $i++) {
         if ($conn) { $up += $svc } else { $down += $svc }
     }
     if ($down.Count -eq 0) { $allUp = $true; break }
+    if ($i -ge $bridgeGraceStart) {
+        $bridgeDown = @($down | Where-Object { $_.Name -like 'MT5 *' }).Count
+        if ($bridgeDown -lt $down.Count) { break }  # non-bridge failure — stop waiting
+    }
     $status = ($up | ForEach-Object { "$($_.Name) ✓" }) -join '  '
     $waiting = ($down | ForEach-Object { "$($_.Name) …" }) -join '  '
     Write-Host "    [$i] $status  $waiting" -ForegroundColor DarkGray
@@ -171,7 +186,8 @@ if ($allUp) {
 } else {
     Write-Host "  Some services didn't start:" -ForegroundColor Red
     foreach ($svc in $down) {
-        Write-Host "    $($svc.Name) on port $($svc.Port) — check $env:TEMP\$($svc.Name -replace ' ','-').log" -ForegroundColor Red
+        $logHint = if ($svc.ErrLog) { "$($svc.ErrLog)  (stdout: $($svc.Log))" } else { $svc.Log }
+        Write-Host "    $($svc.Name) on port $($svc.Port) — check $logHint" -ForegroundColor Red
     }
     # Show NestJS error log inline if it failed
     if ($down | Where-Object { $_.Name -eq 'NestJS API' }) {
