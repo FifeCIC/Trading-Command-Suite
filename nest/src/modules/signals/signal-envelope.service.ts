@@ -12,6 +12,31 @@ import { ExecutionFeasibilityService, FeasibilityBlocker } from '../trading/exec
 /** Strategy ID used when persisting Signals Workbench scores. */
 const SIGNALS_WORKBENCH_STRATEGY_ID = 'signals-workbench';
 
+// ── #718 per-protocol entry gate ────────────────────────────────────────
+// The pre-trade gate is no longer a hardcoded 65 for every protocol. Order:
+//   1. per-protocol override in global_setting: `signals.gate.<protocolId>`
+//   2. the protocol's trading style (mirrors automation-loop STYLE_THRESHOLDS)
+//   3. the 65 default (the historical signals gate — intentionally NOT the
+//      loop's 60 default, to preserve existing Signals behaviour).
+const GATE_DEFAULT = 65;
+const STYLE_GATE: Record<string, number> = {
+  scalp: 75,
+  speed: 80,
+  'day-trade': 65,
+  swing: 55,
+  position: 45,
+};
+
+function styleGateFallback(tradingStyle?: string): number {
+  const s = (tradingStyle || '').toLowerCase();
+  if (s.includes('scalp') || s.includes('tick')) return STYLE_GATE.scalp;
+  if (s.includes('speed')) return STYLE_GATE.speed;
+  if (s.includes('day')) return STYLE_GATE['day-trade'];
+  if (s.includes('swing')) return STYLE_GATE.swing;
+  if (s.includes('position')) return STYLE_GATE.position;
+  return GATE_DEFAULT;
+}
+
 /**
  * SignalEnvelopeService
  * =====================
@@ -139,6 +164,9 @@ export interface ProtocolScoreStatus {
 @Injectable()
 export class SignalEnvelopeService {
   private readonly logger = new Logger(SignalEnvelopeService.name);
+
+  /** Per-protocol gate overrides, cached briefly (60s TTL). */
+  private gateOverrides: { loadedAt: number; map: Map<string, number> } | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -329,11 +357,11 @@ export class SignalEnvelopeService {
    * Enrich a GatedScore into a SignalEnvelope with confidence rails,
    * directive grouping, and conflict detection.
    */
-  private enrichEnvelope(
+  private async enrichEnvelope(
     symbol: string,
     gated: GatedScore,
     protocolId?: string,
-  ): SignalEnvelope {
+  ): Promise<SignalEnvelope> {
     // Build group panels from breakouts
     const groups = this.buildGroups(gated);
 
@@ -344,8 +372,13 @@ export class SignalEnvelopeService {
     // structurally 0 and must not manufacture divergences.
     const conflicts = this.detectConflicts(gated, protocolId);
 
-    // Pre-trade readiness
-    const { preTradeReady, preTradeBlockers } = this.evaluatePreTrade(gated, conflicts);
+    // Pre-trade readiness — #718 per-protocol gate: override key wins,
+    // then the protocol's trading style, then the 65 default.
+    const gateThreshold = await this.getGateThreshold(
+      protocolId,
+      protocolId ? this.protocolDb.getCached(protocolId)?.tradingStyle : undefined,
+    );
+    const { preTradeReady, preTradeBlockers } = this.evaluatePreTrade(gated, conflicts, gateThreshold);
 
     // #684 — combined strength: best of Signal and Opportunity.
     // Signal % is the classification basis (pre-gate directional).
@@ -571,7 +604,11 @@ export class SignalEnvelopeService {
   /**
    * Evaluate pre-trade readiness: are all gates clear?
    */
-  private evaluatePreTrade(gated: GatedScore, conflicts: SignalEnvelope['conflicts']): {
+  private evaluatePreTrade(
+    gated: GatedScore,
+    conflicts: SignalEnvelope['conflicts'],
+    gateThreshold = 65,
+  ): {
     preTradeReady: boolean;
     preTradeBlockers: string[];
   } {
@@ -586,10 +623,11 @@ export class SignalEnvelopeService {
     if (conflicts.some(c => c.severity === 'high')) {
       blockers.push('High-severity directive conflict');
     }
-    if (gated.composite < 65) {
+    if (gated.composite < gateThreshold) {
+      // #718: threshold is per-protocol (override > style > default 65).
       // #687: classification uses the pre-gate percentage, not this gated
       // composite — phrase it as caution, not as a contradiction of the badge.
-      blockers.push(`Gated composite below 65 (${gated.composite.toFixed(0)}) — trade with caution`);
+      blockers.push(`Gated composite below ${gateThreshold} (${gated.composite.toFixed(0)}) — trade with caution`);
     }
     if (gated.directionMode !== 'SHORT_ONLY' && gated.signal === 'SELL' && gated.composite > 50) {
       // Only "mixed" when a long-capable protocol emits SELL while scoring
@@ -605,6 +643,39 @@ export class SignalEnvelopeService {
 
   private getProtocolName(protocolId: string): string {
     return this.protocolDb.getCached(protocolId)?.name ?? protocolId;
+  }
+
+  /** Load `signals.gate.<protocolId>` overrides from global_setting (60s cache). */
+  private async loadGateOverrides(): Promise<Map<string, number>> {
+    const now = Date.now();
+    if (this.gateOverrides && now - this.gateOverrides.loadedAt < 60_000) {
+      return this.gateOverrides.map;
+    }
+    const map = new Map<string, number>();
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<Array<{ key: string; value: string }>>(
+        "SELECT `key`, value FROM global_setting WHERE `key` LIKE 'signals.gate.%'",
+      );
+      for (const r of rows) {
+        const protocolId = r.key.slice('signals.gate.'.length);
+        const v = parseInt(r.value, 10);
+        if (protocolId && Number.isFinite(v)) map.set(protocolId, v);
+      }
+    } catch {
+      /* DB unavailable — fall back to style/default */
+    }
+    this.gateOverrides = { loadedAt: now, map };
+    return map;
+  }
+
+  /** Resolve the pre-trade gate: per-protocol override → style → 65 default. */
+  private async getGateThreshold(protocolId?: string, tradingStyle?: string): Promise<number> {
+    if (protocolId) {
+      const overrides = await this.loadGateOverrides();
+      const override = overrides.get(protocolId);
+      if (override !== undefined) return override;
+    }
+    return styleGateFallback(tradingStyle);
   }
 
   private emptyEnvelope(symbol: string): SignalEnvelope {
