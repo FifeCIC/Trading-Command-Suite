@@ -831,6 +831,8 @@ export class SignalEnvelopeService {
     // routable, even when it lost the display slot for its symbol+direction.
     const scoredPairs = new Set<string>();
     const routingRecords: RoutableSignal[] = [];
+    // #600 — highest composite per protocol this run, persisted below.
+    const maxCompositeBySlug = new Map<string, number>();
 
     for (const slug of slugs) {
       // #627 readiness gate — the loop passes its assessed-ready set so
@@ -870,6 +872,9 @@ export class SignalEnvelopeService {
           const sym = ticker.toUpperCase();
           scoredPairs.add(`${slug}|${sym}`);
           protoScored++;
+          // #600 — track the peak composite for this protocol (any signal).
+          const prev = maxCompositeBySlug.get(slug) ?? 0;
+          if (env.composite > prev) maxCompositeBySlug.set(slug, env.composite);
           // Action-only (#684): skip HOLD and no-data envelopes for display.
           if (env.signal === 'HOLD') continue;
           if (env.composite === 50 && env.confidence === 0) continue;
@@ -912,6 +917,20 @@ export class SignalEnvelopeService {
             symbolsScored: 0,
             reason: `All ${tickers.length} symbols failed to score — missing bars or no data`,
           };
+    }
+
+    // #600 — persist per-protocol highest-ever composite (survives Score
+    // pruning). Atomic bump: only updates when the new peak exceeds the
+    // stored value (or none exists yet).
+    for (const [slug, peak] of maxCompositeBySlug) {
+      try {
+        await this.prisma.protocol.updateMany({
+          where: { slug, OR: [{ highestScore: null }, { highestScore: { lt: peak } }] },
+          data: { highestScore: peak },
+        });
+      } catch (err) {
+        this.logger.warn(`Highest-score persist failed for ${slug}: ${(err as Error).message}`);
+      }
     }
 
     const envelopes = [...byKey.values()];

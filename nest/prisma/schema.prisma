@@ -1881,6 +1881,7 @@ model Protocol {
   derivedFrom          String?  @db.VarChar(100)  // Parent protocol slug — links variants for A/B testing
   isDefault            Boolean  @default(false)
   seasonalAffinity     Json?                                      // monthly weights + date ranges
+  highestScore         Float?                                     // #600 — peak composite ever recorded (survives Score pruning)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
