@@ -313,6 +313,12 @@ const VIEW_META = {
     css: 'src/pages/performance-lab.css',
     api: [],
   },
+  '/trading/trading-settings': {
+    label: 'Trading Settings',
+    file: 'src/pages/TradingSettingsPage.jsx',
+    css: 'src/pages/trading-settings.css',
+    api: ['GET /api/signals/trade-defaults', 'PUT /api/signals/trade-defaults'],
+  },
 
   // ── Accounts (trading212) ──
   '/trading212/order-testing': {
@@ -654,6 +660,12 @@ const VIEW_META = {
     file: 'src/pages/PreferenceLab.jsx',
     css: 'src/pages/preference-lab.css',
     api: [],
+  },
+  '/settings/trading-settings': {
+    label: 'Trading Settings',
+    file: 'src/pages/TradingSettingsPage.jsx',
+    css: 'src/pages/trading-settings.css',
+    api: ['GET /api/signals/trade-defaults', 'PUT /api/signals/trade-defaults'],
   },
 
   // ── Dashboard ──

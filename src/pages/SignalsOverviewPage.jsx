@@ -30,6 +30,7 @@ import {
   fetchBestSignals,
   fetchSignalDismissals,
   fetchSignalAnalytics,
+  fetchTradeDefaults,
   dismissSignal,
   fetchSignalAction,
   tradeSignal,
@@ -62,7 +63,7 @@ function topDirectives(envelope) {
 }
 
 /** One opportunity card — the unit of the Signals ladder. */
-function OpportunityCard({ envelope, dismissHours, onDismissed }) {
+function OpportunityCard({ envelope, dismissHours, onDismissed, defaults }) {
   const [confirming, setConfirming] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -296,7 +297,7 @@ function OpportunityCard({ envelope, dismissHours, onDismissed }) {
           >
             {tradeMutation.isPending
               ? 'Sending…'
-              : `Confirm ${isBuy ? 'buy' : 'sell'} ${envelope.symbol} on MT5`}
+              : `Confirm ${isBuy ? 'buy' : 'sell'} ${envelope.symbol} on MT5 · ${defaults?.size ?? 0.01} lots · SL ${defaults?.slPct ?? 2}% · TP ${defaults?.tpPct ?? 4}%`}
           </button>
         ) : (
           <button
@@ -482,6 +483,13 @@ export default function SignalsOverviewPage() {
     enabled: showDismissed,
   });
 
+  // Manual-trade defaults (#720) — shown in each card's confirm state.
+  const tradeDefaultsQuery = useQuery({
+    queryKey: ['manual-trade-defaults'],
+    queryFn: fetchTradeDefaults,
+    staleTime: 60_000,
+  });
+
   // Feedback-loop observability (#693) — non-executive analytics.
   const analyticsQuery = useQuery({
     queryKey: ['signals-analytics'],
@@ -555,6 +563,7 @@ export default function SignalsOverviewPage() {
               envelope={env}
               dismissHours={dismissHours}
               onDismissed={refresh}
+              defaults={tradeDefaultsQuery.data}
             />
           ))}
         </AnimatePresence>

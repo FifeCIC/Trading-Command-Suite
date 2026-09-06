@@ -131,6 +131,7 @@ export const NAV_TREE = {
       { id: 'trade-journal', label: 'Trade Journal', icon: '▤' },
       { id: 'calculators', label: 'Calculators', icon: '⊞' },
       { id: 'accounts-dashboard', label: 'Accounts', icon: '💰' },
+      { id: 'trading-settings', label: 'Settings', icon: '⚙' },
     ],
   },
   automation: {
@@ -235,6 +236,7 @@ export const NAV_TREE = {
       { id: 'user-preferences', label: 'User Preferences', icon: '⚙' },
       { id: 'risk-controls', label: 'Risk Controls', icon: '◈' },
       { id: 'platform-switches', label: 'Platform Switches', icon: '⇢' },
+      { id: 'trading-settings', label: 'Trading', icon: '⚙' },
     ],
   },
   // ── Development — developer-only tooling, separated on the right ──

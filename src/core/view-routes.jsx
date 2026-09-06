@@ -127,6 +127,7 @@ import GlossaryPage from '../pages/GlossaryPage.jsx';
 import SettingsPage from '../pages/SettingsPage.jsx';
 import SettingsDatabasePage from '../pages/SettingsDatabasePage.jsx';
 import SettingsEducationPage from '../pages/SettingsEducationPage.jsx';
+import TradingSettingsPage from '../pages/TradingSettingsPage.jsx';
 import ServerControlsPage from '../pages/ServerControlsPage.jsx';
 import ReportsPage from '../pages/ReportsPage.jsx';
 import CapabilityMapPage from '../pages/CapabilityMapPage.jsx';
@@ -308,6 +309,7 @@ export const VIEW_COMPONENTS = {
   'settings': SettingsPage,
   'settings-database': SettingsDatabasePage,
   'settings-education': SettingsEducationPage,
+  'trading-settings': TradingSettingsPage,
   'glossary': GlossaryPage,
   'server-controls': ServerControlsPage,
   'reports': ReportsPage,

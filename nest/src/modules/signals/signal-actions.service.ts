@@ -3,6 +3,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
 import { ExecutionFeasibilityService } from '../trading/execution-feasibility.service';
+import { ManualTradeDefaultsService } from './manual-trade-defaults.service';
 import { ManualTradeDto } from './dto/manual-trade.dto';
 import { SignalPlanDto } from './dto/signal-plan.dto';
 
@@ -30,6 +31,7 @@ export class SignalActionsService {
     private readonly adapterFactory: AdapterFactory,
     private readonly feasibility: ExecutionFeasibilityService,
     private readonly tradeRecorder: TradeRecorderService,
+    private readonly tradeDefaults: ManualTradeDefaultsService,
   ) {}
 
   /** Load a signal (Score row) or throw. */
@@ -157,10 +159,12 @@ export class SignalActionsService {
       throw new BadRequestException(`Broker ${brokerId} does not support order placement`);
     }
 
-    // 5. Sizing + SL/TP (explicit in body; safe defaults otherwise)
-    const quantity = body.size ?? 0.01;
-    const slPct = body.slPct ?? 2;
-    const tpPct = body.tpPct ?? 4;
+    // 5. Sizing + SL/TP — explicit in body, else the persisted Settings defaults
+    //    (#720). Defaults are read at order time so Settings edits apply live.
+    const defaults = await this.tradeDefaults.getDefaults();
+    const quantity = body.size ?? defaults.size;
+    const slPct = body.slPct ?? defaults.slPct;
+    const tpPct = body.tpPct ?? defaults.tpPct;
 
     let entryPrice: number | null = null;
     try {

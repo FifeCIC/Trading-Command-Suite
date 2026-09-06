@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Param, Query, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Query, Logger } from '@nestjs/common';
 import { SignalsService } from './signals.service';
 import { SignalEnvelopeService } from './signal-envelope.service';
 import { SignalActionsService } from './signal-actions.service';
 import { SignalOutcomeService } from './signal-outcome.service';
+import { ManualTradeDefaultsService } from './manual-trade-defaults.service';
 import { SignalLadderDto } from './dto/signal-ladder.dto';
 import { ManualTradeDto } from './dto/manual-trade.dto';
 import { DismissSignalDto } from './dto/dismiss-signal.dto';
@@ -42,6 +43,7 @@ export class SignalsController {
     private readonly envelopeService: SignalEnvelopeService,
     private readonly signalActions: SignalActionsService,
     private readonly outcomeService: SignalOutcomeService,
+    private readonly tradeDefaults: ManualTradeDefaultsService,
   ) {}
 
   /**
@@ -190,6 +192,28 @@ export class SignalsController {
       entryKey: entryKey || undefined,
       days: days ? parseInt(days, 10) : undefined,
     });
+  }
+
+  /**
+   * GET /api/signals/trade-defaults (#720)
+   *
+   * Persisted manual-trade defaults (size lots / SL% / TP%) used when the
+   * card places an order without explicit parameters.
+   */
+  @Get('trade-defaults')
+  async getTradeDefaults() {
+    return this.tradeDefaults.getDefaults();
+  }
+
+  /**
+   * PUT /api/signals/trade-defaults (#720)
+   *
+   * Update one or more manual-trade defaults. Same values are exposed from
+   * Settings → Trading and Trading → Settings.
+   */
+  @Put('trade-defaults')
+  async setTradeDefaults(@Body() body: { size?: number; slPct?: number; tpPct?: number }) {
+    return this.tradeDefaults.setDefaults(body);
   }
 
   /**

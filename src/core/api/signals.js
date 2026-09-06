@@ -31,6 +31,11 @@ export function fetchSignalAnalytics() {
   return apiGet('/api/signals/analytics');
 }
 
+/** GET /api/signals/trade-defaults — persisted manual-trade defaults (#720). */
+export function fetchTradeDefaults() {
+  return apiGet('/api/signals/trade-defaults');
+}
+
 /** GET /api/signals/:id/action — bot-action state (none | pending | filled). */
 export function fetchSignalAction(signalId) {
   return apiGet(`/api/signals/${signalId}/action`);
