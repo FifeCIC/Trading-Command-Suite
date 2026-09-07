@@ -607,6 +607,7 @@ export class ProtocolGatingService {
       opportunityScore: Math.round(opportunityScore),
       opportunityMax,
       opportunityPct: Math.round(opportunityPct),
+      compositePct: Math.round(compositePct),
     });
 
     return {
@@ -827,6 +828,7 @@ export class ProtocolGatingService {
       opportunityScore: number;
       opportunityMax: number;
       opportunityPct: number;
+      compositePct: number;
     },
   ): void {
     (async () => {
@@ -842,6 +844,9 @@ export class ProtocolGatingService {
           composite,
           tradingSignal: signal,
           rarityPct,
+          // #726 — normalised percentages so the ceiling distribution is queryable.
+          signalPct: breakdownData.compositePct,
+          opportunityPct: breakdownData.opportunityPct,
         },
       }).catch((err: any) => {
         this.logger.warn(`Failed to store score snapshot: ${err.message}`);

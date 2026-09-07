@@ -1072,6 +1072,8 @@ model ScoreSnapshot {
   composite  Float
   tradingSignal String @map("trading_signal") @db.VarChar(10)
   rarityPct  Float?
+  signalPct  Float?   // #726 — pre-gate directional % (the "signal %" a user sees)
+  opportunityPct Float? // #726 — additive screening %
   snappedAt  DateTime @default(now())
 
   @@map("score_snapshot")
