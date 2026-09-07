@@ -9,6 +9,7 @@ import ToggleSwitch from '../components/ToggleSwitch';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import { formatTime } from '../core/format-utils';
 import { pnlColor } from '../core/signal-utils';
+import { isTradingStrategy, isScoringStrategy, isFaultyStrategy } from '../core/strategy-filters';
 import './automation-dashboard.css';
 
 export default function AutomationDashboardPage() {
@@ -440,8 +441,8 @@ export default function AutomationDashboardPage() {
             ) : (
               <div className="ad-strategy-list">
                 {strategies.map((s) => {
-                  const isTrading = Boolean(s.symbol);
-                  const isScoring = Boolean(s.watchlistName);
+                  const isTrading = isTradingStrategy(s);
+                  const isScoring = isScoringStrategy(s);
                   const typeLabel = isTrading ? 'Trading' : isScoring ? 'Scoring' : 'Strategy';
                   const typeColor = isTrading ? '#3b82f6' : isScoring ? '#8b5cf6' : '#94a3b8';
                   return (
@@ -457,7 +458,7 @@ export default function AutomationDashboardPage() {
                       <span>{s.protocolId}</span> · <span>{s.mode}</span>
                       {s.lastComposite != null && <span> · Score: {s.lastComposite}</span>}
                     </div>
-                    {s.dataStatus && s.dataStatus !== 'ready' && (
+                    {isFaultyStrategy(s) && (
                       <div className="ad-strategy-status" style={{
                         marginTop: '0.35rem', fontSize: '0.72rem',
                         color: s.dataStatus === 'pending_bars' ? '#f59e0b' : '#ef4444',

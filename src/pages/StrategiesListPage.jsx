@@ -17,6 +17,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import ToggleSwitch from '../components/ToggleSwitch';
 import { formatPnl } from '../core/format-utils';
+import { filterStrategies, isActiveStrategy, isTradingStrategy, isScoringStrategy, isFaultyStrategy } from '../core/strategy-filters';
 import './strategies-list.css';
 
 const API = '/api/trading/strategies';
@@ -46,7 +47,7 @@ export default function StrategiesListPage() {
   // Faulty strategies (pending_bars or blocked)
   const faultyStrategies = useMemo(() => {
     if (!strategies?.length) return [];
-    return strategies.filter(s => s.dataStatus && s.dataStatus !== 'ready');
+    return strategies.filter(isFaultyStrategy);
   }, [strategies]);
 
   // ── Portfolio cross-ref ──
@@ -66,14 +67,7 @@ export default function StrategiesListPage() {
   }, [positions]);
 
   // ── Filter ──
-  const filtered = useMemo(() => {
-    if (filter === 'all') return strategies;
-    if (filter === 'active') return strategies.filter(s => s.active !== false);
-    if (filter === 'trading') return strategies.filter(s => s.mode === 'trade' || s.symbol);
-    if (filter === 'scoring') return strategies.filter(s => s.mode === 'score' || s.watchlistName);
-    if (filter === 'faulty') return strategies.filter(s => s.dataStatus && s.dataStatus !== 'ready');
-    return strategies;
-  }, [strategies, filter]);
+  const filtered = useMemo(() => filterStrategies(strategies, filter), [strategies, filter]);
 
   const selected = useMemo(() => {
     if (!selectedId) return null;
@@ -129,9 +123,9 @@ export default function StrategiesListPage() {
 
       <div className="sl-grid">
         {filtered.map((s, i) => {
-          const isActive = s.active !== false;
-          const isTrading = Boolean(s.symbol);
-          const isScoring = Boolean(s.watchlistName);
+          const isActive = isActiveStrategy(s);
+          const isTrading = isTradingStrategy(s);
+          const isScoring = isScoringStrategy(s);
           const typeLabel = isTrading ? 'Trading' : isScoring ? 'Scoring' : 'Strategy';
           const typeColor = isTrading ? '#3b82f6' : isScoring ? '#8b5cf6' : '#94a3b8';
           const posCount = posBySymbol[s.symbol?.toUpperCase()] || 0;
@@ -174,7 +168,7 @@ export default function StrategiesListPage() {
                 </div>
               )}
 
-              {s.dataStatus && s.dataStatus !== 'ready' && (
+              {isFaultyStrategy(s) && (
                 <div className="sl-card-warning">
                   {s.dataStatus === 'pending_bars' ? '⏳' : '🚫'} {s.dataStatusReason || s.dataStatus}
                 </div>

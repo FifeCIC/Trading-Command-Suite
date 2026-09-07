@@ -21,6 +21,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import PageInfoPopover from '../components/PageInfoPopover';
 import { scoreClass } from '../core/signal-utils';
+import { isActiveStrategy, isTradingStrategy, isScoringStrategy, isFaultyStrategy } from '../core/strategy-filters';
 import './strategy-monitor.css';
 import './strategies-list.css';
 
@@ -136,9 +137,9 @@ export default function StrategyMonitorPage() {
 
   // ── Compute overview stats ──
   const overview = useMemo(() => {
-    const active = stratList.filter(s => s.active !== false);
-    const trading = active.filter(s => s.symbol);
-    const scoring = active.filter(s => s.watchlistName);
+    const active = stratList.filter(isActiveStrategy);
+    const trading = active.filter(isTradingStrategy);
+    const scoring = active.filter(isScoringStrategy);
     const withScore = active.filter(s => s.lastComposite != null);
     const avgScore = withScore.length > 0
       ? Math.round(withScore.reduce((sum, s) => sum + s.lastComposite, 0) / withScore.length)
@@ -152,7 +153,7 @@ export default function StrategyMonitorPage() {
 
   // ── Monitored set: active trading strategies only (this is a Monitor view) ──
   const monitoredStrats = useMemo(
-    () => stratList.filter(s => s.active !== false && Boolean(s.symbol)),
+    () => stratList.filter(s => isActiveStrategy(s) && isTradingStrategy(s)),
     [stratList],
   );
 
@@ -218,9 +219,9 @@ export default function StrategyMonitorPage() {
         ) : (
           <div className="sl-grid">
             {monitoredStrats.map((s, i) => {
-              const isActive = s.active !== false;
-              const isTrading = Boolean(s.symbol);
-              const isScoring = Boolean(s.watchlistName);
+              const isActive = isActiveStrategy(s);
+              const isTrading = isTradingStrategy(s);
+              const isScoring = isScoringStrategy(s);
               const typeLabel = isTrading ? 'Trading' : isScoring ? 'Scoring' : 'Strategy';
               const typeColor = isTrading ? '#3b82f6' : isScoring ? '#8b5cf6' : '#94a3b8';
 
@@ -292,7 +293,7 @@ export default function StrategyMonitorPage() {
                       </Link>
                     </div>
                   )}
-                  {s.dataStatus && s.dataStatus !== 'ready' && (
+                  {isFaultyStrategy(s) && (
                     <div className="sl-card-warning">
                       {s.dataStatus === 'pending_bars' ? '⏳' : '🚫'} {s.dataStatusReason || s.dataStatus}
                     </div>
