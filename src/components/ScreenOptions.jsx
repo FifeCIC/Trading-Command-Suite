@@ -9,7 +9,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '../core/api/client';
+import { apiGet, apiPost } from '../core/api/client';
 import { usePreferences } from '../core/hooks/usePreferences';
 import { VIEW_EXPLANATIONS } from '../core/view-explanations';
 import EmptyState from './EmptyState';
@@ -369,6 +369,17 @@ const OPTIONS_REGISTRY = {
       },
     ],
   },
+  't212-portfolio': {
+    title: 'Portfolio',
+    sections: [
+      {
+        id: 'accounts',
+        label: 'Accounts & Totals',
+        description: 'Choose which accounts (and Live/Demo categories) are included in the total.',
+        type: 'accounts',
+      },
+    ],
+  },
 };
 
 /**
@@ -429,6 +440,21 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
     queryFn: () => apiGet('/api/alerts/count').catch(() => ({ active: 0, critical: 0 })),
     refetchInterval: 30_000,
   });
+
+  // ── Portfolio account toggles (view-specific) ──
+  var hasAccountsSection = registry && registry.sections.some(function (s) { return s.type === 'accounts'; });
+  var accountsQuery = useQuery({
+    queryKey: ['so-portfolio-accounts'],
+    queryFn: () => apiGet('/api/portfolio/accounts').catch(() => null),
+    enabled: !!hasAccountsSection,
+    refetchInterval: 60_000,
+  });
+  var portfolioAccounts = accountsQuery.data || { categories: [], grandTotal: null };
+  var togglePortfolioAccount = useCallback(function (id, enabled) {
+    apiPost('/api/portfolio/accounts/' + id, { enabled: enabled }).catch(function () {});
+    accountsQuery.refetch();
+    try { window.dispatchEvent(new CustomEvent('tcs:accounts-changed')); } catch (e) {}
+  }, [accountsQuery]);
 
   var notifications = useMemo(() => {
     var items = [];
@@ -621,24 +647,9 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
         </div>
       </div>
 
-      {/* Overlay */}
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            <motion.div
-              className="so-backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={onToggle}
-            />
-            <motion.div
-              className="so-panel"
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            >
+      {/* Sidebar rail — hidable like Dev Tools (no backdrop, no overlay) */}
+      {isOpen && (
+        <aside className="so-rail" aria-label="Screen options">
               <div className="so-header">
                 <h2 className="so-title">
                   Screen Options
@@ -757,6 +768,41 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                               })}
                             </div>
                           )}
+                          {section.type === 'accounts' && (
+                            <div className="so-accounts">
+                              {(portfolioAccounts.categories || []).map(function (cat) {
+                                return (
+                                  <div key={cat.id} className="so-accounts-cat">
+                                    <label className="so-checkbox-option so-accounts-cat-head">
+                                      <input
+                                        type="checkbox"
+                                        checked={cat.enabled === true}
+                                        onChange={function (e) { togglePortfolioAccount('cat:' + cat.id, e.target.checked); }}
+                                      />
+                                      <span>{cat.label} — {cat.enabled ? ('£' + Number(cat.total || 0).toFixed(2)) : 'excluded'}</span>
+                                    </label>
+                                    {(cat.accounts || []).map(function (acc) {
+                                      return (
+                                        <label key={acc.id} className="so-checkbox-option so-accounts-item" title={acc.note || acc.label}>
+                                          <input
+                                            type="checkbox"
+                                            checked={acc.enabled === true}
+                                            disabled={!acc.connected}
+                                            onChange={function (e) { togglePortfolioAccount(acc.id, e.target.checked); }}
+                                          />
+                                          <span>
+                                            {acc.label}
+                                            {acc.value != null ? ' — £' + Number(acc.value).toFixed(2) : ''}
+                                            {!acc.connected ? ' (not connected)' : ''}
+                                          </span>
+                                        </label>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -771,10 +817,8 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                   Done
                 </button>
               </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+        </aside>
+      )}
 
       {/* ── Calculators Panel ── */}
       <AnimatePresence>

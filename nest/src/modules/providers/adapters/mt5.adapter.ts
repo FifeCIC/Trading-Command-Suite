@@ -20,6 +20,7 @@ import { PrismaService } from '../../../database/prisma.service';
 import {
   IProviderAdapter,
   BrokerAccount,
+  BrokerDeal,
   BrokerOrderRequest,
   BrokerOrderResult,
   BrokerPosition,
@@ -319,6 +320,13 @@ export class Mt5Adapter implements IProviderAdapter {
         unrealizedPnlPct: p.priceOpen > 0 ? ((p.priceCurrent - p.priceOpen) / p.priceOpen) * 100 : 0,
         currency,
         openedAt: p.openTime || new Date().toISOString(),
+        // Broker traceability (#616) — 64-bit MT5 ticket as a string
+        brokerTicket: p.ticket != null ? String(p.ticket) : undefined,
+        side: p.type === 'buy' ? 'buy' : 'sell',
+        sl: p.sl ?? null,
+        tp: p.tp ?? null,
+        magic: p.magic ?? null,
+        comment: p.comment ?? null,
       };
     });
   }
@@ -345,6 +353,25 @@ export class Mt5Adapter implements IProviderAdapter {
   async getPositionsRaw(): Promise<any[]> {
     const data = await this.bridgeGet<{ positions: any[]; count: number }>('/positions');
     return data?.positions ?? [];
+  }
+
+  /** Executed deals (fills) since a date — real exit price + realised PnL (#470). */
+  async getDeals(since: Date): Promise<BrokerDeal[]> {
+    const days = Math.max(1, Math.ceil((Date.now() - since.getTime()) / 86_400_000) + 1);
+    const data = await this.bridgeGet<{ deals: any[] }>(`/history?days=${days}`);
+    if (!data?.deals?.length) return [];
+    const sinceMs = since.getTime();
+    return data.deals
+      .map((d: any) => ({
+        brokerTicket: d.ticket != null ? String(d.ticket) : '',
+        symbol: d.symbol,
+        side: d.type === 'buy' ? 'buy' as const : 'sell' as const,
+        volume: Number(d.volume ?? 0),
+        price: Number(d.price ?? 0),
+        profit: Number(d.profit ?? 0),
+        time: new Date(d.time),
+      }))
+      .filter((d: BrokerDeal) => d.time.getTime() >= sinceMs);
   }
 
   async getAccount(): Promise<BrokerAccount | null> {

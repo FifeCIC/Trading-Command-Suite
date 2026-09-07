@@ -109,7 +109,8 @@ export class Mt5TradingService {
       this.recordOrder(params.symbol, params.type, params.volume, data.success ? 'filled' : 'rejected', data.ticket, data.price, data.error);
 
       if (data.success) {
-        // Record successful trade with MT5 traceability fields (#446)
+        // Record successful trade with MT5 traceability fields (#446, #616)
+        // The 64-bit ticket goes into brokerTicket (string); ticket Int is clamped.
         this.tradeRecorder.record({
           symbol: params.symbol,
           side,
@@ -119,9 +120,10 @@ export class Mt5TradingService {
           status: 'open',
           origin,
           strategy: params.comment || undefined,
-          ticket: data.ticket as number | undefined,
+          brokerTicket: data.ticket != null ? String(data.ticket) : undefined,
           sl: params.sl,
           tp: params.tp,
+          magic: 234000, // bridge hardcodes magic=234000 (see mt5_bridge_v2.py /order)
           brokerComment: params.comment,
         });
         // Record initial SL/TP as adjustment (#476)

@@ -238,6 +238,7 @@ function AppShell() {
 
   const toggleDevOverlay = useUiStore((state) => state.toggleDevOverlay);
   const devOverlayOpen = useUiStore((state) => state.devOverlayOpen);
+  const closeDevOverlay = useUiStore((state) => state.closeDevOverlay);
   const themeMode = useUiStore((state) => state.themeMode);
   const themePack = useUiStore((state) => state.themePack);
   const setThemeMode = useUiStore((state) => state.setThemeMode);
@@ -257,6 +258,11 @@ function AppShell() {
   // ── Status popout ──
   const [statusPopoutOpen, setStatusPopoutOpen] = useState(false);
 
+  // Screen Options and Dev Tools share the right rail — keep them exclusive.
+  useEffect(() => {
+    if (devOverlayOpen) setScreenOptionsOpen(false);
+  }, [devOverlayOpen]);
+
   // Update screen options view when user navigates
   useEffect(() => {
     const viewId = secondaryView;
@@ -270,6 +276,7 @@ function AppShell() {
       'symbols-browser': 'symbols-browser',
       'screener': 'screener',
       'signals-overview': 'signals-overview',
+      't212-portfolio': 't212-portfolio',
     };
     setScreenOptionsView(VIEW_TO_OPTIONS[viewId] || null);
   }, [primaryArea, secondaryView]);
@@ -663,7 +670,7 @@ function AppShell() {
     ? (isDbOnline && isMt5Online ? 'Online' : 'Degraded')
     : 'Offline';
   return (
-    <div className={`site-shell layout-omni background-${backgroundTone}${devOverlayOpen ? '' : ' right-rail-hidden'}${leftCollapsed ? ' left-rail-collapsed' : ''}`} {...withDevTag('app.shell', { product: 'tradingcs' })}>
+    <div className={`site-shell layout-omni background-${backgroundTone}${(devOverlayOpen || screenOptionsOpen) ? '' : ' right-rail-hidden'}${leftCollapsed ? ' left-rail-collapsed' : ''}`} {...withDevTag('app.shell', { product: 'tradingcs' })}>
       {!isOnline && (
         <div className="network-status-bar offline">
           📡 Offline — showing cached data (last sync: {lastOnlineAt?.toLocaleTimeString() || 'never'})
@@ -1060,7 +1067,12 @@ function AppShell() {
       <ScreenOptions
         activeView={screenOptionsView}
         isOpen={screenOptionsOpen}
-        onToggle={() => setScreenOptionsOpen((v) => !v)}
+        onToggle={() => {
+          setScreenOptionsOpen((v) => {
+            if (!v) closeDevOverlay();
+            return !v;
+          });
+        }}
         isBookmarked={bookmarks.some((b) => b.id === `${primaryArea}/${secondaryView}`)}
         onToggleBookmark={() => toggleBookmark(primaryArea, secondaryView)}
         statusLevel={statusLevel}

@@ -733,10 +733,17 @@ model Position {
   lastQuotedAt DateTime?
   openedAt    DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  // Broker traceability (#616) — the 64-bit broker ticket is a STRING.
+  // MT5 position tickets exceed the 32-bit Int range, so we store them here
+  // as text and never rely on the legacy Int column for MT5.
+  brokerTicket String?  @db.VarChar(100)
+  side         String?  @db.VarChar(10)  // buy | sell
+  magic        Int?
 
   @@index([symbol])
   @@index([symbolId])
   @@index([provider, accountId])
+  @@index([brokerTicket])
   @@unique([symbol, provider])
 }
 

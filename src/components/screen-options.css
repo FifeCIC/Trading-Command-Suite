@@ -92,7 +92,7 @@
 }
 .so-info-pop-close:hover { background: rgba(255,255,255,0.08); color: var(--ink, #e2e8f0); }
 
-/* Backdrop */
+/* Backdrop (used by Calculators/Glossary panels — Screen Options panel is backdrop-less) */
 .so-backdrop {
   position: fixed;
   inset: 0;
@@ -101,7 +101,22 @@
   backdrop-filter: blur(2px);
 }
 
-/* Panel */
+/* Sidebar rail — hidable right column like Dev Tools */
+.so-rail {
+  grid-area: right;
+  position: sticky;
+  top: 1rem;
+  align-self: start;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel, #111827);
+  border: 1px solid var(--border, #374151);
+  border-radius: 10px;
+}
+
+/* Panel (used by Calculators/Glossary overlays) */
 .so-panel {
   position: fixed;
   top: 0;
@@ -240,6 +255,32 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2px 12px;
+}
+
+/* Portfolio account toggles (view-specific) */
+.so-accounts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.so-accounts-cat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid var(--border, #374151);
+  border-radius: 8px;
+  background: var(--bg, #111827);
+}
+.so-accounts-cat-head {
+  font-weight: 700;
+}
+.so-accounts-cat-head span {
+  font-weight: 700;
+  color: var(--accent, #22d3ee);
+}
+.so-accounts-item {
+  padding-left: 18px;
 }
 
 /* Footer */

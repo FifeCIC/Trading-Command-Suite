@@ -161,6 +161,12 @@ export interface IProviderAdapter {
    * Place a market order on this broker.
    */
   placeOrder?(params: BrokerOrderRequest): Promise<BrokerOrderResult>;
+
+  /**
+   * Fetch executed deals (fills) since a date — used to reconcile closed
+   * positions with their real exit price and realised PnL (#470).
+   */
+  getDeals?(since: Date): Promise<BrokerDeal[]>;
 }
 
 // ─── Broker Portfolio & Execution Types ─────────────────────
@@ -179,6 +185,25 @@ export interface BrokerPosition {
   unrealizedPnlPct: number;
   currency: string;
   openedAt: string;
+  /** Broker-specific position/order ID (MT5 ticket, T212 orderId). Always a string — 64-bit safe. */
+  brokerTicket?: string;
+  /** Position direction — required to create Trade rows for broker-managed positions. */
+  side?: 'buy' | 'sell';
+  sl?: number | null;
+  tp?: number | null;
+  magic?: number | null;
+  comment?: string | null;
+}
+
+/** A single executed fill/deal from broker history. */
+export interface BrokerDeal {
+  brokerTicket: string;
+  symbol: string;
+  side: 'buy' | 'sell';
+  volume: number;
+  price: number;
+  profit: number;
+  time: Date;
 }
 
 /** Normalized account summary across all brokers. */

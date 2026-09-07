@@ -20,6 +20,9 @@ export type NotificationEvent =
   | 'backtest-complete'
   | 'provider-degraded'
   | 'dxy-regime-change'
+  | 'position-opened'
+  | 'position-closed'
+  | 'stop-adjusted'
   | 'test';
 
 export interface NotificationMessage {
@@ -55,6 +58,9 @@ const DEFAULT_PREFERENCES: NotificationPreference[] = [
   { event: 'backtest-complete', channels: ['telegram'], enabled: true },
   { event: 'provider-degraded', channels: ['windows', 'telegram', 'discord'], enabled: true },
   { event: 'dxy-regime-change', channels: ['windows', 'telegram', 'discord'], enabled: true },
+  { event: 'position-opened', channels: ['windows', 'telegram', 'discord'], enabled: true },
+  { event: 'position-closed', channels: ['windows', 'telegram', 'discord'], enabled: true },
+  { event: 'stop-adjusted', channels: ['windows', 'telegram'], enabled: true },
   { event: 'test', channels: ['windows', 'telegram', 'discord', 'email'], enabled: true },
 ];
 

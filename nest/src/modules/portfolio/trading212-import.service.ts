@@ -206,6 +206,7 @@ export class Trading212ImportService {
                   avgPrice: pos.averagePrice,
                   currentPrice: pos.currentPrice,
                   pnl: pos.ppl ?? null,
+                  accountId: `trading212-${this.t212Adapter.mode || 'demo'}`,
                 },
               });
             } else {
@@ -217,7 +218,7 @@ export class Trading212ImportService {
                   currentPrice: pos.currentPrice,
                   pnl: pos.ppl ?? null,
                   provider: 'trading212',
-                  accountId: 'trading212',
+                  accountId: `trading212-${this.t212Adapter.mode || 'demo'}`, // live vs demo separation (#TBD)
                 },
               });
             }

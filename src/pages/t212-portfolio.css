@@ -59,33 +59,134 @@
 }
 .t212p-hint { font-size: 0.78rem; color: var(--ink-soft, #64748b); }
 
-/* ── Account Toggle ── */
-.t212p-toggle-bar {
+/* ── Grand total ── */
+.t212p-grand-total {
   display: flex;
-  gap: 0;
-  margin-bottom: 1.25rem;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.5rem;
   border: 1px solid var(--line, #334155);
   border-radius: 8px;
-  overflow: hidden;
-  width: fit-content;
-}
-.t212p-toggle-btn {
-  padding: 0.4rem 1rem;
-  border: none;
   background: var(--panel, #1e293b);
-  color: var(--ink-soft, #94a3b8);
-  font-size: 0.82rem;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.15s;
-  border-right: 1px solid var(--line, #334155);
 }
-.t212p-toggle-btn:last-child { border-right: none; }
-.t212p-toggle-btn:hover { background: color-mix(in srgb, var(--panel) 88%, var(--accent) 12%); color: var(--ink); }
-.t212p-toggle-btn.active {
-  background: var(--accent, #0ea5a6);
-  color: #fff;
+.t212p-grand-label {
+  font-size: 0.65rem;
+  color: var(--ink-soft, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.t212p-grand-value {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--ink, #e2e8f0);
+}
+
+/* ── Category + account toggles ── */
+.t212p-category {
+  margin-bottom: 0.6rem;
+  border: 1px solid var(--line, #334155);
+  border-radius: 8px;
+  background: var(--panel, #1e293b);
+  overflow: hidden;
+}
+.t212p-category-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--line, #334155);
+}
+.t212p-category-head h2 {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent, #22d3ee);
+}
+.t212p-cat-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.62rem;
+  color: var(--ink-soft, #94a3b8);
+  cursor: pointer;
+  user-select: none;
+}
+.t212p-cat-toggle input[type="checkbox"] {
+  accent-color: var(--accent, #0ea5a6);
+  cursor: pointer;
+  width: 13px;
+  height: 13px;
+  min-width: 0;
+  min-height: 0;
+}
+.t212p-cat-toggle input[type="checkbox"] + span {
+  min-height: 0;
+  display: inline;
+}
+.t212p-cat-total {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ink, #e2e8f0);
+}
+.t212p-account-list {
+  display: flex;
+  flex-direction: column;
+}
+.t212p-account-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  user-select: none;
+}
+.t212p-account-row:last-child { border-bottom: none; }
+.t212p-account-row:hover { background: color-mix(in srgb, var(--panel) 88%, var(--accent) 12%); }
+.t212p-account-row input[type="checkbox"] {
+  accent-color: var(--accent, #0ea5a6);
+  cursor: pointer;
+  width: 13px;
+  height: 13px;
+  min-width: 0;
+  min-height: 0;
+}
+.t212p-account-row input[type="checkbox"] + .t212p-account-name {
+  min-height: 0;
+  display: inline;
+}
+.t212p-account-row.disconnected { opacity: 0.55; cursor: not-allowed; }
+.t212p-account-name { font-size: 0.72rem; font-weight: 600; color: var(--ink, #e2e8f0); }
+.t212p-account-state {
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.02rem 0.3rem;
+  border-radius: 5px;
+}
+.t212p-account-row.on .t212p-account-state {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+}
+.t212p-account-row.off .t212p-account-state {
+  color: var(--ink-soft, #94a3b8);
+  background: rgba(100, 116, 139, 0.15);
+}
+.t212p-account-positions {
+  font-size: 0.62rem;
+  color: var(--ink-soft, #94a3b8);
+}
+.t212p-account-value {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ink, #e2e8f0);
+  font-variant-numeric: tabular-nums;
 }
 
 .t212p-sync-result {
@@ -125,6 +226,7 @@
   border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 .t212p-symbol { font-weight: 600; font-family: monospace; font-size: 0.85rem; }
+.t212p-account-cell { font-size: 0.7rem; color: var(--ink-soft, #64748b); }
 .t212p-profit { color: #22c55e; }
 .t212p-loss   { color: #ef4444; }
 .t212p-empty {

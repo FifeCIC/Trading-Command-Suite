@@ -11,6 +11,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { TradingStrategyService } from '../trading/trading-strategy.service';
 import { DirectivesService } from '../directives/directives.service';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
+import { NotificationService } from '../notifications/notifications.service';
 
 interface Mt5RawPosition {
   ticket: number;
@@ -80,6 +81,7 @@ export class StopGuardianService {
     private readonly strategyService: TradingStrategyService,
     private readonly directivesService: DirectivesService,
     private readonly mt5Connection: Mt5ConnectionManager,
+    private readonly notifications?: NotificationService,
   ) {
     this.bridgeUrl = this.mt5Connection.getUrl();
   }
@@ -277,6 +279,15 @@ export class StopGuardianService {
             this.logger.log(
               `Stop: ${strat.symbol} #${pos.ticket} SL ${pos.sl} → ${recommendedSl} (${avgConfidence.toFixed(0)}%)`,
             );
+            // Surface the adjustment — evidence the bot is actively managing
+            // stops while the app is running (#721).
+            this.notifications?.send({
+              title: `🛡️ Stop adjusted — ${strat.symbol}`,
+              body: `${side} #${pos.ticket} SL ${pos.sl} → ${recommendedSl!.toFixed(5)} (consensus ${avgConfidence.toFixed(0)}%)`,
+              symbol: strat.symbol,
+              event: 'stop-adjusted',
+              metadata: { ticket: pos.ticket, oldSl: pos.sl, newSl: recommendedSl, side },
+            }).catch(() => {});
           }
         }
 

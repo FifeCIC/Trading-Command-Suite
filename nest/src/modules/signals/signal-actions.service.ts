@@ -199,6 +199,9 @@ export class SignalActionsService {
 
     // 7. Record as a manual trade (origin=manual, source=signals)
     try {
+      // MT5 tickets are 64-bit — persist via brokerTicket (string), never the
+      // legacy Int `ticket` column (#616).
+      const brokerTicket = result.ticket != null ? String(result.ticket) : undefined;
       await this.tradeRecorder.record({
         symbol: ticker,
         side: body.side.toLowerCase(),
@@ -210,10 +213,11 @@ export class SignalActionsService {
         origin: 'manual',
         source: 'signals',
         scoringStrategyId: protocol ?? null,
-        ticket: typeof result.ticket === 'number' ? result.ticket : undefined,
+        brokerTicket,
+        magic: 234000, // bridge hardcodes magic=234000 (see mt5_bridge_v2.py /order)
         sl: sl ?? null,
         tp: tp ?? null,
-        brokerComment: typeof result.ticket === 'string' ? `${comment} (${result.ticket})` : comment,
+        brokerComment: comment,
       } as any);
     } catch (err) {
       this.logger.warn(`Manual trade executed but recording failed: ${(err as Error).message}`);

@@ -59,6 +59,7 @@ import { PositionSyncService } from '../providers/position-sync.service';
 import { WeekendDefenseService } from '../trading/weekend-defense.service';
 import { SymbolResolverService } from '../symbols/symbol-resolver.service';
 import { SignalEnvelopeService } from '../signals/signal-envelope.service';
+import { StopGuardianService } from './stop-guardian.service';
 
 /**
  * Layer 2 of the 3-layer threshold architecture.
@@ -446,6 +447,7 @@ export class AutomationLoopService implements OnModuleInit {
     private readonly jobQueue: JobQueueService,
     private readonly abTestService: AbTestService,
     private readonly signalEnvelope: SignalEnvelopeService,
+    private readonly stopGuardian: StopGuardianService,
   ) {
     this.initBrokerStates();
   }
@@ -686,6 +688,9 @@ export class AutomationLoopService implements OnModuleInit {
     this.timer = setInterval(() => this.tick(), this.state.tickIntervalMs);
     this.state.nextTickAt = new Date(Date.now() + this.state.tickIntervalMs).toISOString();
     this.logger.log(`Automation loop started — interval ${this.state.tickIntervalMs}ms`);
+    // Start the trailing-stop guardian alongside the loop (#721). It no-ops
+    // unless there are active auto-mode strategies with open positions.
+    this.stopGuardian.start();
     // Fire an immediate tick so we don't wait 5 min after restart
     this.tick().catch(err => this.logger.error(`Initial tick failed: ${(err as Error).message}`));
     return { started: true, message: `Loop started — ${this.state.tickIntervalMs}ms interval` };
@@ -699,6 +704,7 @@ export class AutomationLoopService implements OnModuleInit {
     this.timer = null;
     this.state.loopEnabled = false;
     this.state.nextTickAt = null;
+    this.stopGuardian.stop();
     this.logger.log('Automation loop stopped');
     return { stopped: true, message: 'Loop stopped' };
   }
@@ -873,7 +879,8 @@ export class AutomationLoopService implements OnModuleInit {
           // Sync positions → DB (two-way data flow #470, broker-agnostic)
           const normalised = positions.map((p: any) => ({
             symbol: p.symbol,
-            brokerTicket: String(p.ticket ?? p.id ?? ''),
+            brokerTicket: String(p.brokerTicket ?? p.ticket ?? p.id ?? ''),
+            side: p.side ?? null,
             quantity: p.quantity,
             avgPrice: p.avgCost ?? p.entryPrice ?? 0,
             currentPrice: p.currentPrice ?? p.avgCost ?? 0,

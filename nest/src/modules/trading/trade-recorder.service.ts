@@ -39,6 +39,8 @@ export interface TradeRecord {
   openedAt?: Date;
   /** MT5 broker fields for traceability */
   ticket?: number;
+  /** 64-bit-safe broker position/order ID — the PRIMARY link to the broker (#616). */
+  brokerTicket?: string;
   sl?: number;
   tp?: number;
   magic?: number;
@@ -58,6 +60,12 @@ export class TradeRecorderService {
   /** Record a new trade or order attempt */
   async record(trade: TradeRecord): Promise<string | null> {
     try {
+      // Clamp the legacy Int ticket to 32-bit range — MT5's 64-bit tickets
+      // MUST go through brokerTicket (string) instead (#616).
+      const safeTicket = trade.ticket != null && trade.ticket >= 0 && trade.ticket <= 2147483647
+        ? Math.round(trade.ticket)
+        : null;
+
       const created = await this.prisma.trade.create({
         data: {
           symbol: trade.symbol,
@@ -75,8 +83,9 @@ export class TradeRecorderService {
           abTestId: trade.abTestId ?? null,
           openedAt: trade.openedAt || new Date(),
           closedAt: trade.status === 'closed' ? new Date() : null,
-          // MT5 traceability (#446)
-          ticket: trade.ticket ?? null,
+          // MT5 traceability (#446, #616)
+          ticket: safeTicket,
+          brokerTicket: trade.brokerTicket ?? null,
           sl: trade.sl ?? null,
           tp: trade.tp ?? null,
           magic: trade.magic ?? null,
