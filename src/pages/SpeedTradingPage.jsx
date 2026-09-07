@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { TIMEFRAME_MS, useLockout, useTickHistory, useSpeedScanner, useTickRecording, useActionLog } from '../core/hooks/useSpeedCockpit';
 import { XTREND_SPEED_SYMBOLS, getSymbolCategory, SYMBOL_CATEGORIES } from '../data/xtrend-symbols';
 import { getProtocolsForSymbol } from '../data/speed-protocols';
 import SpeedChart from '../components/SpeedChart';
@@ -41,14 +42,13 @@ export default function SpeedTradingPage() {
   const [timeframe, setTf] = useState('1s');
   const [sizePreset, setSizePreset] = useState(2); // index into SIZE_PRESETS
   const [paused, setPaused] = useState(false);
-  const [locked, setLocked] = useState(false);
-  const [lockCountdown, setLockCountdown] = useState(0);
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [flashKey, setFlashKey] = useState(null);
   const [lastAction, setLastAction] = useState(null);
-  const [actionLog, setActionLog] = useState([]);
-  const lockTimer = useRef(null);
   const pageRef = useRef(null);
+
+  const { actionLog, addLog } = useActionLog(30);
+  const { locked, lockCountdown, lock } = useLockout(() => addLog('🔓 Lockout expired — trading re-enabled'));
 
   // ── Speed-trading symbols from DB (tagged with "speed-trading") ──
   const speedSymbolsQuery = useQuery({
@@ -63,68 +63,20 @@ export default function SpeedTradingPage() {
   const speedTradingSymbols = speedSymbolsQuery.data ?? [];
 
   // ── Tick Recorder state ────────────────────────────
-  const [isRecording, setIsRecording] = useState(false);
-  const [recBarCount, setRecBarCount] = useState(0);
-  const recordingRef = useRef(false);
-
-  // Poll active recordings to sync UI state
-  const activeRecQuery = useQuery({
-    queryKey: ['speed-recording-active'],
-    queryFn: () => apiGet('/api/speed/record/active').catch(() => ({ recordings: [] })),
-    refetchInterval: 3000,
-    staleTime: 2000,
-  });
-  const activeRecordings = activeRecQuery.data?.recordings ?? [];
-
-  // Sync isRecording with actual backend state
-  useEffect(() => {
-    const active = activeRecordings.find((r) => r.ticker === symbol.toUpperCase());
-    if (active) {
-      setIsRecording(true);
-      setRecBarCount(active.barCount);
-      recordingRef.current = true;
-    } else {
-      setIsRecording(false);
-      setRecBarCount(0);
-      recordingRef.current = false;
-    }
-  }, [activeRecordings, symbol]);
-
-  const toggleRecording = async () => {
-    const endpoint = isRecording ? '/api/speed/record/stop' : '/api/speed/record/start';
-    try {
-      await fetch(`http://localhost:3201${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol }),
-      });
-      activeRecQuery.refetch();
-    } catch { /* silent */ }
-  };
+  const { isRecording, recBarCount, toggleRecording } = useTickRecording({ queryKey: ['speed-recording-active'], symbol, refetchInterval: 3000 });
 
   // ── Live quote polling ─────────────────────────────
-  const tfToMs = { '1s': 1000, '5s': 5000, '15s': 15000, '1m': 60000, '5m': 300000 };
   const quoteQuery = useQuery({
     queryKey: ['speed-quote', symbol],
     queryFn: () => apiGet(`/api/speed/quote/${symbol}`).catch(() => null),
-    refetchInterval: tfToMs[timeframe] ?? 1000,
+    refetchInterval: TIMEFRAME_MS[timeframe] ?? 1000,
     staleTime: 500,
     enabled: !!symbol,
   });
   const quote = quoteQuery.data;
 
-  // ── Tick history (last 20 mid prices for sparkline) ──
-  const [tickHistory, setTickHistory] = useState([]);
-  const prevMid = useRef(null);
-  useEffect(() => {
-    if (quote?.mid != null) {
-      setTickHistory((prev) => {
-        const next = [...prev, { mid: quote.mid, t: Date.now() }];
-        return next.slice(-30);
-      });
-      prevMid.current = quote.mid;
-    }
-  }, [quote?.mid]);
+  // ── Tick history (last 30 mid prices for sparkline) ──
+  const { tickHistory, prevMid } = useTickHistory(quote);
 
   // Persist selected symbol across page refreshes
   useEffect(() => {
@@ -132,17 +84,14 @@ export default function SpeedTradingPage() {
   }, [symbol]);
 
   // ── Best Opportunities Scanner ──
-  const [scanData, setScanData] = useState(null);
-  const [scanLoading, setScanLoading] = useState(false);
-  const [scanError, setScanError] = useState(null);
   const [scanExpanded, setScanExpanded] = useState(true);
+  const { scanData, scanError, scanLoading } = useSpeedScanner({ paused, locked, timeframe });
   const [chartMode, setChartMode] = useState('candles');
   const [chartSettingsOpen, setChartSettingsOpen] = useState(false);
   const [chartSettings, setChartSettings] = useState({
     showVolume: true, showEMA9: true, showEMA21: true, showEMA50: false,
     gridStyle: 1, upColor: '#22c55e', downColor: '#ef4444',
   });
-  const scanTimer = useRef(null);
 
   // ── Auto-Pilot / Auto-Switch ──
   const [autoPilot, setAutoPilot] = useState(false);
@@ -179,10 +128,6 @@ export default function SpeedTradingPage() {
 
   const currentSize = SIZE_PRESETS[sizePreset];
   const tfIndex = TIMEFRAMES.indexOf(timeframe);
-
-  const addLog = useCallback((msg) => {
-    setActionLog((prev) => [{ id: Date.now(), msg, time: new Date().toLocaleTimeString() }, ...prev].slice(0, 30));
-  }, []);
 
   // ── Filtered symbols: from DB tag "speed-trading" ──
   const filteredSymbols = useMemo(() => {
@@ -268,8 +213,7 @@ export default function SpeedTradingPage() {
           break;
         case key === 'Escape':
           e.preventDefault();
-          setLocked(true);
-          setLockCountdown(30);
+          lock();
           action = '🔒 EMERGENCY LOCKOUT — 30s';
           break;
         case key === 'F1':
@@ -308,44 +252,6 @@ export default function SpeedTradingPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
-
-  // Lockout countdown
-  useEffect(() => {
-    if (locked && lockCountdown > 0) {
-      lockTimer.current = setTimeout(() => setLockCountdown((c) => c - 1), 1000);
-      return () => clearTimeout(lockTimer.current);
-    }
-    if (locked && lockCountdown === 0) {
-      setLocked(false);
-      addLog('🔓 Lockout expired — trading re-enabled');
-    }
-  }, [locked, lockCountdown, addLog]);
-
-  // ── Best Opportunities Scanner (polls every 5s) ──
-  useEffect(() => {
-    const doScan = async () => {
-      if (paused || locked) return;
-      try {
-        const res = await fetch('http://localhost:3201/api/speed/scan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ timeframe: timeframe }),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        setScanData(data);
-        setScanError(null);
-      } catch (e) {
-        setScanError(e.message);
-      }
-      setScanLoading(false);
-    };
-
-    setScanLoading(true);
-    doScan();
-    scanTimer.current = setInterval(doScan, 5000);
-    return () => clearInterval(scanTimer.current);
-  }, [paused, locked]);
 
   // ── Auto-Pilot: watch scan data and auto-switch symbol ──
   useEffect(() => {

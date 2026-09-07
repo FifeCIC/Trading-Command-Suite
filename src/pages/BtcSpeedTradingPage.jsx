@@ -7,10 +7,11 @@
  * URL: /trading/btc-speed
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { TIMEFRAME_MS, useLockout, useTickHistory, useSpeedScanner, useTickRecording, useActionLog } from '../core/hooks/useSpeedCockpit';
 import SpeedChart from '../components/SpeedChart';
 import SpeedDecisionPanel from '../components/SpeedDecisionPanel';
 import EmptyState from '../components/EmptyState';
@@ -24,111 +25,37 @@ export default function BtcSpeedTradingPage() {
   const [sizePreset, setSizePreset] = useState(0);
   const [timeframe, setTf] = useState('5s');
   const [paused, setPaused] = useState(false);
-  const [locked, setLocked] = useState(false);
-  const [lockCountdown, setLockCountdown] = useState(0);
   const [flashKey, setFlashKey] = useState(null);
   const [lastAction, setLastAction] = useState(null);
-  const [actionLog, setActionLog] = useState([]);
   const [chartMode, setChartMode] = useState('candles');
   const [chartSettings, setChartSettings] = useState({
     showVolume: true, showEMA9: true, showEMA21: true, showEMA50: false,
     gridStyle: 1, upColor: '#22c55e', downColor: '#ef4444',
   });
-  const [isRecording, setIsRecording] = useState(false);
-  const [recBarCount, setRecBarCount] = useState(0);
+  const [scanExpanded, setScanExpanded] = useState(true);
 
-  const lockTimer = useRef(null);
   const pageRef = useRef(null);
-  const prevMid = useRef(null);
-  const recordingRef = useRef(false);
+
+  const { actionLog, addLog } = useActionLog(20);
+  const { locked, lockCountdown, lock } = useLockout(() => addLog('🔓 Lockout expired'));
 
   // ── Live quote ──────────────────────────────────────
-  const tfToMs = { '1s': 1000, '5s': 5000, '15s': 15000, '1m': 60000, '5m': 300000 };
   const quoteQuery = useQuery({
     queryKey: ['btc-speed-quote'],
     queryFn: () => apiGet(`/api/speed/quote/${SYMBOL}`).catch(() => null),
-    refetchInterval: tfToMs[timeframe] ?? 1000,
+    refetchInterval: TIMEFRAME_MS[timeframe] ?? 1000,
     staleTime: 500,
   });
   const quote = quoteQuery.data;
 
   // ── Tick history ────────────────────────────────────
-  const [tickHistory, setTickHistory] = useState([]);
-  useEffect(() => {
-    if (quote?.mid != null) {
-      setTickHistory((prev) => {
-        const next = [...prev, { mid: quote.mid, t: Date.now() }];
-        return next.slice(-30);
-      });
-      prevMid.current = quote.mid;
-    }
-  }, [quote?.mid]);
+  const { tickHistory, prevMid } = useTickHistory(quote);
 
   // ── Best Opportunities Scanner ──────────────────────
-  const [scanData, setScanData] = useState(null);
-  const [scanError, setScanError] = useState(null);
-  const [scanExpanded, setScanExpanded] = useState(true);
-
-  useEffect(() => {
-    const doScan = async () => {
-      if (paused || locked) return;
-      try {
-        const res = await fetch('http://localhost:3201/api/speed/scan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ timeframe, symbols: ['BTCUSD'] }),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        setScanData(await res.json());
-        setScanError(null);
-      } catch (e) {
-        setScanError(e.message);
-      }
-    };
-    doScan();
-    const interval = setInterval(doScan, 5000);
-    return () => clearInterval(interval);
-  }, [paused, locked, timeframe]);
+  const { scanData, scanError } = useSpeedScanner({ paused, locked, timeframe, symbols: ['BTCUSD'] });
 
   // ── Tick Recording ──────────────────────────────────
-  const activeRecQuery = useQuery({
-    queryKey: ['btc-rec-active'],
-    queryFn: () => apiGet('/api/speed/record/active').catch(() => []),
-    refetchInterval: 5000,
-  });
-  const activeRecordings = activeRecQuery.data ?? [];
-
-  useEffect(() => {
-    const active = (Array.isArray(activeRecordings) ? activeRecordings : []).find(
-      r => r.symbol === SYMBOL || r.ticker === SYMBOL
-    );
-    if (active) {
-      setIsRecording(true);
-      setRecBarCount(active.barCount ?? 0);
-      recordingRef.current = true;
-    } else {
-      setIsRecording(false);
-      setRecBarCount(0);
-      recordingRef.current = false;
-    }
-  }, [activeRecordings]);
-
-  const toggleRecording = async () => {
-    const endpoint = isRecording ? '/api/speed/record/stop' : '/api/speed/record/start';
-    try {
-      await fetch(`http://localhost:3201${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol: SYMBOL }),
-      });
-      activeRecQuery.refetch();
-    } catch { /* silent */ }
-  };
-
-  // ── Logging ─────────────────────────────────────────
-  const addLog = useCallback((msg) => {
-    setActionLog((prev) => [{ id: Date.now(), msg, time: new Date().toLocaleTimeString() }, ...prev].slice(0, 20));
-  }, []);
+  const { isRecording, recBarCount, toggleRecording } = useTickRecording({ queryKey: ['btc-rec-active'], symbol: SYMBOL });
 
   const currentSize = SIZE_PRESETS[sizePreset];
 
@@ -151,7 +78,7 @@ export default function BtcSpeedTradingPage() {
       case key === '2': e.preventDefault(); setSizePreset(1); break;
       case key === '3': e.preventDefault(); setSizePreset(2); break;
       case key === ' ': e.preventDefault(); setPaused(p => !p); action = paused ? 'RESUMED' : 'PAUSED'; break;
-      case key === 'Escape': e.preventDefault(); setLocked(true); setLockCountdown(30); action = '🔒 LOCKED 30s'; break;
+      case key === 'Escape': e.preventDefault(); lock(); action = '🔒 LOCKED 30s'; break;
       case key === '`': e.preventDefault(); setTf(t => { const i = TIMEFRAMES.indexOf(t); return TIMEFRAMES[(i + 1) % TIMEFRAMES.length]; }); break;
       default: break;
     }
@@ -168,18 +95,6 @@ export default function BtcSpeedTradingPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
-
-  // Lockout countdown
-  useEffect(() => {
-    if (locked && lockCountdown > 0) {
-      lockTimer.current = setTimeout(() => setLockCountdown(c => c - 1), 1000);
-      return () => clearTimeout(lockTimer.current);
-    }
-    if (locked && lockCountdown === 0) {
-      setLocked(false);
-      addLog('🔓 Lockout expired');
-    }
-  }, [locked, lockCountdown, addLog]);
 
   return (
     <div className="btc-page" ref={pageRef}>
