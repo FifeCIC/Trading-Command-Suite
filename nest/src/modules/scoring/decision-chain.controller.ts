@@ -1,9 +1,19 @@
-import { Controller, Get, Post, Query } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query } from '@nestjs/common';
 import { DecisionChainService } from './decision-chain.service';
 
 @Controller('scoring/decision-chain')
 export class DecisionChainController {
   constructor(private readonly chainService: DecisionChainService) {}
+
+  /** GET /api/scoring/decision-chain/trade/:ticket — #535 full reverse trace. */
+  @Get('trade/:ticket')
+  async tradeTrail(@Param('ticket') ticket: string) {
+    const trail = await this.chainService.getTradeTrail(ticket);
+    if (!trail) {
+      return { found: false, ticket, message: 'No trade found for that ticket' };
+    }
+    return { found: true, ...trail };
+  }
 
   /** GET /api/scoring/decision-chain?symbol=EURUSD&actionable=true&limit=20 */
   @Get()

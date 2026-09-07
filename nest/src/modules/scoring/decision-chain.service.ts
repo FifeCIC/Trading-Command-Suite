@@ -142,6 +142,132 @@ export class DecisionChainService {
     });
   }
 
+  /**
+   * #535 — reverse trace: given a trade ticket, assemble the full chain that
+   * produced it (trade → scoring strategy → strategy evaluations → decision
+   * trail → score snapshots → decision_log timeline → directive breakouts).
+   */
+  async getTradeTrail(ticket: string): Promise<any | null> {
+    const ticketNum = parseInt(ticket, 10);
+    const isNumeric = /^\d+$/.test(ticket);
+
+    // 1. The trade itself — match by numeric ticket, brokerTicket, or row id.
+    const trade = await this.prisma.trade.findFirst({
+      where: {
+        OR: [
+          ...(isNumeric && Number.isFinite(ticketNum) ? [{ ticket: ticketNum }] : []),
+          { brokerTicket: ticket },
+          { id: ticket },
+        ],
+      },
+    });
+    if (!trade) return null;
+
+    // 2. Scoring strategy — the params that sized/guarded the trade
+    let scoringStrategy: any = null;
+    if (trade.scoringStrategyId) {
+      scoringStrategy = await this.prisma.scoringStrategy
+        .findUnique({ where: { id: trade.scoringStrategyId } })
+        .catch(() => null);
+    }
+
+    // 3. Strategy evaluations that produced this ticket — only when the
+    // ticket is a real broker ticket (2147483647 is the MT5 placeholder and
+    // would match thousands of unrelated rows).
+    const isPlaceholderTicket = trade.ticket === 2147483647;
+    const evaluations = !isPlaceholderTicket && trade.ticket != null
+      ? await this.prisma.strategyEvaluation.findMany({
+          where: { tradeTicket: trade.ticket },
+          orderBy: { evaluatedAt: 'asc' },
+        })
+      : [];
+
+    // 4. Decision-trail rows linked to this trade
+    const trails = await this.prisma.decisionTrail.findMany({
+      where: { OR: [{ tradeId: trade.id }, { tradeTicket: ticketNum }] },
+      orderBy: { timestamp: 'asc' },
+    });
+
+    // 5. Score snapshots linked from those trail rows
+    const snapshotIds = [...new Set(trails.map((t) => t.scoreSnapshotId).filter(Boolean))] as string[];
+    const snapshots = snapshotIds.length
+      ? await this.prisma.scoreSnapshot.findMany({ where: { id: { in: snapshotIds } }, orderBy: { snappedAt: 'asc' } })
+      : [];
+
+    // 6. decision_log timeline for the symbol + strategies involved, around the trade
+    const strategyIds = [...new Set([
+      ...trails.map((t) => t.strategyId),
+      ...(trade.scoringStrategyId ? [trade.scoringStrategyId] : []),
+    ].filter(Boolean))] as string[];
+    const decisionLogs = strategyIds.length
+      ? await this.prisma.decisionLog.findMany({
+          where: {
+            strategyId: { in: strategyIds },
+            symbol: trade.symbol,
+            timestamp: {
+              gte: new Date(trade.openedAt.getTime() - 5 * 60_000),
+              lte: new Date(trade.openedAt.getTime() + 60_000),
+            },
+          },
+          orderBy: { timestamp: 'asc' },
+        })
+      : [];
+
+    // 7. Directive-level breakdown: nearest Score row for protocol+symbol before open
+    let directiveBreakdown: any = null;
+    const protocolId = scoringStrategy?.protocolId ?? trade.strategy ?? null;
+    if (protocolId) {
+      const sym = await this.prisma.symbol.findFirst({ where: { ticker: trade.symbol.toUpperCase() } }).catch(() => null);
+      if (sym) {
+        const score = await this.prisma.score.findFirst({
+          where: { strategyId: protocolId, symbolId: sym.id, timestamp: { lte: trade.openedAt } },
+          orderBy: { timestamp: 'desc' },
+        });
+        if (score) directiveBreakdown = score.breakdown;
+      }
+    }
+
+    return {
+      ticket: trade.ticket ?? trade.brokerTicket ?? null,
+      trade: {
+        id: trade.id, symbol: trade.symbol, side: trade.side, quantity: trade.quantity,
+        entryPrice: trade.entryPrice, exitPrice: trade.exitPrice, pnl: trade.pnl,
+        status: trade.status, provider: trade.provider, origin: trade.origin, source: trade.source,
+        sl: trade.sl, tp: trade.tp, brokerComment: trade.brokerComment,
+        openedAt: trade.openedAt.toISOString(), closedAt: trade.closedAt?.toISOString() ?? null,
+      },
+      scoringStrategy: scoringStrategy ? {
+        name: scoringStrategy.name, protocolId: scoringStrategy.protocolId,
+        watchlistName: scoringStrategy.watchlistName, brokerId: scoringStrategy.brokerId,
+        mode: scoringStrategy.mode, tradeThreshold: scoringStrategy.tradeThreshold,
+        baseSize: scoringStrategy.baseSize, slPct: scoringStrategy.slPct, tpPct: scoringStrategy.tpPct,
+      } : null,
+      evaluations: evaluations.map((e) => ({
+        id: e.id, composite: e.composite, signal: e.signal, traded: e.traded,
+        tradeResult: e.tradeResult, evaluatedAt: e.evaluatedAt.toISOString(),
+      })),
+      decisionTrail: trails.map((t) => ({
+        id: t.id, tickNumber: t.tickNumber, timestamp: t.timestamp.toISOString(), symbol: t.symbol,
+        winner: t.winner, chosenComposite: t.chosenComposite, finalSignal: t.finalSignal,
+        actionable: t.actionable, reason: t.reason,
+        longProtocolId: t.longProtocolId, longComposite: t.longComposite,
+        shortProtocolId: t.shortProtocolId, shortComposite: t.shortComposite,
+        tradePrice: t.tradePrice, tradeVolume: t.tradeVolume,
+      })),
+      snapshots: snapshots.map((s) => ({
+        id: s.id, protocolId: s.protocolId, symbol: s.symbol, composite: s.composite,
+        tradingSignal: s.tradingSignal, signalPct: s.signalPct, opportunityPct: s.opportunityPct,
+        rarityPct: s.rarityPct, snappedAt: s.snappedAt.toISOString(),
+      })),
+      decisionLog: decisionLogs.map((d) => ({
+        id: d.id, timestamp: d.timestamp.toISOString(), tickNumber: d.tickNumber,
+        decision: d.decision, reason: d.reason, composite: d.composite, signal: d.signal,
+        ticket: d.ticket, price: d.price, quantity: d.quantity,
+      })),
+      directiveBreakdown,
+    };
+  }
+
   /** Batch-load a table by ID list into a Map. */
   private async loadMap(table: string, ids: string[]): Promise<Map<string, any>> {
     const map = new Map<string, any>();
