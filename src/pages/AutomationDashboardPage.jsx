@@ -9,7 +9,8 @@ import ToggleSwitch from '../components/ToggleSwitch';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import { formatTime } from '../core/format-utils';
 import { pnlColor } from '../core/signal-utils';
-import { isTradingStrategy, isScoringStrategy, isFaultyStrategy } from '../core/strategy-filters';
+import { isTradingStrategy, isScoringStrategy } from '../core/strategy-filters';
+import StrategyFaultBadge from '../components/StrategyFaultBadge';
 import './automation-dashboard.css';
 
 export default function AutomationDashboardPage() {
@@ -458,16 +459,16 @@ export default function AutomationDashboardPage() {
                       <span>{s.protocolId}</span> · <span>{s.mode}</span>
                       {s.lastComposite != null && <span> · Score: {s.lastComposite}</span>}
                     </div>
-                    {isFaultyStrategy(s) && (
-                      <div className="ad-strategy-status" style={{
+                    <StrategyFaultBadge
+                      strategy={s}
+                      className="ad-strategy-status"
+                      style={{
                         marginTop: '0.35rem', fontSize: '0.72rem',
                         color: s.dataStatus === 'pending_bars' ? '#f59e0b' : '#ef4444',
                         background: s.dataStatus === 'pending_bars' ? '#f59e0b10' : '#ef444410',
                         padding: '2px 8px', borderRadius: '4px',
-                      }}>
-                        {s.dataStatus === 'pending_bars' ? '⏳' : '🚫'} {s.dataStatusReason || s.dataStatus}
-                      </div>
-                    )}
+                      }}
+                    />
                   </div>
                   );
                 })}

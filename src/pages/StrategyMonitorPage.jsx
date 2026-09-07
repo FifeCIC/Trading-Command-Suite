@@ -21,7 +21,8 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import PageInfoPopover from '../components/PageInfoPopover';
 import { scoreClass } from '../core/signal-utils';
-import { isActiveStrategy, isTradingStrategy, isScoringStrategy, isFaultyStrategy } from '../core/strategy-filters';
+import { isActiveStrategy, isTradingStrategy, isScoringStrategy } from '../core/strategy-filters';
+import StrategyFaultBadge from '../components/StrategyFaultBadge';
 import './strategy-monitor.css';
 import './strategies-list.css';
 
@@ -293,11 +294,7 @@ export default function StrategyMonitorPage() {
                       </Link>
                     </div>
                   )}
-                  {isFaultyStrategy(s) && (
-                    <div className="sl-card-warning">
-                      {s.dataStatus === 'pending_bars' ? '⏳' : '🚫'} {s.dataStatusReason || s.dataStatus}
-                    </div>
-                  )}
+                  <StrategyFaultBadge strategy={s} />
                   {selectedStratId === s.id && (
                     <div className="sl-card-detail">
                       {s.description && <p className="sl-detail-desc">{s.description}</p>}

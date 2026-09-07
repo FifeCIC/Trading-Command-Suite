@@ -18,6 +18,7 @@ import EmptyState from '../components/EmptyState';
 import ToggleSwitch from '../components/ToggleSwitch';
 import { formatPnl } from '../core/format-utils';
 import { filterStrategies, isActiveStrategy, isTradingStrategy, isScoringStrategy, isFaultyStrategy } from '../core/strategy-filters';
+import StrategyFaultBadge from '../components/StrategyFaultBadge';
 import './strategies-list.css';
 
 const API = '/api/trading/strategies';
@@ -168,11 +169,7 @@ export default function StrategiesListPage() {
                 </div>
               )}
 
-              {isFaultyStrategy(s) && (
-                <div className="sl-card-warning">
-                  {s.dataStatus === 'pending_bars' ? '⏳' : '🚫'} {s.dataStatusReason || s.dataStatus}
-                </div>
-              )}
+              <StrategyFaultBadge strategy={s} />
 
               {/* Expanded detail */}
               {selectedId === s.id && (
