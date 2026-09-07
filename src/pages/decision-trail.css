@@ -596,7 +596,23 @@
   padding: 0.65rem 1rem;
   border-bottom: 1px solid var(--line);
 }
-.pt-directive-row:last-child { border-bottom: none; }
+.pt-directive-bar {
+  height: 3px;
+  margin: 0.3rem 0 0.35rem;
+  background: var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.pt-directive-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.pt-directive-fill--bullish { background: var(--notice-success-text); }
+.pt-directive-fill--bearish { background: var(--notice-critical-text); }
+.pt-directive-fill--neutral { background: var(--ink-faint, var(--ink-soft)); }.pt-directive-row:last-child { border-bottom: none; }
 
 .pt-directive-head {
   display: flex;

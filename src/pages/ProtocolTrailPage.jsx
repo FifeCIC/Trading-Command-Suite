@@ -258,8 +258,17 @@ export default function ProtocolTrailPage() {
                         {d.name || d.directiveId}
                       </Link>
                       <span className="pt-directive-score">
+                        {d.signalClass === 'bullish' ? '▲' : d.signalClass === 'bearish' ? '▼' : '•'}{' '}
                         {d.score} / {d.maxScore}
                       </span>
+                    </div>
+                    {/* Contribution bar (#583 Phase 2 item 2) — how strongly this
+                        directive pushed its group's score (0–100 normalised). */}
+                    <div className="pt-directive-bar" title={`${Math.round(d.normalizedScore ?? 0)}% of its maxScore`}>
+                      <div
+                        className={`pt-directive-fill pt-directive-fill--${d.signalClass || 'neutral'}`}
+                        style={{ width: `${Math.min(100, d.normalizedScore ?? 0)}%` }}
+                      />
                     </div>
                     <div className="pt-directive-reason">{d.reason || '—'}</div>
                     {!d.inSignal && (
