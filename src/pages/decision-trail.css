@@ -504,6 +504,58 @@
   border-radius: 4px;
 }
 
+/* ── Pipeline stage tracker (#583 Phase 2) ── */
+.pt-pipeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 1rem 0 1.25rem;
+  padding: 0.65rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.pt-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.pt-stage:not(:first-child)::before {
+  content: '→';
+  margin-left: -0.6rem;
+  margin-right: 0.05rem;
+  color: var(--ink-faint, var(--ink-soft));
+  font-size: 0.7rem;
+}
+
+.pt-stage-icon { font-weight: 700; }
+
+.pt-stage-label {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.62rem;
+}
+
+.pt-stage-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.pt-stage--pass  { border-color: color-mix(in srgb, var(--notice-success-text) 45%, transparent); background: var(--notice-success-bg);  color: var(--notice-success-text); }
+.pt-stage--warn  { border-color: color-mix(in srgb, var(--notice-warning-text) 45%, transparent); background: var(--notice-warning-bg);  color: var(--notice-warning-text); }
+.pt-stage--block { border-color: color-mix(in srgb, var(--notice-critical-text) 45%, transparent); background: var(--notice-critical-bg); color: var(--notice-critical-text); }
+.pt-stage--idle  { color: var(--ink-faint, var(--ink-soft)); }
+
 .pt-group {
   margin-bottom: 1rem;
   background: var(--panel);

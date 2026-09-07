@@ -99,6 +99,35 @@ export default function ProtocolTrailPage() {
     return list;
   }, [breakouts]);
 
+  // ── Pipeline stage tracker (#583 Phase 2) ──
+  // One strip of stages showing how this score was reached, colour-coded
+  // pass (green) / warn (amber) / block (red) / idle (muted).
+  const stages = useMemo(() => {
+    const market = data?.breakdown?.marketStatus;
+    const readiness = data?.breakdown?.readinessGate;
+    const riskMult = typeof data?.breakdown?.riskMultiplier === 'number'
+      ? data?.breakdown?.riskMultiplier
+      : null;
+    const hardGated = rawComposite != null && rawComposite > 0 && (data?.score ?? 0) === 0;
+    const fired = allDirectives.length;
+    const groupCount = Object.keys(breakouts).length;
+
+    const riskTone = hardGated ? 'block'
+      : riskMult == null ? 'idle'
+      : riskMult < 0.3 ? 'block'
+      : riskMult < 0.7 ? 'warn'
+      : 'pass';
+
+    return [
+      { key: 'market', label: 'Market', value: market?.open === false ? 'closed' : market?.open ? 'open' : '—', tone: market?.open === false ? 'block' : market?.open ? 'pass' : 'idle', detail: market?.reason || '' },
+      { key: 'directives', label: 'Directives', value: `${fired} fired`, tone: fired > 0 ? 'pass' : 'block', detail: `${fired} of the protocol's directives produced a result` },
+      { key: 'groups', label: 'Groups', value: `${groupCount} groups`, tone: groupCount > 0 ? 'pass' : 'block', detail: Object.keys(subScores).map((g) => `${GROUP_LABELS[g] || g} ${subScores[g]}`).join(' · ') },
+      { key: 'risk', label: 'Risk gate', value: riskMult != null ? `${Math.round(riskMult * 100)}%` : '—', tone: riskTone, detail: hardGated ? 'Hard gate forced composite to 0' : `Risk multiplier ${riskMult != null ? Math.round(riskMult * 100) + '%' : 'not applied'}` },
+      { key: 'readiness', label: 'Readiness', value: readiness?.ready === false ? 'blocked' : readiness ? 'ready' : '—', tone: readiness?.ready === false ? 'block' : readiness ? 'pass' : 'idle', detail: readiness?.reason || '' },
+      { key: 'classify', label: 'Classify', value: signal, tone: signal === 'HOLD' ? 'warn' : 'pass', detail: strengthPct != null ? `${strengthPct}% signal strength` : '' },
+    ];
+  }, [data, rawComposite, allDirectives, breakouts, subScores, signal, strengthPct]);
+
   return (
     <div className="dt-page">
       <header className="dt-header">
@@ -187,6 +216,17 @@ export default function ProtocolTrailPage() {
                 </span>
               )}
             </div>
+          </div>
+
+          {/* Pipeline stage tracker (#583 Phase 2) */}
+          <div className="pt-pipeline">
+            {stages.map((st) => (
+              <div key={st.key} className={`pt-stage pt-stage--${st.tone}`} title={st.detail}>
+                <span className="pt-stage-icon">{st.tone === 'pass' ? '✓' : st.tone === 'block' ? '⛔' : st.tone === 'warn' ? '△' : '○'}</span>
+                <span className="pt-stage-label">{st.label}</span>
+                <span className="pt-stage-value">{st.value}</span>
+              </div>
+            ))}
           </div>
 
           {/* Group sections */}
