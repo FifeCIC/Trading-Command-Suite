@@ -296,4 +296,11 @@ export const KNOWN_FEATURES = {
   'Signals v1 complete + subscription queue routing': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'signals', devCompletion: 'complete' },
   'Protocol config health + neutral inactive groups': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Signal outcome logging + conflict honesty': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'signals', devCompletion: 'complete' },
+  // 2026-09-03/07 — Handoff Batch #14
+  'Execution Feasibility (shared pre-flight)': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Manual-Trade Defaults (size/SL/TP)': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'Per-Protocol Signal Gate': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Protocol Highest-Ever Score': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Normalised Signal % Persistence': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Position Lifecycle Reconciliation & Notifications': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
 };
