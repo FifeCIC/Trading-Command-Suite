@@ -414,7 +414,7 @@ function readRegistryValues(registry) {
   return initial;
 }
 
-export default function ScreenOptions({ activeView, onSettingsChange, isOpen, onToggle, isBookmarked, onToggleBookmark, statusLevel, isMt5Online, isApiOnline, isDbOnline }) {
+export default function ScreenOptions({ activeView, area, onSettingsChange, isOpen, onToggle, isBookmarked, onToggleBookmark, statusLevel, isMt5Online, isApiOnline, isDbOnline }) {
   var { prefs, set: setPref } = usePreferences();
   var registry = activeView ? OPTIONS_REGISTRY[activeView] : null;
   var [calcOpen, setCalcOpen] = useState(false);
@@ -456,6 +456,18 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
     accountsQuery.refetch();
     try { window.dispatchEvent(new CustomEvent('tcs:accounts-changed')); } catch (e) {}
   }, [accountsQuery]);
+
+  // ── Trading layer switch (Trading area pages) ──
+  // One switch = both the global trading layer AND the MT5 broker's
+  // tradingEnabled, so a single flip fully enables/disables live orders.
+  var isTradingArea = area === 'trading';
+  var tradingEnabled = autoQuery.data?.layers?.tradingEnabled === true;
+  var toggleTrading = useCallback(function (enabled) {
+    apiPost('/api/automation/layer', { layer: 'trading', enabled: enabled }).catch(function () {});
+    apiPost('/api/automation/config', { brokerId: 'mt5', tradingEnabled: enabled }).catch(function () {});
+    autoQuery.refetch();
+    try { window.dispatchEvent(new CustomEvent('tcs:trading-layer-changed', { detail: { enabled: enabled } })); } catch (e) {}
+  }, [autoQuery]);
 
   var notifications = useMemo(() => {
     var items = [];
@@ -803,6 +815,21 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                         </div>
                       );
                     })}
+                  </div>
+                ) : isTradingArea ? (
+                  <div className="so-view-section">
+                    <h3 className="so-global-label">Trading Controls</h3>
+                    <div className="ff-field">
+                      <span className="ff-label" title="Master switch for the automated trading layer. Off = signals are generated but no live orders are placed.">Automated Trading</span>
+                      <label className="ff-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={tradingEnabled}
+                          onChange={function (e) { toggleTrading(e.target.checked); }}
+                        />
+                        <span>{tradingEnabled ? 'Trading is ON — the bot may place live orders.' : 'Trading is OFF — signals only, no live orders.'}</span>
+                      </label>
+                    </div>
                   </div>
                 ) : (
                   <EmptyState icon="⚙" title="No view-specific options" description="This view has no additional configurable options." />

@@ -1066,6 +1066,7 @@ function AppShell() {
 
       <ScreenOptions
         activeView={screenOptionsView}
+        area={primaryArea}
         isOpen={screenOptionsOpen}
         onToggle={() => {
           setScreenOptionsOpen((v) => {
