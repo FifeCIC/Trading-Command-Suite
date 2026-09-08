@@ -420,10 +420,10 @@ export class SuperTrendDirective implements IDirective {
   readonly id = 'supertrend';
   readonly name = 'SuperTrend Indicator';
   readonly description =
-    'ATR(10) × 3 multiplier trailing stop. Green (price above) = uptrend. Red = downtrend. Derived from MT5 SuperTrend.';
+    'ATR(10) × 3 multiplier trailing stop. Price above upper band = strong uptrend; below lower band = strong downtrend. Symmetric bullish/bearish evidence. Derived from MT5 SuperTrend.';
   readonly priority = 50;
   readonly maxScore = 100;
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
 
 
@@ -446,19 +446,24 @@ export class SuperTrendDirective implements IDirective {
     const lastHigh = highs[highs.length - 1];
     const lastLow = lows[lows.length - 1];
 
-    const basicUpper = (lastHigh + lastLow) / 2 + multiplier * lastATR;
-    const basicLower = (lastHigh + lastLow) / 2 - multiplier * lastATR;
+    const midline = (lastHigh + lastLow) / 2;
+    const basicUpper = midline + multiplier * lastATR;
+    const basicLower = midline - multiplier * lastATR;
 
-    // Above SuperTrend = uptrend
+    // Above upper band = strong uptrend; below lower band = strong downtrend.
     if (lastClose > basicUpper) {
       return { score: 75, confidence: 0.7, signalClass: 'bullish', reason: `SuperTrend — strong uptrend (price ${lastClose} > ${basicUpper.toFixed(2)})` };
     }
 
-    if (lastClose > basicLower && lastClose <= basicUpper) {
+    if (lastClose > midline) {
       return { score: 55, confidence: 0.5, signalClass: 'bullish', reason: `SuperTrend — moderate uptrend` };
     }
 
-    return { score: 15, confidence: 0.6, signalClass: 'bearish', reason: `SuperTrend — downtrend (price below ${basicLower.toFixed(2)})` };
+    if (lastClose < basicLower) {
+      return { score: 75, confidence: 0.7, signalClass: 'bearish', reason: `SuperTrend — strong downtrend (price ${lastClose} < ${basicLower.toFixed(2)})` };
+    }
+
+    return { score: 55, confidence: 0.5, signalClass: 'bearish', reason: `SuperTrend — moderate downtrend` };
   }
 }
 
@@ -666,10 +671,10 @@ export class ATRTrailingStopDirective implements IDirective {
   readonly id = 'atr-trailing-stop';
   readonly name = 'ATR Trailing Stop Signal';
   readonly description =
-    'Price above 3×ATR trailing stop = strong trend. Pullback to stop = potential entry. Derived from MT5 ATR Trailing Stop.';
+    'Dual ATR trailing stop: long stop = highest high(20) − 3×ATR, short stop = lowest low(20) + 3×ATR. Symmetric bullish/bearish trend evidence. Derived from MT5 ATR Trailing Stop.';
   readonly priority = 48;
   readonly maxScore = 100;
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
 
 
@@ -688,24 +693,31 @@ export class ATRTrailingStopDirective implements IDirective {
     const lastClose = closes[closes.length - 1];
     const lastATR = atrVals[atrVals.length - 1];
 
-    // Long trailing stop: highest high - 3*ATR
+    // Two trailing stops: long = highest high − 3×ATR, short = lowest low + 3×ATR.
     const highestHigh = Math.max(...highs.slice(-20));
-    const trailingStop = highestHigh - 3 * lastATR;
-    const distance = (lastClose - trailingStop) / lastClose;
+    const lowestLow = Math.min(...lows.slice(-20));
+    const longStop = highestHigh - 3 * lastATR;
+    const shortStop = lowestLow + 3 * lastATR;
+    const distAboveLong = (lastClose - longStop) / lastClose;
+    const distBelowShort = (lastClose - shortStop) / lastClose;
 
-    if (distance > 0.1) {
-      return { score: 75, confidence: 0.7, signalClass: 'bullish', reason: `Strong uptrend — ${(distance * 100).toFixed(1)}% above trailing stop` };
+    if (distAboveLong > 0.1) {
+      return { score: 75, confidence: 0.7, signalClass: 'bullish', reason: `Strong uptrend — ${(distAboveLong * 100).toFixed(1)}% above long trailing stop` };
     }
 
-    if (distance > 0.03) {
-      return { score: 60, confidence: 0.55, signalClass: 'bullish', reason: `Moderate trend — ${(distance * 100).toFixed(1)}% above trailing stop` };
+    if (distAboveLong > 0.03) {
+      return { score: 60, confidence: 0.55, signalClass: 'bullish', reason: `Moderate uptrend — ${(distAboveLong * 100).toFixed(1)}% above long trailing stop` };
     }
 
-    if (distance < -0.02) {
-      return { score: 10, confidence: 0.6, signalClass: 'bearish', reason: `Price below ATR trailing stop` };
+    if (distBelowShort < -0.1) {
+      return { score: 75, confidence: 0.7, signalClass: 'bearish', reason: `Strong downtrend — ${(distBelowShort * 100).toFixed(1)}% below short trailing stop` };
     }
 
-    return { score: 30, confidence: 0.3, signalClass: 'neutral', reason: 'Price near ATR trailing stop — watch for reversal' };
+    if (distBelowShort < -0.03) {
+      return { score: 60, confidence: 0.55, signalClass: 'bearish', reason: `Moderate downtrend — ${(distBelowShort * 100).toFixed(1)}% below short trailing stop` };
+    }
+
+    return { score: 30, confidence: 0.3, signalClass: 'neutral', reason: 'Price inside ATR trailing-stop channel — no clear trend' };
   }
 }
 

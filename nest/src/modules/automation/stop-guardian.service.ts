@@ -226,7 +226,7 @@ export class StopGuardianService {
 
         // 6. Wick filter check
         const wickPassed = !(wickFilter as any)?.metadata?.isFakeout;
-        const wickScore = wickFilter?.score ?? 50;
+        const wickScore = wickFilter?.score ?? null;
 
         if (!wickPassed) {
           guarded.push(
@@ -235,15 +235,30 @@ export class StopGuardianService {
           continue;
         }
 
-        // 7. Weighted confidence
-        const scores = [
-          atrStop?.score ?? 50,
-          superTrend?.score ?? 50,
-          chandelier?.score ?? 50,
-          wickScore,
-        ].filter((s) => s > 0);
-        const avgConfidence =
-          scores.reduce((a, b) => a + b, 0) / Math.max(1, scores.length);
+        // 7. Side-aware confidence — only DIRECTIONAL evidence counts, and it
+        //    must be aligned with the position's side (bullish helps a BUY,
+        //    bearish helps a SELL). Opposing evidence reduces confidence.
+        //    Missing/neutral directives are "no evidence", never a neutral 50.
+        const directives = [atrStop, superTrend, chandelier, wickFilter];
+        let alignedSum = 0;
+        let alignedCount = 0;
+        let opposingSum = 0;
+        let opposingCount = 0;
+        for (const d of directives) {
+          if (!d || d.signalClass === 'neutral') continue;
+          const isBullish = d.signalClass === 'bullish';
+          const aligned = side === 'BUY' ? isBullish : !isBullish;
+          if (aligned) {
+            alignedSum += d.score;
+            alignedCount += 1;
+          } else {
+            opposingSum += d.score;
+            opposingCount += 1;
+          }
+        }
+        const alignedAvg = alignedCount > 0 ? alignedSum / alignedCount : 0;
+        const opposingAvg = opposingCount > 0 ? opposingSum / opposingCount : 0;
+        const stopConfidence = Math.max(0, Math.round(alignedAvg - opposingAvg));
 
         // 8. ATR-based recommended SL
         const atrValue = this.computeAtr(bars);
@@ -275,7 +290,7 @@ export class StopGuardianService {
               pos,
               protective,
               `Protective floor (was unlocked) | ${strat.slPct ?? 1}% from entry`,
-              Math.round(avgConfidence),
+              stopConfidence,
               side,
               adjustments,
               true,
@@ -283,7 +298,7 @@ export class StopGuardianService {
           }
         } else {
           const shouldAdjust =
-            avgConfidence >= 55 &&
+            stopConfidence >= 55 &&
             recommendedSl !== null &&
             Math.abs(recommendedSl - (pos.sl || 0)) > 0.00001;
 
@@ -291,8 +306,8 @@ export class StopGuardianService {
             await this.applyModify(
               pos,
               recommendedSl!,
-              `Consensus ${avgConfidence.toFixed(0)}% | ATR=${atrValue.toFixed(5)} | Wick=${wickScore}`,
-              Math.round(avgConfidence),
+              `Consensus ${stopConfidence} | ATR=${atrValue.toFixed(5)} | Wick=${wickScore ?? 'n/a'}`,
+              stopConfidence,
               side,
               adjustments,
               false,
@@ -312,7 +327,7 @@ export class StopGuardianService {
             strat,
             side,
             recommendedSl,
-            Math.round(avgConfidence),
+            stopConfidence,
             true,
           ),
         );

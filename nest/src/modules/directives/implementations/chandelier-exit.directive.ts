@@ -9,13 +9,13 @@ import { atr } from '../utils/indicators';
 export class ChandelierExitDirective implements IDirective {
   readonly id = 'chandelier-exit';
   readonly name = 'Chandelier Exit';
-  readonly description = 'Long exit: highest high(22) - 3×ATR(22). Price below exit = trend weakening. MT5 Chandelier Exit.';
+  readonly description = 'Dual Chandelier Exit: long stop = highest high(22) − 3×ATR(22), short stop = lowest low(22) + 3×ATR(22). Price beyond the opposite stop = strong trend. Symmetric bullish/bearish evidence.';
   readonly category = 'ratio' as const;
   readonly priority = 64;
   readonly maxScore = 80;
   readonly minScore = 1;
   readonly minBars = { '1d': 26 };
-  readonly version = '1.1.0';
+  readonly version = '1.2.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
 
@@ -27,16 +27,29 @@ export class ChandelierExitDirective implements IDirective {
     const a = atr(highs, lows, closes, 22);
     const lastAtr = a[a.length - 1];
     const highest22 = Math.max(...highs.slice(-22));
-    const exit = highest22 - 3 * lastAtr;
+    const lowest22 = Math.min(...lows.slice(-22));
+    const longExit = highest22 - 3 * lastAtr;
+    const shortExit = lowest22 + 3 * lastAtr;
     const lastClose = closes[closes.length - 1];
-    const aboveExit = lastClose > exit;
-    const distance = Math.abs(lastClose - exit) / lastClose * 100;
-    if (aboveExit && distance > 3) {
-      return { score: 65 + Math.min(15, Math.round(distance * 2)), confidence: 0.55, reason: `Chandelier: ${distance.toFixed(1)}% above exit — hold long`, signalClass: 'bullish' };
+
+    // Strong uptrend: price broke above the SHORT exit (upper channel edge).
+    if (lastClose > shortExit) {
+      const distance = ((lastClose - shortExit) / lastClose) * 100;
+      if (distance > 3) {
+        return { score: 65 + Math.min(15, Math.round(distance * 2)), confidence: 0.55, reason: `Chandelier: ${distance.toFixed(1)}% above short exit — strong uptrend`, signalClass: 'bullish' };
+      }
+      return { score: 55, confidence: 0.5, reason: `Chandelier: above short exit — uptrend`, signalClass: 'bullish' };
     }
-    if (!aboveExit) {
-      return { score: 25, confidence: 0.5, reason: `Chandelier: price below exit — consider closing long`, signalClass: 'bearish' };
+
+    // Strong downtrend: price broke below the LONG exit (lower channel edge).
+    if (lastClose < longExit) {
+      const distance = ((longExit - lastClose) / lastClose) * 100;
+      if (distance > 3) {
+        return { score: 65 + Math.min(15, Math.round(distance * 2)), confidence: 0.55, reason: `Chandelier: ${distance.toFixed(1)}% below long exit — strong downtrend`, signalClass: 'bearish' };
+      }
+      return { score: 55, confidence: 0.5, reason: `Chandelier: below long exit — downtrend`, signalClass: 'bearish' };
     }
-    return { score: 45, confidence: 0.3, reason: `Chandelier: near exit level`, signalClass: 'neutral' };
+
+    return { score: 45, confidence: 0.3, reason: `Chandelier: inside channel — no clear trend`, signalClass: 'neutral' };
   }
 }

@@ -41,6 +41,7 @@ restore a removed fallback merely because an older UI or endpoint expects it.
 | MST-009 | Partially implemented | `DirectiveInput.asOf` drives active windows, modifiers, rollover, and calendar directives. Provider-backed directives still need historical snapshot contracts. |
 | MST-010 | Partially implemented | Backtest, replay, and protocol-runner call canonical protocol gating. `rankAll()` remains explicitly analytics-only while dashboards are migrated. |
 | MST-011 | In progress | Dedicated score-unit, risk-gate, and indicator fixtures were added (12 assertions); broader pipeline contract/property tests remain required. |
+| MST-012 | Implemented and unit tested | Stop Guardian no longer averages long-biased raw scores into one confidence for BUY and SELL. It aggregates side-aligned directional evidence, and the stop directives (`chandelier-exit`, `atr-trailing-stop`, `supertrend`) emit symmetric bullish/bearish branches. Mirror tests added. |
 
 Additional critical repair: the backtester no longer passes a ticker as
 `strategyId` or reads current DB scores for historical dates. A `protocolId` is
@@ -302,6 +303,29 @@ contracts.
 The directive guard is valuable and found 81 warnings in this review, including
 unproduced input fields and direction-bias contradictions. It currently reports
 zero errors, so known-dangerous contradictions do not fail CI.
+
+### MST-012 — Critical — Stop Guardian averages long-biased evidence for both sides
+
+`StopGuardianService` (`nest/src/modules/automation/stop-guardian.service.ts`)
+fetched `atr-trailing-stop`, `supertrend`, `chandelier-exit`, and `wick-filter`
+and averaged their raw scores into one `avgConfidence`, compared against a 55%
+threshold, and applied it to BUY and SELL positions alike. The underlying
+directives were long-only: `chandelier-exit` computed only `highestHigh − 3×ATR`
+and `atr-trailing-stop` only the long stop. A short position therefore received
+bearish, low-magnitude evidence when it was healthy and bullish, high-magnitude
+evidence when it was losing — inverting the stop-adjustment decision.
+
+Required direction:
+
+- Emit symmetric evidence in each stop directive (mirror of the long branch).
+- Aggregate only side-aligned directional evidence (bullish for BUY, bearish for
+  SELL); opposing evidence reduces confidence; missing/neutral is no evidence.
+- Add mirror tests proving a mirrored price series produces the mirrored
+  `signalClass` with equal magnitude.
+
+Fixed 2026-09-08: directives made symmetric (`chandelier-exit` v1.2.0,
+`atr-trailing-stop`/`supertrend` v1.1.0) and the guardian rewritten to
+side-aligned aggregation. Mirror + side-aware unit tests added.
 
 ## Required testing system
 
