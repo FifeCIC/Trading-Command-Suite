@@ -32,6 +32,7 @@ import { AdapterFactory } from '../providers/adapter-factory';
 import { MacroSnapshotService } from './macro-snapshot.service';
 import { EurUsdCacheService } from './eurusd-cache.service';
 import { ProtocolDbService } from './protocol-db.service';
+import { MarketDataService } from '../market-data/market-data.service';
 import { DirectiveConfigService } from './directive-config.service';
 import { isScoringDemo } from '../../config/scoring-mode';
 import {
@@ -274,7 +275,31 @@ export class ProtocolGatingService {
     private readonly eurusdCache: EurUsdCacheService,
     private readonly protocolDb: ProtocolDbService,
     private readonly configService: DirectiveConfigService,
+    private readonly marketData: MarketDataService,
   ) {}
+
+  /**
+   * Load the higher-timeframe bundle (1d/1h/15m) for a symbol, sized to the
+   * protocol's declared min-bars. Callers that only have base bars pass the
+   * result as `higherTfBars` so multi-timeframe directives receive real data
+   * instead of silently scoring from base bars only (MST-004).
+   */
+  async loadHigherTfBundle(
+    symbolId: string,
+    protocolId?: string,
+  ): Promise<{
+    dayBars: import('../directives/interfaces/directive.interface').MarketBar[];
+    hourBars: import('../directives/interfaces/directive.interface').MarketBar[];
+    min15Bars: import('../directives/interfaces/directive.interface').MarketBar[];
+  }> {
+    const requiredBars = protocolId ? this.protocolDb.getRequiredBars(protocolId) : {};
+    const [dayBars, hourBars, min15Bars] = await Promise.all([
+      this.marketData.getBars(symbolId, '1d', requiredBars['1d'] || 200),
+      this.marketData.getBars(symbolId, '1h', requiredBars['1h'] || 200),
+      this.marketData.getBars(symbolId, '15m', requiredBars['15m'] || 200),
+    ]);
+    return { dayBars, hourBars, min15Bars };
+  }
 
   /**
    * Resolve the effective maxScore for every directive in a protocol.
@@ -626,7 +651,8 @@ export class ProtocolGatingService {
     const rarity = await this.computeRarity(protocolId, symbol, composite);
 
     // Market status (#638 phase A) — whether the symbol's market is producing fresh data.
-    const marketStatus = computeMarketStatus(bars);
+    // Use the evaluated candle (asOf), not the process clock, so replay is reproducible.
+    const marketStatus = computeMarketStatus(bars, bars.length ? bars[bars.length - 1].timestamp : new Date());
 
     // Readiness gate (#627): a protocol is only eligible when every included
     // directive is 'ready'. Beta directives are blockers.

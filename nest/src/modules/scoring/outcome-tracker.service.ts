@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
 
 // ── Configuration ────────────────────────────────────────────
@@ -109,7 +110,12 @@ export class OutcomeTrackerService {
    * Compute outcomes for matured predictions.
    * Finds records where outcomeComputedAt is null and predictedAt is old enough,
    * then fills T+15m, T+1h, T+4h, T+24h prices from MarketBar.
+   *
+   * Scheduled daily at 05:00 — this wires the previously-dead learning loop
+   * (MST-007). Without this cron no directive outcome was ever matured, so
+   * directive "performance"/accuracy stayed permanently empty.
    */
+  @Cron(CronExpression.EVERY_DAY_AT_5AM, { name: 'directive-outcome-maturation' })
   async computeOutcomes(): Promise<number> {
     if (!this.prisma.isAvailable) return 0;
 

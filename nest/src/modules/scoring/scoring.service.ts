@@ -167,10 +167,32 @@ export class ScoringService implements OnModuleInit {
     }
   }
 
+  /**
+   * rankAll() — SCREENING / OPPORTUNITY RANKING (analytics only).
+   *
+   * SINGLE PURPOSE: rank symbols by their additive OPPORTUNITY score so callers
+   * can order a watchlist / "which symbols deserve a closer look" list. It
+   * answers "what is most attractive", NOT "buy now, which way".
+   *
+   * INPUTS:
+   *   - strategyId?   — legacy; only resolves a display name (weights are
+   *                     derived from directive maxScore, not a strategy).
+   *   - limit         — max ranked results to return.
+   *   - symbolFilter? — optional symbol subset to rank.
+   *   - protocolSlug? — optional protocol to scope the directive set.
+   *
+   * OUTPUT (RankedResult): an ordered list of { ticker, score, … }. It performs
+   *   NO persistence, enqueues NO decision, and triggers NO trade.
+   *
+   * ⚠️ BOUNDARY — do NOT overstep this method's purpose:
+   *   - It is a LEGACY, second evaluator (dominance/cancellation + seasonal
+   *     affinity + confluence bonus). Its numbers are NOT the canonical Signal.
+   *   - Trade / queue / replay / backtest decisions MUST use
+   *     ProtocolGatingService.scoreWithGating() — the single canonical evaluator.
+   *   - Never derive BUY/SELL actions, queue entries, or position changes from
+   *     this result. Use it only to ORDER screening/analytics surfaces.
+   */
   async rankAll(strategyId?: string, limit = 20, symbolFilter?: string[], protocolSlug?: string): Promise<RankedResult> {
-    // Legacy flat ranking is ANALYTICS ONLY (2026-09-08). Trade, replay, and
-    // backtest decisions must use ProtocolGatingService. Do not add execution
-    // triggers to this method.
     const modeInfo = this.modeService.getModeInfo();
 
     // Strategy weights are now derived from each directive's maxScore.
@@ -299,6 +321,7 @@ export class ScoringService implements OnModuleInit {
         bars,
         eurusdValue,
         dxyValue,
+        asOf: bars.length ? bars[bars.length - 1].timestamp : undefined,
       } as DirectiveInput;
       const results = await this.directivesService.runAll(input, directiveFilter);
 

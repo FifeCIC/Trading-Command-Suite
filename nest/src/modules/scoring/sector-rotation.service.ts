@@ -122,9 +122,14 @@ export class SectorRotationService {
         // Filter to protocols that exist in registry
         const validProtocols = sec.protocols.filter((p) => this.protocolDb.getCached(p));
 
+        const secSym = await this.prisma.symbol.findFirst({ where: { ticker: sec.etf }, select: { id: true } });
+        const { dayBars, hourBars, min15Bars } = secSym
+          ? await this.protocolGating.loadHigherTfBundle(secSym.id)
+          : { dayBars: [], hourBars: [], min15Bars: [] };
+
         for (const pid of validProtocols) {
           try {
-            const gated = await this.protocolGating.scoreWithGating(sec.etf, marketBars, pid);
+            const gated = await this.protocolGating.scoreWithGating(sec.etf, marketBars, pid, { dayBars, hourBars, min15Bars });
             const score = gated.riskGate?.hardGateTriggered ? 0 : gated.signalPct;
             protocolScores.push({
               protocolId: pid,

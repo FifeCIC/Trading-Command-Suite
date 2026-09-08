@@ -62,7 +62,7 @@ export class SocialBuzzDirective implements IDirective {
 
     try {
       // Query the most recent social mention from DB (within last 24h)
-      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const cutoff = new Date((input.asOf?.getTime() ?? Date.now()) - 24 * 60 * 60 * 1000);
       const mention = await this.prisma.socialMention.findFirst({
         where: {
           symbol: symbol.toUpperCase(),

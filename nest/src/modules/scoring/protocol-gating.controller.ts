@@ -423,7 +423,8 @@ export class ProtocolGatingController {
       };
     }
 
-    return this.protocolGating.scoreWithGating(ticker, marketBars, protocol);
+    const { dayBars, hourBars, min15Bars } = await this.protocolGating.loadHigherTfBundle(sym.id, protocol);
+    return this.protocolGating.scoreWithGating(ticker, marketBars, protocol, { dayBars, hourBars, min15Bars });
   }
 
   /**
@@ -470,7 +471,8 @@ export class ProtocolGatingController {
       const bars = await this.marketData.getBars(sym.id, '1d', requiredBars['1d'] || 200);
       if (!bars || bars.length === 0) continue;
 
-      results.push(await this.protocolGating.scoreWithGating(p.symbol, bars as any, slug));
+      const { dayBars, hourBars, min15Bars } = await this.protocolGating.loadHigherTfBundle(sym.id, slug);
+      results.push(await this.protocolGating.scoreWithGating(p.symbol, bars as any, slug, { dayBars, hourBars, min15Bars }));
     }
 
     return results.sort((a, b) => b.composite - a.composite);

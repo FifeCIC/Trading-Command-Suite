@@ -1207,9 +1207,10 @@ export class AutomationLoopService implements OnModuleInit {
       if (!bars || bars.length < 20) continue;
 
       // Score both stacks against the same symbol + bars.
+      const { dayBars, hourBars, min15Bars } = await this.protocolGating.loadHigherTfBundle(dbSym.id, controlCfg.protocolId);
       const [scoreA, scoreB] = await Promise.all([
-        this.protocolGating.scoreWithGating(sym, bars, controlCfg.protocolId, undefined, controlCfg.weightStrategy ?? 'group-weighted'),
-        this.protocolGating.scoreWithGating(sym, bars, variantCfg.protocolId, undefined, variantCfg.weightStrategy ?? 'group-weighted'),
+        this.protocolGating.scoreWithGating(sym, bars, controlCfg.protocolId, { dayBars, hourBars, min15Bars }, controlCfg.weightStrategy ?? 'group-weighted'),
+        this.protocolGating.scoreWithGating(sym, bars, variantCfg.protocolId, { dayBars, hourBars, min15Bars }, variantCfg.weightStrategy ?? 'group-weighted'),
       ]);
 
       const brokerId = (controlCfg.brokerId ?? variantCfg.brokerId ?? 'mt5') as string;

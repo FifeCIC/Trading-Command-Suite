@@ -195,7 +195,11 @@ export class PortfolioService {
   /**
    * Get scoring data for each portfolio holding.
    * Returns last known score and signal strength per symbol.
-   * Integrates with ScoringService for real directive-based scores.
+   *
+   * ⚠️ DISPLAY-ONLY: scores come from ScoringService.rankAll() (the screening /
+   * opportunity ranker). These are NOT canonical trade signals — trade decisions
+   * use ProtocolGatingService.scoreWithGating(). Do not persist these numbers or
+   * feed them to the automation loop.
    */
   async getPortfolioScores(): Promise<Array<{
     symbol: string; ticker: string; score: number | null; signal: string; strength: string; dataStatus: string;

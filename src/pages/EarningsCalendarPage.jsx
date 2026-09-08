@@ -8,6 +8,7 @@ import {
   importEarnings,
   purgeEarningsData,
 } from '../core/api/research.js';
+import '../core/forms.css'; // canonical Form System (.ff-*) — segmented + compact .ff-bar
 import './earnings-calendar.css';
 
 /** Hard cap on rendered rows — 5k+ DOM rows chokes the page. */
@@ -411,30 +412,44 @@ export default function EarningsCalendarPage() {
         </div>
       </details>
 
-      <div className="ec-filters">
-        <div className="ec-field">
-          <label>Horizon / Sector</label>
-          {/* Single chip row: month chips followed by the sector chips (moved
-              here from the separate Sector field so the filters sit on one
-              line). Each group still drives its own filter state. */}
-          <div className="ec-chip-tabs">
+      <div className="ff-bar">
+        {/* Horizon — segmented (low-cardinality) */}
+        <div className="ff-field">
+          <span className="ff-label">Horizon</span>
+          <div className="ff-seg" role="group" aria-label="Horizon">
             {[1, 2, 3].map((m) => (
-              <button key={`m-${m}`} type="button" className={`ec-chip ${selectedMonth === m ? 'ec-chip-active' : ''}`} onClick={() => setSelectedMonth(m)}>
-                {m} month{m > 1 ? 's' : ''}
-              </button>
-            ))}
-            <span className="ec-chip-sep" aria-hidden="true" />
-            {sectors.map((s) => (
-              <button key={`s-${s}`} type="button" className={`ec-chip ${sectorFilter === s ? 'ec-chip-active' : ''}`} onClick={() => setSectorFilter(s)}>
-                {s === 'all' ? 'All Sectors' : s}
+              <button
+                key={`m-${m}`}
+                type="button"
+                className={`ff-seg-btn ${selectedMonth === m ? 'ff-seg-btn--active' : ''}`}
+                aria-pressed={selectedMonth === m}
+                onClick={() => setSelectedMonth(m)}
+              >
+                {m}mo
               </button>
             ))}
           </div>
         </div>
 
-        <div className="ec-field">
-          <label>Time window</label>
-          <div className="ec-chip-tabs">
+        {/* Sector — high-cardinality, compact dropdown instead of inline pills */}
+        <div className="ff-field">
+          <label className="ff-label" htmlFor="ec-sector-filter">Sector</label>
+          <select
+            id="ec-sector-filter"
+            className="ff-select"
+            value={sectorFilter}
+            onChange={(e) => setSectorFilter(e.target.value)}
+          >
+            {sectors.map((s) => (
+              <option key={`s-${s}`} value={s}>{s === 'all' ? 'All Sectors' : s}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Time window — segmented */}
+        <div className="ff-field">
+          <span className="ff-label">Time window</span>
+          <div className="ff-seg" role="group" aria-label="Time window">
             {[
               ['all', 'All'],
               ['today', 'Today'],
@@ -442,31 +457,45 @@ export default function EarningsCalendarPage() {
               ['week', 'This Week'],
               ['nextWeek', 'Next Week'],
             ].map(([w, label]) => (
-              <button key={`w-${w}`} type="button" className={`ec-chip ${windowFilter === w ? 'ec-chip-active' : ''}`} onClick={() => setWindowFilter(w)}>
+              <button
+                key={`w-${w}`}
+                type="button"
+                className={`ff-seg-btn ${windowFilter === w ? 'ff-seg-btn--active' : ''}`}
+                aria-pressed={windowFilter === w}
+                onClick={() => setWindowFilter(w)}
+              >
                 {label}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="ec-field">
-          <label>Session</label>
-          <div className="ec-chip-tabs">
+        {/* Session — segmented */}
+        <div className="ff-field">
+          <span className="ff-label">Session</span>
+          <div className="ff-seg" role="group" aria-label="Session">
             {[
               ['all', 'Any'],
               ['bmo', '☀️ BMO'],
               ['amc', '🌙 AMC'],
             ].map(([s2, label]) => (
-              <button key={`sd-${s2}`} type="button" className={`ec-chip ${sessionFilter === s2 ? 'ec-chip-active' : ''}`} onClick={() => setSessionFilter(s2)}>
+              <button
+                key={`sd-${s2}`}
+                type="button"
+                className={`ff-seg-btn ${sessionFilter === s2 ? 'ff-seg-btn--active' : ''}`}
+                aria-pressed={sessionFilter === s2}
+                onClick={() => setSessionFilter(s2)}
+              >
                 {label}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="ec-field">
-          <label>Market cap</label>
-          <div className="ec-chip-tabs">
+        {/* Market cap — segmented */}
+        <div className="ff-field">
+          <span className="ff-label">Market cap</span>
+          <div className="ff-seg" role="group" aria-label="Market cap">
             {[
               ['all', 'Any'],
               ['mega', 'Mega'],
@@ -474,20 +503,25 @@ export default function EarningsCalendarPage() {
               ['mid', 'Mid'],
               ['small', 'Small'],
             ].map(([c, label]) => (
-              <button key={`c-${c}`} type="button" className={`ec-chip ${capFilter === c ? 'ec-chip-active' : ''}`} onClick={() => setCapFilter(c)} title={CAP_LABELS[c]}>
+              <button
+                key={`c-${c}`}
+                type="button"
+                className={`ff-seg-btn ${capFilter === c ? 'ff-seg-btn--active' : ''}`}
+                aria-pressed={capFilter === c}
+                onClick={() => setCapFilter(c)}
+                title={CAP_LABELS[c]}
+              >
                 {label}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="ec-field">
-          <label>
-            <input type="checkbox" checked={estimatesOnly} onChange={(e) => setEstimatesOnly(e.target.checked)} />
-            {' '}Estimates only
-          </label>
-          <p className="ec-field-hint">Hides reports with no analyst EPS coverage.</p>
-        </div>
+        {/* Estimates only — labelled checkbox */}
+        <label className="ff-checkbox-label" style={{ paddingBottom: '0.3rem' }}>
+          <input type="checkbox" checked={estimatesOnly} onChange={(e) => setEstimatesOnly(e.target.checked)} />
+          <span>Estimates only</span>
+        </label>
       </div>
 
       {/* ── Empty State ── */}

@@ -68,7 +68,7 @@ export class EarningsProximityDirective implements IDirective {
     }
 
     const earningsDate = new Date(meta);
-    const now = new Date();
+    const now = input.asOf ?? new Date();
     const lastBar = bars.length > 0 ? new Date(bars[bars.length - 1].timestamp) : now;
     const daysUntil = Math.ceil((earningsDate.getTime() - lastBar.getTime()) / (1000 * 60 * 60 * 24));
     const absDays = Math.abs(daysUntil);

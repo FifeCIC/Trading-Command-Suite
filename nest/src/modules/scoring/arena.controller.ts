@@ -193,12 +193,14 @@ export class ArenaController {
             volume: Number(b.volume),
           }));
 
+          const { dayBars, hourBars, min15Bars } = await this.protocolGating.loadHigherTfBundle(sym.id);
+
           // Score with each protocol in this strategy, take the best
           let bestScore = 0;
           let bestSignal = 'HOLD';
           for (const pid of strat._validProtocols) {
             try {
-              const gated = await this.protocolGating.scoreWithGating(sym.ticker, marketBars, pid);
+              const gated = await this.protocolGating.scoreWithGating(sym.ticker, marketBars, pid, { dayBars, hourBars, min15Bars });
               if (gated.signalPct > bestScore && !gated.riskGate?.hardGateTriggered) {
                 bestScore = gated.signalPct;
                 bestSignal = gated.signal;
@@ -356,6 +358,7 @@ export class ArenaController {
       }));
 
       const protocolScores: typeof comparison[0]['protocolScores'] = [];
+      const { dayBars, hourBars, min15Bars } = await this.protocolGating.loadHigherTfBundle(symbolId);
 
       for (const protocolId of protocolIds) {
         const reg = this.protocolDb.getCached(protocolId);
@@ -366,6 +369,7 @@ export class ArenaController {
             ticker,
             marketBars,
             protocolId,
+            { dayBars, hourBars, min15Bars },
           );
 
           // Canonical output fields — the SAME normalised shape the ladders use

@@ -188,11 +188,16 @@ export class TradingSchedulerService {
         run.steps.push({ name: 'suggestions', status: 'ok', detail: 'No ranked symbols available' });
         return;
       }
+      // Suggestions are SCREENING output (opportunity ranking from rankAll),
+      // NOT trade decisions. rankAll is analytics-only (see its contract); the
+      // automation loop's canonical ProtocolGatingService path is the ONLY thing
+      // that produces trade actions (see maybeAutoExecute). The 'action' string
+      // here is a display tier and deliberately avoids 'BUY'/'SELL' so it cannot
+      // be mistaken for an execution instruction.
       run.suggestions = ranked.slice(0, 5).map((r: any) => ({
         symbol: r.ticker || r.symbol || '?',
         score: Math.round(r.score || r.composite || 0),
-        action: (r.signal === 'buy' || r.signal === 'BUY' || r.score >= 65) ? 'BUY (paper)' :
-                (r.score >= 40) ? 'WATCH' : 'HOLD',
+        action: r.score >= 65 ? 'TOP (screen)' : r.score >= 40 ? 'WATCH (screen)' : 'LOW (screen)',
       }));
       run.steps.push({ name: 'suggestions', status: 'ok', detail: `${run.suggestions.length} suggestions from live scoring` });
     } catch (err) {

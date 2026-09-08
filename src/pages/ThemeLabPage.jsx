@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FadeCardGroup from '../components/FadeCardGroup';
 import './theme-lab.css';
+import '../core/forms.css'; // canonical shared Form System (.ff-*)
 import PageInfoPopover from '../components/PageInfoPopover';
 
 const LAB_SECTIONS = [
@@ -44,20 +45,20 @@ const TABLE_ROWS = [
 ];
 
 const FORM_STANDARD_CLASSES = [
-  '.app-form           /* Form container - sets field gap */',
-  '.app-form-row       /* Responsive row: 2-col -> 1-col on mobile */',
-  '.app-field          /* Field group: label + input + hint/error */',
-  '.app-field--error   /* Error state - red border + error text */',
-  '.app-field--success /* Success state - green indicator */',
-  '.app-field-label    /* Label - uppercase, spaced from input */',
-  '.app-field-input    /* Input/select/textarea - unified sizing */',
-  '.app-field-textarea /* Textarea variant - resizable vertical */',
-  '.app-field-hint     /* Hint/description below field */',
-  '.app-field-error    /* Error message below field */',
-  '.app-form-actions   /* Button row - right-aligned, gap */',
-  '.app-btn            /* Base button */',
-  '.app-btn-primary    /* Primary action button */',
-  '.app-btn-secondary  /* Secondary/cancel button */',
+  '.ff-form              /* Form container — column, 1rem field gap */',
+  '.ff-field             /* Field group: label + control + hint */',
+  '.ff-field--error      /* Field in error (red border) */',
+  '.ff-field--success    /* Field in success (green border) */',
+  '.ff-label             /* Uppercase micro-label */',
+  '.ff-input/.ff-select/.ff-textarea  /* Unified controls */',
+  '.ff-hint              /* Hint/description below a field */',
+  '.ff-error/.ff-success /* Padded status banners */',
+  '.ff-row-2/.ff-row-3   /* Responsive 2/3-col grids */',
+  '.ff-seg/.ff-seg-btn   /* Segmented control (few options) */',
+  '.ff-bar               /* Compact filter toolbar (dense) */',
+  '.ff-checkbox-label    /* Checkbox + label */',
+  '.ff-actions           /* Right-aligned action row */',
+  '.ff-btn/.ff-btn-primary/.ff-btn-secondary  /* Buttons */',
 ].join('\n');
 
 const FADE_CARDS = [
@@ -346,36 +347,37 @@ export default function ThemeLabPage() {
         </section>
       )}
 
-      {/* ── Form Standard ──────────────────────────────────── */}
+      {/* ── Form System (canonical: src/core/forms.css, .ff-*) ── */}
       <section className="tl-section">
-        <h2>Form Standard</h2>
+        <h2>Form System</h2>
         <p className="tl-hint">
-          Reusable form pattern for consistent spacing, field sizing, error states, and responsive layout.
-          Apply <code>.app-form</code> to any form container, <code>.app-field</code> to each field group.
+          One canonical form standard. Import <code>src/core/forms.css</code> on any page with a form and use the{' '}
+          <code>.ff-*</code> classes — comfortable field density for forms, <code>.ff-bar</code> for dense filter
+          toolbars. There is no longer a separate <code>.app-form</code> set.
         </p>
 
         <div className="tl-form-demos">
           {/* Single-column demo */}
           <div className="tl-form-demo">
             <h3>Single Column</h3>
-            <div className="app-form">
-              <div className="app-field">
-                <label className="app-field-label">Strategy Name</label>
-                <input type="text" className="app-field-input" placeholder="e.g., Tech Dip Accumulation" defaultValue="" />
-                <span className="app-field-hint">Give your strategy a descriptive name.</span>
+            <div className="ff-form">
+              <div className="ff-field">
+                <label className="ff-label" htmlFor="tl-strategy">Strategy Name</label>
+                <input id="tl-strategy" type="text" className="ff-input" placeholder="e.g., Tech Dip Accumulation" defaultValue="" />
+                <span className="ff-hint">Give your strategy a descriptive name.</span>
               </div>
-              <div className="app-field">
-                <label className="app-field-label">Watchlist</label>
-                <select className="app-field-input">
+              <div className="ff-field">
+                <label className="ff-label" htmlFor="tl-watchlist">Watchlist</label>
+                <select id="tl-watchlist" className="ff-select" defaultValue="">
                   <option value="">— Select a watchlist —</option>
                   <option>Momentum Stocks</option>
                   <option>Primary</option>
                 </select>
-                <span className="app-field-hint">Symbols will come from the selected watchlist.</span>
+                <span className="ff-hint">Symbols will come from the selected watchlist.</span>
               </div>
-              <div className="app-field">
-                <label className="app-field-label">Description</label>
-                <textarea className="app-field-input app-field-textarea" placeholder="What does this strategy aim to do?" rows={2} />
+              <div className="ff-field">
+                <label className="ff-label" htmlFor="tl-desc">Description</label>
+                <textarea id="tl-desc" className="ff-textarea" placeholder="What does this strategy aim to do?" rows={2} />
               </div>
             </div>
           </div>
@@ -383,62 +385,124 @@ export default function ThemeLabPage() {
           {/* Two-column demo */}
           <div className="tl-form-demo">
             <h3>Two Column (responsive)</h3>
-            <div className="app-form">
-              <div className="app-form-row">
-                <div className="app-field">
-                  <label className="app-field-label">Min Score</label>
-                  <input type="number" className="app-field-input" placeholder="25" />
-                  <span className="app-field-hint">Composite score threshold (0-100).</span>
+            <div className="ff-form">
+              <div className="ff-row-2">
+                <div className="ff-field">
+                  <label className="ff-label" htmlFor="tl-min">Min Score</label>
+                  <input id="tl-min" type="number" className="ff-input" placeholder="25" />
+                  <span className="ff-hint">Composite score threshold (0-100).</span>
                 </div>
-                <div className="app-field">
-                  <label className="app-field-label">Max Positions</label>
-                  <input type="number" className="app-field-input" placeholder="5" />
-                  <span className="app-field-hint">Maximum concurrent positions.</span>
+                <div className="ff-field">
+                  <label className="ff-label" htmlFor="tl-max">Max Positions</label>
+                  <input id="tl-max" type="number" className="ff-input" placeholder="5" />
+                  <span className="ff-hint">Maximum concurrent positions.</span>
                 </div>
               </div>
-              <div className="app-form-row">
-                <div className="app-field">
-                  <label className="app-field-label">Stop Loss %</label>
-                  <input type="number" className="app-field-input" placeholder="2.0" step="0.1" />
+              <div className="ff-row-2">
+                <div className="ff-field">
+                  <label className="ff-label" htmlFor="tl-sl">Stop Loss %</label>
+                  <input id="tl-sl" type="number" className="ff-input" placeholder="2.0" step="0.1" />
                 </div>
-                <div className="app-field">
-                  <label className="app-field-label">Take Profit %</label>
-                  <input type="number" className="app-field-input" placeholder="5.0" step="0.1" />
+                <div className="ff-field">
+                  <label className="ff-label" htmlFor="tl-tp">Take Profit %</label>
+                  <input id="tl-tp" type="number" className="ff-input" placeholder="5.0" step="0.1" />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Error states demo */}
+          {/* Segmented + buttons demo */}
           <div className="tl-form-demo">
-            <h3>Error &amp; Disabled States</h3>
-            <div className="app-form">
-              <div className="app-field app-field--error">
-                <label className="app-field-label">Ticker Symbol</label>
-                <input type="text" className="app-field-input" defaultValue="INVALID!" />
-                <span className="app-field-error">Symbol not found. Check the ticker and try again.</span>
+            <h3>Segmented &amp; Actions</h3>
+            <div className="ff-form">
+              <div className="ff-field">
+                <label className="ff-label">Session</label>
+                <div className="ff-seg" role="group" aria-label="Session">
+                  <button type="button" className="ff-seg-btn ff-seg-btn--active" aria-pressed="true">Any</button>
+                  <button type="button" className="ff-seg-btn" aria-pressed="false">☀️ BMO</button>
+                  <button type="button" className="ff-seg-btn" aria-pressed="false">🌙 AMC</button>
+                </div>
               </div>
-              <div className="app-field">
-                <label className="app-field-label">Exchange</label>
-                <select className="app-field-input" disabled>
-                  <option>NASDAQ</option>
-                </select>
-                <span className="app-field-hint">Exchange selection is locked for this symbol.</span>
+              <div className="ff-field">
+                <label className="ff-label">Filter Style</label>
+                <div className="ff-seg" role="group" aria-label="Filter style">
+                  <button type="button" className="ff-seg-btn" aria-pressed="false">Table</button>
+                  <button type="button" className="ff-seg-btn ff-seg-btn--active" aria-pressed="true">Cards</button>
+                  <button type="button" className="ff-seg-btn" aria-pressed="false">Split</button>
+                </div>
               </div>
-              <div className="app-field app-field--success">
-                <label className="app-field-label">Protocol</label>
-                <select className="app-field-input" defaultValue="built-in">
-                  <option>built-in</option>
-                  <option>custom</option>
-                </select>
-                <span className="app-field-hint" style={{ color: '#22c55e' }}>✓ Protocol is valid and ready to use.</span>
-              </div>
-              <div className="app-form-actions">
-                <button type="button" className="app-btn app-btn-primary">Save Strategy</button>
-                <button type="button" className="app-btn app-btn-secondary">Cancel</button>
+              <div className="ff-actions">
+                <button type="button" className="ff-btn ff-btn-secondary">Cancel</button>
+                <button type="button" className="ff-btn ff-btn-primary">Save Strategy</button>
               </div>
             </div>
           </div>
+
+          {/* Error/disabled + compact toolbar demo */}
+          <div className="tl-form-demo">
+            <h3>Error &amp; Disabled States</h3>
+            <div className="ff-form">
+              <div className="ff-field ff-field--error">
+                <label className="ff-label" htmlFor="tl-ticker">Ticker Symbol</label>
+                <input id="tl-ticker" type="text" className="ff-input" defaultValue="INVALID!" />
+                <span className="ff-field-error">Symbol not found. Check the ticker and try again.</span>
+              </div>
+              <div className="ff-field">
+                <label className="ff-label" htmlFor="tl-exch">Exchange</label>
+                <select id="tl-exch" className="ff-select" disabled>
+                  <option>NASDAQ</option>
+                </select>
+                <span className="ff-hint">Exchange selection is locked for this symbol.</span>
+              </div>
+              <div className="ff-field ff-field--success">
+                <label className="ff-label" htmlFor="tl-protocol">Protocol</label>
+                <select id="tl-protocol" className="ff-select" defaultValue="built-in">
+                  <option>built-in</option>
+                  <option>custom</option>
+                </select>
+                <span className="ff-hint" style={{ color: '#22c55e' }}>✓ Protocol is valid and ready to use.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Compact toolbar demo */}
+        <div className="tl-form-demo" style={{ marginTop: '1.25rem' }}>
+          <h3>Compact Toolbar (.ff-bar) — data-page filter row</h3>
+          <div className="ff-bar">
+            <div className="ff-field">
+              <span className="ff-label">Horizon</span>
+              <div className="ff-seg" role="group" aria-label="Horizon">
+                <button type="button" className="ff-seg-btn" aria-pressed="false">1mo</button>
+                <button type="button" className="ff-seg-btn" aria-pressed="false">2mo</button>
+                <button type="button" className="ff-seg-btn ff-seg-btn--active" aria-pressed="true">3mo</button>
+              </div>
+            </div>
+            <div className="ff-field">
+              <label className="ff-label" htmlFor="tl-sector">Sector</label>
+              <select id="tl-sector" className="ff-select" defaultValue="all">
+                <option value="all">All Sectors</option>
+                <option>Technology</option>
+                <option>Healthcare</option>
+                <option>Financials</option>
+              </select>
+            </div>
+            <div className="ff-field">
+              <span className="ff-label">Session</span>
+              <div className="ff-seg" role="group" aria-label="Session">
+                <button type="button" className="ff-seg-btn ff-seg-btn--active" aria-pressed="true">Any</button>
+                <button type="button" className="ff-seg-btn" aria-pressed="false">☀️ BMO</button>
+                <button type="button" className="ff-seg-btn" aria-pressed="false">🌙 AMC</button>
+              </div>
+            </div>
+            <label className="ff-checkbox-label" style={{ paddingBottom: '0.4rem' }}>
+              <input type="checkbox" />
+              <span>Estimates only</span>
+            </label>
+          </div>
+          <p className="tl-hint" style={{ margin: '0.75rem 0 0' }}>
+            Slim on desktop for tidy screenshots; tap targets return to 44px on touch devices.
+          </p>
         </div>
 
         {/* CSS snippet reference */}

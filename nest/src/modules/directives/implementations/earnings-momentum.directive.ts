@@ -60,7 +60,7 @@ export class EarningsMomentumDirective implements IDirective {
         where: {
           symbol: symbol.toUpperCase(),
           epsActual: { not: null },
-          reportDate: { lte: new Date() },
+          reportDate: { lte: input.asOf ?? new Date() },
         },
         orderBy: { reportDate: 'desc' },
         take: 4,

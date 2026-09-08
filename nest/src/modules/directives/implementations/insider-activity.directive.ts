@@ -65,7 +65,7 @@ export class InsiderActivityDirective implements IDirective {
 
     try {
       // Query insider transactions from DB (last 30 days)
-      const cutoff = new Date(Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000);
+      const cutoff = new Date((input.asOf?.getTime() ?? Date.now()) - RECENT_DAYS * 24 * 60 * 60 * 1000);
       const recent = await this.prisma.insiderTransaction.findMany({
         where: {
           symbol: symbol.toUpperCase(),

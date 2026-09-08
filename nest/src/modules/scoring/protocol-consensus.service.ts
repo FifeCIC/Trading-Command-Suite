@@ -78,6 +78,7 @@ export class ProtocolConsensusService {
 
     const protocolIds = Object.keys(this.protocolDb.getAllCached());
     const votes: ProtocolVote[] = [];
+    const { dayBars, hourBars, min15Bars } = await this.protocolGating.loadHigherTfBundle(sym.id);
 
     // ── Score through each protocol ──
     for (const protocolId of protocolIds) {
@@ -100,6 +101,7 @@ export class ProtocolConsensusService {
           symbol,
           bars,
           protocolId,
+          { dayBars, hourBars, min15Bars },
         );
 
         if (result && result.signalPct != null) {

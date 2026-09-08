@@ -466,7 +466,8 @@ export class TradingStrategyService {
 
     let gated: any;
     try {
-      gated = await this.protocolGating.scoreWithGating(symbol, bars, protocolId);
+      const { dayBars, hourBars, min15Bars } = await this.protocolGating.loadHigherTfBundle(sym.id, protocolId);
+      gated = await this.protocolGating.scoreWithGating(symbol, bars, protocolId, { dayBars, hourBars, min15Bars });
     } catch (err) {
       this.logger.warn(`Protocol scoring failed for ${symbol}/${protocolId}: ${(err as Error).message}`);
       return { evaluated: false, reason: `Protocol scoring failed: ${(err as Error).message}` };
