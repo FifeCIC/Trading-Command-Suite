@@ -1,0 +1,37 @@
+.pl-page { padding: 1.5rem; color: #d1d5db; max-width: 1100px; }
+.pl-header { margin-bottom: 1rem; }
+.pl-header h2 { margin: 0 0 0.25rem; color: #f1f5f9; font-size: 1.3rem; }
+.pl-sub { margin: 0; color: #94a3b8; font-size: 0.85rem; }
+
+.pl-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; margin-bottom: 1.25rem; }
+.pl-stat { padding: 0.6rem; border: 1px solid #1e2030; border-radius: 8px; background: #0d1117; text-align: center; }
+.pl-stat-num { display: block; font-size: 1.15rem; font-weight: 700; color: #e2e8f0; }
+.pl-stat-time { font-size: 0.8rem !important; }
+.pl-stat span:last-child { font-size: 0.7rem; color: #64748b; }
+
+.pl-section { margin-bottom: 1.25rem; }
+.pl-section h3 { margin: 0 0 0.5rem; color: #cbd5e1; font-size: 0.95rem; }
+.pl-hint { font-size: 0.7rem; color: #64748b; font-weight: 400; }
+.pl-empty { color: #64748b; font-size: 0.85rem; padding: 0.75rem; border: 1px dashed #1e2030; border-radius: 8px; }
+
+.pl-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.pl-table th { text-align: left; padding: 0.4rem 0.6rem; color: #64748b; font-weight: 600; border-bottom: 1px solid #1e2030; }
+.pl-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid #161b22; }
+.pl-symbol { font-weight: 700; color: #e2e8f0; }
+.pl-mono { font-family: ui-monospace, monospace; color: #93c5fd; }
+.pl-muted { color: #94a3b8; }
+.pl-green { color: #22c55e; }
+.pl-red { color: #ef4444; }
+
+.pl-side { font-size: 0.68rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; }
+.pl-side-buy { background: #064e3b44; color: #6ee7b7; }
+.pl-side-sell { background: #7f1d1d44; color: #fca5a5; }
+
+.pl-origin { font-size: 0.68rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; background: #1e293b; color: #cbd5e1; }
+.pl-origin-external { background: #7c2d12; color: #fdba74; }
+.pl-origin-manual { background: #1e3a8a; color: #93c5fd; }
+.pl-origin-strategy { background: #14532d; color: #86efac; }
+
+.pl-adjustments { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; }
+.pl-adjustments li { display: flex; gap: 0.75rem; align-items: center; padding: 0.4rem 0.6rem; border: 1px solid #161b22; border-radius: 6px; background: #0d1117; flex-wrap: wrap; }
+.pl-reason { color: #94a3b8; font-style: italic; flex: 1; }

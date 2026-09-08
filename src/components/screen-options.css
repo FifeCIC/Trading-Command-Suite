@@ -199,6 +199,16 @@
   flex-direction: column;
   gap: 3px;
 }
+/* Two-choice options (e.g. Display Mode) side by side */
+.so-radio-group--displayMode {
+  flex-direction: row;
+  gap: 6px;
+}
+.so-radio-group--displayMode .so-radio-option {
+  flex: 1 1 auto;
+  justify-content: center;
+  padding: 5px 8px;
+}
 .so-radio-option {
   display: flex;
   align-items: center;

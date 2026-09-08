@@ -3,6 +3,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { DuplicateGuardService } from './duplicate-guard.service';
 import { GlobalDiversificationService } from '../diversification/global-diversification.service';
+import { PyramidPolicyService } from './pyramid-policy.service';
 
 /**
  * ExecutionFeasibilityService — #723 shared trade-acceptance assessment.
@@ -45,6 +46,7 @@ export class ExecutionFeasibilityService {
     private readonly adapterFactory: AdapterFactory,
     private readonly duplicateGuard: DuplicateGuardService,
     private readonly diversification: GlobalDiversificationService,
+    private readonly pyramidPolicy: PyramidPolicyService,
   ) {}
 
   /**
@@ -90,7 +92,7 @@ export class ExecutionFeasibilityService {
       });
     }
 
-    // ── 3. Duplicate-position policy (#721) — one-per-symbol default ──
+    // ── 3. Duplicate-position / scale-in policy (#721) — ONE shared library ──
     let positions: any[] = params.positions ?? [];
     if (!params.positions) {
       try {
@@ -99,62 +101,15 @@ export class ExecutionFeasibilityService {
         positions = [];
       }
     }
-    const open = positions.filter(p =>
-      String(p.symbol ?? p.ticker ?? '').toUpperCase() === ticker,
-    );
 
-    if (open.length > 0) {
-      // Policy knob = the EXISTING TradingStrategy.maxPyramidTiers (one place).
-      let tiers = 1;
-      let baseSize = 0.01;
-      try {
-        const bot: any = await this.prisma.tradingStrategy.findFirst({
-          where: { active: true, symbol: ticker },
-          orderBy: { updatedAt: 'desc' },
-        });
-        tiers = Number(bot?.maxPyramidTiers ?? 1) || 1;
-        baseSize = Number(bot?.baseSize ?? 0.01) || 0.01;
-      } catch { /* default policy */ }
-
-      if (tiers <= 1) {
-        blockers.push({
-          key: 'duplicate-position',
-          message: `Duplicate blocked for ${ticker}: ${open.length} open position(s) on ${brokerId.toUpperCase()}. Close existing or wait for cooldown.`,
-          hint: `Close ${open.map(p => p.ticket ? `#${p.ticket}` : '').filter(Boolean).join(', ') || 'the existing position'} — or set maxPyramidTiers > 1 on the bot to allow scale-in`,
-        });
-      } else {
-        // Scale-in path: same profit + SL-locked conditions as the retired
-        // pyramid logic (#721 decisions) — never a second implementation.
-        const entry = open[0];
-        const profit = Number(entry?.profit ?? entry?.unrealizedPnl ?? 0);
-        const sl = Number(entry?.sl ?? entry?.stopLoss ?? 0);
-        const price = Number(entry?.priceCurrent ?? entry?.currentPrice ?? entry?.avgCost ?? 0);
-        const lockedIn = sl > 0 && (
-          side === 'BUY' ? sl >= price : sl <= price
-        );
-        const tier = Math.max(open.length, Math.ceil((Number(entry?.volume ?? 1)) / baseSize));
-
-        if (profit <= 0) {
-          blockers.push({
-            key: 'scale-in-not-green',
-            message: `Scale-in blocked for ${ticker}: existing position is not in profit`,
-            hint: 'Close the losing position first — scaling into a loser is not allowed',
-          });
-        } else if (!lockedIn) {
-          blockers.push({
-            key: 'scale-in-not-locked',
-            message: `Scale-in blocked for ${ticker}: existing position's profit is not locked in`,
-            hint: 'Set a broker SL at breakeven-or-better on the open position',
-          });
-        } else if (tier >= tiers) {
-          blockers.push({
-            key: 'max-tier',
-            message: `Pyramid tier limit reached (${tier}/${tiers})`,
-            hint: 'Raise maxPyramidTiers on the bot or wait for the position to close',
-          });
-        }
-        // otherwise: scale-in allowed — falls through to remaining gates.
-      }
+    const pyramid = await this.pyramidPolicy.evaluate({
+      symbol: ticker,
+      side,
+      brokerId,
+      positions,
+    });
+    for (const b of pyramid.blockers) {
+      blockers.push({ key: b.key, message: b.message, hint: b.hint });
     }
 
     // ── 4. Diversification pre-check (same check the bot runs) ──
@@ -189,7 +144,7 @@ export class ExecutionFeasibilityService {
     }
 
     // Duplicate guard as final structural check (execution-phase parity).
-    if (blockers.length === 0 && open.length === 0) {
+    if (blockers.length === 0 && !pyramid.hasOpenPosition) {
       try {
         const dup = await this.duplicateGuard.checkDuplicate(ticker, brokerId, protocolId ?? undefined);
         if (dup.blocked) {

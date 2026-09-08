@@ -4,9 +4,9 @@
  * Auto-generates a formatted Markdown/plain-text report of today's trading
  * activity. Copy to clipboard for posting to Reddit, Discord, or other platforms.
  *
- * Data sources: /api/providers/mt5/diagnostics, /api/providers/mt5/positions,
- *   /api/providers/mt5/history, /api/scoring/ranked, /api/automation/status,
- *   /api/providers/health
+ * Data sources: /api/trading/position-lifecycle (DB positions), /api/trading/trade-history
+ *   (DB closed trades), /api/providers/mt5/diagnostics (account balance/equity),
+ *   /api/scoring/ranked, /api/automation/status, /api/providers/health
  */
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -35,19 +35,24 @@ export default function DailySummaryReportPage() {
 
   const posQuery = useQuery({
     queryKey: ['report-positions'],
-    queryFn: () => apiGet('/api/providers/mt5/positions').catch(() => ({ positions: [] })),
+    queryFn: () => apiGet('/api/trading/position-lifecycle').catch(() => ({ positions: [] })),
     staleTime: 30_000,
   });
-  const positions = posQuery.data?.positions || [];
+  const positions = (posQuery.data?.positions || []).map(p => ({
+    symbol: p.symbol,
+    type: p.side || 'buy',
+    profit: p.pnl ?? 0,
+    volume: p.quantity ?? 0,
+  }));
 
   const historyQuery = useQuery({
     queryKey: ['report-history'],
-    queryFn: () => apiGet('/api/providers/mt5/history?from=' + todayStr()).catch(() => ({ deals: [] })),
+    queryFn: () => apiGet('/api/trading/trade-history?days=1&status=closed').catch(() => ({ trades: [] })),
     staleTime: 30_000,
   });
   const deals = (() => {
-    const raw = historyQuery.data?.deals || historyQuery.data;
-    return Array.isArray(raw) ? raw : [];
+    const raw = historyQuery.data?.trades || [];
+    return raw.map(t => ({ profit: t.pnl ?? 0, time: t.closedAt, symbol: t.symbol }));
   })();
 
   const rankedQuery = useQuery({

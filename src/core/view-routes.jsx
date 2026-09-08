@@ -142,6 +142,7 @@ import FileInventoryPage from '../pages/FileInventoryPage.jsx';
 
 // ── Lab ──
 import ComponentLabPage from '../pages/ComponentLabPage.jsx';
+import PositionLifecyclePage from '../pages/PositionLifecyclePage.jsx';
 import ResponsiveLayoutLabPage from '../pages/ResponsiveLayoutLabPage.jsx';
 import ChartsLabPage from '../pages/ChartsLabPage.jsx';
 import ThemeLabPage from '../pages/ThemeLabPage.jsx';
@@ -349,6 +350,7 @@ export const VIEW_COMPONENTS = {
   'portfolio-lab': PortfolioLabPage,
   'dual-protocol-inspector': ScoringDebugLab,
   'snapshots': SnapshotLibraryPage,
+  'position-lifecycle': PositionLifecyclePage,
 
   // Training
   'candle-patterns': TrainingCandlePatternsPage,

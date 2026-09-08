@@ -669,7 +669,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                       <div key={section.id} className="so-section">
                         <h3 className="so-section-title" title={section.description}>{section.label}</h3>
                         {section.type === 'radio' && (
-                          <div className="so-radio-group">
+                          <div className={`so-radio-group so-radio-group--${section.id}`}>
                             {section.options.map(function (opt) {
                               var currentValue = globalValueMap[section.field];
                               return (
@@ -718,7 +718,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                         <div key={section.id} className="so-section">
                           <h3 className="so-section-title" title={section.description}>{section.label}</h3>
                           {section.type === 'radio' && (
-                            <div className="so-radio-group">
+                            <div className={`so-radio-group so-radio-group--${section.id}`}>
                               {section.options.map(function (opt) {
                                 return (
                                   <label

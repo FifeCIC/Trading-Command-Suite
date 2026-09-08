@@ -7,6 +7,7 @@ import { AutomationLoopService } from './automation-loop.service';
 import { AuditLogService } from './audit-log.service';
 import { PrismaService } from '../../database/prisma.service';
 import { RequireAuthGuard } from '../auth/guards/require-auth.guard';
+import { PositionSyncService } from '../providers/position-sync.service';
 import type { CacheStats, CacheDebugEntry } from './symbol-data-cache.service';
 import type { ProtocolRunConfig, RunResult } from './protocol-runner.service';
 import type { QueueJob, QueueStats } from './execution-queue.service';
@@ -23,6 +24,7 @@ export class AutomationController {
     private readonly loop: AutomationLoopService,
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
+    private readonly positionSync: PositionSyncService,
   ) {}
 
   // ── Cache endpoints ─────────────────────────────────
@@ -397,6 +399,10 @@ export class AutomationController {
       activeTimelineEvents: loopState.activeTimelineEvents.slice(0, 20),
       recentDecisions: (loopState.recentDecisions || []).slice(0, 20),
       priorityQueue: loopState.priorityQueue || [],
+      positionSync: {
+        lastSyncedAt: this.positionSync.getLastSyncTime(),
+        lastResult: this.positionSync.getLastSyncResult(),
+      },
     };
   }
 

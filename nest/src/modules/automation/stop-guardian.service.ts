@@ -77,6 +77,16 @@ export class StopGuardianService {
     recentAdjustments: [],
   };
 
+  // ── Broker-modification throttle (#721 decision 6) ──
+  // Brokers throttle SL/TP modifications — hammering `/order/modify` every
+  // tick can trip rate limits or get positions re-quoted. Two knobs:
+  //   per-position cadence (min gap between edits on ONE position)
+  //   global cadence (max edits per minute across ALL positions)
+  private readonly MIN_MODIFY_INTERVAL_MS = 60_000; // 1 edit per position per minute
+  private readonly MAX_MODIFY_PER_MINUTE = 10;      // global cap per minute
+  private lastModifyAt = new Map<number, number>(); // ticket → last modify timestamp
+  private modifyTimes: number[] = [];               // timestamps of edits in the last 60s
+
   constructor(
     private readonly strategyService: TradingStrategyService,
     private readonly directivesService: DirectivesService,
@@ -249,45 +259,40 @@ export class StopGuardianService {
           }
         }
 
-        // 9. Execute modification if confident
-        const shouldAdjust =
-          avgConfidence >= 55 &&
-          recommendedSl !== null &&
-          Math.abs(recommendedSl - (pos.sl || 0)) > 0.00001;
-
-        if (shouldAdjust) {
-          const ok = await this.bridgePost('/order/modify', {
-            ticket: pos.ticket,
-            sl: recommendedSl,
-          });
-
-          if (ok) {
-            const entry: StopAdjustment = {
-              timestamp: new Date().toISOString(),
-              ticket: pos.ticket,
-              symbol: strat.symbol,
-              oldSl: pos.sl,
-              newSl: recommendedSl!,
-              reason: `Consensus ${avgConfidence.toFixed(0)}% | ATR=${atrValue.toFixed(5)} | Wick=${wickScore}`,
-              stopConfidence: Math.round(avgConfidence),
-            };
-            adjustments.push(entry);
-            this.state.recentAdjustments = [
-              entry,
-              ...this.state.recentAdjustments,
-            ].slice(0, 50);
-            this.logger.log(
-              `Stop: ${strat.symbol} #${pos.ticket} SL ${pos.sl} → ${recommendedSl} (${avgConfidence.toFixed(0)}%)`,
+        // 9. Execute modification — two-layer stops (#721 decision 6):
+        //    (a) protective floor: an UNLOCKED position (SL=0) is an emergency
+        //        — set a relaxed broker-side disaster stop immediately, exempt
+        //        from the cadence throttle.
+        //    (b) normal trailing: tighten toward the ATR stop, throttled.
+        if (pos.sl == null || pos.sl <= 0) {
+          const protective = this.protectiveSl(pos, side, strat);
+          if (protective != null) {
+            await this.applyModify(
+              pos,
+              protective,
+              `Protective floor (was unlocked) | ${strat.slPct ?? 1}% from entry`,
+              Math.round(avgConfidence),
+              side,
+              adjustments,
+              true,
             );
-            // Surface the adjustment — evidence the bot is actively managing
-            // stops while the app is running (#721).
-            this.notifications?.send({
-              title: `🛡️ Stop adjusted — ${strat.symbol}`,
-              body: `${side} #${pos.ticket} SL ${pos.sl} → ${recommendedSl!.toFixed(5)} (consensus ${avgConfidence.toFixed(0)}%)`,
-              symbol: strat.symbol,
-              event: 'stop-adjusted',
-              metadata: { ticket: pos.ticket, oldSl: pos.sl, newSl: recommendedSl, side },
-            }).catch(() => {});
+          }
+        } else {
+          const shouldAdjust =
+            avgConfidence >= 55 &&
+            recommendedSl !== null &&
+            Math.abs(recommendedSl - (pos.sl || 0)) > 0.00001;
+
+          if (shouldAdjust) {
+            await this.applyModify(
+              pos,
+              recommendedSl!,
+              `Consensus ${avgConfidence.toFixed(0)}% | ATR=${atrValue.toFixed(5)} | Wick=${wickScore}`,
+              Math.round(avgConfidence),
+              side,
+              adjustments,
+              false,
+            );
           }
         }
 
@@ -354,6 +359,99 @@ export class StopGuardianService {
       wickFilterPassed,
       lastEvaluatedAt: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Relaxed broker-side protective stop (#721 decision 6) — the disaster
+   * floor every position MUST carry, independent of the tighter app-managed
+   * trailing stop. Distance = the strategy's own slPct from entry.
+   */
+  private protectiveSl(
+    pos: Mt5RawPosition,
+    side: 'BUY' | 'SELL',
+    strat: any,
+  ): number | null {
+    const entry = Number(pos.priceOpen);
+    if (!entry || entry <= 0) return null;
+    const slPct = Number(strat?.slPct ?? 1) || 1;
+    const protective =
+      side === 'BUY' ? entry * (1 - slPct / 100) : entry * (1 + slPct / 100);
+    return Number(protective.toFixed(5));
+  }
+
+  /** Broker-throttle gate — returns true if a modify may be sent now. */
+  private canModify(ticket: number, priority: boolean): boolean {
+    const now = Date.now();
+    this.modifyTimes = this.modifyTimes.filter((t) => now - t < 60_000);
+    // Global hard cap applies to everyone (incl. protective floors) to avoid
+    // tripping broker throttling during a mass-unlock event.
+    if (this.modifyTimes.length >= this.MAX_MODIFY_PER_MINUTE) return false;
+    if (!priority) {
+      const last = this.lastModifyAt.get(ticket) || 0;
+      if (now - last < this.MIN_MODIFY_INTERVAL_MS) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Post an SL modification, throttle-aware, and record + notify on success.
+   * `priority` bypasses the per-position cadence (used for the protective
+   * floor when a position is unlocked), but never the global cap.
+   */
+  private async applyModify(
+    pos: Mt5RawPosition,
+    newSl: number,
+    reason: string,
+    confidence: number,
+    side: 'BUY' | 'SELL',
+    adjustments: StopAdjustment[],
+    priority: boolean,
+  ): Promise<boolean> {
+    if (!this.canModify(pos.ticket, priority)) {
+      this.logger.debug(
+        `Stop modify throttled: ${pos.symbol} #${pos.ticket} (priority=${priority})`,
+      );
+      return false;
+    }
+
+    const ok = await this.bridgePost('/order/modify', {
+      ticket: pos.ticket,
+      sl: newSl,
+    });
+
+    if (ok) {
+      const now = Date.now();
+      this.lastModifyAt.set(pos.ticket, now);
+      this.modifyTimes.push(now);
+
+      const entry: StopAdjustment = {
+        timestamp: new Date().toISOString(),
+        ticket: pos.ticket,
+        symbol: pos.symbol,
+        oldSl: pos.sl,
+        newSl,
+        reason,
+        stopConfidence: confidence,
+      };
+      adjustments.push(entry);
+      this.state.recentAdjustments = [
+        entry,
+        ...this.state.recentAdjustments,
+      ].slice(0, 50);
+      this.logger.log(
+        `Stop: ${pos.symbol} #${pos.ticket} SL ${pos.sl} → ${newSl} (${confidence}%)`,
+      );
+      this.notifications
+        ?.send({
+          title: `🛡️ Stop adjusted — ${pos.symbol}`,
+          body: `${side} #${pos.ticket} SL ${pos.sl} → ${newSl.toFixed(5)} — ${reason}`,
+          symbol: pos.symbol,
+          event: 'stop-adjusted',
+          metadata: { ticket: pos.ticket, oldSl: pos.sl, newSl, side, reason },
+        })
+        .catch(() => {});
+    }
+    return ok;
   }
 
   private computeAtr(bars: any[]): number {

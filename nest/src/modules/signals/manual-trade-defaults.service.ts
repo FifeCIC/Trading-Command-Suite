@@ -6,13 +6,14 @@ import { PrismaService } from '../../database/prisma.service';
  * (#720). The Signals card places orders with no per-trade parameters, so
  * these ARE the parameters. Stored in `global_setting` (backup-safe, not
  * hardcoded) with the original inline values as the seed: 0.01 lots, 2% SL,
- * 4% TP.
+ * 4% TP, 1 pyramid tier.
  *
  * Keys (single source of truth — read at order time so Settings edits apply
  * without restart):
  *   signals.manualTrade.size
  *   signals.manualTrade.slPct
  *   signals.manualTrade.tpPct
+ *   signals.manualTrade.maxPyramidTiers   ← mirrors TradingStrategy.maxPyramidTiers (#721)
  */
 export interface ManualTradeDefaults {
   /** Position size in lots. */
@@ -21,20 +22,24 @@ export interface ManualTradeDefaults {
   slPct: number;
   /** Take-profit distance from entry, as a percent. */
   tpPct: number;
+  /** Max scale-in tiers for manual trades with no matching bot (#721). */
+  maxPyramidTiers: number;
 }
 
-export const DEFAULT_MANUAL_TRADE: ManualTradeDefaults = { size: 0.01, slPct: 2, tpPct: 4 };
+export const DEFAULT_MANUAL_TRADE: ManualTradeDefaults = { size: 0.01, slPct: 2, tpPct: 4, maxPyramidTiers: 1 };
 
 const KEYS = {
   size: 'signals.manualTrade.size',
   slPct: 'signals.manualTrade.slPct',
   tpPct: 'signals.manualTrade.tpPct',
+  maxPyramidTiers: 'signals.manualTrade.maxPyramidTiers',
 } as const;
 
 const LIMITS: Record<keyof ManualTradeDefaults, { min: number; max: number }> = {
   size: { min: 0.001, max: 100 },
   slPct: { min: 0, max: 50 },
   tpPct: { min: 0, max: 100 },
+  maxPyramidTiers: { min: 1, max: 20 },
 };
 
 @Injectable()
@@ -49,7 +54,7 @@ export class ManualTradeDefaultsService {
     if (!this.prisma.isAvailable) return merged;
     try {
       const rows = await this.prisma.globalSetting.findMany({
-        where: { key: { in: [KEYS.size, KEYS.slPct, KEYS.tpPct] } },
+        where: { key: { in: [KEYS.size, KEYS.slPct, KEYS.tpPct, KEYS.maxPyramidTiers] } },
       });
       for (const r of rows) {
         const v = parseFloat(r.value);
@@ -57,6 +62,7 @@ export class ManualTradeDefaultsService {
         if (r.key === KEYS.size) merged.size = v;
         else if (r.key === KEYS.slPct) merged.slPct = v;
         else if (r.key === KEYS.tpPct) merged.tpPct = v;
+        else if (r.key === KEYS.maxPyramidTiers) merged.maxPyramidTiers = Math.round(v);
       }
     } catch (err) {
       this.logger.warn(`getDefaults fell back to seeded values: ${(err as Error).message}`);
@@ -70,9 +76,10 @@ export class ManualTradeDefaultsService {
     if (patch.size !== undefined) entries.push(['size', patch.size]);
     if (patch.slPct !== undefined) entries.push(['slPct', patch.slPct]);
     if (patch.tpPct !== undefined) entries.push(['tpPct', patch.tpPct]);
+    if (patch.maxPyramidTiers !== undefined) entries.push(['maxPyramidTiers', Math.round(patch.maxPyramidTiers)]);
 
     if (entries.length === 0) {
-      throw new BadRequestException('Provide at least one of: size, slPct, tpPct');
+      throw new BadRequestException('Provide at least one of: size, slPct, tpPct, maxPyramidTiers');
     }
 
     for (const [field, value] of entries) {

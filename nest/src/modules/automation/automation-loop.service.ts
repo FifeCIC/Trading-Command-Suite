@@ -45,7 +45,7 @@ import { MetaStackVersioningService } from '../scoring/metastack-versioning.serv
 import { ScoringLogService } from '../system/scoring-log.service';
 import { TradingStrategyService } from '../trading/trading-strategy.service';
 import { TradeRecorderService } from '../trading/trade-recorder.service';
-import { DuplicateGuardService } from '../trading/duplicate-guard.service';
+import { PyramidPolicyService } from '../trading/pyramid-policy.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 import { GlobalDiversificationService } from '../diversification/global-diversification.service';
 import { DirectivesService } from '../directives/directives.service';
@@ -318,11 +318,20 @@ export class AutomationLoopService implements OnModuleInit {
       return;
     }
 
-    // Duplicate guard
-    const dupCheck = await this.duplicateGuard.checkDuplicate(symbol, brokerId, protocolId ?? undefined);
-    if (dupCheck.blocked) {
-      this.auditLog.logBlocked(this.state.tickCount, strategyId, symbol, dupCheck.reason || 'Duplicate position');
-      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'BLOCKED', reason: dupCheck.reason || 'Duplicate position', composite, signal: side });
+    // Duplicate / scale-in policy (#721 — shared library, bot path)
+    const broker = this.adapterFactory.create(brokerId);
+    let openPositions: any[] = [];
+    try {
+      openPositions = (await broker?.getPositions?.()) ?? [];
+    } catch { /* unknown — policy will treat as no open position */ }
+    const pyramid = await this.pyramidPolicy.evaluate({
+      symbol, side, brokerId, positions: openPositions,
+    });
+    if (!pyramid.allowed) {
+      const first = pyramid.blockers[0];
+      const reason = first?.message || 'Duplicate/scale-in policy block';
+      this.auditLog.logBlocked(this.state.tickCount, strategyId, symbol, reason);
+      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'BLOCKED', reason, composite, signal: side });
       return;
     }
 
@@ -336,7 +345,6 @@ export class AutomationLoopService implements OnModuleInit {
       this.logger.warn(`Diversification: ${divCheck.reason}`);
     }
 
-    const broker = this.adapterFactory.create(brokerId);
     if (!broker?.placeOrder) return;
 
     const sl = side === 'BUY' ? entryPrice * (1 - slPct/100) : entryPrice * (1 + slPct/100);
@@ -430,7 +438,7 @@ export class AutomationLoopService implements OnModuleInit {
     private readonly scoringService: ScoringService,
     private readonly strategyService: TradingStrategyService,
     private readonly tradeRecorder: TradeRecorderService,
-    private readonly duplicateGuard: DuplicateGuardService,
+    private readonly pyramidPolicy: PyramidPolicyService,
     private readonly scoringLog: ScoringLogService,
     private readonly prisma: PrismaService,
     private readonly protocolGating: ProtocolGatingService,

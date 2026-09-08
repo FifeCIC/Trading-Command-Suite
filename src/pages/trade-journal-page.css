@@ -16,11 +16,17 @@
 .tj-card { border: 1px solid #1e2030; border-radius: 10px; padding: 0.75rem; }
 .tj-card.tj-win { border-color: #22c55e; }
 .tj-card.tj-loss { border-color: #ef4444; }
+.tj-card.tj-open { border-color: #3b82f6; }
 .tj-card-header { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.5rem; }
 .tj-symbol { font-weight: 700; font-size: 1rem; color: #e2e8f0; }
 .tj-type { font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; }
 .tj-buy { background: #064e3b44; color: #6ee7b7; }
 .tj-sell { background: #7f1d1d44; color: #fca5a5; }
+.tj-ticket { font-size: 0.72rem; color: #93c5fd; font-family: ui-monospace, monospace; }
+.tj-origin { font-size: 0.68rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; background: #1e293b; color: #cbd5e1; }
+.tj-origin-external { background: #7c2d12; color: #fdba74; }
+.tj-origin-manual { background: #1e3a8a; color: #93c5fd; }
+.tj-origin-strategy { background: #14532d; color: #86efac; }
 .tj-pnl { font-weight: 700; margin-left: auto; }
 .tj-details { display: flex; gap: 1rem; font-size: 0.78rem; color: #94a3b8; flex-wrap: wrap; }
 .tj-tags { display: flex; gap: 0.35rem; flex-wrap: wrap; margin: 0.4rem 0; }

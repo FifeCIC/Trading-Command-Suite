@@ -42,6 +42,7 @@ export interface BrokerPosition {
 export class PositionSyncService {
   private readonly logger = new Logger(PositionSyncService.name);
   private lastSyncedAt: Date | null = null;
+  private lastResult: { synced: number; created: number; closed: number } | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -114,6 +115,7 @@ export class PositionSyncService {
       }
 
       this.lastSyncedAt = new Date();
+      this.lastResult = { synced, created, closed };
       if (synced > 0 || created > 0 || closed > 0) {
         this.logger.log(`[${provider}] Position sync: ${synced} upserted, ${created} created, ${closed} closed`);
       }
@@ -275,4 +277,9 @@ export class PositionSyncService {
   }
 
   getLastSyncTime(): Date | null { return this.lastSyncedAt; }
+
+  /** Most recent sync outcome (upserted/created/closed) — for status dashboards. */
+  getLastSyncResult(): { synced: number; created: number; closed: number } | null {
+    return this.lastResult;
+  }
 }

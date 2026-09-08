@@ -23,6 +23,7 @@ import { PrismaService } from '../../database/prisma.service';
 export interface PyramidOpenPosition {
   symbol?: string;
   ticket?: string | number | null;
+  brokerTicket?: string | null;
   volume?: number;
   quantity?: number;
   sl?: number | null;
@@ -35,7 +36,7 @@ export interface PyramidOpenPosition {
 }
 
 export interface PyramidBlocker {
-  key: 'duplicate-position' | 'scale-in-not-green' | 'scale-in-not-locked' | 'scale-in-no-sl' | 'max-tier';
+  key: 'duplicate-position' | 'scale-in-not-green' | 'scale-in-not-locked' | 'max-tier';
   message: string;
   hint: string;
 }
@@ -69,18 +70,17 @@ export class PyramidPolicyService {
    * open positions. `positions` is the set of open broker positions for the
    * symbol (caller pre-fetches; empty = fresh entry).
    *
-   * `newSl` is the stop-loss the follow-up order WILL carry — scale-ins must
-   * always be protected at the broker (#721 decision 5), so a follow-up with
-   * no SL is blocked.
+   * Follow-up orders MUST carry a broker SL at order time (#721 decision 5) —
+   * both callers always attach SL from their defaults, so that invariant is
+   * enforced at order-building, not re-checked here.
    */
   async evaluate(params: {
     symbol: string;
     side: 'BUY' | 'SELL';
     brokerId: string;
     positions: PyramidOpenPosition[];
-    newSl?: number | null;
   }): Promise<PyramidDecision> {
-    const { symbol, side, brokerId, newSl } = params;
+    const { symbol, side, brokerId } = params;
     const ticker = symbol.toUpperCase();
     const blockers: PyramidBlocker[] = [];
 
@@ -114,7 +114,7 @@ export class PyramidPolicyService {
       blockers.push({
         key: 'duplicate-position',
         message: `Duplicate blocked for ${ticker}: ${open.length} open position(s) on ${brokerId.toUpperCase()}. Close existing or wait for cooldown.`,
-        hint: `Close ${open.map(p => (p.ticket ? `#${p.ticket}` : '')).filter(Boolean).join(', ') || 'the existing position'} — or set maxPyramidTiers > 1 on the bot to allow scale-in`,
+        hint: `Close ${open.map(p => (p.ticket ?? p.brokerTicket ? `#${p.ticket ?? p.brokerTicket}` : '')).filter(Boolean).join(', ') || 'the existing position'} — or set maxPyramidTiers > 1 on the bot to allow scale-in`,
       });
       return this.decide(ticker, true, tier, nextTier, maxTiers, baseSize, source, blockers);
     }
@@ -144,12 +144,6 @@ export class PyramidPolicyService {
         key: 'scale-in-not-locked',
         message: `Scale-in blocked for ${ticker}: existing position's profit is not locked in`,
         hint: 'Set a broker SL at breakeven-or-better on the open position',
-      });
-    } else if (newSl == null) {
-      blockers.push({
-        key: 'scale-in-no-sl',
-        message: `Scale-in blocked for ${ticker}: follow-up order must carry a broker stop-loss`,
-        hint: 'Provide an SL% so the follow-up position is protected at the broker',
       });
     } else if (nextTier > maxTiers) {
       blockers.push({

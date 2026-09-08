@@ -3,58 +3,68 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import './trade-journal-page.css';
 
-/** Map an MT5 history deal to a journal entry */
-function mapDealToEntry(deal) {
-  const pnl = (deal.profit ?? 0) + (deal.commission ?? 0) + (deal.swap ?? 0);
+/**
+ * Map a Trade row (the app's own audit trail — /api/trading/trade-history)
+ * to a journal entry. This is the DB-first source of truth: it includes
+ * brokerTicket (64-bit MT5 ticket), origin (manual/bot/external), source
+ * pipeline, and the real exit price + PnL from position reconciliation.
+ */
+function mapTradeToEntry(t) {
+  const isOpen = t.status === 'open';
   return {
-    id: deal.ticket || deal.id,
-    symbol: deal.symbol || '—',
-    type: deal.type === 'DEAL_TYPE_BUY' ? 'buy' : 'sell',
-    pnl,
-    volume: deal.volume || 0,
-    entryPrice: deal.price || 0,
-    exitPrice: deal.price || 0, // MT5 deals are single-sided
+    id: t.id,
+    symbol: t.symbol || '—',
+    type: (t.side || 'buy').toLowerCase(),
+    pnl: t.pnl ?? 0,
+    volume: t.quantity || 0,
+    entryPrice: t.entryPrice || 0,
+    exitPrice: t.exitPrice ?? null,
     holdDuration: '—',
-    date: deal.time ? new Date(deal.time * 1000).toISOString() : new Date().toISOString(),
-    notes: deal.comment || '',
+    date: (t.closedAt || t.openedAt || t.createdAt || new Date()).toString(),
+    notes: t.brokerComment || '',
     tags: [],
-    origin: deal.comment ? 'manual' : 'mt5',
+    brokerTicket: t.brokerTicket || null,
+    origin: t.origin || 'unknown',
+    source: t.source || null,
+    status: t.status,
+    strategy: t.strategy || null,
+    isOpen,
   };
 }
 
 export default function TradeJournalPage() {
   const [analyzing, setAnalyzing] = useState(null);
 
-  // ── Real trade data from MT5 history ──
+  // ── DB-first: the app's own reconciled trade history ──
   const historyQuery = useQuery({
-    queryKey: ['journal-mt5-history'],
-    queryFn: () => apiGet('/api/providers/mt5/history?limit=500').catch(() => ({ deals: [] })),
+    queryKey: ['journal-trade-history'],
+    queryFn: () => apiGet('/api/trading/trade-history?limit=500').catch(() => ({ trades: [] })),
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
 
-  const deals = historyQuery.data?.deals || [];
-  const entries = useMemo(() => deals.map(mapDealToEntry), [deals]);
+  const trades = historyQuery.data?.trades || [];
+  const entries = useMemo(() => trades.map(mapTradeToEntry), [trades]);
 
   // ── Compute stats from real data ──
   const stats = useMemo(() => {
     if (entries.length === 0) return {};
-    const wins = entries.filter(e => e.pnl > 0);
-    const losses = entries.filter(e => e.pnl < 0);
-    const totalPnl = entries.reduce((s, e) => s + e.pnl, 0);
-    const winRate = entries.length > 0 ? ((wins.length / entries.length) * 100).toFixed(0) + '%' : '0%';
+    const closed = entries.filter(e => !e.isOpen);
+    const wins = closed.filter(e => e.pnl > 0);
+    const losses = closed.filter(e => e.pnl < 0);
+    const totalPnl = closed.reduce((s, e) => s + e.pnl, 0);
+    const winRate = closed.length > 0 ? ((wins.length / closed.length) * 100).toFixed(0) + '%' : '—';
     const avgWinPnl = wins.length > 0 ? (wins.reduce((s, e) => s + e.pnl, 0) / wins.length).toFixed(2) : '0';
     const avgLossPnl = losses.length > 0 ? Math.abs(losses.reduce((s, e) => s + e.pnl, 0) / losses.length).toFixed(2) : '0';
-    // Best/worst day
     const byDay = {};
-    entries.forEach(e => {
+    closed.forEach(e => {
       const day = new Date(e.date).toLocaleDateString();
       byDay[day] = (byDay[day] || 0) + e.pnl;
     });
     const days = Object.entries(byDay).sort((a, b) => b[1] - a[1]);
     const bestDay = days[0]?.[0] || '—';
     const worstDay = days[days.length - 1]?.[0] || '—';
-    return { totalTrades: entries.length, winRate, totalPnl, avgWinPnl, avgLossPnl, bestDay, worstDay };
+    return { totalTrades: entries.length, closedCount: closed.length, winRate, totalPnl, avgWinPnl, avgLossPnl, bestDay, worstDay };
   }, [entries]);
 
   const handleAnalyze = async (id) => {
@@ -71,12 +81,13 @@ export default function TradeJournalPage() {
     <div className="tj-page">
       <header className="tj-header">
         <h2>Trade Journal</h2>
-        <p>Real trades from MT5 history. Add notes and get AI-powered insights.</p>
-        <p className="tj-privacy">AI analysis runs locally with pattern-matching rules.</p>
+        <p>Reconciled trades from the app's own audit trail — includes externally-opened and manually-closed positions.</p>
+        <p className="tj-privacy">Source: <strong>database</strong> (live MT5 deals are shown on Trade History).</p>
       </header>
       {stats.totalTrades > 0 && (
         <div className="tj-stats">
           <div className="tj-stat-card"><span className="tj-stat-num">{stats.totalTrades}</span><span>Total</span></div>
+          <div className="tj-stat-card"><span className="tj-stat-num">{stats.closedCount}</span><span>Closed</span></div>
           <div className="tj-stat-card"><span className="tj-stat-num">{stats.winRate}</span><span>Win Rate</span></div>
           <div className="tj-stat-card"><span className={`tj-stat-num ${stats.totalPnl >= 0 ? 'tj-green' : 'tj-red'}`}>{stats.totalPnl >= 0 ? '+' : ''}{currencySymbol}{Math.abs(stats.totalPnl || 0).toFixed(2)}</span><span>Total P&amp;L</span></div>
           <div className="tj-stat-card"><span className="tj-stat-num tj-green">+{currencySymbol}{stats.avgWinPnl}</span><span>Avg Win</span></div>
@@ -90,22 +101,24 @@ export default function TradeJournalPage() {
         </div>
       )}
       <div className="tj-entries">
-        {historyQuery.isLoading && <p>Loading trades from MT5 history...</p>}
+        {historyQuery.isLoading && <p>Loading trades from the audit trail...</p>}
         {!historyQuery.isLoading && entries.length === 0 && (
-          <div className="tj-empty"><p>No trades found in MT5 history. Connect MT5 and ensure deal history is available.</p></div>
+          <div className="tj-empty"><p>No trades recorded yet. The automation loop records every position it sees — open a position (via Signals, the bot, or directly in MT5) and it will appear here.</p></div>
         )}
         {entries.map((entry) => (
-          <div key={entry.id} className={`tj-card ${entry.pnl >= 0 ? 'tj-win' : 'tj-loss'}`}>
+          <div key={entry.id} className={`tj-card ${entry.isOpen ? 'tj-open' : entry.pnl >= 0 ? 'tj-win' : 'tj-loss'}`}>
             <div className="tj-card-header">
               <span className="tj-symbol">{entry.symbol}</span>
               <span className={`tj-type ${entry.type === 'buy' ? 'tj-buy' : 'tj-sell'}`}>{entry.type?.toUpperCase()}</span>
-              <span className={`tj-pnl ${entry.pnl >= 0 ? 'tj-green' : 'tj-red'}`}>{entry.pnl >= 0 ? '+' : ''}{currencySymbol}{Math.abs(entry.pnl).toFixed(2)}</span>
+              {entry.brokerTicket && <span className="tj-ticket" title={`MT5 ticket #${entry.brokerTicket}`}>#{entry.brokerTicket}</span>}
+              <span className={`tj-origin tj-origin-${entry.origin}`}>{entry.origin}</span>
+              <span className={`tj-pnl ${entry.isOpen ? '' : entry.pnl >= 0 ? 'tj-green' : 'tj-red'}`}>{entry.isOpen ? 'OPEN' : entry.pnl >= 0 ? '+' : ''}{!entry.isOpen ? currencySymbol + Math.abs(entry.pnl).toFixed(2) : ''}</span>
             </div>
             <div className="tj-card-body">
               <div className="tj-details">
                 <span>Vol: {entry.volume}</span><span>Entry: {currencySymbol}{Number(entry.entryPrice).toFixed(2)}</span>
-                {entry.exitPrice && <span>Exit: {currencySymbol}{Number(entry.exitPrice).toFixed(2)}</span>}
-                <span>Held: {entry.holdDuration || '--'}</span>
+                {entry.exitPrice != null && <span>Exit: {currencySymbol}{Number(entry.exitPrice).toFixed(2)}</span>}
+                {entry.strategy && <span>Strategy: {entry.strategy}</span>}
                 <span>{new Date(entry.date).toLocaleDateString()}</span>
               </div>
               {entry.tags && <div className="tj-tags">{entry.tags.map((tag) => <span key={tag} className="tj-tag">{tag}</span>)}</div>}

@@ -214,6 +214,7 @@ export const NAV_TREE = {
       { id: 'portfolio-lab', label: 'Portfolio Lab', icon: '🧪' },
       { id: 'timeline', label: 'Timeline', icon: '📅' },
       { id: 'snapshots', label: 'Snapshots', icon: '🔬' },
+      { id: 'position-lifecycle', label: 'Position Lifecycle', icon: '🛡️' },
       { id: 'ai-costs', label: 'AI Costs', icon: '🤖' },
     ],
   },

@@ -10,6 +10,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { Mt5TradingService } from './mt5-trading.service';
 import { SwapCostService } from './swap-cost.service';
 import { WeekendDefenseService } from './weekend-defense.service';
+import { PositionSyncService } from '../providers/position-sync.service';
 
 @Controller('trading')
 export class TradeHistoryController {
@@ -21,7 +22,49 @@ export class TradeHistoryController {
     private readonly mt5: Mt5TradingService,
     private readonly swapCost: SwapCostService,
     private readonly weekendDefense: WeekendDefenseService,
+    private readonly positionSync: PositionSyncService,
   ) {}
+
+  /**
+   * GET /api/trading/position-lifecycle
+   *
+   * Lab prototype data feed — the full position lifecycle in one payload:
+   * broker `position` rows (with 64-bit brokerTicket), reconciled `trade`
+   * rows, and recent stop adjustments. Backs the Position Lifecycle Monitor.
+   */
+  @Get('position-lifecycle')
+  async getPositionLifecycle() {
+    const [positions, trades, adjustments] = await Promise.all([
+      (this.prisma as any).position.findMany({
+        orderBy: { lastQuotedAt: 'desc' },
+        take: 200,
+      }).catch(() => []),
+      this.prisma.trade.findMany({
+        where: { status: { in: ['open', 'closed'] } },
+        orderBy: { openedAt: 'desc' },
+        take: 200,
+      }).catch(() => []),
+      (this.prisma as any).stopAdjustment.findMany({
+        orderBy: { adjustedAt: 'desc' },
+        take: 50,
+      }).catch(() => []),
+    ]);
+
+    const openTrades = trades.filter((t: any) => t.status === 'open').length;
+    const closedTrades = trades.filter((t: any) => t.status === 'closed').length;
+
+    return {
+      positions,
+      trades,
+      adjustments,
+      sync: {
+        lastSyncedAt: this.positionSync.getLastSyncTime(),
+        openPositions: positions.length,
+        openTrades,
+        closedTrades,
+      },
+    };
+  }
 
   /** Get trade history from the audit trail (all providers) */
   @Get('trade-history')

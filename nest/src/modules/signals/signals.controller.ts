@@ -212,7 +212,7 @@ export class SignalsController {
    * Settings → Trading and Trading → Settings.
    */
   @Put('trade-defaults')
-  async setTradeDefaults(@Body() body: { size?: number; slPct?: number; tpPct?: number }) {
+  async setTradeDefaults(@Body() body: { size?: number; slPct?: number; tpPct?: number; maxPyramidTiers?: number }) {
     return this.tradeDefaults.setDefaults(body);
   }
 
