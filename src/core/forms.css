@@ -127,6 +127,15 @@
   gap: 0.5rem;
 }
 
+/* The grid container must never carry a pseudo-element: the global
+   color-blind rule `[class*='up']::before` matches "ff-toggle-gro**up**"
+   and injects a "▲ " phantom grid item, which breaks the 2-column layout. */
+.ff-toggle-group::before,
+.ff-toggle-group::after {
+  content: none !important;
+  display: none !important;
+}
+
 .ff-toggle-option {
   display: flex;
   flex-direction: column;
@@ -149,6 +158,13 @@
 
 .ff-toggle-option input[type="radio"] {
   display: none;
+}
+
+/* Neutralise the global 44px tap-target rule on adjacent labels/descriptions */
+.ff-toggle-option input[type="radio"] + .ff-toggle-label,
+.ff-checkbox-label input[type="checkbox"] + span {
+  min-height: 0;
+  display: block;
 }
 
 .ff-toggle-label {

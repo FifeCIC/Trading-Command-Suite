@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 
 export interface StopAdjustmentParams {
-  tradeTicket: number;
+  tradeTicket: string | number;
   symbol: string;
   oldSl?: number | null;
   newSl?: number | null;
@@ -34,7 +34,7 @@ export class StopGuardianService {
 
     this.prisma.stopAdjustment.create({
       data: {
-        tradeTicket: params.tradeTicket,
+        tradeTicket: String(params.tradeTicket),
         symbol: params.symbol,
         oldSl: params.oldSl ?? null,
         newSl: params.newSl ?? null,

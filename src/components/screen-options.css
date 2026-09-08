@@ -316,13 +316,17 @@
 .so-done-btn:active { transform: scale(0.97); }
 
 /* Global / View sections */
-.so-global-section { margin-bottom: 2px; }
+.so-global-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 .so-global-label {
   font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--color-muted, #64748b);
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   padding-bottom: 4px;
   border-bottom: 1px solid var(--color-border, #2d3040);
 }
@@ -330,6 +334,9 @@
   margin-top: 10px;
   padding-top: 6px;
   border-top: 1px solid rgba(14,165,166,0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 /* ── Quick Calculators ── */

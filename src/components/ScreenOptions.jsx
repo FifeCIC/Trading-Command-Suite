@@ -16,6 +16,7 @@ import EmptyState from './EmptyState';
 import GlossaryPage from '../pages/GlossaryPage';
 import { SB_OPTIONAL_COLUMNS, sbColumnKey } from '../core/symbols-browser-columns';
 import { SCR_OPTIONAL_COLUMNS, scrColumnKey } from '../core/screener-columns';
+import '../core/forms.css';
 import './notification-disc.css';
 import './screen-options.css';
 
@@ -665,17 +666,17 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                 <div className="so-global-section">
                   <h3 className="so-global-label">Preferences</h3>
                   {GLOBAL_PREFERENCES.map(function (section) {
-                    return (
-                      <div key={section.id} className="so-section">
-                        <h3 className="so-section-title" title={section.description}>{section.label}</h3>
-                        {section.type === 'radio' && (
-                          <div className={`so-radio-group so-radio-group--${section.id}`}>
+                    if (section.type === 'radio') {
+                      return (
+                        <div key={section.id} className="ff-field">
+                          <span className="ff-label" title={section.description}>{section.label}</span>
+                          <div className="ff-toggle-group">
                             {section.options.map(function (opt) {
                               var currentValue = globalValueMap[section.field];
                               return (
                                 <label
                                   key={opt.value}
-                                  className={'so-radio-option' + (currentValue === opt.value ? ' so-radio-selected' : '')}
+                                  className={'ff-toggle-option' + (currentValue === opt.value ? ' active' : '')}
                                   title={opt.desc}
                                 >
                                   <input
@@ -685,26 +686,24 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                                     checked={currentValue === opt.value}
                                     onChange={function () { handleGlobalChange(section.field, opt.value); }}
                                   />
-                                  <span className="so-radio-content">
-                                    <span className="so-radio-label">{opt.label}</span>
-                                    <span className="so-radio-desc">{opt.desc}</span>
-                                  </span>
+                                  <span className="ff-toggle-label">{opt.label}</span>
+                                  {opt.desc && <span className="ff-toggle-desc">{opt.desc}</span>}
                                 </label>
                               );
                             })}
                           </div>
-                        )}
-                        {section.type === 'checkbox' && (
-                          <label className="so-checkbox-option">
-                            <input
-                              type="checkbox"
-                              defaultChecked={globalValueMap[section.field] === true}
-                              onChange={function (e) { handleGlobalChange(section.field, e.target.checked); }}
-                            />
-                            <span>{section.description || section.label}</span>
-                          </label>
-                        )}
-                      </div>
+                        </div>
+                      );
+                    }
+                    return (
+                      <label key={section.id} className="ff-checkbox-label" title={section.description}>
+                        <input
+                          type="checkbox"
+                          defaultChecked={globalValueMap[section.field] === true}
+                          onChange={function (e) { handleGlobalChange(section.field, e.target.checked); }}
+                        />
+                        <span>{section.label} — {section.description}</span>
+                      </label>
                     );
                   })}
                 </div>
@@ -715,15 +714,15 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                     <h3 className="so-global-label">View Options — {registry.title}</h3>
                     {registry.sections.map(function (section) {
                       return (
-                        <div key={section.id} className="so-section">
-                          <h3 className="so-section-title" title={section.description}>{section.label}</h3>
+                        <div key={section.id} className="ff-field">
+                          <span className="ff-label" title={section.description}>{section.label}</span>
                           {section.type === 'radio' && (
-                            <div className={`so-radio-group so-radio-group--${section.id}`}>
+                            <div className="ff-toggle-group">
                               {section.options.map(function (opt) {
                                 return (
                                   <label
                                     key={opt.value}
-                                    className={'so-radio-option' + (values[section.key] === opt.value ? ' so-radio-selected' : '')}
+                                    className={'ff-toggle-option' + (values[section.key] === opt.value ? ' active' : '')}
                                     title={opt.desc}
                                   >
                                     <input
@@ -733,17 +732,15 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                                       checked={values[section.key] === opt.value}
                                       onChange={function () { handleViewChange(section.key, opt.value); }}
                                     />
-                                    <span className="so-radio-content">
-                                      <span className="so-radio-label">{opt.label}</span>
-                                      <span className="so-radio-desc">{opt.desc}</span>
-                                    </span>
+                                    <span className="ff-toggle-label">{opt.label}</span>
+                                    {opt.desc && <span className="ff-toggle-desc">{opt.desc}</span>}
                                   </label>
                                 );
                               })}
                             </div>
                           )}
                           {section.type === 'checkbox' && (
-                            <label className="so-checkbox-option">
+                            <label className="ff-checkbox-label">
                               <input
                                 type="checkbox"
                                 checked={values[section.key] === 'true' || values[section.key] === true}
@@ -756,7 +753,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                             <div className="so-columns-grid">
                               {section.options.map(function (opt) {
                                 return (
-                                  <label key={opt.key} className="so-checkbox-option" title={opt.desc}>
+                                  <label key={opt.key} className="ff-checkbox-label" title={opt.desc}>
                                     <input
                                       type="checkbox"
                                       checked={values[opt.key] === 'true' || values[opt.key] === true}
@@ -773,7 +770,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                               {(portfolioAccounts.categories || []).map(function (cat) {
                                 return (
                                   <div key={cat.id} className="so-accounts-cat">
-                                    <label className="so-checkbox-option so-accounts-cat-head">
+                                    <label className="ff-checkbox-label so-accounts-cat-head">
                                       <input
                                         type="checkbox"
                                         checked={cat.enabled === true}
@@ -783,7 +780,7 @@ export default function ScreenOptions({ activeView, onSettingsChange, isOpen, on
                                     </label>
                                     {(cat.accounts || []).map(function (acc) {
                                       return (
-                                        <label key={acc.id} className="so-checkbox-option so-accounts-item" title={acc.note || acc.label}>
+                                        <label key={acc.id} className="ff-checkbox-label so-accounts-item" title={acc.note || acc.label}>
                                           <input
                                             type="checkbox"
                                             checked={acc.enabled === true}

@@ -93,6 +93,7 @@ export class Trading212Adapter implements IProviderAdapter {
   readonly id = 'trading212';
   readonly supportsBrokerage = true;
   private readonly logger = new Logger(Trading212Adapter.name);
+  private lastPositionSnapshotAuthoritative = false;
 
   // ── Mode ──────────────────────────────────────────────────
 
@@ -323,6 +324,7 @@ export class Trading212Adapter implements IProviderAdapter {
 
   /** @deprecated Use getPositions() which returns BrokerPosition[] */
   async getRawPositions(): Promise<Trading212Position[]> {
+    this.lastPositionSnapshotAuthoritative = false;
     if (!this.hasCredentials) {
       this.logger.warn(`Trading212 getPositions (${this.mode}): no credentials`);
       return [];
@@ -338,7 +340,9 @@ export class Trading212Adapter implements IProviderAdapter {
       }
       if (!res.ok) return [];
       const data = await res.json();
-      return Array.isArray(data) ? data : [];
+      if (!Array.isArray(data)) return [];
+      this.lastPositionSnapshotAuthoritative = true;
+      return data;
     } catch (err) {
       this.logger.error(`Trading212 getPositions (${this.mode}) failed: ${(err as Error).message}`);
       return [];
@@ -574,6 +578,11 @@ export class Trading212Adapter implements IProviderAdapter {
       currency: 'GBP',
       openedAt: p.initialFillDate || new Date().toISOString(),
     }));
+  }
+
+  async getPositionSnapshot() {
+    const positions = await this.getPositions();
+    return { positions, authoritative: this.lastPositionSnapshotAuthoritative };
   }
 
   /**

@@ -408,6 +408,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     for d in deals:
                         deal_list.append({'ticket': d.ticket, 'symbol': d.symbol, 'type': 'buy' if d.type==0 else 'sell',
                             'volume': float(d.volume), 'price': float(d.price), 'profit': float(d.profit),
+                            'positionId': d.position_id, 'orderId': d.order,
+                            'commission': float(d.commission), 'swap': float(d.swap), 'fee': float(d.fee),
                             'time': utc_iso(d.time), 'comment': d.comment})
                 return json_response(self, {'orders': history, 'deals': deal_list, 'orderCount': len(history), 'dealCount': len(deal_list)})
 
@@ -525,6 +527,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
                         if sym and d.symbol.upper() != sym: continue
                         result.append({'ticket': d.ticket, 'symbol': d.symbol, 'type': 'buy' if d.type==0 else 'sell',
                             'volume': float(d.volume), 'price': float(d.price), 'profit': float(d.profit),
+                            'positionId': d.position_id, 'orderId': d.order,
+                            'commission': float(d.commission), 'swap': float(d.swap), 'fee': float(d.fee),
                             'time': utc_iso(d.time), 'comment': d.comment})
                 return json_response(self, {'deals': result, 'count': len(result)})
 
@@ -560,6 +564,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                         logger.info(f'Duplicate order blocked: {client_order_id} → existing ticket {existing["ticket"]}')
                         return json_response(self, {'success': True, 'ticket': existing['ticket'],
                             'symbol': existing['symbol'], 'volume': existing['volume'],
+                            'filledVolume': existing['volume'], 'status': existing['status'],
                             'duplicate': True, 'clientOrderId': client_order_id,
                             'message': f'Duplicate order — existing ticket {existing["ticket"]}'})
 
@@ -627,19 +632,26 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 if tp: req['tp'] = float(tp)
 
                 result = mt5.order_send(req)
-                if not result or result.retcode != mt5.TRADE_RETCODE_DONE:
+                successful_retcodes = (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL)
+                if not result or result.retcode not in successful_retcodes:
                     error = mt5.last_error() if not result else result.comment
                     journal_trade('order_failed', {'symbol': symbol, 'type': order_type, 'volume': volume, 'error': str(error), 'clientOrderId': client_order_id or None})
                     return json_response(self, {'success': False, 'error': str(error)}, 400)
 
                 # Store idempotency key
+                fill_status = 'partially_filled' if result.retcode == mt5.TRADE_RETCODE_DONE_PARTIAL else 'filled'
+                filled_volume = float(result.volume or volume)
                 if client_order_id:
                     recent_orders[client_order_id] = {
                         'ticket': result.order, 'symbol': symbol,
-                        'volume': volume, 'time': time.time(), 'status': 'filled'}
+                        'volume': filled_volume, 'time': time.time(), 'status': fill_status}
 
                 journal_trade('order_placed', {'ticket': result.order, 'symbol': symbol, 'type': order_type, 'volume': volume, 'price': price, 'clientOrderId': client_order_id or None})
-                return json_response(self, {'success': True, 'ticket': result.order, 'volume': volume, 'symbol': symbol, 'price': price, 'type': order_type, 'clientOrderId': client_order_id or None})
+                return json_response(self, {'success': True, 'ticket': result.order, 'volume': volume,
+                    'filledVolume': filled_volume, 'partial': fill_status == 'partially_filled',
+                    'status': fill_status, 'retcode': result.retcode, 'symbol': symbol,
+                    'price': float(result.price or price), 'type': order_type,
+                    'clientOrderId': client_order_id or None})
 
             # /close/<ticket>
             if len(parts) == 2 and parts[0] == 'close':
@@ -657,10 +669,12 @@ class BridgeHandler(BaseHTTPRequestHandler):
                        'price': close_price, 'deviation': 20, 'magic': 234000, 'comment': 'Close by TCS',
                        'type_time': mt5.ORDER_TIME_GTC}
                 result = mt5.order_send(req)
-                if not result or result.retcode != mt5.TRADE_RETCODE_DONE:
+                if not result or result.retcode not in (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL):
                     error = mt5.last_error() if not result else result.comment
                     return json_response(self, {'success': False, 'error': str(error)}, 400)
-                return json_response(self, {'success': True, 'ticket': ticket, 'symbol': pos.symbol, 'closePrice': close_price, 'profit': float(pos.profit)})
+                return json_response(self, {'success': True, 'ticket': ticket, 'symbol': pos.symbol,
+                    'closePrice': close_price, 'price': close_price, 'profit': float(pos.profit),
+                    'retcode': result.retcode, 'partial': result.retcode == mt5.TRADE_RETCODE_DONE_PARTIAL})
 
             # /order/modify
             if path == '/order/modify':
@@ -675,10 +689,11 @@ class BridgeHandler(BaseHTTPRequestHandler):
                        'sl': float(body.get('sl', 0)) or float(pos.sl or 0),
                        'tp': float(body.get('tp', 0)) or float(pos.tp or 0)}
                 result = mt5.order_send(req)
-                if not result or result.retcode != mt5.TRADE_RETCODE_DONE:
+                if not result or result.retcode not in (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL):
                     error = mt5.last_error() if not result else result.comment
                     return json_response(self, {'success': False, 'error': str(error)}, 400)
-                return json_response(self, {'success': True, 'ticket': ticket, 'sl': req['sl'], 'tp': req['tp']})
+                return json_response(self, {'success': True, 'ticket': ticket, 'sl': req['sl'],
+                    'tp': req['tp'], 'retcode': result.retcode})
 
             # /close/partial/<ticket>
             if len(parts) == 3 and parts[0] == 'close' and parts[1] == 'partial':
@@ -698,10 +713,12 @@ class BridgeHandler(BaseHTTPRequestHandler):
                        'price': cp, 'deviation': 20, 'magic': 234000, 'comment': 'Partial close',
                        'type_time': mt5.ORDER_TIME_GTC}
                 result = mt5.order_send(req)
-                if not result or result.retcode != mt5.TRADE_RETCODE_DONE:
+                if not result or result.retcode not in (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL):
                     error = mt5.last_error() if not result else result.comment
                     return json_response(self, {'success': False, 'error': str(error)}, 400)
-                return json_response(self, {'success': True, 'ticket': ticket, 'closed': vol, 'remaining': float(pos.volume)-vol, 'closePrice': cp})
+                return json_response(self, {'success': True, 'ticket': ticket, 'closed': vol,
+                    'remaining': float(pos.volume)-vol, 'closePrice': cp, 'price': cp,
+                    'retcode': result.retcode, 'partial': result.retcode == mt5.TRADE_RETCODE_DONE_PARTIAL})
 
             # /orders/bulk — place/modify/close multiple orders
             if path == '/orders/bulk':

@@ -220,6 +220,7 @@ export class SpeedScanController {
           side,
           quantity: finalSize,
           comment: orderPayload.comment,
+          clientOrderId: `speed-${ticker}-${protocolId || 'manual'}-${Date.now()}`,
         });
 
         return {
