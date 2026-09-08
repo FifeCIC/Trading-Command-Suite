@@ -744,7 +744,7 @@ model Position {
   @@index([symbolId])
   @@index([provider, accountId])
   @@index([brokerTicket])
-  @@unique([symbol, provider])
+  @@unique([provider, brokerTicket])
 }
 
 model Trade {
@@ -779,6 +779,7 @@ model Trade {
   @@index([origin, createdAt])
   @@index([scoringStrategyId])
   @@index([brokerTicket])
+  @@unique([provider, brokerTicket])
 }
 
 model ApiCalls {
@@ -1720,7 +1721,7 @@ model DecisionTrail {
 
 model StopAdjustment {
   id              String   @id @default(uuid()) @db.VarChar(36)
-  tradeTicket     Int
+  tradeTicket     String   @db.VarChar(100)
   symbol          String   @db.VarChar(20)
   oldSl           Float?
   newSl           Float?
@@ -1975,6 +1976,8 @@ model PendingAction {
   side        String   @db.VarChar(10)
   quantity    Float
   composite   Float
+  slPct       Float?
+  tpPct       Float?
   createdAt   DateTime
   expiresAt   DateTime
   status      String   @default("pending") @db.VarChar(20)

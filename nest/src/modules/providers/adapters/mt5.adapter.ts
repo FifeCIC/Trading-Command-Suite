@@ -24,6 +24,7 @@ import {
   BrokerOrderRequest,
   BrokerOrderResult,
   BrokerPosition,
+  BrokerPositionSnapshot,
   MarketBar,
   ProviderProfile,
   ProviderQuote,
@@ -63,6 +64,8 @@ interface BridgeHealthResponse {
   equity?: number;
 }
 
+class BridgeRejectedError extends Error {}
+
 @Injectable()
 export class Mt5Adapter implements IProviderAdapter {
   readonly name = 'MT5';
@@ -75,6 +78,7 @@ export class Mt5Adapter implements IProviderAdapter {
   private trippedAt: number | null = null;
 
   private lastBridgeState: 'connected' | 'disconnected' | 'unknown' = 'unknown';
+  private lastPositionSnapshotAuthoritative = false;
 
   constructor(
     private readonly notifications?: NotificationService,
@@ -296,8 +300,10 @@ export class Mt5Adapter implements IProviderAdapter {
   // ── Brokerage Methods (IProviderAdapter) ─────────────────
 
   async getPositions(): Promise<BrokerPosition[]> {
+    this.lastPositionSnapshotAuthoritative = false;
     const data = await this.bridgeGet<{ positions: any[]; count: number }>('/positions');
     if (!data?.positions) return [];
+    this.lastPositionSnapshotAuthoritative = true;
 
     return data.positions.map((p: any) => {
       const contractSize = p.contractSize ? Number(p.contractSize) : 0;
@@ -329,6 +335,11 @@ export class Mt5Adapter implements IProviderAdapter {
         comment: p.comment ?? null,
       };
     });
+  }
+
+  async getPositionSnapshot(): Promise<BrokerPositionSnapshot> {
+    const positions = await this.getPositions();
+    return { positions, authoritative: this.lastPositionSnapshotAuthoritative };
   }
 
   /**
@@ -364,11 +375,15 @@ export class Mt5Adapter implements IProviderAdapter {
     return data.deals
       .map((d: any) => ({
         brokerTicket: d.ticket != null ? String(d.ticket) : '',
+        positionId: d.positionId != null ? String(d.positionId) : undefined,
         symbol: d.symbol,
         side: d.type === 'buy' ? 'buy' as const : 'sell' as const,
         volume: Number(d.volume ?? 0),
         price: Number(d.price ?? 0),
         profit: Number(d.profit ?? 0),
+        commission: Number(d.commission ?? 0),
+        swap: Number(d.swap ?? 0),
+        fee: Number(d.fee ?? 0),
         time: new Date(d.time),
       }))
       .filter((d: BrokerDeal) => d.time.getTime() >= sinceMs);
@@ -389,6 +404,7 @@ export class Mt5Adapter implements IProviderAdapter {
       currency: data.currency || 'GBP',
       mode: 'demo',
       connected: true,
+      accountId: data.login != null ? String(data.login) : undefined,
     };
   }
 
@@ -402,6 +418,7 @@ export class Mt5Adapter implements IProviderAdapter {
       sl: params.sl ?? null,
       tp: params.tp ?? null,
       comment: safeComment,
+      clientOrderId: params.clientOrderId,
     };
 
     this.logger.log(`MT5 order: ${body.type} ${body.symbol} ×${body.volume} sl=${body.sl} tp=${body.tp} [tripped=${this.tripped} errors=${this.consecutiveErrors}]`);
@@ -422,7 +439,7 @@ export class Mt5Adapter implements IProviderAdapter {
           provider: 'mt5',
         },
       }).catch(() => {});
-      return { success: false, error: message };
+      return { success: false, error: message, status: 'REJECTED' };
     }
 
     if (!data) {
@@ -434,18 +451,21 @@ export class Mt5Adapter implements IProviderAdapter {
         ? 'Bridge unreachable (circuit breaker active)'
         : 'Bridge unreachable (no response)';
       this.logger.warn(`MT5 order FAILED — ${reason} [url=${this.bridgeUrl} tripped=${this.tripped} consecutiveErrors=${this.consecutiveErrors}]`);
-      // Record failed order attempt
+      // A network timeout is an unknown outcome: MT5 may have accepted the
+      // order before the response was lost. Keep it retryable with the same
+      // clientOrderId instead of falsely declaring it rejected.
       this.prisma?.order.create({
         data: {
           symbol: params.symbol,
           type: 'market',
           side: params.side === 'BUY' ? 'buy' : 'sell',
           quantity: params.quantity,
-          status: 'rejected',
+          status: 'unknown',
           provider: 'mt5',
+          providerId: params.clientOrderId ?? null,
         },
       }).catch(() => {});
-      return { success: false, error: reason };
+      return { success: false, error: reason, status: 'UNKNOWN' };
     }
 
     const result: BrokerOrderResult = {
@@ -453,6 +473,11 @@ export class Mt5Adapter implements IProviderAdapter {
       ticket: data.ticket ?? undefined,
       price: data.price ?? undefined,
       error: data.error ?? undefined,
+      status: data.status === 'partially_filled' || data.partial === true
+        ? 'PARTIALLY_FILLED'
+        : data.success === true ? 'FILLED' : 'REJECTED',
+      filledQuantity: data.filledVolume ?? data.volume ?? undefined,
+      duplicate: data.duplicate === true,
     };
 
     // Persist every order attempt (success + failure) to the Order table
@@ -463,7 +488,7 @@ export class Mt5Adapter implements IProviderAdapter {
         side: params.side === 'BUY' ? 'buy' : 'sell',
         quantity: params.quantity,
         price: result.price ?? null,
-        status: result.success ? 'filled' : 'rejected',
+        status: result.status?.toLowerCase() ?? (result.success ? 'filled' : 'rejected'),
         provider: 'mt5',
         providerId: result.ticket ? String(result.ticket) : null,
         filledAt: result.success ? new Date() : null,
@@ -504,13 +529,14 @@ export class Mt5Adapter implements IProviderAdapter {
         this.logBridgeState('disconnected', `HTTP ${res.status}`);
         // Surface the bridge's real error (e.g. "No prices", "Insufficient margin")
         // instead of a generic "Bridge unreachable" so callers can act on it.
-        throw new Error(this.extractBridgeErrorMessage(errorBody) ?? detail);
+        throw new BridgeRejectedError(this.extractBridgeErrorMessage(errorBody) ?? detail);
       }
       this.consecutiveErrors = 0;
       this.logBridgeState('connected');
       return (await res.json()) as T;
     } catch (err) {
       const error = err as Error;
+      if (error instanceof BridgeRejectedError) throw error;
       const category = this.classifyBridgeError(error);
       this.logBridgeDiag('POST', path, `${category}: ${error.message}`, body);
       if (category !== 'refused' && category !== 'dns' && category !== 'network') {

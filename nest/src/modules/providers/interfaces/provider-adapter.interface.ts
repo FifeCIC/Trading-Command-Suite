@@ -152,6 +152,9 @@ export interface IProviderAdapter {
    */
   getPositions?(): Promise<BrokerPosition[]>;
 
+  /** Fetch positions together with proof that an empty result is complete. */
+  getPositionSnapshot?(): Promise<BrokerPositionSnapshot>;
+
   /**
    * Fetch account summary (balance, equity, margin).
    */
@@ -185,6 +188,8 @@ export interface BrokerPosition {
   unrealizedPnlPct: number;
   currency: string;
   openedAt: string;
+  /** Broker account containing the position. Required for multi-account reconciliation. */
+  accountId?: string;
   /** Broker-specific position/order ID (MT5 ticket, T212 orderId). Always a string — 64-bit safe. */
   brokerTicket?: string;
   /** Position direction — required to create Trade rows for broker-managed positions. */
@@ -195,14 +200,24 @@ export interface BrokerPosition {
   comment?: string | null;
 }
 
+export interface BrokerPositionSnapshot {
+  positions: BrokerPosition[];
+  authoritative: boolean;
+}
+
 /** A single executed fill/deal from broker history. */
 export interface BrokerDeal {
   brokerTicket: string;
+  /** Broker position identifier. Unlike brokerTicket, this groups all fills for one position. */
+  positionId?: string;
   symbol: string;
   side: 'buy' | 'sell';
   volume: number;
   price: number;
   profit: number;
+  commission?: number;
+  swap?: number;
+  fee?: number;
   time: Date;
 }
 
@@ -218,6 +233,7 @@ export interface BrokerAccount {
   currency: string;
   mode: 'live' | 'demo' | 'paper' | 'mock';
   connected: boolean;
+  accountId?: string;
 }
 
 /** Standardized order request for any broker. */
@@ -228,6 +244,8 @@ export interface BrokerOrderRequest {
   sl?: number;
   tp?: number;
   comment?: string;
+  /** Stable caller-generated key used to make broker retries safe. */
+  clientOrderId?: string;
 }
 
 /** Standardized order result from any broker. */
@@ -236,6 +254,9 @@ export interface BrokerOrderResult {
   ticket?: string | number;
   price?: number;
   error?: string;
+  status?: 'FILLED' | 'PARTIALLY_FILLED' | 'REJECTED' | 'UNKNOWN';
+  filledQuantity?: number;
+  duplicate?: boolean;
 }
 
 /** A single news headline from a provider. */

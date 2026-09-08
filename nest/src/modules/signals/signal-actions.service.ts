@@ -191,6 +191,7 @@ export class SignalActionsService {
       sl,
       tp,
       comment,
+      clientOrderId: `signal-${signalId}`,
     });
 
     if (!result.success) {

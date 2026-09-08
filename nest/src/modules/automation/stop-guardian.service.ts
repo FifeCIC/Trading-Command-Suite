@@ -12,6 +12,7 @@ import { TradingStrategyService } from '../trading/trading-strategy.service';
 import { DirectivesService } from '../directives/directives.service';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import { NotificationService } from '../notifications/notifications.service';
+import { StopGuardianService as StopAdjustmentRecorder } from '../trading/stop-guardian.service';
 
 interface Mt5RawPosition {
   ticket: number;
@@ -64,6 +65,7 @@ export interface StopAdjustment {
 export class StopGuardianService {
   private readonly logger = new Logger(StopGuardianService.name);
   private timer: NodeJS.Timeout | null = null;
+  private ticking = false;
   private readonly bridgeUrl: string;
 
   state: GuardianState = {
@@ -91,6 +93,7 @@ export class StopGuardianService {
     private readonly strategyService: TradingStrategyService,
     private readonly directivesService: DirectivesService,
     private readonly mt5Connection: Mt5ConnectionManager,
+    private readonly adjustmentRecorder: StopAdjustmentRecorder,
     private readonly notifications?: NotificationService,
   ) {
     this.bridgeUrl = this.mt5Connection.getUrl();
@@ -158,7 +161,8 @@ export class StopGuardianService {
   // ── Main Tick ──────────────────────────────────────────
 
   async tick() {
-    if (!this.state.enabled) return [];
+    if (!this.state.enabled || this.ticking) return [];
+    this.ticking = true;
     const tickStart = Date.now();
     this.state.tickCount++;
     this.state.lastTickAt = new Date().toISOString();
@@ -292,6 +296,12 @@ export class StopGuardianService {
               side,
               adjustments,
               false,
+              {
+                atrTrailingStop: atrStop?.score ?? null,
+                superTrend: superTrend?.score ?? null,
+                chandelierExit: chandelier?.score ?? null,
+                wickFilter: wickScore,
+              },
             );
           }
         }
@@ -317,7 +327,6 @@ export class StopGuardianService {
     this.logger.log(
       `Guardian #${this.state.tickCount}: ${adjustments.length} adjusted, ${this.state.guardedPositions.length} guarded`,
     );
-    this.scheduleNext();
     return adjustments;
   }
 
@@ -337,6 +346,8 @@ export class StopGuardianService {
     this.state.nextTickAt = new Date(
       Date.now() + this.state.tickIntervalMs,
     ).toISOString();
+    this.ticking = false;
+    this.scheduleNext();
   }
 
   private makeGuarded(
@@ -406,6 +417,7 @@ export class StopGuardianService {
     side: 'BUY' | 'SELL',
     adjustments: StopAdjustment[],
     priority: boolean,
+    directiveScores?: Record<string, number | null>,
   ): Promise<boolean> {
     if (!this.canModify(pos.ticket, priority)) {
       this.logger.debug(
@@ -441,6 +453,17 @@ export class StopGuardianService {
       this.logger.log(
         `Stop: ${pos.symbol} #${pos.ticket} SL ${pos.sl} → ${newSl} (${confidence}%)`,
       );
+      // Persist the adjustment to the stop_adjustment audit trail (#476).
+      this.adjustmentRecorder.recordAdjustment({
+        tradeTicket: String(pos.ticket),
+        symbol: pos.symbol,
+        oldSl: pos.sl,
+        newSl,
+        oldTp: pos.tp,
+        newTp: pos.tp,
+        reason,
+        directiveScores: directiveScores ?? undefined,
+      });
       this.notifications
         ?.send({
           title: `🛡️ Stop adjusted — ${pos.symbol}`,

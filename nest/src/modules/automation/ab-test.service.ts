@@ -188,6 +188,7 @@ export class AbTestService {
       sl,
       tp,
       comment,
+      clientOrderId: `ab-${test.id}-${side}-${symbol}`,
     });
 
     await this.tradeRecorder.record({
@@ -201,7 +202,7 @@ export class AbTestService {
       origin: 'strategy',
       source: 'meta-stack',
       abTestId: test.id,
-      ticket: result.ticket as number | undefined,
+      brokerTicket: result.ticket != null ? String(result.ticket) : undefined,
       sl,
       tp,
       brokerComment: comment,

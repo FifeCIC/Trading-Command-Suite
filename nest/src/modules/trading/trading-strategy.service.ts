@@ -672,6 +672,7 @@ export class TradingStrategyService {
         // Name only — the shared sanitizer strips '|' and '%', so embedding
         // "| composite%" pollutes the strategy name parsed back on close.
         comment: `TCS ${strategy.name}`,
+        clientOrderId: `strategy-${strategy.id}-${evalResult.evaluationId}`,
       });
 
       this.lastTradeTime.set(strategyId, new Date());

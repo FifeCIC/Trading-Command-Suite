@@ -8,7 +8,7 @@ import { sanitizeMt5Comment } from '../providers/mt5-comment.util';
 export interface Mt5Position {
   ticket: number;
   symbol: string;
-  type: number;
+  type: number | 'buy' | 'sell';
   volume: number;
   price_open: number;
   sl: number;
@@ -49,15 +49,39 @@ export class Mt5TradingService {
     try {
       const res = await fetch(`${this.bridgeUrl}/account`);
       if (!res.ok) return null;
-      return res.json();
+      const data = await res.json();
+      return {
+        login: Number(data.login ?? 0),
+        balance: Number(data.balance ?? 0),
+        equity: Number(data.equity ?? 0),
+        margin: Number(data.margin ?? 0),
+        margin_free: Number(data.margin_free ?? data.marginFree ?? 0),
+        margin_level: Number(data.margin_level ?? data.marginLevel ?? 0),
+        currency: String(data.currency ?? ''),
+      };
     } catch { return null; }
   }
 
   async getPositions(): Promise<Mt5Position[]> {
     try {
-      const res = await fetch(`${this.bridgeUrl}/positions`);
+      const res = await fetch(`${this.bridgeUrl}/positions`, { signal: AbortSignal.timeout(10_000) });
       if (!res.ok) return [];
-      return res.json();
+      const data = await res.json();
+      const rows = Array.isArray(data) ? data : data?.positions;
+      if (!Array.isArray(rows)) return [];
+      return rows.map((p: any) => ({
+        ticket: Number(p.ticket),
+        symbol: String(p.symbol ?? ''),
+        type: p.type,
+        volume: Number(p.volume ?? 0),
+        price_open: Number(p.price_open ?? p.priceOpen ?? 0),
+        sl: Number(p.sl ?? 0),
+        tp: Number(p.tp ?? 0),
+        price_current: Number(p.price_current ?? p.priceCurrent ?? 0),
+        profit: Number(p.profit ?? 0),
+        comment: String(p.comment ?? ''),
+        time: Number(p.time ?? (p.openTime ? Date.parse(p.openTime) / 1000 : 0)),
+      }));
     } catch { return []; }
   }
 
@@ -84,7 +108,8 @@ export class Mt5TradingService {
     tp?: number;
     comment?: string;
     origin?: string;
-  }): Promise<{ success: boolean; ticket?: number; price?: number; error?: string }> {
+    clientOrderId?: string;
+  }): Promise<{ success: boolean; ticket?: number; price?: number; error?: string; status?: string; filledQuantity?: number }> {
     const side = params.type === 'BUY' ? 'buy' : 'sell';
     const origin = (params.origin || 'user') as 'user' | 'agent' | 'strategy' | 'system';
 
@@ -97,16 +122,20 @@ export class Mt5TradingService {
       if (params.sl) body.sl = params.sl;
       if (params.tp) body.tp = params.tp;
       if (params.comment) body.comment = sanitizeMt5Comment(params.comment);
+      if (params.clientOrderId) body.clientOrderId = params.clientOrderId;
 
       const res = await fetch(`${this.bridgeUrl}/order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15_000),
       });
       const data = await res.json();
 
       // ── Order audit: record every bridge order attempt (#477) ──
-      this.recordOrder(params.symbol, params.type, params.volume, data.success ? 'filled' : 'rejected', data.ticket, data.price, data.error);
+      const orderStatus = data.status ?? (data.success ? 'filled' : 'rejected');
+      const filledQuantity = Number(data.filledVolume ?? data.volume ?? params.volume);
+      this.recordOrder(params.symbol, params.type, params.volume, orderStatus, data.ticket, data.price, data.error);
 
       if (data.success) {
         // Record successful trade with MT5 traceability fields (#446, #616)
@@ -114,7 +143,7 @@ export class Mt5TradingService {
         this.tradeRecorder.record({
           symbol: params.symbol,
           side,
-          quantity: params.volume,
+          quantity: filledQuantity,
           entryPrice: data.price,
           provider: 'mt5',
           status: 'open',
@@ -136,7 +165,7 @@ export class Mt5TradingService {
             reason: 'Initial SL/TP set at order placement',
           });
         }
-        return { success: true, ticket: data.ticket, price: data.price };
+        return { success: true, ticket: data.ticket, price: data.price, status: orderStatus, filledQuantity };
       }
       // Record rejected attempt
       this.tradeRecorder.record({
@@ -151,19 +180,11 @@ export class Mt5TradingService {
       return { success: false, error: data.error || `HTTP ${res.status}` };
     } catch (err) {
       const errorMsg = (err as Error).message;
-      // Record failed attempt
-      this.tradeRecorder.record({
-        symbol: params.symbol,
-        side,
-        quantity: params.volume,
-        provider: 'mt5',
-        status: 'rejected',
-        origin,
-        strategy: params.comment || undefined,
-      });
-      // Order audit: network/bridge failures (#477)
-      this.recordOrder(params.symbol, params.type, params.volume, 'error', undefined, undefined, errorMsg);
-      return { success: false, error: errorMsg };
+      // Network failures are an unknown broker outcome: the request may have
+      // reached MT5 before the response was lost. The caller can safely retry
+      // with the same clientOrderId.
+      this.recordOrder(params.symbol, params.type, params.volume, 'unknown', undefined, undefined, errorMsg);
+      return { success: false, error: errorMsg, status: 'unknown' };
     }
   }
 
@@ -209,10 +230,11 @@ export class Mt5TradingService {
       const data = await res.json();
       // MT5 returns multiple success retcodes: 10008 (placed), 10009 (done),
       // 10010 (partial). Treat all as success; anything else is a failure.
-      const success = [10008, 10009, 10010].includes(data.retcode);
+      const success = data.success === true || [10008, 10009, 10010].includes(data.retcode);
 
-      // Record the close in trade history
-      if (pos) {
+      // Close the existing lifecycle row rather than inserting a second,
+      // opposite-side trade for the same broker position.
+      if (success && !data.partial && pos) {
         const posType = String(pos.type) === '0' || (pos as any).type === 'buy' ? 'buy' : 'sell';
         // Extract strategy name from MT5 comment.
         // Legacy: "TCS Strategy | 119%" → split on '|'.
@@ -221,22 +243,33 @@ export class Mt5TradingService {
         const strategyFromComment = rawComment.includes('|')
           ? rawComment.split('|')[0]?.trim() || undefined
           : rawComment.replace(/^TCS\s+/i, '').trim() || undefined;
-        this.tradeRecorder.record({
-          symbol: pos.symbol,
-          side: posType === 'buy' ? 'sell' : 'buy', // closing side is opposite
-          quantity: pos.volume,
-          entryPrice: pos.price_open || 0,
-          exitPrice: data.price || pos.price_current || 0,
-          pnl: pos.profit || 0,
-          provider: 'mt5',
-          status: 'closed',
-          origin: 'user',
-          openedAt: pos.time ? new Date(pos.time * 1000) : undefined,
-          strategy: strategyFromComment,
-        });
+        const exitPrice = Number(data.closePrice ?? data.price ?? pos.price_current ?? 0);
+        const pnl = Number(data.profit ?? pos.profit ?? 0);
+        const existing = await this.prisma.trade.findFirst({
+          where: { provider: 'mt5', brokerTicket: String(ticket), status: 'open' },
+          orderBy: { openedAt: 'desc' },
+        }).catch(() => null);
+        if (existing) {
+          await this.tradeRecorder.close(existing.id, exitPrice, pnl);
+        } else {
+          await this.tradeRecorder.record({
+            symbol: pos.symbol,
+            side: posType,
+            quantity: pos.volume,
+            entryPrice: pos.price_open || 0,
+            exitPrice,
+            pnl,
+            provider: 'mt5',
+            status: 'closed',
+            origin: 'user',
+            openedAt: pos.time ? new Date(pos.time * 1000) : undefined,
+            strategy: strategyFromComment,
+            brokerTicket: String(ticket),
+          });
+        }
       }
 
-      return { success, error: data.comment };
+      return { success, error: data.error ?? data.comment };
     } catch (err) {
       return { success: false, error: (err as Error).message };
     }
@@ -244,14 +277,14 @@ export class Mt5TradingService {
 
   async closePartial(ticket: number, volume: number): Promise<{ success: boolean; error?: string }> {
     try {
-      const res = await fetch(`${this.bridgeUrl}/close/${ticket}`, {
+      const res = await fetch(`${this.bridgeUrl}/close/partial/${ticket}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ volume }),
       });
       const data = await res.json();
       // Same success retcodes as closePosition (10008 placed / 10009 done / 10010 partial)
-      return { success: [10008, 10009, 10010].includes(data.retcode), error: data.comment };
+      return { success: data.success === true || [10008, 10009, 10010].includes(data.retcode), error: data.error ?? data.comment };
     } catch (err) {
       return { success: false, error: (err as Error).message };
     }
@@ -259,6 +292,8 @@ export class Mt5TradingService {
 
   async modifyPosition(ticket: number, sl?: number, tp?: number): Promise<{ success: boolean; error?: string }> {
     try {
+      const positions = await this.getPositions();
+      const pos = positions.find((p) => p.ticket === ticket);
       const res = await fetch(`${this.bridgeUrl}/order/modify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -266,7 +301,19 @@ export class Mt5TradingService {
       });
       const data = await res.json();
       // Modify can also return 10008 (placed) / 10009 (done) — treat both as success
-      return { success: [10008, 10009, 10010].includes(data.retcode), error: data.comment };
+      const success = data.success === true || [10008, 10009, 10010].includes(data.retcode);
+      if (success && pos) {
+        this.stopGuardian.recordAdjustment({
+          tradeTicket: ticket,
+          symbol: pos.symbol,
+          oldSl: pos.sl || null,
+          newSl: sl ?? pos.sl ?? null,
+          oldTp: pos.tp || null,
+          newTp: tp ?? pos.tp ?? null,
+          reason: 'Manual SL/TP modification',
+        });
+      }
+      return { success, error: data.error ?? data.comment };
     } catch (err) {
       return { success: false, error: (err as Error).message };
     }
