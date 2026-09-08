@@ -28,7 +28,6 @@ import { DirectivesService } from '../directives/directives.service';
 import { ScoreHistoryService } from './score-history.service';
 import { NotificationService } from '../notifications/notifications.service';
 import { CalibrationService } from '../calibration/calibration.service';
-import { OutcomeTrackerService } from './outcome-tracker.service';
 import { SeasonalAffinityService } from './seasonal-affinity.service';
 import { MacroSnapshotService } from './macro-snapshot.service';
 import { EurUsdCacheService } from './eurusd-cache.service';
@@ -141,7 +140,6 @@ export class ScoringService implements OnModuleInit {
     private readonly scoreHistoryService: ScoreHistoryService,
     private readonly notificationService: NotificationService,
     private readonly calibrationService: CalibrationService,
-    private readonly outcomeTracker: OutcomeTrackerService,
     private readonly seasonalAffinity: SeasonalAffinityService,
     private readonly macroSnapshot: MacroSnapshotService,
     private readonly eurusdCache: EurUsdCacheService,
@@ -170,6 +168,9 @@ export class ScoringService implements OnModuleInit {
   }
 
   async rankAll(strategyId?: string, limit = 20, symbolFilter?: string[], protocolSlug?: string): Promise<RankedResult> {
+    // Legacy flat ranking is ANALYTICS ONLY (2026-09-08). Trade, replay, and
+    // backtest decisions must use ProtocolGatingService. Do not add execution
+    // triggers to this method.
     const modeInfo = this.modeService.getModeInfo();
 
     // Strategy weights are now derived from each directive's maxScore.
@@ -184,6 +185,7 @@ export class ScoringService implements OnModuleInit {
 
     // Compute directive list — protocol-scoped when a protocol is specified
     let allDirectives = this.directivesService.list();
+    let directiveFilter: Set<string> | undefined;
     if (protocolSlug && this.prisma.isAvailable) {
       try {
         const protocol = await (this.prisma as any).protocol.findUnique({
@@ -202,12 +204,13 @@ export class ScoringService implements OnModuleInit {
             }
           }
           if (protocolDirectiveIds.size > 0) {
+            directiveFilter = protocolDirectiveIds;
             allDirectives = allDirectives.filter(d => protocolDirectiveIds.has(d.id));
             this.logger.log(`Protocol-scoped scoring: ${allDirectives.length} directives from "${protocolSlug}" (of ${this.directivesService.list().length} total)`);
           }
         }
       } catch (err) {
-        this.logger.warn(`Protocol lookup failed for "${protocolSlug}" — falling back to all directives: ${(err as Error).message}`);
+        throw new Error(`Protocol lookup failed for "${protocolSlug}": ${(err as Error).message}`);
       }
     }
     const protocolMaxScore = allDirectives.reduce((sum, d) => sum + d.maxScore, 0);
@@ -297,7 +300,7 @@ export class ScoringService implements OnModuleInit {
         eurusdValue,
         dxyValue,
       } as DirectiveInput;
-      const results = await this.directivesService.runAll(input);
+      const results = await this.directivesService.runAll(input, directiveFilter);
 
       // Apply symbol-specific calibrations before building breakdown
       const { adjustedScores, applied: calibrationsApplied } = this.calibrationService.applyCalibrations(symbol.ticker, results);
@@ -404,10 +407,10 @@ export class ScoringService implements OnModuleInit {
         totalConfidence += d.confidence * d.maxScore;
         weightSum += d.maxScore;
 
-        if (d.score > 0 || d.confidence > 0) {
-          maxPossibleScore += d.maxScore;
-          activeDirectives++;
-        }
+        // The configured maximum is invariant. Missing/zero evidence may lower
+        // coverage, but must never shrink the denominator and inflate a score.
+        maxPossibleScore += d.maxScore;
+        if (d.score > 0 || d.confidence > 0) activeDirectives++;
       }
 
       // Rule C: Confluence bonus — if multiple high-priority directives agree
@@ -488,22 +491,8 @@ export class ScoringService implements OnModuleInit {
         timestamp: new Date().toISOString(),
       });
 
-      // Q304: Record directive outcomes for self-improving scoring
-      if (hasData) {
-        const now = new Date();
-        this.outcomeTracker.recordOutcomes(
-          breakdown.map((d) => ({
-            directiveId: d.directiveId,
-            symbol: symbol.ticker,
-            timeframe: 'M15', // default; directives can override
-            score: d.score,
-            signalClass: d.signalClass,
-            confidence: d.confidence,
-            predictedAt: now,
-            priceAtPredict: bars.length > 0 ? bars[bars.length - 1].close : 0,
-          })),
-        ).catch((err) => this.logger.warn(`Outcome recording failed for ${symbol.ticker}: ${err.message}`));
-      }
+      // Outcome learning is intentionally not fed from this analytics-only
+      // scorer. Canonical protocol decisions are recorded by SignalEnvelope.
     }
 
     ranked.sort((a, b) => b.score - a.score);
@@ -576,11 +565,13 @@ export class ScoringService implements OnModuleInit {
         for (const s of scores) {
           if (seen.has(s.symbolId)) continue;
           seen.add(s.symbolId);
+          const storedPct = Number((s.breakdown as any)?.signalPct);
+          const normalizedScore = Number.isFinite(storedPct) ? storedPct : 0;
           ranked.push({
             symbolId: s.symbolId,
             ticker: (s as any).symbol?.ticker ?? s.symbolId,
             score: s.value,
-            normalizedScore: Math.min(100, s.value),
+            normalizedScore,
             maxPossibleScore: 100,
             totalDirectives: directiveCount,
             activeDirectives: directiveCount,
@@ -589,7 +580,7 @@ export class ScoringService implements OnModuleInit {
             degradedProviders: [],
             confidence: 0.5,
             freshness: 'cached',
-            signal: s.value >= ENTRY_THRESHOLD ? 'BUY' : s.value >= WATCH_THRESHOLD ? 'HOLD' : 'SELL',
+            signal: normalizedScore >= ENTRY_THRESHOLD ? 'BUY' : 'HOLD',
             dataStatus: 'live' as const,
             breakdown: [],
             timestamp: s.timestamp?.toISOString?.() ?? new Date().toISOString(),
@@ -611,11 +602,12 @@ export class ScoringService implements OnModuleInit {
         const sym = s.symbol?.toUpperCase?.() ?? s.symbol;
         if (!sym || seen.has(sym)) continue;
         seen.add(sym);
+        const normalizedScore = Number.isFinite(Number(s.signalPct)) ? Number(s.signalPct) : 0;
         ranked.push({
           symbolId: s.id,
           ticker: sym,
           score: s.composite ?? 0,
-          normalizedScore: Math.min(100, s.composite ?? 0),
+          normalizedScore,
           maxPossibleScore: 100,
           totalDirectives: directiveCount,
           activeDirectives: directiveCount,
@@ -624,7 +616,7 @@ export class ScoringService implements OnModuleInit {
           degradedProviders: [],
           confidence: 0.5,
           freshness: 'cached',
-          signal: s.tradingSignal ?? (s.composite >= ENTRY_THRESHOLD ? 'BUY' : s.composite >= WATCH_THRESHOLD ? 'HOLD' : 'SELL'),
+          signal: s.tradingSignal ?? (normalizedScore >= ENTRY_THRESHOLD ? 'BUY' : 'HOLD'),
           dataStatus: 'live' as const,
           breakdown: [],
           timestamp: s.snappedAt?.toISOString?.() ?? new Date().toISOString(),

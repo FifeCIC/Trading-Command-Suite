@@ -39,7 +39,7 @@ export function rsi(closes: number[], period = 14): number[] {
   avgGain /= period;
   avgLoss /= period;
 
-  result.push(avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss));
+  result.push(rsiFromAverages(avgGain, avgLoss));
 
   // Smoothed
   for (let i = period + 1; i < closes.length; i++) {
@@ -48,9 +48,16 @@ export function rsi(closes: number[], period = 14): number[] {
     const loss = diff < 0 ? Math.abs(diff) : 0;
     avgGain = (avgGain * (period - 1) + gain) / period;
     avgLoss = (avgLoss * (period - 1) + loss) / period;
-    result.push(avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss));
+    result.push(rsiFromAverages(avgGain, avgLoss));
   }
   return result;
+}
+
+function rsiFromAverages(avgGain: number, avgLoss: number): number {
+  if (avgGain === 0 && avgLoss === 0) return 50;
+  if (avgLoss === 0) return 100;
+  if (avgGain === 0) return 0;
+  return 100 - 100 / (1 + avgGain / avgLoss);
 }
 
 /** MACD (fast, slow, signal). Returns { macd, signal, histogram } arrays. */
@@ -149,7 +156,8 @@ export function roc(closes: number[], period = 12): number[] {
   if (closes.length <= period) return [];
   const result: number[] = [];
   for (let i = period; i < closes.length; i++) {
-    result.push(((closes[i] - closes[i - period]) / closes[i - period]) * 100);
+    const prior = closes[i - period];
+    result.push(prior === 0 ? 0 : ((closes[i] - prior) / prior) * 100);
   }
   return result;
 }
@@ -446,8 +454,8 @@ export function awesomeOscillator(highs: number[], lows: number[], fastPeriod = 
 /**
  * DeMarker (DeM) indicator.
  * DeM = SMA(deMax, period) / (SMA(deMax, period) + SMA(deMin, period))
- * deMax = high - prevLow if > 0 else 0
- * deMin = prevHigh - low if > 0 else 0
+ * deMax = high - prevHigh if > 0 else 0
+ * deMin = prevLow - low if > 0 else 0
  * Range: 0-1. > 0.7 = overbought, < 0.3 = oversold.
  */
 export function demarker(highs: number[], lows: number[], period = 14): number[] {
@@ -456,8 +464,8 @@ export function demarker(highs: number[], lows: number[], period = 14): number[]
   const deMax: number[] = [];
   const deMin: number[] = [];
   for (let i = 1; i < n; i++) {
-    deMax.push(Math.max(highs[i] - lows[i - 1], 0));
-    deMin.push(Math.max(highs[i - 1] - lows[i], 0));
+    deMax.push(Math.max(highs[i] - highs[i - 1], 0));
+    deMin.push(Math.max(lows[i - 1] - lows[i], 0));
   }
   const maxSma = smaSeries(deMax, period);
   const minSma = smaSeries(deMin, period);
@@ -509,9 +517,7 @@ export function forceIndex(closes: number[], volumes: number[], period = 13): nu
   for (let i = 1; i < n; i++) {
     raw.push(volumes[i] * (closes[i] - closes[i - 1]));
   }
-  const result = ema(raw, period);
-  const offset = raw.length - result.length;
-  return result.map((v, i) => raw[i + offset]);
+  return ema(raw, period);
 }
 
 /**

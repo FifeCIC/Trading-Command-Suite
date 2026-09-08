@@ -11,11 +11,10 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { DirectivesService } from '../directives/directives.service';
-import { CalibrationService } from '../calibration/calibration.service';
 import { SymbolDataCacheService } from './symbol-data-cache.service';
 import { getPreset, ProtocolPreset } from './protocol-presets';
-import type { DirectiveInput, DirectiveResult, MarketBar } from '../directives/interfaces/directive.interface';
+import type { MarketBar } from '../directives/interfaces/directive.interface';
+import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -61,9 +60,8 @@ export class ProtocolRunnerService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly directivesService: DirectivesService,
-    private readonly calibrationService: CalibrationService,
     private readonly cache: SymbolDataCacheService,
+    private readonly protocolGating: ProtocolGatingService,
   ) {}
 
   /**
@@ -147,74 +145,38 @@ export class ProtocolRunnerService {
   // ── Private ──────────────────────────────────────────
 
   /**
-   * Score a single symbol against a protocol preset.
-   * Only directives in the preset are run; others are skipped.
+   * Analysis entry point for the canonical scorer (2026-09-08).
+   * Do not add aggregation or signal thresholds here.
    */
   private async scoreSymbol(
     symbol: string,
     preset: ProtocolPreset,
   ): Promise<SymbolScoreResult> {
-    // Load market bars (via cache layer)
     const bars = await this.loadBars(symbol);
-
-    const input: DirectiveInput = {
-      symbol: symbol.toUpperCase(),
+    const gated = await this.protocolGating.scoreWithGating(
+      symbol.toUpperCase(),
       bars,
-    };
-
-    // Run ALL directives — then filter to preset's directives
-    const allResults = await this.directivesService.runAll(input);
-
-    // Apply calibrations
-    const { adjustedScores } =
-      this.calibrationService.applyCalibrations(symbol, allResults);
-
-    // Build breakdown for preset directives only
-    const breakdown: SymbolScoreResult['breakdown'] = [];
-    let totalScore = 0;
-    let totalMax = 0;
-    let bullishWeight = 0;
-    let bearishWeight = 0;
-
-    for (const directiveId of preset.directives) {
-      const result = allResults.get(directiveId);
-      if (!result) continue;
-
-      const directive = this.directivesService.get(directiveId);
-      const maxScore = directive?.maxScore ?? 100;
-      const name = directive?.name ?? directiveId;
-      const calibratedScore = adjustedScores.get(directiveId) ?? result.score;
-      const signalClass = result.signalClass ?? 'neutral';
-
-      if (signalClass === 'bullish') bullishWeight += maxScore;
-      else if (signalClass === 'bearish') bearishWeight += maxScore;
-
-      totalScore += calibratedScore;
-      totalMax += maxScore;
-
-      breakdown.push({
-        directiveId,
-        name,
-        score: calibratedScore,
-        maxScore,
-        confidence: result.confidence,
-        reason: result.reason,
-        signalClass,
-      });
-    }
-
-    // Determine overall signal class
-    let signalClass: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-    if (bullishWeight > bearishWeight * 1.5) signalClass = 'bullish';
-    else if (bearishWeight > bullishWeight * 1.5) signalClass = 'bearish';
+      preset.id,
+    );
+    const signalClass: SymbolScoreResult['signalClass'] =
+      gated.signal === 'BUY' || gated.signal === 'STRONG_BUY' ? 'bullish' :
+      gated.signal === 'SELL' || gated.signal === 'STRONG_SELL' ? 'bearish' : 'neutral';
 
     return {
       symbol: symbol.toUpperCase(),
-      score: totalScore,
-      maxPossible: totalMax,
+      score: gated.signalRaw,
+      maxPossible: gated.signalMax,
       signalClass,
-      breakdown,
-      calibrationsApplied: adjustedScores.size,
+      breakdown: Object.values(gated.breakouts).flat().map(d => ({
+        directiveId: d.directiveId,
+        name: d.name,
+        score: d.score,
+        maxScore: d.maxScore,
+        confidence: d.normalizedScore / 100,
+        reason: d.reason,
+        signalClass: d.signalClass,
+      })),
+      calibrationsApplied: 0,
     };
   }
 

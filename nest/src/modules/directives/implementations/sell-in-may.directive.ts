@@ -20,7 +20,7 @@ export class SellInMayDirective implements IDirective {
   readonly directionBias = 'bearish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
-    const now = new Date();
+    const now = input.asOf ?? new Date();
     const month = now.getMonth(); // 4=May, 9=Oct
 
     const isWindow = month >= 4 && month <= 9;

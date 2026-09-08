@@ -6,6 +6,13 @@
 > This document **replaces** the earlier `weightPortion + rawFeedback` draft (issue #608),
 > which described an aspirational per-directive formula that was never what the code computed.
 
+> **Correctness remediation (started 2026-09-08):** The canonical pipeline now
+> separates directional evidence and score units, preserves queue lineage, and
+> uses canonical scoring for replay/backtest. Some account-risk, outcome-schema,
+> and full timeframe-loader work remains. Keep automated trading disabled until
+> the dated ledger in [META.Stack Correctness Review](./meta-stack-correctness-review.md)
+> shows every Critical item complete with pipeline regression tests.
+
 ---
 
 ## The core idea: two questions, two scores
@@ -19,6 +26,27 @@ A trading system asks **two different questions**, and they deserve **two differ
 
 Mixing both into one number produced the old "relaxed scoring": a BUY at 42% that was mostly
 noise from always-on conditions rather than genuine directional conviction.
+
+## Non-negotiable data-flow invariants
+
+The score model is safe only when its meaning survives every service boundary:
+
+1. Raw score, maximum, percentage, confidence, and risk multiplier are distinct
+   units. A raw score must never be persisted in a percentage field.
+2. Bullish and bearish evidence remain separate until an explicit conflict/netting
+   rule resolves direction. Protocol intent cannot turn bearish evidence bullish.
+3. Every evaluation carries an explicit as-of time and the complete, provenance-
+   tagged timeframe bundle required by its directives.
+4. Missing, stale, neutral, and zero are different states and must not share a
+   fallback value.
+5. Queue entries reference an immutable persisted decision and every execution
+   path re-runs the same fail-closed feasibility policy immediately before the
+   broker call.
+6. Live, API, replay, backtest, and scheduler entry points use one canonical
+   evaluator and produce identical results for an identical evaluation context.
+
+The executable test requirements for these invariants are defined in the
+[META.Stack Correctness Review](./meta-stack-correctness-review.md#required-testing-system).
 
 ---
 
@@ -124,3 +152,17 @@ The runtime marker is the directive's `signalClass`:
 | **inSignal** | Per-directive flag in the breakdown: `true` = counted in the Signal, `false` = condition/gate (Opportunity only). |
 | **signalClass** | Runtime direction of a directive: `bullish` / `bearish` / `neutral`. Drives Signal inclusion. |
 | **directionBias** | Declared bias of a directive (bullish/bearish/neutral). Used for protocol-direction filtering. |
+
+## Change guard — 2026-09-08
+
+- `ProtocolGatingService` is the only action-producing score implementation.
+  `ScoringService.rankAll()` is a legacy analytics surface, not a fallback.
+- Backtest, replay, schedulers, and protocol runners must supply a real protocol
+  and the evaluated market-data window. Never recover from an error by running
+  all directives or reading a current score.
+- Compare execution thresholds with unrounded `signalPct`. Round percentages only
+  at display boundaries. `composite` remains risk-adjusted raw points.
+- A `neutral` directive bias means dynamically two-sided eligibility; its emitted
+  `signalClass` remains bullish or bearish and requires mirror tests.
+- A risk gate may be marked `ready` only when its authoritative account/broker
+  input is present in `DirectiveInput` and covered by boundary truth-table tests.

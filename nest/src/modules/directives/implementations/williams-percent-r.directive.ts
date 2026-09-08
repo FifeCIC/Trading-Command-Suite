@@ -26,7 +26,7 @@ export class WilliamsPercentRDirective implements IDirective {
   readonly minBars = { '1d': 16 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
-  readonly directionBias = 'bearish' as const;
+  readonly directionBias = 'neutral' as const; // Oversold/overbought branches are two-sided.
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { high, low, close } = this.extractOHLC(input);

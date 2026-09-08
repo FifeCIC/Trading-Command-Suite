@@ -1,14 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DirectivesService } from '../directives/directives.service';
-import { ScoringService } from '../scoring/scoring.service';
 import { DirectiveInput, DirectiveResult, MarketBar } from '../directives/interfaces/directive.interface';
-import {
-  DIRECTIVE_GROUPS,
-  BTC_SPEED_GROUPS,
-  DirectiveGroup,
-} from '../directives/directive-groups';
 import { ProtocolDbService } from '../scoring/protocol-db.service';
+import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 
 export interface BacktestRunRequest {
   symbol: string;
@@ -122,8 +117,8 @@ export class BacktestService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly directivesService: DirectivesService,
-    private readonly scoringService: ScoringService,
     private readonly protocolDb: ProtocolDbService,
+    private readonly protocolGating: ProtocolGatingService,
   ) {}
 
   async run(request: BacktestRunRequest): Promise<BacktestResult> {
@@ -150,6 +145,13 @@ export class BacktestService {
       // ── Kelly criterion (#269) ──
       kellyCapPct = 25,
     } = request;
+
+    // 2026-09-08: unscoped and custom-weight backtests previously fell into a
+    // second scoring implementation. Require the canonical protocol identity.
+    if (!protocolId) throw new Error('Backtest requires protocolId for canonical META.Stack scoring.');
+    if (request.weights && Object.keys(request.weights).length > 0) {
+      throw new Error('Backtest weight overrides are disabled until canonical protocol overrides are supported.');
+    }
 
     // ── Execution realism defaults ──
     const isForex = assetClass === 'forex' || (symbol.length === 6 && /^[A-Z]{6}$/.test(symbol));
@@ -229,50 +231,18 @@ export class BacktestService {
       if (newsExclusion === 'exclude' && isNewsDay) continue;           // skip entirely
       if (newsExclusion === 'only' && !isNewsDay) continue;             // only keep news days
 
-      // Use production ScoringService.rankAll() for full directive coverage
-      let composite: number;
-      let signal: string;
-      try {
-        const ranked = await this.scoringService.rankAll(symbol, 1);
-        if (ranked?.ranked?.length > 0) {
-          composite = ranked.ranked[0].score ?? 50;
-          signal = ranked.ranked[0].signal ?? 'HOLD';
-        } else {
-          // Fallback to inline protocol-gated scoring
-          const groups = protocolId
-            ? (this.protocolDb.getCached(protocolId)?.groups ?? DIRECTIVE_GROUPS)
-            : DIRECTIVE_GROUPS;
-          const result = await this.fullScore(symbol, window, groups);
-          composite = result.composite;
-          signal = result.signal;
-        }
-      } catch {
-        // ScoringService failed — fall back to inline scoring
-        const groups = protocolId
-          ? (this.protocolDb.getCached(protocolId)?.groups ?? DIRECTIVE_GROUPS)
-          : DIRECTIVE_GROUPS;
-        const result = await this.fullScore(symbol, window, groups);
-        composite = result.composite;
-        signal = result.signal;
-      }
-
-      // Apply weight overrides if provided
-      if (request.weights && Object.keys(request.weights).length > 0) {
-        // Weight overrides applied via fullScore fallback for precision
-        const groups = protocolId
-          ? (this.protocolDb.getCached(protocolId)?.groups ?? DIRECTIVE_GROUPS)
-          : DIRECTIVE_GROUPS;
-        const result = await this.fullScore(symbol, window, groups, request.weights);
-        composite = result.composite;
-        signal = result.signal;
-      }
+      // Canonical historical evaluation: ticker, protocol, and window are all
+      // explicit. Never call rankAll here; it reads current DB state.
+      const result = await this.fullScore(symbol, window, protocolId);
+      const composite = result.composite;
+      const signal = result.signal;
 
       const score = composite;
 
       const currentClose = currentBar.close;
 
       // Entry signal
-      if (signal === 'BUY') {
+      if (signal === 'BUY' || signal === 'STRONG_BUY') {
         const future5 = bars[day + 5]?.close;
         const future10 = bars[day + 10]?.close;
         const future20 = bars[day + Math.min(20, bars.length - day - 1)]?.close;
@@ -975,6 +945,7 @@ export class BacktestService {
     timeframe = '1d',
     from?: string,
     to?: string,
+    protocolId?: string,
   ): Promise<{
     bars: Array<{ time: string; open: number; high: number; low: number; close: number; volume: number }>;
     signals: Array<{ time: string; type: string; score: number; label: string; price: number; pnl?: number }>;
@@ -1029,6 +1000,9 @@ export class BacktestService {
     const windowSize = 100;
 
     for (let day = windowSize; day < rows.length; day++) {
+      // Chart bars/indicators remain available without a protocol, but signals
+      // must never be fabricated by an unscoped fallback scorer.
+      if (!protocolId) break;
       const window = rows.slice(day - windowSize, day).map(r => ({
         timestamp: r.timestamp,
         open: Number(r.open),
@@ -1039,11 +1013,11 @@ export class BacktestService {
       }));
 
       // Use inline protocol-gated scoring
-      const { composite: score, signal } = await this.fullScore(symbol, window, DIRECTIVE_GROUPS);
+      const { composite: score, signal } = await this.fullScore(symbol, window, protocolId);
 
       const currentClose = window[window.length - 1].close;
 
-      if (signal === 'BUY') {
+      if (signal === 'BUY' || signal === 'STRONG_BUY') {
         const future10 = rows[day + 10]?.close;
         const pnl = future10 ? Number(((Number(future10) - currentClose) / currentClose * 100).toFixed(2)) : undefined;
 
@@ -1070,133 +1044,29 @@ export class BacktestService {
     };
   }
 
-  // ── Full SEES Pipeline (production parity) ──────────
+  // ── Canonical META.Stack scoring adapter ───────────────
 
   /**
-   * Full production scoring pipeline for backtest — mirrors
-   * ScoringService.rankAll() with dominance/cancellation,
-   * calibration, and weighted aggregation.
+   * Historical scoring must call the same evaluator as live automation.
+   * This adapter intentionally contains no fallback maths (2026-09-08).
    */
   private async fullScore(
     symbol: string,
     bars: MarketBar[],
-    groups: DirectiveGroup[],
-    weightOverrides?: Record<string, number>,
+    protocolId: string,
   ): Promise<{ composite: number; signal: string; breakdown: Array<{ directiveId: string; score: number; maxScore: number; signalClass: string }> }> {
-    const input: DirectiveInput = { symbol, bars };
-    const allResults = await this.directivesService.runAll(input);
-
-    // Collect all directive IDs from groups
-    const directiveIds = new Set<string>();
-    for (const g of groups) {
-      for (const id of g.directiveIds) directiveIds.add(id);
-    }
-
-    // Phase 1: Build breakdown with signalClass and priority
-    type BreakdownEntry = { directiveId: string; score: number; maxScore: number; confidence: number; signalClass: string; priority: number };
-    const breakdown: BreakdownEntry[] = [];
-    const signalGroups = { bullish: 0, bearish: 0, neutral: 0 };
-
-    for (const id of directiveIds) {
-      const result = allResults.get(id);
-      if (!result) continue;
-      const directive = this.directivesService.get(id);
-      const maxScore = directive?.maxScore ?? 100;
-      const priority = directive?.priority ?? 50;
-      const signalClass = result.signalClass ?? 'neutral';
-
-      if (signalClass === 'bullish') signalGroups.bullish += maxScore;
-      else if (signalClass === 'bearish') signalGroups.bearish += maxScore;
-      else signalGroups.neutral += maxScore;
-
-      breakdown.push({
-        directiveId: id,
-        score: result.score,
-        maxScore,
-        confidence: result.confidence,
-        signalClass,
-        priority,
-      });
-    }
-
-    // Phase 2: Dominance/cancellation
-    const suppressedIds = new Set<string>();
-    const highPrioBull = breakdown.filter((d) => d.signalClass === 'bullish' && d.priority >= 80);
-    const highPrioBear = breakdown.filter((d) => d.signalClass === 'bearish' && d.priority >= 80);
-
-    if (highPrioBull.length > 0 && highPrioBear.length === 0) {
-      for (const d of breakdown) {
-        if (d.signalClass === 'bearish' && d.priority < 60) suppressedIds.add(d.directiveId);
-      }
-    } else if (highPrioBear.length > 0 && highPrioBull.length === 0) {
-      for (const d of breakdown) {
-        if (d.signalClass === 'bullish' && d.priority < 60) suppressedIds.add(d.directiveId);
-      }
-    }
-
-    const totalWeight = breakdown.reduce((s, d) => s + d.maxScore, 0);
-    const bullRatio = totalWeight > 0 ? signalGroups.bullish / totalWeight : 0;
-    const bearRatio = totalWeight > 0 ? signalGroups.bearish / totalWeight : 0;
-
-    if (bullRatio > bearRatio * 2 && bullRatio > 0.4) {
-      for (const d of breakdown) {
-        if (d.signalClass === 'bearish' && d.confidence < 0.5) suppressedIds.add(d.directiveId);
-      }
-    } else if (bearRatio > bullRatio * 2 && bearRatio > 0.4) {
-      for (const d of breakdown) {
-        if (d.signalClass === 'bullish' && d.confidence < 0.5) suppressedIds.add(d.directiveId);
-      }
-    }
-
-    // Phase 3: Group-weighted aggregation
-    let totalScore = 0;
-    let totalMax = 0;
-    let bullishWeight = 0;
-    let bearishWeight = 0;
-
-    for (const d of breakdown) {
-      if (suppressedIds.has(d.directiveId)) continue;
-      totalScore += d.score;
-      totalMax += d.maxScore;
-      if (d.signalClass === 'bullish') bullishWeight += d.maxScore;
-      else if (d.signalClass === 'bearish') bearishWeight += d.maxScore;
-    }
-
-    const normalized = totalMax > 0 ? (totalScore / totalMax) * 100 : 50;
-
-    // Risk gate from risk group
-    const riskGroup = groups.find((g) => g.id === 'risk');
-    let riskMultiplier = 1.0;
-    if (riskGroup) {
-      // Find risk directives in the breakdown
-      const riskDirectives = riskGroup.directiveIds;
-      let riskScore = 50;
-      let riskCount = 0;
-      for (const id of riskDirectives) {
-        const result = allResults.get(id);
-        if (result) {
-          const d = this.directivesService.get(id);
-          riskScore += (result.score / (d?.maxScore || 100)) * 100;
-          riskCount++;
-        }
-      }
-      if (riskCount > 0) {
-        riskScore = riskScore / riskCount;
-        riskMultiplier = Math.max(riskGroup.minMultiplier, Math.min(riskGroup.maxMultiplier, riskScore / 100));
-      }
-    }
-
-    const composite = Math.round(Math.max(0, normalized * riskMultiplier));
-    let signal = 'HOLD';
-    if (bullishWeight > bearishWeight * 1.5) signal = 'BUY';
-    else if (bearishWeight > bullishWeight * 1.5) signal = 'SELL';
-
+    const gated = await this.protocolGating.scoreWithGating(symbol, bars, protocolId);
     return {
-      composite,
-      signal,
-      breakdown: breakdown
-        .filter((d) => !suppressedIds.has(d.directiveId))
-        .map((d) => ({ directiveId: d.directiveId, score: d.score, maxScore: d.maxScore, signalClass: d.signalClass })),
+      composite: gated.signalPct,
+      signal: gated.signal,
+      breakdown: Object.values(gated.breakouts)
+        .flat()
+        .map(d => ({
+          directiveId: d.directiveId,
+          score: d.score,
+          maxScore: d.maxScore,
+          signalClass: d.signalClass,
+        })),
     };
   }
 

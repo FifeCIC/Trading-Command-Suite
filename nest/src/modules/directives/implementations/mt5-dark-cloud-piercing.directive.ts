@@ -26,7 +26,7 @@ export class Mt5DarkCloudPiercingDirective implements IDirective {
   readonly minBars = { '1d': 41 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
-  readonly directionBias = 'bearish' as const;
+  readonly directionBias = 'neutral' as const; // Dark-cloud and piercing branches are opposite directions.
 
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);

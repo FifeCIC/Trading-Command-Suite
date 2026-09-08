@@ -73,8 +73,9 @@ export class BacktestController {
     @Query('timeframe') timeframe?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('protocolId') protocolId?: string,
   ) {
-    return this.backtestService.getChartData(symbol, timeframe || '1d', from, to);
+    return this.backtestService.getChartData(symbol, timeframe || '1d', from, to, protocolId);
   }
 
   @Post('optimize')

@@ -34,7 +34,7 @@ export class OverheadSupplyPressureDirective implements IDirective {
   readonly minBars = { '1d': 56 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
-  readonly directionBias = 'bearish' as const;
+  readonly directionBias = 'neutral' as const; // Emits bullish when supply is absorbed.
 
   calculate(input: DirectiveInput): DirectiveResult {
     const bars = input.bars;

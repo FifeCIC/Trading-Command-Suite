@@ -28,7 +28,7 @@ export class Mt5HammerDirective implements IDirective {
   readonly minBars = { '1d': 14 };
   readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
-  readonly directionBias = 'bullish' as const;
+  readonly directionBias = 'neutral' as const; // Dynamic two-sided evidence (2026-09-08)
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;

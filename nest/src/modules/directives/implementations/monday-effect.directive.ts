@@ -20,7 +20,7 @@ export class MondayEffectDirective implements IDirective {
   readonly directionBias = 'bearish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
-    const now = new Date();
+    const now = input.asOf ?? new Date();
     const dayOfWeek = now.getUTCDay(); // 1=Mon
 
     const isMonday = dayOfWeek === 1;

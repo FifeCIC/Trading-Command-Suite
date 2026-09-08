@@ -60,7 +60,7 @@ describe('AppController', () => {
   describe('version', () => {
     it('should return version object with expected shape', () => {
       const result = appController.getVersion();
-      expect(result).toHaveProperty('version', 'nest-0.1.0');
+      expect(result).toHaveProperty('version', '0.4.0');
       expect(result).toHaveProperty('status', 'ok');
       expect(result).toHaveProperty('timestamp');
       expect(result).toHaveProperty('mode', 'test');

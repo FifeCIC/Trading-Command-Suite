@@ -43,7 +43,7 @@ const DIST_DIR = path.join(NEST_ROOT, 'dist', 'src', 'modules', 'directives', 'i
 /** Input fields the engine is KNOWN to write. Anything else read off `input` is suspicious. */
 const KNOWN_INPUT_FIELDS = new Set([
   'bars', 'symbol', 'ticker', 'dayBars', 'hourBars', 'min15Bars',
-  'price', 'eurusdValue', 'dxyValue', 'accountId', 'account', 'quote', 'timestamp',
+  'price', 'eurusdValue', 'dxyValue', 'accountId', 'account', 'quote', 'timestamp', 'asOf',
 ]);
 
 /** Confession patterns — a `ready` directive containing any of these is a red flag. */

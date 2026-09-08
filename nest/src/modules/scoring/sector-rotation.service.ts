@@ -125,7 +125,7 @@ export class SectorRotationService {
         for (const pid of validProtocols) {
           try {
             const gated = await this.protocolGating.scoreWithGating(sec.etf, marketBars, pid);
-            const score = gated.riskGate?.hardGateTriggered ? 0 : gated.composite;
+            const score = gated.riskGate?.hardGateTriggered ? 0 : gated.signalPct;
             protocolScores.push({
               protocolId: pid,
               protocolName: this.protocolDb.getCached(pid)?.name || pid,

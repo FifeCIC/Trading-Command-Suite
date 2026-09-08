@@ -20,7 +20,7 @@ export class TripleWitchingDirective implements IDirective {
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
-    const now = new Date();
+    const now = input.asOf ?? new Date();
     const month = now.getUTCMonth(); // 2=Mar, 5=Jun, 8=Sep, 11=Dec
     const dayOfWeek = now.getUTCDay(); // 5=Fri
     const day = now.getUTCDate();

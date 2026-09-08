@@ -12,6 +12,7 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { createHash } from 'crypto';
 import { PrismaService } from '../../database/prisma.service';
 import { DirectiveConfigService } from '../scoring/directive-config.service';
 import {
@@ -198,7 +199,7 @@ export class DirectivesService {
     }
   }
 
-  /** Per-tick memoization cache: symbol+bars-signature → results */
+  /** Per-tick memoization cache keyed by the complete evaluation context. */
   private tickCache = new Map<string, Map<string, DirectiveResult>>();
 
   /** Clear the per-tick cache. Call at start of each automation tick. */
@@ -211,13 +212,12 @@ export class DirectivesService {
    *  @param directiveFilter - Optional set of directive IDs to run. If omitted, runs ALL registered directives.
    *    Used by protocol-gating to avoid running directives not in the active protocol (#389). */
   async runAll(input: DirectiveInput, directiveFilter?: Set<string>): Promise<Map<string, DirectiveResult>> {
-    // ── Per-tick memoization (#408) ──
-    // Directives scoring is deterministic for a given (symbol, bars) combo.
-    // Multiple callers (rankAll, protocol-gating, evaluateStrategy) ask for
-    // the same symbol in the same tick. Cache the result per symbol.
-    const cacheKey = `${input.symbol}|${input.bars?.[input.bars.length - 1]?.timestamp?.getTime?.() ?? 0}|${input.bars?.length ?? 0}`;
+    // 2026-09-08: the former symbol+lastTimestamp+length key allowed one
+    // protocol/filter or timeframe bundle to poison another. Fingerprint all
+    // market/external inputs, the filter, and directive configuration.
+    const cacheKey = this.createEvaluationFingerprint(input, directiveFilter);
     const cached = this.tickCache.get(cacheKey);
-    if (cached) return cached;
+    if (cached) return this.cloneResults(cached);
 
     const results = new Map<string, DirectiveResult>();
 
@@ -248,7 +248,7 @@ export class DirectivesService {
       try {
         // ── Time-gate check (activeWindow) ──
         if (directive.activeWindow) {
-          const inWindow = this.isInTimeWindow(directive.activeWindow);
+          const inWindow = this.isInTimeWindow(directive.activeWindow, input.asOf);
           if (!inWindow) {
             results.set(id, {
               score: 0,
@@ -278,7 +278,7 @@ export class DirectivesService {
 
         // ── Apply time modifiers (timeModifiers) ──
         if (directive.timeModifiers && directive.timeModifiers.length > 0) {
-          const applied = this.evaluateTimeModifiers(directive.timeModifiers);
+          const applied = this.evaluateTimeModifiers(directive.timeModifiers, input.asOf);
           if (applied.length > 0) {
             const totalAdjustment = applied.reduce((sum, m) => sum + m.adjustment, 0);
             const modifierReasons = applied.map((m) => m.reason).join('; ');
@@ -293,7 +293,7 @@ export class DirectivesService {
           }
         }
 
-        results.set(id, result);
+        results.set(id, this.sanitizeDirectiveResult(id, directive.maxScore, result));
       } catch (error) {
         this.logger.error(`Directive ${id} threw: ${String(error)}`);
         results.set(id, {
@@ -345,14 +345,62 @@ export class DirectivesService {
             }
           }
         }
-        results.set(id, result);
+        results.set(id, this.sanitizeDirectiveResult(id, directive.maxScore, result));
       } catch (err) {
         results.set(id, { score: 0, confidence: 0, reason: `Meta error: ${String(err)}` });
       }
     }
 
-    this.tickCache.set(cacheKey, results);
-    return results;
+    this.tickCache.set(cacheKey, this.cloneResults(results));
+    return this.cloneResults(results);
+  }
+
+  private cloneResults(source: Map<string, DirectiveResult>): Map<string, DirectiveResult> {
+    return new Map([...source].map(([id, result]) => [id, {
+      ...result,
+      metadata: result.metadata ? { ...result.metadata } : undefined,
+      timeModifiersApplied: result.timeModifiersApplied
+        ? result.timeModifiersApplied.map(modifier => ({ ...modifier }))
+        : undefined,
+    }]));
+  }
+
+  private createEvaluationFingerprint(input: DirectiveInput, directiveFilter?: Set<string>): string {
+    const directiveIds = directiveFilter
+      ? [...directiveFilter].sort()
+      : [...this.registry.keys()].sort();
+    const directiveConfig = directiveIds.map(id => {
+      const directive = this.registry.get(id);
+      return [id, directive?.maxScore, directive?.directionBias, directive?.readiness];
+    });
+    const normalized = JSON.stringify(input, (_key, value) => {
+      if (value instanceof Date) return value.toISOString();
+      if (value instanceof Set) return [...value].sort();
+      return value;
+    });
+    return createHash('sha256')
+      .update(normalized)
+      .update(JSON.stringify(directiveIds))
+      .update(JSON.stringify(directiveConfig))
+      .digest('hex');
+  }
+
+  /** Fail closed at the directive boundary; NaN/Infinity must never enter scoring. */
+  private sanitizeDirectiveResult(id: string, maximum: number, result: DirectiveResult): DirectiveResult {
+    const max = Number.isFinite(maximum) && maximum > 0 ? maximum : 0;
+    const score = Number.isFinite(result.score) ? Math.max(0, Math.min(max, result.score)) : 0;
+    const confidence = Number.isFinite(result.confidence)
+      ? Math.max(0, Math.min(1, result.confidence))
+      : 0;
+    if (score !== result.score || confidence !== result.confidence) {
+      this.logger.warn(`Directive ${id} emitted invalid/out-of-range values; clamped at boundary`);
+    }
+    return {
+      ...result,
+      score,
+      confidence,
+      signalClass: result.signalClass ?? 'neutral',
+    };
   }
 
   /**
@@ -429,9 +477,9 @@ export class DirectivesService {
    * Check if the current time falls within an activeWindow.
    * Uses Node.js Intl.DateTimeFormat with IANA timezone strings (no external lib needed).
    */
-  private isInTimeWindow(window: TimeWindow): boolean {
+  private isInTimeWindow(window: TimeWindow, asOf = new Date()): boolean {
     try {
-      const now = new Date();
+      const now = asOf;
 
       // Check daysOfWeek if specified
       if (window.daysOfWeek && window.daysOfWeek.length > 0) {
@@ -484,16 +532,16 @@ export class DirectivesService {
       Sun: 0, Mon: 1, Tue: 2, Wed: 3,
       Thu: 4, Fri: 5, Sat: 6,
     };
-    return dayMap[formatter.format(date)] ?? new Date().getDay();
+    return dayMap[formatter.format(date)] ?? date.getDay();
   }
 
   /**
    * Evaluate which time modifiers are currently active.
    * Returns the list of modifiers whose time windows contain the current time.
    */
-  private evaluateTimeModifiers(modifiers: TimeModifier[]): { adjustment: number; reason: string }[] {
+  private evaluateTimeModifiers(modifiers: TimeModifier[], asOf = new Date()): { adjustment: number; reason: string }[] {
     const applied: { adjustment: number; reason: string }[] = [];
-    const now = new Date();
+    const now = asOf;
     const currentMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
 
     for (const modifier of modifiers) {

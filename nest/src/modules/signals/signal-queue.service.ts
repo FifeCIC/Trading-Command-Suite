@@ -7,6 +7,7 @@ export interface RoutableSignal {
   symbol: string;
   direction: string; // LONG | SHORT
   signal: string;    // BUY | SELL
+  /** Canonical signal percentage (0..100). Kept for schema compatibility. */
   compositePct: number | null;
   signalPct: number | null;
   opportunityPct: number | null;
@@ -50,6 +51,10 @@ export class SignalQueueService {
 
       // Upsert pending entries for each actionable record.
       for (const rec of actionable) {
+        if (!rec.scoreId || !isPercentage(rec.compositePct) || !isPercentage(rec.signalPct)) {
+          this.logger.warn(`Queue rejected ${rec.protocolId}/${rec.symbol}: missing lineage or invalid score units`);
+          continue;
+        }
         for (const sub of subs) {
           if (sub.protocolId !== rec.protocolId) continue;
           if (sub.strategySymbol && sub.strategySymbol !== rec.symbol) continue;
@@ -112,10 +117,10 @@ export class SignalQueueService {
     try {
       const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
         `SELECT id, strategyId, symbol, protocolId, direction, \`signal\`,
-                CAST(compositePct AS SIGNED) AS compositePct,
-                CAST(signalPct AS SIGNED) AS signalPct,
-                CAST(opportunityPct AS SIGNED) AS opportunityPct,
-                CAST(combinedStrength AS SIGNED) AS combinedStrength,
+                CAST(compositePct AS DECIMAL(10,4)) AS compositePct,
+                CAST(signalPct AS DECIMAL(10,4)) AS signalPct,
+                CAST(opportunityPct AS DECIMAL(10,4)) AS opportunityPct,
+                CAST(combinedStrength AS DECIMAL(10,4)) AS combinedStrength,
                 scoreId, status, createdAt, updatedAt
          FROM strategy_signal_queue
          WHERE strategyId = ? AND status = 'pending'
@@ -155,4 +160,9 @@ export class SignalQueueService {
       this.logger.warn(`Queue upsert failed for ${strategyId}/${rec.symbol}: ${(err as Error).message}`);
     }
   }
+}
+
+/** Persistence-boundary guard: raw scores must never enter percentage columns. */
+function isPercentage(value: number | null): value is number {
+  return value !== null && Number.isFinite(value) && value >= 0 && value <= 100;
 }

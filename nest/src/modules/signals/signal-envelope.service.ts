@@ -8,6 +8,7 @@ import { AdapterFactory } from '../providers/adapter-factory';
 import { SignalQueueService, RoutableSignal } from './signal-queue.service';
 import { SignalOutcomeService } from './signal-outcome.service';
 import { ExecutionFeasibilityService, FeasibilityBlocker } from '../trading/execution-feasibility.service';
+import { OutcomeTrackerService } from '../scoring/outcome-tracker.service';
 
 /** Strategy ID used when persisting Signals Workbench scores. */
 const SIGNALS_WORKBENCH_STRATEGY_ID = 'signals-workbench';
@@ -37,6 +38,17 @@ function styleGateFallback(tradingStyle?: string): number {
   return GATE_DEFAULT;
 }
 
+/** Map free-text protocol guidance to the finest supported primary cadence. */
+function selectBaseTimeframe(recommended?: string): string {
+  const value = (recommended ?? '').toLowerCase();
+  if (/\b(5s|30s|1m)\b/.test(value)) return '1m';
+  if (/\b5m\b/.test(value)) return '5m';
+  if (/\b15m\b/.test(value)) return '15m';
+  if (/\b1h\b/.test(value)) return '1h';
+  if (/\b4h\b/.test(value)) return '4h';
+  return '1d';
+}
+
 /**
  * SignalEnvelopeService
  * =====================
@@ -53,6 +65,7 @@ function styleGateFallback(tradingStyle?: string): number {
 
 export interface SignalEnvelope {
   symbol: string;
+  /** Risk-adjusted raw signal. Never compare this value with a percentage threshold. */
   composite: number;
   maxPossible: number;           // max achievable score for this envelope
   signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
@@ -178,6 +191,7 @@ export class SignalEnvelopeService {
     private readonly signalQueue: SignalQueueService,
     private readonly signalOutcomes: SignalOutcomeService,
     private readonly feasibility: ExecutionFeasibilityService,
+    private readonly outcomeTracker: OutcomeTrackerService,
   ) {}
 
   /**
@@ -335,9 +349,19 @@ export class SignalEnvelopeService {
       where: { ticker: cleanTicker },
     });
 
-    const marketBars = sym
-      ? await this.marketData.getBars(sym.id, '1d', 200)
-      : [];
+    const protocol = protocolId
+      ? (this.protocolDb.getCached(protocolId) ?? await this.protocolDb.findBySlug(protocolId))
+      : undefined;
+    const requiredBars = protocolId ? this.protocolDb.getRequiredBars(protocolId) : { '1d': 200 };
+    const baseTimeframe = selectBaseTimeframe(protocol?.recommendedTimeframe);
+    const [marketBars, dayBars, hourBars, min15Bars] = sym
+      ? await Promise.all([
+          this.marketData.getBars(sym.id, baseTimeframe, requiredBars[baseTimeframe] || 200),
+          this.marketData.getBars(sym.id, '1d', requiredBars['1d'] || 200),
+          this.marketData.getBars(sym.id, '1h', requiredBars['1h'] || 200),
+          this.marketData.getBars(sym.id, '15m', requiredBars['15m'] || 200),
+        ])
+      : [[], [], [], []];
 
     if (!marketBars || marketBars.length === 0) {
       return this.emptyEnvelope(cleanTicker);
@@ -348,9 +372,40 @@ export class SignalEnvelopeService {
       cleanTicker,
       marketBars,
       protocolId,
+      { dayBars, hourBars, min15Bars },
     );
 
-    return this.enrichEnvelope(cleanTicker, gated, protocolId);
+    // Feed learning from the canonical live path. The retired rankAll path is
+    // not an execution decision source and must not be the sole producer.
+    const priceAtPredict = Number(marketBars[marketBars.length - 1]?.close ?? 0);
+    if (priceAtPredict > 0) {
+      this.outcomeTracker.recordOutcomes(
+        Object.values(gated.breakouts).flat()
+          .filter(item => item.score > 0 && item.signalClass !== 'neutral')
+          .map(item => ({
+            directiveId: item.directiveId,
+            symbol: cleanTicker,
+            timeframe: baseTimeframe,
+            score: item.score,
+            signalClass: item.signalClass,
+            confidence: item.normalizedScore / 100,
+            predictedAt: marketBars[marketBars.length - 1].timestamp,
+            priceAtPredict,
+          })),
+      ).catch(err => this.logger.warn(`Outcome capture failed: ${(err as Error).message}`));
+    }
+
+    const envelope = await this.enrichEnvelope(cleanTicker, gated, protocolId);
+    const directiveIds = new Set(protocol?.groups.flatMap(group => group.directiveIds) ?? []);
+    const needsMtf = ['multi-timeframe-trend', 'mtf-confluence-conservative', 'mtf-confluence-weighted', 'micro-sr-levels']
+      .some(id => directiveIds.has(id));
+    if (needsMtf && (dayBars.length < 2 || hourBars.length < 10 || min15Bars.length < 10)) {
+      envelope.preTradeReady = false;
+      envelope.preTradeBlockers.push(
+        `Incomplete timeframe bundle (1d=${dayBars.length}, 1h=${hourBars.length}, 15m=${min15Bars.length})`,
+      );
+    }
+    return envelope;
   }
 
   /**
@@ -383,7 +438,7 @@ export class SignalEnvelopeService {
     // #684 — combined strength: best of Signal and Opportunity.
     // Signal % is the classification basis (pre-gate directional).
     const directionMode = gated.directionMode ?? 'LONG_ONLY';
-    const signalPct = gated.meta?.compositePct ?? null;
+    const signalPct = gated.signalPct;
     const opportunityPct = gated.opportunityPct ?? null;
     const combinedStrength =
       signalPct != null && opportunityPct != null
@@ -393,7 +448,7 @@ export class SignalEnvelopeService {
     return {
       symbol,
       composite: gated.composite,
-      maxPossible: Object.values(gated.subMaxTotals).reduce((s, v) => s + v, 0),
+      maxPossible: gated.signalMax,
       signal: gated.signal,
       confidence,
       rarity: gated.rarity?.label ?? null,
@@ -504,7 +559,7 @@ export class SignalEnvelopeService {
     }
 
     // Distance from threshold
-    const distance = gated.composite - 65;
+    const distance = gated.signalPct - 65;
     if (distance > 0) confidence += Math.min(distance * 0.5, 15);
     else confidence -= Math.min(Math.abs(distance) * 0.3, 15);
 
@@ -623,16 +678,14 @@ export class SignalEnvelopeService {
     if (conflicts.some(c => c.severity === 'high')) {
       blockers.push('High-severity directive conflict');
     }
-    if (gated.composite < gateThreshold) {
+    if (gated.signalPct < gateThreshold) {
       // #718: threshold is per-protocol (override > style > default 65).
       // #687: classification uses the pre-gate percentage, not this gated
       // composite — phrase it as caution, not as a contradiction of the badge.
-      blockers.push(`Gated composite below ${gateThreshold} (${gated.composite.toFixed(0)}) — trade with caution`);
+      blockers.push(`Signal below ${gateThreshold}% (${gated.signalPct.toFixed(1)}%)`);
     }
-    if (gated.directionMode !== 'SHORT_ONLY' && gated.signal === 'SELL' && gated.composite > 50) {
-      // Only "mixed" when a long-capable protocol emits SELL while scoring
-      // strong — for SHORT_ONLY protocols a strong SELL is the healthy outcome.
-      blockers.push('Mixed signal — SELL but composite above midpoint');
+    if (gated.marketStatus && !gated.marketStatus.open) {
+      blockers.push(`Market unavailable: ${gated.marketStatus.reason ?? 'closed or stale'}`);
     }
 
     return {
@@ -826,12 +879,11 @@ export class SignalEnvelopeService {
     // protocol_score_status without a second scoring pass (#714 single line).
     const protocolStatus: Record<string, ProtocolScoreStatus> = {};
 
-    // #714 Stage 1 — routing records for the trading-bot queues. Collected
-    // BEFORE the best-of merge so every protocol's actionable signal is
-    // routable, even when it lost the display slot for its symbol+direction.
+    // Preserve every actionable protocol result until feasibility and
+    // persistence complete. Routing before those steps loses decision lineage.
     const scoredPairs = new Set<string>();
-    const routingRecords: RoutableSignal[] = [];
-    // #600 — highest composite per protocol this run, persisted below.
+    const scoredEnvelopes: SignalEnvelope[] = [];
+    // #600 — highest signal percentage per protocol this run, persisted below.
     const maxCompositeBySlug = new Map<string, number>();
 
     for (const slug of slugs) {
@@ -844,8 +896,6 @@ export class SignalEnvelopeService {
 
       const config = this.protocolDb.getCached(slug) ?? (await this.protocolDb.findBySlug(slug));
       if (!config) continue;
-
-      const direction = config.directionMode === 'SHORT_ONLY' ? 'short' : 'long';
 
       let tickers: string[];
       try {
@@ -866,33 +916,22 @@ export class SignalEnvelopeService {
 
       let protoScored = 0;
       for (const ticker of tickers) {
-        const key = `${ticker.toUpperCase()}|${direction}`;
         try {
           const env = await this.buildEnvelope(ticker, slug);
           const sym = ticker.toUpperCase();
           scoredPairs.add(`${slug}|${sym}`);
           protoScored++;
-          // #600 — track the peak composite for this protocol (any signal).
+          // #600 — protocol maxima are comparable only after normalization.
           const prev = maxCompositeBySlug.get(slug) ?? 0;
-          if (env.composite > prev) maxCompositeBySlug.set(slug, env.composite);
+          if ((env.signalPct ?? 0) > prev) maxCompositeBySlug.set(slug, env.signalPct ?? 0);
           // Action-only (#684): skip HOLD and no-data envelopes for display.
           if (env.signal === 'HOLD') continue;
           if (env.composite === 50 && env.confidence === 0) continue;
 
-          // #714 — every actionable per-protocol record is routable, even
-          // when it loses the display merge below.
-          routingRecords.push({
-            protocolId: slug,
-            symbol: sym,
-            direction: env.signal.startsWith('SELL') ? 'SHORT' : 'LONG',
-            signal: env.signal.startsWith('SELL') ? 'SELL' : 'BUY',
-            compositePct: env.composite != null ? Math.round(env.composite) : null,
-            signalPct: env.signalPct != null ? Math.round(env.signalPct) : null,
-            opportunityPct: env.opportunityPct != null ? Math.round(env.opportunityPct) : null,
-            combinedStrength: env.combinedStrength != null ? Math.round(env.combinedStrength) : null,
-            scoreId: null, // assigned after persistScores below
-          });
+          scoredEnvelopes.push(env);
 
+          const direction = env.signal.startsWith('SELL') ? 'short' : 'long';
+          const key = `${sym}|${direction}`;
           const existing = byKey.get(key);
           if (!existing || env.combinedStrength > existing.combinedStrength) {
             byKey.set(key, env);
@@ -947,7 +986,7 @@ export class SignalEnvelopeService {
     } catch {
       /* broker offline — holdsCfd stays false */
     }
-    for (const env of envelopes) {
+    for (const env of scoredEnvelopes) {
       env.holdsCfd = held.has(env.symbol.toUpperCase());
     }
 
@@ -955,7 +994,7 @@ export class SignalEnvelopeService {
     // path re-runs. Uses the positions already fetched above + the cached
     // broker symbol list, so the card explains blockers before any click.
     try {
-      for (const env of envelopes) {
+      for (const env of scoredEnvelopes) {
         const res = await this.feasibility.assess({
           symbol: env.symbol,
           side: env.signal.startsWith('SELL') ? 'SELL' : 'BUY',
@@ -972,7 +1011,7 @@ export class SignalEnvelopeService {
 
     // ── Persist + assign score ids (required for /:id/action and /:id/trade) ──
     const byProtocol = new Map<string, SignalEnvelope[]>();
-    for (const env of envelopes) {
+    for (const env of scoredEnvelopes) {
       const pid = env.protocolId ?? SIGNALS_WORKBENCH_STRATEGY_ID;
       if (!byProtocol.has(pid)) byProtocol.set(pid, []);
       byProtocol.get(pid)!.push(env);
@@ -1004,11 +1043,28 @@ export class SignalEnvelopeService {
       .filter(e => !dismissed.has(`${e.symbol}|${e.protocolId}`))
       .sort((a, b) => b.combinedStrength - a.combinedStrength);
 
-    // #714 Stage 1 — route this run's actionable records into trading-bot
-    // queues (dedupe-refresh, void on non-signalling re-scores). Honours the
-    // same dismissals that hide cards. Additive — never touches `visible`.
+    // 2026-09-08: route only feasible, persisted decisions. The old path built
+    // queue records before feasibility and persistence, so blockers and score
+    // lineage disappeared and a raw composite was stored as a percentage.
     try {
-      const routeable = routingRecords.filter(r => !dismissed.has(`${r.symbol}|${r.protocolId}`));
+      const routeable: RoutableSignal[] = scoredEnvelopes
+        .filter(env =>
+          env.preTradeReady &&
+          (env.executionBlockers?.length ?? 0) === 0 &&
+          Boolean(env.scoreId) &&
+          !dismissed.has(`${env.symbol}|${env.protocolId}`),
+        )
+        .map(env => ({
+          protocolId: env.protocolId!,
+          symbol: env.symbol,
+          direction: env.signal.startsWith('SELL') ? 'SHORT' : 'LONG',
+          signal: env.signal.startsWith('SELL') ? 'SELL' : 'BUY',
+          compositePct: env.signalPct,
+          signalPct: env.signalPct,
+          opportunityPct: env.opportunityPct,
+          combinedStrength: env.combinedStrength,
+          scoreId: env.scoreId,
+        }));
       await this.signalQueue.syncQueues(routeable, scoredPairs);
     } catch (err) {
       this.logger.warn(`Signal queue routing failed: ${(err as Error).message}`);

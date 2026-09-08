@@ -39,6 +39,7 @@ import {
   RiskDirectiveResult,
   RiskGateResult,
 } from './risk-gating-engine.service';
+import { normalizeScorePercent, selectDirectionalEvidence } from './score-units';
 
 /**
  * Weighting Systems
@@ -103,7 +104,14 @@ export interface RarityInfo {
 
 export interface GatedScore {
   symbol: string;
+  /** Risk-adjusted raw directional score. Never compare this value to a percentage threshold. */
   composite: number;
+  /** Pre-risk raw score for the selected evidence direction. */
+  signalRaw: number;
+  /** Maximum raw score for the selected evidence direction. */
+  signalMax: number;
+  /** Unrounded normalized signal percentage. Round only at presentation boundaries. */
+  signalPct: number;
   signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
   /** Group id → 0-100 directional percentage.
    *  CONTRACT: an ABSENT key means the group is not participating (empty config,
@@ -136,6 +144,7 @@ export interface GatedScore {
     riskScore: number;
   };
   meta: {
+    /** @deprecated Compatibility alias for signalPct. Do not use for new code. */
     compositePct: number;
     maxScore: number;
     directiveCount: number;
@@ -144,6 +153,16 @@ export interface GatedScore {
     weightStrategy: 'group-weighted' | 'maxscore-weighted';
     /** Readiness tier counts: ready/beta/alpha. Alpha directives are excluded from scoring. */
     readinessBreakdown: { ready: number; beta: number; alpha: number; alphaExcluded: number };
+    /** Direction-separated runtime evidence. Added 2026-09-08 to prevent bearish points becoming BUY strength. */
+    directionalEvidence: {
+      bullishRaw: number;
+      bullishMax: number;
+      bullishPct: number;
+      bearishRaw: number;
+      bearishMax: number;
+      bearishPct: number;
+      selected: 'bullish' | 'bearish' | 'none';
+    };
   };
   /** Readiness gate (#627) — protocols are only eligible when every included directive is ready. */
   readinessGate?: {
@@ -357,6 +376,9 @@ export class ProtocolGatingService {
     const input: DirectiveInput = {
       symbol,
       bars,
+      // The evaluated candle, not the process clock, defines scoring time.
+      // This keeps live, replay, and backtest calculations reproducible.
+      asOf: bars.length ? bars[bars.length - 1].timestamp : new Date(),
       eurusdValue,
       dxyValue,
       ...(higherTfBars ?? {}),
@@ -446,6 +468,10 @@ export class ProtocolGatingService {
     const oppMaxTotals: Record<string, number> = {};
     const breakouts: Record<string, DirectiveBreakout[]> = {};
     const inactiveGroupIds: string[] = [];
+    let bullishRaw = 0;
+    let bullishMax = 0;
+    let bearishRaw = 0;
+    let bearishMax = 0;
 
     for (const [groupId, { results, config, maxScores }] of groups) {
       breakouts[groupId] = [];
@@ -475,7 +501,15 @@ export class ProtocolGatingService {
         const maxScore = directiveId ? (maxScores.get(directiveId) ?? 100) : 100;
         const directional =
           result.signalClass === 'bullish' || result.signalClass === 'bearish';
-        const inSignal = !isGateGroup && directional;
+        // Runtime evidence direction is authoritative. A LONG_ONLY protocol may
+        // observe bearish evidence, but that evidence must never increase BUY
+        // strength (and vice versa for SHORT_ONLY). BOTH protocols retain the
+        // two sides separately until the winner is selected below.
+        const directionAllowed =
+          directionMode === 'BOTH' ||
+          (directionMode === 'LONG_ONLY' && result.signalClass === 'bullish') ||
+          (directionMode === 'SHORT_ONLY' && result.signalClass === 'bearish');
+        const inSignal = !isGateGroup && directional && directionAllowed;
 
         // Opportunity: everything counts.
         oppRaw += result.score;
@@ -486,6 +520,13 @@ export class ProtocolGatingService {
           signalRaw += result.score;
           signalMax += maxScore;
         }
+        if (!isGateGroup && result.signalClass === 'bullish') {
+          bullishRaw += result.score;
+          bullishMax += maxScore;
+        } else if (!isGateGroup && result.signalClass === 'bearish') {
+          bearishRaw += result.score;
+          bearishMax += maxScore;
+        }
 
         const directive = directiveId ? this.directivesService.get(directiveId) : null;
 
@@ -494,7 +535,7 @@ export class ProtocolGatingService {
           name: directive?.name ?? directiveId ?? 'Unknown',
           score: result.score,
           maxScore,
-          normalizedScore: maxScore > 0 ? Math.round((result.score / maxScore) * 100) : 0,
+          normalizedScore: Math.round(normalizeScorePercent(result.score, maxScore)),
           signalClass: result.signalClass ?? 'neutral',
           reason: result.reason,
           groupId,
@@ -512,7 +553,7 @@ export class ProtocolGatingService {
         subRawTotals[groupId] = 0;
         subMaxTotals[groupId] = 0;
       } else {
-        subScores[groupId] = Math.round((signalRaw / signalMax) * 100);
+        subScores[groupId] = Math.round(normalizeScorePercent(signalRaw, signalMax));
         subRawTotals[groupId] = signalRaw;
         subMaxTotals[groupId] = signalMax;
       }
@@ -534,17 +575,21 @@ export class ProtocolGatingService {
     // SIGNAL (composite): directional conviction, risk-gated. Drives the
     //   BUY/HOLD/SELL classification and the automation loop.
     // OPPORTUNITY: additive "everything counts", for screening/ranking.
-    let totalRaw = 0;
-    for (const groupId of Object.keys(subRawTotals)) {
-      totalRaw += subRawTotals[groupId] ?? 0;
-    }
+    const bullishPct = normalizeScorePercent(bullishRaw, bullishMax);
+    const bearishPct = normalizeScorePercent(bearishRaw, bearishMax);
+    const selectedEvidence = selectDirectionalEvidence(directionMode, {
+      bullishRaw, bullishMax, bearishRaw, bearishMax,
+    });
+    const selectedDirection = selectedEvidence.direction;
+    const totalRaw = selectedEvidence.raw;
+    const totalMax = selectedEvidence.maximum;
 
     let opportunityScore = 0;
     for (const groupId of Object.keys(oppRawTotals)) {
       opportunityScore += oppRawTotals[groupId] ?? 0;
     }
     const opportunityMax = Object.values(oppMaxTotals).reduce((a, b) => a + (b ?? 0), 0);
-    const opportunityPct = opportunityMax > 0 ? (opportunityScore / opportunityMax) * 100 : 0;
+    const opportunityPct = normalizeScorePercent(opportunityScore, opportunityMax);
 
     const riskResult = this.riskEngine.apply(totalRaw, riskDirectives);
 
@@ -556,15 +601,14 @@ export class ProtocolGatingService {
     // Signal-strength percentage: pre-gate directional sum against the
     // directional-only denominator (un-softened by the risk multiplier).
     const STRONG_PCT = 80; // % of maxScore for STRONG_BUY / STRONG_SELL
-    const totalMax = Object.values(subMaxTotals).reduce((a, b) => a + (b ?? 0), 0);
-    const compositePct = totalMax > 0 ? (directionalSum / totalMax) * 100 : 0;
+    const signalPct = selectedEvidence.percentage;
 
     let signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
-    const isLongDirection = directionMode !== 'SHORT_ONLY';
+    const isLongDirection = selectedDirection === 'bullish';
 
-    if (compositePct >= STRONG_PCT) {
+    if (selectedDirection !== 'none' && signalPct >= STRONG_PCT) {
       signal = isLongDirection ? 'STRONG_BUY' : 'STRONG_SELL';
-    } else if (compositePct >= ENTRY_THRESHOLD) {
+    } else if (selectedDirection !== 'none' && signalPct >= ENTRY_THRESHOLD) {
       signal = isLongDirection ? 'BUY' : 'SELL';
     } else {
       // Below entry threshold = no directional edge, for EVERY direction mode.
@@ -607,12 +651,15 @@ export class ProtocolGatingService {
       opportunityScore: Math.round(opportunityScore),
       opportunityMax,
       opportunityPct: Math.round(opportunityPct),
-      compositePct: Math.round(compositePct),
+      compositePct: signalPct,
     });
 
     return {
       symbol,
       composite,
+      signalRaw: directionalSum,
+      signalMax: totalMax,
+      signalPct,
       signal,
       subScores,
       subRawTotals,
@@ -633,7 +680,7 @@ export class ProtocolGatingService {
         riskScore: riskResult.riskScore,
       },
       meta: {
-        compositePct: Math.round(compositePct),
+        compositePct: signalPct,
         maxScore: totalMax,
         directiveCount: allResults.size,
         gatedCount: allResults.size - alphaCount,
@@ -641,6 +688,15 @@ export class ProtocolGatingService {
         weightStrategy,
         // ── Readiness breakdown — see docs/readiness-tiers.md ──
         readinessBreakdown: { ready: readyCount, beta: betaCount, alpha: alphaCount, alphaExcluded: alphaCount },
+        directionalEvidence: {
+          bullishRaw,
+          bullishMax,
+          bullishPct,
+          bearishRaw,
+          bearishMax,
+          bearishPct,
+          selected: selectedDirection,
+        },
       },
       // ── Directives excluded from scoring due to ALPHA readiness ──
       excludedBreakdown,
