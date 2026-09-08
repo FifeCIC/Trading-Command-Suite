@@ -355,6 +355,13 @@ Each directive still needs small, formula-specific fixtures for threshold edges.
 Promoting a directive to `ready` should require this suite plus a reviewed live
 data fixture.
 
+> Implemented 2026-09-08: `nest/scripts/directive-conformance.cjs`
+> (`npm --prefix nest run conformance`) runs every compiled directive through
+> determinism / finiteness / bounded / direction / insufficient-data / immutability
+> checks and prints a pass/fail table. Current result: 153 pass, 2 skip
+> (injected deps: `session-open-effect`, `session-timing-filter`), 4 warn
+> (date-driven calendar directives score on empty bars by design).
+
 ### Tier 3 — Aggregation and risk contracts
 
 Use table-driven protocol examples to prove:

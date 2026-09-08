@@ -18,13 +18,13 @@ export class VwapDirective implements IDirective {
   readonly name = 'VWAP';
   readonly description = 'Price relative to VWAP. Above = bullish intraday sentiment, below = bearish.';
   readonly category = 'oscillator' as const;
-  readonly directionBias = 'bullish' as const;
+  readonly directionBias = 'neutral' as const;
 
   readonly priority = 50;
   readonly maxScore = 100;
   readonly minScore = 1;
   readonly minBars = { '1d': 5 };
-  readonly version = '1.1.0';
+  readonly version = '1.2.0';
   readonly readiness = 'ready' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -47,22 +47,18 @@ export class VwapDirective implements IDirective {
 
     const distancePct = ((currentPrice - currentVwap) / currentVwap) * 100;
 
-    if (distancePct > 0) {
-      const strength = Math.min(1, distancePct / 3); // 0–3% → 0–1
-      const score = Math.round(55 + strength * 30);
-      return {
-        score,
-        confidence: 0.5 + strength * 0.2,
-        reason: `Price ${currentPrice.toFixed(2)} is ${distancePct.toFixed(2)}% above VWAP ${currentVwap.toFixed(2)}. Bullish intraday sentiment.`,
-      };
+    if (Math.abs(distancePct) < 0.001) {
+      return { score: 50, signalClass: 'neutral', confidence: 0.5, reason: `Price at VWAP ${currentVwap.toFixed(2)} — neutral.` };
     }
 
-    const strength = Math.min(1, Math.abs(distancePct) / 3);
-    const score = Math.round(25 - strength * 15);
+    const strength = Math.min(1, Math.abs(distancePct) / 3); // 0–3% → 0–1
+    const score = Math.round(55 + strength * 30);
+    const isAbove = distancePct > 0;
     return {
       score,
-      confidence: 0.45 + strength * 0.15,
-      reason: `Price ${currentPrice.toFixed(2)} is ${Math.abs(distancePct).toFixed(2)}% below VWAP ${currentVwap.toFixed(2)}. Bearish — reduced long score.`,
+      signalClass: isAbove ? 'bullish' : 'bearish',
+      confidence: 0.5 + strength * 0.2,
+      reason: `Price ${currentPrice.toFixed(2)} is ${Math.abs(distancePct).toFixed(2)}% ${isAbove ? 'above' : 'below'} VWAP ${currentVwap.toFixed(2)} — ${isAbove ? 'bullish' : 'bearish'} intraday sentiment.`,
     };
   }
 }

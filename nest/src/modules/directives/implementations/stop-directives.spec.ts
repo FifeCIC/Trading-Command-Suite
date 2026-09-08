@@ -31,8 +31,8 @@ function mirrorBars(bars: MarketBar[]): MarketBar[] {
   return bars.map((b) => ({
     ...b,
     open: 2 * pivot - b.open,
-    high: 2 * pivot - b.high,
-    low: 2 * pivot - b.low,
+    high: 2 * pivot - b.low, // old low → new high (mirror flips the candle)
+    low: 2 * pivot - b.high, // old high → new low
     close: 2 * pivot - b.close,
   }));
 }

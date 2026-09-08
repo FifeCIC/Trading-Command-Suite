@@ -25,6 +25,8 @@ import {
   sma,
   smaSeries,
   atr,
+  awesomeOscillator,
+  chaikinMoneyFlow,
   adx,
   bollingerBands,
   macd,
@@ -105,29 +107,27 @@ export class AwesomeOscillatorDirective implements IDirective {
   readonly id = 'awesome-oscillator';
   readonly name = 'Awesome Oscillator (Bill Williams)';
   readonly description =
-    '5-period SMA of midpoints minus 34-period SMA. Green bars and rising = bullish momentum. Derived from MT5 Awesome Oscillator.';
+    '5-period SMA of midpoints minus 34-period SMA. Rising green above zero = bullish, falling red below zero = bearish. Symmetric. Derived from MT5 Awesome Oscillator.';
   readonly priority = 40;
   readonly maxScore = 100;
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
     const { bars } = input;
-    const mids = bars.map((b) => (b.high + b.low) / 2);
+    const highs = bars.map((b) => b.high);
+    const lows = bars.map((b) => b.low);
     const MIN = 40;
 
-    if (mids.length < MIN) {
-      return { score: 0, confidence: 0.1, signalClass: 'neutral', reason: `Need ${MIN} bars, have ${mids.length}` };
+    if (bars.length < MIN) {
+      return { score: 0, confidence: 0.1, signalClass: 'neutral', reason: `Need ${MIN} bars, have ${bars.length}` };
     }
 
-    const sma5 = smaSeries(mids, 5);
-    const sma34 = smaSeries(mids, 34);
-    const ao: number[] = [];
-    for (let i = 34; i < mids.length; i++) {
-      ao.push(sma5[i] - sma34[i]);
-    }
-
+    // Shared primitive — the old inline loop read fastSma[i] vs slowSma[i],
+    // which are DIFFERENT bars (34-5=29 offset), a displacement misalignment.
+    const ao = awesomeOscillator(highs, lows);
     const current = ao[ao.length - 1];
     const prev = ao[ao.length - 2];
     const prev2 = ao[ao.length - 3];
@@ -136,24 +136,24 @@ export class AwesomeOscillatorDirective implements IDirective {
       return { score: 0, confidence: 0.1, signalClass: 'neutral', reason: 'AO unavailable' };
     }
 
-    // Bullish: green bar (higher than prev), above zero, and rising
-    if (current > prev && current > 0 && prev > prev2) {
-      return { score: 70, confidence: 0.65, signalClass: 'bullish', reason: `AO ${current.toFixed(4)} — green above zero, rising` };
-    }
-
-    // Bullish saucer: 3 green bars above zero
-    if (current > prev && prev > prev2 && current > 0) {
-      return { score: 75, confidence: 0.7, signalClass: 'bullish', reason: `AO saucer — 3 rising green bars` };
-    }
-
-    // Bearish: below zero and falling
-    if (current < 0 && current < prev) {
-      return { score: 10, confidence: 0.6, signalClass: 'bearish', reason: `AO ${current.toFixed(4)} — red below zero` };
-    }
-
-    // Zero-line cross up
+    // Symmetric: rising green above zero = bullish, falling red below zero = bearish.
     if (current > 0 && prev <= 0) {
       return { score: 65, confidence: 0.6, signalClass: 'bullish', reason: 'AO crossed above zero line' };
+    }
+    if (current < 0 && prev >= 0) {
+      return { score: 65, confidence: 0.6, signalClass: 'bearish', reason: 'AO crossed below zero line' };
+    }
+    if (current > prev && prev > prev2 && current > 0) {
+      return { score: 75, confidence: 0.7, signalClass: 'bullish', reason: `AO ${current.toFixed(4)} — rising green above zero` };
+    }
+    if (current < prev && prev < prev2 && current < 0) {
+      return { score: 75, confidence: 0.7, signalClass: 'bearish', reason: `AO ${current.toFixed(4)} — falling red below zero` };
+    }
+    if (current > prev && current > 0) {
+      return { score: 70, confidence: 0.65, signalClass: 'bullish', reason: `AO ${current.toFixed(4)} — green above zero, rising` };
+    }
+    if (current < prev && current < 0) {
+      return { score: 70, confidence: 0.65, signalClass: 'bearish', reason: `AO ${current.toFixed(4)} — red below zero, falling` };
     }
 
     return { score: 35, confidence: 0.3, signalClass: 'neutral', reason: `AO ${current.toFixed(4)} — neutral` };
@@ -228,11 +228,12 @@ export class ChaikinMoneyFlowDirective implements IDirective {
   readonly id = 'chaikin-mf';
   readonly name = 'Chaikin Money Flow';
   readonly description =
-    'Volume-weighted accumulation/distribution over 21 periods. CMF > 0.1 = accumulation. Derived from MT5 Chaikin Money Flow.';
+    'Volume-weighted accumulation/distribution over 21 periods. CMF > 0.1 = accumulation, < -0.1 = distribution. Symmetric. Derived from MT5 Chaikin Money Flow.';
   readonly priority = 50;
   readonly maxScore = 100;
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -243,25 +244,13 @@ export class ChaikinMoneyFlowDirective implements IDirective {
       return { score: 0, confidence: 0.1, signalClass: 'neutral', reason: `Need ${MIN} bars, have ${bars.length}` };
     }
 
-    const period = 21;
-    const mfMultipliers: number[] = [];
-    const mfVolumes: number[] = [];
-
-    for (let i = 0; i < bars.length; i++) {
-      const { high, low, close, volume } = bars[i];
-      const range = high - low;
-      const mfm = range > 0 ? ((close - low) - (high - close)) / range : 0;
-      mfMultipliers.push(mfm);
-      mfVolumes.push(mfm * volume);
-    }
-
-    // Sum over period
-    const cmfValues: number[] = [];
-    for (let i = period; i < bars.length; i++) {
-      const mfvSum = mfVolumes.slice(i - period, i).reduce((a, b) => a + b, 0);
-      const volSum = bars.slice(i - period, i).reduce((a, b) => a + b.volume, 0);
-      cmfValues.push(volSum > 0 ? mfvSum / volSum : 0);
-    }
+    // Shared primitive — the old inline loop summed slice(i-period, i), which
+    // EXCLUDES the current bar (off-by-one candle index).
+    const highs = bars.map((b) => b.high);
+    const lows = bars.map((b) => b.low);
+    const closes = bars.map((b) => b.close);
+    const volumes = bars.map((b) => b.volume);
+    const cmfValues = chaikinMoneyFlow(highs, lows, closes, volumes, 21);
 
     const current = cmfValues[cmfValues.length - 1];
     const prev = cmfValues[cmfValues.length - 2];
@@ -275,14 +264,19 @@ export class ChaikinMoneyFlowDirective implements IDirective {
       return { score: 80, confidence: 0.75, signalClass: 'bullish', reason: `CMF ${current.toFixed(3)} — strong accumulation` };
     }
 
-    // Mild accumulation
+    // Accumulation
     if (current > 0) {
       return { score: 60, confidence: 0.55, signalClass: 'bullish', reason: `CMF ${current.toFixed(3)} — accumulation` };
     }
 
+    // Strong distribution
+    if (current < -0.1 && current < prev) {
+      return { score: 80, confidence: 0.75, signalClass: 'bearish', reason: `CMF ${current.toFixed(3)} — strong distribution` };
+    }
+
     // Distribution
-    if (current < -0.1) {
-      return { score: 10, confidence: 0.7, signalClass: 'bearish', reason: `CMF ${current.toFixed(3)} — strong distribution` };
+    if (current < 0) {
+      return { score: 60, confidence: 0.55, signalClass: 'bearish', reason: `CMF ${current.toFixed(3)} — distribution` };
     }
 
     return { score: 30, confidence: 0.35, signalClass: 'neutral', reason: `CMF ${current.toFixed(3)} — neutral` };
@@ -298,11 +292,12 @@ export class DonchianBreakoutDirective implements IDirective {
   readonly id = 'donchian-breakout';
   readonly name = 'Donchian Channel Breakout';
   readonly description =
-    'Price breaking above 20-period high = bullish breakout. Derived from MT5 Donchian Channel.';
+    '20-bar high/low channel. Break above the prior high = bullish breakout, break below the prior low = bearish. Symmetric. Derived from MT5 Donchian Channel.';
   readonly priority = 55;
   readonly maxScore = 100;
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -321,28 +316,29 @@ export class DonchianBreakoutDirective implements IDirective {
     const ll = lowest(lows, period);
 
     const lastClose = closes[closes.length - 1];
-    const upperBand = hh[hh.length - 1];
-    const lowerBand = ll[ll.length - 1];
-    const midBand = (upperBand + lowerBand) / 2;
-    const prevClose = closes[closes.length - 2];
-    const prevUpper = hh[hh.length - 2];
+    // Channel from PRIOR bars only — exclude the active candle so a breakout is
+    // measured against the prior 20-bar high/low, not the current bar's own range.
+    const upperBand = hh[hh.length - 2];
+    const lowerBand = ll[ll.length - 2];
 
-    // Breakout above upper band
-    if (lastClose > upperBand && prevClose <= prevUpper) {
-      return { score: 75, confidence: 0.7, signalClass: 'bullish', reason: `Price ${lastClose} broke above Donchian high ${upperBand.toFixed(2)}` };
+    if (lastClose > upperBand) {
+      return { score: 75, confidence: 0.7, signalClass: 'bullish', reason: `Price ${lastClose} broke above prior Donchian high ${upperBand.toFixed(2)}` };
     }
 
-    // Near upper band
-    if (lastClose > midBand && lastClose >= upperBand * 0.98) {
-      return { score: 55, confidence: 0.5, signalClass: 'bullish', reason: `Price near Donchian upper band` };
-    }
-
-    // Below lower band
     if (lastClose < lowerBand) {
-      return { score: 10, confidence: 0.6, signalClass: 'bearish', reason: `Price below Donchian low ${lowerBand.toFixed(2)}` };
+      return { score: 75, confidence: 0.7, signalClass: 'bearish', reason: `Price ${lastClose} broke below prior Donchian low ${lowerBand.toFixed(2)}` };
     }
 
-    return { score: 35, confidence: 0.3, signalClass: 'neutral', reason: `Price within Donchian channel` };
+    const midBand = (upperBand + lowerBand) / 2;
+    if (lastClose > midBand) {
+      return { score: 55, confidence: 0.5, signalClass: 'bullish', reason: `Price in upper half of Donchian channel` };
+    }
+
+    if (lastClose < midBand) {
+      return { score: 55, confidence: 0.5, signalClass: 'bearish', reason: `Price in lower half of Donchian channel` };
+    }
+
+    return { score: 35, confidence: 0.3, signalClass: 'neutral', reason: `Price at Donchian channel midline` };
   }
 }
 
@@ -1010,11 +1006,12 @@ export class IchimokuCloudDirective implements IDirective {
   readonly id = 'ichimoku-cloud';
   readonly name = 'Ichimoku Cloud Position';
   readonly description =
-    'Price above cloud = bullish, below = bearish, inside = neutral. Cloud color and thickness indicate support/resistance. Derived from MT5 Ichimoku.';
+    'Price above cloud = bullish, below = bearish, inside = neutral. Senkou spans are displaced 26 bars forward. Derived from MT5 Ichimoku.';
   readonly priority = 50;
   readonly maxScore = 100;
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly readiness = 'ready' as const;
+  readonly directionBias = 'neutral' as const;
 
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -1022,33 +1019,38 @@ export class IchimokuCloudDirective implements IDirective {
     const highs = bars.map((b) => b.high);
     const lows = bars.map((b) => b.low);
     const closes = bars.map((b) => b.close);
-    const MIN = 60;
+    const MIN = 78; // 52 (Senkou B) + 26 (cloud forward displacement)
 
     if (closes.length < MIN) {
       return { score: 0, confidence: 0.1, signalClass: 'neutral', reason: `Need ${MIN} bars, have ${closes.length}` };
     }
 
-    // Tenkan-sen (9), Kijun-sen (26), Senkou Span B (52)
-    const tenkanPeriod = 9;
-    const kijunPeriod = 26;
-    const senkouBPeriod = 52;
+    const mid = (h: number[], l: number[], period: number, idx: number) =>
+      (Math.max(...h.slice(idx - period + 1, idx + 1)) + Math.min(...l.slice(idx - period + 1, idx + 1))) / 2;
 
-    const tenkan = (highest(highs, tenkanPeriod)[highs.length - 1] + lowest(lows, tenkanPeriod)[lows.length - 1]) / 2;
-    const kijun = (highest(highs, kijunPeriod)[highs.length - 1] + lowest(lows, kijunPeriod)[lows.length - 1]) / 2;
-    const senkouA = (tenkan + kijun) / 2;
+    const last = closes.length - 1;
 
-    // Senkou B needs 52 bars back, projected 26 forward
-    const senkouB = (highest(highs, senkouBPeriod)[highs.length - 1] + lowest(lows, senkouBPeriod)[lows.length - 1]) / 2;
+    // Tenkan-sen (9) and Kijun-sen (26) at the CURRENT bar.
+    const tenkan = mid(highs, lows, 9, last);
+    const kijun = mid(highs, lows, 26, last);
+    const tkBullish = tenkan > kijun;
+
+    // Senkou spans are plotted 26 bars FORWARD — the cloud live under the
+    // current price was computed 26 bars ago (displacement).
+    const cloudIdx = last - 26;
+    const senkouA = (mid(highs, lows, 9, cloudIdx) + mid(highs, lows, 26, cloudIdx)) / 2;
+    const senkouB = mid(highs, lows, 52, cloudIdx);
     const cloudTop = Math.max(senkouA, senkouB);
     const cloudBottom = Math.min(senkouA, senkouB);
-    const lastClose = closes[closes.length - 1];
-
-    // TK cross (Tenkan above Kijun = bullish)
-    const tkBullish = tenkan > kijun;
     const cloudGreen = senkouA > senkouB;
+    const lastClose = closes[last];
 
     if (lastClose > cloudTop && tkBullish && cloudGreen) {
       return { score: 80, confidence: 0.75, signalClass: 'bullish', reason: 'Price above green cloud with TK bullish cross — strong uptrend' };
+    }
+
+    if (lastClose < cloudBottom && !tkBullish && !cloudGreen) {
+      return { score: 80, confidence: 0.75, signalClass: 'bearish', reason: 'Price below red cloud with TK bearish cross — strong downtrend' };
     }
 
     if (lastClose > cloudTop) {
@@ -1056,7 +1058,7 @@ export class IchimokuCloudDirective implements IDirective {
     }
 
     if (lastClose < cloudBottom) {
-      return { score: 10, confidence: 0.6, signalClass: 'bearish', reason: 'Price below Ichimoku cloud' };
+      return { score: 65, confidence: 0.6, signalClass: 'bearish', reason: 'Price below Ichimoku cloud' };
     }
 
     return { score: 35, confidence: 0.35, signalClass: 'neutral', reason: 'Price inside Ichimoku cloud — no clear direction' };

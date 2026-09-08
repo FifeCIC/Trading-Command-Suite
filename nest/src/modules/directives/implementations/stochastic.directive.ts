@@ -23,13 +23,13 @@ function mapRange(v: number, inMin: number, inMax: number, outMin: number, outMa
 export class StochasticDirective implements IDirective {
   readonly id = 'stochastic';
   readonly name = 'Stochastic Oscillator';
-  readonly description = 'Hybrid: continuous base + oversold bonuses + crossover bonus.';
+  readonly description = 'Symmetric hybrid: continuous base + oversold/overbought bonuses + crossover bonus.';
   readonly category = 'oscillator' as const;
   readonly priority = 50;
   readonly maxScore = 100;
   readonly minScore = 1;
   readonly minBars = { '1d': 19 };
-  readonly version = '2.0.1';
+  readonly version = '2.1.0';
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
 
@@ -49,31 +49,40 @@ export class StochasticDirective implements IDirective {
     const currentD = d[d.length - 1];
     const prevD = d[d.length - 2];
     const crossUp = prevK <= prevD && currentK > currentD;
+    const crossDown = prevK >= prevD && currentK < currentD;
     const kRising = currentK > prevK;
+    const kFalling = currentK < prevK;
 
-    // BASE: %K 80→0, %K 20→50 (lower %K = more oversold = higher base)
-    const baseScore = Math.round(mapRange(currentK, 80, 20, 0, 50));
-
-    // BONUS: oversold tiers
+    // Symmetric hybrid: oversold → bullish reversion, overbought → bearish.
+    const isBullish = currentK <= 50;
+    let baseScore: number;
     let bonusScore = 0;
     let bonusLabel = '';
-    if (currentK < 10) { bonusScore = 50; bonusLabel = 'deep oversold (<10)'; }
-    else if (currentK < 20) { bonusScore = 30; bonusLabel = 'oversold (<20)'; }
+    if (isBullish) {
+      baseScore = Math.round(mapRange(currentK, 80, 20, 0, 50));
+      if (currentK < 10) { bonusScore = 50; bonusLabel = 'deep oversold (<10)'; }
+      else if (currentK < 20) { bonusScore = 30; bonusLabel = 'oversold (<20)'; }
+    } else {
+      baseScore = Math.round(mapRange(currentK, 20, 80, 0, 50));
+      if (currentK > 90) { bonusScore = 50; bonusLabel = 'deep overbought (>90)'; }
+      else if (currentK > 80) { bonusScore = 30; bonusLabel = 'overbought (>80)'; }
+    }
 
     // CROSSOVER bonus
-    const crossBonus = crossUp ? 15 : (kRising ? 5 : 0);
+    const crossBonus = crossUp || crossDown ? 15 : (kRising || kFalling ? 5 : 0);
 
-    const total = baseScore + bonusScore + crossBonus;
+    const total = Math.min(this.maxScore, baseScore + bonusScore + crossBonus);
+    const signalClass = total >= 60 ? (isBullish ? 'bullish' : 'bearish') : 'neutral';
     const parts = [`base=${baseScore}`];
     if (bonusScore > 0) parts.push(`+${bonusScore} bonus (${bonusLabel})`);
-    if (crossBonus > 0) parts.push(`+${crossBonus} ${crossUp ? 'crossover' : 'rising'}`);
+    if (crossBonus > 0) parts.push(`+${crossBonus} ${crossUp ? 'crossover-up' : crossDown ? 'crossover-down' : 'trend'}`);
 
     return {
-      signalClass: total >= 60 ? 'bullish' : 'neutral',
+      signalClass,
       score: total,
       confidence: Number((bonusScore > 0 ? 0.55 + (bonusScore / 50) * 0.3 : 0.3 + (baseScore / 50) * 0.2).toFixed(2)),
       reason: `Stoch K=${currentK.toFixed(1)} D=${currentD.toFixed(1)}: ${parts.join(' ')}=${total}/${this.maxScore}`,
-      metadata: { baseScore, bonusScore, bonusLabel, crossBonus, currentK, crossUp },
+      metadata: { baseScore, bonusScore, bonusLabel, crossBonus, currentK, crossUp, crossDown },
     };
   }
 }
