@@ -518,7 +518,7 @@ export class ScoreHistoryService {
       take: 500,
     });
 
-    const symbolMap = new Map<string, { symbolId: string; latestScore: number; latestConfidence: number; lastAnalysedAt: Date; totalRuns: number }>();
+    const symbolMap = new Map<string, { symbolId: string; latestScore: number; latestConfidence: number; lastAnalysedAt: Date; totalRuns: number; latestSignal: string | null }>();
     for (const s of scores) {
       const existing = symbolMap.get(s.symbolId);
       if (!existing) {
@@ -526,6 +526,7 @@ export class ScoreHistoryService {
           symbolId: s.symbolId, latestScore: s.value,
           latestConfidence: (s.breakdown as any)?.confidence ?? 0,
           lastAnalysedAt: s.timestamp, totalRuns: 1,
+          latestSignal: (s.breakdown as any)?.signal ?? null,
         });
       } else {
         existing.totalRuns++;
@@ -541,7 +542,13 @@ export class ScoreHistoryService {
     return Array.from(symbolMap.values())
       .map((entry: any) => {
         const ticker: string = tickerMap.get(entry.symbolId) || entry.symbolId.slice(0, 8);
-        const signal = entry.latestScore >= 60 ? 'entry' : entry.latestScore >= 40 ? 'watch' : 'defensive';
+        // #738 — never threshold the raw composite (Score.value is unbounded,
+        // often 100s-1000s) against the 60/40 tiers. Use the server-owned signal
+        // (STRONG_BUY/BUY/HOLD/SELL/STRONG_SELL) persisted in the breakdown,
+        // falling back to a neutral tier for legacy rows that predate it.
+        const signal = entry.latestSignal?.startsWith('BUY') ? 'entry'
+          : entry.latestSignal?.startsWith('SELL') ? 'defensive'
+          : 'watch';
         return {
           symbolId: entry.symbolId, ticker,
           latestScore: Number(entry.latestScore.toFixed(1)),

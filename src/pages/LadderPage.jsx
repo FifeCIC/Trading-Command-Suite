@@ -325,7 +325,7 @@ export default function LadderPage() {
         <span className="lad-card-status">
           <SignalBadge display={e.vm} />
           <span className={`lad-state lad-state--${e.vm.state}`}>
-            {e.vm.frozen ? 'Market closed' : 'Live'}
+            {e.vm.frozen ? (e.vm.state === 'stale' ? 'Stale' : 'Market closed') : 'Live'}
           </span>
         </span>
       </div>

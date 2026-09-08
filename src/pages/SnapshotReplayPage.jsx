@@ -22,6 +22,7 @@ export default function SnapshotReplayPage() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [directiveMode, setDirectiveMode] = useState(true);
   const [symbolInput, setSymbolInput] = useState('EURUSD');
+  const [selectedProtocols, setSelectedProtocols] = useState([]);
   const chartRef = useRef(null);
   const chartInst = useRef(null);
   const candleSeries = useRef(null);
@@ -35,6 +36,14 @@ export default function SnapshotReplayPage() {
   });
 
   const availableSymbols = inventoryQuery.data || [];
+
+  // ── Protocols for canonical scoring (each replay scores the selected set) ──
+  const protocolsQuery = useQuery({
+    queryKey: ['replay-protocols'],
+    queryFn: () => apiGet('/api/scoring/gated/protocols').catch(() => ({ protocols: [] })),
+    staleTime: 60_000,
+  });
+  const protocols = protocolsQuery.data?.protocols || [];
 
   // ── Run replay ──
   const replayMutation = useMutation({
@@ -132,7 +141,20 @@ export default function SnapshotReplayPage() {
 
   const handleRun = () => {
     reset();
-    replayMutation.mutate({ symbol: symbolInput.toUpperCase(), timeframe, from: fromDate, to: toDate, windowSize: 30, relativeScoring: true });
+    replayMutation.mutate({
+      symbol: symbolInput.toUpperCase(),
+      timeframe,
+      from: fromDate,
+      to: toDate,
+      windowSize: 30,
+      protocolIds: selectedProtocols,
+    });
+  };
+
+  const toggleProtocol = (id) => {
+    setSelectedProtocols((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   };
 
   if (inventoryQuery.isLoading) return <LoadingSkeleton variant="card" count={4} />;
@@ -179,6 +201,23 @@ export default function SnapshotReplayPage() {
             {replayResult.totalBars} bars · {steps.length} steps · avg {replayResult.summary.avgComposite}%
           </span>
         )}
+      </div>
+
+      {/* ── Protocol selection (canonical scoring set) ── */}
+      <div className="sr-protocol-select">
+        <span className="sr-protocol-select-label">Protocols:</span>
+        {protocols.map((p) => {
+          const checked = selectedProtocols.includes(p.id);
+          return (
+            <label key={p.id} className={`sr-proto-chip ${checked ? 'active' : ''}`} title={p.id}>
+              <input type="checkbox" checked={checked} onChange={() => toggleProtocol(p.id)} />
+              {p.name || p.id}
+            </label>
+          );
+        })}
+        <span className="sr-hint">
+          {selectedProtocols.length ? `${selectedProtocols.length} selected` : 'select ≥1 protocol to score'}
+        </span>
       </div>
 
       {!replayResult && (
@@ -246,7 +285,61 @@ export default function SnapshotReplayPage() {
             )}
           </div>
 
-          {/* ── Chart + Directives ── */}
+          {/* ── Decision Card (primary — the star of the show, not the candles) ── */}
+          {currentStep && (
+            <div className="sr-decision-card">
+              <div className="sr-dc-top">
+                <span className="sr-dc-symbol">
+                  {symbolInput.toUpperCase()} · {timeframe} · {new Date(currentStep.timestamp).toLocaleString()}
+                </span>
+                <span className={`sr-dc-signal ${currentSignal.signal}`}>{currentStep.signal}</span>
+                <span className="sr-dc-score">{currentStep.normalizedScore}%</span>
+              </div>
+
+              <div className="sr-dc-identity">
+                <span className="sr-dc-proto" title="Protocol (signal thesis) — the scoring recipe / directional edge">
+                  🧭 {currentStep.protocolName || currentStep.protocolId || '—'}
+                </span>
+                {currentStep.botName && (
+                  <span className="sr-dc-bot" title="Execution bot (policy) — money-management & risk gates">
+                    🤖 {currentStep.botName}
+                  </span>
+                )}
+              </div>
+
+              <div className="sr-dc-fwd">
+                {currentStep.forwardReturn1 !== undefined && (
+                  <span className={`sr-dc-fwd-item ${currentStep.forwardReturn1 >= 0 ? 'up' : 'down'}`}>
+                    Fwd1 {currentStep.forwardReturn1 >= 0 ? '+' : ''}{currentStep.forwardReturn1}%
+                  </span>
+                )}
+                {currentStep.forwardReturn5 !== undefined && (
+                  <span className={`sr-dc-fwd-item ${currentStep.forwardReturn5 >= 0 ? 'up' : 'down'}`}>
+                    Fwd5 {currentStep.forwardReturn5 >= 0 ? '+' : ''}{currentStep.forwardReturn5}%
+                  </span>
+                )}
+                {currentStep.signalCorrect !== undefined && (
+                  <span className={`sr-dc-correct ${currentStep.signalCorrect ? 'correct' : 'wrong'}`}>
+                    {currentStep.signalCorrect ? '✓ Correct' : '✗ Wrong'}
+                  </span>
+                )}
+              </div>
+
+              {directiveMode && currentDirectives.length > 0 && (
+                <div className="sr-dc-directives">
+                  {currentDirectives.map((d) => (
+                    <div key={d.name} className="sr-dc-dir" title={d.reason}>
+                      <span className={`sr-dc-dir-dot ${d.signalClass}`} />
+                      <span className="sr-dc-dir-name">{d.name}</span>
+                      <span className="sr-dc-dir-score">{d.score}/{d.maxScore}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Chart + Directives (secondary price context) ── */}
           <div className="sr-layout">
             <div className="sr-chart-wrap" ref={chartRef} />
 

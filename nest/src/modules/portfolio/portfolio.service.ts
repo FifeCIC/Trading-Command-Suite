@@ -194,55 +194,132 @@ export class PortfolioService {
 
   /**
    * Get scoring data for each portfolio holding.
-   * Returns last known score and signal strength per symbol.
+   * Returns the last PERSISTED protocol-scoped score per holding.
    *
-   * ⚠️ DISPLAY-ONLY: scores come from ScoringService.rankAll() (the screening /
-   * opportunity ranker). These are NOT canonical trade signals — trade decisions
-   * use ProtocolGatingService.scoreWithGating(). Do not persist these numbers or
-   * feed them to the automation loop.
+   * ⚠️ DISPLAY-ONLY + PERSISTED-READ (GH #738): this reads the score_snapshot
+   * table, which ProtocolGatingService writes ONLY for symbols scored under an
+   * ASSIGNED protocol by the automation loop. There is deliberately NO unscoped
+   * whole-registry rankAll() here — running the whole directive registry against
+   * every symbol is pointless (that practice was retired), and on a display
+   * endpoint it also triggered destructive on-demand provider imports + rate-limit
+   * exhaustion. A holding with no protocol assignment / no fresh snapshot honestly
+   * reports no_data/untracked, signalling it is not yet being scored by a protocol
+   * (add a symbol_protocol_assignment row to bring it online — one at a time).
+   * These are NOT canonical trade signals on their own — trade decisions use
+   * ProtocolGatingService.scoreWithGating() during the loop. Do not persist or feed
+   * these numbers to the automation loop.
    */
   async getPortfolioScores(): Promise<Array<{
     symbol: string; ticker: string; score: number | null; signal: string; strength: string; dataStatus: string;
+    rawComposite?: number | null; maxPossibleScore?: number | null; protocolId?: string | null;
   }>> {
     const { positions } = await this.getPortfolio();
     if (positions.length === 0) return [];
 
-    // Fetch real scores from scoring service
-    let scoreMap = new Map<string, { score: number; dataStatus: string }>();
-    try {
-      const ranked = await this.scoringService.rankAll(undefined, 200);
-      if (ranked?.ranked) {
-        for (const entry of ranked.ranked) {
-          scoreMap.set(entry.ticker, { score: entry.score, dataStatus: entry.dataStatus });
+    const norm = (s: string) => (s || '').toUpperCase();
+    const holdingSymbols = positions.map((p) => norm(p.ticker || p.symbol));
+
+    // 1) Resolve each holding's assigned protocol (canonical scoring source).
+    const assignments = new Map<string, string>(); // SYM -> protocolId
+    if (this.prisma.isAvailable) {
+      try {
+        const rows = await this.prisma.symbolProtocolAssignment.findMany({
+          where: { symbol: { in: holdingSymbols } },
+          orderBy: { priority: 'asc' },
+        });
+        for (const a of rows) {
+          const key = norm(a.symbol);
+          if (!assignments.has(key)) assignments.set(key, a.protocolId);
         }
+      } catch (err) {
+        this.logger.warn(`Could not resolve protocol assignments for portfolio scores: ${(err as Error).message}`);
       }
-    } catch (err) {
-      this.logger.warn(`Could not fetch portfolio scores: ${(err as Error).message}`);
     }
 
-    return positions.map((p) => {
-      const scored = scoreMap.get(p.ticker) ?? scoreMap.get(p.symbol);
-      const score = scored?.score ?? null;
-      const dataStatus = scored?.dataStatus ?? 'untracked';
+    // 2) Latest persisted protocol-scoped snapshot per holding (fast, no live screening).
+    const snapshots = new Map<string, {
+      protocolId: string; signalPct: number | null; composite: number | null;
+      tradingSignal: string | null; snappedAt: Date;
+    }>();
+    if (this.prisma.isAvailable) {
+      try {
+        const snaps = await this.prisma.scoreSnapshot.findMany({
+          where: { symbol: { in: holdingSymbols } },
+          orderBy: { snappedAt: 'desc' },
+        });
+        for (const s of snaps) {
+          const key = norm(s.symbol);
+          if (!snapshots.has(key)) {
+            snapshots.set(key, {
+              protocolId: s.protocolId,
+              signalPct: s.signalPct ?? null,
+              composite: s.composite ?? null,
+              tradingSignal: s.tradingSignal ?? null,
+              snappedAt: s.snappedAt,
+            });
+          }
+        }
+      } catch (err) {
+        this.logger.warn(`Could not read persisted scores for portfolio: ${(err as Error).message}`);
+      }
+    }
 
-      // If dataStatus is 'no_data', don't produce a misleading SELL signal
-      const effectiveSignal = dataStatus === 'no_data' || dataStatus === 'untracked'
-        ? 'no_data'
+    // Freshness horizon for a persisted snapshot to count as "live" data.
+    const FRESH_MS = 30 * 24 * 60 * 60 * 1000; // 30 days = the loop's persistence horizon
+    const now = Date.now();
+
+    return positions.map((p) => {
+      const key = norm(p.ticker || p.symbol);
+      const snap = snapshots.get(key);
+      const assignedProtocolId = assignments.get(key) ?? null;
+
+      // Honest: no persisted protocol score => this holding is not being scored by a
+      // protocol right now. Report no_data/untracked rather than a fabricated number.
+      if (!snap) {
+        return {
+          symbol: p.symbol, ticker: p.ticker,
+          score: null, signal: 'no_data', strength: 'none', dataStatus: 'untracked',
+          rawComposite: null, maxPossibleScore: null, protocolId: assignedProtocolId,
+        };
+      }
+
+      // normalized 0-100 signal % is the ONLY comparable score field (never the
+      // raw unbounded composite). This is what the protocol actually classified on.
+      const pct = snap.signalPct;
+      const score = pct === null || pct === undefined ? null : Math.round(pct);
+      const fresh = now - snap.snappedAt.getTime() <= FRESH_MS;
+      const dataStatus = fresh ? 'live' : 'stale';
+
+      // Prefer the server-owned trading signal (persisted by the loop); fall back to
+      // thresholding the % only if the signal string is absent.
+      const signal = snap.tradingSignal
+        ? this.mapPersistedSignal(snap.tradingSignal)
         : score !== null
           ? (score >= 65 ? 'buy' : score <= 40 ? 'sell' : 'hold')
           : 'no_data';
 
+      const strength = score !== null
+        ? (score >= 80 ? 'strong' : score >= 65 ? 'moderate' : 'weak')
+        : 'none';
+
       return {
-        symbol: p.symbol,
-        ticker: p.ticker,
-        score,
-        signal: effectiveSignal,
-        strength: score !== null && dataStatus !== 'no_data' && dataStatus !== 'untracked'
-          ? (score >= 80 ? 'strong' : score >= 65 ? 'moderate' : 'weak')
-          : 'none',
-        dataStatus,
+        symbol: p.symbol, ticker: p.ticker, score, signal, strength, dataStatus,
+        rawComposite: snap.composite, maxPossibleScore: null, protocolId: snap.protocolId || assignedProtocolId,
       };
     });
+  }
+
+  /** Map a persisted protocol-gating signal (uppercase vocabulary) to the compact
+   *  lowercase vocabulary this endpoint has always returned. */
+  private mapPersistedSignal(sig: string): string {
+    switch ((sig || '').toUpperCase()) {
+      case 'STRONG_BUY':
+      case 'BUY': return 'buy';
+      case 'STRONG_SELL':
+      case 'SELL': return 'sell';
+      case 'HOLD': return 'hold';
+      default: return 'no_data';
+    }
   }
 
   /**

@@ -17,7 +17,7 @@
  *   POST /api/signals/:id/trade  — manual trade via the bot's safety chain
  */
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import PageInfoPopover from '../components/PageInfoPopover';
@@ -199,9 +199,14 @@ function OpportunityCard({ envelope, dismissHours, onDismissed, defaults }) {
             CLOSED
           </span>
         )}
-        <span className="sig-opp-proto" title={`Protocol: ${envelope.protocolId}`}>
-          {envelope.protocolName || envelope.protocolId}
+        <span className="sig-opp-proto" title={`Protocol (signal thesis): ${envelope.protocolName || envelope.protocolId} · slug ${envelope.protocolId}`}>
+          Protocol · {envelope.protocolId}
         </span>
+        {envelope.botName && (
+          <span className="sig-opp-botname" title={`Execution bot: ${envelope.botName} — this signal routes through this bot's money-management & risk gates`}>
+            🤖 {envelope.botName}
+          </span>
+        )}
         <span className="sig-opp-time">{timeAgo(envelope.scoredAt)}</span>
         {envelope.scoreId && (
           <button
@@ -262,7 +267,7 @@ function OpportunityCard({ envelope, dismissHours, onDismissed, defaults }) {
       {execBlocked && (
         <div className="sig-opp-exec">
           {execBlockers.map((b, i) => (
-            <span key={i} title={b.hint}>
+            <span key={i} title={`${envelope.botName ? `${envelope.botName} bot · ` : ''}${b.hint || b.message}`}>
               ⛔ {b.message}{b.hint ? ` — ${b.hint}` : ''}
             </span>
           ))}
@@ -347,6 +352,282 @@ function OpportunityCard({ envelope, dismissHours, onDismissed, defaults }) {
               <span>
                 Plan created — <Link to="/trading/trading-plans">open in Trading Plans</Link>
               </span>
+            ) : result?.text)}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.article>
+  );
+}
+
+/** Round a percentage to a whole number for display (avoids 55.555…%). */
+function roundPct(v) { return v == null ? null : Math.round(v); }
+
+/** Normalise every blocker/warning/conflict into ONE uniform notice list so the
+ *  card never mixes ad-hoc styles. severity: 'critical' | 'warning' | 'info'. */
+function buildNotices(envelope) {
+  const notices = [];
+  const add = (severity, text, title) => {
+    const t = String(text || '').trim();
+    if (t) notices.push({ severity, text: t, title: title || t });
+  };
+  // Execution feasibility (blocks the trade) — most important, shown first.
+  (envelope.executionBlockers || []).forEach((b) =>
+    add('critical', b.message, `${envelope.botName ? `${envelope.botName} · ` : ''}${b.hint || b.message}`));
+  // Pre-trade block (duplicate/cooldown etc).
+  if ((envelope.preTradeBlockers || []).length) {
+    add('critical', envelope.preTradeBlockers.slice(0, 2).join(' · '), 'Pre-trade block');
+  }
+  // Risk-gate warnings — each is its own notice; the visible text is clamped in
+  // CSS and the full, technical detail is preserved on hover (tooltip).
+  (envelope.riskGate?.warnings || []).map(stripWarningGlyph).slice(0, 2).forEach((w) => add('warning', w, w));
+  // Directive conflicts — low/med = info, high = warning.
+  (envelope.conflicts || []).forEach((c) =>
+    add(
+      c.severity === 'high' ? 'warning' : 'info',
+      c.description,
+      `${c.type} · ${c.severity}${c.directives?.length ? ` · ${c.directives.join(', ')}` : ''}`,
+    ));
+  return notices;
+}
+
+/**
+ * OpportunityCard B — the redesigned signal card (A/B test default variant).
+ * Shares the exact action/trade/plan/dismiss logic of OpportunityCard but
+ * presents a calmer layout: no protocol/bot icons, age top-right, an explicit
+ * Combined-strength breakdown, directives removed (moved to another view), and
+ * every blocker/warning/conflict rendered through one uniform notice list.
+ */
+function OpportunityCardB({ envelope, dismissHours, onDismissed, defaults }) {
+  const [confirming, setConfirming] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  const copyRef = async () => {
+    if (!envelope.scoreId) return;
+    try { await navigator.clipboard.writeText(envelope.scoreId); } catch { /* clipboard unavailable */ }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  };
+
+  const marketOpen = envelope.marketStatus ? envelope.marketStatus.open !== false : true;
+  const dir = directionLabel(envelope.directionMode);
+  const isBuy = envelope.directionMode !== 'SHORT_ONLY'
+    && !String(envelope.signal || '').toUpperCase().includes('SELL');
+
+  const actionQuery = useQuery({
+    queryKey: ['signal-action', envelope.scoreId],
+    queryFn: () => fetchSignalAction(envelope.scoreId),
+    enabled: Boolean(envelope.scoreId),
+    staleTime: 60_000,
+    refetchInterval: REFRESH_MS,
+  });
+
+  const dismissMutation = useMutation({
+    mutationFn: () => dismissSignal({
+      symbol: envelope.symbol,
+      protocolId: envelope.protocolId,
+      hours: dismissHours,
+      strengths: {
+        combinedStrength: envelope.combinedStrength,
+        signalPct: envelope.signalPct,
+        opportunityPct: envelope.opportunityPct,
+      },
+    }),
+    onSuccess: () => { setResult({ type: 'dismissed', text: `Dismissed for ${dismissHours}h` }); onDismissed(); },
+    onError: (e) => setError(e?.message || 'Dismiss failed'),
+  });
+
+  const tradeMutation = useMutation({
+    mutationFn: ({ side }) => tradeSignal(envelope.scoreId, { side, brokerId: 'mt5' }),
+    onSuccess: (r) => {
+      if (r?.success === false) { setError(r.error || 'Order failed'); }
+      else { setResult({ type: 'trade', text: `Order placed #${r?.orderId}`, orderId: r?.orderId }); }
+      setConfirming(false);
+    },
+    onError: (e) => { setError(e?.message || 'Trade failed'); setConfirming(false); },
+  });
+
+  const planMutation = useMutation({
+    mutationFn: () => createSignalPlan(envelope.scoreId, {
+      direction: isBuy ? 'LONG' : 'SHORT',
+      protocolName: envelope.protocolName || null,
+      context: {
+        combinedStrength: envelope.combinedStrength,
+        signalPct: envelope.signalPct,
+        opportunityPct: envelope.opportunityPct,
+        confidence: envelope.confidence,
+        topDirectives: topDirectives(envelope),
+        warnings: envelope.riskGate?.warnings || [],
+      },
+    }),
+    onSuccess: (r) => {
+      if (r?.success === false) { setError(r.message || 'Plan already exists for this signal'); }
+      else { setResult({ type: 'plan', text: 'Plan created', planId: r?.planId }); }
+    },
+    onError: (e) => setError(e?.message || 'Plan creation failed'),
+  });
+
+  const startConfirm = () => { setError(null); setResult(null); setConfirming(true); };
+
+  const blocked = envelope.preTradeBlockers?.length > 0;
+  const botAction = actionQuery.data?.action || 'none';
+  const execBlockers = envelope.executionBlockers || [];
+  const execBlocked = execBlockers.length > 0;
+  const tradeBlockedReason = execBlockers[0]?.message
+    || (!marketOpen ? (envelope.marketStatus?.reason || 'Market closed — trade blocked') : null)
+    || (blocked ? envelope.preTradeBlockers.slice(0, 2).join(' · ') : null);
+
+  const notices = buildNotices(envelope);
+  const signalPct = roundPct(envelope.signalPct);
+  const oppPct = roundPct(envelope.opportunityPct);
+  const protocolName = envelope.protocolName || envelope.protocolId;
+  const strength = Math.min(100, envelope.combinedStrength || 0);
+
+  return (
+    <motion.article
+      className={`sig-b-card ${blocked ? 'sig-b-card--blocked' : ''}`}
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+    >
+      {/* ── Title row: symbol · direction · age (top right) ── */}
+      <header className="sig-b-head">
+        <div className="sig-b-title">
+          <span className="sig-b-ticker">{envelope.symbol}</span>
+          <span className={`sig-opp-dir sig-opp-dir--${dir.cls}`}>{dir.label}</span>
+          {!marketOpen && (
+            <span className="sig-opp-closed" title={`Market closed — trade blocked: ${envelope.marketStatus?.reason || 'closed'}`}>
+              CLOSED
+            </span>
+          )}
+        </div>
+        <span className="sig-b-age" title={`Scored ${timeAgo(envelope.scoredAt)}`}>{timeAgo(envelope.scoredAt)}</span>
+      </header>
+
+      {/* ── Context row: protocol + bot, no icons ── */}
+      <div
+        className="sig-b-context"
+        title={`Protocol (thesis): ${protocolName}${envelope.botName ? ` · Execution bot: ${envelope.botName}` : ''}`}
+      >
+        <span className="sig-b-proto">{protocolName}</span>
+        {envelope.botName && <span className="sig-b-dot" aria-hidden="true">·</span>}
+        {envelope.botName && <span className="sig-b-bot">{envelope.botName}</span>}
+        {envelope.rarity && <span className="sig-b-rarity">{envelope.rarity}</span>}
+      </div>
+
+      {/* ── Strength: combined + metrics — one aligned list (Label | Bar | value) ── */}
+      <section className="sig-b-strength">
+        <div className="sig-b-bars">
+          <div className="sig-b-row sig-b-row--combined" title="Combined strength = the average of Signal and Opportunity, rounded.">
+            <span className="sig-b-row-label">Combined strength</span>
+            <span className="sig-b-row-track"><span className="sig-b-row-fill" style={{ width: `${strength}%` }} /></span>
+            <strong className="sig-b-row-pct sig-b-row-pct--combined">{envelope.combinedStrength}</strong>
+          </div>
+          <div className="sig-b-row" title="Signal = directional conviction of this setup (0–100%)">
+            <span className="sig-b-row-label">Signal</span>
+            <span className="sig-b-row-track"><span className="sig-b-row-fill sig-b-row-fill--accent" style={{ width: `${Math.max(0, Math.min(100, signalPct || 0))}%` }} /></span>
+            <strong className="sig-b-row-pct">{signalPct ?? '—'}{signalPct != null ? '%' : ''}</strong>
+          </div>
+          <div className="sig-b-row" title="Opportunity = additive screen value on top of the setup (0–100%)">
+            <span className="sig-b-row-label">Opportunity</span>
+            <span className="sig-b-row-track"><span className="sig-b-row-fill" style={{ width: `${Math.max(0, Math.min(100, oppPct || 0))}%` }} /></span>
+            <strong className="sig-b-row-pct">{oppPct ?? '—'}{oppPct != null ? '%' : ''}</strong>
+          </div>
+          <div className="sig-b-row" title="Confidence = how certain the model is (0–100, not a percentage band)">
+            <span className="sig-b-row-label">Confidence</span>
+            <span className="sig-b-row-track"><span className="sig-b-row-fill sig-b-row-fill--conf" style={{ width: `${Math.max(0, Math.min(100, envelope.confidence || 0))}%` }} /></span>
+            <strong className="sig-b-row-pct">{envelope.confidence ?? '—'}</strong>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Uniform notices (all blockers/warnings/conflicts, one style) ── */}
+      {notices.length > 0 && (
+        <ul className="sig-b-notices">
+          {notices.map((n, i) => (
+            <li key={i} className={`sig-b-notice sig-b-notice--${n.severity}`} title={n.title}>
+              <strong className="sig-b-notice-label">{n.severity === 'critical' ? 'Blocked' : n.severity === 'warning' ? 'Warning' : 'Note'}</strong>
+              <span className="sig-b-notice-text">{n.text}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <footer className="sig-opp-actions">
+        {result?.type === 'trade' ? (
+          <Link
+            to={`/trading/positions-monitor?highlight=${encodeURIComponent(String(result.orderId ?? ''))}`}
+            className="sig-opp-btn sig-opp-btn--placed"
+            title="View this position in Positions Monitor"
+          >
+            ✓ {result.text}
+          </Link>
+        ) : confirming ? (
+          <button
+            type="button"
+            className="sig-opp-btn sig-opp-btn--confirm"
+            onClick={() => tradeMutation.mutate({ side: isBuy ? 'BUY' : 'SELL' })}
+            disabled={tradeMutation.isPending || !envelope.scoreId}
+          >
+            {tradeMutation.isPending
+              ? 'Sending…'
+              : `Confirm ${isBuy ? 'buy' : 'sell'} ${envelope.symbol} on MT5 · ${defaults?.size ?? 0.01} lots · SL ${defaults?.slPct ?? 2}% · TP ${defaults?.tpPct ?? 4}%`}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={`sig-opp-btn ${isBuy ? 'sig-opp-btn--buy' : 'sig-opp-btn--sell'}`}
+            onClick={startConfirm}
+            disabled={!envelope.scoreId || Boolean(tradeBlockedReason)}
+            title={
+              tradeBlockedReason
+                ? `Blocked: ${tradeBlockedReason}${execBlockers[0]?.hint ? ` — ${execBlockers[0].hint}` : ''}`
+                : !envelope.scoreId
+                  ? 'No persisted score to trade against'
+                  : `Open ${isBuy ? 'long' : 'short'} CFD on MT5`
+            }
+          >
+            {isBuy ? 'Buy (Long)' : 'Sell (Short)'}
+          </button>
+        )}
+        <button
+          type="button"
+          className="sig-opp-btn sig-opp-btn--plan"
+          onClick={() => planMutation.mutate()}
+          disabled={planMutation.isPending || !envelope.scoreId}
+          title="Queue into the Trading area as a draft plan"
+        >
+          {planMutation.isPending ? '…' : 'Plan'}
+        </button>
+        <button
+          type="button"
+          className="sig-opp-btn sig-opp-btn--dismiss"
+          onClick={() => dismissMutation.mutate()}
+          disabled={dismissMutation.isPending}
+        >
+          {dismissMutation.isPending ? '…' : 'Dismiss'}
+        </button>
+      </footer>
+
+      {envelope.scoreId && (
+        <button type="button" className="sig-b-ref" onClick={copyRef} title={`Signal ref ${envelope.scoreId} — click to copy`}>
+          {copied ? '✓ ref copied' : `⧉ ref ${envelope.scoreId.slice(-8)}`}
+        </button>
+      )}
+
+      <AnimatePresence>
+        {(result || error) && (
+          <motion.div
+            className={`sig-opp-feedback ${error ? 'sig-opp-feedback--error' : 'sig-opp-feedback--ok'}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            {error || (result?.type === 'plan' ? (
+              <span>Plan created — <Link to="/trading/trading-plans">open in Trading Plans</Link></span>
             ) : result?.text)}
           </motion.div>
         )}
@@ -470,6 +751,12 @@ export default function SignalsOverviewPage() {
   const [showDismissed, setShowDismissed] = useState(false);
   const dismissHours = readDismissHours();
 
+  // A/B design test (#card). B (no ?variant) is the redesigned card; A = legacy
+  // card reachable via ?variant=A for side-by-side comparison.
+  const [searchParams] = useSearchParams();
+  const isVariantA = searchParams.get('variant') === 'A';
+  const Card = isVariantA ? OpportunityCard : OpportunityCardB;
+
   const bestQuery = useQuery({
     queryKey: ['signals-best'],
     queryFn: fetchBestSignals,
@@ -558,7 +845,7 @@ export default function SignalsOverviewPage() {
       <div className="sig-opp-grid">
         <AnimatePresence>
           {envelopes.map((env) => (
-            <OpportunityCard
+            <Card
               key={`${env.symbol}|${env.protocolId}|${env.directionMode}`}
               envelope={env}
               dismissHours={dismissHours}

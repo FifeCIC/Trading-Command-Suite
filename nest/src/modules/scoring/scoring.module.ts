@@ -4,6 +4,7 @@ import { DirectivesModule } from '../directives/directives.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { CalibrationModule } from '../calibration/calibration.module';
 import { MarketDataModule } from '../market-data/market-data.module';
+import { CalendarModule } from '../calendar/calendar.module';
 import { ProvidersModule } from '../providers/providers.module';
 import { PortfolioModule } from '../portfolio/portfolio.module';
 import { ArenaController } from './arena.controller';
@@ -45,7 +46,7 @@ import { DecisionChainService } from './decision-chain.service';
 import { DecisionChainController } from './decision-chain.controller';
 
 @Module({
-  imports: [DatabaseModule, DirectivesModule, NotificationsModule, CalibrationModule, MarketDataModule, ProvidersModule, forwardRef(() => PortfolioModule)],
+  imports: [DatabaseModule, DirectivesModule, NotificationsModule, CalibrationModule, MarketDataModule, CalendarModule, ProvidersModule, forwardRef(() => PortfolioModule)],
   controllers: [ScoringController, ArenaController, ProtocolsController, ProtocolGatingController, SpeedScanController, SeasonalityController, MetaStackVersioningController, DecisionChainController, ScoringStrategyController],
   providers: [ScoringService, ScoreHistoryService, ScoreVelocityService, DirectiveImpactService, ScoringSchedulerService, AveragingScorer, StrategyCompetitionService, PredictiveScoringService, ProtocolGatingService, ProtocolConsensusService, OutcomeTrackerService, SpeedScanService, SeasonalityService, SeasonalAffinityService, TickRecorderService, TimezoneService, MicroTrendDetector, RiskGatingEngine, SectorRotationService, MacroSnapshotService, EurUsdCacheService, StackPerformanceService, MetaStackVersioningService, ProtocolDbService, QuoteGateway, DecisionChainService, ScoringStrategyService, ProtocolHealthService],
   exports: [ScoringService, ScoreHistoryService, ScoreVelocityService, DirectiveImpactService, AveragingScorer, StrategyCompetitionService, PredictiveScoringService, ProtocolGatingService, ProtocolConsensusService, OutcomeTrackerService, SpeedScanService, SeasonalityService, SeasonalAffinityService, TickRecorderService, TimezoneService, MicroTrendDetector, RiskGatingEngine, MacroSnapshotService, StackPerformanceService, MetaStackVersioningService, ProtocolDbService, DecisionChainService],

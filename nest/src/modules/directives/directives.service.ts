@@ -39,7 +39,7 @@ import { isScoringDemo } from '../../config/scoring-mode';
  *  - BTC/USD, ETH/USD etc. → crypto (24/7)
  *  - US30, UK100, GER30 etc. → indices (NOT 24h — follow exchange hours)
  */
-function is24HourMarket(symbol: string): boolean {
+export function is24HourMarket(symbol: string): boolean {
   const s = (symbol || '').toUpperCase();
 
   // Forex pairs: exactly 6 chars, first 3 and last 3 are currencies

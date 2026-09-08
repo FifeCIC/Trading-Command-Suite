@@ -16,7 +16,7 @@
  *   NEVER:  evaluates thresholds, opens positions, or persists decisions
  */
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { DirectivesService } from '../directives/directives.service';
+import { DirectivesService, is24HourMarket } from '../directives/directives.service';
 import { PrismaService } from '../../database/prisma.service';
 import {
   DirectiveInput,
@@ -33,6 +33,7 @@ import { MacroSnapshotService } from './macro-snapshot.service';
 import { EurUsdCacheService } from './eurusd-cache.service';
 import { ProtocolDbService } from './protocol-db.service';
 import { MarketDataService } from '../market-data/market-data.service';
+import { MarketCalendarService } from '../calendar/market-calendar.service';
 import { DirectiveConfigService } from './directive-config.service';
 import { isScoringDemo } from '../../config/scoring-mode';
 import {
@@ -171,9 +172,12 @@ export interface GatedScore {
     blockers: { directiveId: string; name: string; readiness: string }[];
     reason?: string;
   };
-  /** Market-open status (#638 phase A) — whether the symbol's market is producing fresh data. */
+  /** Market-open status (#638 phase A). `open` = safe to trade (calendar open
+   *  AND data fresh); `stale` = market open but data stale (#732). */
   marketStatus?: {
     open: boolean;
+    /** True when the market is open per the calendar but the data feed is stale. */
+    stale?: boolean;
     asOf: string | null;
     reason?: string;
   };
@@ -276,6 +280,7 @@ export class ProtocolGatingService {
     private readonly protocolDb: ProtocolDbService,
     private readonly configService: DirectiveConfigService,
     private readonly marketData: MarketDataService,
+    private readonly marketCalendar: MarketCalendarService,
   ) {}
 
   /**
@@ -650,9 +655,30 @@ export class ProtocolGatingService {
     // Rarity: compute percentile against historical scores for this protocol
     const rarity = await this.computeRarity(protocolId, symbol, composite);
 
-    // Market status (#638 phase A) — whether the symbol's market is producing fresh data.
-    // Use the evaluated candle (asOf), not the process clock, so replay is reproducible.
-    const marketStatus = computeMarketStatus(bars, bars.length ? bars[bars.length - 1].timestamp : new Date());
+    // Market status (#638 phase A). Bar freshness alone cannot distinguish
+    // "market closed" from "data stale" — for US equities a stale feed during
+    // market hours was mislabelled "Market closed" (#732). Fix: `open` means
+    // "safe to trade" (calendar open AND data fresh), and a separate `stale`
+    // flag reports "market open but data stale" so the UI can label it "Stale"
+    // instead of "Market closed" while execution still blocks on `open=false`.
+    const freshness = computeMarketStatus(bars);
+    let marketStatus: { open: boolean; stale?: boolean; asOf: string | null; reason?: string };
+    if (is24HourMarket(symbol)) {
+      marketStatus = { ...freshness, stale: !freshness.open };
+    } else {
+      const cal = this.marketCalendar.getMarketStatus('US');
+      const stale = cal.isOpen && !freshness.open;
+      marketStatus = {
+        open: cal.isOpen && freshness.open,
+        stale,
+        asOf: freshness.asOf,
+        reason: !cal.isOpen
+          ? `US market ${cal.status}${cal.holidayName ? ` — ${cal.holidayName}` : ''}`
+          : stale
+            ? `US market open — ${freshness.reason ?? 'data may be stale'}`
+            : 'US market open',
+      };
+    }
 
     // Readiness gate (#627): a protocol is only eligible when every included
     // directive is 'ready'. Beta directives are blockers.

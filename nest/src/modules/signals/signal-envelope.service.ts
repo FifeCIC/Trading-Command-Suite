@@ -108,6 +108,8 @@ export interface SignalEnvelope {
   // ── #684 Signals v1 — best-of metadata ──
   protocolId: string | null;
   protocolName: string | null;
+  /** Executing bot (TradingStrategy) name — distinct from the protocol (signal thesis). */
+  botName?: string | null;
   directionMode: 'LONG_ONLY' | 'SHORT_ONLY' | 'BOTH';
   scoreId: string | null;          // persisted Score row id — required for /:id/action + /:id/trade
   signalPct: number | null;        // pre-gate directional % (classification basis)
@@ -988,6 +990,25 @@ export class SignalEnvelopeService {
     }
     for (const env of scoredEnvelopes) {
       env.holdsCfd = held.has(env.symbol.toUpperCase());
+    }
+
+    // Resolve the executing bot (TradingStrategy) per symbol+protocol, so the
+    // UI can distinguish "protocol" (signal thesis) from "bot" (execution
+    // policy). Best-effort: a signal without a matching bot stays null.
+    const botByKey = new Map<string, string>();
+    try {
+      const bots = await this.prisma.tradingStrategy.findMany({
+        where: { active: true },
+        select: { name: true, protocolId: true, symbol: true },
+      });
+      for (const b of bots) {
+        if (b.protocolId) botByKey.set(`${b.protocolId}|${b.symbol.toUpperCase()}`, b.name);
+      }
+    } catch {
+      /* bot lookup is best-effort */
+    }
+    for (const env of scoredEnvelopes) {
+      env.botName = botByKey.get(`${env.protocolId}|${env.symbol.toUpperCase()}`) ?? null;
     }
 
     // #723 — feasibility at generation: the SAME assessment the execution

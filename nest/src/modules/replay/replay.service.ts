@@ -33,6 +33,10 @@ export interface ReplayStep {
   composite: number;
   signal: string;
   normalizedScore: number;
+  /** Selected protocol (signal thesis) + its name + executing bot (execution policy). */
+  protocolId: string | null;
+  protocolName: string | null;
+  botName: string | null;
   activeDirectives: number;
   totalDirectives: number;
   /** Forward returns: what happened AFTER this signal */
@@ -253,6 +257,28 @@ export class ReplayService {
     let holdCount = 0;
     let totalDirectivesRun = 0;
 
+    // #739 — resolve protocol (thesis) + bot (execution policy) display names
+    // up-front so each decision card can show them distinctly (mirrors the
+    // signal-envelope botName resolution).
+    const nameBySlug = new Map<string, string>();
+    try {
+      const protocols = await this.prisma.protocol.findMany({
+        where: { slug: { in: protocolIds } },
+        select: { slug: true, name: true },
+      });
+      for (const p of protocols) nameBySlug.set(p.slug, p.name);
+    } catch { /* best-effort */ }
+    const botByKey = new Map<string, string>();
+    try {
+      const bots = await this.prisma.tradingStrategy.findMany({
+        where: { active: true },
+        select: { name: true, protocolId: true, symbol: true },
+      });
+      for (const b of bots) {
+        if (b.protocolId) botByKey.set(`${b.protocolId}|${b.symbol.toUpperCase()}`, b.name);
+      }
+    } catch { /* best-effort */ }
+
     // Step through bars using the canonical protocol evaluator (2026-09-08).
     for (let i = windowSize - 1; i < bars.length; i++) {
       const currentBar = bars[i];
@@ -262,9 +288,12 @@ export class ReplayService {
           this.protocolGating.scoreWithGating(symbol, windowBars, protocolId),
         ),
       );
-      const selected = gatedResults.reduce((best, current) =>
-        current.signalPct > best.signalPct ? current : best,
-      );
+      let selectedIdx = 0;
+      for (let j = 1; j < gatedResults.length; j++) {
+        if (gatedResults[j].signalPct > gatedResults[selectedIdx].signalPct) selectedIdx = j;
+      }
+      const selected = gatedResults[selectedIdx];
+      const selectedProtocolId = protocolIds[selectedIdx];
       const normalizedScore = selected.signalPct;
       const signal = selected.signal;
       const breakdown = Object.values(selected.breakouts).flat().map(d => ({
@@ -303,6 +332,9 @@ export class ReplayService {
         composite: selected.composite,
         signal,
         normalizedScore,
+        protocolId: selectedProtocolId ?? null,
+        protocolName: nameBySlug.get(selectedProtocolId) ?? selectedProtocolId ?? null,
+        botName: botByKey.get(`${selectedProtocolId}|${symbol.toUpperCase()}`) ?? null,
         activeDirectives: activeCount,
         totalDirectives: selected.meta.directiveCount,
         directiveBreakdown: breakdown.slice(0, 10),

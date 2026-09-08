@@ -52,7 +52,15 @@ export default function UserWatchlistsPage() {
   });
 
   const selectedWl = watchlists?.find(w => w.id === selectedId);
-  const symbols = detail?.symbols ?? [];
+  // Watchlist detail `symbols` is normally an array, but some legacy lists
+  // (e.g. the `default` watchlist) return a comma-separated string. Normalise
+  // to an array so `.map()` / `.length` always work.
+  const rawSymbols = detail?.symbols;
+  const symbols = Array.isArray(rawSymbols)
+    ? rawSymbols
+    : typeof rawSymbols === 'string'
+      ? rawSymbols.split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
 
   // Fetch all symbols to get company names
   const { data: allSymbols } = useQuery({

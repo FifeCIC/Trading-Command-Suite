@@ -144,6 +144,18 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.sig-opp-botname {
+  font-size: 0.7rem;
+  color: #b45309;
+  background: rgba(217, 119, 6, 0.08);
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  border-radius: 5px;
+  padding: 2px 7px;
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .sig-opp-time { margin-left: auto; font-size: 0.68rem; color: var(--ink-soft); }
 
 .sig-opp-combined-head {
@@ -399,4 +411,112 @@
   font-size: 0.66rem; color: #f87171;
   border-left: 2px solid rgba(248, 113, 113, 0.45);
   padding: 2px 0 2px 8px; margin: 2px 0 4px;
+}
+/* ── OpportunityCard B (redesign) ───────────────────────────
+   A/B test default variant. Calmer card: no protocol/bot icons,
+   age top-right, explicit Combined-strength breakdown, directives
+   removed, and every blocker/warning/conflict in ONE uniform style. */
+.sig-b-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+}
+.sig-b-card--blocked { border-style: dashed; opacity: 0.95; }
+
+/* ── Title row ── */
+.sig-b-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+.sig-b-title { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; min-width: 0; }
+.sig-b-ticker { font-size: 1.1rem; font-weight: 800; color: var(--ink); letter-spacing: 0.02em; }
+.sig-b-age { font-size: 0.68rem; color: var(--ink-soft); white-space: nowrap; padding-top: 0.12rem; }
+
+/* ── Context row: protocol + bot unified, no icons ── */
+.sig-b-context { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; font-size: 0.7rem; color: var(--ink-soft); }
+.sig-b-proto { font-weight: 600; color: var(--ink); }
+.sig-b-dot { color: var(--ink-soft); opacity: 0.6; }
+.sig-b-rarity {
+  margin-left: auto;
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ── Combined strength + labelled breakdown ── */
+/* Stacked strength breakdown — one shared 3-column grid so every bar is the
+   same length and values align to a single right edge. Combined strength is
+   the first row of the same list. */
+.sig-b-bars {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.55rem;
+  row-gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+.sig-b-row { display: contents; } /* children join the shared grid tracks */
+.sig-b-row--combined { } /* group hook; emphasis applied to its children below */
+.sig-b-row--combined .sig-b-row-label { color: var(--ink); font-weight: 700; }
+.sig-b-row-label { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
+.sig-b-row-track { height: 6px; border-radius: 4px; background: color-mix(in srgb, var(--ink) 10%, transparent); overflow: hidden; }
+.sig-b-row-fill { display: block; height: 100%; border-radius: 4px; background: color-mix(in srgb, var(--accent) 55%, #22c55e); transition: width 0.4s ease; }
+.sig-b-row-fill--accent { background: var(--accent); }
+.sig-b-row-fill--conf { background: #38bdf8; }
+.sig-b-row-pct { font-size: 0.78rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.sig-b-row-pct--combined { font-size: 0.95rem; font-weight: 800; color: var(--accent); }
+
+/* ── Uniform notices (single system, severity = tint only) ── */
+.sig-b-notices { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.sig-b-notice {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid;
+}
+.sig-b-notice-label { flex: none; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+.sig-b-notice-text {
+  min-width: 0;
+  opacity: 0.94;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.sig-b-notice--critical { color: #f87171; background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.28); }
+.sig-b-notice--warning { color: #f59e0b; background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.3); }
+.sig-b-notice--info { color: var(--ink-soft); background: color-mix(in srgb, var(--ink) 6%, transparent); border-color: var(--line); }
+
+/* ── Subtle ref copy (footer meta) ── */
+.sig-b-ref {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: -0.15rem;
+  font-size: 0.62rem;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.sig-b-ref:hover { color: var(--accent); }
+
+/* Color-blind mode injects ▲/▼ onto classes whose names contain buy/sell.
+   On the B card the action buttons already state direction in words
+   (Buy (Long) / Sell (Short)), so those redundant glyphs are suppressed. */
+:root[data-colorblind='true'] .sig-b-card .sig-opp-btn--buy::before,
+:root[data-colorblind='true'] .sig-b-card .sig-opp-btn--sell::before {
+  content: none !important;
+  display: none !important;
 }

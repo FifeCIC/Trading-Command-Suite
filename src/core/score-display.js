@@ -64,7 +64,9 @@ export function buildScoreDisplay(raw = {}) {
   let state = SCORE_STATES.UNSCORED;
   if (score != null) {
     if (ms && ms.open === false) {
-      state = SCORE_STATES.PAUSED;
+      // `stale` distinguishes "market open but data stale" from "market closed"
+      // (#732) — the server sets it from the calendar + bar freshness.
+      state = ms.stale === true ? SCORE_STATES.STALE : SCORE_STATES.PAUSED;
     } else if (ms && ms.open === true) {
       const asOf = ms.asOf ? Date.parse(ms.asOf) : NaN;
       state =
@@ -99,7 +101,7 @@ export function buildScoreDisplay(raw = {}) {
     marketStatus: ms,  // { open, asOf, reason } | null
     // Human copy for frozen/closed rows — built once, reused everywhere.
     frozenTitle: frozen
-      ? `Market ${ms?.open === false ? 'closed' : 'stale'} — ${signal ?? 'signal'} (${score ?? '—'}/${scoreMax ?? '—'}) frozen at last close, not a live tradable signal.`
+      ? `Market ${state === SCORE_STATES.STALE ? 'stale' : 'closed'} — ${signal ?? 'signal'} (${score ?? '—'}/${scoreMax ?? '—'}) frozen at last close, not a live tradable signal.`
       : undefined,
   };
 }

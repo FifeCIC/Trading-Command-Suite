@@ -196,8 +196,10 @@ export class TradingSchedulerService {
       // be mistaken for an execution instruction.
       run.suggestions = ranked.slice(0, 5).map((r: any) => ({
         symbol: r.ticker || r.symbol || '?',
-        score: Math.round(r.score || r.composite || 0),
-        action: r.score >= 65 ? 'TOP (screen)' : r.score >= 40 ? 'WATCH (screen)' : 'LOW (screen)',
+        // #738 — rankAll's `score` is an unbounded raw composite (hundreds/thousands);
+        // only `normalizedScore` (0-100 %) may be compared to the 65/40 screen tiers.
+        score: Math.round(r.normalizedScore ?? 0),
+        action: (r.normalizedScore ?? 0) >= 65 ? 'TOP (screen)' : (r.normalizedScore ?? 0) >= 40 ? 'WATCH (screen)' : 'LOW (screen)',
       }));
       run.steps.push({ name: 'suggestions', status: 'ok', detail: `${run.suggestions.length} suggestions from live scoring` });
     } catch (err) {

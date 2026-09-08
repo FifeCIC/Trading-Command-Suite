@@ -17,7 +17,7 @@ export default function Breadcrumbs() {
   const viewLabel = areaEntry?.views?.find((v) => v.id === view)?.label || view || '';
 
   // A/B testing: show switcher for views that support it
-  const abViews = ['protocols-registry', 'protocols', 'symbols-ladder'];
+  const abViews = ['protocols-registry', 'protocols', 'symbols-ladder', 'signals-overview'];
   const showAB = abViews.includes(view);
 
   return (
