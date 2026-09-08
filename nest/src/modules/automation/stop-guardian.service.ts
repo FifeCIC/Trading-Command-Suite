@@ -12,6 +12,7 @@ import { TradingStrategyService } from '../trading/trading-strategy.service';
 import { DirectivesService } from '../directives/directives.service';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import { NotificationService } from '../notifications/notifications.service';
+import { StopGuardianService as StopAdjustmentRecorder } from '../trading/stop-guardian.service';
 
 interface Mt5RawPosition {
   ticket: number;
@@ -64,6 +65,7 @@ export interface StopAdjustment {
 export class StopGuardianService {
   private readonly logger = new Logger(StopGuardianService.name);
   private timer: NodeJS.Timeout | null = null;
+  private ticking = false;
   private readonly bridgeUrl: string;
 
   state: GuardianState = {
@@ -81,6 +83,7 @@ export class StopGuardianService {
     private readonly strategyService: TradingStrategyService,
     private readonly directivesService: DirectivesService,
     private readonly mt5Connection: Mt5ConnectionManager,
+    private readonly adjustmentRecorder: StopAdjustmentRecorder,
     private readonly notifications?: NotificationService,
   ) {
     this.bridgeUrl = this.mt5Connection.getUrl();
@@ -148,7 +151,8 @@ export class StopGuardianService {
   // ── Main Tick ──────────────────────────────────────────
 
   async tick() {
-    if (!this.state.enabled) return [];
+    if (!this.state.enabled || this.ticking) return [];
+    this.ticking = true;
     const tickStart = Date.now();
     this.state.tickCount++;
     this.state.lastTickAt = new Date().toISOString();
@@ -288,6 +292,21 @@ export class StopGuardianService {
               event: 'stop-adjusted',
               metadata: { ticket: pos.ticket, oldSl: pos.sl, newSl: recommendedSl, side },
             }).catch(() => {});
+            this.adjustmentRecorder.recordAdjustment({
+              tradeTicket: String(pos.ticket),
+              symbol: strat.symbol,
+              oldSl: pos.sl,
+              newSl: recommendedSl,
+              oldTp: pos.tp,
+              newTp: pos.tp,
+              reason: entry.reason,
+              directiveScores: {
+                atrTrailingStop: atrStop?.score ?? null,
+                superTrend: superTrend?.score ?? null,
+                chandelierExit: chandelier?.score ?? null,
+                wickFilter: wickScore,
+              },
+            });
           }
         }
 
@@ -312,7 +331,6 @@ export class StopGuardianService {
     this.logger.log(
       `Guardian #${this.state.tickCount}: ${adjustments.length} adjusted, ${this.state.guardedPositions.length} guarded`,
     );
-    this.scheduleNext();
     return adjustments;
   }
 
@@ -332,6 +350,8 @@ export class StopGuardianService {
     this.state.nextTickAt = new Date(
       Date.now() + this.state.tickIntervalMs,
     ).toISOString();
+    this.ticking = false;
+    this.scheduleNext();
   }
 
   private makeGuarded(

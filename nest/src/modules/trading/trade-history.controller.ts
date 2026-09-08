@@ -289,7 +289,7 @@ export class TradeHistoryController {
     try {
       const where: any = {};
       if (symbol) where.symbol = symbol.toUpperCase();
-      if (tradeTicket) where.tradeTicket = parseInt(tradeTicket, 10);
+      if (tradeTicket) where.tradeTicket = tradeTicket;
 
       const adjustments = await (this.prisma as any).stopAdjustment.findMany({
         where, orderBy: { adjustedAt: 'desc' }, take,

@@ -36,6 +36,13 @@ export interface BrokerPosition {
   tp: number | null;
   comment: string;
   openedAt: Date;
+  accountId?: string | null;
+}
+
+export interface PositionSyncOptions {
+  /** True only when the broker positively returned a complete snapshot. */
+  authoritative?: boolean;
+  accountId?: string | null;
 }
 
 @Injectable()
@@ -57,52 +64,75 @@ export class PositionSyncService {
   async syncPositions(
     provider: string,
     positions: BrokerPosition[],
+    options: PositionSyncOptions = {},
   ): Promise<{ synced: number; created: number; closed: number }> {
     if (!this.prisma.isAvailable) return { synced: 0, created: 0, closed: 0 };
-    if (!positions.length) {
-      this.logger.debug(`No ${provider} positions to sync`);
-      return { synced: 0, created: 0, closed: 0 };
-    }
+    const authoritative = options.authoritative ?? positions.length > 0;
+    const accountId = options.accountId ?? null;
 
     try {
-      // 1. Upsert incoming positions (idempotent by symbol + provider)
+      // 1. Upsert incoming positions by broker ticket. Symbol-level uniqueness
+      // collapses hedged/pyramided positions and is unsafe across accounts.
       let synced = 0;
       let created = 0;
       for (const pos of positions) {
-        await (this.prisma as any).position.upsert({
-          where: { symbol_provider: { symbol: pos.symbol, provider } },
-          create: {
+        const positionAccountId = pos.accountId ?? accountId;
+        const data = {
             symbol: pos.symbol,
             quantity: pos.quantity,
             avgPrice: pos.avgPrice,
             currentPrice: pos.currentPrice,
             pnl: pos.pnl,
             provider,
+            accountId: positionAccountId,
             brokerTicket: pos.brokerTicket || null,
             side: pos.side || null,
             openedAt: pos.openedAt,
             lastQuotedAt: new Date(),
-          },
-          update: {
+        };
+        const update = {
             quantity: pos.quantity,
             avgPrice: pos.avgPrice,
             currentPrice: pos.currentPrice,
             pnl: pos.pnl,
             brokerTicket: pos.brokerTicket || null,
             side: pos.side || null,
+            accountId: positionAccountId,
             lastQuotedAt: new Date(),
-          },
-        });
+        };
+        if (pos.brokerTicket) {
+          await (this.prisma as any).position.upsert({
+            where: { provider_brokerTicket: { provider, brokerTicket: pos.brokerTicket } },
+            create: data,
+            update,
+          });
+        } else {
+          const existing = await (this.prisma as any).position.findFirst({
+            where: { provider, accountId: positionAccountId, symbol: pos.symbol, brokerTicket: null },
+          });
+          if (existing) {
+            await (this.prisma as any).position.update({ where: { id: existing.id }, data: update });
+          } else {
+            await (this.prisma as any).position.create({ data });
+          }
+        }
         synced++;
 
         // 2. Link to — or CREATE — the Trade record for this position.
         created += await this.reconcileTrade(provider, pos);
       }
 
-      // 3. Detect closed positions (in DB but not in latest fetch)
+      // 3. Detect closed positions only from a complete broker snapshot. Empty
+      // arrays caused by outages must never liquidate the local projection.
+      if (!authoritative) {
+        this.logger.warn(`[${provider}] Non-authoritative position snapshot — closure detection skipped`);
+        return { synced, created, closed: 0 };
+      }
       const incomingTickets = positions.map(p => p.brokerTicket).filter(Boolean);
       const incomingSymbols = positions.map(p => p.symbol);
-      const dbPositions = await (this.prisma as any).position.findMany({ where: { provider } });
+      const dbPositions = await (this.prisma as any).position.findMany({
+        where: accountId ? { provider, accountId } : { provider },
+      });
       let closed = 0;
       for (const dbPos of dbPositions) {
         const stillOpen = dbPos.brokerTicket
@@ -153,7 +183,7 @@ export class PositionSyncService {
 
     // 2b. Fallback — match by symbol+provider+side (legacy rows with no ticket).
     const bySymbol: any = await this.prisma.trade
-      .findFirst({ where: { ...openWhere, symbol: pos.symbol, side }, orderBy: { openedAt: 'desc' } })
+      .findFirst({ where: { ...openWhere, symbol: pos.symbol, side, brokerTicket: null }, orderBy: { openedAt: 'desc' } })
       .catch(() => null);
     if (bySymbol) {
       await this.prisma.trade.update({
@@ -223,7 +253,7 @@ export class PositionSyncService {
     }
     if (!trade) {
       trade = await this.prisma.trade
-        .findFirst({ where: { ...where, symbol: dbPos.symbol }, orderBy: { openedAt: 'desc' } })
+        .findFirst({ where: { ...where, symbol: dbPos.symbol, brokerTicket: null }, orderBy: { openedAt: 'desc' } })
         .catch(() => null);
     }
 
@@ -235,12 +265,24 @@ export class PositionSyncService {
       const adapter: any = this.adapterFactory?.create(provider);
       if (adapter?.getDeals && dbPos.openedAt) {
         const deals = await adapter.getDeals(new Date(dbPos.openedAt));
-        const deal = deals
-          .filter((d: any) => d.symbol === dbPos.symbol)
-          .sort((a: any, b: any) => b.time.getTime() - a.time.getTime())[0];
-        if (deal) {
-          exitPrice = deal.price;
-          realizedPnl = deal.profit;
+        const byPosition = deals.filter((d: any) =>
+          dbPos.brokerTicket && d.positionId === dbPos.brokerTicket,
+        );
+        // Legacy brokers may not expose a position id. Symbol fallback is safe
+        // only when it identifies a single lifecycle in the returned history.
+        const symbolDeals = deals.filter((d: any) => d.symbol === dbPos.symbol);
+        const candidates = byPosition.length > 0
+          ? byPosition
+          : dbPos.brokerTicket ? [] : symbolDeals;
+        const closingSide = dbPos.side === 'sell' ? 'buy' : 'sell';
+        const exitDeals = candidates.filter((d: any) => d.side === closingSide);
+        if (exitDeals.length > 0) {
+          const filledVolume = exitDeals.reduce((sum: number, d: any) => sum + Number(d.volume || 0), 0);
+          exitPrice = filledVolume > 0
+            ? exitDeals.reduce((sum: number, d: any) => sum + Number(d.price || 0) * Number(d.volume || 0), 0) / filledVolume
+            : Number(exitDeals[exitDeals.length - 1].price || 0);
+          realizedPnl = exitDeals.reduce((sum: number, d: any) =>
+            sum + Number(d.profit || 0) + Number(d.commission || 0) + Number(d.swap || 0) + Number(d.fee || 0), 0);
         }
       }
     } catch (err) {
@@ -256,7 +298,7 @@ export class PositionSyncService {
           pnl: realizedPnl ?? trade.pnl ?? null,
           closedAt: new Date(),
         },
-      }).catch(() => {});
+      });
 
       const pnlStr = realizedPnl != null ? ` PnL=${realizedPnl.toFixed(2)}` : '';
       this.logger.log(`[${provider}] Closed trade ${trade.id} (${trade.symbol}) exit=${exitPrice}${pnlStr}`);
@@ -270,7 +312,7 @@ export class PositionSyncService {
       }).catch(() => {});
     }
 
-    await (this.prisma as any).position.delete({ where: { id: dbPos.id } }).catch(() => {});
+    await (this.prisma as any).position.delete({ where: { id: dbPos.id } });
     return 1;
   }
 

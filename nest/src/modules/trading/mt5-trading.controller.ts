@@ -11,6 +11,7 @@ class OrderDto {
   @IsOptional() @IsNumber() tp?: number;
   @IsOptional() @IsString() comment?: string;
   @IsOptional() @IsIn(['user', 'agent', 'strategy', 'system']) origin?: string;
+  @IsOptional() @IsString() clientOrderId?: string;
 }
 class PartialDto { @IsNumber() @Min(0.001) volume!: number; }
 class ModifyDto { @IsOptional() @IsNumber() sl?: number; @IsOptional() @IsNumber() tp?: number; }

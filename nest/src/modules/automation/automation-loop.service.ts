@@ -158,6 +158,8 @@ export interface PendingAction {
   side: string;
   quantity: number;
   composite: number;
+  slPct?: number;
+  tpPct?: number;
   createdAt: string;
   expiresAt: string;
   evaluationId?: string;
@@ -233,6 +235,8 @@ export class AutomationLoopService implements OnModuleInit {
   /** #714 Stage 3 — bot pacing: last queue-driven trade per strategy + globally. */
   private lastBotTradeAt = new Map<string, number>();
   private lastBotTradeAnyAt = 0;
+  /** Prevent overlapping interval/manual ticks from racing through pre-trade gates. */
+  private tickInProgress = false;
 
   /** Get watchlist symbols — DB-first with case-insensitive matching + JSON fallback. */
   private async getWatchlistSymbols(name: string): Promise<string[] | null> {
@@ -296,9 +300,10 @@ export class AutomationLoopService implements OnModuleInit {
     entryPrice: number;
     mode: string;
     protocolId: string | null;
+    executionId?: string;
     decisions: TickDecision[];
   }): Promise<void> {
-    const { strategyId, strategyName, symbol, brokerId, side, composite, baseSize, slPct, tpPct, entryPrice, mode, protocolId, decisions } = params;
+    const { strategyId, strategyName, symbol, brokerId, side, composite, baseSize, slPct, tpPct, entryPrice, mode, protocolId, executionId, decisions } = params;
 
     // #615 mandate: Trading layer OFF → signals still generated, never dispatched.
     if (!this.state.tradingEnabled) {
@@ -344,12 +349,14 @@ export class AutomationLoopService implements OnModuleInit {
 
     if (mode === 'semi-auto') {
       const aid = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
-      this.state.pendingActions.push({
+      const action: PendingAction = {
         id: aid, strategyId, symbol, brokerId,
-        side, quantity: baseSize, composite,
+        side, quantity: baseSize, composite, slPct, tpPct,
         createdAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + 5*60000).toISOString(),
-      });
+      };
+      this.state.pendingActions.push(action);
+      await this.persistPendingAction(action);
       decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'QUEUED', reason: 'Awaiting confirmation', composite, signal: side, actionId: aid });
       return;
     }
@@ -361,6 +368,7 @@ export class AutomationLoopService implements OnModuleInit {
       // Name only — the sanitizer strips '|'/'%', so "| composite%" polluted
       // the strategy name parsed back on close (see mt5-comment.util.ts).
       comment: `TCS ${strategyName}`,
+      clientOrderId: executionId,
     });
     this.auditLog.logOrderResult(this.state.tickCount, strategyId, symbol,
       result.success, result.ticket as number|undefined,
@@ -375,7 +383,7 @@ export class AutomationLoopService implements OnModuleInit {
           provider: brokerId, status: 'open', origin: 'strategy',
           source: 'meta-stack',
           scoringStrategyId: strategyId,
-          ticket: result.ticket as number | undefined,
+          brokerTicket: result.ticket != null ? String(result.ticket) : undefined,
           sl, tp,
           brokerComment: `TCS ${strategyName}`,
         } as any);
@@ -599,7 +607,8 @@ export class AutomationLoopService implements OnModuleInit {
         data: {
           id: action.id, strategyId: action.strategyId, symbol: action.symbol,
           brokerId: action.brokerId, side: action.side, quantity: action.quantity,
-          composite: action.composite, createdAt: new Date(action.createdAt),
+          composite: action.composite, slPct: action.slPct, tpPct: action.tpPct,
+          createdAt: new Date(action.createdAt),
           expiresAt: new Date(action.expiresAt), status: 'pending',
         },
       });
@@ -629,7 +638,8 @@ export class AutomationLoopService implements OnModuleInit {
         this.state.pendingActions.push({
           id: r.id, strategyId: r.strategyId, symbol: r.symbol,
           brokerId: r.brokerId, side: r.side, quantity: r.quantity,
-          composite: r.composite, createdAt: r.createdAt.toISOString(),
+          composite: r.composite, slPct: r.slPct ?? undefined, tpPct: r.tpPct ?? undefined,
+          createdAt: r.createdAt.toISOString(),
           expiresAt: r.expiresAt.toISOString(),
         });
       }
@@ -799,6 +809,11 @@ export class AutomationLoopService implements OnModuleInit {
   // ── Core Tick ────────────────────────────────────────
 
   async tick(): Promise<TickDecision[]> {
+    if (this.tickInProgress) {
+      this.logger.warn('Automation tick skipped — previous tick is still running');
+      return [];
+    }
+    this.tickInProgress = true;
     const tickStart = Date.now();
     this.state.tickCount++;
     this.state.lastTickAt = new Date().toISOString();
@@ -812,6 +827,7 @@ export class AutomationLoopService implements OnModuleInit {
     if (!this.state.protocolsEnabled) {
       this.auditLog.logSkip(this.state.tickCount, 'protocols-layer', '—', 'Protocols layer disabled — scoring skipped');
       this.logger.log(`Tick #${this.state.tickCount} skipped — protocols layer disabled`);
+      this.tickInProgress = false;
       return decisions;
     }
 
@@ -872,11 +888,20 @@ export class AutomationLoopService implements OnModuleInit {
         if (!adapter?.supportsBrokerage || !adapter.getPositions) continue;
 
         try {
-          const positions = await adapter.getPositions();
+          const snapshot = adapter.getPositionSnapshot
+            ? await adapter.getPositionSnapshot()
+            : { positions: await adapter.getPositions(), authoritative: false };
+          const positions = snapshot.positions;
           this.logger.log(`  ${brokerId}: ${positions.length} positions`);
           allPositions.push(...positions);
 
           // Sync positions → DB (two-way data flow #470, broker-agnostic)
+          let accountId = positions.find((p: any) => p.accountId)?.accountId as string | undefined;
+          if (adapter.getAccount) {
+            const account = await adapter.getAccount().catch(() => null);
+            accountId = accountId ?? account?.accountId;
+          }
+          const authoritative = snapshot.authoritative || positions.length > 0;
           const normalised = positions.map((p: any) => ({
             symbol: p.symbol,
             brokerTicket: String(p.brokerTicket ?? p.ticket ?? p.id ?? ''),
@@ -889,9 +914,9 @@ export class AutomationLoopService implements OnModuleInit {
             tp: p.tp ?? null,
             comment: p.comment ?? '',
             openedAt: p.openedAt ? new Date(p.openedAt) : new Date(),
+            accountId: p.accountId ?? accountId ?? null,
           }));
-          this.positionSync.syncPositions(brokerId, normalised).catch(err =>
-            this.logger.warn(`Position sync [${brokerId}] failed: ${(err as Error).message}`));
+          await this.positionSync.syncPositions(brokerId, normalised, { authoritative, accountId });
         } catch (err) {
           this.logger.warn(`  ${brokerId}: failed to fetch positions — ${(err as Error).message}`);
         }
@@ -1113,6 +1138,7 @@ export class AutomationLoopService implements OnModuleInit {
     this.auditLog.flush().catch(() => {});
 
     this.logger.log(`Tick #${this.state.tickCount} completed in ${this.state.lastTickMs}ms — ${decisions.length} decisions`);
+    this.tickInProgress = false;
     return decisions;
   }
 
@@ -1376,6 +1402,7 @@ export class AutomationLoopService implements OnModuleInit {
           entryPrice,
           mode: strategy.mode,
           protocolId: head.protocolId,
+          executionId: `queue-${head.id}`,
           decisions,
         });
         const last = decisions.length > before ? decisions[decisions.length - 1] : null;
@@ -1449,8 +1476,8 @@ export class AutomationLoopService implements OnModuleInit {
 
     // NOTE (2026-08-27): confirm no longer resolves SL/TP from scoring
     // strategies — safe defaults here, loop dispatch carries exact values.
-    const slPct = 1.0;
-    const tpPct = 1.0;
+    const slPct = action.slPct ?? 1.0;
+    const tpPct = action.tpPct ?? 1.0;
     const sl = entryPrice > 0
       ? action.side === 'BUY' ? entryPrice * (1 - slPct / 100) : entryPrice * (1 + slPct / 100)
       : 0;
@@ -1465,6 +1492,7 @@ export class AutomationLoopService implements OnModuleInit {
       sl,
       tp,
       comment: `TCS ${action.strategyId}`,
+      clientOrderId: `confirm-${action.id}`,
     });
 
     // Action is consumed regardless of outcome (avoids stale confirm buttons)
@@ -1492,7 +1520,7 @@ export class AutomationLoopService implements OnModuleInit {
         origin: 'strategy',
         source: 'meta-stack',
         scoringStrategyId: action.strategyId,
-        ticket: result.ticket as number | undefined,
+        brokerTicket: result.ticket != null ? String(result.ticket) : undefined,
         sl,
         tp,
       } as any);
