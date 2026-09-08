@@ -12,7 +12,7 @@
  *
  * Architecture:
  *   1. Score symbol through each protocol via ProtocolGatingService
- *   2. Classify each result as bullish (≥65), bearish (<35), or neutral
+ *   2. Reuse the canonical protocol signal and normalized signal percentage
  *   3. Compute weighted consensus (weights by confidence + protocol weight)
  *   4. Identify dissenting protocols (conflict detection)
  */
@@ -102,17 +102,20 @@ export class ProtocolConsensusService {
           protocolId,
         );
 
-        if (result && result.composite != null) {
+        if (result && result.signalPct != null) {
+          // 2026-09-08: never reclassify result.composite here. It is a raw
+          // protocol-specific score, and doing so previously made high-scoring
+          // SHORT_ONLY results vote bullish.
           const signal: 'bullish' | 'bearish' | 'neutral' =
-            result.composite >= 65 ? 'bullish' :
-            result.composite < 35 ? 'bearish' : 'neutral';
+            result.signal === 'BUY' || result.signal === 'STRONG_BUY' ? 'bullish' :
+            result.signal === 'SELL' || result.signal === 'STRONG_SELL' ? 'bearish' : 'neutral';
 
           const config = await this.protocolDb.findBySlug(protocolId);
           votes.push({
             protocolId,
             protocolName: config?.name || protocolId,
             tradingStyle: config?.tradingStyle,
-            score: result.composite,
+            score: result.signalPct,
             signal,
             confidence: (result as any).confidence ?? 0.5,
             riskMultiplier: (result as any).riskMultiplier ?? 1.0,

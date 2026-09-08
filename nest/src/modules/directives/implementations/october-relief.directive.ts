@@ -20,7 +20,7 @@ export class OctoberReliefDirective implements IDirective {
   readonly directionBias = 'bullish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
-    const now = new Date();
+    const now = input.asOf ?? new Date();
     const month = now.getMonth(); // 9=Oct
     const day = now.getDate();
 

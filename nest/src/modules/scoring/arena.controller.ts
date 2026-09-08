@@ -199,8 +199,8 @@ export class ArenaController {
           for (const pid of strat._validProtocols) {
             try {
               const gated = await this.protocolGating.scoreWithGating(sym.ticker, marketBars, pid);
-              if (gated.composite > bestScore && !gated.riskGate?.hardGateTriggered) {
-                bestScore = gated.composite;
+              if (gated.signalPct > bestScore && !gated.riskGate?.hardGateTriggered) {
+                bestScore = gated.signalPct;
                 bestSignal = gated.signal;
               }
             } catch { /* protocol may not apply to this symbol */ }
@@ -383,7 +383,7 @@ export class ArenaController {
             protocolId,
             name: reg.name,
             description: reg.description,
-            score: gated.composite,
+            score: gated.signalPct,
             signal: gated.signal,
             rawComposite,
             rawMax,

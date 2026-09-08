@@ -60,6 +60,8 @@ import { WeekendDefenseService } from '../trading/weekend-defense.service';
 import { SymbolResolverService } from '../symbols/symbol-resolver.service';
 import { SignalEnvelopeService } from '../signals/signal-envelope.service';
 import { StopGuardianService } from './stop-guardian.service';
+import { ExecutionFeasibilityService } from '../trading/execution-feasibility.service';
+import { computeMarketStatus } from '../directives/market-status';
 
 /**
  * Layer 2 of the 3-layer threshold architecture.
@@ -340,14 +342,33 @@ export class AutomationLoopService implements OnModuleInit {
       return;
     }
 
-    // Global diversification check
-    const divCheck = await this.diversification.checkPreTrade(symbol, brokerId);
-    if (divCheck.blocked) {
-      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'BLOCKED', reason: `Diversification: ${divCheck.reason}`, composite, signal: side });
+    // Portfolio-wide risk authority (merged from CodeRabbit 416f794 / MST-006).
+    // Kept alongside the per-symbol duplicate/scale-in policy above: one guards
+    // position building, the other guards aggregate account risk.
+    const accountRisk = await this.strategyService.assessGlobalRiskLimits(baseSize);
+    if (!accountRisk.allowed) {
+      this.auditLog.logBlocked(this.state.tickCount, strategyId, symbol, accountRisk.reason);
+      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'BLOCKED', reason: accountRisk.reason, composite, signal: side });
       return;
     }
-    if (divCheck.severity === 'warn') {
-      this.logger.warn(`Diversification: ${divCheck.reason}`);
+
+    // Authoritative feasibility re-check immediately before broker dispatch.
+    // Generation annotations are advisory because positions/market state may
+    // change while a queue entry waits (2026-09-08).
+    const dbSymbol = await this.prisma.symbol.findFirst({ where: { ticker: symbol } });
+    const freshBars = dbSymbol ? await this.marketData.getBars(dbSymbol.id, '5m', 20) : [];
+    const feasibility = await this.feasibility.assess({
+      symbol,
+      side,
+      brokerId,
+      protocolId,
+      marketStatus: computeMarketStatus(freshBars),
+    });
+    if (!feasibility.feasible) {
+      const reason = feasibility.blockers.map(blocker => blocker.message).join('; ');
+      this.auditLog.logBlocked(this.state.tickCount, strategyId, symbol, reason);
+      decisions.push({ timestamp: new Date().toISOString(), strategyId, symbol, brokerId, decision: 'BLOCKED', reason, composite, signal: side });
+      return;
     }
 
     if (!broker?.placeOrder) return;
@@ -464,6 +485,7 @@ export class AutomationLoopService implements OnModuleInit {
     private readonly abTestService: AbTestService,
     private readonly signalEnvelope: SignalEnvelopeService,
     private readonly stopGuardian: StopGuardianService,
+    private readonly feasibility: ExecutionFeasibilityService,
   ) {
     this.initBrokerStates();
   }
@@ -1283,8 +1305,8 @@ export class AutomationLoopService implements OnModuleInit {
 
       const pendingRows: any[] = await (this.prisma as any).$queryRawUnsafe(
         `SELECT q.id, q.strategyId, q.symbol, q.protocolId, q.direction, q.\`signal\`,
-                CAST(q.compositePct AS SIGNED) AS compositePct,
-                CAST(q.combinedStrength AS SIGNED) AS combinedStrength,
+                CAST(q.compositePct AS DECIMAL(10,4)) AS compositePct,
+                CAST(q.combinedStrength AS DECIMAL(10,4)) AS combinedStrength,
                 q.scoreId, q.createdAt
          FROM strategy_signal_queue q
          JOIN trading_strategy ts ON ts.id = q.strategyId
@@ -1325,6 +1347,17 @@ export class AutomationLoopService implements OnModuleInit {
         // for logs/display only.
         const gatePct = Number(head.compositePct ?? 0);
         const side: 'BUY' | 'SELL' = head.direction === 'SHORT' ? 'SELL' : 'BUY';
+
+        if (!head.scoreId || !Number.isFinite(gatePct) || gatePct < 0 || gatePct > 100) {
+          decisions.push({
+            timestamp: new Date().toISOString(),
+            strategyId: strategy.id, symbol, brokerId: strategy.brokerId || 'mt5',
+            decision: 'BLOCKED',
+            reason: '[QueueBot] invalid score lineage or percentage unit',
+            composite: 0, signal: side,
+          });
+          continue;
+        }
 
         // Gate 2 — auto bots only; manual/semi-auto stay for the UI buttons.
         if (strategy.mode !== 'auto') continue;
@@ -1473,6 +1506,26 @@ export class AutomationLoopService implements OnModuleInit {
     const broker = this.adapterFactory.create(action.brokerId || 'mt5');
     if (!broker || !broker.placeOrder) {
       return { confirmed: false, message: `Broker ${action.brokerId || 'mt5'} does not support orders` };
+    }
+
+    const accountRisk = await this.strategyService.assessGlobalRiskLimits(action.quantity);
+    if (!accountRisk.allowed) {
+      return { confirmed: false, message: `Action blocked: ${accountRisk.reason}` };
+    }
+
+    const dbSymbol = await this.prisma.symbol.findFirst({ where: { ticker: action.symbol } });
+    const freshBars = dbSymbol ? await this.marketData.getBars(dbSymbol.id, '5m', 20) : [];
+    const feasibility = await this.feasibility.assess({
+      symbol: action.symbol,
+      side: action.side as 'BUY' | 'SELL',
+      brokerId: action.brokerId || 'mt5',
+      marketStatus: computeMarketStatus(freshBars),
+    });
+    if (!feasibility.feasible) {
+      return {
+        confirmed: false,
+        message: `Action blocked: ${feasibility.blockers.map(blocker => blocker.message).join('; ')}`,
+      };
     }
 
     // Current price for SL/TP bracket — market order without bracket if unavailable

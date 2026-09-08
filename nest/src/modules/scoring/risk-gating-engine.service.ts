@@ -46,6 +46,11 @@ export class RiskGatingEngine {
 
     for (const directive of riskDirectives) {
       const rule = this.classifyRule(directive);
+      // Track every classified rule before the control-flow branches below.
+      // The former placement was unreachable because every branch continued or
+      // broke, leaving riskScore permanently at its neutral default.
+      totalRiskWeight += rule.weight;
+      weightedRiskSum += rule.severity * rule.weight;
 
       if (rule.tier === 'hard_gate' && rule.severity >= 0.8) {
         // HARD GATE: trade is structurally unsafe — veto
@@ -120,16 +125,13 @@ export class RiskGatingEngine {
         continue;
       }
 
-      // Track risk contribution for aggregate risk score
-      totalRiskWeight++;
-      weightedRiskSum += rule.severity;
     }
 
     // Safety floor ONLY — prevents runaway compounding producing zero/negative
     // scores. No 0.5 cap: multiple moderate risks SHOULD compound (e.g. high
     // correlation + high volatility + near rollover) and drive the score toward
     // the threshold that blocks the trade. Hard gates still veto fully above this.
-    cumulativeMultiplier = Math.max(0.05, cumulativeMultiplier);
+    cumulativeMultiplier = hardGateTriggered ? 0 : Math.max(0.05, cumulativeMultiplier);
 
     // Compute aggregate risk score (0-100, inverted: 0 = safe, 100 = extreme risk)
     const riskScore = totalRiskWeight > 0
@@ -152,7 +154,9 @@ export class RiskGatingEngine {
    */
   private classifyRule(directive: RiskDirectiveResult): ClassifiedRule {
     // Normalized score 0-1 (lower = worse for risk directives)
-    const normalizedScore = Math.max(0, Math.min(1, directive.score / directive.maxScore));
+    const normalizedScore = directive.maxScore > 0
+      ? Math.max(0, Math.min(1, directive.score / directive.maxScore))
+      : 0;
     const severity = 1 - normalizedScore; // High severity = low score = dangerous
 
     // ── Rule classification by directive type ──

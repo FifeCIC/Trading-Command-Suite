@@ -43,9 +43,9 @@
  *     volume magnitude, squeeze/coiling) adds raw points to a directional
  *     composite. Symptom: score rises regardless of whether the bar went up or
  *     down. Neutral conditions should be gates/multipliers, not additive points.
- *  5. signalClass semantics — the emitted class contradicts `directionBias`.
- *     Symptom: a `directionBias: 'neutral'` directive emitting 'bullish'/'bearish',
- *     or a bullish-only directive emitting 'bearish' for "no signal".
+ *  5. signalClass semantics — a one-sided declared bias emits the opposite.
+ *     A `neutral` directionBias is valid for a dynamic two-sided directive;
+ *     it requires mirror tests proving bullish/bearish input symmetry.
  *  6. Data-layer defect — wrong/naive timestamps or a field that is read but
  *     never written. Symptom: session/time windows shifted, or `input.x` with
  *     no matching producer.
@@ -66,6 +66,8 @@ export interface MarketBar {
 export interface DirectiveInput {
   symbol: string;
   bars: MarketBar[]; // Price candles ordered oldest → newest
+  /** Evaluation clock. Replays/backtests must set this to the historical as-of time. */
+  asOf?: Date;
   /** Higher-timeframe bars for multi-timeframe directives. Optional — most directives ignore these. */
   dayBars?: MarketBar[];
   hourBars?: MarketBar[];

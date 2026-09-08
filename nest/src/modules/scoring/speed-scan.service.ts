@@ -263,7 +263,7 @@ export class SpeedScanService {
           protocolActive,
           composite: Number(seasonAdjustedComposite.toFixed(1)),
           signal: score.signal,
-          gated: score.gatingActive && score.composite < 50,
+          gated: score.gatingActive && score.signalPct < 50,
           riskMultiplier: score.riskMultiplier,
           subScores: {
             technical: score.subScores?.technical ?? 50,

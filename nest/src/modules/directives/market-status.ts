@@ -19,7 +19,7 @@ export interface MarketStatus {
   reason?: string;
 }
 
-export function computeMarketStatus(bars: MarketBar[]): MarketStatus {
+export function computeMarketStatus(bars: MarketBar[], referenceTime = new Date()): MarketStatus {
   if (!bars || bars.length < 2) {
     const asOf = bars && bars.length > 0 ? bars[bars.length - 1].timestamp.toISOString() : null;
     return { open: false, asOf, reason: 'insufficient bars' };
@@ -57,7 +57,7 @@ export function computeMarketStatus(bars: MarketBar[]): MarketStatus {
   }
 
   const lastRealBar = bars[idx];
-  const ageMs = Date.now() - lastRealBar.timestamp.getTime();
+  const ageMs = referenceTime.getTime() - lastRealBar.timestamp.getTime();
   const asOf = lastRealBar.timestamp.toISOString();
 
   if (medianInterval > 0 && ageMs > medianInterval * 3) {

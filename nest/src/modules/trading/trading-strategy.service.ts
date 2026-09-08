@@ -632,7 +632,7 @@ export class TradingStrategyService {
     const tpPct = (strategy.tpPct ?? 1.0) / 100;
 
     // ── Pre-Flight Safety Gates (Issue #28) ──────────────
-    const safetyCheck = await this.runSafetyGates(strategy, size);
+    const safetyCheck = await this.assessGlobalRiskLimits(size);
     if (!safetyCheck.allowed) {
       return { executed: false, reason: safetyCheck.reason };
     }
@@ -739,8 +739,7 @@ export class TradingStrategyService {
    * Pre-flight safety gates before any MT5 order.
    * Checks env-driven risk limits + RiskService portfolio gates.
    */
-  private async runSafetyGates(
-    strategy: any,
+  async assessGlobalRiskLimits(
     size: number,
   ): Promise<{ allowed: boolean; reason: string }> {
     // ── 1. MT5_MAX_POSITION_SIZE ──

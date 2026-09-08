@@ -20,7 +20,7 @@ export class FridayDriftDirective implements IDirective {
   readonly directionBias = 'bullish' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
-    const now = new Date();
+    const now = input.asOf ?? new Date();
     const dayOfWeek = now.getUTCDay(); // 5=Fri
 
     const isFriday = dayOfWeek === 5;

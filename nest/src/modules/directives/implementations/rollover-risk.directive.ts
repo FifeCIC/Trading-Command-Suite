@@ -44,8 +44,9 @@ export class RolloverRiskDirective implements IDirective {
     preferredSessions: ['US', 'London', 'Asian', 'off-hours'] as const,
   };
 
-  calculate(_input: DirectiveInput): DirectiveResult {
-    const now = new Date();
+  calculate(input: DirectiveInput): DirectiveResult {
+    // Evaluation time is explicit so historical replay is deterministic.
+    const now = input.asOf ?? new Date();
     const hour = now.getUTCHours();
     const minute = now.getUTCMinutes();
     const day = now.getUTCDay();

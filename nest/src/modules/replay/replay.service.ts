@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { DirectivesService } from '../directives/directives.service';
-import { ScoringService } from '../scoring/scoring.service';
+import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 import { resolveMt5BridgeUrl } from '../providers/mt5/mt5-bridge.config';
 
 export interface ReplayConfig {
@@ -100,8 +99,7 @@ export class ReplayService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly directivesService: DirectivesService,
-    private readonly scoringService: ScoringService,
+    private readonly protocolGating: ProtocolGatingService,
   ) {}
 
   /** Load bars for a symbol within a date range */
@@ -207,6 +205,9 @@ export class ReplayService {
       config;
     const fromDate = new Date(from);
     const toDate = new Date(to);
+    if (!protocolIds?.length) {
+      throw new Error('Replay requires at least one protocolId for canonical META.Stack scoring.');
+    }
 
     // Load bars
     const bars = await this.loadBars(symbol, timeframe, fromDate, toDate);
@@ -252,115 +253,66 @@ export class ReplayService {
     let holdCount = 0;
     let totalDirectivesRun = 0;
 
-    // Load all registered directives once
-    const allDirectives = this.directivesService.list() || [];
-
-    // Step through bars (sliding window)
+    // Step through bars using the canonical protocol evaluator (2026-09-08).
     for (let i = windowSize - 1; i < bars.length; i++) {
       const currentBar = bars[i];
       const windowBars = bars.slice(Math.max(0, i - windowSize + 1), i + 1);
-
-      // Run directives against this window
-      const input = { symbol, bars: windowBars };
-      const directiveResults = await this.directivesService.runAll(input);
-
-      // Compute composite score from directive results
-      let rawSum = 0;
-      let totalMax = 0;
-      let activeCount = 0;
-
-      const breakdown = Array.from(directiveResults.entries()).map(
-        ([id, result]) => {
-          const meta = allDirectives.find((d) => d.id === id);
-          if (result.score > 0) activeCount++;
-          rawSum += result.score;
-          totalMax += meta?.maxScore || 100;
-          return {
-            name: meta?.name || id,
-            score: result.score,
-            maxScore: meta?.maxScore || 100,
-            signalClass: result.signalClass || 'neutral',
-            reason: result.reason || '',
-          };
-        },
+      const gatedResults = await Promise.all(
+        protocolIds.map(protocolId =>
+          this.protocolGating.scoreWithGating(symbol, windowBars, protocolId),
+        ),
       );
+      const selected = gatedResults.reduce((best, current) =>
+        current.signalPct > best.signalPct ? current : best,
+      );
+      const normalizedScore = selected.signalPct;
+      const signal = selected.signal;
+      const breakdown = Object.values(selected.breakouts).flat().map(d => ({
+        name: d.name,
+        score: d.score,
+        maxScore: d.maxScore,
+        signalClass: d.signalClass,
+        reason: d.reason,
+      }));
+      const activeCount = breakdown.filter(d => d.score > 0).length;
 
-      const normalizedScore =
-        totalMax > 0 ? Math.round((rawSum / totalMax) * 100) : 0;
-
-      // Determine signal using configurable thresholds or dynamic percentiles
-      let signal = 'HOLD';
-      const buyThresh = config.buyThreshold ?? 30;
-      const sellThresh = config.sellThreshold ?? 15;
-      if (normalizedScore >= buyThresh) signal = 'BUY';
-      else if (normalizedScore <= sellThresh) signal = 'SELL';
-
-      // Count signals (will be recalculated if relativeScoring)
-      if (signal === 'BUY') buyCount++;
-      else if (signal === 'SELL') sellCount++;
-      else holdCount++;
-
-      // Count signals
-      if (signal === 'BUY') buyCount++;
-      else if (signal === 'SELL') sellCount++;
+      if (signal === 'BUY' || signal === 'STRONG_BUY') buyCount++;
+      else if (signal === 'SELL' || signal === 'STRONG_SELL') sellCount++;
       else holdCount++;
 
       totalComposite += normalizedScore;
       maxComposite = Math.max(maxComposite, normalizedScore);
       minComposite = Math.min(minComposite, normalizedScore);
-      totalDirectivesRun += allDirectives.length;
+      totalDirectivesRun += selected.meta.directiveCount;
 
-      // Run protocol evaluation if requested
-      let protocolResults: ReplayStep['protocolResults'];
-      if (protocolIds && protocolIds.length > 0) {
-        protocolResults = protocolIds.map((pid) => ({
-          protocolId: pid,
-          composite: normalizedScore,
-          signal,
-          passed: normalizedScore >= 15, // default threshold
-          checks: {
-            scoreOk: { passed: normalizedScore >= 15, required: 15, actual: normalizedScore },
-            directionOk: { passed: true },
-            rarityOk: { passed: true, required: 'none', actual: 'standard' },
-          },
-        }));
-      }
+      const protocolResults: ReplayStep['protocolResults'] = gatedResults.map((result, index) => ({
+        protocolId: protocolIds[index],
+        composite: result.signalPct,
+        signal: result.signal,
+        passed: result.signal !== 'HOLD' && !result.riskGate?.hardGateTriggered,
+        checks: {
+          scoreOk: { passed: result.signal !== 'HOLD', required: 40, actual: result.signalPct },
+          directionOk: { passed: result.meta.directionalEvidence.selected !== 'none' },
+          riskOk: { passed: !result.riskGate?.hardGateTriggered },
+        },
+      }));
 
       steps.push({
         timestamp: currentBar.timestamp,
         bar: currentBar,
-        composite: rawSum,
+        composite: selected.composite,
         signal,
         normalizedScore,
         activeDirectives: activeCount,
-        totalDirectives: allDirectives.length,
-        directiveBreakdown: breakdown.slice(0, 10), // top 10 for brevity
+        totalDirectives: selected.meta.directiveCount,
+        directiveBreakdown: breakdown.slice(0, 10),
         protocolResults,
       });
     }
 
-    // ── Relative scoring (optional) ──────────────────────
-    // Re-rank signals within their own distribution to find true outliers
-    const useRelative = config.relativeScoring !== false; // default true
-    if (useRelative && steps.length > 10) {
-      const scores = steps.map(s => s.normalizedScore);
-      const mean = scores.reduce((a,b) => a+b, 0) / scores.length;
-      const variance = scores.reduce((s,v) => s + (v-mean)**2, 0) / scores.length;
-      const stdDev = Math.sqrt(variance);
-
-      // Reset counters
-      buyCount = 0; sellCount = 0; holdCount = 0;
-
-      for (const step of steps) {
-        // Z-score: how many standard deviations from mean
-        const zScore = stdDev > 0.01 ? (step.normalizedScore - mean) / stdDev : 0;
-
-        // Re-rank: BUY if >0.5σ above mean, SELL if >0.5σ below mean
-        if (zScore > 0.5) { step.signal = 'BUY'; buyCount++; }
-        else if (zScore < -0.5) { step.signal = 'SELL'; sellCount++; }
-        else { step.signal = 'HOLD'; holdCount++; }
-      }
-    }
+    // Relative percentiles may be reported as analytics, but must not replace
+    // canonical protocol actions. The former z-score reclassification was a
+    // second signal trigger and was removed on 2026-09-08.
 
     // ── Forward-return analysis ─────────────────────────
     // Compute what happened AFTER each signal
@@ -384,14 +336,14 @@ export class ReplayService {
       // Signal accuracy: BUY correct if price went up, SELL correct if price went down
       const fwd1 = step.forwardReturn1;
       if (fwd1 !== undefined) {
-        if (step.signal === 'BUY') step.signalCorrect = fwd1 > 0;
-        else if (step.signal === 'SELL') step.signalCorrect = fwd1 < 0;
+        if (step.signal === 'BUY' || step.signal === 'STRONG_BUY') step.signalCorrect = fwd1 > 0;
+        else if (step.signal === 'SELL' || step.signal === 'STRONG_SELL') step.signalCorrect = fwd1 < 0;
       }
     }
 
     // ── Outcome aggregation ─────────────────────────────
-    const buySteps = steps.filter(s => s.signal === 'BUY' && s.forwardReturn1 !== undefined);
-    const sellSteps = steps.filter(s => s.signal === 'SELL' && s.forwardReturn1 !== undefined);
+    const buySteps = steps.filter(s => (s.signal === 'BUY' || s.signal === 'STRONG_BUY') && s.forwardReturn1 !== undefined);
+    const sellSteps = steps.filter(s => (s.signal === 'SELL' || s.signal === 'STRONG_SELL') && s.forwardReturn1 !== undefined);
     const actionableSteps = [...buySteps, ...sellSteps];
 
     const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a,b) => a+b, 0) / arr.length : 0;

@@ -25,7 +25,7 @@ export class ElectionCycleDirective implements IDirective {
   private static readonly CYCLE_LENGTH = 4;
 
   calculate(input: DirectiveInput): DirectiveResult {
-    const now = new Date();
+    const now = input.asOf ?? new Date();
     const year = now.getUTCFullYear();
     const cycleYear = ((year - ElectionCycleDirective.CYCLE_START_YEAR) % ElectionCycleDirective.CYCLE_LENGTH) + 1;
 

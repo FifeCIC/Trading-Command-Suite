@@ -206,7 +206,7 @@ export class SnapshotComparisonService {
           );
           scoring = {
             composite: gated.composite,
-            normalizedScore: gated.composite,
+            normalizedScore: gated.signalPct,
             signal: gated.signal,
             confidence: 0.5,
             directiveCount: gated.meta?.directiveCount ?? 0,

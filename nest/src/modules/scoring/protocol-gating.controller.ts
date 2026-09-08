@@ -390,6 +390,9 @@ export class ProtocolGatingController {
       return {
         symbol: ticker,
         composite: 50,
+        signalRaw: 0,
+        signalMax: 0,
+        signalPct: 0,
         signal: 'HOLD',
         directionMode: 'LONG_ONLY' as const,
         subScores: { technical: 50, sentiment: 50, risk: 50 },
@@ -410,6 +413,11 @@ export class ProtocolGatingController {
           riskDirectiveCount: 0,
           weightStrategy: 'group-weighted' as const,
           readinessBreakdown: { ready: 0, beta: 0, alpha: 0, alphaExcluded: 0 },
+          directionalEvidence: {
+            bullishRaw: 0, bullishMax: 0, bullishPct: 0,
+            bearishRaw: 0, bearishMax: 0, bearishPct: 0,
+            selected: 'none' as const,
+          },
         },
         excludedBreakdown: [],
       };

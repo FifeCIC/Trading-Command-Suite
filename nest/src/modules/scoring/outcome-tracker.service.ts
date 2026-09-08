@@ -120,8 +120,9 @@ export class OutcomeTrackerService {
     const pending = await this.prisma.directiveOutcome.findMany({
       where: {
         outcomeComputedAt: null,
-        // Only compute if at least 15 min have passed
-        predictedAt: { lte: new Date(now.getTime() - 15 * 60 * 1000) },
+        // This schema has one completion marker for all four horizons. Wait for
+        // the final horizon so early runs cannot permanently null T+1h/T+4h/T+24h.
+        predictedAt: { lte: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
       },
       take: 500,
       orderBy: { predictedAt: 'asc' },
@@ -132,12 +133,8 @@ export class OutcomeTrackerService {
         // Look up prices at future timestamps from MarketBar
         const priceT15m = await this.getPriceAt(rec.symbol, rec.timeframe, new Date(rec.predictedAt.getTime() + 15 * 60 * 1000));
         const priceT1h = await this.getPriceAt(rec.symbol, rec.timeframe, new Date(rec.predictedAt.getTime() + 60 * 60 * 1000));
-        const priceT4h = rec.predictedAt.getTime() + 4 * 60 * 60 * 1000 <= now.getTime()
-          ? await this.getPriceAt(rec.symbol, rec.timeframe, new Date(rec.predictedAt.getTime() + 4 * 60 * 60 * 1000))
-          : null;
-        const priceT24h = rec.predictedAt.getTime() + 24 * 60 * 60 * 1000 <= now.getTime()
-          ? await this.getPriceAt(rec.symbol, rec.timeframe, new Date(rec.predictedAt.getTime() + 24 * 60 * 60 * 1000))
-          : null;
+        const priceT4h = await this.getPriceAt(rec.symbol, rec.timeframe, new Date(rec.predictedAt.getTime() + 4 * 60 * 60 * 1000));
+        const priceT24h = await this.getPriceAt(rec.symbol, rec.timeframe, new Date(rec.predictedAt.getTime() + 24 * 60 * 60 * 1000));
 
         // Compute directionCorrect based on T+1h
         let directionCorrect: boolean | null = null;
@@ -171,17 +168,27 @@ export class OutcomeTrackerService {
   }
 
   /**
-   * Get the close price from MarketBar nearest to the target timestamp.
+   * Get the first close at/after the horizon in a bounded freshness window.
+   * `symbol` is a ticker; MarketBar.symbolId is a UUID foreign key.
    */
   private async getPriceAt(symbol: string, timeframe: string, targetTime: Date): Promise<number | null> {
     try {
+      const resolved = await this.prisma.symbol.findFirst({
+        where: { ticker: symbol.toUpperCase() },
+        select: { id: true },
+      });
+      if (!resolved) return null;
+      const toleranceMs = Math.max(15 * 60_000, timeframeToMilliseconds(timeframe) * 2);
       const bar = await this.prisma.marketBar.findFirst({
         where: {
-          symbolId: symbol,
+          symbolId: resolved.id,
           timeframe,
-          timestamp: { lte: targetTime },
+          timestamp: {
+            gte: targetTime,
+            lte: new Date(targetTime.getTime() + toleranceMs),
+          },
         },
-        orderBy: { timestamp: 'desc' },
+        orderBy: { timestamp: 'asc' },
         select: { close: true },
       });
       return bar?.close ?? null;
@@ -277,4 +284,12 @@ export class OutcomeTrackerService {
     }
     return result.count;
   }
+}
+
+function timeframeToMilliseconds(timeframe: string): number {
+  const match = /^(\d+)(m|h|d)$/i.exec(timeframe);
+  if (!match) return 60 * 60_000;
+  const value = Number(match[1]);
+  const unit = match[2].toLowerCase();
+  return value * (unit === 'm' ? 60_000 : unit === 'h' ? 60 * 60_000 : 24 * 60 * 60_000);
 }

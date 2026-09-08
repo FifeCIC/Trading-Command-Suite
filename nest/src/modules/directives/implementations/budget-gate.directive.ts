@@ -1,16 +1,16 @@
 /**
  * Budget Gate
  * ===========
- * Tracks concurrent open signals and blocks new entries when the
- * "signal budget" is exhausted. Prevents over-trading and over-exposure.
+ * Historical candle heuristic retained only for research compatibility.
  *
  * This directive is a GATE — it doesn't produce a directional signal.
  * When the budget is full, it returns score 0 (blocks entry).
  * When budget is available, it passes through with modest score.
  *
- * The budget is tracked externally via the DirectivesService / scoring
- * context. For now, the directive uses an internal signal count heuristic
- * based on recent bar volatility and volume activity.
+ * DECOMMISSIONED 2026-09-08: candles cannot establish account P&L, pending
+ * orders, or position budgets. This directive MUST remain alpha/excluded until
+ * DirectiveInput carries an authoritative account-risk snapshot. Do not mark
+ * it ready by tuning the volatility heuristic below.
  */
 
 import { Injectable } from '@nestjs/common';
@@ -28,14 +28,14 @@ export class BudgetGateDirective implements IDirective {
   readonly id = 'budget-gate';
   readonly name = 'Budget Gate';
   readonly description =
-    'Gates new trade entries when the signal budget is near exhaustion. Prevents over-trading.';
+    'Research-only candle activity heuristic; not an authoritative account budget gate.';
   readonly category = 'structural' as const;
   readonly priority = 90;
   readonly maxScore = 100;
   readonly minScore = 1;
   readonly minBars = { '1d': 20 };
-  readonly version = '1.0.1';
-  readonly readiness = 'ready' as const;
+  readonly version = '1.1.0';
+  readonly readiness = 'alpha' as const;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
@@ -84,6 +84,5 @@ export class BudgetGateDirective implements IDirective {
     };
   }
 }
-
 
 
