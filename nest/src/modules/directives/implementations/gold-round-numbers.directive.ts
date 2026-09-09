@@ -12,9 +12,9 @@
  * Micro levels: every $10  (2610, 2620, 2630...) — weak but tradeable
  *
  * ── Proximity Zones ─────────────────────────────────────
- * Within 0.15% of a major level → strong signal (score ±25 from baseline)
- * Within 0.30% of a minor level → moderate signal (score ±15)
- * Within 0.50% of a micro level → weak signal (score ±8)
+ * Within 0.15% of a major level → strong signal (magnitude 25, direction via signalClass)
+ * Within 0.30% of a minor level → moderate signal (magnitude 15)
+ * Within 0.50% of a micro level → weak signal (magnitude 8)
  *
  * ── Direction Logic ─────────────────────────────────────
  * Price ABOVE a round number → potential support (bullish if bouncing)
@@ -55,10 +55,10 @@ export class GoldRoundNumbersDirective implements IDirective {
     'Gold respects round numbers more consistently than any other asset — ' +
     'market makers and institutional algos cluster orders at these levels.';
   readonly priority = 58;
-  readonly maxScore = 25; // 2026-08-16 Phase B (#638): rebased to 0-centered signed scale — max bullish = 25 major-level shift (was 75 = 50 phantom baseline + 25)
+  readonly maxScore = 25; // 2026-09-09 (#731): magnitude cap — 25 major-level shift (history: #638 rebased 75→25; the 0-centered *signed* intent never matched the engine, which clamps scores to [0, maxScore])
   readonly minScore = 0;
   readonly minBars = { '1d': 2 }; // Only needs current price
-  readonly version = '1.3.0'; // no constant floor — no proximity = 0
+  readonly version = '1.4.0'; // 2026-09-09 (#731): magnitude-only scores — direction travels in signalClass; signed scores were zeroed at the engine boundary
   readonly readiness = 'ready' as const;
   readonly directionBias = 'neutral' as const;
 
@@ -108,13 +108,17 @@ export class GoldRoundNumbersDirective implements IDirective {
     let bestLevel = 0;
     let bestDistPct = Infinity;
 
-    // Check major levels first (strongest signal)
+    // Check major levels first (strongest signal).
+    // 2026-09-09 (#731): score is a MAGNITUDE in [0, maxScore]; direction
+    // travels in signalClass. The previous signed scores (−25/−15/−8) were
+    // clamped to 0 by the engine boundary (sanitizeDirectiveResult), which
+    // destroyed all bearish evidence and logged a warning every tick.
     if (distMajorPct <= MAJOR_ZONE_PCT) {
       bestLevel = nearestMajor;
       bestDistPct = distMajorPct;
       const direction = price > nearestMajor ? 'above (potential support)' : 'below (potential resistance)';
       const bullish = price > nearestMajor;
-      score = bullish ? MAJOR_SCORE_SHIFT : -MAJOR_SCORE_SHIFT;
+      score = MAJOR_SCORE_SHIFT;
       signalClass = bullish ? 'bullish' : 'bearish';
       signals.push(`Major level $${nearestMajor}: price ${direction}, ${(distMajorPct * 100).toFixed(2)}% away`);
     } else if (distMinorPct <= MINOR_ZONE_PCT) {
@@ -122,7 +126,7 @@ export class GoldRoundNumbersDirective implements IDirective {
       bestDistPct = distMinorPct;
       const direction = price > nearestMinor ? 'above (potential support)' : 'below (potential resistance)';
       const bullish = price > nearestMinor;
-      score = bullish ? MINOR_SCORE_SHIFT : -MINOR_SCORE_SHIFT;
+      score = MINOR_SCORE_SHIFT;
       signalClass = bullish ? 'bullish' : 'bearish';
       signals.push(`Minor level $${nearestMinor}: price ${direction}, ${(distMinorPct * 100).toFixed(2)}% away`);
     } else if (distMicroPct <= MICRO_ZONE_PCT) {
@@ -130,7 +134,7 @@ export class GoldRoundNumbersDirective implements IDirective {
       bestDistPct = distMicroPct;
       const direction = price > nearestMicro ? 'above (potential support)' : 'below (potential resistance)';
       const bullish = price > nearestMicro;
-      score = bullish ? MICRO_SCORE_SHIFT : -MICRO_SCORE_SHIFT;
+      score = MICRO_SCORE_SHIFT;
       signalClass = bullish ? 'bullish' : 'bearish';
       signals.push(`Micro level $${nearestMicro}: price ${direction}, ${(distMicroPct * 100).toFixed(2)}% away`);
     } else {
@@ -140,8 +144,8 @@ export class GoldRoundNumbersDirective implements IDirective {
       signals.push(`Between $${nearestMajor - MAJOR_STEP} and $${nearestMajor} (${(distMajorPct * 100).toFixed(1)}% from nearest major)`);
     }
 
-    // Clamp — symmetric around 0, no floor.
-    score = Math.max(-MAJOR_SCORE_SHIFT, Math.min(MAJOR_SCORE_SHIFT, score));
+    // Defensive clamp — magnitude-only: [0, maxScore]. Never negative.
+    score = Math.max(0, Math.min(MAJOR_SCORE_SHIFT, score));
 
     const confidence = bestDistPct < MAJOR_ZONE_PCT ? 0.7 : bestDistPct < MINOR_ZONE_PCT ? 0.55 : bestDistPct < MICRO_ZONE_PCT ? 0.4 : 0.2;
 

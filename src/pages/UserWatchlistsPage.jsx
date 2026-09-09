@@ -5,7 +5,7 @@
  * Inline creation replaces the old standalone CreateWatchlistPage (#301).
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
@@ -85,6 +85,24 @@ export default function UserWatchlistsPage() {
     staleTime: 30_000,
   });
   const isLocked = lockQuery.data?.locked || false;
+
+  // "Colour" view mode (activity colouring). Only 'traded' is shipped now;
+  // heatmap / day-move are roadmap (#741). Reads STORED open positions only —
+  // this page never triggers imports or live scoring. The read is lazy: it
+  // only fires when the user actually picks the Traded view.
+  const [viewMode, setViewMode] = useState('neutral'); // 'neutral' | 'traded'
+  const positionsQuery = useQuery({
+    queryKey: ['symbols-positions'],
+    queryFn: () => apiGet('/api/symbols/positions'),
+    enabled: viewMode === 'traded',
+    staleTime: 60_000,
+  });
+  const posRows = Array.isArray(positionsQuery.data?.positions) ? positionsQuery.data.positions : [];
+  const positionSymbols = useMemo(() => {
+    const set = new Set();
+    posRows.forEach((p) => { if (p?.symbol) set.add(String(p.symbol).toUpperCase()); });
+    return set;
+  }, [posRows]);
 
   // Delete watchlist mutation
   const deleteMutation = useMutation({
@@ -194,14 +212,6 @@ export default function UserWatchlistsPage() {
 
   return (
     <div className="wl-page">
-      <header className="wl-header">
-        <div>
-          <h2>Watchlists</h2>
-          <p className="wl-subtitle">
-            {isLoading ? 'Loading…' : `${watchlists?.length || 0} watchlists · ${totalSymbols} total symbols`}
-          </p>
-        </div>
-      </header>
 
       {isLoading && <p className="wl-loading">Loading…</p>}
 
@@ -232,7 +242,7 @@ export default function UserWatchlistsPage() {
             )}
             {/* Watchlists */}
             <div className="wl-group">
-              <div className="wl-group-label">Watchlists</div>
+              <div className="wl-group-label">{isLoading ? 'Loading…' : `${watchlists?.length || 0} watchlists · ${totalSymbols} total symbols`}</div>
               {watchlists.filter(w => w.kind !== 'built-in').map((wl, i) => renderWatchlistItem(wl, i))}
               {/* Inline "Create New Watchlist" entry */}
               <motion.div
@@ -325,16 +335,25 @@ export default function UserWatchlistsPage() {
                     </span>
                   )}
                 </div>
+                {symbols.length > 0 && (
+                  <div className="wl-viewbar" role="group" aria-label="Colour symbols by activity">
+                    <span className="wl-viewbar-label">Colour</span>
+                    <button type="button" className={`wl-view-btn${viewMode === 'neutral' ? ' wl-view-btn--active' : ''}`} onClick={() => setViewMode('neutral')} title="No colouring">Default</button>
+                    <button type="button" className={`wl-view-btn${viewMode === 'traded' ? ' wl-view-btn--active' : ''}`} onClick={() => setViewMode('traded')} title="Highlight symbols with an open position">Traded</button>
+                  </div>
+                )}
                 <div className="wl-symbols-grid">
                   {symbols.map(s => {
                     const ticker = typeof s === 'string' ? s : (s.ticker || s.symbol || s.name || '');
                     const cleanTicker = ticker.includes('_') ? ticker.split('_')[0] : ticker;
                     const companyName = symbolNameMap[cleanTicker.toUpperCase()] || '';
+                    const traded = viewMode === 'traded' && positionSymbols.has(String(cleanTicker).toUpperCase());
                     return (
                       <div key={ticker || Math.random()} className="wl-symbol-chip-wrap">
                         <a
                           href={`/research/symbol/${cleanTicker}`}
-                          className="wl-symbol-chip"
+                          className={`wl-symbol-chip${viewMode === 'traded' ? (traded ? ' wl-symbol-chip--traded' : ' wl-symbol-chip--flat') : ''}`}
+                          title={traded ? `Open position — ${cleanTicker}` : undefined}
                         >
                           <span className="wl-symbol-ticker">{cleanTicker}</span>
                           {companyName && (

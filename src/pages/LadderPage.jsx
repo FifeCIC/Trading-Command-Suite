@@ -14,7 +14,7 @@
  * @uses buildScoreDisplay() (src/core/score-display.js)
  * @uses SignalBadge         (src/components/SignalBadge.jsx)
  */
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -24,6 +24,8 @@ import { buildScoreDisplay } from '../core/score-display';
 import { useProtocolStatuses } from '../core/protocol-status';
 import { useProtocolData } from '../core/useProtocolData';
 import { usePersistentState, usePersistentChoice } from '../hooks/usePersistentState';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '../core/api/client';
 import { timeAgo } from '../core/format-utils';
 import './ladder.css';
 
@@ -115,7 +117,51 @@ function ScoreBlock({ label, score, max, pct, mode, active }) {
   );
 }
 
+/** Numeric helpers for the opt-in facts strip (#667/#668). */
+function fmtVal(v, d = 2) { return v == null ? '—' : Number(v).toFixed(d); }
+function fmtSigned(v) {
+  if (v == null) return '—';
+  const n = Number(v);
+  return `${n >= 0 ? '+' : ''}${n.toFixed(2)}`;
+}
+
+/**
+ * Opt-in facts strip on a Ladder card (#667/#668, phase-6 preview — shown only
+ * when the ladder's "Details" toggle is on). Company/stock facts come from the
+ * stored symbol registry; our own trading stats come from the stored
+ * open-position map. Renders nothing (graceful) when neither is available.
+ */
+function LadderFacts({ meta, pos }) {
+  const co = meta && meta.name && String(meta.name).trim().toUpperCase() !== String(meta.ticker || '').toUpperCase()
+    ? meta.name
+    : null;
+  const pnl = pos && typeof pos.pnl === 'number' ? pos.pnl : null;
+  const pnlPct = pos && typeof pos.pnlPct === 'number' ? pos.pnlPct : null;
+  if (!co && !pos) return null;
+  return (
+    <div className="lad-facts">
+      {co && (
+        <span className="lad-fact" title={[meta.exchange, meta.type].filter(Boolean).join(' · ') || 'Company'}>
+          {co}
+        </span>
+      )}
+      {pos && (
+        <span
+          className={`lad-fact lad-fact--pos${pnl != null ? (pnl >= 0 ? ' lad-pnl-up' : ' lad-pnl-down') : ''}`}
+          title={`Open position${pos.provider ? ` · ${pos.provider}` : ''}`}
+        >
+          ● {fmtVal(pos.quantity, 2)} @ {fmtVal(pos.avgPrice)} → {fmtVal(pos.currentPrice)}
+          {pnl != null && (
+            <span className="lad-fact-pnl"> · P&L {fmtSigned(pnl)} ({fmtSigned(pnlPct)}%)</span>
+          )}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function LadderPage() {
+  const cardsColRef = useRef(null); // scroll-reveal scope (issue #672)
   const { protocols, runs, isLoading } = useProtocolData();
   const { statusMap } = useProtocolStatuses();
   // Filter / sort selections persist across navigation. Protocol selections are
@@ -169,6 +215,36 @@ export default function LadderPage() {
     }, 250);
     return () => clearInterval(interval);
   }, []);
+
+  // Issue #667/#668 — opt-in "Details": company/stock facts + our own trading
+  // stats on each card. DEFAULT OFF so the production ladder is unchanged
+  // (phase-6 scope; surfaced behind a toggle). Reads are single STORED GETs,
+  // enabled lazily only when the toggle is on — no on-page imports.
+  const [showFacts, setShowFacts] = usePersistentState('ladder:showFacts', false);
+  const posQuery = useQuery({
+    queryKey: ['symbols-positions'],
+    queryFn: () => apiGet('/api/symbols/positions'),
+    enabled: showFacts,
+    staleTime: 60_000,
+  });
+  const positionBySymbol = useMemo(() => {
+    const m = {};
+    (Array.isArray(posQuery.data?.positions) ? posQuery.data.positions : [])
+      .forEach((p) => { if (p?.symbol) m[String(p.symbol).toUpperCase()] = p; });
+    return m;
+  }, [posQuery.data]);
+  const metaQuery = useQuery({
+    queryKey: ['all-symbols-meta'],
+    queryFn: () => apiGet('/api/symbols').catch(() => ({ symbols: [] })),
+    enabled: showFacts,
+    staleTime: 120_000,
+  });
+  const symbolMeta = useMemo(() => {
+    const m = {};
+    (Array.isArray(metaQuery.data?.symbols) ? metaQuery.data.symbols : [])
+      .forEach((s) => { if (s?.ticker) m[String(s.ticker).toUpperCase()] = s; });
+    return m;
+  }, [metaQuery.data]);
 
   // Active protocols only — inactive ones are skipped (matches the ladders).
   const activeProtocols = useMemo(
@@ -301,6 +377,40 @@ export default function LadderPage() {
 
   const scoredCount = passing.filter((e) => e.hasScore).length;
 
+  // Reveal-on-scroll (issue #672). Cards below the fold fade/slide in as they
+  // enter the viewport. SAFE BY DESIGN: any card already within the viewport is
+  // revealed immediately (before paint, no flash), cards are never left hidden
+  // while visible, and if IntersectionObserver is unavailable everything is
+  // revealed. popLayout/reordering/exit are untouched because we only observe an
+  // inner content div (.lad-reveal) inside the existing motion.div card.
+  useLayoutEffect(() => {
+    const root = cardsColRef.current;
+    if (!root) return;
+    const ioSupported = typeof IntersectionObserver !== 'undefined';
+    const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+    const revealAll = () => root.querySelectorAll('.lad-reveal').forEach((el) => {
+      el.classList.add('lad-reveal--show');
+      el.dataset.revealed = '1';
+    });
+    // Safety: never leave cards hidden. If IO is unavailable OR we cannot
+    // reliably measure the viewport (e.g. headless/embedded contexts where
+    // innerHeight is 0), reveal everything rather than risk stuck-hidden cards.
+    if (!ioSupported || vh <= 0) { revealAll(); return; }
+    const observers = [];
+    root.querySelectorAll('.lad-reveal').forEach((el) => {
+      if (el.dataset.revealed === '1') return;
+      const reveal = () => { el.classList.add('lad-reveal--show'); el.dataset.revealed = '1'; };
+      const r = el.getBoundingClientRect();
+      if (r.top < vh - 24 && r.bottom > 0) { reveal(); return; } // already in viewport
+      const io = new IntersectionObserver((entries, obs) => {
+        if (entries.some((en) => en.isIntersecting)) { reveal(); obs.disconnect(); }
+      }, { threshold: 0.05, rootMargin: '0px 0px -24px 0px' });
+      io.observe(el);
+      observers.push(io);
+    });
+    return () => observers.forEach((o) => o.disconnect());
+  }, [passing, excluded]);
+
   // One card renderer — used for both the ladder and the excluded section.
   const renderCard = (e, i, dimmed) => (
     <motion.div
@@ -312,6 +422,7 @@ export default function LadderPage() {
       transition={{ duration: 0.45, ease: 'easeOut' }}
       className={`lad-card ${i === 0 && !dimmed ? 'lad-card--top' : ''} ${dimmed ? 'lad-card--filtered' : ''}`}
     >
+      <div className="lad-reveal">
       <div className="lad-card-head">
         <span className="lad-rank">#{i + 1}</span>
         <Link
@@ -329,6 +440,12 @@ export default function LadderPage() {
           </span>
         </span>
       </div>
+      {showFacts && (
+        <LadderFacts
+          meta={symbolMeta[String(e.symbol).toUpperCase()] || null}
+          pos={positionBySymbol[String(e.symbol).toUpperCase()] || null}
+        />
+      )}
       <div className="lad-card-foot">
         <div className="lad-card-scores">
           <ScoreBlock
@@ -351,6 +468,7 @@ export default function LadderPage() {
           )}
         </div>
         <span className="lad-time"><span className="lad-time-label">Scored: </span>{e.time ? timeAgo(e.time) : 'no score'}</span>
+      </div>
       </div>
     </motion.div>
   );
@@ -430,7 +548,7 @@ export default function LadderPage() {
         </aside>
 
         {/* Right — cards stacked in score order */}
-        <main className="lad-cards-col">
+        <main className="lad-cards-col" ref={cardsColRef}>
           <div className="lad-toolbar">
             <div className="lad-direction" role="group" aria-label="Direction">
               {DIRECTION_OPTIONS.map(([val, label]) => (
@@ -463,6 +581,10 @@ export default function LadderPage() {
               <select value={marketFilter} onChange={(e) => setMarketFilter(e.target.value)}>
                 {MARKET_OPTIONS.map(([val, label]) => <option key={val} value={val}>{label}</option>)}
               </select>
+            </label>
+            <label className="lad-filter" title="Show company facts & your open-position stats on each card (phase-6 preview, #667/#668)">
+              <input type="checkbox" checked={showFacts} onChange={(e) => setShowFacts(e.target.checked)} />
+              Details
             </label>
           </div>
           {selectedIds.length === 0 ? (

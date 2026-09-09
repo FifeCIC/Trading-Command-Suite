@@ -20,6 +20,16 @@ export interface MarketStatus {
 }
 
 export function computeMarketStatus(bars: MarketBar[], referenceTime = new Date()): MarketStatus {
+  // Defensive: coerce string timestamps to Date. Some bridge/serialized paths
+  // pass ISO strings; `.getTime()`/`.toISOString()` throw on a string. This
+  // function is called directly (automation loop, protocol-gating) as well as
+  // from directives, so guard here independently of runAll's normalization.
+  for (const b of (bars ?? [])) {
+    if (b?.timestamp && !(b.timestamp instanceof Date)) {
+      (b as any).timestamp = new Date(b.timestamp as any);
+    }
+  }
+
   if (!bars || bars.length < 2) {
     const asOf = bars && bars.length > 0 ? bars[bars.length - 1].timestamp.toISOString() : null;
     return { open: false, asOf, reason: 'insufficient bars' };

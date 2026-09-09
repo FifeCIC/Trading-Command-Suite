@@ -20,6 +20,31 @@ const EVENT_TYPE_STYLE = {
 };
 
 import { formatTime, formatDuration, timeAgo } from '../core/format-utils';
+
+/** Seconds until an ISO timestamp (for next-tick countdown). */
+function countdownTo(iso) {
+  if (!iso) return '—';
+  const diff = new Date(iso).getTime() - Date.now();
+  if (diff <= 0) return 'due';
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return `in ${sec}s`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `in ${min}m ${sec % 60}s`;
+  return `in ${Math.floor(min / 60)}h ${min % 60}m`;
+}
+
+/** The primary automation loop's tick sequence (matches automation-loop.service.ts tick()). */
+const LOOP_STEPS = [
+  { n: '0', label: 'Job queue poll', desc: 'Process due scheduled_job entries (priority desc)' },
+  { n: '1', label: 'Timeline risk', desc: 'Active events → global risk multiplier' },
+  { n: '1b', label: 'Weekend defense', desc: 'Wed/Fri swap-drag + gap-risk check' },
+  { n: '2', label: 'Fetch portfolios', desc: 'All enabled brokers → position sync' },
+  { n: '2b', label: 'Discover strategies', desc: 'Active bots + data-readiness + priority reorder' },
+  { n: '3', label: 'One scoring line', desc: 'buildBestLadder → signal records → bot queues' },
+  { n: '3c', label: 'A/B test', desc: 'Score both snapshots when a test is active' },
+  { n: '4', label: 'Process signal queues', desc: 'Queue heads → gates → dispatchTrade' },
+];
+
 function ProgressBar({ done, total }) {
   const pct = total > 0 ? (done / total) * 100 : 0;
   return (
@@ -98,9 +123,31 @@ export default function ExecutionQueuePage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['execution-queue'] }),
   });
 
+  // ── Loop routine (live status) ────────────────────
+  const statusQuery = useQuery({
+    queryKey: ['automation', 'status'],
+    queryFn: () => apiGet('/api/automation/status'),
+    refetchInterval: 5000,
+  });
+
+  // ── Scheduled jobs (unified job queue #614) ───────
+  const jobsQuery = useQuery({
+    queryKey: ['automation', 'jobs'],
+    queryFn: () => apiGet('/api/automation/jobs?limit=50'),
+    refetchInterval: tab === 'jobs' ? 5000 : false,
+  });
+  const jobStatsQuery = useQuery({
+    queryKey: ['automation', 'jobs', 'stats'],
+    queryFn: () => apiGet('/api/automation/jobs/stats'),
+    refetchInterval: tab === 'jobs' ? 5000 : false,
+  });
+
   const events = eventsQuery.data?.events || [];
   const jobs = queueQuery.data || [];
   const stats = statsQuery.data || { queued: 0, running: 0, completed: 0, failed: 0, cancelled: 0 };
+  const loopStatus = statusQuery.data || {};
+  const scheduledJobs = jobsQuery.data || [];
+  const jobStats = jobStatsQuery.data || {};
   const apiOnline = !eventsQuery.isError && !queueQuery.isError;
 
   const handleCancel = useCallback((jobId) => {
@@ -127,6 +174,30 @@ export default function ExecutionQueuePage() {
 
       {!apiOnline && <ApiOfflineBanner />}
 
+      {/* ── Loop Routine (schedule + tick sequence) ── */}
+      <motion.section className="eq-routine" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.02 }}>
+        <div className="eq-routine-head">
+          <span className={`eq-routine-dot ${loopStatus.loopEnabled ? 'eq-on' : 'eq-off'}`} />
+          <strong>Primary Loop</strong>
+          <span className="eq-routine-chip">⟳ every {loopStatus.tickIntervalMs ? formatDuration(loopStatus.tickIntervalMs) : '—'}</span>
+          <span className="eq-routine-chip">Tick #{loopStatus.tickCount ?? 0}</span>
+          <span className="eq-routine-chip">last tick {formatDuration(loopStatus.lastTickMs)}</span>
+          <span className="eq-routine-chip">risk ×{loopStatus.globalRiskMultiplier ?? 1}</span>
+          <span className="eq-routine-chip">
+            {loopStatus.layers?.protocolsEnabled ? '🟢 Protocols' : '🔴 Protocols'} · {loopStatus.layers?.tradingEnabled ? '🟢 Trading' : '🔴 Trading'}
+          </span>
+          {loopStatus.nextTickAt && <span className="eq-routine-next">{countdownTo(loopStatus.nextTickAt)}</span>}
+        </div>
+        <div className="eq-routine-steps">
+          {LOOP_STEPS.map((s) => (
+            <div key={s.n} className="eq-routine-step" title={s.desc}>
+              <span className="eq-routine-step-n">{s.n}</span>
+              <span className="eq-routine-step-label">{s.label}</span>
+            </div>
+          ))}
+        </div>
+      </motion.section>
+
       {/* ── Tabs ── */}
       <motion.div className="eq-tabs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.04 }}>
         <button className={`eq-tab ${tab === 'events' ? 'eq-tab-active' : ''}`} onClick={() => setTab('events')}>
@@ -134,6 +205,9 @@ export default function ExecutionQueuePage() {
         </button>
         <button className={`eq-tab ${tab === 'queue' ? 'eq-tab-active' : ''}`} onClick={() => setTab('queue')}>
           🏗 Protocol Queue <span className="eq-tab-count">{stats.running + stats.queued}</span>
+        </button>
+        <button className={`eq-tab ${tab === 'jobs' ? 'eq-tab-active' : ''}`} onClick={() => setTab('jobs')}>
+          🗓 Scheduled Jobs <span className="eq-tab-count">{(jobStats.queued || 0) + (jobStats.running || 0)}</span>
         </button>
       </motion.div>
 
@@ -263,6 +337,58 @@ export default function ExecutionQueuePage() {
                     <span className="eq-trace-id">ID: {job.id.slice(0, 8)}</span>
                     <span className="eq-trace-run">Run: #{job.runId}</span>
                   </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </div>
+      )}
+
+      {/* ── Scheduled Jobs Tab (unified job queue #614) ── */}
+      {tab === 'jobs' && (
+        <div className="eq-tab-content">
+          <motion.div className="eq-stats-bar" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+            {['queued', 'running', 'complete', 'failed'].map((key) => (
+              <div key={key} className="eq-stat-chip" style={{ borderColor: STATUS_COLORS[key] || '#94a3b8' }}>
+                <span className="eq-stat-count" style={{ color: STATUS_COLORS[key] }}>{jobStats[key] ?? 0}</span>
+                <span className="eq-stat-label">{key}</span>
+              </div>
+            ))}
+            {jobStats.nextDueAt && (
+              <span className="eq-job-time">next: {jobStats.nextDueType} {countdownTo(jobStats.nextDueAt)}</span>
+            )}
+          </motion.div>
+
+          {scheduledJobs.length === 0 ? (
+            <motion.div className="eq-empty-state" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+              <div className="eq-empty-icon">🗓</div>
+              <h2>No scheduled jobs</h2>
+              <p>The unified job queue (scheduled_job) is empty. Jobs are polled by the loop each tick.</p>
+            </motion.div>
+          ) : (
+            <motion.div className="eq-timeline" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.08 }}>
+              {scheduledJobs.map((job) => (
+                <motion.div
+                  key={job.id}
+                  className={`eq-job-card eq-job-${job.status}`}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  style={{ borderLeftColor: STATUS_COLORS[job.status] || '#94a3b8' }}
+                >
+                  <div className="eq-job-top">
+                    <span className="eq-job-name">{job.type}</span>
+                    <span className="eq-job-status" style={{ background: (STATUS_COLORS[job.status] + '22'), color: STATUS_COLORS[job.status] }}>{job.status}</span>
+                    <span className="eq-job-protocol">priority {job.priority}</span>
+                    {job.recurrence === 'interval' && <span className="eq-retry-badge">↻ every {formatDuration(job.recurrenceMs)}</span>}
+                    {job.attempts > 0 && <span className="eq-job-protocol">attempt {job.attempts}/{job.maxAttempts}</span>}
+                  </div>
+                  <div className="eq-job-timeline">
+                    <span className="eq-job-time">Due: {formatTime(job.runAt)}</span>
+                    {job.lastRunAt && <span className="eq-job-time">Last ran: {formatTime(job.lastRunAt)}</span>}
+                    <span className="eq-job-time">Created: {timeAgo(job.createdAt)}</span>
+                  </div>
+                  {job.lastError && <div className="eq-job-error">⚠ {job.lastError}</div>}
+                  <div className="eq-job-trace"><span className="eq-trace-id">ID: {job.id.slice(0, 8)}</span></div>
                 </motion.div>
               ))}
             </motion.div>

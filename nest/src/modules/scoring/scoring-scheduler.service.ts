@@ -97,13 +97,15 @@ export class ScoringSchedulerService implements OnModuleInit {
     try {
       this.logger.log(`Scoring run started at ${startIso}`);
 
-      const result = await this.scoringService.rankAll(undefined, 100);
+      // #734 — read persisted protocol-scoped scores (score_snapshot) instead of
+      // the unscoped, analytics-only rankAll() whole-registry scorer.
+      const result = await this.scoringService.rankFromDb(100);
       const symbolCount = result.ranked?.length ?? 0;
 
       const elapsed = Date.now() - startTime;
       this.lastRunResult = { symbolsScored: symbolCount, durationMs: elapsed, completedAt: new Date().toISOString() };
       this.logger.log(
-        `Scoring run completed — ${symbolCount} symbols scored in ${elapsed}ms`,
+        `Scoring run completed — ${symbolCount} symbols with persisted protocol scores in ${elapsed}ms`,
       );
     } catch (error) {
       const elapsed = Date.now() - startTime;

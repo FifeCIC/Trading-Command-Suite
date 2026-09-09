@@ -85,7 +85,7 @@ export default function RecentlyAnalysedSymbolsPage() {
                     <td className="ra-num" style={{ color: s.latestScore >= 60 ? '#22c55e' : s.latestScore >= 40 ? '#f59e0b' : '#ef4444' }}>
                       {s.latestScore.toFixed(1)}
                     </td>
-                    <td className="ra-num">{s.latestConfidence > 0 ? `${(s.latestConfidence * 100).toFixed(0)}%` : '—'}</td>
+                    <td className="ra-num">{s.latestConfidence > 0 ? `${s.latestConfidence}%` : '—'}</td>
                     <td>
                       <span className="ra-signal-chip" style={{ color: sig.color, background: sig.bg }}>
                         {sig.label}

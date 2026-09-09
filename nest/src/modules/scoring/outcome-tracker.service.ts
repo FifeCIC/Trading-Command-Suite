@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
 
 // ── Configuration ────────────────────────────────────────────
@@ -111,24 +111,27 @@ export class OutcomeTrackerService {
    * Finds records where outcomeComputedAt is null and predictedAt is old enough,
    * then fills T+15m, T+1h, T+4h, T+24h prices from MarketBar.
    *
-   * Scheduled daily at 05:00 — this wires the previously-dead learning loop
-   * (MST-007). Without this cron no directive outcome was ever matured, so
-   * directive "performance"/accuracy stayed permanently empty.
+   * Runs every 15 minutes — the shortest horizon (T+15m) is the finest
+   * granularity, so a daily batch would delay the short horizons by up to 24h.
+   * Each pass is idempotent (fills only due-and-null horizons), so frequent runs
+   * stay cheap. (MST-007) Without this sweep no directive outcome is ever
+   * matured, so directive "performance"/accuracy stays permanently empty.
    */
-  @Cron(CronExpression.EVERY_DAY_AT_5AM, { name: 'directive-outcome-maturation' })
+  @Cron('*/15 * * * *', { name: 'directive-outcome-maturation' })
   async computeOutcomes(): Promise<number> {
     if (!this.prisma.isAvailable) return 0;
 
-    const now = new Date();
+    const now = Date.now();
     const computed = { count: 0 };
 
-    // Find uncomputed outcomes with enough elapsed time
+    // MST-007 — independent per-horizon maturity. Each horizon (T+15m/1h/4h/24h)
+    // is filled as soon as its own due time has passed, instead of waiting for
+    // the 24h mark and filling all four in a single update. This stops a missing
+    // T+24h bar from holding the shorter horizons hostage.
     const pending = await this.prisma.directiveOutcome.findMany({
       where: {
         outcomeComputedAt: null,
-        // This schema has one completion marker for all four horizons. Wait for
-        // the final horizon so early runs cannot permanently null T+1h/T+4h/T+24h.
-        predictedAt: { lte: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
+        predictedAt: { lte: new Date(now - 15 * 60 * 1000) },
       },
       take: 500,
       orderBy: { predictedAt: 'asc' },
@@ -136,29 +139,50 @@ export class OutcomeTrackerService {
 
     for (const rec of pending) {
       try {
-        // Look up prices at future timestamps from MarketBar
-        const priceT15m = await this.getPriceAt(rec.symbol, rec.timeframe, new Date(rec.predictedAt.getTime() + 15 * 60 * 1000));
-        const priceT1h = await this.getPriceAt(rec.symbol, rec.timeframe, new Date(rec.predictedAt.getTime() + 60 * 60 * 1000));
-        const priceT4h = await this.getPriceAt(rec.symbol, rec.timeframe, new Date(rec.predictedAt.getTime() + 4 * 60 * 60 * 1000));
-        const priceT24h = await this.getPriceAt(rec.symbol, rec.timeframe, new Date(rec.predictedAt.getTime() + 24 * 60 * 60 * 1000));
+        const predicted = rec.predictedAt.getTime();
 
-        // Compute directionCorrect based on T+1h
-        let directionCorrect: boolean | null = null;
-        if (priceT1h != null && rec.signalClass !== 'neutral') {
-          directionCorrect = rec.signalClass === 'bullish'
-            ? priceT1h > rec.priceAtPredict
-            : priceT1h < rec.priceAtPredict;
+        let t15m = rec.priceT15m;
+        let t1h = rec.priceT1h;
+        let t4h = rec.priceT4h;
+        let t24h = rec.priceT24h;
+
+        // Fill each horizon only once its own due time has passed and it is
+        // still null (idempotent across runs).
+        if (t15m == null && now >= predicted + 15 * 60 * 1000) {
+          t15m = await this.getPriceAt(rec.symbol, rec.timeframe, new Date(predicted + 15 * 60 * 1000));
         }
+        if (t1h == null && now >= predicted + 60 * 60 * 1000) {
+          t1h = await this.getPriceAt(rec.symbol, rec.timeframe, new Date(predicted + 60 * 60 * 1000));
+        }
+        if (t4h == null && now >= predicted + 4 * 60 * 60 * 1000) {
+          t4h = await this.getPriceAt(rec.symbol, rec.timeframe, new Date(predicted + 4 * 60 * 60 * 1000));
+        }
+        if (t24h == null && now >= predicted + 24 * 60 * 60 * 1000) {
+          t24h = await this.getPriceAt(rec.symbol, rec.timeframe, new Date(predicted + 24 * 60 * 60 * 1000));
+        }
+
+        // directionCorrect becomes available as soon as T+1h is known.
+        let directionCorrect = rec.directionCorrect;
+        if (directionCorrect == null && t1h != null && rec.signalClass !== 'neutral') {
+          directionCorrect = rec.signalClass === 'bullish'
+            ? t1h > rec.priceAtPredict
+            : t1h < rec.priceAtPredict;
+        }
+
+        const allFilled = t15m != null && t1h != null && t4h != null && t24h != null;
+        // Permanently-missing data (e.g. symbol stopped trading) must not rescan
+        // forever — finalise 1h past the last horizon regardless.
+        const gracePassed = now >= predicted + 25 * 60 * 60 * 1000;
 
         await this.prisma.directiveOutcome.update({
           where: { id: rec.id },
           data: {
-            priceT15m,
-            priceT1h,
-            priceT4h,
-            priceT24h,
+            priceT15m: t15m,
+            priceT1h: t1h,
+            priceT4h: t4h,
+            priceT24h: t24h,
             directionCorrect,
-            outcomeComputedAt: new Date(),
+            outcomeComputedAt: allFilled || gracePassed ? new Date() : null,
           },
         });
         computed.count++;
@@ -168,7 +192,7 @@ export class OutcomeTrackerService {
     }
 
     if (computed.count > 0) {
-      this.logger.log(`Computed ${computed.count} outcomes`);
+      this.logger.log(`Matured ${computed.count} directive outcomes`);
     }
     return computed.count;
   }

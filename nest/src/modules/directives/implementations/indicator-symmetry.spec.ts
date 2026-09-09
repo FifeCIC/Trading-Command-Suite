@@ -1,5 +1,6 @@
 import { StochasticDirective } from './stochastic.directive';
 import { VwapDirective } from './vwap.directive';
+import { GoldRoundNumbersDirective } from './gold-round-numbers.directive';
 import {
   DonchianBreakoutDirective,
   AwesomeOscillatorDirective,
@@ -126,5 +127,32 @@ describe('indicator directives — side-symmetry mirror tests', () => {
     expect(up.signalClass).toBe('bullish');
     expect(down.signalClass).toBe('bearish');
     expect(down.score).toBe(up.score);
+  });
+
+  it('gold-round-numbers emits mirrored bullish/bearish around a major level with equal magnitude', () => {
+    const d = new GoldRoundNumbersDirective();
+    // XAUUSD just ABOVE $2600 (major) → potential support → bullish, magnitude 25.
+    const above = d.calculate({
+      symbol: 'XAUUSD',
+      bars: makeBars([2593, 2597, 2602]),
+    });
+    // XAUUSD just BELOW $2600 → potential resistance → bearish, SAME magnitude 25.
+    const below = d.calculate({
+      symbol: 'XAUUSD',
+      bars: makeBars([2595, 2597, 2598]),
+    });
+    expect(above.signalClass).toBe('bullish');
+    expect(below.signalClass).toBe('bearish');
+    expect(below.score).toBe(above.score);
+    expect(above.score).toBeGreaterThan(0);
+    expect(above.score).toBeLessThanOrEqual(d.maxScore);
+    expect(below.score).toBeGreaterThanOrEqual(0);
+  });
+
+  it('gold-round-numbers ignores non-gold symbols', () => {
+    const d = new GoldRoundNumbersDirective();
+    const r = d.calculate({ symbol: 'SPY', bars: makeBars([500, 501, 502]) });
+    expect(r.signalClass).toBe('neutral');
+    expect(r.score).toBe(0);
   });
 });

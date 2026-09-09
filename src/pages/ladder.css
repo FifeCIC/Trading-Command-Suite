@@ -25,6 +25,7 @@
 .lad-filter { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: var(--ink-soft); font-weight: 600; }
 .lad-filter select { min-height: 32px; padding: 0 0.5rem; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); font-family: inherit; font-size: 0.8rem; }
 .lad-filter select:focus { outline: none; border-color: var(--accent); }
+.lad-filter input[type='checkbox'] { accent-color: var(--accent); cursor: pointer; }
 
 /* Direction segmented control (All / LONG / SHORT) */
 .lad-direction { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
@@ -46,6 +47,35 @@
 .lad-card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem 1rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); }
 .lad-card--top { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 4px 16px rgba(0, 0, 0, 0.12); }
 .lad-card--filtered { opacity: 0.55; }
+
+/* Reveal-on-scroll (issue #672): content is hidden until JS adds
+   .lad-reveal--show when the card scrolls into view. The reveal div wraps the
+   card head+foot INSIDE the existing motion.div card, so popLayout reordering
+   and exit animations are unaffected. Reduced-motion always shows content. */
+.lad-reveal { opacity: 0; transform: translateY(14px); transition: opacity 0.45s ease, transform 0.45s ease; }
+.lad-reveal--show { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .lad-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+}
+
+/* Opt-in facts strip (#667/#668) — company + our own trading stats per card,
+   shown only when the ladder's "Details" toggle is on (default off). */
+.lad-facts { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.55rem; }
+.lad-fact {
+  font-size: 0.66rem;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 8px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lad-fact--pos { font-variant-numeric: tabular-nums; }
+.lad-fact-pnl { font-weight: 600; }
+.lad-pnl-up { color: #22c55e; border-color: rgba(34, 197, 94, 0.45); }
+.lad-pnl-down { color: #ef4444; border-color: rgba(239, 68, 68, 0.45); }
 
 /* Divider above the filter-excluded section */
 .lad-divider { display: flex; align-items: baseline; gap: 0.6rem; margin: 0.9rem 0 0.5rem; padding-top: 0.6rem; border-top: 1px dashed var(--line); }

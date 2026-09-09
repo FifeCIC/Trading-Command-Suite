@@ -172,9 +172,13 @@ export class TradingSchedulerService {
         run.steps.push({ name: 'scoring', status: 'skipped', detail: 'No active symbols' });
         return;
       }
-      const result = await this.scoringService.rankAll();
+      // #734 — read persisted protocol-scoped scores (score_snapshot) instead of
+      // running the unscoped, analytics-only rankAll() whole-registry scorer. The
+      // automation loop (2-min tick) is the canonical scorer and persists protocol-
+      // scoped snapshots; the daily routine only reports coverage here.
+      const result = await this.scoringService.rankFromDb();
       const scored = result?.ranked?.length || 0;
-      run.steps.push({ name: 'scoring', status: 'ok', detail: `${scored} symbols scored (${activeSymbols.length} active)` });
+      run.steps.push({ name: 'scoring', status: 'ok', detail: `${scored} symbols with persisted protocol scores (${activeSymbols.length} active)` });
     } catch (err) {
       run.steps.push({ name: 'scoring', status: 'error', detail: (err as Error).message });
     }
@@ -182,26 +186,26 @@ export class TradingSchedulerService {
 
   private async generateSuggestions(run: SchedulerRun): Promise<void> {
     try {
-      const result = await this.scoringService.rankAll(undefined, 10);
+      const result = await this.scoringService.rankFromDb(10);
       const ranked = (result as any)?.ranked || [];
       if (!ranked.length) {
         run.steps.push({ name: 'suggestions', status: 'ok', detail: 'No ranked symbols available' });
         return;
       }
-      // Suggestions are SCREENING output (opportunity ranking from rankAll),
-      // NOT trade decisions. rankAll is analytics-only (see its contract); the
+      // Suggestions are SCREENING output (opportunity ranking from persisted
+      // protocol-scoped scores via rankFromDb), NOT trade decisions. The
       // automation loop's canonical ProtocolGatingService path is the ONLY thing
       // that produces trade actions (see maybeAutoExecute). The 'action' string
       // here is a display tier and deliberately avoids 'BUY'/'SELL' so it cannot
       // be mistaken for an execution instruction.
       run.suggestions = ranked.slice(0, 5).map((r: any) => ({
         symbol: r.ticker || r.symbol || '?',
-        // #738 — rankAll's `score` is an unbounded raw composite (hundreds/thousands);
+        // #738 — the raw composite `score` is unbounded (hundreds/thousands);
         // only `normalizedScore` (0-100 %) may be compared to the 65/40 screen tiers.
         score: Math.round(r.normalizedScore ?? 0),
         action: (r.normalizedScore ?? 0) >= 65 ? 'TOP (screen)' : (r.normalizedScore ?? 0) >= 40 ? 'WATCH (screen)' : 'LOW (screen)',
       }));
-      run.steps.push({ name: 'suggestions', status: 'ok', detail: `${run.suggestions.length} suggestions from live scoring` });
+      run.steps.push({ name: 'suggestions', status: 'ok', detail: `${run.suggestions.length} suggestions from persisted protocol scores` });
     } catch (err) {
       run.steps.push({ name: 'suggestions', status: 'error', detail: (err as Error).message });
     }

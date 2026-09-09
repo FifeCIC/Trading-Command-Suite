@@ -211,7 +211,33 @@ export class DirectivesService {
    *  @param input - The directive input (symbol, bars, etc.)
    *  @param directiveFilter - Optional set of directive IDs to run. If omitted, runs ALL registered directives.
    *    Used by protocol-gating to avoid running directives not in the active protocol (#389). */
+  /**
+   * Coerce bar timestamps to Date. Some upstream producers (MT5 bridge
+   * fallbacks, serialized snapshots) pass ISO strings even though MarketBar
+   * declares `timestamp: Date`. Directives call `.getTime()`/`.getUTCDay()`
+   * on it — a string throws mid-scoring (session-open-effect, liquidity-check).
+   * Normalizing once at the directive boundary protects every directive.
+   */
+  private normalizeBarTimestamps(input: DirectiveInput): void {
+    const coerce = (bars: any[] | undefined) => {
+      if (!bars) return;
+      for (const b of bars) {
+        if (b && b.timestamp && !(b.timestamp instanceof Date)) {
+          b.timestamp = new Date(b.timestamp);
+        }
+      }
+    };
+    coerce(input.bars);
+    coerce((input as any).dayBars);
+    coerce((input as any).hourBars);
+    coerce((input as any).min15Bars);
+  }
+
   async runAll(input: DirectiveInput, directiveFilter?: Set<string>): Promise<Map<string, DirectiveResult>> {
+    // Normalize bar timestamps BEFORE fingerprinting so the cache key is stable
+    // and every directive receives a real Date (some callers pass ISO strings).
+    this.normalizeBarTimestamps(input);
+
     // 2026-09-08: the former symbol+lastTimestamp+length key allowed one
     // protocol/filter or timeframe bundle to poison another. Fingerprint all
     // market/external inputs, the filter, and directive configuration.

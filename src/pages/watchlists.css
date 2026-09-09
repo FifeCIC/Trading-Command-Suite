@@ -88,6 +88,17 @@
   border-bottom: 1px solid var(--line);
   margin-bottom: 0.25rem;
 }
+/* Color-blind mode injects ▲ into any class containing the substring "up"
+   (its `[class*='up']::before` rule). "groUP" / "wl-group" collides, so the
+   accordion group and its label each got a phantom ▲ that read as a broken
+   arrow. Neutralise both pseudo-elements here (no intended arrow exists). */
+:root[data-colorblind='true'] .wl-group::before,
+:root[data-colorblind='true'] .wl-group::after,
+:root[data-colorblind='true'] .wl-group-label::before,
+:root[data-colorblind='true'] .wl-group-label::after {
+  content: none !important;
+  display: none !important;
+}
 .wl-detail-pane {
   position: sticky; top: 10px;
   border: 1px solid var(--line, #1e293b);
@@ -257,3 +268,37 @@
   opacity: 0;
 }
 .wl-symbol-remove:hover { background: #ef4444; border-color: #ef4444; }
+
+/* ── "Colour" view switch (activity colouring, phase 1 = Traded) ── */
+.wl-viewbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.15rem 0 0.55rem;
+}
+.wl-viewbar-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); margin-right: 0.1rem; }
+.wl-view-btn {
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid var(--line);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.wl-view-btn:hover { color: var(--ink); border-color: var(--ink-soft); }
+.wl-view-btn--active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+/* Traded view: open-position chips pop; the rest recede so the traded ones read. */
+.wl-symbol-chip--traded {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.wl-symbol-chip--traded .wl-symbol-ticker { color: var(--accent); }
+.wl-symbol-chip--flat { opacity: 0.45; }
