@@ -1,16 +1,44 @@
 /**
- * Placeholder Directive Stubs
- * ===========================
- * All directives from TradePress PHP classes and aspirational strategy docs
- * that have established math but not yet been ported to NestJS.
+ * Momentum, Macro & Pattern Directives
+ * ====================================
+ * ⚠️ RENAMED 2026-09-10. This file was `placeholder-directives.stub.ts`, and the
+ * name caused real harm: it led an investigation to describe its contents as
+ * "not real data" and to question whether live scoring was running on
+ * placeholders. It is not and never was — the participants here compute from
+ * real market bars. The name was a leftover from when the file DID hold stubs.
  *
- * Each stub:
- * - Returns score: 0, confidence: 0, reason referencing PHP source
- * - Preserves the directive ID contract
- * - Ready for real implementation when prioritized
+ * WHAT THIS FILE ACTUALLY CONTAINS
+ * --------------------------------
+ * Directives with real implementations whose math lives inline rather than in a
+ * dedicated `*.directive.ts` file. A directive belongs here when its logic is
+ * short enough that a separate file adds ceremony, not clarity.
  *
- * DO NOT EDIT stubs to add real math — create a new implementation file
- * and remove the stub registration once the real version is active.
+ * Real, `readiness: 'ready'`, and consumed by live protocols:
+ *   - `volatility-tools`        ATR(14) + percentile rank + bonus  (25 protocols)
+ *   - `analyst-adjustments`     momentum-acceleration proxy        (19 protocols)
+ *   - `moving-averages`         SMA20/50/200 alignment             (4 protocols)
+ *   - `macd`                    MACD(12,26,9) crossover            (3 protocols)
+ *   - `sp500-regime`            SMA200 regime                     (2 protocols)
+ *   - `mean-reversion`          Bollinger sigma-distance          (2 protocols)
+ *   - `conviction-growth`       multi-timeframe EMA/SMA           (2 protocols)
+ *   - `spy-qqq-relative-strength` 5d/20d momentum acceleration     (4 protocols)
+ *
+ * The remainder are `readiness: 'beta'` or lower and are wired into NO protocol,
+ * so they cannot influence execution. Before promoting one to `ready`, verify
+ * its math against real bars — see the directive audit checklist in
+ * `interfaces/directive.interface.ts`.
+ *
+ * HISTORY (why the old name was once accurate)
+ * --------------------------------------------
+ * This file originally held ~55 stubs returning a constant `stubResult`. Issue
+ * #641 removed 28 dead classes and 14 dead standalone files; the survivors were
+ * reimplemented in place and promoted on 2026-08-15. The `stubResult` factory
+ * below is the vestige — it is retained only because a few `beta` classes still
+ * call it, and it is a marker for "not implemented" rather than a source of
+ * scores. Those classes are excluded from scoring by their readiness tier.
+ *
+ * DO NOT add a stub here for a NEW directive — an unimplemented directive should
+ * be `readiness: 'alpha'` so it is excluded from the composite entirely.
  */
 
 import { Injectable } from '@nestjs/common';
@@ -21,16 +49,26 @@ import {
 } from '../interfaces/directive.interface';
 import { rsi, sma, ema, bollingerBands, macd, atr } from '../utils/indicators';
 
-/** Factory for consistent stub result */
+/**
+ * Marker result for a class that is declared but not yet implemented.
+ *
+ * ⚠️ MUST NOT be reachable from a `ready` directive. A `ready` class returning
+ * this would present "not implemented" as a real zero reading, which is the
+ * same class of fault as the fabricated-score bug fixed on 2026-09-10. Callers
+ * are `beta`-tier classes, which scoring excludes.
+ */
 function stubResult(directiveId: string, phpFile?: string): DirectiveResult {
   const src = phpFile
     ? `Math in TradePress includes/scoring-system/directives/${phpFile}`
     : 'Documented in strategy docs — not yet spec\'d as directive';
   return {
-      signalClass: 'neutral',
-      score: 0,
+    signalClass: 'neutral',
+    score: 0,
     confidence: 0,
     reason: `[STUB] ${directiveId}: Not yet implemented. ${src}.`,
+    // `unmeasured` so that if one of these ever escapes the readiness filter it
+    // contributes no score and can never trip a risk gate or fabricate a grade.
+    unmeasured: true,
     metadata: { performance: 'stub', status: 'underperforming', stubbedAt: '2026-06-10' },
   };
 }
@@ -345,7 +383,17 @@ export class MidweekMomentumDirective implements IDirective {
   calculate(input: DirectiveInput): DirectiveResult {
 
     const bars = input.bars;
-    if (bars.length < 5) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'Need 5+ bars' };
+    if (bars.length < 5) {
+      return {
+        signalClass: 'neutral',
+        score: 0,
+        confidence: 0.1,
+        reason: 'Need 5+ bars',
+        // UNMEASURED — not enough data to judge midweek momentum at all
+        // (INV-NO-FABRICATED-READING).
+        unmeasured: true,
+      };
+    }
     const lastBar = bars[bars.length - 1];
     const day = lastBar.timestamp ? new Date(lastBar.timestamp).getUTCDay() : new Date().getUTCDay();
     const closes = bars.map(b => b.close);
@@ -353,23 +401,68 @@ export class MidweekMomentumDirective implements IDirective {
     const prevClose = closes[Math.max(0, closes.length - 5)];
     const recentReturn = prevClose > 0 ? ((lastClose - prevClose) / prevClose) * 100 : 0;
 
-    // BASE (10-35): midweek bias
     const isMidweek = day >= 2 && day <= 4;
-    const baseScore = isMidweek ? Math.round(mapRange(recentReturn, -2, 3, 10, 35)) : 10;
 
-    // BONUS: strong midweek trend
+    // ── DIRECTION REQUIRES A REAL MOVE, NOT A SIGN TEST ─────────────────
+    // ⚠️ Was `isMidweek && recentReturn > 0 ? 'bullish' : 'neutral'` — a sign
+    // test, so momentum of +0.01% (indistinguishable from zero) produced a full
+    // `bullish` classification. Meanwhile `baseScore` mapped `recentReturn`
+    // across `-2..3` → `10..35`, so a NEGATIVE return still scored up to ~10
+    // while being classified neutral: a non-zero score with no direction, i.e. a
+    // number that could not be acted on.
+    //
+    // Direction now needs the same ±0.5% move the bonus tiers already treat as
+    // meaningful, and below it the directive reports UNMEASURED rather than a
+    // fabricated floor. See INV-NO-FABRICATED-READING.
+    const MIDWEEK_DIRECTIONAL_PCT = 0.5;
+
+    if (!isMidweek) {
+      return {
+        signalClass: 'neutral',
+        score: 0,
+        confidence: 0.1,
+        reason: `Not midweek (day ${day}) — the Tue–Thu bias does not apply, so there is nothing to measure.`,
+        unmeasured: true,
+      };
+    }
+
+    if (Math.abs(recentReturn) < MIDWEEK_DIRECTIONAL_PCT) {
+      return {
+        signalClass: 'neutral',
+        score: 0,
+        confidence: 0.1,
+        reason:
+          `Midweek (day ${day}) but the ${recentReturn.toFixed(2)}% move is below the ` +
+          `${MIDWEEK_DIRECTIONAL_PCT}% threshold — no measurable momentum bias. Reporting UNMEASURED ` +
+          `rather than scoring a direction from the sign of a near-zero number.`,
+        unmeasured: true,
+      };
+    }
+
+    // ── Measured: a real midweek move in a real direction ────────────────
+    // baseScore now scales the ABSOLUTE move, so the score reflects how strong
+    // the move is rather than rising on a negative return.
+    const baseScore = Math.round(mapRange(Math.abs(recentReturn), MIDWEEK_DIRECTIONAL_PCT, 3, 10, 35));
+
     let bonusScore = 0;
     let bonusLabel = '';
-    if (isMidweek && recentReturn > 1.5) { bonusScore = 20; bonusLabel = 'strong midweek momentum (+' + recentReturn.toFixed(1) + '%)'; }
-    else if (isMidweek && recentReturn > 0.5) { bonusScore = 10; bonusLabel = 'positive midweek bias'; }
+    if (Math.abs(recentReturn) > 1.5) {
+      bonusScore = 20;
+      bonusLabel = `strong midweek momentum (${recentReturn > 0 ? '+' : ''}${recentReturn.toFixed(1)}%)`;
+    } else if (Math.abs(recentReturn) > 1) {
+      bonusScore = 10;
+      bonusLabel = `moderate midweek momentum (${recentReturn > 0 ? '+' : ''}${recentReturn.toFixed(1)}%)`;
+    }
+
+    // Direction from the (now thresholded) sign — the magnitude was verified above.
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = recentReturn > 0 ? 'bullish' : 'bearish';
 
     const total = Math.min(this.maxScore, baseScore + bonusScore);
-    const signalClass: 'bullish' | 'bearish' | 'neutral' = isMidweek && recentReturn > 0 ? 'bullish' : 'neutral';
     return {
       signalClass,
       score: total,
-      confidence: Number((0.2 + (isMidweek ? 0.1 : 0) + (Math.abs(recentReturn) > 1 ? 0.15 : 0)).toFixed(2)),
-      reason: `Midweek momentum: day ${day}, ${recentReturn.toFixed(1)}% recent, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
+      confidence: Number((0.3 + (Math.abs(recentReturn) > 1 ? 0.15 : 0)).toFixed(2)),
+      reason: `Midweek momentum: day ${day}, ${recentReturn > 0 ? '+' : ''}${recentReturn.toFixed(1)}% recent, base=${baseScore}${bonusScore ? ' +' + bonusScore + ' bonus (' + bonusLabel + ')' : ''}=${total}/${this.maxScore}`,
       metadata: { baseScore, bonusScore, bonusLabel, dayOfWeek: day, recentReturn },
     };
 
@@ -389,26 +482,61 @@ export class AdvancedWeeklyRhythmDirective implements IDirective {
   calculate(input: DirectiveInput): DirectiveResult {
 
     const bars = input.bars;
-    if (bars.length < 5) return { signalClass: 'neutral', score: 0, confidence: 0.1, reason: 'Need 5+ bars' };
+    if (bars.length < 5) {
+      return {
+        signalClass: 'neutral',
+        score: 0,
+        confidence: 0.1,
+        reason: 'Need 5+ bars',
+        // UNMEASURED — not enough data to judge weekly rhythm (INV-NO-FABRICATED-READING).
+        unmeasured: true,
+      };
+    }
     const lastBar = bars[bars.length - 1];
     const day = lastBar.timestamp ? new Date(lastBar.timestamp).getUTCDay() : new Date().getUTCDay();
     const closes = bars.map(b => b.close);
     const recentReturn = closes.length > 5 ? (closes[closes.length-1] - closes[closes.length-6]) / Math.max(0.01, closes[closes.length-6]) * 100 : 0;
 
-    // BASE (15-40): multi-session composite
+    // Day-of-week bias: Tue–Thu positive, Mon/Fri/Sat slightly negative, Sun more so.
     const dayBias: Record<number, number> = { 0: -8, 1: -5, 2: 10, 3: 15, 4: 10, 5: 0, 6: -5 };
     const bias = dayBias[day] || 0;
+
+    // ⚠️ DIRECTION REQUIRES A REAL MOVE, NOT A SIGN TEST (INV-NO-FABRICATED-READING).
+    //
+    // Was `bias > 0 && recentReturn > 0 ? 'bullish' : ...` — a sign test, so a
+    // +0.01% move alongside a positive day bias produced a full `bullish`
+    // classification, while `baseScore` mapped `bias + trendAlignment` across
+    // `-15..25` → `15..40` and therefore returned a non-zero score on a flat or
+    // negative week. A direction from the sign of a near-zero number is a coin-flip,
+    // and a score with no measurable input behind it is a fabricated reading.
+    const RHYTHM_DIRECTIONAL_PCT = 0.5;
+
+    if (Math.abs(recentReturn) < RHYTHM_DIRECTIONAL_PCT) {
+      return {
+        signalClass: 'neutral',
+        score: 0,
+        confidence: 0.1,
+        reason:
+          `Weekly rhythm: day ${day} bias=${bias}, but the ${recentReturn.toFixed(2)}% move is below the ` +
+          `${RHYTHM_DIRECTIONAL_PCT}% threshold — no measurable trend to align with the day bias. ` +
+          `Reporting UNMEASURED rather than scoring direction from a near-zero number.`,
+        metadata: { dayOfWeek: day, bias, recentReturn },
+        unmeasured: true,
+      };
+    }
+
+    // Trend aligned WITH the day bias = the confluence this directive looks for.
     const trendAlignment = recentReturn * (bias >= 0 ? 1 : -1);
     const baseScore = Math.round(mapRange(bias + trendAlignment, -15, 25, 15, 40));
 
-    // BONUS: confluence (day bias + trend aligned)
     let bonusScore = 0;
     let bonusLabel = '';
     if (bias > 0 && recentReturn > 1) { bonusScore = 20; bonusLabel = 'bullish confluence (midweek + uptrend)'; }
     else if (bias < 0 && recentReturn < -1) { bonusScore = 15; bonusLabel = 'bearish confluence'; }
 
     const total = Math.min(this.maxScore, baseScore + bonusScore);
-    const signalClass: 'bullish' | 'bearish' | 'neutral' = bias > 0 && recentReturn > 0 ? 'bullish' : bias < 0 && recentReturn < 0 ? 'bearish' : 'neutral';
+    // Direction from the thresholded sign — the magnitude was verified above.
+    const signalClass: 'bullish' | 'bearish' | 'neutral' = recentReturn > 0 ? 'bullish' : 'bearish';
     return {
       signalClass,
       score: total,
@@ -1066,21 +1194,105 @@ export class AnalystAdjustmentsDirective implements IDirective {
   readonly description = 'Price momentum proxy for sentiment shifts (analyst revisions unavailable).';
   readonly priority = 50;
   readonly maxScore = 80;
-  readonly version = '2.0.0';
-  readonly readiness = 'ready' as const; // promoted beta→ready 2026-08-15 — real price-momentum proxy (registered copy; standalone mock-first file is dead code)
+  readonly version = '3.0.0';
+  readonly readiness = 'ready' as const;
 
+  /**
+   * ⚠️ HONESTY CONTRACT (rewritten 2026-09-10).
+   *
+   * This directive has NO analyst feed. It infers conviction from price momentum,
+   * and it must say so rather than manufacture certainty. The previous version
+   * ended with:
+   *
+   *     score = Math.round(30 + accelerating * 5)          // confidence 0.25
+   *     signalClass = accelerating > 0 ? 'bullish' : 'bearish'
+   *
+   * Two faults, both measured live:
+   *
+   *  1. A FABRICATED FLOOR. The `30 +` produced a non-zero score even when
+   *     momentum was flat — a number with no market basis behind it. Measured:
+   *     1,125 `bullish` readings averaged 30.9 with a minimum of EXACTLY 30, and
+   *     630 `bearish` averaged 29.7 with a maximum of EXACTLY 30. 94% of 1,755
+   *     readings sat inside a 27–50 band, i.e. inside the invented offset.
+   *
+   *  2. DIRECTION FROM NOISE. It emitted a tradeable direction from the SIGN of
+   *     `accelerating`, so momentum of +0.02% — indistinguishable from zero —
+   *     produced a full `bullish` classification. For the index protocols this
+   *     was the ONLY directional directive, so a coin-flip WAS the composite.
+   *
+   * This matters because the app may one day trade real money: when a symbol
+   * halts or a feed stops, the correct output is "I cannot measure this", never
+   * a plausible number. So the flat branch returns `unmeasured: true` with
+   * score 0 and a neutral class — it contributes nothing to the composite and
+   * can never trip a risk gate.
+   *
+   * The genuine branches below are unchanged: they fire only on a momentum move
+   * large enough to be a real observation, not a rounding artefact.
+   *
+   * Naming note: the id remains `analyst-adjustments` for compatibility with 8
+   * live protocol configs, but the NAME is misleading — there is no analyst
+   * data here. Prefer `momentum-acceleration` if the id is ever migrated.
+   */
   calculate(input: DirectiveInput): DirectiveResult {
     const closes = input.bars.map(b => b.close);
-    if (closes.length < 15) return { score: 0, confidence: 0.1, reason: `Need 15+ bars, have ${closes.length}`, signalClass: 'neutral' };
-    // Proxy: accelerating price momentum suggests positive revisions
-    const ret5 = (closes[closes.length-1] - closes[closes.length-6]) / Math.max(0.01, closes[closes.length-6]) * 100;
-    const ret5prev = closes.length > 11 ? (closes[closes.length-6] - closes[closes.length-11]) / Math.max(0.01, closes[closes.length-11]) * 100 : 0;
+    if (closes.length < 15) {
+      return {
+        score: 0,
+        confidence: 0.1,
+        reason: `Need 15+ bars, have ${closes.length}`,
+        signalClass: 'neutral',
+        unmeasured: true,
+      };
+    }
+
+    // Momentum acceleration: the 5-bar return now vs the previous 5-bar return.
+    // A real observation, used by the branches below.
+    const ret5 = (closes[closes.length - 1] - closes[closes.length - 6]) / Math.max(0.01, closes[closes.length - 6]) * 100;
+    const ret5prev = closes.length > 11
+      ? (closes[closes.length - 6] - closes[closes.length - 11]) / Math.max(0.01, closes[closes.length - 11]) * 100
+      : 0;
     const accelerating = ret5 - ret5prev;
-    const volumeSurge = (input.bars[input.bars.length-1].volume || 0) > (input.bars.slice(-11, -1).reduce((s,b) => s + (b.volume||0), 0) / 10) * 1.3;
-    if (accelerating > 2 && volumeSurge) return { score: 70, confidence: 0.5, reason: `Momentum accelerating +${accelerating.toFixed(1)}% with volume surge — bullish sentiment proxy`, signalClass: 'bullish' };
-    if (accelerating > 1) return { score: 50, confidence: 0.35, reason: `Momentum accelerating +${accelerating.toFixed(1)}%`, signalClass: 'bullish' };
-    if (accelerating < -2) return { score: 45, confidence: 0.3, reason: `Momentum decelerating ${accelerating.toFixed(1)}% — bearish proxy`, signalClass: 'bearish' };
-    return { score: Math.round(30 + accelerating * 5), confidence: 0.25, reason: `Momentum change: ${accelerating.toFixed(1)}% (analyst data unavailable, using price proxy)`, signalClass: accelerating > 0 ? 'bullish' : 'bearish' };
+
+    const volumeSurge = (input.bars[input.bars.length - 1].volume || 0)
+      > (input.bars.slice(-11, -1).reduce((s, b) => s + (b.volume || 0), 0) / 10) * 1.3;
+
+    // ── Measured branches (unchanged): each requires a real momentum move ──
+    if (accelerating > 2 && volumeSurge) {
+      return {
+        score: 70, confidence: 0.5,
+        reason: `Momentum accelerating +${accelerating.toFixed(1)}% with volume surge — bullish momentum proxy`,
+        signalClass: 'bullish',
+      };
+    }
+    if (accelerating > 1) {
+      return {
+        score: 50, confidence: 0.35,
+        reason: `Momentum accelerating +${accelerating.toFixed(1)}%`,
+        signalClass: 'bullish',
+      };
+    }
+    if (accelerating < -2) {
+      return {
+        score: 45, confidence: 0.3,
+        reason: `Momentum decelerating ${accelerating.toFixed(1)}% — bearish momentum proxy`,
+        signalClass: 'bearish',
+      };
+    }
+
+    // ── Unmeasured: |accelerating| < 1% is momentum noise, not a signal ──
+    // No score (the old `30 +` was invented), no direction (the old sign test
+    // was a coin-flip), and `unmeasured` so the risk engine never derives
+    // severity from it and the composite does not count it.
+    return {
+      score: 0,
+      confidence: 0.1,
+      reason:
+        `No measurable momentum shift: change ${accelerating >= 0 ? '+' : ''}${accelerating.toFixed(2)}% is ` +
+        `below the 1% threshold, and no analyst feed is available. Reporting UNMEASURED rather than ` +
+        `fabricating a sentiment score.`,
+      signalClass: 'neutral',
+      unmeasured: true,
+    };
   }
 }
 

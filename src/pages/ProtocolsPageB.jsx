@@ -26,6 +26,8 @@ export default function ProtocolsPageB({ initialProtocolId }) {
   const [usageFilter, setUsageFilter] = useState('all');
   const [hideInactive, setHideInactive] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const [adaptiveBusy, setAdaptiveBusy] = useState(false);
+  const [adaptiveError, setAdaptiveError] = useState(null);
   const [editingDirective, setEditingDirective] = useState(null);
   const [editValue, setEditValue] = useState('');
   const queryClient = useQueryClient();
@@ -93,6 +95,17 @@ export default function ProtocolsPageB({ initialProtocolId }) {
     staleTime: 10_000,
   });
   const directiveConfig = directiveConfigQuery.data;
+
+  // ── Adaptive Target (2026-09-10) — OFF by default ──
+  // The server owns the decision (it refuses to enable below the sample floor), so this
+  // query is the source of truth for both the button state and the explanation copy.
+  const adaptiveTargetQuery = useQuery({
+    queryKey: ['adaptive-target', selectedProto?.id],
+    queryFn: () => apiGet(`/api/scoring/protocols/${selectedProto?.id}/adaptive-target`),
+    enabled: !!selectedProto?.id,
+    staleTime: 10_000,
+  });
+  const adaptiveTarget = adaptiveTargetQuery.data;
 
   async function handleSaveOverride(directiveId, maxScore) {
     if (!selectedProto || !Number.isFinite(maxScore)) return;
@@ -186,6 +199,39 @@ export default function ProtocolsPageB({ initialProtocolId }) {
     setToggling(false);
   }
 
+  /**
+   * Toggle the Adaptive Target for the selected protocol (2026-09-10).
+   *
+   * OFF by default, and deliberately not optimistic: the server REFUSES to enable it when
+   * the protocol has too few observations, and the operator needs to see that reason rather
+   * than a button that flips and silently does nothing.
+   */
+  async function handleAdaptiveToggle() {
+    if (!selectedProto || adaptiveBusy) return;
+    const next = !(adaptiveTarget?.enabled);
+    setAdaptiveBusy(true);
+    setAdaptiveError(null);
+    try {
+      const res = await fetch(
+        `/api/scoring/protocols/${encodeURIComponent(selectedProto.id)}/adaptive-target`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: next }),
+        },
+      );
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        setAdaptiveError(body?.message || `Could not change Adaptive Target (${res.status}).`);
+      } else {
+        queryClient.setQueryData(['adaptive-target', selectedProto.id], body);
+      }
+    } catch (err) {
+      setAdaptiveError(err?.message || 'Could not reach the API.');
+    }
+    setAdaptiveBusy(false);
+  }
+
   if (protocolsQuery.isLoading) {
     return <div className="prb-page"><div className="prb-loading">Loading protocols…</div></div>;
   }
@@ -257,7 +303,7 @@ export default function ProtocolsPageB({ initialProtocolId }) {
             <div
               key={p.id}
               className={`prb-item ${selectedProto?.id === p.id ? 'prb-selected' : ''}`}
-              onClick={() => setSelected(p)}
+              onClick={() => { setSelected(p); setAdaptiveError(null); }}
             >
               <div className="prb-item-name">
                 {p.name}
@@ -288,15 +334,72 @@ export default function ProtocolsPageB({ initialProtocolId }) {
                   <h2>{selectedProto.name}</h2>
                   <code className="prb-detail-id">{selectedProto.id}</code>
                 </div>
-                <button
-                  className={`prb-status-btn ${selectedProto.active ? 'active' : 'inactive'}`}
-                  onClick={handleToggle}
-                  disabled={toggling}
-                  title={`Click to ${selectedProto.active ? 'disable' : 'enable'} this protocol`}
-                >
-                  {toggling ? '…' : selectedProto.active ? 'Active' : 'Inactive'}
-                </button>
+                <div className="prb-head-actions">
+                  <button
+                    className={`prb-status-btn ${selectedProto.active ? 'active' : 'inactive'}`}
+                    onClick={handleToggle}
+                    disabled={toggling}
+                    title={`Click to ${selectedProto.active ? 'disable' : 'enable'} this protocol`}
+                  >
+                    {toggling ? '…' : selectedProto.active ? 'Active' : 'Inactive'}
+                  </button>
+                  {/* Adaptive Target toggle (2026-09-10) — off by default, and visually
+                      distinct from Active/Inactive so the two are never confused: this
+                      changes the SCALE a score is measured against, not whether the
+                      protocol runs. "On" is amber, not green, because enabling it is a
+                      deliberate departure from the configured-capacity baseline. */}
+                  <button
+                    className={`prb-status-btn prb-target-btn ${
+                      adaptiveTarget?.enabled ? 'target-on' : 'target-off'
+                    }`}
+                    onClick={handleAdaptiveToggle}
+                    disabled={adaptiveBusy || adaptiveTargetQuery.isLoading}
+                    title={
+                      adaptiveTarget
+                        ? `${adaptiveTarget.reasonText}${
+                            adaptiveTarget.enabled
+                              ? ''
+                              : ` Enabling measures scores against this protocol's own observed peak instead of its full configured capacity, which raises every percentage for it.`
+                          }`
+                        : 'Loading Adaptive Target state…'
+                    }
+                  >
+                    {adaptiveBusy
+                      ? '…'
+                      : adaptiveTarget?.enabled
+                        ? 'Target: On'
+                        : 'Target: Off'}
+                  </button>
+                </div>
               </div>
+
+              {/* Adaptive Target detail — shown whenever it's ON, and whenever the
+                  operator tried to enable it and was refused. The point is that a reader
+                  can always tell WHICH scale the protocol's scores are on. */}
+              {(adaptiveTarget?.enabled || adaptiveError) && (
+                <div className={`prb-target-note ${adaptiveError ? 'prb-target-note--error' : ''}`}>
+                  {adaptiveError ? (
+                    <p>🚫 {adaptiveError}</p>
+                  ) : (
+                    <>
+                      <p>
+                        <strong>Adaptive Target is on.</strong> Percentages divide by this
+                        protocol&apos;s observed peak ({Math.round(adaptiveTarget.adaptiveMax ?? adaptiveTarget.peak ?? 0)})
+                        rather than its configured capacity ({Math.round(adaptiveTarget.configuredMax ?? 0)}).
+                        The peak only ever rises — it is never lowered by a quiet period.
+                      </p>
+                      <p className="prb-target-sub">
+                        Based on {adaptiveTarget.samples} reading
+                        {adaptiveTarget.samples === 1 ? '' : 's'}
+                        {adaptiveTarget.since
+                          ? `, peak set ${new Date(adaptiveTarget.since).toLocaleDateString()}`
+                          : ''}
+                        . {adaptiveTarget.reasonText}
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
 
               <p className="prb-description">{selectedProto.description}</p>
 

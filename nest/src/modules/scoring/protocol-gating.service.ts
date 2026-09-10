@@ -46,25 +46,54 @@ import { normalizeScorePercent, selectDirectionalEvidence } from './score-units'
 /**
  * Weighting Systems
  * =================
- * The scoring engine supports two weighting approaches. They are NOT competing —
- * they operate at different levels and can be selected per MetaStack:
+ * ⚠️ READ THE CURRENT RULE FIRST — this header used to describe a formula the
+ * code no longer implements, and that stale description is the most likely
+ * reason three protocols were built unable to trade (2026-09-10).
  *
- * 1. GROUP-WEIGHTED (default):
- *    Group weights (Technical=0.40, Sentiment=0.35, Risk=0.25) determine how much
- *    each group contributes to the composite. Within a group, directive maxScores
- *    determine relative influence (a maxScore=180 directive naturally contributes
- *    more than a maxScore=90 one). Composite = (technical×0.40 + sentiment×0.35) × riskMultiplier.
- *    Best for: protocols with mixed directive types where you want to control
- *    category balance (e.g. "I want technicals to matter 40% regardless of which
- *    directives fire").
+ * WHAT THE COMPOSITE ACTUALLY IS NOW
+ * ----------------------------------
+ *     composite = (directional raw / directional capacity) × riskMultiplier
  *
- * 2. MAXSCORE-WEIGHTED:
- *    Group weights are ignored. The composite is derived solely from directive maxScores
- *    across ALL active directives. Each directive contributes proportionally to its maxScore
- *    relative to the sum of all maxScores. No category preference — directives compete
- *    on their declared importance only.
- *    Best for: protocols where all directives are the same type and you want pure
- *    score-based ranking without category bias.
+ * Only directives whose RUNTIME `signalClass` is `bullish` (in a LONG_ONLY or
+ * BOTH protocol) or `bearish` (SHORT_ONLY or BOTH) contribute. A directive with
+ * `directionBias: 'neutral'` scores, is reported in `breakouts`, and adds
+ * EXACTLY ZERO to the composite — however high it scores. Groups marked
+ * `isRiskGate` are excluded from the signal entirely.
+ *
+ * ⚠️ CONSEQUENCE — capacity is not tradable capacity. A protocol can declare
+ * 1,075 points of maxScore and still be unable to reach its own threshold if
+ * most of those points sit on neutral directives. Live proof: `ftse-speed-v1`,
+ * `dax-speed-v1` and `cac-speed-v1` each carry ~815 points of NEUTRAL technical
+ * directives around a single 80-point directional one (`analyst-adjustments`),
+ * so their all-time maximum composite is **31** against a `minComposite` of 65.
+ * Across their whole history they have cleared the gate **0 times**, while
+ * `forex-session-v1` cleared it 1,168 times and `xau-speed-v1` 86 times.
+ * Before adding a directive to a protocol, check whether it can emit a
+ * `signalClass` — a neutral directive is a display metric, not a signal.
+ *
+ * (Historical note — the old formula was
+ * `(technical × 0.40 + sentiment × 0.35) × riskMultiplier`, i.e. group weights
+ * over NORMALIZED group scores, with gates multiplying. That was removed when
+ * scoring moved to directional-only evidence. `weightStrategy` below now selects
+ * between two DENOMINATOR conventions, not group weighting.)
+ *
+ * The engine supports two denominator conventions, selectable per MetaStack:
+ * both operate on DIRECTIONAL evidence only — they differ in what they divide by:
+ *
+ * 1. 'group-weighted' (default, misleading name): normalizes the directional raw
+ *    total against the protocol's CONFIGURED directional capacity
+ *    (`capacityMaxTotal`, INV-STABLE-DENOMINATOR). Stable over time — the same
+ *    market condition scores the same on every tick.
+ *
+ * 2. 'maxscore-weighted': divides by the OBSERVED evidence sum for this tick.
+ *    Because that denominator moves whenever a directive goes quiet, the same
+ *    reading scores differently between ticks; retained for A/B comparison and
+ *    screening, not for execution decisions.
+ *
+ * ⚠️ NEITHER convention makes a neutral directive count. The distinction between
+ * them is the DENOMINATOR only. If a protocol's compositor is too small to clear
+ * its threshold, the fix is to give it directional directives, not to switch
+ * weightStrategy.
  *
  * The weightStrategy is stored on ScoringStrategy and defaults to 'group-weighted'.
  *
@@ -89,6 +118,14 @@ export interface DirectiveBreakout {
   groupId: string;
   /** True when this directive contributed to the directional Signal score (Phase C). */
   inSignal: boolean;
+  /**
+   * True when the directive could not take a reading this tick (stale data,
+   * insufficient bars) — `score: 0` here means "no measurement", NOT "measured
+   * zero". The risk engine MUST NOT derive severity from it: doing so turned
+   * `liquidity-check`'s stale-data guard into a hard gate that vetoed the trade
+   * and blamed illiquidity (2026-09-10). See `DirectiveResult.unmeasured`.
+   */
+  unmeasured?: boolean;
 }
 
 export type RarityBand = 'standard' | 'strong' | 'exceptional' | 'cyclical' | 'black-swan';
@@ -110,7 +147,14 @@ export interface GatedScore {
   composite: number;
   /** Pre-risk raw score for the selected evidence direction. */
   signalRaw: number;
-  /** Maximum raw score for the selected evidence direction. */
+  /** The DENOMINATOR for `signalPct` — the protocol's CONFIGURED directional capacity
+   *  (`meta.configuredSignalMax`). Fixed by config, so it is stable between ticks and
+   *  identical across symbols. `signalRaw / signalMax` is exactly `signalPct`, and it is the
+   *  same pair the persisted `rawMax` uses.
+   *
+   *  ⚠️ This is NOT the observed evidence sum. That is `meta.observedSignalMax` and is
+   *  diagnostic only — it shrinks when a directive reads neutral, which inflates the
+   *  percentage. Do not divide by `subMaxTotals`/`observedSignalMax` (#758 follow-up). */
   signalMax: number;
   /** Unrounded normalized signal percentage. Round only at presentation boundaries. */
   signalPct: number;
@@ -166,14 +210,17 @@ export interface GatedScore {
       selected: 'bullish' | 'bearish' | 'none';
     };
     // ── #758 stable denominator — see docs/scoring-architecture.md ──
-    /** How `signalPct` was derived. 'configured-capacity' = divided by the protocol's
-     *  configured directional capacity (stable between ticks). */
+    /** How `signalPct` was derived. Always 'configured-capacity': `signalPct` divides by the
+     *  protocol's configured directional capacity, which is fixed by config and therefore
+     *  stable between ticks and identical across symbols. */
     denominatorMode: 'configured-capacity';
-    /** Configured directional capacity: sum of maxScores of every directive eligible to
-     *  express direction this tick. THIS is the denominator the persisted `rawMax` uses. */
+    /** Configured directional capacity: sum of maxScores of every non-gate directive admitted
+     *  into the protocol. Independent of what fired this tick. THIS is the denominator for BOTH
+     *  the classification percentage (`signalPct`) and the persisted `rawMax`. */
     configuredSignalMax: number;
-    /** Observed directional capacity: sum of maxScores of directives that actually
-     *  produced directional evidence this tick. Diagnostic only — do not divide by it. */
+    /** Observed directional capacity: sum of maxScores of directives that actually produced
+     *  directional evidence this tick. DIAGNOSTIC ONLY — it shrinks when a directive reads
+     *  neutral, so dividing by it inflates the percentage. Never use it as a denominator. */
     observedSignalMax: number;
     /** Count of directives eligible to express direction (matches `configuredSignalMax`). */
     directionEligibleDirectives: number;
@@ -276,6 +323,18 @@ function protocolNeedsEurUsd(groups: DirectiveGroup[]): boolean {
  */
 const ENTRY_THRESHOLD = 40;   // % of maxScore — BUY/SELL above this; below = HOLD (no directional edge)
 
+/**
+ * The pre-gate raw composite for Adaptive Target purposes — the sum of the per-group RAW
+ * totals (directional + non-directional), which is the same figure persisted as
+ * `breakdown.rawComposite`.
+ *
+ * Takes `breakdownData` rather than a number so the Adaptive Target path and the persisted
+ * `rawComposite` cannot drift apart: both read `subRawTotals` through this one function.
+ */
+function rawCompositeForAdaptiveTarget(breakdownData: { subRawTotals?: Record<string, number> }): number {
+  return Object.values(breakdownData?.subRawTotals ?? {}).reduce((a, b) => a + (b ?? 0), 0);
+}
+
 // ─── Service ─────────────────────────────────────────────
 
 @Injectable()
@@ -373,6 +432,14 @@ export class ProtocolGatingService {
       min15Bars?: import('../directives/interfaces/directive.interface').MarketBar[];
     },
     weightStrategy: 'group-weighted' | 'maxscore-weighted' = 'group-weighted',
+    /**
+     * Cadence of `bars` (e.g. '5m', '1d'). Passed to directives and to
+     * `computeMarketStatus` so a freshness check measures staleness against the
+     * REAL cadence rather than inferring it from a possibly-mixed array — the
+     * mismatch that made fresh data read as closed and hard-gated every tick of
+     * `spy-day-v1`/`qqq-day-v1` (2026-09-10).
+     */
+    timeframe?: string,
   ): Promise<GatedScore> {
     // Scoring REQUIRES a protocol — the unscoped 'default' pipeline was removed
     // (2026-08-22). Without a protocol, scoring would run every directive as a
@@ -418,6 +485,10 @@ export class ProtocolGatingService {
     const input: DirectiveInput = {
       symbol,
       bars,
+      // Cadence of `bars`, when the caller declared it. Directives that judge
+      // freshness (liquidity-check) pass this to computeMarketStatus so the
+      // staleness window is relative to the real cadence (2026-09-10).
+      timeframe,
       // The evaluated candle, not the process clock, defines scoring time.
       // This keeps live, replay, and backtest calculations reproducible.
       asOf: bars.length ? bars[bars.length - 1].timestamp : new Date(),
@@ -524,6 +595,27 @@ export class ProtocolGatingService {
     let bearishRaw = 0;
     let bearishMax = 0;
 
+    // ── Directive de-duplication across groups (2026-09-10) ────────────────
+    //
+    // A directive belongs to exactly ONE group. When the same `directiveId`
+    // appears in two groups the scoring loop below runs it twice and adds its
+    // score AND its maxScore twice — phantom capacity that inflates the
+    // denominator and weights the directive double.
+    //
+    // ProtocolHealthService already calls this an error and SKIPS the second
+    // occurrence (`duplicate-directive` / "appears in more than one group —
+    // double-counted"). The scorer had no such guard, so the two disagreed and
+    // the schema let the fault through silently.
+    //
+    // Measured before this guard: `session-open-effect` (maxScore 60) was the
+    // only offender, across 6 ACTIVE protocols — 60 phantom maxScore each, and
+    // 120 for forex-session-v1 which listed it in three groups.
+    //
+    // We keep the FIRST occurrence (group order is the protocol's own ordering)
+    // and skip later ones, mirroring the health check exactly so a protocol's
+    // audit and its score can no longer disagree.
+    const seenDirectiveIds = new Set<string>();
+
     for (const [groupId, { results, config, maxScores }] of groups) {
       breakouts[groupId] = [];
 
@@ -569,6 +661,20 @@ export class ProtocolGatingService {
 
       for (const result of results) {
         const directiveId = this.findDirectiveId(allResults, result);
+
+        // Skip a directive already counted in an earlier group — see the
+        // `seenDirectiveIds` note above. Checked BEFORE any accumulation so the
+        // duplicate contributes neither score nor capacity.
+        if (directiveId && seenDirectiveIds.has(directiveId)) {
+          this.logger.warn(
+            `Protocol ${protocolId}: directive "${directiveId}" appears in multiple groups ` +
+            `(group "${groupId}") — skipping the duplicate so it is not double-counted. ` +
+            `Fix the protocol config; ProtocolHealthService reports this as duplicate-directive.`,
+          );
+          continue;
+        }
+        if (directiveId) seenDirectiveIds.add(directiveId);
+
         const maxScore = directiveId ? (maxScores.get(directiveId) ?? 100) : 100;
         const directional =
           result.signalClass === 'bullish' || result.signalClass === 'bearish';
@@ -583,18 +689,64 @@ export class ProtocolGatingService {
         const inSignal = !isGateGroup && directional && directionAllowed;
 
         // Configured capacity: this directive can legitimately carry direction in this
-        // protocol (right mode for it) and is not a gate. Counts regardless of runtime
-        // signalClass, which is what makes the denominator stable (#758).
-        if (!isGateGroup && directionMode === 'BOTH') {
-          capacityMax += maxScore;
-          directionEligibleCount++;
-        } else if (!isGateGroup && directionMode === 'LONG_ONLY' && result.signalClass !== 'bearish') {
-          // A LONG_ONLY protocol can observe bearish evidence; `classifyDirectiveInclusion`
-          // already excludes hard-bearish directives from the config, so anything present
-          // here is eligible to contribute to the long side.
-          capacityMax += maxScore;
-          directionEligibleCount++;
-        } else if (!isGateGroup && directionMode === 'SHORT_ONLY' && result.signalClass !== 'bullish') {
+        // protocol (right mode for it) and is not a gate.
+        //
+        // ⚠️ WHY THIS NO LONGER READS `result.signalClass` (#758, second pass)
+        // -------------------------------------------------------------------
+        // The first fix still consulted `result.signalClass` here — a RUNTIME value —
+        // so the denominator remained market-dependent rather than configured:
+        //
+        //     LONG_ONLY + directive reading bearish  → excluded from capacity
+        //     BOTH                                → always counted
+        //
+        // Measured live after that fix deployed: `forex-session-v1` wrote FIVE
+        // different denominators in 30 minutes (470/560/390/480/410), and `xau-speed-m15`
+        // wrote four. A percentage whose denominator drifts with the market is not
+        // comparable over time — which is the exact defect #758 exists to remove. It
+        // also made capacity depend on the SYMBOL, because each symbol reaches a
+        // different directional reading, so the same protocol scored two symbols
+        // against two different maxima in the same tick.
+        //
+        // Direction-ELEGIBILITY is a property of the CONFIG (which mode the protocol
+        // declares, and what `classifyDirectiveInclusion` admitted), not of the tick.
+        // A directive admitted into a BOTH protocol is eligible to carry direction;
+        // whether it happens to read neutral or bullish THIS minute changes the
+        // numerator only. That is what "stable denominator" has to mean to be worth
+        // anything, and it is what the issue's own analysis describes: "Denominator =
+        // sum of maxScores of all included, direction-eligible directives from
+        // **config**, not from what fired."
+        //
+        // Gate groups stay excluded — a gate expresses a hurdle, not conviction.
+        //
+        // ⚠️ `!isGateGroup` ALONE IS CORRECT HERE — DO NOT ADD A `directionBias` TEST (#761)
+        // --------------------------------------------------------------------------------
+        // #761 proposed making capacity require `directionBias ∈ {bullish, bearish}`, on the
+        // grounds that a directive which can never emit a direction is unreachable
+        // denominator. **That was tried (2026-09-10) and reverted**, because the premise is
+        // false: declared bias massively UNDERSTATES what directives actually emit.
+        //
+        // Measured over 7 days of recorded breakdowns:
+        //
+        //     directive                  declares    directional hits at runtime
+        //     support-resistance-levels  ?            11,129
+        //     analyst-adjustments        ?             8,746
+        //     macd-crossover             neutral       5,252
+        //     gold-macro-correlation     neutral       4,703
+        //     gold-round-numbers         neutral       3,890
+        //     speed-momentum             neutral       2,854
+        //
+        // Gating capacity on `directionBias` therefore EXCLUDES the directives doing most of
+        // the real work and shrinks every denominator — making the percentages worse, not
+        // better. `ProtocolHealthService` documents the same trap in its own
+        // `low-declared-directional-capacity` check, which is deliberately reported at
+        // `warning` and worded as "go and look", precisely because declared bias is not
+        // trustworthy as a capacity measure.
+        //
+        // The genuine question in #761 — "does capacity include points the numerator cannot
+        // reach?" — is real, but it cannot be answered from config. Measure it from OUTCOMES:
+        // `scripts/analyse-unreachable-capacity.cjs`. Any future fix must be driven by that,
+        // not by declaration. See ADR-011.
+        if (!isGateGroup) {
           capacityMax += maxScore;
           directionEligibleCount++;
         }
@@ -628,6 +780,8 @@ export class ProtocolGatingService {
           reason: result.reason,
           groupId,
           inSignal,
+          // Carry the measured/unmeasured distinction through to the risk engine.
+          unmeasured: result.unmeasured,
         });
       }
 
@@ -663,6 +817,9 @@ export class ProtocolGatingService {
       score: b.score,
       maxScore: b.maxScore,
       reason: b.reason,
+      // Propagate "could not measure" so the engine skips it instead of
+      // computing severity 1.0 and tripping a hard gate (2026-09-10).
+      unmeasured: b.unmeasured,
     }));
 
     // 5. Compute both scores (Phase C dual-score model).
@@ -686,11 +843,32 @@ export class ProtocolGatingService {
     // A percentage over a moving denominator is not comparable across the stored series, so
     // the reported percentage denominator prefers the protocol's CONFIGURED capacity.
     //
+    // ⚠️ THE CONFIGURED DENOMINATOR IS ALSO THE CLASSIFICATION DENOMINATOR (#758 follow-up).
+    //
+    // #758 built `capacityMaxTotal` and wired it into the PERSISTED `rawMax`, but left
+    // `signalPct` dividing by `selectedEvidence.maximum` (the OBSERVED directional max). That
+    // made ONE reading carry TWO percentages: the card showed `raw / configured` (e.g. 17%)
+    // while the BUY/STRONG_BUY label and the pre-trade gate were decided from
+    // `raw / observed` (e.g. 82%) — so a card could read `STRONG_BUY 17%`. Both numbers were
+    // internally consistent; they simply answered the question against different bars.
+    //
+    // The observed max is NOT a legitimate classification denominator because it SHRINKS
+    // when a directive reads neutral this tick — a quieter tick inflates the percentage.
+    // `capacityMaxTotal` is fixed by config, is per-protocol (not per-symbol), and is the
+    // denominator the stored series already uses. One authoritative denominator.
+    //
     // When there is no directional evidence at all (no direction-eligible directive produced a
     // reading, so numerator and denominator are both 0), that is NOT a score — it is an
     // absence. Previously it persisted as `rawMax: 0, composite: 0, signal: 'HOLD'`, which is
     // indistinguishable from a genuine neutral reading and silently inflated the 'scored'
     // counts that drove `protocol_score_status` to claim 'scoring' for hours (#758).
+    //
+    // The `: totalMax` fallback is load-bearing and was investigated during #761: it can only
+    // trigger when a protocol has NO non-gate directives at all, because capacity does NOT
+    // test `directionBias` (see the note at the capacity accumulation). A `directionBias`-based
+    // capacity test was tried and reverted precisely because it would have made this fallback
+    // reachable for real protocols — handing them `totalMax`, the OBSERVED max that ADR-011
+    // bans. Left as-is; the fallback is unreachable in practice.
     const signalDenominator = capacityMaxTotal > 0 ? capacityMaxTotal : totalMax;
     const hasDirectionalEvidence = capacityMaxTotal > 0
       ? directionEligibleTotal > 0 && observedMaxTotal > 0
@@ -710,10 +888,13 @@ export class ProtocolGatingService {
       ? 0
       : Math.round(Math.max(0, riskResult.finalScore));
 
-    // Signal-strength percentage: pre-gate directional sum against the
-    // directional-only denominator (un-softened by the risk multiplier).
-    const STRONG_PCT = 80; // % of maxScore for STRONG_BUY / STRONG_SELL
-    const signalPct = selectedEvidence.percentage;
+    // Signal-strength percentage: pre-gate directional sum against the CONFIGURED directional
+    // capacity (un-softened by the risk multiplier). This is the ONE number used for the
+    // BUY/HOLD/SELL classification AND displayed on the card, so the label and the percentage
+    // can never disagree. See the `signalDenominator` note above for why the observed max is
+    // not acceptable here (#758 follow-up).
+    const STRONG_PCT = 80; // % of configured capacity for STRONG_BUY / STRONG_SELL
+    const signalPct = normalizeScorePercent(selectedEvidence.raw, signalDenominator);
 
     let signal: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
     const isLongDirection = selectedDirection === 'bullish';
@@ -781,7 +962,7 @@ export class ProtocolGatingService {
     // "safe to trade" (calendar open AND data fresh), and a separate `stale`
     // flag reports "market open but data stale" so the UI can label it "Stale"
     // instead of "Market closed" while execution still blocks on `open=false`.
-    const freshness = computeMarketStatus(bars);
+    const freshness = computeMarketStatus(bars, new Date(), timeframe);
     let marketStatus: { open: boolean; stale?: boolean; asOf: string | null; reason?: string };
     if (is24HourMarket(symbol)) {
       marketStatus = { ...freshness, stale: !freshness.open };
@@ -834,7 +1015,10 @@ export class ProtocolGatingService {
       symbol,
       composite,
       signalRaw: directionalSum,
-      signalMax: totalMax,
+      // The CONFIGURED denominator — `signalRaw / signalMax === signalPct`. Carrying the
+      // observed `totalMax` here was the second half of the original defect: a consumer that
+      // computed `signalRaw / signalMax` would get a different percentage from `signalPct`.
+      signalMax: signalDenominator,
       signalPct,
       signal,
       subScores,
@@ -857,16 +1041,20 @@ export class ProtocolGatingService {
       },
       meta: {
         compositePct: signalPct,
-        maxScore: totalMax,
+        // The denominator behind `compositePct`/`signalPct`. Must be the configured capacity —
+        // pairing a configured percentage with an observed max silently breaks every consumer
+        // that recomputes `raw / maxScore`.
+        maxScore: signalDenominator,
         directiveCount: allResults.size,
         gatedCount: allResults.size - alphaCount,
         riskDirectiveCount: breakouts['risk']?.length ?? 0,
         weightStrategy,
         // ── #758 stable denominator ──
-        // `signalMax`/`meta.maxScore` remain the OBSERVED evidence pair (what actually read
-        // directional this tick). `configuredSignalMax` is the protocol's CONFIGURED
-        // directional capacity and is what the persisted `rawMax` uses, so `score / rawMax` is
-        // comparable between ticks instead of moving with whatever happened to fire.
+        // `configuredSignalMax` is the protocol's CONFIGURED directional capacity and is the
+        // denominator BOTH for `signalPct` (classification + UI) and for the persisted `rawMax`,
+        // so `score / rawMax` is comparable between ticks and across symbols. `observedSignalMax`
+        // remains the observed evidence pair for diagnostics only — dividing by it makes the same
+        // market condition score differently just because a directive went quiet.
         denominatorMode: 'configured-capacity',
         configuredSignalMax: capacityMaxTotal,
         observedSignalMax: totalMax,
@@ -1086,6 +1274,54 @@ export class ProtocolGatingService {
     return symbols.includes(symbol.toUpperCase());
   }
 
+  /**
+   * Fold a reading into a protocol's Adaptive Target peak (2026-09-10).
+   *
+   * MONOTONIC — the peak only ever rises. See `adaptive-target.ts` for why a falling
+   * target is not acceptable. The UPDATE is therefore guarded in SQL (`adaptiveTargetMax < ?`)
+   * as well as in JS, so two concurrent scoring runs cannot lower it through a race.
+   *
+   * Only the peak and sample count move. `adaptiveTargetEnabled` is NEVER touched here —
+   * enabling is an explicit operator action (the registry toggle), so a protocol cannot
+   * silently switch itself onto a different scale.
+   *
+   * Fire-and-forget: called without `await` from `storeSnapshot`, so a failure degrades to
+   * "target not yet established" rather than breaking a scoring tick.
+   */
+  private observeAdaptiveTargetPeak(protocolId: string, rawComposite: number): void {
+    if (!Number.isFinite(rawComposite) || rawComposite <= 0) return; // absence is not evidence
+    void (async () => {
+      try {
+        // ONE statement, deliberately. Doing "raise the peak" and "count the sample" as two
+        // UPDATEs would increment `adaptiveTargetSamples` twice on every new high, so a
+        // protocol would reach the sample floor at half the real observation count.
+        //
+        // The peak only moves via the guarded CASE — `GREATEST` alone would still allow a
+        // lower value to win if the row were read and written non-atomically, whereas the
+        // CASE evaluates against the stored value inside the same statement.
+        await (this.prisma as any).$executeRawUnsafe(
+          `UPDATE protocol
+              SET adaptiveTargetMax = CASE
+                    WHEN adaptiveTargetMax IS NULL OR adaptiveTargetMax < ? THEN ?
+                    ELSE adaptiveTargetMax
+                  END,
+                  adaptiveTargetSamples = adaptiveTargetSamples + 1,
+                  adaptiveTargetSince = CASE
+                    WHEN adaptiveTargetSince IS NULL THEN ?
+                    ELSE adaptiveTargetSince
+                  END
+            WHERE slug = ?`,
+          rawComposite,
+          rawComposite,
+          new Date(),
+          protocolId,
+        );
+      } catch (err: any) {
+        this.logger.debug?.(`Adaptive target observation skipped for ${protocolId}: ${err?.message ?? err}`);
+      }
+    })();
+  }
+
   private storeSnapshot(
     protocolId: string,
     symbol: string,
@@ -1139,6 +1375,18 @@ export class ProtocolGatingService {
       try {
         const sym = await this.prisma.symbol.findFirst({ where: { ticker: symbol.toUpperCase() }, select: { id: true } });
         if (!sym) return;
+
+        // ── Adaptive Target observation (2026-09-10) ────────────────────────────
+        // Fold this reading into the protocol's observed-peak RAW composite.
+        //
+        // Uses the PRE-GATE raw composite, not `composite`: a closed market hard-gates the
+        // composite to 0, so feeding it here would make the peak depend on whether the
+        // market happened to be open — reintroducing the tick-varying denominator that
+        // #758 removed.
+        //
+        // Fire-and-forget like the score write: a failure here must never break scoring.
+        this.observeAdaptiveTargetPeak(protocolId, rawCompositeForAdaptiveTarget(breakdownData));
+
         await (this.prisma as any).score.create({
           data: {
             symbolId: sym.id,

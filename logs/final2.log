@@ -1,0 +1,6 @@
+
+C:\wamp64\www\trading-command-suite\src\pages\ProtocolsPageB.jsx
+  48:9  warning  The 'healthIssues' logical expression could make the dependencies of useMemo Hook (at line 56) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'healthIssues' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+Ô£û 1 problem (0 errors, 1 warning)
+

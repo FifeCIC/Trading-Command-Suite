@@ -69,7 +69,7 @@ OpportunityPct   = OpportunityScore / OpportunityMax × 100
 
 ```
 SignalRaw = Σ (directional directive scores)        — only signalClass ∈ {bullish, bearish}
-SignalMax = Σ (those directives' maxScores)         — directional denominator
+SignalMax = Σ (non-gate directives' maxScores)      — CONFIGURED capacity, fixed by config
 SignalPct = SignalRaw / SignalMax × 100
 
 composite = SignalRaw × risk-multiplier             — soft gates scale it
@@ -81,6 +81,39 @@ composite = SignalRaw × risk-multiplier             — soft gates scale it
 - **What it's for** — timing an entry/exit. The `BUY / HOLD / SELL` classification and the
   automation loop's trade decisions use this.
 - **Gated, not diluted** — risk conditions *multiply* the signal; they never add points.
+
+#### The denominator is CONFIGURED capacity — never the observed sum
+
+This is the one point most easily got wrong, so it is stated explicitly.
+
+| | Meaning | May be used as denominator? |
+|---|---|---|
+| **`configuredSignalMax`** | Σ maxScores of every **non-gate** directive admitted into the protocol. Fixed by config. Identical for every symbol, every tick. | ✅ **Yes — this is the only one.** |
+| **`observedSignalMax`** | Σ maxScores of directives that happened to read **directional this tick**. Shrinks when a directive reads neutral. Differs per symbol. | ❌ **No — diagnostic only.** |
+| `subMaxTotals` / `signalMax` | The per-group observed pair (`observedSignalMax` is their total). | ❌ No — same trap, one level down. |
+
+**Why the observed sum is not a legitimate denominator:** it *shrinks* whenever a directive
+reads neutral, so a **quieter tick produces a HIGHER percentage**. A protocol with 910 points
+of configured capacity whose only two firing groups total 185 would score `152/185 = 82%`
+(→ `STRONG_BUY`) on the observed basis but `152/910 = 17%` on the configured basis. The
+observed figure is not a measure of conviction; it is a measure of how many directives
+happened to have an opinion. Two further consequences make it unusable:
+
+- It is **per-symbol**, so one protocol could score two symbols against two different maxima
+  in the same tick.
+- It made the **stored series non-comparable** — `forex-session-v1` wrote five different
+  denominators in 30 minutes (`#758`).
+
+**One denominator, everywhere.** `signalPct` (classification + UI), the persisted `rawMax`
+(`score-history`), and the Arena consensus percentage all divide by
+`configuredSignalMax`. If you find a fourth place computing its own denominator, that is a
+bug — the card, the label and the gate must never disagree.
+
+> **Regression note (`#758` follow-up).** `#758` correctly stabilised the *persisted*
+> `rawMax` onto configured capacity but left `signalPct` dividing by the observed max, so a
+> card could read `STRONG_BUY 17%` — label from one denominator, percentage from another.
+> Both numbers were internally consistent; they answered against different bars. Whichever
+> side you change, change both: they are one number with one denominator.
 
 ---
 

@@ -1,0 +1,40 @@
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": MySQL database "tradingcs" at "localhost:3306"
+
+ÔÜá´©Å  There might be data loss when applying the changes:
+
+  ÔÇó You are about to drop the column `provider` on the `symbol_route` table, which still contains 8 non-null values.
+
+  ÔÇó You are about to drop the column `exitPriceRaw` on the `trade` table, which still contains 82 non-null values.
+
+  ÔÇó You are about to drop the column `pnlInvalid` on the `trade` table, which still contains 143 non-null values.
+
+  ÔÇó You are about to drop the column `pnlInvalidReason` on the `trade` table, which still contains 82 non-null values.
+
+  ÔÇó You are about to drop the column `pnlRaw` on the `trade` table, which still contains 82 non-null values.
+
+  ÔÇó You are about to drop the `directiveoutcome_ts_backup_20260910` table, which is not empty (40303 rows).
+
+  ÔÇó You are about to drop the `marketbar_ts_backup_20260910` table, which is not empty (195391 rows).
+
+  ÔÇó You are about to drop the `paper_trade` table, which is not empty (44 rows).
+
+  ÔÇó You are about to drop the `position_ts_backup_20260910` table, which is not empty (24 rows).
+
+  ÔÇó You are about to drop the `signal_outcome_log` table, which is not empty (1370 rows).
+
+  ÔÇó You are about to drop the `signal_outcome_meta` table, which is not empty (4586 rows).
+
+  ÔÇó You are about to drop the `strategy_signal_queue` table, which is not empty (1 rows).
+
+  ÔÇó You are about to drop the `trade_ts_backup_20260910` table, which is not empty (140 rows).
+
+  ÔÇó You are about to drop the `watchlist_backup_763` table, which is not empty (23 rows).
+
+  ÔÇó You are about to drop the `watchlist_backup_764` table, which is not empty (19 rows).
+
+
+
+[?25l[2K[1G[36m?[39m [1mDo you want to ignore the warning(s)?[22m [90m┬╗[39m [90m(y/N)[39m[2K[1G[2K[1G[31m├ù[39m [1mDo you want to ignore the warning(s)?[22m [90m...[39m no
+[?25hPush cancelled.

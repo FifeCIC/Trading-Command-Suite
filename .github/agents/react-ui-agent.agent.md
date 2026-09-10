@@ -25,7 +25,7 @@ Phase-gated features may have placeholders in the UI. Leave them as-is. Do not b
 1. Read the skeleton/stub page to understand the intent
 2. Design the backend service(s) needed — what Prisma models, what queries
 3. Build the NestJS service + controller + module wiring
-4. Push any needed schema changes (`prisma db push`)
+4. Apply schema changes safely — 🛑 **NEVER `prisma db push`** (it drops 10 raw-managed tables incl. the trade execution queue). Add columns with `ALTER TABLE`, then `npx prisma generate` with the API stopped. Run `npm --prefix nest run db:check`. See `.github/instructions/database-schema.instructions.md` and #769
 5. Build the frontend with real API calls, motion animations, proper loading/error states
 6. Verify the build passes
 

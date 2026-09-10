@@ -15,34 +15,38 @@ import { DirectivesService } from '../directives/directives.service';
 import { PROTOCOL_SEED_DATA } from './protocols-seed-data';
 
 /**
- * Protocol symbol-derivation rules — shared with SymbolResolverService
- * (bar-refresh coverage, #665). Single source of truth for the
- * "auto-derive symbols from protocol ID" behaviour.
+ * Protocol symbol-derivation rules (#665, retired #764).
+ *
+ * ⚠️ RETIRED — THESE TABLES ARE INTENTIONALLY EMPTY.
+ *
+ * They map a protocol-name FRAGMENT to a symbol or watchlist name, and were the last
+ * resort in `resolveSymbols()` when a protocol had neither an assignment nor a linked
+ * watchlist. The audit (`scripts/audit-hint-dependency.cjs`) found **20 protocols relying
+ * on them** — including 10 ACTIVE ones — which meant a protocol's symbols were being
+ * GUESSED from its slug text rather than declared.
+ *
+ * That is not a relationship. It cannot survive a rename, it cannot report that it broke,
+ * and it produced four stale targets after the #760 ticker consolidation (#761: `BTCUSD`,
+ * `USOIL`, `DOGEUSD`, `CHN50`). Every protocol is now wired by foreign key — see
+ * `docs/guides/symbol-onboarding-procedure.md` — so the audit reports:
+ *
+ *     ACTIVE: HINT_ONLY=0   ALL: HINT_ONLY=0
+ *
+ * The tables are kept as EMPTY typed arrays rather than deleted, for one reason: the code
+ * path that reads them also carries the warning that tells an operator a protocol is
+ * unwired. Deleting the arrays would delete the diagnostic with them. Kept empty, the
+ * behaviour is:
+ *
+ *   - a correctly wired protocol never reaches this path;
+ *   - an UNWIRED protocol resolves to NOTHING and logs exactly how to fix it — a loud,
+ *     actionable failure instead of a silent, plausible guess.
+ *
+ * Do not repopulate these. Wire the protocol instead. If you think you need a hint, the
+ * thing you actually need is a watchlist row linked via `watchlist.protocolId`.
  */
-export const SINGLE_SYMBOL_HINTS: Array<{ match: string; symbol: string }> = [
-  { match: 'btc', symbol: 'BTCUSD' },
-  { match: 'xau', symbol: 'XAUUSD' },
-  { match: 'gold', symbol: 'XAUUSD' },
-  { match: 'oil', symbol: 'USOIL' },
-  { match: 'spy', symbol: 'SPY' },
-  { match: 'spx', symbol: 'SPY' },
-  { match: 'qqq', symbol: 'QQQ' },
-  { match: 'dow', symbol: 'US30' },
-  { match: 'ftse', symbol: 'UK100' },
-  { match: 'tsla', symbol: 'TSLA' },
-  { match: 'doge', symbol: 'DOGEUSD' },
-  { match: 'china', symbol: 'CHN50' },
-  { match: 'vix', symbol: 'VIX' },
-];
+export const SINGLE_SYMBOL_HINTS: Array<{ match: string; symbol: string }> = [];
 
-export const WATCHLIST_HINTS: Array<{ match: string; watchlist: string }> = [
-  { match: 'forex', watchlist: 'forex-majors' },
-  { match: 'session', watchlist: 'forex-majors' },
-  { match: 'dxy', watchlist: 'forex-majors' },
-  { match: 'momentum', watchlist: 'momentum-stocks' },
-  { match: 'pandemic', watchlist: 'pandemics' },
-  { match: 'leverage', watchlist: 'leverage' },
-];
+export const WATCHLIST_HINTS: Array<{ match: string; watchlist: string }> = [];
 
 /** Pure: single symbol derived from a protocol slug, or null. */
 export function deriveSingleSymbolFromSlug(slug: string): string | null {
@@ -51,6 +55,20 @@ export function deriveSingleSymbolFromSlug(slug: string): string | null {
     if (id.includes(hint.match)) return hint.symbol;
   }
   return null;
+}
+
+/**
+ * Every ticker SINGLE_SYMBOL_HINTS can produce (#761).
+ *
+ * This table is a hardcoded map from a protocol *name* to a symbol *ticker*, and
+ * nothing at runtime validates that the ticker still exists. When a symbol is
+ * renamed or retired the hint keeps resolving happily to a ticker with no rows,
+ * the protocol stalls, and the only symptom is a score that never appears —
+ * which looks exactly like a quiet market. Exported so the contract gate can
+ * assert every target resolves to a live, active symbol.
+ */
+export function allDerivedSymbolTargets(): string[] {
+  return [...new Set(SINGLE_SYMBOL_HINTS.map((h) => h.symbol))];
 }
 
 export interface ProtocolConfig {
@@ -179,23 +197,56 @@ export class ProtocolDbService implements OnModuleInit {
       }
     } catch { /* table may not exist yet */ }
 
-    // Path 2: DB — Watchlist linked to this protocol
+    // Path 2: DB — Watchlist linked to this protocol BY FOREIGN KEY.
+    //
+    // ⚠️ This is FK-only on purpose, and `protocolId` alone is the match (#763).
+    // The previous version asked the database for a watchlist whose *name* equalled
+    // the candidate id, normalised by hand. That is a name-matching heuristic, not a
+    // relationship, and it was actively harmful: five watchlists exist TWICE with the
+    // same name — once with a slug-shaped id (`leverage-long`) and once with a UUID —
+    // and the old query used `LIMIT 1` with no `ORDER BY`, so which of the two a
+    // protocol read depended on storage order. Editing the symbols on one row could
+    // therefore change what a protocol scored, with no error. It also meant renaming
+    // a watchlist broke resolution silently.
+    //
+    // A watchlist that names a protocol by FK cannot drift, cannot be ambiguous, and
+    // survives renames. If a protocol has no linked watchlist, that is a real state
+    // and it falls through to the (loud) derivation fallback below.
     try {
-      const wl = await (this.prisma as any).watchlist.findFirst({
-        where: { protocolId: { in: idCandidates } },
-        select: { symbols: true },
-      });
-      if (wl?.symbols) {
+      const wls: any[] = await (this.prisma as any).$queryRawUnsafe(
+        `SELECT symbols FROM watchlist
+          WHERE protocolId IN (${idCandidates.map(() => '?').join(',')})
+          ORDER BY (id REGEXP '^[0-9a-f]{8}-[0-9a-f]{4}-') DESC, id ASC`,
+        ...idCandidates,
+      );
+      const syms: string[] = [];
+      for (const wl of wls) {
         const parsed = typeof wl.symbols === 'string' ? JSON.parse(wl.symbols) : wl.symbols;
-        if (Array.isArray(parsed)) {
-          const syms = parsed.map((s: any) => typeof s === 'string' ? s.toUpperCase() : (s.ticker || s.symbol || '').toUpperCase()).filter(Boolean);
-          if (syms.length > 0) return syms;
+        if (!Array.isArray(parsed)) continue;
+        for (const s of parsed) {
+          const t = (typeof s === 'string' ? s : (s?.ticker || s?.symbol || '')).toUpperCase();
+          if (t && !syms.includes(t)) syms.push(t);
         }
       }
+      if (syms.length > 0) return syms;
     } catch { /* table may not exist yet */ }
 
-    // Path 3: Auto-derived from protocol ID (fallback — prefer DB wiring above).
-    return this.deriveSymbolsFromId(protocolId);
+    // Path 3: Auto-derived from protocol ID — a NAME-GUESSING FALLBACK, not a link.
+    // The protocol has no assignment and no linked watchlist, so there is no
+    // relationship to follow and we are inferring a symbol from the protocol's slug
+    // text. That is exactly how four hints went stale after a ticker rename and left
+    // protocols aimed at dead symbols with no error (#761). It is kept for
+    // convenience but it MUST announce itself, because a guessed symbol is
+    // indistinguishable from a wired one once the bars arrive (#763).
+    const derived = await this.deriveSymbolsFromId(protocolId);
+    if (derived.length > 0) {
+      this.logger.warn(
+        `Protocol "${protocolId}" has NO assignment and NO linked watchlist — symbols were GUESSED from its name: ` +
+        `[${derived.join(', ')}]. This is not a pipeline relationship and will break silently if the symbol is renamed. ` +
+        `Wire it properly: link a watchlist via watchlist.protocolId, or add a symbol_protocol_assignment row.`,
+      );
+    }
+    return derived;
   }
 
   /** Auto-derive symbols from a protocol ID when no explicit config exists. */
@@ -220,11 +271,22 @@ export class ProtocolDbService implements OnModuleInit {
     return [];
   }
 
-  /** Get symbols from a watchlist by name (fuzzy match). */
+  /**
+   * Get symbols from a watchlist by name (legacy fuzzy match, #763).
+   *
+   * ⚠️ Only reachable from the derivation fallback. Prefer a `watchlist.protocolId`
+   * FK. The match normalises `-`/`_` to spaces and nothing else, so a real rename
+   * (`momentum-stocks` → `Momentum Stocks (US)`) does NOT match and resolution drops
+   * through to guessing. Ordering is pinned to the UUID row so a duplicate slug/UUID
+   * pair can never resolve by storage order.
+   */
   private async getWatchlistSymbols(name: string): Promise<string[]> {
     try {
       const wl: any[] = await (this.prisma as any).$queryRawUnsafe(
-        `SELECT symbols FROM watchlist WHERE LOWER(REPLACE(REPLACE(name, '-', ' '), '_', ' ')) = LOWER(REPLACE(REPLACE(?, '-', ' '), '_', ' ')) LIMIT 1`,
+        `SELECT symbols FROM watchlist
+          WHERE LOWER(REPLACE(REPLACE(name, '-', ' '), '_', ' ')) = LOWER(REPLACE(REPLACE(?, '-', ' '), '_', ' '))
+          ORDER BY (id REGEXP '^[0-9a-f]{8}-[0-9a-f]{4}-') DESC, id ASC
+          LIMIT 1`,
         name,
       );
       if (wl.length > 0 && wl[0].symbols) {

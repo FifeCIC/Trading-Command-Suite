@@ -423,6 +423,15 @@ export class AutomationController {
       activeTimelineEvents: loopState.activeTimelineEvents.slice(0, 20),
       recentDecisions: (loopState.recentDecisions || []).slice(0, 20),
       priorityQueue: loopState.priorityQueue || [],
+      // ── Session-gated bots (#759) ──
+      // Bots the session gate is holding shut right now. Present so a gated bot
+      // is never mistaken for an idle one: before this, three of six forex bots
+      // could be shut through London and the US session and every surface
+      // reported nothing at all. `ambigutyHint: 'news-flow?'` means the window
+      // resolved through a CITY alias, so the gate may be reading a news-flow
+      // name as a trading clock — a question for the operator, not a decision
+      // this endpoint makes.
+      sessionGatedBots: this.loop.getSessionGated(),
       positionSync: {
         lastSyncedAt: this.positionSync.getLastSyncTime(),
         lastResult: this.positionSync.getLastSyncResult(),

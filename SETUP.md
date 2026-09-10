@@ -67,21 +67,42 @@ The connection string lives in `nest/.env`:
 DATABASE_URL="mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"
 ```
 
-### Push schema (creates all tables)
+### Create the schema
+
+> 🛑 **Do NOT run `prisma db push` in this repo.** It is a declarative diff with destructive
+> defaults: every table with no model in `schema.prisma` is dropped. This repo has **10**
+> such tables, including `strategy_signal_queue` (the trade execution queue) and the #750
+> timestamp-repair backups. See `.github/instructions/database-schema.instructions.md` and
+> issue **#769**.
+>
+> `npm run db:push` is deliberately **blocked** and explains why.
+
+For a **fresh database**, create the schema from `schema.prisma` without letting Prisma
+choose the diff — generate the SQL, **read it**, then apply it:
 
 ```powershell
 $env:DATABASE_URL = "mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"
-npm --prefix C:\wamp64\www\trading-command-suite\nest run prisma db push
+cd C:\wamp64\www\trading-command-suite\nest
+
+# 1. Generate the DDL from the schema to an empty target and REVIEW it
+npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script
+
+# 2. Apply it (pipe to mysql), then load the raw-managed tables
+#    prisma/schema.prisma cannot create these — they are raw-SQL managed:
+#      nest/prisma/raw-managed/{strategy_signal_queue,paper_trade,
+#                               signal_outcome_log,signal_outcome_meta}.sql
+#    They MUST exist before the app runs; see nest/prisma/raw-managed/README.md
+
+# 3. Regenerate the client
+npx prisma generate
+
+# 4. Verify nothing non-empty is unmanaged
+npm run db:check
 ```
 
-This creates all tables including:
-- `symbol`, `strategy`, `directive`, `score`, `signal` — core trading
-- `market_bar`, `import_run` — data pipeline
-- `backtest_run`, `backtest_trade` — permanent backtest storage
-- `provider_health`, `api_activity_log`, `api_trace` — monitoring
-- `correlation_pair`, `symbol_calibration` — analysis
-- `news_source`, `news_article`, `article_sample`, `publishing_pattern` — news pipeline
-- `faq_entry` — help system
+On an **existing** database, add columns with a targeted `ALTER TABLE` and then
+`npx prisma generate`. Stop the API first — it locks the query-engine DLL and `prisma
+generate` will fail with `EPERM`.
 
 ### Seed initial data
 
@@ -95,15 +116,27 @@ well beyond the original "3 test symbols" — see the seed modules for the curre
 protocols via `POST /api/scoring/gated/protocols/seed`, trading bots via
 `POST /api/trading/strategies/seed`, FAQ entries, historical data).
 
-> ⚠️ **Schema drift:** some runtime tables (`paper_trade`, `strategy_signal_queue`, …) were created via
-> raw SQL and are NOT in `schema.prisma`, so `prisma db push` will not (re)create them. Account for
-> this when standing up a fresh database.
+> ⚠️ **Schema drift — and it is dangerous, not just untidy.**
+>
+> Four **live** tables (`strategy_signal_queue`, `paper_trade`, `signal_outcome_log`,
+> `signal_outcome_meta`) plus six backup tables were created via raw SQL and are **not** in
+> `schema.prisma`. They have no `CREATE TABLE` in the repo — they exist only in the database.
+>
+> This means `prisma db push` does not merely fail to create them: **it would DROP them**, because
+> Prisma treats every unmodelled table as garbage. `strategy_signal_queue` is the trade execution
+> queue. This repo also has **no migration history**, so drift cannot be reconciled.
+>
+> The checked-in DDL that restores them lives in `nest/prisma/raw-managed/`. Verify the current
+> state with `npm --prefix nest run db:check`. Tracked in issue **#769**.
 
 ### Regenerate Prisma client (after schema changes)
 
+⚠️ **Stop the API first.** `prisma generate` cannot replace the query-engine DLL while the API
+holds it, and fails with `EPERM`. Forgetting this also leaves `dist/` empty after `rimraf`.
+
 ```powershell
 $env:DATABASE_URL = "mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs"
-npm --prefix C:\wamp64\www\trading-command-suite\nest run prisma generate
+npm --prefix C:\wamp64\www\trading-command-suite\nest run prisma:generate
 ```
 
 ---
@@ -253,7 +286,24 @@ kill -9 <pid>
 
 ### Prisma seed fails with foreign key errors
 
-Run `npx prisma db push --force-reset` to reset and re-seed (⚠️ wipes data).
+🛑 **Do not reach for `prisma db push --force-reset`.** It wipes the database, and on this
+repo it also removes the trade execution queue and the #750 timestamp-repair backups — the
+one thing that makes a bad repair recoverable.
+
+Seed ordering issues are almost always a missing parent row, not a broken schema. Check the
+seed module's dependency order first (`nest/prisma/seed*.ts`), and confirm the tables it
+depends on exist with `npm --prefix nest run db:check`.
+
+If a genuine full reset is needed on a **throwaway** database, take a dump first:
+
+```powershell
+$env:MYSQL_PWD='tradingcs_dev_2026'
+& "C:\wamp64\bin\mysql\mysql9.1.0\bin\mysql.exe" -u tradingcs tradingcs `
+  -e "SHOW TABLES" | Out-File tables-before-reset.txt
+mysqldump -u tradingcs -p tradingcs > backup-before-reset.sql
+```
+
+Never on the dev database, which holds the timestamp-repair rollback path.
 
 ---
 

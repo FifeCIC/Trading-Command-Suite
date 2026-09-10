@@ -60,8 +60,9 @@ import { WeekendDefenseService } from '../trading/weekend-defense.service';
 import { SymbolResolverService } from '../symbols/symbol-resolver.service';
 import { SignalEnvelopeService } from '../signals/signal-envelope.service';
 import { StopGuardianService } from './stop-guardian.service';
+import { PositionTimeStopService } from './position-time-stop.service';
 import { ExecutionFeasibilityService } from '../trading/execution-feasibility.service';
-import { checkSessionWindow, SessionGateResult } from '../trading/session-window';
+import { checkSessionWindow, auditNameVsWindow, SessionGateResult } from '../trading/session-window';
 import { resolveStyleThreshold, BOT_BAR_DEFAULT } from '../../common/utils/style-thresholds';
 import { computeMarketStatus } from '../directives/market-status';
 
@@ -478,6 +479,7 @@ export class AutomationLoopService implements OnModuleInit {
     private readonly abTestService: AbTestService,
     private readonly signalEnvelope: SignalEnvelopeService,
     private readonly stopGuardian: StopGuardianService,
+    private readonly positionTimeStop: PositionTimeStopService,
     private readonly feasibility: ExecutionFeasibilityService,
   ) {
     this.initBrokerStates();
@@ -740,6 +742,11 @@ export class AutomationLoopService implements OnModuleInit {
     // Start the trailing-stop guardian alongside the loop (#721). It no-ops
     // unless there are active auto-mode strategies with open positions.
     this.stopGuardian.start();
+    // Start the position time-stop alongside the loop (#773). This is the fix for the
+    // slot bottleneck: 11 auto bots shared 5 broker-wide slots and NOTHING freed them,
+    // because no time-based exit existed — `maxHoldDuration` was declared but never read.
+    // It no-ops unless a strategy opts in, and is DRY RUN unless POSITION_TIMESTOP_DRY_RUN=0.
+    this.positionTimeStop.start();
     // Fire an immediate tick so we don't wait 5 min after restart
     this.tick().catch(err => this.logger.error(`Initial tick failed: ${(err as Error).message}`));
     return { started: true, message: `Loop started — ${this.state.tickIntervalMs}ms interval` };
@@ -1321,12 +1328,69 @@ export class AutomationLoopService implements OnModuleInit {
   /** Session-gate log dedupe: strategyId → last skip reason (report once, not per tick). */
   private readonly sessionSkipLog = new Map<string, string>();
 
+  /**
+   * Bots currently held shut by the session gate (#759). Keyed by strategyId.
+   *
+   * This is the observable counterpart to `sessionSkipLog`'s dedupe: the log
+   * reports the TRANSITION, this reports the STATE. Without it a gated bot looks
+   * identical to an idle one from every surface, which is how three of six forex
+   * bots stayed shut through London and the US session without anyone noticing.
+   */
+  private readonly sessionGated = new Map<string, {
+    strategyId: string;
+    name: string;
+    symbol: string;
+    reason: string;
+    allowed: string[];
+    active: string[];
+    /** 'ambiguous' means the NAME could mean a clock or a news flow — see auditNameVsWindow. */
+    nameWindowAgreement: string;
+    nameWindowNote: string;
+    at: string;
+  }>();
+
+  /** Bots the session gate is currently holding shut — for the status payload. */
+  getSessionGated(): Array<ReturnType<typeof Object> & Record<string, unknown>> {
+    return [...this.sessionGated.values()];
+  }
+
   private logSessionSkip(strategy: any, symbol: string, sess: SessionGateResult): void {
     const key = String(strategy?.id ?? '');
     const reason = sess.reason ?? 'session closed';
     if (this.sessionSkipLog.get(key) === reason) return;
     this.sessionSkipLog.set(key, reason);
-    this.logger.log(`  [SessionGate] ${strategy?.name ?? key} (${symbol}) skipped — ${reason}`);
+
+    // ── Audit whether the NAME and the WINDOW mean the same thing (#759) ──
+    //
+    // The window VALUE is always a canonical tag ('asian'), so it can never look
+    // wrong on its own — the ambiguity lives in the bot NAME. "Sydney AUDUSD
+    // Session" naming a city whose news drives the pair, while the window
+    // declares the `asian` CLOCK, is consistent with two readings and the gate
+    // cannot tell them apart. Report the question; do not answer it by editing
+    // the bot's trading hours.
+    const audit = auditNameVsWindow(strategy?.name, strategy?.sessionWindow);
+
+    // Record the block so it is VISIBLE, not just logged once. The dedupe above is
+    // deliberate (a standing condition should not write a row per bot per tick),
+    // but on its own it made a gated bot indistinguishable from an idle one: the
+    // single log line scrolled away and no surface reported that three of six
+    // forex bots were shut. AUDUSD scored 100% STRONG_BUY with zero pre-trade
+    // blockers while this line was the ONLY evidence, and it was not being read.
+    this.sessionGated.set(key, {
+      strategyId: key,
+      name: strategy?.name ?? key,
+      symbol,
+      reason,
+      allowed: sess.allowed,
+      active: sess.active,
+      nameWindowAgreement: audit.agreement,
+      nameWindowNote: audit.note,
+      at: new Date().toISOString(),
+    });
+    this.logger.log(
+      `  [SessionGate] ${strategy?.name ?? key} (${symbol}) skipped — ${reason}`
+      + (audit.agreement === 'ambiguous' ? ` ⚠ ${audit.note}` : ''),
+    );
   }
 
   private async processSignalQueues(decisions: TickDecision[]): Promise<void> {
@@ -1334,6 +1398,28 @@ export class AutomationLoopService implements OnModuleInit {
       if (!this.state.botQueueEnabled) return;
       const strategies = (this.state.activeStrategies || []).filter((s: any) => s.active !== false);
       if (strategies.length === 0) return;
+
+      // ── Recover rows stranded in 'executing' (#759) ──
+      //
+      // The pre-#759 code wrote 'executing' for QUEUED as well as EXECUTED, and
+      // nothing read that state back, so a row whose confirmation was never
+      // answered stranded permanently and removed the bot from trading that
+      // symbol. The write is fixed above; this pass drains the rows already
+      // stuck in the field so the fix takes effect without hand-editing the DB.
+      //
+      // 'executing' is not a legitimate resting state for this pipeline: a
+      // genuine execution reaches 'executed' in the same tick. Anything still
+      // 'executing' after a grace period was abandoned, so it is returned to
+      // 'pending' and re-offered. Bounded and non-fatal — a queue that cannot be
+      // drained must not take the tick down with it.
+      try {
+        await (this.prisma as any).$executeRawUnsafe(
+          `UPDATE strategy_signal_queue
+              SET status = 'pending', updatedAt = NOW()
+            WHERE status = 'executing'
+              AND updatedAt < NOW() - INTERVAL 15 MINUTE`,
+        );
+      } catch { /* recovery is best-effort */ }
 
       const pendingRows: any[] = await (this.prisma as any).$queryRawUnsafe(
         `SELECT q.id, q.strategyId, q.symbol, q.protocolId, q.direction, q.\`signal\`,
@@ -1426,6 +1512,7 @@ export class AutomationLoopService implements OnModuleInit {
           continue;
         }
         this.sessionSkipLog.delete(String(strategy.id));
+        this.sessionGated.delete(String(strategy.id));
 
         // Gate 5 — strategy cooldown (shared with the legacy path).
         const lastTrade = this.lastTradeTime.get(strategy.id);
@@ -1511,10 +1598,26 @@ export class AutomationLoopService implements OnModuleInit {
         });
         const last = decisions.length > before ? decisions[decisions.length - 1] : null;
         if (last && last.strategyId === strategy.id && (last.decision === 'EXECUTED' || last.decision === 'QUEUED')) {
-          await (this.prisma as any).$executeRawUnsafe(
-            `UPDATE strategy_signal_queue SET status = 'executing', updatedAt = NOW() WHERE id = ? AND status = 'pending'`,
-            head.id,
-          ).catch(() => {});
+          // ── Terminal status is DERIVED from the actual outcome (#759) ──
+          //
+          // This used to write `status = 'executing'` for BOTH EXECUTED and QUEUED,
+          // and 'executing' is not a state this method ever reads back — the head
+          // query only takes `status = 'pending'`. A QUEUED (awaiting confirmation)
+          // row therefore left the queue permanently: if the confirmation was never
+          // clicked, or the process restarted before it was, the row sat in
+          // 'executing' forever and the bot silently stopped trading that symbol.
+          // Observed: GBPUSD Session stuck at 'executing' from 13:07 with no ticket.
+          //
+          // QUEUED stays PENDING so it is re-offered next tick — that is the honest
+          // state for "waiting on a human", and it is what the docblock above always
+          // claimed ("BLOCKED and FAILED entries stay pending"). Only a real
+          // EXECUTED consumes the entry.
+          if (last.decision === 'EXECUTED') {
+            await (this.prisma as any).$executeRawUnsafe(
+              `UPDATE strategy_signal_queue SET status = 'executed', updatedAt = NOW() WHERE id = ? AND status = 'pending'`,
+              head.id,
+            ).catch(() => {});
+          }
           this.lastBotTradeAt.set(strategy.id, Date.now());
           this.lastBotTradeAnyAt = Date.now();
           this.state.lastBotTradeAt = new Date().toISOString();

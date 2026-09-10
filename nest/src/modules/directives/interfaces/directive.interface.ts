@@ -66,6 +66,14 @@ export interface MarketBar {
 export interface DirectiveInput {
   symbol: string;
   bars: MarketBar[]; // Price candles ordered oldest → newest
+  /**
+   * Cadence of `bars` (e.g. '5m', '1d'). Optional but IMPORTANT for any
+   * directive that judges freshness: without it, a staleness check has to infer
+   * the cadence from the array, and a mixed-timeframe array makes that inference
+   * meaningless — fresh data then reads as stale (2026-09-10). Prefer passing
+   * it; `computeMarketStatus(bars, asOf, timeframe)` uses it directly.
+   */
+  timeframe?: string;
   /** Evaluation clock. Replays/backtests must set this to the historical as-of time. */
   asOf?: Date;
   /** Higher-timeframe bars for multi-timeframe directives. Optional — most directives ignore these. */
@@ -81,6 +89,31 @@ export interface DirectiveResult {
   confidence: number;
   /** Human-readable explanation. */
   reason: string;
+  /**
+   * ⚠️ MEASURED vs UNMEASURABLE — load-bearing for RISK gating.
+   *
+   * A risk directive returning `score: 0` for "I could not measure this" is NOT
+   * the same as one that measured a genuinely bad condition. The former is
+   * ABSENCE OF EVIDENCE and must never veto a trade; the latter may.
+   *
+   * Why this exists (2026-09-10): `liquidity-check` returns `score: 0` when its
+   * stale-data guard trips. `RiskGatingEngine` derives
+   * `severity = 1 - score/maxScore = 1.0`, and its `liquidity-check` rule treats
+   * `severity > 0.9` as a HARD GATE — so a transient stale-data read vetoed the
+   * trade AND reported the false reason "Symbol liquidity too low — cannot
+   * execute at acceptable spread". The real cause was already stated by the
+   * directive itself ("market closed — not scored on stale data").
+   *
+   * Measured blast radius over 45 minutes: `xau-speed-v1` lost 12 of 22 ticks,
+   * and `spy-day-v1` (11), `qqq-day-v1` (11) and `spy-speed-v1` (7) lost EVERY
+   * tick — those three never once scored a non-zero liquidity value. The same
+   * symbol alternated between "highly liquid ... 94/100" and "Market closed"
+   * seconds apart. Composite 0 then failed the 65 pre-trade gate → no trade.
+   *
+   * Set `unmeasured: true` on any zero that means "no reading". Omitting it
+   * asserts the directive genuinely measured a zero.
+   */
+  unmeasured?: boolean;
   /** Directional bias. Defaults to 'neutral' when absent. */
   signalClass?: 'bullish' | 'bearish' | 'neutral';
   /** True if the directive was suppressed by an active-window time gate. */

@@ -48,7 +48,7 @@ const prisma = new PrismaClient();
 
   await prisma.$disconnect();
   console.log('\nDone. Remember to also remove SOURCE references:');
-  console.log('  - placeholder-directives.stub.ts (class)');
+  console.log('  - momentum-and-macro.directives.ts (class)');
   console.log('  - directives.module.ts (import/providers/constructor/register)');
   console.log('  - directive-groups.ts');
   console.log('  - directive-suitability.registry.ts');

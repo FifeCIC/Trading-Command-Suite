@@ -21,6 +21,7 @@ import { MultiProtocolRankingService } from './multi-protocol-ranking.service';
 import { TimelineService } from './timeline.service';
 import { AutomationLoopService } from './automation-loop.service';
 import { StopGuardianService } from './stop-guardian.service';
+import { PositionTimeStopService } from './position-time-stop.service';
 import { AuditLogService } from './audit-log.service';
 import { AutomationController } from './automation.controller';
 import { StopGuardianController } from './stop-guardian.controller';
@@ -53,6 +54,7 @@ import { AbTestController } from './ab-test.controller';
     TimelineService,
     AutomationLoopService,
     StopGuardianService,
+    PositionTimeStopService,
     AuditLogService,
   ],
   exports: [
@@ -65,6 +67,7 @@ import { AbTestController } from './ab-test.controller';
     TimelineService,
     AutomationLoopService,
     StopGuardianService,
+    PositionTimeStopService,
     AuditLogService,
   ],
 })

@@ -1,6 +1,6 @@
 {
   "name": "nest",
-  "version": "0.6.5",
+  "version": "0.6.7",
   "description": "",
   "author": "",
   "private": true,
@@ -12,8 +12,12 @@
     "seed:strategies": "ts-node prisma/seed-strategies.ts"
   },
   "scripts": {
-    "prebuild": "npx rimraf dist && node scripts/validate-protocol-directions.cjs && node scripts/validate-pipeline-contracts.cjs",
+    "prebuild": "npx rimraf dist && npx prisma generate && node scripts/validate-protocol-directions.cjs && node scripts/validate-pipeline-contracts.cjs",
     "build": "tsc -p tsconfig.build.json",
+    "prisma:generate": "prisma generate",
+    "db:check": "node scripts/validate-schema-safety.cjs",
+    "db:push": "node -e \"console.error('\\n[db:push] BLOCKED. This repo has 10 raw-managed tables that are NOT in schema.prisma, so `prisma db push` would DROP them (incl. strategy_signal_queue and 195k backup rows).\\n\\nRun `npm run db:check` to see them. To add a column: ALTER TABLE ... ; npx prisma generate\\n'); process.exit(1)\"",
+    "db:unsafe-push-I-have-read-the-warning": "node scripts/validate-schema-safety.cjs && prisma db push",
     "seed:watchlists": "ts-node prisma/seed-watchlists.ts",
     "seed:symbol-onboarding": "ts-node prisma/seed-symbol-onboarding.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",

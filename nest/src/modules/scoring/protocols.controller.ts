@@ -7,13 +7,18 @@
  * GET /api/scoring/protocols/:id — single protocol detail with version history
  */
 
-import { Controller, Get, Post, Put, Patch, Delete, Param, Body, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Param, Body, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DirectivesService } from '../directives/directives.service';
 import { classifyDirectiveInclusion } from '../directives/directive-inclusion';
 import { DirectiveConfigService } from './directive-config.service';
 import { ScoringSchedulerService } from './scoring-scheduler.service';
 import { resolveDirectiveCatalog } from '../strategies/strategies.controller';
+import {
+  resolveAdaptiveTarget,
+  adaptiveTargetReasonText,
+  ADAPTIVE_TARGET_MIN_SAMPLES,
+} from './adaptive-target';
 
 interface ProtocolSummary {
   id: string;
@@ -201,6 +206,97 @@ export class ProtocolsController {
   }
 
   // ── Per-protocol directive config (Phase 5 — #609) ────
+
+  /**
+   * GET /api/scoring/protocols/:slug/adaptive-target
+   *
+   * Adaptive Target state for one protocol (2026-09-10). Returns the stored peak AND the
+   * resolution against the protocol's configured capacity, so the UI never has to decide
+   * for itself which denominator is in force.
+   */
+  @Get(':slug/adaptive-target')
+  async getAdaptiveTarget(@Param('slug') slug: string) {
+    if (!this.prisma.isAvailable) {
+      return { slug, enabled: false, peak: null, samples: 0, since: null,
+               configuredMax: 0, denominator: 0, applied: false, reasonText: 'Database unavailable.' };
+    }
+    const proto = await (this.prisma as any).protocol.findUnique({
+      where: { slug },
+      select: {
+        adaptiveTargetEnabled: true, adaptiveTargetMax: true,
+        adaptiveTargetSamples: true, adaptiveTargetSince: true,
+      },
+    });
+    if (!proto) throw new NotFoundException(`Protocol ${slug} not found`);
+
+    // Configured capacity is derived from the live directive config so the two numbers the
+    // operator compares are measured the same way.
+    const cfg = await this.getProtocolDirectiveConfig(slug).catch(() => null);
+    const configuredMax = cfg?.totalWeight ?? 0;
+
+    const state = {
+      enabled: !!proto.adaptiveTargetEnabled,
+      peak: proto.adaptiveTargetMax ?? null,
+      samples: proto.adaptiveTargetSamples ?? 0,
+      since: proto.adaptiveTargetSince ?? null,
+    };
+    const resolved = resolveAdaptiveTarget(state, configuredMax);
+
+    return {
+      slug,
+      ...state,
+      configuredMax: resolved.configuredMax,
+      denominator: resolved.denominator,
+      applied: resolved.applied,
+      minSamples: ADAPTIVE_TARGET_MIN_SAMPLES,
+      reasonText: adaptiveTargetReasonText(resolved),
+    };
+  }
+
+  /**
+   * PATCH /api/scoring/protocols/:slug/adaptive-target
+   *
+   * Enable/disable the Adaptive Target for one protocol. Body: `{ enabled: boolean }`.
+   *
+   * Enabling does NOT synthesise a peak — if the protocol has never been observed there is
+   * nothing to measure against, and the scorer keeps using configured capacity until real
+   * observations exist. Refuses to enable below the sample floor for the same reason.
+   */
+  @Patch(':slug/adaptive-target')
+  async setAdaptiveTarget(
+    @Param('slug') slug: string,
+    @Body() body: { enabled?: boolean },
+  ) {
+    if (typeof body?.enabled !== 'boolean') {
+      throw new BadRequestException('Body must be { enabled: boolean }');
+    }
+    const proto = await (this.prisma as any).protocol.findUnique({
+      where: { slug },
+      select: { adaptiveTargetEnabled: true, adaptiveTargetSamples: true, adaptiveTargetMax: true },
+    });
+    if (!proto) throw new NotFoundException(`Protocol ${slug} not found`);
+
+    // Refuse to enable a target that would change nothing. An operator who toggles this on
+    // and sees no difference would reasonably conclude the feature is broken.
+    if (body.enabled) {
+      const samples = proto.adaptiveTargetSamples ?? 0;
+      if (!proto.adaptiveTargetMax || samples < ADAPTIVE_TARGET_MIN_SAMPLES) {
+        throw new BadRequestException(
+          `Cannot enable Adaptive Target for ${slug}: it needs at least ${ADAPTIVE_TARGET_MIN_SAMPLES} ` +
+          `scoring observations before a peak is meaningful (currently ${samples}). ` +
+          `The target will be available once the protocol has scored enough.`,
+        );
+      }
+    }
+
+    await (this.prisma as any).$executeRawUnsafe(
+      `UPDATE protocol SET adaptiveTargetEnabled = ? WHERE slug = ?`,
+      body.enabled ? 1 : 0,
+      slug,
+    );
+    this.logger.log(`Adaptive Target for ${slug} set to ${body.enabled ? 'enabled' : 'disabled'}`);
+    return this.getAdaptiveTarget(slug);
+  }
 
   /**
    * GET /api/scoring/protocols/:slug/directive-config

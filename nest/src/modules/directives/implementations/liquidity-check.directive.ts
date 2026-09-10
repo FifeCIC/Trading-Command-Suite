@@ -48,19 +48,32 @@ export class LiquidityCheckDirective implements IDirective {
         confidence: 0.1,
         reason: `Insufficient data: need ${MIN_BARS} bars, have ${bars.length}.`,
         signalClass: 'neutral',
+        // UNMEASURED — not enough data to judge liquidity at all. Must not be
+        // read as "liquidity is bad" by the risk gate (see the interface note).
+        unmeasured: true,
       };
     }
 
     // Stale-data guard (2026-08-15): a frozen market (no new bars) is NOT
     // "highly liquid". Zero CV/range/gaps here means "closed", not "perfect" —
     // previously a closed market scored 100/100 "highly liquid".
-    const marketStatus = computeMarketStatus(bars);
+    //
+    // ⚠️ `unmeasured: true` is load-bearing (added 2026-09-10). Returning a bare
+    // `score: 0` made `RiskGatingEngine` compute `severity = 1.0`, which trips
+    // `liquidity-check`'s `severity > 0.9` HARD GATE — so a stale-data read
+    // vetoed the whole trade and blamed "Symbol liquidity too low", a reason
+    // that is simply untrue. "I could not measure liquidity" is absence of
+    // evidence; it must never be evidence of illiquidity. Measured before the
+    // fix: `spy-day-v1`, `qqq-day-v1` and `spy-speed-v1` were hard-gated on
+    // every single tick over 45 minutes, and `xau-speed-v1` on 12 of 22.
+    const marketStatus = computeMarketStatus(bars, input.asOf ?? new Date(), input.timeframe);
     if (!marketStatus.open) {
       return {
         score: 0,
         confidence: 0.1,
         reason: `Market closed — liquidity is not scored on stale data. ${marketStatus.reason ?? ''}`,
         signalClass: 'neutral',
+        unmeasured: true,
       };
     }
 

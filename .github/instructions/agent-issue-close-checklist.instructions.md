@@ -121,9 +121,24 @@ This file is visible to humans and other agents. Read it at the start of every s
 
 ### 7. Schema changes go through the migration system — NEVER inline DDL.
 
-Table creation belongs in Prisma schema + `prisma db push`, or in a startup bootstrap method that runs ONCE (like `PrismaService.onModuleInit`). Do NOT put `CREATE TABLE` in service methods, controllers, or the automation loop. These run repeatedly and belong to a different layer.
+Table creation belongs in a migration or a one-off script, or in a startup bootstrap method
+that runs ONCE (like `PrismaService.onModuleInit`). Do NOT put `CREATE TABLE` in service
+methods, controllers, or the automation loop. These run repeatedly and belong to a
+different layer.
 
-If `prisma db push` can't run due to a pre-existing table conflict, resolve the conflict. Do not work around it by scattering DDL through application code.
+> 🛑 **DO NOT use `prisma db push` to apply a schema change.** This repo has 10 tables
+> managed outside Prisma — including `strategy_signal_queue`, the trade execution queue —
+> and **no migration history**, so `db push` classifies every unmodelled table as garbage
+> and **drops it**, after a warning and a `y`. It does not error. See
+> `.github/instructions/database-schema.instructions.md` and issue #769.
+>
+> **Instead:** `ALTER TABLE` / targeted `CREATE TABLE`, then `npx prisma generate`
+> (with the API stopped — it locks the query-engine DLL). Run `npm --prefix nest run
+> db:check` before closing. If a table is deliberately raw-managed, capture its DDL into
+> `nest/prisma/raw-managed/` and declare it in `validate-schema-safety.cjs`.
+
+If you hit a pre-existing table conflict, resolve the conflict **without** a bare
+`db push`. Do not work around it by scattering DDL through application code either.
 
 After posting the checklist as a comment, close the issue WITH that comment using:
 

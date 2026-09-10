@@ -154,7 +154,7 @@ import {
   Sp500RegimeDirective,
   VixStrategyDirective,
   WeeklyRhythmStrategyDirective,
-} from './implementations/placeholder-directives.stub';
+} from './implementations/momentum-and-macro.directives';
 
 // Crypto (real implementations — unstubbed 2026-06-23)
 import { CryptoFearGreedDirective } from './implementations/crypto-fear-greed.directive';
@@ -239,7 +239,7 @@ import { ElectionCycleDirective } from './implementations/election-cycle.directi
     Mt5HaramiDirective,
     Mt5StarDojiDirective,
     Mt5HammerDirective,
-    // Patterns (real math — PinBarPatternDirective lives in placeholder-directives.stub.ts)
+    // Patterns (real math — PinBarPatternDirective lives in momentum-and-macro.directives.ts)
     PinBarPatternDirective,
     // Implemented — Macro
     DxyRegimeDirective,

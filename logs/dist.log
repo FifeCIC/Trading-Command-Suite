@@ -1,0 +1,35 @@
+=== Distribution of signalPct on the CONFIGURED denominator (newest row per protocol+symbol) ===
++------------+----------+----+
+| label      | band     | n  |
++------------+----------+----+
+| BUY        | c 20-39% |  1 |
+| BUY        | d 10-19% |  3 |
+| BUY        | e <10%   |  5 |
+| HOLD       | d 10-19% |  1 |
+| HOLD       | e <10%   | 12 |
+| SELL       | e <10%   |  1 |
+| STRONG_BUY | d 10-19% |  1 |
++------------+----------+----+
+
+=== Cap: what is the MAX achievable if EVERY direction-eligible directive fired at full? ===
+(rawComposite is a sum of directive raw scores; configuredSignalMax is their maxScores)
++------------------+---------------+---+
+| strategyId       | best_pct_seen | n |
++------------------+---------------+---+
+| gold-macro-v1    |            21 | 1 |
+| xau-speed-1h     |            15 | 1 |
+| forex-session-v1 |            14 | 7 |
+| qqq-day-v1       |            11 | 1 |
+| spy-day-v1       |            10 | 1 |
+| xau-speed-m15    |            10 | 1 |
+| vix-spike-v1     |             9 | 1 |
+| xau-speed-4h     |             8 | 1 |
+| xau-speed-m5     |             8 | 1 |
+| xau-speed-v1     |             8 | 2 |
+| vix-short-v1     |             6 | 1 |
+| qqq-speed-v1     |             5 | 2 |
+| cac-speed-v1     |             4 | 1 |
+| dax-speed-v1     |             4 | 1 |
+| ftse-speed-v1    |             4 | 1 |
+| spy-speed-v1     |             3 | 1 |
++------------------+---------------+---+

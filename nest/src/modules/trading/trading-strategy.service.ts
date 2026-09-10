@@ -47,6 +47,15 @@ export interface StrategySummary {
    */
   sessionWindow?: string | null;
   maxPositions?: number;
+  /**
+   * Position time-stop limit in HOURS (#773). null = no limit.
+   *
+   * ⚠️ MUST be carried on the summary. It lives on the `trading_strategy` row as
+   * `maxHoldHours`, but `PositionTimeStopService` reads it off `findAll()` — so omitting
+   * it here makes the limit unreadable and the time-stop silently no-ops, which is the
+   * exact failure mode this field exists to fix.
+   */
+  maxHoldHours?: number | null;
   /** #344 pyramid averaging — moved here from ScoringStrategy (2026-08-27). */
   maxPyramidTiers?: number;
   lastEvaluatedAt: string | null;
@@ -229,6 +238,9 @@ export class TradingStrategyService {
         // Session gate window — consumed by processSignalQueues (Gate 4.5).
         sessionWindow: (s as any).sessionWindow ?? null,
         maxPositions: s.maxPositions,
+        // Position time-stop (#773) — consumed by PositionTimeStopService. Without this the
+        // limit is unreadable and the time-stop silently no-ops.
+        maxHoldHours: (s as any).maxHoldHours ?? null,
         maxPyramidTiers: (s as any).maxPyramidTiers ?? 1,
         lastEvaluatedAt: lastEval?.evaluatedAt ? new Date(lastEval.evaluatedAt).toISOString() : null,
         lastSignal: lastEval?.signal ?? null,

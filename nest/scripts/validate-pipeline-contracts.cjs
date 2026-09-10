@@ -56,6 +56,15 @@ const BAR_WINDOW_SCOPE = [
 const SCORE_CLAMP_SCOPE = ['src/modules/directives', 'src/modules/scoring'];
 
 /**
+ * Where a directive may not fabricate a reading (INV-NO-FABRICATED-READING).
+ *
+ * Directives only — the fault is a directive returning a number it did not measure.
+ * `risk-gating-engine.service.ts` and `protocol-gating.service.ts` legitimately hold the
+ * literals this scan looks for (they CONSUME `unmeasured`), so they are out of scope.
+ */
+const FABRICATION_SCOPE = ['src/modules/directives/implementations'];
+
+/**
  * Where dividing a signal total by an OBSERVED evidence sum is forbidden (#758).
  *
  * The protocol percentage has to be `earned / capacity` where capacity is CONFIGURED. An
@@ -218,6 +227,61 @@ const CANARIES = [
     markers: ['configured-capacity', 'configuredSignalMax'],
     hint: 'signalPct must divide by the protocol\'s configured directional capacity (capacityMaxTotal), not by the observed evidence sum — an observed denominator moves every time a directive goes quiet, so the same reading scores differently between ticks and a group that contributes 0 makes 0/0 read as a HOLD (#758).',
   },
+  {
+    id: 'INV-ONE-ROW-PER-RUN',
+    root: 'nest',
+    file: 'src/modules/scoring/score-history.service.ts',
+    // The reader-side tolerance for the duplicate write. If this helper is removed the
+    // Ladder silently reverts to reading whichever of the two rows is newer.
+    markers: ['collapseDuplicateWrites'],
+    hint: 'getRuns() must collapse the per-tick duplicate (symbol, protocol, minute) rows and keep the one carrying the gating breakdown. Two services both create a Score row per tick; the signals-workbench row is newer but thin (8 keys, no rawMax/marketStatus), so reading rows[0] loses the denominator and the market status.',
+  },
+  {
+    id: 'INV-ADAPTIVE-TARGET-MONOTONIC',
+    root: 'nest',
+    file: 'src/modules/scoring/adaptive-target.ts',
+    // The peak must be a high-water mark. If this marker disappears, someone has replaced
+    // it with a rolling window or a decay, which is the exact change that lets a quiet
+    // period silently lower the bar. `observeAdaptiveTarget` returning null when the new
+    // reading does not raise the peak IS the monotonicity guarantee.
+    markers: ['raw <= current && state.samples > 0', 'ADAPTIVE_TARGET_FLOOR_RATIO'],
+    hint: 'The Adaptive Target peak may only ever increase — never a rolling window, never decayed, never lowered by a quiet period. It is also floored at 25% of configured capacity so a near-dead protocol cannot be normalised into looking healthy. A falling target would mask a directive that has stopped working: the bar lowers to match and the card still reads healthy (#685). Guarded by the explicit monotonicity assertions in adaptive-target.spec.ts.',
+  },
+  {
+    id: 'INV-QUEUE-TERMINAL-STATE',
+    root: 'nest',
+    file: 'src/modules/automation/automation-loop.service.ts',
+    // A real execution is the ONLY thing that may consume an entry, and the
+    // stranded-row recovery must stay present. Both markers are load-bearing:
+    // dropping the first re-introduces the permanent strand; dropping the second
+    // leaves rows already stuck in the field with no way back.
+    markers: ["status = 'executed'", "WHERE status = 'executing'"],
+    hint: 'A queue entry is consumed only by a real EXECUTED (status -> `executed`), and the recovery pass must return rows stranded in `executing` to `pending`. Writing `executing` for QUEUED as well made a signal awaiting confirmation strand permanently and silently removed the bot from trading that symbol — GBPUSD sat in `executing` from 13:07 with no ticket (#759).',
+  },
+  {
+    id: 'INV-GATE-RECONCILED',
+    root: 'nest',
+    file: 'src/modules/signals/signal-envelope.service.ts',
+    // The reconciliation must stay wired to the gate AND must never fire for an
+    // explicit override — those two properties ARE the contract.
+    markers: ['reconcileGateWithBots', "resolution.source === 'override'"],
+    hint: 'The pre-trade gate must be reconciled DOWN to the lowest participating bot bar, and an explicit `signals.gate.<protocol>` override must be left verbatim. Both halves are required: without the reconciliation the gate demands a bar no bot asked for; without the override guard a convenience rule silently overrules a human instruction (#759).',
+  },
+  {
+    id: 'INV-SESSION-VISIBLE',
+    root: 'nest',
+    file: 'src/modules/trading/session-window.ts',
+    // The audit is the only thing that reports a city NAME being read as a clock.
+    markers: ['auditNameVsWindow', 'CITY_WORDS'],
+    hint: 'auditNameVsWindow() must classify whether a bot NAME and its sessionWindow agree. A city name over a session-tag window is ambiguous — report both readings rather than assuming a clock (#759).',
+  },
+  {
+    id: 'INV-SESSION-VISIBLE',
+    root: 'nest',
+    file: 'src/modules/automation/automation-loop.service.ts',
+    markers: ['sessionGated', 'getSessionGated'],
+    hint: 'The session gate must PUBLISH which bots it is holding shut. A deduped log line alone made three gated forex bots indistinguishable from idle ones, so AUDUSD scored 100% STRONG_BUY while shut (#759).',
+  },
 ];
 
 /** Invariants enforced by a scan rather than a canary. */
@@ -227,10 +291,24 @@ const SCAN_ENFORCED = {
   'INV-SCORE-MAGNITUDE': 'no-score-clamp',
   'INV-STABLE-DENOMINATOR': 'no-observed-denominator',
   'INV-MTF-BUNDLE': 'no-bundle-less-scoring',
+  'INV-CADENCE-COVERAGE': 'timeframe-refresh-coverage',
+  'INV-NO-FABRICATED-READING': 'no-fabricated-baseline',
 };
 
 /** Invariants enforced by the live probe (a runtime check cannot be static). */
-const PROBE_ENFORCED = { 'INV-NO-FUTURE-ROWS': 'scripts/contract-probe.cjs' };
+const PROBE_ENFORCED = {
+  'INV-NO-FUTURE-ROWS': 'scripts/contract-probe.cjs',
+  'INV-CADENCE-COVERAGE': 'scripts/contract-probe.cjs',
+  'INV-PROVIDER-REACHABLE': 'scripts/contract-probe.cjs',
+  // Needs the live registry: a hint's target must be an ACTIVE symbol with delivered
+  // bars. The unit spec (symbol-hint-validity.spec.ts) guards the table's contents
+  // against a known-good list; this probe guards it against reality.
+  'INV-NO-SYMBOL-GUESSING': 'scripts/contract-probe.cjs',
+  // Needs the live table: "is any watchlist name ambiguous" is a property of the data,
+  // not of the code. The spec (watchlist-identity.spec.ts) guards that resolution
+  // PREFERS an FK and PINS its ordering; this probe guards that duplicates are gone.
+  'INV-WATCHLIST-IDENTITY': 'scripts/contract-probe.cjs',
+};
 
 /**
  * Files that call `scoreWithGating()` and MUST supply the higher-timeframe bundle (#735).
@@ -256,6 +334,132 @@ const MTF_SCORING_SCOPE = [
   'src/modules/snapshots',
   'src/modules/trading',
 ];
+
+/**
+ * INV-NO-FABRICATED-READING — absence of evidence must not become a number.
+ *
+ * A directive that cannot take a reading must say so (`unmeasured: true`) rather than
+ * return a number it did not measure. Three separate live incidents, one cause:
+ *
+ *   (a) `analyst-adjustments` returned `Math.round(30 + accelerating * 5)` with the
+ *       direction taken from the SIGN of `accelerating`. Measured: 1,125 `bullish`
+ *       readings averaged 30.9 with a MINIMUM of exactly 30; 630 `bearish` averaged
+ *       29.7 with a MAXIMUM of exactly 30 — 94% of 1,755 readings sat inside a
+ *       fabricated 27–50 band. On `forex-session-v1`, 97% of readings came from that
+ *       branch and 275 cleared the 65 gate: the app was trading on invented conviction.
+ *   (b) `liquidity-check` returned `score: 0` when its stale-data guard tripped, which
+ *       `RiskGatingEngine` turned into `severity = 1.0` and a HARD GATE — zeroing the
+ *       composite and blaming "Symbol liquidity too low". Three protocols were gated
+ *       shut on every tick for 45 minutes.
+ *   (c) `stubResult()` presented "not implemented" as a real zero reading.
+ *
+ * ⚠️ PRECISION OVER REACH — a guard that fires on correct code gets switched off. This
+ * flags the two shapes that are unambiguous, and nothing else:
+ *
+ *   1. A `signalClass` derived from a SIGN TEST on a near-zero quantity:
+ *      `signalClass: x > 0 ? 'bullish' : 'bearish'`. Direction must come from a
+ *      THRESHOLD that expresses a real move — `x > 1 ? 'bullish' : ...`.
+ *   2. A no-signal early return carrying a non-zero literal `score`, where the reason
+ *      states the directive could not measure (insufficient bars / no data / stale).
+ *
+ * A legitimate constant is not flagged, because every hit is matched against the reason
+ * text the directive itself supplies. If it says it could not measure, it must not
+ * return a measurement.
+ */
+function scanFabricatedReadings() {
+  for (const scope of FABRICATION_SCOPE) {
+    for (const file of walk(path.join(NEST_ROOT, scope))) {
+      if (/\.spec\.ts$/.test(file)) continue;
+      const raw = fs.readFileSync(file, 'utf8');
+      const fileRel = rel(file);
+
+      // ⚠️ Iterate the RAW lines and strip comments PER LINE, so the loop index and the
+      // lookback window share ONE coordinate system.
+      //
+      // The first version split the comment-stripped source instead. `stripComments()`
+      // deletes `/* ... */` blocks *including their newlines*, so every line after a block
+      // comment shifts upward and the indices no longer point at the same code. That made
+      // the scan report FALSE POSITIVES on correct code (twice — once on a doc comment
+      // above the detector itself). A guard that fires on correct code gets switched off.
+      const rawLines = raw.split(/\r?\n/);
+      const lines = rawLines.map((l) => (isCommentLine(l) ? '' : l.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')));
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.trim()) continue;
+
+        // ── Shape 1: direction from the SIGN of a near-zero quantity ──
+        // `x > 0 ? 'bullish' : 'bearish'` — a coin-flip wearing a direction.
+        //
+        // ⚠️ CONTEXT MATTERS — a sign test is CORRECT once the magnitude has already
+        // been thresholded above it. Both forms are legitimate:
+        //
+        //     if (Math.abs(move) < 0.5) return { unmeasured: true, ... };  // guarded above
+        //     signalClass: move > 0 ? 'bullish' : 'bearish'               // now safe
+        //
+        // and
+        //
+        //     signalClass: move > 1 ? 'bullish' : 'bearish'               // self-thresholded
+        //
+        // So before flagging, look BACKWARD for a guard on `Math.abs(<same expr>)`
+        // against a threshold, and FORWARD for the ternary's own threshold. Firing on
+        // correct code gets a guard switched off — the comment above says so, and this
+        // scan hit exactly that trap on its first run.
+        if (/signalClass\s*:.*>\s*0\s*\?.*['"](bullish|bearish)['"].*:.*['"](bullish|bearish)['"]/.test(line)) {
+          const subject = (line.match(/([A-Za-z_$][\w$]*)\s*>\s*0\s*\?/) || [])[1] || '';
+
+          // A prior magnitude guard on the same identifier within the preceding
+          // 40 lines (inside the same function body) makes the sign test safe.
+          const lookback = rawLines.slice(Math.max(0, i - 40), i).join('\n');
+          const isGuarded =
+            subject !== '' &&
+            new RegExp(
+              `Math\\.abs\\(\\s*${subject}\\s*\\)\\s*<\\s*[A-Za-z0-9_.]+|` +
+              `${subject}\\s*>=\\s*-?[0-9.]+\\s*&&\\s*${subject}\\s*<=\\s*[0-9.]+`,
+            ).test(lookback);
+
+          if (isGuarded) continue;
+
+          const w = whitelistEntryFor('no-fabricated-baseline', fileRel);
+          if (w) held.push(`no-fabricated-baseline  ${fileRel}:${i + 1}  (held by ${w.issue})`);
+          else {
+            fail(
+              'INV-NO-FABRICATED-READING',
+              `${fileRel}:${i + 1} derives a direction from the SIGN of a quantity rather than a threshold`,
+              'A sign test on a near-zero value (momentum +0.02%) classifies as fully bullish/bearish, so the direction is a coin-flip. Use a THRESHOLD that expresses a real move (e.g. `accel > 1`), or guard the magnitude above and return `unmeasured: true` below it. See INV-NO-FABRICATED-READING.',
+            );
+          }
+        }
+
+        // ── Shape 2: a non-zero literal score on a could-not-measure path ──
+        // Look at each `return { ... }` whose reason admits no measurement.
+        if (!/\breturn\s*\{/.test(line)) continue;
+        const block = lines.slice(i, i + 12).join('\n');
+        const reasonMatch = block.match(/reason\s*:\s*(`[^`]*`|'[^']*'|"[^"]*")/);
+        if (!reasonMatch) continue;
+        const reason = reasonMatch[1].toLowerCase();
+        const admitsNoData =
+          /insufficient|no data|not enough|need \d+\+? bars|could not|failed|unavailable|not scored/.test(reason);
+        if (!admitsNoData) continue;
+
+        const scoreMatch = block.match(/\bscore\s*:\s*(-?\d+(?:\.\d+)?)/);
+        if (!scoreMatch) continue;
+        const literal = Number(scoreMatch[1]);
+        if (literal === 0) continue; // a zero is an honest "no reading"
+
+        const w = whitelistEntryFor('no-fabricated-baseline', fileRel);
+        if (w) held.push(`no-fabricated-baseline  ${fileRel}:${i + 1}  (held by ${w.issue})`);
+        else {
+          fail(
+            'INV-NO-FABRICATED-READING',
+            `${fileRel}:${i + 1} returns a non-zero literal score (${literal}) on a path whose own reason says it could not measure`,
+            'Either return `score: 0` with `unmeasured: true`, or if the constant IS a real measurement, say so in the reason and this scan will stop flagging it. A number that the directive itself says it did not derive must not enter the composite. See INV-NO-FABRICATED-READING.',
+          );
+        }
+      }
+    }
+  }
+}
 
 function scanBundleLessScoring() {
   for (const scope of MTF_SCORING_SCOPE) {
@@ -446,6 +650,7 @@ function whitelistEntry(rule, file) {
  *   no-direct-bar-window    — a hand-rolled prisma.marketBar.findMany window in a scoring path
  *   no-score-clamp          — clamping a score magnitude to 100
  *   no-score-clamp-review   — same, but the operand's units need a human read to classify
+ *   no-fabricated-baseline  — a directive fabricating a reading it did not measure
  *
  * Entry FIELDS are `{ file, rule, issue, reason }`. `issue` is not part of the key.
  */
@@ -640,6 +845,83 @@ function checkStaleWhitelist() {
   }
 }
 
+// ── 2b. cadence coverage ──────────────────────────────────────────────────
+//
+// Every cadence `selectBaseTimeframe()` can RETURN must be one BarRefreshService
+// actually FETCHES. These two lists live in different files and nothing tied them
+// together, so they drifted:
+//
+//   selectBaseTimeframe('5s–30s') -> '1m'
+//   TIMEFRAMES                     -> ['5m','15m','1h','4h','1d']   (no '1m')
+//
+// Seven active protocols declared a sub-minute horizon, asked the canonical loader
+// for `1m`, received an empty array, and produced NO SCORES AT ALL — while
+// `protocol_score_status` reported them as `scoring` with `symbolsScored > 0`. They
+// sat in that state for ~6 hours. An empty bar array is a legitimate state (a new
+// symbol has no history), which is exactly why nothing failed loudly.
+//
+// This check is the missing link: it reads the two sources and asserts the fetched
+// set is a SUPERSET of the resolvable set. Either list changing alone now fails the
+// build, which is the point — the drift, not either list, was the defect.
+
+const TIMEFRAME_UTIL = 'src/common/utils/timeframe.ts';
+const BAR_REFRESH = 'src/modules/market-data/bar-refresh.service.ts';
+
+/** The cadence literals `selectBaseTimeframe` can return. */
+const RESOLVABLE_TIMEFRAMES = ['1m', '5m', '15m', '1h', '4h', '1d'];
+
+function checkTimeframeCoverage() {
+  const refreshFile = path.join(NEST_ROOT, BAR_REFRESH);
+  if (!fs.existsSync(refreshFile)) {
+    fail('timeframe-refresh-coverage', `${BAR_REFRESH} is missing`, 'It owns the fetch list.');
+    return;
+  }
+  const src = stripComments(fs.readFileSync(refreshFile, 'utf8'));
+  const m = src.match(/const\s+TIMEFRAMES\s*=\s*\[([^\]]*)\]/);
+  if (!m) {
+    fail(
+      'timeframe-refresh-coverage',
+      `could not find the TIMEFRAMES array in ${BAR_REFRESH}`,
+      'Update checkTimeframeCoverage() to match the new declaration.',
+    );
+    return;
+  }
+  const fetched = [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]);
+  if (fetched.length === 0) {
+    fail('timeframe-refresh-coverage', `TIMEFRAMES is empty in ${BAR_REFRESH}`, 'No bars would be fetched at all.');
+    return;
+  }
+
+  // Assert the utility still declares those literals — if selectBaseTimeframe starts
+  // returning a NEW cadence, the literal below will not be found and the build fails
+  // rather than silently serving nothing for it. That is the intended tripwire.
+  if (!fs.existsSync(path.join(NEST_ROOT, TIMEFRAME_UTIL))) {
+    fail('timeframe-refresh-coverage', `${TIMEFRAME_UTIL} is missing`, 'It owns cadence resolution.');
+    return;
+  }
+  const utilSrc = stripComments(fs.readFileSync(path.join(NEST_ROOT, TIMEFRAME_UTIL), 'utf8'));
+
+  const missing = RESOLVABLE_TIMEFRAMES.filter((tf) => !fetched.includes(tf));
+  const undeclared = RESOLVABLE_TIMEFRAMES.filter(
+    (tf) => !new RegExp(`['"]${tf.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]`).test(utilSrc),
+  );
+
+  if (undeclared.length > 0) {
+    fail(
+      'timeframe-refresh-coverage',
+      `RESOLVABLE_TIMEFRAMES lists ${undeclared.join(', ')} but ${TIMEFRAME_UTIL} no longer returns them`,
+      'selectBaseTimeframe() changed. Update RESOLVABLE_TIMEFRAMES in checkTimeframeCoverage() to match the new mapping, and make sure TIMEFRAMES in bar-refresh.service.ts covers it.',
+    );
+  }
+  if (missing.length > 0) {
+    fail(
+      'timeframe-refresh-coverage',
+      `selectBaseTimeframe() can return ${missing.join(', ')} but TIMEFRAMES in ${BAR_REFRESH} never fetches it`,
+      `Add ${missing.join(', ')} to TIMEFRAMES in nest/src/modules/market-data/bar-refresh.service.ts. A protocol whose recommendedTimeframe resolves to an unfetched cadence receives an empty bar array, produces no score, and does so silently — seven protocols sat stalled ~6h reporting "scoring" this way (#758).`,
+    );
+  }
+}
+
 // ── 3. wiring: invariants <-> guards <-> QA mirror ────────────────────────
 
 function readInvariants() {
@@ -715,6 +997,8 @@ scanBarWindows();
 scanScoreClamp();
 scanObservedDenominator();
 scanBundleLessScoring();
+scanFabricatedReadings();
+checkTimeframeCoverage();
 checkCapabilityRegistry();
 checkStaleWhitelist();
 const ids = checkWiring();

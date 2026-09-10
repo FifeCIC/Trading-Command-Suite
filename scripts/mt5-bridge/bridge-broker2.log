@@ -32,3 +32,134 @@
 2026-09-10 13:29:20,993 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1404.71
 2026-09-10 13:29:20,993 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
 2026-09-10 13:29:21,007 [INFO] [broker2] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-10 14:02:50,016 [INFO] [broker2] [TRADE JOURNAL] {"timestamp": "2026-09-10T14:02:50.015928", "action": "order_placed", "ticket": 152611831814, "symbol": "USDCAD", "type": "buy", "volume": 0.01, "price": 1.38279, "clientOrderId": "queue-eccbd665-ad17-11f1-951d-9c6b00b28963"}
+2026-09-10 15:42:53,513 [INFO] [broker2] MetaTrader5 package loaded
+2026-09-10 15:42:53,514 [INFO] [broker2] Bridge instance [broker2] slot #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-10 15:42:53,515 [INFO] [broker2] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-10 15:42:53,515 [INFO] [broker2] Connecting to MT5 at startup...
+2026-09-10 15:42:53,515 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-10 15:42:53,519 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1404.71
+2026-09-10 15:42:53,519 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 15:42:53,553 [INFO] [broker2] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-10 18:02:26,017 [INFO] [broker2] MetaTrader5 package loaded
+2026-09-10 18:02:26,018 [INFO] [broker2] Bridge instance [broker2] slot #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-10 18:02:26,019 [INFO] [broker2] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-10 18:02:26,019 [INFO] [broker2] Connecting to MT5 at startup...
+2026-09-10 18:02:26,020 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-10 18:02:26,027 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1404.71
+2026-09-10 18:02:26,027 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 18:02:26,069 [INFO] [broker2] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-10 18:04:13,099 [INFO] [broker2] MetaTrader5 package loaded
+2026-09-10 18:04:13,100 [INFO] [broker2] Bridge instance [broker2] slot #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-10 18:04:13,101 [INFO] [broker2] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-10 18:04:13,101 [INFO] [broker2] Connecting to MT5 at startup...
+2026-09-10 18:04:13,102 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-10 18:04:13,105 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1404.71
+2026-09-10 18:04:13,106 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 18:04:13,119 [INFO] [broker2] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-10 18:05:27,721 [INFO] [broker2] Bridge shutting down...
+2026-09-10 18:17:14,534 [INFO] [broker2] MetaTrader5 package loaded
+2026-09-10 18:17:14,535 [INFO] [broker2] Bridge instance [broker2] slot #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-10 18:17:14,535 [INFO] [broker2] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-10 18:17:14,536 [INFO] [broker2] Connecting to MT5 at startup...
+2026-09-10 18:17:14,536 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-10 18:17:14,539 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1404.71
+2026-09-10 18:17:14,540 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 18:17:14,557 [INFO] [broker2] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-10 18:18:07,764 [INFO] [broker2] MetaTrader5 package loaded
+2026-09-10 18:18:07,765 [INFO] [broker2] Bridge instance [broker2] slot #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-10 18:18:07,765 [INFO] [broker2] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-10 18:18:07,765 [INFO] [broker2] Connecting to MT5 at startup...
+2026-09-10 18:18:07,765 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-10 18:18:07,768 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1404.71
+2026-09-10 18:18:07,768 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 18:18:07,777 [INFO] [broker2] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-10 18:18:44,174 [INFO] [broker2] Bridge shutting down...
+2026-09-10 18:19:45,167 [INFO] [broker2] MetaTrader5 package loaded
+2026-09-10 18:19:45,167 [INFO] [broker2] Bridge instance [broker2] slot #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-10 18:19:45,167 [INFO] [broker2] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-10 18:19:45,168 [INFO] [broker2] Connecting to MT5 at startup...
+2026-09-10 18:19:45,168 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-10 18:19:45,171 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1404.71
+2026-09-10 18:19:45,171 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 18:19:45,186 [INFO] [broker2] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-10 18:22:07,424 [INFO] [broker2] MetaTrader5 package loaded
+2026-09-10 18:22:07,425 [INFO] [broker2] Bridge instance [broker2] slot #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-10 18:22:07,426 [INFO] [broker2] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-10 18:22:07,426 [INFO] [broker2] Connecting to MT5 at startup...
+2026-09-10 18:22:07,426 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-10 18:22:07,428 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1404.71
+2026-09-10 18:22:07,429 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 18:22:07,438 [INFO] [broker2] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-10 19:48:31,211 [INFO] [broker2] MetaTrader5 package loaded
+2026-09-10 19:48:31,211 [INFO] [broker2] Bridge instance [broker2] slot #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-10 19:48:31,211 [INFO] [broker2] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-10 19:48:31,211 [INFO] [broker2] Connecting to MT5 at startup...
+2026-09-10 19:48:31,212 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-10 19:48:31,215 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1404.71
+2026-09-10 19:48:31,215 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 19:48:31,225 [INFO] [broker2] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-10 19:50:39,276 [INFO] [broker2] MetaTrader5 package loaded
+2026-09-10 19:50:39,277 [INFO] [broker2] Bridge instance [broker2] slot #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-10 19:50:39,277 [INFO] [broker2] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-10 19:50:39,277 [INFO] [broker2] Connecting to MT5 at startup...
+2026-09-10 19:50:39,277 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-10 19:50:39,279 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1404.71
+2026-09-10 19:50:39,279 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 19:50:39,287 [INFO] [broker2] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-10 20:40:52,345 [INFO] [broker2] MetaTrader5 package loaded
+2026-09-10 20:40:52,345 [INFO] [broker2] Bridge instance [broker2] slot #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-10 20:40:52,345 [INFO] [broker2] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-10 20:40:52,345 [INFO] [broker2] Connecting to MT5 at startup...
+2026-09-10 20:40:52,346 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-10 20:40:52,348 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1404.71
+2026-09-10 20:40:52,348 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 20:40:52,356 [INFO] [broker2] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-10 20:51:26,859 [INFO] [broker2] MetaTrader5 package loaded
+2026-09-10 20:51:26,860 [INFO] [broker2] Bridge instance [broker2] slot #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-10 20:51:26,860 [INFO] [broker2] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-10 20:51:26,860 [INFO] [broker2] Connecting to MT5 at startup...
+2026-09-10 20:51:26,860 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-10 20:51:26,863 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1404.71
+2026-09-10 20:51:26,863 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 20:51:26,873 [INFO] [broker2] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-10 21:37:01,678 [INFO] [broker2] MetaTrader5 package loaded
+2026-09-10 21:37:01,679 [INFO] [broker2] Bridge instance [broker2] slot #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-10 21:37:01,679 [INFO] [broker2] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-10 21:37:01,679 [INFO] [broker2] Connecting to MT5 at startup...
+2026-09-10 21:37:01,679 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-10 21:37:01,682 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1404.71
+2026-09-10 21:37:01,682 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 21:37:01,692 [INFO] [broker2] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-10 21:41:41,043 [INFO] [broker2] MetaTrader5 package loaded
+2026-09-10 21:41:41,043 [INFO] [broker2] Bridge instance [broker2] slot #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-10 21:41:41,043 [INFO] [broker2] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-10 21:41:41,043 [INFO] [broker2] Connecting to MT5 at startup...
+2026-09-10 21:41:41,044 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-10 21:41:41,046 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1404.71
+2026-09-10 21:41:41,046 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 21:41:41,056 [INFO] [broker2] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-10 21:50:54,599 [INFO] [broker2] MetaTrader5 package loaded
+2026-09-10 21:50:54,600 [INFO] [broker2] Bridge instance [broker2] slot #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-10 21:50:54,600 [INFO] [broker2] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-10 21:50:54,600 [INFO] [broker2] Connecting to MT5 at startup...
+2026-09-10 21:50:54,600 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-10 21:50:54,602 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1404.71
+2026-09-10 21:50:54,603 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 21:50:54,621 [INFO] [broker2] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-10 22:01:20,646 [INFO] [broker2] MetaTrader5 package loaded
+2026-09-10 22:01:20,646 [INFO] [broker2] Bridge instance [broker2] slot #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-10 22:01:20,647 [INFO] [broker2] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-10 22:01:20,647 [INFO] [broker2] Connecting to MT5 at startup...
+2026-09-10 22:01:20,647 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-10 22:01:20,682 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1404.71
+2026-09-10 22:01:20,683 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 22:01:20,691 [INFO] [broker2] MT5 Bridge v2 listening on http://127.0.0.1:5000
+2026-09-10 22:08:58,090 [INFO] [broker2] MetaTrader5 package loaded
+2026-09-10 22:08:58,090 [INFO] [broker2] Bridge instance [broker2] slot #2: 10011309743 @ MetaQuotes-Demo on port 5000
+2026-09-10 22:08:58,090 [INFO] [broker2] Starting MT5 Bridge v2 on port 5000 (http.server, no Flask)...
+2026-09-10 22:08:58,090 [INFO] [broker2] Connecting to MT5 at startup...
+2026-09-10 22:08:58,091 [INFO] [broker2] Initializing MT5: server=MetaQuotes-Demo, account=10011309743 (account #2), path=C:\Program Files\MetaTrader 5\terminal64.exe
+2026-09-10 22:08:58,096 [INFO] [broker2] MT5 connected: 10011309743 @ MetaQuotes-Demo, balance=1404.71
+2026-09-10 22:08:58,107 [INFO] [broker2] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 22:08:58,117 [INFO] [broker2] MT5 Bridge v2 listening on http://127.0.0.1:5000

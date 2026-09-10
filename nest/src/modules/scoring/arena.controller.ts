@@ -391,15 +391,22 @@ export class ArenaController {
           );
 
           // Canonical output fields — the SAME normalised shape the ladders use
-          // via buildScoreDisplay. Raw composites are not comparable across
-          // protocols (different denominators), so expose raw+max and let the
-          // canonical layer compute the percentage.
+          // via buildScoreDisplay.
+          //
+          // ⚠️ DO NOT re-derive `rawMax` from `subMaxTotals` (#758 follow-up).
+          // `subMaxTotals` is the OBSERVED per-group max — it shrinks on a quiet tick and
+          // differs per symbol. Re-deriving here made the Arena a THIRD denominator convention
+          // beside the card and the persisted row, so consensus percentages disagreed with the
+          // card for the same reading. `gated.signalMax` is the canonical configured
+          // denominator (the same one `signalPct` and the persisted `rawMax` use).
           const rawComposite = Object.values(gated.subRawTotals || {}).reduce(
             (a: number, b: number) => a + (b ?? 0), 0,
           );
-          const rawMax = Object.values(gated.subMaxTotals || {}).reduce(
-            (a: number, b: number) => a + (b ?? 0), 0,
-          );
+          const rawMax = gated.signalMax > 0
+            ? gated.signalMax
+            : Object.values(gated.subMaxTotals || {}).reduce(
+              (a: number, b: number) => a + (b ?? 0), 0,
+            );
 
           protocolScores.push({
             protocolId,

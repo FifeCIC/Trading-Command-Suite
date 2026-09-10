@@ -1,0 +1,10 @@
+
+> nest@0.6.7 prebuild
+> npx rimraf dist && npx prisma generate && node scripts/validate-protocol-directions.cjs && node scripts/validate-pipeline-contracts.cjs
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Error: 
+EPERM: operation not permitted, rename 'C:\wamp64\www\trading-command-suite\nest\node_modules\.prisma\client\query_engine-windows.dll.node.tmp34636' -> 'C:\wamp64\www\trading-command-suite\nest\node_modules\.prisma\client\query_engine-windows.dll.node'
+
+

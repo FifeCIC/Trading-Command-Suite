@@ -355,11 +355,23 @@ export class SignalEnvelopeService {
     }
 
     // Score via ProtocolGatingService
+    //
+    // ⚠️ `baseTimeframe` is passed THROUGH (2026-09-10). It was computed above
+    // only to select the bars, then dropped — so every directive that judges
+    // freshness had to infer the cadence from the array it happened to receive.
+    // When that array is mixed the inference is meaningless and FRESH data reads
+    // as stale: `liquidity-check` returns `score: 0`, the risk engine turns that
+    // into a hard gate, and the composite collapses to 0 against a 65 threshold.
+    // Live, that blocked every tick of `spy-day-v1`, `qqq-day-v1` and
+    // `spy-speed-v1`, and 12 of 22 ticks of `xau-speed-v1`. The cadence is
+    // already known here — passing it is what stops the false close.
     const gated = await this.protocolGating.scoreWithGating(
       cleanTicker,
       marketBars,
       protocolId,
       { dayBars, hourBars, min15Bars },
+      'group-weighted',
+      baseTimeframe,
     );
 
     // Feed learning from the canonical live path. The retired rankAll path is
@@ -416,9 +428,17 @@ export class SignalEnvelopeService {
 
     // Pre-trade readiness — #718 per-protocol gate: override key wins,
     // then the protocol's trading style, then the 65 default.
-    const gate = await this.getGateThreshold(
+    //
+    // #759: the style bar is then reconciled DOWN to the lowest participating
+    // bot's `minComposite`, so a bot configured to act at 55 is not starved by a
+    // gate of 65 it never mentioned. An explicit `signals.gate.<protocol>`
+    // override is left alone — that is an instruction, not a default.
+    const gate = await this.reconcileGateWithBots(
+      await this.getGateThreshold(
+        protocolId,
+        protocolId ? this.protocolDb.getCached(protocolId)?.tradingStyle : undefined,
+      ),
       protocolId,
-      protocolId ? this.protocolDb.getCached(protocolId)?.tradingStyle : undefined,
     );
     const { preTradeReady, preTradeBlockers } = this.evaluatePreTrade(
       gated,
@@ -732,6 +752,72 @@ export class SignalEnvelopeService {
       }
     }
     return resolveStyleThreshold(tradingStyle, SIGNALS_GATE_DEFAULT);
+  }
+
+  /**
+   * Reconcile the style-derived gate against the bots that actually execute
+   * this signal (#759).
+   *
+   * ⚠️ WHY THIS IS NEEDED, AND WHY IT ONLY EVER LOWERS
+   * --------------------------------------------------
+   * Two independent thresholds decide whether a signal becomes an order:
+   *
+   *   the pre-trade gate  — from the protocol's trading STYLE (65 for day-trade)
+   *   the bot's minComposite — the bar the BOT was deliberately configured with
+   *
+   * Nothing reconciled them, so a bot could be configured to act at 55 and be
+   * starved by a gate of 65 it never mentioned. Measured live: `forex-session-v1`
+   * scored USDJPY/USDCAD/USDCHF at 50/50/50.6, the gate held them at 65, and the
+   * bots set to 55–60 were never offered the decision. The signal was dropped
+   * before reaching the component whose configured intent governs it.
+   *
+   * The operator's explicit per-bot bar WINS, because it is the more specific
+   * declaration — the same precedence this codebase already applies to
+   * directive maxScore (protocol override → global config → directive class).
+   *
+   * It LOWERS ONLY, and only as far as the LOWEST participating bot bar. It
+   * never raises the gate, so a style that legitimately demands more (scalp 75,
+   * speed 80) is untouched for bots that agree with it; and it cannot make a
+   * threshold stricter than the operator asked for. A `signals.gate.<protocol>`
+   * OVERRIDE still wins outright — that is a deliberate human instruction, and
+   * a convenience rule must not silently overrule it. Both facts are recorded in
+   * the returned label so the number is never a mystery.
+   *
+   * Returns the gate unchanged when no bot participates: a protocol scored for
+   * display only (no subscription) keeps its style bar, because there is no
+   * operator intent to defer to.
+   */
+  private async reconcileGateWithBots(
+    resolution: StyleGateResolution,
+    protocolId?: string,
+  ): Promise<StyleGateResolution> {
+    if (!protocolId) return resolution;
+    // An explicit override is an instruction, not a default. Never second-guess it.
+    if (resolution.source === 'override') return resolution;
+
+    try {
+      const bots = await this.prisma.tradingStrategy.findMany({
+        where: { protocolId, active: true },
+        select: { minComposite: true, mode: true, symbol: true },
+      });
+      const bars = bots
+        .map((b) => Number((b as { minComposite?: number | null }).minComposite ?? 0))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      if (bars.length === 0) return resolution;
+
+      const lowestBotBar = Math.min(...bars);
+      if (lowestBotBar >= resolution.threshold) return resolution;
+
+      return {
+        threshold: lowestBotBar,
+        source: 'style',
+        style: resolution.style,
+        label: `${resolution.label}, reconciled down to the lowest participating bot bar (${lowestBotBar})`,
+      };
+    } catch {
+      // Bot lookup is best-effort — never let it change the gate by accident.
+      return resolution;
+    }
   }
 
   private emptyEnvelope(symbol: string): SignalEnvelope {

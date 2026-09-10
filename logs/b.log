@@ -1,0 +1,17 @@
+
+> nest@0.6.5 prebuild
+> npx rimraf dist && node scripts/validate-protocol-directions.cjs && node scripts/validate-pipeline-contracts.cjs
+
+[validate-protocol-directions] Scanned 46 protocols, 420 directive refs, 155 directives with a known bias.
+[validate-protocol-directions] Ô£à OK ÔÇö no direction-contract conflicts.
+[pipeline-contracts] 16 invariants in the contracts doc; 0 whitelisted deviations
+[pipeline-contracts] four-page mirror coverage (QA is gated, these are reported):
+    Architecture   11/16 invariants named: INV-BAR-ORDER, INV-BAR-WINDOW, INV-CANONICAL-LOADER, INV-GATE-FAILS-CLOSED, INV-MTF-BUNDLE, INV-NO-FUTURE-ROWS, INV-ONE-ROW-PER-RUN, INV-SCORE-MAGNITUDE, INV-SINGLE-CADENCE, INV-STABLE-DENOMINATOR, INV-UTC-TIMESTAMPS
+    Diagrams       0/16 invariants named
+    CapabilityMap  0/16 invariants named
+[pipeline-contracts] Ô£à OK ÔÇö canonical mechanisms present, no banned patterns, invariants mirrored in QA
+
+
+> nest@0.6.5 build
+> tsc -p tsconfig.build.json
+

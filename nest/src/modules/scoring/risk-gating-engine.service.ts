@@ -46,6 +46,24 @@ export class RiskGatingEngine {
 
     for (const directive of riskDirectives) {
       const rule = this.classifyRule(directive);
+
+      // UNMEASURED — no reading, so no risk. Skipped BEFORE the weight/severity
+      // accumulators below, which would otherwise drag `riskScore` toward
+      // "extreme risk" on the strength of a directive that admitted it could not
+      // see anything (2026-09-10).
+      if (rule.tier === 'unmeasured') {
+        chain.push({
+          directiveId: directive.directiveId,
+          name: directive.name,
+          tier: 'unmeasured',
+          severity: 0,
+          multiplier: 1.0,
+          reason: rule.reason,
+          cumulativeMultiplier,
+        });
+        continue;
+      }
+
       // Track every classified rule before the control-flow branches below.
       // The former placement was unreachable because every branch continued or
       // broke, leaving riskScore permanently at its neutral default.
@@ -153,6 +171,34 @@ export class RiskGatingEngine {
    * Classify a risk directive result into a tiered rule.
    */
   private classifyRule(directive: RiskDirectiveResult): ClassifiedRule {
+    // ⚠️ UNMEASURED GUARD — checked BEFORE any severity maths (added 2026-09-10).
+    //
+    // `severity = 1 - score/maxScore` maps an unmeasured zero (score 0) to
+    // severity 1.0, the MOST dangerous possible reading. That inversion is the
+    // bug: "I could not measure this" was being scored as "this is catastrophically
+    // bad", so a directive's own stale-data guard tripped its own hard gate.
+    //
+    // Live evidence: `liquidity-check` returns score 0 when its stale-data guard
+    // fires. That made severity 1.0 → the `severity > 0.9` HARD GATE vetoed the
+    // trade with the false reason "Symbol liquidity too low — cannot execute at
+    // acceptable spread". Over 45 minutes `spy-day-v1` (11 ticks), `qqq-day-v1`
+    // (11) and `spy-speed-v1` (7) were hard-gated on EVERY tick, and `xau-speed-v1`
+    // on 12 of 22 — the same symbol oscillating between "highly liquid 94/100"
+    // and "Market closed" seconds apart.
+    //
+    // An unmeasured directive contributes NO penalty and NO veto: it is absent
+    // from the risk picture, exactly as a neutral reading with no data should be.
+    // This is the risk-side twin of INV-STABLE-DENOMINATOR — absence of evidence
+    // must not be scored as evidence, in either the numerator or the gate.
+    if (directive.unmeasured) {
+      return {
+        tier: 'unmeasured',
+        severity: 0,
+        weight: 0,
+        reason: directive.reason || `${directive.name}: no reading this tick`,
+      };
+    }
+
     // Normalized score 0-1 (lower = worse for risk directives)
     const normalizedScore = directive.maxScore > 0
       ? Math.max(0, Math.min(1, directive.score / directive.maxScore))
@@ -219,12 +265,18 @@ export interface RiskDirectiveResult {
   score: number;    // Raw score (lower = more risk)
   maxScore: number;
   reason: string;
+  /**
+   * True when the directive could not take a reading this tick (stale data,
+   * insufficient bars). An unmeasured result contributes no penalty and can
+   * NEVER trip a hard gate — see the guard in `classifyRule` (2026-09-10).
+   */
+  unmeasured?: boolean;
 }
 
 export interface MultiplierStep {
   directiveId: string;
   name: string;
-  tier: 'hard_gate' | 'soft_modifier' | 'regime_override';
+  tier: 'hard_gate' | 'soft_modifier' | 'regime_override' | 'unmeasured';
   severity: number;          // 0-1 (0 = safe, 1 = extreme risk)
   multiplier: number;        // Applied multiplier (1 = no change, 0 = veto)
   reason: string;
@@ -243,7 +295,7 @@ export interface RiskGateResult {
 }
 
 interface ClassifiedRule {
-  tier: 'hard_gate' | 'soft_modifier' | 'regime_override';
+  tier: 'hard_gate' | 'soft_modifier' | 'regime_override' | 'unmeasured';
   severity: number;
   weight: number;
   reason: string;

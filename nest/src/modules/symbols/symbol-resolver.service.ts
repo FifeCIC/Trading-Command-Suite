@@ -19,7 +19,7 @@
  * ── Feature Mapping ───────────────────────────────────────────────
  *
  *   news         → positions + active-protocols + macro + sector + all-active
- *   bar-refresh  → positions + active-strategies + forex-floor
+ *   bar-refresh  → positions + active-strategies + forex-floor + protocol-symbols
  *   scoring      → active-strategies (symbolFilter passed to rankAll)
  *   automation   → positions + active-strategies + watchlist-starred
  *
@@ -201,6 +201,21 @@ export class SymbolResolverService {
         for (const a of assigns) set.add(String(a.symbol).toUpperCase());
       } catch { /* table may not exist */ }
 
+      // Path 1b — EVERY assignment belonging to an active protocol, matched by FK
+      // rather than by the candidate list above. Path 1 only reaches assignments
+      // whose protocolId is already an active protocol's id or slug, so an
+      // assignment written against any other key silently drops out and the
+      // symbol stops being refreshed while still being scored (#761).
+      try {
+        const allActive: any[] = await (this.prisma as any).$queryRawUnsafe(
+          `SELECT DISTINCT a.symbol
+             FROM symbol_protocol_assignment a
+             JOIN protocol p ON p.id = a.protocolId
+            WHERE p.active = 1`,
+        );
+        for (const a of allActive) set.add(String(a.symbol).toUpperCase());
+      } catch { /* table may not exist */ }
+
       // Path 2 — watchlist linked via watchlist.protocolId
       try {
         const wls: any[] = await (this.prisma as any).$queryRawUnsafe(
@@ -208,6 +223,19 @@ export class SymbolResolverService {
           ...candidates,
         );
         for (const w of wls) this.collectWatchlistSymbols(w.symbols, set);
+      } catch { /* column may not exist */ }
+
+      // Path 2b — EVERY watchlist linked to an active protocol BY FOREIGN KEY.
+      // Preferred over the name-guessing hints below: an FK relationship cannot be
+      // ambiguous, cannot rot on a rename, and does not depend on storage order (#763).
+      try {
+        const linked: any[] = await (this.prisma as any).$queryRawUnsafe(
+          `SELECT w.symbols
+             FROM watchlist w
+             JOIN protocol p ON p.id = w.protocolId
+            WHERE p.active = 1`,
+        );
+        for (const w of linked) this.collectWatchlistSymbols(w.symbols, set);
       } catch { /* column may not exist */ }
 
       // Path 3 — derivation hints (shared with ProtocolDbService)
@@ -237,11 +265,20 @@ export class SymbolResolverService {
     } catch { /* best effort */ }
   }
 
-  /** Resolve a named watchlist (fuzzy match, same query as ProtocolDbService). */
+  /**
+   * Resolve a named watchlist (fuzzy match, same query as ProtocolDbService).
+   *
+   * ⚠️ Legacy fallback (#763). Ordering is pinned to the UUID-shaped row so a
+   * duplicate slug/UUID watchlist pair cannot resolve by storage order — five such
+   * pairs exist and the previous `LIMIT 1` with no `ORDER BY` chose arbitrarily.
+   */
   private async collectNamedWatchlist(name: string, set: Set<string>): Promise<void> {
     try {
       const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
-        `SELECT symbols FROM watchlist WHERE LOWER(REPLACE(REPLACE(name, '-', ' '), '_', ' ')) = LOWER(REPLACE(REPLACE(?, '-', ' '), '_', ' ')) LIMIT 1`,
+        `SELECT symbols FROM watchlist
+          WHERE LOWER(REPLACE(REPLACE(name, '-', ' '), '_', ' ')) = LOWER(REPLACE(REPLACE(?, '-', ' '), '_', ' '))
+          ORDER BY (id REGEXP '^[0-9a-f]{8}-[0-9a-f]{4}-') DESC, id ASC
+          LIMIT 1`,
         name,
       );
       if (rows[0]) this.collectWatchlistSymbols(rows[0].symbols, set);

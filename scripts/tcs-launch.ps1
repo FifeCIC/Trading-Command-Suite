@@ -89,14 +89,76 @@ for ($i = 0; $i -lt $activeBrokers.Count; $i++) {
     Write-Host "  Starting MT5 Bridge #${brokerId} — ${brokerServer} (port ${bridgePort})…" -ForegroundColor Yellow
     $env:BRIDGE_PORT = "$bridgePort"
     $env:BRIDGE_ACCOUNT = $brokerId
-    $mt5 = Start-Process -FilePath $pythonPath `
-        -ArgumentList $bridgeScript `
+    # ⚠️ `-NoNewWindow` puts the bridge in THIS console's process group, so when the
+    # launcher exits the bridge receives CTRL_C_EVENT and dies. Measured (#765):
+    #
+    #   18:18:07  MT5 Bridge v2 listening on http://127.0.0.1:5000
+    #   18:18:44  Bridge shutting down...          ← 37s later, when the launcher exited
+    #
+    # The bridge traps KeyboardInterrupt (mt5_bridge_v2.py:1205) and shuts down cleanly, so
+    # it looks like a deliberate stop rather than a crash — and every subsequent launch
+    # reported "All services running" while the bridges were already gone. Crypto and FX
+    # then fetched nothing and the API logged "All MT5 Bridges Disconnected".
+    #
+    # The bridges are long-lived daemons; they must outlive the launcher. Use `cmd /c start`
+    # to give each bridge its own detached console, which is not in the launcher's process
+    # group and so never receives its signals.
+    $bridgeLog = "$env:TEMP\mt5-bridge-${bridgePort}.log"
+    $bridgeErr = "$env:TEMP\mt5-bridge-${bridgePort}-err.log"
+    $bridgeArgs = "`"$bridgeScript`""
+    $started = Start-Process -FilePath "cmd" `
+        -ArgumentList "/c start `"MT5 Bridge $brokerId`" /min `"$pythonPath`" $bridgeArgs > `"$bridgeLog`" 2> `"$bridgeErr`"" `
         -WorkingDirectory $bridgeCwd `
-        -PassThru -NoNewWindow `
-        -RedirectStandardOutput "$env:TEMP\mt5-bridge-${bridgePort}.log" `
-        -RedirectStandardError "$env:TEMP\mt5-bridge-${bridgePort}-err.log"
-    $mt5Pids += $mt5.Id
-    Write-Host "    PID $($mt5.Id) (port ${bridgePort})" -ForegroundColor DarkGray
+        -PassThru -WindowStyle Hidden
+    $mt5Pids += $started.Id
+    Write-Host "    launcher PID $($started.Id) (detached; bridge on port ${bridgePort})" -ForegroundColor DarkGray
+}
+
+# ── Wait for the bridges to be READY before starting the API ─
+#
+# WHY THIS GATE EXISTS (#765)
+# ---------------------------
+# The API used to be started immediately after the bridges, with all waiting done at the
+# END. That ordering is wrong and the symptom is severe but quiet:
+#
+#   WARN  MT5 bridge [broker 2] GET /candles?symbol=US500… FAILED: network: fetch failed
+#   LOG   Bar refresh complete (live): 0 bars for 39 symbols
+#   ALERT All MT5 Bridges Disconnected: ?, ? not connected. Automated trading disabled.
+#
+# The API boots, runs its first refresh against bridges that are not accepting connections
+# yet, fails EVERY fetch, and commits a refresh cycle that upserted nothing. The final
+# "Waiting for services" loop then reports "All services running" — because by then the
+# bridges HAVE come up. So the launch reports success over a cycle that produced no data,
+# and nothing re-runs that first refresh.
+#
+# A listening socket is NOT the readiness signal we need on its own — the bridge binds
+# AFTER connecting to MT5 (see mt5_bridge_v2.py), so we poll `/health` and require
+# `connected=true`, which is the same predicate the adapter needs to succeed.
+$bridgeReady = @{}
+foreach ($i in 0..($activeBrokers.Count - 1)) {
+    $brokerId = $activeBrokers[$i]
+    $bridgePort = 5000 + $i
+    $brokerServer = $envVars["MT5_SERVER_$brokerId"] ?? '?'
+    $ready = $false
+    for ($attempt = 1; $attempt -le 45; $attempt++) {   # up to 90s
+        Start-Sleep -Seconds 2
+        if (Get-NetTCPConnection -LocalPort $bridgePort -State Listen -ErrorAction SilentlyContinue) {
+            try {
+                $h = Invoke-RestMethod "http://localhost:$bridgePort/health" -TimeoutSec 5 -ErrorAction Stop
+                if ($h.connected) {
+                    $ready = $true
+                    Write-Host "    MT5 #${brokerId} (${brokerServer}) ready after $($attempt*2)s — connected to terminal" -ForegroundColor DarkGray
+                    break
+                }
+            } catch { /* not up yet */ }
+        }
+    }
+    $bridgeReady[$bridgePort] = $ready
+    if (-not $ready) {
+        Write-Host "    ⚠️  MT5 #${brokerId} (${brokerServer}) did NOT report connected within 90s" -ForegroundColor Yellow
+        Write-Host "        Starting the API anyway — but its first refresh will fetch nothing." -ForegroundColor Yellow
+        Write-Host "        Check: $env:TEMP\mt5-bridge-${bridgePort}-err.log" -ForegroundColor DarkGray
+    }
 }
 
 # ── Start NestJS API ────────────────────────────────────────
@@ -105,25 +167,36 @@ Write-Host "  Starting NestJS API (port 3201)…" -ForegroundColor Cyan
 $env:DATABASE_URL = 'mysql://tradingcs:tradingcs_dev_2026@localhost:3306/tradingcs'
 $nestLog = "$env:TEMP\nest-api.log"
 $nestErr = "$env:TEMP\nest-api-err.log"
+# Detached for the same reason as the bridges (#765): a child started with `-NoNewWindow`
+# shares this console's process group, so the launcher exiting sends it CTRL_C_EVENT.
+#
+# ⚠️ Do NOT wrap this in `cmd /c start` for the redirects — measured (#765): the API is
+# detected on 3201 during the launcher's wait loop, then gone, with EMPTY log files. The
+# nested quoting swallowed the redirect and the process never persisted, yet the launcher
+# still reported "All services running" because it tests the port, not the process.
+#
+# `-WindowStyle Hidden` already gives the child its own console and detaches it from our
+# signal group, so the plain form is both correct and simpler.
 $nest = Start-Process -FilePath "node" `
     -ArgumentList "$ROOT\nest\dist\src\main.js" `
     -WorkingDirectory "$ROOT\nest" `
-    -PassThru -NoNewWindow `
+    -PassThru -WindowStyle Hidden `
     -RedirectStandardOutput $nestLog `
     -RedirectStandardError $nestErr
-Write-Host "    PID $($nest.Id)" -ForegroundColor DarkGray
+Write-Host "    PID $($nest.Id) (detached; API on port 3201)" -ForegroundColor DarkGray
 
 # ── Start Vite Frontend ─────────────────────────────────────
 
 if (-not $SkipFrontend) {
     Write-Host "  Starting Vite Frontend (port 5173)…" -ForegroundColor Green
+    # Detached, same reasoning (#765).
     $vite = Start-Process -FilePath "cmd" `
         -ArgumentList "/c npx vite --host --port 5173 --strictPort" `
         -WorkingDirectory $ROOT `
-        -PassThru -NoNewWindow `
+        -PassThru -WindowStyle Hidden `
         -RedirectStandardOutput "$env:TEMP\vite.log" `
         -RedirectStandardError "$env:TEMP\vite-err.log"
-    Write-Host "    PID $($vite.Id)" -ForegroundColor DarkGray
+    Write-Host "    PID $($vite.Id) (detached; Vite on port 5173)" -ForegroundColor DarkGray
 }
 
 # ── Wait and verify ────────────────────────────────────────
@@ -174,7 +247,45 @@ for ($i = 1; $i -le 45; $i++) {
 
 Write-Host ""
 if ($allUp) {
-    Write-Host "  All services running" -ForegroundColor Green
+    # "All services running" is NOT the same as "the pipeline is working". A bridge can
+    # listen while refusing every request, and the API happily boots and records a refresh
+    # cycle that fetched nothing (#765). So once the ports are up, confirm the bridges are
+    # actually CONNECTED before claiming success — otherwise the message is a false green
+    # over a system that will not place a trade.
+    $degraded = @()
+    foreach ($i in 0..($activeBrokers.Count - 1)) {
+        $brokerId = $activeBrokers[$i]
+        $bridgePort = 5000 + $i
+        $brokerServer = $envVars["MT5_SERVER_$brokerId"] ?? '?'
+        $ok = $false
+        try {
+            $h = Invoke-RestMethod "http://localhost:$bridgePort/health" -TimeoutSec 6 -ErrorAction Stop
+            $ok = [bool]$h.connected
+        } catch { $ok = $false }
+        if (-not $ok) { $degraded += "MT5 #${brokerId} (${brokerServer}) port ${bridgePort}" }
+    }
+
+    if ($degraded.Count -eq 0) {
+        Write-Host "  All services running and bridges connected" -ForegroundColor Green
+    } else {
+        Write-Host "  Services are LISTENING but the pipeline is NOT healthy" -ForegroundColor Yellow
+        Write-Host "    Not connected to MT5: $($degraded -join ', ')" -ForegroundColor Yellow
+        Write-Host "    Symbols on those bridges will fetch 0 candles and score nothing." -ForegroundColor Yellow
+    }
+
+    # A listening port is not proof of a WORKING service (#765). Measured: the API was
+    # detected on 3201 during the wait loop and was gone moments later, with the launcher
+    # still printing "All services running". So confirm /api/health actually answers.
+    if (-not $SkipFrontend) {
+        try {
+            $health = Invoke-RestMethod "http://localhost:3201/api/health" -TimeoutSec 10 -ErrorAction Stop
+            Write-Host "    API health: $($health.status)" -ForegroundColor DarkGray
+        } catch {
+            Write-Host "    ⚠️  Port 3201 is listening but /api/health did not answer." -ForegroundColor Yellow
+            Write-Host "        The API process may have exited. Check: $env:TEMP\nest-api-err.log" -ForegroundColor Yellow
+        }
+    }
+
     foreach ($svc in $services) {
         Write-Host "    $($svc.Name): http://localhost:$($svc.Port)" -ForegroundColor $svc.Color
     }

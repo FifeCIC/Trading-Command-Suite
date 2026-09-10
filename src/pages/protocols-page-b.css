@@ -23,6 +23,46 @@
 .prb-status-btn.inactive:hover { background: #ef4444; color: #fff; }
 .prb-status-btn:disabled { opacity: 0.5; cursor: default; }
 
+/* ── Adaptive Target toggle (2026-09-10) ──────────────────────────────────────
+   Sits beside the Active/Inactive button but must never be confused with it:
+   Active/Inactive decides whether the protocol RUNS; Adaptive Target decides what
+   its scores are MEASURED AGAINST. Deliberately a different hue family — amber for
+   "on" rather than the green used for Active — so a glance can't mistake a scale
+   change for an on/off state. */
+.prb-head-actions { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.prb-target-btn { border-style: dashed; }
+.prb-target-btn.target-off {
+  background: transparent; color: var(--color-muted, #64748b);
+  border-color: color-mix(in srgb, var(--line) 70%, var(--color-muted, #64748b) 30%);
+}
+.prb-target-btn.target-off:hover {
+  color: var(--color-warning, #f59e0b);
+  border-color: var(--color-warning, #f59e0b);
+}
+.prb-target-btn.target-on {
+  background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent);
+  color: var(--color-warning, #f59e0b);
+  border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 45%, transparent);
+  border-style: solid;
+}
+.prb-target-btn.target-on:hover { background: var(--color-warning, #f59e0b); color: #111; }
+
+/* Explanation panel — present whenever the target is on, or when enabling was refused.
+   The whole point is that a reader can always tell which scale is in force. */
+.prb-target-note {
+  margin: 0.6rem 0; padding: 0.55rem 0.7rem; border-radius: 6px; font-size: 0.78rem;
+  line-height: 1.45; border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 35%, transparent);
+  background: color-mix(in srgb, var(--color-warning, #f59e0b) 8%, transparent);
+}
+.prb-target-note p { margin: 0 0 0.3rem; }
+.prb-target-note p:last-child { margin-bottom: 0; }
+.prb-target-sub { color: var(--ink-soft); font-size: 0.74rem; }
+.prb-target-note--error {
+  border-color: color-mix(in srgb, #ef4444 40%, transparent);
+  background: color-mix(in srgb, #ef4444 8%, transparent);
+  color: var(--ink);
+}
+
 /* Toolbar */
 .prb-toolbar {
   display: flex; justify-content: space-between; align-items: center;

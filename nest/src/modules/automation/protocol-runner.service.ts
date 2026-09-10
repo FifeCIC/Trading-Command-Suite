@@ -19,6 +19,13 @@ import { MarketDataService } from '../market-data/market-data.service';
 
 // ── Types ──────────────────────────────────────────────────
 
+/**
+ * Cadence this runner loads base bars on. Kept as a named constant so the bars
+ * and the `timeframe` hint handed to `scoreWithGating` can never disagree — a
+ * mismatch would reintroduce the false "market closed" reading (2026-09-10).
+ */
+const BASE_TIMEFRAME = '1d';
+
 export interface ProtocolRunConfig {
   name: string;
   protocolId: string;
@@ -162,11 +169,17 @@ export class ProtocolRunnerService {
     const { dayBars, hourBars, min15Bars } = sym
       ? await this.protocolGating.loadHigherTfBundle(sym.id, preset.id)
       : { dayBars: [], hourBars: [], min15Bars: [] };
+    // Pass the cadence the bars were actually loaded on, so a freshness check
+    // inside a directive measures staleness against the real interval instead of
+    // inferring it — the inference that made fresh data read as closed and
+    // hard-gated every tick of some protocols (2026-09-10).
     const gated = await this.protocolGating.scoreWithGating(
       symbol.toUpperCase(),
       bars,
       preset.id,
       { dayBars, hourBars, min15Bars },
+      'group-weighted',
+      BASE_TIMEFRAME,
     );
     const signalClass: SymbolScoreResult['signalClass'] =
       gated.signal === 'BUY' || gated.signal === 'STRONG_BUY' ? 'bullish' :
@@ -214,7 +227,7 @@ export class ProtocolRunnerService {
         // ordering was already correct, but it is a COPY of the canonical loader: the
         // `timeframe` filter and the ordering had to be re-supplied by hand, and four sites
         // that did this got it wrong (#751, #754). Calls the one loader instead.
-        const bars = await this.marketData.getBars(sym.id, '1d', 60);
+        const bars = await this.marketData.getBars(sym.id, BASE_TIMEFRAME, 60);
 
         return bars.map((b) => ({
           timestamp: b.timestamp,

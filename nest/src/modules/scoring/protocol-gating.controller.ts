@@ -8,6 +8,7 @@ import { DirectivesService } from '../directives/directives.service';
 import { DirectiveConfigService } from './directive-config.service';
 import { ProtocolHealthService } from './protocol-health.service';
 import { isDirectiveIncluded } from '../directives/directive-inclusion';
+import { resolveAdaptiveTarget, ADAPTIVE_TARGET_MIN_SAMPLES } from './adaptive-target';
 
 /**
  * Protocol Gating Controller — META.Stack Canonical Scoring
@@ -97,6 +98,13 @@ export class ProtocolGatingController {
       note?: string | null;
       theory?: string | null; // #689 — written intent (target behaviour, why these groups, what a good day looks like)
       readiness?: { ready: boolean; blockers: Array<{ directiveId: string; name: string; readiness: string }> };
+      // Adaptive Target (2026-09-10) — surfaced here so the Ladder can badge a card
+      // without a second request per protocol. `adaptiveTargetActive` is the question the
+      // UI actually asks: 'is this protocol's score measured on a different scale?'
+      adaptiveTargetEnabled?: boolean;
+      adaptiveTargetActive?: boolean;
+      adaptiveTargetMax?: number | null;
+      adaptiveTargetSamples?: number;
       // Set after construction by async resolveSymbols() below
       resolvedSymbols?: string[];
     }> = [];
@@ -108,6 +116,24 @@ export class ProtocolGatingController {
     // registry maxScore stays in lockstep with the scoring engine (#609/#637).
     const globalConfigs = await this.configService.getAllConfigs();
     const allOverrides = await this.configService.getAllProtocolOverrides();
+
+    // Adaptive Target state for every protocol in ONE query — the Ladder badges cards from
+    // this, so it must not be a per-protocol round trip.
+    const adaptiveBySlug = new Map<string, { enabled: boolean; max: number | null; samples: number }>();
+    try {
+      const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
+        `SELECT slug, adaptiveTargetEnabled AS e, adaptiveTargetMax AS m, adaptiveTargetSamples AS s FROM protocol`,
+      );
+      for (const r of rows ?? []) {
+        adaptiveBySlug.set(String(r.slug), {
+          enabled: !!r.e,
+          max: r.m == null ? null : Number(r.m),
+          samples: Number(r.s ?? 0),
+        });
+      }
+    } catch {
+      // Column may not exist on an older DB — Adaptive Target simply reads as off.
+    }
 
     for (const [id, proto] of Object.entries(allProtocols)) {
       // Skip protocols with no directive groups — these are ghost entries
@@ -184,6 +210,22 @@ export class ProtocolGatingController {
         idealFor: (proto as any).idealFor,
         note: (proto as any).note ?? null,
         theory: (proto as any).theory ?? null,
+        // Adaptive Target — `active` means the target is genuinely in force, i.e. enabled AND
+        // resting on enough observations to change the denominator. A protocol with the flag
+        // on but too few readings is NOT badged, because its scores are still on the
+        // configured scale and a badge would be a lie.
+        adaptiveTargetEnabled: adaptiveBySlug.get(id)?.enabled ?? false,
+        adaptiveTargetActive: (() => {
+          const a = adaptiveBySlug.get(id);
+          if (!a?.enabled || a.max == null) return false;
+          if (a.samples < ADAPTIVE_TARGET_MIN_SAMPLES) return false;
+          return resolveAdaptiveTarget(
+            { enabled: a.enabled, peak: a.max, samples: a.samples, since: null },
+            maxScore,
+          ).applied;
+        })(),
+        adaptiveTargetMax: adaptiveBySlug.get(id)?.max ?? null,
+        adaptiveTargetSamples: adaptiveBySlug.get(id)?.samples ?? 0,
         // Placeholder — populated below by resolveSymbols()
         resolvedSymbols: [] as string[],
       });

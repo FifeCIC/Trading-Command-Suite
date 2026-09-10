@@ -1,6 +1,8 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { ProtocolDbService } from './protocol-db.service';
 import { DirectivesService } from '../directives/directives.service';
+import { classifyDirectiveInclusion } from '../directives/directive-inclusion';
+import { PrismaService } from '../../database/prisma.service';
 
 /**
  * ProtocolHealthService — static protocol-config validation.
@@ -19,7 +21,21 @@ import { DirectivesService } from '../directives/directives.service';
 export interface ProtocolHealthIssue {
   protocolId: string;
   groupId?: string;
-  kind: 'empty-group' | 'unknown-directive' | 'no-risk-gate' | 'duplicate-directive' | 'zero-weight';
+  kind:
+    | 'empty-group'
+    | 'unknown-directive'
+    | 'no-risk-gate'
+    | 'duplicate-directive'
+    | 'zero-weight'
+    /** Under 25% of declared maxScore sits on direction-declaring directives.
+     *  A review prompt only — config understates real capacity (2026-09-10). */
+    | 'low-declared-directional-capacity'
+    /** Measured maximum composite is BELOW the bot's minComposite — the bot can
+     *  never trade as configured, however the market behaves (2026-09-10). */
+    | 'ceiling-below-threshold'
+    /** Measured maximum composite clears minComposite by under 25%, so the bot
+     *  fires rarely and is fragile to any weight change (2026-09-10). */
+    | 'ceiling-near-threshold';
   severity: 'warning' | 'error';
   message: string;
 }
@@ -33,6 +49,7 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
   constructor(
     private readonly protocolDb: ProtocolDbService,
     private readonly directives: DirectivesService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /** Validate every active protocol's group/directive wiring. */
@@ -57,10 +74,29 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
       const seen = new Set<string>();
       const hasRiskGate = config.groups.some((g: any) => g.isRiskGate === true);
 
+      // ── Directional capacity (added 2026-09-10) ──────────────────────────
+      // The composite counts ONLY directives that can emit a directional
+      // `signalClass`; a `directionBias: "neutral"` directive scores, is shown in
+      // the UI, and adds EXACTLY ZERO. A protocol can therefore declare a huge
+      // maxScore total and still be unable to reach its own threshold.
+      //
+      // This is not hypothetical: `ftse-speed-v1`, `dax-speed-v1` and
+      // `cac-speed-v1` each wrap ~815 points of neutral technical directives
+      // around a single 80-point directional one, so their all-time maximum
+      // composite is 31 against a `minComposite` of 65 — they had never cleared
+      // the gate once in their entire history. The fault was invisible because
+      // every individual directive looked healthy and scored in range.
+      let directionalCapacity = 0;
+      let neutralCapacity = 0;
+
       for (const group of config.groups as any[]) {
         const groupId: string = group.id;
         const directiveIds: string[] = group.directiveIds ?? [];
         const weight = Number(group.weight ?? 0);
+
+        // Gate groups are excluded from the signal by design, so their capacity
+        // is neither directional nor wasted.
+        const isGateGroup = group.isRiskGate === true;
 
         if (weight > 0 && directiveIds.length === 0) {
           issues.push({
@@ -101,6 +137,42 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
               severity: 'error',
               message: `Directive "${directiveId}" has no implementation registered — it will never score.`,
             });
+          } else if (!isGateGroup) {
+            // `directionBias` is the DECLARED capability. A directive that
+            // declares `neutral` may still emit a dynamic two-sided signalClass
+            // at runtime (speed-momentum does), so this is reported as a
+            // capacity SHORTFALL rather than asserted as a hard fact — but a
+            // protocol whose declared directional capacity cannot reach its
+            // threshold deserves a human look.
+            //
+            // ⚠️ MUST go through `classifyDirectiveInclusion` — the single
+            // source of truth for directionBias vs directionMode.
+            // Counting the raw `directionBias` here is exactly the drift that
+            // module's header warns about, and it made this check MISS its own
+            // motivating case: `ftse-speed-v1` is LONG_ONLY, so the bearish
+            // `rsi-overbought` (140) is silently excluded at runtime — yet a
+            // naive count credited it as directional capacity and pushed the
+            // protocol over the threshold, hiding the fault (2026-09-10).
+            const directionMode = (config as any).directionMode ?? 'LONG_ONLY';
+            const included = classifyDirectiveInclusion(
+              {
+                directionBias: (impl as any).directionBias,
+                readiness: (impl as any).readiness,
+              },
+              directionMode,
+            );
+            const maxScore = Number((impl as any).maxScore ?? 0);
+            if (included !== 'included') {
+              // Excluded by direction mode or alpha readiness. Not usable
+              // capacity — do not credit it to either side.
+              continue;
+            }
+            const bias = (impl as any).directionBias;
+            if (bias === 'bullish' || bias === 'bearish') {
+              directionalCapacity += maxScore;
+            } else {
+              neutralCapacity += maxScore;
+            }
           }
         }
       }
@@ -113,10 +185,147 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
           message: 'Protocol has no risk-gate group (isRiskGate) — risk multiplier stays at the default.',
         });
       }
+
+      // A protocol whose DECLARED directional capacity is a small minority of
+      // its total cannot reach a high threshold from declared signals alone.
+      //
+      // ⚠️ Reported at `warning` and worded as a prompt to verify, because the
+      // declared bias UNDERSTATES real capacity: several directives declare
+      // `neutral` and still emit bullish/bearish at runtime. `xau-speed-v1` sits
+      // at 15% declared-directional yet regularly clears 65. The check is a
+      // review trigger — "go and look at this protocol's measured ceiling" —
+      // not a verdict.
+      const totalCapacity = directionalCapacity + neutralCapacity;
+      if (totalCapacity > 0 && directionalCapacity < totalCapacity * 0.25) {
+        issues.push({
+          protocolId: slug,
+          kind: 'low-declared-directional-capacity',
+          severity: 'warning',
+          message:
+            `Only ${directionalCapacity} of ${totalCapacity} maxScore points sit on directives that ` +
+            `DECLARE a direction (${Math.round((directionalCapacity / totalCapacity) * 100)}%). ` +
+            `Directives that declare none may still emit a bullish/bearish reading at runtime, so ` +
+            `this is not proof the protocol is untradable — verify by comparing its measured ` +
+            `composite against its minComposite. The known failure case is a protocol whose ` +
+            `all-time maximum never reaches its own threshold.`,
+        });
+      }
     }
 
     this.lastIssues = issues;
     this.lastRunAt = new Date().toISOString();
+    return issues;
+  }
+
+  /**
+   * Compare each ACTIVE bot's `minComposite` against its protocol's MEASURED
+   * maximum composite (2026-09-10).
+   *
+   * WHY THIS EXISTS
+   * ---------------
+   * `low-declared-directional-capacity` (above) reads config, and config
+   * understates real capacity — several directives declare `neutral` yet emit
+   * direction at runtime. So config alone cannot answer the question that
+   * actually matters: **can this bot ever trade?**
+   *
+   * This check answers it from evidence. For each active bot it takes the
+   * protocol's highest composite ever recorded and compares it to the bot's own
+   * threshold. If the ceiling is below the bar, the bot is configured to never
+   * fire, and no amount of market movement will change that.
+   *
+   * THE CASE THAT MOTIVATED IT: `ftse-speed-v1`, `dax-speed-v1` and
+   * `cac-speed-v1` each had an all-time maximum composite of **31** against a
+   * `minComposite` of **65**. They had cleared their gate 0 times in their entire
+   * history while `forex-session-v1` cleared it 1,168 times. Every individual
+   * directive looked healthy, so nothing reported a problem — the fault was only
+   * visible by comparing the ceiling to the threshold.
+   *
+   * ⚠️ Reported at `error` when the measured ceiling cannot reach the threshold,
+   * because that is a definite fault rather than a suspicion: the bot cannot
+   * trade as configured. It is deliberately NOT auto-fixed — the right response
+   * may be to fix the protocol, lower the threshold, or disable the bot.
+   */
+  async auditMeasuredCeilings(): Promise<ProtocolHealthIssue[]> {
+    const issues: ProtocolHealthIssue[] = [];
+    if (!this.prisma?.isAvailable) return issues;
+
+    let rows: any[] = [];
+    try {
+      // ⚠️ COLLATION IS LOAD-BEARING HERE — verified against information_schema:
+      //
+      //   trading_strategy.protocolId / .id  →  utf8mb4_0900_ai_ci
+      //   protocol.id / .slug                →  utf8mb4_unicode_ci
+      //   score.strategyId                   →  utf8mb4_unicode_ci
+      //
+      // The two tables were created under different server defaults, so a plain
+      // `ON p.id = ts.protocolId` throws "Illegal mix of collations" and the
+      // comparison of `slug` against `strategyId` clashes too. Every join and
+      // subquery below therefore pins BOTH sides to utf8mb4_0900_ai_ci.
+      //
+      // This was diagnosed the hard way: the throw was caught and logged as a
+      // bare `.message` that came out EMPTY, so the audit produced nothing and
+      // the health endpoint looked clean. That silent-no-op shape is exactly what
+      // this codebase keeps producing, hence the full-error log below.
+      rows = await this.prisma.$queryRawUnsafe(`
+        SELECT ts.protocolId,
+               p.slug                AS slug,
+               MAX(ts.minComposite)  AS required,
+               COUNT(DISTINCT ts.id) AS bots,
+               (SELECT MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(s.breakdown, '$.rawComposite')) AS DECIMAL(7,2)))
+                  FROM score s
+                 WHERE s.strategyId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS ceiling,
+               (SELECT COUNT(*) FROM score s2
+                 WHERE s2.strategyId COLLATE utf8mb4_0900_ai_ci = p.slug COLLATE utf8mb4_0900_ai_ci) AS samples
+          FROM trading_strategy ts
+          JOIN protocol p
+            ON p.id COLLATE utf8mb4_0900_ai_ci = ts.protocolId COLLATE utf8mb4_0900_ai_ci
+         WHERE ts.active = 1
+         GROUP BY ts.protocolId, p.slug
+      `);
+    } catch (err) {
+      // ⚠️ Log the FULL error, not just `.message` — an empty message here once
+      // meant a collation failure took ten minutes to find. Fail loud.
+      this.logger.warn(
+        `Measured-ceiling audit skipped: ${(err as Error).message || String(err)}`,
+      );
+      return issues;
+    }
+
+    for (const row of rows) {
+      const required = Number(row.required ?? 0);
+      const ceiling = row.ceiling == null ? null : Number(row.ceiling);
+      const samples = Number(row.samples ?? 0);
+
+      // Need a real history before claiming a ceiling. 10 readings is enough to
+      // see the shape without waiting a session.
+      if (ceiling == null || samples < 10) continue;
+
+      if (ceiling < required) {
+        issues.push({
+          protocolId: row.slug,
+          kind: 'ceiling-below-threshold',
+          severity: 'error',
+          message:
+            `Protocol "${row.slug}" cannot reach the composite its ${row.bots} active bot(s) ` +
+            `require: highest composite EVER recorded is ${ceiling} against a minComposite of ` +
+            `${required} (${samples} readings). This bot cannot trade as configured — fix the ` +
+            `protocol's directional capacity, lower minComposite, or disable the bot.`,
+        });
+      } else if (ceiling < required * 1.25) {
+        // Reaches the bar, but only just: it will fire rarely and any change to
+        // directive weights could strand it.
+        issues.push({
+          protocolId: row.slug,
+          kind: 'ceiling-near-threshold',
+          severity: 'warning',
+          message:
+            `Protocol "${row.slug}" barely clears its threshold: highest composite ever is ` +
+            `${ceiling} against minComposite ${required} (${samples} readings). It will trade ` +
+            `rarely, and a small change to directive weights could strand it entirely.`,
+        });
+      }
+    }
+
     return issues;
   }
 
@@ -127,10 +336,24 @@ export class ProtocolHealthService implements OnApplicationBootstrap {
   /** Log config faults once at boot so they're visible in the backend log too. */
   async onApplicationBootstrap() {
     try {
-      const issues = await this.validateAll();
+      const configIssues = await this.validateAll();
+
+      // Evidence-based check: can each active bot actually reach its threshold?
+      // Run AFTER validateAll so `lastIssues` keeps the config findings; the
+      // ceiling findings are appended so a single health call reports both.
+      let ceilingIssues: ProtocolHealthIssue[] = [];
+      try {
+        ceilingIssues = await this.auditMeasuredCeilings();
+      } catch (err) {
+        this.logger.warn(`Measured-ceiling audit failed: ${(err as Error).message}`);
+      }
+
+      const issues = [...configIssues, ...ceilingIssues];
+      this.lastIssues = issues;
+
       for (const i of issues) {
         if (i.severity === 'error') {
-          this.logger.warn(`Protocol config ERROR [${i.protocolId}]: ${i.message}`);
+          this.logger.error(`Protocol config ERROR [${i.protocolId}]: ${i.message}`);
         } else {
           this.logger.log(`Protocol config warning [${i.protocolId}]: ${i.message}`);
         }

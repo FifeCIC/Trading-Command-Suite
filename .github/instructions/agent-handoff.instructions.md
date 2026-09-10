@@ -15,6 +15,29 @@ Write a handoff file to `.github/handoffs/` BEFORE calling `task_complete` **onl
 
 Rule of thumb: if the change would not belong on the Capability Map or Architecture Framework, it does not need a handoff.
 
+## 🛑 If your change touched the database schema
+
+Do this **before** writing the handoff — a schema change is the one class of change that can
+destroy data, so it gets an explicit checkpoint:
+
+```powershell
+npm --prefix C:\wamp64\www\trading-command-suite\nest run db:check
+```
+
+It must print `✅ OK`. If it reports an undeclared non-empty table, either add the table to
+`schema.prisma` or declare it in `nest/scripts/validate-schema-safety.cjs` with a reason and
+an owning module — then re-run.
+
+Also confirm in the handoff:
+
+- **How** the schema changed (`ALTER TABLE` / targeted `CREATE TABLE` — **never** `db push`).
+- Whether `schema.prisma` was updated **in the same commit** (it must be, or the model drifts
+  from reality again).
+- If you added a raw-managed table: that its DDL is in `nest/prisma/raw-managed/`.
+
+**Never** run `prisma db push` or `db push --force-reset` to apply a schema change here. See
+`.github/instructions/database-schema.instructions.md` and issue **#769**.
+
 ## ⚠️ Inline Documentation Comments — ALWAYS APPLY
 
 When you edit code, you MUST add a documentation comment if you spent **3+ search/read operations** understanding the pattern before editing. These comments save future agents (and human developers) from re-discovering the same information.

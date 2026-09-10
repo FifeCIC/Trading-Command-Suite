@@ -428,6 +428,12 @@ export default function LadderPage() {
           // family fallback resolves back to this card's own protocol id there is
           // nothing borrowed, and chipping it would just duplicate the run id.
           scoreFrom: borrowed && borrowed.sourceProtocolId !== p.id ? borrowed.sourceProtocolId : null,
+          // Adaptive Target (2026-09-10). `adaptiveTargetActive` is true only when the
+          // target is enabled AND rests on enough observations to actually move the
+          // denominator — a flag-on-but-inactive protocol is NOT badged, because its
+          // scores are still on the configured scale and a badge would mislead.
+          adaptiveTargetActive: !!p.adaptiveTargetActive,
+          adaptiveTargetMax: p.adaptiveTargetMax ?? null,
         });
       }
     }
@@ -523,6 +529,23 @@ export default function LadderPage() {
           {e.symbol}
         </Link>
         <span className="lad-proto-tag">{e.protocolName}</span>
+        {/* Adaptive Target badge (2026-09-10) — this protocol's percentage is measured
+            against its own observed peak, NOT its configured capacity. Shown on the card
+            itself (not just the registry) because the whole risk of this feature is a
+            reader comparing two percentages that sit on different scales without knowing.
+            Deliberately a word, not just a colour, so it survives colour-blind rendering. */}
+        {e.adaptiveTargetActive && (
+          <span
+            className="lad-target-badge"
+            title={
+              `Adaptive Target — measured against this protocol's observed peak` +
+              `${e.adaptiveTargetMax != null ? ` (${Math.round(e.adaptiveTargetMax)})` : ''}, ` +
+              `not its configured capacity. The peak only ever rises.`
+            }
+          >
+            target
+          </span>
+        )}
         <span className="lad-card-status">
           <SignalBadge display={e.vm} />
           {/* ONE state chip on every card — never a different element or a
@@ -623,6 +646,48 @@ export default function LadderPage() {
 
       {/* ── Two-column split: protocols left, cards right ── */}
       <div className="lad-split">
+        {/* Control row — spans BOTH columns so it has the full width for more controls.
+            It is a grid sibling (not nested in either column), which is what lets it sit
+            above the protocol list as well as the cards. */}
+        <div className="lad-toolbar">
+          <div className="lad-direction" role="group" aria-label="Direction">
+            {DIRECTION_OPTIONS.map(([val, label]) => (
+              <button
+                key={val}
+                type="button"
+                className={`lad-dir-btn ${direction === val ? 'lad-dir-btn--active' : ''}`}
+                onClick={() => changeDirection(val)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <label className="lad-filter">
+            Score by:
+            <select value={rankBy} onChange={(e) => setRankBy(e.target.value)}>
+              <option value="signal">Signal</option>
+              <option value="opp">Opportunity</option>
+            </select>
+          </label>
+          <label className="lad-filter">
+            Score age:
+            <select value={ageFilter} onChange={(e) => setAgeFilter(e.target.value)}>
+              <option value="all">All</option>
+              {AGE_OPTIONS.map((m) => <option key={m} value={m}>≤ {m}m</option>)}
+            </select>
+          </label>
+          <label className="lad-filter">
+            Market:
+            <select value={marketFilter} onChange={(e) => setMarketFilter(e.target.value)}>
+              {MARKET_OPTIONS.map(([val, label]) => <option key={val} value={val}>{label}</option>)}
+            </select>
+          </label>
+          <label className="lad-filter" title="Show company facts & your open-position stats on each card (phase-6 preview, #667/#668)">
+            <input type="checkbox" checked={showFacts} onChange={(e) => setShowFacts(e.target.checked)} />
+            Details
+          </label>
+        </div>
+
         {/* Left — protocol selection list */}
         <aside className="lad-proto-col">
           <h2 className="lad-proto-title">
@@ -668,44 +733,6 @@ export default function LadderPage() {
 
         {/* Right — cards stacked in score order */}
         <main className="lad-cards-col" ref={cardsColRef}>
-          <div className="lad-toolbar">
-            <div className="lad-direction" role="group" aria-label="Direction">
-              {DIRECTION_OPTIONS.map(([val, label]) => (
-                <button
-                  key={val}
-                  type="button"
-                  className={`lad-dir-btn ${direction === val ? 'lad-dir-btn--active' : ''}`}
-                  onClick={() => changeDirection(val)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <label className="lad-filter">
-              Score by:
-              <select value={rankBy} onChange={(e) => setRankBy(e.target.value)}>
-                <option value="signal">Signal</option>
-                <option value="opp">Opportunity</option>
-              </select>
-            </label>
-            <label className="lad-filter">
-              Score age:
-              <select value={ageFilter} onChange={(e) => setAgeFilter(e.target.value)}>
-                <option value="all">All</option>
-                {AGE_OPTIONS.map((m) => <option key={m} value={m}>≤ {m}m</option>)}
-              </select>
-            </label>
-            <label className="lad-filter">
-              Market:
-              <select value={marketFilter} onChange={(e) => setMarketFilter(e.target.value)}>
-                {MARKET_OPTIONS.map(([val, label]) => <option key={val} value={val}>{label}</option>)}
-              </select>
-            </label>
-            <label className="lad-filter" title="Show company facts & your open-position stats on each card (phase-6 preview, #667/#668)">
-              <input type="checkbox" checked={showFacts} onChange={(e) => setShowFacts(e.target.checked)} />
-              Details
-            </label>
-          </div>
           {selectedIds.length === 0 ? (
             <div className="lad-empty">
               <p className="lad-empty-title">Select a protocol to build the ladder.</p>

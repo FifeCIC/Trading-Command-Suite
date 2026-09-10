@@ -25,6 +25,41 @@ tradeable" — **read the matching contract first.** The canonical mechanism pro
 
 ---
 
+## ⚠️ Before you change scoring, directives, gating, or capacity — read the ADRs
+
+This file guards the pipeline's **structure**. It cannot guard its **intent**, because a
+re-decision usually *satisfies* every invariant while violating the reasoning behind it.
+
+Worked example: `capacityMax += maxScore` satisfies `INV-STABLE-DENOMINATOR` perfectly — the
+denominator is stable — while breaking the percentage, because the **numerator only accepts
+directional scores** and the denominator counts everything. No invariant can catch that.
+
+**The settled scoring decisions are recorded as ADR-010 … ADR-014 in**
+`Trading-Command-Suite-Documentation/docs/architecture/DECISIONS.md`:
+
+| ADR | Settled decision |
+|---|---|
+| ADR-010 | Directive scores are **magnitudes**, not percentages; direction lives in `signalClass` |
+| ADR-011 | ONE **stable, config-derived** denominator (`configuredSignalMax`) |
+| ADR-012 | Direction eligibility comes from **config**, not the tick |
+| ADR-013 | Group **weights are not applied** in assembly (aspirational until #718) |
+| ADR-014 | **One implementation per concept** — a fork must name what it replaces |
+
+Each ADR lists the **symptom to expect if someone re-opens it**, so it doubles as a
+diagnostic. These are settled, **not frozen** — re-opening is allowed and has a protocol
+(named above, in the ADR file). What is not allowed is re-deciding *by accident*.
+
+### The one question that catches drift
+
+> **"Which ADR does this touch — and am I fixing a bug, or re-deciding an approach?"**
+
+A **bug fix** implements a settled decision correctly. A **re-decision** changes it. Both are
+legitimate; confusing them is how the denominator acquired three definitions, how two
+functions came to compute "capacity" differently, and how the same file ended up with 74
+references to 8 competing percentage concepts.
+
+If the answer is "re-deciding", say so explicitly in the issue/PR **before** writing code.
+
 ## Boundaries — who owns what
 
 | Stage / concern | Owning file(s) — the contract lives here | Do not re-implement in |
@@ -55,8 +90,20 @@ QA entry.**
 | `INV-GATE-FAILS-CLOSED` | `computeMarketStatus` returns **closed** when freshness cannot be verified (future-dated, reordered, indeterminate cadence) | #750/#751 — three separate fail-open paths | `market-status.spec.ts` + canary |
 | `INV-SCORE-MAGNITUDE` | A directive `score` is a magnitude in `[0, maxScore]`; direction lives in `signalClass`. Never clamp to 100 | the recurring "0–100 trap" that destroys protocol weighting | scan (`Math.min(x, 100)`) |
 | `INV-NO-FUTURE-ROWS` | No MT5-sourced row is dated in the future | #750 — a future date silently defeats every staleness check | `nest/scripts/contract-probe.cjs` (live) |
-| `INV-STABLE-DENOMINATOR` | A protocol percentage divides **earned** by **configured capacity**, never by the observed evidence sum. Direction-eligibility is decided per directive, so the denominator is fixed for the tick | #758 — an observed denominator made the same reading score differently between ticks, and a group contributing 0 produced `0/0 → 0% HOLD` that was counted as *scored* | canary + scan (`no-observed-denominator`) |
+| `INV-STABLE-DENOMINATOR` | A protocol percentage divides **earned** by **configured capacity**, never by the observed evidence sum. Every percentage for a reading — the `BUY/HOLD/SELL` classification, the `signalPct` shown on a card, `meta.maxScore`, the Arena consensus, and the persisted `rawMax` — uses the SAME denominator: `configuredSignalMax`. Direction-eligibility is decided per directive **from config**, so the denominator is fixed for the tick and identical across symbols | #758 — an observed denominator made the same reading score differently between ticks (it *shrinks* when a directive reads neutral, so a quieter tick inflates the percentage), and gave one protocol two different maxima for two symbols in the same tick. `#758` fixed only the persisted `rawMax` and left `signalPct` observed-based, so a card could read `STRONG_BUY 17%` — label from one denominator, percentage from another. A group contributing 0 also produced `0/0 → 0% HOLD` that was counted as *scored* | canary + scan (`no-observed-denominator`) |
 | `INV-MTF-BUNDLE` | Every `scoreWithGating()` call in a decision/analysis path passes the 4th argument — the `{ dayBars, hourBars, min15Bars }` bundle from `loadHigherTfBundle(symbolId, protocolId)`. A site with no bundle writes `// no-higher-tf: <reason>` | MST-004 / #735 — 12 call sites omitted it, so every multi-timeframe directive silently scored from base bars only and returned plausible numbers the live loop would never produce | scan (`no-bundle-less-scoring`) |
+| `INV-QUEUE-TERMINAL-STATE` | A queue entry is consumed **only** by a real `EXECUTED`. `QUEUED` stays `pending`; `executing` is a transit state, never a resting one, and a row left in it past the grace period is returned to `pending` | #759 — the code wrote `executing` for QUEUED as well as EXECUTED and nothing read it back, so a signal awaiting confirmation stranded permanently and silently removed the bot from trading that symbol (observed: GBPUSD stuck from 13:07 with no ticket) | `automation-loop.service.ts` recovery pass + QA procedure |
+| `INV-GATE-RECONCILED` | The pre-trade gate may only be **lowered** to the lowest participating bot's `minComposite`, and never when a `signals.gate.<protocol>` override is set. A blocked signal names the gate's provenance | #759 — `forex-session-v1` used a style-derived gate of 65 while its bots declared 55–60, so USDJPY/USDCAD/USDCHF scoring 50–60 were dropped by a bar no bot had asked for | `reconcileGateWithBots()` + QA procedure |
+| `INV-SESSION-VISIBLE` | A bot held shut by the session gate is reported in `/api/automation/status` → `sessionGatedBots`, with a name-vs-window verdict. A CITY name over a session-tag window is reported `ambiguous` (both readings stated), never silently assumed to be a clock | #759 — three of six forex bots were gated to 19:00–04:00 ET with a single deduped log line as the only evidence, so AUDUSD scored 100% STRONG_BUY with zero blockers and produced no order while every surface looked idle | `auditNameVsWindow()` + status payload + QA procedure |
+| `INV-CADENCE-COVERAGE` | Every cadence `selectBaseTimeframe()` can **return** is one `BarRefreshService.TIMEFRAMES` actually **fetches**. The fetched set must be a superset of the resolvable set | #758 follow-up — `'5s–30s'` resolves to `1m`, `1m` was never fetched and the DB held ZERO `1m` bars, so seven active protocols asked for a non-existent cadence, received an empty array, produced no scores, and reported `scoring` with `symbolsScored: 2` for ~6 hours | scan (`timeframe-refresh-coverage`) + probe (live: every wanted cadence has FRESH bars) |
+| `INV-PROVIDER-REACHABLE` | Every ACTIVE symbol assigned to a protocol is served by a provider that can actually deliver it — the registry ticker must be one the provider recognises, AND an adapter must be wired to fetch it | #760 — two silent variants: `SPX500`/`TECH100`/`DJI30`/`USOIL` were not the provider's names (zero bars, ever, blocking four active protocols), and crypto was binance-sourced while the refresh loop hardcoded MT5 (aged out over 16–54 days). Both present identically: an empty result | probe (live: assigned symbols have delivered bars) + scan (`timeframe-refresh-coverage`) |
+| `INV-NO-SYMBOL-GUESSING` | The hint tables `SINGLE_SYMBOL_HINTS` / `WATCHLIST_HINTS` are **EMPTY**, and every ACTIVE protocol resolves its symbols through a declared relationship — a `symbol_protocol_assignment` row or a `watchlist.protocolId` FK. A protocol may never have its symbols inferred from its own slug text | #761 → #764. **#761** renamed stale targets (`BTCUSD`/`USOIL`/`DOGEUSD`/`CHN50`) — fixing the symptom. **#764** swept all 46 protocols and found 20 (10 ACTIVE) depended on the guess tables and nothing else, i.e. a protocol's symbols were inferred from its name. A guess cannot survive a rename, cannot report that it broke, and is indistinguishable from a working relationship once bars arrive. The tables were emptied and all 20 protocols wired by FK | `symbol-hint-validity.spec.ts` (tables empty, no guessing, warning preserved) + probe (nothing guesses) + `scripts/audit-hint-dependency.cjs` |
+| `INV-WATCHLIST-IDENTITY` | A protocol reaches its watchlist through `watchlist.protocolId` (a FOREIGN KEY). Any surviving name-based lookup must pin its ordering deterministically. No watchlist NAME may resolve to more than one row | #763 — two faults with one cause. **(a)** Resolution matched the watchlist NAME against the protocol's slug text (normalising only `-`/`_`), so a genuine rename broke the link and the protocol silently fell through to name-guessing. **(b)** Five watchlists existed twice — slug-shaped id AND UUID — and the query ended `LIMIT 1` with no `ORDER BY`, so which row a protocol read depended on storage order. The pairs were NOT identical: `dxy-sensitive` held 12 symbols under its UUID and 10 under its slug, missing `USDCNH`/`USDSEK` — a coin-flip that silently dropped two currency pairs from the DXY basket | `watchlist-identity.spec.ts` (unit: FK preferred, ordering pinned, fallback loud) + probe (live: no ambiguous name) |
+| `INV-QUEUE-TERMINAL-STATE` | A queue entry is consumed **only** by a real `EXECUTED`. `QUEUED` stays `pending`; `executing` is a transit state, never a resting one, and a row left in it past the grace period is returned to `pending` | #759 — the code wrote `executing` for QUEUED as well as EXECUTED and nothing read it back, so a signal awaiting confirmation stranded permanently and silently removed the bot from trading that symbol (observed: GBPUSD stuck from 13:07 with no ticket) | `automation-loop.service.ts` recovery pass + QA procedure |
+| `INV-GATE-RECONCILED` | The pre-trade gate may only be **lowered** to the lowest participating bot's `minComposite`, and never when a `signals.gate.<protocol>` override is set. A blocked signal names the gate's provenance | #759 — `forex-session-v1` used a style-derived gate of 65 while its bots declared 55–60, so USDJPY/USDCAD/USDCHF scoring 50–60 were dropped by a bar no bot had asked for | `reconcileGateWithBots()` + QA procedure |
+| `INV-ONE-ROW-PER-RUN` | One `(symbol, protocol, minute)` owns **one** authoritative `Score` row. A second writer must **adopt** the existing row (reusing its id), never `create` a shadow duplicate with a thinner `breakdown` | the Ladder's ragged cards — `signals-workbench` created a thin 8-key row 0.2–4.5 s *after* the 21-key `protocol-gating` row, so the `(minute, protocol)` grouping read the newer thin row and lost `rawMax` (no percentage) and `marketStatus` (closed markets read as live). ~47% of `Score` rows were thin duplicates | scan (`shadow-score-writer`) + `collapseDuplicateWrites()` in `score-history.service.ts` |
+| `INV-ADAPTIVE-TARGET-MONOTONIC` | A protocol's optional Adaptive Target peak (`protocol.adaptiveTargetMax`) may **only ever increase**. It is a high-water mark, never a rolling window, never decayed toward recent readings, never lowered on a quiet period. Enabled → the captured peak is **bounded by a floor** (25% of configured capacity) so a near-dead protocol cannot read as healthy | #685 — a protocol's structural ceiling is far below its configured capacity because directives are mutually exclusive, so `raw / configured` reads ~20% on a best day (max ever recorded: 32%). A *falling* target would let a directive that quietly stopped working lower the bar to match and the card would still read healthy — the "plausible numbers, no error" class | `adaptive-target.spec.ts` (explicit monotonicity assertions) |
+| `INV-NO-FABRICATED-READING` | **Absence of evidence must never become a number, a direction, or a veto.** A directive that cannot take a reading returns `score: 0` **with `unmeasured: true`** — never a constant baseline, never a direction derived from the sign of a near-zero quantity. An unmeasured directive contributes nothing to the composite and can never trip a risk gate. Corollary: a `readiness: 'ready'` directive must not return a stub baseline | **Three separate live incidents, one cause.** **(a)** `analyst-adjustments` returned `score: Math.round(30 + accelerating*5)` with `signalClass` from the SIGN of `accelerating`. Measured: 1,125 `bullish` readings averaged 30.9 with a minimum of **exactly 30**; 630 `bearish` averaged 29.7 with a maximum of **exactly 30** — 94% of 1,755 readings sat inside a fabricated 27–50 band. On `forex-session-v1`, **97% of readings (589/605) came from that branch and 275 cleared the 65 gate** — the app was trading on invented conviction. **(b)** `liquidity-check` returned `score: 0` when its stale-data guard tripped; `RiskGatingEngine` derived `severity = 1.0` and tripped a HARD GATE, zeroing the composite and blaming *"Symbol liquidity too low"*. `spy-day-v1`, `qqq-day-v1` and `spy-speed-v1` were gated shut on **every tick** for 45 minutes. **(c)** `stubResult()` presented "not implemented" as a real zero. All three produced **plausible numbers with no error** | `risk-unmeasured-gate.spec.ts` + `analyst-adjustments-honesty.spec.ts` (both proven to fail when the guard is removed) + scan (`no-fabricated-baseline`) |
 
 ---
 
@@ -94,8 +141,47 @@ the one worth gating on. The others describe, and descriptions cannot fail.
 
 ---
 
-## Banned patterns (all detected at build time)
+## The silent-empty rule — read this before adding a list, mapping, or resolver
 
+**Four separate incidents in this codebase share one shape.** Each was a value produced by one
+module and consumed by another, with nothing asserting the two still agreed. Both halves looked
+individually correct, so nothing flagged, and every one presented as **an empty result** — which
+is indistinguishable from a correct result that happens to be empty, and therefore produces no
+error, no warning, and no row.
+
+| Incident | Producer ↔ consumer that were never compared |
+|---|---|
+| `INV-STABLE-DENOMINATOR` (#758) | configured directional capacity ↔ the denominator actually used |
+| `INV-MTF-BUNDLE` (#735) | timeframes a directive *declares* ↔ the bundle a caller *supplies* |
+| `INV-CADENCE-COVERAGE` (#758) | cadences a protocol *resolves to* ↔ cadences actually *fetched* |
+| `INV-PROVIDER-REACHABLE` (#760) | symbols *assigned* to protocols ↔ symbols a provider *delivers* |
+| `INV-NO-SYMBOL-GUESSING` (#764) | symbols a protocol *declares* by FK ↔ symbols *inferred* from its slug text |
+| `INV-WATCHLIST-IDENTITY` (#763) | the watchlist a protocol *asks for by name* ↔ the one it *reads by FK* |
+
+**The rule:**
+
+> When a value is produced by one module and consumed by another, something must assert the two
+> still agree. A list that is only ever **written** will drift from the list that is **read** —
+> and an empty result hides the drift, because empty is a legitimate state.
+
+**How to apply it.** When you add or change any list, mapping, or resolver, ask: *who reads this,
+and does anything check that what I produce is what they expect?* If not, add the assertion —
+a canary, a scan, or a live probe — **in the same change**. Specifically:
+
+- **A produced list** (cadences, providers, symbols, bar counts) needs a check that its consumers
+  can still resolve every entry they ask for.
+- **A consumed list** needs a check that the producer still emits what it needs.
+- **Prefer failing loudly over defaulting silently.** A `?? 200` default, a `catch { return [] }`,
+  and an empty array are the exact mechanisms that hide this class of fault. Where a default is
+  genuinely correct, name it in a comment so the next reader can tell a decision from an accident.
+
+**Why this is a rule and not four fixes:** each incident cost hours of investigation, and the
+mechanism was identical every time. Recognising the shape is what makes it findable — the symptom
+is never "the data is wrong", it is **"nothing happened, and nothing said why."**
+
+---
+
+## Banned patterns (all detected at build time)
 | Pattern | Why | Instead |
 |---|---|---|
 | `prisma.marketBar.findMany(...)` in a scoring/decision path | loses the timeframe filter, gets the order wrong, silently | `marketData.getBars(symbolId, cadence, count)` |

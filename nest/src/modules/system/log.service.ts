@@ -11,16 +11,50 @@ export interface LogEntry {
   category?: LogCategory;
 }
 
-// Resolve log directory relative to the project root (nest/)
-const LOG_DIR = (() => {
-  // Try the project root first (nest/logs)
-  const projectRoot = path.resolve(__dirname, '..', '..', '..', 'logs');
-  // Fallback: use process-relative path
-  if (!fs.existsSync(projectRoot)) {
-    try { fs.mkdirSync(projectRoot, { recursive: true }); } catch {}
+/**
+ * Resolve the log directory — `nest/logs/`, NOT `dist/logs/`.
+ *
+ * ⚠️ This used to be `path.resolve(__dirname, '..', '..', '..', 'logs')`. At runtime the
+ * compiled module lives at `dist/src/modules/system/`, so three levels up is `dist/`, and
+ * logs were written to **`dist/logs/`** — a directory the BUILD OWNs. `npm run build` runs
+ * `rimraf dist` in its prebuild step, so every rebuild deleted the log directory and the
+ * running app then failed on every flush:
+ *
+ *     WARN [SystemLogService] Log write failed (…\nest\dist\logs\tcs-….log):
+ *     ENOENT: no such file or directory
+ *
+ * The symptom was easy to miss because it is a warning, not an error, and the in-memory
+ * log buffer (`getRecent`) kept working — so the API still *looked* healthy while nothing
+ * was reaching disk. Logs silently stopped persisting after each build.
+ *
+ * Resolution order, most explicit first:
+ *   1. `TCS_LOG_DIR` — an absolute override, for tests and for relocating logs.
+ *   2. The project root's `logs/` directory, found by walking up from `__dirname` until a
+ *      directory containing `package.json` is found. That is the `nest/` root whether the
+ *      code is running from `src/` (ts-node/jest) or `dist/src/` (compiled), so the path
+ *      does not depend on the build layout.
+ *   3. `process.cwd()/logs` — last resort if no package.json is found.
+ *
+ * The directory is created on resolution AND re-created before each write, because a
+ * long-running process can outlive an external cleanup.
+ */
+function resolveLogDir(): string {
+  const override = process.env.TCS_LOG_DIR;
+  if (override && override.trim()) return path.resolve(override.trim());
+
+  // Walk up to the package root (nest/), which is the directory holding package.json.
+  let dir = __dirname;
+  for (let i = 0; i < 8; i += 1) {
+    const parent = path.dirname(dir);
+    if (parent === dir) break; // hit the filesystem root
+    dir = parent;
+    if (fs.existsSync(path.join(dir, 'package.json'))) return path.join(dir, 'logs');
   }
-  return projectRoot;
-})();
+
+  return path.resolve(process.cwd(), 'logs');
+}
+
+const LOG_DIR = resolveLogDir();
 
 const LOG_FILE = () => {
   const d = new Date();
@@ -42,7 +76,10 @@ export class SystemLogService {
 
   constructor() {
     try { fs.mkdirSync(LOG_DIR, { recursive: true }); } catch {}
+    // Log the resolved path, not just that logging started — when logs go missing the first
+    // question is always "where is it writing?", and this answers it without a debug session.
     this.logger.log(`Log directory: ${LOG_DIR} (exists: ${fs.existsSync(LOG_DIR)})`);
+    this.log('SystemLogService', 'info', `Log directory resolved to ${LOG_DIR}`, 'system');
   }
 
   /** Write a log entry */
@@ -120,18 +157,48 @@ export class SystemLogService {
     } catch { return ''; }
   }
 
-  /** Flush queued writes to disk */
+  /**
+   * Flush queued writes to disk.
+   *
+   * Re-creates the log directory on each attempt. A long-running process can outlive an
+   * external cleanup (a `rimraf dist`, a backup tool, a manual tidy), and the retry path
+   * below would otherwise spin forever failing on a directory that no longer exists —
+   * re-queuing the same batch each time. Cheap to check, and it makes the writer self-heal
+   * instead of silently degrading to memory-only.
+   */
   private async flushQueue() {
     if (this.flushing || this.writeQueue.length === 0) return;
     this.flushing = true;
     const batch = this.writeQueue.splice(0);
     try {
+      if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
       const filePath = path.join(LOG_DIR, LOG_FILE());
       fs.appendFileSync(filePath, batch.join(''));
+      this.writeFailures = 0;
     } catch (err) {
-      this.logger.warn(`Log write failed (${LOG_DIR}/${LOG_FILE()}): ${(err as Error).message}`);
+      this.writeFailures += 1;
+      // Report the first failure and then every 100th, so a persistent fault is visible
+      // without flooding the console it is failing to write to.
+      if (this.writeFailures === 1 || this.writeFailures % 100 === 0) {
+        this.logger.warn(
+          `Log write failed (${LOG_DIR}/${LOG_FILE()}) [${this.writeFailures} consecutive]: ${(err as Error).message}`,
+        );
+      }
       this.writeQueue.unshift(...batch);
     }
     this.flushing = false;
+  }
+
+  /** Consecutive failed flushes since the last success. Surfaces a broken writer. */
+  private writeFailures = 0;
+
+  /** Health of the log writer — distinguishes "nothing to log" from "cannot log". */
+  getWriterHealth() {
+    return {
+      directory: LOG_DIR,
+      directoryExists: fs.existsSync(LOG_DIR),
+      consecutiveWriteFailures: this.writeFailures,
+      queuedLines: this.writeQueue.length,
+    };
   }
 }

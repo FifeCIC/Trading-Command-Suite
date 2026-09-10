@@ -60,6 +60,26 @@ const BY_NAME = new Map<string, SessionDef>(SESSION_DEFS.map((s) => [s.name.toLo
  * session words. Accepting them means the column is writable by a human
  * without knowing the canonical tags, and the old vocabulary keeps working.
  * 'always' / '24-7' map to null = no tag = UNGATED (they mean "any time").
+ *
+ * ⚠️ THE CITY WORDS ARE THE HAZARD, NOT THE FEATURE (#759)
+ * ------------------------------------------------------
+ * A city alias means two different things depending on who wrote it:
+ *
+ *   "we trade this during the Tokyo SESSION"       → a trading clock   (intended)
+ *   "this pair is DRIVEN by Tokyo news"            → news flow, NOT a clock
+ *
+ * The second reading is what the seeded bots used. "Sydney AUDUSD Session",
+ * "Tokyo USDJPY Session" and "Wellington NZDUSD Session" name the city whose
+ * data drives the pair — AUD news is Sydney, JPY news is Tokyo, NZD news is
+ * Wellington. Reading those as clocks gated all three to 19:00–04:00 ET, so
+ * they were shut through the entire London and US sessions while the app looked
+ * idle rather than gated. AUDUSD scored 100% STRONG_BUY with zero blockers and
+ * still produced no order.
+ *
+ * The aliases stay (removing them would silently UN-gate those bots, which is
+ * the opposite of a fix). Instead the gate reports when a city alias is what
+ * decided the outcome — see `cityAliasUsed` and CITY_ALIASES below — so the
+ * ambiguity is visible instead of inferred.
  */
 const ALIASES: Record<string, SessionTag | null> = {
   asia: 'asian', asian: 'asian', tokyo: 'asian', sydney: 'asian', wellington: 'asian',
@@ -68,6 +88,111 @@ const ALIASES: Record<string, SessionTag | null> = {
   us: 'us', usa: 'us', newyork: 'us', ny: 'us', america: 'us',
   always: null, any: null, '24/7': null, '24h': null, none: null,
 };
+
+/**
+ * Which CITY word (if any) appears in a bot NAME (#759).
+ *
+ * ⚠️ THE HAZARD IS THE NAME, NOT THE WINDOW VALUE
+ * ----------------------------------------------
+ * The stored `sessionWindow` column holds the CANONICAL tags
+ * ('asian' | 'london' | 'us') — verified against the live table, where
+ * "Sydney AUDUSD Session" carries the literal `asian`. So parsing the window
+ * value cannot detect the ambiguity: by the time it is a column value, the
+ * decision has already been made and looks deliberate.
+ *
+ * The ambiguity lives in the NAME. Those three bots are named after the CITY
+ * whose news drives the pair — AUD news is Sydney, JPY news is Tokyo, NZD news
+ * is Wellington — but their window says `asian`, which is a TRADING CLOCK
+ * (19:00–04:00 ET). Read as a clock, the window shuts them through London and
+ * the entire US session, and the name "Sydney … Session" makes that look
+ * intentional to anyone auditing the list.
+ *
+ * The question this answers is therefore: "does the NAME and the WINDOW agree
+ * about what kind of thing this is?" A city name with a session tag is
+ * consistent with BOTH readings, so it is reported as ambiguous rather than
+ * assumed correct. A name carrying a session word that disagrees with the tag
+ * ("London … Session" with window `us`) is a plain contradiction and is
+ * reported as such. This function only classifies — it never changes a gate.
+ */
+export type NameWindowAgreement = 'consistent' | 'ambiguous' | 'contradictory';
+
+export interface NameWindowAudit {
+  agreement: NameWindowAgreement;
+  /** The city word found in the name, if any. */
+  cityWord: string | null;
+  /** The session word found in the name, if any. */
+  sessionWord: SessionTag | null;
+  /** The tag(s) the window actually declares. */
+  windowTags: SessionTag[];
+  /** One-line explanation for logs/UI. */
+  note: string;
+}
+
+/** City words that name a NEWS FLOW rather than a trading clock. */
+const CITY_WORDS = new Set(['sydney', 'tokyo', 'wellington', 'zurich', 'frankfurt', 'paris', 'newyork']);
+
+/**
+ * Classify whether a bot's NAME agrees with its sessionWindow VALUE.
+ *
+ * Deliberately pure and name-only: the caller decides what to do with an
+ * 'ambiguous' verdict. Silently rewriting the window would be a trading
+ * behaviour change dressed as a bug fix, and the operator is the only one who
+ * can answer "did you mean the clock or the news flow?".
+ */
+export function auditNameVsWindow(name: unknown, raw: unknown): NameWindowAudit {
+  const windowTags = parseSessionWindow(raw);
+  const lower = String(name ?? '').toLowerCase();
+
+  const cityWord = [...CITY_WORDS].find((c) => lower.includes(c)) ?? null;
+
+  // A session word in the NAME. Reuse the alias table so 'europe'/'asia' count.
+  let sessionWord: SessionTag | null = null;
+  for (const [word, tag] of Object.entries(ALIASES)) {
+    if (!tag) continue;
+    if (CITY_WORDS.has(word)) continue;         // city words are not session words
+    if (new RegExp(`\\b${word}\\b`).test(lower)) { sessionWord = tag; break; }
+  }
+
+  if (windowTags.length === 0) {
+    return {
+      agreement: 'consistent',
+      cityWord,
+      sessionWord,
+      windowTags,
+      note: cityWord
+        ? `name references ${cityWord} but the bot is UNGATED — no clock is enforced`
+        : 'ungated — no clock is enforced',
+    };
+  }
+
+  if (sessionWord && !windowTags.includes(sessionWord)) {
+    return {
+      agreement: 'contradictory',
+      cityWord,
+      sessionWord,
+      windowTags,
+      note: `name says "${sessionWord}" but the window declares ${windowTags.join('/')} — the name and the rule disagree`,
+    };
+  }
+
+  if (cityWord) {
+    return {
+      agreement: 'ambiguous',
+      cityWord,
+      sessionWord,
+      windowTags,
+      note: `name references the city "${cityWord}" and the window declares the ${windowTags.join('/')} clock — read as the clock this gates the bot outside ${windowTags.join('/')} hours; if the name meant "driven by ${cityWord} news" the window is enforcing the wrong thing`,
+    };
+  }
+
+  return {
+    agreement: 'consistent',
+    cityWord,
+    sessionWord,
+    windowTags,
+    note: `window declares ${windowTags.join('/')}`,
+  };
+}
 
 /**
  * Convert a UTC instant to minutes-since-midnight in ET.
@@ -160,6 +285,12 @@ export interface SessionGateResult {
  *
  * An ungated bot (no declared window) always passes — the gate is opt-in, so
  * adding it never changes the behaviour of a strategy that has not opted in.
+ *
+ * ⚠️ Scope: this function answers ONE question — "is `at` inside the declared
+ * window". It deliberately does NOT judge whether the window was a good idea.
+ * Whether a name and a window mean the same thing is a separate, non-clock
+ * question answered by `auditNameVsWindow()`, and keeping the two apart is what
+ * stops this gate from quietly rewriting a bot's trading hours (#759).
  */
 export function checkSessionWindow(raw: unknown, at: Date = new Date()): SessionGateResult {
   const allowed = parseSessionWindow(raw);

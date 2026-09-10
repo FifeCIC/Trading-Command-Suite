@@ -7,7 +7,7 @@
  * MODE 6 check in directive-guard.cjs.
  *
  * Two categories:
- *   1. Dead classes in placeholder-directives.stub.ts whose `id` is also
+ *   1. Dead classes in momentum-and-macro.directives.ts whose `id` is also
  *      defined by a standalone *.directive.ts that the module actually
  *      registers (the standalone copy is the live one).
  *   2. Dead standalone *.directive.ts files whose `id` is also defined by
@@ -21,7 +21,7 @@ const fs = require('fs');
 const path = require('path');
 
 const IMPL = path.resolve('C:/wamp64/www/trading-command-suite/nest/src/modules/directives/implementations');
-const STUB = path.join(IMPL, 'placeholder-directives.stub.ts');
+const STUB = path.join(IMPL, 'momentum-and-macro.directives.ts');
 
 // 1) Dead classes inside the stub file (registered copy lives in a standalone file).
 const DEAD_STUB_CLASSES = [
@@ -177,7 +177,7 @@ for (const cls of DEAD_STUB_CLASSES) {
 // tidy up: collapse runs of 3+ blank lines
 stubSrc = stubSrc.replace(/\n{3,}/g, '\n\n');
 fs.writeFileSync(STUB, stubSrc);
-console.log(`Removed ${removed}/${DEAD_STUB_CLASSES.length} dead classes from placeholder-directives.stub.ts\n`);
+console.log(`Removed ${removed}/${DEAD_STUB_CLASSES.length} dead classes from momentum-and-macro.directives.ts\n`);
 
 // ── 2. Delete dead standalone files ──────────────────────────────────────
 let deleted = 0;

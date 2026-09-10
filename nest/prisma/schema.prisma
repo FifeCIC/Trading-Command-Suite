@@ -1,6 +1,38 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// 🛑  DO NOT RUN `prisma db push` AGAINST THIS PROJECT
+// ═══════════════════════════════════════════════════════════════════════════════════════
+//
+// This file is NOT the complete truth about the database, and `db push` assumes it is.
+// `db push` drops every table with no model here — and TEN tables are managed OUTSIDE
+// Prisma, because the faster-moving subsystems create them with raw SQL and access them
+// via $queryRawUnsafe:
+//
+//   strategy_signal_queue   ← THE TRADE EXECUTION QUEUE (money path, 12 code references)
+//   paper_trade             ← paper-trading ledger
+//   signal_outcome_log      ← one row per persisted signal
+//   signal_outcome_meta     ← blocker / conflict / warning entries
+//   *_backup_*_20260910 (6) ← rollback path for the #750 timestamp repair (195k+ rows)
+//
+// Four of those have no CREATE TABLE anywhere in the repo — they exist only in the running
+// database. There is also NO migration history (no _prisma_migrations, no migrations/), so
+// drift cannot be reconciled against anything.
+//
+// It does not error. It prints a warning list, waits for a `y`, and deletes them.
+//
+// WHAT TO DO INSTEAD
+//   Add a column:   ALTER TABLE <t> ADD COLUMN ... ; npx prisma generate  (API stopped)
+//   Add a table:    targeted CREATE TABLE, then add the model below in the same commit
+//   Raw-managed:    capture DDL to nest/prisma/raw-managed/<t>.sql AND declare it in
+//                   nest/scripts/validate-schema-safety.cjs (reason + owning module)
+//   Verify first:   npm --prefix nest run db:check
+//
+// Rules:   .github/instructions/database-schema.instructions.md
+// Detail:  docs/schema-drift-control.md   ·   Issue: #769
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
@@ -1200,6 +1232,19 @@ model TradingStrategy {
   hotStockAllocation   Float?   // separate allocation % for hot stock trades
   hotStockDetectionMode String? @db.VarChar(20) // "top-scoring" | "volume-spike" | "all"
   hotStockMaxHoldHours Int?     // shorter max hold for hot stock positions (default: 24h)
+  // Position time-stop (#773). NULL = NO LIMIT, so existing strategies are unchanged
+  // and nothing closes by surprise.
+  //
+  // WHY THIS COLUMN EXISTS: `maxHoldDuration` was declared on the TradingStrategy
+  // *interface* (`tradeManagement.maxHoldDuration`, default '30d') but was never
+  // persisted, so it was never read — and consequently NO time-based exit existed
+  // anywhere. Slots filled and stayed filled: measured 2026-09-10, 11 active auto bots
+  // shared 5 broker-wide slots, nothing freed them, and 633 decisions produced 2 trades
+  // while composites of 81 and 82 sat BLOCKED on "Max open positions (5) reached".
+  //
+  // Units are HOURS (Int?), not a '30d' string, so a scalp protocol can express a
+  // sub-day limit without a parser between config and enforcement.
+  maxHoldHours  Int?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -1297,6 +1342,10 @@ model ScoringStrategy {
   hotStockAllocation   Float?   // separate allocation % for hot stock trades
   hotStockDetectionMode String? @db.VarChar(20) // "top-scoring" | "volume-spike" | "all"
   hotStockMaxHoldHours Int?     // shorter max hold for hot stock positions (default: 24h)
+  // Position time-stop (#773) — mirror of TradingStrategy.maxHoldHours.
+  // NULL = no limit. Kept in step so the settings surface and the enforcement path
+  // cannot disagree about what a strategy allows.
+  maxHoldHours  Int?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -1897,6 +1946,24 @@ model Protocol {
   isDefault            Boolean  @default(false)
   seasonalAffinity     Json?                                      // monthly weights + date ranges
   highestScore         Float?                                     // #600 — peak composite ever recorded (survives Score pruning)
+  // ── Adaptive Target (2026-09-10) — "realistic ceiling" ──
+  // OFF by default. See docs/scoring-architecture.md and docs/handoff/2026-09-10-adaptive-target.md.
+  //
+  // WHY: a protocol's structural ceiling is usually far below its configured capacity,
+  // because directives are mutually exclusive — they cannot all fire on one bar
+  // (#685, PROTOCOL-THEORY.md: xau-speed-v1 "Ceiling ~77% is by design"). Measuring
+  // `raw / configuredSignalMax` therefore undersells a genuine reading. When enabled,
+  // the percentage divides by `adaptiveTargetMax` — the protocol's own observed peak —
+  // so the number answers "is this good FOR THIS PROTOCOL".
+  //
+  // ⚠️ MONOTONIC BY DESIGN — this value only ever INCREASES. It must never be lowered
+  // on a rolling window: a falling target silently re-baselines a protocol and masks a
+  // directive that has stopped working, which is the "plausible numbers with no error"
+  // failure class this repo has hit repeatedly. A quiet month must NOT lower the bar.
+  adaptiveTargetEnabled Boolean @default(false)                   // opt-in per protocol
+  adaptiveTargetMax     Float?                                    // observed peak RAW composite (pre-gate, so gating can't shrink it)
+  adaptiveTargetSamples Int     @default(0)                       // readings contributing to the peak
+  adaptiveTargetSince   DateTime?                                 // when the peak was first set (for "since <date>" copy)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

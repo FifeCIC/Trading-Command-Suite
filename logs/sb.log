@@ -1,0 +1,30 @@
+
+> nest@0.6.7 prebuild
+> npx rimraf dist && npx prisma generate && node scripts/validate-protocol-directions.cjs && node scripts/validate-pipeline-contracts.cjs
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+
+Ô£ö Generated Prisma Client (v5.22.0) to .\node_modules\@prisma\client in 568ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Curious about the SQL queries Prisma ORM generates? Optimize helps you enhance your visibility: https://pris.ly/tip-2-optimize
+
+[validate-protocol-directions] Scanned 46 protocols, 420 directive refs, 155 directives with a known bias.
+[validate-protocol-directions] Ô£à OK ÔÇö no direction-contract conflicts.
+[pipeline-contracts] 20 invariants in the contracts doc; 0 whitelisted deviations
+[pipeline-contracts] four-page mirror coverage (QA is gated, these are reported):
+    Architecture   12/20 invariants named: INV-ADAPTIVE-TARGET-MONOTONIC, INV-BAR-ORDER, INV-BAR-WINDOW, INV-CANONICAL-LOADER, INV-GATE-FAILS-CLOSED, INV-MTF-BUNDLE, INV-NO-FUTURE-ROWS, INV-ONE-ROW-PER-RUN, INV-SCORE-MAGNITUDE, INV-SINGLE-CADENCE, INV-STABLE-DENOMINATOR, INV-UTC-TIMESTAMPS
+    Diagrams       0/20 invariants named
+    CapabilityMap  0/20 invariants named
+
+[pipeline-contracts] Ô£û 2 contract violation(s):
+
+  Ô£û [INV-NO-FABRICATED-READING] src/modules/directives/implementations/momentum-and-macro.directives.ts:401 derives a direction from the SIGN of a quantity rather than a threshold
+      ÔåÆ A sign test on a near-zero value (momentum +0.02%) classifies as fully bullish/bearish, so the direction is a coin-flip. Use a THRESHOLD that expresses a real move (e.g. `accel > 1`), and return `unmeasured: true` below it. See INV-NO-FABRICATED-READING.
+  Ô£û [INV-NO-FABRICATED-READING] src/modules/directives/implementations/placeholder-directives.stub.ts:398 derives a direction from the SIGN of a quantity rather than a threshold
+      ÔåÆ A sign test on a near-zero value (momentum +0.02%) classifies as fully bullish/bearish, so the direction is a coin-flip. Use a THRESHOLD that expresses a real move (e.g. `accel > 1`), and return `unmeasured: true` below it. See INV-NO-FABRICATED-READING.
+
+See .github/instructions/meta-stack-contracts.instructions.md
+

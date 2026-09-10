@@ -46,8 +46,14 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     name: 'FTSE Index Tick Scalp',
     symbol: 'UK100',
     protocolId: 'ftse-speed-v1',
+    // brokerId is a broker TYPE, not an instance — routing is driven by
+    // symbol_route (UK100 -> broker 3 / Pepperstone :5001). See the audit note
+    // at the top of this file.
     brokerId: 'mt5',
-    mode: 'semi-auto',
+    // AUTO (2026-09-10): was 'semi-auto', which requires a UI click and meant
+    // ZERO Pepperstone trades ever occurred. This is the only auto bot routing
+    // to Pepperstone, so it is the proof path for multi-broker execution.
+    mode: 'auto',
     timeframe: '5m',
     baseSize: 0.01,
     slPct: 0.4,
