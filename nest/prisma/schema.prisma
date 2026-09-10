@@ -1188,6 +1188,11 @@ model TradingStrategy {
   maxPyramidTiers Int    @default(1)  // #344 pyramid averaging — moved from ScoringStrategy (2026-08-27)
   maxDailyLoss  Float?
   cooldownMinutes Int    @default(5)
+  // Session gate (2026-09-10) — declared market session(s) this bot may act in.
+  // JSON array or comma list of tags: 'asian' | 'london' | 'us' (see session-window.ts).
+  // NULL / empty = UNGATED: the bot may act any time. The gate is opt-in, so an
+  // existing strategy's behaviour is unchanged until it declares a window.
+  sessionWindow String?  @db.VarChar(120)
   mode          String   @default("manual") @db.VarChar(20)
   active        Boolean  @default(false)
   // Hot Stock Picks integration (#339)

@@ -2,7 +2,6 @@ import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
-import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './execution-queue.css';
 import PageInfoPopover from '../components/PageInfoPopover';
@@ -186,6 +185,24 @@ export default function ExecutionQueuePage() {
           <span className="eq-routine-chip">
             {loopStatus.layers?.protocolsEnabled ? '🟢 Protocols' : '🔴 Protocols'} · {loopStatus.layers?.tradingEnabled ? '🟢 Trading' : '🔴 Trading'}
           </span>
+          {/* EFFECTIVE EXECUTION STATE.
+              `layers.tradingEnabled` is only HALF the answer — Gate 7 also needs
+              the per-broker flag. Rendering the layer flag alone let the app show
+              "🟢 Trading" while every dispatch was being diverted to paper, which
+              hid a months-long throughput collapse (94 -> 9 -> 1 trades/month).
+              Show what will ACTUALLY happen to an order. */}
+          {loopStatus.execution && (
+            <span
+              className={`eq-routine-chip ${loopStatus.execution.willPlaceRealOrders ? 'eq-on' : 'eq-off'}`}
+              title={
+                `layer tradingEnabled=${loopStatus.execution.layerTradingEnabled}; ` +
+                `brokers=${Object.entries(loopStatus.execution.brokerTradingEnabled || {})
+                  .map(([id, on]) => `${id}=${on}`).join(', ')}`
+              }
+            >
+              {loopStatus.execution.willPlaceRealOrders ? '⚡ Real orders' : `🧾 ${loopStatus.execution.mode}`}
+            </span>
+          )}
           {loopStatus.nextTickAt && <span className="eq-routine-next">{countdownTo(loopStatus.nextTickAt)}</span>}
         </div>
         <div className="eq-routine-steps">

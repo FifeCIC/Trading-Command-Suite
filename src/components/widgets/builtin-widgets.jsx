@@ -365,5 +365,3 @@ registerWidget({
   size: { w: 4, h: 5, minW: 3, minH: 4 },
   Component: ProtocolsWidget,
 });
-
-export { SystemHealthWidget, PositionsWidget, TopSignalsWidget, AutomationPulseWidget, ActiveAlertsWidget, ProtocolsWidget };

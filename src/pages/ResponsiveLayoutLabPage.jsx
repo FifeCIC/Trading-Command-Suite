@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import './responsive-layout-lab.css';
 import PageInfoPopover from '../components/PageInfoPopover';
 

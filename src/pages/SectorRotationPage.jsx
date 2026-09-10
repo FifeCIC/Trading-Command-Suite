@@ -20,9 +20,14 @@ const SECTOR_META = [
 ];
 
 const TIMEFRAMES = [
-  { key: 'd1', label: '1 Day' },
-  { key: 'w1', label: '1 Week' },
-  { key: 'm1', label: '1 Month' },
+  // ⚠️ labels must match the REAL span (#756). These were '1 Day' / '1 Week' / '1 Month',
+  // which was never true: the backend returns positional offsets (length-2, length-6,
+  // length-22) over a 1h window, so the spans are ~1h / ~5h / ~21h. The keys stay `d1/w1/m1`
+  // (API field names); only the display text changed. If the backend ever moves to a 1d
+  // cadence these labels must change with it.
+  { key: 'd1', label: 'Last hour' },
+  { key: 'w1', label: 'Last 5h' },
+  { key: 'm1', label: 'Last 21h' },
 ];
 
 export default function SectorRotationPage() {
@@ -124,6 +129,15 @@ export default function SectorRotationPage() {
       {/* Performance table */}
       <section className="sr2-section">
         <h2>Sector Performance</h2>
+        {/* #756 — coverage caveat. The table is only meaningful if the reader knows the window
+            each column covers AND how fresh the underlying bars are. Hourly ETF history is
+            thin (≈35–41 bars per ETF) and several tickers' newest bar is weeks old, so this
+            describes a past period rather than "now". Stated here rather than implied. */}
+        <p className="sr2-caveat" style={{ margin: '0 0 8px', fontSize: '0.72rem', color: 'var(--ink-soft)' }}>
+          ⚠️ Periods are measured in <strong>hourly bars</strong>, not calendar days — see the column
+          headings. Coverage is limited: about 35–41 hourly bars per ETF, and some tickers' most
+          recent bar is several weeks old, so this reflects that window rather than the present.
+        </p>
         <div className="sr2-tf-tabs">
           {TIMEFRAMES.map((tf) => (
             <button key={tf.key} type="button" className={`sr2-tf-tab ${sortTf === tf.key ? 'sr2-tf-active' : ''}`} onClick={() => setSortTf(tf.key)}>

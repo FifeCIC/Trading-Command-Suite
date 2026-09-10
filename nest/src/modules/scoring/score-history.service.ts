@@ -41,6 +41,84 @@ export interface RecentlyAnalysedSymbol {
   signal: string;
 }
 
+/**
+ * Collapse the DOUBLE WRITE that every scored symbol receives per tick.
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * Two services persist a Score row for the same (symbol, protocol, minute):
+ *
+ *   1. `protocol-gating`   — the full pipeline result. breakdown carries
+ *                            `rawMax`, `rawComposite`, `marketStatus`,
+ *                            `denominatorMode`, `readinessGate` — 21 keys.
+ *   2. `signals-workbench` — `SignalEnvelopeService.persistScores()`. Same
+ *                            `value`, but a thin 8-key breakdown: no `rawMax`,
+ *                            no `marketStatus`. It lands ~0.2–4.5s AFTER the
+ *                            gating row (measured: 233 rich vs 208 thin rows in
+ *                            30 minutes — ~47% of all Score rows).
+ *
+ * Both rows are `create`d (nothing overwrites), so the Score table holds a
+ * duplicate pair per symbol per tick. `getRuns()` then groups by
+ * (minute, protocol) — which merges the pair — and reads `entries[0]` from a
+ * `timestamp desc` query, i.e. the THIN row. The thin row has no `rawMax`, so
+ * the ladder cannot compute a percentage and shows a bare number; it has no
+ * `marketStatus`, so a closed market reads as live.
+ *
+ * The symptom is exactly "some cards show 82/120 68%, others show a bare 82".
+ *
+ * WHAT THIS DOES
+ * --------------
+ * Within one run group, keep ONE row per ticker: the richest breakdown. Ties on
+ * richness break toward the gating row, then toward the newer row. The score
+ * `value` is identical across the pair, so this changes presentation only — it
+ * never alters a score.
+ *
+ * If the duplicate write is ever removed from `SignalEnvelopeService`, this
+ * function becomes a harmless no-op (one row per ticker in, one row out).
+ */
+function collapseDuplicateWrites<T extends { symbol?: { ticker?: string } | null; symbolId: string; value: number; breakdown?: any }>(
+  entries: T[],
+): T[] {
+  // How much gating metadata a row carries — the tie-breaker for "richest".
+  const richness = (e: T): number => {
+    const b = e.breakdown ?? {};
+    let n = 0;
+    if (b.rawMax != null) n += 4;
+    if (b.rawComposite != null) n += 4;
+    if (b.marketStatus != null) n += 4;
+    if (b.opportunityScore != null) n += 2;
+    if (b.opportunityMax != null) n += 2;
+    if (b.denominatorMode != null) n += 1;
+    if (b.readinessGate != null) n += 1;
+    return n;
+  };
+  // `protocolId` absent from the breakdown means this is the workbench row —
+  // the only writer that omits it.
+  const isWorkbench = (e: T): boolean => (e.breakdown?.protocolId ?? null) === null;
+  // `value` is identical within a pair, so it is safe to prefer the rich row.
+
+  const best = new Map<string, T>();
+  const order: string[] = [];
+  for (const e of entries) {
+    const ticker = String(e.symbol?.ticker || e.symbolId);
+    const prev = best.get(ticker);
+    if (!prev) {
+      best.set(ticker, e);
+      order.push(ticker);
+      continue;
+    }
+    const re = richness(e);
+    const rp = richness(prev);
+    if (re !== rp) {
+      if (re > rp) best.set(ticker, e);
+      continue;
+    }
+    // Same richness — prefer the non-workbench row, else the newer one.
+    if (isWorkbench(prev) && !isWorkbench(e)) best.set(ticker, e);
+  }
+  return order.map((t) => best.get(t)!);
+}
+
 @Injectable()
 export class ScoreHistoryService {
   private readonly logger = new Logger(ScoreHistoryService.name);
@@ -204,6 +282,17 @@ export class ScoreHistoryService {
     const where: any = {};
     if (strategyFilter) where.strategyId = strategyFilter;
 
+    // Which field identifies a "run" — the protocol when grouping by protocol
+    // (the default: the breakdown JSON carries protocolId), else the strategy.
+    const groupMode = opts?.groupBy || 'protocol';
+
+    // Rolling 14-day window — the outer bound on how far back runs are considered.
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+    const baseWhere: any = { timestamp: { gte: fourteenDaysAgo } };
+    if (Object.keys(where).length > 0) {
+      baseWhere.AND = [where];
+    }
+
     // Fetch raw scores — if search is active, also fetch symbol tickers to filter
     let scores;
     if (search) {
@@ -232,17 +321,74 @@ export class ScoreHistoryService {
       if (matchingStrategies.length > 0) where.OR.push(strategyNameFilter);
     }
 
-    // Fetch scores from the last 14 days
-    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-    const baseWhere: any = { timestamp: { gte: fourteenDaysAgo } };
-    if (Object.keys(where).length > 0) {
-      baseWhere.AND = [where];
+    // ── Newest runs PER PROTOCOL, not newest rows globally (#757) ──
+    //
+    // WHY THIS IS NOT A SIMPLE findMany + slice. A "run" is a group of Score rows
+    // bucketed to the minute, so the *number of runs* a protocol emits per tick is
+    // its symbol count. A global `orderBy timestamp desc, take: 10000` therefore
+    // spends its budget on the busiest protocol: forex-session-v1 writes 7 symbols
+    // a tick (~420 rows), so 10k rows covered only ~24 minutes, and by the time the
+    // page was sliced (limit=200) the low-volume protocols — spy-speed-v1, vix-spike-v1,
+    // qqq-speed-v1 — had already fallen off the end. Their scores were in the DB and
+    // simply never reached the API, which is why those Ladder cards looked broken.
+    //
+    // So: first find WHEN each protocol last scored (cheap — a handful of strings,
+    // no Score rows), union those minutes, then fetch only the rows belonging to the
+    // selected minutes. The row budget then scales with runs instead of with how many
+    // symbols the noisiest protocol happens to score.
+    const truncateToMinute = (d: Date | string) => {
+      const t = new Date(d);
+      t.setSeconds(0, 0);
+      return t;
+    };
+
+    const groupField = groupMode === 'strategy' ? 'strategyId' : "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(breakdown, '$.protocolId')), strategyId)";
+    const since = fourteenDaysAgo;
+
+    // Per-group newest minute. MAX(timestamp) per group is exactly "last scored at"
+    // and returns one row per protocol regardless of how many symbols it scored.
+    //
+    // ⚠️ A group MUST receive its timestamp as a string. `$queryRawUnsafe` turns a
+    // MySQL DATETIME into a JS Date, and multiplying that Date by the auto-increment
+    // id (below) coerces it to epoch ms — which produces an absurd id, not a "NaN"
+    // crash. DATE_FORMAT keeps it opaque text and is also what the grouping key needs.
+    const latestRows: Array<{ g: string | null; newest: string }> = await (this.prisma as any).$queryRawUnsafe(
+      `SELECT ${groupField} AS g,
+              DATE_FORMAT(MAX(timestamp), '%Y-%m-%dT%H:%i:%s.000Z') AS newest
+         FROM Score
+        WHERE timestamp >= ?
+        GROUP BY g`,
+      since,
+    );
+
+    // Keep the newest `limit` groups (the page), then union their minutes. A group
+    // can contribute more than one run when several protocols share a minute, so the
+    // union is de-duplicated and the window is widened slightly to guarantee the page
+    // is full rather than relying on ticks never colliding.
+    const newestWindow = Math.max(page * pageSize, pageSize) + pageSize;
+    const top = latestRows
+      .filter((r) => r.g)
+      .sort((a, b) => new Date(b.newest).getTime() - new Date(a.newest).getTime())
+      .slice(0, newestWindow);
+
+    if (top.length === 0) {
+      return { runs: [], total: 0, page, pageSize, totalPages: 0, queryTimeMs: Date.now() - startTime };
     }
 
+    const minuteIsos = [...new Set(top.map((r) => truncateToMinute(r.newest).toISOString()))];
+
+    // MySQL DATETIME window covering exactly those minutes. Using a range (not a
+    // per-minute OR list) keeps the query to a single indexed scan of the window.
+    const windowStart = new Date(Math.min(...minuteIsos.map((iso) => Date.parse(iso))));
+    const windowEnd = new Date(Math.max(...minuteIsos.map((iso) => Date.parse(iso))) + 60_000);
+
     scores = await this.prisma.score.findMany({
-      where: baseWhere,
+      where: {
+        ...baseWhere,
+        timestamp: { gte: windowStart, lt: windowEnd },
+      },
       orderBy: { timestamp: 'desc' },
-      take: 10000,
+      take: 20000,
       include: { symbol: { select: { ticker: true } } },
     });
 
@@ -274,7 +420,6 @@ export class ScoreHistoryService {
     }
 
     // Group by minute + (strategyId or protocolId) — each unique run
-    const groupMode = opts?.groupBy || 'protocol';
     const groups = new Map<string, typeof scores>();
     for (const s of scores) {
       const ts = new Date(s.timestamp);
@@ -326,7 +471,7 @@ export class ScoreHistoryService {
           avgScore: Math.round(avgScore * 10) / 10,
           signalSummary: { buy, sell, neutral },
           topSymbol,
-          scores: entries.map((e) => ({
+          scores: collapseDuplicateWrites(entries).map((e) => ({
             id: (e as any).id, // Score table UUID — used for deep-linking to a specific run
             ticker: (e as any).symbol?.ticker || e.symbolId,
             value: e.value,

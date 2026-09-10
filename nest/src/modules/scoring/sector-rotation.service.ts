@@ -9,6 +9,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ProtocolGatingService } from './protocol-gating.service';
 import { ProtocolDbService } from './protocol-db.service';
+import { MarketDataService } from '../market-data/market-data.service';
 
 const SECTOR_ETFS = [
   { etf: 'XLK', name: 'Technology', protocols: ['spy-speed-v1', 'momentum-stock-v1', 'qqq-speed-v1', 'leverage-v2'] as string[] },
@@ -47,8 +48,19 @@ export class SectorRotationService {
     private readonly prisma: PrismaService,
     private readonly protocolGating: ProtocolGatingService,
     private readonly protocolDb: ProtocolDbService,
+    private readonly marketData: MarketDataService,
   ) {}
 
+  /**
+   * SectorRotationService — sector ETF relative-strength / rotation census.
+   *
+   * ⚠️ #754 — the bar window used to be two hand-rolled `prisma.marketBar.findMany` queries
+   * that took `desc` but never reversed AND never filtered `timeframe`. The ordering made the
+   * positional reads (`length-2`, `length-6`, `length-22`) measure the WRONG bars, and the
+   * missing filter silently spliced cadences together. Now loaded through the canonical
+   * `MarketDataService.getBars()` at a pinned single cadence (INV-BAR-WINDOW,
+   * INV-SINGLE-CADENCE).
+   */
   async getRotation(): Promise<SectorRotationResult> {
     const protocolMap: Record<string, { name: string; description: string }> = {};
 
@@ -61,28 +73,26 @@ export class SectorRotationService {
 
     for (const sec of SECTOR_ETFS) {
       try {
-        // Try Symbol lookup first, then direct symbolId search
-        let bars = await this.prisma.marketBar.findMany({
-          where: { symbol: { ticker: sec.etf } },
-          orderBy: { timestamp: 'desc' },
-          take: 100,
+        // ⚠️ Cadence is pinned to '1h' DELIBERATELY — do not "correct" it to '1d'.
+        //
+        // The d1/w1/m1 labels are misleading legacies: they are not 1-day, 1-week and
+        // 1-month returns. They are POSITIONAL — `length-2`, `length-6`, `length-22` — so
+        // their real meaning is "whatever the window's cadence is, per bar". The sector ETFs
+        // in `marketbar` hold ONLY 1h bars (verified 2026-09-10: all 11 XL* tickers, 35–41
+        // bars each), so these are ~2h / ~6h / ~22h moves despite the names.
+        //
+        // Pinning to '1d' returns zero bars and silently flips every sector to `hasData:false`
+        // (a regression introduced and caught during #754). The previous hand-rolled query
+        // looked like it worked only because it had no `timeframe` filter and took whatever
+        // rows happened to be newest. NOTE: naming these d1/w1/m1 on a 1h window is a real
+        // (separate) correctness issue for the UI — see #756.
+        const secSym = await this.prisma.symbol.findFirst({
+          where: { ticker: sec.etf },
+          select: { id: true },
         });
-
-        // Fallback: search by symbolId where the ticker is stored in the symbol table
-        if (bars.length === 0) {
-          const sym = await this.prisma.symbol.findFirst({
-            where: { ticker: { contains: sec.etf } },
-            select: { id: true },
-          });
-          if (sym) {
-            bars = await this.prisma.marketBar.findMany({
-              where: { symbolId: sym.id },
-              orderBy: { timestamp: 'desc' },
-              take: 100,
-            });
-          }
-        }
-
+        const bars = secSym
+          ? await this.marketData.getBars(secSym.id, '1h', 100)
+          : [];
         if (bars.length < 5) {
           sectors.push({
             etf: sec.etf,
@@ -97,7 +107,7 @@ export class SectorRotationService {
           continue;
         }
 
-        const marketBars = bars.map((b) => ({
+        const marketBars = bars.map((b: any) => ({
           timestamp: b.timestamp,
           open: Number(b.open), high: Number(b.high),
           low: Number(b.low), close: Number(b.close),
@@ -122,9 +132,9 @@ export class SectorRotationService {
         // Filter to protocols that exist in registry
         const validProtocols = sec.protocols.filter((p) => this.protocolDb.getCached(p));
 
-        const secSym = await this.prisma.symbol.findFirst({ where: { ticker: sec.etf }, select: { id: true } });
-        const { dayBars, hourBars, min15Bars } = secSym
-          ? await this.protocolGating.loadHigherTfBundle(secSym.id)
+        const secSymForBundle = secSym;
+        const { dayBars, hourBars, min15Bars } = secSymForBundle
+          ? await this.protocolGating.loadHigherTfBundle(secSymForBundle.id)
           : { dayBars: [], hourBars: [], min15Bars: [] };
 
         for (const pid of validProtocols) {

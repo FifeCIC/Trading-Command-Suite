@@ -76,6 +76,38 @@ function readScoreDisplay() {
 }
 
 /**
+ * Card state vocabulary — the single place that decides what a card's state chip
+ * says and how it is coloured. Every card renders exactly one chip with one of
+ * these values, so a card that is somehow in the wrong state is spottable by
+ * reading the chip rather than by spotting a missing element.
+ *
+ * Deliberately a fixed map instead of string building: an unexpected
+ * `vm.state` falls back to the unscored style rather than emitting a
+ * `lad-state--undefined` class that would silently render unstyled.
+ */
+const STATE_CLASS = {
+  live: 'lad-state--live',
+  paused: 'lad-state--paused',
+  stale: 'lad-state--stale',
+  unscored: 'lad-state--unscored',
+  closed: 'lad-state--closed',
+};
+
+/** Human label for a card's state chip. See STATE_CLASS for the vocabulary. */
+function stateLabel(vm) {
+  if (vm.state === 'unscored') return 'Not scored';
+  if (vm.frozen) return vm.state === 'stale' ? 'Stale' : 'Market closed';
+  return 'Live';
+}
+
+/** CSS modifier for a card's state chip — the label/colour pair in one place. */
+function stateClass(vm) {
+  if (vm.state === 'unscored') return STATE_CLASS.unscored;
+  if (!vm.frozen) return STATE_CLASS[vm.state] || STATE_CLASS.live;
+  return vm.state === 'stale' ? STATE_CLASS.stale : STATE_CLASS.closed;
+}
+
+/**
  * One-time migration helper: the pre-direction-selection build stored a single
  * flat array of protocol ids (the BOTH view). Read it so those selections carry
  * into the BOTH bucket of the new per-direction memory.
@@ -85,6 +117,22 @@ function readLegacySelectedIds() {
     const old = JSON.parse(localStorage.getItem('tcs:view-state:ladder:selectedIds') || 'null');
     return Array.isArray(old) ? old : [];
   } catch { return []; }
+}
+
+/**
+ * familyOf(protocolId) — the protocol FAMILY a run belongs to.
+ *
+ * The gated-protocol registry and the run store name the same strategy slightly
+ * differently: the registry uses `xau-speed-v1` while runs are emitted per
+ * timeframe as `xau-speed-m5` / `-m15` / `-1h` / `-4h`. Dropping the version
+ * suffix (`-v1`) and the trailing timeframe gives the shared family key, so a
+ * card can find its score whichever name produced it.
+ */
+function familyOf(protocolId) {
+  return String(protocolId || '')
+    .toLowerCase()
+    .replace(/-v\d+$/, '')                    // xau-speed-v1   -> xau-speed
+    .replace(/-(m1|m5|m15|m30|h1|h4|d1|w1|mn1|\d+[mhd])$/, ''); // xau-speed-m5 -> xau-speed
 }
 
 /**
@@ -302,30 +350,53 @@ export default function LadderPage() {
   };
 
   // Build symbol→score lookup from the scoring runs (latest run per symbol+protocol).
-  const scoreMap = useMemo(() => {
-    const map = {};
+  //
+  // ⚠️ WHY THERE ARE TWO MAPS. The ladder keys a card by `symbol::protocolId` using
+  // the id from /api/scoring/gated/protocols (e.g. `xau-speed-v1`), but the run
+  // store keys the same symbol by the TIMEFRAME variant that produced it
+  // (`xau-speed-m5`, `xau-speed-m15`, `xau-speed-1h`, `xau-speed-4h`). An exact
+  // match therefore misses the speed/scalp protocols entirely: `XAUUSD::xau-speed-v1`
+  // is absent while `XAUUSD::xau-speed-m5` is present.
+  //
+  // Deleting the `-v1` suffix — the same rule the ladder already uses below for
+  // per-protocol filtering, where a protocol is "relevant" to a run when either id
+  // is a prefix of the other — reconciles them. Two maps instead of one because a
+  // direct hit must always beat a family hit: if a protocol ever does emit its own
+  // run, that exact score wins and this is inert.
+  const { scoreMap, familyMap } = useMemo(() => {
+    const exact = {};
+    const family = {};
     for (const run of runs) {
       const proto = run.protocolId || run.strategyId;
       for (const s of run.scores || []) {
         const ticker = (s.ticker || s.symbol || '').toUpperCase();
         if (!ticker) continue;
-        const key = `${ticker}::${proto}`;
         // Runs are timestamp-desc, so the first match per key is the latest.
-        if (!map[key]) {
-          map[key] = {
-            value: s.value,
-            signal: s.signal ?? null,
-            rawComposite: s.rawComposite ?? s.value,
-            rawMax: s.rawMax ?? null,
-            opportunityScore: s.opportunityScore ?? null,
-            opportunityMax: s.opportunityMax ?? null,
-            marketStatus: s.marketStatus ?? null,
-            timestamp: run.timestamp,
-          };
+        const row = {
+          value: s.value,
+          signal: s.signal ?? null,
+          rawComposite: s.rawComposite ?? s.value,
+          rawMax: s.rawMax ?? null,
+          opportunityScore: s.opportunityScore ?? null,
+          opportunityMax: s.opportunityMax ?? null,
+          marketStatus: s.marketStatus ?? null,
+          timestamp: run.timestamp,
+          // Which protocol emitted this row — the card footer always names it.
+          protocolId: proto,
+        };
+        const key = `${ticker}::${proto}`;
+        if (!exact[key]) exact[key] = row;
+
+        // Family key: drop the version suffix and the trailing timeframe.
+        // `xau-speed-m5` and `xau-speed-v1` both become `xau-speed`.
+        const fam = `${ticker}::${familyOf(proto)}`;
+        const prev = family[fam];
+        if (!prev || Date.parse(run.timestamp) > Date.parse(prev.timestamp)) {
+          family[fam] = { ...row, sourceProtocolId: proto };
         }
       }
     }
-    return map;
+    return { scoreMap: exact, familyMap: family };
   }, [runs]);
 
   // Partition the selected protocols' cards into those passing all filters and
@@ -336,7 +407,12 @@ export default function LadderPage() {
     for (const p of selectedProtocols) {
       for (const sym of p.resolvedSymbols || []) {
         const ticker = sym.toUpperCase();
-        const raw = scoreMap[`${ticker}::${p.id}`] || null;
+        // Exact run for this protocol id first; otherwise the family fallback
+        // (see the scoreMap note above). `borrowed` marks the fallback so the
+        // card can say which timeframe the number actually came from.
+        const exact = scoreMap[`${ticker}::${p.id}`] || null;
+        const borrowed = exact ? null : (familyMap[`${ticker}::${familyOf(p.id)}`] || null);
+        const raw = exact || borrowed;
         all.push({
           symbol: ticker,
           protocolId: p.id,
@@ -345,6 +421,13 @@ export default function LadderPage() {
           vm: buildScoreDisplay(raw ?? {}),
           hasScore: !!raw,
           time: raw?.timestamp ?? null,
+          // The protocol id that actually produced the number. Equal to this
+          // card's protocolId for an exact match; the sibling's id when borrowed.
+          runId: raw?.protocolId ?? null,
+          // Only a genuine cross-timeframe borrow gets the "via" chip. When the
+          // family fallback resolves back to this card's own protocol id there is
+          // nothing borrowed, and chipping it would just duplicate the run id.
+          scoreFrom: borrowed && borrowed.sourceProtocolId !== p.id ? borrowed.sourceProtocolId : null,
         });
       }
     }
@@ -354,6 +437,13 @@ export default function LadderPage() {
     const list = marketFilter === 'all' ? all : all.filter((e) => marketMatches(e, marketFilter));
 
     const sorter = (a, b) => {
+      // Rank on whether the card is actually actionable BEFORE score size.
+      // A frozen (market-closed) scan is a historical read, not a live signal —
+      // it must never outrank a live score, which is what happened when
+      // `spy-day-v1`/`qqq-day-v1` (closed) sat above a live Gold BUY.
+      const ta = a.hasScore && !a.vm.frozen ? 1 : 0;
+      const tb = b.hasScore && !b.vm.frozen ? 1 : 0;
+      if (ta !== tb) return tb - ta;
       if (a.hasScore !== b.hasScore) return a.hasScore ? -1 : 1;
       const key = rankBy === 'opp' ? 'opportunityPct' : 'pct';
       const sa = a.vm[key] ?? -1;
@@ -373,7 +463,7 @@ export default function LadderPage() {
     pass.sort(sorter);
     excl.sort(sorter);
     return { passing: pass, excluded: excl };
-  }, [selectedProtocols, scoreMap, ageFilter, rankBy, marketFilter]);
+  }, [selectedProtocols, scoreMap, familyMap, ageFilter, rankBy, marketFilter]);
 
   const scoredCount = passing.filter((e) => e.hasScore).length;
 
@@ -420,7 +510,7 @@ export default function LadderPage() {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.45, ease: 'easeOut' }}
-      className={`lad-card ${i === 0 && !dimmed ? 'lad-card--top' : ''} ${dimmed ? 'lad-card--filtered' : ''}`}
+      className={`lad-card ${i === 0 && !dimmed ? 'lad-card--top' : ''} ${dimmed ? 'lad-card--filtered' : ''} ${e.vm.state !== 'unscored' && e.vm.frozen ? 'lad-card--closed' : ''}`}
     >
       <div className="lad-reveal">
       <div className="lad-card-head">
@@ -435,8 +525,13 @@ export default function LadderPage() {
         <span className="lad-proto-tag">{e.protocolName}</span>
         <span className="lad-card-status">
           <SignalBadge display={e.vm} />
-          <span className={`lad-state lad-state--${e.vm.state}`}>
-            {e.vm.frozen ? (e.vm.state === 'stale' ? 'Stale' : 'Market closed') : 'Live'}
+          {/* ONE state chip on every card — never a different element or a
+              missing chip. Values: Live / Market closed / Stale / Not scored.
+              Unscored rows must NOT claim "Live" (that reads as a live tradable
+              signal next to a blank score), so they get their own value here
+              rather than swapping the markup out. */}
+          <span className={`lad-state ${stateClass(e.vm)}`}>
+            {stateLabel(e.vm)}
           </span>
         </span>
       </div>
@@ -456,18 +551,42 @@ export default function LadderPage() {
             mode={scoreDisplay}
             active={rankBy === 'signal'}
           />
-          {e.vm.opportunityPct != null && (
-            <ScoreBlock
-              label="Opp"
-              score={e.vm.opportunityScore}
-              max={e.vm.opportunityMax}
-              pct={e.vm.opportunityPct}
-              mode={scoreDisplay}
-              active={rankBy === 'opp'}
-            />
-          )}
+          {/* Both score slots always render. Previously "Opp" was omitted when
+              null, so an unscored card was visibly SHORTER than a scored one and
+              the whole row shifted. An empty slot is the honest and consistent
+              presentation: the protocol genuinely has no Opportunity score. */}
+          <ScoreBlock
+            label="Opp"
+            score={e.vm.opportunityScore}
+            max={e.vm.opportunityMax}
+            pct={e.vm.opportunityPct}
+            mode={scoreDisplay}
+            active={rankBy === 'opp'}
+          />
         </div>
-        <span className="lad-time"><span className="lad-time-label">Scored: </span>{e.time ? timeAgo(e.time) : 'no score'}</span>
+        {/* Footer meta — the SAME slots in the SAME order on every card, so a
+            card that is missing something is visibly missing it rather than just
+            looking shorter. Slot 1: age, or an explicit no-run word. Slot 2: the
+            run that produced the number, always shown. Slot 3: a badge when this
+            protocol had no run of its own and the number came from a sibling. */}
+        <span className="lad-time">
+          {e.time ? (
+            <>
+              <span className="lad-time-label">Scored: </span>{timeAgo(e.time)}
+              <span className="lad-time-src" title={`Scoring run: ${e.runId || e.protocolId}`}> · {e.runId || e.protocolId}</span>
+              {e.scoreFrom && (
+                <span
+                  className="lad-time-borrow"
+                  title={`${e.protocolId} produced no run — showing ${e.scoreFrom} instead`}
+                >
+                  borrowed
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="lad-time-none">No scoring run yet</span>
+          )}
+        </span>
       </div>
       </div>
     </motion.div>

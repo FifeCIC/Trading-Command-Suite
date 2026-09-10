@@ -11,8 +11,10 @@ describe('PositionSyncService', () => {
   };
   const trade = {
     findFirst: jest.fn(),
+    findMany: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
   };
   const prisma = { isAvailable: true, position, trade };
   const adapter = { getDeals: jest.fn() };
@@ -25,6 +27,8 @@ describe('PositionSyncService', () => {
     position.findMany.mockResolvedValue([]);
     position.delete.mockResolvedValue({});
     trade.update.mockResolvedValue({});
+    trade.findMany.mockResolvedValue([]);
+    trade.updateMany.mockResolvedValue({ count: 0 });
     adapter.getDeals.mockResolvedValue([]);
     service = new PositionSyncService(prisma as any, adapterFactory as any);
   });
@@ -32,8 +36,10 @@ describe('PositionSyncService', () => {
   it('does not infer closures from a non-authoritative empty response', async () => {
     const result = await service.syncPositions('mt5', [], { authoritative: false });
 
-    expect(result).toEqual({ synced: 0, created: 0, closed: 0 });
+    expect(result).toEqual({ synced: 0, created: 0, closed: 0, reaped: 0 });
     expect(position.findMany).not.toHaveBeenCalled();
+    // A non-authoritative read must never reap trades either.
+    expect(trade.findMany).not.toHaveBeenCalled();
   });
 
   it('closes the final position from an authoritative empty snapshot', async () => {
@@ -176,5 +182,45 @@ describe('PositionSyncService', () => {
     expect(updateArg.data.exitPrice).toBe(4403.27);
     expect(updateArg.data.pnl).toBeCloseTo(55.49, 2);
     expect(updateArg.data.closedAt.toISOString()).toBe('2026-09-07T16:41:31.000Z');
+  });
+
+  /**
+   * Regression 2026-09-10 — stranded Trade rows.
+   *
+   * The Position table self-heals, but `trade` had no reaper: when a position
+   * closed, finalizeClosedPosition() only ran for rows still present in
+   * `position`. Any Trade whose Position row had already been cleaned stayed
+   * `status='open'` forever. Measured: 17 phantom USDCAD rows against ZERO
+   * broker positions, inflating every open-exposure count.
+   */
+  it('reaps an unticketed open Trade whose symbol is absent from the broker snapshot', async () => {
+    position.findMany.mockResolvedValue([]);
+    trade.findMany.mockResolvedValue([
+      { id: 'stranded-1', symbol: 'USDCAD', openedAt: new Date('2026-07-24T18:41:05Z') },
+    ]);
+    trade.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await service.syncPositions('mt5', [], { authoritative: true });
+
+    expect(result.reaped).toBe(1);
+    expect(trade.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: 'stranded-1', status: 'open', brokerTicket: null }),
+      data: expect.objectContaining({ status: 'closed', pnl: 0 }),
+    }));
+  });
+
+  it('does NOT reap an unticketed Trade whose symbol IS held by the broker', async () => {
+    position.findMany.mockResolvedValue([]);
+    trade.findMany.mockResolvedValue([
+      { id: 'live-1', symbol: 'XAUUSD', openedAt: new Date('2026-09-03T21:49:31Z') },
+    ]);
+
+    const result = await service.syncPositions('mt5', [{
+      symbol: 'XAUUSD', side: 'buy', quantity: 0.01, avgPrice: 4380,
+      currentPrice: 4388, pnl: 1, sl: null, tp: null, comment: '', openedAt: new Date(),
+    }], { authoritative: true });
+
+    expect(result.reaped).toBe(0);
+    expect(trade.updateMany).not.toHaveBeenCalled();
   });
 });

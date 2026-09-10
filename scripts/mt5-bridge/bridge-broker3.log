@@ -6,3 +6,27 @@
 2026-09-10 10:14:38,885 [INFO] [broker3] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
 2026-09-10 10:14:38,887 [INFO] [broker3] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
 2026-09-10 10:14:38,900 [INFO] [broker3] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-09-10 11:00:11,508 [INFO] [broker3] MetaTrader5 package loaded
+2026-09-10 11:00:11,508 [INFO] [broker3] Bridge instance [broker3] slot #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-09-10 11:00:11,509 [INFO] [broker3] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-09-10 11:00:11,509 [INFO] [broker3] Connecting to MT5 at startup...
+2026-09-10 11:00:11,509 [INFO] [broker3] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-09-10 11:00:11,512 [INFO] [broker3] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-09-10 11:00:11,512 [INFO] [broker3] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 11:00:11,527 [INFO] [broker3] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-09-10 11:34:56,236 [INFO] [broker3] MetaTrader5 package loaded
+2026-09-10 11:34:56,237 [INFO] [broker3] Bridge instance [broker3] slot #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-09-10 11:34:56,237 [INFO] [broker3] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-09-10 11:34:56,237 [INFO] [broker3] Connecting to MT5 at startup...
+2026-09-10 11:34:56,238 [INFO] [broker3] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-09-10 11:34:56,251 [INFO] [broker3] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-09-10 11:34:56,252 [INFO] [broker3] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 11:34:56,290 [INFO] [broker3] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-09-10 13:29:20,986 [INFO] [broker3] MetaTrader5 package loaded
+2026-09-10 13:29:20,987 [INFO] [broker3] Bridge instance [broker3] slot #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-09-10 13:29:20,987 [INFO] [broker3] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-09-10 13:29:20,988 [INFO] [broker3] Connecting to MT5 at startup...
+2026-09-10 13:29:20,988 [INFO] [broker3] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-09-10 13:29:20,996 [INFO] [broker3] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-09-10 13:29:20,997 [INFO] [broker3] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-10 13:29:21,007 [INFO] [broker3] MT5 Bridge v2 listening on http://127.0.0.1:5001

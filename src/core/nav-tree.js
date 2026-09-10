@@ -18,7 +18,14 @@
  *   - lab        → Lab (sandbox, theme lab, motion lab, component lab)
  *   - settings   → Settings (general, database, theme packs, preferences)
  *   - development → Development (developer tools: dynamic roadmap, more to come)
+ *
+ * ⚠️ ESM ONLY — the old `getFilteredNavStructure()` did
+ * `const { isNavVisible } = require('./experience-levels')` "to avoid a circular
+ * dependency". There is no cycle (`experience-levels.js` imports nothing), and in
+ * the Vite/ESM bundle `require` is undefined, so the function would have thrown
+ * `ReferenceError` the first time any caller ran it. It now uses a static import.
  */
+import { isNavVisible } from './experience-levels';
 
 export const NAV_TREE = {
   /**
@@ -190,6 +197,7 @@ export const NAV_TREE = {
       { id: 'feature-lab', label: 'Feature Lab', icon: '🔬' },
       { id: 'component-lab', label: 'Component Lab', icon: '🧩' },
       { id: 'widget-board', label: 'Widget Board', icon: '⬚' },
+      { id: 'screen-cockpit', label: 'Screen Cockpit', icon: '🖥️' },
       { id: 'diagrams', label: 'Diagrams', icon: '▦' },
       { id: 'triple-screen', label: 'Triple-Screen Cockpit', icon: '🖥️' },
       { id: 'responsive-layout-lab', label: 'Responsive Layout Lab', icon: '📐' },
@@ -280,8 +288,6 @@ export function getNavStructure() {
  * @param {'beginner'|'experienced'|'expert'} level
  */
 export function getFilteredNavStructure(level) {
-  // Lazy import to avoid circular dependency
-  const { isNavVisible } = require('./experience-levels');
   const structure = {};
   for (const [key, area] of Object.entries(NAV_TREE)) {
     const filtered = area.views.filter(v => isNavVisible(v.id, level));

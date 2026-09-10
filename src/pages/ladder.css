@@ -104,8 +104,25 @@
 .lad-state--paused { color: var(--color-neutral, #64748b); }
 .lad-state--stale { color: var(--color-warning, #f59e0b); }
 .lad-state--unscored { color: var(--color-muted, #94a3b8); }
-.lad-time { color: var(--ink-soft); }
+.lad-time { color: var(--ink-soft); display: inline-flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
 .lad-time-label { color: var(--color-muted, #94a3b8); font-weight: 700; text-transform: uppercase; font-size: 0.62rem; letter-spacing: 0.04em; }
+/* The run id that produced the number — shown on EVERY scored card so identical
+   cards look identical (it used to appear only for borrowed scores). */
+.lad-time-src { color: var(--color-muted, #94a3b8); font-size: 0.72rem; }
+/* Marks a score borrowed from a sibling timeframe rather than this protocol's
+   own run. Chip shape so it reads as a distinct fact, not part of the age text. */
+.lad-time-borrow {
+  font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.03em; padding: 0.05rem 0.32rem; border-radius: 999px;
+  color: var(--color-warning, #f59e0b);
+  border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 45%, transparent);
+}
+/* Unscored rows say why, instead of the old misleading "Scored: no score". */
+.lad-time-none { color: var(--color-muted, #94a3b8); font-style: italic; }
+/* Closed-market rows: dim the score so a frozen scan can't be mistaken for a
+   live ranked signal, while keeping every slot in the same place. */
+.lad-card--closed .lad-card-scores { opacity: 0.55; }
+.lad-state--closed { color: var(--color-neutral, #64748b); }
 
 .lad-empty { padding: 3rem 1rem; text-align: center; border: 1px dashed var(--line); border-radius: 10px; }
 .lad-empty-title { font-size: 0.95rem; font-weight: 700; margin: 0 0 0.3rem; }

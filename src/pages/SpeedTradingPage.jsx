@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { TIMEFRAME_MS, useLockout, useTickHistory, useSpeedScanner, useTickRecording, useActionLog } from '../core/hooks/useSpeedCockpit';
-import { XTREND_SPEED_SYMBOLS, getSymbolCategory, SYMBOL_CATEGORIES } from '../data/xtrend-symbols';
+import { getSymbolCategory, SYMBOL_CATEGORIES } from '../data/xtrend-symbols';
 import { getProtocolsForSymbol } from '../data/speed-protocols';
 import SpeedChart from '../components/SpeedChart';
 import SeasonalityHeatmap from '../components/SeasonalityHeatmap';

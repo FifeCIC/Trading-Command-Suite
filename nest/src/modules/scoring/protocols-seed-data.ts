@@ -810,6 +810,118 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
       }
     ]
   },
+  "dax-speed-v1": {
+    "name": "DAX Speed Scalp V1",
+    "description": "Sub-minute GER40/DAX scalping protocol (German large-caps — SAP, Siemens, Allianz). Frankfurt session; sensitive to EUR and EU macro data.",
+    "directionMode": "LONG_ONLY",
+    "tradingStyle": "Tick Scalp",
+    "recommendedTimeframe": "5s–30s",
+    "avgHoldTime": "Seconds to a few minutes",
+    "winRateTarget": "65–75%",
+    "idealFor": "XTrend GER40 speed trading during Frankfurt/London session. Mirrors ftse-speed-v1 directive structure.",
+    "derivedFrom": "ftse-speed-v1",
+    "groups": [
+      {
+        "id": "technical",
+        "name": "DAX Micro-Structure",
+        "description": "DAX Micro-Structure",
+        "weight": 0.4,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "speed-momentum",
+          "bollinger-band-squeeze",
+          "volume-confirmation",
+          "volatility-tools",
+          "rsi-oversold",
+          "support-resistance-levels",
+          "session-open-effect"
+        ]
+      },
+      {
+        "id": "sentiment",
+        "name": "EU Macro",
+        "description": "EU Macro",
+        "weight": 0.25,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "analyst-adjustments"
+        ]
+      },
+      {
+        "id": "risk",
+        "name": "Cross-Session Risk",
+        "description": "Cross-Session Risk",
+        "weight": 0.35,
+        "isRiskGate": true,
+        "minMultiplier": 0.5,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "liquidity-check",
+          "session-open-effect"
+        ]
+      }
+    ]
+  },
+  "cac-speed-v1": {
+    "name": "CAC Speed Scalp V1",
+    "description": "Sub-minute FRA40/CAC40 scalping protocol (French large-caps — LVMH, Total, Sanofi). Paris session 08:00–16:30 UK; sensitive to EUR and EU macro data.",
+    "directionMode": "LONG_ONLY",
+    "tradingStyle": "Tick Scalp",
+    "recommendedTimeframe": "5s–30s",
+    "avgHoldTime": "Seconds to a few minutes",
+    "winRateTarget": "65–75%",
+    "idealFor": "XTrend FRA40 speed trading during Paris/London session. Mirrors ftse-speed-v1 directive structure.",
+    "derivedFrom": "ftse-speed-v1",
+    "groups": [
+      {
+        "id": "technical",
+        "name": "CAC Micro-Structure",
+        "description": "CAC Micro-Structure",
+        "weight": 0.4,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "speed-momentum",
+          "bollinger-band-squeeze",
+          "volume-confirmation",
+          "volatility-tools",
+          "rsi-oversold",
+          "support-resistance-levels",
+          "session-open-effect"
+        ]
+      },
+      {
+        "id": "sentiment",
+        "name": "EU Macro",
+        "description": "EU Macro",
+        "weight": 0.25,
+        "isRiskGate": false,
+        "minMultiplier": 0.3,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "analyst-adjustments"
+        ]
+      },
+      {
+        "id": "risk",
+        "name": "Cross-Session Risk",
+        "description": "Cross-Session Risk",
+        "weight": 0.35,
+        "isRiskGate": true,
+        "minMultiplier": 0.5,
+        "maxMultiplier": 1.2,
+        "directiveIds": [
+          "liquidity-check",
+          "session-open-effect"
+        ]
+      }
+    ]
+  },
   "tsla-speed-v1": {
     "name": "TSLA Speed Scalp V1",
     "description": "Sub-minute Tesla (TSLA) single-stock scalping protocol. The most volatile mega-cap — Elon factor, delivery numbers, AI narrative. Much wider risk gates than index protocols.",

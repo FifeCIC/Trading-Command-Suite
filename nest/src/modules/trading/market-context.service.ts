@@ -10,6 +10,9 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+// Canonical session definitions live in session-window.ts — the same module the
+// execution-side session gate uses. Never re-declare them here.
+import { SESSION_DEFS } from './session-window';
 
 export interface DayContext {
   dayOfWeek: string;
@@ -52,12 +55,7 @@ export interface MarketContext {
   preflightOk: boolean;
 }
 
-// Session definitions in ET (America/New_York)
-const SESSIONS = [
-  { name: 'Asian', startH: 19, startM: 0, endH: 4, endM: 0, timeRange: '7pm–4am ET' },
-  { name: 'London', startH: 3, startM: 0, endH: 12, endM: 0, timeRange: '3am–12pm ET' },
-  { name: 'US', startH: 9, startM: 30, endH: 16, endM: 0, timeRange: '9:30am–4pm ET' },
-];
+// Session definitions are sourced from session-window.ts (SESSION_DEFS).
 
 // Day-of-week profiles
 const DAY_PROFILES: Record<number, Omit<DayContext, 'dayIndex'>> = {
@@ -124,7 +122,7 @@ export class MarketContextService {
     const etMinute = now.getUTCMinutes();
     const etMinutes = etHour * 60 + etMinute;
 
-    const sessions: MarketSession[] = SESSIONS.map((s) => {
+    const sessions: MarketSession[] = SESSION_DEFS.map((s) => {
       const sessionStart = s.startH * 60 + s.startM;
       let sessionEnd = s.endH * 60 + s.endM;
       if (sessionEnd <= sessionStart) sessionEnd += 24 * 60; // wraps past midnight

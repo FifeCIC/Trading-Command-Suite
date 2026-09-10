@@ -12,7 +12,7 @@
  * of a single symbol + protocol, see SinglesMonitorPage.
  */
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';

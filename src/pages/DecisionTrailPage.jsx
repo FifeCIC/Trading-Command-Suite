@@ -14,7 +14,6 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import Notice from '../components/Notice';
 import './decision-trail.css';
 import PageInfoPopover from '../components/PageInfoPopover';
 

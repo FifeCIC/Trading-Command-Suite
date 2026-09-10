@@ -1,3 +1,17 @@
+/**
+ * MarketDataService — THE bar data boundary.
+ *
+ * ⚠️ CONTRACT: `getBars()` is the ONE way to load a window of bars for scoring or decision
+ * paths. It owns three things that callers kept re-deriving, each time losing one of them:
+ *   1. the `timeframe` filter  (a mixed-cadence array silently changes what every window means)
+ *   2. `desc + take` selection  (`asc + take` returns the OLDEST N bars, not the newest)
+ *   3. oldest → newest order     (the order ~34 directives assume via `bars[bars.length - 1]`)
+ *
+ * Two hand-rolled queries that bypassed this lost the timeframe filter; one of them also
+ * scored 34 symbols on ~4-month-old data (#751). If you need bars, call getBars() — do not
+ * write a third query. Invariants: INV-CANONICAL-LOADER, INV-BAR-WINDOW, INV-SINGLE-CADENCE
+ * in `.github/instructions/meta-stack-contracts.instructions.md` (build-enforced).
+ */
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 

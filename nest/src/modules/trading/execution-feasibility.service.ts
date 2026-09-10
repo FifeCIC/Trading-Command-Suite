@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AdapterFactory } from '../providers/adapter-factory';
+import { Mt5SymbolRouter } from '../providers/mt5/mt5-symbol-router.service';
 import { DuplicateGuardService } from './duplicate-guard.service';
 import { GlobalDiversificationService } from '../diversification/global-diversification.service';
 import { PyramidPolicyService } from './pyramid-policy.service';
@@ -47,6 +48,7 @@ export class ExecutionFeasibilityService {
     private readonly duplicateGuard: DuplicateGuardService,
     private readonly diversification: GlobalDiversificationService,
     private readonly pyramidPolicy: PyramidPolicyService,
+    private readonly symbolRouter?: Mt5SymbolRouter,
   ) {}
 
   /**
@@ -70,9 +72,18 @@ export class ExecutionFeasibilityService {
     const adapter = this.adapterFactory.create(brokerId);
 
     // ── 1. Broker symbol availability (#719) — cached bridge symbol list ──
+    // Check the broker that ACTUALLY serves this symbol (per symbol_route), not
+    // just the default bridge — otherwise a symbol routed to another broker
+    // (e.g. GER40 on Pepperstone) is wrongly reported unavailable (#747).
     try {
-      const names = await (adapter as any)?.getSymbols?.();
-      if (names && names.size > 0 && !names.has(ticker)) {
+      const adapterId = (adapter as any)?.id;
+      const routedBrokerId = adapterId === 'mt5' ? this.symbolRouter?.getBrokerId(ticker) : undefined;
+      const brokerSymbol = (adapterId === 'mt5' ? this.symbolRouter?.getBrokerSymbol(ticker) : ticker) || ticker;
+      const raw = await (adapter as any)?.getSymbols?.(routedBrokerId);
+      const names: Set<string> | null = raw instanceof Set
+        ? raw
+        : Array.isArray(raw) ? new Set(raw.map((n: any) => String(n).toUpperCase())) : null;
+      if (names && names.size > 0 && !names.has(brokerSymbol.toUpperCase()) && !names.has(ticker)) {
         blockers.push({
           key: 'symbol-unavailable',
           message: `Broker ${brokerId} has no ${ticker} instrument`,

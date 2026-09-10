@@ -62,6 +62,54 @@ Rules:
 
 ---
 
+## 📊 Bar data — one canonical loader; never bypass it (#751)
+
+> ⚠️ **The authoritative invariant list is
+> `.github/instructions/meta-stack-contracts.instructions.md`** (IDs `INV-*`, each with a
+> build-time guard and a QA entry). This section is the short form for people about to write
+> scoring code. If the two ever disagree, the contracts file wins — it is the one that is
+> machine-checked, including against this file's checklist below.
+
+**One function owns "give me the newest N bars for a symbol":**
+
+```ts
+this.marketData.getBars(symbolId, timeframe, count)   // MarketDataService
+```
+
+It filters by `timeframe`, takes the newest `count` rows, and returns them
+**oldest → newest** — the order every directive expects. It is already used in 19 places
+across 6 modules (automation loop, directives controller, protocol-gating, speed-scan,
+signal-envelope).
+
+| ❌ Never | Why |
+|---|---|
+| `prisma.marketBar.findMany(...)` directly in a scoring/data path | The two hand-rolled queries that existed (#751) had **both** lost the `timeframe` filter, so arrays mixed cadences (e.g. `5m` + `1d`) |
+| `orderBy: { timestamp: 'asc' }, take: N` meaning "the newest N" | `asc + take` returns the **OLDEST** N. One of the two hand-rolled queries did this and scored 34 data-rich symbols on ~4-month-old data |
+| Passing a `desc` array straight through to directives | Reverses the series — see the ordering contract below |
+
+If you must query directly, copy `MarketDataService.getBars()` exactly, **including the
+`timeframe` filter and the `.reverse()`**.
+
+### The ordering contract
+
+`DirectiveInput.bars` is **oldest → newest**, and ~34 directives read
+`bars[bars.length - 1]` as the CURRENT bar (current price, candle patterns, session
+lookups). A reversed array makes "current price" the **oldest** bar and mis-scores
+everything — no error, no warning, just plausible-looking wrong numbers. `DirectivesService`
+enforces the order at its boundary (`normalizeDirectiveBars()`), but do not rely on that to
+justify a wrong-order array: keep the boundary as the safety net, not the fix.
+
+### Per-protocol cadence
+
+Each protocol declares `recommendedTimeframe` as free text (`'5s–30s'`, `'5m–1h'`,
+`'15m–1d'`, …). `selectBaseTimeframe()` in `signals/signal-envelope.service.ts` maps that to
+a single cadence (`1m`/`5m`/`15m`/`1h`/`4h`/`1d`); pair it with
+`ProtocolDbService.getRequiredBars(protocolId)` for per-timeframe bar counts. Protocols are
+already per-timeframe by design (`xau-speed-m5`, `xau-speed-m15`, `xau-speed-1h`), so a
+sub-minute scalp protocol must never be judged on higher-timeframe bars.
+
+---
+
 ## 🎨 CSS Variables — Theme tokens only
 
 All colours MUST use CSS variables from the theme. Never hardcode a hex value for text, background, or borders.
@@ -95,3 +143,5 @@ Before writing any new function:
 2. **Check useProtocolData.js** — am I fetching protocols or runs? Use the hook.
 3. **Check nav-tree.js** — am I adding a route? Register it properly.
 4. **Check view-routes.jsx** — does my component need a VIEW_COMPONENTS entry?
+5. **Check `MarketDataService.getBars()`** — am I loading bars? Use it (guarantees the
+   `timeframe` filter and oldest → newest order). See the Bar data section above.

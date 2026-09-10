@@ -9,14 +9,13 @@
  * @created 2026-07-29 — #504 strategy page consolidation
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import ToggleSwitch from '../components/ToggleSwitch';
-import { formatPnl } from '../core/format-utils';
 import { filterStrategies, isActiveStrategy, isTradingStrategy, isScoringStrategy, isFaultyStrategy } from '../core/strategy-filters';
 import StrategyFaultBadge from '../components/StrategyFaultBadge';
 import './strategies-list.css';

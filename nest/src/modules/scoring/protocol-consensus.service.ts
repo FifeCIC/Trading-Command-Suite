@@ -22,6 +22,8 @@ import { PrismaService } from '../../database/prisma.service';
 import { ScoringService } from './scoring.service';
 import { ProtocolGatingService } from './protocol-gating.service';
 import { ProtocolDbService } from './protocol-db.service';
+import { MarketDataService } from '../market-data/market-data.service';
+import { selectBaseTimeframe } from '../../common/utils/timeframe';
 import { DirectiveGroup } from '../directives/directive-groups';
 
 export interface ProtocolVote {
@@ -65,6 +67,7 @@ export class ProtocolConsensusService {
     private readonly scoringService: ScoringService,
     private readonly protocolGating: ProtocolGatingService,
     private readonly protocolDb: ProtocolDbService,
+    private readonly marketData: MarketDataService,
   ) {}
 
   /**
@@ -83,12 +86,17 @@ export class ProtocolConsensusService {
     // ── Score through each protocol ──
     for (const protocolId of protocolIds) {
       try {
-        // Load bars for this symbol
-        const rows = await this.prisma.marketBar.findMany({
-          where: { symbolId: sym.id, timeframe: '1h' },
-          orderBy: { timestamp: 'asc' },
-          take: 100,
-        });
+        // Bars per protocol cadence via the canonical loader (#754).
+        //
+        // ⚠️ This used `orderBy: { timestamp: 'asc' }, take: 100` with a HARD-CODED '1h', so
+        // consensus was voted on the OLDEST 100 hourly bars — weeks-old data — and every
+        // protocol was judged on 1h regardless of what its `recommendedTimeframe` asked for.
+        // `getBars()` selects the NEWEST N for the requested cadence and returns them
+        // oldest → newest (INV-BAR-WINDOW, INV-SINGLE-CADENCE).
+        const cadence = selectBaseTimeframe(
+          this.protocolDb.getCached(protocolId)?.recommendedTimeframe,
+        );
+        const rows = await this.marketData.getBars(sym.id, cadence, 100);
         if (rows.length < 30) continue; // Need enough bars
 
         const bars = rows.map((r) => ({

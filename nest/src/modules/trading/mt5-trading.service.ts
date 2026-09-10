@@ -243,8 +243,50 @@ export class Mt5TradingService {
         const strategyFromComment = rawComment.includes('|')
           ? rawComment.split('|')[0]?.trim() || undefined
           : rawComment.replace(/^TCS\s+/i, '').trim() || undefined;
-        const exitPrice = Number(data.closePrice ?? data.price ?? pos.price_current ?? 0);
-        const pnl = Number(data.profit ?? pos.profit ?? 0);
+
+        // ⚠️ REALISED P&L, not floating (2026-09-10).
+        //
+        // These used to be `data.closePrice ?? pos.price_current` and
+        // `data.profit ?? pos.profit`. Both fallbacks are PRE-CLOSE values:
+        // `pos.profit` is floating profit (excludes the exit deal) and
+        // `pos.price_current` is the current quote, not the fill.
+        //
+        // Real damage: a bulk close of 26 EURUSD positions wrote
+        // exitPrice=1.16257 and pnl=-9.02 on EVERY row with an identical
+        // closedAt — buys and sells alike — because the shared fallback was
+        // applied to each. That made the book's P&L unreadable and looked like
+        // strategy losses. The bridge now returns the realised figure from the
+        // closed deal; if it cannot, we RECOMPUTE from the actual exit price
+        // rather than persisting a floating number as if it were realised.
+        const bridgePnl = data.profit;
+        const hasRealised = data.realized === true && bridgePnl != null;
+
+        // Exit price: prefer the realised deal price, then the trade server's
+        // actual fill price, and only then the pre-fill quote.
+        const exitPrice = Number(
+          (hasRealised ? data.closePrice : null) ?? data.closePrice ?? data.price ?? 0,
+        );
+
+        let pnl: number;
+        if (hasRealised) {
+          pnl = Number(bridgePnl);
+        } else {
+          // No realised figure — compute it from the exit price and the entry
+          // that we recorded, honouring side. This is strictly better than
+          // trusting a floating profit, and it cannot produce a shared value
+          // across different entries.
+          const entryPrice = Number(pos.price_open ?? 0);
+          const volume = Number(pos.volume ?? 0);
+          pnl = exitPrice > 0 && entryPrice > 0
+            ? (exitPrice - entryPrice) * volume * (posType === 'sell' ? -1 : 1)
+            : Number(bridgePnl ?? pos.profit ?? 0);
+          this.logger.warn(
+            `closePosition(${ticket}): bridge returned no realised P&L — recomputed ${pnl.toFixed(2)} ` +
+            `from entry=${entryPrice} exit=${exitPrice} side=${posType}. ` +
+            `If this recurs, the bridge build is predating the realised-profit fix.`,
+          );
+        }
+
         const existing = await this.prisma.trade.findFirst({
           where: { provider: 'mt5', brokerTicket: String(ticket), status: 'open' },
           orderBy: { openedAt: 'desc' },

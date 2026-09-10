@@ -13,7 +13,6 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { formatCurrency } from '../core/format-utils';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import Notice from '../components/Notice';
 import './daily-summary-report.css';
 import PageInfoPopover from '../components/PageInfoPopover';
 

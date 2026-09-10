@@ -13,7 +13,9 @@
     <meta name="application-name" content="Trading Command Suite" />
     <meta name="msapplication-TileColor" content="#0f172a" />
     <meta name="msapplication-tap-highlight" content="no" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- No manifest link here on purpose: vite-plugin-pwa injects it into the
+         built HTML from vite.config.js. A manual one duplicated it in dist/ and
+         404'd in dev (the plugin only emits the manifest at build time). -->
     <link rel="apple-touch-icon" href="/tcs-icon.PNG" sizes="192x192" />
     <link rel="apple-touch-icon" href="/tcs-icon.PNG" sizes="512x512" />
     <link rel="icon" type="image/png" href="/tcs-icon.PNG" />

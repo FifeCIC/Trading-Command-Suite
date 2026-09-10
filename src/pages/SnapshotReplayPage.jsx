@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { createChart, CandlestickSeries } from 'lightweight-charts';

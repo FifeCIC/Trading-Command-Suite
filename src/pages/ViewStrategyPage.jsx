@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
-import { apiGet } from '../core/api/client';
 import './view-strategy.css';
 
 function DirectiveBar({ name, score, max }) {

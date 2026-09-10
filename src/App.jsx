@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation, Link } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { analytics, trackAppView, trackSupportClick } from './analytics';
 import Breadcrumbs from './components/Breadcrumbs';
@@ -9,122 +9,17 @@ import MarketTape from './components/MarketTape';
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp';
 
 import { apiGet } from './core/api/client';
-import { FEATURE_FLAGS } from './core/features/flags';
 import { withDevTag } from './dev-runtime/tags';
 import { getPerformanceSnapshot, startPerformanceMonitoring } from './performance/monitor';
-import ArchitectureFrameworkPage from './pages/ArchitectureFrameworkPage';
 import HomeDashboard from './pages/HomeDashboard';
-import BacktestPage from './pages/BacktestPage';
-import ScenarioAnalysisPage from './pages/ScenarioAnalysisPage';
-import FaqPage from './pages/FaqPage';
-import PortfolioPage from './pages/PortfolioPage';
-import PortfolioEventsPage from './pages/PortfolioEventsPage';
-import Mt5TradingPage from './pages/Mt5TradingPage';
-import TradeHistoryPage from './pages/TradeHistoryPage';
-import TradeJournalPage from './pages/TradeJournalPage';
-import TradingPlansPage from './pages/TradingPlansPage';
-import ProtocolsPage from './pages/ProtocolsPage';
-import ReportsPage from './pages/ReportsPage';
-import ActiveSymbolsPage from './pages/ActiveSymbolsPage';
-import AddSymbolPage from './pages/AddSymbolPage';
-import ApiActivityPage from './pages/ApiActivityPage';
-import ApiEndpointsPage from './pages/ApiEndpointsPage';
-import DatabaseTablesPage from './pages/DatabaseTablesPage';
-import BacktestDataPage from './pages/BacktestDataPage';
-import DailySummaryReportPage from './pages/DailySummaryReportPage';
-import DataAreaLandingPage from './pages/DataAreaLandingPage';
-import DiagramsPage from './pages/DiagramsPage';
-import DataStatusPage from './pages/DataStatusPage';
-import DataElementsPage from './pages/DataElementsPage';
-import DecoderPage from './pages/DecoderPage';
-import DailyBriefingPage from './pages/DailyBriefingPage';
-import DecisionTrailPage from './pages/DecisionTrailPage';
-import DirectivesManagerPage from './pages/DirectivesManagerPage';
-import ScoringRunsPage from './pages/ScoringRunsPage';
-import ScoringActivityLogsPage from './pages/ScoringActivityLogsPage';
-import ScoringOverviewPage from './pages/ScoringOverviewPage';
-import EventsCalendarPage from './pages/EventsCalendarPage';
-import ExecutionQueuePage from './pages/ExecutionQueuePage';
-import ImportJobsPage from './pages/ImportJobsPage';
-import Mt5StatusPage from './pages/Mt5StatusPage';
-import NewsIntelPage from './pages/NewsIntelPage';
 import PlatformComparisonsPage from './pages/PlatformComparisonsPage';
 import PluginTabSkeletonPage from './pages/PluginTabSkeletonPage';
-import TradingStrategiesPage from './pages/TradingStrategiesPage';
-import StrategyComparisonPage from './pages/StrategyComparisonPage';
-import RiskControlsPage from './pages/RiskControlsPage';
-import CacheMonitorPage from './pages/CacheMonitorPage';
-import PositionsMonitorPage from './pages/PositionsMonitorPage';
-import LadderPage from './pages/LadderPage';
-import SeesArenaPage from './pages/SeesArenaPage';
-import ABTestingPage from './pages/ABTestingPage';
-import AICostsPage from './pages/AICostsPage';
-import PerformanceLabPage from './pages/PerformanceLabPage';
-import AlertCenterPage from './pages/AlertCenterPage';
-import AutomationDashboardPage from './pages/AutomationDashboardPage';
-import AutomationRulesPage from './pages/AutomationRulesPage';
-import SetupWizardPage from './pages/SetupWizardPage';
-import ServerControlsPage from './pages/ServerControlsPage';
-import ChartComparisonPage from './pages/ChartComparisonPage';
-import AnalyseSymbolPage from './pages/AnalyseSymbolPage';
-import AccountsDashboardPage from './pages/AccountsDashboardPage';
-import OrderTestingPage from './pages/OrderTestingPage';
-import TradingTimelinePage from './pages/TradingTimelinePage';
-import SettingsPage from './pages/SettingsPage';
-import StrategiesPage from './pages/StrategiesPage';
-import StrategyWizardPage from './pages/StrategyWizardPage';
-import SymbolsBrowserPage from './pages/SymbolsBrowserPage';
-import SymbolPage from './pages/SymbolPage';
-import GlobalAllocatorPage from './pages/GlobalAllocatorPage';
 import DataManagementPage from './pages/DataManagementPage';
 import TopMoversPage from './pages/TopMoversPage';
 import SystemHealthPage from './pages/SystemHealthPage';
-import SpeedTradingPage from './pages/SpeedTradingPage';
-import SpeedScannerPage from './pages/SpeedScannerPage';
-import BtcSpeedTradingPage from './pages/BtcSpeedTradingPage';
-import GoldSpeedTradingPage from './pages/GoldSpeedTradingPage';
-import PortfolioLabPage from './pages/PortfolioLabPage';
-import SnapshotLibraryPage from './pages/SnapshotLibraryPage';
-import ExitSignalsPage from './pages/ExitSignalsPage';
-import StockInvestigationPage from './pages/StockInvestigationPage';
-import PersonalFinancesPage from './pages/PersonalFinancesPage';
-import TradingStylesPage from './pages/TradingStylesPage';
-import ObjectivesPage from './pages/ObjectivesPage';
-import CalculatorsPage from './pages/CalculatorsPage';
-import SystemLogPage from './pages/SystemLogPage';
-import TrainingCandlePatternsPage from './pages/TrainingCandlePatternsPage';
-import CandlePatternsGuidePage from './pages/CandlePatternsGuidePage';
-import ThemePage from './pages/ThemePage';
-import ThemeLabPage from './pages/ThemeLabPage';
-import ThemeLabMotion from './pages/ThemeLabMotion';
-import ThemeLabTransitions from './pages/ThemeLabTransitions';
-import ThemeLabScroll from './pages/ThemeLabScroll';
-import ThemeLabPopover from './pages/ThemeLabPopover';
-import ComponentLabPage from './pages/ComponentLabPage';
-import ResponsiveLayoutLabPage from './pages/ResponsiveLayoutLabPage';
-import ChartsLabPage from './pages/ChartsLabPage';
-import UserWatchlistsPage from './pages/UserWatchlistsPage';
-import FeatureLabPage from './pages/FeatureLabPage';
-import LabLandingPage from './pages/LabLandingPage';
-import LabPage from './pages/LabPage';
-import ScoringDebugLab from './pages/ScoringDebugLab';
-import SnapshotReplayPage from './pages/SnapshotReplayPage';
-import SocialNetworksPage from './pages/SocialNetworksPage';
-import SupportResistancePage from './pages/SupportResistancePage';
-import VolatilityAnalysisPage from './pages/VolatilityAnalysisPage';
-import TechnicalIndicatorsPage from './pages/TechnicalIndicatorsPage';
-import PatternScannerPage from './pages/PatternScannerPage';
-import MacroMonitorPage from './pages/MacroMonitorPage';
-import EarningsCalendarPage from './pages/EarningsCalendarPage';
-import PriceForecastPage from './pages/PriceForecastPage';
-import SectorRotationPage from './pages/SectorRotationPage';
-import MarketCorrelationsPage from './pages/MarketCorrelationsPage';
-import CapabilityMapPage from './pages/CapabilityMapPage';
-import SourcesPage from './pages/SourcesPage';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
 import ScreenOptions from './components/ScreenOptions';
 import PageInfoPopover from './components/PageInfoPopover';
-import VIEW_META from './core/view-meta';
 import { VIEW_EXPLANATIONS } from './core/view-explanations';
 import { TopRowSlotProvider, TopRowSlotHost } from './core/top-row-slot';
 
@@ -135,8 +30,7 @@ import './theme/packs/ai-original.css';
 import './theme/packs/scifi.css';
 import './theme/packs/slate.css';
 import { featureFlags } from './utils/featureFlags';
-import { NAV_TREE, PRIMARY_PAGES, QUICK_MENU, getNavStructure, getFilteredNavStructure } from './core/nav-tree';
-import { getExperienceLevel } from './core/experience-levels';
+import { NAV_TREE, getNavStructure } from './core/nav-tree';
 import { PLUGIN_TAB_SKELETONS } from './pages/plugin-tab-skeletons';
 import { VIEW_COMPONENTS } from './core/view-routes.jsx';
 
@@ -165,10 +59,6 @@ const THEME_CARDS = [
 ];
 
 
-
-function BadgePill({ label, status = 'neutral' }) {
-  return <span className={`badge-pill badge-${status}`}>{label}</span>;
-}
 
 function AccordionBlock({ title, defaultOpen = false, children }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -239,7 +129,6 @@ function AppShell() {
   const [ffState, setFfState] = useState(() => featureFlags.getFlags());
 
 
-  const toggleDevOverlay = useUiStore((state) => state.toggleDevOverlay);
   const devOverlayOpen = useUiStore((state) => state.devOverlayOpen);
   const closeDevOverlay = useUiStore((state) => state.closeDevOverlay);
   const themeMode = useUiStore((state) => state.themeMode);
@@ -283,7 +172,7 @@ function AppShell() {
     };
     setScreenOptionsView(VIEW_TO_OPTIONS[viewId] || null);
   }, [primaryArea, secondaryView]);
-  const { adapters, meta } = useThemeRuntime({ mode: themeMode, packId: themePack });
+  const { meta } = useThemeRuntime({ mode: themeMode, packId: themePack });
   const availablePacks = Array.isArray(meta?.availablePacks) ? meta.availablePacks : [];
   const availableAdapters = Array.isArray(meta?.availableAdapters) ? meta.availableAdapters : [];
   const diagnostics = Array.isArray(meta?.diagnostics) ? meta.diagnostics : [];

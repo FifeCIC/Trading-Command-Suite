@@ -115,7 +115,6 @@ import PlatformComparisonsPage from '../pages/PlatformComparisonsPage.jsx';
 // ── Backtest / Strategies ──
 import BacktestPage from '../pages/BacktestPage.jsx';
 import ScenarioAnalysisPage from '../pages/ScenarioAnalysisPage.jsx';
-import StrategiesPage from '../pages/StrategiesPage.jsx';
 
 // ── Status / System ──
 import SystemLogPage from '../pages/SystemLogPage.jsx';
@@ -187,7 +186,8 @@ import GlobalAllocatorPage from '../pages/GlobalAllocatorPage.jsx';
 import RoadmapPage from '../pages/RoadmapPage.jsx';
 import MonitoringPage from '../pages/MonitoringPage.jsx';
 import DashboardPage from '../pages/DashboardPage.jsx';
-import HomeDashboard from '../pages/HomeDashboard.jsx';
+import ScreenBoardPage from '../pages/ScreenBoardPage.jsx';
+import ScreenCockpitPage from '../pages/ScreenCockpitPage.jsx';
 
 // ── MAP ──────────────────────────────────────────────────────────────────────
 export const VIEW_COMPONENTS = {
@@ -305,7 +305,6 @@ export const VIEW_COMPONENTS = {
   'commands': CommandsReferencePage,
   'system-log': SystemLogPage,
   'health-check': HealthDashboardPage,
-  'commands': CommandsReferencePage,
   'setup': SetupWizardPage,
   'faq': FaqPage,
   'settings': SettingsPage,
@@ -318,6 +317,7 @@ export const VIEW_COMPONENTS = {
   'capability-map': CapabilityMapPage,
   'meta-stack-status': MetaStackStatusPage,
   'dashboard': DashboardPage,
+  'screen': ScreenBoardPage,
   'qa-testing': QATestingPage,
   'architecture-framework': ArchitectureFrameworkPage,
   'diagrams': DiagramsPage,
@@ -327,6 +327,7 @@ export const VIEW_COMPONENTS = {
   // Lab
   'component-lab': ComponentLabPage,
   'widget-board': WidgetBoardLabPage,
+  'screen-cockpit': ScreenCockpitPage,
   'responsive-layout-lab': ResponsiveLayoutLabPage,
   'charts-lab': ChartsLabPage,
   'theme-lab': ThemeLabPage,

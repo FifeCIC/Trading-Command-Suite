@@ -389,6 +389,30 @@ export class AutomationController {
         protocolsEnabled: loopState.protocolsEnabled ?? true,
         tradingEnabled: loopState.tradingEnabled ?? false,
       },
+      // EFFECTIVE EXECUTION STATE (2026-09-10).
+      //
+      // `layers.tradingEnabled` alone is NOT what decides whether an order is
+      // placed — Gate 7 requires the layer flag AND the per-broker flag. The UI
+      // read only the layer flag, so the app could show "trading enabled" while
+      // dispatching nothing but paper rows. This block states the RESULT so the
+      // two can never disagree silently again.
+      execution: {
+        /** True only when the layer AND at least one broker allow real orders. */
+        willPlaceRealOrders: Boolean(
+          (loopState.tradingEnabled ?? false) &&
+          Object.values(loopState.brokerStates || {}).some((bs: any) => bs?.tradingEnabled),
+        ),
+        mode: ((loopState.tradingEnabled ?? false) &&
+          Object.values(loopState.brokerStates || {}).some((bs: any) => bs?.tradingEnabled))
+          ? 'live'
+          : (loopState.tradingEnabled ?? false)
+            ? 'paper (no broker enabled)'
+            : 'paper (trading layer off)',
+        layerTradingEnabled: loopState.tradingEnabled ?? false,
+       brokerTradingEnabled: Object.fromEntries(
+          Object.entries(loopState.brokerStates || {}).map(([id, bs]: [string, any]) => [id, Boolean(bs?.tradingEnabled)]),
+        ),
+      },
       decisionLogStats: {
         persisted: loopState.decisionLogPersisted ?? 0,
         suppressed: loopState.decisionLogSuppressed ?? 0,
@@ -554,7 +578,7 @@ export class AutomationController {
 
   /** POST /api/automation/config — update broker config */
   @Post('config')
-  updateConfig(@Body() body: { brokerId: string; tradingEnabled?: boolean; tradeThreshold?: number; requireConfirmation?: boolean; scoreIntervalMs?: number }) {
+  async updateConfig(@Body() body: { brokerId: string; tradingEnabled?: boolean; tradeThreshold?: number; requireConfirmation?: boolean; scoreIntervalMs?: number }) {
     // Auto-create broker state if missing
     if (!this.loop.state.brokerStates[body.brokerId]) {
       this.loop.state.brokerStates[body.brokerId] = {
@@ -567,7 +591,14 @@ export class AutomationController {
       };
     }
     const bs = this.loop.state.brokerStates[body.brokerId];
-    if (body.tradingEnabled !== undefined) bs.tradingEnabled = body.tradingEnabled;
+    if (body.tradingEnabled !== undefined) {
+      bs.tradingEnabled = body.tradingEnabled;
+      // PER-BROKER PERSISTENCE (2026-09-10): without this the flag lived only in
+      // memory and reset to false on every restart, so automated trading shut
+      // itself off silently (94 -> 9 -> 1 trades/month). Persist the explicit
+      // choice so a restart restates it rather than overruling it.
+      await this.loop.persistBrokerTradingFlag(body.brokerId, body.tradingEnabled);
+    }
     if (body.tradeThreshold !== undefined) bs.tradeThreshold = body.tradeThreshold;
     if (body.requireConfirmation !== undefined) bs.requireConfirmation = body.requireConfirmation;
     if (body.scoreIntervalMs !== undefined) {

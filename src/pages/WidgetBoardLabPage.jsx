@@ -13,6 +13,7 @@
  */
 import PageInfoPopover from '../components/PageInfoPopover';
 import WidgetBoard from '../components/WidgetBoard';
+import { defaultWidgetsFor } from '../core/board-defaults';
 
 export default function WidgetBoardLabPage() {
   return (
@@ -40,10 +41,7 @@ export default function WidgetBoardLabPage() {
       </header>
 
       <section className="tl-section">
-        <WidgetBoard
-          boardId="lab"
-          defaultWidgets={['market-context', 'top-signals', 'positions', 'system-health']}
-        />
+        <WidgetBoard boardId="lab" defaultWidgets={defaultWidgetsFor('lab')} />
       </section>
     </div>
   );

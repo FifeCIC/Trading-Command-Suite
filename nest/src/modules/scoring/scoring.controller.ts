@@ -31,7 +31,6 @@ import { ScoreHistoryService } from './score-history.service';
 import { ScoreVelocityService } from './score-velocity.service';
 import { DirectiveImpactService } from './directive-impact.service';
 import { StrategyCompetitionService } from './strategy-competition.service';
-import { PredictiveScoringService } from './predictive-scoring.service';
 import { OutcomeTrackerService } from './outcome-tracker.service';
 import { SectorRotationService } from './sector-rotation.service';
 import { SeasonalAffinityService } from './seasonal-affinity.service';
@@ -49,7 +48,6 @@ export class ScoringController {
     private readonly scoreVelocityService: ScoreVelocityService,
     private readonly directiveImpactService: DirectiveImpactService,
     private readonly competitionService: StrategyCompetitionService,
-    private readonly predictiveService: PredictiveScoringService,
     private readonly outcomeTracker: OutcomeTrackerService,
     private readonly sectorRotation: SectorRotationService,
     private readonly degradationService: ProviderDegradationService,
@@ -309,21 +307,6 @@ export class ScoringController {
   @ApiOperation({ summary: 'Get competition status' })
   getCompetitionStatus() {
     return this.competitionService.getStatus();
-  }
-
-  @Get('predictive')
-  getPredictive(
-    @Query('symbols') symbols?: string,
-    @Query('horizon') horizon?: string,
-  ) {
-    const symbolList = symbols ? symbols.split(',').map((s) => s.trim().toUpperCase()) : undefined;
-    const horizonDays = parseInt(horizon || '7', 10);
-    const predictions = this.predictiveService.getPredictions(symbolList, horizonDays);
-    return {
-      predictions,
-      generatedAt: new Date().toISOString(),
-      disclaimer: 'PROTOTYPE — Predictive scores are experimental. Based on scheduled events only.',
-    };
   }
 
   // ── Sector Rotation ──

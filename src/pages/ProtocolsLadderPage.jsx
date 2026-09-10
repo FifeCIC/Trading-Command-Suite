@@ -10,7 +10,7 @@
  * @rebuilt 2026-08-07 — added aggregation, per-protocol ranking
  */
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useProtocolData } from '../core/useProtocolData';
@@ -20,7 +20,7 @@ import PageInfoPopover from '../components/PageInfoPopover';
 import './protocols-ladder.css';
 
 import { scoreClass, DIRECTION_MODE_LABELS } from '../core/signal-utils';
-import { usePersistentState, usePersistentChoice } from '../hooks/usePersistentState';
+import { usePersistentChoice } from '../hooks/usePersistentState';
 
 export default function ProtocolsLadderPage() {
   const [sortBy, setSortBy] = usePersistentChoice('protocols-ladder:sortBy', 'top-symbol', ['top-symbol', 'aggregate', 'avg']);

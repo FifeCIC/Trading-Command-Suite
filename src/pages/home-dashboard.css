@@ -411,35 +411,10 @@
   }
 }
 
-/* ── Dashboard 2-Column Grid ────────────────────────────── */
-/* Page container — .main-stage has no padding by design; each view
-   brings its own (matches .sig-page / .sm-page conventions). */
+/* ── Page container ─────────────────────────────────────── */
+/* .main-stage has no padding by design; each view brings its own
+   (matches .sig-page / .sm-page conventions). */
 .dash-page { padding: 1.25rem 1.5rem; }
-.dash-page .mcw-widget { margin-bottom: 1rem; }
-
-.dash-grid {
-  display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-@media (max-width: 860px) {
-  .dash-grid { grid-template-columns: 1fr; }
-}
-.dash-col-main { display: flex; flex-direction: column; gap: 0.75rem; }
-.dash-col-side { display: flex; flex-direction: column; gap: 0.75rem; }
-
-.dash-card {
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--line, #334155);
-  border-radius: 10px;
-  padding: 0.85rem 1rem;
-}
-.dash-card-compact {
-  padding: 0.55rem 0.85rem;
-}
-.dash-card-compact h3 { margin: 0 0 0.35rem; font-size: 0.82rem; }
-.dash-card h3 { font-size: 0.88rem; margin: 0 0 0.6rem; color: var(--ink, #e2e8f0); }
 
 .dash-card-stats { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; }
 .dash-stat { display: flex; flex-direction: column; gap: 0.1rem; min-width: 90px; }
@@ -447,14 +422,6 @@
 .dash-stat-value { font-size: 0.9rem; font-weight: 700; color: var(--ink, #e2e8f0); }
 .dash-stat-value.ok { color: var(--color-profit, #22c55e); }
 .dash-stat-value.err { color: var(--danger, #ef4444); }
-
-.dash-pnl-broker { border-top: 1px solid var(--line); margin-top: 0.5rem; padding-top: 0.5rem; display: flex; gap: 1.25rem; }
-.dash-pnl-broker-item { display: flex; align-items: center; gap: 0.5rem; }
-.dash-pnl-broker-label { font-size: 0.7rem; color: var(--ink-soft); text-transform: uppercase; min-width: 30px; }
-.dash-pnl-broker-value { font-size: 0.85rem; font-weight: 700; }
-.dash-pnl-broker-value.ok { color: var(--color-profit, #22c55e); }
-.dash-pnl-broker-value.err { color: var(--danger, #ef4444); }
-.dash-pnl-broker-detail { font-size: 0.65rem; color: var(--ink-soft); }
 
 /* ── Session dot (theme-aware) ───────────────────────────── */
 .dash-session-dot-open { background: var(--color-profit, #22c55e); }
@@ -497,8 +464,6 @@
 }
 .dash-broker-badge.badge-live { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
 .dash-broker-badge.badge-practice { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
-.dash-broker-badge.badge-demo { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
-.dash-broker-badge.badge-isa { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
 .dash-broker-badge.badge-off { background: rgba(239, 68, 68, 0.15); color: #f87171; }
 .dash-broker-metrics {
   display: flex;
@@ -531,7 +496,6 @@
   font-size: 0.6rem;
   color: #64748b;
 }
-.dash-broker-pnl .dash-broker-mval { font-size: 0.88rem; }
 
 /* Total row */
 .dash-broker-total {
@@ -649,8 +613,6 @@
 .dash-sell { color: #ef4444; font-weight: 600; }
 .dash-profit { color: #22c55e; font-weight: 600; }
 .dash-loss { color: #ef4444; font-weight: 600; }
-.dash-buy { color: #22c55e; font-weight: 600; }
-.dash-sell { color: #ef4444; font-weight: 600; }
 .dash-time { color: #64748b; font-size: 0.72rem; white-space: nowrap; }
 
 /* ── Market Sessions ────────────────────────────────────── */
@@ -722,18 +684,6 @@
 .dash-news-summary { margin-top: 0.4rem; font-size: 0.7rem; color: #64748b; }
 
 /* ── Hot Picks Widget ───────────────────────────────────── */
-.dash-hot-picks { position: relative; }
-.dash-hp-refresh {
-  font-size: 0.7rem;
-  color: var(--accent, #0ea5a6);
-  animation: dash-hp-spin 1.5s linear infinite;
-  display: inline-block;
-}
-@keyframes dash-hp-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
 .dash-hp-list {
   display: flex;
   flex-direction: column;

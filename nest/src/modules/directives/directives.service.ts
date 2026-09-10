@@ -212,31 +212,57 @@ export class DirectivesService {
    *  @param directiveFilter - Optional set of directive IDs to run. If omitted, runs ALL registered directives.
    *    Used by protocol-gating to avoid running directives not in the active protocol (#389). */
   /**
-   * Coerce bar timestamps to Date. Some upstream producers (MT5 bridge
-   * fallbacks, serialized snapshots) pass ISO strings even though MarketBar
-   * declares `timestamp: Date`. Directives call `.getTime()`/`.getUTCDay()`
-   * on it — a string throws mid-scoring (session-open-effect, liquidity-check).
-   * Normalizing once at the directive boundary protects every directive.
+   * Prepare the bar arrays handed to directives: coerce timestamps to Date AND
+   * enforce **oldest → newest** order.
+   *
+   * ⚠️ CONTRACT FILE — this method is the directive boundary's guard for
+   * INV-BAR-ORDER. Deleting the sort silently reverses every order-sensitive directive.
+   * Enforced at build time by `nest/scripts/validate-pipeline-contracts.cjs` (canary
+   * INV-BAR-ORDER, which checks comment-stripped source so commenting the sort out fails).
+   *
+   * ⚠️ ORDER IS PART OF THE CONTRACT, AND CALLERS GET IT WRONG (#751, fixed
+   * 2026-09-10). `DirectiveInput.bars` is documented "oldest → newest", and ~34
+   * directives read `bars[bars.length - 1]` as the CURRENT bar (current price,
+   * candle-pattern detection, session lookups). But the natural query for "the
+   * newest N bars" is `orderBy: { timestamp: 'desc' }, take: N` — and callers
+   * handed that array straight through, reversing the series. Consequence:
+   * "current price" was the OLDEST bar in the window and every pattern compared
+   * the wrong candles. It survived because scores still look plausible; the
+   * live tell was `/scoring/arena/compare` reporting `marketStatus.asOf` as the
+   * window's OLDEST bar.
+   *
+   * Sorting here protects every directive, present and future, whichever order a
+   * caller supplies, and keeps the evaluation cache key order-independent
+   * (createEvaluationFingerprint serializes the bars).
+   *
+   * The previous name (normalizeBarTimestamps) hid the ordering duty: callers
+   * that sorted assumed it handled order, callers that did not assumed it did
+   * not matter.
    */
-  private normalizeBarTimestamps(input: DirectiveInput): void {
-    const coerce = (bars: any[] | undefined) => {
+  private normalizeDirectiveBars(input: DirectiveInput): void {
+    const prepare = (bars: any[] | undefined) => {
       if (!bars) return;
       for (const b of bars) {
         if (b && b.timestamp && !(b.timestamp instanceof Date)) {
           b.timestamp = new Date(b.timestamp);
         }
       }
+      // Stable within equal timestamps (duplicate rows from two providers).
+      bars.sort(
+        (a, b) => (a?.timestamp?.getTime?.() ?? 0) - (b?.timestamp?.getTime?.() ?? 0),
+      );
     };
-    coerce(input.bars);
-    coerce((input as any).dayBars);
-    coerce((input as any).hourBars);
-    coerce((input as any).min15Bars);
+    prepare(input.bars);
+    prepare((input as any).dayBars);
+    prepare((input as any).hourBars);
+    prepare((input as any).min15Bars);
   }
 
   async runAll(input: DirectiveInput, directiveFilter?: Set<string>): Promise<Map<string, DirectiveResult>> {
-    // Normalize bar timestamps BEFORE fingerprinting so the cache key is stable
-    // and every directive receives a real Date (some callers pass ISO strings).
-    this.normalizeBarTimestamps(input);
+    // Normalize bar timestamps/order BEFORE fingerprinting so the cache key is
+    // stable (and order-independent) and every directive receives real Dates in
+    // oldest → newest order — see normalizeDirectiveBars for why that matters.
+    this.normalizeDirectiveBars(input);
 
     // 2026-09-08: the former symbol+lastTimestamp+length key allowed one
     // protocol/filter or timeframe bundle to poison another. Fingerprint all

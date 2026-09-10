@@ -19,7 +19,6 @@ import { apiGet, apiPost } from '../core/api/client';
 import { getAssetType } from '../core/asset-types';
 import { STYLE_DEFAULTS } from '../core/broker-utils';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import EmptyState from '../components/EmptyState';
 import StrategyWizard from '../components/StrategyBuilder/StrategyWizard';
 import '../core/forms.css';
 import '../components/StrategyBuilder/strategy-wizard.css';

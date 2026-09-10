@@ -41,6 +41,11 @@ export interface StrategySummary {
   slPct?: number | null;
   tpPct?: number | null;
   cooldownMinutes?: number;
+  /**
+   * Session gate (2026-09-10) — declared market session tags this bot may act
+   * in ('asian' | 'london' | 'us'). null/empty = ungated. See session-window.ts.
+   */
+  sessionWindow?: string | null;
   maxPositions?: number;
   /** #344 pyramid averaging — moved here from ScoringStrategy (2026-08-27). */
   maxPyramidTiers?: number;
@@ -221,6 +226,8 @@ export class TradingStrategyService {
         slPct: s.slPct,
         tpPct: s.tpPct,
         cooldownMinutes: s.cooldownMinutes,
+        // Session gate window — consumed by processSignalQueues (Gate 4.5).
+        sessionWindow: (s as any).sessionWindow ?? null,
         maxPositions: s.maxPositions,
         maxPyramidTiers: (s as any).maxPyramidTiers ?? 1,
         lastEvaluatedAt: lastEval?.evaluatedAt ? new Date(lastEval.evaluatedAt).toISOString() : null,
@@ -876,6 +883,8 @@ export class TradingStrategyService {
     name: string; symbol: string; protocolId: string;
     brokerId: string; mode: string; timeframe: string;
     baseSize: number; slPct: number; tpPct: number; minComposite: number;
+    /** Session gate window (see session-window.ts). null/absent = ungated. */
+    sessionWindow?: string[] | null;
   }>): Promise<{ created: number; skipped: number; scoringCreated: number }> {
     if (!this.prisma.isAvailable) {
       return { created: 0, skipped: strategies.length, scoringCreated: 0 };
@@ -918,7 +927,7 @@ export class TradingStrategyService {
 
       // Create trading strategy
       try {
-        await (this.prisma as any).tradingStrategy.create({
+        const createdBot = await (this.prisma as any).tradingStrategy.create({
           data: {
             name: s.name,
             symbol: s.symbol,
@@ -931,9 +940,31 @@ export class TradingStrategyService {
             tpPct: s.tpPct,
             minComposite: s.minComposite,
             scoringStrategyId: scoringId,
+            // Session gate — JSON array of tags, or null when ungated.
+            sessionWindow: s.sessionWindow?.length ? JSON.stringify(s.sessionWindow) : null,
             active: true,
           },
         });
+
+        // Queue routing requires a protocol SUBSCRIPTION (strategy_protocol).
+        // SignalQueueService routes by subscription, NOT by trading_strategy —
+        // a bot with no subscription can never receive a queued signal, so it
+        // stays invisible in the bot queue and can never trade via that path.
+        // NOTE: `protocolId` here is the protocol SLUG (matching the routing
+        // records at runtime), while trading_strategy.protocolId may hold a UUID.
+        try {
+          await (this.prisma as any).strategyProtocol.create({
+            data: {
+              strategyId: createdBot.id,
+              protocolId: s.protocolId,
+              role: 'long',
+              sortOrder: 0,
+            },
+          });
+        } catch (subErr) {
+          this.logger.warn(`Could not subscribe ${s.name} to ${s.protocolId}: ${(subErr as Error).message}`);
+        }
+
         created++;
       } catch (err) {
         this.logger.warn(`Could not create trading strategy ${s.name}: ${(err as Error).message}`);

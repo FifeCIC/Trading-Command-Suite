@@ -7,7 +7,7 @@
  *
  * Lane colors distinguish modules. Dashed borders = planned/roadmap.
  */
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import PageInfoPopover from '../components/PageInfoPopover';

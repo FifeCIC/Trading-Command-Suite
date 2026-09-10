@@ -148,7 +148,30 @@ export class PaperTradingService {
     const pos = this.positions.get(ticket);
     if (!pos) return { success: false, error: `Position #${ticket} not found` };
 
-    const exitPrice = this.getCurrentPrice(pos.symbol) ?? pos.currentPrice ?? pos.entryPrice;
+    // ⚠️ NEVER fall back to `pos.entryPrice` as the exit price (fixed 2026-09-10).
+    //
+    // The old chain was `getCurrentPrice() ?? pos.currentPrice ?? pos.entryPrice`.
+    // The last link substitutes the ENTRY price for the EXIT, which forces
+    // `pnl = 0` and books a fabricated break-even trade as a real close. It also
+    // incremented totalTrades / winning / losing counters, so a missing quote
+    // silently polluted the paper statistics.
+    //
+    // This is the same defect class as the MT5 bridge P&L fabrication found the
+    // same day: a plausible-but-wrong number substituted where an error belongs.
+    // A close with no observable price is a FAILED close, and must say so.
+    const exitPrice = this.getCurrentPrice(pos.symbol) ?? pos.currentPrice ?? null;
+    if (exitPrice == null || !Number.isFinite(exitPrice)) {
+      this.logger.warn(
+        `📝 PAPER CLOSE REFUSED #${ticket} ${pos.symbol} — no observable exit price ` +
+        `(live price and currentPrice both unavailable). Position left OPEN rather than ` +
+        `booking a fabricated break-even close.`,
+      );
+      return {
+        success: false,
+        error: `No exit price available for ${pos.symbol} — position remains open`,
+      };
+    }
+
     const pnl = (exitPrice - pos.entryPrice) * pos.quantity * (pos.side === 'sell' ? -1 : 1);
     this.realizedPnl += pnl;
     this.totalTrades++;
@@ -188,7 +211,10 @@ export class PaperTradingService {
     let totalPnl = 0;
     let closed = 0;
     for (const [ticket, pos] of this.positions) {
-      const currentPrice = this.getCurrentPrice(pos.symbol) ?? pos.currentPrice ?? pos.entryPrice;
+      // No entryPrice fallback — see closePosition(). An unpriceable position is
+      // skipped, not silently treated as break-even.
+      const currentPrice = this.getCurrentPrice(pos.symbol) ?? pos.currentPrice ?? null;
+      if (currentPrice == null || !Number.isFinite(currentPrice)) continue;
       const unrealizedPnl = (currentPrice - pos.entryPrice) * pos.quantity * (pos.side === 'sell' ? -1 : 1);
       if (unrealizedPnl > 0) {
         const result = await this.closePosition(ticket);

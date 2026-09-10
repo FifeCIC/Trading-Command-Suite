@@ -35,6 +35,18 @@ export interface Mt5BridgeHealth {
   balance: number | null;
   equity: number | null;
   connectionErrors: number;
+  /**
+   * Broker server-clock offset measured by the bridge and applied inside `utc_iso()`
+   * (broker server time − true UTC, e.g. 10800 = the server is 3h ahead). #750.
+   *
+   * ⚠️ Optional on purpose: its ABSENCE means the bridge is running a build from
+   * before #750 — raw server-clock epochs are being stamped as UTC again, so every
+   * MT5 timestamp lands ~3h in the future and `computeMarketStatus` fails OPEN on
+   * stale data. `AlertTriggerService` raises `bridge-clock-skew` for exactly that.
+   * If you change the field name, change it in mt5_bridge_v2.py and that check too.
+   */
+  serverUtcOffsetSeconds?: number;
+  serverUtcOffsetHours?: number;
 }
 
 export interface Mt5BrokerInfo {

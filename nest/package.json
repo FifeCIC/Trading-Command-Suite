@@ -1,6 +1,6 @@
 {
   "name": "nest",
-  "version": "0.5.4",
+  "version": "0.6.5",
   "description": "",
   "author": "",
   "private": true,
@@ -12,8 +12,10 @@
     "seed:strategies": "ts-node prisma/seed-strategies.ts"
   },
   "scripts": {
-    "prebuild": "npx rimraf dist && node scripts/validate-protocol-directions.cjs",
+    "prebuild": "npx rimraf dist && node scripts/validate-protocol-directions.cjs && node scripts/validate-pipeline-contracts.cjs",
     "build": "tsc -p tsconfig.build.json",
+    "seed:watchlists": "ts-node prisma/seed-watchlists.ts",
+    "seed:symbol-onboarding": "ts-node prisma/seed-symbol-onboarding.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

@@ -15,8 +15,10 @@
  *     snap that the pointer is committing to is visible;
  *   - the drop target is shown by the library's own placeholder.
  *
- * Layout is stored per breakpoint under `widgets-layout:<boardId>`; the widget
- * list (which widgets, in what order) lives under `widgets:<boardId>`.
+ * Layout is persisted by `src/core/board-store.js` — one versioned document per
+ * board (`tcs:view-state:widgets-board:<boardId>`), not the retired
+ * `widgets:<id>` / `widgets-layout:<id>` split keys. Read that file before
+ * changing what a board stores.
  *
  * Keyboard: react-grid-layout is pointer-only, so each tile exposes a grip that
  * opens an arrange strip (WCAG 2.2 AA needs a non-pointer path). Arrow keys on
@@ -583,5 +585,3 @@ function WidgetLibrary({ layout, onAdd }) {
     </div>
   );
 }
-
-export { WidgetLibrary };

@@ -1,0 +1,5 @@
+{
+  "symbols": ["XAGUSD"],
+  "protocolId": "xau-speed-v1",
+  "notes": "Silver (XAGUSD) feeds the gold speed family alongside XAUUSD. Both are priced live on both MT5 bridges. Registered 2026-09-10 after a 'Not scored' ladder card revealed XAGUSD was assigned to xau-speed-v1 with no symbol row."
+}

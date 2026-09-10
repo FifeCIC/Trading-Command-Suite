@@ -43,7 +43,3 @@ export function getWidget(id) {
 export function getWidgets() {
   return Array.from(registry.values());
 }
-
-export function isRegistered(id) {
-  return registry.has(id);
-}

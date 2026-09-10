@@ -15,6 +15,7 @@ import { SymbolDataCacheService } from './symbol-data-cache.service';
 import { getPreset, ProtocolPreset } from './protocol-presets';
 import type { MarketBar } from '../directives/interfaces/directive.interface';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
+import { MarketDataService } from '../market-data/market-data.service';
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -62,6 +63,7 @@ export class ProtocolRunnerService {
     private readonly prisma: PrismaService,
     private readonly cache: SymbolDataCacheService,
     private readonly protocolGating: ProtocolGatingService,
+    private readonly marketData: MarketDataService,
   ) {}
 
   /**
@@ -153,10 +155,18 @@ export class ProtocolRunnerService {
     preset: ProtocolPreset,
   ): Promise<SymbolScoreResult> {
     const bars = await this.loadBars(symbol);
+    // Higher-timeframe bundle (1d/1h/15m) MUST be supplied: without it every MTF
+    // directive silently evaluates from the base bars only and reports a plausible
+    // number that is not the strategy's reading (#735, MST-004).
+    const sym = await this.prisma.symbol.findFirst({ where: { ticker: symbol.toUpperCase() } });
+    const { dayBars, hourBars, min15Bars } = sym
+      ? await this.protocolGating.loadHigherTfBundle(sym.id, preset.id)
+      : { dayBars: [], hourBars: [], min15Bars: [] };
     const gated = await this.protocolGating.scoreWithGating(
       symbol.toUpperCase(),
       bars,
       preset.id,
+      { dayBars, hourBars, min15Bars },
     );
     const signalClass: SymbolScoreResult['signalClass'] =
       gated.signal === 'BUY' || gated.signal === 'STRONG_BUY' ? 'bullish' :
@@ -200,22 +210,20 @@ export class ProtocolRunnerService {
 
         if (!sym) return [];
 
-        const bars = await this.prisma.marketBar.findMany({
-          where: { symbolId: sym.id, timeframe: '1d' },
-          orderBy: { timestamp: 'desc' },
-          take: 60,
-        });
+        // ⚠️ #754 — was `prisma.marketBar.findMany({ ... take: 60 })` then `.reverse()`. The
+        // ordering was already correct, but it is a COPY of the canonical loader: the
+        // `timeframe` filter and the ordering had to be re-supplied by hand, and four sites
+        // that did this got it wrong (#751, #754). Calls the one loader instead.
+        const bars = await this.marketData.getBars(sym.id, '1d', 60);
 
-        return bars
-          .map((b) => ({
-            timestamp: b.timestamp,
-            open: b.open,
-            high: b.high,
-            low: b.low,
-            close: b.close,
-            volume: b.volume,
-          }))
-          .reverse(); // oldest → newest
+        return bars.map((b) => ({
+          timestamp: b.timestamp,
+          open: b.open,
+          high: b.high,
+          low: b.low,
+          close: b.close,
+          volume: b.volume,
+        }));
       },
       10_000, // 10s TTL — market bars don't change within a run
     );

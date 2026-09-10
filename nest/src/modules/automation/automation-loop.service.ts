@@ -61,6 +61,8 @@ import { SymbolResolverService } from '../symbols/symbol-resolver.service';
 import { SignalEnvelopeService } from '../signals/signal-envelope.service';
 import { StopGuardianService } from './stop-guardian.service';
 import { ExecutionFeasibilityService } from '../trading/execution-feasibility.service';
+import { checkSessionWindow, SessionGateResult } from '../trading/session-window';
+import { resolveStyleThreshold, BOT_BAR_DEFAULT } from '../../common/utils/style-thresholds';
 import { computeMarketStatus } from '../directives/market-status';
 
 /**
@@ -88,23 +90,14 @@ import { computeMarketStatus } from '../directives/market-status';
  * the app over-produced BUY signals. Do NOT tune these to new absolute values
  * — the correct fix is percentage-based thresholds (composite / maxScore × 100)
  * so custom protocols of any maxScore share the same semantics.
+ *
+ * The style→bar table and matcher live in common/utils/style-thresholds.ts.
+ * This file used to carry its own copy with a DIFFERENT fallback (60) from the
+ * signals gate's (65); two copies of one table always drift.
  */
-const STYLE_THRESHOLDS: Record<string, number> = {
-  scalp: 75,
-  'day-trade': 65,
-  speed: 80,
-  swing: 55,
-  position: 45,
-};
-
 function getStyleThreshold(tradingStyle?: string): number {
-  const style = (tradingStyle || '').toLowerCase();
-  if (style.includes('scalp') || style.includes('tick')) return STYLE_THRESHOLDS.scalp;
-  if (style.includes('speed')) return STYLE_THRESHOLDS.speed;
-  if (style.includes('day')) return STYLE_THRESHOLDS['day-trade'];
-  if (style.includes('swing')) return STYLE_THRESHOLDS.swing;
-  if (style.includes('position')) return STYLE_THRESHOLDS.position;
-  return 60;
+  // BOT_BAR_DEFAULT (60) preserves this path's historic fallback exactly.
+  return resolveStyleThreshold(tradingStyle, BOT_BAR_DEFAULT).threshold;
 }
 
 export interface PriorityQueueEntry {
@@ -495,6 +488,8 @@ export class AutomationLoopService implements OnModuleInit {
     await this.restoreLayerFlags();
 
     // Auto-restore the loop ONLY if AUTO_START_AUTOMATION is explicitly 'true' (fail-closed).
+    // The per-broker trading flag is restored later, after the LAST
+    // initBrokerStates() — see the comment there for why ordering matters.
     // Trading is NEVER auto-enabled regardless — it resets to false on every restart.
     const autoStart = process.env.AUTO_START_AUTOMATION === 'true';
     if (!autoStart) {
@@ -512,7 +507,16 @@ export class AutomationLoopService implements OnModuleInit {
       return;
     }
     this.logger.log('Auto-start enabled — restoring automation state...');
-    // Re-init broker states now that ProvidersModule has registered adapters
+    // Re-init broker states now that ProvidersModule has registered adapters.
+    //
+    // ⚠️ ORDERING IS LOAD-BEARING (2026-09-10). The broker-trading restore MUST
+    // come after BOTH this initBrokerStates() AND the mt5 auto-create block
+    // below. Two earlier placements each failed silently:
+    //   1. next to restoreLayerFlags() → the later initBrokerStates() clobbered it;
+    //   2. immediately after initBrokerStates() → at that point
+    //      getBrokerageAdapters() is still empty, so the loop iterated an empty
+    //      map and restored nothing, and the mt5 auto-create then set it false.
+    // Both looked correct in the database while the running value stayed off.
     this.initBrokerStates();
     // Ensure MT5 broker state exists (auto-create if missing) — but NEVER
     // auto-enable trading. Trading must be explicitly enabled by the user via
@@ -530,6 +534,11 @@ export class AutomationLoopService implements OnModuleInit {
       };
       this.logger.log('Auto-created MT5 broker state (was missing after initBrokerStates)');
     }
+
+    // THE per-broker trading restore — deliberately the LAST word on the flag.
+    // Everything that can create or reset a broker entry has now run.
+    await this.restoreBrokerTradingFlags();
+    this.logEffectiveTradingState();
     try {
       const strategies = await this.strategyService.findAll();
       for (const s of strategies) {
@@ -1207,10 +1216,21 @@ export class AutomationLoopService implements OnModuleInit {
       if (!bars || bars.length < 20) continue;
 
       // Score both stacks against the same symbol + bars.
-      const { dayBars, hourBars, min15Bars } = await this.protocolGating.loadHigherTfBundle(dbSym.id, controlCfg.protocolId);
+      //
+      // ⚠️ Each side gets ITS OWN protocol's bundle. Loading one bundle from
+      // `controlCfg.protocolId` and handing it to both sides made the variant's MTF
+      // directives read the control's timeframe sizes — the A/B comparison then
+      // measured a difference that partly did not exist, which is the one thing this
+      // path must not do (#735, #751).
+      const [controlBundle, variantBundle] = await Promise.all([
+        this.protocolGating.loadHigherTfBundle(dbSym.id, controlCfg.protocolId),
+        controlCfg.protocolId === variantCfg.protocolId
+          ? Promise.resolve(null)
+          : this.protocolGating.loadHigherTfBundle(dbSym.id, variantCfg.protocolId),
+      ]);
       const [scoreA, scoreB] = await Promise.all([
-        this.protocolGating.scoreWithGating(sym, bars, controlCfg.protocolId, { dayBars, hourBars, min15Bars }, controlCfg.weightStrategy ?? 'group-weighted'),
-        this.protocolGating.scoreWithGating(sym, bars, variantCfg.protocolId, { dayBars, hourBars, min15Bars }, variantCfg.weightStrategy ?? 'group-weighted'),
+        this.protocolGating.scoreWithGating(sym, bars, controlCfg.protocolId, controlBundle, controlCfg.weightStrategy ?? 'group-weighted'),
+        this.protocolGating.scoreWithGating(sym, bars, variantCfg.protocolId, variantBundle ?? controlBundle, variantCfg.weightStrategy ?? 'group-weighted'),
       ]);
 
       const brokerId = (controlCfg.brokerId ?? variantCfg.brokerId ?? 'mt5') as string;
@@ -1298,6 +1318,17 @@ export class AutomationLoopService implements OnModuleInit {
    * Consumed only on EXECUTED/QUEUED (status → 'executing'). BLOCKED and
    * FAILED entries stay pending for the next tick. Every failure is non-fatal.
    */
+  /** Session-gate log dedupe: strategyId → last skip reason (report once, not per tick). */
+  private readonly sessionSkipLog = new Map<string, string>();
+
+  private logSessionSkip(strategy: any, symbol: string, sess: SessionGateResult): void {
+    const key = String(strategy?.id ?? '');
+    const reason = sess.reason ?? 'session closed';
+    if (this.sessionSkipLog.get(key) === reason) return;
+    this.sessionSkipLog.set(key, reason);
+    this.logger.log(`  [SessionGate] ${strategy?.name ?? key} (${symbol}) skipped — ${reason}`);
+  }
+
   private async processSignalQueues(decisions: TickDecision[]): Promise<void> {
     try {
       if (!this.state.botQueueEnabled) return;
@@ -1379,6 +1410,23 @@ export class AutomationLoopService implements OnModuleInit {
           continue;
         }
 
+        // Gate 4.5 — SESSION GATE (2026-09-10).
+        // A bot only acts during the market session(s) it declares. This is a
+        // WHEN check, not a WHAT check: it never touches the score or the
+        // thresholds — it decides whether an already-qualified signal is
+        // allowed to become an order right now. Bots named "London … Session"
+        // were previously only *labelled* London; this makes it a rule.
+        // Ungated bots (null/empty window) pass — the gate is opt-in, so no
+        // existing strategy's behaviour changes until it declares a window.
+        // Silent skip: "session closed" is a standing condition, and a row per
+        // bot per tick would flood decision_log. Transitions log once instead.
+        const sess = checkSessionWindow(strategy.sessionWindow, new Date());
+        if (!sess.ok) {
+          this.logSessionSkip(strategy, symbol, sess);
+          continue;
+        }
+        this.sessionSkipLog.delete(String(strategy.id));
+
         // Gate 5 — strategy cooldown (shared with the legacy path).
         const lastTrade = this.lastTradeTime.get(strategy.id);
         const cooldownMs = (strategy.cooldownMinutes || 5) * 60000;
@@ -1403,7 +1451,21 @@ export class AutomationLoopService implements OnModuleInit {
         const tpPct = strategy.tpPct ?? 1.0;
 
         // Gate 7 — trading OFF → paper capture, entry stays pending.
-        if (!this.state.tradingEnabled || !this.state.brokerStates[strategy.brokerId || 'mt5']?.tradingEnabled) {
+        //
+        // ⚠️ TWO DIFFERENT FLAGS gate this, and they used to be reported as one
+        // ("trading layer OFF") even when the LAYER was on and only the BROKER
+        // flag was off. That wording sent two investigations after the wrong
+        // component and hid a months-long throughput collapse. Name the flag that
+        // actually blocked, so the reason is never ambiguous again.
+        const brokerId = strategy.brokerId || 'mt5';
+        const layerOn = this.state.tradingEnabled;
+        const brokerOn = this.state.brokerStates[brokerId]?.tradingEnabled === true;
+        if (!layerOn || !brokerOn) {
+          const why = !layerOn && !brokerOn
+            ? `trading layer OFF and broker ${brokerId} OFF`
+            : !layerOn
+              ? 'trading layer OFF'
+              : `broker ${brokerId} tradingEnabled=false (layer ON)`;
           await this.recordPaperTrade({
             strategyId: strategy.id,
             symbol,
@@ -1421,9 +1483,9 @@ export class AutomationLoopService implements OnModuleInit {
           }).catch(() => {});
           decisions.push({
             timestamp: new Date().toISOString(),
-            strategyId: strategy.id, symbol, brokerId: strategy.brokerId || 'mt5',
+            strategyId: strategy.id, symbol, brokerId,
             decision: 'SKIP',
-            reason: `[QueueBot] ${side} ${symbol} captured as paper (trading layer OFF) — stays queued`,
+            reason: `[QueueBot] ${side} ${symbol} captured as paper — ${why} — stays queued`,
             composite: gatePct, signal: side,
           });
           continue;
@@ -1778,6 +1840,9 @@ export class AutomationLoopService implements OnModuleInit {
     this.state.activeStrategyIds = [];
     for (const bs of Object.values(this.state.brokerStates)) {
       bs.tradingEnabled = false;
+      // Persist the shutdown too — an emergency stop must survive a restart,
+      // otherwise a reboot would silently undo the operator's stop.
+      void this.persistBrokerTradingFlag(bs.brokerId, false);
     }
     // #615 — the trading layer itself is also switched off and persisted.
     void this.setLayer('trading', false);
@@ -1839,12 +1904,97 @@ export class AutomationLoopService implements OnModuleInit {
           if (Number.isFinite(mins) && mins >= 0) this.state.botInterTradeDelayMinutes = mins;
         }
       }
+      // NOTE: the per-broker trading flag is NOT restored here — it is restored
+      // separately, after the LAST initBrokerStates() call. See onModuleInit().
       this.logger.log(
         `Layer flags restored — protocols=${this.state.protocolsEnabled}, trading=${this.state.tradingEnabled}` +
         `, botQueue=${this.state.botQueueEnabled}, botDelay=${this.state.botInterTradeDelayMinutes}m`,
       );
     } catch (err) {
       this.logger.warn(`Layer flag restore failed: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * Restore per-broker trading flags from global_setting; default OFF when absent.
+   *
+   * WHY THIS EXISTS (2026-09-10): this flag used to be memory-only and
+   * `initBrokerStates()` hard-set it to false on every boot with no restore.
+   * Gate 7 requires BOTH the layer flag AND the broker flag, so the layer flag
+   * reading `true` was meaningless — the broker flag silently vetoed every
+   * dispatch. Measured impact: automated trades went 94/month (Jul) → 9 (Aug) →
+   * 1 (Sep) purely from restarts, with no UI signal that trading had been
+   * switched off. 104 historical `origin='strategy'` trades exist only from
+   * windows where the process stayed up and someone re-enabled it.
+   *
+   * Default remains OFF for any broker with no stored value, so a fresh install
+   * still cannot trade without an explicit opt-in. Restoring only restates the
+   * user's own last explicit choice.
+   */
+  private async restoreBrokerTradingFlags(): Promise<void> {
+    if (!this.prisma.isAvailable) return;
+    try {
+      const rows: any[] = await (this.prisma as any).globalSetting.findMany({
+        where: { key: { startsWith: 'automation.brokerTrading.' } },
+      });
+      const stored = new Map<string, boolean>();
+      for (const r of rows) {
+        const id = String(r.key).slice('automation.brokerTrading.'.length);
+        if (id) stored.set(id, r.value === 'true');
+      }
+      for (const bs of Object.values(this.state.brokerStates)) {
+        const persisted = stored.get(bs.brokerId);
+        if (persisted !== undefined) {
+          const changed = bs.tradingEnabled !== persisted;
+          bs.tradingEnabled = persisted;
+          if (changed) {
+            this.logger.warn(
+              `[TradingState] broker=${bs.brokerId} tradingEnabled restored to ${persisted} from stored setting`,
+            );
+          }
+        }
+        // No stored value → leave the safe default (false).
+      }
+    } catch (err) {
+      this.logger.warn(`Broker trading-flag restore failed: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * Make the effective execution state unmissable at boot.
+   *
+   * The layer flag and the per-broker flag are DIFFERENT things and used to
+   * disagree silently (layer=true, broker=false), which is how a months-long
+   * throughput collapse stayed invisible: the UI read only the layer flag.
+   */
+  private logEffectiveTradingState(): void {
+    const states = Object.values(this.state.brokerStates);
+    const anyBroker = states.some((bs: any) => bs?.tradingEnabled);
+    const live = this.state.tradingEnabled && anyBroker;
+    for (const bs of states) {
+      this.logger.warn(
+        `[TradingState] broker=${bs.brokerId} tradingEnabled=${bs.tradingEnabled}` +
+        ` (layer tradingEnabled=${this.state.tradingEnabled})` +
+        (bs.tradingEnabled ? '' : ' — dispatches for this broker are PAPER ONLY'),
+      );
+    }
+    this.logger.warn(
+      `[TradingState] EFFECTIVE MODE = ${live ? 'LIVE (real orders will be placed)' : 'PAPER ONLY'}`,
+    );
+  }
+
+  /** Persist one broker's trading flag. Called from every setter that mutates it. */
+  async persistBrokerTradingFlag(brokerId: string, enabled: boolean): Promise<void> {
+    if (!this.prisma.isAvailable) return;
+    const key = `automation.brokerTrading.${brokerId}`;
+    try {
+      await (this.prisma as any).globalSetting.upsert({
+        where: { key },
+        create: { key, value: String(enabled) },
+        update: { value: String(enabled) },
+      });
+    } catch (err) {
+      this.logger.warn(`Broker trading-flag persist failed (${key}): ${(err as Error).message}`);
     }
   }
 

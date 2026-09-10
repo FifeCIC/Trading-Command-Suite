@@ -165,6 +165,18 @@ export interface GatedScore {
       bearishPct: number;
       selected: 'bullish' | 'bearish' | 'none';
     };
+    // ── #758 stable denominator — see docs/scoring-architecture.md ──
+    /** How `signalPct` was derived. 'configured-capacity' = divided by the protocol's
+     *  configured directional capacity (stable between ticks). */
+    denominatorMode: 'configured-capacity';
+    /** Configured directional capacity: sum of maxScores of every directive eligible to
+     *  express direction this tick. THIS is the denominator the persisted `rawMax` uses. */
+    configuredSignalMax: number;
+    /** Observed directional capacity: sum of maxScores of directives that actually
+     *  produced directional evidence this tick. Diagnostic only — do not divide by it. */
+    observedSignalMax: number;
+    /** Count of directives eligible to express direction (matches `configuredSignalMax`). */
+    directionEligibleDirectives: number;
   };
   /** Readiness gate (#627) — protocols are only eligible when every included directive is ready. */
   readinessGate?: {
@@ -498,6 +510,15 @@ export class ProtocolGatingService {
     const oppMaxTotals: Record<string, number> = {};
     const breakouts: Record<string, DirectiveBreakout[]> = {};
     const inactiveGroupIds: string[] = [];
+
+    // #758 — stable-denominator accumulators. `capacityMaxTotal` is the CONFIGURED
+    // directional capacity (sum of maxScores of direction-eligible, non-gate directives);
+    // `observedMaxTotal` is what actually read directional this tick; `directionEligibleTotal`
+    // counts eligible directives so callers can distinguish "no directional evidence at all"
+    // from a genuine neutral reading.
+    let capacityMaxTotal = 0;
+    let observedMaxTotal = 0;
+    let directionEligibleTotal = 0;
     let bullishRaw = 0;
     let bullishMax = 0;
     let bearishRaw = 0;
@@ -525,6 +546,26 @@ export class ProtocolGatingService {
       let signalMax = 0;
       let oppRaw = 0;
       let oppMax = 0;
+      // ── Stable denominator (#758) ──────────────────────────────────────────
+      // `signalMax` above is the OBSERVED directional capacity: only directives whose
+      // RUNTIME signalClass is directional and direction-allowed contribute to it. That
+      // made the denominator flip tick to tick — a protocol scored `/80` at 11:55 and
+      // `/90` at 11:53 — so the stored percentage was not comparable over time, and when
+      // every group happened to read neutral the numerator AND denominator both went to 0,
+      // producing `0/0 → 0` with `signal: 'HOLD'`: a phantom zero written as if it were a
+      // reading.
+      //
+      // `capacityMax` is the CONFIGURED directional capacity: the sum of maxScores of the
+      // directives in this group that are *eligible* to carry direction, independent of
+      // what fired this minute. maxScore expresses importance, so the protocol's maximum
+      // belongs to its config, not to what happened to be directional at 11:48. This is
+      // the theory in docs/scoring-architecture.md applied to the denominator.
+      //
+      // `directionEligibleCount` records how many directives COULD have contributed, so a
+      // caller can tell "no directional evidence at all" (0 eligible → not a reading) from
+      // "directional directives present but all neutral" (real 0).
+      let capacityMax = 0;
+      let directionEligibleCount = 0;
 
       for (const result of results) {
         const directiveId = this.findDirectiveId(allResults, result);
@@ -540,6 +581,23 @@ export class ProtocolGatingService {
           (directionMode === 'LONG_ONLY' && result.signalClass === 'bullish') ||
           (directionMode === 'SHORT_ONLY' && result.signalClass === 'bearish');
         const inSignal = !isGateGroup && directional && directionAllowed;
+
+        // Configured capacity: this directive can legitimately carry direction in this
+        // protocol (right mode for it) and is not a gate. Counts regardless of runtime
+        // signalClass, which is what makes the denominator stable (#758).
+        if (!isGateGroup && directionMode === 'BOTH') {
+          capacityMax += maxScore;
+          directionEligibleCount++;
+        } else if (!isGateGroup && directionMode === 'LONG_ONLY' && result.signalClass !== 'bearish') {
+          // A LONG_ONLY protocol can observe bearish evidence; `classifyDirectiveInclusion`
+          // already excludes hard-bearish directives from the config, so anything present
+          // here is eligible to contribute to the long side.
+          capacityMax += maxScore;
+          directionEligibleCount++;
+        } else if (!isGateGroup && directionMode === 'SHORT_ONLY' && result.signalClass !== 'bullish') {
+          capacityMax += maxScore;
+          directionEligibleCount++;
+        }
 
         // Opportunity: everything counts.
         oppRaw += result.score;
@@ -587,6 +645,13 @@ export class ProtocolGatingService {
         subRawTotals[groupId] = signalRaw;
         subMaxTotals[groupId] = signalMax;
       }
+      // #758 — accumulate the CONFIGURED capacity separately from the observed max. The
+      // signal percentage is computed against `capacityMax` at the end (when > 0), giving a
+      // denominator that does not move between ticks. `signalMax` is still reported so the
+      // observed/configured pair is auditable.
+      capacityMaxTotal += capacityMax;
+      observedMaxTotal += signalMax;
+      directionEligibleTotal += directionEligibleCount;
       oppRawTotals[groupId] = oppRaw;
       oppMaxTotals[groupId] = oppMax;
     }
@@ -613,6 +678,23 @@ export class ProtocolGatingService {
     const selectedDirection = selectedEvidence.direction;
     const totalRaw = selectedEvidence.raw;
     const totalMax = selectedEvidence.maximum;
+
+    // ── #758 — stable denominator + explicit no-data ───────────────────────────
+    //
+    // `totalRaw/totalMax` above are the OBSERVED evidence pair, and `totalMax` moves tick to
+    // tick (it is only the direction-eligible directives that happened to read directional).
+    // A percentage over a moving denominator is not comparable across the stored series, so
+    // the reported percentage denominator prefers the protocol's CONFIGURED capacity.
+    //
+    // When there is no directional evidence at all (no direction-eligible directive produced a
+    // reading, so numerator and denominator are both 0), that is NOT a score — it is an
+    // absence. Previously it persisted as `rawMax: 0, composite: 0, signal: 'HOLD'`, which is
+    // indistinguishable from a genuine neutral reading and silently inflated the 'scored'
+    // counts that drove `protocol_score_status` to claim 'scoring' for hours (#758).
+    const signalDenominator = capacityMaxTotal > 0 ? capacityMaxTotal : totalMax;
+    const hasDirectionalEvidence = capacityMaxTotal > 0
+      ? directionEligibleTotal > 0 && observedMaxTotal > 0
+      : totalMax > 0;
 
     let opportunityScore = 0;
     for (const groupId of Object.keys(oppRawTotals)) {
@@ -651,6 +733,44 @@ export class ProtocolGatingService {
     // Meta: composite is the plain sum — no gating reduction to report.
     // compositePct is the normalized signal strength used for classification.
     const riskScore = subScores['risk'] ?? 50; // 50 = neutral risk baseline
+
+    // #758 — a tick with NO directional evidence is a no-data outcome, not a HOLD reading.
+    // `score: 0` with `signal: 'HOLD'` was a phantom zero: it looked like a real neutral
+    // reading, and it counted toward `symbolsScored`, so a protocol stuck in this state
+    // reported 'scoring' while producing nothing usable. Callers that persist or count
+    // scores can now skip this rather than storing it as a result.
+    if (!hasDirectionalEvidence) {
+      const signal = 'NO_DATA' as any;
+      return {
+        symbol,
+        protocolId,
+        composite: 0,
+        maxPossible: 0,
+        signal,
+        signalRaw: 0,
+        signalMax: 0,
+        signalPct: 0,
+        confidence: 0,
+        subScores,
+        subRawTotals,
+        subMaxTotals,
+        oppRawTotals,
+        oppMaxTotals,
+        opportunityScore,
+        opportunityMax,
+        opportunityPct,
+        breakouts,
+        riskGate: { hardGateTriggered: false, multiplier: 1, severity: 0, warnings: [], reasons: [], chain: [], active: false, triggered: false } as any,
+        rarity: null,
+        noData: true,
+        noDataReason: 'No directional evidence this tick — no direction-eligible directive produced a reading. This is data absence, not a neutral score (#758).',
+        marketStatus: undefined,
+        // Diagnostics for the denominator decision (#758).
+        denominatorMode: 'configured-capacity',
+        observedSignalMax: totalMax,
+        configuredSignalMax: capacityMaxTotal,
+      } as any;
+    }
 
     // Rarity: compute percentile against historical scores for this protocol
     const rarity = await this.computeRarity(protocolId, symbol, composite);
@@ -704,6 +824,10 @@ export class ProtocolGatingService {
       opportunityMax,
       opportunityPct: Math.round(opportunityPct),
       compositePct: signalPct,
+      // #758 — stable-denominator diagnostics.
+      denominatorMode: 'configured-capacity',
+      observedSignalMax: totalMax,
+      configuredSignalMax: capacityMaxTotal,
     });
 
     return {
@@ -738,6 +862,15 @@ export class ProtocolGatingService {
         gatedCount: allResults.size - alphaCount,
         riskDirectiveCount: breakouts['risk']?.length ?? 0,
         weightStrategy,
+        // ── #758 stable denominator ──
+        // `signalMax`/`meta.maxScore` remain the OBSERVED evidence pair (what actually read
+        // directional this tick). `configuredSignalMax` is the protocol's CONFIGURED
+        // directional capacity and is what the persisted `rawMax` uses, so `score / rawMax` is
+        // comparable between ticks instead of moving with whatever happened to fire.
+        denominatorMode: 'configured-capacity',
+        configuredSignalMax: capacityMaxTotal,
+        observedSignalMax: totalMax,
+        directionEligibleDirectives: directionEligibleTotal,
         // ── Readiness breakdown — see docs/readiness-tiers.md ──
         readinessBreakdown: { ready: readyCount, beta: betaCount, alpha: alphaCount, alphaExcluded: alphaCount },
         directionalEvidence: {
@@ -781,12 +914,47 @@ export class ProtocolGatingService {
     const CONCURRENCY = 5;
     const results: GatedScore[] = [];
     let cursor = 0;
+
+    // Resolve the higher-timeframe bundle ONCE per symbol, before the workers start
+    // (#735 / MST-004). Doing it inside the loop would issue three extra bar queries
+    // per symbol *per worker*, which is exactly the connection-pool pressure the
+    // concurrency bound above exists to prevent. Bundles are keyed by the symbol's own
+    // name here because `holdings` carries no symbol row id.
+    const bundleBySymbol = new Map<string, {
+      dayBars: import('../directives/interfaces/directive.interface').MarketBar[];
+      hourBars: import('../directives/interfaces/directive.interface').MarketBar[];
+      min15Bars: import('../directives/interfaces/directive.interface').MarketBar[];
+    }>();
+    await Promise.all(
+      holdings.map(async (h) => {
+        try {
+          const row = await this.prisma.symbol.findFirst({
+            where: { ticker: h.symbol.toUpperCase() },
+            select: { id: true },
+          });
+          bundleBySymbol.set(
+            h.symbol,
+            row
+              ? await this.loadHigherTfBundle(row.id, protocolId)
+              : { dayBars: [], hourBars: [], min15Bars: [] },
+          );
+        } catch {
+          bundleBySymbol.set(h.symbol, { dayBars: [], hourBars: [], min15Bars: [] });
+        }
+      }),
+    );
+
     const worker = async (): Promise<void> => {
       while (cursor < holdings.length) {
         const idx = cursor++;
         const h = holdings[idx];
         try {
-          const gated = await this.scoreWithGating(h.symbol, h.bars, protocolId);
+          const gated = await this.scoreWithGating(
+            h.symbol,
+            h.bars,
+            protocolId,
+            bundleBySymbol.get(h.symbol),
+          );
           if (gated) results[idx] = gated;
         } catch (err) {
           this.logger.warn(`scorePortfolio: ${h.symbol} failed — skipping: ${(err as Error).message}`);
@@ -937,6 +1105,13 @@ export class ProtocolGatingService {
       opportunityMax: number;
       opportunityPct: number;
       compositePct: number;
+      // ── #758 stable denominator ──
+      /** Always 'configured-capacity' today. Present so a future mode can be told apart. */
+      denominatorMode?: string;
+      /** Sum of maxScores for directives that actually produced directional evidence. */
+      observedSignalMax?: number;
+      /** Sum of maxScores for ALL directives eligible to express direction this tick. */
+      configuredSignalMax?: number;
     },
   ): void {
     (async () => {
@@ -981,10 +1156,26 @@ export class ProtocolGatingService {
               // hard gate (e.g. closed-market liquidity) forces composite to 0.
               // The gate is a tradability check, not part of the score itself.
               rawComposite: Object.values(breakdownData.subRawTotals).reduce((a: number, b: number) => a + (b ?? 0), 0),
-              // Directional denominator (Phase C #638) — sum of maxScores of the
-              // directives that actually counted. Used by the UI so `score/max`
-              // stays consistent now that neutral/gate maxScores are excluded.
-              rawMax: Object.values(breakdownData.subMaxTotals).reduce((a: number, b: number) => a + (b ?? 0), 0),
+              // ⚠️ STABLE DENOMINATOR (#758, 2026-09-10) — do NOT recompute this from
+              // `subMaxTotals` at persist time.
+              //
+              // That is exactly what this line used to do, and it silently undid the stable
+              // denominator computed in `scoreWithGating()`: `subMaxTotals` is the OBSERVED
+              // directional capacity (only directives that read directional this tick), so
+              // the persisted `rawMax` moved tick to tick — `forex-session-v1` wrote NINE
+              // different denominators in six hours (1,928 rows), and `spy-day-v1` alternated
+              // 90/80/0/null. `score / rawMax` on a moving denominator is not comparable over
+              // time, so the stored history was unusable as a series.
+              //
+              // Use the configured capacity when the scorer supplied one, falling back to the
+              // observed sum only for legacy paths that do not set it.
+              rawMax: breakdownData.configuredSignalMax && breakdownData.configuredSignalMax > 0
+                ? breakdownData.configuredSignalMax
+                : Object.values(breakdownData.subMaxTotals).reduce((a: number, b: number) => a + (b ?? 0), 0),
+              // Diagnostics — make the denominator decision auditable from the row alone.
+              denominatorMode: breakdownData.denominatorMode ?? 'observed-fallback',
+              observedSignalMax: breakdownData.observedSignalMax ?? null,
+              configuredSignalMax: breakdownData.configuredSignalMax ?? null,
               // Opportunity score (Phase C dual-score model) — additive
               // "everything counts" total for SCREENING / ranking. Kept
               // alongside the directional signal.

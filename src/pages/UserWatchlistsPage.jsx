@@ -9,7 +9,6 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
-import PageInfoPopover from '../components/PageInfoPopover';
 import './watchlists.css';
 
 /** Clean watchlist label: strip timestamp suffixes */

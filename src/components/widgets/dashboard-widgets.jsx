@@ -635,15 +635,3 @@ registerWidget({
   size: { w: 4, h: 6, minW: 3, minH: 4 },
   Component: HotPicksWidget,
 });
-
-export {
-  Mt5PortfolioWidget,
-  BrokerPnlWidget,
-  DiversificationWidget,
-  Mt5PositionsWidget,
-  RecentTradesWidget,
-  WorstCaseWidget,
-  MarketSessionsWidget,
-  NewsSourcesWidget,
-  HotPicksWidget,
-};

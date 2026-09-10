@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { apiGet } from '../core/api/client';
 
 export default function ReportsPage() {
   const [csvLoading, setCsvLoading] = useState(false);

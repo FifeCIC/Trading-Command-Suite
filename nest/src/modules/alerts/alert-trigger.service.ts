@@ -14,6 +14,7 @@
  *  - market-close      — time until session close < N minutes
  *  - weekend-gap-risk  — projected gap risk exceeds % of equity
  *  - earnings-proximity — earnings event within N hours
+ *  - bridge-clock-skew — MT5 bridge clock-offset telemetry missing or implausible (#750)
  */
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
@@ -48,6 +49,9 @@ export class AlertTriggerService implements OnModuleInit {
     'market-close':      { enabled: true, cooldownSeconds: 900, severity: 'info', threshold: 30 },       // 30 min
     'weekend-gap-risk':  { enabled: true, cooldownSeconds: 3600, severity: 'warning', threshold: 2 },    // 2%
     'earnings-proximity':{ enabled: true, cooldownSeconds: 7200, severity: 'info', threshold: 24 },      // 24h
+    // threshold is HOURS here (the only trigger that is): a real broker offset is at
+    // most ±14h, so anything larger means the measurement itself is broken.
+    'bridge-clock-skew': { enabled: true, cooldownSeconds: 3600, severity: 'high', threshold: 14 },      // 14h
   };
 
   constructor(
@@ -96,6 +100,7 @@ export class AlertTriggerService implements OnModuleInit {
         case 'market-close':       condition = await this.checkMarketClose(cfg); break;
         case 'weekend-gap-risk':   condition = await this.checkWeekendGapRisk(cfg); break;
         case 'earnings-proximity': condition = await this.checkEarningsProximity(cfg); break;
+        case 'bridge-clock-skew':  condition = await this.checkBridgeClockSkew(cfg); break;
       }
 
       if (condition?.triggered) {
@@ -252,6 +257,67 @@ export class AlertTriggerService implements OnModuleInit {
       }
       return { triggered: false, title: '', message: '' };
     } catch { return null; }
+  }
+
+  /**
+   * Bridge clock-offset telemetry (#750).
+   *
+   * WHY THIS ALERT EXISTS
+   * ---------------------
+   * The MT5 bridge measures the broker's server-clock offset (+3h on MetaQuotes-Demo)
+   * and subtracts it in `utc_iso()`, so every MT5-sourced timestamp is true UTC. Two
+   * failure modes are silent and expensive, and both look like healthy data:
+   *
+   *  1. **The telemetry is gone.** A bridge build from before #750 (or a rollback)
+   *     stamps raw server-clock epochs as UTC, so every bar lands ~3h in the FUTURE.
+   *     `computeMarketStatus` then computes a negative `ageMs`, which can never exceed
+   *     the staleness threshold — the tradability gate fails OPEN and a stale or
+   *     weekend feed reads as tradable. Nothing else in the app complains; scores
+   *     still compute, they just describe the wrong moment.
+   *  2. **The offset is implausible.** A broken measurement applies a nonsense
+   *     conversion to every timestamp. Real broker offsets are within ±14h.
+   *
+   * Only evaluated while a bridge is reachable AND connected — an unreachable bridge is
+   * already covered by `mt5-disconnected`, and firing both would be noise.
+   *
+   * `cfg.threshold` is in HOURS. This is intentionally an in-app alert rather than a
+   * silent log line: the pre-#750 failure survived for weeks because nothing surfaced it.
+   */
+  private async checkBridgeClockSkew(cfg: TriggerConfig): Promise<{ triggered: boolean; title: string; message: string; severity?: AlertSeverity } | null> {
+    try {
+      const brokers = await this.mt5Connection.getAllBrokerHealths();
+      const live = brokers.filter((b) => b.reachable && b.health?.connected);
+      if (live.length === 0) return { triggered: false, title: '', message: '' };
+
+      const missing = live.filter((b) => typeof b.health?.serverUtcOffsetSeconds !== 'number');
+      if (missing.length > 0) {
+        const servers = missing.map((b) => b.server || `broker ${b.brokerId}`).join(', ');
+        return {
+          triggered: true,
+          title: 'MT5 Clock-Offset Telemetry Missing',
+          message: `${servers}: /health reports no serverUtcOffsetSeconds, so the bridge is stamping broker SERVER time as UTC again (pre-#750 build). Timestamps will run ~3h ahead and the market-status gate will fail open. Redeploy scripts/mt5-bridge/mt5_bridge_v2.py.`,
+          severity: 'critical',
+        };
+      }
+
+      const limitHours = cfg.threshold ?? 14;
+      const implausible = live.filter((b) => Math.abs(b.health!.serverUtcOffsetSeconds!) > limitHours * 3600);
+      if (implausible.length > 0) {
+        const detail = implausible
+          .map((b) => `${b.server || `broker ${b.brokerId}`} ${(b.health!.serverUtcOffsetSeconds! / 3600).toFixed(2)}h`)
+          .join(', ');
+        return {
+          triggered: true,
+          title: 'MT5 Clock-Offset Implausible',
+          message: `Measured server-clock offset beyond ±${limitHours}h: ${detail}. Every MT5-sourced timestamp is being shifted by a suspect offset — check GET :5000/health.`,
+          severity: 'high',
+        };
+      }
+
+      return { triggered: false, title: '', message: '' };
+    } catch {
+      return null; // bridge health unavailable — mt5-disconnected covers this case
+    }
   }
 
   // ── Helpers ─────────────────────────────────────────

@@ -8,7 +8,7 @@
  *   const { checking, stale, lastRefresh } = useDataFreshness({ symbols: ['AAPL','NVDA'] });
  */
 import { useState, useEffect, useRef } from 'react';
-import { apiGet, apiPost } from '../api/client';
+import { apiPost } from '../api/client';
 
 const STALE_THRESHOLD_MINUTES = 15;
 

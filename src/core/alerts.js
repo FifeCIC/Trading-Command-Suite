@@ -16,10 +16,11 @@
  * Readers that trust `title`/`severity` directly show "trading" as every
  * headline and mis-colour severity — which is what the widget board hit.
  */
-export const ALERT_LEVELS = ['critical', 'high', 'warning', 'medium', 'info', 'low'];
+/** Severity ordering as stored by the API. */
+const ALERT_LEVELS = ['critical', 'high', 'warning', 'medium', 'info', 'low'];
 
 /** Categories the Alert Center understands (its TYPE_FALLBACKS keys). */
-export const ALERT_CATEGORIES = ['signal', 'drawdown', 'daily', 'backtest', 'system', 'trading'];
+const ALERT_CATEGORIES = ['signal', 'drawdown', 'daily', 'backtest', 'system', 'trading'];
 
 const LEVEL_SET = new Set(ALERT_LEVELS);
 const CATEGORY_SET = new Set(ALERT_CATEGORIES);

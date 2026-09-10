@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
 import { timeAgo } from '../core/format-utils';
@@ -14,7 +14,6 @@ const PLATFORMS_DEMO_LIVE = [
   { id: 'all', label: 'All Platforms' },
 ];
 
-import UnavailablePlaceholder from '../components/UnavailablePlaceholder';
 
 // ── Allocation Bar ──────────────────────────────────────────
 function AllocationBar({ positions, total }) {

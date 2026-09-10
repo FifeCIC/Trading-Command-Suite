@@ -36,8 +36,21 @@ export class SignalQueueService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Sync queues from this run's routing records + all scored pairs. */
-  async syncQueues(actionable: RoutableSignal[], scoredPairs: Set<string>) {
+  /** Sync queues from this run's routing records + all scored pairs.
+   *
+   * @param actionable  envelopes that passed every pre-queue check
+   * @param scoredPairs every `protocolId|symbol` scored this run
+   * @param notRouteable `protocolId|symbol` → WHY it was not routeable. Without
+   *   this the void pass cannot tell "the protocol never signalled" from "it
+   *   signalled and the pre-trade gate blocked it", and it used to report both
+   *   as `dropped non-signalling symbol(s)` — which blamed the protocol for a
+   *   decision the gate made, and cost real investigation time.
+   */
+  async syncQueues(
+    actionable: RoutableSignal[],
+    scoredPairs: Set<string>,
+    notRouteable?: Map<string, string>,
+  ) {
     if (!this.prisma.isAvailable) return;
     if (actionable.length === 0 && scoredPairs.size === 0) return;
     try {
@@ -80,13 +93,32 @@ export class SignalQueueService {
         const live = actionableByProto.get(pid) || new Set<string>();
         const dead = [...scoredSyms].filter(s => !live.has(s));
         if (dead.length === 0) continue;
-        const placeholders = dead.map(() => '?').join(',');
+
+        // Split the dropped symbols by CAUSE so the log states what actually
+        // happened. `blocked` = the protocol DID signal but the envelope was not
+        // pre-trade ready (gate/risk/conflict); `silent` = no signal at all.
+        const blocked: string[] = [];
+        const silent: string[] = [];
+        for (const sym of dead) {
+          const why = notRouteable?.get(`${pid}|${sym}`);
+          if (why) blocked.push(`${sym} (${why})`);
+          else silent.push(sym);
+        }
+
+        if (blocked.length > 0) {
+          this.logger.log(
+            `Queue skip: ${pid} signalled but blocked pre-trade [${blocked.join(' | ')}]`,
+          );
+        }
+        if (silent.length === 0) continue;
+
+        const placeholders = silent.map(() => '?').join(',');
         await (this.prisma as any).$executeRawUnsafe(
           `DELETE FROM strategy_signal_queue
            WHERE protocolId = ? AND status = 'pending' AND symbol IN (${placeholders})`,
-          pid, ...dead,
+          pid, ...silent,
         );
-        this.logger.log(`Queue void: ${pid} dropped non-signalling symbol(s) [${dead.join(', ')}]`);
+        this.logger.log(`Queue void: ${pid} dropped non-signalling symbol(s) [${silent.join(', ')}]`);
       }
     } catch (err) {
       this.logger.warn(`Signal queue sync failed: ${(err as Error).message}`);

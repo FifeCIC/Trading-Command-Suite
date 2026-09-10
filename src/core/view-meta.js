@@ -489,6 +489,12 @@ const VIEW_META = {
     css: 'src/components/widget-board.css',
     api: ['/api/health', '/api/signals/best', '/api/symbols/positions', '/api/trading/sessions/market-context'],
   },
+  '/lab/screen-cockpit': {
+    label: 'Screen Cockpit',
+    file: 'src/pages/ScreenCockpitPage.jsx',
+    css: 'src/pages/screen-cockpit.css',
+    api: [],
+  },
   '/lab/responsive-layout-lab': {
     label: 'Responsive Layout Lab',
     file: 'src/pages/ResponsiveLayoutLabPage.jsx',
@@ -680,6 +686,12 @@ const VIEW_META = {
     file: 'src/pages/DashboardPage.jsx',
     css: 'src/pages/home-dashboard.css',
     api: ['GET /api/providers/mt5/diagnostics', 'GET /api/providers/mt5/positions', 'GET /api/scoring/ranked'],
+  },
+  '/dashboard/screen': {
+    label: 'Screen View',
+    file: 'src/pages/ScreenBoardPage.jsx',
+    css: 'src/components/widget-board.css',
+    api: [],
   },
 
   // ── Watchlists ──

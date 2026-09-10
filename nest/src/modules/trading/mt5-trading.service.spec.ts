@@ -53,12 +53,14 @@ describe('Mt5TradingService broker contracts', () => {
     });
   });
 
-  it('closes the existing trade lifecycle when the v2 bridge reports success', async () => {
+  it('closes the existing trade lifecycle when the v2 bridge reports a realised outcome', async () => {
     global.fetch = jest.fn()
       .mockResolvedValueOnce(response({
         positions: [{ ticket: 42, symbol: 'XAUUSD', type: 'buy', volume: 0.1, priceOpen: 2400, priceCurrent: 2410, profit: 10 }],
       }))
-      .mockResolvedValueOnce(response({ success: true, ticket: 42, closePrice: 2410, profit: 10 })) as any;
+      // `realized: true` = the bridge read the closed deal, so its figures are
+      // authoritative and must be persisted verbatim.
+      .mockResolvedValueOnce(response({ success: true, ticket: 42, closePrice: 2410, profit: 10, realized: true })) as any;
     prisma.trade.findFirst.mockResolvedValue({ id: 'trade-42' });
     tradeRecorder.close.mockResolvedValue(true);
 
@@ -67,6 +69,27 @@ describe('Mt5TradingService broker contracts', () => {
     expect(result.success).toBe(true);
     expect(tradeRecorder.close).toHaveBeenCalledWith('trade-42', 2410, 10);
     expect(tradeRecorder.record).not.toHaveBeenCalled();
+  });
+
+  /**
+   * When the bridge CANNOT report the realised outcome (`realized` absent, as in
+   * every build before 2026-09-10), its `profit` is a pre-close FLOATING value
+   * and must never be persisted as if it were realised. Nest recomputes from
+   * entry/exit/side instead — see the fabrication regression below.
+   */
+  it('recomputes rather than trusting a floating profit from a pre-fix bridge', async () => {
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce(response({
+        positions: [{ ticket: 42, symbol: 'XAUUSD', type: 'buy', volume: 0.1, priceOpen: 2400, priceCurrent: 2410, profit: 10 }],
+      }))
+      .mockResolvedValueOnce(response({ success: true, ticket: 42, closePrice: 2410, profit: 10 })) as any;
+    prisma.trade.findFirst.mockResolvedValue({ id: 'trade-42' });
+    tradeRecorder.close.mockResolvedValue(true);
+
+    await service.closePosition(42);
+
+    // (2410 - 2400) * 0.1 * +1 = 1.0 recomputed, not the floating 10.
+    expect(tradeRecorder.close).toHaveBeenCalledWith('trade-42', 2410, 1);
   });
 
   it('uses the bridge partial-close endpoint', async () => {
@@ -79,6 +102,80 @@ describe('Mt5TradingService broker contracts', () => {
       'http://mt5.test/close/partial/42',
       expect.objectContaining({ method: 'POST' }),
     );
+  });
+
+  /**
+   * Regression 2026-09-10 — FABRICATED P&L.
+   *
+   * The bridge /close endpoint used to return `pos.profit` (floating profit
+   * read BEFORE order_send) and a pre-fill `tick.bid|ask` quote. Nest trusted
+   * both, falling back to the same pre-close values. Because closeAll() loops
+   * closePosition() per ticket, ONE bulk close stamped ONE shared exitPrice and
+   * ONE shared pnl onto every row in the batch.
+   *
+   * Real evidence: 26 EURUSD rows all exitPrice=1.16257 / pnl=-9.02 with a
+   * byte-identical closedAt — buys AND sells taking the same sign.
+   *
+   * This test asserts the property that was violated: two DIFFERENT positions
+   * closed in the same batch must never receive identical exit prices, and a
+   * long closing higher must not be recorded as a loss.
+   */
+  it('never shares one exit price or P&L across two positions in a batch close', async () => {
+    const recorded: Array<{ id: string; exitPrice: number; pnl: number }> = [];
+    tradeRecorder.close.mockImplementation(async (id: string, exitPrice: number, pnl: number) => {
+      recorded.push({ id, exitPrice, pnl });
+      return true;
+    });
+
+    // Two EURUSD positions opened at different prices, both still open.
+    global.fetch = jest.fn().mockImplementation(async (url: string) => {
+      if (String(url).endsWith('/positions')) {
+        return response({
+          positions: [
+            { ticket: 1, symbol: 'EURUSD', type: 'buy', volume: 0.01, priceOpen: 1.1400, priceCurrent: 1.1500, profit: 1.0 },
+            { ticket: 2, symbol: 'EURUSD', type: 'buy', volume: 0.01, priceOpen: 1.1600, priceCurrent: 1.1500, profit: -1.0 },
+          ],
+        });
+      }
+      // Bridge now returns the REALISED outcome per ticket (different per position).
+      if (String(url).includes('/close/1')) {
+        return response({ success: true, ticket: 1, closePrice: 1.1500, profit: 0.10, realized: true });
+      }
+      return response({ success: true, ticket: 2, closePrice: 1.1500, profit: -0.10, realized: true });
+    }) as any;
+
+    prisma.trade.findFirst
+      .mockResolvedValueOnce({ id: 'trade-1' })
+      .mockResolvedValueOnce({ id: 'trade-2' });
+
+    await service.closePosition(1);
+    await service.closePosition(2);
+
+    expect(recorded).toHaveLength(2);
+    // The pnl values must differ — a shared value is the bug's signature.
+    expect(recorded[0].pnl).not.toBe(recorded[1].pnl);
+    // And the long that closed flat-ish must not be booked as a large loss.
+    expect(Math.abs(recorded[0].pnl)).toBeLessThan(1);
+    expect(Math.abs(recorded[1].pnl)).toBeLessThan(1);
+  });
+
+  it('recomputes realised P&L from entry/exit when the bridge reports no realised figure', async () => {
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce(response({
+        positions: [{ ticket: 77, symbol: 'EURUSD', type: 'buy', volume: 0.10, priceOpen: 1.1000, priceCurrent: 1.1500, profit: 99 }],
+      }))
+      // Stale bridge: no `realized` flag, and `profit` is the OLD floating value.
+      .mockResolvedValueOnce(response({ success: true, ticket: 77, closePrice: 1.1200, profit: 99 })) as any;
+    prisma.trade.findFirst.mockResolvedValue({ id: 'trade-77' });
+    tradeRecorder.close.mockResolvedValue(true);
+
+    await service.closePosition(77);
+
+    // entry 1.10 -> exit 1.12, 0.10 lots, long => +0.0020 * 0.10 = +0.0002... but
+    // the KEY assertion is that the floating `99` was NOT persisted as realised.
+    const call: any = tradeRecorder.close.mock.calls[0];
+    expect(call[2]).not.toBe(99);
+    expect(Math.abs(call[2])).toBeLessThan(1);
   });
 
   it('keeps the trade lifecycle open when a requested full close only partially fills', async () => {

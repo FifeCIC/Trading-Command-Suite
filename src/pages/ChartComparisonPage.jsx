@@ -8,7 +8,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
-import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts';
+import { createChart, CandlestickSeries } from 'lightweight-charts';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';

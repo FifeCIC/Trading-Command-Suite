@@ -9,6 +9,28 @@ import './capability-map.css';
 
 import { KNOWN_FEATURES } from '../data/known-features';
 
+// ── Status semantics (#755, 2026-09-10) ──
+//
+// WHAT WAS WRONG: every row was emitted with `status: 'ALPHA'` as a hardcoded literal, so the
+// column did not describe the capability — it described the fact that a row existed. "Predictive
+// Scoring (ML Horizon)" displayed identically to the SEES Scoring Engine, long after its service
+// had become a stub. A column that can only ever say one thing cannot drift, because it is not
+// tracking anything.
+//
+// NOW: `status` is resolved per row from the capability record (`features.js` → the DB capability
+// table). A genuinely unassessed feature falls back to `LEGACY_STATUS` — deliberately the
+// least-flattering of the old literals, so "nobody has classified this" is visible rather than
+// being disguised as a positive status. Removing the literals means the remaining ones are real
+// signals: they mark rows still awaiting assessment, and that list should shrink to zero.
+const LEGACY_STATUS = 'UNASSESSED';
+const DEFAULT_CAPABILITY = {
+  dataPersistence: 'ephemeral',
+  uiSurfaces: 0,
+  pipelineIntegration: 'none',
+  devCompletion: 'partial',
+  status: LEGACY_STATUS,
+};
+
 // ── Build unified capability rows ──
 
 function buildCapabilityRows(directives, providers, dbMap) {
@@ -25,7 +47,7 @@ function buildCapabilityRows(directives, providers, dbMap) {
     return {};
   };
 
-  const def = { dataPersistence: 'ephemeral', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'partial' };
+  const def = { ...DEFAULT_CAPABILITY };
 
   // ── Pages (from nav tree + page data status) ──
   Object.entries(NAV_TREE).forEach(([areaKey, area]) => {
@@ -37,7 +59,7 @@ function buildCapabilityRows(directives, providers, dbMap) {
         area: area.label,
         name: view.label,
         type: 'UI',
-        status: 'ALPHA',
+        status: LEGACY_STATUS,
         notes: meta?.source || meta?.note || '',
         uiSurfaces: 1,
       });
@@ -54,7 +76,7 @@ function buildCapabilityRows(directives, providers, dbMap) {
         area: d.category || 'Uncategorized',
         name: d.name,
         type: 'Backend',
-        status: 'ALPHA',
+        status: LEGACY_STATUS,
         notes: d.description?.substring(0, 80) || '',
         ...known,
       });
@@ -71,7 +93,7 @@ function buildCapabilityRows(directives, providers, dbMap) {
       area: 'Data',
       name,
       type: 'Integration',
-      status: 'ALPHA',
+      status: LEGACY_STATUS,
       notes: `Quotes: ${p.quotes !== false ? '✓' : '✗'} · Candles: ${p.candles !== false ? '✓' : '✗'} · News: ${p.news ? '✓' : '✗'} · Fund: ${p.fundamentals ? '✓' : '✗'} · Portfolio: ${p.portfolio ? '✓' : '✗'}`,
       ...known,
     });
@@ -127,7 +149,7 @@ function buildCapabilityRows(directives, providers, dbMap) {
       area: 'Backend',
       name: mod.name,
       type: 'Backend',
-      status: 'ALPHA',
+      status: LEGACY_STATUS,
       notes: `${mod.count} endpoints`,
       ...known,
     });
@@ -196,7 +218,7 @@ function buildCapabilityRows(directives, providers, dbMap) {
       area: 'UI',
       name,
       type: 'Frontend',
-      status: 'ALPHA',
+      status: LEGACY_STATUS,
       notes: '',
       uiSurfaces: 1,
       ...known,
@@ -229,20 +251,27 @@ function buildCapabilityRows(directives, providers, dbMap) {
       area: 'Infrastructure',
       name,
       type: 'Platform',
-      status: 'ALPHA',
+      status: LEGACY_STATUS,
       notes: '',
       ...known,
     });
   });
 
   // ── Backend Tech ──
+  //
+  // ⚠️ Every name here is registered as a live capability. Removed 2026-09-10 (#755) because
+  // they no longer exist and were being presented as real:
+  //   - 'Predictive Scoring (ML Horizon)' — deleted. getCurrentScore() returned a hard-coded 0
+  //     and its SEED_CALENDAR events were all in the past, so every prediction was delta=0
+  //     with no catalysts. Nothing consumed it.
+  //   - 'Multi-Timeframe Scorer' — deleted. Zero references (no provider, no import, no route),
+  //     and its output was a [-1,+1] fold rather than the platform's [0, maxScore] unit.
+  // Do not re-add a name here for code that does not exist — see the status fix below.
   [
     'SEES Scoring Engine',
     'Scoring Scheduler',
     'Score History Service',
-    'Predictive Scoring (ML Horizon)',
     'Outcome Tracker (Q304)',
-    'Multi-Timeframe Scorer',
     'Speed Scan Service',
     'Strategy Competition Service',
     'Strategy Comparison (Showdown)',
@@ -277,7 +306,7 @@ function buildCapabilityRows(directives, providers, dbMap) {
       area: 'Backend',
       name,
       type: 'Backend',
-      status: 'ALPHA',
+      status: LEGACY_STATUS,
       notes: '',
       ...known,
     });
@@ -287,10 +316,23 @@ function buildCapabilityRows(directives, providers, dbMap) {
 }
 
 // ── Badge Components ──
+//
+// StatusBadge colours by REAL status rather than one fixed violet. `UNASSESSED` is grey — it
+// means "not yet classified", which is neither good nor bad and must not read as either.
 function StatusBadge({ status }) {
-  const color = '#8b5cf6';
-  const bg = 'rgba(139,92,246,0.12)';
-  return <span className="cm-badge" style={{ color, background: bg }}>{status}</span>;
+  const map = {
+    LIVE:        { color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
+    BETA:        { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+    ALPHA:       { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+    STUB:        { color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+    DEPRECATED:  { color: '#a1a1aa', bg: 'rgba(161,161,170,0.12)' },
+    UNASSESSED:  { color: '#71717a', bg: 'rgba(113,113,122,0.12)' },
+  };
+  const m = map[status] || map.UNASSESSED;
+  const title = status === 'UNASSESSED'
+    ? 'Not yet classified — set `status` for this capability in src/data/features.js'
+    : status;
+  return <span className="cm-badge" style={{ color: m.color, background: m.bg }} title={title}>{status}</span>;
 }
 
 function DataBadge({ value }) {

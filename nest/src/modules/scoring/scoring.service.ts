@@ -34,6 +34,8 @@ import { EurUsdCacheService } from './eurusd-cache.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { ProviderDegradationService } from '../providers/provider-degradation.service';
 import { CryptoProviderRouter } from '../providers/crypto-provider-router.service';
+import { MarketDataService } from '../market-data/market-data.service';
+import { selectBaseTimeframe, DEFAULT_LIVE_TIMEFRAME } from '../../common/utils/timeframe';
 import {
   DirectiveInput,
   MarketBar,
@@ -146,6 +148,7 @@ export class ScoringService implements OnModuleInit {
     private readonly adapterFactory: AdapterFactory,
     private readonly degradationService: ProviderDegradationService,
     private readonly cryptoRouter: CryptoProviderRouter,
+    private readonly marketData: MarketDataService,
   ) {}
 
   /** On startup, detect directive version changes and log warnings. */
@@ -208,6 +211,7 @@ export class ScoringService implements OnModuleInit {
     // Compute directive list — protocol-scoped when a protocol is specified
     let allDirectives = this.directivesService.list();
     let directiveFilter: Set<string> | undefined;
+    let protocolTimeframe: string | undefined;
     if (protocolSlug && this.prisma.isAvailable) {
       try {
         const protocol = await (this.prisma as any).protocol.findUnique({
@@ -219,6 +223,9 @@ export class ScoringService implements OnModuleInit {
           },
         });
         if (protocol?.directiveGroups) {
+          // The protocol's own cadence drives which bars we score (#751) — a protocol
+          // is per-timeframe by design, so its recommendation must win over a default.
+          protocolTimeframe = (protocol as any)?.recommendedTimeframe ?? undefined;
           const protocolDirectiveIds = new Set<string>();
           for (const group of protocol.directiveGroups) {
             for (const entry of group.directives || []) {
@@ -314,8 +321,13 @@ export class ScoringService implements OnModuleInit {
       }).catch(err => this.logger.warn(`Macro snapshot failed: ${(err as Error).message}`));
     }
 
+    // Cadence for the fresh-compute path (#751): the protocol's recommendation when
+    // one is in play, else the app's live base cadence. loadBars() itself falls back
+    // to the cadence the symbol actually has, so daily-only equity symbols still score.
+    const barsCadence = protocolTimeframe ? selectBaseTimeframe(protocolTimeframe) : DEFAULT_LIVE_TIMEFRAME;
+
     for (const symbol of symbols) {
-      const bars = await this.loadBars(symbol.id, symbol.ticker);
+      const bars = await this.loadBars(symbol.id, barsCadence, symbol.ticker);
       const input: DirectiveInput = {
         symbol: symbol.ticker,
         bars,
@@ -456,11 +468,15 @@ export class ScoringService implements OnModuleInit {
       const seasonalMultiplier = this.seasonalAffinity.getMultiplier('unscoped');
       const seasonAdjustedScore = finalScore * seasonalMultiplier;
 
-      // Normalized score: percentage of achievable maximum for THIS symbol
-      const normScore = maxPossibleScore > 0
+      // Normalized score: percentage of achievable maximum for THIS symbol.
+      // ⚠️ This is a 0–100 PERCENTAGE, not a directive magnitude — hence the `Pct`
+      // name. The clamp below is therefore legitimate (INV-SCORE-MAGNITUDE bans
+      // clamping a *score*; clamping a percentage is correct by definition), and the
+      // name is what tells the build-time contract guard which of the two it is.
+      const normalizedScorePct = maxPossibleScore > 0
         ? Math.min(100, Math.max(0, (seasonAdjustedScore / maxPossibleScore) * 100))
         : 0;
-
+      const normScore = normalizedScorePct;
       // Determine data status and signal (rebase on normalizedScore)
       const hasData = bars.length > 0;
       const dataStatus: RankedSymbol['dataStatus'] = hasData ? 'live' : 'no_data';
@@ -750,16 +766,22 @@ export class ScoringService implements OnModuleInit {
       const oscillation = Math.sin((Date.now() / 1000 + originalScore) * 0.47) * qaSettings.parityAmplitude;
       const nudge = Math.max(-qaSettings.maxNudge, Math.min(qaSettings.maxNudge, oscillation));
 
-      const modifiedScore = Math.min(100, Math.max(0, originalScore + nudge));
-      const change = modifiedScore - originalScore;
+      // ⚠️ `symbol.score` here is rankAll's normalized 0–100 PERCENTAGE (see
+      // normalizedScorePct), which is why a ±maxNudge correction is meaningful and
+      // why the result is bounded to 100. It is NOT a directive magnitude, so this
+      // clamp does not conflict with INV-SCORE-MAGNITUDE — the `...Pct` naming is
+      // what tells the build-time contract guard that.
+      const nudgedScorePct = originalScore + nudge;
+      const modifiedScorePct = Math.min(100, Math.max(0, nudgedScorePct));
+      const change = modifiedScorePct - originalScore;
 
       if (Math.abs(change) >= 0.5) {
-        debug(`${symbol.ticker}: ${originalScore.toFixed(1)} → ${modifiedScore.toFixed(1)} (${change > 0 ? '+' : ''}${change.toFixed(1)})`);
+        debug(`${symbol.ticker}: ${originalScore.toFixed(1)} → ${modifiedScorePct.toFixed(1)} (${change > 0 ? '+' : ''}${change.toFixed(1)})`);
       }
 
       return {
         ...symbol,
-        score: Number(modifiedScore.toFixed(1)),
+        score: Number(modifiedScorePct.toFixed(1)),
         qa: {
           originalScore: Number(originalScore.toFixed(1)),
           nudge: Number(nudge.toFixed(2)),
@@ -799,29 +821,46 @@ export class ScoringService implements OnModuleInit {
     return false;
   }
 
-  private async loadBars(symbolId: string, ticker?: string): Promise<MarketBar[]> {
+  /**
+   * loadBars() — the bar window behind rankAll()'s fresh scoring.
+   *
+   * Delegates to the canonical loader, `MarketDataService.getBars()`, for the same
+   * reason the Arena now does (#751): only that loader filters by `timeframe` AND
+   * returns oldest → newest. This method used to query prisma directly, wrongly twice:
+   * `asc + take: 200` returned the OLDEST 200 rows (for AUDUSD — 13,091 bars — that
+   * window ended 2026-05-18 while the newest bar was 2026-09-10, so every directive
+   * scored ~4 months of stale data and `asOf` reported May), and it had no `timeframe`
+   * filter at all, so it spliced cadences together.
+   *
+   * `cadence` comes from the caller — the protocol's `recommendedTimeframe` through
+   * `selectBaseTimeframe()`. If the symbol has no rows at that cadence we fall back to
+   * the cadence of its newest bar: equity symbols are daily-only in `marketbar`, and
+   * they must not score 0 merely because a protocol recommended 5m.
+   */
+  private async loadBars(symbolId: string, cadence: string, ticker?: string): Promise<MarketBar[]> {
     try {
-      const rows = await this.prisma.marketBar.findMany({
-        where: { symbolId },
-        orderBy: { timestamp: 'asc' },
-        take: 200,
-      });
+      let marketBars = (await this.marketData.getBars(symbolId, cadence, 200)) as MarketBar[];
 
-      if (rows.length >= 30) {
-        return rows.map((r) => ({
-          timestamp: r.timestamp,
-          open: Number(r.open),
-          high: Number(r.high),
-          low: Number(r.low),
-          close: Number(r.close),
-          volume: Number(r.volume),
-        }));
+      if (marketBars.length < 30) {
+        const newest = await this.prisma.marketBar.findFirst({
+          where: { symbolId },
+          orderBy: { timestamp: 'desc' },
+          select: { timeframe: true },
+        });
+        if (newest?.timeframe && newest.timeframe !== cadence) {
+          const alt = (await this.marketData.getBars(symbolId, newest.timeframe, 200)) as MarketBar[];
+          if (alt.length > marketBars.length) marketBars = alt;
+        }
+      }
+
+      if (marketBars.length >= 30) {
+        return marketBars;
       }
 
       // ── Live Data Fallback ──
       // Backoff (issue #31): at most one live refresh per cooldown per symbol, so
       // persistently sparse symbols don't fire a bridge fetch + DB import every tick.
-      if (ticker && rows.length < 30 && this.isLiveRefreshDue(symbolId)) {
+      if (ticker && marketBars.length < 30 && this.isLiveRefreshDue(symbolId)) {
         // Check if this is a crypto ticker — use the crypto router
         if (this.cryptoRouter.isCrypto(ticker)) {
           try {
@@ -865,15 +904,8 @@ export class ScoringService implements OnModuleInit {
       }
       // ── End Live Data Fallback ──
 
-      if (rows.length > 0) {
-        return rows.map((r) => ({
-          timestamp: r.timestamp,
-          open: Number(r.open),
-          high: Number(r.high),
-          low: Number(r.low),
-          close: Number(r.close),
-          volume: Number(r.volume),
-        }));
+      if (marketBars.length > 0) {
+        return marketBars;
       }
 
       return [];

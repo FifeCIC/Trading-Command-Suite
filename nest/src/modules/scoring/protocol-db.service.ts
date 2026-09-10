@@ -145,32 +145,56 @@ export class ProtocolDbService implements OnModuleInit {
    * 3. Auto-derived from protocol ID (fallback)
    */
   async resolveSymbols(protocolId: string): Promise<string[]> {
+    // The id passed in may be a protocol SLUG (automation loop / control config) or
+    // a UUID. Resolve to the canonical Protocol row so the DB lookups below match
+    // either way — otherwise every symbol silently falls back to the hard-coded
+    // hints in Path 3 (#747).
+    let protoUuid: string | null = null;
+    let protoSlug: string | null = null;
+    try {
+      const proto = await (this.prisma as any).protocol.findFirst({
+        where: { OR: [{ slug: protocolId }, { id: protocolId }] },
+        select: { id: true, slug: true },
+      });
+      if (proto) { protoUuid = proto.id; protoSlug = proto.slug; }
+    } catch { /* protocol table best-effort */ }
+    const idCandidates: string[] = [];
+    for (const v of [protocolId, protoUuid, protoSlug]) {
+      if (typeof v === 'string' && v.length > 0 && !idCandidates.includes(v)) idCandidates.push(v);
+    }
+
     // Path 1: DB — SymbolProtocolAssignment records
     try {
       const assignments = await (this.prisma as any).symbolProtocolAssignment.findMany({
-        where: { protocolId },
+        where: { protocolId: { in: idCandidates } },
         select: { symbol: true },
       });
       if (assignments?.length > 0) {
-        return assignments.map((a: any) => a.symbol.toUpperCase());
+        const syms: string[] = [];
+        for (const a of assignments) {
+          const s = String(a.symbol).toUpperCase();
+          if (!syms.includes(s)) syms.push(s);
+        }
+        return syms;
       }
     } catch { /* table may not exist yet */ }
 
     // Path 2: DB — Watchlist linked to this protocol
     try {
       const wl = await (this.prisma as any).watchlist.findFirst({
-        where: { protocolId },
+        where: { protocolId: { in: idCandidates } },
         select: { symbols: true },
       });
       if (wl?.symbols) {
         const parsed = typeof wl.symbols === 'string' ? JSON.parse(wl.symbols) : wl.symbols;
         if (Array.isArray(parsed)) {
-          return parsed.map((s: any) => typeof s === 'string' ? s.toUpperCase() : (s.ticker || s.symbol || '').toUpperCase()).filter(Boolean);
+          const syms = parsed.map((s: any) => typeof s === 'string' ? s.toUpperCase() : (s.ticker || s.symbol || '').toUpperCase()).filter(Boolean);
+          if (syms.length > 0) return syms;
         }
       }
     } catch { /* table may not exist yet */ }
 
-    // Path 3: Auto-derived from protocol ID
+    // Path 3: Auto-derived from protocol ID (fallback — prefer DB wiring above).
     return this.deriveSymbolsFromId(protocolId);
   }
 

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import AccountSummary from '../components/mt5/AccountSummary';
 import PositionsTable from '../components/mt5/PositionsTable';
 import OrderForm from '../components/mt5/OrderForm';
 import './mt5-trading-page.css';

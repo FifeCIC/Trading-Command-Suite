@@ -18,30 +18,18 @@
  */
 import SetupBanner from '../components/SetupBanner';
 import WidgetBoard from '../components/WidgetBoard';
+import { boardLabel, defaultWidgetsFor } from '../core/board-defaults';
 import './home-dashboard.css';
-
-/** The dashboard as it shipped, expressed as widget ids. */
-const COCKPIT_DEFAULTS = [
-  'market-context',
-  'alerts',
-  'hot-picks',
-  'mt5-portfolio',
-  'broker-pnl',
-  'worst-case',
-  'mt5-positions',
-  'recent-trades',
-  'diversification',
-  'top-signals',
-  'market-sessions',
-  'news-sources',
-  'automation',
-];
 
 export default function DashboardPage() {
   return (
     <div className="dash-page">
       <SetupBanner />
-      <WidgetBoard boardId="dashboard" title="Cockpit" defaultWidgets={COCKPIT_DEFAULTS} />
+      <WidgetBoard
+        boardId="dashboard"
+        title={boardLabel('dashboard')}
+        defaultWidgets={defaultWidgetsFor('dashboard')}
+      />
     </div>
   );
 }

@@ -46,10 +46,9 @@ let uidCounter = 0;
 export const nextUid = () => `w${Date.now().toString(36)}${(uidCounter++).toString(36)}`;
 
 /** New key. Replaces the legacy `widgets:<id>` / `widgets-layout:<id>` pair. */
-export const boardStorageKey = (boardId) => `widgets-board:${boardId}`;
+const boardStorageKey = (boardId) => `widgets-board:${boardId}`;
 
-/** Registry footprint → concrete grid units for `cols` columns. */
-export function sizeFor(def, cols) {
+function sizeFor(def, cols) {
   const base = def?.size || FALLBACK_SIZE;
   const minW = clamp(base.minW ?? 2, 1, cols);
   return {
@@ -93,7 +92,7 @@ export const seedItems = (ids) =>
   (ids || []).filter((id) => !!getWidget(id)).map((widgetId) => ({ uid: nextUid(), widgetId }));
 
 /** A brand-new board for `defaultWidgets`. */
-export function createBoard(defaultWidgets = []) {
+function createBoard(defaultWidgets = []) {
   const ids = (defaultWidgets || []).filter((id) => !!getWidget(id));
   const items = seedItems(ids);
   return { v: BOARD_VERSION, items, layouts: buildAllLayouts(items), seeded: [...ids] };
@@ -211,6 +210,25 @@ export function saveBoardLocal(boardId, board) {
 }
 
 /**
+ * listBoards() — board ids that have saved state, discovered from storage.
+ *
+ * Used by the screen cockpit's board picker and by the `/dashboard/screen` view
+ * so a board arranged once can be shown on any monitor. It reports only what
+ * actually exists locally — the built-in ids come from
+ * `src/core/board-defaults.js`, so callers union the two and never invent a board.
+ */
+export function listBoards() {
+  if (typeof localStorage === 'undefined') return [];
+  const prefix = `tcs:view-state:${boardStorageKey('')}`;
+  const ids = [];
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(prefix)) ids.push(key.slice(prefix.length));
+  }
+  return ids;
+}
+
+/**
  * subscribeBoard(boardId, onChange) → unsubscribe.
  * Cross-tab/window sync. Matters for the multi-screen cockpit, where the same
  * board can be open in more than one window: the other window's edit arrives as
@@ -226,20 +244,4 @@ export function subscribeBoard(boardId, onChange) {
   };
   window.addEventListener('storage', onStorage);
   return () => window.removeEventListener('storage', onStorage);
-}
-
-/**
- * Board ids that exist (localStorage scan). A DB backend would query rows
- * instead — the Component Lab / Settings UI should not assume localStorage.
- */
-export function listBoards() {
-  const ids = [];
-  try {
-    for (let i = 0; i < localStorage.length; i += 1) {
-      const key = localStorage.key(i);
-      const match = key && key.match(/^tcs:view-state:widgets-board:(.+)$/);
-      if (match) ids.push(match[1]);
-    }
-  } catch { /* noop */ }
-  return ids;
 }

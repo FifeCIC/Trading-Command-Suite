@@ -22,6 +22,12 @@ import { ProtocolGatingService } from './protocol-gating.service';
 import { ProtocolConsensusService } from './protocol-consensus.service';
 import { ProtocolDbService } from './protocol-db.service';
 import { PrismaService } from '../../database/prisma.service';
+import { MarketDataService } from '../market-data/market-data.service';
+import { MarketBar } from '../directives/interfaces/directive.interface';
+import { selectBaseTimeframe } from '../../common/utils/timeframe';
+
+/** Bars loaded per symbol/cadence for Arena scoring (unchanged window size). */
+const ARENA_BAR_WINDOW = 100;
 
 interface ArenaSymbol {
   symbol: string;
@@ -140,7 +146,33 @@ export class ArenaController {
     private readonly consensusService: ProtocolConsensusService,
     private readonly protocolDb: ProtocolDbService,
     private readonly prisma: PrismaService,
+    private readonly marketData: MarketDataService,
   ) {}
+
+  /**
+   * Load a symbol's bars for ONE cadence — cached per request, keyed by cadence, so
+   * the protocol loop never re-queries the same (symbol, cadence) pair. A comparison
+   * of 44 protocols therefore costs at most 6 distinct queries per symbol (1m/5m/15m/
+   * 1h/4h/1d), not 44.
+   *
+   * ⚠️ Uses the canonical MarketDataService.getBars(). That is the ONLY loader that
+   * guarantees the two things a scoring array must have: a single `timeframe`
+   * (no mixed cadences) and oldest → newest order (#751). Both hand-rolled
+   * prisma.marketBar queries that used to live in this controller were wrong — one
+   * handed directives a descending array, and neither filtered by timeframe, so
+   * cadences were spliced together. Do not "optimise" this back into a direct query.
+   */
+  private async loadCadenceBars(
+    symbolId: string,
+    cadence: string,
+    cache: Map<string, MarketBar[]>,
+  ): Promise<MarketBar[]> {
+    const cached = cache.get(cadence);
+    if (cached) return cached;
+    const bars = (await this.marketData.getBars(symbolId, cadence, ARENA_BAR_WINDOW)) as MarketBar[];
+    cache.set(cadence, bars);
+    return bars;
+  }
 
   @Get()
   async getArena(
@@ -178,28 +210,22 @@ export class ArenaController {
 
       for (const sym of symbols) {
         try {
-          // Load bars for this symbol
-          const bars = await this.prisma.marketBar.findMany({
-            where: { symbolId: sym.id },
-            orderBy: { timestamp: 'desc' },
-            take: 100,
-          });
-          if (bars.length < 5) continue;
-
-          const marketBars = bars.map((b) => ({
-            timestamp: b.timestamp,
-            open: Number(b.open), high: Number(b.high),
-            low: Number(b.low), close: Number(b.close),
-            volume: Number(b.volume),
-          }));
-
           const { dayBars, hourBars, min15Bars } = await this.protocolGating.loadHigherTfBundle(sym.id);
+
+          // Bars are resolved PER PROTOCOL: cadence is a protocol attribute (#751),
+          // and a strategy legitimately groups protocols from different timeframes
+          // (a 5m scalp and a 1d macro protocol can sit in one stack).
+          const barsCache = new Map<string, MarketBar[]>();
 
           // Score with each protocol in this strategy, take the best
           let bestScore = 0;
           let bestSignal = 'HOLD';
           for (const pid of strat._validProtocols) {
             try {
+              const cadence = selectBaseTimeframe(this.protocolDb.getCached(pid)?.recommendedTimeframe);
+              const marketBars = await this.loadCadenceBars(sym.id, cadence, barsCache);
+              if (marketBars.length < 5) continue; // symbol has no data at this cadence
+
               const gated = await this.protocolGating.scoreWithGating(sym.ticker, marketBars, pid, { dayBars, hourBars, min15Bars });
               if (gated.signalPct > bestScore && !gated.riskGate?.hardGateTriggered) {
                 bestScore = gated.signalPct;
@@ -340,29 +366,21 @@ export class ArenaController {
       const symbolId = tickerToId.get(ticker);
       if (!symbolId) continue;
 
-      // Load bars once per symbol
-      const bars = await this.prisma.marketBar.findMany({
-        where: { symbolId },
-        orderBy: { timestamp: 'desc' },
-        take: 100,
-      });
-      if (bars.length < 5) continue;
-
-      const marketBars = bars.map((b) => ({
-        timestamp: b.timestamp,
-        open: Number(b.open),
-        high: Number(b.high),
-        low: Number(b.low),
-        close: Number(b.close),
-        volume: Number(b.volume),
-      }));
-
+      // Load bars once per symbol.
       const protocolScores: typeof comparison[0]['protocolScores'] = [];
       const { dayBars, hourBars, min15Bars } = await this.protocolGating.loadHigherTfBundle(symbolId);
+
+      // Bars are resolved PER PROTOCOL — cadence comes from the protocol's own
+      // recommendation (#751), cached per cadence so repeated protocols are free.
+      const barsCache = new Map<string, MarketBar[]>();
 
       for (const protocolId of protocolIds) {
         const reg = this.protocolDb.getCached(protocolId);
         if (!reg) continue;
+
+        const cadence = selectBaseTimeframe(reg.recommendedTimeframe);
+        const marketBars = await this.loadCadenceBars(symbolId, cadence, barsCache);
+        if (marketBars.length < 5) continue; // symbol has no data at this cadence
 
         try {
           const gated = await this.protocolGating.scoreWithGating(

@@ -317,6 +317,34 @@ export class ProtocolGatingController {
       for (const r of rows) statusMap[r.protocolId] = r;
     } catch { /* table not yet created */ }
 
+    // ── STALLED detection (#758) ────────────────────────────────────────────
+    //
+    // WHY: a protocol can honestly report `state: 'scoring'` while writing nothing usable.
+    // `symbolsScored` counts envelopes that were *built*, and a tick where every direction-
+    // eligible directive read neutral produced `0/0 -> 0` with `signal: 'HOLD'` — a phantom
+    // zero that counted as a score. Live evidence: `spy-day-v1` wrote rows at 11:48 with
+    // `rawMax: 0` and then nothing directional for hours, while this table still said
+    // 'scoring'. The outage was invisible because nothing compared "claims to be scoring"
+    // against "last produced a real reading".
+    //
+    // HOW: from the last persisted reading per protocol. Derived at read time rather than
+    // stored, so there is no new column, no migration, and no cron — and it cannot drift out
+    // of sync with the data it describes. A protocol declared `scoring` with no reading older
+    // than the threshold is reported `stalled` instead.
+    const STALL_AFTER_MS = 15 * 60_000; // 15 min: several 5m-scoring ticks, still actionable
+    const lastReadingMap: Record<string, { at: Date; rawMax: number | null }> = {};
+    try {
+      const reads: any[] = await (this.prisma as any).$queryRawUnsafe(
+        `SELECT strategyId AS protocolId, MAX(timestamp) AS at
+           FROM score
+          WHERE strategyId <> ''
+          GROUP BY strategyId`,
+      );
+      for (const r of reads) lastReadingMap[r.protocolId] = { at: new Date(r.at), rawMax: null };
+    } catch { /* score table shape varies; stall detection simply stays off */ }
+
+    const now = Date.now();
+
     const statuses: Array<{
       protocolId: string;
       name: string;
@@ -328,6 +356,8 @@ export class ProtocolGatingController {
         symbolsResolved: number;
         symbolsScored: number;
         lastTickAt: string | null;
+        lastReadingAt?: string | null;
+        stalledForMinutes?: number | null;
       } | null;
     }> = [];
 
@@ -336,6 +366,21 @@ export class ProtocolGatingController {
       // groups are legacy seed artifacts, not real protocols.
       if (!proto.groups?.length) continue;
       const row = statusMap[id];
+
+      let state = row?.state as string | undefined;
+      let reason = (row?.reason ?? null) as string | null;
+      const lastReading = lastReadingMap[id]?.at ?? null;
+      const stalledForMs = lastReading ? now - lastReading.getTime() : null;
+
+      // Only 'scoring' can be silently lying. 'paused'/'no-symbols'/'no-data' already explain
+      // themselves and must NOT be overwritten — a stalled badge on an intentionally paused
+      // protocol would be noise, and noise is how guards get ignored.
+      if (state === 'scoring' && stalledForMs !== null && stalledForMs > STALL_AFTER_MS) {
+        const mins = Math.round(stalledForMs / 60_000);
+        state = 'stalled';
+        reason = `Reports 'scoring' but has written no reading for ${mins} min. Either every direction-eligible directive is reading neutral (a 0/0 phantom score — see #758) or scoring is failing silently. Check the directive breakdown for this protocol.`;
+      }
+
       statuses.push({
         protocolId: id,
         name: proto.name || id,
@@ -343,11 +388,13 @@ export class ProtocolGatingController {
         note: noteMap[id] ?? null,
         status: row
           ? {
-              state: row.state,
-              reason: row.reason ?? null,
+              state: state ?? 'pending',
+              reason,
               symbolsResolved: Number(row.symbolsResolved ?? 0),
               symbolsScored: Number(row.symbolsScored ?? 0),
               lastTickAt: row.lastTickAt ? new Date(row.lastTickAt).toISOString() : null,
+              lastReadingAt: lastReading ? lastReading.toISOString() : null,
+              stalledForMinutes: stalledForMs === null ? null : Math.round(stalledForMs / 60_000),
             }
           : null,
       });
@@ -418,6 +465,12 @@ export class ProtocolGatingController {
             bearishRaw: 0, bearishMax: 0, bearishPct: 0,
             selected: 'none' as const,
           },
+          // #758 stable denominator — zero-bar fallback has no capacity to divide by,
+          // so the diagnostic set is all zero and `denominatorMode` still names the rule.
+          denominatorMode: 'configured-capacity' as const,
+          configuredSignalMax: 0,
+          observedSignalMax: 0,
+          directionEligibleDirectives: 0,
         },
         excludedBreakdown: [],
       };

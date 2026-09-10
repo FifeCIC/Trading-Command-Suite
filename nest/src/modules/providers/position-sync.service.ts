@@ -49,7 +49,7 @@ export interface PositionSyncOptions {
 export class PositionSyncService {
   private readonly logger = new Logger(PositionSyncService.name);
   private lastSyncedAt: Date | null = null;
-  private lastResult: { synced: number; created: number; closed: number } | null = null;
+  private lastResult: { synced: number; created: number; closed: number; reaped: number } | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -66,8 +66,8 @@ export class PositionSyncService {
     provider: string,
     positions: BrokerPosition[],
     options: PositionSyncOptions = {},
-  ): Promise<{ synced: number; created: number; closed: number }> {
-    if (!this.prisma.isAvailable) return { synced: 0, created: 0, closed: 0 };
+  ): Promise<{ synced: number; created: number; closed: number; reaped: number }> {
+    if (!this.prisma.isAvailable) return { synced: 0, created: 0, closed: 0, reaped: 0 };
     const authoritative = options.authoritative ?? positions.length > 0;
     const accountId = options.accountId ?? null;
 
@@ -127,7 +127,7 @@ export class PositionSyncService {
       // arrays caused by outages must never liquidate the local projection.
       if (!authoritative) {
         this.logger.warn(`[${provider}] Non-authoritative position snapshot — closure detection skipped`);
-        return { synced, created, closed: 0 };
+        return { synced, created, closed: 0, reaped: 0 };
       }
       const incomingTickets = positions.map(p => p.brokerTicket).filter(Boolean);
       // 2026-09-10 — rows written before the accountId/ticket backfill carry NULL
@@ -160,15 +160,86 @@ export class PositionSyncService {
         closed += await this.finalizeClosedPosition(provider, dbPos);
       }
 
+      // Reap stranded TRADE rows — see reapStrandedTrades(). Runs only past the
+      // `authoritative` guard above, so an outage can never trigger it.
+      const reaped = await this.reapStrandedTrades(provider, accountId, positions);
+
       this.lastSyncedAt = new Date();
-      this.lastResult = { synced, created, closed };
-      if (synced > 0 || created > 0 || closed > 0) {
-        this.logger.log(`[${provider}] Position sync: ${synced} upserted, ${created} created, ${closed} closed`);
+      this.lastResult = { synced, created, closed, reaped };
+      if (synced > 0 || created > 0 || closed > 0 || reaped > 0) {
+        this.logger.log(
+          `[${provider}] Position sync: ${synced} upserted, ${created} created, ${closed} closed, ${reaped} stranded trade row(s) reaped`,
+        );
       }
-      return { synced, created, closed };
+      return { synced, created, closed, reaped };
     } catch (err) {
       this.logger.warn(`[${provider}] Position sync failed: ${(err as Error).message}`);
-      return { synced: 0, created: 0, closed: 0 };
+      return { synced: 0, created: 0, closed: 0, reaped: 0 };
+    }
+  }
+
+  /**
+   * Close out Trade rows that have no broker counterpart and no ticket.
+   *
+   * WHY (2026-09-10): the Position table self-heals, but `trade` had no
+   * equivalent reaper. When a position closed, `finalizeClosedPosition()` only
+   * ran for rows still present in `position` — so any Trade whose Position row
+   * had already been cleaned stayed `status='open'` forever with no broker
+   * counterpart. Measured damage: 17 phantom USDCAD rows (opened
+   * 2026-07-10…07-24), all `origin='strategy'`, all NULL brokerTicket, against
+   * ZERO broker positions. They inflate every open-position count and corrupt
+   * any exposure or P&L figure derived from `trade`.
+   *
+   * ⚠️ SAFETY: only rows with NO brokerTicket are considered, and only when the
+   * symbol is absent from an AUTHORITATIVE snapshot.
+   *   - A ticket is proof of life: if the broker reports that ticket, the row is
+   *     never touched, whatever else the snapshot looks like.
+   *   - A partial/empty snapshot caused by an outage must never reap anything,
+   *     which is why this runs only after the `authoritative` early-return.
+   *   - Rows are CLOSED, not deleted, so the record stays auditable.
+   */
+  private async reapStrandedTrades(
+    provider: string,
+    accountId: string | null,
+    positions: BrokerPosition[],
+  ): Promise<number> {
+    try {
+      // ⚠️ Do NOT filter by accountId here: `trade` has no such column (only
+      // `position` does). Adding it silently returns zero rows, because Prisma
+      // discards an unknown filter rather than erroring — which is exactly how
+      // the first version of this reaper reported "0 reaped" while 17 stranded
+      // rows sat in the table. `provider` is the correct scope for `trade`.
+      void accountId;
+      const liveSymbols = new Set(positions.map((p) => String(p.symbol).toUpperCase()));
+      const stranded: any[] = await (this.prisma as any).trade.findMany({
+        where: { provider, status: 'open', brokerTicket: null },
+        select: { id: true, symbol: true, openedAt: true },
+      });
+      if (!Array.isArray(stranded) || stranded.length === 0) return 0;
+
+      let reaped = 0;
+      for (const t of stranded) {
+        if (liveSymbols.has(String(t.symbol).toUpperCase())) continue;
+        const updated = await (this.prisma as any).trade.updateMany({
+          where: { id: t.id, status: 'open', brokerTicket: null },
+          data: {
+            status: 'closed',
+            closedAt: new Date(),
+            pnl: 0,
+            brokerComment: 'Reconciled: no broker counterpart (stranded row)',
+          },
+        }).catch(() => null);
+        if (updated?.count) {
+          reaped += updated.count;
+          this.logger.warn(
+            `[${provider}] Reaped stranded open Trade ${t.symbol} (${t.id}) — unticketed and absent from broker snapshot`,
+          );
+        }
+      }
+      return reaped;
+    } catch (err) {
+      this.logger.warn(`[${provider}] Stranded-trade reap failed: ${(err as Error).message}`);
+      return 0;
     }
   }
 

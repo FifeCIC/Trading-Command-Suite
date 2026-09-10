@@ -1049,13 +1049,23 @@ export class BacktestService {
   /**
    * Historical scoring must call the same evaluator as live automation.
    * This adapter intentionally contains no fallback maths (2026-09-08).
+   *
+   * The higher-timeframe bundle is loaded ONCE per (symbol, protocol) and cached,
+   * NOT per bar. A backtest loops over thousands of bars, so loading 1d/1h/15m inside
+   * the loop would be prohibitive — but omitting it entirely is worse: every MTF
+   * directive would silently score from base bars only and the backtest would
+   * validate a strategy the live loop never runs (#735, MST-004).
    */
   private async fullScore(
     symbol: string,
     bars: MarketBar[],
     protocolId: string,
   ): Promise<{ composite: number; signal: string; breakdown: Array<{ directiveId: string; score: number; maxScore: number; signalClass: string }> }> {
-    const gated = await this.protocolGating.scoreWithGating(symbol, bars, protocolId);
+    const symId = await this.resolveSymbolId(symbol);
+    const bundle = symId
+      ? await this.loadTfBundle(symId, protocolId)
+      : { dayBars: [], hourBars: [], min15Bars: [] };
+    const gated = await this.protocolGating.scoreWithGating(symbol, bars, protocolId, bundle);
     return {
       composite: gated.signalPct,
       signal: gated.signal,
@@ -1068,6 +1078,38 @@ export class BacktestService {
           signalClass: d.signalClass,
         })),
     };
+  }
+
+  // ── Higher-timeframe bundle cache (#735) ───────────────
+  //
+  // Backtests and replays iterate over thousands of bars, so `loadHigherTfBundle()`
+  // cannot be called per bar. The bundle for a (symbol, protocol) pair is STABLE for
+  // the whole run — a historical backtest sees the same 1d/1h/15m history regardless
+  // of which base bar is being evaluated — so it is loaded once and reused.
+  private readonly tfBundleCache = new Map<string, {
+    dayBars: MarketBar[]; hourBars: MarketBar[]; min15Bars: MarketBar[];
+  }>();
+  private readonly symbolIdCache = new Map<string, string | null>();
+
+  private async resolveSymbolId(ticker: string): Promise<string | null> {
+    const key = ticker.toUpperCase();
+    if (this.symbolIdCache.has(key)) return this.symbolIdCache.get(key) ?? null;
+    const sym = await this.prisma.symbol.findFirst({
+      where: { ticker: key },
+      select: { id: true },
+    });
+    const id = sym?.id ?? null;
+    this.symbolIdCache.set(key, id);
+    return id;
+  }
+
+  private async loadTfBundle(symbolId: string, protocolId: string) {
+    const key = `${symbolId}|${protocolId}`;
+    const cached = this.tfBundleCache.get(key);
+    if (cached) return cached;
+    const bundle = await this.protocolGating.loadHigherTfBundle(symbolId, protocolId);
+    this.tfBundleCache.set(key, bundle);
+    return bundle;
   }
 
   // ── Indicator helpers (pure functions) ──

@@ -896,9 +896,57 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 if not result or result.retcode not in (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL):
                     error = mt5.last_error() if not result else result.comment
                     return json_response(self, {'success': False, 'error': str(error)}, 400)
-                return json_response(self, {'success': True, 'ticket': ticket, 'symbol': pos.symbol,
-                    'closePrice': close_price, 'price': close_price, 'profit': float(pos.profit),
-                    'retcode': result.retcode, 'partial': result.retcode == mt5.TRADE_RETCODE_DONE_PARTIAL})
+
+                # ── Report the REALISED outcome, not pre-close floating values ──
+                #
+                # ⚠️ DO NOT return `pos.profit` / `tick.bid|ask` here. Both are
+                # read BEFORE order_send, so they describe the position as it was
+                # about to be closed, not the close itself:
+                #   - `pos.profit` is FLOATING profit (excludes the exit deal).
+                #   - `tick.bid|ask` is a pre-fill quote, not the fill price.
+                #
+                # Real damage (discovered 2026-09-10): a bulk close of 26 EURUSD
+                # positions recorded exitPrice=1.16257 and pnl=-9.02 on EVERY row,
+                # with a byte-identical closedAt. Buys and sells alike took the
+                # same negative value, because the fallback was shared. That made
+                # the whole book's P&L unreadable and looked like strategy losses.
+                #
+                # The authoritative source is the closed deal itself. Match the
+                # entry deal(s) for this position and sum profit/commission/swap
+                # for the realised figure; use the exit deal's own price.
+                realized_profit = None
+                realized_price = None
+                try:
+                    deals = mt5.history_deals_get(position=ticket)
+                    if deals:
+                        entries = [d for d in deals if d.entry == 0]   # DEAL_ENTRY_IN
+                        exits = [d for d in deals if d.entry == 1]     # DEAL_ENTRY_OUT
+                        if exits:
+                            realized_price = float(exits[-1].price)
+                        realized_profit = float(sum(d.profit + d.commission + d.swap for d in deals))
+                except Exception:
+                    # History may lag a just-filled close by a moment; fall back
+                    # to the send result rather than to pre-close floating values.
+                    pass
+
+                # result.price is the actual fill price from the trade server —
+                # far better than the pre-fill quote we used to return.
+                fill_price = None
+                try:
+                    if getattr(result, 'price', None):
+                        fill_price = float(result.price)
+                except Exception:
+                    pass
+
+                return json_response(self, {
+                    'success': True, 'ticket': ticket, 'symbol': pos.symbol,
+                    'closePrice': realized_price if realized_price is not None else (fill_price or close_price),
+                    'price': realized_price if realized_price is not None else (fill_price or close_price),
+                    'profit': realized_profit,
+                    'realized': realized_profit is not None,
+                    'retcode': result.retcode,
+                    'partial': result.retcode == mt5.TRADE_RETCODE_DONE_PARTIAL,
+                })
 
             # /order/modify
             if path == '/order/modify':

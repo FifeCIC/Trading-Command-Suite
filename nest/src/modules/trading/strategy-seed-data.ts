@@ -13,6 +13,8 @@
  * @created 2026-07-31 — 24/7 session coverage
  */
 
+import { SessionTag } from './session-window';
+
 export interface SeedTradingStrategy {
   name: string;
   symbol: string;
@@ -24,14 +26,80 @@ export interface SeedTradingStrategy {
   slPct: number;
   tpPct: number;
   minComposite: number;
-  /** Session this strategy targets */
-  session: 'tokyo' | 'london' | 'us' | 'always';
+  /**
+   * SESSION GATE (2026-09-10) — canonical session tags this bot may act in.
+   * Persisted to trading_strategy.sessionWindow and enforced by Gate 4.5 in
+   * automation-loop.service.ts. `null` = ungated (may act any time).
+   *
+   * Replaces the old `session: 'tokyo' | 'london' | 'us' | 'always'` field,
+   * which was declared here but consumed by no runtime code — a label with no
+   * rule behind it. 'tokyo' → 'asian', 'always' → null.
+   */
+  sessionWindow: SessionTag[] | null;
   /** Trading style from the protocol */
   style: string;
 }
 
 export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
+  // ── Index tick-scalp bots — London/EU coverage (#730 / #747) ──
+  {
+    name: 'FTSE Index Tick Scalp',
+    symbol: 'UK100',
+    protocolId: 'ftse-speed-v1',
+    brokerId: 'mt5',
+    mode: 'semi-auto',
+    timeframe: '5m',
+    baseSize: 0.01,
+    slPct: 0.4,
+    tpPct: 0.6,
+    minComposite: 65,
+    sessionWindow: ['london'],
+    style: 'Tick Scalp',
+  },
+  {
+    name: 'DAX Index Tick Scalp',
+    symbol: 'GER40',
+    protocolId: 'dax-speed-v1',
+    brokerId: 'mt5',
+    mode: 'semi-auto',
+    timeframe: '5m',
+    baseSize: 0.01,
+    slPct: 0.4,
+    tpPct: 0.6,
+    minComposite: 65,
+    sessionWindow: ['london'],
+    style: 'Tick Scalp',
+  },
+  {
+    name: 'CAC Index Tick Scalp',
+    symbol: 'FRA40',
+    protocolId: 'cac-speed-v1',
+    brokerId: 'mt5',
+    mode: 'semi-auto',
+    timeframe: '5m',
+    baseSize: 0.01,
+    slPct: 0.4,
+    tpPct: 0.6,
+    minComposite: 65,
+    sessionWindow: ['london'],
+    style: 'Tick Scalp',
+  },
+
   // ── XAUUSD Variants (derived from xau-speed-v1) ──────────
+  {
+    name: 'Silver Speed Scalp',
+    symbol: 'XAGUSD',
+    protocolId: 'xau-speed-v1',
+    brokerId: 'mt5',
+    mode: 'semi-auto',
+    timeframe: '5m',
+    baseSize: 0.01,
+    slPct: 0.6,
+    tpPct: 1.0,
+    minComposite: 60,
+    sessionWindow: ['london'],
+    style: 'Tick Scalp',
+  },
   {
     name: 'Gold Scalp M5',
     symbol: 'XAUUSD',
@@ -43,7 +111,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 0.3,
     tpPct: 0.5,
     minComposite: 55,
-    session: 'always',
+    sessionWindow: null,
     style: 'Scalp',
   },
   {
@@ -57,7 +125,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 0.5,
     tpPct: 1.0,
     minComposite: 60,
-    session: 'always',
+    sessionWindow: null,
     style: 'Day Trade',
   },
   {
@@ -71,7 +139,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 1.5,
     tpPct: 3.0,
     minComposite: 55,
-    session: 'always',
+    sessionWindow: null,
     style: 'Swing',
   },
   {
@@ -85,7 +153,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 3.0,
     tpPct: 6.0,
     minComposite: 50,
-    session: 'always',
+    sessionWindow: null,
     style: 'Position',
   },
 
@@ -101,7 +169,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 1.5,
     tpPct: 3.0,
     minComposite: 60,
-    session: 'tokyo',
+    sessionWindow: ['asian'],
     style: 'Swing',
   },
   {
@@ -115,7 +183,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 0.5,
     tpPct: 1.0,
     minComposite: 60,
-    session: 'london',
+    sessionWindow: ['london'],
     style: 'Day Trade',
   },
   {
@@ -129,7 +197,7 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     slPct: 3.0,
     tpPct: 6.0,
     minComposite: 55,
-    session: 'us',
+    sessionWindow: ['us'],
     style: 'Position',
   },
 ];

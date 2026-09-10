@@ -181,17 +181,22 @@ export class SymbolResolverService {
     try {
       if (!this.prisma.isAvailable) return [];
       const rows: any[] = await (this.prisma as any).$queryRawUnsafe(
-        `SELECT slug FROM protocol WHERE active = 1`,
+        `SELECT id, slug FROM protocol WHERE active = 1`,
       );
       const slugs: string[] = rows.map((r: any) => r.slug).filter(Boolean);
       if (!slugs.length) return [];
-      const ph = slugs.map(() => '?').join(',');
+      // DB rows key protocol refs by UUID (FK) while the loop passes slugs — match
+      // BOTH forms or the DB paths never hit and everything falls back to the
+      // hard-coded derivation hints below (#747).
+      const ids: string[] = rows.map((r: any) => r.id).filter(Boolean);
+      const candidates = [...new Set([...ids, ...slugs])];
+      const ph = candidates.map(() => '?').join(',');
 
       // Path 1 — symbol-protocol assignments
       try {
         const assigns: any[] = await (this.prisma as any).$queryRawUnsafe(
           `SELECT symbol FROM symbol_protocol_assignment WHERE protocolId IN (${ph})`,
-          ...slugs,
+          ...candidates,
         );
         for (const a of assigns) set.add(String(a.symbol).toUpperCase());
       } catch { /* table may not exist */ }
@@ -200,7 +205,7 @@ export class SymbolResolverService {
       try {
         const wls: any[] = await (this.prisma as any).$queryRawUnsafe(
           `SELECT symbols FROM watchlist WHERE protocolId IN (${ph})`,
-          ...slugs,
+          ...candidates,
         );
         for (const w of wls) this.collectWatchlistSymbols(w.symbols, set);
       } catch { /* column may not exist */ }

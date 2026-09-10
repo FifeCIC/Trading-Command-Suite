@@ -45,20 +45,33 @@ async function main() {
         continue;
       }
 
+      // Optional protocol pairing (#747) — a watchlist can be linked to the
+      // protocol it feeds. Accepts a slug or UUID; resolve to the Protocol row id
+      // so the DB-driven symbol resolution (ProtocolDbService Path 2) matches.
+      let protocolId: string | null = null;
+      const protocolRef = typeof data?.protocolId === 'string' ? data.protocolId : null;
+      if (protocolRef) {
+        const proto = await prisma.protocol.findFirst({
+          where: { OR: [{ slug: protocolRef }, { id: protocolRef }] },
+          select: { id: true },
+        });
+        protocolId = proto?.id ?? protocolRef;
+      }
+
       // Try update first, then create
       const existing = await prisma.watchlist.findFirst({ where: { name } });
       if (existing) {
         await prisma.watchlist.update({
           where: { id: existing.id },
-          data: { symbols: symbols as any, kind: 'system', updatedAt: new Date() },
+          data: { symbols: symbols as any, kind: 'system', ...(protocolId ? { protocolId } : {}), updatedAt: new Date() },
         });
-        console.log(`  ${name}: updated (${symbols.length} symbols)`);
+        console.log(`  ${name}: updated (${symbols.length} symbols${protocolId ? `, protocol=${protocolRef}` : ''})`);
         updated++;
       } else {
         await prisma.watchlist.create({
-          data: { name, symbols: symbols as any, kind: 'system', isDefault: name === 'primary' },
+          data: { name, symbols: symbols as any, kind: 'system', isDefault: name === 'primary', ...(protocolId ? { protocolId } : {}) },
         });
-        console.log(`  ${name}: created (${symbols.length} symbols)`);
+        console.log(`  ${name}: created (${symbols.length} symbols${protocolId ? `, protocol=${protocolRef}` : ''})`);
         created++;
       }
     } catch (err) {

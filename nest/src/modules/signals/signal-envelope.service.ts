@@ -9,45 +9,30 @@ import { SignalQueueService, RoutableSignal } from './signal-queue.service';
 import { SignalOutcomeService } from './signal-outcome.service';
 import { ExecutionFeasibilityService, FeasibilityBlocker } from '../trading/execution-feasibility.service';
 import { OutcomeTrackerService } from '../scoring/outcome-tracker.service';
+import { selectBaseTimeframe } from '../../common/utils/timeframe';
+import {
+  resolveStyleThreshold,
+  SIGNALS_GATE_DEFAULT,
+  StyleGateResolution,
+} from '../../common/utils/style-thresholds';
 
 /** Strategy ID used when persisting Signals Workbench scores. */
 const SIGNALS_WORKBENCH_STRATEGY_ID = 'signals-workbench';
 
 // ── #718 per-protocol entry gate ────────────────────────────────────────
-// The pre-trade gate is no longer a hardcoded 65 for every protocol. Order:
+// The pre-trade gate is not a hardcoded 65 for every protocol. Order:
 //   1. per-protocol override in global_setting: `signals.gate.<protocolId>`
-//   2. the protocol's trading style (mirrors automation-loop STYLE_THRESHOLDS)
-//   3. the 65 default (the historical signals gate — intentionally NOT the
-//      loop's 60 default, to preserve existing Signals behaviour).
-const GATE_DEFAULT = 65;
-const STYLE_GATE: Record<string, number> = {
-  scalp: 75,
-  speed: 80,
-  'day-trade': 65,
-  swing: 55,
-  position: 45,
-};
+//   2. the protocol's trading style
+//   3. SIGNALS_GATE_DEFAULT (65 — the historical Signals gate, deliberately
+//      NOT the automation loop's 60, so neither path changes)
+// The style→bar table and its matcher now live in common/utils/style-thresholds.ts.
+// Do NOT re-declare the numbers here — the previous duplicate drifted from the
+// loop's copy and only one of the two would have received the next fix.
 
-function styleGateFallback(tradingStyle?: string): number {
-  const s = (tradingStyle || '').toLowerCase();
-  if (s.includes('scalp') || s.includes('tick')) return STYLE_GATE.scalp;
-  if (s.includes('speed')) return STYLE_GATE.speed;
-  if (s.includes('day')) return STYLE_GATE['day-trade'];
-  if (s.includes('swing')) return STYLE_GATE.swing;
-  if (s.includes('position')) return STYLE_GATE.position;
-  return GATE_DEFAULT;
-}
-
-/** Map free-text protocol guidance to the finest supported primary cadence. */
-function selectBaseTimeframe(recommended?: string): string {
-  const value = (recommended ?? '').toLowerCase();
-  if (/\b(5s|30s|1m)\b/.test(value)) return '1m';
-  if (/\b5m\b/.test(value)) return '5m';
-  if (/\b15m\b/.test(value)) return '15m';
-  if (/\b1h\b/.test(value)) return '1h';
-  if (/\b4h\b/.test(value)) return '4h';
-  return '1d';
-}
+// NOTE: selectBaseTimeframe() now lives in common/utils/timeframe.ts (#751) so the
+// Arena and the scoring path resolve cadence the same way this service does. It was
+// module-private here, which is why those two callers hand-rolled their own bar
+// queries and lost the timeframe filter. Import it — do not re-add a local copy.
 
 /**
  * SignalEnvelopeService
@@ -431,11 +416,16 @@ export class SignalEnvelopeService {
 
     // Pre-trade readiness — #718 per-protocol gate: override key wins,
     // then the protocol's trading style, then the 65 default.
-    const gateThreshold = await this.getGateThreshold(
+    const gate = await this.getGateThreshold(
       protocolId,
       protocolId ? this.protocolDb.getCached(protocolId)?.tradingStyle : undefined,
     );
-    const { preTradeReady, preTradeBlockers } = this.evaluatePreTrade(gated, conflicts, gateThreshold);
+    const { preTradeReady, preTradeBlockers } = this.evaluatePreTrade(
+      gated,
+      conflicts,
+      gate.threshold,
+      gate.label,
+    );
 
     // #684 — combined strength: best of Signal and Opportunity.
     // Signal % is the classification basis (pre-gate directional).
@@ -665,6 +655,7 @@ export class SignalEnvelopeService {
     gated: GatedScore,
     conflicts: SignalEnvelope['conflicts'],
     gateThreshold = 65,
+    gateLabel = '',
   ): {
     preTradeReady: boolean;
     preTradeBlockers: string[];
@@ -684,7 +675,11 @@ export class SignalEnvelopeService {
       // #718: threshold is per-protocol (override > style > default 65).
       // #687: classification uses the pre-gate percentage, not this gated
       // composite — phrase it as caution, not as a contradiction of the badge.
-      blockers.push(`Signal below ${gateThreshold}% (${gated.signalPct.toFixed(1)}%)`);
+      // The gate's PROVENANCE is included so the number is never a mystery:
+      // a silent style fall-through used to look identical to a real decision.
+      blockers.push(
+        `Signal below ${gateThreshold}% (${gated.signalPct.toFixed(1)}%)${gateLabel ? ` [${gateLabel}]` : ''}`,
+      );
     }
     if (gated.marketStatus && !gated.marketStatus.open) {
       blockers.push(`Market unavailable: ${gated.marketStatus.reason ?? 'closed or stale'}`);
@@ -724,13 +719,19 @@ export class SignalEnvelopeService {
   }
 
   /** Resolve the pre-trade gate: per-protocol override → style → 65 default. */
-  private async getGateThreshold(protocolId?: string, tradingStyle?: string): Promise<number> {
+  private async getGateThreshold(protocolId?: string, tradingStyle?: string): Promise<StyleGateResolution> {
     if (protocolId) {
       const overrides = await this.loadGateOverrides();
       const override = overrides.get(protocolId);
-      if (override !== undefined) return override;
+      if (override !== undefined) {
+        return {
+          threshold: override,
+          source: 'override',
+          label: `override signals.gate.${protocolId} = ${override}`,
+        };
+      }
     }
-    return styleGateFallback(tradingStyle);
+    return resolveStyleThreshold(tradingStyle, SIGNALS_GATE_DEFAULT);
   }
 
   private emptyEnvelope(symbol: string): SignalEnvelope {
@@ -820,6 +821,46 @@ export class SignalEnvelopeService {
           select: { id: true },
         });
         if (!sym) continue;
+
+        // ── Reuse the gating row instead of shadowing it ────────────────────
+        //
+        // The protocol-gating pipeline already wrote a Score row for this
+        // (symbol, protocol) moments ago. That row carries the full breakdown
+        // (`rawMax`, `marketStatus`, `denominatorMode`, `readinessGate` — 21
+        // keys); this write only carries 8. Creating a second row made EVERY
+        // scored symbol a duplicate pair, with the thin row newer — so the
+        // scoring-runs grouping (which reads `entries[0]` from a timestamp-desc
+        // fetch) picked the thin one and the ladder lost the denominator and
+        // the market status.
+        //
+        // If a gating row exists in this same minute we adopt its id and leave
+        // it in place. `scoreId` — the only thing this method's callers need —
+        // is still returned, and the rich breakdown is preserved.
+        const existingRows = await (this.prisma as any).$queryRawUnsafe(
+          `SELECT id FROM Score
+            WHERE symbolId = ? AND strategyId = ?
+              AND timestamp >= ?
+              AND JSON_UNQUOTE(JSON_EXTRACT(breakdown, '$.protocolId')) IS NOT NULL
+            ORDER BY timestamp DESC LIMIT 1`,
+          sym.id,
+          strategy.id,
+          new Date(Date.now() - 60_000),
+        ) as Array<{ id: string }>;
+        const existing = existingRows?.[0] ?? null;
+        if (existing?.id) {
+          ids[env.symbol] = existing.id;
+          this.signalOutcomes.recordOutcome({
+            scoreId: existing.id,
+            symbol: env.symbol,
+            protocolId: env.protocolId ?? (strategyId !== SIGNALS_WORKBENCH_STRATEGY_ID ? strategyId : null),
+            preTradeReady: env.preTradeReady,
+            blockers: env.preTradeBlockers,
+            conflicts: env.conflicts,
+            warnings: env.riskGate?.warnings ?? [],
+            executionBlockers: env.executionBlockers ?? [],
+          }).catch(() => {});
+          continue;
+        }
 
         const snapshot = await this.scoreHistory.storeSnapshot(
           sym.id,
@@ -921,6 +962,12 @@ export class SignalEnvelopeService {
         try {
           const env = await this.buildEnvelope(ticker, slug);
           const sym = ticker.toUpperCase();
+          // #758 — a NO_DATA envelope is an ABSENCE, not a score. Counting it as scored is
+          // what let a protocol report 'scoring' for hours while producing nothing usable:
+          // the phantom `0/0 -> 0` tick incremented this counter. It still counts as a
+          // RESOLVED pair (we did look at it), but not as a reading.
+          const noData = (env as any).noData === true || env.signal === ('NO_DATA' as any);
+          if (noData) continue;
           scoredPairs.add(`${slug}|${sym}`);
           protoScored++;
           // #600 — protocol maxima are comparable only after normalization.
@@ -949,14 +996,14 @@ export class SignalEnvelopeService {
             symbolsResolved: tickers.length,
             symbolsScored: protoScored,
             reason: protoScored < tickers.length
-              ? `${protoScored}/${tickers.length} symbols scored (rest failed)`
+              ? `${protoScored}/${tickers.length} symbols produced a directional reading (the rest were no-data or failed) — see #758`
               : undefined,
           }
         : {
             state: 'no-data',
             symbolsResolved: tickers.length,
             symbolsScored: 0,
-            reason: `All ${tickers.length} symbols failed to score — missing bars or no data`,
+            reason: `No symbol produced a directional reading — every direction-eligible directive read neutral or data was missing (${tickers.length} symbol(s) resolved). An all-neutral tick is data absence, not a HOLD score (#758).`,
           };
     }
 
@@ -1068,13 +1115,14 @@ export class SignalEnvelopeService {
     // queue records before feasibility and persistence, so blockers and score
     // lineage disappeared and a raw composite was stored as a percentage.
     try {
+      const isRouteable = (env: typeof scoredEnvelopes[number]): boolean =>
+        env.preTradeReady &&
+        (env.executionBlockers?.length ?? 0) === 0 &&
+        Boolean(env.scoreId) &&
+        !dismissed.has(`${env.symbol}|${env.protocolId}`);
+
       const routeable: RoutableSignal[] = scoredEnvelopes
-        .filter(env =>
-          env.preTradeReady &&
-          (env.executionBlockers?.length ?? 0) === 0 &&
-          Boolean(env.scoreId) &&
-          !dismissed.has(`${env.symbol}|${env.protocolId}`),
-        )
+        .filter(isRouteable)
         .map(env => ({
           protocolId: env.protocolId!,
           symbol: env.symbol,
@@ -1086,7 +1134,32 @@ export class SignalEnvelopeService {
           combinedStrength: env.combinedStrength,
           scoreId: env.scoreId,
         }));
-      await this.signalQueue.syncQueues(routeable, scoredPairs);
+
+      // Explain everything that did NOT become routeable, so the queue log can
+      // report "signalled but blocked (why)" instead of the misleading
+      // "dropped non-signalling symbol(s)". A symbol blocked by the 65%
+      // pre-trade gate used to be reported as though the PROTOCOL had never
+      // signalled — which sent two separate investigations after the wrong
+      // component. Keep this map in step with the isRouteable() filter above.
+      const notRouteable = new Map<string, string>();
+      for (const env of scoredEnvelopes) {
+        if (isRouteable(env) || !env.protocolId) continue;
+        let why: string;
+        if (env.preTradeBlockers?.length) {
+          why = env.preTradeBlockers.join('; ');
+        } else if (env.executionBlockers?.length) {
+          why = env.executionBlockers
+            .map((b: any) => b?.reason ?? b?.code ?? b?.message ?? 'execution blocker')
+            .join('; ');
+        } else if (!env.scoreId) {
+          why = 'no score lineage';
+        } else {
+          why = 'dismissed';
+        }
+        notRouteable.set(`${env.protocolId}|${env.symbol}`, why);
+      }
+
+      await this.signalQueue.syncQueues(routeable, scoredPairs, notRouteable);
     } catch (err) {
       this.logger.warn(`Signal queue routing failed: ${(err as Error).message}`);
     }

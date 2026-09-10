@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
 import { resolveMt5BridgeUrl } from '../providers/mt5/mt5-bridge.config';
+import type { MarketBar } from '../directives/interfaces/directive.interface';
 
 export interface ReplayConfig {
   symbol: string;
@@ -280,12 +281,39 @@ export class ReplayService {
     } catch { /* best-effort */ }
 
     // Step through bars using the canonical protocol evaluator (2026-09-08).
+    //
+    // Higher-timeframe bundle (#735 / MST-004): resolved ONCE for the run, not per bar —
+    // a replay is a fixed historical slice, so the 1d/1h/15m series a given protocol sees
+    // does not change as `i` advances. Omitting it made every MTF directive score from base
+    // bars only, so a replay reported decisions the live loop would never make.
+    const replaySym = await this.prisma.symbol.findFirst({
+      where: { ticker: symbol.toUpperCase() },
+      select: { id: true },
+    });
+    const tfBundles = new Map<string, { dayBars: MarketBar[]; hourBars: MarketBar[]; min15Bars: MarketBar[] }>();
+    if (replaySym) {
+      for (const protocolId of protocolIds) {
+        try {
+          tfBundles.set(protocolId, await this.protocolGating.loadHigherTfBundle(replaySym.id, protocolId));
+        } catch {
+          // A protocol with no resolvable bars simply replays from base bars; do not
+          // fabricate a bundle, and do not abort the whole replay for one protocol.
+          tfBundles.set(protocolId, { dayBars: [], hourBars: [], min15Bars: [] });
+        }
+      }
+    }
+
     for (let i = windowSize - 1; i < bars.length; i++) {
       const currentBar = bars[i];
       const windowBars = bars.slice(Math.max(0, i - windowSize + 1), i + 1);
       const gatedResults = await Promise.all(
         protocolIds.map(protocolId =>
-          this.protocolGating.scoreWithGating(symbol, windowBars, protocolId),
+          this.protocolGating.scoreWithGating(
+            symbol,
+            windowBars,
+            protocolId,
+            tfBundles.get(protocolId) ?? { dayBars: [], hourBars: [], min15Bars: [] },
+          ),
         ),
       );
       let selectedIdx = 0;

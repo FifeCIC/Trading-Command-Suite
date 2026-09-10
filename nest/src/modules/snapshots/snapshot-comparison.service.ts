@@ -199,10 +199,18 @@ export class SnapshotComparisonService {
 
         // Use gated pipeline if protocol specified, otherwise raw scoring
         if (protocolId) {
+          // Supply the full 1d/1h/15m bundle — a snapshot that scores without it
+          // records a number no live path would produce, so the comparison it
+          // exists to make is invalid (#735, MST-004).
+          const sym = await this.prisma.symbol.findFirst({ where: { ticker: ticker.toUpperCase() } });
+          const { dayBars, hourBars, min15Bars } = sym
+            ? await this.protocolGating.loadHigherTfBundle(sym.id, protocolId)
+            : { dayBars: [], hourBars: [], min15Bars: [] };
           const gated = await this.protocolGating.scoreWithGating(
             ticker,
             marketBars,
             protocolId,
+            { dayBars, hourBars, min15Bars },
           );
           scoring = {
             composite: gated.composite,
