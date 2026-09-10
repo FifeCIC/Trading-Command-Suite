@@ -13,6 +13,7 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { zonedWallClockInstant } from '../../common/utils/session-time';
 
 export type SessionScope = 'sydney' | 'tokyo' | 'london' | 'ny';
 
@@ -238,17 +239,12 @@ export class MarketSessionsService {
 
   /** ISO timestamp of the session's local open on the same calendar day as `onDay`. */
   private localOpenTime(s: MarketSession, onDay: Date): Date {
-    const [oh, om] = s.open.split(':').map(Number);
-    const d = new Date(onDay.toLocaleString('en-US', { timeZone: s.iana }));
-    d.setHours(oh, om, 0, 0);
-    return d;
+    // 2026-09-10 (#731): shared DST-aware wall-clock → instant helper. The old
+    // inline parse only worked when the machine sat in the session's own zone.
+    return zonedWallClockInstant(s.iana, onDay, s.open);
   }
-
   /** ISO timestamp of the session's local close on the same calendar day as `onDay`. */
   private localCloseTime(s: MarketSession, onDay: Date): Date {
-    const [ch, cm] = s.close.split(':').map(Number);
-    const d = new Date(onDay.toLocaleString('en-US', { timeZone: s.iana }));
-    d.setHours(ch, cm, 0, 0);
-    return d;
+    return zonedWallClockInstant(s.iana, onDay, s.close);
   }
 }

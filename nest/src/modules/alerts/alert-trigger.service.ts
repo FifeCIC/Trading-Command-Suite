@@ -262,7 +262,14 @@ export class AlertTriggerService implements OnModuleInit {
     if (now - last < cfg.cooldownSeconds * 1000) return;
 
     this.lastFired.set(key, now);
-    this.alerts.addAlert(severity, 'trading', title, message);
+    // ⚠️ ARGUMENT ORDER — AlertsService.addAlert(type, title, detail, severity, ticker?, link?).
+    // These four args were previously shifted by one (`severity, 'trading', title, message`),
+    // so every stored alert had title='trading' and the human message landed in the
+    // `severity` column — the Alert Center and the notification bell then showed useless
+    // titles and could not colour by severity. Frontend expects `type` to be a CATEGORY
+    // (AlertCenterPage TYPE_FALLBACKS: signal | drawdown | daily | backtest | system | trading),
+    // not the trigger key. Keep 'trading' as the category, pass the message as `detail`.
+    this.alerts.addAlert('trading', title, message, severity);
     this.logger.log(`ALERT [${severity}] ${title}: ${message}`);
   }
 

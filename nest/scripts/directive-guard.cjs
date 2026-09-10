@@ -18,7 +18,10 @@
  *           different classes (different files). One copy is dead code that
  *           still confuses audits and the registry.
  *   MODE 7  Readiness evidence (--db) — a `ready` directive must have recorded
- *           scores in the DB that vary (Score.breakdown.breakouts).
+ *           scores in the DB that vary (Score.breakdown.breakouts). Directives
+ *           that NO active protocol can reach are counted separately: they have
+ *           no evidence because they never run, which is a coverage fact rather
+ *           than a readiness defect (115/129 warnings in the 2026-09-09 run).
  *
  * Usage:
  *   node nest/scripts/directive-guard.cjs              # static + runtime
@@ -114,7 +117,10 @@ function staticCheckFile(file) {
     if (!id) continue; // not a directive class
 
     // Collect `ready` directives for the MODE 7 readiness-evidence check.
-    if (readiness === 'ready' && !readyDirectives.has(id)) readyDirectives.set(id, file);
+    if (readiness === 'ready' && !readyDirectives.has(id)) {
+      readyDirectives.set(id, file);
+      readyBias.set(id, bias ?? 'neutral');
+    }
 
     // MODE 6 — duplicate id: same id defined by a class in a different file
     if (idOwners.has(id)) {
@@ -249,6 +255,8 @@ function runtimeCheck() {
 
 /** id -> file of every directive marked `ready` (populated by the static pass). */
 const readyDirectives = new Map();
+/** id -> directionBias of every `ready` directive (populated by the static pass). */
+const readyBias = new Map();
 const MIN_EVIDENCE_RECORDS = 10;
 const MIN_EVIDENCE_DISTINCT = 2;
 
@@ -277,11 +285,51 @@ async function readinessEvidenceCheck() {
   }
   const client = new prisma.PrismaClient();
   let rows = [];
+  let exposed = null; // null = unknown (query failed) → fall back to the noisy behaviour
+  let notPersisted = new Set(); // exposed by an active protocol that never persists breakdowns
   try {
     await client.$connect();
     rows = await client.$queryRawUnsafe(
       'SELECT breakdown FROM score ORDER BY timestamp DESC LIMIT 5000',
     );
+    // Exposure set — directives an ACTIVE protocol can actually run AND report on.
+    // Two filters beyond mere membership:
+    //   1. inclusion — `directive-inclusion.ts` drops a directive whose direction
+    //      bias cannot match the protocol's mode (bearish in LONG_ONLY can never
+    //      produce evidence: rsi-overbought, 2026-09-10).
+    //   2. persistence — evidence only exists for protocols that actually write
+    //      breakdown rows, so a directive whose admissible protocols never persist
+    //      cannot be judged from this table at all.
+    try {
+      const reachable = await client.$queryRawUnsafe(
+        `SELECT DISTINCT e.directiveId AS id, p.slug AS protocol, p.directionMode AS directionMode
+           FROM protocol_directive_entry e
+           JOIN protocol_directive_group g ON g.id = e.groupId
+           JOIN protocol p ON p.id = g.protocolId
+          WHERE p.active = 1`,
+      );
+      // Protocols that actually appear as breakdown rows in the window.
+      const persistingProtocols = new Set();
+      for (const row of rows) {
+        const pid = (row.breakdown || {}).protocolId;
+        if (pid) persistingProtocols.add(String(pid));
+      }
+      exposed = new Set();
+      notPersisted = new Set();
+      for (const row of reachable) {
+        const id = String(row.id);
+        const mode = String(row.directionMode || 'LONG_ONLY');
+        const bias = readyBias.get(id) ?? 'neutral';
+        const blockedByBias =
+          (mode === 'LONG_ONLY' && bias === 'bearish') ||
+          (mode === 'SHORT_ONLY' && bias === 'bullish');
+        if (blockedByBias) continue;
+        if (persistingProtocols.has(String(row.protocol))) exposed.add(id);
+        else notPersisted.add(id);
+      }
+    } catch (err) {
+      console.log(`[guard] exposure query failed (${err.message}) — reporting every ready directive.`);
+    }
   } catch (err) {
     console.log(`[guard] readiness evidence skipped — DB unavailable: ${err.message}`);
     return;
@@ -307,17 +355,33 @@ async function readinessEvidenceCheck() {
   }
 
   let insufficient = 0;
+  let notExposed = 0;
+  let lowSample = 0;
   for (const [id, file] of readyDirectives) {
     const e = evidence.get(id);
+    // No active protocol admits this directive, or none of the protocols that
+    // admit it persist breakdown rows → it cannot have evidence by definition.
+    const reachable = exposed ? exposed.has(id) : true;
+    if (!reachable) { notExposed++; continue; }
     if (!e || e.records === 0) {
       report(file, id, 7, 'WARN', `readiness='ready' but zero recorded scores in DB — no runtime evidence`);
       insufficient++;
-    } else if (e.records < MIN_EVIDENCE_RECORDS || e.values.size < MIN_EVIDENCE_DISTINCT) {
-      report(file, id, 7, 'WARN', `readiness='ready' but weak evidence: ${e.records} recorded scores, ${e.values.size} distinct`);
+    } else if (e.records < MIN_EVIDENCE_RECORDS) {
+      // A handful of samples is not evidence of a constant — the protocol may
+      // simply barely run. Counted separately so it cannot masquerade as a defect.
+      lowSample++;
+    } else if (e.values.size < MIN_EVIDENCE_DISTINCT) {
+      report(file, id, 7, 'WARN', `readiness='ready' but CONSTANT in production: ${e.records} recorded scores, ${e.values.size} distinct value`);
       insufficient++;
     }
   }
-  console.log(`[guard] readiness evidence: ${evidence.size} directives scored in DB, ${insufficient}/${readyDirectives.size} ready directives lack evidence.`);
+  console.log(
+    `[guard] readiness evidence: ${evidence.size} directives scored in DB, ${insufficient}/${readyDirectives.size} ready directives lack evidence` +
+    (exposed
+      ? `, ${notExposed} outside the evidence base (no admitting protocol persists breakdowns)`
+      : '') +
+    (lowSample ? `, ${lowSample} with too few samples to judge.` : '.'),
+  );
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────

@@ -12,9 +12,11 @@
  *   const candles = await adapter.getCandles('AAPL', '1h', 100);
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { IProviderAdapter } from './interfaces/provider-adapter.interface';
 import { RateLimitTracker, RateLimitState } from './rate-limit-tracker';
+import { RateLimitGovernor } from './rate-limit-governor.service';
 
 /**
  * Capability types a provider can support.
@@ -64,6 +66,49 @@ export class AdapterFactory {
   private readonly instanceConfigs = new Map<string, AdapterConfig>();
   private readonly rateLimitTrackers = new Map<string, RateLimitTracker>();
 
+  /**
+   * ModuleRef lets us resolve adapter instances through the Nest DI container so
+   * their injected dependencies (Logger services, PrismaService, BridgeEventService,
+   * NotificationService, …) are actually wired. Without this, `new ctor()` produced
+   * adapters with `undefined` deps — silently disabling bridge logging and order
+   * persistence (GH #747). Optional so unit tests / manual `new AdapterFactory()`
+   * still work, falling back to bare instantiation.
+   */
+  constructor(
+    private readonly moduleRef?: ModuleRef,
+    /**
+     * GH #744 — the governor is the authoritative rate-limit source. It holds a real
+     * per-provider limit table AND records live usage (every finnhub response calls
+     * `recordCall`), whereas the factory's own trackers were never registered — so
+     * selection saw `Infinity` remaining and never backed off. Optional so tests and
+     * manual construction keep working.
+     */
+    @Optional() private readonly governor?: RateLimitGovernor,
+  ) {}
+
+  /** Below this many calls remaining, prefer another provider. */
+  private static readonly MIN_REMAINING = 5;
+  /**
+   * Remaining value for a provider with no known limit. Deliberately FINITE: an
+   * unknown provider must not win a "highest remaining" comparison against a
+   * provider whose limit we actually know (that is the bug this replaced).
+   */
+  private static readonly UNKNOWN_REMAINING = 50;
+
+  /**
+   * GH #744 — make a missing governor LOUD. It is injected optionally so tests and
+   * manual construction work, but in the running app its absence silently returns
+   * selection to "everyone is unlimited", i.e. the exact outage this fixed.
+   */
+  onModuleInit(): void {
+    if (!this.governor) {
+      this.logger.warn(
+        'No RateLimitGovernor injected — provider selection cannot see live rate limits ' +
+        '(failover will not trigger; check ProvidersModule providers)',
+      );
+    }
+  }
+
   /** Register a rate limit tracker for an adapter instance. */
   setRateLimiter(instanceId: string, tracker: RateLimitTracker): void {
     this.rateLimitTrackers.set(instanceId, tracker);
@@ -108,6 +153,22 @@ export class AdapterFactory {
   }
 
   /**
+   * Instantiate an adapter, preferring the Nest DI-managed singleton so injected
+   * dependencies are present. Falls back to a bare `new` when ModuleRef is absent
+   * (tests) or the class is not a registered provider.
+   */
+  private instantiate(ctor: AdapterConstructor): IProviderAdapter {
+    if (this.moduleRef) {
+      try {
+        return this.moduleRef.get(ctor as any, { strict: false }) as IProviderAdapter;
+      } catch {
+        // Not a DI provider (or not resolvable) — fall through to bare construction.
+      }
+    }
+    return new ctor();
+  }
+
+  /**
    * Create (or retrieve cached) adapter instance.
    * Reads the API key from the environment on creation.
    */
@@ -127,7 +188,7 @@ export class AdapterFactory {
     }
 
     try {
-      const instance = new registration.ctor();
+      const instance = this.instantiate(registration.ctor);
       this.instances.set(id, instance);
       this.instanceConfigs.set(id, registration.config);
       this.logger.log(`Created adapter instance: ${id}`);
@@ -142,9 +203,13 @@ export class AdapterFactory {
 
   /**
    * Get the active adapter with smart rate-limit-aware selection.
-   * Picks the provider with the highest remaining rate limit.
-   * Skips tripped providers and those with <5 remaining calls.
-   * Falls back to failoverPriority order if no rate limit data.
+   * Picks the provider with the highest remaining rate limit, skipping providers
+   * that are tripped or below MIN_REMAINING.
+   *
+   * GH #744: remaining now comes from the RateLimitGovernor (real per-provider
+   * limit + live usage). It used to read only this factory's own trackers, which
+   * nothing ever registered, so every provider looked unlimited (`Infinity`) and
+   * the skip/failover logic below could never trigger.
    */
   getActive(preferredId?: string): IProviderAdapter | null {
     if (preferredId) {
@@ -152,19 +217,42 @@ export class AdapterFactory {
       if (instance) return instance;
     }
 
+    // One governor snapshot per call — it rebuilds a status object for every
+    // configured provider, so it must not run once per candidate.
+    const governorStatus = this.governor?.getStatus().providers;
+
     // Collect all usable instances with their rate limit info
     const candidates: Array<{ id: string; instance: IProviderAdapter; remaining: number }> = [];
+    const throttled: Array<{ id: string; instance: IProviderAdapter; remaining: number; reason: string }> = [];
 
     for (const [id, instance] of this.instances) {
-      const tracker = this.rateLimitTrackers.get(id);
+      const { remaining, reason } = this.remainingFor(id, governorStatus);
 
-      if (tracker && !tracker.isUsable()) {
-        this.logger.debug(`Skipping ${id} — rate limited or tripped`);
+      if (reason) {
+        this.logger.debug(`Skipping ${id} — ${reason}`);
+        throttled.push({ id, instance, remaining, reason });
+        continue;
+      }
+      if (remaining < AdapterFactory.MIN_REMAINING) {
+        const low = `${remaining} remaining (<${AdapterFactory.MIN_REMAINING})`;
+        this.logger.debug(`Skipping ${id} — ${low}`);
+        throttled.push({ id, instance, remaining, reason: low });
         continue;
       }
 
-      const remaining = tracker ? tracker.getState().remaining : Infinity;
       candidates.push({ id, instance, remaining });
+    }
+
+    if (candidates.length === 0 && throttled.length > 0) {
+      // Everything is throttled. Return the least-exhausted provider rather than
+      // falling through to "create anything from the registry", which bypassed the
+      // limits entirely — the path that burned API keys.
+      throttled.sort((a, b) => b.remaining - a.remaining);
+      const pick = throttled[0];
+      this.logger.warn(
+        `All providers throttled — least-exhausted is ${pick.id} (${pick.reason})`,
+      );
+      return pick.instance;
     }
 
     if (candidates.length === 0) {
@@ -182,14 +270,42 @@ export class AdapterFactory {
     // Pick the candidate with the highest remaining rate limit
     candidates.sort((a, b) => b.remaining - a.remaining);
 
-    if (candidates.length > 1) {
-      this.logger.debug(
-        `Rate-limit aware selection: ${candidates[0].id} (${candidates[0].remaining} remaining) ` +
-        `over ${candidates[1].id} (${candidates[1].remaining} remaining)`,
-      );
-    }
+    // Always state the choice and its remaining budget — GH #744's acceptance
+    // criterion is a finite count in this log (it used to read "Infinity").
+    const summary = candidates.length > 1
+      ? `${candidates[0].id} (${candidates[0].remaining} remaining) over ${candidates[1].id} (${candidates[1].remaining} remaining)`
+      : `${candidates[0].id} (${candidates[0].remaining} remaining)`;
+    this.logger.debug(`Rate-limit aware selection: ${summary}`);
 
     return candidates[0].instance;
+  }
+
+  /**
+   * Remaining calls for a provider, from the single authoritative source:
+   * a tracker registered for this instance → the governor → a finite default.
+   * Never `Infinity` (GH #744).
+   */
+  private remainingFor(
+    id: string,
+    governorStatus?: Record<string, { remainingEstimate: number }>,
+  ): { remaining: number; reason?: string } {
+    const tracker = this.rateLimitTrackers.get(id);
+    if (tracker) {
+      const state = tracker.getState();
+      if (!tracker.isUsable()) return { remaining: state.remaining, reason: 'rate limited or tripped' };
+      return { remaining: state.remaining };
+    }
+
+    const status = governorStatus?.[id];
+    if (this.governor && status) {
+      const verdict = this.governor.canCall(id);
+      if (!verdict.allowed) {
+        return { remaining: status.remainingEstimate, reason: verdict.reason ?? 'not allowed right now' };
+      }
+      return { remaining: status.remainingEstimate };
+    }
+
+    return { remaining: AdapterFactory.UNKNOWN_REMAINING };
   }
 
   /**

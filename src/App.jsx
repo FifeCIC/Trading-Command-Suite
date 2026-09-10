@@ -230,6 +230,9 @@ function AppShell() {
   const areaViews = NAV_STRUCTURE[primaryArea];
   const defaultView = (areaViews && areaViews.length > 0) ? areaViews[0].id : 'directives-registry';
   const secondaryView = isSymbolRoute ? 'symbol' : (symbolId ? 'symbol-detail' : (view || defaultView));
+  // Dashboard renders full-bleed — no breadcrumb, no left section nav — as a
+  // step toward the future widget-based, multi-screen dashboard.
+  const isDashboard = primaryArea === 'dashboard';
   const [demoPrompt, setDemoPrompt] = useState('Generate a responsive planning concept for eco garden week.');
   const [demoOutput, setDemoOutput] = useState('');
   const [activityLog, setActivityLog] = useState([]);
@@ -670,7 +673,7 @@ function AppShell() {
     ? (isDbOnline && isMt5Online ? 'Online' : 'Degraded')
     : 'Offline';
   return (
-    <div className={`site-shell layout-omni background-${backgroundTone}${(devOverlayOpen || screenOptionsOpen) ? '' : ' right-rail-hidden'}${leftCollapsed ? ' left-rail-collapsed' : ''}`} {...withDevTag('app.shell', { product: 'tradingcs' })}>
+    <div className={`site-shell layout-omni background-${backgroundTone}${(devOverlayOpen || screenOptionsOpen) ? '' : ' right-rail-hidden'}${leftCollapsed ? ' left-rail-collapsed' : ''}${isDashboard ? ' dashboard-shell' : ''}`} {...withDevTag('app.shell', { product: 'tradingcs' })}>
       {!isOnline && (
         <div className="network-status-bar offline">
           📡 Offline — showing cached data (last sync: {lastOnlineAt?.toLocaleTimeString() || 'never'})
@@ -1031,7 +1034,7 @@ function AppShell() {
         <div aria-live="assertive" aria-atomic="true" className="sr-only-alert" role="alert"></div>
         <TopRowSlotProvider>
           <div className="main-top-row">
-            <Breadcrumbs />
+            {!isDashboard && <Breadcrumbs />}
             <div className="main-top-right">
               {(() => {
                 const explanation = VIEW_EXPLANATIONS[secondaryView];

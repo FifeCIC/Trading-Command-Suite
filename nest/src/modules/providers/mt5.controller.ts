@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Param, Body, Query, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, Logger } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdapterFactory } from './adapter-factory';
 import { Mt5Adapter } from './adapters/mt5.adapter';
 import { Mt5ConnectionManager } from './mt5/mt5-connection-manager.service';
+import { Mt5SymbolRouter } from './mt5/mt5-symbol-router.service';
 import { resolveMt5BridgeUrl } from './mt5/mt5-bridge.config';
 import { PrismaService } from '../../database/prisma.service';
 
@@ -16,6 +17,7 @@ export class Mt5Controller {
     private readonly adapterFactory: AdapterFactory,
     private readonly prisma: PrismaService,
     private readonly mt5Connection: Mt5ConnectionManager,
+    private readonly symbolRouter: Mt5SymbolRouter,
   ) {}
 
   private getMt5Adapter(): Mt5Adapter | null {
@@ -33,6 +35,122 @@ export class Mt5Controller {
     return {
       brokers: await this.mt5Connection.getAllBrokerHealths(),
       timestamp: new Date().toISOString(),
+    };
+  }
+
+  // ── Symbol → broker routing (symbol_route, GH #747) ──────
+
+  private invalidateRouteCache(symbol?: string): void {
+    this.symbolRouter.invalidate(symbol);
+    void this.symbolRouter.refresh();
+  }
+
+  @Get('routes')
+  @ApiOperation({ summary: 'List symbol→broker route assignments' })
+  async getRoutes(@Query('brokerId') brokerId?: string, @Query('symbol') symbol?: string) {
+    const where: any = {};
+    if (brokerId) where.brokerId = parseInt(brokerId, 10);
+    if (symbol) where.symbol = symbol.toUpperCase();
+    const routes = await this.prisma.symbolRoute.findMany({
+      where,
+      orderBy: [{ symbol: 'asc' }, { priority: 'asc' }],
+    });
+    return { routes, cache: this.symbolRouter.snapshot(), timestamp: new Date().toISOString() };
+  }
+
+  @Get('routes/:symbol')
+  @ApiOperation({ summary: 'Resolve the effective route for a single symbol' })
+  async resolveRoute(@Param('symbol') symbol: string) {
+    return { symbol: symbol.toUpperCase(), route: this.symbolRouter.resolve(symbol) };
+  }
+
+  @Put('routes/:symbol')
+  @ApiOperation({ summary: 'Create/update a symbol→broker route' })
+  async setRoute(
+    @Param('symbol') symbol: string,
+    @Body() body: { brokerId: number; brokerSymbol?: string | null; priority?: number; enabled?: boolean; note?: string },
+  ) {
+    const sym = symbol.toUpperCase();
+    if (typeof body?.brokerId !== 'number') {
+      return { ok: false, error: 'brokerId (number) is required' };
+    }
+    const route = await this.prisma.symbolRoute.upsert({
+      where: { symbol_brokerId: { symbol: sym, brokerId: body.brokerId } },
+      update: {
+        brokerSymbol: body.brokerSymbol ?? null,
+        priority: body.priority ?? 0,
+        enabled: body.enabled ?? true,
+        note: body.note ?? null,
+      },
+      create: {
+        symbol: sym,
+        brokerId: body.brokerId,
+        brokerSymbol: body.brokerSymbol ?? null,
+        priority: body.priority ?? 0,
+        enabled: body.enabled ?? true,
+        note: body.note ?? null,
+      },
+    });
+    this.invalidateRouteCache(sym);
+    return { ok: true, route };
+  }
+
+  @Post('routes/bulk')
+  @ApiOperation({ summary: 'Bulk create/update symbol→broker routes' })
+  async bulkSetRoutes(
+    @Body() body: { routes: Array<{ symbol: string; brokerId: number; brokerSymbol?: string | null; priority?: number; enabled?: boolean; note?: string }> },
+  ) {
+    const items = Array.isArray(body?.routes) ? body.routes : [];
+    let applied = 0;
+    for (const r of items) {
+      if (!r?.symbol || typeof r.brokerId !== 'number') continue;
+      const sym = r.symbol.toUpperCase();
+      await this.prisma.symbolRoute.upsert({
+        where: { symbol_brokerId: { symbol: sym, brokerId: r.brokerId } },
+        update: { brokerSymbol: r.brokerSymbol ?? null, priority: r.priority ?? 0, enabled: r.enabled ?? true, note: r.note ?? null },
+        create: { symbol: sym, brokerId: r.brokerId, brokerSymbol: r.brokerSymbol ?? null, priority: r.priority ?? 0, enabled: r.enabled ?? true, note: r.note ?? null },
+      });
+      applied++;
+    }
+    this.invalidateRouteCache();
+    return { ok: true, applied, cache: this.symbolRouter.snapshot(), timestamp: new Date().toISOString() };
+  }
+
+  @Delete('routes/:symbol')
+  @ApiOperation({ summary: 'Delete all routes for a symbol (falls back to asset-type default)' })
+  async deleteRoutes(@Param('symbol') symbol: string, @Query('brokerId') brokerId?: string) {
+    const sym = symbol.toUpperCase();
+    const where: any = { symbol: sym };
+    if (brokerId) where.brokerId = parseInt(brokerId, 10);
+    const res = await this.prisma.symbolRoute.deleteMany({ where });
+    this.invalidateRouteCache(sym);
+    return { ok: true, deleted: res.count };
+  }
+
+  // ── Bulk market data (broker-grouped — scales to many symbols, #747) ──
+
+  @Post('quotes/bulk')
+  @ApiOperation({ summary: 'Bulk quotes for many symbols (grouped per broker)' })
+  async bulkQuotes(@Body() body: { symbols: string[] }) {
+    const adapter = this.getMt5Adapter();
+    if (!adapter) return { ok: false, error: 'MT5 adapter unavailable' };
+    const symbols = Array.isArray(body?.symbols) ? body.symbols : [];
+    const quotes = await adapter.getQuotesBulk(symbols);
+    return { ok: true, requested: symbols.length, count: Object.keys(quotes).length, quotes };
+  }
+
+  @Post('candles/bulk')
+  @ApiOperation({ summary: 'Bulk candles for many symbols (grouped per broker)' })
+  async bulkCandles(@Body() body: { symbols: string[]; timeframe?: string; limit?: number }) {
+    const adapter = this.getMt5Adapter();
+    if (!adapter) return { ok: false, error: 'MT5 adapter unavailable' };
+    const symbols = Array.isArray(body?.symbols) ? body.symbols : [];
+    const data = await adapter.getCandlesBatch(symbols, body?.timeframe ?? '1h', body?.limit ?? 100);
+    return {
+      ok: true,
+      requested: symbols.length,
+      count: Object.keys(data).length,
+      barCounts: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, v.length])),
     };
   }
 

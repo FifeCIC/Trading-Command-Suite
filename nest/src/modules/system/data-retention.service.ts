@@ -15,6 +15,7 @@ const TABLE_CONFIG: Record<string, { dateCol: string; defaultDays: number; envKe
   automation_event:     { dateCol: 'timestamp',    defaultDays: 60,  envKey: 'DATA_RETENTION_EVENT_DAYS',      label: 'Automation Events' },
   portfolio_snapshot:   { dateCol: 'takenAt',      defaultDays: 365, envKey: 'DATA_RETENTION_PORTFOLIO_DAYS',  label: 'Portfolio Snapshots' },
   order:                { dateCol: 'createdAt',    defaultDays: 365, envKey: 'DATA_RETENTION_ORDER_DAYS',      label: 'Orders' },
+  bridge_event:         { dateCol: 'createdAt',    defaultDays: 90,  envKey: 'DATA_RETENTION_BRIDGE_DAYS',     label: 'Bridge Events' },
 };
 /**
  * Data retention service — prunes old data to prevent unbounded growth.

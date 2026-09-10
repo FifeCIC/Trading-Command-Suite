@@ -130,15 +130,31 @@ export class PositionSyncService {
         return { synced, created, closed: 0 };
       }
       const incomingTickets = positions.map(p => p.brokerTicket).filter(Boolean);
-      const incomingSymbols = positions.map(p => p.symbol);
+      // 2026-09-10 — rows written before the accountId/ticket backfill carry NULL
+      // in both columns. Scoping this scan by accountId hid them from closure
+      // detection forever, so a closed position kept living on as a phantom
+      // "open" row (it also blocked the duplicate guard for that symbol).
       const dbPositions = await (this.prisma as any).position.findMany({
-        where: accountId ? { provider, accountId } : { provider },
+        where: accountId
+          ? { provider, OR: [{ accountId }, { accountId: null }] }
+          : { provider },
       });
+      // A legacy row (no ticket) is only "still open" while NO ticketed row
+      // represents the same symbol — otherwise it is a superseded duplicate:
+      // matching by symbol alone made any re-opened symbol immortal.
+      const ticketedSymbols = new Set(
+        dbPositions.filter((p: any) => p.brokerTicket).map((p: any) => p.symbol),
+      );
+      const unticketedIncoming = new Set(
+        positions.filter(p => !p.brokerTicket).map(p => p.symbol),
+      );
       let closed = 0;
       for (const dbPos of dbPositions) {
         const stillOpen = dbPos.brokerTicket
           ? incomingTickets.includes(dbPos.brokerTicket)
-          : incomingSymbols.includes(dbPos.symbol);
+          : ticketedSymbols.has(dbPos.symbol)
+            ? false
+            : unticketedIncoming.has(dbPos.symbol);
         if (stillOpen) continue;
 
         closed += await this.finalizeClosedPosition(provider, dbPos);
@@ -263,6 +279,7 @@ export class PositionSyncService {
     // known currentPrice/pnl snapshot if the broker doesn't expose deals.
     let exitPrice: number | null = dbPos.currentPrice ?? null;
     let realizedPnl: number | null = dbPos.pnl ?? null;
+    let closedAt: Date | null = null;
     try {
       const adapter: any = this.adapterFactory?.create(provider);
       if (adapter?.getDeals && dbPos.openedAt) {
@@ -270,13 +287,30 @@ export class PositionSyncService {
         const byPosition = deals.filter((d: any) =>
           dbPos.brokerTicket && d.positionId === dbPos.brokerTicket,
         );
-        // Legacy brokers may not expose a position id. Symbol fallback is safe
-        // only when it identifies a single lifecycle in the returned history.
+        // Legacy brokers may not expose a position id. The symbol fallback is
+        // only safe when the returned window identifies ONE lifecycle — with
+        // several lifecycles for the same symbol it would average unrelated
+        // deals into the exit price (2026-09-10).
         const symbolDeals = deals.filter((d: any) => d.symbol === dbPos.symbol);
+        const symbolLifecycles = new Set(
+          symbolDeals.map((d: any) => d.positionId ?? d.orderId ?? ''),
+        );
+        const symbolFallbackSafe = symbolLifecycles.size <= 1;
         const candidates = byPosition.length > 0
           ? byPosition
-          : dbPos.brokerTicket ? [] : symbolDeals;
-        const closingSide = dbPos.side === 'sell' ? 'buy' : 'sell';
+          : dbPos.brokerTicket ? []
+            : symbolFallbackSafe ? symbolDeals : [];
+        if (byPosition.length === 0 && !dbPos.brokerTicket && !symbolFallbackSafe) {
+          this.logger.warn(
+            `[${provider}] ${dbPos.symbol}: ${symbolLifecycles.size} deal lifecycles in history — ` +
+            'cannot identify the closing deal, keeping the last known snapshot as the exit price',
+          );
+        }
+        // The Trade row owns the direction. A legacy Position row has side NULL,
+        // which used to flip this to the OPENING deal and write the entry price
+        // back as the exit price.
+        const positionSide = String(trade?.side ?? dbPos.side ?? '').toLowerCase();
+        const closingSide = positionSide === 'sell' ? 'buy' : 'sell';
         const exitDeals = candidates.filter((d: any) => d.side === closingSide);
         if (exitDeals.length > 0) {
           const filledVolume = exitDeals.reduce((sum: number, d: any) => sum + Number(d.volume || 0), 0);
@@ -285,6 +319,10 @@ export class PositionSyncService {
             : Number(exitDeals[exitDeals.length - 1].price || 0);
           realizedPnl = exitDeals.reduce((sum: number, d: any) =>
             sum + Number(d.profit || 0) + Number(d.commission || 0) + Number(d.swap || 0) + Number(d.fee || 0), 0);
+          // Prefer the broker's real close time over "now" (a reconciliation
+          // pass can finalise a trade days after the broker closed it).
+          const lastExitTime = exitDeals[exitDeals.length - 1]?.time;
+          if (lastExitTime) closedAt = new Date(lastExitTime);
         }
       }
     } catch (err) {
@@ -298,7 +336,7 @@ export class PositionSyncService {
           status: 'closed',
           exitPrice: exitPrice ?? trade.exitPrice ?? null,
           pnl: realizedPnl ?? trade.pnl ?? null,
-          closedAt: new Date(),
+          closedAt: closedAt ?? new Date(),
         },
       });
 

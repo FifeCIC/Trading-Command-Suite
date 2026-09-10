@@ -14,23 +14,25 @@
  * BASE (0–100):  Continuous DXY interpolation: DXY 108→0, DXY 95→100.
  *                USDCAD: flipped (100-base) since USD is the base currency.
  *                Other CAD pairs: base as-is (USD quote, DXY↑=bearish).
- * BONUS tiers:   WTI > $85 → +25 (strong oil tailwind for CAD).
- * MAX:           125 (100 base + 25 bonus).
+ * OUT OF SCOPE:  non-CAD symbols score 0 — no constant contribution.
+ *
+ * ── Removed tier (2026-09-10, #731) ──────────────────────
+ * The old "WTI > $85 → +25" bonus was unreachable: no producer writes
+ * `wtiValue`, so 25 of the old maxScore 125 were phantom points that inflated
+ * every protocol denominator while never being earnable. maxScore 125 → 100,
+ * requiredDataFeeds ['oil'] → ['dxy']. Same fix as `gold-macro-correlation`
+ * (2026-08-14). Wire a real oil feed before re-adding an oil tier.
  *
  * ── Symbol Coverage ──────────────────────────────────────
  * USDCAD, EURCAD, GBPCAD, AUDCAD, NZDCAD
  *
  * ── Data Sources ─────────────────────────────────────────
- * dxyValue or eurusdValue on DirectiveInput (DXY pipeline)
- * wtiValue on DirectiveInput (MT5 USOIL quote, optional)
+ * dxyValue or eurusdValue on DirectiveInput (DXY pipeline, wired in
+ * `protocol-gating.service.ts`). `wtiValue` is NOT wired.
  */
 
 import { Injectable } from '@nestjs/common';
 import { DirectiveInput, DirectiveResult, IDirective } from '../interfaces/directive.interface';
-
-// ── Thresholds ────────────────────────────────────────────
-
-const OIL_STRONG = 85;  // WTI > $85 = strong oil = CAD tailwind
 
 // ── CAD pair detection ────────────────────────────────────
 
@@ -54,28 +56,27 @@ export class CadUsdOilCorrelationDirective implements IDirective {
     'Hybrid: continuous DXY base for CAD pairs + oil-price threshold bonuses.';
   readonly category = 'structural' as const;
   readonly priority = 50;
-  readonly maxScore = 125; // 100 base + 25 bonus
-  readonly minScore = 1;
+  readonly maxScore = 100; // 2026-09-10 (#731): was 125 with an unreachable +25 oil tier — the class is the single source of truth for weights
+  readonly minScore = 0;   // no-signal / out-of-scope = 0, never a midpoint
   readonly minBars = { '1d': 20 };
-  readonly version = '2.0.1';
-  readonly requiredDataFeeds = ['oil'];
+  readonly version = '2.1.0'; // 2026-09-10: phantom oil tier removed + scoped floors → 0
+  readonly requiredDataFeeds = ['dxy']; // 'oil' dropped — nothing writes wtiValue
   readonly readiness = 'beta' as const;
   readonly directionBias = 'neutral' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
     let dxy = (input as any).dxyValue as number | undefined;
     const eurusd = (input as any).eurusdValue as number | undefined;
-    const wti = (input as any).wtiValue as number | undefined;
-
     const sym = input.symbol.toUpperCase();
 
-    // Only score CAD pairs
+    // Only score CAD pairs. Out of scope = NO contribution (was a constant 50,
+    // which added a phantom half-score to Opportunity for every other symbol).
     if (!CAD_PAIRS.has(sym)) {
       return {
         signalClass: 'neutral',
-        score: 50,
+        score: 0,
         confidence: 0,
-        reason: `${input.symbol} is not a CAD pair — cad-usd-oil-correlation only applies to USDCAD/EURCAD/GBPCAD/AUDCAD/NZDCAD.`,
+        reason: `${input.symbol} is not a CAD pair — cad-usd-oil-correlation applies to USDCAD/EURCAD/GBPCAD/AUDCAD/NZDCAD only.`,
       };
     }
 
@@ -92,8 +93,8 @@ export class CadUsdOilCorrelationDirective implements IDirective {
     if (dxy === undefined || dxy <= 0) {
       return {
         signalClass: 'neutral',
-        score: 50,
-        confidence: 0.10,
+        score: 0, // no evidence = no contribution (was a constant 50)
+        confidence: 0,
         reason: `No DXY or EURUSD macro data for ${sym}. CAD correlation requires USD strength data. Connect MT5 (EURUSD always available).`,
       };
     }
@@ -106,28 +107,20 @@ export class CadUsdOilCorrelationDirective implements IDirective {
     // Other CAD pairs: USD is quote, strong USD = bearish → rawBase works as-is
     const baseScore = isUsdBase ? 100 - rawBase : rawBase;
 
-    // ── BONUS (threshold-gated, rare events) ─────────────
-    let bonusScore = 0;
-    let bonusLabel = '';
-
-    if (wti !== undefined && wti > 0 && wti >= OIL_STRONG) {
-      bonusScore = 25;
-      bonusLabel = `strong oil (WTI=$${wti.toFixed(0)})`;
-    }
-
     // ── Total ─────────────────────────────────────────────
-    const totalScore = baseScore + bonusScore;
+    // No bonus tier: every earnable point now comes from the DXY base, so the
+    // score is comparable across symbols again.
+    const totalScore = baseScore;
 
     let signalClass: 'bullish' | 'bearish' | 'neutral';
     if (totalScore >= 65) signalClass = 'bullish';
     else if (totalScore <= 35) signalClass = 'bearish';
     else signalClass = 'neutral';
 
-    const hasOil = wti !== undefined && wti > 0;
-    const confidence = hasOil ? 0.50 : 0.30;
+    // Confidence reflects evidence quality, not the (removed) oil tier.
+    const confidence = 0.30;
 
     const parts: string[] = [`base=${baseScore} (${dxySource}=${dxy}, ${isUsdBase ? 'USD base' : 'CAD cross'})`];
-    if (bonusScore > 0) parts.push(`+${bonusScore} bonus (${bonusLabel})`);
     parts.push(`= ${totalScore}/${this.maxScore}`);
 
     return {
@@ -135,7 +128,7 @@ export class CadUsdOilCorrelationDirective implements IDirective {
       score: totalScore,
       confidence,
       reason: `${sym}: ${parts.join(' ')}`,
-      metadata: { baseScore, bonusScore, bonusLabel, dxy, dxySource, isUsdBase },
+      metadata: { baseScore, dxy, dxySource, isUsdBase },
     };
   }
 }

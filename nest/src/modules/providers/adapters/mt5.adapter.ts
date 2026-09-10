@@ -17,6 +17,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
+import { normalizeSide, resolvePositionPnl } from '../../../common/utils/position-pnl';
 import {
   IProviderAdapter,
   BrokerAccount,
@@ -33,6 +34,8 @@ import { NotificationService } from '../../notifications/notifications.service';
 import { BridgeEventService } from '../bridge-event.service';
 import { sanitizeMt5Comment } from '../mt5-comment.util';
 import { resolveMt5BridgeUrl } from '../mt5/mt5-bridge.config';
+import { Mt5SymbolRouter, ResolvedSymbolRoute } from '../mt5/mt5-symbol-router.service';
+import { SystemLogService } from '../../system/log.service';
 
 interface BridgeQuoteResponse {
   symbol: string;
@@ -77,15 +80,40 @@ export class Mt5Adapter implements IProviderAdapter {
   tripped = false;
   private trippedAt: number | null = null;
 
-  private lastBridgeState: 'connected' | 'disconnected' | 'unknown' = 'unknown';
   private lastPositionSnapshotAuthoritative = false;
+
+  /** Per-broker bridge state — one broker's outage must not mask another's (#747). */
+  private readonly lastBridgeStateByBroker = new Map<number, 'connected' | 'disconnected' | 'unknown'>();
 
   constructor(
     private readonly notifications?: NotificationService,
     private readonly bridgeEvents?: BridgeEventService,
     private readonly prisma?: PrismaService,
+    private readonly symbolRouter?: Mt5SymbolRouter,
+    private readonly syslog?: SystemLogService,
   ) {
     this.bridgeUrl = resolveMt5BridgeUrl();
+  }
+
+  /**
+   * Resolve which broker bridge URL + broker-native symbol name to use (#747).
+   * Delegates to Mt5SymbolRouter (symbol_route table, cached) so a symbol like
+   * UK100 can be sourced from Pepperstone (:5001) while others use the default.
+   * Falls back to the single default bridge when no router is injected (tests).
+   */
+  private resolveRoute(symbol?: string, assetType?: string): ResolvedSymbolRoute {
+    if (this.symbolRouter && symbol) {
+      return this.symbolRouter.resolve(symbol, assetType);
+    }
+    const brokerId = this.symbolRouter?.primaryBrokerId() ?? 2;
+    return { brokerId, url: this.bridgeUrl, brokerSymbol: symbol ?? '', explicit: false };
+  }
+
+  /** Env var for a given broker slot, e.g. MT5_ACCOUNT_3 / MT5_SERVER_3. */
+  private brokerEnv(brokerId: number | undefined, key: 'MT5_ACCOUNT' | 'MT5_SERVER'): string | undefined {
+    const slot = brokerId ?? (process.env.MT5_ACTIVE_ACCOUNT ? parseInt(process.env.MT5_ACTIVE_ACCOUNT, 10) : undefined);
+    if (slot) return process.env[`${key}_${slot}`] || process.env[key];
+    return process.env[key];
   }
 
   private get authHeaders(): Record<string, string> {
@@ -130,54 +158,61 @@ export class Mt5Adapter implements IProviderAdapter {
   /**
    * Log detailed bridge diagnostics to the system log and logger.
    */
-  private logBridgeDiag(method: string, path: string, detail: string, body?: unknown): void {
+  private logBridgeDiag(method: string, path: string, detail: string, body?: unknown, brokerId?: number): void {
     const summary = body ? JSON.stringify(body).substring(0, 200) : '(no body)';
-    this.logger.warn(`MT5 bridge ${method} ${path} FAILED: ${detail} [body=${summary}]`);
+    this.logger.warn(`MT5 bridge [broker ${brokerId ?? 'default'}] ${method} ${path} FAILED: ${detail} [body=${summary}]`);
+    // Integrate with the app-wide SystemLogService (category 'mt5') — GH #747.
+    this.syslog?.warn('MT5Adapter', `bridge[${brokerId ?? 'default'}] ${method} ${path} FAILED: ${detail}`, 'mt5');
     this.bridgeEvents?.log({
       eventType: 'bridge_diag',
-      account: process.env.MT5_ACCOUNT || undefined,
-      server: process.env.MT5_SERVER || undefined,
+      account: this.brokerEnv(brokerId, 'MT5_ACCOUNT'),
+      server: this.brokerEnv(brokerId, 'MT5_SERVER'),
       errorMessage: `${method} ${path}: ${detail}`.substring(0, 500),
     }).catch(() => {});
   }
 
-  private async bridgeGet<T>(path: string): Promise<T | null> {
+  private async bridgeGet<T>(path: string, route?: ResolvedSymbolRoute): Promise<T | null> {
+    const url = route?.url ?? this.bridgeUrl;
+    const brokerId = route?.brokerId;
     if (this.tripped) {
       const cooldownMs = 60_000; // 1 min circuit breaker
       if (this.trippedAt && Date.now() - this.trippedAt >= cooldownMs) {
         this.tripped = false;
         this.consecutiveErrors = 0;
         this.logger.log('MT5 circuit breaker released after cooldown');
-        this.logBridgeEvent('reconnected', 'Circuit breaker released');
+        this.logBridgeEvent('reconnected', 'Circuit breaker released', brokerId);
         this.notifications?.send({
           title: '✅ MT5 Bridge Reconnected',
           body: 'Circuit breaker released — MT5 bridge is responding again.',
           event: 'provider-degraded',
         }).catch(() => {});
       } else {
-        this.logBridgeDiag('GET', path, 'circuit breaker active (skipped)');
+        this.logBridgeDiag('GET', path, 'circuit breaker active (skipped)', undefined, brokerId);
         return null;
       }
     }
 
     try {
-      const res = await fetch(`${this.bridgeUrl}${path}`, {
+      const res = await fetch(`${url}${path}`, {
         headers: this.authHeaders,
         signal: AbortSignal.timeout(10_000),
       });
       if (!res.ok) {
-        this.consecutiveErrors++;
+        // A 4xx (e.g. 404 symbol-not-available) is a per-request client error, NOT a
+        // bridge outage — don't flip connection state or trip the breaker for it.
+        const isClientError = res.status >= 400 && res.status < 500 && res.status !== 429;
+        if (!isClientError) this.consecutiveErrors++;
         const errorBody = await this.readBridgeErrorBody(res);
         const detail = `HTTP ${res.status}: ${errorBody}`;
-        this.logBridgeDiag('GET', path, detail);
+        this.logBridgeDiag('GET', path, detail, undefined, brokerId);
         if (this.consecutiveErrors >= 10) {
-          this.tripBreaker(detail);
+          this.tripBreaker(detail, brokerId);
         }
-        this.logBridgeState('disconnected', `HTTP ${res.status}`);
+        if (!isClientError) this.logBridgeState('disconnected', `HTTP ${res.status}`, brokerId);
         return null;
       }
       this.consecutiveErrors = 0;
-      this.logBridgeState('connected');
+      this.logBridgeState('connected', undefined, brokerId);
       return (await res.json()) as T;
     } catch (error: unknown) {
       const err = error as Error;
@@ -186,20 +221,20 @@ export class Mt5Adapter implements IProviderAdapter {
       if (!isTransient) {
         this.consecutiveErrors++;
       }
-      this.logBridgeDiag('GET', path, `${category}: ${err.message}`);
+      this.logBridgeDiag('GET', path, `${category}: ${err.message}`, undefined, brokerId);
       if (this.consecutiveErrors >= 10) {
-        this.tripBreaker(`${category}: ${err.message}`);
+        this.tripBreaker(`${category}: ${err.message}`, brokerId);
       }
-      this.logBridgeState('disconnected', err.message);
+      this.logBridgeState('disconnected', err.message, brokerId);
       return null;
     }
   }
 
-  private tripBreaker(reason: string): void {
+  private tripBreaker(reason: string, brokerId?: number): void {
     this.tripped = true;
     this.trippedAt = Date.now();
     this.logger.warn(`MT5 bridge circuit breaker TRIPPED (10 errors): ${reason}`);
-    this.logBridgeEvent('disconnected', reason);
+    this.logBridgeEvent('disconnected', reason, brokerId);
     this.notifications?.send({
       title: '🚨 MT5 Bridge Disconnected',
       body: `Circuit breaker tripped — ${reason}. Trading via MT5 is unavailable until the bridge recovers.`,
@@ -207,25 +242,32 @@ export class Mt5Adapter implements IProviderAdapter {
     }).catch(() => {});
   }
 
-  private logBridgeState(state: 'connected' | 'disconnected', errorMessage?: string): void {
-    if (this.lastBridgeState !== state) {
-      this.lastBridgeState = state;
-      this.logBridgeEvent(state, errorMessage);
+  private logBridgeState(state: 'connected' | 'disconnected', errorMessage?: string, brokerId?: number): void {
+    const key = brokerId ?? 0;
+    if (this.lastBridgeStateByBroker.get(key) !== state) {
+      this.lastBridgeStateByBroker.set(key, state);
+      this.logBridgeEvent(state, errorMessage, brokerId);
     }
   }
 
-  private logBridgeEvent(eventType: string, errorMessage?: string): void {
+  private logBridgeEvent(eventType: string, errorMessage?: string, brokerId?: number): void {
+    // SystemLogService integration (#747) — category 'provider' for state changes.
+    const brokerTag = `broker ${brokerId ?? 'default'}`;
+    const msg = `MT5 ${eventType} (${brokerTag})${errorMessage ? `: ${errorMessage}` : ''}`;
+    if (eventType === 'disconnected') this.syslog?.warn('MT5Adapter', msg, 'provider');
+    else this.syslog?.info('MT5Adapter', msg, 'provider');
     this.bridgeEvents?.log({
       eventType,
-      account: process.env.MT5_ACCOUNT || undefined,
-      server: process.env.MT5_SERVER || undefined,
+      account: this.brokerEnv(brokerId, 'MT5_ACCOUNT'),
+      server: this.brokerEnv(brokerId, 'MT5_SERVER'),
       errorMessage: errorMessage?.substring(0, 500),
     }).catch(() => {});
   }
 
   async getQuote(symbol: string): Promise<ProviderQuote | null> {
-    this.logger.log(`MT5: fetching quote for ${symbol}`);
-    const data = await this.bridgeGet<BridgeQuoteResponse>(`/quote?symbol=${encodeURIComponent(symbol)}`);
+    const route = this.resolveRoute(symbol);
+    this.logger.log(`MT5: fetching quote for ${route.brokerSymbol} (broker ${route.brokerId})`);
+    const data = await this.bridgeGet<BridgeQuoteResponse>(`/quote?symbol=${encodeURIComponent(route.brokerSymbol)}`, route);
     if (!data) return null;
 
     return {
@@ -238,13 +280,15 @@ export class Mt5Adapter implements IProviderAdapter {
   }
 
   async getCandles(symbol: string, timeframe = '1h', limit = 100): Promise<MarketBar[]> {
-    this.logger.log(`MT5: fetching ${limit} candles for ${symbol} (${timeframe})`);
+    const route = this.resolveRoute(symbol);
+    this.logger.log(`MT5: fetching ${limit} candles for ${route.brokerSymbol} (${timeframe}) [broker ${route.brokerId}]`);
     const data = await this.bridgeGet<BridgeCandlesResponse>(
-      `/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(timeframe)}&limit=${Math.min(limit, 1000)}`,
+      `/candles?symbol=${encodeURIComponent(route.brokerSymbol)}&timeframe=${encodeURIComponent(timeframe)}&limit=${Math.min(limit, 1000)}`,
+      route,
     );
     if (!data?.bars) return [];
 
-    this.logger.log(`MT5: got ${data.bars.length} candles for ${symbol} (${timeframe})`);
+    this.logger.log(`MT5: got ${data.bars.length} candles for ${route.brokerSymbol} (${timeframe})`);
     return data.bars.map((b) => ({
       timestamp: new Date(b.timestamp),
       open: b.open,
@@ -260,24 +304,28 @@ export class Mt5Adapter implements IProviderAdapter {
     return null;
   }
 
-  /** Cached broker symbol list — powers the #723 symbol-availability gate.
-   *  TTL 5 min; on failure returns the last known list (or null = unknown). */
-  private symbolsCache: { names: Set<string>; fetchedAt: number } | null = null;
-  async getSymbols(): Promise<Set<string> | null> {
+  /** Per-broker cached symbol lists (TTL 5 min) — powers the #723 symbol-availability gate.
+   *  Keyed per broker so one broker's list can't poison another's (#747). */
+  private readonly symbolsCacheByBroker = new Map<number, { names: Set<string>; fetchedAt: number }>();
+  async getSymbols(brokerId?: number): Promise<Set<string> | null> {
+    const key = brokerId ?? this.symbolRouter?.primaryBrokerId() ?? 0;
+    const cached = this.symbolsCacheByBroker.get(key);
     try {
       const now = Date.now();
-      if (this.symbolsCache && now - this.symbolsCache.fetchedAt < 300_000) {
-        return this.symbolsCache.names;
+      if (cached && now - cached.fetchedAt < 300_000) {
+        return cached.names;
       }
-      const data = await this.bridgeGet<{ symbols: Array<{ name: string }>; count: number }>('/symbols');
-      if (!data?.symbols?.length) return this.symbolsCache?.names ?? null;
-      this.symbolsCache = {
+      const route = this.symbolRouter?.routeForBroker(key);
+      const data = await this.bridgeGet<{ symbols: Array<{ name: string }>; count: number }>('/symbols', route);
+      if (!data?.symbols?.length) return cached?.names ?? null;
+      const entry = {
         names: new Set(data.symbols.map(s => String(s.name).toUpperCase())),
         fetchedAt: now,
       };
-      return this.symbolsCache.names;
+      this.symbolsCacheByBroker.set(key, entry);
+      return entry.names;
     } catch {
-      return this.symbolsCache?.names ?? null;
+      return cached?.names ?? null;
     }
   }
 
@@ -313,6 +361,18 @@ export class Mt5Adapter implements IProviderAdapter {
         ? p.volume * contractSize * p.priceCurrent
         : p.priceCurrent * p.volume;
       const currency = this.quoteCurrency(p.symbol, p.currencyProfit);
+      // 2026-09-10 — side drives the sign of P&L. The old inline percentage
+      // `(current - open) / open` was long-only, so a profitable SHORT reported a
+      // negative %. resolvePositionPnl keeps the sign-correct broker profit and a
+      // percentage that agrees with it.
+      const side = normalizeSide(p.type);
+      const { pnl, pnlPct } = resolvePositionPnl({
+        side,
+        avgPrice: p.priceOpen,
+        currentPrice: p.priceCurrent,
+        quantity: p.volume,
+        brokerPnl: p.profit,
+      });
       return {
         brokerId: this.id!,
         brokerName: this.name,
@@ -322,13 +382,13 @@ export class Mt5Adapter implements IProviderAdapter {
         avgCost: p.priceOpen,
         currentPrice: p.priceCurrent,
         marketValue,
-        unrealizedPnl: p.profit,
-        unrealizedPnlPct: p.priceOpen > 0 ? ((p.priceCurrent - p.priceOpen) / p.priceOpen) * 100 : 0,
+        unrealizedPnl: pnl ?? 0,
+        unrealizedPnlPct: pnlPct ?? 0,
         currency,
         openedAt: p.openTime || new Date().toISOString(),
         // Broker traceability (#616) — 64-bit MT5 ticket as a string
         brokerTicket: p.ticket != null ? String(p.ticket) : undefined,
-        side: p.type === 'buy' ? 'buy' : 'sell',
+        side,
         sl: p.sl ?? null,
         tp: p.tp ?? null,
         magic: p.magic ?? null,
@@ -411,8 +471,10 @@ export class Mt5Adapter implements IProviderAdapter {
   async placeOrder(params: BrokerOrderRequest): Promise<BrokerOrderResult> {
     // MT5 only allows short ASCII comments — sanitize via shared helper
     const safeComment = sanitizeMt5Comment(params.comment);
+    // Route the order to the broker that serves this symbol (#747).
+    const route = this.resolveRoute(params.symbol);
     const body = {
-      symbol: params.symbol,
+      symbol: route.brokerSymbol,
       type: params.side === 'BUY' ? 'buy' : 'sell',
       volume: params.quantity,
       sl: params.sl ?? null,
@@ -421,14 +483,15 @@ export class Mt5Adapter implements IProviderAdapter {
       clientOrderId: params.clientOrderId,
     };
 
-    this.logger.log(`MT5 order: ${body.type} ${body.symbol} ×${body.volume} sl=${body.sl} tp=${body.tp} [tripped=${this.tripped} errors=${this.consecutiveErrors}]`);
+    this.logger.log(`MT5 order [broker ${route.brokerId}]: ${body.type} ${body.symbol} ×${body.volume} sl=${body.sl} tp=${body.tp} [tripped=${this.tripped} errors=${this.consecutiveErrors}]`);
 
     let data: any;
     try {
-      data = await this.bridgePost<any>('/order', body);
+      data = await this.bridgePost<any>('/order', body, route);
     } catch (err) {
       const message = (err as Error).message;
       this.logger.warn(`MT5 order FAILED: ${message}`);
+      this.syslog?.error('MT5Adapter', `ORDER REJECTED ${route.brokerSymbol} ${params.side} ×${params.quantity} — ${message} [broker ${route.brokerId}]`, 'trading');
       this.prisma?.order.create({
         data: {
           symbol: params.symbol,
@@ -450,7 +513,8 @@ export class Mt5Adapter implements IProviderAdapter {
       const reason = this.tripped
         ? 'Bridge unreachable (circuit breaker active)'
         : 'Bridge unreachable (no response)';
-      this.logger.warn(`MT5 order FAILED — ${reason} [url=${this.bridgeUrl} tripped=${this.tripped} consecutiveErrors=${this.consecutiveErrors}]`);
+      this.logger.warn(`MT5 order FAILED — ${reason} [url=${route.url} broker=${route.brokerId} tripped=${this.tripped} consecutiveErrors=${this.consecutiveErrors}]`);
+      this.syslog?.error('MT5Adapter', `ORDER ${reason} ${route.brokerSymbol} ${params.side} ×${params.quantity} [broker ${route.brokerId}]`, 'trading');
       // A network timeout is an unknown outcome: MT5 may have accepted the
       // order before the response was lost. Keep it retryable with the same
       // clientOrderId instead of falsely declaring it rejected.
@@ -495,57 +559,163 @@ export class Mt5Adapter implements IProviderAdapter {
       },
     }).catch(err => this.logger.warn(`Failed to persist order: ${err.message}`));
 
+    this.syslog?.order(
+      'MT5Adapter',
+      `${route.brokerSymbol} ${params.side} ×${params.quantity} → ${result.status ?? (result.success ? 'FILLED' : 'REJECTED')}` +
+      `${result.ticket ? ` (ticket ${result.ticket})` : ''}${result.error ? ` — ${result.error}` : ''} [broker ${route.brokerId}]`,
+      'trading',
+    );
+
     return result;
   }
 
-  private async bridgePost<T>(path: string, body: unknown): Promise<T | null> {
+  // ── Position management (broker-aware, #747) ─────────────
+
+  /** Build a route for a specific broker id (undefined → default bridge). */
+  private routeForBroker(brokerId?: number): ResolvedSymbolRoute | undefined {
+    return this.symbolRouter && brokerId !== undefined ? this.symbolRouter.routeForBroker(brokerId) : undefined;
+  }
+
+  /** Close an open position by broker ticket. */
+  async closePosition(ticket: string, volume?: number, brokerId?: number): Promise<BrokerOrderResult> {
+    return this.positionAction(`/close/${encodeURIComponent(ticket)}`, volume !== undefined ? { volume } : {}, brokerId, 'CLOSE');
+  }
+
+  /** Partially close an open position by broker ticket. */
+  async closePartial(ticket: string, volume: number, brokerId?: number): Promise<BrokerOrderResult> {
+    return this.positionAction(`/close/partial/${encodeURIComponent(ticket)}`, { volume }, brokerId, 'CLOSE_PARTIAL');
+  }
+
+  /** Modify SL/TP on an open position by broker ticket. */
+  async modifyPosition(ticket: string, mods: { sl?: number | null; tp?: number | null }, brokerId?: number): Promise<BrokerOrderResult> {
+    return this.positionAction('/order/modify', { ticket, sl: mods.sl ?? null, tp: mods.tp ?? null }, brokerId, 'MODIFY');
+  }
+
+  private async positionAction(path: string, body: any, brokerId: number | undefined, op: string): Promise<BrokerOrderResult> {
+    const route = this.routeForBroker(brokerId);
+    try {
+      const data = await this.bridgePost<any>(path, body, route);
+      if (!data) {
+        this.syslog?.error('MT5Adapter', `${op} no response (broker ${brokerId ?? 'default'})`, 'trading');
+        return { success: false, error: 'Bridge unreachable', status: 'UNKNOWN' };
+      }
+      const ok = data.success === true;
+      const result: BrokerOrderResult = {
+        success: ok,
+        ticket: data.ticket != null ? String(data.ticket) : undefined,
+        price: data.price ?? undefined,
+        error: data.error ?? undefined,
+        status: ok ? (data.partial === true ? 'PARTIALLY_FILLED' : 'FILLED') : 'REJECTED',
+        filledQuantity: data.filledVolume ?? data.volume ?? undefined,
+      };
+      this.syslog?.order('MT5Adapter', `${op} ticket ${body?.ticket ?? path} → ${result.status}${result.error ? ` — ${result.error}` : ''} [broker ${brokerId ?? 'default'}]`, 'trading');
+      return result;
+    } catch (err) {
+      const message = (err as Error).message;
+      this.syslog?.error('MT5Adapter', `${op} FAILED (broker ${brokerId ?? 'default'}): ${message}`, 'trading');
+      return { success: false, error: message, status: 'REJECTED' };
+    }
+  }
+
+  // ── Bulk market data (broker-grouped, scales to many symbols — #747) ──
+
+  /** Group symbols by the broker that serves them (via the symbol router). */
+  private groupByBroker(symbols: string[]): Map<number, { route: ResolvedSymbolRoute; symbols: string[]; originals: string[] }> {
+    const groups = new Map<number, { route: ResolvedSymbolRoute; symbols: string[]; originals: string[] }>();
+    for (const s of symbols) {
+      const r = this.resolveRoute(s);
+      const g = groups.get(r.brokerId) ?? { route: r, symbols: [], originals: [] };
+      g.symbols.push(r.brokerSymbol);
+      g.originals.push(s);
+      groups.set(r.brokerId, g);
+    }
+    return groups;
+  }
+
+  /** Fetch many quotes efficiently — ONE bulk call per broker, then merge. */
+  async getQuotesBulk(symbols: string[]): Promise<Record<string, ProviderQuote>> {
+    const out: Record<string, ProviderQuote> = {};
+    for (const { route, symbols: syms, originals } of this.groupByBroker(symbols).values()) {
+      const data = await this.bridgePost<any>('/quotes', { symbols: syms }, route);
+      const bySymbol = new Map<string, any>((data?.quotes ?? []).map((q: any) => [String(q.symbol).toUpperCase(), q]));
+      // Map back onto the ORIGINAL tickers so callers can look up what they asked for.
+      for (const orig of originals) {
+        const q = bySymbol.get(orig.toUpperCase());
+        if (!q) continue;
+        out[orig] = { symbol: orig, bid: q.bid ?? null, ask: q.ask ?? null, last: q.last ?? null, timestamp: new Date(q.timestamp) };
+      }
+    }
+    return out;
+  }
+
+  /** Fetch candles for many symbols — ONE bulk call per broker. Returns ticker → bars. */
+  async getCandlesBatch(symbols: string[], timeframe = '1h', limit = 100): Promise<Record<string, MarketBar[]>> {
+    const out: Record<string, MarketBar[]> = {};
+    for (const { route, symbols: syms, originals } of this.groupByBroker(symbols).values()) {
+      const data = await this.bridgePost<any>('/candles/batch', { symbols: syms, timeframe, limit }, route);
+      const bySymbol = new Map<string, any[]>((data?.results ?? []).map((r: any) => [String(r.symbol).toUpperCase(), r.bars ?? []]));
+      for (const orig of originals) {
+        const bars = bySymbol.get(orig.toUpperCase());
+        if (!bars) continue;
+        out[orig] = bars.map((b: any) => ({
+          timestamp: new Date(b.timestamp), open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume,
+        }));
+      }
+    }
+    return out;
+  }
+
+  private async bridgePost<T>(path: string, body: unknown, route?: ResolvedSymbolRoute): Promise<T | null> {
+    const url = route?.url ?? this.bridgeUrl;
+    const brokerId = route?.brokerId;
     if (this.tripped) {
       const cooldownMs = 60_000;
       if (this.trippedAt && Date.now() - this.trippedAt >= cooldownMs) {
         this.tripped = false;
         this.consecutiveErrors = 0;
-        this.logBridgeEvent('reconnected', 'Circuit breaker released');
+        this.logBridgeEvent('reconnected', 'Circuit breaker released', brokerId);
       } else {
-        this.logBridgeDiag('POST', path, 'circuit breaker active (skipped)', body);
+        this.logBridgeDiag('POST', path, 'circuit breaker active (skipped)', body, brokerId);
         return null;
       }
     }
 
     try {
-      const res = await fetch(`${this.bridgeUrl}${path}`, {
+      const res = await fetch(`${url}${path}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(10_000),
       });
       if (!res.ok) {
-        this.consecutiveErrors++;
+        const isClientError = res.status >= 400 && res.status < 500 && res.status !== 429;
+        if (!isClientError) this.consecutiveErrors++;
         const errorBody = await this.readBridgeErrorBody(res);
         const detail = `HTTP ${res.status}: ${errorBody}`;
-        this.logBridgeDiag('POST', path, detail, body);
+        this.logBridgeDiag('POST', path, detail, body, brokerId);
         if (this.consecutiveErrors >= 10) {
-          this.tripBreaker(detail);
+          this.tripBreaker(detail, brokerId);
         }
-        this.logBridgeState('disconnected', `HTTP ${res.status}`);
+        if (!isClientError) this.logBridgeState('disconnected', `HTTP ${res.status}`, brokerId);
         // Surface the bridge's real error (e.g. "No prices", "Insufficient margin")
         // instead of a generic "Bridge unreachable" so callers can act on it.
         throw new BridgeRejectedError(this.extractBridgeErrorMessage(errorBody) ?? detail);
       }
       this.consecutiveErrors = 0;
-      this.logBridgeState('connected');
+      this.logBridgeState('connected', undefined, brokerId);
       return (await res.json()) as T;
     } catch (err) {
       const error = err as Error;
       if (error instanceof BridgeRejectedError) throw error;
       const category = this.classifyBridgeError(error);
-      this.logBridgeDiag('POST', path, `${category}: ${error.message}`, body);
+      this.logBridgeDiag('POST', path, `${category}: ${error.message}`, body, brokerId);
       if (category !== 'refused' && category !== 'dns' && category !== 'network') {
         this.consecutiveErrors++;
       }
       if (this.consecutiveErrors >= 10) {
-        this.tripBreaker(`${category}: ${error.message}`);
+        this.tripBreaker(`${category}: ${error.message}`, brokerId);
       }
-      this.logBridgeState('disconnected', error.message);
+      this.logBridgeState('disconnected', error.message, brokerId);
       return null;
     }
   }

@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+// Read the version from package.json — a hardcoded string here went stale on
+// every release (it still asserted 0.4.0 while the app was 0.5.4).
+import * as packageJson from '../package.json';
 import { ModeService } from './config/mode.service';
 import { PrismaService } from './database/prisma.service';
 import { ProvidersService } from './modules/providers/providers.service';
@@ -60,7 +63,7 @@ describe('AppController', () => {
   describe('version', () => {
     it('should return version object with expected shape', () => {
       const result = appController.getVersion();
-      expect(result).toHaveProperty('version', '0.4.0');
+      expect(result).toHaveProperty('version', packageJson.version);
       expect(result).toHaveProperty('status', 'ok');
       expect(result).toHaveProperty('timestamp');
       expect(result).toHaveProperty('mode', 'test');

@@ -22,6 +22,7 @@ import {
   IDirective,
 } from '../interfaces/directive.interface';
 import { MarketSessionsService, type MarketSession } from '../../calendar/market-sessions.service';
+import { zonedWallClockInstant } from '../../../common/utils/session-time';
 
 const MIN_BARS = 30;
 const PRE_OPEN_BARS = 8; // ~2 hours on 15m, ~1 hour on 5m
@@ -61,11 +62,11 @@ export class SessionOpenEffectDirective implements IDirective {
   private localOpenInstant(scope: 'tokyo' | 'london' | 'ny', onDay: Date): Date {
     const s = this.marketSessions.getSession(scope);
     if (!s) return onDay;
-    const [oh, om] = s.open.split(':').map(Number);
-    // Reference a moment in the session's own timezone so DST offset is resolved.
-    const localRef = new Date(onDay.toLocaleString('en-US', { timeZone: s.iana }));
-    localRef.setHours(oh, om, 0, 0);
-    return localRef;
+    // 2026-09-10 (#731): this used to parse the zone's wall clock in MACHINE-local
+    // time, so only the machine's own zone resolved correctly (NY opened 5h early,
+    // Tokyo 8h late on a Europe/London box) and the ±window test almost never
+    // matched — 6,308 recorded scores, all zero. Shared helper, unit tested.
+    return zonedWallClockInstant(s.iana, onDay, s.open);
   }
 
   readonly priority = 74;

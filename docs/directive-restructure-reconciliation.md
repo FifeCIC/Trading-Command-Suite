@@ -93,6 +93,32 @@ one directive at a time with a date-stamped comment, re-running the guard after 
 - Accuracy remains **measurement-only** (`getAccuracy` is exposed read-only via
   `scoring.controller.ts`; it is **not** fed into any weighting) — item 3 holds by design.
 
+### ⚠️ Correction (2026-09-10) — wired ≠ working
+
+The entry above is now known to be **too optimistic**. All three requirements were
+implemented, but the loop still produced **zero usable outcomes**:
+
+| Live evidence (before today's fix) | Value |
+|---|---|
+| Outcome rows | 40,120 |
+| Rows with `priceT15m` filled | **0** |
+| Rows finalised (grace) with NULL prices | 3,000 |
+| Rows carrying `timeframe='M15'` (no such label in `MarketBar`) | 35,472 (88%) |
+
+- **`timeframe` label mismatch.** Outcome rows were written with MT5-style labels
+  (`M15`) while `MarketBar.timeframe` stores `15m`; `getPriceAt()` filters by equality,
+  so every horizon matured to NULL. Fixed with `canonicalTimeframe()` applied on write
+  and at lookup — which also **recovers the 35k historical rows** instead of letting the
+  grace path discard them.
+- **Sweep starvation.** The sweep took the 500 oldest pending rows, so the unfillable
+  backlog blocked the 4,648 valid rows behind it for days.
+- **Silent failure.** `getPriceAt()`'s `catch { return null }` made a 100%-failure
+  lookup rate indistinguishable from "no data yet".
+
+Lesson worth keeping: a measurement loop that reports "nothing yet" is not evidence of
+working code — check that the columns it is supposed to fill are non-null, not that the
+cron is registered.
+
 ---
 
 ## 5. Directive Guard Run #1 + first fix (2026-09-09)
@@ -142,4 +168,92 @@ re-enable via the UI toggle or `POST /api/automation/config`.
 
 ---
 
-*Last updated: 2026-09-09.*
+## 6. Guard Run #2 + three fixes (2026-09-10)
+
+`node nest/scripts/directive-guard.cjs --db` → **0 errors, 82 warnings** (from 199).
+The drop is mostly the guard measuring the right thing (§6.4) plus real fixes.
+
+### 6.1 Producer-trace defects (mode 4) ✅
+
+Both directives read an input no producer writes. Neither had live impact, but both
+were structurally dishonest, so both were corrected rather than left as noise.
+
+- **`cad-usd-oil-correlation` v2.0.1 → v2.1.0.** The `WTI > $85 → +25` tier was
+  unreachable (`wtiValue` has 0 writers), so 25 of `maxScore 125` were phantom
+  points inflating every protocol denominator. Removed the tier, `maxScore 125 → 100`,
+  `requiredDataFeeds ['oil'] → ['dxy']`. Also removed two constant floors: a non-CAD
+  symbol scored a flat `50`, and a no-macro-data symbol scored a flat `50` — both now
+  `0` (no evidence = no contribution). Same treatment `gold-macro-correlation` got in
+  2026-08-14. All 5 protocols using it are inactive, so no live score moved.
+- **`earnings-proximity` v2.0.1 → v2.0.2.** The mock branch returned a constant `45`
+  ("Mock-neutral score"). Now returns `0` with an honest reason, so it cannot inject a
+  phantom contribution if it is ever re-enabled before a feed is wired. Stays at
+  `alpha` (excluded) per #626/#648 — rehoming it as a screener catalyst is still the plan.
+- Both classes and their 5 `global_setting` / `directive` / `protocol_directive_entry`
+  weight rows were synced (the DB config layer outranks the class at runtime, and the
+  boot seed only rewrites it on restart).
+
+### 6.2 Indicator correctness — session instants ✅ (the big one)
+
+`session-open-effect` is `ready` and sits in 10 active protocols, yet its scoring rows
+showed **6,308 evaluations, all `0`**. Root cause was a timezone bug, not the strategy:
+
+```ts
+// OLD — parses the ZONE's wall clock in the MACHINE's timezone
+const d = new Date(onDay.toLocaleString('en-US', { timeZone: iana }));
+d.setHours(oh, om, 0, 0);
+```
+
+Measured on this (Europe/London) machine: New York's 09:30 open resolved to
+**08:30 UTC (5h early)** and Tokyo's 09:00 open to **08:00 UTC (8h late)** — London was
+correct only by accident of the machine's zone. So the ±30-minute window rarely matched
+a real open and the directive never left its no-signal branch.
+
+- **New shared helper `nest/src/common/utils/session-time.ts`** — `zonedWallClockInstant()`
+  (two-pass offset refinement, DST-correct, no dependency), plus `zoneOffsetMs`,
+  `minutesInZone`, `minutesFromOpen`.
+- Applied in `session-open-effect.directive.ts` and `market-sessions.service.ts`
+  (`localOpenTime`/`localCloseTime` — the same broken pattern was scheduling session
+  calendar events at wrong instants).
+- The same pattern also affects the London-vs-machine assumption globally; any machine
+  not in the session's own zone was wrong.
+- Tests: `session-time.spec.ts` (absolute UTC expectations that hold on any machine) and
+  `session-open-effect.directive.spec.ts` (proves the directive now fires at the real NY
+  and Tokyo opens, and stays silent mid-session).
+
+### 6.3 Constant-output triage (mode 1) — all four were false positives
+
+| Directive | Verdict |
+|---|---|
+| `budget-gate` (100) | Decommissioned 2026-09-08, `alpha` → excluded from scoring by `directive-inclusion.ts` rule 1. Constant is by construction. |
+| `rollover-risk` (100) | A **gate-group** directive: `isRiskGate` groups are a multiplier path, never additive (#716). `maxScore` outside the rollover window means "gate open". |
+| `position-size-kelly` (30) | Hardcoded stub, `alpha` → excluded. Wiring Kelly needs portfolio-level win rate/loss ratio in `DirectiveInput` (a feature, not this sweep). |
+| `pattern-density-sr` (90) | Real maths; the guard's synthetic A/B pair produces the same branch. Needs ≥40 bars and 4+ reversals. |
+
+### 6.4 Guard mode 7 now measures the right thing ✅
+
+Mode 7 previously flagged **115/129** `ready` directives as lacking evidence because it
+judged every `ready` directive against a `score` table that only covers protocols which
+persist breakdowns. It now filters by:
+
+1. **admission** — the canonical rules (`directive-inclusion.ts`): a bearish directive in
+   a LONG_ONLY protocol can never produce evidence (`rsi-overbought`: 12 of its 13 active
+   protocols exclude it by bias, and the one SHORT_ONLY protocol admits it but does not
+   persist breakdowns);
+2. **persistence** — the directive must be admitted by an active protocol that actually
+   writes breakdown rows;
+3. **sample size** — fewer than 10 records is "too few to judge", not a defect.
+
+Result: **115 → 1** finding. The one that remains is the genuine production constant
+(`session-open-effect`, 6,308 records / 1 distinct value) — fixed in §6.2, so it will
+clear as fresh evidence accumulates.
+
+### 6.5 Clean-up
+
+- `nest/src/app.controller.spec.ts` asserted `version === '0.4.0'` while the app is
+  `0.5.4` — it now reads `package.json`, so the suite is green (171/171) and cannot drift.
+- Guard weight rows synced; temp diagnostics removed.
+
+---
+
+*Last updated: 2026-09-10.*

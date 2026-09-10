@@ -269,7 +269,7 @@ export class BarRefreshService {
     const fetchBridgeCandles = async (url: string, symbol: string, tf: string, count: number): Promise<any[]> => {
       try {
         const res = await fetch(
-          `${url}/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(tf)}&count=${count}`,
+          `${url}/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(tf)}&limit=${count}`,
           { signal: AbortSignal.timeout(10_000) },
         );
         if (!res.ok) return [];

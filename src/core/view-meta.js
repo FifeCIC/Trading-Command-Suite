@@ -483,6 +483,12 @@ const VIEW_META = {
     css: 'src/pages/component-lab.css',
     api: [],
   },
+  '/lab/widget-board': {
+    label: 'Widget Board',
+    file: 'src/pages/WidgetBoardLabPage.jsx',
+    css: 'src/components/widget-board.css',
+    api: ['/api/health', '/api/signals/best', '/api/symbols/positions', '/api/trading/sessions/market-context'],
+  },
   '/lab/responsive-layout-lab': {
     label: 'Responsive Layout Lab',
     file: 'src/pages/ResponsiveLayoutLabPage.jsx',

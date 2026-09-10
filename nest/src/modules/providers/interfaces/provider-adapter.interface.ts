@@ -118,6 +118,28 @@ export interface IProviderAdapter {
   getNews?(symbol: string): Promise<NewsItem[] | null>;
 
   /**
+   * List broker-native symbol names this provider can serve (optional).
+   * MT5: per-broker instance (`brokerId`) — powers the symbol-availability gate (#747).
+   * Returns a Set (MT5) or array (some adapters) — callers should normalise.
+   */
+  getSymbols?(brokerId?: number): Promise<Set<string> | string[] | null>;
+
+  /** Close an open position by broker ticket (optional, broker-aware). #747 */
+  closePosition?(ticket: string, volume?: number, brokerId?: number): Promise<BrokerOrderResult>;
+
+  /** Partially close an open position by broker ticket (optional, broker-aware). #747 */
+  closePartial?(ticket: string, volume: number, brokerId?: number): Promise<BrokerOrderResult>;
+
+  /** Modify SL/TP on an open position by broker ticket (optional, broker-aware). #747 */
+  modifyPosition?(ticket: string, mods: { sl?: number | null; tp?: number | null }, brokerId?: number): Promise<BrokerOrderResult>;
+
+  /** Bulk quotes for many symbols in one pass (optional, scales to many). #747 */
+  getQuotesBulk?(symbols: string[]): Promise<Record<string, ProviderQuote>>;
+
+  /** Bulk candles for many symbols in one pass (optional, scales to many). #747 */
+  getCandlesBatch?(symbols: string[], timeframe?: string, limit?: number): Promise<Record<string, MarketBar[]>>;
+
+  /**
    * Fetch aggregate sentiment for a symbol (optional — Finnhub-specific).
    */
   getSentiment?(symbol: string): Promise<SentimentData | null>;

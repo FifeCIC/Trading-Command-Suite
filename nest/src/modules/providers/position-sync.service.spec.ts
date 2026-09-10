@@ -93,4 +93,88 @@ describe('PositionSyncService', () => {
       where: { provider_brokerTicket: { provider: 'mt5', brokerTicket: '502' } },
     }));
   });
+
+  /**
+   * Regression 2026-09-10 — a closed position stayed in the Position table as a
+   * phantom "open" row (and kept the duplicate guard blocking the symbol):
+   * the closure scan was scoped by accountId, and legacy rows carry NULL.
+   */
+  it('finalizes a legacy row (no ticket, no account) that is gone from the broker', async () => {
+    position.findMany.mockResolvedValue([{
+      id: 'phantom-1',
+      symbol: 'XAUUSD',
+      provider: 'mt5',
+      brokerTicket: null,
+      accountId: null,
+      side: null,
+      quantity: 0.01,
+      avgPrice: 4478.47,
+      currentPrice: 4402.48,
+      pnl: 56.13,
+      openedAt: new Date('2026-09-03T21:49:31Z'),
+    }]);
+    trade.findFirst.mockResolvedValue({ id: 'trade-xau', symbol: 'XAUUSD', side: 'sell' });
+    adapter.getDeals.mockResolvedValue([]);
+
+    const result = await service.syncPositions('mt5', [], {
+      authoritative: true,
+      accountId: '10011309743',
+    });
+
+    expect(result.closed).toBe(1);
+    expect(position.delete).toHaveBeenCalledWith({ where: { id: 'phantom-1' } });
+    // The scan must include the legacy NULL-account rows, not just this account.
+    expect(position.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ provider: 'mt5', OR: expect.any(Array) }),
+    }));
+  });
+
+  it('finalizes a legacy duplicate once a ticketed row represents the symbol', async () => {
+    position.findMany.mockResolvedValue([
+      {
+        id: 'legacy-aud', symbol: 'AUDUSD', provider: 'mt5', brokerTicket: null,
+        accountId: null, side: null, quantity: 0.01, avgPrice: 0.7206,
+        currentPrice: 0.72176, pnl: 0.86, openedAt: new Date('2026-09-03T21:49:56Z'),
+      },
+      {
+        id: 'live-aud', symbol: 'AUDUSD', provider: 'mt5', brokerTicket: '152599651521',
+        accountId: '10011309743', side: 'buy', quantity: 0.01, avgPrice: 0.72184,
+        currentPrice: 0.7215, pnl: -0.25, openedAt: new Date('2026-09-08T18:49:49Z'),
+      },
+    ]);
+    trade.findFirst.mockResolvedValue({ id: 'trade-aud', symbol: 'AUDUSD', side: 'buy' });
+    adapter.getDeals.mockResolvedValue([]);
+
+    const result = await service.syncPositions('mt5', [{
+      symbol: 'AUDUSD', brokerTicket: '152599651521', side: 'buy', quantity: 0.01,
+      avgPrice: 0.72184, currentPrice: 0.7215, pnl: -0.25,
+      sl: null, tp: null, comment: '', openedAt: new Date(),
+    }], { authoritative: true, accountId: '10011309743' });
+
+    expect(result.closed).toBe(1);
+    expect(position.delete).toHaveBeenCalledWith({ where: { id: 'legacy-aud' } });
+    expect(position.delete).not.toHaveBeenCalledWith({ where: { id: 'live-aud' } });
+  });
+
+  it('resolves the closing deal from the Trade side when the legacy row has no side', async () => {
+    position.findMany.mockResolvedValue([{
+      id: 'phantom-2', symbol: 'XAUUSD', provider: 'mt5', brokerTicket: null,
+      accountId: null, side: null, quantity: 0.01, avgPrice: 4478.47,
+      currentPrice: 4402.48, pnl: 56.13, openedAt: new Date('2026-09-03T21:49:31Z'),
+    }]);
+    trade.findFirst.mockResolvedValue({ id: 'trade-xau', symbol: 'XAUUSD', side: 'sell' });
+    // One lifecycle: short opened @4478.47, closed @4403.27 for +55.55 (swap -0.06).
+    adapter.getDeals.mockResolvedValue([
+      { positionId: '152582228436', symbol: 'XAUUSD', side: 'sell', volume: 0.01, price: 4478.47, profit: 0, commission: 0, swap: 0, time: new Date('2026-09-03T21:49:31Z') },
+      { positionId: '152582228436', symbol: 'XAUUSD', side: 'buy', volume: 0.01, price: 4403.27, profit: 55.55, commission: 0, swap: -0.06, time: new Date('2026-09-07T16:41:31Z') },
+    ]);
+
+    await service.syncPositions('mt5', [], { authoritative: true });
+
+    const updateArg: any = trade.update.mock.calls[0][0];
+    expect(updateArg.data.status).toBe('closed');
+    expect(updateArg.data.exitPrice).toBe(4403.27);
+    expect(updateArg.data.pnl).toBeCloseTo(55.49, 2);
+    expect(updateArg.data.closedAt.toISOString()).toBe('2026-09-07T16:41:31.000Z');
+  });
 });

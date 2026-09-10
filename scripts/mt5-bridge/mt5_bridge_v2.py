@@ -25,28 +25,110 @@ try:
 except ImportError:
     print('python-dotenv not installed')
 
+# ─── Instance identity (multi-bridge, #747) ───────────────
+# Each bridge instance targets ONE MT5 account slot. Resolve identity EARLY —
+# before logging is configured — so every log line is tagged with the broker id,
+# and so --port / --broker-id CLI flags work alongside env vars.
+
+import sys as _sys
+
+def _cli_arg(flag):
+    if flag in _sys.argv:
+        i = _sys.argv.index(flag)
+        if i + 1 < len(_sys.argv):
+            return _sys.argv[i + 1]
+    return None
+
+_cli_port = _cli_arg('--port')
+_cli_broker = _cli_arg('--broker-id')
+if _cli_port:
+    os.environ['BRIDGE_PORT'] = _cli_port
+if _cli_broker:
+    os.environ['BRIDGE_ACCOUNT'] = _cli_broker
+
+BRIDGE_PORT = int(os.environ.get('BRIDGE_PORT', 5000))
+# BRIDGE_ACCOUNT lets multiple instances target different account slots
+# (e.g. 2=MetaQuotes, 3=Pepperstone) — applied before anything reads credentials.
+if os.environ.get('BRIDGE_ACCOUNT'):
+    os.environ['MT5_ACTIVE_ACCOUNT'] = os.environ['BRIDGE_ACCOUNT']
+
+BROKER_ID = (os.environ.get('MT5_BROKER_ID')
+             or os.environ.get('MT5_ACTIVE_ACCOUNT')
+             or '?')
+BROKER_TAG = f'broker{BROKER_ID}'
+
 log_dir = os.path.dirname(os.path.abspath(__file__))
-log_file = os.path.join(log_dir, 'bridge.log')
+# One log file per instance so multiple bridges never interleave or race rotation.
+log_file = os.path.join(log_dir, f'bridge-{BROKER_TAG}.log')
 handler = RotatingFileHandler(log_file, maxBytes=5_242_880, backupCount=5)
-handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+handler.setFormatter(logging.Formatter(f'%(asctime)s [%(levelname)s] [{BROKER_TAG}] %(message)s'))
+_stream = logging.StreamHandler()
+_stream.setFormatter(logging.Formatter(f'%(asctime)s [%(levelname)s] [{BROKER_TAG}] %(message)s'))
 logger = logging.getLogger('mt5_bridge_v2')
 logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)
-logger.addHandler(logging.StreamHandler())
+logger.addHandler(_stream)
 
 # ─── Timestamp helpers (UTC) ──────────────────────────────
-# MT5 returns Unix timestamps (seconds, UTC). Previously we used
-# datetime.fromtimestamp() / datetime.now() WITHOUT a timezone, which emits
-# naive LOCAL wall-clock strings. NestJS then parsed those as machine-local,
-# shifting every time-based directive by the bridge machine's UTC offset
-# (~3-4h). Emit unambiguous UTC (ISO-8601 with 'Z') instead.
+# TWO clocks reach this file, and conflating them is a bug:
+#
+#   1. The MACHINE clock — `datetime.now(timezone.utc)`, true UTC.
+#   2. The BROKER SERVER clock — everything MT5 returns (rate['time'],
+#      position.time, order.time_setup, deal.time, calendar .time) is a Unix
+#      epoch in SERVER time, NOT UTC. MetaQuotes-Demo runs UTC+3, so those
+#      epochs read ~3h ahead of true UTC.
+#
+# 2026-08-15 (#625) made the output unambiguous (ISO-8601 'Z') but assumed MT5
+# epochs were already UTC, so every MT5 timestamp became a *false* UTC claim
+# ~3h in the future. Measured 2026-09-10: this bridge returned 5m bars stamped
+# 11:55Z while true UTC was 09:02Z (+2h57m). Consequence: stored bars looked
+# "fresh" for three extra hours, `ageMs` went negative, and the market-status
+# staleness gate (`computeMarketStatus`, market-status.ts) could NEVER report a
+# market closed — a tradability gate failing open on stale data.
+#
+# RULE: MT5-sourced epochs go through `utc_iso()` (which subtracts the measured
+# server offset). Only the machine clock goes through `utc_now_iso()`.
+
+SERVER_UTC_OFFSET_SECONDS = 0
+_SERVER_OFFSET_MEASURED_AT = 0.0
+_SERVER_OFFSET_TTL_SECONDS = 1800  # re-measure twice an hour — DST moves twice a year
+
+def detect_server_utc_offset(force=False):
+    """Measure how far the broker's server clock runs ahead of true UTC.
+
+    MT5 exposes no server-timezone field, so it is derived from the one pair of
+    clocks readable at the same instant: a fresh tick's server epoch and the
+    machine's true epoch. Rounded to 15 minutes so tick lag cannot leak in.
+    Cheap and cached — safe to call per timestamp.
+    """
+    global SERVER_UTC_OFFSET_SECONDS, _SERVER_OFFSET_MEASURED_AT
+    now = time.time()
+    if not force and _SERVER_OFFSET_MEASURED_AT and (now - _SERVER_OFFSET_MEASURED_AT) < _SERVER_OFFSET_TTL_SECONDS:
+        return SERVER_UTC_OFFSET_SECONDS
+    try:
+        probe = os.environ.get('MT5_OFFSET_PROBE_SYMBOL', 'EURUSD')
+        tick = mt5.symbol_info_tick(probe)
+        if tick and tick.time:
+            SERVER_UTC_OFFSET_SECONDS = int(round((tick.time - now) / 900.0) * 900)
+            _SERVER_OFFSET_MEASURED_AT = now
+    except Exception as err:  # never fail a request over the probe
+        logger.debug(f'Server UTC offset probe failed: {err}')
+    return SERVER_UTC_OFFSET_SECONDS
 
 def utc_iso(epoch_seconds):
-    """MT5 epoch seconds -> ISO-8601 UTC string with 'Z' suffix."""
-    return datetime.fromtimestamp(epoch_seconds, tz=timezone.utc).isoformat().replace('+00:00', 'Z')
+    """MT5 SERVER-clock epoch seconds -> true-UTC ISO-8601 string with 'Z'.
+
+    All 12 call sites are MT5-sourced (rates, positions, orders, deals,
+    calendar), so the server offset is applied here rather than at each call.
+    """
+    if epoch_seconds is None:
+        return None
+    return datetime.fromtimestamp(
+        epoch_seconds - detect_server_utc_offset(), tz=timezone.utc
+    ).isoformat().replace('+00:00', 'Z')
 
 def utc_now_iso():
-    """Current UTC time -> ISO-8601 string with 'Z' suffix."""
+    """Current MACHINE time -> ISO-8601 string with 'Z' suffix (already true UTC)."""
     return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
 
 # ─── MT5 Connection ───────────────────────────────────────
@@ -261,6 +343,14 @@ def connect_mt5():
         reset_circuit_breaker()
         info = mt5.account_info()
         logger.info(f'MT5 connected: {info.login} @ {info.server}, balance={info.balance}')
+        # Re-measure the broker's clock offset on every (re)connect. MT5 epochs
+        # are SERVER time; stamping them as UTC put every timestamp ~3h in the
+        # future and defeated the market-status staleness gate (2026-09-10).
+        offset = detect_server_utc_offset(force=True)
+        logger.info(
+            f'Broker server clock offset: {offset}s ({offset / 3600:+.2f}h) vs true UTC '
+            f'— applied to all MT5-sourced timestamps'
+        )
         return True, None
     error = mt5.last_error()
     connection_errors += 1
@@ -294,6 +384,105 @@ def read_body(handler):
     if length == 0: return {}
     return json.loads(handler.rfile.read(length))
 
+# ─── Bulk helpers (symbol-count agnostic — scales to hundreds/thousands) ──────
+
+def _parse_symbols(q, body=None):
+    """Collect a symbol list from a POST body (`symbols`) or GET query
+    (`symbols=A,B,C` or repeated `symbol=A`). Uppercased + de-duped, order kept."""
+    raw = []
+    if body:
+        raw = body.get('symbols') or []
+    if not raw:
+        joined = q.get('symbols', [''])[0]
+        if joined:
+            raw = joined.split(',')
+    if not raw:
+        raw = q.get('symbol', [])
+    seen, out = set(), []
+    for s in raw:
+        sym = str(s).strip().upper()
+        if sym and sym not in seen:
+            seen.add(sym)
+            out.append(sym)
+    return out
+
+def quote_payload(symbol):
+    """(payload, error) for one symbol's tick. payload is None on failure."""
+    symbol = (symbol or '').upper()
+    if not symbol:
+        return None, 'symbol required'
+    tick = mt5.symbol_info_tick(symbol)
+    if not tick:
+        mt5.symbol_select(symbol, True)
+        tick = mt5.symbol_info_tick(symbol)
+    if not tick:
+        return None, f'{symbol} not available'
+    return {'symbol': symbol, 'bid': tick.bid, 'ask': tick.ask,
+            'last': tick.last or tick.bid, 'timestamp': utc_now_iso()}, None
+
+def candles_payload(symbol, tf='1h', limit=100):
+    """(payload, error) for one symbol's OHLCV. Always returns a payload shape
+    (empty bars) when the symbol exists but has no data."""
+    symbol = (symbol or '').upper()
+    if not symbol:
+        return None, 'symbol required'
+    try:
+        limit = max(1, min(int(limit), 1000))
+    except (TypeError, ValueError):
+        limit = 100
+    mt5.symbol_select(symbol, True)
+    rates = mt5.copy_rates_from_pos(symbol, timeframe_to_mt5(tf), 0, limit)
+    if rates is None or len(rates) == 0:
+        return {'symbol': symbol, 'timeframe': tf, 'bars': []}, None
+    bars = [{'timestamp': utc_iso(r['time']), 'open': float(r['open']),
+             'high': float(r['high']), 'low': float(r['low']), 'close': float(r['close']),
+             'volume': int(r['tick_volume'])} for r in rates]
+    return {'symbol': symbol, 'timeframe': tf, 'bars': bars}, None
+
+def handle_bulk_quotes(handler, q, body=None):
+    """Bulk quotes: {quotes:[...], errors:[{symbol,error}], count}"""
+    ok, err = ensure_mt5()
+    if not ok:
+        return json_response(handler, {'connected': False, 'error': str(err)}, 503)
+    symbols = _parse_symbols(q, body)
+    if not symbols:
+        return json_response(handler, {'error': 'symbols required (body.symbols or ?symbols=A,B)'}, 400)
+    quotes, errors = [], []
+    for s in symbols:
+        payload, perr = quote_payload(s)
+        if payload:
+            quotes.append(payload)
+        else:
+            errors.append({'symbol': s, 'error': perr})
+    return json_response(handler, {'quotes': quotes, 'errors': errors, 'count': len(quotes)})
+
+def handle_bulk_candles(handler, q, body=None):
+    """Bulk candles: {results:[{symbol,timeframe,bars}], errors:[...], count}.
+    Supports a shared timeframe/limit, plus per-symbol overrides via
+    body.perSymbol = { 'SYM': { 'timeframe': '1d', 'limit': 200 } } so any
+    symbol can carry its own requirements."""
+    ok, err = ensure_mt5()
+    if not ok:
+        return json_response(handler, {'connected': False, 'error': str(err)}, 503)
+    symbols = _parse_symbols(q, body)
+    if not symbols:
+        return json_response(handler, {'error': 'symbols required (body.symbols or ?symbols=A,B)'}, 400)
+    body = body or {}
+    tf = body.get('timeframe') or q.get('timeframe', ['1h'])[0]
+    limit = body.get('limit') or q.get('limit', ['100'])[0]
+    per_symbol = body.get('perSymbol') or {}
+    results, errors = [], []
+    for s in symbols:
+        override = per_symbol.get(s) or {}
+        s_tf = override.get('timeframe', tf)
+        s_limit = override.get('limit', limit)
+        payload, perr = candles_payload(s, s_tf, s_limit)
+        if payload is not None:
+            results.append(payload)
+        else:
+            errors.append({'symbol': s, 'error': perr})
+    return json_response(handler, {'results': results, 'errors': errors, 'count': len(results)})
+
 # ─── HTTP Handler ─────────────────────────────────────────
 
 class BridgeHandler(BaseHTTPRequestHandler):
@@ -312,6 +501,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 acct, _, _, active_num, _ = get_active_credentials()
                 return json_response(self, {
                     'connected': connected, 'mt5Package': True,
+                    'serverUtcOffsetSeconds': detect_server_utc_offset(),
+                    'serverUtcOffsetHours': round(detect_server_utc_offset() / 3600.0, 2),
                     'activeAccount': active_num,
                     'account': str(acc.login) if acc else None,
                     'server': acc.server if acc else None,
@@ -319,6 +510,23 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     'equity': float(acc.equity) if acc else None,
                     'connectionErrors': connection_errors,
                     'circuitBreaker': {'state': circuit_state, 'failures': circuit_failures, 'threshold': CIRCUIT_BREAKER_THRESHOLD, 'cooldown': CIRCUIT_BREAKER_COOLDOWN},
+                })
+
+            # /broker — instance identity + capability (#747)
+            if path == '/broker':
+                ok, err = ensure_mt5()
+                acc = mt5.account_info() if ok else None
+                return json_response(self, {
+                    'brokerId': BROKER_ID,
+                    'brokerTag': BROKER_TAG,
+                    'port': BRIDGE_PORT,
+                    'connected': ok,
+                    'activeAccount': os.environ.get('MT5_ACTIVE_ACCOUNT'),
+                    'account': str(acc.login) if acc else None,
+                    'server': acc.server if acc else None,
+                    'currency': acc.currency if acc else None,
+                    'leverage': acc.leverage if acc else None,
+                    'features': {'bulkQuotes': True, 'bulkCandles': True, 'perSymbolOverrides': True},
                 })
 
             # /quote?symbol=X
@@ -350,6 +558,14 @@ class BridgeHandler(BaseHTTPRequestHandler):
                          'high': float(r['high']), 'low': float(r['low']), 'close': float(r['close']),
                          'volume': int(r['tick_volume'])} for r in rates]
                 return json_response(self, {'symbol': symbol, 'timeframe': tf, 'bars': bars})
+
+            # /quotes?symbols=A,B,C   (bulk — scales to hundreds by URL or use POST)
+            if path == '/quotes':
+                return handle_bulk_quotes(self, q)
+
+            # /candles/batch?symbols=A,B&timeframe=1h&limit=100   (bulk)
+            if path == '/candles/batch':
+                return handle_bulk_candles(self, q)
 
             # /symbols
             if path == '/symbols':
@@ -545,6 +761,14 @@ class BridgeHandler(BaseHTTPRequestHandler):
         body = read_body(self)
 
         try:
+            # /quotes   (bulk quotes — POST body {symbols:[...]}; preferred at scale)
+            if path == '/quotes':
+                return handle_bulk_quotes(self, q, body)
+
+            # /candles/batch   (bulk candles — POST body {symbols, timeframe, limit, perSymbol})
+            if path == '/candles/batch':
+                return handle_bulk_candles(self, q, body)
+
             # /order
             if path == '/order':
                 ok, err = ensure_mt5()
@@ -915,24 +1139,22 @@ class BridgeHandler(BaseHTTPRequestHandler):
 # ─── Main ─────────────────────────────────────────────────
 
 if __name__ == '__main__':
-    port = int(os.environ.get('BRIDGE_PORT', 5000))
-    # BRIDGE_ACCOUNT overrides MT5_ACTIVE_ACCOUNT — lets multiple bridge instances
-    # each target a different account slot (e.g. 2=MetaQuotes, 3=Pepperstone).
-    if os.environ.get('BRIDGE_ACCOUNT'):
-        os.environ['MT5_ACTIVE_ACCOUNT'] = os.environ['BRIDGE_ACCOUNT']
-        account, _, server, active, _ = get_active_credentials()
-        logger.info(f'Bridge instance #{active}: {account} @ {server} on port {port}')
+    # Identity (port + account slot + log file) was resolved at import time —
+    # supports `--port` / `--broker-id` CLI flags and BRIDGE_PORT / BRIDGE_ACCOUNT env.
+    port = BRIDGE_PORT
+    account, _, server, active, _ = get_active_credentials()
+    logger.info(f'Bridge instance [{BROKER_TAG}] slot #{active}: {account} @ {server} on port {port}')
     logger.info(f'Starting MT5 Bridge v2 on port {port} (http.server, no Flask)...')
     # Connect MT5 once at startup (after BRIDGE_ACCOUNT override takes effect)
     logger.info('Connecting to MT5 at startup...')
     ok, err = connect_mt5()
     if not ok:
         logger.warning(f'MT5 not connected at startup: {err}')
-    server = HTTPServer(('127.0.0.1', port), BridgeHandler)
+    server_obj = HTTPServer(('127.0.0.1', port), BridgeHandler)
     logger.info(f'MT5 Bridge v2 listening on http://127.0.0.1:{port}')
     try:
-        server.serve_forever()
+        server_obj.serve_forever()
     except KeyboardInterrupt:
         logger.info('Bridge shutting down...')
-        server.shutdown()
+        server_obj.shutdown()
         mt5.shutdown()

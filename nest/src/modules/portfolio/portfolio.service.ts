@@ -4,6 +4,7 @@ import { AdapterFactory } from '../providers/adapter-factory';
 import { IProviderAdapter, BrokerPosition, BrokerAccount } from '../providers/interfaces/provider-adapter.interface';
 import { ScoringService } from '../scoring/scoring.service';
 import { PrismaService } from '../../database/prisma.service';
+import { resolvePositionPnl } from '../../common/utils/position-pnl';
 
 export interface PortfolioSummary {
   totalValue: number;
@@ -85,20 +86,30 @@ export class PortfolioService {
           });
           if (dbPositions.length > 0) {
             this.logger.log(`Using ${dbPositions.length} cached positions from Position table`);
-            positions = dbPositions.map((p) => ({
-              brokerId: 'trading212',
-              brokerName: 'Trading212',
-              symbol: p.symbol,
-              ticker: p.symbol,
-              quantity: p.quantity,
-              avgCost: p.avgPrice,
-              currentPrice: p.currentPrice ?? 0,
-              marketValue: (p.currentPrice ?? 0) * p.quantity,
-              unrealizedPnl: p.pnl ?? 0,
-              unrealizedPnlPct: p.avgPrice > 0 ? ((p.currentPrice ?? 0) - p.avgPrice) / p.avgPrice * 100 : 0,
-              currency: 'GBP',
-              openedAt: p.openedAt?.toISOString() ?? new Date().toISOString(),
-            }));
+            positions = dbPositions.map((p) => {
+              // 2026-09-10 — side-aware: the stored row carries the broker side.
+              const { pnl, pnlPct } = resolvePositionPnl({
+                side: p.side,
+                avgPrice: p.avgPrice,
+                currentPrice: p.currentPrice ?? 0,
+                quantity: p.quantity,
+                brokerPnl: p.pnl,
+              });
+              return {
+                brokerId: 'trading212',
+                brokerName: 'Trading212',
+                symbol: p.symbol,
+                ticker: p.symbol,
+                quantity: p.quantity,
+                avgCost: p.avgPrice,
+                currentPrice: p.currentPrice ?? 0,
+                marketValue: (p.currentPrice ?? 0) * p.quantity,
+                unrealizedPnl: pnl ?? 0,
+                unrealizedPnlPct: pnlPct ?? 0,
+                currency: 'GBP',
+                openedAt: p.openedAt?.toISOString() ?? new Date().toISOString(),
+              };
+            });
           }
         }
         const account = adapter.getAccount ? await adapter.getAccount() : null;

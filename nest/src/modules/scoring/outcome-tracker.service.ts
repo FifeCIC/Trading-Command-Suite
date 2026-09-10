@@ -13,7 +13,36 @@ const OUTCOME_TRACKING_DEDUP_WINDOW_MS = process.env.OUTCOME_TRACKING_DEDUP_WIND
   ? parseInt(process.env.OUTCOME_TRACKING_DEDUP_WINDOW_MS, 10)
   : 300_000; // 5 minutes
 
+/**
+ * Rows matured per sweep. The sweep is oldest-first, so a saturated batch means
+ * the queue head contains rows that cannot fill (symbol delisted, no bars) and
+ * every row behind them is waiting. 500 left a 37k backlog draining for ~18h
+ * (2026-09-10); this is deliberately larger and reports saturation.
+ */
+const MATURATION_BATCH = 1000;
+
 type DedupKey = string; // `${directiveId}::${symbol}`
+
+/**
+ * Canonicalise a timeframe label to the form stored on `MarketBar`.
+ *
+ * 2026-09-10 (MST-007 / #733): outcome rows were recorded with MT5-style labels
+ * (`M15`, `H1`, `D1`) while `MarketBar.timeframe` holds `15m`, `1h`, `1d`. The
+ * lookup filters on equality, so **every such row matured to NULL forever** —
+ * 35,472 of 40,120 rows in the live table carried `M15` and not one had a single
+ * horizon price. Normalising here makes historical rows resolvable as well as
+ * protecting against a producer that speaks MT5 casing.
+ */
+export function canonicalTimeframe(timeframe: string): string {
+  const t = String(timeframe ?? '').trim();
+  const mt5 = /^([MHD])(\d+)$/i.exec(t);      // M5 / M15 / H1 / H4 / D1
+  if (mt5) {
+    const unit = mt5[1].toUpperCase();
+    const n = Number(mt5[2]);
+    return unit === 'M' ? `${n}m` : unit === 'H' ? `${n}h` : `${n}d`;
+  }
+  return t.toLowerCase();                      // already canonical ('15m', '1d')
+}
 
 @Injectable()
 export class OutcomeTrackerService {
@@ -89,7 +118,8 @@ export class OutcomeTrackerService {
           directiveId: o.directiveId,
           symbol: o.symbol,
           strategyId: o.strategyId ?? null,
-          timeframe: o.timeframe,
+          // Store the canonical label so the maturity lookup always matches.
+          timeframe: canonicalTimeframe(o.timeframe),
           score: o.score,
           signalClass: o.signalClass,
           confidence: o.confidence,
@@ -133,9 +163,21 @@ export class OutcomeTrackerService {
         outcomeComputedAt: null,
         predictedAt: { lte: new Date(now - 15 * 60 * 1000) },
       },
-      take: 500,
+      take: MATURATION_BATCH,
       orderBy: { predictedAt: 'asc' },
     });
+
+    if (pending.length === MATURATION_BATCH) {
+      // A saturated batch is not a quiet one — report the true backlog so rows
+      // stuck behind an unfillable queue head are visible instead of silent.
+      const backlog = await this.prisma.directiveOutcome
+        .count({ where: { outcomeComputedAt: null, predictedAt: { lte: new Date(now - 15 * 60 * 1000) } } })
+        .catch(() => null);
+      this.logger.warn(
+        `Outcome maturation batch saturated (${MATURATION_BATCH} rows)` +
+        (backlog != null ? ` — ${backlog} rows pending` : ''),
+      );
+    }
 
     for (const rec of pending) {
       try {
@@ -208,11 +250,14 @@ export class OutcomeTrackerService {
         select: { id: true },
       });
       if (!resolved) return null;
-      const toleranceMs = Math.max(15 * 60_000, timeframeToMilliseconds(timeframe) * 2);
+      // Always query with the canonical label — outcome rows may carry MT5-style
+      // labels (`M15`) that `MarketBar` never uses (`15m`).
+      const barTimeframe = canonicalTimeframe(timeframe);
+      const toleranceMs = Math.max(15 * 60_000, timeframeToMilliseconds(barTimeframe) * 2);
       const bar = await this.prisma.marketBar.findFirst({
         where: {
           symbolId: resolved.id,
-          timeframe,
+          timeframe: barTimeframe,
           timestamp: {
             gte: targetTime,
             lte: new Date(targetTime.getTime() + toleranceMs),
@@ -222,7 +267,12 @@ export class OutcomeTrackerService {
         select: { close: true },
       });
       return bar?.close ?? null;
-    } catch {
+    } catch (err) {
+      // Never swallow silently: a query bug here is invisible otherwise, which is
+      // exactly how the timeframe mismatch survived unnoticed (MST-007, #733).
+      this.logger.debug(
+        `Outcome price lookup failed for ${symbol} ${canonicalTimeframe(timeframe)}: ${(err as Error).message}`,
+      );
       return null;
     }
   }

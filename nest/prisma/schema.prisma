@@ -1965,6 +1965,27 @@ model SymbolProtocolAssignment {
   @@map("symbol_protocol_assignment")
 }
 
+// Per-symbol MT5 broker routing (GH #747) — which bridge instance serves a symbol,
+// plus the optional broker-native symbol name. Source of truth for Mt5SymbolRouter,
+// which caches it in memory for O(1) per-tick resolution. brokerId = MT5 account
+// slot (2 = MetaQuotes :5000, 3 = Pepperstone :5001, …).
+model SymbolRoute {
+  id           String   @id @default(uuid()) @db.VarChar(36)
+  symbol       String   @db.VarChar(20)          // canonical ticker (Symbol.ticker)
+  brokerId     Int                                // MT5 account slot
+  brokerSymbol String?  @db.VarChar(50)           // broker-native name (e.g. UK100-F)
+  priority     Int      @default(0)               // lower = preferred when several
+  enabled      Boolean  @default(true)
+  note         String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([symbol, brokerId])
+  @@index([brokerId])
+  @@index([symbol])
+  @@map("symbol_route")
+}
+
 // ── Pending Actions (#352) ────────────────────────────────
 // Persists semi-auto queued trades across NestJS restarts.
 

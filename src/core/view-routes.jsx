@@ -153,6 +153,7 @@ import ThemeLabPopover from '../pages/ThemeLabPopover.jsx';
 import LabLandingPage from '../pages/LabLandingPage.jsx';
 import LabPage from '../pages/LabPage.jsx';
 import PipelineGraphLabPage from '../pages/PipelineGraphLabPage.jsx';
+import WidgetBoardLabPage from '../pages/WidgetBoardLabPage.jsx';
 import FeatureLabPage from '../pages/FeatureLabPage.jsx';
 import PreferenceLab from '../pages/PreferenceLab.jsx';
 import PerformanceLabPage from '../pages/PerformanceLabPage.jsx';
@@ -325,6 +326,7 @@ export const VIEW_COMPONENTS = {
 
   // Lab
   'component-lab': ComponentLabPage,
+  'widget-board': WidgetBoardLabPage,
   'responsive-layout-lab': ResponsiveLayoutLabPage,
   'charts-lab': ChartsLabPage,
   'theme-lab': ThemeLabPage,

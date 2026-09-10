@@ -13,6 +13,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { resolvePositionPnl } from '../../common/utils/position-pnl';
 
 // ── Default Settings ───────────────────────────────────
 
@@ -148,20 +149,28 @@ export class GlobalDiversificationService {
         isa: 'Stocks ISA',
       };
 
-      return rows.map((r) => ({
-        brokerId: r.provider,
-        brokerName: brokerNames[r.provider] || r.provider,
-        symbol: r.symbol,
-        quantity: r.quantity,
-        avgPrice: r.avgPrice,
-        currentPrice: r.currentPrice ?? 0,
-        marketValue: (r.currentPrice ?? r.avgPrice) * r.quantity,
-        unrealizedPnl: r.pnl ?? 0,
-        unrealizedPnlPct: r.avgPrice > 0
-          ? (((r.currentPrice ?? r.avgPrice) - r.avgPrice) / r.avgPrice) * 100
-          : 0,
-        currency: r.provider === 'mt5' ? 'GBP' : r.provider === 'trading212' ? 'USD' : 'GBP',
-      }));
+      return rows.map((r) => {
+        // 2026-09-10 — side-aware P&L (short rows previously inverted here too).
+        const { pnl, pnlPct } = resolvePositionPnl({
+          side: r.side,
+          avgPrice: r.avgPrice,
+          currentPrice: r.currentPrice ?? r.avgPrice,
+          quantity: r.quantity,
+          brokerPnl: r.pnl,
+        });
+        return {
+          brokerId: r.provider,
+          brokerName: brokerNames[r.provider] || r.provider,
+          symbol: r.symbol,
+          quantity: r.quantity,
+          avgPrice: r.avgPrice,
+          currentPrice: r.currentPrice ?? 0,
+          marketValue: (r.currentPrice ?? r.avgPrice) * r.quantity,
+          unrealizedPnl: pnl ?? 0,
+          unrealizedPnlPct: pnlPct ?? 0,
+          currency: r.provider === 'mt5' ? 'GBP' : r.provider === 'trading212' ? 'USD' : 'GBP',
+        };
+      });
     } catch (err) {
       this.logger.warn(`Failed to fetch positions: ${(err as Error).message}`);
       return [];

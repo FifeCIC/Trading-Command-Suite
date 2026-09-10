@@ -189,6 +189,7 @@ export const NAV_TREE = {
       // ── Engineering Tools ──
       { id: 'feature-lab', label: 'Feature Lab', icon: '🔬' },
       { id: 'component-lab', label: 'Component Lab', icon: '🧩' },
+      { id: 'widget-board', label: 'Widget Board', icon: '⬚' },
       { id: 'diagrams', label: 'Diagrams', icon: '▦' },
       { id: 'triple-screen', label: 'Triple-Screen Cockpit', icon: '🖥️' },
       { id: 'responsive-layout-lab', label: 'Responsive Layout Lab', icon: '📐' },

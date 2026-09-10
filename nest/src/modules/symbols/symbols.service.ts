@@ -7,6 +7,7 @@ import { CreateSymbolDto } from './dto/create-symbol.dto';
 import { UpdateSymbolDto } from './dto/update-symbol.dto';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
+import { resolvePositionPnl } from '../../common/utils/position-pnl';
 
 @Injectable()
 export class SymbolsService {
@@ -162,8 +163,10 @@ export class SymbolsService {
     let positions: any[] = [];
     try {
       const allPositions = await (this.prisma as any).position.findMany();
+      // 2026-09-10 — Position has no `symbolTicker` column (that filter could
+      // never match), so match on symbolId or the symbol text.
       positions = allPositions.filter((p: any) =>
-        p.symbolId === symbol.id || p.symbolTicker === upperTicker
+        p.symbolId === symbol.id || String(p.symbol ?? '').toUpperCase() === upperTicker
       );
     } catch { /* no positions */ }
 
@@ -184,13 +187,25 @@ export class SymbolsService {
       },
       price,
       starred: symbol.active,
-      positions: positions.map((p) => ({
-        provider: p.provider || 'unknown',
-        accountId: p.accountId || 'default',
-        quantity: p.quantity,
-        avgPrice: Number(p.avgPrice || 0),
-        pnl: Number(p.unrealizedPnl || 0),
-      })),
+      positions: positions.map((p) => {
+        // 2026-09-10 — the Position column is `pnl`; the old `unrealizedPnl` read
+        // did not exist on this model, so every row reported 0.
+        const { pnl } = resolvePositionPnl({
+          side: p.side,
+          avgPrice: p.avgPrice,
+          currentPrice: p.currentPrice,
+          quantity: p.quantity,
+          brokerPnl: p.pnl,
+        });
+        return {
+          provider: p.provider || 'unknown',
+          accountId: p.accountId || 'default',
+          quantity: p.quantity,
+          avgPrice: Number(p.avgPrice || 0),
+          pnl: pnl ?? 0,
+          side: p.side ?? null,
+        };
+      }),
       freshness,
     };
   }
@@ -208,12 +223,16 @@ export class SymbolsService {
         orderBy: { symbol: 'asc' },
       });
       return rows.map((p) => {
-        const pnl = p.pnl ?? (p.currentPrice != null && p.avgPrice > 0
-          ? (p.currentPrice - p.avgPrice) * p.quantity
-          : null);
-        const pnlPct = p.avgPrice > 0 && p.currentPrice != null
-          ? ((p.currentPrice - p.avgPrice) / p.avgPrice) * 100
-          : null;
+        // 2026-09-10 — side-aware. This endpoint reported `pnl: +56.13` beside
+        // `pnlPct: -1.70%` for a short XAUUSD position because the percentage was
+        // computed long-only while the stored amount came from the broker.
+        const { pnl, pnlPct } = resolvePositionPnl({
+          side: p.side,
+          avgPrice: p.avgPrice,
+          currentPrice: p.currentPrice,
+          quantity: p.quantity,
+          brokerPnl: p.pnl,
+        });
         return {
           symbol: p.symbol,
           hasPosition: true,
@@ -222,6 +241,7 @@ export class SymbolsService {
           currentPrice: p.currentPrice,
           pnl,
           pnlPct,
+          side: p.side ?? null,
           provider: p.provider,
         };
       });

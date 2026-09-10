@@ -10,6 +10,11 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { AdapterFactory } from '../providers/adapter-factory';
+import {
+  sideDirection,
+  unrealizedPnlAmount as pnlAmount,
+  unrealizedPnlPct as pnlPercent,
+} from '../../common/utils/position-pnl';
 
 export interface LivePosition {
   symbol: string;
@@ -91,6 +96,7 @@ export class PortfolioPriceService {
       avgCost?: number;
       averagePrice?: number;
       currentPrice?: number;
+      side?: string | number | null;
     }>,
     source: string = 'all',
   ): Promise<ComputedPortfolio> {
@@ -116,8 +122,10 @@ export class PortfolioPriceService {
       if (currentPrice != null && quantity > 0) {
         marketValue = currentPrice * quantity;
         if (avgCost > 0) {
-          unrealizedPnl = (currentPrice - avgCost) * quantity;
-          unrealizedPnlPct = ((currentPrice - avgCost) / avgCost) * 100;
+          // 2026-09-10 — side-aware: a short profits as the price falls, so the
+          // long-only formula inverted every short's P&L sign.
+          unrealizedPnl = pnlAmount(avgCost, currentPrice, quantity, (pos as any).side);
+          unrealizedPnlPct = pnlPercent(avgCost, currentPrice, (pos as any).side);
         }
       }
 

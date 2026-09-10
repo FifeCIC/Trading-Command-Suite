@@ -2610,3 +2610,26 @@ button.nav-active {
   color: var(--ink-soft, #94a3b8);
   opacity: 0.7;
 }
+
+/* ── Dashboard: full-bleed shell (no left section nav, no breadcrumb) ──
+   The Dashboard is heading toward a widget-based, multi-screen layout, so it
+   drops the left rail and spans the full width. The primary top nav remains. */
+.site-shell.dashboard-shell {
+  grid-template-columns: 1fr !important;
+  grid-template-areas:
+    'topbar'
+    'main'
+    'footer';
+}
+.site-shell.dashboard-shell:not(.right-rail-hidden) {
+  /* Dev Tools / Screen Options rail still needs its column when open */
+  grid-template-columns: 1fr 330px !important;
+  grid-template-areas:
+    'topbar topbar'
+    'main right'
+    'footer footer';
+}
+.site-shell.dashboard-shell .left-rail,
+.site-shell.dashboard-shell .rail-collapse-toggle {
+  display: none;
+}

@@ -44,11 +44,11 @@ export class EarningsProximityDirective implements IDirective {
   readonly description = 'Hybrid: continuous earnings-proximity base + within-window bonuses.';
   readonly priority = 50;
   readonly maxScore = 80;
-  readonly minScore = 1; // 55 base + 25 bonus
+  readonly minScore = 0; // 2026-09-10 (#731): 0 when the earnings feed is absent — never a phantom midpoint
   readonly minBars = { '1d': 1 };
-  readonly version = '2.0.1'; // Hybrid scoring
+  readonly version = '2.0.2'; // 2026-09-10: mock branch no longer injects a constant 45
   readonly requiredDataFeeds = ['earnings'];
-  readonly readiness = 'alpha' as const; // demoted beta→alpha 2026-08-15 — mock-first: reads input.earningsDate which nothing writes; always returns mock 45
+  readonly readiness = 'alpha' as const; // demoted beta→alpha 2026-08-15 — mock-first: reads input.earningsDate which nothing writes
   readonly category = 'pattern' as const;
   readonly directionBias = 'bullish' as const;
 
@@ -58,12 +58,19 @@ export class EarningsProximityDirective implements IDirective {
     const bars = input.bars;
 
     if (!meta) {
-      // Mock mode — no earnings calendar connected
+      // No earnings calendar wired → NO contribution.
+      // 2026-09-10 (#731): this used to return a constant 45/100 "mock-neutral"
+      // score. That was a phantom: it inflated Opportunity and every protocol
+      // denominator while carrying no evidence, and it survived a re-enable that
+      // forgot about the missing feed. A data-less directive must score 0.
+      // Wiring path (feeds #648): attach `earningsDate` from the stored
+      // EarningsEvent for the symbol when the protocol needs earnings data —
+      // mirroring how `protocol-gating.service.ts` attaches dxyValue.
       return {
         signalClass: 'neutral',
-        score: 45,
-        confidence: 0.15,
-        reason: `No earnings calendar data for ${input.symbol}. Mock-neutral score. Connect Alpha Vantage EARNINGS_CALENDAR for real data.`,
+        score: 0,
+        confidence: 0,
+        reason: `No earnings calendar data for ${input.symbol} — earnings-proximity contributes nothing until an earnings feed is wired.`,
       };
     }
 

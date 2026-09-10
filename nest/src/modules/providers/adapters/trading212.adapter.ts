@@ -12,6 +12,7 @@ import {
 import { RateLimitTracker } from '../rate-limit-tracker';
 import { getEndpointInterval } from '../../../common/rate-limit/provider-rate-limits';
 import { cleanT212Ticker } from '../t212-ticker-map';
+import { resolvePositionPnl } from '../../../common/utils/position-pnl';
 
 /**
  * Trading212 API Adapter
@@ -564,20 +565,34 @@ export class Trading212Adapter implements IProviderAdapter {
    */
   async getPositions(): Promise<BrokerPosition[]> {
     const raw = await this.getRawPositions();
-    return raw.map((p) => ({
-      brokerId: this.id,
-      brokerName: this.name,
-      symbol: this.stripTicker(p.ticker),
-      ticker: p.ticker,
-      quantity: p.quantity,
-      avgCost: p.averagePrice,
-      currentPrice: p.currentPrice,
-      marketValue: p.currentPrice * p.quantity,
-      unrealizedPnl: p.ppl ?? (p.currentPrice - p.averagePrice) * p.quantity,
-      unrealizedPnlPct: p.averagePrice > 0 ? ((p.currentPrice - p.averagePrice) / p.averagePrice) * 100 : 0,
-      currency: 'GBP',
-      openedAt: p.initialFillDate || new Date().toISOString(),
-    }));
+    return raw.map((p) => {
+      // 2026-09-10 — Invest/ISA positions are long-only, but a negative size
+      // (CFD short) is still respected so the P&L sign can never invert.
+      const side = Number(p.quantity) < 0 ? 'sell' : 'buy';
+      const { pnl, pnlPct } = resolvePositionPnl({
+        side,
+        avgPrice: p.averagePrice,
+        currentPrice: p.currentPrice,
+        quantity: p.quantity,
+        brokerPnl: p.ppl,
+        roundPctTo: 2,
+      });
+      return {
+        brokerId: this.id,
+        brokerName: this.name,
+        symbol: this.stripTicker(p.ticker),
+        ticker: p.ticker,
+        quantity: p.quantity,
+        avgCost: p.averagePrice,
+        currentPrice: p.currentPrice,
+        marketValue: p.currentPrice * p.quantity,
+        unrealizedPnl: pnl ?? 0,
+        unrealizedPnlPct: pnlPct ?? 0,
+        currency: 'GBP',
+        openedAt: p.initialFillDate || new Date().toISOString(),
+        side,
+      };
+    });
   }
 
   async getPositionSnapshot() {
