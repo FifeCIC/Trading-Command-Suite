@@ -1,7 +1,17 @@
+---
+description: "Accessibility and usability policy — WCAG 2.2 AA contrast, keyboard navigation, focus states, tap targets, and reduced-motion handling. Read before building or restyling any UI. Use when: adding a page/component, choosing colours, building forms or interactive controls, or reviewing a UI change."
+applyTo: "src/**"
+---
+
 # Accessibility & Usability Policy — Trading Command Suite
 
 **Target:** WCAG 2.2 Level AA (Level AAA where achievable without design compromise)
 **Last reviewed:** 2026-07-16
+
+> ⚠️ **2026-09-11 — frontmatter added.** This file previously had NO frontmatter, so it had no
+> `applyTo` and may not have loaded as an instruction at all. A rule that does not load is
+> indistinguishable from a rule that does not exist. `scripts/validate-agent-docs.cjs` now
+> warns on any instruction file without an explicit `applyTo`.
 
 ---
 

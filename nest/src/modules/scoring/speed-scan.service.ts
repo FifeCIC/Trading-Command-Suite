@@ -205,10 +205,15 @@ export class SpeedScanService {
           return { symbol, skipped: true, reason: 'No market data configured' };
         }
 
-        // Try requested timeframe first, fall back to 1d if insufficient bars
+        // Try requested timeframe first, fall back to 1d if insufficient bars.
+        // ⚠️ Track which cadence actually won, so the freshness hint below matches the bars
+        // really loaded. Passing the REQUESTED timeframe after a 1d fallback would report a
+        // 1d series as a short-cadence one and mis-size the staleness window (#783 follow-up).
+        let loadedTimeframe = timeframe;
         let marketBars = await this.marketData.getBars(symId, timeframe, bars);
         if ((!marketBars || marketBars.length < 5) && timeframe !== '1d') {
           marketBars = await this.marketData.getBars(symId, '1d', bars);
+          loadedTimeframe = '1d';
         }
         if (!marketBars || marketBars.length < 5) {
           return { symbol, skipped: true, reason: `Insufficient bars (${timeframe}/1d)` };
@@ -231,6 +236,8 @@ export class SpeedScanService {
           marketBars as any,
           protocol,
           { dayBars: dayBars ?? undefined, hourBars: hourBars ?? undefined, min15Bars: min15Bars ?? undefined },
+          'group-weighted',
+          loadedTimeframe,
         );
 
         // ── Priority-log if protocol has no watchlist assigned ──

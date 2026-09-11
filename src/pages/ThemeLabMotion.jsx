@@ -3,6 +3,80 @@ import { useState } from 'react';
 import '../pages/theme-lab.css';
 import PageInfoPopover from '../components/PageInfoPopover';
 
+// ── Hook-owning demos, extracted as COMPONENTS ──────────────────────────────
+//
+// ⚠️ WHY THESE ARE SEPARATE COMPONENTS AND NOT `render:` CALLBACKS IN `demos`.
+//
+// The demo table below is invoked as `demo.render(...)` inside a `.map()` in the
+// page body. That makes each `render` a PLAIN FUNCTION CALL during another
+// component's render — not a component of its own. React only permits hooks in a
+// component or a custom hook, so `useState` inside a `render:` callback violated
+// the Rules of Hooks (`react-hooks/rules-of-hooks`, 2 occurrences here).
+//
+// It happened to appear to work because the hook slot was read during an
+// enclosing render, but it is not safe: the state belongs to whichever component
+// happened to be rendering, so it is shared between both stateful demos and is
+// torn down by any parent re-render. Extracting them into real components gives
+// each its own hook slot, which is what the demo intends.
+//
+// Adding a hook-using demo in future: add a component here and reference it from
+// `demos`, do NOT inline `useState` in a `render:` callback.
+
+/** AnimatePresence add/remove — owns its own list state. */
+function AnimatePresenceDemo() {
+  const [items, setItems] = useState(['AAPL', 'NVDA', 'TSLA']);
+  return (
+    <div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+        <AnimatePresence>
+          {items.map((s) => (
+            <motion.div key={s} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 50 }}
+              transition={{ duration: 0.25 }}
+              style={{ padding: '0.4rem 0.65rem', background: 'var(--panel)', borderRadius: 6, border: '1px solid var(--line)', fontSize: '0.82rem', display: 'flex', justifyContent: 'space-between' }}>
+              {s} <button onClick={() => setItems(items.filter((i) => i !== s))} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}>×</button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+      <button onClick={() => setItems([...items, 'AMD'])} className="tl-demo-btn" style={{ padding: '0.3rem 0.7rem', fontSize: '0.75rem', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--line)', borderRadius: 6, color: 'var(--ink-soft)', cursor: 'pointer' }}>+ Add AMD</button>
+    </div>
+  );
+}
+
+/** Real-world accordion chevron — owns its own open state. */
+function AccordionChevronDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <button onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', color: 'var(--ink)', cursor: 'pointer', fontSize: '0.82rem', padding: '0.4rem 0' }}>
+        <motion.span
+          animate={{ rotate: open ? 90 : 0 }}
+          transition={{ duration: 0.2 }}
+          style={{ display: 'inline-block', fontSize: '0.75rem' }}
+        >
+          ▸
+        </motion.span>
+        {open ? '▾' : '▸'} Section Title
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            style={{ overflow: 'hidden', paddingLeft: '1.2rem' }}
+          >
+            <p style={{ margin: '0.4rem 0', fontSize: '0.78rem', color: 'var(--ink-soft)', padding: '0.5rem', background: 'var(--panel)', borderRadius: 6, border: '1px solid var(--line)' }}>
+              This accordion pattern is used across the Architecture Framework page and Settings panels.
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 const demos = [
   {
     title: 'Fade In',
@@ -52,61 +126,14 @@ const demos = [
   {
     title: 'AnimatePresence (add/remove)',
     code: '<AnimatePresence>\n  {items.map(i => <motion.div exit={{ opacity: 0, x: -50 }}>)}',
-    render: (key) => {
-      const [items, setItems] = useState(['AAPL', 'NVDA', 'TSLA']);
-      return (
-        <div key={key}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
-            <AnimatePresence>
-              {items.map((s) => (
-                <motion.div key={s} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 50 }}
-                  transition={{ duration: 0.25 }}
-                  style={{ padding: '0.4rem 0.65rem', background: 'var(--panel)', borderRadius: 6, border: '1px solid var(--line)', fontSize: '0.82rem', display: 'flex', justifyContent: 'space-between' }}>
-                  {s} <button onClick={() => setItems(items.filter((i) => i !== s))} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}>×</button>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-          <button onClick={() => setItems([...items, 'AMD'])} className="tl-demo-btn" style={{ padding: '0.3rem 0.7rem', fontSize: '0.75rem', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--line)', borderRadius: 6, color: 'var(--ink-soft)', cursor: 'pointer' }}>+ Add AMD</button>
-        </div>
-      );
-    },
+    // Component (owns its own useState) — see the note above AnimatePresenceDemo.
+    render: () => <AnimatePresenceDemo />,
   },
   {
     title: 'Real-World: Accordion Chevron',
     code: '<motion.span animate={{ rotate: open ? 90 : 0 }} transition={{ duration: 0.2 }}>',
-    render: (key) => {
-      const [open, setOpen] = useState(false);
-      return (
-        <div key={key}>
-          <button onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', color: 'var(--ink)', cursor: 'pointer', fontSize: '0.82rem', padding: '0.4rem 0' }}>
-            <motion.span
-              animate={{ rotate: open ? 90 : 0 }}
-              transition={{ duration: 0.2 }}
-              style={{ display: 'inline-block', fontSize: '0.75rem' }}
-            >
-              ▸
-            </motion.span>
-            {open ? '▾' : '▸'} Section Title
-          </button>
-          <AnimatePresence>
-            {open && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25 }}
-                style={{ overflow: 'hidden', paddingLeft: '1.2rem' }}
-              >
-                <p style={{ margin: '0.4rem 0', fontSize: '0.78rem', color: 'var(--ink-soft)', padding: '0.5rem', background: 'var(--panel)', borderRadius: 6, border: '1px solid var(--line)' }}>
-                  This accordion pattern is used across the Architecture Framework page and Settings panels.
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      );
-    },
+    // Component (owns its own useState) — see the note above AnimatePresenceDemo.
+    render: () => <AccordionChevronDemo />,
   },
 ];
 

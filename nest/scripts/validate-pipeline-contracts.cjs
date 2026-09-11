@@ -293,6 +293,10 @@ const SCAN_ENFORCED = {
   'INV-MTF-BUNDLE': 'no-bundle-less-scoring',
   'INV-CADENCE-COVERAGE': 'timeframe-refresh-coverage',
   'INV-NO-FABRICATED-READING': 'no-fabricated-baseline',
+  // Enforced by its own dedicated script (`validate-directive-group-kind.cjs`),
+  // which runs earlier in `prebuild`. It is listed here because the wiring check
+  // requires every invariant to name a guard, and a companion script is a guard.
+  'INV-GATE-MEMBERSHIP': 'validate-directive-group-kind.cjs',
 };
 
 /** Invariants enforced by the live probe (a runtime check cannot be static). */
@@ -314,6 +318,11 @@ const PROBE_ENFORCED = {
   // unit spec (timeframe.spec.ts) pins the alignment arithmetic; this probe asserts
   // the stored timestamps actually sit on valid boundaries.
   'INV-BAR-ALIGNED': 'scripts/contract-probe.cjs',
+  // Gate 3 (STATE). Needs the live database: the seeder is UPSERT-ONLY, so a removal
+  // or move in the seed is a silent no-op in the DB, and re-seeding cannot converge
+  // them. Build gates cannot see this — they pass while the live system is unchanged,
+  // which is exactly how 30 orphan rows sat there with every build green (#789/#792).
+  'INV-SEED-DB-CONSISTENT': 'scripts/contract-probe.cjs',
 };
 
 /**

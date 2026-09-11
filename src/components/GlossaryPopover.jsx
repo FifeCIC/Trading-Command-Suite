@@ -26,9 +26,14 @@ export default function GlossaryPopover({ term, children }) {
   const entry = lookupGlossary(term);
   const displayText = children || term;
 
-  // If not a glossary term, render as plain text
-  if (!entry) return <span>{displayText}</span>;
-
+  // ⚠️ HOOK ORDER: these three callbacks MUST be declared BEFORE the `if (!entry)`
+  // guard below. They previously sat after it, so a GlossaryPopover whose term was
+  // in the glossary registered 3 hooks while one whose term was NOT registered 0.
+  // Terms appear and disappear as page content changes (and the guard depends on
+  // `term`, which is a prop), so this could switch between renders and throw
+  // "Rendered fewer hooks than expected". `react-hooks/rules-of-hooks` flagged it
+  // three times. The hooks are safe to run when `entry` is null — they only touch
+  // refs and state — so ordering them first costs nothing.
   const show = useCallback(() => {
     clearTimeout(timeoutRef.current);
     if (!triggerRef.current) return;
@@ -48,6 +53,9 @@ export default function GlossaryPopover({ term, children }) {
   const handlePopoverEnter = useCallback(() => {
     clearTimeout(timeoutRef.current);
   }, []);
+
+  // If not a glossary term, render as plain text
+  if (!entry) return <span>{displayText}</span>;
 
   return (
     <>

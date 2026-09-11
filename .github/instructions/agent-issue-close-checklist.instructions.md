@@ -7,13 +7,9 @@ applyTo: "nest/src/**, src/pages/**, src/components/**, src/data/**, src/core/**
 
 ## ⚠️ BEFORE YOU START ANY WORK
 
-**Read `.github/AGENT-ATTENTION.md`** to see known blockers and issues. Do not waste time diagnosing problems that are already documented. The attention log is the shared memory of the agent team.
+**1. Read `.github/AGENT-ATTENTION.md`** to see known blockers and issues. Do not waste time diagnosing problems that are already documented. The attention log is the shared memory of the agent team.
 
----
-
-## ⚠️ BEFORE YOU START ANY WORK
-
-**Read `.github/AGENT-ATTENTION.md`** to see known blockers and issues. Do not waste time diagnosing problems that are already documented. The attention log is the shared memory of the agent team.
+**2. Check whether this area is already settled.** Run `node scripts/detect-circular-work.cjs` and read `docs/SETTLED-DECISIONS.md`. If the area shows both CLOSED and OPEN issues, you are probably **re-opening** something, not discovering it — see `.github/instructions/anti-circular-work.instructions.md`.
 
 **Checkbox the issue.** If the issue has action-oriented bullets (`### Investigation Required`, `### Recommended Next Steps`, `### Fix Options`, `### Scope`) without checkboxes, add `- [ ]` to every actionable bullet BEFORE starting work. Uncheckboxed bullets are invisible to the completion process — they get skipped. A bullet that says "Check whether X" or "Action: do Y" without a checkbox is not tracked and will not get done.
 
@@ -36,7 +32,8 @@ Steps:
    - NEVER write `- [x] → #XXX` — that's a fake checkbox
    - Use `gh issue edit <number> --repo FifeCIC/Trading-Command-Suite --body "<updated text>"`
 5. **If ANY `[ ]` remain, the issue stays OPEN.** Only close when all boxes are `[x]` or the unchecked items have been extracted into separate standalone issues.
-5. **Post the ticked list as a comment** — as a supplement, post the same updated checklist in a comment for the notification record.
+6. **Post the ticked list as a comment** — as a supplement, post the same updated checklist in a comment for the notification record.
+7. **If you fixed an INSTANCE of a known class, add a guard.** This is the highest-value step. `#789` was 14 placements; `#790` was 6 in the same class — the guard is why that was ONE issue and not six. A guard converts "we fixed it" into "it cannot come back".
 
 Example — if the issue has:
 

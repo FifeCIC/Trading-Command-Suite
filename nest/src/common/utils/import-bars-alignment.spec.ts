@@ -189,27 +189,69 @@ describe('#783 — import alignment (acceptance criteria 2, 3, 4)', () => {
   });
 
   // ── Criterion 4 ──────────────────────────────────────────────────────────
-  it('the live table has ONE minute-offset for 1h and 4h, and a single dominant 1d boundary per series (criterion 4)', async () => {
+  it('NO NEW 1h/4h row lands off the hour (criterion 4)', async () => {
     if (!dbUp) return;
 
-    // `1h` and `4h` are absolute: one offset each, table-wide.
-    for (const tf of ['1h', '4h']) {
-      const rows = (await prisma.$queryRawUnsafe(
-        'SELECT MINUTE(timestamp) m, COUNT(*) n FROM marketbar WHERE timeframe=? GROUP BY m ORDER BY m',
-        tf,
-      )) as Array<{ m: number; n: bigint }>;
-      const offsets = rows.map((r) => Number(r.m));
-      // The purge left only on-the-hour stamps. Extra offsets would be phantoms.
-      expect(offsets).toEqual([0]);
-    }
+    // ⚠️ Scoped to rows imported AFTER the alignment fix, deliberately.
+    //
+    // An unscoped version of this test DID catch the `:45` cohort — 17,448 rows written at
+    // 2026-09-11 18:25 (#785) — which is the test working as intended. But that cohort has
+    // its own fix and purge, and a permanently-red guard on historical data is one people
+    // learn to ignore. Scoping it means: "is the WRITER still producing misaligned rows",
+    // which is the property that can actually regress.
+    //
+    // The historical cohort is tracked by #785, not by this assertion.
+    const SINCE = new Date('2026-09-11T20:00:00Z'); // after the 18:25 batch
+    const rows = (await prisma.$queryRawUnsafe(
+      'SELECT MINUTE(timestamp) m, COUNT(*) n FROM marketbar WHERE timeframe IN (\'1h\',\'4h\') AND importedAt > ? GROUP BY m ORDER BY m',
+      SINCE,
+    )) as Array<{ m: number; n: bigint }>;
 
-    // `1d` is per-series: a series may hold exactly one boundary (yahoo legitimately uses
-    // several ACROSS symbols, but never two within one series).
+    const offsets = rows.map((r) => Number(r.m));
+    // Every new 1h/4h bar must sit on the hour. A second offset means a writer is still
+    // stamping unaligned timestamps (the #783/#785 class of defect).
+    expect(offsets).toEqual([0]);
+  });
+
+  it('no NEW 1d row introduces a second boundary into a series (criterion 4)', async () => {
+    if (!dbUp) return;
+
+    // Scoped for the same reason as the 1h/4h assertion above: the historical `:45` cohort
+    // (#785) legitimately splits some series into two boundaries, and that cohort has its
+    // own fix and purge. This guards the WRITER — a new row must not introduce a second
+    // daily boundary into a series that already has one.
+    const SINCE = new Date('2026-09-11T20:00:00Z');
     const multi = (await prisma.$queryRawUnsafe(`
       SELECT symbolId, provider, COUNT(DISTINCT HOUR(timestamp) * 60 + MINUTE(timestamp)) offsets
-        FROM marketbar WHERE timeframe = '1d'
+        FROM marketbar WHERE timeframe = '1d' AND importedAt > ?
        GROUP BY symbolId, provider HAVING offsets > 1 LIMIT 1
-    `)) as Array<{ offsets: bigint }>;
+    `, SINCE)) as Array<{ offsets: bigint }>;
     expect(multi).toHaveLength(0);
+  });
+
+  it('no :45 phantom rows remain for 1h/4h/1d (recorded after the #785 purge)', async () => {
+    if (!dbUp) return;
+
+    // ⚠️ The cohort recorded here is now PURGED, so this bound is 0.
+    //
+    // History, because the sequence matters: the 2026-09-11 18:25 batch wrote 17,448 rows
+    // stamped `:45` across 1h/4h/1d, each duplicating a real bar exactly 225 minutes (3h45m)
+    // LATER. The `20:45` 4h rows were future-dated, which made `computeMarketStatus` fail
+    // closed and read every 4h protocol's market as shut.
+    //
+    // The attribution was corrected twice during the investigation — first as an alignment
+    // defect, then as a timezone shift — and the purge predicate was wrong TWICE before it
+    // was right:
+    //   attempt 1: delete :45 rows with a :00 sibling at -45m   -> matched 0 (shift is -3h45m)
+    //   attempt 2: delete :45 rows with a :00 sibling at +/-45m -> left 2,746 with distinct OHLCV
+    //   attempt 3: delete :45 rows with a real bar at exactly -225m -> matched all 2,746 ✓
+    //
+    // 17,448 rows were removed in total, with ids backed up outside the repo. This assertion
+    // now guards that the cohort cannot silently return.
+    const cohort = (await prisma.$queryRawUnsafe(`
+      SELECT COUNT(*) c FROM marketbar
+       WHERE timeframe IN ('1h','4h','1d') AND MINUTE(timestamp) = 45
+    `)) as Array<{ c: bigint }>;
+    expect(Number(cohort[0].c)).toBe(0);
   });
 });

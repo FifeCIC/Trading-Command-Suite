@@ -1910,7 +1910,7 @@ model GlobalSetting {
   @@map("global_setting")
 }
 
-// ─── M.E.T.A. Protocol Registry ──────────────────────────
+// ─── META.Stack Protocol Registry ──────────────────────────
 // DB-backed protocol definitions replacing the hardcoded
 // PROTOCOL_REGISTRY in directive-groups.ts.
 // Phase A.1 of META.Stack Architecture Refactor (#398).

@@ -40,6 +40,52 @@ npm --prefix C:\wamp64\www\trading-command-suite\nest run db:check   # ALWAYS ru
 Quick form: add columns with `ALTER TABLE` + `npx prisma generate` (API stopped — it locks
 the query-engine DLL). Never `db push`.
 
+## 🛑 Building the API — `nest run build` needs the API STOPPED
+
+**Read this before concluding the repo is broken.** `nest run build` starts with `prebuild`,
+which runs `prisma generate`. That step needs **write access** to
+`node_modules/.prisma/client/query_engine-windows.dll.node`. The running API
+(`node dist/src/main.js`) loads that engine at startup and holds it for its lifetime, so
+`prisma generate` fails with:
+
+```
+EPERM: operation not permitted, rename '...query_engine-windows.dll.node.tmpNNNNN'
+    -> '...query_engine-windows.dll.node'
+```
+
+**That message names a temp file and never mentions the API.** It reads like a corrupted
+install, and has been misdiagnosed as one repeatedly. It is not broken — the API is just
+running. Windows releases the file only when the process exits.
+
+**Use this instead:**
+
+```powershell
+npm --prefix C:\wamp64\www\trading-command-suite\nest run build:api
+```
+
+Stop API → build → restart API → verify health. This is the normal way to build the API now.
+
+Other useful forms:
+
+```powershell
+# Check first, build nothing
+npm --prefix C:\wamp64\www\trading-command-suite\nest run build:preflight
+#   exit 0 = engine free      exit 1 = blocked, names the holding PID
+
+# Build with the API deliberately left down (e.g. before a manual launch)
+npm --prefix C:\wamp64\www\trading-command-suite\nest run build -SkipRestart   # via build-api.ps1
+```
+
+`build-preflight.cjs` runs FIRST in `prebuild`, so a plain `npm run build` now **refuses to
+start** rather than emitting the confusing EPERM — you get the PID, the command line, and the
+fix.
+
+**TypeScript only, no Prisma?** `npx tsc -p tsconfig.build.json --noEmit` works with the API
+running and is enough to verify a `.ts` change type-checks.
+
+⚠️ Don't confuse this with the frontend — `npm run build` **from the repo root** is Vite and
+involves no Prisma, so it works with everything running.
+
 ## Stack operations
 
 ```powershell

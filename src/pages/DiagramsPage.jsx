@@ -114,8 +114,8 @@ const DIAGRAMS = [
   },
   {
     id: 'sees-trading',
-    label: 'M.E.T.A. Stack Trading Lifecycle',
-    desc: 'M.E.T.A. Stack orchestrates the full trading lifecycle. Automation tick: Priority Queue check (Hot Stock Picks boost) → Timeline risk check → fetch bars → per-tick directive memoization cache → dual-protocol gated scoring via SEES (LONG vs SHORT) → threshold + cooldown + duplicate guard → mode dispatch (manual/semi-auto/auto) → broker execution via AdapterFactory → trade recording. Priority queue allows manual boosting of cross-protocol hot picks to be evaluated FIRST.',
+    label: 'META.Stack Trading Lifecycle',
+    desc: 'META.Stack orchestrates the full trading lifecycle. Automation tick: Priority Queue check (Hot Stock Picks boost) → Timeline risk check → fetch bars → per-tick directive memoization cache → dual-protocol gated scoring via SEES (LONG vs SHORT) → threshold + cooldown + duplicate guard → mode dispatch (manual/semi-auto/auto) → broker execution via AdapterFactory → trade recording. Priority queue allows manual boosting of cross-protocol hot picks to be evaluated FIRST.',
     code: `flowchart TB
     subgraph Tick["1. Automation Tick (5min)"]
         A[clearTickCache] --> B[Timeline Risk Check]
@@ -137,7 +137,7 @@ const DIAGRAMS = [
         K -->|"short wins"| M[SELL signal]
         K -->|"both low"| N[HOLD]
     end
-    subgraph Gates["4. M.E.T.A. Safety Gates"]
+    subgraph Gates["4. META.Stack Safety Gates"]
         L --> O["Score >= Threshold?"]
         M --> O
         O -->|No| P[SKIP]
@@ -162,8 +162,8 @@ const DIAGRAMS = [
   },
   {
     id: 'sees-automation',
-    label: 'M.E.T.A. Stack -- Setup to Execution',
-    desc: 'End-to-end user journey through the M.E.T.A. Stack (Modular Expert Trading Architecture). Setup: providers → watchlists → protocols → ScoringStrategy. Automation: the loop invokes SEES for scoring, then evaluates TradingStrategies (each REQUIRES a linked ScoringStrategy via FK). Decision and execution are M.E.T.A. responsibilities. 42 protocols, 7 ScoringStrategies, 35 TradingStrategies — all linked.',
+    label: 'META.Stack -- Setup to Execution',
+    desc: 'End-to-end user journey through META.Stack (Modular Expert Trading Architecture). Setup: providers → watchlists → protocols → ScoringStrategy. Automation: the loop invokes SEES for scoring, then evaluates TradingStrategies (each REQUIRES a linked ScoringStrategy via FK). Decision and execution are META.Stack responsibilities. 42 protocols, 7 ScoringStrategies, 35 TradingStrategies — all linked.',
     code: `flowchart TB
     subgraph SETUP["1. SETUP (User)"]
         A1["Configure Providers"] --> A2["Import Market Data"]
@@ -171,7 +171,7 @@ const DIAGRAMS = [
         A3 --> A4["Build Protocols<br/>(directive groups + symbol resolution)"]
         A4 --> A5["Protocol ↔ Symbols<br/>via SymbolProtocolAssignment<br/>or Watchlist link"]
     end
-    subgraph AUTOMATION["2. AUTOMATION LOOP (M.E.T.A.)"]
+    subgraph AUTOMATION["2. AUTOMATION LOOP (META.Stack)"]
         B1["Start Loop"] --> B2["Enable Broker<br/>(MT5 or T212)"]
         B2 --> B3["TradingStrategy =<br/>Protocol + Symbol + Entry Rules"]
         B3 --> B4["Tick: fetch bars,<br/>invoke SEES per symbol"]
@@ -181,7 +181,7 @@ const DIAGRAMS = [
         C2 --> C3["Protocol Gating<br/>(multiplicative risk)"]
         C3 --> C4["Composite Score<br/>+ signal class"]
     end
-    subgraph DECISION["4. DECISION (M.E.T.A.)"]
+    subgraph DECISION["4. DECISION (META.Stack)"]
         D1{"Score >= Threshold?"} -->|No| D2["Watch"]
         D1 -->|Yes| D3{"Cooldown + Duplicate?"}
         D3 -->|Blocked| D4["Rejected"]
@@ -209,7 +209,7 @@ const DIAGRAMS = [
   {
     id: 'data-arch',
     label: 'Data Architecture',
-    desc: 'End-to-end data flow: 10 providers ->’ AdapterFactory (rate-limited, failover) ->’ normalized storage (MarketBar, Earnings, News, Macro) ->’ SEES directives ->’ scoring ->’ M.E.T.A. trading ->’ analytics. No raw/transform split -- adapters normalize on ingest.',
+    desc: 'End-to-end data flow: 10 providers ->’ AdapterFactory (rate-limited, failover) ->’ normalized storage (MarketBar, Earnings, News, Macro) ->’ SEES directives ->’ scoring ->’ META.Stack trading ->’ analytics. No raw/transform split -- adapters normalize on ingest.',
     code: `flowchart TB
     subgraph Ingest["Data Ingest (10 Providers)"]
         A[MT5 Bridge]
@@ -236,7 +236,7 @@ const DIAGRAMS = [
         P[ProtocolGatingService]
         Q[Composite Score]
     end
-    subgraph META["M.E.T.A. Trading"]
+    subgraph META["META.Stack Trading"]
         R[AutomationLoop]
         S[AdapterFactory<br/>MT5 or T212]
         T[DuplicateGuard + Timeline]
@@ -1178,8 +1178,8 @@ const DIAGRAMS = [
 
   {
     id: 'metastack-product',
-    label: 'M.E.T.A. Product Hierarchy',
-    desc: 'Trading Command Suite delivers SEES signals layered into M.E.T.A. (Modular Expert Trading Architecture). 37 protocols in PROTOCOL_REGISTRY. 3 SHORT variants (default-short, built-in-short, mt5-technical-short) have explicit directionMode: SHORT_ONLY. Direction is encoded in protocol selection, not an API parameter.',
+    label: 'META.Stack Product Hierarchy',
+    desc: 'Trading Command Suite delivers SEES signals layered into META.Stack. 37 protocols in PROTOCOL_REGISTRY. 3 SHORT variants (default-short, built-in-short, mt5-technical-short) have explicit directionMode: SHORT_ONLY. Direction is encoded in protocol selection, not an API parameter.',
     code: `flowchart TB
     subgraph TCS["Trading Command Suite"]
         direction TB
@@ -1189,7 +1189,7 @@ const DIAGRAMS = [
             C["Ranked Symbol Output<br/>Composite scores 0-100"]
             A --> B --> C
         end
-        subgraph MS["M.E.T.A. -- Modular Expert Trading Architecture"]
+        subgraph MS["META.Stack (Modular Expert Trading Architecture)"]
             direction TB
             subgraph ProtocolPair["Protocol Pair (LONG + SHORT)"]
                 PL["ðŸŸ¢ LONG Protocol<br/>e.g. built-in-default<br/>directionMode: LONG_ONLY"]
@@ -1221,7 +1221,7 @@ const DIAGRAMS = [
 
   {
     id: 'metastack-rating',
-    label: 'M.E.T.A. Rating Engine',
+    label: 'META.Stack Rating Engine',
     desc: 'StackPerformanceService rates each MetaStack (Watchlist+Protocol+ScoringStrategy+TradingStrategy) from actual Trade records. Formula: normalizedEffectiveness (PnL/hr scaled to 0-100 where $50/hr=100) x recencyDecay (exp(-days/30)) x confidenceFactor (clamp(trades/100, 0.1, 1.0)) x consistencyFactor (1-abs(winRate-0.5)*0.3). Persists to StackPerformance table via upsert. SHA-256 fingerprint of config detects MetaStack drift. Endpoint: GET /api/scoring/metastacks/ratings.',
     code: `flowchart LR
     subgraph Inputs["Trade Data"]
@@ -1287,7 +1287,7 @@ const DIAGRAMS = [
 
   {
     id: 'metastack-signature',
-    label: 'M.E.T.A. Configuration Signature',
+    label: 'META.Stack Configuration Signature',
     desc: 'SHA-256 hash of MetaStack components detects configuration drift. When a watchlist symbol, protocol, or risk parameter changes, the signature changes -- warning users that performance history may be stale.',
     code: `flowchart TB
     subgraph Components["MetaStack Components"]

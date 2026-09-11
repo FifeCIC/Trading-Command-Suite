@@ -1,0 +1,34 @@
+seed protocols parsed: 47
+db protocols parsed : 45
+
+=== drift summary ===
+  protocols in BOTH            : 45
+  protocols ONLY in DB         : 0
+  protocols ONLY in seed       : 2
+  directive-in-DB-not-in-seed  : 30
+  directive-in-seed-not-in-DB  : 0
+
+=== sample: directives present in DB but NOT in the seed ===
+  btc-speed-v1 :: rsi-overbought
+  btc-scalp-v1 :: rsi-overbought
+  xau-speed-v1 :: rsi-overbought
+  oil-speed-v1 :: rsi-overbought
+  spy-speed-v1 :: rsi-overbought
+  spy-day-v1 :: rsi-overbought
+  qqq-speed-v1 :: rsi-overbought
+  qqq-day-v1 :: rsi-overbought
+  dow-speed-v1 :: rsi-overbought
+  ftse-speed-v1 :: rsi-overbought
+  tsla-speed-v1 :: rsi-overbought
+  doge-speed-v1 :: rsi-overbought
+  china-speed-v1 :: rsi-overbought
+  pandemic-v1 :: rsi-overbought
+  leverage-v2 :: rsi-overbought
+  vix-spike-v1 :: rsi-overbought
+  gold-macro-v1 :: rsi-overbought
+  nikkei-speed-v1 :: rsi-overbought
+
+=== sample: directives in the seed but NOT in the DB ===
+
+=== directionMode drift (mode is what makes a directive reachable) ===
+  modes differing: 0

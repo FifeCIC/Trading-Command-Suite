@@ -2929,6 +2929,30 @@ const QA_CHECKLIST = [
     priority: 'critical',
     versionNote: '2026-09-11 — #783 duplicate OHLCV bars from unaligned import timestamps',
   },
+  {
+    id: 'qa-contract-022',
+    invariant: 'INV-GATE-MEMBERSHIP',
+    area: 'Pipeline Contracts',
+    system: 'Scoring / Protocol config',
+    name: 'A risk gate contains only gate directives — no directional voter is silently discarded',
+    procedure: 'Run `node scripts/validate-directive-group-kind.cjs` from nest/ (also runs in `prebuild`). To prove the guard bites, run `node scripts/test-gate-membership-guard.cjs` — it reconstructs the defect against a temp seed and asserts rejection. To inspect by hand: `node scripts/find-risk-group-directives.cjs <directiveId>` lists every placement split into scoring vs RISK, so a directive showing `scoring: 0, RISK: N` is ENTIRELY dead.',
+    expected: 'The validator reports `✅ OK — every risk-gate member is a declared gate`, and the test reports all 7 expectations passing. The rule is that a group with `isRiskGate: true` may contain **only** `category: \'structural\'` directives — the interface\'s own definition (`directive.interface.ts`: *"\'structural\': Risk gates, regime checks. Modifier, not signal score."*). ⚠️ A directive whose report shows `scoring: 0` is not "double-counted", it is **absent**: it contributes no score, no direction and no capacity anywhere, and nothing reports it — `ProtocolHealthService` names duplicate placements, never the inert one. `protocol-gating.service.ts` enforces the exclusion at L689 (`inSignal = !isGateGroup && ...`), L749 (no `capacityMax` contribution) and L763/766 (no bullish/bearish accumulation). ⚠️ DO NOT widen the rule back to `category === \'risk\'`: that version reported 68 violations on a healthy tree, 62 of them genuine `structural` gates, and was corrected by reading the interface\'s own vocabulary. Measured: `session-open-effect` (category `pattern`, maxScore 60) was inert in 14 protocols; the guard then found 4 more, including `btc-halving-cycle` (maxScore **200**, the highest weight in the system) and `earnings-momentum` — all with zero scoring-group copies, i.e. entirely dead (#789).',
+    category: 'Contract',
+    priority: 'critical',
+    versionNote: '2026-09-11 — #789 directional voters in risk gates quietly discarded',
+  },
+  {
+    id: 'qa-contract-023',
+    invariant: 'INV-SEED-DB-CONSISTENT',
+    area: 'Pipeline Contracts',
+    system: 'Scoring / Protocol seed data',
+    name: 'Seed placement counts match the database (Gate 3 — the live system agrees with its config)',
+    procedure: 'Run `node scripts/contract-probe.cjs` from nest/ and read the `INV-SEED-DB-CONSISTENT` line (needs MySQL + the API). For the full per-group picture run `node scripts/diff-seed-vs-db.cjs` from the repo root — it classifies ORPHAN / MISSING / MOVED / KIND-CHANGED. To see the raw counts: `SELECT p.slug, COUNT(e.id) FROM protocol p LEFT JOIN protocol_directive_group g ON g.protocolId = p.id LEFT JOIN protocol_directive_entry e ON e.groupId = g.id GROUP BY p.slug;`',
+    expected: 'The probe reports PASS and seed/DB placement counts agree. **Then prove the check bites:** temporarily remove any directive from `protocols-seed-data.ts` and re-run — the probe must FAIL, because the seeder is UPSERT-ONLY and cannot delete the row it created previously. Restore afterwards. ⚠️ The diagnostic lies the other way round: the seed endpoint returns `entries: N` counting rows **UPSERTED**, not rows that **EXIST**, so a successful-looking re-seed can leave orphans behind. Measured 2026-09-11: `seed 419 / database 449 / 30 ORPHAN`; `rsi-overbought` was 28 of them, left live in 28 `LONG_ONLY` protocols where a `bearish` directive is excluded from BOTH numerator and denominator — so it never read as a zero, it silently lowered the reachable ceiling by **3,920 points** (#792). ⚠️ This is the one gate `tsc`/eslint/contract validation CANNOT catch: they all passed while the live system was unchanged. Fix with explicit SQL — **never** `prisma db push` (drops 10 raw-managed tables, #769).',
+    category: 'Contract',
+    priority: 'critical',
+    versionNote: '2026-09-11 — #789/#792 seed/DB drift; Gate 3 (STATE) added to the probe',
+  },
   // ═══════════════════════════════════════════════════
   // HANDOFF BATCH #15 (2026-09-08 → 09-10)
   // ═══════════════════════════════════════════════════════

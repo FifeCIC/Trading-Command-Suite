@@ -35,7 +35,7 @@ var PIPELINE_STAGES = [
   { id: 'performance', label: 'Results', icon: '◈' },
 ];
 
-export default function MetaStackPipeline({ title = 'MetaStack Display', subtitle = 'M.E.T.A. — Modular Expert Trading Architecture', showHeader = true }) {
+export default function MetaStackPipeline({ title = 'MetaStack Display', subtitle = 'META.Stack — Modular Expert Trading Architecture', showHeader = true }) {
   var [selectedStackId, setSelectedStackId] = useState(null);
 
   var stacksQuery = useQuery({

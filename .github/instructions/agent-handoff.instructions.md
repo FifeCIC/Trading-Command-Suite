@@ -1,11 +1,21 @@
 ---
 description: "Write a handoff file when closing a GitHub issue, when a change alters a pipeline's data flow/behaviour/capability, or when adding a new feature. Skip cosmetic-only UI work. The Librarian batch-processes handoffs to update the QA Testing page, Capability Map, and Architecture Framework."
-applyTo: "nest/src/**, src/pages/**, src/components/**, src/data/**, src/core/**, scripts/**"
+applyTo: "**"
 ---
 
 # Agent Handoff Rule — WRITE WHEN IT MATTERS
 
-Write a handoff file to `.github/handoffs/` BEFORE calling `task_complete` **only** when the change is one of:
+> **2026-09-11 — two corrections to this rule, both from measured failures.**
+>
+> 1. **`applyTo` was `nest/src/**, src/pages/**, ...` — it did NOT include `docs/**`.** So this rule
+>    never fired while an agent was editing documentation, and handoffs were written to the wrong
+>    directory. **An instruction that does not fire is indistinguishable from one that does not
+>    exist.** It is now `"**"` because a handoff is written about work that spans any file type.
+> 2. **The canonical directory is `docs/handoff/`, NOT `.github/handoffs/`.** Handoffs were split
+>    across both, and **four cited handoffs became unfindable** (only one recoverable from git).
+>    `scripts/validate-agent-docs.cjs` now **fails the build** if `.github/handoffs/` reappears.
+
+Write a handoff file to **`docs/handoff/`** BEFORE calling `task_complete` **only** when the change is one of:
 
 1. **Closing a GitHub issue** — work that resolves an issue gets a handoff so the Librarian records it in the QA page, Capability Map, and Architecture Framework.
 2. **Pipeline / behaviour / capability change** — a change that alters a pipeline's data flow or behaviour: new or changed API endpoints, Prisma schema changes, scoring/gating/trading/automation logic, provider adapters, or data contracts.
@@ -14,6 +24,23 @@ Write a handoff file to `.github/handoffs/` BEFORE calling `task_complete` **onl
 **Skip the handoff** for cosmetic-only work: visual styling, layout, copy/label tweaks, badge/theme adjustments, and trivial refactors with no behavioural change.
 
 Rule of thumb: if the change would not belong on the Capability Map or Architecture Framework, it does not need a handoff.
+
+## ⚠️ Handoffs are NEVER deleted
+
+**2026-09-11.** The previous version of this process said the Librarian deletes each handoff after
+processing it. **That is what destroyed the project's memory of *why*.** Four handoffs cited by
+`.github/AGENT-ATTENTION.md` became unfindable, and three were never committed at all.
+
+The Librarian **summarises** a handoff into the QA page, Capability Map, and Architecture Framework.
+It **leaves the handoff in place.** The handoff is the durable record of the reasoning; the docs are
+the summary. Deleting the source because you wrote the summary is how the same area gets re-opened
+for weeks.
+
+## ⚠️ A handoff must state what it did NOT do
+
+**2026-09-11.** A handoff that reads as complete when the work was partial is the same defect as a
+ticked checklist box that was never verified (#638). If you stopped short anywhere, say so
+explicitly with the reason. Honest-partial is a pass; silent-partial is the failure.
 
 ## 🛑 If your change touched the database schema
 
@@ -132,7 +159,7 @@ When you close the issue, the closing comment replaces the claim. No cleanup nee
 .github/handoffs/YYYY-MM-DD-{slug}.md
 ```
 
-Example: `.github/handoffs/2026-07-15-metastack-fingerprint.md`
+Example of the NAME SHAPE (not a real file): `docs/handoff/YYYY-MM-DD-{slug}.md`
 
 ## Required Format
 

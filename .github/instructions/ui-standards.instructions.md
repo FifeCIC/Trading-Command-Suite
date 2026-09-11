@@ -1,6 +1,16 @@
+---
+description: "UI standards — permitted UI technologies, CSS variable tokens, spacing/sizing scales, and user-configurable preferences. The single source of truth for UI work. Read before creating a page/component or restyling. Use when: writing CSS, choosing colours or spacing, adding a page, or building an interactive control."
+applyTo: "src/**"
+---
+
 # UI Standards — Trading Command Suite
 
 **Purpose:** Defines what UI technologies, visual patterns, spacing/sizing scales, and user-configurable preferences are permitted across the app. This file is the single source of truth for the React UI Agent.
+
+> ⚠️ **2026-09-11 — frontmatter added.** This file previously had NO frontmatter, so it had no
+> `applyTo` and may not have loaded as an instruction at all. A rule that does not load is
+> indistinguishable from a rule that does not exist. `scripts/validate-agent-docs.cjs` now
+> warns on any instruction file without an explicit `applyTo`.
 
 ---
 

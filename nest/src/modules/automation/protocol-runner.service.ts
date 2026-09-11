@@ -15,16 +15,33 @@ import { SymbolDataCacheService } from './symbol-data-cache.service';
 import { getPreset, ProtocolPreset } from './protocol-presets';
 import type { MarketBar } from '../directives/interfaces/directive.interface';
 import { ProtocolGatingService } from '../scoring/protocol-gating.service';
+import { ProtocolDbService } from '../scoring/protocol-db.service';
 import { MarketDataService } from '../market-data/market-data.service';
+import { selectBaseTimeframe } from '../../common/utils/timeframe';
 
 // ── Types ──────────────────────────────────────────────────
 
 /**
- * Cadence this runner loads base bars on. Kept as a named constant so the bars
- * and the `timeframe` hint handed to `scoreWithGating` can never disagree — a
- * mismatch would reintroduce the false "market closed" reading (2026-09-10).
+ * Fallback cadence when a protocol declares no `recommendedTimeframe`.
+ *
+ * ⚠️ HISTORY — this was the ONLY cadence (#783 follow-up, 2026-09-11). The runner
+ * hardcoded `BASE_TIMEFRAME = '1d'` and loaded every protocol's base bars as daily,
+ * whatever the protocol actually asked for. The consequences were severe and silent:
+ *
+ *   `xau-speed-1h` (a 1h protocol) was fed DAILY bars. Its median interval was a day,
+ *   so `computeMarketStatus()` correctly reported "last real bar 1105m old" against
+ *   the *daily* series — while the symbol's real 1h feed was 26 minutes old and had
+ *   been imported two minutes earlier. The card therefore read STALE/PAUSED with a
+ *   stale-data reason, and `xau-speed-m15`, `xau-speed-4h` and `xau-speed-1h` all
+ *   reported the SAME ~1000m age because they were all reading one identical daily
+ *   bar. Every intraday protocol looked permanently stale.
+ *
+ * The cadence now comes from the protocol's own `recommendedTimeframe` via
+ * `selectBaseTimeframe()`, which is the SAME function the Arena, the signal envelope
+ * and the automation loop already use. This runner was the lone outlier — do not
+ * reintroduce a constant here (INV-CADENCE-COVERAGE).
  */
-const BASE_TIMEFRAME = '1d';
+const FALLBACK_TIMEFRAME = '1d';
 
 export interface ProtocolRunConfig {
   name: string;
@@ -71,7 +88,31 @@ export class ProtocolRunnerService {
     private readonly cache: SymbolDataCacheService,
     private readonly protocolGating: ProtocolGatingService,
     private readonly marketData: MarketDataService,
+    private readonly protocolDb: ProtocolDbService,
   ) {}
+
+  /**
+   * The cadence a protocol's base bars must be loaded on.
+   *
+   * Resolution order: protocol's declared `recommendedTimeframe` → `FALLBACK_TIMEFRAME`.
+   * `selectBaseTimeframe()` maps the free-text value (`'1h'`, `'5s–30s'`, `'1d (signal),
+   * 1h/15m'`, …) onto a cadence that exists in `marketbar`. The SAME result is passed to
+   * `scoreWithGating()` as its `timeframe` argument, so the bars and the freshness check
+   * can never disagree — a mismatch is what produced the false "market closed" reading
+   * on 2026-09-10.
+   *
+   * ⚠️ Bar COUNT comes from `getRequiredBars()`, not a literal. Directives declare their
+   * own `minBars` per timeframe; a fixed 60 starves long-window directives (e.g. a
+   * 200-bar daily regime filter would silently evaluate on 60 bars and still return a
+   * plausible number — INV-BAR-WINDOW's failure mode).
+   */
+  private resolveCadence(protocolId: string): { timeframe: string; barCount: number } {
+    const declared = this.protocolDb.getCached(protocolId)?.recommendedTimeframe;
+    const timeframe = selectBaseTimeframe(declared) || FALLBACK_TIMEFRAME;
+    const required = this.protocolDb.getRequiredBars(protocolId);
+    const barCount = required[timeframe] ?? required['1d'] ?? 100;
+    return { timeframe, barCount };
+  }
 
   /**
    * Execute a full scoring run for a protocol config.
@@ -161,7 +202,10 @@ export class ProtocolRunnerService {
     symbol: string,
     preset: ProtocolPreset,
   ): Promise<SymbolScoreResult> {
-    const bars = await this.loadBars(symbol);
+    // Resolve the cadence ONCE per protocol and reuse it for both the bar load and the
+    // freshness hint, so the two can never drift apart (#783 follow-up).
+    const { timeframe, barCount } = this.resolveCadence(preset.id);
+    const bars = await this.loadBars(symbol, timeframe, barCount);
     // Higher-timeframe bundle (1d/1h/15m) MUST be supplied: without it every MTF
     // directive silently evaluates from the base bars only and reports a plausible
     // number that is not the strategy's reading (#735, MST-004).
@@ -172,14 +216,15 @@ export class ProtocolRunnerService {
     // Pass the cadence the bars were actually loaded on, so a freshness check
     // inside a directive measures staleness against the real interval instead of
     // inferring it — the inference that made fresh data read as closed and
-    // hard-gated every tick of some protocols (2026-09-10).
+    // hard-gated every tick of some protocols (2026-09-10). Now it is the PROTOCOL's
+    // cadence, not a hardcoded '1d' (#783 follow-up).
     const gated = await this.protocolGating.scoreWithGating(
       symbol.toUpperCase(),
       bars,
       preset.id,
       { dayBars, hourBars, min15Bars },
       'group-weighted',
-      BASE_TIMEFRAME,
+      timeframe,
     );
     const signalClass: SymbolScoreResult['signalClass'] =
       gated.signal === 'BUY' || gated.signal === 'STRONG_BUY' ? 'bullish' :
@@ -204,14 +249,22 @@ export class ProtocolRunnerService {
   }
 
   /**
-   * Load market bars for a symbol. Uses the cache layer to avoid
-   * duplicate DB queries across concurrent protocol runs.
+   * Load market bars for a symbol at the protocol's own cadence.
+   *
+   * ⚠️ The cache key includes the TIMEFRAME. It previously did not, because the cadence
+   * was a constant and so could not vary. Now that it is per-protocol, omitting it would
+   * let a 1d request be served a 1h series from cache — the exact silent-mixed-cadence
+   * failure that `INV-SINGLE-CADENCE` exists to prevent, reintroduced through the cache.
    */
-  private async loadBars(symbol: string): Promise<MarketBar[]> {
+  private async loadBars(
+    symbol: string,
+    timeframe: string,
+    barCount: number,
+  ): Promise<MarketBar[]> {
     return this.cache.getOrFetch<MarketBar[]>(
       'internal',
       symbol,
-      'market-bars',
+      `market-bars:${timeframe}:${barCount}`,
       async () => {
         if (!this.prisma.isAvailable) return [];
 
@@ -227,7 +280,7 @@ export class ProtocolRunnerService {
         // ordering was already correct, but it is a COPY of the canonical loader: the
         // `timeframe` filter and the ordering had to be re-supplied by hand, and four sites
         // that did this got it wrong (#751, #754). Calls the one loader instead.
-        const bars = await this.marketData.getBars(sym.id, BASE_TIMEFRAME, 60);
+        const bars = await this.marketData.getBars(sym.id, timeframe, barCount);
 
         return bars.map((b) => ({
           timestamp: b.timestamp,

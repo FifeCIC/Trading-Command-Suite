@@ -265,8 +265,33 @@ export class DirectivesController {
       readiness: (d as any).readiness || 'alpha',
       requiredDataFeeds: (d as any).requiredDataFeeds || [],
       // ── Performance classification (from #283 audit + DB stubbing #288) ──
-      classification: (!dbActive || isStub) ? 'stub' : (st?.count ? 'active' : 'untested'),
-      performance: (!dbActive || isStub) ? 'underperforming' : (st?.count ? (st.totalScore / st.count >= 50 ? 'healthy' : 'weak') : 'unknown'),
+      //
+      // ⚠️ `readiness` IS AUTHORITATIVE (#768). `STUB_IDS` is a HARDCODED snapshot
+      // from the #283/#288 audits, and it went stale: eight of its entries were
+      // later reimplemented and promoted to `readiness: 'ready'` during the #641
+      // cleanup, but remained in the set. That produced internally contradictory
+      // API output — `readiness: 'ready'` beside `classification: 'stub'` and
+      // `performance: 'underperforming'` — for directives carrying real weight:
+      //
+      //   volatility-tools           25 protocols
+      //   analyst-adjustments        19 protocols
+      //   moving-averages             4 protocols
+      //   spy-qqq-relative-strength   4 protocols
+      //   macd                        3 protocols
+      //   conviction-growth, mean-reversion, sp500-regime   2 each
+      //
+      // A consumer reading `classification` would conclude these are placeholders
+      // while the scoring engine is running them as production directives. Two
+      // fields disagreeing about the same thing is the "one of them is lying"
+      // class from #768, and the honest resolution is that the DIRECTIVE CLASS
+      // knows its own maturity — a hardcoded list cannot.
+      //
+      // So the stub label now only applies where readiness does NOT say ready.
+      // Kept (rather than deleting STUB_IDS) because the ids that are genuinely
+      // still alpha/beta still need the label, and deleting the set would silently
+      // reclassify them as active.
+      classification: (!dbActive || (isStub && (d as any).readiness !== 'ready')) ? 'stub' : (st?.count ? 'active' : 'untested'),
+      performance: (!dbActive || (isStub && (d as any).readiness !== 'ready')) ? 'underperforming' : (st?.count ? (st.totalScore / st.count >= 50 ? 'healthy' : 'weak') : 'unknown'),
       // ── Directive nature (#289) — DB value first, fallback to defaults ──
       nature: dbNatures.get(d.id) || DEFAULT_NATURE[d.id] || 'predictive',
       // ── Merged stats ──

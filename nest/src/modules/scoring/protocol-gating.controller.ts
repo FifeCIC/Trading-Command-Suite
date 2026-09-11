@@ -9,6 +9,7 @@ import { DirectiveConfigService } from './directive-config.service';
 import { ProtocolHealthService } from './protocol-health.service';
 import { isDirectiveIncluded } from '../directives/directive-inclusion';
 import { resolveAdaptiveTarget, ADAPTIVE_TARGET_MIN_SAMPLES } from './adaptive-target';
+import { selectBaseTimeframe } from '../../common/utils/timeframe';
 
 /**
  * Protocol Gating Controller — META.Stack Canonical Scoring
@@ -563,11 +564,20 @@ export class ProtocolGatingController {
       }
 
       const requiredBars = this.protocolDb.getRequiredBars(slug);
-      const bars = await this.marketData.getBars(sym.id, '1d', requiredBars['1d'] || 200);
+      // ⚠️ Cadence from the PROTOCOL, not a hardcoded '1d' — see the `batch` handler above
+      // for the full explanation (#783 follow-up). This site additionally omitted the
+      // `timeframe` argument on `scoreWithGating`, so the freshness check had to infer the
+      // cadence from the array's median even when the bars were loaded correctly.
+      const cadence = selectBaseTimeframe(
+        this.protocolDb.getCached(slug)?.recommendedTimeframe,
+      );
+      const bars = await this.marketData.getBars(sym.id, cadence, requiredBars[cadence] ?? requiredBars['1d'] ?? 200);
       if (!bars || bars.length === 0) continue;
 
       const { dayBars, hourBars, min15Bars } = await this.protocolGating.loadHigherTfBundle(sym.id, slug);
-      results.push(await this.protocolGating.scoreWithGating(p.symbol, bars as any, slug, { dayBars, hourBars, min15Bars }));
+      results.push(await this.protocolGating.scoreWithGating(
+        p.symbol, bars as any, slug, { dayBars, hourBars, min15Bars }, 'group-weighted', cadence,
+      ));
     }
 
     return results.sort((a, b) => b.composite - a.composite);
@@ -601,19 +611,32 @@ export class ProtocolGatingController {
     }
 
     const protocolBars = this.protocolDb.getRequiredBars(body.protocolId);
+
+    // ⚠️ Cadence comes from the PROTOCOL, not a hardcoded '1d' (#783 follow-up, 2026-09-11).
+    // This endpoint previously loaded `getBars(sym.id, '1d', protocolBars['1d'])` — it fetched
+    // the protocol's per-timeframe bar REQUIREMENTS and then ignored its cadence entirely, so
+    // a 1h protocol was scored on daily bars. `computeMarketStatus()` then measured staleness
+    // against the daily series and reported ~1100m for every intraday protocol, making the
+    // whole Ladder read STALE/PAUSED during an active session. `scorePortfolio()` below is
+    // told the same cadence, so the bars and the freshness hint cannot disagree.
+    const cadence = selectBaseTimeframe(
+      this.protocolDb.getCached(body.protocolId)?.recommendedTimeframe,
+    );
+    const barCount = protocolBars[cadence] ?? protocolBars['1d'] ?? 200;
+
     const holdings = await Promise.all(
       body.tickers.map(async (ticker) => {
         const sym = await this.prisma.symbol.findFirst({
           where: { ticker: ticker.toUpperCase() },
         });
         const bars = sym
-          ? await this.marketData.getBars(sym.id, '1d', protocolBars['1d'] || 200)
+          ? await this.marketData.getBars(sym.id, cadence, barCount)
           : [];
         return { symbol: ticker.toUpperCase(), bars: bars || [] };
       }),
     );
 
-    return this.protocolGating.scorePortfolio(holdings, body.protocolId);
+    return this.protocolGating.scorePortfolio(holdings, body.protocolId, cadence);
   }
 
   /**

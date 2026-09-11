@@ -81,9 +81,6 @@ export default function SymbolDetailPage() {
 
   const isLoading = symbolQuery.isLoading;
 
-  if (symbolQuery.isLoading) return <div className="sd-page"><p>Loading symbol data...</p></div>;
-  if (symbolQuery.isError) return <div className="sd-page"><p className="sd-error">Failed to load symbol. Is the backend running?</p></div>;
-
   const sym = symbolQuery.data ?? {};
   const ticker = sym.ticker || symbolId;
   const freshness = freshnessQuery.data ?? {};
@@ -134,6 +131,16 @@ export default function SymbolDetailPage() {
     window.addEventListener('resize', h);
     return () => { window.removeEventListener('resize', h); chart.remove(); chartInstance.current = null; };
   }, [candles]);
+
+  // ⚠️ HOOK ORDER: these two guards MUST stay BELOW every hook in this component.
+  // They previously sat above the chart useEffect (and above the derived `sym`,
+  // `ticker`, etc.), so on a loading render React saw 1 hook and on a loaded
+  // render 2 — React throws "Rendered fewer hooks than expected" when the count
+  // changes between renders, which blanked the page during the symbol fetch.
+  // `react-hooks/rules-of-hooks` flagged it; moving the guards below the effect
+  // fixes the order without changing what renders.
+  if (symbolQuery.isLoading) return <div className="sd-page"><p>Loading symbol data...</p></div>;
+  if (symbolQuery.isError) return <div className="sd-page"><p className="sd-error">Failed to load symbol. Is the backend running?</p></div>;
 
   return (
     <div className="sd-page">

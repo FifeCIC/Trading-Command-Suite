@@ -136,7 +136,7 @@ function buildCapabilityRows(directives, providers, dbMap) {
     { name: 'Scoring Logs (unified)', count: 2 },
     { name: 'Alerts (triggers + service)', count: 4 },
     { name: 'Trading (strategies + duplicate)', count: 3 },
-    { name: 'M.E.T.A. (ratings + signature)', count: 3 },
+    { name: 'META.Stack (ratings + signature)', count: 3 },
     { name: 'Diversification (global)', count: 4 },
     { name: 'Symbol Focus (single ticker)', count: 1 },
     { name: 'Bridge Events (MT5)', count: 1 },

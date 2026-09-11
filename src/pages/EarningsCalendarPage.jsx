@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchEarningsCalendar,
   fetchEarningsSettings,
@@ -118,6 +118,11 @@ export default function EarningsCalendarPage() {
     staleTime: 15 * 60 * 1000, // 15 min — earnings calendar doesn't change rapidly
   });
 
+  // Required by saveSettings() below to invalidate the calendar after a purge.
+  // See the comment at that call site — this hook was MISSING and its absence
+  // was a ReferenceError masked as a "Save & apply failed" message.
+  const queryClient = useQueryClient();
+
   const settingsQuery = useQuery({
     queryKey: ['earnings-settings'],
     queryFn: fetchEarningsSettings,
@@ -167,6 +172,17 @@ export default function EarningsCalendarPage() {
       );
       settingsQuery.refetch();
       statusQuery.refetch();
+      // ⚠️ `queryClient.invalidateQueries(...)` used to be called here, but
+      // `queryClient` was never imported or instantiated — so this threw a
+      // ReferenceError. Because the throw happened AFTER the settings were
+      // saved and the purge succeeded, the user saw "Save & apply failed:
+      // queryClient is not defined" even though the operation had worked, and
+      // the calendar never refreshed.
+      //
+      // The calendar query's key is ['earnings-calendar', selectedMonth], so
+      // invalidating the 'earnings-calendar' PREFIX is what refreshes the month
+      // grid — and it is deliberately a prefix rather than a refetch, because
+      // the purge may have changed months the user has already browsed.
       queryClient.invalidateQueries({ queryKey: ['earnings-calendar'] });
       setShowAll(false);
     } catch (e) {

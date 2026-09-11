@@ -1,0 +1,33 @@
+=== gated/protocols shape ===
+  keys: protocols, count
+  protocol count: 45
+
+=== runs shape ===
+  run count: 30
+  total score rows across runs: 39
+
+=== top 20 by SIGNAL % (claim 1: often under 10%) ===
+  pct  raw/max       ticker   proto                 open  sig
+   18%  142/795      XAUUSD   gold-macro-v1         true  HOLD
+   18%  142/795      XAUUSD   gold-macro-v1         true  HOLD
+   18%  142/795      XAUUSD   gold-macro-v1         true  HOLD
+   16%  110/695      SPY      spy-speed-v1          false HOLD
+   16%  110/695      SPY      spy-speed-v1          false HOLD
+   16%  110/695      SPY      spy-speed-v1          false HOLD
+   14%  100/695      US500    spy-speed-v1          false HOLD
+   14%  100/695      US500    spy-speed-v1          false HOLD
+   14%  100/695      US500    spy-speed-v1          false HOLD
+   10%  92/910       XAUUSD   xau-speed-4h          true  HOLD
+   10%  92/910       XAUUSD   xau-speed-4h          true  HOLD
+   10%  80/810       VIX      vix-short-v1          false HOLD
+   10%  92/910       XAUUSD   xau-speed-4h          true  HOLD
+   10%  80/810       VIX      vix-short-v1          false HOLD
+   10%  92/910       XAUUSD   xau-speed-4h          true  HOLD
+    9%  60/655       USDCHF   forex-session-v1      true  HOLD
+    9%  60/655       GBPUSD   forex-session-v1      true  HOLD
+    9%  60/655       USDCHF   forex-session-v1      true  HOLD
+    9%  60/655       GBPUSD   forex-session-v1      true  HOLD
+    9%  60/655       USDCHF   forex-session-v1      true  HOLD
+
+  under 10%: 24 of 39 (62%)
+  max pct seen: 18%

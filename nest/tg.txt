@@ -1,0 +1,19 @@
+=== CONFIGURED: 10 entries, total maxScore=1035 ===
+=== RAN: 9 directives, total maxScore=895 ===
+
+=== CONFIGURED but DID NOT RUN (silently excluded) ===
+  rsi-overbought                  grp=Technical Analysis  max=140  active=1
+  => excluded maxScore total: 140
+
+=== RAN but NOT CONFIGURED (unexpected extras) ===
+
+=== THE ARITHMETIC ===
+  configured total      : 1035
+  ran total (subMax)    : 895
+  excluded total        : 140
+  API signalMax         : 795
+  API observedSignalMax : 190
+  API directionEligible : 8
+
+  signalRaw=142  -> raw/signalMax = 17.9%
+  signalRaw=142  -> raw/ranTotal  = 15.9%

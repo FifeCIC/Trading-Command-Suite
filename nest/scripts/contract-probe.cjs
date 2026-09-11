@@ -410,6 +410,8 @@ async function main() {
 
       const problems = [];
       const observations = [];
+      /** Lags that are explained by unavailable data, rather than by wrong scoring. */
+      const explained = [];
       for (const [cadence, asOfSet] of byCadence) {
         const newest = await prisma.marketBar.findFirst({
           where: { symbolId: symbol.id, timeframe: cadence },
@@ -423,12 +425,89 @@ async function main() {
         // (a bar can close between the arena scoring and this query).
         const matched = asOfs.some((a) => Math.abs(new Date(a) - newest.timestamp) <= 5 * 60_000);
         observations.push(`${cadence}: arena asOf=${asOfs.join('|')} newest bar=${newestIso}${matched ? ' ✓' : ' ✗'}`);
-        if (!matched) problems.push(cadence);
+        if (matched) continue;
+
+        // ⚠️ NOT EVERY LAG IS A BUG — AND TREATING ONE AS A BUG COSTS REAL TIME
+        // -------------------------------------------------------------------
+        // #795 (2026-09-11, filed as priority-high then closed as NOT-A-BUG) was exactly
+        // this: a 15-minute bar gap that appeared for 29 of 30 symbols at once. The cause was
+        // a **bridge restart at 20:52 from development activity**, and the gap then
+        // **self-healed** over successive refresh cycles (0 → 5 → 10 symbols refilled) because
+        // `BarRefreshService` re-fetches by COUNT (200 bars ≈ 16.7h at 5m), so it reaches back
+        // past any plausible development gap.
+        //
+        // The arena's `asOf` was CORRECT in that case — it was the newest bar when scoring ran.
+        // The lag was in the DATA, not in the scoring. Reporting it as a contract failure sends
+        // an agent hunting a scoring bug that does not exist.
+        //
+        // So: a lag is only a CONTRACT VIOLATION if bars for those minutes exist and were
+        // skipped. If no bars exist for the missing window, the lag is explained by absent
+        // data — report it, do not fail on it.
+        const laggingMinutes = Math.round(
+          (newest.timestamp - new Date(asOfs[0])) / 60_000,
+        );
+        const lookbackStart = new Date(new Date(asOfs[0]).getTime() + 60_000);
+        const barsInWindow = await prisma.marketBar.count({
+          where: { symbolId: symbol.id, timeframe: cadence, timestamp: { gte: lookbackStart, lt: newest.timestamp } },
+        });
+
+        if (barsInWindow > 0) {
+          // Bars DO exist between asOf and newest, yet the arena did not see them. That is the
+          // real defect INV-BAR-ORDER names (#751): stale/ordered/mis-filtered reads.
+          problems.push(`${cadence} (${barsInWindow} bar(s) exist between asOf and newest — arena did not see them)`);
+        } else {
+          // No bars to see. The lag is a DATA gap, which is expected when a bridge restarts
+          // during development and which self-heals.
+          explained.push(
+            `${cadence}: ${laggingMinutes}min behind, but ZERO bars exist in that window ` +
+              `(data gap, not a scoring bug — expected after a bridge restart; self-heals on re-fetch)`,
+          );
+        }
       }
       record('INV-BAR-ORDER', `arena asOf equals the newest real bar per cadence (${LIVE_SYMBOL})`, problems.length === 0,
-        observations.join('; '));
-      record('INV-SINGLE-CADENCE', `each protocol is scored on a single cadence (${LIVE_SYMBOL})`, problems.length === 0,
-        `${byCadence.size} cadences resolved: ${[...byCadence.keys()].join(', ')}`);
+        [observations.join('; '), ...explained.map((e) => `⚠ not a failure: ${e}`)].join(' | '));
+
+      // ⚠️ INV-SINGLE-CADENCE — WHAT THIS CAN AND CANNOT PROVE
+      // ------------------------------------------------------
+      // It previously reported the SAME boolean as INV-BAR-ORDER, so it (a) failed whenever
+      // bar-order failed — even when cadence was perfectly correct — and (b) never tested
+      // cadence-mixing at all. Measured 2026-09-11: it reported
+      // "5 cadences resolved: 15m, 5m, 1d, 1h, 1m" for AUDUSD as a FAILURE, but that is
+      // CORRECT BEHAVIOUR — AUDUSD legitimately feeds per-timeframe protocols
+      // (`xau-speed-m5` / `-m15` / `-1h` / `-4h` / `1d`), the design settled by the #751
+      // arena-cadence decision. Grouping by SYMBOL means one symbol feeding several
+      // per-timeframe protocols looks like a mixed-cadence array.
+      //
+      // ⚠️ A guard that fails on correct configuration gets switched off, which is worse than
+      // no guard because it looks like coverage.
+      //
+      // ⚠️ AND AN HONEST LIMIT: the arena payload does NOT expose the per-protocol bar array
+      // (`protocolScores[].timeframe` is a single string; there is no `timeframes[]`). So this
+      // probe can verify that **every protocol resolves to a cadence** and that the resolved
+      // cadence is one of the KNOWN cadences — it CANNOT see a protocol whose internal bar
+      // array spliced several timeframes together. That #751 defect class is guarded
+      // structurally by the `INV-SINGLE-CADENCE` marker canary in `timeframe.ts` plus
+      // `timeframe.spec.ts`, and behaviourally by `INV-CADENCE-COVERAGE` below.
+      //
+      // Stating the limit is deliberate: a check that silently cannot fire is
+      // indistinguishable from a check that passes. If a `timeframes[]` field is ever added to
+      // the payload, tighten this to assert it has length <= 1.
+      const protocols = comparison[0]?.protocolScores || [];
+      const KNOWN_CADENCES = new Set(['1m', '5m', '15m', '1h', '4h', '1d', '1w']);
+      const unresolved = protocols.filter((s) => !KNOWN_CADENCES.has(mapCadence(s.timeframe)));
+      const cadenceCounts = [...new Set(protocols.map((s) => mapCadence(s.timeframe)).filter(Boolean))];
+      const canSeeArrays = protocols.some((s) => Array.isArray(s.timeframes));
+      record(
+        'INV-SINGLE-CADENCE',
+        `each protocol resolves to exactly one known cadence (${LIVE_SYMBOL})`,
+        unresolved.length === 0,
+        unresolved.length === 0
+          ? `${protocols.length} protocol(s) each resolve to ONE known cadence — ${cadenceCounts.length} distinct cadence(s) across protocols (${cadenceCounts.sort().join(', ')}), which is the intended per-timeframe design.` +
+            (canSeeArrays
+              ? ''
+              : ` ⚠️ LIMIT: the payload exposes no per-protocol \`timeframes[]\`, so a protocol whose bar array spliced multiple timeframes cannot be detected HERE — that class is covered by the INV-SINGLE-CADENCE marker in timeframe.ts + timeframe.spec.ts + INV-CADENCE-COVERAGE below.`)
+          : `${unresolved.length} protocol(s) resolved to an UNKNOWN cadence: ${unresolved.map((s) => `${s.protocolId || '?'}→"${s.timeframe}"`).join(', ')} — cadence must resolve from recommendedTimeframe via selectBaseTimeframe(); an unresolved cadence means the protocol is being fed something the coverage guard does not know about (#758).`,
+      );
     } catch (err) {
       const why = err && err.message ? err.message : String(err);
       record('INV-BAR-ORDER', `arena asOf equals the newest real bar per cadence (${LIVE_SYMBOL})`, true, `skipped — ${why}`, true);
@@ -687,6 +766,91 @@ async function main() {
           : `AMBIGUOUS NAME(S): ${names.join(', ')} — a protocol resolving this watchlist by name gets an arbitrary row, so its symbol set can change without any edit. Consolidate onto the UUID-identified row.`);
     } catch (err) {
       record('INV-WATCHLIST-IDENTITY', 'no watchlist name is ambiguous (duplicate name+shape rows)', true, `skipped — ${err.message}`, true);
+    }
+  }
+
+  // ── INV-SEED-DB-CONSISTENT (GATE 3: STATE) ─────────────────────────────
+  //
+  // ⚠️ ADDED 2026-09-11 — this is the check the build gates CANNOT make.
+  //
+  // Gates 1 and 2 (`tsc`, eslint, the `prebuild` validators) are CODE checks.
+  // They pass while the LIVE SYSTEM is unchanged. That is exactly how 30 orphan
+  // rows sat in `protocol_directive_entry` with every build green: the seed file
+  // was corrected, the seeder is UPSERT-ONLY so it could not delete the old rows,
+  // and nothing compared the two.
+  //
+  // The visible symptom was `rsi-overbought` — a `directionBias: 'bearish'`,
+  // 140-point directive left live in 28 `LONG_ONLY` protocols where it is excluded
+  // from BOTH numerator and denominator. So it never read as a zero; it silently
+  // lowered the REACHABLE CEILING by 3,920 points (#792).
+  //
+  // This check asks the question the build cannot: **does the running system agree
+  // with the config that describes it?**
+  //
+  // Scope note: this compares PLACEMENT COUNTS per protocol, not full set equality.
+  // Full comparison lives in `scripts/diff-seed-vs-db.cjs` (repo root), which parses
+  // per-group membership. Counts are the cheap invariant that catches the class
+  // here, without duplicating that parser — ADR-014 (one implementation per concept).
+  if (prisma) {
+    try {
+      const protoRows = await prisma.$queryRawUnsafe(
+        `SELECT p.slug, COUNT(e.id) AS entries
+           FROM protocol p
+           LEFT JOIN protocol_directive_group g
+                  ON g.protocolId COLLATE utf8mb4_unicode_ci = p.id COLLATE utf8mb4_unicode_ci
+           LEFT JOIN protocol_directive_entry e
+                  ON e.groupId COLLATE utf8mb4_unicode_ci = g.id COLLATE utf8mb4_unicode_ci
+          GROUP BY p.slug`,
+      );
+      const dbBySlug = new Map(protoRows.map((r) => [r.slug, Number(r.entries)]));
+
+      // Parse the seed's per-protocol placement count.
+      const seedSrc = fs.readFileSync(
+        path.join(NEST_ROOT, 'src', 'modules', 'scoring', 'protocols-seed-data.ts'),
+        'utf8',
+      );
+      const seedBySlug = new Map();
+      let cur = null;
+      let inIds = false;
+      for (const line of seedSrc.split(/\r?\n/)) {
+        const proto = line.match(/^ {2}"([^"]+)":\s*\{/);
+        if (proto) {
+          cur = proto[1];
+          if (!seedBySlug.has(cur)) seedBySlug.set(cur, 0);
+          inIds = false;
+          continue;
+        }
+        if (!cur) continue;
+        if (/^\s*"directiveIds":\s*\[/.test(line)) { inIds = true; continue; }
+        if (inIds) {
+          if (/^\s*\]/.test(line)) { inIds = false; continue; }
+          if (/^\s*"[^"]+"\s*,?\s*$/.test(line)) seedBySlug.set(cur, seedBySlug.get(cur) + 1);
+        }
+      }
+
+      const seedTotal = [...seedBySlug.values()].reduce((a, b) => a + b, 0);
+      const dbTotal = [...dbBySlug.values()].reduce((a, b) => a + b, 0);
+
+      // Compare only protocols present on BOTH sides. A protocol in the DB but not
+      // the seed is a different (and legitimate) situation — e.g. `signals-workbench`,
+      // a workbench protocol populated by SignalEnvelopeService, deliberately unseeded.
+      const drift = [];
+      for (const [slug, dbCount] of dbBySlug) {
+        if (!seedBySlug.has(slug)) continue;
+        const seedCount = seedBySlug.get(slug);
+        if (seedCount !== dbCount) drift.push(`${slug}: seed ${seedCount} vs db ${dbCount}`);
+      }
+
+      record(
+        'INV-SEED-DB-CONSISTENT',
+        'seed placement counts match the database (Gate 3: state)',
+        drift.length === 0,
+        drift.length === 0
+          ? `seed and DB agree — ${seedTotal} placements across ${seedBySlug.size} protocols. (DB total ${dbTotal}; any difference is a protocol absent from the seed, which is a separate question.)`
+          : `${drift.length} protocol(s) disagree: ${drift.slice(0, 8).join(' | ')}${drift.length > 8 ? ` … +${drift.length - 8}` : ''}. The seeder is UPSERT-ONLY, so a removal/move in the seed is a SILENT no-op in the DB. Run \`node scripts/diff-seed-vs-db.cjs\` from the repo root for the full per-group picture, then reconcile with explicit SQL — NEVER \`prisma db push\` (it drops 10 raw-managed tables, #769).`,
+      );
+    } catch (err) {
+      record('INV-SEED-DB-CONSISTENT', 'seed placement counts match the database (Gate 3: state)', true, `skipped — ${err.message}`, true);
     }
   }
 

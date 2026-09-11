@@ -11,7 +11,7 @@ Built by [FifeCIC](https://fifecic.scot) | [Ryan Bayne](https://github.com/RyanB
 
 ## What It Does
 
-- **META.Stack Scoring** — 43 protocols, 100+ directives across technical, sentiment, and risk groups. Protocol-gated scoring (~14 directives per protocol) is ~7× cheaper than flat scoring.
+- **META.Stack Scoring** (**M**odular **E**xpert **T**rading **A**rchitecture) — 43 protocols, 100+ directives across technical, sentiment, and risk groups. Protocol-gated scoring (~14 directives per protocol) is ~7× cheaper than flat scoring.
 - **Automation Loop** — 120s tick cycle. Scores strategy symbols, gates through risk chains, dispatches trades. 7 active strategies covering Tokyo, London, and US sessions.
 - **Decision Trail** — Full audit chain from trade → dispatch → gate → score → directive → market data. Queryable via `GET /api/automation/decision-trail`.
 - **Multi-Broker** — 10 provider adapters (MT5, Alpaca, Trading212, Capital.com, Finnhub, FMP, Binance, Yahoo, Interactive Brokers, Polygon).

@@ -136,6 +136,41 @@ function familyOf(protocolId) {
 }
 
 /**
+ * matchesSearch(entry, query) — does a ladder card match the free-text search?
+ *
+ * Covers the three things a user actually looks for on this page:
+ *   - SYMBOL        — "xau" finds XAUUSD and XAGUSD
+ *   - PROTOCOL      — the display name OR the id, so "gold" and "xau-speed" both work
+ *   - STATE/SIGNAL  — "live", "stale", "closed", "not scored" and the signal word
+ *                     (BUY / HOLD / SELL), which is what the badge renders.
+ *
+ * The state words are matched against the SAME helpers the chip renders with
+ * (`stateLabel`), not a re-typed list — otherwise the search would drift from the
+ * labels the moment a chip is renamed. `signalClass` is deliberately not searched:
+ * the badge shows the direction word, so matching the class would accept queries
+ * the user cannot see on screen.
+ *
+ * Space-separated terms are ANDed, so "gold live" narrows to live Gold cards.
+ */
+function matchesSearch(e, query) {
+  const terms = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if (terms.length === 0) return true;
+  const haystack = [
+    e.symbol,
+    e.protocolName,
+    e.protocolId,
+    e.runId,
+    e.scoreFrom,
+    stateLabel(e.vm),
+    e.hasScore ? (e.vm.signal || '') : 'not scored',
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return terms.every((t) => haystack.includes(t));
+}
+
+/**
  * One labeled score block — used for BOTH the Signal and Opportunity scores so
  * they render identically. Value format follows the Screen Options preference
  * (raw | percent | both). `active` highlights the metric the ladder is ranked by.
@@ -174,20 +209,24 @@ function fmtSigned(v) {
 }
 
 /**
- * Opt-in facts strip on a Ladder card (#667/#668, phase-6 preview — shown only
- * when the ladder's "Details" toggle is on). Company/stock facts come from the
- * stored symbol registry; our own trading stats come from the stored
- * open-position map. Renders nothing (graceful) when neither is available.
+ * LadderFacts({ meta, pos, asBlock }) — company / open-position facts.
+ *
+ * `asBlock` renders it as a footer column matching ScoreBlock's label-above-value
+ * rhythm (label "Details", values beneath) instead of the old inline strip. It is
+ * ALWAYS ON now — the "Details" toolbar toggle was removed — so this no longer
+ * depends on `showFacts`. Returns null when there is nothing to show, which stops
+ * an unscored card rendering an empty third column.
  */
-function LadderFacts({ meta, pos }) {
+function LadderFacts({ meta, pos, asBlock = false }) {
   const co = meta && meta.name && String(meta.name).trim().toUpperCase() !== String(meta.ticker || '').toUpperCase()
     ? meta.name
     : null;
   const pnl = pos && typeof pos.pnl === 'number' ? pos.pnl : null;
   const pnlPct = pos && typeof pos.pnlPct === 'number' ? pos.pnlPct : null;
   if (!co && !pos) return null;
-  return (
-    <div className="lad-facts">
+
+  const body = (
+    <>
       {co && (
         <span className="lad-fact" title={[meta.exchange, meta.type].filter(Boolean).join(' · ') || 'Company'}>
           {co}
@@ -204,8 +243,19 @@ function LadderFacts({ meta, pos }) {
           )}
         </span>
       )}
-    </div>
+    </>
   );
+
+  if (asBlock) {
+    return (
+      <span className="lad-score-block lad-score-block--facts">
+        <span className="lad-score-label">Details</span>
+        <span className="lad-score-value lad-facts-values">{body}</span>
+      </span>
+    );
+  }
+
+  return <div className="lad-facts">{body}</div>;
 }
 
 export default function LadderPage() {
@@ -222,6 +272,10 @@ export default function LadderPage() {
   });
   const [ageFilter, setAgeFilter] = usePersistentChoice('ladder:ageFilter', 'all', ['all', ...AGE_OPTIONS]);
   const [rankBy, setRankBy] = usePersistentChoice('ladder:rankBy', 'signal', ['signal', 'opp']);
+
+  // Free-text search across symbol, protocol, state and signal. Persisted so a
+  // filtered view survives navigation — same convention as the other controls.
+  const [search, setSearch] = usePersistentState('ladder:search', '');
 
   // Market status filter — default Open, so the ladder shows only symbols
   // backed by an open market. Persists across navigation.
@@ -267,12 +321,12 @@ export default function LadderPage() {
   // Issue #667/#668 — opt-in "Details": company/stock facts + our own trading
   // stats on each card. DEFAULT OFF so the production ladder is unchanged
   // (phase-6 scope; surfaced behind a toggle). Reads are single STORED GETs,
-  // enabled lazily only when the toggle is on — no on-page imports.
-  const [showFacts, setShowFacts] = usePersistentState('ladder:showFacts', false);
+  // Company facts + open-position stats are ALWAYS shown now, on the card footer
+  // (the old "Details" toolbar toggle was removed). The queries below are enabled
+  // unconditionally so the footer columns have data on first paint.
   const posQuery = useQuery({
     queryKey: ['symbols-positions'],
     queryFn: () => apiGet('/api/symbols/positions'),
-    enabled: showFacts,
     staleTime: 60_000,
   });
   const positionBySymbol = useMemo(() => {
@@ -284,7 +338,6 @@ export default function LadderPage() {
   const metaQuery = useQuery({
     queryKey: ['all-symbols-meta'],
     queryFn: () => apiGet('/api/symbols').catch(() => ({ symbols: [] })),
-    enabled: showFacts,
     staleTime: 120_000,
   });
   const symbolMeta = useMemo(() => {
@@ -440,7 +493,13 @@ export default function LadderPage() {
 
     // Market status filter — default (Open) hides closed-market symbols so the
     // ladder shows only cards backed by an open market.
-    const list = marketFilter === 'all' ? all : all.filter((e) => marketMatches(e, marketFilter));
+    const marketList = marketFilter === 'all' ? all : all.filter((e) => marketMatches(e, marketFilter));
+
+    // Search filter — applied after the market filter so it narrows whatever is
+    // currently visible. A search term is treated as a HARD filter (like market),
+    // not a soft one: matches stay in `passing` and non-matches go nowhere, since
+    // listing everything the user just excluded would defeat the point.
+    const list = search.trim() ? marketList.filter((e) => matchesSearch(e, search)) : marketList;
 
     const sorter = (a, b) => {
       // Rank on whether the card is actually actionable BEFORE score size.
@@ -469,7 +528,7 @@ export default function LadderPage() {
     pass.sort(sorter);
     excl.sort(sorter);
     return { passing: pass, excluded: excl };
-  }, [selectedProtocols, scoreMap, familyMap, ageFilter, rankBy, marketFilter]);
+  }, [selectedProtocols, scoreMap, familyMap, ageFilter, rankBy, marketFilter, search]);
 
   const scoredCount = passing.filter((e) => e.hasScore).length;
 
@@ -558,12 +617,6 @@ export default function LadderPage() {
           </span>
         </span>
       </div>
-      {showFacts && (
-        <LadderFacts
-          meta={symbolMeta[String(e.symbol).toUpperCase()] || null}
-          pos={positionBySymbol[String(e.symbol).toUpperCase()] || null}
-        />
-      )}
       <div className="lad-card-foot">
         <div className="lad-card-scores">
           <ScoreBlock
@@ -586,30 +639,47 @@ export default function LadderPage() {
             mode={scoreDisplay}
             active={rankBy === 'opp'}
           />
-        </div>
-        {/* Footer meta — the SAME slots in the SAME order on every card, so a
-            card that is missing something is visibly missing it rather than just
-            looking shorter. Slot 1: age, or an explicit no-run word. Slot 2: the
-            run that produced the number, always shown. Slot 3: a badge when this
-            protocol had no run of its own and the number came from a sibling. */}
-        <span className="lad-time">
-          {e.time ? (
-            <>
-              <span className="lad-time-label">Scored: </span>{timeAgo(e.time)}
-              <span className="lad-time-src" title={`Scoring run: ${e.runId || e.protocolId}`}> · {e.runId || e.protocolId}</span>
-              {e.scoreFrom && (
-                <span
-                  className="lad-time-borrow"
-                  title={`${e.protocolId} produced no run — showing ${e.scoreFrom} instead`}
-                >
-                  borrowed
-                </span>
+          {/* Details (company + open position) now lives in the footer as a third
+              labelled column so all three read with the same label-above-value
+              rhythm. Always on; renders nothing when there is no data, so an
+              unscored card simply has two columns rather than an empty third. */}
+          <LadderFacts
+            asBlock
+            meta={symbolMeta[String(e.symbol).toUpperCase()] || null}
+            pos={positionBySymbol[String(e.symbol).toUpperCase()] || null}
+          />
+          {/* Footer meta — the SAME slots in the SAME order on every card, so a
+              card missing something is visibly missing it rather than just looking
+              shorter. Rendered as a score-block so "Scored" sits above its value
+              like "Signal" and "Opp" do. The run id is nested INSIDE the value so
+              the column stays narrow and the label never wraps to two lines. */}
+          <span className="lad-score-block lad-score-block--time">
+            <span className="lad-score-label">Scored</span>
+            <span className="lad-score-value lad-time-value">
+              {e.time ? (
+                <>
+                  <span>{timeAgo(e.time)}</span>
+                  <span
+                    className="lad-time-src"
+                    title={`Scoring run: ${e.runId || e.protocolId}`}
+                  >
+                    {e.runId || e.protocolId}
+                  </span>
+                  {e.scoreFrom && (
+                    <span
+                      className="lad-time-borrow"
+                      title={`${e.protocolId} produced no run — showing ${e.scoreFrom} instead`}
+                    >
+                      borrowed
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="lad-time-none">No scoring run yet</span>
               )}
-            </>
-          ) : (
-            <span className="lad-time-none">No scoring run yet</span>
-          )}
-        </span>
+            </span>
+          </span>
+        </div>
       </div>
       </div>
     </motion.div>
@@ -682,9 +752,26 @@ export default function LadderPage() {
               {MARKET_OPTIONS.map(([val, label]) => <option key={val} value={val}>{label}</option>)}
             </select>
           </label>
-          <label className="lad-filter" title="Show company facts & your open-position stats on each card (phase-6 preview, #667/#668)">
-            <input type="checkbox" checked={showFacts} onChange={(e) => setShowFacts(e.target.checked)} />
-            Details
+          <label className="lad-search">
+            <span className="lad-search-icon" aria-hidden="true">⌕</span>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search symbol, protocol, state…"
+              aria-label="Search ladder by symbol, protocol, state or signal"
+            />
+            {search && (
+              <button
+                type="button"
+                className="lad-search-clear"
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+                title="Clear search"
+              >
+                ×
+              </button>
+            )}
           </label>
         </div>
 
@@ -740,16 +827,35 @@ export default function LadderPage() {
             </div>
           ) : passing.length === 0 && excluded.length === 0 ? (
             <div className="lad-empty">
-              <p className="lad-empty-title">
-                {marketFilter === 'open'
-                  ? 'No open-market symbols for the selected protocols.'
-                  : 'No symbols for the selected protocols.'}
-              </p>
-              <p>
-                {marketFilter === 'open'
-                  ? 'All matched cards are for a closed market. Switch the Market filter to All or Closed to see them.'
-                  : 'None of the selected protocols have resolved symbols to rank yet.'}
-              </p>
+              {/* The search term must be named as the cause.
+                  Without this branch the panel claimed "none of the selected
+                  protocols have resolved symbols" while four protocols were
+                  selected and seven symbols were resolved — the search had hidden
+                  them. An empty result that misreports WHY is the exact failure
+                  this codebase warns about ("nothing happened, and nothing said
+                  why"), so search gets its own message and a one-click escape. */}
+              {search.trim() ? (
+                <>
+                  <p className="lad-empty-title">No cards match “{search.trim()}”.</p>
+                  <p>
+                    The selected protocols have resolved symbols, but none match the search.
+                    {' '}
+                    <button type="button" className="lad-empty-action" onClick={() => setSearch('')}>
+                      Clear search
+                    </button>
+                  </p>
+                </>
+              ) : marketFilter === 'open' ? (
+                <>
+                  <p className="lad-empty-title">No open-market symbols for the selected protocols.</p>
+                  <p>All matched cards are for a closed market. Switch the Market filter to All or Closed to see them.</p>
+                </>
+              ) : (
+                <>
+                  <p className="lad-empty-title">No symbols for the selected protocols.</p>
+                  <p>None of the selected protocols have resolved symbols to rank yet.</p>
+                </>
+              )}
             </div>
           ) : (
             <>

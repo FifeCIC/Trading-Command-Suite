@@ -55,7 +55,7 @@ import { AdapterFactory } from '../providers/adapter-factory';
 import { Mt5ConnectionManager } from '../providers/mt5/mt5-connection-manager.service';
 import { resolveMt5BridgeUrl } from '../providers/mt5/mt5-bridge.config';
 import { SymbolResolverService } from '../symbols/symbol-resolver.service';
-import { isBarBeyondItsOwnLength } from '../../common/utils/timeframe';
+import { isBarBeyondItsOwnLength, alignBarTimestamp } from '../../common/utils/timeframe';
 
 // Avoid importing the concrete adapter class
 interface BarProvider {
@@ -546,13 +546,38 @@ export class BarRefreshService {
           let count = 0;
           for (const bar of bars) {
             if (!bar.timestamp || bar.open === undefined) continue;
+
+            // ⚠️ ALIGN TO THE CADENCE BOUNDARY (#785). Storing the raw timestamp let a
+            // bulk refresh write every higher timeframe at `:45` — 5,854 `4h` rows, 5,785
+            // `1d`, 5,780 `1h` — because `:45` and `:00` are different timestamps, so the
+            // unique key could not reject the duplicate (#783's mechanism, second writer).
+            // Worse, a `:45` bar written at 18:25 for a 4h cadence lands at 20:45 — two
+            // hours in the FUTURE — which makes `computeMarketStatus()` fail closed and
+            // reads the market as shut.
+            //
+            // Flooring makes the duplicate collapse onto the real boundary row, so the
+            // ON DUPLICATE KEY UPDATE below overwrites it instead of inserting a twin.
+            const aligned = alignBarTimestamp(bar.timestamp, tf, providerName);
+            if (!aligned) {
+              impossibleBars++;
+              this.logger.warn(
+                `Skipped bar with unparseable timestamp for ${symbol} (${tf}): ${String(bar.timestamp)}. ` +
+                `A malformed timestamp must never be coerced — coercion writes a bar that looks real (#783).`,
+              );
+              continue;
+            }
+
             // Never persist a bar dated beyond its own bar length (#780) — see
             // `isBarBeyondItsOwnLength`. Such a row is unoverwritable and would
             // pin `MAX(timestamp)` for this symbol forever.
-            if (isBarBeyondItsOwnLength(bar.timestamp, tf)) {
+            //
+            // Judged on the ALIGNED value: aligning can only move a timestamp EARLIER
+            // (floor), so this check is strictly more permissive after alignment and can
+            // never reject a bar that the raw value would have allowed.
+            if (isBarBeyondItsOwnLength(aligned, tf)) {
               impossibleBars++;
               this.logger.warn(
-                `Skipped impossible bar for ${symbol} (${tf}): timestamp ${new Date(bar.timestamp).toISOString()} ` +
+                `Skipped impossible bar for ${symbol} (${tf}): timestamp ${aligned.toISOString()} ` +
                 `is more than one bar length ahead of now. A bridge never serves a future bar, so this row ` +
                 `would be unoverwritable and would pin the symbol's newest-bar time. ` +
                 `If this repeats, suspect bridge clock skew (#750) or a dead bridge returning stale data (#780).`,
@@ -562,7 +587,7 @@ export class BarRefreshService {
             try {
               await this.prisma.$executeRaw`
                 INSERT INTO marketbar (id, symbolId, provider, timeframe, timestamp, open, high, low, close, volume)
-                VALUES (UUID(), ${dbSymbol.id}, ${providerName}, ${tf}, ${new Date(bar.timestamp)},
+                VALUES (UUID(), ${dbSymbol.id}, ${providerName}, ${tf}, ${aligned},
                         ${bar.open}, ${bar.high}, ${bar.low}, ${bar.close}, ${bar.volume ?? 0})
                 ON DUPLICATE KEY UPDATE open=${bar.open}, high=${bar.high}, low=${bar.low}, close=${bar.close}, volume=${bar.volume ?? 0}
               `;

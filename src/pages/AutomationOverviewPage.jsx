@@ -48,6 +48,24 @@ export default function AutomationOverviewPage() {
     queryFn: () => apiGet('/api/scoring/protocols').catch(() => ({ protocols: [] })),
     staleTime: 120_000,
   });
+  // ── Paper signals (dry-run candidates, #695) ──────────────────────────────
+  // ⚠️ This query was REFERENCED but never DECLARED — `paperQuery.data` was read
+  // three times in the JSX below while no `const paperQuery = useQuery(...)`
+  // existed. That is a runtime ReferenceError, not a lint nit: the whole
+  // Automation Overview page threw on render, so the paper section could never
+  // be seen. ESLint's no-undef caught it (4 occurrences) while the page looked
+  // fine in review.
+  //
+  // The endpoint is GET /api/automation/paper, which returns { recent: [...] }.
+  // The shape here must match what the JSX reads: side, composite, entryPrice,
+  // sl, tp, createdAt, strategyId. Verified against automation.controller.ts
+  // (getPaperTrades).
+  const paperQuery = useQuery({
+    queryKey: ['automation-paper'],
+    queryFn: () => apiGet('/api/automation/paper').catch(() => ({ recent: [] })),
+    refetchInterval: 30000,
+  });
+
   const providersQuery = useQuery({
     queryKey: ['ao-provider-health'],
     queryFn: () => apiGet('/api/providers/health').catch(() => ({})),

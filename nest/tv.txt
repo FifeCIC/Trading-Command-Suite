@@ -1,0 +1,58 @@
+
+ÔòÉÔòÉÔòÉÔòÉ forex-session-v1  directionMode=LONG_ONLY ÔòÉÔòÉÔòÉÔòÉ
+  configured entries sum   = 965
+  non-gate configured sum  = 795
+  groups:
+    Risk                    gate=1  liquidity-check               max=100
+    Risk                    gate=1  spy-qqq-relative-strength     max=70
+    Sentiment & Fundamentalsgate=0  analyst-adjustments           max=80
+    Technical Analysis      gate=0  bollinger-band-squeeze        max=90
+    Technical Analysis      gate=0  ema-structure                 max=100
+    Technical Analysis      gate=0  macd-crossover                max=90
+    Technical Analysis      gate=0  rsi-overbought                max=140
+    Technical Analysis      gate=0  rsi-oversold                  max=140
+    Technical Analysis      gate=0  session-open-effect           max=60
+    Technical Analysis      gate=0  support-resistance-levels     max=95
+
+ÔòÉÔòÉÔòÉÔòÉ gold-macro-v1  directionMode=LONG_ONLY ÔòÉÔòÉÔòÉÔòÉ
+  configured entries sum   = 1035
+  non-gate configured sum  = 935
+  groups:
+    Risk                    gate=1  liquidity-check               max=100
+    Sentiment & Macro       gate=0  analyst-adjustments           max=80
+    Sentiment & Macro       gate=0  gold-macro-correlation        max=100
+    Technical Analysis      gate=0  bollinger-band-squeeze        max=90
+    Technical Analysis      gate=0  ema-structure                 max=100
+    Technical Analysis      gate=0  macd-crossover                max=90
+    Technical Analysis      gate=0  rsi-overbought                max=140
+    Technical Analysis      gate=0  rsi-oversold                  max=140
+    Technical Analysis      gate=0  support-resistance-levels     max=95
+    Technical Analysis      gate=0  volume-confirmation           max=100
+
+ÔòÉÔòÉÔòÉÔòÉ vix-short-v1  directionMode=SHORT_ONLY ÔòÉÔòÉÔòÉÔòÉ
+  configured entries sum   = 1010
+  non-gate configured sum  = 810
+  groups:
+    Bearish Technical Analysisgate=0  bollinger-band-squeeze        max=90
+    Bearish Technical Analysisgate=0  cci                           max=100
+    Bearish Technical Analysisgate=0  macd-crossover                max=90
+    Bearish Technical Analysisgate=0  mean-reversion                max=105
+    Bearish Technical Analysisgate=0  rsi-overbought                max=140
+    Short-Side Risk         gate=1  liquidity-check               max=100
+    Short-Side Risk         gate=1  sp500-regime                  max=100
+    Volatility Structure    gate=0  support-resistance-levels     max=95
+    Volatility Structure    gate=0  volatility-tools              max=90
+    Volatility Structure    gate=0  volume-confirmation           max=100
+
+ÔòÉÔòÉÔòÉÔòÉ vix-spike-v1  directionMode=LONG_ONLY ÔòÉÔòÉÔòÉÔòÉ
+  configured entries sum   = 820
+  non-gate configured sum  = 620
+  groups:
+    Risk                    gate=1  liquidity-check               max=100
+    Risk                    gate=1  sp500-regime                  max=100
+    Technical Analysis      gate=0  bollinger-band-squeeze        max=90
+    Technical Analysis      gate=0  mean-reversion                max=105
+    Technical Analysis      gate=0  rsi-overbought                max=140
+    Technical Analysis      gate=0  support-resistance-levels     max=95
+    Technical Analysis      gate=0  volatility-tools              max=90
+    Technical Analysis      gate=0  volume-confirmation           max=100

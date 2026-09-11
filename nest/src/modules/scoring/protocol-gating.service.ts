@@ -1085,10 +1085,18 @@ export class ProtocolGatingService {
 
   /**
    * Score multiple symbols with gating. Runs in parallel.
+   *
+   * `timeframe` is the cadence `holdings[].bars` were loaded on, and is forwarded to
+   * every `scoreWithGating()` call so the freshness check measures staleness against the
+   * REAL interval rather than inferring it from the array's median. Omitting it was the
+   * second half of the #783 follow-up defect: the batch endpoint loaded bars at the
+   * protocol's cadence but left the scorer guessing, so a 1h protocol could still be
+   * judged against a daily-derived window.
    */
   async scorePortfolio(
     holdings: Array<{ symbol: string; bars: import('../directives/interfaces/directive.interface').MarketBar[] }>,
     protocolId: string,
+    timeframe?: string,
   ): Promise<GatedScore[]> {
     if (!protocolId) {
       throw new BadRequestException(
@@ -1142,6 +1150,8 @@ export class ProtocolGatingService {
             h.bars,
             protocolId,
             bundleBySymbol.get(h.symbol),
+            'group-weighted',
+            timeframe,
           );
           if (gated) results[idx] = gated;
         } catch (err) {

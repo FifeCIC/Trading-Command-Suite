@@ -1,6 +1,6 @@
 ---
 description: "DEPRECATED — Superseded by agent-handoff.instructions.md. Agents should write handoff files instead of directly editing QA/Capability/Architecture pages. The Librarian batch-processes handoffs."
-applyTo: "nest/src/**, src/pages/**, src/components/**, src/data/**"
+applyTo: "**"
 ---
 
 # Agent QA Test Recording Rule — DEPRECATED

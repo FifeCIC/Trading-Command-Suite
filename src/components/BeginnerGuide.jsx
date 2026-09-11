@@ -29,15 +29,22 @@ export default function BeginnerGuide({ directive }) {
   const globalDismissed = !!dismissed[GLOBAL_ID];
   const specificDismissed = !!dismissed[SPECIFIC_ID];
 
-  if (!showGuidance || !directive) return null;
-  if (globalDismissed && specificDismissed) return null;
-
+  // ⚠️ HOOK ORDER: `useCallback` must be declared BEFORE any early return.
+  // It previously sat below the two `return null` guards, so on a render where
+  // the guide was hidden React saw FEWER hooks than on a render where it was
+  // shown. React enforces a fixed hook count per component, so toggling
+  // training guidance on (or dismissing both guides) would throw
+  // "Rendered fewer hooks than expected" and blank the surrounding view.
+  // `react-hooks/rules-of-hooks` flagged this; the fix is ordering, not logic.
   const dismiss = useCallback((guideId) => {
     set('dismissedGuides', {
       ...(prefs?.dismissedGuides || {}),
       [guideId]: new Date().toISOString(),
     });
   }, [prefs, set]);
+
+  if (!showGuidance || !directive) return null;
+  if (globalDismissed && specificDismissed) return null;
 
   const category = directive.category || 'Other';
   const name = directive.name || directive.id;

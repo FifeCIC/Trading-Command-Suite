@@ -111,9 +111,9 @@ export const KNOWN_FEATURES = {
   'Backtest News Exclusion (#105)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Backtest Equity Curve (#103)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Backtest Run Compare (#104)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
-  // 2026-07-08/09 — M.E.T.A. System
-  'M.E.T.A. Ratings Engine': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
-  'M.E.T.A. Signature Verification': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  // 2026-07-08/09 — META.Stack system (M.E.T.A. = Modular Expert Trading Architecture)
+  'META.Stack Ratings Engine': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'META.Stack Signature Verification': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
   // 2026-07-14 — Protocol Direction Architecture
   'Protocol Direction Mode (LONG/SHORT)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
   'Directive Direction Bias Filtering': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },

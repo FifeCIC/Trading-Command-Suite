@@ -1,0 +1,21 @@
+=== CLAIM 3: does a card borrow a score from a SIBLING timeframe? ===
+The Ladder iterates protocol.resolvedSymbols and falls back to familyMap.
+  exact=12  borrowed=0  noScore=149
+
+=== CLAIM 2: is the ranking order actually by the displayed metric? ===
+  #  symbol   protocol              opp%  sig%   open  source
+   1 XAUUSD   xau-speed-4h            46    10  true  xau-speed-4h
+   2 XAUUSD   gold-macro-v1           42    18  true  gold-macro-v1
+   3 XAUUSD   xau-speed-1h            41     8  true  xau-speed-1h
+   4 GBPUSD   forex-session-v1        40     9  true  forex-session-v1
+   5 USDCHF   forex-session-v1        40     9  true  forex-session-v1
+   6 XAUUSD   xau-speed-m15           37     8  true  xau-speed-m15
+   7 XAGUSD   xau-speed-v1            32     8  true  xau-speed-v1
+   8 US500    spy-speed-v1            49    14  false spy-speed-v1
+   9 XAUUSD   xau-speed-v1            42     8  false xau-speed-v1
+  10 VIX      vix-short-v1            39     3  false vix-short-v1
+  11 SPY      spy-speed-v1            38    16  false spy-speed-v1
+  12 XAUUSD   xau-speed-m5            25     8  false xau-speed-m5
+
+=== monotonicity check ===
+  order breaks within live/frozen groups: 0

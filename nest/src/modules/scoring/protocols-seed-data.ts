@@ -67,7 +67,9 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "crypto-fear-greed",
-          "social-buzz"
+          "social-buzz",
+          "btc-halving-cycle",
+          "crypto-weekend-effect"
         ]
       },
       {
@@ -79,8 +81,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "btc-halving-cycle",
-          "crypto-weekend-effect",
           "liquidity-check"
         ]
       }
@@ -125,7 +125,8 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "crypto-fear-greed"
+          "crypto-fear-greed",
+          "crypto-weekend-effect"
         ]
       },
       {
@@ -137,8 +138,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.5,
         "maxMultiplier": 1.3,
         "directiveIds": [
-          "liquidity-check",
-          "crypto-weekend-effect"
+          "liquidity-check"
         ]
       }
     ]
@@ -476,8 +476,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.45,
         "maxMultiplier": 1.3,
         "directiveIds": [
-          "liquidity-check",
-          "session-open-effect"
+          "liquidity-check"
         ]
       }
     ]
@@ -529,8 +528,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.5,
         "maxMultiplier": 1.25,
         "directiveIds": [
-          "liquidity-check",
-          "session-open-effect"
+          "liquidity-check"
         ]
       }
     ]
@@ -584,7 +582,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.55,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "session-open-effect",
           "liquidity-check"
         ]
       }
@@ -639,8 +636,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.45,
         "maxMultiplier": 1.3,
         "directiveIds": [
-          "liquidity-check",
-          "session-open-effect"
+          "liquidity-check"
         ]
       }
     ]
@@ -694,7 +690,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.45,
         "maxMultiplier": 1.3,
         "directiveIds": [
-          "session-open-effect",
           "liquidity-check"
         ]
       }
@@ -749,8 +744,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.55,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "liquidity-check",
-          "session-open-effect"
+          "liquidity-check"
         ]
       }
     ]
@@ -804,8 +798,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.5,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "liquidity-check",
-          "session-open-effect"
+          "liquidity-check"
         ]
       }
     ]
@@ -860,8 +853,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.5,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "liquidity-check",
-          "session-open-effect"
+          "liquidity-check"
         ]
       }
     ]
@@ -916,8 +908,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.5,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "liquidity-check",
-          "session-open-effect"
+          "liquidity-check"
         ]
       }
     ]
@@ -1123,7 +1114,8 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "analyst-adjustments",
-          "social-buzz"
+          "social-buzz",
+          "earnings-momentum"
         ]
       },
       {
@@ -1135,8 +1127,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.4,
         "maxMultiplier": 1.3,
         "directiveIds": [
-          "liquidity-check",
-          "earnings-momentum"
+          "liquidity-check"
         ]
       }
     ]
@@ -1463,7 +1454,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "liquidity-check",
-          "session-open-effect",
           "rollover-risk"
         ]
       }
@@ -1519,7 +1509,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "liquidity-check",
-          "session-open-effect",
           "rollover-risk"
         ]
       }
@@ -1615,7 +1604,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "session-open-effect",
           "analyst-adjustments"
         ]
       },
@@ -1628,7 +1616,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "session-open-effect",
           "liquidity-check",
           "spy-qqq-relative-strength"
         ]
@@ -1786,8 +1773,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.5,
         "maxMultiplier": 1.15,
         "directiveIds": [
-          "liquidity-check",
-          "session-open-effect"
+          "liquidity-check"
         ]
       }
     ]
@@ -2107,7 +2093,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
           "budget-gate",
           "liquidity-check",
           "rollover-risk",
-          "session-open-effect",
           "position-size-confidence",
           "target-achieved",
           "time-stop",
