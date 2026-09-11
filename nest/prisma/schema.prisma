@@ -2044,8 +2044,14 @@ model SymbolProtocolAssignment {
 model SymbolRoute {
   id           String   @id @default(uuid()) @db.VarChar(36)
   symbol       String   @db.VarChar(20)          // canonical ticker (Symbol.ticker)
-  brokerId     Int                                // MT5 account slot
+  brokerId     Int                                // MT5 account slot (or 0 for non-MT5)
   brokerSymbol String?  @db.VarChar(50)           // broker-native name (e.g. UK100-F)
+  // ⚠️ provider WAS MISSING FROM THIS MODEL until 2026-09-11, while the column
+  // existed in the database. Prisma therefore could not read or write it, so the
+  // binance crypto routes (brokerId 0) lost their distinguishing field on any
+  // code path that round-tripped through Prisma. Discovered while seeding VIX.
+  // The DB is authoritative here: `prisma db pull` reports this column.
+  provider     String   @default("mt5") @db.VarChar(32)
   priority     Int      @default(0)               // lower = preferred when several
   enabled      Boolean  @default(true)
   note         String?  @db.Text

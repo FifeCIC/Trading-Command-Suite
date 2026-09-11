@@ -206,4 +206,39 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     sessionWindow: ['us'],
     style: 'Position',
   },
+
+  // ── Short-side proof (#772) ─────────────────────────────
+  //
+  // ⚠️ This is the app's only SHORT bot and the proof that the short path works
+  // end-to-end. Read #770 before changing it.
+  //
+  // `vix-short-v1` is SHORT_ONLY and is the ONLY protocol that emits SELL. It
+  // produced 247 scores (65 at the 200 ceiling) while having no bot — because
+  // scoring is protocol-driven (buildBestLadder) but DISPATCH needs a
+  // trading_strategy row to own the queue entry (processSignalQueues joins
+  // q.strategyId -> trading_strategy.id). Without this row, scores accumulate
+  // forever and nothing can ever execute.
+  //
+  // minComposite 0 is DELIBERATE and not a typo. The gate compares
+  // `compositePct` — a 0-100 PERCENTAGE (protocol-gating.service.ts:307), not
+  // the raw 0-200 composite. A bar of "60" would therefore mean 60%, which is
+  // strict enough to silently gate the very trade this bot exists to prove.
+  // Raise it only from measured Step 4 data (#772), never by intuition.
+  //
+  // brokerId is a broker TYPE, not an instance. VIX is Pepperstone-only and the
+  // slot comes from the symbol_route row seeded in seed-symbol-onboarding.ts.
+  {
+    name: 'VIX Spike Short (demo proof #772)',
+    symbol: 'VIX',
+    protocolId: 'vix-short-v1',
+    brokerId: 'mt5',
+    mode: 'auto',
+    timeframe: '5m',
+    baseSize: 0.01,
+    slPct: 2.0,
+    tpPct: 4.0,
+    minComposite: 0,
+    sessionWindow: null,
+    style: 'Scalp',
+  },
 ];

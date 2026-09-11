@@ -161,12 +161,13 @@ async function main() {
       // Lead, in seconds, allowed for a forming bar of each cadence. Anything beyond is
       // impossible by construction.
       //
-      // ⚠️ WHY THIS IS `cadence + ONE MORE CADENCE`, NOT JUST `cadence` (fixed 2026-09-11)
-      // -------------------------------------------------------------------------------
-      // A bar may legitimately exist for the NEXT period, not only the CURRENT one. The refresh
-      // loop upserts whatever the provider returns, and a provider publishes the just-opened bar
-      // as soon as the prior one closes. So at 21:57:30 a `1m` bar stamped `21:59` is one whole
-      // cadence ahead of the clock and is still legitimate.
+      // ⚠️ WHY THIS IS `cadence × 2`, NOT JUST `cadence` (fixed 2026-09-11)
+      // ----------------------------------------------------------------
+      // A bar may legitimately exist for the NEXT period, not only the CURRENT one.
+      // `BarRefreshService.doRefresh()` upserts whatever `getCandles()` returns, and a
+      // provider publishes the just-opened bar as soon as the prior one closes. So at
+      // 21:57:30 a `1m` bar stamped `21:59` is one whole cadence ahead of the clock and is
+      // still legitimate.
       //
       // With the old allowance of exactly 60s for `1m`, that row was reported as an orphan:
       //     lead = 90s  >  allowed 60 + 1  ->  ORPHAN   (false positive)
@@ -181,6 +182,14 @@ async function main() {
       // What this check exists to catch (#750/#780) is a row skewed by HOURS (a broker
       // server/UTC mix-up produced ~3h leads), so `2 × cadence` still catches it by a wide
       // margin while removing the boundary race.
+      //
+      // ⚠️ SCOPE OF THE TOLERANCE — do not read this as "any lead up to 2 cadences is fine"
+      // in a general sense. `<cadence?>` is only loosely bounded by the provider's own
+      // lookback: `BarRefreshService.LIVE_LIMIT` defaults to 200 bars
+      // (`BAR_REFRESH_LIVE_LIMIT`), so the practical window is generous for SLOW cadences
+      // (200 × `1h` ≈ 8 days) and only ~3h for `1m`. The `2 ×` multiplier is chosen purely
+      // to clear the ONE-cadence boundary race; it is not a claim that two cadences of lead
+      // is normal.
       const CADENCE_SECONDS = {
         '1m': 60, '5m': 300, '15m': 900, '30m': 1800,
         '1h': 3600, '4h': 14400, '1d': 86400, '1w': 604800,

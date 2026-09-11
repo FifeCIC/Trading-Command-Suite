@@ -68,6 +68,29 @@ non-issue — which is the exact failure this workbook exists to prevent.
 - **Not** applied to `directiveoutcome` separately — `predictedAt` inherits the evaluated
   bar's timeframe, so it is judged by the same cadence map, which is correct.
 
+## Correction — a figure in my earlier notes was overstated
+
+An earlier description of the #795 self-healing path said the refresh "re-fetches 200 bars
+≈ 16.7h", citing `5m`. Verified against source on 2026-09-11:
+`BarRefreshService.LIVE_LIMIT` defaults to **200** (`BAR_REFRESH_LIVE_LIMIT`),
+`REFRESH_INTERVAL_MS` to **300000 (5 min)**. So the lookback is:
+
+| Cadence | 200 bars = |
+|---|---|
+| `1m` | **~3.3 hours** |
+| `5m` | ~16.7 hours |
+| `1h` | ~8 days |
+
+**"16.7h" is only true for `5m`.** It is *not* a general property, and at `1m` the reach is
+only ~3.3h. The self-healing conclusion still holds for the observed gap (a ~15-minute `5m`
+gap), because `5m` is the cadence that actually gaped — but the general claim was wrong and
+is corrected here and in the `contract-probe.cjs` comment.
+
+This is recorded rather than silently fixed because **an overstated figure in a comment is
+how the next agent inherits a false assumption** — the same failure class this whole workbook
+exists to prevent. Notably I verified this by reading the constant *after* writing the claim,
+which is backwards; the check should come first.
+
 ## Capability Map Entry
 
 - **name:** Contract Probe — Future-Row Detection (cadence-aware tolerance)
