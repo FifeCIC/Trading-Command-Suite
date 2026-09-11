@@ -160,11 +160,37 @@ async function main() {
       const now = new Date();
       // Lead, in seconds, allowed for a forming bar of each cadence. Anything beyond is
       // impossible by construction.
-      const LEAD_FOR = (tf) => ({
+      //
+      // ⚠️ WHY THIS IS `cadence + ONE MORE CADENCE`, NOT JUST `cadence` (fixed 2026-09-11)
+      // -------------------------------------------------------------------------------
+      // A bar may legitimately exist for the NEXT period, not only the CURRENT one. The refresh
+      // loop upserts whatever the provider returns, and a provider publishes the just-opened bar
+      // as soon as the prior one closes. So at 21:57:30 a `1m` bar stamped `21:59` is one whole
+      // cadence ahead of the clock and is still legitimate.
+      //
+      // With the old allowance of exactly 60s for `1m`, that row was reported as an orphan:
+      //     lead = 90s  >  allowed 60 + 1  ->  ORPHAN   (false positive)
+      // It then **self-corrected the moment the clock passed 21:58:00**, so the check was
+      // INTERMITTENT — it failed or passed depending on the second the probe happened to run.
+      //
+      // ⚠️ An intermittent guard is the worst kind: it looks like coverage, it burns
+      // investigation time, and it teaches the reader to ignore the result. Measured live:
+      // FAILED at 21:58:10 with `orphans=8 worst=1m @ 21:59:00`, PASSED at 21:58:34 with
+      // `orphans=0`, same data, no writes between the two runs.
+      //
+      // What this check exists to catch (#750/#780) is a row skewed by HOURS (a broker
+      // server/UTC mix-up produced ~3h leads), so `2 × cadence` still catches it by a wide
+      // margin while removing the boundary race.
+      const CADENCE_SECONDS = {
         '1m': 60, '5m': 300, '15m': 900, '30m': 1800,
         '1h': 3600, '4h': 14400, '1d': 86400, '1w': 604800,
-      }[tf] ?? 86400);
+      };
+      const LEAD_FOR = (tf) => (CADENCE_SECONDS[tf] ?? 86400) * 2;
 
+      // ⚠️ `now` is captured ONCE and passed to both halves of the UNION ALL, and it is also
+      // used for the `positions`/`trades` counts below. If the query were re-evaluated with a
+      // different `now`, a row could be classified against one instant and reported against
+      // another. Keeping one instant makes the whole check internally consistent.
       const rows = await prisma.$queryRawUnsafe(`
         SELECT timeframe, timestamp FROM marketbar WHERE timestamp > ?
         UNION ALL

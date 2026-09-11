@@ -1,8 +1,62 @@
+import { useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useUiStore } from '../stores/useUiStore';
 import { usePreferences } from '../core/hooks/usePreferences';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost, apiPut } from '../core/api/client';
+import { ALL_SECTIONS } from '../components/MarketTape';
 import './settings.css'
+
+/**
+ * MarketTapeSection — the ONE place tape sections are configured.
+ *
+ * It renders from `ALL_SECTIONS`, exported by MarketTape itself, so the settings list
+ * and the tape's own render list cannot drift apart. A second hand-maintained list here
+ * would be a section the user can see but never switch on.
+ */
+function MarketTapeSection() {
+  const { prefs, set } = usePreferences();
+  const on = ALL_SECTIONS.filter((s) => prefs[s.key]);
+  return (
+    <>
+      {ALL_SECTIONS.map((s) => (
+        <SettingRow key={s.key} label={s.label}>
+          <div className="inline-actions">
+            <button type="button" className={prefs[s.key] ? 'cta' : ''} onClick={() => set(s.key, true)}>On</button>
+            <button type="button" className={!prefs[s.key] ? 'cta' : ''} onClick={() => set(s.key, false)}>Off</button>
+          </div>
+        </SettingRow>
+      ))}
+      <SettingRow
+        label="Scroll speed"
+        hint="Seconds for the ticker to travel one full pass. Lower is faster (2 = brisk, 30 = leisurely). This is the strip's SPEED."
+      >
+        <input
+          type="number" min="2" max="120" step="1"
+          className="settings-input settings-input-sm"
+          value={prefs.tapeScrollSecPerCopy}
+          onChange={(e) => set('tapeScrollSecPerCopy', Math.min(120, Math.max(2, parseInt(e.target.value, 10) || 12)))}
+        />
+      </SettingRow>
+      <SettingRow
+        label="Headline rotation"
+        hint="Seconds between swapping the GLOBAL and SYMBOL news headlines. Only affects which news item is shown — it does NOT change how fast the strip moves (that is Scroll speed, above)."
+      >
+        <input
+          type="number" min="5" max="300" step="5"
+          className="settings-input settings-input-sm"
+          value={prefs.newsTapeRotateSec}
+          onChange={(e) => set('newsTapeRotateSec', Math.max(5, parseInt(e.target.value, 10) || 30))}
+        />
+      </SettingRow>
+      {on.length === 0 && (
+        <p className="settings-section-desc">
+          Nothing is currently shown — the tape will display a hint pointing back here.
+        </p>
+      )}
+    </>
+  );
+}
 
 function SettingRow({ label, children, hint }) {
   return (
@@ -26,7 +80,7 @@ export default function SettingsPage() {
   const resetQaChecks = useUiStore((state) => state.resetQaChecks);
   const qaCount = Object.keys(qaChecks).length;
 
-  const { prefs, set, setMany, reset: resetPrefs, defaults } = usePreferences();
+  const { prefs, set, reset: resetPrefs } = usePreferences();
 
   const riskLimitsQuery = useQuery({
     queryKey: ['trading-risk-limits'],
@@ -35,6 +89,17 @@ export default function SettingsPage() {
     retry: 1,
   });
   const serverLimits = riskLimitsQuery.data;
+
+  // Deep-link support: the market tape's ⚙ button navigates to
+  // /settings?section=market-tape. Scroll that section into view on arrival so the
+  // button lands the user ON the control rather than at the top of a long page.
+  const [searchParams] = useSearchParams();
+  const wantSection = searchParams.get('section');
+  useEffect(() => {
+    if (!wantSection) return;
+    const el = document.getElementById(wantSection);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [wantSection]);
 
   return (
     <div className="settings-page">
@@ -312,6 +377,16 @@ export default function SettingsPage() {
 
         <AutomationRulesSection />
         <MetaStackControlSection />
+      </section>
+
+      <section className="settings-section" id="market-tape">
+        <h2>Market Tape</h2>
+        <p className="settings-section-desc">
+          Choose which sections appear in the ticker at the top of the app. The ⚙ button on the
+          tape links straight here. Everything is off-by-default for new sections so the tape
+          never silently grows wider than you asked for.
+        </p>
+        <MarketTapeSection />
       </section>
 
       <section className="settings-section">

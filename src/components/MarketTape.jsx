@@ -1,39 +1,78 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { apiGet } from '../core/api/client';
 import { usePreferences } from '../core/hooks/usePreferences';
 import './market-tape.css';
 import { computeSessionStates, nextSessionLabel } from '../core/session-utils';
 import { timeAgo } from '../core/format-utils';
 
-/* ── Preference key ── */
-const PREFS_KEY = 'tcs:market-tape';
+/* ── Preference keys ──
+ *
+ * ⚠️ WHY THESE MOVED (2026-09-11). The tape used to own a PRIVATE localStorage key
+ * (`tcs:market-tape`) with its own load/save, while `usePreferences` held a second,
+ * server-synced store. Two stores for one concept meant a section could be turned on
+ * in Settings and stay off on the tape — a toggle that silently does nothing. All tape
+ * sections now live in `usePreferences` (keys below), which is server-synced so the
+ * choice follows the user across devices.
+ *
+ * LEGACY_KEY is read ONCE by `readLegacyTapePrefs()` and then deleted. It exists so an
+ * existing user's on/off choices survive the migration instead of being reset to
+ * defaults — a preference silently changing back is the same defect this fix removes.
+ */
+const LEGACY_KEY = 'tcs:market-tape';
 
-/* ── All available sections ── */
-const ALL_SECTIONS = [
-  { key: 'sessions', label: 'Sessions', defaultOn: true },
-  { key: 'events', label: 'Events / Timeline', defaultOn: true },
-  { key: 'providers', label: 'Provider Health', defaultOn: true },
-  { key: 'auto', label: 'Automation Pulse', defaultOn: true },
-  { key: 'next', label: 'Next Session', defaultOn: true },
-  { key: 'news', label: 'News Headline', defaultOn: false },
-  { key: 'trade', label: 'Recent Trade', defaultOn: false },
-  { key: 'uptime', label: 'App Uptime', defaultOn: false },
-];
+/** Old section key → new usePreferences key. */
+const LEGACY_MAP = {
+  sessions: 'tapeSessions',
+  events: 'tapeEvents',
+  providers: 'tapeProviders',
+  auto: 'tapeAuto',
+  next: 'tapeNext',
+  news: 'tapeNews',
+  trade: 'tapeTrade',
+  uptime: 'tapeUptime',
+};
 
-function loadPrefs() {
+/**
+ * Read the pre-2026-09-11 tape preferences, if any are still present.
+ * Returns a partial map of `usePreferences` keys, or null when there is nothing to
+ * migrate. Purely a read — the caller decides when it is safe to delete the old key.
+ */
+function readLegacyTapePrefs() {
   try {
-    const raw = localStorage.getItem(PREFS_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch { /* ignore */ }
-  const defaults = {};
-  for (const s of ALL_SECTIONS) defaults[s.key] = s.defaultOn;
-  return defaults;
+    const raw = localStorage.getItem(LEGACY_KEY);
+    if (!raw) return null;
+    const old = JSON.parse(raw);
+    if (!old || typeof old !== 'object') return null;
+    const migrated = {};
+    for (const [oldKey, newKey] of Object.entries(LEGACY_MAP)) {
+      if (typeof old[oldKey] === 'boolean') migrated[newKey] = old[oldKey];
+    }
+    return Object.keys(migrated).length > 0 ? migrated : null;
+  } catch {
+    return null; // malformed JSON — treat as "nothing to migrate"
+  }
 }
 
-function savePrefs(prefs) {
-  try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch { /* ignore */ }
-}
+/* ── All available sections ──
+ * The list is exported so the Settings page renders the SAME catalog. Two hand-kept
+ * lists would drift, and a section missing from one is a section the user cannot
+ * switch on. `defaultOn` documents intent; the live default is in usePreferences.js.
+ */
+export const ALL_SECTIONS = [
+  { key: 'tapeSessions', label: 'Sessions', defaultOn: true },
+  { key: 'tapeEvents', label: 'Events / Timeline', defaultOn: true },
+  { key: 'tapeProviders', label: 'Provider Health', defaultOn: true },
+  { key: 'tapeAuto', label: 'Automation Pulse', defaultOn: true },
+  { key: 'tapeNext', label: 'Next Session', defaultOn: true },
+  { key: 'tapeNews', label: 'News Headline', defaultOn: false },
+  { key: 'tapeTrade', label: 'Recent Order', defaultOn: false },
+  { key: 'tapeUptime', label: 'App Uptime', defaultOn: false },
+  { key: 'tapeScore', label: 'Latest Score', defaultOn: false },
+  { key: 'tapeProfit', label: 'Latest Profit Taken', defaultOn: false },
+  { key: 'tapeLoss', label: 'Latest Loss Taken', defaultOn: false },
+];
 
 /* ── Helpers ── */
 function escapeHtml(str) {
@@ -69,6 +108,12 @@ function fmtUptime(seconds) {
   return `${m}m`;
 }
 
+/** Signed money, always 2dp, with an explicit + for gains. */
+function fmtMoney(v) {
+  const n = Number(v) || 0;
+  return `${n >= 0 ? '+' : ''}${n.toFixed(2)}`;
+}
+
 /* ── Sessions ──
  * Session definitions/state now come from the canonical DST-aware util
  * (src/core/session-utils.js) which mirrors the backend MarketSessionsService.
@@ -80,9 +125,8 @@ function computeSessions() {
 
 /* ── Component ── */
 export default function MarketTape() {
-  const [prefs, setPrefs] = useState(loadPrefs);
-  const [prefsOpen, setPrefsOpen] = useState(false);
-  const { prefs: userPrefs } = usePreferences();
+  const { prefs: userPrefs, set: setPref } = usePreferences();
+  const navigate = useNavigate();
 
   // Rotate between the global and symbol-priority headlines.
   const [newsIdx, setNewsIdx] = useState(0);
@@ -92,12 +136,16 @@ export default function MarketTape() {
     return () => clearInterval(id);
   }, [userPrefs.newsTapeRotateSec]);
 
-  const toggleSection = useCallback((key) => {
-    setPrefs((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      savePrefs(next);
-      return next;
-    });
+  // One-shot legacy migration (see LEGACY_KEY note). Runs once on mount, writes any
+  // old choices through to the server-synced store, then removes the stale key so
+  // there is exactly one source of truth from then on.
+  useEffect(() => {
+    const legacy = readLegacyTapePrefs();
+    if (!legacy) return;
+    for (const [key, value] of Object.entries(legacy)) setPref(key, value);
+    try { localStorage.removeItem(LEGACY_KEY); } catch { /* noop */ }
+    // Intentionally mount-only: this is a migration, not a sync.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ── Data queries ── */
@@ -124,15 +172,24 @@ export default function MarketTape() {
     queryKey: ['market-tape', 'news'],
     queryFn: () => apiGet('/api/news/tape').catch(() => null),
     refetchInterval: 120_000, staleTime: 60_000, retry: 1,
-    enabled: prefs.news,
+    enabled: !!userPrefs.tapeNews,
   });
 
-  // New: recent trade
-  const tradeQuery = useQuery({
-    queryKey: ['market-tape', 'recent-trade'],
-    queryFn: () => apiGet('/api/providers/mt5/history?limit=1').catch(() => null),
+  /* ⚠️ ENDPOINT FIX (2026-09-11). This used to call
+   * `/api/providers/mt5/history?limit=1` and read `data.deals[0]` with `deal.profit`.
+   * That endpoint returns `{ orders: [...] }` and MT5 orders carry NO profit field —
+   * so `deals` was always undefined, `lastDeal` was always undefined, and the section
+   * silently rendered NOTHING when switched on. A toggle that produces no output is
+   * indistinguishable from a broken one.
+   *
+   * It now reads the trade audit trail, which has a real `pnl` on CLOSED trades and is
+   * the same source the profit/loss sections use. One source, three sections.
+   */
+  const tradesQuery = useQuery({
+    queryKey: ['market-tape', 'closed-trades'],
+    queryFn: () => apiGet('/api/trading/trade-history?status=closed&limit=25&days=90').catch(() => null),
     refetchInterval: 60_000, staleTime: 30_000, retry: 1,
-    enabled: prefs.trade,
+    enabled: !!(userPrefs.tapeTrade || userPrefs.tapeProfit || userPrefs.tapeLoss),
   });
 
   // New: app uptime
@@ -140,16 +197,40 @@ export default function MarketTape() {
     queryKey: ['market-tape', 'health'],
     queryFn: () => apiGet('/api/health').catch(() => null),
     refetchInterval: 60_000, staleTime: 30_000, retry: 1,
-    enabled: prefs.uptime,
+    enabled: !!userPrefs.tapeUptime,
+  });
+
+  // Latest score — newest row from the ranked scoring store.
+  const scoreQuery = useQuery({
+    queryKey: ['market-tape', 'latest-score'],
+    queryFn: () => apiGet('/api/scoring/ranked?limit=1').catch(() => null),
+    refetchInterval: 60_000, staleTime: 30_000, retry: 1,
+    enabled: !!userPrefs.tapeScore,
   });
 
   const sessions = computeSessions();
+
+  /* ── Closed-trade slices (profit taken / loss taken) ──
+   * `trades` is already closedAt-desc from the API, so the FIRST row matching each
+   * predicate is the most recent one. It is re-sorted defensively here too, because
+   * "latest" silently becoming "some" is what makes a tape untrustworthy.
+   */
+  const closedTrades = (() => {
+    const raw = tradesQuery.data?.trades;
+    if (!Array.isArray(raw)) return [];
+    return [...raw]
+      .filter((t) => t && t.pnl != null && t.closedAt)
+      .sort((a, b) => Date.parse(b.closedAt) - Date.parse(a.closedAt));
+  })();
+  const lastWin = closedTrades.find((t) => Number(t.pnl) > 0) || null;
+  const lastLoss = closedTrades.find((t) => Number(t.pnl) < 0) || null;
+  const lastClose = closedTrades[0] || null;
 
   /* ── Build sections ── */
   const sections = [];
 
   // 1. Sessions
-  if (prefs.sessions) {
+  if (userPrefs.tapeSessions) {
     const parts = sessions.map((s) => {
       const status = s.active ? (s.closesSoon ? 'closing' : 'open') : 'closed';
       return `${s.flag} ${s.name} ${status}`;
@@ -158,7 +239,7 @@ export default function MarketTape() {
   }
 
   // 2. Events
-  if (prefs.events) {
+  if (userPrefs.tapeEvents) {
     const upcoming = timelineQuery.data?.events?.slice(0, 3) || [];
     if (upcoming.length > 0) {
       const parts = upcoming.map((e) => {
@@ -170,7 +251,7 @@ export default function MarketTape() {
   }
 
   // 3. Providers
-  if (prefs.providers) {
+  if (userPrefs.tapeProviders) {
     const providers = healthQuery.data?.providers || [];
     if (providers.length > 0) {
       const parts = providers.slice(0, 5).map((p) => {
@@ -184,7 +265,7 @@ export default function MarketTape() {
   }
 
   // 4. Automation pulse
-  if (prefs.auto && autoQuery.data) {
+  if (userPrefs.tapeAuto && autoQuery.data) {
     const auto = autoQuery.data;
     const strategies = auto.activeStrategies?.length || 0;
     const positions = (auto.brokerStates && typeof auto.brokerStates === 'object')
@@ -199,12 +280,14 @@ export default function MarketTape() {
   }
 
   // 5. Next session
-  if (prefs.next) {
+  if (userPrefs.tapeNext) {
     sections.push({ key: 'next', label: 'Next', content: nextSessionLabel(sessions), color: 'var(--ink-soft, #64748b)' });
   }
 
-  // 6. News headline — prioritized tape headlines (global 🌐 + symbol-priority)
-  if (prefs.news && newsQuery.data) {
+  // 6. News headline — prioritized tape headlines (global 🌐 + symbol-priority).
+  // The LINK is carried through so a headline is clickable to its source article; it
+  // falls back to the in-app news page when the source gave no external URL.
+  if (userPrefs.tapeNews && newsQuery.data) {
     const { global, symbol } = newsQuery.data || {};
     const candidates = [];
     if (userPrefs.newsTapeGlobal && global) candidates.push({ ...global, kind: 'global' });
@@ -227,25 +310,78 @@ export default function MarketTape() {
     }
   }
 
-  // 7. Recent trade (new)
-  if (prefs.trade && tradeQuery.data) {
-    const deals = tradeQuery.data?.deals || [];
-    const lastDeal = deals[0];
-    if (lastDeal) {
-      const dir = lastDeal.type === 'DEAL_TYPE_BUY' ? 'BUY' : lastDeal.type === 'DEAL_TYPE_SELL' ? 'SELL' : escapeHtml(lastDeal.type || '');
-      const sym = escapeHtml(lastDeal.symbol || '');
-      const pnl = lastDeal.profit ?? 0;
-      const pnlColor = pnl >= 0 ? '#22c55e' : '#ef4444';
+  // 7. Recent order — the newest CLOSED trade, whatever its result.
+  if (userPrefs.tapeTrade && lastClose) {
+    const sym = escapeHtml(lastClose.symbol || '');
+    const dir = escapeHtml(String(lastClose.side || '').toUpperCase());
+    const pnl = Number(lastClose.pnl) || 0;
+    const pnlColor = pnl >= 0 ? '#22c55e' : '#ef4444';
+    sections.push({
+      key: 'trade', label: 'Trade',
+      htmlContent: `↕ ${dir} ${sym} <span style="color:${pnlColor}">${fmtMoney(pnl)}</span>`,
+      color: 'var(--ink-soft, #94a3b8)',
+    });
+  }
+
+  // 8. Latest profit taken — most recent closed trade that made money.
+  if (userPrefs.tapeProfit && lastWin) {
+    const sym = escapeHtml(lastWin.symbol || '');
+    sections.push({
+      key: 'profit', label: 'Profit',
+      htmlContent: `✅ ${sym} <span style="color:#22c55e">${fmtMoney(lastWin.pnl)}</span>`
+        + `<span style="color:var(--ink-soft)"> · ${escapeHtml(timeAgo(lastWin.closedAt))}</span>`,
+      color: 'var(--ink-soft, #94a3b8)',
+    });
+  }
+
+  // 9. Latest loss taken — most recent closed trade that lost money.
+  // Shown with the same prominence as profit-taken. Surfacing wins while hiding losses
+  // would make the tape actively misleading.
+  if (userPrefs.tapeLoss && lastLoss) {
+    const sym = escapeHtml(lastLoss.symbol || '');
+    sections.push({
+      key: 'loss', label: 'Loss',
+      htmlContent: `⚠ ${sym} <span style="color:#ef4444">${fmtMoney(lastLoss.pnl)}</span>`
+        + `<span style="color:var(--ink-soft)"> · ${escapeHtml(timeAgo(lastLoss.closedAt))}</span>`,
+      color: 'var(--ink-soft, #94a3b8)',
+    });
+  }
+
+  // 10. Latest score — the newest scoring run, linked to its symbol page.
+  //
+  // ⚠️ Field names verified against the live endpoint (2026-09-11). `/api/scoring/ranked`
+  // returns `{ ranked: [...] }` — NOT `scores[]` or `rows[]` (both were wrong first time
+  // and produced a section that silently rendered nothing). A row carries `ticker`,
+  // `signal`, `score` and `maxPossibleScore`; there is NO precomputed percentage, so it
+  // is derived here. Shows the signal word AND the percentage: a bare percentage is not
+  // actionable without knowing which side it favours.
+  if (userPrefs.tapeScore && scoreQuery.data) {
+    const d = scoreQuery.data;
+    const row = Array.isArray(d) ? d[0] : (d.ranked?.[0] || d.scores?.[0] || d.rows?.[0] || null);
+    if (row && (row.ticker || row.symbol)) {
+      const symRaw = String(row.ticker || row.symbol);
+      const sym = escapeHtml(symRaw);
+      const sigRaw = String(row.signal || '').replace('STRONG_', '') || '—';
+      const sig = escapeHtml(sigRaw);
+      const max = Number(row.maxPossibleScore) || 0;
+      const raw = Number(row.score);
+      const pct = Number.isFinite(raw) && max > 0 ? Math.round((raw / max) * 100) : null;
+      const sigColor = sigRaw === 'BUY' ? 'var(--market-open, #22c55e)'
+        : sigRaw === 'SELL' ? 'var(--danger, #ef4444)'
+          : 'var(--ink-soft, #94a3b8)';
       sections.push({
-        key: 'trade', label: 'Trade',
-        htmlContent: `↕ ${dir} ${sym} <span style="color:${pnlColor}">${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}</span>`,
+        key: 'score', label: 'Score',
+        htmlContent: `<a href="/research/symbol/${encodeURIComponent(symRaw)}" style="color:inherit;text-decoration:none">`
+          + `<span style="font-weight:700">${sym}</span> `
+          + `<span style="color:${sigColor};font-weight:700">${sig}</span>`
+          + `${pct != null ? ` ${pct}%` : ''}</a>`,
         color: 'var(--ink-soft, #94a3b8)',
       });
     }
   }
 
-  // 8. App uptime (new)
-  if (prefs.uptime && uptimeQuery.data) {
+  // 11. App uptime
+  if (userPrefs.tapeUptime && uptimeQuery.data) {
     const uptime = uptimeQuery.data?.uptime || uptimeQuery.data?.process?.uptime || 0;
     sections.push({
       key: 'uptime', label: 'Uptime',
@@ -254,7 +390,43 @@ export default function MarketTape() {
     });
   }
 
-  /* ── Build ticker tape ── */
+  /* ── Build ticker tape ──
+   *
+   * ⚠️ SEAMLESS LOOP (fixed 2026-09-11). The old code emitted exactly TWO copies and
+   * animated `translateX(0 → -50%)`. That only loops seamlessly when ONE copy is at
+   * least as wide as the viewport — otherwise the track runs out of content, the tail
+   * of copy 2 appears, and the whole strip visibly snaps back to the right. Measured
+   * live: one copy was 753px in a 1229px window, so the loop was broken by construction.
+   *
+   * The fix is geometric, not cosmetic. We repeat the content N times and animate by
+   * exactly `-100% / N`. At that offset the layout is pixel-identical to the start
+   * (copy k sits where copy k+1 was), so the reset is invisible.
+   *
+   * ⚠️ THE CONDITION IS `oneCopy × (N − 1) ≥ viewport`, NOT `oneCopy ≥ viewport`.
+   * The track must still cover the window AFTER one copy has scrolled past. Measured:
+   * one copy is ~763px, so a 1214px window needs 3; a 3440px ultrawide needs 6.
+   *
+   * N is a fixed 8 rather than measured, because a ResizeObserver would re-render on
+   * every window drag for a decorative strip. 8 copies keeps the loop seamless up to
+   * `763 × 7 ≈ 5.3k px` — beyond any practical display. It costs nothing when unused:
+   * the extra copies are off-screen and the strip is a few hundred bytes of text.
+   * If N ever changes the CSS keyframe MUST change with it, so N is injected as a CSS
+   * variable rather than duplicated in the stylesheet.
+   */
+  const COPIES = 8;
+
+  // Duration keeps the SCROLL SPEED constant as the number of copies changes. Seconds
+  // are PER COPY, so the perceived speed is independent of COPIES — otherwise raising
+  // the copy count would make the tape sprint without anyone touching "speed".
+  //
+  // ⚠️ This is USER-CONFIGURABLE (`tapeScrollSecPerCopy`, Settings → Market Tape). It is
+  // a DIFFERENT control from `newsTapeRotateSec` above, which only swaps the news
+  // headline — the two were previously adjacent in Settings with no speed control at all,
+  // so changing the rotation value looked like it should speed the tape up and did not.
+  // Clamped here as well as in the input: a 0 or negative would divide to an invalid
+  // animation duration and freeze the strip silently.
+  const SECONDS_PER_COPY = Math.min(120, Math.max(2, Number(userPrefs.tapeScrollSecPerCopy) || 12));
+
   const tapeItems = sections.map((s) => {
     if (s.htmlContent) {
       return `<span class="mkt-tape-section" style="color:${s.color}" data-key="${s.key}"><span class="mkt-tape-label">${s.label}</span> ${s.htmlContent}</span>`;
@@ -262,37 +434,34 @@ export default function MarketTape() {
     return `<span class="mkt-tape-section" style="color:${s.color}" data-key="${s.key}"><span class="mkt-tape-label">${s.label}</span> ${s.content || ''}</span>`;
   });
 
-  const tapeHTML = tapeItems.join('<span class="mkt-tape-sep">│</span>');
-  const doubled = sections.length > 0
-    ? `${tapeHTML}<span class="mkt-tape-sep">│</span>${tapeHTML}`
-    : '<span class="mkt-tape-section" style="color:var(--ink-soft)">All sections hidden — click ⚙ to configure</span>';
+  const sep = '<span class="mkt-tape-sep">│</span>';
+  // One copy ends with a separator so the join between copies is spaced like any other.
+  const oneCopy = tapeItems.join(sep) + sep;
+  const repeated = sections.length > 0
+    ? oneCopy.repeat(COPIES)
+    : '<span class="mkt-tape-section" style="color:var(--ink-soft)">All sections hidden — open Settings → Market Tape to choose what shows</span>';
 
   return (
     <div className="market-tape" aria-label="Market status ticker" aria-live="polite" aria-atomic="true">
-      <div className="mkt-tape-track" dangerouslySetInnerHTML={{ __html: doubled }} />
-      {/* Preferences toggle */}
+      <div
+        className="mkt-tape-track"
+        style={{
+          '--mkt-tape-copies': COPIES,
+          '--mkt-tape-duration': `${COPIES * SECONDS_PER_COPY}s`,
+        }}
+        dangerouslySetInnerHTML={{ __html: repeated }}
+      />
+      {/* The gear goes to the REAL settings surface rather than a private popover.
+          A tape-only configuration UI is a second source of truth: the two lists
+          drift, and a section added to one silently misses the other. */}
       <button
         className="mkt-tape-gear"
-        onClick={() => setPrefsOpen((v) => !v)}
-        title="Configure tape sections"
-        aria-label="Configure tape sections"
+        onClick={() => navigate('/settings?section=market-tape')}
+        title="Configure the market tape in Settings"
+        aria-label="Configure the market tape in Settings"
       >
         ⚙
       </button>
-      {prefsOpen && (
-        <>
-          <div className="mkt-tape-backdrop" onClick={() => setPrefsOpen(false)} />
-          <div className="mkt-tape-prefs">
-            <div className="mkt-tape-prefs-title">Market Tape Sections</div>
-            {ALL_SECTIONS.map((s) => (
-              <label key={s.key} className="mkt-tape-pref-row">
-                <input type="checkbox" checked={prefs[s.key] || false} onChange={() => toggleSection(s.key)} />
-                <span>{s.label}</span>
-              </label>
-            ))}
-          </div>
-        </>
-      )}
     </div>
   );
 }

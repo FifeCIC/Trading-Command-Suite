@@ -1617,6 +1617,32 @@ export class Sp500RegimeDirective implements IDirective {
   readonly version = '2.0.0';
   readonly readiness = 'ready' as const; // promoted beta→ready 2026-08-15 — real SMA200 regime math
 
+  /**
+   * `structural` — a GATE, not a directional voter (#790, decided 2026-09-11).
+   *
+   * WHY THIS IS EXPLICIT NOW
+   * ------------------------
+   * This field was previously ABSENT. `category` is optional on `IDirective`, so the guard
+   * `validate-directive-group-kind.cjs` (INV-GATE-MEMBERSHIP) could not classify this
+   * directive and reported it as `⚠ no category — NOT CHECKED` on every build.
+   *
+   * It mattered because this directive sits in the `risk` gate of `vix-spike-v1` and
+   * `vix-short-v1`, and the seed documents that deliberately:
+   *     "Risk gate (SP500 regime) is mandatory."
+   * So the PLACEMENT is intended. What was missing was the DECLARATION that makes the
+   * intent machine-checkable.
+   *
+   * ⚠️ The `calculate()` method DOES return `bullish`/`bearish` (from SMA200 deviation and
+   * slope) — which is why this was ambiguous. A gate may legitimately emit a direction to
+   * express the direction it is gating FOR; the point of `structural` is that the scorer
+   * treats it as a hurdle (multiplier), never as additive conviction
+   * (`protocol-gating.service.ts` L689/L749/L763).
+   *
+   * ⚠️ If this is ever moved OUT of a risk gate, re-read `docs/SETTLED-DECISIONS.md` first —
+   * `vix-short-v1`'s description states the gate is mandatory.
+   */
+  readonly category = 'structural' as const;
+
   calculate(input: DirectiveInput): DirectiveResult {
 
     const closes = input.bars.map(b => b.close);
@@ -1662,6 +1688,30 @@ export class VixStrategyDirective implements IDirective {
   readonly maxScore = 90;
   readonly version = '2.0.0';
   readonly readiness = 'beta' as const;
+
+  /**
+   * `structural` — a GATE, not a directional voter (#790, decided 2026-09-11).
+   *
+   * WHY THIS IS EXPLICIT NOW
+   * ------------------------
+   * This field was previously ABSENT (see the fuller note on `sp500-regime` above for why
+   * that matters). `category` is optional on `IDirective`, so the guard reported this
+   * directive as `⚠ no category — NOT CHECKED` on every build rather than enforcing it.
+   *
+   * WHY IT IS CORRECTLY A GATE, not a voter moved to a scoring group:
+   *   1. Name and description say **"for position sizing"** — a size decision is a hurdle,
+   *      not a directional conviction.
+   *   2. It returns `bullish` or `neutral` and **never `bearish`** — it cannot express a
+   *      short view, so it cannot act as a symmetric voter.
+   *   3. Its score RISES with volatility (`percentile > 85` → +30 "extreme vol (VIX spike
+   *      proxy)"). A high score therefore means "dangerous conditions", i.e. reduce size.
+   *      Treated as conviction that would be inverted — a high score would *increase*
+   *      BUY strength, which is the opposite of the intent.
+   *
+   * ⚠️ Point 3 is the reason this must NOT be "fixed" by moving it into a scoring group.
+   * Point 2 alone would look like a weak voter; points 1+3 together make it a gate.
+   */
+  readonly category = 'structural' as const;
 
   calculate(input: DirectiveInput): DirectiveResult {
 

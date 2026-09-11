@@ -1604,7 +1604,8 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "analyst-adjustments"
+          "analyst-adjustments",
+          "spy-qqq-relative-strength"
         ]
       },
       {
@@ -1616,8 +1617,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "liquidity-check",
-          "spy-qqq-relative-strength"
+          "liquidity-check"
         ]
       }
     ]
@@ -1658,7 +1658,9 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "isRiskGate": false,
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
-        "directiveIds": []
+        "directiveIds": [
+          "spy-qqq-relative-strength"
+        ]
       },
       {
         "id": "risk",
@@ -1670,8 +1672,7 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.25,
         "directiveIds": [
           "dxy-regime",
-          "liquidity-check",
-          "spy-qqq-relative-strength"
+          "liquidity-check"
         ]
       }
     ]
@@ -2144,7 +2145,8 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "maxMultiplier": 1.2,
         "directiveIds": [
           "analyst-adjustments",
-          "social-buzz"
+          "social-buzz",
+          "spy-qqq-relative-strength"
         ]
       },
       {
@@ -2156,7 +2158,6 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
         "minMultiplier": 0.3,
         "maxMultiplier": 1.2,
         "directiveIds": [
-          "spy-qqq-relative-strength",
           "dilution-impact",
           "vix-strategy",
           "liquidity-check",

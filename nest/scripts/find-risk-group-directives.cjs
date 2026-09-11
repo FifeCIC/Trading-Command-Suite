@@ -116,12 +116,30 @@ const tech = occurrences.filter((o) => o.isRiskGate === false);
 const unknown = occurrences.filter((o) => o.isRiskGate === null);
 
 console.log(`  ✅ in a scoring group (isRiskGate: false) : ${tech.length}`);
-console.log(`  ❌ in a RISK group   (isRiskGate: true)  : ${risk.length}   <-- inert, contributes nothing`);
+  // ⚠️ A risk-gate placement is only INERT if the directive is not a declared gate.
+  // Corrected 2026-09-11 (#790): this line used to read "<-- inert, contributes nothing"
+  // unconditionally, which is wrong for a `category: 'structural'` directive. A structural
+  // directive legitimately lives in a gate and contributes as a MULTIPLIER — that is the
+  // design (`protocol-gating.service.ts` L749 excludes gates from capacity, and the risk
+  // engine turns them into a multiplier). Calling those "inert" sends an agent to "fix" a
+  // correct configuration. Only a non-structural directive in a gate is inert.
+  console.log(`  ${risk.length ? '⚠️ ' : '   '}in a RISK group   (isRiskGate: true)  : ${risk.length}`);
+  if (risk.length) {
+    console.log(
+      `       ↳ INERT only if the directive is NOT \`category: 'structural'\`. A declared\n` +
+        `         structural directive is a legitimate gate and contributes as a multiplier.`,
+    );
+  }
 if (unknown.length) console.log(`  ⚠️  unattributed                            : ${unknown.length}`);
 
 if (risk.length) {
   console.log('');
-  console.log('  RISK-GROUP OCCURRENCES (the defect):');
+  // ⚠️ NOT "(the defect)" unconditionally — corrected 2026-09-11 (#790). In a risk gate the
+  // placement IS the defect only for a directional VOTER. A `category: 'structural'`
+  // directive belongs there. This script cannot read directive classes, so it states both
+  // cases rather than asserting one — an analysis tool that names a correct configuration
+  // "the defect" sends the next agent to break it.
+  console.log('  RISK-GROUP OCCURRENCES — a defect only if the directive is a VOTER:');
   for (const o of risk) {
     console.log(`    L${String(o.line).padEnd(5)} ${String(o.slug).padEnd(24)} group="${o.groupId}"`);
   }

@@ -11,10 +11,22 @@
   z-index: 10;
 }
 
+/* The track holds N identical copies of the sections (N = --mkt-tape-copies, set
+   inline by MarketTape.jsx). It scrolls left by exactly ONE copy width and repeats.
+
+   ⚠️ WHY NOT `-50%` WITH TWO COPIES (the old code). `translateX(-50%)` is half the
+   TRACK, which equals one copy only when there are two. It loops seamlessly only if
+   * `oneCopy × (copies − 1) >= viewport` — otherwise the strip runs out of content and
+   * snaps back. Measured: one copy was 753px in a 1229px window, so the gap was
+   * guaranteed. With N copies the offset must be `-100% / N`; the keyframe below uses a
+   * variable so the two can never drift apart. */
 .mkt-tape-track {
   display: inline-block;
   white-space: nowrap;
-  animation: mkt-scroll 60s linear infinite;
+  /* Duration is set inline (COPIES x SECONDS_PER_COPY) so scroll SPEED stays constant
+     when the copy count changes. The 60s here is only a fallback if the variable is
+     missing — a bare 60s with 4 copies would scroll far too fast. */
+  animation: mkt-scroll var(--mkt-tape-duration, 120s) linear infinite;
   font-size: 0.78rem;
   font-family: var(--font-mono, 'JetBrains Mono', 'Fira Code', monospace);
   line-height: 1.4;
@@ -28,7 +40,15 @@
 
 @keyframes mkt-scroll {
   0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  100% { transform: translateX(calc(-100% / var(--mkt-tape-copies, 4))); }
+}
+
+/* Anyone who has asked their OS to reduce motion does not want a permanently moving
+   strip. The tape stays readable — the content is simply static and the container
+   scrolls instead, so no information is lost by honouring the preference. */
+@media (prefers-reduced-motion: reduce) {
+  .mkt-tape-track { animation: none; }
+  .market-tape { overflow-x: auto; }
 }
 
 .mkt-tape-section {
@@ -99,42 +119,8 @@
 }
 .mkt-tape-gear:hover { opacity: 1; color: var(--accent, #0ea5a6); }
 
-.mkt-tape-backdrop {
-  position: fixed; inset: 0; z-index: 30;
-  background: rgba(0,0,0,0.2);
-}
+/* NOTE (2026-09-11): the inline preferences popover was REMOVED — its rules
+   (.mkt-tape-backdrop / .mkt-tape-prefs / .mkt-tape-pref-row) are gone with it.
+   The gear now navigates to Settings → Market Tape, so that popover was a second
+   source of truth for the same list and would have drifted from the settings UI. */
 
-.mkt-tape-prefs {
-  position: absolute;
-  right: 8px;
-  top: calc(100% + 4px);
-  background: var(--panel, #1e293b);
-  border: 1px solid var(--line, #334155);
-  border-radius: 10px;
-  padding: 0.75rem 1rem;
-  z-index: 40;
-  min-width: 200px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-}
-.mkt-tape-prefs-title {
-  font-weight: 700;
-  font-size: 0.8rem;
-  margin-bottom: 0.5rem;
-  padding-bottom: 0.4rem;
-  border-bottom: 1px solid var(--line, #334155);
-  color: var(--accent, #0ea5a6);
-}
-.mkt-tape-pref-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.25rem 0;
-  font-size: 0.78rem;
-  color: var(--ink-soft, #94a3b8);
-  cursor: pointer;
-}
-.mkt-tape-pref-row:hover { color: var(--ink, #e2e8f0); }
-.mkt-tape-pref-row input[type="checkbox"] {
-  accent-color: var(--accent, #0ea5a6);
-  cursor: pointer;
-}

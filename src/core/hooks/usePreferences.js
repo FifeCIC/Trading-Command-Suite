@@ -39,6 +39,32 @@ const DEFAULTS = {
   newsTapeGlobal: true,           // Show globally-impacting (macro) headline in the market tape
   newsTapeSymbol: true,           // Show symbol-priority (positions/scored) headline in the market tape
   newsTapeRotateSec: 30,          // Seconds between headline rotation (global ↔ symbol)
+  // ── Market Tape sections (2026-09-11) ──────────────────────────────────────────
+  // MIGRATED from the tape's own localStorage key `tcs:market-tape`. There were two
+  // competing preference stores: the tape's private one and this server-synced one.
+  // Two stores meant a section could be toggled in Settings and stay unchanged on the
+  // tape, which is exactly the "silent no-op" class of bug this repo guards against.
+  // The tape's legacy key is still READ once (see MarketTape.migrateLegacyTapePrefs) so
+  // an existing user's on/off choices carry over instead of being silently reset.
+  tapeSessions: true,
+  tapeEvents: true,
+  tapeProviders: true,
+  tapeAuto: true,
+  tapeNext: true,
+  tapeNews: false,
+  tapeTrade: false,
+  tapeUptime: false,
+  // New sections — all OFF by default so the tape does not silently grow wider for
+  // anyone who has not asked for it.
+  tapeScore: false,               // Latest score (most recent scoring run)
+  tapeProfit: false,              // Latest profit taken (most recent CLOSED winning trade)
+  tapeLoss: false,                // Latest loss taken (most recent CLOSED losing trade)
+  // Tape scroll speed, in SECONDS PER COPY of the ticker content. Lower = faster.
+  // ⚠️ Named distinctly from `newsTapeRotateSec` above. That one controls how often the
+  // NEWS HEADLINE swaps between the global and symbol article; it has nothing to do with
+  // how fast the strip moves. Sitting side by side in Settings, the two were easy to
+  // mistake for one another — that ambiguity is why this is explicitly "scroll".
+  tapeScrollSecPerCopy: 12,
   // Performance
   pollingInterval: 30,
   chartAnimation: true,
