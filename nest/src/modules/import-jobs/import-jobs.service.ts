@@ -3,6 +3,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { ModeService } from '../../config/mode.service';
 import { AdapterFactory } from '../providers/adapter-factory';
 import { SymbolNameEnricherService } from '../symbols/symbol-name-enricher.service';
+import { alignBarTimestamp } from '../../common/utils/timeframe';
 
 type EnqueueImportInput = {
   symbolId: string;
@@ -324,7 +325,18 @@ export class ImportJobsService {
    * Import raw OHLCV bars for a symbol with deduplication.
    * Auto-registers the symbol if not found. Skips duplicate (symbol+timeframe+timestamp) bars.
    *
+   * ⚠️ TIMESTAMPS ARE ALIGNED TO THE CADENCE BOUNDARY (#783). Storing the raw
+   * timestamp let a re-import that stamped a bar 30 minutes differently create a
+   * SECOND row for the same period — the unique key is an exact match, so `13:30`
+   * and `13:00` are different rows and `P2002` never fires. That produced ~27,376
+   * phantom bars and a fake 30-minute cadence on `1h`/`4h`/`1d` series. Flooring to
+   * the boundary makes the constraint work: `13:30` floors to `13:00` and is skipped.
+   *
+   * The reported `skipped` count therefore includes both true duplicates and
+   * misaligned bars that resolved to an existing row.
+   *
    * @see #272 — Flexible bar import endpoint
+   * @see #783 — Duplicate OHLCV bars from unaligned timestamps
    */
   async importBars(
     ticker: string, timeframe: string, provider: string,
@@ -343,17 +355,39 @@ export class ImportJobsService {
       this.enricher.enrichOne(sym).catch(() => {});
     }
 
-    // 2. Insert bars with skipDuplicates
+    // 2. Insert bars, aligning each to its cadence boundary first (#783)
     let imported = 0;
     let skipped = 0;
+    let misaligned = 0;
+    let invalid = 0;
 
     for (const bar of bars) {
+      const aligned = alignBarTimestamp(bar.timestamp, timeframe, provider);
+      if (!aligned) {
+        // A malformed timestamp is a bad input, not a new bar. Counted separately so
+        // it cannot masquerade as a duplicate in the import report.
+        invalid++;
+        this.logger.warn(`Bar rejected for ${sym} ${timeframe}: unparseable timestamp ${String(bar.timestamp)}`);
+        continue;
+      }
+
+      // Track how much the input had to move. A large offset is worth knowing about
+      // because it means the source is stamping bars wrongly, and silently aligning
+      // would hide that upstream fault.
+      const rawMs = new Date(bar.timestamp).getTime();
+      if (rawMs !== aligned.getTime()) {
+        misaligned++;
+        this.logger.debug(
+          `Aligned bar for ${sym} ${timeframe}: ${new Date(rawMs).toISOString()} -> ${aligned.toISOString()} (${provider})`,
+        );
+      }
+
       try {
         await this.prisma.marketBar.create({
           data: {
             symbolId: symbol.id,
             timeframe,
-            timestamp: new Date(bar.timestamp),
+            timestamp: aligned,
             open: bar.open,
             high: bar.high,
             low: bar.low,
@@ -364,7 +398,8 @@ export class ImportJobsService {
         });
         imported++;
       } catch (err: any) {
-        // Duplicate key (symbolId + timeframe + timestamp) — skip
+        // Duplicate key (symbolId + timeframe + timestamp) — skip.
+        // With alignment applied this now catches the offset-duplicate case too.
         if (err.code === 'P2002') {
           skipped++;
         } else {
@@ -373,7 +408,10 @@ export class ImportJobsService {
       }
     }
 
-    this.logger.log(`Bars imported: ${sym} ${timeframe} — ${imported} new, ${skipped} skipped (${provider})`);
-    return { imported, skipped, symbol: sym, timeframe, provider };
+    this.logger.log(
+      `Bars imported: ${sym} ${timeframe} — ${imported} new, ${skipped} skipped, ` +
+        `${misaligned} aligned to cadence, ${invalid} rejected (${provider})`,
+    );
+    return { imported, skipped, misaligned, invalid, symbol: sym, timeframe, provider };
   }
 }

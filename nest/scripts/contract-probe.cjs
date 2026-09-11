@@ -35,6 +35,20 @@ const argOf = (flag, fallback) => {
 };
 const LIVE_SYMBOL = argOf('--symbol', 'AUDUSD');       // a symbol with several cadences present
 
+/**
+ * INV-BAR-ALIGNED (#783) only judges bars newer than this instant.
+ *
+ * WHY A CUTOFF AND NOT "all rows". The 30-minute-offset rows written by the bulk
+ * back-fill are known-bad and are purged by a separate cleanup. If this check counted
+ * them forever it would be permanently red, and a guard that is never green is a guard
+ * everyone learns to ignore — which is strictly worse than no guard, because it reports
+ * a number nobody trusts. The cutoff makes the check mean "no NEW misaligned bar has
+ * been written since the fix", which is the property that can actually regress.
+ *
+ * Override with `--aligned-since 2026-09-11T00:00:00Z` when validating a cleanup.
+ */
+const ALIGNED_SINCE = new Date(argOf('--aligned-since', '2026-09-11T00:00:00Z'));
+
 // The symbol-derivation hints are the source of truth for INV-SYMBOL-HINTS-RESOLVE.
 // Import lazily: the module is TypeScript-adjacent plain JS, and a failure to load it
 // must skip the check rather than break the whole probe.
@@ -186,6 +200,176 @@ async function main() {
   } else {
     record('INV-NO-FUTURE-ROWS',
       'no row is dated beyond its own bar length (forming bars excluded)',
+      true, 'skipped — no DB connection', true);
+  }
+
+  // ── INV-BAR-ALIGNED (#783) ─────────────────────────────────────────────
+  //
+  // ⚠️ THIS ONE IS DIFFERENT FROM EVERY OTHER BAR INVARIANT: it inspects DATA, not code.
+  //
+  // The pre-existing bar invariants are all marker-presence canaries —
+  // `INV-BAR-ORDER` only asserts that `normalizeDirectiveBars`/`bars.sort(` EXIST, and
+  // `INV-SINGLE-CADENCE` only asserts `selectBaseTimeframe` exists. Neither can see that
+  // the rows themselves are duplicated. That is why ~27,376 phantom bars sat in the table
+  // undetected (#783).
+  //
+  // THE DEFECT. `importBars()` stored timestamps verbatim and deduped solely on the exact
+  // (symbolId, timeframe, timestamp) key. A re-import that stamped a bar 30 minutes
+  // differently therefore wrote a SECOND row for the same period, because `13:30` and
+  // `13:00` are genuinely different timestamps — `P2002` never fired, so the constraint
+  // could not help itself. Measured: 1,227 of 1,256 mt5 `1d` rows at 21:30 were
+  // byte-identical duplicates of the real 21:00 bar.
+  //
+  // WHY IT MATTERS BEYOND "duplicate rows". The phantom sits 30 minutes from the real bar,
+  // so the series' MEDIAN INTERVAL becomes 30m on a daily series. `computeMarketStatus()`
+  // derives `effectiveCadenceMs` from that median, so a fake cadence silently changes the
+  // staleness window for every `1h`/`4h`/`1d` protocol — plausible numbers, no error.
+  //
+  // The fix floors each timestamp to its cadence boundary at import, which makes the
+  // offset duplicate collapse onto the real bar so the unique key rejects it.
+  //
+  // This check asserts the OUTCOME: within one (symbol, timeframe, provider) series, every
+  // timestamp must sit on a valid boundary for that cadence. `1d` is judged per-provider
+  // (mt5 21:00, binance 00:00, yahoo 07:00) because the daily boundary is a property of
+  // the market, not of UTC — a blanket 21:00 rule would misfire on binance.
+  if (prisma) {
+    try {
+      // ── How `1d` is judged ──────────────────────────────────────────────
+      //
+      // NOT against a hardcoded boundary table. Two attempts at one were wrong on
+      // healthy data:
+      //   1. "must be 21:00 UTC"  -> failed for binance (00:00) and yahoo.
+      //   2. per-provider table   -> still failed, because yahoo legitimately uses
+      //      THREE different boundaries across its symbols (measured: 07:00, 13:30,
+      //      00:00) depending on the exchange whose close it reports.
+      //
+      // The daily boundary is a property of the MARKET, and one provider can serve
+      // several markets. So the rule is RELATIVE, per series: every daily bar for one
+      // (symbol, provider) must share a SINGLE time-of-day. Two different time-of-day
+      // stamps in one series is exactly the phantom signature — measured for mt5:
+      // 21:00 (3,689 bars) alongside 21:30 (1,256 bars), where 1,227 of the 21:30 rows
+      // are byte-identical duplicates of the real 21:00 bar.
+      //
+      // A guard that fires on correct code gets switched off, which is worse than no
+      // guard at all. This rule passes mt5/binance/yahoo as they actually are.
+      const dailyOffsets = new Map(); // "symbolId|provider" -> Map<minuteOfDay, count>
+
+      // Only rows newer than this are judged. Historic rows written before the fix are
+      // known-bad and are purged separately; counting them forever would make this check
+      // permanently red and therefore ignored — a guard that is never green is a guard
+      // nobody reads.
+      const rows = await prisma.$queryRawUnsafe(`
+        SELECT symbolId, timeframe, provider, timestamp
+          FROM marketbar
+         WHERE timeframe IN ('1h', '4h', '1d', '1w')
+           AND timestamp > ?
+      `, ALIGNED_SINCE);
+
+      // Gather the per-series daily offsets. Queried without the time cutoff on purpose:
+      // one series' boundary convention should be learned from ALL its history, not just
+      // the recent slice, so a partially-migrated series is still judged coherently.
+      const allDaily = await prisma.$queryRawUnsafe(`
+        SELECT symbolId, provider, timestamp FROM marketbar WHERE timeframe = '1d'
+      `);
+      for (const r of allDaily) {
+        const d = new Date(r.timestamp);
+        const key = `${r.symbolId}|${r.provider}`;
+        if (!dailyOffsets.has(key)) dailyOffsets.set(key, new Map());
+        const mod = d.getUTCHours() * 60 + d.getUTCMinutes();
+        const m = dailyOffsets.get(key);
+        m.set(mod, (m.get(mod) ?? 0) + 1);
+      }
+
+      // ⚠️ `4h` is judged against its OWN series' stride, NOT an absolute UTC hour.
+      //
+      // First attempt hardcoded "must be a multiple of 4 hours from midnight UTC" and
+      // immediately failed on HEALTHY data: mt5 4h bars sit at 01/05/09/13/17/21, a +1h
+      // offset, because the broker server's day boundary is not UTC. Measured 696 rows
+      // per offset — legitimate, not misaligned. So this rule is relative too: a 4h
+      // series is fine as long as every bar is a whole number of 4h steps from the
+      // series' own origin.
+      const fourHourOffsets = new Map(); // "symbolId|provider" -> Set of hour-mod-4
+      if (rows.some((r) => r.timeframe === '4h')) {
+        const all4h = await prisma.$queryRawUnsafe(`
+          SELECT symbolId, provider, timestamp FROM marketbar WHERE timeframe = '4h'
+        `);
+        for (const r of all4h) {
+          const key = `${r.symbolId}|${r.provider}`;
+          if (!fourHourOffsets.has(key)) fourHourOffsets.set(key, new Set());
+          fourHourOffsets.get(key).add(new Date(r.timestamp).getUTCHours() % 4);
+        }
+      }
+
+      const bad = [];
+      for (const r of rows) {
+        const tf = r.timeframe;
+        const d = new Date(r.timestamp);
+        const minute = d.getUTCMinutes();
+        const second = d.getUTCSeconds();
+        const msPart = d.getUTCMilliseconds();
+        const prov = String(r.provider ?? '').toLowerCase();
+        const seriesKey = `${r.symbolId}|${r.provider}`;
+
+        if (tf === '1d') {
+          const offsets = dailyOffsets.get(seriesKey);
+          // One series, one boundary. A second distinct time-of-day is the phantom.
+          if (offsets && offsets.size > 1) {
+            // Name the DOMINANT offset as correct and flag the minority, so the detail
+            // line points at the rows to delete rather than at the healthy majority.
+            const ranked = [...offsets.entries()].sort((a, b) => b[1] - a[1]);
+            const dominant = ranked[0][0];
+            const mine = d.getUTCHours() * 60 + minute;
+            if (mine !== dominant) {
+              bad.push({ tf, provider: prov, ts: d.toISOString() });
+            }
+          }
+          continue;
+        }
+        if (tf === '1w') {
+          // Monday 00:00 UTC.
+          if (minute !== 0 || second !== 0 || msPart !== 0
+              || d.getUTCHours() !== 0 || d.getUTCDay() !== 1) {
+            bad.push({ tf, provider: prov, ts: d.toISOString() });
+          }
+          continue;
+        }
+        if (tf === '4h') {
+          // Must sit on the minute grid and agree modulo 4h with its series' origin.
+          if (minute !== 0 || second !== 0 || msPart !== 0) {
+            bad.push({ tf, provider: prov, ts: d.toISOString() });
+            continue;
+          }
+          const mods = fourHourOffsets.get(seriesKey);
+          if (mods && mods.size > 0 && !mods.has(d.getUTCHours() % 4)) {
+            bad.push({ tf, provider: prov, ts: d.toISOString() });
+          }
+          continue;
+        }
+        // `1h` must sit on the hour — this one IS absolute and safe, since every
+        // broker's hour grid coincides with UTC's (the offset is whole hours).
+        if (minute !== 0 || second !== 0 || msPart !== 0) {
+          bad.push({ tf, provider: prov, ts: d.toISOString() });
+        }
+      }
+
+      const worst = bad.slice(0, 3)
+        .map((b) => `${b.tf}/${b.provider}@${b.ts}`)
+        .join(', ');
+      record('INV-BAR-ALIGNED',
+        'every 1h/4h/1d/1w bar timestamp sits on a valid cadence boundary (per provider)',
+        bad.length === 0,
+        bad.length
+          ? `${bad.length} misaligned row(s) newer than ${ALIGNED_SINCE.toISOString().slice(0,10)} — `
+            + `worst: ${worst}. An offset bar duplicates the real one and fakes the cadence (#783).`
+          : `checked ${rows.length} row(s) newer than ${ALIGNED_SINCE.toISOString().slice(0,10)}; all on valid boundaries`);
+    } catch (err) {
+      record('INV-BAR-ALIGNED',
+        'every 1h/4h/1d/1w bar timestamp sits on a valid cadence boundary (per provider)',
+        false, `query failed: ${err.message}`);
+    }
+  } else {
+    record('INV-BAR-ALIGNED',
+      'every 1h/4h/1d/1w bar timestamp sits on a valid cadence boundary (per provider)',
       true, 'skipped — no DB connection', true);
   }
 

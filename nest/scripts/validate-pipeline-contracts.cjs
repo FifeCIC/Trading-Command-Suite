@@ -308,6 +308,12 @@ const PROBE_ENFORCED = {
   // not of the code. The spec (watchlist-identity.spec.ts) guards that resolution
   // PREFERS an FK and PINS its ordering; this probe guards that duplicates are gone.
   'INV-WATCHLIST-IDENTITY': 'scripts/contract-probe.cjs',
+  // Needs the live table, and this is the point: EVERY other bar invariant is a
+  // marker-presence canary that verifies a helper EXISTS, never that the rows are
+  // correct. That blind spot is why ~27,376 phantom bars sat undetected (#783). The
+  // unit spec (timeframe.spec.ts) pins the alignment arithmetic; this probe asserts
+  // the stored timestamps actually sit on valid boundaries.
+  'INV-BAR-ALIGNED': 'scripts/contract-probe.cjs',
 };
 
 /**

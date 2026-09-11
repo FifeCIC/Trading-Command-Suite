@@ -2472,5 +2472,81 @@ export const PROTOCOL_SEED_DATA: Record<string, SeedProtocol> = {
     "winRateTarget": null,
     "idealFor": null,
     "groups": []
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // hourly-3dir-v1 — the #761 CONTROL PROTOCOL
+  //
+  // PURPOSE: settle whether the ~24% ceiling on scoring percentages is a
+  // DENOMINATOR problem or a SCORING problem. Every existing protocol mixes
+  // directional and non-directional directives in one capacity sum, which makes
+  // both explanations consistent with the observed numbers. This protocol removes
+  // the ambiguity by construction.
+  //
+  // DESIGN RULES (each deliberately different from the existing protocols):
+  //
+  // 1. THREE directives only. Every existing protocol carries 8-12, and the
+  //    measured 24h utilisation showed several of them contributing near-zero
+  //    (speed-momentum 10.6%, support-resistance-levels 4.9%, session-open-effect
+  //    0.9%) while still occupying the denominator with their full maxScore.
+  //    Three directives means the denominator is ~300 rather than ~700-900.
+  //
+  // 2. ALL THREE MUST BE ABLE TO EMIT A DIRECTION. This is the control condition.
+  //    Measured 24h bullish-rate on the excluded candidates:
+  //      bollinger-band-squeeze 0.0% (63.4% util), volume-confirmation 0.0% (24.4%),
+  //      gold-session-profile 0.0% (50.0%), spy-qqq-relative-strength 0.0% (46.7%),
+  //      volatility-tools 0.0% (37.9%)
+  //    Those directives have NEVER produced a directional reading, so including
+  //    them guarantees the numerator can never reach the denominator. The chosen
+  //    three all measured directionally active:
+  //      ema-structure   45.8% bullish rate (45.6% utilisation)
+  //      rsi-oversold    14.7% bullish rate (28.9% utilisation) — 140 maxScore
+  //      macd-crossover  18.6% bullish rate (31.9% utilisation)
+  //
+  // 3. NO risk gate. `liquidity-check` is correctly excluded from capacity by
+  //    isRiskGate, but including one here would add a second variable.
+  //
+  // 4. ONE start-with-an-index confirmation, no session/calendar directive. A
+  //    session directive only fires at an open, so for most of the day it is pure
+  //    denominator — the exact artefact this protocol exists to eliminate.
+  //
+  // EXPECTED OUTCOME — this is the falsifiable prediction:
+  //   If the low percentages are a DENOMINATOR artefact, this protocol should
+  //   print a materially higher peak percentage than the ~23% seen elsewhere,
+  //   because its denominator carries no idle capacity.
+  //   If it still prints ~25%, then neither denominator composition nor directive
+  //   failure explains it, and the loss is inside composite assembly itself
+  //   (candidates: the risk multiplier, or selectDirectionalEvidence picking the
+  //   minority side). That would mean #761 was treating a symptom.
+  //
+  // Run for one full session on a symbol with dense hourly bars (crypto has the
+  // most complete 1h history: BTC/ETH/SOL/DOGE at 145 bars/7d vs 104 for forex),
+  // then examine. See issue #761.
+  // ─────────────────────────────────────────────────────────────────────────────
+  "hourly-3dir-v1": {
+    "name": "Hourly Triple-Directive Control V1",
+    "description": "Experiment protocol for issue #761. Three directional-only directives on hourly bars, sized so the capacity denominator carries no idle weight. Exists to distinguish a denominator artefact from a scoring fault in the ~24% scoring ceiling. Not intended for live capital — it is a measurement instrument.",
+    "directionMode": "LONG_ONLY",
+    "tradingStyle": "Day Trade / Momentum",
+    "recommendedTimeframe": "1h",
+    "avgHoldTime": "2–12 hours",
+    "winRateTarget": "50–60%",
+    "idealFor": "Measuring whether scoring percentages are suppressed by denominator composition. Designed for symbols whose favourable conditions recur on an hourly cadence, where a 3-directive set can realistically align.",
+    "groups": [
+      {
+        "id": "technical",
+        "name": "Directional Core",
+        "description": "The three directional directives. All three can emit bullish/bearish, so the numerator has a real chance of reaching the denominator.",
+        "weight": 1.0,
+        "isRiskGate": false,
+        "minMultiplier": 1.0,
+        "maxMultiplier": 1.0,
+        "directiveIds": [
+          "ema-structure",
+          "rsi-oversold",
+          "macd-crossover"
+        ]
+      }
+    ]
   }
 };

@@ -1,0 +1,5 @@
+{
+  "protocolId": "hourly-3dir-v1",
+  "symbols": ["EURUSD"],
+  "notes": "Control watchlist for issue #761 (hourly triple-directive experiment). EURUSD chosen on measured evidence (2026-09-11): it has the densest AND freshest MT5 hourly history — 191 bars over 10 days with the newest bar 77 minutes old — and it is quoted continuously across sessions, so no session gap leaves capacity in the denominator that cannot be exercised. BTC was the first candidate and was rejected: its binance-sourced 1h bars were 23 HOURS stale (last 2026-09-10 14:00) while MT5 was 76 minutes fresh, which is the INV-PROVIDER-REACHABLE crypto variant from #760 — the protocol would have been measured on aged-out bars. This watchlist is linked by FK via protocolId, NOT by name matching (INV-WATCHLIST-IDENTITY). No entry in SINGLE_SYMBOL_HINTS or WATCHLIST_HINTS is needed or permitted (INV-NO-SYMBOL-GUESSING)."
+}

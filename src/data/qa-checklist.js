@@ -2917,6 +2917,18 @@ const QA_CHECKLIST = [
     priority: 'critical',
     versionNote: '2026-09-10 — analyst-adjustments +30 fabrication, liquidity-check false hard gate, stubResult zero',
   },
+  {
+    id: 'qa-contract-021',
+    invariant: 'INV-BAR-ALIGNED',
+    area: 'Pipeline Contracts',
+    system: 'Market data / Import',
+    name: 'Stored bar timestamps sit on a valid cadence boundary (no 30-minute phantom duplicates)',
+    procedure: 'Run `npm --prefix nest run test -- --testPathPatterns="timeframe|import-bars-alignment"` (68 tests) — `timeframe.spec.ts` pins the alignment arithmetic (flooring, idempotence, per-provider daily boundaries, null-coercion) and `import-bars-alignment.spec.ts` is the INTEGRATION proof that the unique key now rejects an offset duplicate and that the live table holds one offset per timeframe. Then `node scripts/contract-probe.cjs` from nest/ and read the `INV-BAR-ALIGNED` line. To see the live pattern by hand: `SELECT b.timeframe, HOUR(b.timestamp) h, MINUTE(b.timestamp) m, b.provider, COUNT(*) n FROM marketbar b WHERE b.timeframe IN (\'1h\',\'4h\',\'1d\') GROUP BY h, m, b.provider ORDER BY n DESC;` — any intraday timeframe with TWO large offsets (`:00` and `:30`) is the defect.',
+    expected: 'All 68 tests pass and the probe reports no NEW misaligned row. Each of `1h`/`4h`/`1d` has exactly ONE valid offset per series: `1h` on the hour, `4h` on its series\' own 4-hour stride (mt5 sits at 01/05/09/13/17/21 — a +1h broker offset, NOT a clean UTC grid, so judging it by `hour % 4` false-positives on healthy data), and `1d` on a SINGLE boundary per series (mt5 21:00, binance 00:00, yahoo 07:00/13:30/00:00 across different exchanges). ⚠️ Two earlier versions of this rule were wrong — a hardcoded 21:00 daily boundary, then a per-provider table — because the daily close is a property of the MARKET, not the provider and not UTC. A guard that fires on correct code gets switched off, which is worse than no guard, so the rule is deliberately RELATIVE. **Then prove the guard bites:** import a `1h` bar stamped `13:30` when a `13:00` bar already exists and confirm ONE row remains, reported as `skipped`; and run the probe with `--aligned-since 2026-08-01` to confirm it still FAILS on the pre-fix history. History: `importBars()` stored timestamps verbatim and deduped solely on the exact `(symbolId, timeframe, timestamp)` key, so a back-fill that stamped a bar 30 minutes differently wrote a second row for the same period — `13:30` ≠ `13:00`, so `P2002` never fired. Measured ~27,376 phantom bars of 266,890 (~10%), and 1,227 of 1,256 mt5 `1d` rows at 21:30 were byte-identical to the real 21:00 bar. The damage beyond duplication: the 30-minute offset made the series median interval read `30m` on a DAILY series, and `computeMarketStatus()` derives its staleness window from that median — so a fake cadence silently resized every `1h`/`4h`/`1d` freshness threshold. Post-purge the medians are correct: `1h`=60m, `4h`=240m, `1d`=1440m. ⚠️ Every other bar invariant verifies a HELPER EXISTS (a marker canary) and cannot see that the rows themselves are wrong; this is the only bar check that inspects data, which is why the defect survived so long.',
+    category: 'Contract',
+    priority: 'critical',
+    versionNote: '2026-09-11 — #783 duplicate OHLCV bars from unaligned import timestamps',
+  },
   // ═══════════════════════════════════════════════════
   // HANDOFF BATCH #15 (2026-09-08 → 09-10)
   // ═══════════════════════════════════════════════════════

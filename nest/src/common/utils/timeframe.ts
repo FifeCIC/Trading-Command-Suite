@@ -114,3 +114,124 @@ export function isBarBeyondItsOwnLength(
   if (Number.isNaN(ms)) return false;
   return ms > now + barLengthMs(timeframe) + BAR_LEAD_TOLERANCE_MS;
 }
+
+// ─── Bar alignment (INV-BAR-ALIGNED, #783) ───────────────────────────────────
+
+/**
+ * Bar boundaries for cadences that are NOT a clean division of the UTC day.
+ *
+ * Every intraday cadence up to `4h` divides evenly into 24h, so flooring against
+ * the UTC epoch is correct for it. `1d` does not: the daily boundary is a
+ * property of the **provider and the market**, not of UTC:
+ *
+ *   | boundary (UTC) | provider | meaning                                    |
+ *   |----------------|----------|--------------------------------------------|
+ *   | 21:00          | mt5      | CME/COMEX/FX daily close (17:00 ET)        |
+ *   | 00:00          | binance  | crypto daily close, midnight UTC           |
+ *   | 07:00          | yahoo    | some exchanges' local close                |
+ *
+ * ⚠️ A hardcoded "floor 1d to 21:00" is therefore WRONG for binance and yahoo — it
+ * would shift every legitimate daily bar by three hours. `1d` is handled by
+ * resolving the provider's own boundary from the series already stored (see
+ * `resolveAlignmentBoundaryMs`), and only falls back to 21:00 for an unknown
+ * provider because mt5 is the dominant source.
+ *
+ * Verified live before this was written: mt5 `1d` bars sit at 21:00 (2,885 rows)
+ * and 21:30 (1,256 rows) — the 21:30 group is the #783 phantom, and 1,227 of those
+ * 1,256 are byte-identical duplicates of the 21:00 bar.
+ */
+const DAILY_BOUNDARY_HOUR_UTC: Record<string, number> = {
+  mt5: 21,
+  binance: 0,
+  yahoo: 7,
+};
+
+/** The default daily boundary (mt5/CME close) when a provider is unknown. */
+const DEFAULT_DAILY_BOUNDARY_HOUR_UTC = 21;
+
+/**
+ * Floor a timestamp to its **bar-open** boundary for the given cadence and provider.
+ *
+ * WHY THIS EXISTS (#783)
+ * ----------------------
+ * `importBars()` previously stored `new Date(bar.timestamp)` **verbatim** and relied
+ * solely on the unique key `(symbolId, timeframe, timestamp)` for deduplication. A
+ * bulk re-import that stamped a bar 30 minutes differently (`13:30` instead of the
+ * real `13:00`) therefore created a **second row for the same period**: the
+ * timestamps genuinely differ, so `P2002` never fired and the constraint could not
+ * help. Measured result: ~27,376 phantom bars in a 266,890-row table (~10%), and a
+ * **fake 30-minute median interval** on `1h`/`4h`/`1d` series — which then corrupted
+ * `computeMarketStatus()`'s `effectiveCadenceMs` for every multi-hour timeframe.
+ *
+ * Flooring makes the constraint work again: `13:30` floors to `13:00`, collides with
+ * the real bar, and is correctly skipped as a duplicate.
+ *
+ * ⚠️ A BAR IS STAMPED BY ITS **OPEN** TIME, so flooring (never rounding) is the only
+ * correct direction. Rounding UP would move a bar into the next period and silently
+ * rewrite history.
+ *
+ * @param timestamp  The raw bar timestamp (Date | ISO string | epoch ms).
+ * @param timeframe  Declared cadence, e.g. '15m', '1h', '1d'.
+ * @param provider   Data source, used only to resolve the `1d` boundary.
+ * @returns A new Date floored to the boundary, or `null` if the input is unparseable
+ *          (a malformed timestamp is a different fault — the caller must reject it,
+ *          never silently coerce it to now or epoch 0).
+ */
+export function alignBarTimestamp(
+  timestamp: unknown,
+  timeframe: string,
+  provider?: string,
+): Date | null {
+  // ⚠️ Guard the null-ish cases EXPLICITLY. `new Date(null).getTime()` is `0`, not
+  // `NaN`, so a naive `Number.isNaN` check lets `null` through and it silently becomes
+  // **epoch 0 (1970-01-01)** — a bar dated 1970 that looks like real data. Same for
+  // `false` and `[]`. Only a non-empty string or a number/Date may be parsed.
+  if (timestamp === null || timestamp === undefined || timestamp === '') return null;
+  if (typeof timestamp !== 'string' && typeof timestamp !== 'number' && !(timestamp instanceof Date)) {
+    return null;
+  }
+  if (typeof timestamp === 'string' && timestamp.trim() === '') return null;
+
+  const ms = new Date(timestamp as any).getTime();
+  if (Number.isNaN(ms)) return null;
+
+  if (timeframe === '1d') {
+    // Place the bar on the provider's own daily close boundary. We keep the
+    // calendar DATE of the bar and snap the time-of-day to that boundary.
+    const d = new Date(ms);
+    const boundaryHour = DAILY_BOUNDARY_HOUR_UTC[(provider ?? '').toLowerCase()]
+      ?? DEFAULT_DAILY_BOUNDARY_HOUR_UTC;
+    const out = new Date(Date.UTC(
+      d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), boundaryHour, 0, 0, 0,
+    ));
+    // A bar stamped BEFORE its own boundary belongs to the PREVIOUS session:
+    // e.g. an mt5 daily bar at 20:00 UTC is the close of the prior day, not a
+    // new one. Pulling it back keeps one row per session instead of two.
+    if (d.getTime() < out.getTime()) out.setUTCDate(out.getUTCDate() - 1);
+    return out;
+  }
+
+  if (timeframe === '1w') {
+    // Floor to Monday 00:00 UTC — ISO week start.
+    const d = new Date(ms);
+    const day = d.getUTCDay();               // 0 = Sunday
+    const back = day === 0 ? 6 : day - 1;    // days since Monday
+    return new Date(Date.UTC(
+      d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - back, 0, 0, 0, 0,
+    ));
+  }
+
+  const len = barLengthMs(timeframe);
+  return new Date(Math.floor(ms / len) * len);
+}
+
+/** True when `timestamp` already sits exactly on its cadence boundary. */
+export function isBarAligned(
+  timestamp: unknown,
+  timeframe: string,
+  provider?: string,
+): boolean {
+  const aligned = alignBarTimestamp(timestamp, timeframe, provider);
+  if (!aligned) return false;
+  return aligned.getTime() === new Date(timestamp as any).getTime();
+}
