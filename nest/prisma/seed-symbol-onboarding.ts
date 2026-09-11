@@ -126,12 +126,29 @@ async function main() {
   }
 
   for (const r of ROUTES) {
+    // ⚠️ `update` must carry EVERY field the route depends on, not just `enabled`.
+    // An upsert whose update omits a field silently leaves whatever the DB already
+    // has, so a re-seed could not REPAIR a wrong brokerSymbol — it would only
+    // re-enable the row. brokerSymbol and provider are both load-bearing for
+    // symbol resolution (#760), so both are set on update as well as create.
     await prisma.symbolRoute.upsert({
       where: { symbol_brokerId: { symbol: r.symbol, brokerId: r.brokerId } },
-      update: { enabled: true, note: r.note },
-      create: { symbol: r.symbol, brokerId: r.brokerId, enabled: true, note: r.note },
+      update: {
+        enabled: true,
+        note: r.note,
+        provider: r.provider ?? 'mt5',
+        brokerSymbol: r.brokerSymbol ?? undefined,
+      },
+      create: {
+        symbol: r.symbol,
+        brokerId: r.brokerId,
+        enabled: true,
+        note: r.note,
+        provider: r.provider ?? 'mt5',
+        brokerSymbol: r.brokerSymbol ?? null,
+      },
     });
-    console.log(`  ✓ route ${r.symbol} -> broker ${r.brokerId}`);
+    console.log(`  ✓ route ${r.symbol} -> broker ${r.brokerId}${r.brokerSymbol ? ` (brokerSymbol=${r.brokerSymbol})` : ''}`);
   }
 
   for (const a of ASSIGNMENTS) {

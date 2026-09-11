@@ -897,6 +897,11 @@ export class TradingStrategyService {
     baseSize: number; slPct: number; tpPct: number; minComposite: number;
     /** Session gate window (see session-window.ts). null/absent = ungated. */
     sessionWindow?: string[] | null;
+    /**
+     * Direction the bot may act on ('BUY' | 'SELL'). null/absent = unconstrained.
+     * Required for SHORT_ONLY protocols so a seeded short bot cannot open longs.
+     */
+    requireDirection?: string | null;
   }>): Promise<{ created: number; skipped: number; scoringCreated: number }> {
     if (!this.prisma.isAvailable) {
       return { created: 0, skipped: strategies.length, scoringCreated: 0 };
@@ -954,6 +959,9 @@ export class TradingStrategyService {
             scoringStrategyId: scoringId,
             // Session gate — JSON array of tags, or null when ungated.
             sessionWindow: s.sessionWindow?.length ? JSON.stringify(s.sessionWindow) : null,
+            // Direction constraint. A SHORT_ONLY protocol must not be allowed to
+            // open longs; null = unconstrained (legacy behaviour).
+            requireDirection: (s as any).requireDirection ?? null,
             active: true,
           },
         });
@@ -964,12 +972,17 @@ export class TradingStrategyService {
         // stays invisible in the bot queue and can never trade via that path.
         // NOTE: `protocolId` here is the protocol SLUG (matching the routing
         // records at runtime), while trading_strategy.protocolId may hold a UUID.
+        //
+        // ⚠️ `role` is DERIVED FROM THE PROTOCOL, not hardcoded. It was hardcoded
+        // 'long', which is wrong for the SHORT_ONLY protocol (vix-short-v1) — a
+        // short bot seeded as role 'long' would be routed as if it were going long.
         try {
+          const shortOnly = /-short|short-/i.test(s.protocolId);
           await (this.prisma as any).strategyProtocol.create({
             data: {
               strategyId: createdBot.id,
               protocolId: s.protocolId,
-              role: 'long',
+              role: shortOnly ? 'short' : 'long',
               sortOrder: 0,
             },
           });

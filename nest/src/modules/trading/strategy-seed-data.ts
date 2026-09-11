@@ -36,6 +36,15 @@ export interface SeedTradingStrategy {
    * rule behind it. 'tokyo' → 'asian', 'always' → null.
    */
   sessionWindow: SessionTag[] | null;
+  /**
+   * Direction constraint ('BUY' | 'SELL'). null/absent = unconstrained.
+   *
+   * Required for SHORT_ONLY protocols. Without it a seeded short bot has no
+   * declared side, so the direction is implied by the protocol alone — and the
+   * subscription role (`strategy_protocol.role`) is what actually routes signals.
+   * See database-seed-discipline.instructions.md.
+   */
+  requireDirection?: 'BUY' | 'SELL' | null;
   /** Trading style from the protocol */
   style: string;
 }
@@ -239,6 +248,10 @@ export const DEFAULT_TRADING_STRATEGIES: SeedTradingStrategy[] = [
     tpPct: 4.0,
     minComposite: 0,
     sessionWindow: null,
+    // Must be SELL — vix-short-v1 is SHORT_ONLY. The API create() path also sets
+    // this; the seeder previously had no such field, so a seeded short bot would
+    // have been created without a declared direction.
+    requireDirection: 'SELL',
     style: 'Scalp',
   },
 ];
