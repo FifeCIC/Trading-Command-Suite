@@ -806,6 +806,23 @@ model Trade {
   swap              Float?   // Accumulated swap
   brokerComment     String?  @db.VarChar(200) // MT5 position comment
 
+  // ── P&L validity (bridge bug, pre-2026-09-10) ────────────────────────────
+  // ⚠️ These four columns EXISTED IN THE DATABASE but were MISSING FROM THIS MODEL until
+  // 2026-09-12, so Prisma could neither read nor write them. That omission is how a
+  // measurement tool came to report an 8.77% win rate over 114 trades when 82 of those
+  // rows were unusable placeholders — it could not see `pnlInvalid`, so it counted them.
+  // Adding a field to a model does NOT alter the database; see database-schema.instructions.md.
+  //
+  //   pnlInvalid      1 = the exit price was never captured, so `pnl` is a placeholder 0,
+  //                      NOT a break-even trade. ALWAYS exclude these from any P&L stat.
+  //   pnlInvalidReason why it was flagged (records the specific bridge defect)
+  //   pnlRaw /         the values as received from the bridge before validity checks, kept
+  //   exitPriceRaw     for diagnosis. Do NOT treat as usable P&L — see #805.
+  pnlInvalid        Int?     @default(0)
+  pnlInvalidReason  String?  @db.Text
+  pnlRaw            Float?
+  exitPriceRaw      Float?
+
   @@index([symbol, openedAt])
   @@index([status])
   @@index([origin, createdAt])
