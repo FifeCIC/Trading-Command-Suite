@@ -334,4 +334,37 @@ export const KNOWN_FEATURES = {
   'Predictive scoring (removed — do not restore)': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'removed' },
   'Multi-timeframe scorer (removed — non-canonical unit)': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'removed' },
   'Sector rotation census (labels corrected)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+
+  // ── 2026-09-10 / 11 / 12 — batch #16 ──
+  // P&L / edge measurement (2026-09-12)
+  'Edge Statistics (Wilson intervals, long/short split)': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'P&L Statistics (expectancy, profit factor, R:R)': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Edge verdict + exit-geometry finding': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'P&L Population Integrity (invalid-row exclusion)': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Trade shape parity (pnlInvalid + raw fields on model)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  // Scoring design & capacity (2026-09-11)
+  'Directional capacity accounting (three output classes)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+  'Scoring design documents (A/B/C + change protocol)': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'hourly-3dir-v1 control protocol (100% directional)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  // Guards & contracts (2026-09-10 / 11)
+  'Gate Membership Guard (INV-GATE-MEMBERSHIP)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Bar Length Guard (INV-NO-FUTURE-ROWS)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'MT5 server-clock offset detection': { dataPersistence: 'cached', uiSurfaces: 1, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Watchlist identity guard (INV-WATCHLIST-IDENTITY)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Symbol-guessing retirement (INV-NO-SYMBOL-GUESSING)': { dataPersistence: 'config', uiSurfaces: 0, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Seed restorability (round-trip verified)': { dataPersistence: 'stored', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Trading-enabled persistence (survives restart)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  'Trade reconciliation (stranded row reaping)': { dataPersistence: 'stored', uiSurfaces: 1, pipelineIntegration: 'trading', devCompletion: 'complete' },
+  // Process & tooling (2026-09-11)
+  'Circular-work detection (settled decisions)': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Seed-vs-DB drift detector (Gate 3)': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'both', devCompletion: 'complete' },
+  'Four-gate completeness contract': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Canonical handoff directory enforcement': { dataPersistence: 'none', uiSurfaces: 0, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // Market tape (2026-09-11)
+  'Market Tape configurable sections': { dataPersistence: 'config', uiSurfaces: 2, pipelineIntegration: 'none', devCompletion: 'complete' },
+  'Market Tape seamless marquee (N-copy loop)': { dataPersistence: 'config', uiSurfaces: 1, pipelineIntegration: 'none', devCompletion: 'complete' },
+  // Ladder (2026-09-10)
+  'Ladder card uniformity (4 footer columns)': { dataPersistence: 'ephemeral', uiSurfaces: 1, pipelineIntegration: 'scoring', devCompletion: 'complete' },
+  'Ladder selection durability (no swallowed-catch)': { dataPersistence: 'localStorage', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'partial' },
+  'Adaptive Target (monotonic observed-peak ceiling)': { dataPersistence: 'stored', uiSurfaces: 2, pipelineIntegration: 'scoring', devCompletion: 'complete' },
 };

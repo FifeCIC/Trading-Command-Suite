@@ -65,15 +65,28 @@ Maintain `docs/theories/`:
 ### 7. Handoff Processing (batch documentation updates)
 When invoked with `/update-documentation` or when you detect multiple unprocessed handoff files, process them in batch:
 
-1. **Read `.github/handoffs/`** — list all `.md` files except `README.md`
+1. **Read `docs/handoff/`** — list all `.md` files except `README.md`
+   > ⚠️ **Corrected 2026-09-11.** This step previously said `.github/handoffs/`. That directory is
+   > **retired** — `scripts/validate-agent-docs.cjs` **fails the build** if it reappears, and four
+   > handoffs cited by `AGENT-ATTENTION.md` became unfindable entirely because they lived there.
+   > `docs/handoff/` is the ONE canonical location.
 2. **For each handoff file**, extract the Capability Map, QA, and Architecture Framework entries
-3. **Update all three pages** in one pass:
-   - `src/pages/CapabilityMapPage.jsx` — add KNOWN_FEATURES entries
+3. **Update the pages** in one pass:
+   - `src/data/known-features.js` — add capability entries (**this is the source of truth**; then run
+     `node nest/scripts/seed-capabilities.cjs` to push them to the `capability` table the page reads)
    - `src/data/qa-checklist.js` — add QA test entries
-   - `src/core/architecture-reference.js` — add SLICE + route contract entries
-4. **Move processed files** to `.github/handoffs/processed/`
+   - `src/core/architecture-reference.js` — add `CURRENT_SLICE` + route contract entries, and bump
+     `CONTRACT_REGISTER_LAST_UPDATED`
+   - `src/pages/architecture-framework.data.js` — mirror the slice + route contracts for the UI page
+4. **⚠️ The handoffs STAY. Never delete and never move them.**
+   > **Corrected 2026-09-11.** This step previously said *"Move processed files to
+   > `.github/handoffs/processed/`"*, and an even earlier version said *"DELETE, don't archive"*.
+   > Both were wrong and both destroyed the record of *why*. **Processing means summarising INTO the
+   > docs; the handoff is the durable source and the docs are the summary.** A handoff with no
+   > `processed/` marker is not "unprocessed" — re-running the batch must be idempotent, so
+   > **detect already-recorded entries and skip them** rather than re-adding duplicates.
 5. **Notify Discord** (phase 1, #652) — for each processed file:
-   `node scripts/handoff-to-discord.cjs .github/handoffs/processed/<file>`
+   `node scripts/handoff-to-discord.cjs docs/handoff/<file>`
    No-op with a clear skip message when no webhook is configured.
 6. **Report**: "Processed 5 handoffs → +3 capabilities, +4 QA entries, +2 AF slices"
 
