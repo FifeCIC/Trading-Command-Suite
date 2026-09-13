@@ -32,7 +32,7 @@ import { ProtocolDbService } from '../scoring/protocol-db.service';
  * The /api/system/reload-config response includes a `note` field
  * explaining what was reloaded and what still needs a restart.
  *
- * @see docs/handoff/2026-07-29-config-reload-policy-509.md
+ * @see #509 — handoff 2026-07-29-config-reload-policy-509.md (central docs store)
  */
 @Controller('system')
 export class ConfigReloadController {

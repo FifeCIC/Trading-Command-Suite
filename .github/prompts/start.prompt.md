@@ -44,6 +44,6 @@ node scripts/agent-claim.cjs heartbeat
 ```
 
 ## 7. On completion
-- Write handoff: `.github/handoffs/YYYY-MM-DD-{slug}.md`
+- Write handoff: `…\Trading-Command-Suite-Documentation\handoff\YYYY-MM-DD-{slug}.md`
 - Release: `node scripts/agent-claim.cjs release`
 - Close issue: `gh issue close {number} --repo FifeCIC/Trading-Command-Suite --comment "summary"`

@@ -10,7 +10,8 @@
 > separates directional evidence and score units, preserves queue lineage, and
 > uses canonical scoring for replay/backtest. Some account-risk, outcome-schema,
 > and full timeframe-loader work remains. Keep automated trading disabled until
-> the dated ledger in [META.Stack Correctness Review](./meta-stack-correctness-review.md)
+> the dated ledger in **META.Stack Correctness Review**
+> (`…\Trading-Command-Suite-Documentation\archive\working\meta-stack-correctness-review.md`)
 > shows every Critical item complete with pipeline regression tests.
 
 ---
@@ -46,7 +47,7 @@ The score model is safe only when its meaning survives every service boundary:
    evaluator and produce identical results for an identical evaluation context.
 
 The executable test requirements for these invariants are defined in the
-[META.Stack Correctness Review](./meta-stack-correctness-review.md#required-testing-system).
+**META.Stack Correctness Review** (`…\Trading-Command-Suite-Documentation\archive\working\meta-stack-correctness-review.md`).
 
 ---
 

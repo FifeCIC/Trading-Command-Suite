@@ -140,14 +140,14 @@ and the reasoning then became unfindable.**
 
 | Artefact | Canonical path | Written by |
 |---|---|---|
-| **Handoff** | **`docs/handoff/YYYY-MM-DD-{slug}.md`** | any agent, before `task_complete` |
+| **Handoff** | **`…\Trading-Command-Suite-Documentation\handoff\YYYY-MM-DD-{slug}.md`** (central store — NOT the app package) | any agent, before `task_complete` |
 | Settled decisions | `docs/SETTLED-DECISIONS.md` | humans + agents |
 | Invariants (`INV-*`) | `.github/instructions/meta-stack-contracts.instructions.md` | the ONE owner |
 | Operational memory / blockers | `.github/AGENT-ATTENTION.md` | any agent, append-only |
 | Guard scripts | `nest/scripts/validate-*.cjs` | any agent |
 | Repo-wide audit scripts | `scripts/*.cjs` | any agent |
 
-**⚠️ Historical note (2026-09-11):** handoffs were split across `.github/handoffs/` and
-`docs/handoff/`, and **4 handoffs cited in `AGENT-ATTENTION.md` are now lost entirely** because
-they lived in the directory that was later removed. `docs/handoff/` is now the single canonical
-location. Do not create a third.
+**⚠️ Historical note (2026-09-11 → 2026-09-13):** handoffs were split across `.github/handoffs/`
+and `docs/handoff/`, and **4 handoffs cited in `AGENT-ATTENTION.md` are now lost entirely**. On
+2026-09-13 the whole handoff set moved **out of the app package** to the central docs store
+(`…\Trading-Command-Suite-Documentation\handoff\`). One canonical location — do not create another.

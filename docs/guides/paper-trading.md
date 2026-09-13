@@ -1,5 +1,12 @@
 # Paper Trading Guide
 
+**Status:** active
+**Category:** C — reference / contract
+**Created:** 2026-07-06
+**Last updated:** 2026-07-06
+**Owner:** TCS team
+
+
 Virtual trading account with realistic order flow, P&L tracking, and SL/TP enforcement. Use it to test strategies risk-free before going live on MT5.
 
 ---

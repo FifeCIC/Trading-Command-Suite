@@ -1,5 +1,8 @@
 # Symbol data coverage audit — 2026-09-10
 
+> **Status:** dated audit (category B working record). Findings reflect the database as at
+> 2026-09-10. Open fix options below are tracked on issues — this file is not a to-do list.
+
 **Method:** joined `symbol` (registry intent) with `marketbar.provider` + freshness (delivery),
 then cross-checked against `GET http://localhost:5000/symbols` (12,411 MT5 symbols) for the
 MT5-sourced set. Sources of truth used: the **DB** for what actually arrived, the **broker

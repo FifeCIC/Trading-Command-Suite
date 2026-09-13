@@ -1,5 +1,12 @@
 # Risk Controls — How It Works
 
+**Status:** active
+**Category:** C — reference / contract
+**Created:** 2026-07-02
+**Last updated:** 2026-07-02
+**Owner:** TCS team
+
+
 ## Overview
 
 The Risk Controls system provides central guardrails for trading: exposure caps, drawdown limits, a three-gate pre-trade check pipeline, and a circuit breaker that can halt all trading.
@@ -86,3 +93,4 @@ Portfolio health queries real data:
 - **Risk Limits grid**: 6 configured limits
 - **Trading Gates**: 3-column cards showing active config for each gate
 - **Kill Switch Log**: Circuit breaker event history
+

@@ -11,7 +11,8 @@
  * CURL bonus:    +10 if RSI is rising (recovery signal).
  * MAX:           140 (50 base + 80 extreme bonus + 10 curl).
  *
- * See docs/sees-hybrid-scoring.md for the full architecture.
+ * See docs/theories/sees-hybrid-scoring.md (central docs store) for the full architecture — moved
+ * out of the repo 2026-09-13.
  */
 
 import { Injectable } from '@nestjs/common';

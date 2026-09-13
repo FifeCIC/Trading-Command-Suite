@@ -3,7 +3,8 @@
  * Roadmap sync (epic #681, Phase B)
  * =================================
  * Build-time script: pulls GitHub issues via `gh` and writes the roadmap
- * dataset in the agreed contract shape (see docs/roadmap-core-spec.md).
+ * dataset in the agreed contract shape (see archive/working/roadmap-core-spec.md in the central
+ * docs store — moved out of the repo 2026-09-13).
  *
  *   node scripts/roadmap-sync.cjs            # uses repo from roadmap-config.json
  *   node scripts/roadmap-sync.cjs --repo owner/name   # override

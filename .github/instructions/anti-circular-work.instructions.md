@@ -108,7 +108,7 @@ bearing. Check `docs/SETTLED-DECISIONS.md` first.
 |---|---|
 | **`docs/SETTLED-DECISIONS.md`** | **The register.** 10 settled decisions with guard status (🟢 enforced / 🟡 partial / 🔴 **UNGUARDED**). 🔴 rows are the ones that will be re-opened. |
 | `.github/instructions/meta-stack-contracts.instructions.md` | Invariants that **are** enforced at build time |
-| `docs/handoff/` | Per-change handoffs, dated |
+| `…\Trading-Command-Suite-Documentation\handoff\` | Per-change handoffs, dated |
 | `node scripts/detect-circular-work.cjs` | Flags re-opened areas on demand |
 
 ---

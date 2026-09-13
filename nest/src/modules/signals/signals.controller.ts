@@ -31,7 +31,7 @@ import { SignalPlanDto } from './dto/signal-plan.dto';
  * Internally delegates to ProtocolGatingService for base scoring,
  * then wraps results with confidence/conflict metadata.
  *
- * @see docs/handoff/2026-07-29-scoring-paths-audit-497.md
+ * @see #497 — handoff 2026-07-29-scoring-paths-audit-497.md (central docs store)
  */
 
 @Controller('signals')

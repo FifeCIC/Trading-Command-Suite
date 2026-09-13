@@ -7,7 +7,7 @@ applyTo: "**"
 
 **⚠️ This rule has been superseded by `agent-handoff.instructions.md`.**
 
-Do NOT directly edit `qa-checklist.js`, `CapabilityMapPage.jsx`, or `architecture-framework.data.js`. Instead, write a handoff file to `.github/handoffs/` as described in `agent-handoff.instructions.md`. The Librarian agent will batch-process all handoffs and update these pages.
+Do NOT directly edit `qa-checklist.js`, `CapabilityMapPage.jsx`, or `architecture-framework.data.js`. Instead, write a handoff file to the central docs store (`…\Trading-Command-Suite-Documentation\handoff\`) as described in `agent-handoff.instructions.md`. The Librarian agent will batch-process all handoffs and update these pages.
 
 ## Legacy reference (for handoff format)
 

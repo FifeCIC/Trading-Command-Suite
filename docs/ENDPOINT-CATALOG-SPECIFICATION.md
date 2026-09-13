@@ -220,39 +220,17 @@ The catalog's `freshnessSLA.staleThresholdMinutes` field is designed to feed dir
 
 ## 6. Known Uncertainties & Open Questions
 
-### 6.1 Trading 212
+> ⚠️ **All open questions were closed or deferred on 2026-09-13.** They lived here as 15 `- [ ]`
+> checkboxes; a document is not a tracker, so they now resolve to issues:
 
-- [ ] **Q1**: Does Trading 212 have a REST endpoint for single-symbol quotes (`GET /equity/quote/{ticker}`)? The official docs only document portfolio, orders, instruments, and history. Flagged `confidence: uncertain`.
-- [ ] **Q2**: Is there a public WebSocket API? The seed data says "No" but references to `wss://live.trading212.com/streaming/events` exist in community code. Needs verification with a funded account.
-- [ ] **Q3**: Exact rate limit numbers are unpublished. Community estimates of 60 RPM and 20 RPM for order writes need live testing.
-- [ ] **Q4**: Are trailing stops available via API? Seed data says "No". Confirm against latest API docs.
+| Was | Disposition |
+|---|---|
+| **Q1-Q4 — Trading212** (single-symbol REST quote, public WebSocket, rate limits, trailing stops via API) | **Closed - moot.** Trading212 development is discontinued and it is a **view-only portfolio source** (#696, decision 2026-08-27). None affect a read-only import. |
+| **Q5-Q7 — Interactive Brokers** (API surface, `conid` indirection, fundamentals path) | **Deferred.** No IB work in scope; the active broker tracks are Alpaca (#697) and multi-broker MT5 (#592). |
+| **Q8-Q12 — catalog design** (normalizationMap, codegen, dataElementId cross-ref, WS subscription params, RFC 6570 path templates) | **Deferred - design questions, not tasks.** Revisit if the catalog grows beyond its current consumers. |
+| **Q13-Q15 — process** (review cadence, `lastVerified`, extract script) | **Deferred.** Add maintenance when the catalog becomes a live surface. |
 
-### 6.2 Interactive Brokers
-
-- [ ] **Q5**: Which API surface should TCS target? Options:
-  - **Client Portal REST** (runs on localhost, requires OAuth browser flow, ~50 RPM)
-  - **TWS API** (socket connection to TWS/IB Gateway, mature, complex)
-  - **IBKR Web API** (newer REST + WebSocket, OAuth, cloud-capable)
-  - **Recommendation**: IBKR Web API is the future, but TWS API is the most reliable for now.
-- [ ] **Q6**: `conid` indirection is a significant architectural concern. The `IProviderAdapter.getQuote(string symbol)` takes a ticker, but IB requires a conid. The adapter must internally resolve ticker→conid, which adds latency and a cache requirement.
-- [ ] **Q7**: Path for fundamentals endpoint is approximate. IB's Client Portal API has `/fundamentals` but exact path structure varies by data type.
-
-### 6.3 All Providers
-
-- [ ] **Q8**: Should we add a `normalizationMap` field to the catalog that maps raw provider field names to `IProviderAdapter` return types (`MarketBar`, `ProviderQuote`, `ProviderProfile`)? Example: `{ "providerField": "o", "adapterField": "open" }`.
-- [ ] **Q9**: Should the catalog drive adapter code generation? The structured endpoint/parameter/payload definitions are rich enough to generate TypeScript adapter stubs. Feasibility depends on IB `conid` complexity.
-- [ ] **Q10**: Should we add a `dataElementId` cross-reference to `DATA-ELEMENTS-SPECIFICATION.md` in each endpoint entry? This would enable automatic data-element-to-provider-capability mapping.
-- [ ] **Q11**: WebSocket subscription models differ significantly. Alpaca uses `authenticate` + `subscribe`, Polygon uses per-channel auth, Tradier uses session tokens, and IB uses a totally different protocol. The `WS` endpoints need per-provider subscription parameter specs.
-- [ ] **Q12**: The catalog currently uses flat strings for `path`. Should we switch to RFC 6570 URI Templates for more precise parameter binding?
-
-### 6.4 Process
-
-- [ ] **Q13**: What's the update cadence? Provider APIs change. Recommend: review and re-extract quarterly, with automated checks for deprecated endpoints.
-- [ ] **Q14**: Should we add a `lastVerified` timestamp per endpoint to track staleness of our catalog data?
-- [ ] **Q15**: Should the `extract-provider-comparisons.cjs` script be extended to also extract from this catalog JSON and generate adapter stubs?
-
----
-
+The field dictionary in §1-§5 is the part that carries value.
 ## 7. React Table Rendering Compatibility
 
 The catalog is designed for direct consumption by `PlatformComparisonsPage.jsx` or a new `EndpointCatalogPage.jsx`. Key design decisions:
@@ -280,14 +258,13 @@ EndpointCatalogPage
 
 ## 8. Next Steps
 
-1. **Validate** the catalog JSON against the schema (use `ajv` or similar).
-2. **Resolve Q5** (IB API surface selection) — this blocks the IB adapter.
-3. **Implement adapters** for Polygon and Tradier — both are high-confidence, well-documented.
-4. **Convert mock adapters to real** — Alpaca, Alpha Vantage, and Trading 212 adapters need real API calls.
-5. **Build `EndpointCatalogPage.jsx`** — React component rendering this catalog.
-6. **Wire freshness SLA values** into `FreshnessService` — use catalog thresholds instead of hardcoded constants.
-7. **Set up quarterly review** — provider APIs change; catalog needs maintenance.
+> ⚠️ **Replaced 2026-09-13** - this was a 7-item task list inside a specification. Work items belong
+> on issues, not here:
+> - Catalog validation + a future `EndpointCatalogPage.jsx` -> provider/broker surface work (#697)
+> - IB adapter -> deferred (§6)
+> - Freshness-SLA wiring -> provider maintenance
+>
+> §1-§5 and §7 remain the reference.
 
 ---
 
-*End of specification. For questions, refer to the open questions list in Section 6.*

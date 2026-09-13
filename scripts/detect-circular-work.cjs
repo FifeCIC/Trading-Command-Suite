@@ -52,8 +52,8 @@
  *   (c) work on a topic that is CONTRADICTORILY documented → stop and reconcile
  *
  * Sources scanned:
- *   - `docs/handoff/*.md`            (agent handoffs, dated)
- *   - `docs/issues/*.md`             (issue write-ups)
+ *   - `<central docs>/handoff/*.md`     (agent handoffs, dated — outside the app package)
+ *   - `<central docs>/archive/working/*.md` (retired working docs, issue write-ups)
  *   - git log                        (commit subjects mentioning the topic)
  *   - GitHub issues via `gh`         (if available; degrades gracefully)
  *
@@ -71,8 +71,14 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
-const HANDOFF_DIR = path.join(REPO_ROOT, 'docs', 'handoff');
-const ISSUES_DIR = path.join(REPO_ROOT, 'docs', 'issues');
+// Handoffs moved OUT of the app package on 2026-09-13 (the repo becomes public). The canonical
+// store is the central docs store; override with TCS_DOCS_ROOT if it moves. A missing store is not
+// fatal — readDirSafe() degrades to an empty list, so git/gh sources still work.
+const CENTRAL_DOCS_ROOT =
+  process.env.TCS_DOCS_ROOT ||
+  'G:\\My Drive\\Project Management\\Live\\Trading-Command-Suite-Documentation';
+const HANDOFF_DIR = path.join(CENTRAL_DOCS_ROOT, 'handoff');
+const ISSUES_DIR = path.join(CENTRAL_DOCS_ROOT, 'archive', 'working');
 
 const argv = process.argv.slice(2);
 const minTouchesFlag = argv.indexOf('--min-touches');

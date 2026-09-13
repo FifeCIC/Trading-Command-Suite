@@ -23,6 +23,9 @@
  *      entirely — they lived in the directory that was removed. The reasoning had
  *      been written down, and still vanished. That is the mechanism behind
  *      "we keep re-discovering the same thing".
+ *      (2026-09-13: the surviving set moved OUT of the app package to the central
+ *      docs store, because the repo becomes public. Check 8 now asserts the rule still
+ *      names that store.)
  *
  *   3. RULE TEXT DUPLICATED AND MISNUMBERED.
  *      `agent-issue-close-checklist.instructions.md` contained the same
@@ -41,6 +44,19 @@
  *   4. Duplicate blocks — no instruction file may contain the same multi-line block
  *      twice (catches copy-paste corruption in mandatory files).
  *   5. Numbered-list integrity — no two consecutive list steps may share a number.
+ *   6. Retired handoff target — no file under `.github/` may tell an agent to WRITE/READ
+ *      `.github/handoffs/`. Check 2 fails only if the DIRECTORY exists; it does not stop a
+ *      prompt, skill, or instruction from citing the retired path. On 2026-09-13 four such
+ *      citations remained (start.prompt.md, the librarian skill ×2, agent-qa-testing) even
+ *      though the directory itself was already gone — the same defect class as the original
+ *      `applyTo` bug (a rule pointing at the wrong location). Historical mentions are allowed.
+ *   7. Doc headers — every `.md` under `docs/` should carry a date/status header so its age is
+ *      visible (documentation-standards.instructions.md §3). REPORTED, not failed, while the
+ *      legacy backlog is back-filled — a gate that fails on day one gets switched off.
+ *   9. Docs are not task trackers — an open `- [ ]` under `docs/` FAILS. Open work belongs on a
+ *      GitHub issue. A reusable template opts out with `<!-- doc-tasks-allowed -->`.
+ *      (2026-09-13: ~40 open boxes were found across 10+ non-roadmap files in both roots, most
+ *      already done or moot. Same failure mode as the retired `prompts/` queue.)
  *
  * ⚠️ PRECISION — WHY CHECK 1 IS REPORTED, NOT FAILED
  * --------------------------------------------------
@@ -49,7 +65,7 @@
  * which is worse than no guard because it looks like coverage — a lesson learned the
  * hard way on 2026-09-11 when a first-pass rule fired 68 times on healthy data.
  *
- * So: checks 2-5 FAIL (they are objective facts). Check 1 REPORTS.
+ * So: checks 2-6, 8 and 9 FAIL (they are objective facts). Checks 1 and 7 REPORT.
  *
  * Usage (from repo root):  node scripts/validate-agent-docs.cjs
  * Exit code: 1 on failure, 0 otherwise.
@@ -62,7 +78,6 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 const INSTRUCTIONS_DIR = path.join(REPO_ROOT, '.github', 'instructions');
 const ATTENTION_BOARD = path.join(REPO_ROOT, '.github', 'AGENT-ATTENTION.md');
 const LEGACY_HANDOFF_DIR = path.join(REPO_ROOT, '.github', 'handoffs');
-const CANONICAL_HANDOFF_DIR = path.join(REPO_ROOT, 'docs', 'handoff');
 
 const failures = [];
 const warnings = [];
@@ -124,18 +139,15 @@ if (fs.existsSync(LEGACY_HANDOFF_DIR)) {
   const legacy = fs.readdirSync(LEGACY_HANDOFF_DIR).filter((f) => f.endsWith('.md'));
   fail(
     'duplicate-handoff-dir',
-    `.github/handoffs/ exists with ${legacy.length} file(s) — handoffs were split across two directories`,
-    `The canonical location is \`docs/handoff/\`. A split directory is how FOUR handoffs cited in AGENT-ATTENTION.md became unfindable (2026-09-11). Move any content worth keeping into docs/handoff/, then delete .github/handoffs/ — do NOT leave both. Existing here: ${legacy.join(', ')}`,
+    `.github/handoffs/ exists with ${legacy.length} file(s) — the retired in-repo location`,
+    `Handoffs live in the central docs store (\`…\\Trading-Command-Suite-Documentation\\handoff\\\`), NOT in the app package. A split directory is how FOUR handoffs cited in AGENT-ATTENTION.md became unfindable (2026-09-11). Move any content worth keeping to the central store, then delete .github/handoffs/ — do NOT leave both. Existing here: ${legacy.join(', ')}`,
   );
 }
 
-if (!fs.existsSync(CANONICAL_HANDOFF_DIR)) {
-  fail(
-    'handoff-dir-missing',
-    `the canonical handoff directory docs/handoff/ does not exist`,
-    'Create docs/handoff/ — it is the single location agents are told to write to.',
-  );
-}
+// The canonical handoff store is EXTERNAL as of 2026-09-13 — it is outside the repo, so it cannot
+// be checked on disk from CI. Check 8 asserts the RULE still names it instead, which is the thing
+// that actually governs where agents write. (The old `handoff-dir-missing` check was removed:
+// requiring an in-repo directory is what kept handoffs inside the public package.)
 
 // ── 3. dangling path references (lost reasoning) ─────────────────────────────
 
@@ -197,6 +209,11 @@ function checkReferences(label, body) {
     // A guidance path that is created BY following the rule is not a dangling ref
     // (e.g. "write to docs/handoff/YYYY-MM-DD-slug.md"). Detect the placeholder shapes.
     if (/(YYYY|MM|DD|\{|\})$/.test(p) || /YYYY-MM-DD/.test(p) || /\{slug\}/.test(p)) continue;
+
+    // ⚠️ A citation into the CENTRAL DOCS STORE: handoffs, theory, commercial and archived working
+    // docs all live OUTSIDE the repo by rule (2026-09-13), so a citation to one cannot be resolved
+    // here and is NOT a defect. Only repo-local citations are checked for existence.
+    if (/^(handoff|archive|commercial|website)\//.test(p) || /^docs\/(theories|wiki-seed)\//.test(p)) continue;
 
     // ⚠️ Abbreviated citation: the basename exists somewhere, so the file is real and
     // the path is merely shortened. NOT dangling — do not report it.
@@ -285,6 +302,133 @@ function checkNumbering(f) {
 
 for (const f of instructionFiles) checkNumbering(f);
 
+// ── 6. retired handoff directory must not be cited as a TARGET ───────────────
+//
+// WHY: check 2 fails only when `.github/handoffs/` EXISTS as a directory. It does not stop
+// an instruction file, prompt, skill, or agent definition from TELLING an agent to write or
+// read there — which is the same defect class as the original `applyTo` bug: a rule that
+// points at the wrong location never fires, or fires somewhere harmless. On 2026-09-13 four
+// such citations remained (start.prompt.md, update-architecture-framework/SKILL.md ×2,
+// agent-qa-testing.instructions.md) even though the directory itself was long gone.
+//
+// PRECISION: a historical mention — "`.github/handoffs/` was REMOVED", "previously said", a
+// HANDOFF LOST marker — is CORRECT documentation and must NOT fail. So a line is flagged only
+// when it carries a read/write verb AND has no historical marker. (A guard that fires on
+// correct input gets switched off, which is worse than none.)
+
+function collectMarkdown(dir, out, depth = 0) {
+  if (depth > 6) return out;
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const e of entries) {
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) collectMarkdown(full, out, depth + 1);
+    else if (e.name.endsWith('.md')) out.push(full);
+  }
+  return out;
+}
+
+const HISTORICAL_MENTION =
+  /previously|earlier version|REMOVED|historical|no longer|LOST|must not|do not|not be recreated|was |were |retired|corrected|renamed|migrated/i;
+const TARGET_VERB =
+  /\b(write|written|writes|read|reads|reading|record|records|save|saves|create|creates|batch-process)/i;
+
+for (const full of collectMarkdown(path.join(REPO_ROOT, '.github'), [])) {
+  const rel = path.relative(REPO_ROOT, full);
+  const lines = fs.readFileSync(full, 'utf8').split(/\r?\n/);
+  lines.forEach((line, i) => {
+    if (!line.includes('.github/handoffs/')) return;
+    if (HISTORICAL_MENTION.test(line)) return;
+    if (!TARGET_VERB.test(line)) return;
+    fail(
+      'retired-handoff-dir-citation',
+      `${rel}:${i + 1} tells an agent to use the retired \`.github/handoffs/\` directory`,
+      'The canonical handoff store is the central docs store (`…\\Trading-Command-Suite-Documentation\\handoff\\`) — `.github/handoffs/` was REMOVED on 2026-09-11 and the build fails if it reappears. Repoint this citation at the central store. (A historical note that merely MENTIONS the removal is fine and is not flagged.)',
+    );
+  });
+}
+
+// ── 7. doc headers present (report-only while the legacy backlog is back-filled) ─
+//
+// WHY: a scan on 2026-09-13 found 13 of 40 docs under `docs/` carrying no date or status, so
+// their age is invisible and no one can tell what is stale. `.github/instructions/
+// documentation-standards.instructions.md` now requires a header; this surfaces the backlog.
+//
+// ⚠️ REPORT-ONLY on purpose. A new gate that fails on day one (13 pre-existing files) gets
+// switched off, which is worse than no gate because it looks like coverage. Drive this list to
+// zero, then promote it to a failure.
+
+const DOCS_DIR = path.join(REPO_ROOT, 'docs');
+const DOC_DATE_RE = /\b(19|20)\d{2}-\d{2}-\d{2}\b/;
+const DOC_FIELD_RE = /^\s*(\*\*)?(Status|Category|Created|Last updated|Last reviewed|Date|Updated)\b/im;
+const docsMissingHeader = [];
+
+if (fs.existsSync(DOCS_DIR)) {
+  for (const full of collectMarkdown(DOCS_DIR, [])) {
+    const rel = path.relative(REPO_ROOT, full).replace(/\\/g, '/');
+    if (rel.startsWith('docs/handoff/')) continue; // handoffs use their own mandated frontmatter
+    const head = fs.readFileSync(full, 'utf8').split(/\r?\n/).slice(0, 8).join('\n');
+    if (DOC_DATE_RE.test(head) || DOC_FIELD_RE.test(head)) continue;
+    docsMissingHeader.push(rel);
+  }
+}
+
+if (docsMissingHeader.length) {
+  warn(
+    'doc-header-missing',
+    `${docsMissingHeader.length} doc(s) under docs/ carry no date or status header`,
+    `Add the standard header (documentation-standards.instructions.md §3). Files: ${docsMissingHeader.slice(0, 20).join(', ')}${docsMissingHeader.length > 20 ? ` … (+${docsMissingHeader.length - 20} more)` : ''}`,
+  );
+}
+
+// ── 8. the handoff location must still be DECLARED ───────────────────────────
+//
+// Handoffs moved OUT of the app package on 2026-09-13 (the repo becomes public). Because the store
+// is external it cannot be checked on disk from CI — so assert instead that the rule agents follow
+// still NAMES it. An instruction that does not name a location is how handoffs end up back in a
+// retired directory, which is the exact bug this file exists to catch.
+
+const HANDOFF_RULE = path.join(INSTRUCTIONS_DIR, 'agent-handoff.instructions.md');
+if (fs.existsSync(HANDOFF_RULE)) {
+  const ruleBody = fs.readFileSync(HANDOFF_RULE, 'utf8');
+  if (!/Trading-Command-Suite-Documentation[\\/]+handoff/i.test(ruleBody)) {
+    fail(
+      'handoff-location-undeclared',
+      'agent-handoff.instructions.md no longer names the central handoff store',
+      'The canonical handoff store is `…\\Trading-Command-Suite-Documentation\\handoff\\`. If it moved, update this rule AND scripts/validate-agent-docs.cjs together — otherwise agents will write to the retired location again.',
+    );
+  }
+}
+
+// ── 9. docs describe what IS — no task lists in documents ────────────────────
+//
+// Open work belongs on a GitHub issue. Checkboxes buried in documents are invisible from the
+// tracker and go stale silently — measured 2026-09-13: ~40 open boxes across 10+ non-roadmap files
+// in both roots, most already done or moot ("a trailing-stop loop needs to be built" — it existed;
+// four Trading212 API questions — Trading212 was discontinued).
+//
+// A reusable TEMPLATE is the one legitimate exception and must opt in with
+// `<!-- doc-tasks-allowed -->`, so the exemption is a visible choice rather than an accident.
+
+const TASK_MARKER = /<!--\s*doc-tasks-allowed\s*-->/;
+if (fs.existsSync(DOCS_DIR)) {
+  for (const full of collectMarkdown(DOCS_DIR, [])) {
+    const body = fs.readFileSync(full, 'utf8');
+    if (TASK_MARKER.test(body)) continue;
+    if (!/^\s*[-*]\s*\[ \]/m.test(body)) continue;
+    const rel = path.relative(REPO_ROOT, full).replace(/\\/g, '/');
+    fail(
+      'doc-task-list',
+      `${rel} contains an open checkbox — a document is not a task tracker`,
+      'Open work belongs on a GitHub issue — attach it to the relevant epic. Remove the checkbox and file/attach it instead. For a reusable template, add `<!-- doc-tasks-allowed -->`. See documentation-standards.instructions.md §5.',
+    );
+  }
+}
+
 // ── report ───────────────────────────────────────────────────────────────────
 
 for (const n of notes) console.log(`[agent-docs] ${n}`);
@@ -308,5 +452,5 @@ if (failures.length) {
 }
 
 console.log(
-  '\n[agent-docs] ✅ OK — applyTo present, ONE handoff directory, no dangling citations, no duplicated or misnumbered rules\n',
+  '\n[agent-docs] ✅ OK — applyTo present, ONE handoff directory (no retired citations), no dangling citations, no duplicated or misnumbered rules, no doc task lists\n',
 );

@@ -8,7 +8,9 @@
 
 ## The Problem
 
-The Trading Command Suite has 104 registered directives. At time of writing, approximately 25 produce real, data-backed scores. The remaining ~79 fall into two categories:
+> ⚠️ **Counts flagged for re-verification (2026-09-13).** These figures were written 2026-07-29 and are stale: the code registry now declares **155** directive ids (was 104). The readiness *distribution* lives in the DB (`directive.readiness`) — recount via `GET /api/directives` before quoting these numbers. The **policy** below is the part that still stands.
+
+The Trading Command Suite registers a large directive set. Only a minority produce real, data-backed scores. The remainder fall into two categories:
 
 - **Mock-neutral**: Returns score=50 with "no API keys" or "data unavailable" reason. Present in the scoring pipeline, drags composites toward the middle.
 - **Stub**: Returns score=0 or placeholder values. Marked `[STUBBED]` but still registered and counted in directive totals.

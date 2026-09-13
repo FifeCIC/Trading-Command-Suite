@@ -1,5 +1,12 @@
 # Signals Workbench — How It Works
 
+**Status:** active
+**Category:** C — reference / contract
+**Created:** 2026-07-02
+**Last updated:** 2026-09-03
+**Owner:** TCS team
+
+
 ## Overview
 
 The Signals Workbench is the bridge between the scoring pipeline and trade execution. It takes raw directive outputs from the `ProtocolGatingService`, normalizes them into signal envelopes, and presents a live signal ladder with directive drilldown, confidence rails, and conflict resolution.

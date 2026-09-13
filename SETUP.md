@@ -345,9 +345,9 @@ trading-command-suite/
 
 1. Set up Alpaca paper trading credentials in `nest/.env` for real market data
 2. Run `setup-local-infra.ps1` for automated infrastructure checks (Windows)
-3. Follow the sprint board in `.agenticmemory/SPRINT.md` for current tasks
-4. Read `docs/CANONICAL-DIRECTIVE-REFERENCE.md` before touching directive code
+3. Find work in **GitHub Issues** (`gh issue list`) — the old `.agenticmemory/SPRINT.md` board is archived
+4. Read `docs/scoring-architecture.md` and the live registry (`GET /api/directives`) before touching directive code
 
 ---
 
-> **Questions?** Check `.agenticmemory/SPRINT.md` for the current sprint board and agent inbox conventions.
+> **Questions?** Check `.github/AGENT-ATTENTION.md` for blockers and `docs/SETTLED-DECISIONS.md` for settled areas.

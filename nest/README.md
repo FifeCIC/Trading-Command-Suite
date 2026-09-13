@@ -441,7 +441,7 @@ Check frontend API base URL configuration.
 ## Related Documentation
 
 - **Frontend**: `../README.md` (React app)
-- **Architecture**: `../docs/README.md`
+- **Architecture**: `../docs/scoring-architecture.md` + `../src/core/architecture-reference.js`
 - **Execution Rules**: `G:/My Drive/Project Management/Live/Trading-Command-Suite-Documentation/.agent-rules.md`
 - **Exit WordPress**: `G:\My Drive\Project Management\Live\TradePress-Documentation\exit-wordpress\`
 

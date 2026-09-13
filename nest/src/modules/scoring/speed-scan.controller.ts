@@ -22,7 +22,7 @@
  * NOT for: dashboard overviews (use /api/scoring/ranked),
  * strategy evaluation (use /api/scoring/gated/batch).
  *
- * @see docs/handoff/2026-07-29-scoring-paths-audit-497.md
+ * @see #497 — handoff 2026-07-29-scoring-paths-audit-497.md (central docs store)
  *
  * POST /api/speed/scan
  */

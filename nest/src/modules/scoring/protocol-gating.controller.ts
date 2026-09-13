@@ -36,7 +36,7 @@ import { selectBaseTimeframe } from '../../common/utils/timeframe';
  *
  * ~7× cheaper than unfiltered rankAll due to protocol scoping.
  *
- * @see docs/handoff/2026-07-29-scoring-paths-audit-497.md
+ * @see #497 — handoff 2026-07-29-scoring-paths-audit-497.md (central docs store)
  */
 
 @Controller('scoring/gated')

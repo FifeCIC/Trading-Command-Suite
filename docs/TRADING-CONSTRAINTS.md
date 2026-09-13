@@ -1,6 +1,16 @@
 # Trading Constraints — Minimum Trade Sizes & Fee Structures
 
-## Trading212
+**Status:** active
+**Category:** C — reference / contract
+**Created:** 2026-06-14
+**Last updated:** 2026-06-14
+**Owner:** TCS team
+
+
+## Trading212 - ⚠️ development DISCONTINUED 2026-08-27 (#696)
+> Kept as a **view-only portfolio source**: no order placement, no bot access. The minimums and fee
+> notes below still apply to the read-only import path.
+
 - **CFD Minimums**: Vary by instrument. EURUSD: 0.01 lots (~€1,000 notional). Stocks: 1 share minimum.
 - **Fractional Shares**: Not supported. Whole shares only.
 - **Fees**: No commission on CFD trades. Spread built into bid/ask. Overnight swap fees apply.

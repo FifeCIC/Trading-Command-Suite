@@ -20,7 +20,7 @@
  *   /api/speed/scan              ← Micro-trend scalping scanner
  *   /api/backtest/benchmark      ← Buy-and-hold comparison (analytics)
  *
- * @see docs/handoff/2026-07-29-scoring-paths-audit-497.md
+ * @see #497 — handoff 2026-07-29-scoring-paths-audit-497.md (central docs store)
  */
 
 import { Body, Controller, Get, Param, Post, Query, UseInterceptors } from '@nestjs/common';

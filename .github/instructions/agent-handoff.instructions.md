@@ -11,11 +11,12 @@ applyTo: "**"
 >    never fired while an agent was editing documentation, and handoffs were written to the wrong
 >    directory. **An instruction that does not fire is indistinguishable from one that does not
 >    exist.** It is now `"**"` because a handoff is written about work that spans any file type.
-> 2. **The canonical directory is `docs/handoff/`, NOT `.github/handoffs/`.** Handoffs were split
->    across both, and **four cited handoffs became unfindable** (only one recoverable from git).
->    `scripts/validate-agent-docs.cjs` now **fails the build** if `.github/handoffs/` reappears.
+> 2. **Handoffs do NOT live in the repo.** The canonical location is the central docs store,
+>    **`G:\My Drive\Project Management\Live\Trading-Command-Suite-Documentation\handoff\`** —
+>    outside the app package, which becomes public. `.github/handoffs/` was removed 2026-09-11 and
+>    `scripts/validate-agent-docs.cjs` still **fails the build** if it reappears.
 
-Write a handoff file to **`docs/handoff/`** BEFORE calling `task_complete` **only** when the change is one of:
+Write a handoff file to **`G:\My Drive\Project Management\Live\Trading-Command-Suite-Documentation\handoff\`** BEFORE calling `task_complete` **only** when the change is one of:
 
 1. **Closing a GitHub issue** — work that resolves an issue gets a handoff so the Librarian records it in the QA page, Capability Map, and Architecture Framework.
 2. **Pipeline / behaviour / capability change** — a change that alters a pipeline's data flow or behaviour: new or changed API endpoints, Prisma schema changes, scoring/gating/trading/automation logic, provider adapters, or data contracts.
@@ -25,16 +26,22 @@ Write a handoff file to **`docs/handoff/`** BEFORE calling `task_complete` **onl
 
 Rule of thumb: if the change would not belong on the Capability Map or Architecture Framework, it does not need a handoff.
 
-## ⚠️ Handoffs are NEVER deleted
+## ⚠️ Retention — GitHub Issues are the durable record (2026-09-13)
 
-**2026-09-11.** The previous version of this process said the Librarian deletes each handoff after
-processing it. **That is what destroyed the project's memory of *why*.** Four handoffs cited by
-`.github/AGENT-ATTENTION.md` became unfindable, and three were never committed at all.
+A handoff is **working material**, not a permanent local document. It carries reasoning from the
+agent that did the work to the Librarian that records it.
 
-The Librarian **summarises** a handoff into the QA page, Capability Map, and Architecture Framework.
-It **leaves the handoff in place.** The handoff is the durable record of the reasoning; the docs are
-the summary. Deleting the source because you wrote the summary is how the same area gets re-opened
-for weeks.
+- The **durable, searchable** record of *why* is the **closed GitHub issue** plus the docs the
+  Librarian writes (QA page, Capability Map, Architecture Framework). Local files are **not**
+  required long-term.
+- Handoffs therefore live in the **central docs store**, never in the app package — they are **not**
+  retained in the repo.
+- **Never delete a handoff before it has been summarised.** That is the one rule that still matters;
+  once recorded, the source may be archived in the central store.
+
+⚠️ The 2026-09-11 loss was not "handoffs were deleted". It was that they were **written to a
+directory nobody could find**. One canonical, discoverable location is the fix; permanence in the
+repo is not required.
 
 ## ⚠️ A handoff must state what it did NOT do
 
@@ -156,10 +163,11 @@ When you close the issue, the closing comment replaces the claim. No cleanup nee
 ## File Location
 
 ```
-.github/handoffs/YYYY-MM-DD-{slug}.md
+G:\My Drive\Project Management\Live\Trading-Command-Suite-Documentation\handoff\YYYY-MM-DD-{slug}.md
 ```
 
-Example of the NAME SHAPE (not a real file): `docs/handoff/YYYY-MM-DD-{slug}.md`
+Include the issue number in the slug where one exists so the handoff is greppable from the issue —
+`2026-09-11-789-session-open-effect-placement.md`.
 
 ## Required Format
 
@@ -277,12 +285,17 @@ This file costs ~200-400 tokens to write. If the agent self-updated the QA page,
 
 ## What the Librarian Does
 
-> ⚠️ **DELETE, don't archive.** After a handoff is processed it is **deleted** — do NOT move it into a `processed/` folder. Git history is the permanent record.
+> ⚠️ **Handoffs are read from the central store, summarised into the docs, and then archived there —
+> never in the app package.** The Librarian reads
+> `…\Trading-Command-Suite-Documentation\handoff\*.md`, writes the summary into the QA page /
+> Capability Map / Architecture Framework, and leaves the source in the central store.
+> `.github/handoffs/` must **not** be recreated (`validate-agent-docs.cjs` fails the build if it
+> reappears).
 
 When processing handoffs, the Librarian invokes the `update-architecture-framework` skill (`.github/skills/update-architecture-framework/SKILL.md`) which handles:
 - Updating `src/core/architecture-reference.js` (AI-readable system map)
 - Updating `src/pages/architecture-framework.data.js` (human-facing UI page)
 - Adding route contracts, SLICE entries, and database schema changes
-- Deleting processed handoff files (git history preserves them if ever needed)
+- **Skipping** handoffs whose entries are already recorded — re-running the batch must be idempotent, so detect-and-skip rather than adding duplicates
 
-The `processed/` subdirectory is **not used** — the Librarian deletes handoffs after processing. Git history is the permanent record.
+**The handoff files STAY.** Git history is not a substitute for a file that is still there.

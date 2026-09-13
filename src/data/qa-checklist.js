@@ -3223,7 +3223,7 @@ const QA_CHECKLIST = [
 
   /* ── Batch #16 — 2026-09-10 / 2026-09-11 / 2026-09-12 handoffs ──
    * Keep these grouped and dated. `versionNote` names the handoff so the reasoning
-   * behind a test is findable at docs/handoff/<date>-<slug>.md. */
+   * behind a test is findable in the central docs store at handoff/<date>-<slug>.md. */
 
   // ── Scoring population & measurement (2026-09-12) ──
   {
@@ -3514,6 +3514,30 @@ const QA_CHECKLIST = [
     category: 'Contract',
     priority: 'high',
     versionNote: '2026-09-11 — withdrawn #795 + INV-BAR-ORDER near-miss',
+  },
+
+  /* ── Batch #17 — 2026-09-13 (documentation triage) ── */
+  {
+    id: 'qa-docs-001',
+    area: 'Infra / Docs',
+    system: 'Doc-integrity gate',
+    name: 'A doc under docs/ with no date/status header is reported',
+    procedure: 'Create a `.md` under `docs/` with no header, run `node scripts/validate-agent-docs.cjs`, then add a `**Status:**` + date header and re-run.',
+    expected: 'First run lists it under `[doc-header-missing]` (⚠ warning, exit 0). Second run does not. The check is **report-only** until the legacy backlog hits zero — a gate that fails on day one gets switched off.',
+    category: 'Contract',
+    priority: 'medium',
+    versionNote: '2026-09-13 — documentation triage',
+  },
+  {
+    id: 'qa-docs-002',
+    area: 'Infra / Docs',
+    system: 'Handoff location guard',
+    name: 'The handoff rule must still name the central store',
+    procedure: 'Remove the `Trading-Command-Suite-Documentation\\handoff` reference from `.github/instructions/agent-handoff.instructions.md`, run `node scripts/validate-agent-docs.cjs`; then restore it.',
+    expected: 'Fails with `[handoff-location-undeclared]` and exit 1. Restoring it returns `✅ OK` / exit 0. Handoffs are **external** to the repo as of 2026-09-13, so the store cannot be checked on disk — the rule that names it is the checkable contract. `.github/handoffs/` existing still fails the build independently.',
+    category: 'Contract',
+    priority: 'high',
+    versionNote: '2026-09-13 — documentation triage',
   },
 ];
 

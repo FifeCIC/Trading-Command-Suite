@@ -4,6 +4,24 @@ Items needing human attention. Agents: read this at session start. Append confir
 
 ---
 
+## 2026-09-13
+
+### 📌 Handoffs are now OUTSIDE the app package — documentation triage
+
+- **Canonical handoff store:** `G:\My Drive\Project Management\Live\Trading-Command-Suite-Documentation\handoff\`.
+  `docs/handoff/` no longer exists in the repo. `.github/handoffs/` must still never be recreated —
+  `scripts/validate-agent-docs.cjs` fails the build if it is.
+- **Why:** the repo becomes public, and **136 `.md` files (~70% of all project docs) sat inside it.**
+  Documentation was triaged into categories — see
+  `.github/instructions/documentation-standards.instructions.md`. Working / theory / commercial docs
+  moved to the central store; artefacts were deleted.
+- ⚠️ **Retention changed.** A handoff is working material. The **durable, searchable** record of *why*
+  is the **closed GitHub issue** plus the docs the Librarian writes, so local long-term handoff files
+  are **not** required. Never delete a handoff *before* it has been summarised.
+- **Agent:** Copilot (2026-09-13)
+
+---
+
 ## 2026-09-11
 
 ### ✅ NOT A BUG — bar gaps after a bridge restart are EXPECTED (do not re-investigate)
@@ -54,7 +72,7 @@ Items needing human attention. Agents: read this at session start. Append confir
   execution queue (#769).
 - **Agent:** Copilot (2026-09-11)
 
-### 📌 Handoff location changed — `docs/handoff/` ONLY
+### 📌 ~~Handoff location changed — `docs/handoff/` ONLY~~ (SUPERSEDED 2026-09-13 — see the 2026-09-13 entry)
 
 - The canonical handoff directory is **`docs/handoff/`**. `.github/handoffs/` was **REMOVED** — handoffs
   had been split across both, and **four cited here became unfindable** (only one recoverable from git;
@@ -166,7 +184,7 @@ untouched deliberately; flagging so it is not lost.
   and `INV-BAR-WINDOW` in `.github/instructions/meta-stack-contracts.instructions.md`.
 - **MT5 server clock (#750):** bridge timestamps are broker SERVER time; `utc_iso()`
   subtracts a measured offset. Do not re-add `Z` to a raw epoch. Handoff:
-  `docs/handoff/2026-09-10-mt5-server-clock-skew.md` (recovered from git 2026-09-11)
+  `handoff/2026-09-10-mt5-server-clock-skew.md` (central docs store; recovered from git 2026-09-11)
 
 ### ✅ RESOLVED — arena cadence (#751, 2026-09-10)
 - **Decision taken:** cadence resolves **per protocol** from `recommendedTimeframe`, via a

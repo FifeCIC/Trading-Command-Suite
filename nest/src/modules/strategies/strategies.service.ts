@@ -2,7 +2,9 @@
  * Strategies Service
  * ==================
  * Combines directive scores into weighted strategy aggregate scores.
- * - Canonical weights from docs/CANONICAL-DIRECTIVE-REFERENCE.md
+ * - Canonical weights come from the LIVE directive registry (`GET /api/directives`).
+ *   The old docs/CANONICAL-DIRECTIVE-REFERENCE.md (5 MVP directives) was RETIRED
+ *   2026-09-13 - it described an MVP the app outgrew (155 directive ids in code).
  * - totalScore = Σ(directive.score × weight / 100), capped 0-100
  * - confidence = weighted average of directive confidences
  */

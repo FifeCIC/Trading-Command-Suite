@@ -9,7 +9,7 @@
  * CURL bonus:    +10 if RSI is falling (overbought reversal).
  * MAX:           130.
  *
- * See docs/sees-hybrid-scoring.md.
+ * See docs/theories/sees-hybrid-scoring.md in the central docs store (moved out of the repo 2026-09-13).
  */
 
 import { Injectable } from '@nestjs/common';

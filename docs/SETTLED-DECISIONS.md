@@ -162,4 +162,4 @@ If `detect-circular-work` shows an area with both CLOSED and OPEN issues, you ar
 - `scripts/validate-directive-group-kind.cjs` — INV-GATE-MEMBERSHIP guard
 - `.github/instructions/meta-stack-contracts.instructions.md` — invariants that ARE enforced
 - `.github/instructions/development-status.instructions.md` — pre-release policy
-- `docs/handoff/` — per-change handoffs, dated
+- `…\Trading-Command-Suite-Documentation\handoff\` — per-change handoffs, dated (central store, not the repo)

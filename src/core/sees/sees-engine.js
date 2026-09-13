@@ -4,9 +4,9 @@
  * This is a visual prototype that simulates scoring with synthetic math.
  * It does NOT use real market indicators (RSI, MACD, EMA, ATR, Volume).
  *
- * 🔴 CANONICAL DIRECTIVE REFERENCE: docs/CANONICAL-DIRECTIVE-REFERENCE.md
- *    The production directives are:
- *    rsi-oversold, macd-crossover, ema-structure, atr-dip, volume-confirmation
+ * 🔴 DIRECTIVE REGISTRY: the live source is `GET /api/directives` (registry + readiness).
+ *    The old docs/CANONICAL-DIRECTIVE-REFERENCE.md (5 MVP directives) was RETIRED 2026-09-13.
+ *    The ids below are a legacy subset kept for the simulation demo only.
  *
  * 🔴 DIRECTIVE NAMES now match canonical production IDs (rsi-oversold, macd-crossover,
  *    ema-structure, atr-dip, volume-confirmation) but the math is still SIMULATION ONLY.

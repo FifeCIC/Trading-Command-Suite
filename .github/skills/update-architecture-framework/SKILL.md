@@ -4,7 +4,7 @@ description: "Update the Architecture Framework page (/builder/architecture-fram
 ---
 # Update Architecture Framework
 
-> ⚠️ **This skill is for the LIBRARIAN agent only.** Feature-development agents should NOT use this skill. Instead, write a handoff file to `.github/handoffs/` (see `agent-handoff.instructions.md`). The Librarian batch-processes handoffs and updates `architecture-framework.data.js` in one pass.
+> ⚠️ **This skill is for the LIBRARIAN agent only.** Feature-development agents should NOT use this skill. Instead, write a handoff file to the central docs store (`…\Trading-Command-Suite-Documentation\handoff\`) — see `agent-handoff.instructions.md`. The Librarian batch-processes handoffs and updates `architecture-framework.data.js` in one pass.
 
 ## When to Use (Librarian only)
 
@@ -19,7 +19,7 @@ Trigger this skill after:
 
 ## Files to Update
 
-Start by reading all unprocessed handoff files from `.github/handoffs/` (excluding `README.md`). Extract the Architecture Framework entries from each.
+Start by reading all unprocessed handoff files from the central docs store, `…\Trading-Command-Suite-Documentation\handoff\`. Extract the Architecture Framework entries from each.
 
 Then update:
 

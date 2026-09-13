@@ -1,6 +1,6 @@
 # Next Agent — start here
 
-**Last session:** 2026-09-10 · **Version:** 0.6.7 · **Stack:** Vite 5173 · NestJS 3201 · MT5 5000/5001
+**Last session:** 2026-09-13 · **Version:** 0.6.11 · **Stack:** Vite 5173 · NestJS 3201 · MT5 5000/5001
 
 A long session on the scoring layer just finished. This file tells you **what to work on,
 in what order, and why** — so you do not re-derive it or re-break it.
@@ -32,7 +32,7 @@ the acceptance criteria. The table below is the short form:
 | 7 | **#774** / **#775** | Two smaller classification/label defects found last session |
 | 8 | **#782** — Ladder "No active protocols" + selection loss | ⚠️ **UI-layer instance of the same failure class as the `INV-*` list**: a failed fetch is swallowed into a plausible empty state, and then the saved selection is *destroyed* by a prune effect with no loaded-guard. 18 swallowed `catch()` sites. Read before touching any `queryFn` |
 
-Fuller context: **`docs/handoff/2026-09-10-orientation.md`** — includes the one-paragraph
+Fuller context: **`…\Trading-Command-Suite-Documentation\handoff\2026-09-10-orientation.md`** — includes the one-paragraph
 explanation of what was wrong, what is fixed, and the traps.
 
 ---
@@ -104,8 +104,8 @@ the stderr warning swallows output.
 | Source | Contains |
 |---|---|
 | `docs/scoring-architecture.md` | **Canonical** dual-score model + the denominator rule |
-| `docs/handoff/2026-09-10-unified-denominator.md` | The two-denominator investigation |
-| `docs/handoff/2026-09-10-ladder-card-uniformity.md` | The duplicate-write bug + ranking inversion |
-| `docs/handoff/2026-09-10-adaptive-target.md` | The ceiling mechanism, and why it is monotonic |
+| `…\Trading-Command-Suite-Documentation\handoff\2026-09-10-unified-denominator.md` | The two-denominator investigation |
+| `…\Trading-Command-Suite-Documentation\handoff\2026-09-10-ladder-card-uniformity.md` | The duplicate-write bug + ranking inversion |
+| `…\Trading-Command-Suite-Documentation\handoff\2026-09-10-adaptive-target.md` | The ceiling mechanism, and why it is monotonic |
 | `docs/schema-drift-control.md` | The 10 unmodelled tables and the controls |
-| `PROTOCOL-THEORY.md` (GDrive) | Per-protocol **intended** ceilings — read before judging a low score |
+| `docs/theories/PROTOCOL-THEORY.md` (central store) | Per-protocol **intended** ceilings — read before judging a low score |

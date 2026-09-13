@@ -1964,7 +1964,7 @@ model Protocol {
   seasonalAffinity     Json?                                      // monthly weights + date ranges
   highestScore         Float?                                     // #600 — peak composite ever recorded (survives Score pruning)
   // ── Adaptive Target (2026-09-10) — "realistic ceiling" ──
-  // OFF by default. See docs/scoring-architecture.md and docs/handoff/2026-09-10-adaptive-target.md.
+  // OFF by default. See docs/scoring-architecture.md and the central docs store's handoff/2026-09-10-adaptive-target.md.
   //
   // WHY: a protocol's structural ceiling is usually far below its configured capacity,
   // because directives are mutually exclusive — they cannot all fire on one bar

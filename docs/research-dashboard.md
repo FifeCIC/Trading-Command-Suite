@@ -1,5 +1,12 @@
 # Research Dashboard — How It Works
 
+**Status:** active
+**Category:** C — reference / contract
+**Created:** 2026-07-02
+**Last updated:** 2026-07-02
+**Owner:** TCS team
+
+
 ## Overview
 
 The Research Dashboard aggregates data from 7+ subsystems into a single overview page. It provides a bird's-eye view of your trading environment: portfolio health, market context, top signals, sector performance, recent decisions, upcoming events, and position news.

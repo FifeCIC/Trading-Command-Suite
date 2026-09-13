@@ -31,10 +31,14 @@ Maintain `src/core/page-data-status.js` and the Capability Map page (Q295):
 - Update directive coverage counts when new directives ship
 - Update provider status when adapters change
 - Sync discussion status from `.agenticmemory/discussions/`
-- **Capability metadata lives in the DB `capability` table (single source of
-  truth). For new/updated capabilities, POST to `/api/capabilities` (upsert by
-  name) — do NOT edit `src/data/known-features.js`. That file only seeds the
-  table via `nest/scripts/seed-capabilities.cjs` for fresh environments.**
+- **Capability metadata: the DB `capability` table is read FIRST, with
+  `src/data/known-features.js` as the fallback AND the seed source.** The page is
+  `src/pages/CapabilityMapPage.jsx` — its `lookupKnown()` checks the DB map first,
+  then falls back to `KNOWN_FEATURES`. So a new/updated capability needs **BOTH**:
+  add it to `known-features.js` (durable — survives a reinstall) **and** push it to
+  the DB via `POST /api/capabilities` (upsert by name) or
+  `node nest/scripts/seed-capabilities.cjs`. Editing only the JS file leaves the DB
+  row absent; editing only the DB is lost on reinstall. This is the seed-first rule.
 
 ### 4. Prompt Lifecycle Management
 Prompts live in `G:\...\Trading-Command-Suite-Documentation\.agenticmemory\prompts\`:
@@ -65,28 +69,27 @@ Maintain `docs/theories/`:
 ### 7. Handoff Processing (batch documentation updates)
 When invoked with `/update-documentation` or when you detect multiple unprocessed handoff files, process them in batch:
 
-1. **Read `docs/handoff/`** — list all `.md` files except `README.md`
-   > ⚠️ **Corrected 2026-09-11.** This step previously said `.github/handoffs/`. That directory is
-   > **retired** — `scripts/validate-agent-docs.cjs` **fails the build** if it reappears, and four
-   > handoffs cited by `AGENT-ATTENTION.md` became unfindable entirely because they lived there.
-   > `docs/handoff/` is the ONE canonical location.
+1. **Read the central handoff store** — `…\Trading-Command-Suite-Documentation\handoff\` — list all
+   `.md` files
+   > ⚠️ **Changed 2026-09-13.** Handoffs moved OUT of the app package (it becomes public). The
+   > canonical location is the central docs store — not `docs/handoff/`, and never `.github/handoffs/`
+   > (`scripts/validate-agent-docs.cjs` fails the build if the latter reappears).
 2. **For each handoff file**, extract the Capability Map, QA, and Architecture Framework entries
 3. **Update the pages** in one pass:
-   - `src/data/known-features.js` — add capability entries (**this is the source of truth**; then run
-     `node nest/scripts/seed-capabilities.cjs` to push them to the `capability` table the page reads)
+   - `src/data/known-features.js` — add capability entries (the fallback + seed source), **then**
+     push them to the `capability` table the page reads DB-first — `POST /api/capabilities` or
+     `node nest/scripts/seed-capabilities.cjs`. Do both, or the DB and the seed drift.
    - `src/data/qa-checklist.js` — add QA test entries
    - `src/core/architecture-reference.js` — add `CURRENT_SLICE` + route contract entries, and bump
      `CONTRACT_REGISTER_LAST_UPDATED`
    - `src/pages/architecture-framework.data.js` — mirror the slice + route contracts for the UI page
-4. **⚠️ The handoffs STAY. Never delete and never move them.**
-   > **Corrected 2026-09-11.** This step previously said *"Move processed files to
-   > `.github/handoffs/processed/`"*, and an even earlier version said *"DELETE, don't archive"*.
-   > Both were wrong and both destroyed the record of *why*. **Processing means summarising INTO the
-   > docs; the handoff is the durable source and the docs are the summary.** A handoff with no
-   > `processed/` marker is not "unprocessed" — re-running the batch must be idempotent, so
-   > **detect already-recorded entries and skip them** rather than re-adding duplicates.
+4. **Summarise, then leave the source in the central store.**
+   > Re-running the batch must be **idempotent** — detect entries already recorded and skip them, do
+   > not re-add duplicates. The **durable, searchable** record of *why* is the **closed GitHub issue**
+   > plus the docs you write; local handoff files are working material and are not retained long-term
+   > (2026-09-13).
 5. **Notify Discord** (phase 1, #652) — for each processed file:
-   `node scripts/handoff-to-discord.cjs docs/handoff/<file>`
+   `node scripts/handoff-to-discord.cjs "<path to the handoff file>"`
    No-op with a clear skip message when no webhook is configured.
 6. **Report**: "Processed 5 handoffs → +3 capabilities, +4 QA entries, +2 AF slices"
 
@@ -102,7 +105,7 @@ Token savings: processing 5 handoffs costs ~70K tokens vs ~325K if each agent se
 | `.agenticmemory/prompts/` | Prompt queue — manage lifecycle |
 | `docs/theories/README.md` | Theory Laboratory guide |
 | `docs/theories/` | Individual theory files |
-| `.github/handoffs/` | Agent handoff files — process in batch |
+| `…\Trading-Command-Suite-Documentation\handoff\` | Agent handoff files — process in batch, summarise into the docs (NOT in the app package) |
 | `src/pages/architecture-framework.data.js` | Architecture data to update |
 | `src/core/page-data-status.js` | Page data status metadata |
 | `.github/skills/update-architecture-framework/SKILL.md` | How to update architecture |
@@ -115,7 +118,7 @@ Token savings: processing 5 handoffs costs ~70K tokens vs ~325K if each agent se
 - Report: "14 prompts queued, 2 claimed, 1 DONE today"
 
 ### After Any Agent Completes Work
-- Agent writes `.github/handoffs/{date}-{slug}.md` (mandatory via agent-handoff.instructions.md)
+- Agent writes a handoff to the central docs store (`…\Trading-Command-Suite-Documentation\handoff\{date}-{slug}.md`) (mandatory via agent-handoff.instructions.md)
 - When invoked with `/update-documentation`, batch-process all unprocessed handoffs
 - Rename prompt from CLAIM__ to DONE__
 - Add changelog entry

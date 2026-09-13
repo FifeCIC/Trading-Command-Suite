@@ -19,7 +19,7 @@ import type { BacktestRunRequest } from './backtest.service';
  *   GET  /api/backtest/runs        — list past runs
  *   GET  /api/backtest/benchmark   — compare strategy vs buy-and-hold
  *
- * @see docs/handoff/2026-07-29-scoring-paths-audit-497.md
+ * @see #497 — handoff 2026-07-29-scoring-paths-audit-497.md (central docs store)
  */
 
 @ApiTags('backtest')

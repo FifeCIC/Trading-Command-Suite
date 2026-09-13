@@ -1,5 +1,12 @@
 # Protocol Consensus Engine
 
+**Status:** active
+**Category:** C — reference / contract
+**Created:** 2026-07-06
+**Last updated:** 2026-07-06
+**Owner:** TCS team
+
+
 Runs **all 32 protocols** against a single symbol and produces an ensemble vote. Instead of picking one protocol, this is "wisdom of the crowd" — 25 of 32 protocols agreeing on BUY is far stronger than any single protocol's output.
 
 ---
