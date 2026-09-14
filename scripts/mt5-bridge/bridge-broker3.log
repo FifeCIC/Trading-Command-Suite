@@ -200,3 +200,19 @@
 2026-09-12 20:10:24,801 [INFO] [broker3] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
 2026-09-12 20:10:24,801 [INFO] [broker3] Broker server clock offset: -69300s (-19.25h) vs true UTC — applied to all MT5-sourced timestamps
 2026-09-12 20:10:24,843 [INFO] [broker3] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-09-14 09:51:26,635 [INFO] [broker3] MetaTrader5 package loaded
+2026-09-14 09:51:26,636 [INFO] [broker3] Bridge instance [broker3] slot #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-09-14 09:51:26,637 [INFO] [broker3] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-09-14 09:51:26,637 [INFO] [broker3] Connecting to MT5 at startup...
+2026-09-14 09:51:26,637 [INFO] [broker3] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-09-14 09:51:26,639 [INFO] [broker3] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-09-14 09:51:26,639 [INFO] [broker3] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-14 09:51:26,687 [INFO] [broker3] MT5 Bridge v2 listening on http://127.0.0.1:5001
+2026-09-14 16:02:06,285 [INFO] [broker3] MetaTrader5 package loaded
+2026-09-14 16:02:06,285 [INFO] [broker3] Bridge instance [broker3] slot #3: 62135531 @ PepperstoneUK-Demo on port 5001
+2026-09-14 16:02:06,286 [INFO] [broker3] Starting MT5 Bridge v2 on port 5001 (http.server, no Flask)...
+2026-09-14 16:02:06,286 [INFO] [broker3] Connecting to MT5 at startup...
+2026-09-14 16:02:06,286 [INFO] [broker3] Initializing MT5: server=PepperstoneUK-Demo, account=62135531 (account #3), path=C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe
+2026-09-14 16:02:06,289 [INFO] [broker3] MT5 connected: 62135531 @ PepperstoneUK-Demo, balance=1000.0
+2026-09-14 16:02:06,290 [INFO] [broker3] Broker server clock offset: 10800s (+3.00h) vs true UTC — applied to all MT5-sourced timestamps
+2026-09-14 16:02:06,300 [INFO] [broker3] MT5 Bridge v2 listening on http://127.0.0.1:5001

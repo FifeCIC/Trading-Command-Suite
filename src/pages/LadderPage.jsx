@@ -120,6 +120,62 @@ function readLegacySelectedIds() {
 }
 
 /**
+ * readInitialSelection() — starting state for the per-direction protocol buckets.
+ *
+ * Shape: { all: string[], long: string[], short: string[], seeded: { [dir]: boolean } }
+ *
+ * ⚠️ WHY `seeded` EXISTS — read before simplifying this away.
+ *
+ * Two defects met here and produced ONE symptom: "my selections are gone after refresh".
+ *
+ *   1. The seed/prune effect ran BEFORE the protocol list had loaded. With no protocols,
+ *      the set of applicable ids was empty, so every stored id failed the membership
+ *      test and the effect **persisted the emptied array**. The next render then
+ *      auto-selected a single protocol — so a 4-protocol selection became 1 on *every*
+ *      refresh, which is exactly the reported bug.
+ *   2. Seeding only ever chose ONE protocol (`applicableProtocols[0]`), so a first-time
+ *      visitor got a one-card ladder and had to tick the rest by hand.
+ *
+ * `seeded` is what separates "this bucket has never been given its default" — seed it, with
+ * everything — from "the user deliberately emptied this bucket", which must be left alone.
+ * Without that distinction, deselecting every protocol would immediately re-select all of
+ * them on the next render, which is worse than the bug being fixed.
+ *
+ * ⚠️ MIGRATION CHOICE — why an unmarked store is treated as UNSEEDED, not as a
+ * deliberate selection worth preserving.
+ *
+ * When `seeded` is absent the stored buckets came from the code that HAD the defect, so
+ * their contents are the corrupted output of it — typically whatever single protocol the
+ * bad auto-select left behind. Preserving that would strand the user on a one-card ladder
+ * and force them to re-tick every protocol by hand, which is the opposite of the intent.
+ * Treating it as unseeded re-seeds each direction to ALL applicable protocols once, and the
+ * `seeded` marker stops it happening again. Erring toward the inclusive default is the safe
+ * direction here: an extra tick is recoverable, a silently vanished selection is not.
+ */
+function readInitialSelection() {
+  try {
+    const raw = localStorage.getItem('tcs:view-state:ladder:selectedByDir');
+    if (raw) {
+      const stored = JSON.parse(raw);
+      if (stored && typeof stored === 'object' && !Array.isArray(stored)) {
+        const isMigrated = !stored.seeded || typeof stored.seeded !== 'object';
+        return {
+          all: [], long: [], short: [],
+          ...stored,
+          // Pre-`seeded` store → deliberately empty so each direction seeds to all.
+          seeded: isMigrated ? {} : { ...stored.seeded },
+        };
+      }
+    }
+  } catch { /* fall through to the legacy shape */ }
+
+  // Pre-direction build: one flat array, which was the BOTH view. Its contents carry
+  // forward as the BOTH selection, and BOTH is marked seeded so those ids are honoured.
+  const legacy = readLegacySelectedIds();
+  return { all: legacy, long: [], short: [], seeded: { all: legacy.length > 0 } };
+}
+
+/**
  * familyOf(protocolId) — the protocol FAMILY a run belongs to.
  *
  * The gated-protocol registry and the run store name the same strategy slightly
@@ -264,12 +320,12 @@ export default function LadderPage() {
   const { statusMap } = useProtocolStatuses();
   // Filter / sort selections persist across navigation. Protocol selections are
   // stored PER direction, so toggling BOTH/LONG/SHORT restores each view's own
-  // chosen protocols instead of wiping them.
-  const [selectedByDir, setSelectedByDir] = usePersistentState('ladder:selectedByDir', {
-    all: readLegacySelectedIds(),
-    long: [],
-    short: [],
-  });
+  // chosen protocols instead of wiping them. See `readInitialSelection` for why the
+  // `seeded` marker is part of this shape.
+  const [selectedByDir, setSelectedByDir] = usePersistentState(
+    'ladder:selectedByDir',
+    readInitialSelection(),
+  );
   const [ageFilter, setAgeFilter] = usePersistentChoice('ladder:ageFilter', 'all', ['all', ...AGE_OPTIONS]);
   const [rankBy, setRankBy] = usePersistentChoice('ladder:rankBy', 'signal', ['signal', 'opp']);
 
@@ -378,19 +434,47 @@ export default function LadderPage() {
   // The active selection set is the current direction's own bucket.
   const selectedIds = selectedByDir[direction] || [];
 
-  // Prune ONLY the current direction's selections to applicable protocols and
-  // auto-select the first one when nothing applicable is selected. Other
-  // directions' selections are left untouched so they're restored on toggle-back.
+  // ── Seed (once) or prune the CURRENT direction's selection. ──
+  //
+  // ⚠️ THE ORDER OF THESE GUARDS *IS* THE FIX — do not reorder or "simplify" them.
+  //
+  //   1. `isLoading` — the protocol list has not arrived, so EVERY stored id looks
+  //      inapplicable. Pruning here persists an empty selection: this guard was missing
+  //      and it is why a 4-protocol selection collapsed to 1 on every refresh.
+  //   2. `applicableProtocols.length === 0` — after loading this can still be legitimately
+  //      empty (e.g. no protocol applies to SHORT). There is then nothing to prune AGAINST
+  //      and nothing to seed FROM, so return rather than writing `[]`.
+  //   3. Only past both guards: seed on first sight, otherwise prune.
+  //
+  // Seeding selects ALL applicable protocols — the reported expectation. It happens once
+  // per direction (tracked by `seeded`), so a user who deliberately clears the list keeps
+  // it cleared.
+  //
+  // Other directions' buckets are never touched, so BOTH → LONG → BOTH restores each
+  // view's own selection.
   useEffect(() => {
-    const applicableIds = new Set(applicableProtocols.map((p) => p.id));
+    if (isLoading) return;
+    if (applicableProtocols.length === 0) return;
+
+    const applicableIds = applicableProtocols.map((p) => p.id);
+    const applicableIdSet = new Set(applicableIds);
+    const alreadySeeded = selectedByDir.seeded?.[direction] === true;
+
+    if (!alreadySeeded) {
+      setSelectedByDir((prev) => ({
+        ...prev,
+        [direction]: applicableIds,
+        seeded: { ...(prev.seeded || {}), [direction]: true },
+      }));
+      return;
+    }
+
     const cur = selectedByDir[direction] || [];
-    const kept = cur.filter((id) => applicableIds.has(id));
+    const kept = cur.filter((id) => applicableIdSet.has(id));
     if (kept.length !== cur.length) {
       setSelectedByDir((prev) => ({ ...prev, [direction]: kept }));
-    } else if (kept.length === 0 && applicableProtocols.length > 0) {
-      setSelectedByDir((prev) => ({ ...prev, [direction]: [applicableProtocols[0].id] }));
     }
-  }, [direction, applicableProtocols, selectedByDir, setSelectedByDir]);
+  }, [direction, applicableProtocols, selectedByDir, setSelectedByDir, isLoading]);
 
   const selectedProtocols = applicableProtocols.filter((p) => selectedIds.includes(p.id));
 
