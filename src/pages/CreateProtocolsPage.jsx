@@ -13,6 +13,11 @@ import { apiGet, apiPost } from '../core/api/client';
 import '../core/forms.css';
 import './create-protocols.css';
 import PageInfoPopover from '../components/PageInfoPopover';
+import NoticeBlock from '../components/NoticeBlock';
+// `notice()` comes from the registry and `noticeFromError()` from the adapter — the adapter does not
+// re-export it. (Passing an object literal to noticeFromError would fabricate an Error shape.)
+import { notice } from '../core/notices/registry.js';
+import { noticeFromError } from '../core/notices/from-error.js';
 
 // ── Constants ──
 const DIRECTION_MODES = [
@@ -57,6 +62,10 @@ export default function CreateProtocolsPage() {
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState('');
   const [saveError, setSaveError] = useState('');
+  // Failures get their own state. `saveError` also carries VALIDATION text ("Protocol name and slug
+  // are required."), which is legitimate prose for a form; mixing the two is what forced a network
+  // failure into the same string shape and lost its code.
+  const [saveNotice, setSaveNotice] = useState(null);
 
   // ── Load directives + existing protocols ──
   useEffect(() => {
@@ -71,7 +80,7 @@ export default function CreateProtocolsPage() {
         setDirectives(Array.isArray(dirs) ? dirs : []);
         setExistingProtocols(Array.isArray(protos.protocols) ? protos.protocols : []);
       } catch (e) {
-        if (!cancelled) setError(e.message);
+        if (!cancelled) setError(noticeFromError(e, 'TCS-SYS-007', { operation: 'load the protocols' }));
       }
       if (!cancelled) setLoading(false);
     }
@@ -213,10 +222,12 @@ export default function CreateProtocolsPage() {
         const protos = await apiGet('/api/scoring/protocols').catch(() => ({ protocols: [] }));
         setExistingProtocols(Array.isArray(protos.protocols) ? protos.protocols : []);
       } else {
-        setSaveError(res.error || 'Save failed.');
+        setSaveError('');
+      setSaveNotice(notice('TCS-SYS-007', { operation: 'save the protocol', detail: res.error || 'The API reported a failure with no reason.' }));
       }
     } catch (e) {
-      setSaveError(e.message || 'Network error.');
+      setSaveError('');
+      setSaveNotice(noticeFromError(e, 'TCS-SYS-007', { operation: 'save the protocol' }));
     }
     setSaving(false);
   }
@@ -247,7 +258,7 @@ export default function CreateProtocolsPage() {
       <div className="cp-page">
         <div className="cp-error">
           <h2>Failed to load</h2>
-          <p>{error}</p>
+          <NoticeBlock notice={error} />
           <button onClick={() => window.location.reload()}>Retry</button>
         </div>
       </div>
@@ -538,6 +549,7 @@ export default function CreateProtocolsPage() {
       {/* ── Actions ── */}
       <div className="cp-actions">
         {saveError && <div className="cp-msg cp-msg--error">{saveError}</div>}
+      {saveNotice && <NoticeBlock notice={saveNotice} compact />}
         {savedMsg && <div className="cp-msg cp-msg--success">{savedMsg}</div>}
         <button type="button" className="ff-btn ff-btn--primary" onClick={handleSave} disabled={saving}>
           {saving ? 'Saving…' : 'Save Protocol'}

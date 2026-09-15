@@ -20,6 +20,7 @@ import { getAssetType } from '../core/asset-types';
 import { STYLE_DEFAULTS } from '../core/broker-utils';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import StrategyWizard from '../components/StrategyBuilder/StrategyWizard';
+import { noticeLine } from '../core/notices/registry.js';
 import '../core/forms.css';
 import '../components/StrategyBuilder/strategy-wizard.css';
 import './strategy-create.css';
@@ -43,7 +44,7 @@ export default function StrategyCreatePage() {
   const [baseSize, setBaseSize] = useState(0.02);
   const [slPct, setSlPct] = useState(0.5);
   const [tpPct, setTpPct] = useState(1.0);
-  const [minComposite, setMinComposite] = useState(65);
+  const [minComposite, setMinComposite] = useState(null);
   const [timeframe, setTimeframe] = useState('5m');
   const [watchlistName, setWatchlistName] = useState('');
   const [description, setDescription] = useState('');
@@ -107,6 +108,33 @@ export default function StrategyCreatePage() {
   const brokerCfg = brokerMap[brokerId] || brokerMap.mt5;
   const assetType = getAssetType(symbol);
 
+  /**
+   * The bot strength bar — READ from the server, never remembered here.
+   *
+   * ⚠️ WHY THIS IS A FETCH AND NOT A CONSTANT (#839).
+   *
+   * The backend owns this value (`nest/src/common/utils/style-thresholds.ts`, rescaled
+   * 2026-09-15). When the frontend kept its own copy, the rescale updated the owner and left the
+   * copy behind — and a bot created here silently never traded, because its bar was ~2x the
+   * maximum the scoring scale can produce.
+   *
+   * `preTradeGate.default` is the server's own fallback bar, so it is always clearable by
+   * construction. A form field whose blank value means "an unclearable bot" is a trap; seeding it
+   * from the server removes the trap rather than documenting it.
+   */
+  const thresholdsQuery = useQuery({
+    queryKey: ['scoring-thresholds'],
+    queryFn: () => apiGet('/api/scoring/gated/thresholds'),
+    staleTime: 5 * 60_000,
+    retry: 1,
+  });
+  const serverBarDefault = thresholdsQuery.data?.preTradeGate?.default ?? null;
+
+  // Seed the field once the server value arrives, but never clobber a value the user has typed.
+  useEffect(() => {
+    if (minComposite == null && serverBarDefault != null) setMinComposite(serverBarDefault);
+  }, [serverBarDefault, minComposite]);
+
   const brokerCompatible = useMemo(() => {
     if (!brokerCfg) return true;
     const styleOk = brokerCfg.supportedStyles.includes(
@@ -117,13 +145,25 @@ export default function StrategyCreatePage() {
   }, [brokerCfg, selectedProto, assetType]);
 
   // ── Apply style defaults ──
+  //
+  // ⚠️ `minComposite` is deliberately NOT set from here any more (#839).
+  //
+  // This function used to read `STYLE_DEFAULTS[style].minComposite` — a frontend copy of the
+  // backend style table. Two problems, both real:
+  //   1. The copy was missed by the 2026-09-15 rescale, so it held 55-75 while the live scale
+  //      tops out at ~33. Any bot created from it could never clear its own bar.
+  //   2. The keys never matched anyway: `STYLE_DEFAULTS['Swing / Position']` is `undefined`, so
+  //      the lookup returned early and the form kept its hardcoded `useState(65)`. The style path
+  //      therefore never applied — 65 was the only value this form ever submitted.
+  //
+  // The bar now comes from the ONE owner via the API (see the thresholds effect below). Size and
+  // SL/TP stay local — they are risk parameters, not capability thresholds, and were never rescaled.
   const applyStyleDefaults = (style) => {
     const d = STYLE_DEFAULTS[style];
     if (!d) return;
     setBaseSize(d.baseSize);
     setSlPct(d.slPct);
     setTpPct(d.tpPct);
-    setMinComposite(d.minComposite);
     setTimeframe(d.timeframe);
   };
 
@@ -141,7 +181,7 @@ export default function StrategyCreatePage() {
       queryClient.invalidateQueries({ queryKey: ['strategies-list'] });
       queryClient.invalidateQueries({ queryKey: ['monitor-strategies'] });
     },
-    onError: (err) => setMsg(`❌ ${err.message || 'Failed to create'}`),
+    onError: (err) => setMsg('❌ ' + noticeLine('TCS-SYS-007', { operation: 'create the strategy', detail: err })),
   });
 
   const handleSubmit = (e) => {

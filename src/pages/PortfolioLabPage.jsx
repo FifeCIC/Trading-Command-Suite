@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiGet } from '../core/api/client';
+import NoticeBlock from '../components/NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
+// noticeLine() is the registry's ONE-LINE form, for places where a full notice block cannot go —
+// here a chat bubble, and a table cell in StrategyMonitorPage.
+import { noticeLine } from '../core/notices/registry.js';
 import './portfolio-lab.css';
 
 const REFRESH_MS = 30_000;
@@ -71,7 +76,7 @@ export default function PortfolioLabPage() {
       setData(portfolio);
       setScores(scoreData);
     } catch (e) {
-      setError(e.message);
+      setError(noticeFromError(e, 'TCS-SYS-007', { operation: 'load the portfolio lab' }));
     }
     setLoading(false);
   }, []);
@@ -153,10 +158,10 @@ export default function PortfolioLabPage() {
       if (r.ok && r.analysis) {
         setChatMessages(prev => [...prev, { role: 'assistant', content: r.analysis, usage: r.usage }]);
       } else {
-        setChatMessages(prev => [...prev, { role: 'assistant', content: r.error || 'No response', error: true }]);
+        setChatMessages(prev => [...prev, { role: 'assistant', content: noticeLine('TCS-SYS-007', { operation: 'get the AI analysis', detail: r.error || 'the API returned no analysis' }), error: true }]);
       }
     } catch (e) {
-      setChatMessages(prev => [...prev, { role: 'assistant', content: 'Error: ' + e.message, error: true }]);
+      setChatMessages(prev => [...prev, { role: 'assistant', content: noticeLine('TCS-SYS-007', { operation: 'get the AI analysis', detail: e }), error: true }]);
     }
     setChatLoading(false);
   };
@@ -165,7 +170,7 @@ export default function PortfolioLabPage() {
 
   // ── Render ────────────────────────────────────────────
   if (loading) return <div className="plab-loading">Loading portfolio data…</div>;
-  if (error) return <div className="plab-error">Error: {error}</div>;
+  if (error) return <div className="plab-error"><NoticeBlock notice={error} /></div>;
 
   const summary = data?.summary;
   const posList = classifications || [];

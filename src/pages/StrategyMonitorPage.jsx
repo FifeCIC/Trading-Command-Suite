@@ -17,6 +17,9 @@ import { motion } from 'motion/react';
 import { apiGet, apiPost } from '../core/api/client';
 import { dismissSignal } from '../core/api/signals';
 import { timeAgo } from '../core/format-utils';
+// noticeLine() — the coded one-liner. A table cell cannot hold a NoticeBlock, and the point here is
+// the CODE, which is what makes the row's failure joinable to the API log.
+import { noticeLine } from '../core/notices/registry.js';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import PageInfoPopover from '../components/PageInfoPopover';
@@ -110,7 +113,7 @@ export default function StrategyMonitorPage() {
       queryClient.invalidateQueries({ queryKey: ['monitor-queues'] });
     },
     onError: (err, vars) => {
-      setRowResults(prev => ({ ...prev, [vars.entryId]: `❌ ${err?.message || 'Execute failed'}` }));
+      setRowResults(prev => ({ ...prev, [vars.entryId]: '❌ ' + noticeLine('TCS-SYS-007', { operation: 'execute the strategy', detail: err }) }));
     },
   });
 
@@ -132,7 +135,7 @@ export default function StrategyMonitorPage() {
       queryClient.invalidateQueries({ queryKey: ['signals-best'] });
     },
     onError: (err, vars) => {
-      setRowResults(prev => ({ ...prev, [vars.entry.id]: `❌ ${err?.message || 'Dismiss failed'}` }));
+      setRowResults(prev => ({ ...prev, [vars.entry.id]: '❌ ' + noticeLine('TCS-SYS-007', { operation: 'dismiss the signal', detail: err }) }));
     },
   });
 

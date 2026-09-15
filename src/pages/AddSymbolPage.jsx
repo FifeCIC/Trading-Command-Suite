@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiGet, apiPost } from '../core/api/client';
+import NoticeBlock from '../components/NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 import './trading-platforms.css';
 
 export default function AddSymbolPage() {
@@ -84,7 +86,7 @@ export default function AddSymbolPage() {
         setTimeout(() => navigate('/watchlists/active-symbols'), 800);
       }
     } catch (e) {
-      setStatus({ type: 'error', msg: `Failed: ${e.message}` });
+      setStatus({ type: 'error', notice: noticeFromError(e, 'TCS-SYS-007', { operation: 'add the symbol' }) });
     } finally {
       setAdding(false);
     }
@@ -178,7 +180,7 @@ export default function AddSymbolPage() {
           {status.type === 'success' && '✅ '}
           {status.type === 'duplicate' && 'ℹ️ '}
           {status.type === 'error' && '❌ '}
-          {status.msg}
+          {status.notice ? <NoticeBlock notice={status.notice} compact /> : status.msg}
         </section>
       )}
 
@@ -210,7 +212,7 @@ function ManualAddForm({ onSuccess }) {
       setMsg({ type: 'success', text: `${form.ticker} added.` });
       setTimeout(onSuccess, 800);
     } catch (err) {
-      setMsg({ type: 'error', text: err.message });
+      setMsg({ type: 'error', notice: noticeFromError(err, 'TCS-SYS-007', { operation: 'add the symbol' }) });
     } finally {
       setAdding(false);
     }
@@ -242,6 +244,7 @@ function ManualAddForm({ onSuccess }) {
         {adding ? 'Adding...' : 'Add Symbol'}
       </button>
       {msg && <span style={{ color: msg.type === 'error' ? '#ef4444' : '#22c55e', fontSize: '0.85rem' }}>{msg.text}</span>}
+          {msg.notice && <NoticeBlock notice={msg.notice} compact />}
     </form>
   );
 }

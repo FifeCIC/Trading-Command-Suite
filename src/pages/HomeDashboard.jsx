@@ -5,6 +5,7 @@ import { apiGet } from '../core/api/client';
 import ScreenOptions from '../components/ScreenOptions';
 import './home-dashboard.css';
 import PageInfoPopover from '../components/PageInfoPopover';
+import { noticeLine } from '../core/notices/registry.js';
 
 export default function HomeDashboard() {
   const navigate = useNavigate();
@@ -74,7 +75,7 @@ export default function HomeDashboard() {
         setRestarting(false);
       }
     } catch (err) {
-      setRestartMsg(`Failed: ${err.message || 'Could not reach task runner'}`);
+      setRestartMsg('Failed: ' + noticeLine('TCS-SYS-007', { operation: 'restart the services', detail: err }));
       setRestarting(false);
     }
   }, [healthQuery]);
