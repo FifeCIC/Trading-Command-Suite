@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiGet, apiPost } from '../core/api/client'
 import { formatCurrency } from '../core/format-utils'
+import NoticeBlock from '../components/NoticeBlock'
+import { noticeFromError } from '../core/notices/from-error.js'
 import './earnings-whispers.css'
 
 const PLACEHOLDER = `Paste the full Earnings Whispers email here — the per-symbol paragraphs, images and links included. Sections separated by ### headings will be split automatically.
@@ -26,7 +28,7 @@ export default function EarningsWhispersPage() {
       setError('')
       if (data.saved) queryClient.invalidateQueries({ queryKey: ['earnings-whispers'] })
     },
-    onError: (err) => setError(String(err?.message || err)),
+    onError: (err) => setError(noticeFromError(err, 'TCS-SYS-007', { operation: 'load the earnings whispers' })),
   })
 
   const stored = useQuery({
@@ -78,7 +80,7 @@ export default function EarningsWhispersPage() {
           placeholder={PLACEHOLDER}
           spellCheck={false}
         />
-        {error && <p className="ew-error">{error}</p>}
+        {error && <div className="ew-error"><NoticeBlock notice={error} compact /></div>}
       </section>
 
       {result.count != null && (

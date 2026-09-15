@@ -659,6 +659,19 @@ async function loadLocaleBundle(file) {
     const total = Object.values(files).reduce((a, b) => a + b, 0);
     const before = Object.values(previous).reduce((a, b) => a + b, 0);
 
+    // ⚠️ Notes are PRESERVED across an update. They record why an entry will never be migrated
+    // (`{severity, message}` data, an error boundary, API warning objects) so the next agent does not
+    // re-litigate it — losing them here would be the same defect as a claim nobody re-checks.
+    let notes = {};
+    try {
+      notes = JSON.parse(fs.readFileSync(UI_ALLOWANCE_FILE, 'utf8')).notes ?? {};
+    } catch {
+      notes = {};
+    }
+    for (const key of Object.keys(notes)) {
+      if (!files[key]) delete notes[key];
+    }
+
     fs.writeFileSync(
       UI_ALLOWANCE_FILE,
       JSON.stringify(
@@ -668,6 +681,7 @@ async function loadLocaleBundle(file) {
             'is a regression and the gate fails on it. Lower it with: node scripts/validate-notices.cjs --update-allowance',
           total,
           files,
+          notes,
         },
         null,
         2,

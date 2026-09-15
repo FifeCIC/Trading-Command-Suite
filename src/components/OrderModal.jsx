@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { placeSellOrder, placeBuyOrder } from '../core/api/orders';
+import NoticeBlock from './NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 import './order-modal.css';
 
 /**
@@ -72,7 +74,7 @@ export default function OrderModal({ position, accountCash, mode = 'sell', onClo
         setError(res.error || 'Order failed');
       }
     } catch (err) {
-      setError(err.message);
+      setError(noticeFromError(err, 'TCS-SYS-007', { operation: 'place the order' }));
     } finally {
       setSubmitting(false);
     }
@@ -259,7 +261,7 @@ export default function OrderModal({ position, accountCash, mode = 'sell', onClo
               </div>
             )}
 
-            {error && <div className="om-error">{error}</div>}
+            {error && <div className="om-error"><NoticeBlock notice={error} compact /></div>}
 
             <div className="om-actions">
               <button className="om-btn om-btn-secondary" onClick={() => { setStep(1); setCooldown(5); setConfirmText(''); setError(null); }}>

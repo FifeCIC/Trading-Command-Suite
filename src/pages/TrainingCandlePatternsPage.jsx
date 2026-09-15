@@ -4,6 +4,7 @@ import PatternDetailPanel from '../components/PatternDetailPanel';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import './training-candle-patterns-page.css';
 import PageInfoPopover from '../components/PageInfoPopover';
+import { noticeFromError } from '../core/notices/from-error.js';
 
 const TIMEFRAMES = ['M5', 'M15', 'M30', 'H1', 'H4', 'D1'];
 const SYMBOLS = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'NZDUSD', 'XAUUSD', 'BTCUSD', 'NVDA', 'AAPL'];
@@ -38,7 +39,7 @@ export default function TrainingCandlePatternsPage() {
       setPatterns(data.patterns || []);
       setPatternCount((data.patterns || []).length);
     } catch (e) {
-      setError(e.message);
+      setError(noticeFromError(e, 'TCS-SYS-007', { operation: 'load the candle patterns' }));
       // Fall back to local sample data
       const fallbackBars = generateLocalBars([], 100);
       setBars(fallbackBars);

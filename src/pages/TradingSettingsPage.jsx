@@ -5,6 +5,8 @@ import { apiGet, apiPut } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ApiOfflineBanner from '../components/ApiOfflineBanner';
 import PageInfoPopover from '../components/PageInfoPopover';
+import NoticeBlock from '../components/NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 import './trading-settings.css';
 
 /**
@@ -112,7 +114,7 @@ export default function TradingSettingsPage() {
           </button>
           {saved && <span className="ts-saved">✓ Saved</span>}
           {saveMutation.isError && (
-            <span className="ts-error">{saveMutation.error?.message || 'Save failed'}</span>
+            <NoticeBlock notice={noticeFromError(saveMutation.error, 'TCS-SYS-007', { operation: 'save the trading settings' })} compact />
           )}
         </footer>
       </motion.form>

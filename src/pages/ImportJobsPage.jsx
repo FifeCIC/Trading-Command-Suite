@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiGet, apiPost } from '../core/api/client'
 import LoadingSkeleton from '../components/LoadingSkeleton'
 import { formatDateTime, formatDuration } from '../core/format-utils'
+import NoticeBlock from '../components/NoticeBlock'
+import { noticeFromError } from '../core/notices/from-error.js'
 import './import-jobs-page.css'
 
 const POLL_INTERVAL_MS = 15_000
@@ -76,7 +78,7 @@ export default function ImportJobsPage() {
       setTimeout(() => queryClient.invalidateQueries({ queryKey: ['import-runs'] }), 1000)
     },
     onError: (err) => {
-      setTriggerStatus({ type: 'error', message: err.message })
+      setTriggerStatus({ type: 'error', notice: noticeFromError(err, 'TCS-SYS-007', { operation: 'start the import job' }) })
     },
   })
 
@@ -155,7 +157,7 @@ export default function ImportJobsPage() {
           </div>
           {triggerStatus && (
             <p className={`trigger-status trigger-status--${triggerStatus.type}`}>
-              {triggerStatus.message}
+              {triggerStatus.notice ? <NoticeBlock notice={triggerStatus.notice} compact /> : triggerStatus.message}
             </p>
           )}
         </form>

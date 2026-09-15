@@ -9,6 +9,8 @@ import {
   purgeEarningsData,
 } from '../core/api/research.js';
 import '../core/forms.css'; // canonical Form System (.ff-*) — segmented + compact .ff-bar
+import NoticeBlock from '../components/NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 import './earnings-calendar.css';
 
 /** Hard cap on rendered rows — 5k+ DOM rows chokes the page. */
@@ -100,6 +102,10 @@ export default function EarningsCalendarPage() {
   const [estimatesOnly, setEstimatesOnly] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState(null);
   const [settingsMsg, setSettingsMsg] = useState(null);
+  // Failures are kept SEPARATE from `settingsMsg`, which also carries progress and success text.
+  // Mixing them meant a failure had to be squeezed into a status string ("Save failed: …"), which
+  // is where its code, status and remedy were lost.
+  const [settingsNotice, setSettingsNotice] = useState(null);
   const [showAll, setShowAll] = useState(false); // renders all rows (heavy — opt-in)
   const [sortKey, setSortKey] = useState(null); // column id, or null = API order
   const [sortDir, setSortDir] = useState('asc');
@@ -157,7 +163,8 @@ export default function EarningsCalendarPage() {
       statusQuery.refetch();
       setTimeout(() => setSettingsMsg(null), 4000);
     } catch (e) {
-      setSettingsMsg(`Save failed: ${e?.message || e}`);
+        setSettingsMsg(null);
+        setSettingsNotice(noticeFromError(e, 'TCS-SYS-007', { operation: 'save the earnings settings' }));
     }
   };
 
@@ -186,7 +193,7 @@ export default function EarningsCalendarPage() {
       queryClient.invalidateQueries({ queryKey: ['earnings-calendar'] });
       setShowAll(false);
     } catch (e) {
-      setSettingsMsg(`Save & apply failed: ${e?.message || e}`);
+        setSettingsNotice(noticeFromError(e, 'TCS-SYS-007', { operation: 'save and apply the earnings settings' }));
     }
     setTimeout(() => setSettingsMsg(null), 8000);
   };
@@ -200,7 +207,7 @@ export default function EarningsCalendarPage() {
       if (!res?.started) setSettingsMsg('An import is already running.');
       statusQuery.refetch();
     } catch (e) {
-      setSettingsMsg(`Import failed to start: ${e?.message || e}`);
+        setSettingsNotice(noticeFromError(e, 'TCS-SYS-007', { operation: 'start the import' }));
     }
     setTimeout(() => setSettingsMsg(null), 6000);
   };
@@ -275,8 +282,7 @@ export default function EarningsCalendarPage() {
           <h1>Earnings Calendar</h1>
         </header>
         <div className="ec-error">
-          <p>Failed to load earnings data.</p>
-          <p className="ec-error-detail">{error?.message || 'Unknown error'}</p>
+          <NoticeBlock notice={noticeFromError(error)} />
         </div>
       </div>
     );
@@ -413,6 +419,7 @@ export default function EarningsCalendarPage() {
             <button type="button" className="ec-btn ec-btn-danger" onClick={saveAndApply} title="Save settings and delete stored rows that no longer match them (future reports only)">Save &amp; apply (purge)</button>
             <button type="button" className="ec-btn" onClick={doImport}>Import now</button>
             <span className="ec-settings-msg">{settingsMsg ?? ''}</span>
+        {settingsNotice && <NoticeBlock notice={settingsNotice} compact />}
           </div>
 
           <div className="ec-import-status">

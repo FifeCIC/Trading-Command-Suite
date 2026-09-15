@@ -37,6 +37,7 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-SYS-004` | error | SYS | Request rejected before it ran |
 | `TCS-SYS-005` | error | SYS | API request exceeded its deadline |
 | `TCS-SYS-006` | error | SYS | Unexpected server error |
+| `TCS-SYS-007` | error | SYS | Action failed |
 | `TCS-TRADE-001` | error | TRADE | Order rejected — unsupported filling mode |
 | `TCS-TRADE-002` | warning | TRADE | Order not sent — market closed |
 | `TCS-TRADE-003` | error | TRADE | Not enough margin at the broker |
@@ -55,7 +56,7 @@ The **code** identifies a condition and never changes. The **wording** explains 
 | `TCS-TRADE-016` | error | TRADE | Blocked by the bridge size cap |
 | `TCS-TRADE-017` | error | TRADE | Blocked by the bridge position count |
 
-**33 codes** — 2 critical, 21 error, 6 warning, 1 info, 3 success.
+**34 codes** — 2 critical, 22 error, 6 warning, 1 info, 3 success.
 
 ## Codes by area
 
@@ -399,4 +400,14 @@ The **code** identifies a condition and never changes. The **wording** explains 
 - **Action:** This is a bug, not a condition you can clear. Report the code shown above with what you were doing — the API log holds the stack against the same code.
 - **Params:** `status`, `detail`
 - **Call:** `notice('TCS-SYS-006', { status, detail })`
+- **Related:** #826
+
+#### `TCS-SYS-007` — Action failed
+
+- **Severity:** error
+- **Message:** The request to {operation} failed.
+- **Cause:** {detail}
+- **Action:** Retry. If it keeps failing, the API log names the route against this same code. Nothing was changed by the attempt.
+- **Params:** `operation`, `detail`
+- **Call:** `notice('TCS-SYS-007', { operation, detail })`
 - **Related:** #826

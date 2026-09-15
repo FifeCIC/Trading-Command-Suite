@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import NoticeBlock from '../components/NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 import './scoring-debug-lab.css';
 
 const API = '/api';
@@ -27,7 +29,7 @@ export default function ScoringDebugLab() {
       setLongResult(l);
       setShortResult(s);
     } catch (err) {
-      setError(err.message);
+      setError(noticeFromError(err, 'TCS-SYS-007', { operation: 'load the gated scoring result' }));
     }
     setLoading(false);
   }, [symbol, timeframe, barCount]);
@@ -75,7 +77,7 @@ export default function ScoringDebugLab() {
         </button>
       </div>
 
-      {error && <div className="sdl-error">❌ {error}</div>}
+{error && <div className="sdl-error"><NoticeBlock notice={error} compact /></div>}
 
       {/* Head-to-Head Comparison */}
       <div className="sdl-comparison">

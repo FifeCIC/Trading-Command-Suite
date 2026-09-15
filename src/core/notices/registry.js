@@ -423,6 +423,18 @@ export const NOTICES = {
   },
 
   // ── Signals workbench ────────────────────────
+  'TCS-SYS-007': {
+    severity: 'error',
+    area: 'SYS',
+    title: 'Action failed',
+    message: 'The request to {operation} failed.',
+    cause: '{detail}',
+    action:
+      'Retry. If it keeps failing, the API log names the route against this same code. Nothing was ' +
+      'changed by the attempt.',
+    params: ['operation', 'detail'],
+    refs: ['#826'],
+  },
   'TCS-SIG-001': {
     severity: 'error',
     area: 'SIG',

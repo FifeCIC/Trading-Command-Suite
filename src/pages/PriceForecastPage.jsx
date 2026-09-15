@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchAnalystTargets } from '../core/api/research.js';
 import './price-forecast.css';
 import PageInfoPopover from '../components/PageInfoPopover';
+import NoticeBlock from '../components/NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 
 // Default symbols list for the forecast table
 const DEFAULT_SYMBOLS = ['AAPL', 'NVDA', 'MSFT', 'TSLA', 'AMD', 'AMZN', 'META', 'GOOGL', 'JPM', 'NFLX', 'BA', 'XOM', 'SPY', 'GLD'];
@@ -70,7 +72,7 @@ export default function PriceForecastPage() {
         <header className="pf-header"><h1>Price Forecast</h1></header>
         <div className="pf-error">
           <p>Failed to load analyst data.</p>
-          <p className="pf-error-detail">{error?.message || 'Unknown error'}</p>
+          <NoticeBlock notice={noticeFromError(error)} />
         </div>
       </div>
     );

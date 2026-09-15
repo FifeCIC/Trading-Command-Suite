@@ -13,6 +13,8 @@
  * Merged from SpeedChart + CandlestickChart (#506).
  */
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import NoticeBlock from './NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 import {
   createChart,
   ColorType,
@@ -126,7 +128,7 @@ export default function SpeedChart({
         setDataError('No data for this symbol');
       }
     } catch (e) {
-      setDataError(e.message);
+      setDataError(noticeFromError(e, 'TCS-SYS-007', { operation: 'load the MT5 chart data' }));
     }
   }, [symbol, timeframe]);
 
@@ -396,7 +398,7 @@ export default function SpeedChart({
       ) : (
         <>
           {dataError && (
-            <div className="st-chart-error">MT5: {dataError}</div>
+            <div className="st-chart-error"><NoticeBlock notice={dataError} compact /></div>
           )}
           {legend}
           <div ref={containerRef} className="st-chart-canvas" />

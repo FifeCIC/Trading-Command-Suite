@@ -3,6 +3,8 @@
  * by hour and day of week for the active symbol.
  */
 import { useEffect, useState, useRef } from 'react';
+import NoticeBlock from './NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 import './seasonality-heatmap.css';
 
 const API = 'http://localhost:3201';
@@ -42,7 +44,7 @@ export default function SeasonalityHeatmap({ symbol }) {
         const d = await res.json();
         if (!cancelled) { setData(d); setError(null); }
       } catch (e) {
-        if (!cancelled) setError(e.message);
+          if (!cancelled) setError(noticeFromError(e, 'TCS-SYS-007', { operation: 'load the seasonality data' }));
       }
       if (!cancelled) setLoading(false);
     };
@@ -65,7 +67,7 @@ export default function SeasonalityHeatmap({ symbol }) {
       </div>
       {expanded && (
         <div className="sh-body">
-          {error && <div className="sh-error">No data: {error}</div>}
+            {error && <div className="sh-error"><NoticeBlock notice={error} compact /></div>}
           {loading && !data && <div className="sh-loading">Computing…</div>}
           {data && (
             <>

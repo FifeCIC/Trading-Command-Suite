@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { apiGet } from '../core/api/client';
 import { formatCurrency } from '../core/format-utils';
 import EmptyState from '../components/EmptyState';
+import NoticeBlock from '../components/NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 import './trading-platforms.css';
 import './accounts-dashboard.css';
 
@@ -40,7 +42,7 @@ export default function AccountsDashboardPage() {
 
       setData({ mt5: mt5Data, t212: t212Data, isa: isaRaw, capital: capitalRaw, errors });
     } catch (e) {
-      setError(e.message);
+      setError(noticeFromError(e, 'TCS-SYS-007', { operation: 'load the accounts' }));
     } finally {
       setLoading(false);
     }
@@ -135,7 +137,7 @@ export default function AccountsDashboardPage() {
 
       {error && !data && (
         <div className="ad-error">
-          <p>Failed to load accounts: {error}</p>
+            <NoticeBlock notice={error} compact />
           <button type="button" className="btn btn-primary" onClick={load}>Retry</button>
         </div>
       )}

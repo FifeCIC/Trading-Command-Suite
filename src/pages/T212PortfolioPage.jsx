@@ -14,6 +14,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import LastUpdated from '../components/LastUpdated';
 import PageInfoPopover from '../components/PageInfoPopover';
+import NoticeBlock from '../components/NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 import './t212-portfolio.css';
 
 const fmt = (n) => (n == null ? '—' : `£${Number(n).toFixed(2)}`);
@@ -78,7 +80,7 @@ export default function T212PortfolioPage() {
       qc.invalidateQueries({ queryKey: ['t212-history'] });
       qc.invalidateQueries({ queryKey: ['portfolio-accounts'] });
     } catch (e) {
-      setSyncResult({ error: e.message });
+      setSyncResult({ error: noticeFromError(e, 'TCS-SYS-007', { operation: 'sync the T212 portfolio' }) });
     }
     setSyncing(false);
   }
@@ -163,7 +165,7 @@ export default function T212PortfolioPage() {
       <LastUpdated at={lastUpdated} />
 
       {syncing && <p className="t212p-hint">Syncing…</p>}
-      {syncResult?.error && <p className="t212p-sync-result t212p-sync-err">{syncResult.error}</p>}
+      {syncResult?.error && <NoticeBlock notice={syncResult.error} compact />}
 
       {/* ── Investment account summary ── */}
       {investActive && (
