@@ -567,7 +567,7 @@ model FxRate {
   @@index([provider, timestamp])
 }
 
-// ÔöÇÔöÇ Planned Tables (from Database Tables page) ÔöÇÔöÇ
+// ── Planned Tables (from Database Tables page) ──
 
 model SymbolTechnical {
   id         String   @id @default(uuid()) @db.VarChar(36)

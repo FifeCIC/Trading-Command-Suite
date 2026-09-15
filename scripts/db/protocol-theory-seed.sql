@@ -3,10 +3,27 @@
 -- for the first set of protocols. Theory structure per entry:
 --   target behaviour · why these groups · what a good day looks like ·
 --   suitability · known weaknesses.
--- Safe to re-run (pure UPDATEs). Apply with:
---   mysql -u tradingcs -p... tradingcs < scripts/db/protocol-theory-seed.sql
+-- Safe to re-run (pure UPDATEs; the ALTER is IF NOT EXISTS).
+--
+-- ⚠️ THE CHARSET FLAG IS MANDATORY. This file is UTF-8 and contains em dashes (—).
+--    On Windows the mysql client defaults to the OEM code page (CP850), so the
+--    em dash bytes E2 80 94 are read as three characters: D4 C7 F6 — written to the
+--    database as that three-character sequence and rendered on the Protocols Registry as
+--    mojibake. That is exactly what happened on 2026-08-26 and was repaired on 2026-09-15.
+-- Apply with:
+--   "C:\wamp64\bin\mysql\mysql9.1.0\bin\mysql.exe" -u tradingcs -p*** tradingcs ^
+--       --default-character-set=utf8mb4 < scripts/db/protocol-theory-seed.sql
+-- Verify after applying (must return 0 and 13):
+--   SELECT COUNT(*) FROM protocol WHERE HEX(theory) LIKE '%C394C387%';
+--   SELECT COUNT(*) FROM protocol WHERE HEX(theory) LIKE '%E28094%';
 
-ALTER TABLE protocol ADD COLUMN theory TEXT NULL;
+-- Add the column only if absent. MySQL has no `ADD COLUMN IF NOT EXISTS`
+-- (that is MariaDB), so this is done with a prepared statement.
+SET @have_theory := (SELECT COUNT(*) FROM information_schema.COLUMNS
+                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'protocol'
+                       AND COLUMN_NAME = 'theory');
+SET @ddl := IF(@have_theory = 0, 'ALTER TABLE protocol ADD COLUMN theory TEXT NULL', 'DO 0');
+PREPARE stmt FROM @ddl; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 UPDATE protocol SET theory = 'Targets gold''s macro-driven trend days — the days real news (dollar, rates, risk appetite) moves gold decisively. The technical group measures trend structure and squeeze; the sentiment group adds macro-regime context; the risk group guards liquidity and session timing, and softens the score when conditions are thin. A good day: gold trending on real macro news with strong liquidity, so most groups fire together — the engine caught exactly this on 13 Aug 2026 (raw composite 772, rarity percentile 100, the highest on record). Known weakness: in quiet ranging gold almost nothing fires and the protocol correctly stays silent. It is an opportunity catcher, not a clockwork signaler — expect clusters of strong signals around macro events, not a daily drip.' WHERE slug = 'gold-macro-v1';
 
