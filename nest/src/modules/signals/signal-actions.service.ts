@@ -202,7 +202,19 @@ export class SignalActionsService {
     });
 
     if (!result.success) {
-      return { success: false, signalId, symbol: ticker, protocolId: protocol, error: result.error || 'Order failed' };
+      // #826 Phase 3 — forward the notice code/params from the broker adapter. Without this the
+      // code is dropped here and the client can only show the broker's sentence, which is exactly
+      // how "Unsupported filling mode" reached a user with nothing to act on.
+      return {
+        success: false,
+        signalId,
+        symbol: ticker,
+        protocolId: protocol,
+        error: result.error || 'Order failed',
+        code: result.code,
+        params: result.params,
+        external: result.external,
+      };
     }
 
     // 7. Record as a manual trade (origin=manual, source=signals)

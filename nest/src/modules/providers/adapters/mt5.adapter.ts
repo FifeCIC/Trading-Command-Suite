@@ -89,7 +89,23 @@ interface BridgeHealthResponse {
   equity?: number;
 }
 
-class BridgeRejectedError extends Error {}
+/**
+ * A refusal from the bridge (HTTP 4xx/5xx with a readable body).
+ *
+ * Carries the notice-registry code and params (#826 Phase 3) so the caller can surface WHICH
+ * condition failed. The bridge is Python and cannot import the JS registry, so it sends the code
+ * and the data; the wording is rendered client-side.
+ */
+class BridgeRejectedError extends Error {
+  constructor(
+    message: string,
+    readonly code?: string,
+    readonly params?: Record<string, unknown>,
+    readonly external?: Record<string, unknown>,
+  ) {
+    super(message);
+  }
+}
 
 @Injectable()
 export class Mt5Adapter implements IProviderAdapter {
@@ -167,13 +183,30 @@ export class Mt5Adapter implements IProviderAdapter {
     }
   }
 
-  /** Extract the bridge's `error` field from a JSON error body, if present. */
-  private extractBridgeErrorMessage(body: string): string | null {
+  /**
+   * Read the bridge's STRUCTURED refusal: `{ error, code, params, external }`.
+   *
+   * ⚠️ The code is a field, never parsed out of `error`. The bridge deliberately sends both so the
+   * wording stays free to change while the identity (the code) does not — the principle behind the
+   * whole notice registry (#826), and the reason #824's "Unsupported filling mode" was
+   * unexplainable: no code, no symbol, nothing to look up.
+   */
+  private extractBridgeRejection(body: string): {
+    message: string | null;
+    code?: string;
+    params?: Record<string, unknown>;
+    external?: Record<string, unknown>;
+  } {
     try {
       const parsed = JSON.parse(body);
-      return typeof parsed?.error === 'string' ? parsed.error : null;
+      return {
+        message: typeof parsed?.error === 'string' ? parsed.error : null,
+        code: typeof parsed?.code === 'string' ? parsed.code : undefined,
+        params: parsed?.params && typeof parsed.params === 'object' ? parsed.params : undefined,
+        external: parsed?.external && typeof parsed.external === 'object' ? parsed.external : undefined,
+      };
     } catch {
-      return null;
+      return { message: null };
     }
   }
 
@@ -552,8 +585,9 @@ export class Mt5Adapter implements IProviderAdapter {
       data = await this.bridgePost<any>('/order', body, route);
     } catch (err) {
       const message = (err as Error).message;
-      this.logger.warn(`MT5 order FAILED: ${message}`);
-      this.syslog?.error('MT5Adapter', `ORDER REJECTED ${route.brokerSymbol} ${params.side} ×${params.quantity} — ${message} [broker ${route.brokerId}]`, 'trading');
+      const rejection = err instanceof BridgeRejectedError ? err : null;
+      this.logger.warn(`MT5 order FAILED: ${message}${rejection?.code ? ` [${rejection.code}]` : ''}`);
+      this.syslog?.error('MT5Adapter', `ORDER REJECTED ${route.brokerSymbol} ${params.side} ×${params.quantity} — ${message} [broker ${route.brokerId}]${rejection?.code ? ` code=${rejection.code}` : ''}`, 'trading');
       this.prisma?.order.create({
         data: {
           symbol: params.symbol,
@@ -564,7 +598,16 @@ export class Mt5Adapter implements IProviderAdapter {
           provider: 'mt5',
         },
       }).catch(() => {});
-      return { success: false, error: message, status: 'REJECTED' };
+      // #826 Phase 3 — pass the code/params on so the API layer and the UI can render the notice
+      // rather than a bare broker sentence.
+      return {
+        success: false,
+        error: message,
+        status: 'REJECTED',
+        code: rejection?.code,
+        params: rejection?.params,
+        external: rejection?.external,
+      };
     }
 
     if (!data) {
@@ -591,7 +634,15 @@ export class Mt5Adapter implements IProviderAdapter {
           providerId: params.clientOrderId ?? null,
         },
       }).catch(() => {});
-      return { success: false, error: reason, status: 'UNKNOWN' };
+      return {
+        success: false,
+        error: reason,
+        status: 'UNKNOWN',
+        // #826 Phase 3 — the two causes are DIFFERENT conditions, so they get different codes.
+        // The distinction is read from the breaker's own state, not from the message text.
+        code: this.tripped ? 'TCS-INTEG-002' : 'TCS-INTEG-001',
+        params: { detail: reason },
+      };
     }
 
     const result: BrokerOrderResult = {
@@ -761,7 +812,14 @@ export class Mt5Adapter implements IProviderAdapter {
         if (!isClientError) this.logBridgeState('disconnected', `HTTP ${res.status}`, brokerId);
         // Surface the bridge's real error (e.g. "No prices", "Insufficient margin")
         // instead of a generic "Bridge unreachable" so callers can act on it.
-        throw new BridgeRejectedError(this.extractBridgeErrorMessage(errorBody) ?? detail);
+        // #826 Phase 3 — carry the notice code + params through with it.
+        const rejection = this.extractBridgeRejection(errorBody);
+        throw new BridgeRejectedError(
+          rejection.message ?? detail,
+          rejection.code,
+          rejection.params,
+          rejection.external,
+        );
       }
       this.consecutiveErrors = 0;
       this.logBridgeState('connected', undefined, brokerId);

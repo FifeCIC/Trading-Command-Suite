@@ -246,6 +246,87 @@ def order_rejected(result, symbol, filling_name, mask):
     return (f"{symbol} rejected (retcode {retcode}, filling={filling_name}): {comment}. "
             f"Broker allows: {', '.join(allowed) if allowed else 'none reported'}.")
 
+# ─── Notice codes (#826 Phase 3) ──────────────────────────
+#
+# The bridge is Python and CANNOT import the JS registry (src/core/notices/registry.js), so it
+# emits the CODE plus the DATA and the client renders the wording. A code used here but missing
+# from the registry FAILS THE BUILD: scripts/validate-notices.cjs scans scripts/ for `TCS-…`
+# literals and checks every one is registered. That scan is the guard against the two lists
+# drifting apart, which is the whole risk of a two-language code list.
+NOTICE_NOT_CONNECTED    = 'TCS-INTEG-001'
+NOTICE_CIRCUIT_OPEN     = 'TCS-INTEG-002'
+NOTICE_FILLING          = 'TCS-TRADE-001'
+NOTICE_NOT_TRADEABLE    = 'TCS-TRADE-004'
+NOTICE_ORDER_REJECTED   = 'TCS-TRADE-005'
+NOTICE_NO_QUOTE         = 'TCS-TRADE-010'
+NOTICE_VOLUME_MIN       = 'TCS-TRADE-011'
+NOTICE_VOLUME_MAX       = 'TCS-TRADE-012'
+NOTICE_SPREAD           = 'TCS-TRADE-013'
+NOTICE_POSITION_MISSING = 'TCS-TRADE-014'
+NOTICE_DUPLICATE        = 'TCS-TRADE-015'
+NOTICE_SIZE_CAP         = 'TCS-TRADE-016'
+NOTICE_POSITION_CAP     = 'TCS-TRADE-017'
+NOTICE_MARGIN           = 'TCS-TRADE-003'
+
+
+def refusal(code, message, params=None, external=None):
+    """Error body for a refusal: the CODE identifies the condition, `params` carry the data, and
+    `message` keeps the bridge/broker wording for the log and for anyone reading raw JSON."""
+    out = {'success': False, 'error': message, 'code': code}
+    if params:
+        out['params'] = params
+    if external:
+        out['external'] = external
+    return out
+
+
+def mt5_external(result):
+    """The broker's own retcode as a look-up-able external code (MT5 documents these)."""
+    rc = getattr(result, 'retcode', None)
+    if rc is None:
+        return None
+    names = {getattr(mt5, n): n for n in dir(mt5) if n.startswith('TRADE_RETCODE_')}
+    return {'system': 'MetaTrader 5', 'code': rc, 'name': names.get(rc, 'UNKNOWN')}
+
+
+def rejection_code(result):
+    """Map a broker RETCODE to a notice code.
+
+    ⚠️ This reads a STRUCTURED field, never the broker's free-text comment. Matching on prose
+    breaks the moment a broker rewords, and removing that class of guesswork is why the registry
+    exists — see the note in src/core/notices/from-error.js.
+    """
+    invalid_fill = getattr(mt5, 'TRADE_RETCODE_INVALID_FILL', 10030)
+    return NOTICE_FILLING if getattr(result, 'retcode', None) == invalid_fill else NOTICE_ORDER_REJECTED
+
+
+def rejection_params(symbol, filling_name, mask):
+    """Params for a broker rejection.
+
+    TRADE-001 needs all four of these; TRADE-005 ignores the extras, so one call site can serve
+    both codes without knowing which one it will get. `broker` comes from the terminal, not from
+    config, so a multi-broker setup reports the account it actually sent to.
+    """
+    acct = mt5.account_info()
+    allowed = [n for n, bit in (('FOK', 1), ('IOC', 2)) if mask & bit]
+    return {
+        'symbol': symbol,
+        'mode': filling_name,
+        'broker': getattr(acct, 'server', None) or 'the broker',
+        'allowed': ', '.join(allowed) if allowed else 'none reported',
+    }
+
+
+def unavailable_response(err):
+    """503 body for 'the bridge cannot serve this request'.
+
+    The circuit breaker and 'terminal not connected' are DIFFERENT conditions, and the difference
+    is read from circuit STATE — not by inspecting the message text.
+    """
+    code = NOTICE_CIRCUIT_OPEN if circuit_state == 'open' else NOTICE_NOT_CONNECTED
+    return refusal(code, str(err), {'detail': str(err)})
+
+
 def get_active_credentials():
     active = os.environ.get('MT5_ACTIVE_ACCOUNT', '1')
     account = os.environ.get(f'MT5_ACCOUNT_{active}', os.environ.get('MT5_ACCOUNT', ''))
@@ -854,7 +935,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
             # /order
             if path == '/order':
                 ok, err = ensure_mt5()
-                if not ok: return json_response(self, {'success': False, 'error': str(err)}, 503)
+                if not ok: return json_response(self, unavailable_response(err), 503)
                 symbol = body.get('symbol', '').upper()
                 order_type = body.get('type', 'buy').lower()
                 volume = float(body.get('volume', 0.01))
@@ -872,17 +953,22 @@ class BridgeHandler(BaseHTTPRequestHandler):
                             'symbol': existing['symbol'], 'volume': existing['volume'],
                             'filledVolume': existing['volume'], 'status': existing['status'],
                             'duplicate': True, 'clientOrderId': client_order_id,
+                            'code': NOTICE_DUPLICATE, 'params': {'ticket': existing['ticket']},
                             'message': f'Duplicate order — existing ticket {existing["ticket"]}'})
 
                 # ── Risk Limits ──
                 # Max position size
                 if volume > MAX_POSITION_SIZE:
-                    return json_response(self, {'error': f'Volume {volume} exceeds max position size {MAX_POSITION_SIZE}'}, 400)
+                    return json_response(self, refusal(NOTICE_SIZE_CAP,
+                        f'Volume {volume} exceeds max position size {MAX_POSITION_SIZE}',
+                        {'volume': volume, 'maximum': MAX_POSITION_SIZE}), 400)
                 # Max open positions
                 existing_positions = mt5.positions_get()
                 current_count = len(existing_positions) if existing_positions else 0
                 if current_count >= MAX_OPEN_POSITIONS:
-                    return json_response(self, {'error': f'Max open positions ({MAX_OPEN_POSITIONS}) reached — {current_count} currently open'}, 400)
+                    return json_response(self, refusal(NOTICE_POSITION_CAP,
+                        f'Max open positions ({MAX_OPEN_POSITIONS}) reached — {current_count} currently open',
+                        {'open': current_count, 'maximum': MAX_OPEN_POSITIONS}), 400)
                 # Daily loss check
                 if MAX_DAILY_LOSS > 0:
                     today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -899,23 +985,32 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
                 mt5.symbol_select(symbol, True)
                 tick = mt5.symbol_info_tick(symbol)
-                if not tick: return json_response(self, {'error': f'No quote for {symbol}'}, 400)
+                if not tick: return json_response(self, refusal(NOTICE_NO_QUOTE,
+                    f'No quote for {symbol}', {'symbol': symbol}), 400)
 
                 # ── Pre-flight symbol validation ──
                 sym_info = mt5.symbol_info(symbol)
                 if sym_info:
                     # Check trade mode — reject if market closed
                     if sym_info.trade_mode != mt5.SYMBOL_TRADE_MODE_FULL:
-                        return json_response(self, {'error': f'{symbol} not tradeable (trade mode: {sym_info.trade_mode})'}, 400)
+                        return json_response(self, refusal(NOTICE_NOT_TRADEABLE,
+                            f'{symbol} not tradeable (trade mode: {sym_info.trade_mode})',
+                            {'symbol': symbol, 'tradeMode': sym_info.trade_mode}), 400)
                     # Check volume limits
                     if volume < sym_info.volume_min:
-                        return json_response(self, {'error': f'Volume {volume} below {symbol} minimum ({sym_info.volume_min})'}, 400)
+                        return json_response(self, refusal(NOTICE_VOLUME_MIN,
+                            f'Volume {volume} below {symbol} minimum ({sym_info.volume_min})',
+                            {'symbol': symbol, 'volume': volume, 'minimum': sym_info.volume_min}), 400)
                     if sym_info.volume_max > 0 and volume > sym_info.volume_max:
-                        return json_response(self, {'error': f'Volume {volume} exceeds {symbol} maximum ({sym_info.volume_max})'}, 400)
+                        return json_response(self, refusal(NOTICE_VOLUME_MAX,
+                            f'Volume {volume} exceeds {symbol} maximum ({sym_info.volume_max})',
+                            {'symbol': symbol, 'volume': volume, 'maximum': sym_info.volume_max}), 400)
                     # Check spread is reasonable (< 5% of price)
                     spread_pct = (tick.ask - tick.bid) / tick.bid * 100 if tick.bid > 0 else 0
                     if spread_pct > 5:
-                        return json_response(self, {'error': f'Spread too wide for {symbol}: {spread_pct:.2f}%'}, 400)
+                        return json_response(self, refusal(NOTICE_SPREAD,
+                            f'Spread too wide for {symbol}: {spread_pct:.2f}%',
+                            {'symbol': symbol, 'spread': round(spread_pct, 2)}), 400)
                 else:
                     logger.warning(f'symbol_info({symbol}) returned None — skipping tradeability checks')
 
@@ -924,7 +1019,10 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 if account and account.margin_free is not None:
                     required_margin = (sym_info.margin_initial * volume) if sym_info else (volume * 1000)
                     if account.margin_free < required_margin:
-                        return json_response(self, {'error': f'Insufficient margin: need {required_margin:.2f}, have {account.margin_free:.2f}'}, 400)
+                        return json_response(self, refusal(NOTICE_MARGIN,
+                            f'Insufficient margin: need {required_margin:.2f}, have {account.margin_free:.2f}',
+                            {'symbol': symbol, 'required': round(required_margin, 2),
+                             'free': round(account.margin_free, 2)}), 400)
                 # ── End pre-flight validation ──
 
                 price = body.get('price') or (tick.ask if mt5_type in (mt5.ORDER_TYPE_BUY, mt5.ORDER_TYPE_BUY_LIMIT, mt5.ORDER_TYPE_BUY_STOP) else tick.bid)
@@ -949,8 +1047,14 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 successful_retcodes = (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL)
                 if not result or result.retcode not in successful_retcodes:
                     error = order_rejected(result, symbol, filling_name, filling_mask)
-                    journal_trade('order_failed', {'symbol': symbol, 'type': order_type, 'volume': volume, 'error': error, 'fillingMode': filling_name, 'retcode': getattr(result, 'retcode', None), 'clientOrderId': client_order_id or None})
-                    return json_response(self, {'success': False, 'error': error}, 400)
+                    code = rejection_code(result)
+                    external = mt5_external(result)
+                    journal_trade('order_failed', {'symbol': symbol, 'type': order_type, 'volume': volume,
+                        'error': error, 'code': code, 'retcode': getattr(result, 'retcode', None),
+                        'externalCode': (external or {}).get('code'), 'externalName': (external or {}).get('name'),
+                        'fillingMode': filling_name, 'clientOrderId': client_order_id or None})
+                    return json_response(self, refusal(code, error,
+                        rejection_params(symbol, filling_name, filling_mask), external), 400)
 
                 # Store idempotency key
                 fill_status = 'partially_filled' if result.retcode == mt5.TRADE_RETCODE_DONE_PARTIAL else 'filled'
@@ -973,10 +1077,12 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 ok, err = ensure_mt5()
                 if not ok: return json_response(self, {'success': False, 'error': str(err)}, 503)
                 positions = mt5.positions_get(ticket=ticket)
-                if not positions: return json_response(self, {'error': f'Position {ticket} not found'}, 404)
+                if not positions: return json_response(self, refusal(NOTICE_POSITION_MISSING,
+                    f'Position {ticket} not found', {'ticket': ticket}), 404)
                 pos = positions[0]; is_buy = pos.type == 0
                 tick = mt5.symbol_info_tick(pos.symbol)
-                if not tick: return json_response(self, {'error': f'No quote for {pos.symbol}'}, 400)
+                if not tick: return json_response(self, refusal(NOTICE_NO_QUOTE,
+                    f'No quote for {pos.symbol}', {'symbol': pos.symbol}), 400)
                 close_price = tick.bid if is_buy else tick.ask
                 req = {'action': mt5.TRADE_ACTION_DEAL, 'symbol': pos.symbol, 'volume': float(pos.volume),
                        'type': mt5.ORDER_TYPE_SELL if is_buy else mt5.ORDER_TYPE_BUY, 'position': ticket,
@@ -987,7 +1093,11 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 result = mt5.order_send(req)
                 if not result or result.retcode not in (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL):
                     error = order_rejected(result, pos.symbol, filling_name, filling_mask)
-                    return json_response(self, {'success': False, 'error': error}, 400)
+                    journal_trade('order_failed', {'symbol': pos.symbol, 'action': 'close', 'ticket': ticket,
+                        'error': error, 'code': rejection_code(result),
+                        'retcode': getattr(result, 'retcode', None)})
+                    return json_response(self, refusal(rejection_code(result), error,
+                        rejection_params(pos.symbol, filling_name, filling_mask), mt5_external(result)), 400)
 
                 # ── Report the REALISED outcome, not pre-close floating values ──
                 #
@@ -1081,7 +1191,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 result = mt5.order_send(req)
                 if not result or result.retcode not in (mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL):
                     error = order_rejected(result, pos.symbol, filling_name, filling_mask)
-                    return json_response(self, {'success': False, 'error': error}, 400)
+                    return json_response(self, refusal(rejection_code(result), error,
+                        rejection_params(pos.symbol, filling_name, filling_mask), mt5_external(result)), 400)
                 return json_response(self, {'success': True, 'ticket': ticket, 'closed': vol,
                     'remaining': float(pos.volume)-vol, 'closePrice': cp, 'price': cp,
                     'retcode': result.retcode, 'partial': result.retcode == mt5.TRADE_RETCODE_DONE_PARTIAL})
@@ -1122,6 +1233,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                             ok_res = res and res.retcode == mt5.TRADE_RETCODE_DONE
                             results.append({'index': i, 'success': ok_res,
                                 'ticket': res.order if ok_res else None, 'symbol': sym, 'action': 'place',
+                                'code': None if ok_res else rejection_code(res),
                                 'error': None if ok_res else order_rejected(res, sym, filling_name, filling_mask)})
                         elif action == 'close':
                             ticket = int(op.get('ticket', 0))
@@ -1146,6 +1258,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                             ok_res = res and res.retcode == mt5.TRADE_RETCODE_DONE
                             results.append({'index': i, 'success': ok_res,
                                 'ticket': ticket, 'symbol': pos.symbol, 'action': 'close',
+                                'code': None if ok_res else rejection_code(res),
                                 'error': None if ok_res else order_rejected(res, pos.symbol, filling_name, filling_mask)})
                         elif action == 'modify':
                             ticket = int(op.get('ticket', 0))

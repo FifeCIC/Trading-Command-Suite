@@ -313,6 +313,16 @@ export interface BrokerOrderResult {
   status?: 'FILLED' | 'PARTIALLY_FILLED' | 'REJECTED' | 'UNKNOWN';
   filledQuantity?: number;
   duplicate?: boolean;
+  /**
+   * Notice-registry code + data (#826 Phase 3). A broker refusal is identified by a STABLE CODE,
+   * not by its wording, so a log line, a UI card and a GitHub issue can be joined — and so the
+   * message can be reworded or translated without breaking that link.
+   *
+   * `external` carries the broker's own code (e.g. MT5 retcode 10030) for look-up.
+   */
+  code?: string;
+  params?: Record<string, unknown>;
+  external?: Record<string, unknown>;
 }
 
 /** A single news headline from a provider. */
