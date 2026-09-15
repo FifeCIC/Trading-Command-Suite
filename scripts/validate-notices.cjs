@@ -18,6 +18,11 @@
  *   6. **Every `TCS-…` literal found anywhere in the codebase is registered.**
  *   7. (report only) codes registered but not referenced anywhere — usually a sign the caller was
  *      never migrated, so it is worth seeing rather than failing on.
+ *   8. **#826 Phase 1 — the backend catalogue agrees with this registry.** The NestJS side cannot
+ *      import the registry (the two roots share no build), so it mirrors a *subset* of it in
+ *      `nest/src/common/notices/notice-catalogue.ts` for the two things only the server can know:
+ *      the HTTP status, and the log severity. This gate is what stops that mirror drifting — and
+ *      what forces a code the backend EMITS to be declared there.
  *
  * Usage:
  *   node scripts/validate-notices.cjs            # gate (exit 1 on a problem)
@@ -150,6 +155,70 @@ function findReferences(files, skipFiles) {
   return referenced;
 }
 
+/**
+ * The backend's mirror of a SUBSET of this registry (#826 Phase 1).
+ *
+ * ⚠️ It is parsed with a regex, not a TypeScript parser: this gate runs in `prebuild` where no TS
+ * toolchain is guaranteed, and the file's own header declares that one entry lives on one line in a
+ * fixed shape for exactly this reason. If that shape is broken the parse yields ZERO entries, which
+ * is reported as an error below — so a reformat can never silently switch this check off.
+ */
+const SERVER_CATALOGUE = path.join(
+  REPO_ROOT,
+  'nest',
+  'src',
+  'common',
+  'notices',
+  'notice-catalogue.ts',
+);
+const CATALOGUE_ENTRY = /'(TCS-[A-Z]{2,6}-\d{3})':\s*\{\s*httpStatus:\s*(\d+),\s*severity:\s*'([a-z]+)'/g;
+
+function parseServerCatalogue(source) {
+  const entries = new Map();
+  for (const m of source.matchAll(CATALOGUE_ENTRY)) {
+    entries.set(m[1], { httpStatus: Number(m[2]), severity: m[3] });
+  }
+  return entries;
+}
+
+/**
+ * Cross-language parity. The two roots share no build, so the CODE LIST is the interface: if the
+ * backend can emit a code the registry does not define, the user gets an unexplainable message —
+ * which is exactly the defect #826 exists to remove.
+ */
+function validateServerCatalogue(source, notices, severities) {
+  const errors = [];
+  const entries = parseServerCatalogue(source);
+
+  if (entries.size === 0) {
+    return {
+      errors: [
+        '  server catalogue: no entries parsed from nest/src/common/notices/notice-catalogue.ts — ' +
+          'the file has been reformatted out of the one-entry-per-line shape this gate reads, which ' +
+          'would silently disable the cross-language check',
+      ],
+      entries,
+    };
+  }
+
+  for (const [code, entry] of entries) {
+    const def = notices[code];
+    if (!def) {
+      errors.push(`  ${code}: declared in the server catalogue but NOT registered in the registry`);
+      continue;
+    }
+    if (!severities.includes(entry.severity)) {
+      errors.push(`  ${code}: server severity '${entry.severity}' is not a valid severity`);
+    } else if (entry.severity !== def.severity) {
+      errors.push(
+        `  ${code}: severity disagrees — registry '${def.severity}', server '${entry.severity}'`,
+      );
+    }
+  }
+
+  return { errors, entries };
+}
+
 async function loadRegistry() {
   if (!fs.existsSync(REGISTRY)) {
     throw new Error(`registry not found: ${path.relative(REPO_ROOT, REGISTRY)}`);
@@ -258,6 +327,41 @@ function toMarkdown(list) {
     const referenced = findReferences(files, SKIP_FILES);
     result.unknownReferences = [...referenced.entries()].filter(([code]) => !NOTICES[code]);
     result.unused = result.codes.filter((code) => !referenced.has(code));
+
+    // ── #826 Phase 1 — the server catalogue must agree with this registry ────
+    const catalogueRel = path.relative(REPO_ROOT, SERVER_CATALOGUE).split(path.sep).join('/');
+    let serverEntries = new Map();
+    if (!fs.existsSync(SERVER_CATALOGUE)) {
+      result.errors.push(
+        `  server catalogue missing: ${catalogueRel} — the backend has no way to map a code to an HTTP status`,
+      );
+    } else {
+      const server = validateServerCatalogue(
+        fs.readFileSync(SERVER_CATALOGUE, 'utf8'),
+        NOTICES,
+        SEVERITIES,
+      );
+      serverEntries = server.entries;
+      result.errors.push(...server.errors);
+    }
+    result.serverCatalogue = serverEntries.size;
+
+    // The reverse direction: a code the BACKEND emits that it never declared. Without a declaration
+    // it still serialises, but with no agreed status — so this is a failure, not a warning.
+    const backendCodes = new Set();
+    for (const [code, where] of referenced) {
+      const inBackend = where.some(
+        (p) => p.startsWith('nest/src/') && !p.endsWith('.spec.ts') && p !== catalogueRel,
+      );
+      if (inBackend) backendCodes.add(code);
+    }
+    for (const code of backendCodes) {
+      if (!serverEntries.has(code)) {
+        result.errors.push(
+          `  ${code}: emitted by the backend but missing from the server catalogue — add its httpStatus + severity to ${catalogueRel}`,
+        );
+      }
+    }
   } catch (e) {
     // An exception here is a defect in THIS validator, not in the registry — say so, so it is not
     // mistaken for a real failure of the code under test.
@@ -266,7 +370,8 @@ function toMarkdown(list) {
   }
 
   console.log(
-    `[notices] ${result.codes.length} registered code(s), ${result.filesScanned} file(s) scanned`,
+    `[notices] ${result.codes.length} registered code(s), ${result.filesScanned} file(s) scanned, ` +
+      `${result.serverCatalogue} declared as backend-emittable`,
   );
 
   if (result.warnings.length) {

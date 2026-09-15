@@ -5,6 +5,11 @@
  * (infinite loop, deadlock, or missing await) spins forever with no response.
  * This interceptor returns 504 Gateway Timeout after the deadline.
  *
+ * ⚠️ It must be `GatewayTimeoutException` (504), NOT `RequestTimeoutException`. Nest's
+ * RequestTimeoutException is **408**, which means "the client took too long to send its request" —
+ * the opposite party, and the wrong diagnosis for a hung server query. This file's comment claimed
+ * 504 for months while the code returned 408; the notice contract test (#826 Phase 1) caught it.
+ *
  * Registered globally in main.ts via app.useGlobalInterceptors().
  */
 
@@ -13,7 +18,7 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
-  RequestTimeoutException,
+  GatewayTimeoutException,
 } from '@nestjs/common';
 import { Observable, throwError, TimeoutError } from 'rxjs';
 import { timeout, catchError } from 'rxjs/operators';
@@ -28,7 +33,7 @@ export class TimeoutInterceptor implements NestInterceptor {
       catchError((err) => {
         if (err instanceof TimeoutError) {
           return throwError(
-            () => new RequestTimeoutException('Request timed out'),
+            () => new GatewayTimeoutException('Request timed out'),
           );
         }
         return throwError(() => err);

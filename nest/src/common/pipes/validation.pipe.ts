@@ -6,6 +6,7 @@
  * - Warning-level logging of all validation failures
  * - Field-level error messages in the response body
  * - Structured error array: [{ field, errors: [messages] }]
+ * - A stable notice code (`TCS-SYS-004`) so a rejected payload is identifiable — #826 Phase 1
  * - Preserves whitelist + forbidNonWhitelisted + transform behavior
  *
  * Usage: apply globally in main.ts or per-controller with @UsePipes()
@@ -13,13 +14,13 @@
 
 import {
   ArgumentMetadata,
-  BadRequestException,
   Injectable,
   Logger,
   PipeTransform,
   ValidationPipe as NestValidationPipe,
 } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
+import { TcsNoticeException } from '../notices/tcs-notice.exception';
 
 @Injectable()
 export class LoggingValidationPipe implements PipeTransform<any> {
@@ -36,11 +37,20 @@ export class LoggingValidationPipe implements PipeTransform<any> {
         this.logger.warn(
           `Validation failed — ${formatted.length} field(s) rejected\n${JSON.stringify(formatted, null, 2)}`,
         );
-        return new BadRequestException({
-          statusCode: 400,
-          error: 'Validation Failed',
-          errors: formatted,
-        });
+        // ⚠️ A rejected payload is a CODED condition, not prose (#826 Phase 1). The field list is
+        // DATA — the registry renders the sentence — and `errors` is kept verbatim because it is
+        // the only thing that says *why* each field failed, which no single code can carry.
+        const fields = formatted.map((f) => f.field);
+        const summary = fields.join(', ') || 'none reported';
+        return new TcsNoticeException(
+          'TCS-SYS-004',
+          { count: formatted.length, fields: summary },
+          {
+            httpStatus: 400,
+            detail: `Validation failed — ${formatted.length} field(s) rejected: ${summary}`,
+            extra: { error: 'Validation Failed', errors: formatted },
+          },
+        );
       },
     });
   }

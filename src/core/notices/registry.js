@@ -377,10 +377,49 @@ export const NOTICES = {
     area: 'SYS',
     title: 'Request timed out',
     message: 'The API did not answer within {seconds}s, so the request was abandoned.',
-    cause: 'The client timeout is set just below the 30s server timeout, so a slow query surfaces here rather than hanging the page.',
+    cause:
+      'The CLIENT gave up. Its timeout is set just below the server\u2019s 30s deadline, so a slow query ' +
+      'usually surfaces here rather than hanging the page. If the server gave up first the code is ' +
+      'TCS-SYS-005 instead — the difference tells you which side was still waiting.',
     action: 'Retry. If it keeps timing out, the backend is busy or the query is slow — check the API logs.',
     params: ['seconds'],
     refs: [],
+  },
+  'TCS-SYS-004': {
+    severity: 'error',
+    area: 'SYS',
+    title: 'Request rejected before it ran',
+    message: 'The request was rejected before it reached the endpoint: {count} field(s) are not valid.',
+    cause: 'Fields rejected: {fields}',
+    action:
+      'Correct the named field(s) and send the request again. Field paths use dot notation for nested ' +
+      'objects, so `body.volume` means the `volume` property of the request body.',
+    params: ['count', 'fields'],
+    refs: ['#826'],
+  },
+  'TCS-SYS-005': {
+    severity: 'error',
+    area: 'SYS',
+    title: 'API request exceeded its deadline',
+    message: 'The API abandoned this request after {seconds}s without producing an answer.',
+    cause:
+      'The SERVER gave up. The endpoint did not return inside its own deadline (TimeoutInterceptor). ' +
+      'A slow query, an unresponsive provider, or a missing await is the usual cause.',
+    action: 'Retry once. If it repeats, the API log names the route that timed out, against this same code.',
+    params: ['seconds'],
+    refs: ['#826'],
+  },
+  'TCS-SYS-006': {
+    severity: 'error',
+    area: 'SYS',
+    title: 'Unexpected server error',
+    message: 'The API hit an unexpected error while handling this request (HTTP {status}).',
+    cause: '{detail}',
+    action:
+      'This is a bug, not a condition you can clear. Report the code shown above with what you were ' +
+      'doing — the API log holds the stack against the same code.',
+    params: ['status', 'detail'],
+    refs: ['#826'],
   },
 
   // ── Signals workbench ────────────────────────

@@ -10,6 +10,7 @@ import { PrismaService } from './database/prisma.service';
 import { ApiActivityService } from './modules/api-activity/api-activity.service';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { SlowRequestInterceptor } from './common/interceptors/slow-request.interceptor';
+import { NoticeExceptionFilter } from './common/notices/notice.filter';
 
 const logger = new Logger('Bootstrap');
 
@@ -82,6 +83,11 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new LoggingValidationPipe());
   app.useGlobalInterceptors(new SlowRequestInterceptor(), new TimeoutInterceptor());
+  // THE error serialiser (#826 Phase 1). Every failure leaves the API carrying a stable code, so a
+  // log line, a UI report and a GitHub issue can be joined by the same string. Registered here
+  // rather than via APP_FILTER so it sits beside the pipes/interceptors it works with — and so a
+  // reader of bootstrap can see that error shape is decided in exactly one place.
+  app.useGlobalFilters(new NoticeExceptionFilter());
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Trader Core API')
