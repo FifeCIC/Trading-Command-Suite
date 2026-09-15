@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
+// ⚠️ One import, and it is load-bearing: every preference write funnels through save() below, so
+// applying the notice locale THERE is what stops a language switch from being a silent no-op
+// (preference stored, messages still English until a reload). See apply-locale.js.
+import { applyNoticeLocale } from '../notices/apply-locale.js';
 
 const STORAGE_KEY = 'tcs:preferences';
 const API = '/api/preferences';
@@ -24,6 +28,9 @@ const DEFAULTS = {
   experienceLevel: 'beginner', // 'beginner' | 'experienced' | 'expert'
   // Display classification — controls information density and language
   displayMode: 'focused',     // 'focused' | 'technical'
+  // Language for user-facing notices. Only the notice catalogue is translated so far (#826 Phase 6):
+  // the codes stay identical in every language, only the sentences differ. 'en' | 'de'.
+  noticeLocale: 'en',
   // Accessibility & UX
   pageTransitions: true,       // View Transitions API page morphing
   keyboardShortcutsHelp: true, // Show keyboard shortcuts helper
@@ -94,6 +101,9 @@ function load() {
 function save(prefs) {
   cached = prefs;
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); } catch { /* noop */ }
+  // Apply on EVERY write path — the Settings control, server hydration and reset all land here.
+  // An unrecognised value degrades to English inside applyNoticeLocale().
+  applyNoticeLocale(prefs.noticeLocale);
 }
 
 /** Push a single key to server (fire-and-forget) */

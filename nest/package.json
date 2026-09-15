@@ -1,6 +1,6 @@
 {
   "name": "nest",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "",
   "author": "",
   "private": true,
@@ -12,7 +12,7 @@
     "seed:strategies": "ts-node prisma/seed-strategies.ts"
   },
   "scripts": {
-    "prebuild": "node scripts/build-preflight.cjs && npx rimraf dist && npx prisma generate && node scripts/validate-protocol-directions.cjs && node scripts/validate-directive-group-kind.cjs && node scripts/validate-pipeline-contracts.cjs && node ../scripts/validate-agent-docs.cjs && node ../scripts/validate-text-encoding.cjs && node ../scripts/validate-roadmap-columns.cjs && node ../scripts/validate-notices.cjs",
+    "prebuild": "node scripts/build-preflight.cjs && npx rimraf dist && npx prisma generate && node scripts/validate-protocol-directions.cjs && node scripts/validate-directive-group-kind.cjs && node scripts/validate-pipeline-contracts.cjs && node ../scripts/validate-agent-docs.cjs && node ../scripts/validate-text-encoding.cjs && node ../scripts/validate-roadmap-columns.cjs && node ../scripts/validate-notices.cjs && node --test ../src/core/notices/notices.test.js",
     "build": "tsc -p tsconfig.build.json",
     "build:api": "pwsh -File ../scripts/build-api.ps1",
     "prisma:generate": "prisma generate",

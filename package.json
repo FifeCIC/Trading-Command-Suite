@@ -1,6 +1,6 @@
 {
   "name": "tradingcs",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,7 +14,8 @@
     "handoff:discord": "node ./scripts/handoff-to-discord.cjs",
     "digest:discord": "node ./scripts/weekly-digest-discord.cjs",
     "roadmap:sync": "node ./scripts/roadmap-sync.cjs",
-    "test:roadmap": "node --test src/core/roadmap/roadmap-core.test.js"
+    "test:roadmap": "node --test src/core/roadmap/roadmap-core.test.js",
+    "test:notices": "node --test src/core/notices/notices.test.js"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.20",

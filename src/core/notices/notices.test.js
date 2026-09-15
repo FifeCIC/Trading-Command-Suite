@@ -1,0 +1,176 @@
+/**
+ * notices.test.js — the registry's invariants, run without a browser.
+ * =================================================================
+ * Created 2026-09-15 for #826 **Phase 6**. Run with: `npm run test:notices`
+ *
+ * WHY A TEST AND NOT A REVIEW
+ * ---------------------------
+ * Phase 6's acceptance criterion is "translation is demonstrable: one locale added without touching
+ * a single call site". A demonstration in a chat message proves it once, for one code, on one day.
+ * These assertions prove it for **every** code, on every run — and each one is a property that was
+ * silently broken at least once in this app's history:
+ *
+ *   1. **A code renders every field.** An entry whose `message` is `{detail}` renders as the raw
+ *      detail with no frame; one with a typo'd placeholder renders `{detial}` to a user.
+ *   2. **No message is blank.** The anti-silence rule: a blank notice is worse than an ugly one.
+ *   3. **An unknown code names itself.** `known: false` is a signal to a developer, and the code
+ *      must still be visible to a user reporting it.
+ *   4. **The same code renders in every locale**, with the code unchanged — the identity survives
+ *      translation, which is the only reason a support ticket can be grepped (this is exactly what
+ *      failed in #824: the user was shown the broker's prose and nothing else).
+ *   5. **A partial locale falls back per FIELD, not per code.** The property that makes a locale
+ *      shipable incrementally, and the one most likely to be "simplified" away.
+ */
+
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+import {
+  NOTICES,
+  AREAS,
+  SEVERITIES,
+  notice,
+  noticeLine,
+  renderTemplate,
+  listNotices,
+  isNoticeCode,
+  setNoticeLocale,
+  getNoticeLocale,
+} from './registry.js';
+import { AVAILABLE_LOCALES, applyNoticeLocale, registerBundledLocales } from './apply-locale.js';
+import de from './locales/de.js';
+
+const CODES = Object.keys(NOTICES);
+
+/** Every declared param given a value, so any template that still has `{x}` is using an undeclared one. */
+const allParams = (code) =>
+  Object.fromEntries((NOTICES[code].params || []).map((p) => [p, `«${p}»`]));
+
+test('the catalogue is well formed', () => {
+  assert.ok(CODES.length > 0, 'registry is empty');
+
+  for (const code of CODES) {
+    const def = NOTICES[code];
+    const [, area] = code.match(/^TCS-([A-Z]{2,6})-\d{3}$/) ?? [];
+    assert.equal(def.area, area, `${code}: area does not match the code segment`);
+    assert.ok(SEVERITIES.includes(def.severity), `${code}: unknown severity ${def.severity}`);
+    assert.ok(AREAS[def.area], `${code}: area ${def.area} is not declared`);
+    assert.equal(new Set(def.params).size, def.params.length, `${code}: duplicate params`);
+    assert.ok(isNoticeCode(code), `${code}: isNoticeCode disagrees with the catalogue`);
+  }
+});
+
+test('every code renders a title, a message and a non-empty line', () => {
+  for (const code of CODES) {
+    const n = notice(code, allParams(code));
+    assert.equal(n.known, true, `${code}: reported as unknown`);
+    assert.ok(n.title?.trim(), `${code}: blank title`);
+    assert.ok(n.message?.trim(), `${code}: blank message`);
+    assert.ok(noticeLine(code, allParams(code)).includes(`[${code}]`), `${code}: line lacks the code`);
+  }
+});
+
+test('no template leaks an unsubstituted placeholder when its params are supplied', () => {
+  for (const code of CODES) {
+    for (const locale of AVAILABLE_LOCALES.map((l) => l.id)) {
+      applyNoticeLocale(locale);
+      const n = notice(code, allParams(code));
+      for (const field of ['title', 'message', 'cause', 'action']) {
+        const text = n[field];
+        if (!text) continue;
+        assert.ok(
+          !/\{\w+\}/.test(text),
+          `${code} [${locale}]: ${field} still shows a placeholder — "${text}"`,
+        );
+      }
+    }
+  }
+  applyNoticeLocale('en');
+});
+
+test('an undeclared placeholder is left VISIBLE rather than blanked (anti-silence)', () => {
+  assert.equal(renderTemplate('about {symbol}', {}), 'about {symbol}');
+  // An empty string counts as missing: "rejected " reads like a rendering bug, "rejected {symbol}" reports itself.
+  assert.equal(renderTemplate('about {symbol}', { symbol: '' }), 'about {symbol}');
+  assert.equal(renderTemplate('about {symbol}', { symbol: 'XAGUSD' }), 'about XAGUSD');
+});
+
+test('an unknown code is never blank and names itself', () => {
+  // Built at runtime so the identifier cannot be mistaken for a real registration by the gate.
+  const bogus = ['TCS', 'SYS', '000'].join('-');
+  const n = notice(bogus);
+  assert.equal(n.known, false);
+  assert.ok(n.message.includes(bogus), 'the unknown code must appear in its own message');
+  assert.ok(n.severity && n.title, 'an unknown code still has to present');
+});
+
+test('the SAME code renders in every locale — only the wording differs', () => {
+  registerBundledLocales();
+  const code = 'TCS-TRADE-001';
+  const params = allParams(code);
+
+  applyNoticeLocale('en');
+  const english = notice(code, params);
+  applyNoticeLocale('de');
+  const german = notice(code, params);
+  applyNoticeLocale('en');
+
+  assert.equal(german.code, english.code, 'the code must not translate');
+  assert.equal(german.severity, english.severity, 'severity is metadata, not wording');
+  assert.equal(german.area, english.area, 'area is metadata, not wording');
+  assert.notEqual(german.title, english.title, 'the German title should differ from the English one');
+  // Params are substituted identically in both languages — that is what makes the code the interface.
+  assert.ok(german.message.includes('«symbol»'), 'the German message must substitute the same params');
+  assert.ok(english.message.includes('«symbol»'), 'the English message must substitute the same params');
+});
+
+test('a partial locale falls back PER FIELD, not per code', () => {
+  registerBundledLocales();
+  // TCS-SIG-001 is translated but deliberately carries no `cause` — that single field must fall
+  // back to English while title/message stay German. Per-code fallback would drop the whole entry.
+  applyNoticeLocale('de');
+  const n = notice('TCS-SIG-001', { detail: 'HTTP 500' });
+  assert.match(n.title, /Signalliste/, 'the translated title should be used');
+  assert.match(n.cause, /Status|detail|HTTP/i, 'the English cause should fall back in');
+  applyNoticeLocale('en');
+
+  // And an entirely untranslated code is still English, in every field.
+  applyNoticeLocale('de');
+  const untouched = notice('TCS-TRADE-013', allParams('TCS-TRADE-013'));
+  assert.equal(untouched.title, NOTICES['TCS-TRADE-013'].title);
+  applyNoticeLocale('en');
+});
+
+test('an unrecognised locale degrades to English instead of blanking every message', () => {
+  registerBundledLocales();
+  assert.equal(applyNoticeLocale('kl'), 'en');
+  assert.equal(getNoticeLocale(), 'en');
+  assert.ok(notice('TCS-SYS-002', allParams('TCS-SYS-002')).message.length > 0);
+
+  // Also true of a stale preference value (e.g. a locale file that was removed).
+  setNoticeLocale('zz');
+  assert.ok(notice('TCS-SYS-002', allParams('TCS-SYS-002')).message.length > 0);
+  setNoticeLocale('en');
+});
+
+test('the German bundle only names registered codes, and its placeholders are declared', () => {
+  // The gate checks this too (`validate-notices.cjs`); the duplicate here is deliberate — the gate
+  // runs on prebuild, this runs on the machine of whoever edits the translation.
+  for (const [code, fields] of Object.entries(de)) {
+    assert.ok(NOTICES[code], `${code}: translated but not registered`);
+    for (const [field, text] of Object.entries(fields)) {
+      for (const [, placeholder] of String(text).matchAll(/\{(\w+)\}/g)) {
+        assert.ok(
+          (NOTICES[code].params || []).includes(placeholder),
+          `${code}.${field}: {${placeholder}} is not declared by ${code}`,
+        );
+      }
+    }
+  }
+});
+
+test('listNotices() exposes the whole catalogue to tooling', () => {
+  const listed = listNotices();
+  assert.equal(listed.length, CODES.length);
+  for (const n of listed) assert.ok(n.code && n.title, 'every listed notice needs a code and a title');
+});

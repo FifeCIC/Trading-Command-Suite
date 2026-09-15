@@ -23,11 +23,16 @@
  *      `nest/src/common/notices/notice-catalogue.ts` for the two things only the server can know:
  *      the HTTP status, and the log severity. This gate is what stops that mirror drifting — and
  *      what forces a code the backend EMITS to be declared there.
+ *   9. **#826 Phase 6 — the published catalogue is not stale.** `docs/NOTICE-CODES.md` is generated
+ *      from the registry and compared byte-for-byte, so a published code reference cannot rot.
+ *  10. **#826 Phase 6 — locale bundles are structurally sound.** Every translated code must exist,
+ *      must not rename itself, and must not use a placeholder its code does not declare.
  *
  * Usage:
  *   node scripts/validate-notices.cjs            # gate (exit 1 on a problem)
  *   node scripts/validate-notices.cjs --list     # print the catalogue
- *   node scripts/validate-notices.cjs --md       # markdown catalogue on stdout (for docs)
+ *   node scripts/validate-notices.cjs --md       # the catalogue as a markdown document on stdout
+ *   node scripts/validate-notices.cjs --md --out=docs/NOTICE-CODES.md   # write it (UTF-8, correct)
  *   node scripts/validate-notices.cjs --self-test
  */
 
@@ -39,6 +44,14 @@ const { pathToFileURL } = require('node:url');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const REGISTRY = path.join(REPO_ROOT, 'src', 'core', 'notices', 'registry.js');
+/** Locale bundles, if any. Registered translations live here so the gate can check they stay valid. */
+const LOCALES_DIR = path.join(REPO_ROOT, 'src', 'core', 'notices', 'locales');
+/**
+ * The PUBLISHED catalogue (category C, reference). Generated, and drift-checked — see
+ * buildCatalogueDoc(). It is also excluded from the reference scan below: it mentions every code,
+ * so counting it would make the "registered but not referenced" report always say zero.
+ */
+const CATALOGUE_DOC = path.join(REPO_ROOT, 'docs', 'NOTICE-CODES.md');
 
 const SCAN_ROOTS = ['src', 'nest/src', 'nest/scripts', 'scripts', '.github', 'docs'];
 const SCAN_EXTS = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.json', '.md', '.py', '.ps1']);
@@ -55,7 +68,11 @@ const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', 'coverage', '.git', 
  * is an accepted trade: this is tooling, not application code, and the alternative is putting
  * throwaway `TCS-TEST-*` codes in the production registry.
  */
-const SKIP_FILES = new Set([REGISTRY, path.join(REPO_ROOT, 'scripts', 'validate-notices.cjs')]);
+const SKIP_FILES = new Set([
+  REGISTRY,
+  path.join(REPO_ROOT, 'scripts', 'validate-notices.cjs'),
+  CATALOGUE_DOC,
+]);
 
 /** Matches a notice code in source text. Kept in sync with CODE_PATTERN in the registry. */
 const CODE_IN_TEXT = /\bTCS-[A-Z]{2,6}-\d{3}\b/g;
@@ -138,13 +155,18 @@ function findReferences(files, skipFiles) {
   const referenced = new Map(); // code -> [relative paths]
   for (const full of files) {
     if (skipFiles.has(full)) continue;
+    // ⚠️ Locale bundles are excluded for the same reason the registry is: they MENTION every code
+    // they translate, so counting them would report codes as "referenced" that no caller emits yet —
+    // the report exists to show migration progress, and a translation is not a caller. An
+    // unregistered code inside a bundle is caught by validateLocaleBundle() instead, which reports
+    // it with the locale that got it wrong.
+    if (full.startsWith(LOCALES_DIR)) continue;
     let body;
     try {
       body = fs.readFileSync(full, 'utf8');
     } catch {
       continue;
-    }
-    const hits = body.match(CODE_IN_TEXT);
+    }    const hits = body.match(CODE_IN_TEXT);
     if (!hits) continue;
     const rel = path.relative(REPO_ROOT, full).split(path.sep).join('/');
     for (const code of new Set(hits)) {
@@ -219,6 +241,190 @@ function validateServerCatalogue(source, notices, severities) {
   return { errors, entries };
 }
 
+/**
+ * validateLocaleBundle() — structural checks on a translation.
+ *
+ * A translation is a second copy of the wording, which in this repo is the classic failure: the
+ * second copy rots. Three things can silently break it, and all three are checked here:
+ *
+ *   1. a code that is not registered in English (the translator worked from an older list);
+ *   2. a placeholder the translation uses that the code does not declare — the message would render
+ *      `{symbol}` literally to a user, in a language they may not read well enough to report it;
+ *   3. a translated CODE — impossible to write by accident, but the codes are the one thing that
+ *      must never differ between languages, so it is asserted rather than assumed.
+ *
+ * Missing fields are NOT an error: a partial translation falls back per field to English (see
+ * wordingFor() in the registry), which is what makes a locale shipable incrementally.
+ */
+function validateLocaleBundle(locale, bundle, notices) {
+  const errors = [];
+  let fallbacks = 0;
+
+  if (!bundle || typeof bundle !== 'object') {
+    return { errors: [`  locale '${locale}': bundle is not an object`], count: 0, fallbacks: 0 };
+  }
+
+  const entries = Object.entries(bundle);
+  if (entries.length === 0) errors.push(`  locale '${locale}': bundle declares no codes`);
+
+  for (const [code, fields] of entries) {
+    const def = notices[code];
+    if (!def) {
+      errors.push(`  locale '${locale}': ${code} is not registered`);
+      continue;
+    }
+    if (fields && typeof fields.code === 'string' && fields.code !== code) {
+      errors.push(`  locale '${locale}': ${code} declares code '${fields.code}' — codes never translate`);
+    }
+
+    const declared = Array.isArray(def.params) ? def.params : [];
+    const used = new Set();
+    for (const field of ['title', 'message', 'cause', 'action']) {
+      const text = fields?.[field];
+      if (typeof text !== 'string') {
+        // ⚠️ COUNTED, NOT WARNED. A partial locale is the DESIGN (fields fall back to English one at
+        // a time so a locale is shipable incrementally). 22 individual warnings for a 12-code bundle
+        // is how a warnings section becomes something people scroll past.
+        if (typeof def[field] === 'string') fallbacks++;
+        continue;
+      }
+      for (const hit of text.matchAll(/\{(\w+)\}/g)) used.add(hit[1]);
+    }
+    for (const u of used) {
+      if (!declared.includes(u)) {
+        errors.push(`  locale '${locale}': ${code} uses {${u}}, which ${code} does not declare`);
+      }
+    }
+  }
+
+  return { errors, count: entries.length, fallbacks };
+}
+
+/**
+ * buildCatalogueDoc() — the human catalogue, generated.
+ *
+ * WHY IT IS GENERATED RATHER THAN WRITTEN
+ * ---------------------------------------
+ * A hand-written catalogue is a second copy of the registry, and the second copy is always the one
+ * that rots (#826's whole premise: ~130 call sites each holding their own copy of a message). Here
+ * the registry is the source and this is a rendering of it — so `--check` can prove the published
+ * document matches the code, and a build fails if someone edits the doc instead of the registry.
+ *
+ * ⚠️ The output must be DETERMINISTIC (sorted, and carrying no timestamp) or the drift check would
+ * fail on every run. That is also why the header has no `Last updated` date: a generated file's
+ * history is its git log, and a date would make the content irreproducible.
+ */
+function buildCatalogueDoc(list, areas, severities) {
+  const sorted = [...list].sort((a, b) => a.code.localeCompare(b.code));
+  // Counted by walking the declared severity order, not by object keys: the output has to be
+  // deterministic, or the drift check below would fire on ordering alone.
+  const tally = {};
+  for (const n of sorted) tally[n.severity] = (tally[n.severity] || 0) + 1;
+  const esc = (s) => String(s ?? '').replace(/\|/g, '\\|');
+
+  const out = [];
+  out.push('# Notice codes — the catalogue');
+  out.push('');
+  out.push('**Status:** active');
+  out.push('**Category:** C (reference)');
+  out.push('**Created:** 2026-09-15');
+  out.push('**Last updated:** generated — see `git log docs/NOTICE-CODES.md`');
+  out.push('**Owner:** generated — do NOT edit by hand');
+  out.push('');
+  out.push(
+    '> Generated from `src/core/notices/registry.js` by ' +
+      '`node scripts/validate-notices.cjs --md --out=docs/NOTICE-CODES.md`.',
+  );
+  out.push(
+    '> Editing this file changes nothing: the backend `prebuild` fails if it does not match the registry.',
+  );
+  out.push('');
+  out.push('## Why codes exist');
+  out.push('');
+  out.push(
+    'The **code** identifies a condition and never changes. The **wording** explains it and may be ' +
+      'reworded or translated at any time. Before this, the identity of a message *was* its wording — ' +
+      'so a log line, a UI card, a test and a GitHub issue could not be correlated, and fixing a typo ' +
+      'orphaned every reference to it. Same principle as Windows `HRESULT`, PostgreSQL `SQLSTATE` and ' +
+      'the MetaTrader retcodes this app already consumes.',
+  );
+  out.push('');
+  out.push('**Reporting a problem:** quote the code shown in the message. It is greppable here, in the API log and in the issue tracker.');
+  out.push('');
+  out.push('**Adding a code:** add the entry to the registry, emit it at the call site, then run the gate. Retire codes; never renumber one — renumbering is the same defect as rewording.');
+  out.push('');
+  out.push('## Index');
+  out.push('');
+  out.push(`| Code | Severity | Area | Title |`);
+  out.push('|---|---|---|---|');
+  for (const n of sorted) out.push(`| \`${n.code}\` | ${n.severity} | ${n.area} | ${esc(n.title)} |`);
+  out.push('');
+  out.push(
+    `**${sorted.length} codes** — ` +
+      severities
+        .filter((s) => tally[s])
+        .map((s) => `${tally[s]} ${s}`)
+        .join(', ') +
+      '.',
+  );
+  out.push('');
+  out.push('## Codes by area');
+  out.push('');
+
+  for (const [area, label] of Object.entries(areas)) {
+    const group = sorted.filter((n) => n.area === area);
+    if (!group.length) continue;
+    out.push(`### ${area} — ${label}`);
+    out.push('');
+    for (const n of group) {
+      out.push(`#### \`${n.code}\` — ${n.title}`);
+      out.push('');
+      out.push(`- **Severity:** ${n.severity}`);
+      out.push(`- **Message:** ${n.message}`);
+      if (n.cause) out.push(`- **Cause:** ${n.cause}`);
+      if (n.action) out.push(`- **Action:** ${n.action}`);
+      const params = n.params || [];
+      out.push(
+        `- **Params:** ${params.length ? params.map((p) => `\`${p}\``).join(', ') : '*none*'}`,
+      );
+      // The call form IS the example: derived from `params`, so it cannot drift, and it shows a
+      // caller exactly what to pass without inventing a reading this catalogue cannot verify.
+      out.push(
+        `- **Call:** \`notice('${n.code}'${params.length ? `, { ${params.join(', ')} }` : ''})\``,
+      );
+      if (n.external) {
+        out.push(
+          `- **External:** ${n.external.system} ${n.external.code ?? ''}${n.external.name ? ` (${n.external.name})` : ''}`,
+        );
+      }
+      out.push(`- **Related:** ${(n.refs || []).length ? (n.refs || []).join(', ') : '*none*'}`);
+      out.push('');
+    }
+  }
+
+  return out.join('\n').replace(/\n+$/, '\n');
+}
+
+/**
+ * Prove the published catalogue matches the registry.
+ *
+ * A published document that is silently out of date is worse than none — it looks like provenance.
+ * Regeneration is one command, so staleness is always a mistake rather than a constraint.
+ */
+function checkCatalogueDoc(expected) {
+  if (!fs.existsSync(CATALOGUE_DOC)) {
+    return [`  docs/NOTICE-CODES.md is missing — run: node scripts/validate-notices.cjs --md --out=docs/NOTICE-CODES.md`];
+  }
+  const actual = fs.readFileSync(CATALOGUE_DOC, 'utf8').replace(/\r\n/g, '\n');
+  if (actual !== expected) {
+    return [
+      '  docs/NOTICE-CODES.md is out of date — regenerate it: ' +
+        'node scripts/validate-notices.cjs --md --out=docs/NOTICE-CODES.md',
+    ];
+  }
+  return [];
+}
+
 async function loadRegistry() {
   if (!fs.existsSync(REGISTRY)) {
     throw new Error(`registry not found: ${path.relative(REPO_ROOT, REGISTRY)}`);
@@ -226,18 +432,14 @@ async function loadRegistry() {
   return import(pathToFileURL(REGISTRY).href);
 }
 
-function toMarkdown(list) {
-  const rows = list.map(
-    (n) =>
-      `| \`${n.code}\` | ${n.severity} | ${n.area} | ${n.title} | ${n.message} | ${n.action || ''} | ${
-        n.external ? `${n.external.system} ${n.external.code}` : ''
-      } | ${(n.refs || []).join(' ')} |`,
-  );
-  return [
-    '| Code | Severity | Area | Title | Message | Action | External | Refs |',
-    '|---|---|---|---|---|---|---|---|',
-    ...rows,
-  ].join('\n');
+/**
+ * Load a locale bundle for structural checking. Bundles are plain ESM default-exporting an object
+ * of `code -> { title?, message?, cause?, action? }`, so plain Node can import them exactly as the
+ * browser does — no build step, no parser, and the gate checks the real artefact.
+ */
+async function loadLocaleBundle(file) {
+  const mod = await import(pathToFileURL(file).href);
+  return mod.default ?? mod.messages ?? mod;
 }
 
 (async () => {
@@ -289,6 +491,20 @@ function toMarkdown(list) {
     expect('rejects an undeclared placeholder', /placeholder \{missing\}/.test(joined));
     expect('rejects duplicate params', /duplicate params/.test(joined));
     expect('flags area/segment mismatch', /does not match the code segment/.test(joined));
+
+    // ── locale bundle checks ──────────────────────────────────────────
+    const locGood = { 'TCS-TEST-001': { title: 'ok {thing}', message: 'body' } };
+    const locBad = {
+      'TCS-TEST-999': { title: 'unknown code' },
+      'TCS-TEST-001': { message: 'uses {nope}' },
+    };
+    expect(
+      'locale: a partial bundle is accepted (missing fields fall back to English)',
+      validateLocaleBundle('xx', locGood, good).errors.length === 0,
+    );
+    const lj = validateLocaleBundle('xx', locBad, good).errors.join('\n');
+    expect('locale: rejects a code the registry does not define', /not registered/.test(lj));
+    expect('locale: rejects a placeholder the code does not declare', /does not declare/.test(lj));
     console.log();
     if (failed) {
       console.log(`FAILED (${failed})`);
@@ -301,8 +517,17 @@ function toMarkdown(list) {
   // ── Catalogue output modes ────────────────────────────────────────────
   if (process.argv.includes('--list') || process.argv.includes('--md')) {
     const list = listNotices().sort((a, b) => a.code.localeCompare(b.code));
+    const outArg = process.argv.find((a) => a.startsWith('--out='));
     if (process.argv.includes('--md')) {
-      console.log(toMarkdown(list));
+      const doc = buildCatalogueDoc(list, AREAS, SEVERITIES);
+      if (outArg) {
+        // Written with fs, not shell redirection: PowerShell re-encodes stdout and turns every em
+        // dash in the catalogue into mojibake (#815 is the issue that cost us a day for this).
+        fs.writeFileSync(path.resolve(REPO_ROOT, outArg.slice('--out='.length)), doc, 'utf8');
+        console.log(`wrote ${outArg.slice('--out='.length)} — ${list.length} code(s)`);
+      } else {
+        process.stdout.write(doc);
+      }
     } else {
       for (const n of list) {
         console.log(`${n.code}  ${String(n.severity).padEnd(8)} ${n.title}`);
@@ -362,6 +587,23 @@ function toMarkdown(list) {
         );
       }
     }
+
+    // ── the PUBLISHED catalogue must match the registry ────────────────
+    // A published document that is silently stale is worse than none: it looks like provenance.
+    result.errors.push(...checkCatalogueDoc(buildCatalogueDoc(listNotices(), AREAS, SEVERITIES)));
+
+    // ── locale bundles (#826 Phase 6) ────────────────────────────────
+    result.locales = [];
+    if (fs.existsSync(LOCALES_DIR)) {
+      const files = fs.readdirSync(LOCALES_DIR).filter((f) => f.endsWith('.js'));
+      for (const f of files) {
+        const locale = path.basename(f, '.js');
+        const bundle = await loadLocaleBundle(path.join(LOCALES_DIR, f));
+        const checked = validateLocaleBundle(locale, bundle, NOTICES);
+        result.errors.push(...checked.errors);
+        result.locales.push(`${locale}:${checked.count}${checked.fallbacks ? ` (+${checked.fallbacks} fields in English)` : ''}`);
+      }
+    }
   } catch (e) {
     // An exception here is a defect in THIS validator, not in the registry — say so, so it is not
     // mistaken for a real failure of the code under test.
@@ -371,7 +613,8 @@ function toMarkdown(list) {
 
   console.log(
     `[notices] ${result.codes.length} registered code(s), ${result.filesScanned} file(s) scanned, ` +
-      `${result.serverCatalogue} declared as backend-emittable`,
+      `${result.serverCatalogue} declared as backend-emittable` +
+      (result.locales?.length ? `, locales: ${result.locales.join(' ')}` : ''),
   );
 
   if (result.warnings.length) {
@@ -383,7 +626,8 @@ function toMarkdown(list) {
   }
 
   if (result.errors.length === 0 && result.unknownReferences.length === 0) {
-    console.log('\n[notices] ✅ OK — every code is well-formed and every referenced code is registered\n');
+    console.log('\n[notices] ✅ OK — every code is well-formed and every referenced code is registered');
+    console.log('[notices]    behaviour checks (rendering, locales): npm run test:notices\n');
     process.exit(0);
   }
 

@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
 import { usePreferences } from '../core/hooks/usePreferences';
+import { AVAILABLE_LOCALES } from '../core/notices/apply-locale';
 import { VIEW_EXPLANATIONS } from '../core/view-explanations';
 import EmptyState from './EmptyState';
 import GlossaryPage from '../pages/GlossaryPage';
@@ -48,6 +49,23 @@ var GLOBAL_PREFERENCES = [
       { value: 'experienced', label: 'Experienced', desc: 'Full feature set — assumes trading and platform familiarity' },
       { value: 'expert', label: 'Expert', desc: 'All features unlocked — advanced configuration and raw data access' },
     ],
+  },
+  {
+    id: 'noticeLocale',
+    label: 'Message Language',
+    description:
+      'Language for system notices, warnings and errors. Codes (TCS-…) never change — only the wording.',
+    type: 'radio',
+    key: 'tcs:preferences',
+    field: 'noticeLocale',
+    defaultValue: 'en',
+    // ⚠️ Derived from AVAILABLE_LOCALES, not hand-listed here. A second list of languages is a
+    // second list to forget: adding a locale would show up in the registry and nowhere in Settings.
+    options: AVAILABLE_LOCALES.map((l) => ({
+      value: l.id,
+      label: l.native,
+      desc: l.translated,
+    })),
   },
   {
     id: 'hidePageTitle',
