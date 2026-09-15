@@ -10,6 +10,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet } from '../core/api/client';
+import NoticeBlock from './NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 import './speed-decision-panel.css';
 
 const POLL_MS = 10_000; // Refresh every 10s
@@ -60,7 +62,7 @@ export default function SpeedDecisionPanel({ symbol = 'BTCUSD', compact = false 
       });
       setError(null);
     } catch (err) {
-      setError(err.message);
+      setError(noticeFromError(err));
     }
   }, [symbol]);
 
@@ -74,7 +76,9 @@ export default function SpeedDecisionPanel({ symbol = 'BTCUSD', compact = false 
     return (
       <div className="sdp-panel sdp-panel--error">
         <span className="sdp-error-icon">⚠</span>
-        <span className="sdp-error-text">Decision data unavailable</span>
+        {/* The old form was three words and no identity: "Decision data unavailable" told the user
+            nothing to act on and gave support nothing to grep (cf. #824). */}
+        <NoticeBlock notice={error} compact />
       </div>
     );
   }

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
+import NoticeBlock from '../components/NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 import BacktestChartPane from '../components/backtest/BacktestChartPane';
 import EquityCurveChart from '../components/backtest/EquityCurveChart';
 
@@ -231,7 +233,7 @@ export default function BacktestPage() {
         )}
       </div>
 
-      {runMutation.isError && <p className="bt-error">{(runMutation.error && runMutation.error.message) || 'Backtest failed'}</p>}
+{runMutation.isError && <NoticeBlock notice={noticeFromError(runMutation.error)} compact />}
 
       {stats && (
         <div className="bt-results">

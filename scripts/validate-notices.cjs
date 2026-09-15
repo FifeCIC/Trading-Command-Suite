@@ -53,6 +53,128 @@ const LOCALES_DIR = path.join(REPO_ROOT, 'src', 'core', 'notices', 'locales');
  */
 const CATALOGUE_DOC = path.join(REPO_ROOT, 'docs', 'NOTICE-CODES.md');
 
+/**
+ * #826 Phase 5 — the RATCHET on raw error rendering in the UI.
+ *
+ * WHAT IT MEASURES
+ * ----------------
+ * A "raw error render" is a place where a user is shown an error whose only identity is its wording:
+ * `error.message`, `err.message`, `{error}`. Those are the sites where the status, the code and the
+ * remedy have all been discarded — the defect #824 exposed, where the user was shown the broker's
+ * bare sentence "Unsupported filling mode".
+ *
+ * WHY A RATCHET RATHER THAN A RULE
+ * --------------------------------
+ * 19 files cannot be migrated in one honest pass, and a rule that fails on all 19 would be switched
+ * off — this repo has already measured that (a guard that fires on correct behaviour gets disabled).
+ * So the remaining count is DECLARED in `scripts/notice-ui-surfaces.json`, and:
+ *
+ *   - a file that GROWS                     → fails (regression)
+ *   - a file that SHRINKS                   → also fails, until the number is lowered
+ *   - a new file with raw renders           → fails (migrate it, or declare it deliberately)
+ *
+ * The shrink rule looks pedantic and is the important one: without it the declared number becomes a
+ * claim nobody re-checks, which is exactly how #638's ticked-but-unverified checkbox happened.
+ *
+ * ⚠️ COMMENTS ARE STRIPPED BEFORE COUNTING. The comment explaining a migration naturally mentions
+ * `error.message`; counting those would mean the number could never fall, and would let an agent
+ * "fix" the metric with a comment. Full-line `//` and all block comments are removed — a trailing
+ * inline `//` is not, a documented limit.
+ */
+const UI_ALLOWANCE_FILE = path.join(__dirname, 'notice-ui-surfaces.json');
+const UI_SCAN_ROOT = path.join(REPO_ROOT, 'src');
+/** The notices machinery itself handles raw messages — it is the thing doing the converting. */
+const UI_SKIP_PREFIX = [path.join(UI_SCAN_ROOT, 'core', 'notices')];
+/**
+ * ⚠️ THE PROXY IS `…message`, AND ONLY THAT. An earlier version also counted `{error}`, which matched
+ * `notice={error}` — the CORRECT migrated form — so it flagged good code as bad and would have been
+ * switched off within a week. The defensible definition of the defect is narrower and truer:
+ * extracting `.message` from an error is the moment its code, status and remedy are discarded.
+ *
+ * ⚠️ LIMIT: it cannot see an error STRING passed as a child (`<p>{message}</p>`), because by then the
+ * provenance is invisible. This makes Phase 5 measurable and monotonic; it is not a detector.
+ */
+const RAW_ERROR_PATTERNS = [/(\b(error|err|e)\??\.message\b)/g];
+
+/** Remove block comments and full-line `//` comments, so a comment cannot move the number. */
+function stripComments(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*\/\//.test(line))
+    .join('\n');
+}
+
+/** Count raw error renders per UI file. Map of repo-relative path -> count, entries with 0 omitted. */
+function scanUiSurfaces() {
+  const files = [];
+  walk(UI_SCAN_ROOT, files);
+  const counts = new Map();
+
+  for (const full of files) {
+    const rel = path.relative(REPO_ROOT, full).split(path.sep).join('/');
+    if (!/\.(jsx|js)$/.test(rel)) continue;
+    if (rel.endsWith('.test.js')) continue;
+    if (UI_SKIP_PREFIX.some((p) => full.startsWith(p))) continue;
+
+    let body;
+    try {
+      body = stripComments(fs.readFileSync(full, 'utf8'));
+    } catch {
+      continue;
+    }
+    let hits = 0;
+    for (const pattern of RAW_ERROR_PATTERNS) hits += (body.match(pattern) || []).length;
+    if (hits > 0) counts.set(rel, hits);
+  }
+
+  return counts;
+}
+
+/**
+ * Compare the live count against the declared allowance. Pure, so `--self-test` can prove it fails
+ * in both directions on fixtures rather than asserting on the real tree and hoping.
+ */
+function validateUiAllowance(actual, allowance) {
+  const errors = [];
+  let remaining = 0;
+
+  for (const [file, count] of actual) {
+    remaining += count;
+    const declared = allowance[file];
+    if (declared === undefined) {
+      errors.push(
+        `  UI: ${file} renders ${count} raw error(s) and is not declared — migrate it, or add it to scripts/notice-ui-surfaces.json`,
+      );
+    } else if (count > declared) {
+      errors.push(`  UI: ${file} went from ${declared} to ${count} raw error render(s) — regression`);
+    } else if (count < declared) {
+      errors.push(
+        `  UI: ${file} is down to ${count} from ${declared} raw error render(s) — record it: node scripts/validate-notices.cjs --update-allowance`,
+      );
+    }
+  }
+
+  for (const [file, declared] of Object.entries(allowance)) {
+    if (!actual.has(file)) {
+      errors.push(
+        `  UI: ${file} no longer renders any raw error — remove its entry (${declared}) with --update-allowance`,
+      );
+    }
+  }
+
+  return { errors, remaining };
+}
+
+function readUiAllowance() {
+  if (!fs.existsSync(UI_ALLOWANCE_FILE)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(UI_ALLOWANCE_FILE, 'utf8')).files ?? {};
+  } catch {
+    return {};
+  }
+}
+
 const SCAN_ROOTS = ['src', 'nest/src', 'nest/scripts', 'scripts', '.github', 'docs'];
 const SCAN_EXTS = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.json', '.md', '.py', '.ps1']);
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', 'coverage', '.git', 'backups', 'logs', 'data']);
@@ -505,12 +627,57 @@ async function loadLocaleBundle(file) {
     const lj = validateLocaleBundle('xx', locBad, good).errors.join('\n');
     expect('locale: rejects a code the registry does not define', /not registered/.test(lj));
     expect('locale: rejects a placeholder the code does not declare', /does not declare/.test(lj));
+
+    // ── the Phase 5 ratchet ─────────────────────────────────
+    const ui = (actual, allowed) => validateUiAllowance(new Map(actual), allowed);
+    expect('UI ratchet: an undeclared file fails', ui([['a.jsx', 1]], {}).errors.length === 1);
+    expect('UI ratchet: growth fails', /regression/.test(ui([['a.jsx', 2]], { 'a.jsx': 1 }).errors.join()));
+    expect(
+      'UI ratchet: shrinkage fails until it is recorded',
+      /record it/.test(ui([['a.jsx', 1]], { 'a.jsx': 2 }).errors.join()),
+    );
+    expect(
+      'UI ratchet: a stale entry fails',
+      /no longer renders/.test(ui([], { 'a.jsx': 1 }).errors.join()),
+    );
+    expect('UI ratchet: matching counts are silent', ui([['a.jsx', 2]], { 'a.jsx': 2 }).errors.length === 0);
+    expect('UI ratchet: comments are not counted', stripComments('// error.message\n/* e.message */\n').trim() === '');
     console.log();
     if (failed) {
       console.log(`FAILED (${failed})`);
       process.exit(1);
     }
     console.log('OK - self-test passed');
+    process.exit(0);
+  }
+
+  // ── --update-allowance: record the Phase 5 ratchet ────────────────────
+  if (process.argv.includes('--update-allowance')) {
+    const actual = scanUiSurfaces();
+    const previous = readUiAllowance();
+    const files = Object.fromEntries([...actual.entries()].sort((a, b) => a[0].localeCompare(b[0])));
+    const total = Object.values(files).reduce((a, b) => a + b, 0);
+    const before = Object.values(previous).reduce((a, b) => a + b, 0);
+
+    fs.writeFileSync(
+      UI_ALLOWANCE_FILE,
+      JSON.stringify(
+        {
+          note:
+            'Raw error renders left in the UI (#826 Phase 5). This number may only go DOWN: raising it ' +
+            'is a regression and the gate fails on it. Lower it with: node scripts/validate-notices.cjs --update-allowance',
+          total,
+          files,
+        },
+        null,
+        2,
+      ) + '\n',
+      'utf8',
+    );
+
+    console.log(
+      `[notices] UI allowance recorded: ${before} -> ${total} raw error render(s) across ${Object.keys(files).length} file(s)`,
+    );
     process.exit(0);
   }
 
@@ -604,6 +771,13 @@ async function loadLocaleBundle(file) {
         result.locales.push(`${locale}:${checked.count}${checked.fallbacks ? ` (+${checked.fallbacks} fields in English)` : ''}`);
       }
     }
+
+    // ── #826 Phase 5 — raw error renders in the UI (the ratchet) ────────────
+    const uiActual = scanUiSurfaces();
+    const ui = validateUiAllowance(uiActual, readUiAllowance());
+    result.errors.push(...ui.errors);
+    result.uiRemaining = ui.remaining;
+    result.uiFiles = uiActual.size;
   } catch (e) {
     // An exception here is a defect in THIS validator, not in the registry — say so, so it is not
     // mistaken for a real failure of the code under test.
@@ -614,7 +788,10 @@ async function loadLocaleBundle(file) {
   console.log(
     `[notices] ${result.codes.length} registered code(s), ${result.filesScanned} file(s) scanned, ` +
       `${result.serverCatalogue} declared as backend-emittable` +
-      (result.locales?.length ? `, locales: ${result.locales.join(' ')}` : ''),
+      (result.locales?.length ? `, locales: ${result.locales.join(' ')}` : '') +
+      (result.uiRemaining !== undefined
+        ? `, UI: ${result.uiRemaining} raw error render(s) left in ${result.uiFiles} file(s)`
+        : ''),
   );
 
   if (result.warnings.length) {

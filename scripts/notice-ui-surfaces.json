@@ -1,0 +1,33 @@
+{
+  "note": "Raw error renders left in the UI (#826 Phase 5). This number may only go DOWN: raising it is a regression and the gate fails on it. Lower it with: node scripts/validate-notices.cjs --update-allowance",
+  "total": 40,
+  "files": {
+    "src/components/OrderModal.jsx": 1,
+    "src/components/SeasonalityHeatmap.jsx": 1,
+    "src/components/SpeedChart.jsx": 1,
+    "src/core/fx/useFxRate.js": 1,
+    "src/core/hooks/useSpeedCockpit.js": 1,
+    "src/pages/AccountsDashboardPage.jsx": 1,
+    "src/pages/ActiveSymbolsPage.jsx": 2,
+    "src/pages/AddSymbolPage.jsx": 2,
+    "src/pages/CreateProtocolsPage.jsx": 2,
+    "src/pages/EarningsCalendarPage.jsx": 4,
+    "src/pages/EarningsWhispersPage.jsx": 1,
+    "src/pages/HomeDashboard.jsx": 1,
+    "src/pages/ImportJobsPage.jsx": 1,
+    "src/pages/Mt5TradingPage.jsx": 5,
+    "src/pages/OrderTestingPage.jsx": 1,
+    "src/pages/PortfolioLabPage.jsx": 2,
+    "src/pages/PriceForecastPage.jsx": 1,
+    "src/pages/ProtocolsPageB.jsx": 1,
+    "src/pages/ScoringDebugLab.jsx": 1,
+    "src/pages/SignalsOverviewPage.jsx": 1,
+    "src/pages/StrategyCreatePage.jsx": 1,
+    "src/pages/StrategyMonitorPage.jsx": 2,
+    "src/pages/SymbolFocusPage.jsx": 1,
+    "src/pages/T212PortfolioPage.jsx": 1,
+    "src/pages/TradingSettingsPage.jsx": 1,
+    "src/pages/TrainingCandlePatternsPage.jsx": 1,
+    "src/theme/registry.js": 2
+  }
+}

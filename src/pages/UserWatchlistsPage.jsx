@@ -9,6 +9,8 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../core/api/client';
+import NoticeBlock from '../components/NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 import './watchlists.css';
 
 /** Clean watchlist label: strip timestamp suffixes */
@@ -216,8 +218,9 @@ export default function UserWatchlistsPage() {
 
       {error && (
         <div className="wl-error">
-          <p>Failed to load watchlists: {error.message}</p>
-          <p className="wl-hint">Check that the API server is running on port 3201.</p>
+          {/* The old form pasted `error.message` — the status, code and remedy were all dropped,
+              and the hint below duplicated what a notice's `action` already says (#826 Phase 5). */}
+          <NoticeBlock notice={noticeFromError(error)} />
         </div>
       )}
 

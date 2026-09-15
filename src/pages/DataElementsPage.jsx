@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { apiGet } from '../core/api/client';
 import LoadingSkeleton from '../components/LoadingSkeleton';
-import EmptyState from '../components/EmptyState';
+import NoticeBlock from '../components/NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 import './trading-platforms.css';
 import './data-elements.css';
 
@@ -79,7 +80,7 @@ export default function DataElementsPage() {
           setFreshnessData(results);
         }
       } catch (e) {
-        setError(e.message || 'Failed to load');
+        setError(noticeFromError(e));
       }
       setLoading(false);
     }
@@ -147,7 +148,10 @@ export default function DataElementsPage() {
   }
 
   if (error) {
-    return <div className="trading-platforms-page"><div className="tp-page-header"><h1>Data Elements</h1></div><EmptyState icon="❌" title="Could not load data" description={error} /></div>;
+    // The notice replaces EmptyState here: the operation FAILED rather than returning nothing, and
+    // `EmptyState` takes a string description — which is how a raw `error.message` used to reach the
+    // user with its code, status and remedy stripped off.
+    return <div className="trading-platforms-page"><div className="tp-page-header"><h1>Data Elements</h1></div><NoticeBlock notice={error} /></div>;
   }
 
   return (

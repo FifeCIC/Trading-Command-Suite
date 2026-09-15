@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../core/api/client';
+import { noticeFromError } from '../core/notices/from-error.js';
 import './trading-strategies.css';
 
 const TRADING = '/api/trading/strategies';
@@ -59,7 +60,9 @@ export default function TradingStrategiesPage() {
       .catch(e => {
         if (cancelled) return;
         setTrading([]);
-        setError(e.message);
+        // The notice is stored even though this surface only uses `error` as a flag today: the raw
+      // `e.message` was collected and then never shown, so a code is what makes it renderable later.
+      setError(noticeFromError(e));
         setLoading(false);
       });
     return () => { cancelled = true; };

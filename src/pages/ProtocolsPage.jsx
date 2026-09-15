@@ -4,6 +4,8 @@ import { useSearchParams } from 'react-router-dom';
 import { apiGet } from '../core/api/client';
 import ProtocolsPageB from './ProtocolsPageB';
 import { getProtocolType } from '../core/protocol-utils';
+import NoticeBlock from '../components/NoticeBlock';
+import { noticeFromError } from '../core/notices/from-error.js';
 import './protocols-page.css';
 
 export default function ProtocolsPage() {
@@ -35,7 +37,10 @@ export default function ProtocolsPage() {
     });
   })();
   const loading = protocolsQuery.isLoading;
-  const error = protocolsQuery.error?.message || null;
+  // ⚠️ A NOTICE, not a string (#826 Phase 5). The server's code is used when it sends one; otherwise
+  // the fallback names the failed OPERATION, and the server's own wording is kept as the cause. The
+  // old form kept only `error.message`, so the status, the code and the remedy were all discarded.
+  const error = protocolsQuery.error ? noticeFromError(protocolsQuery.error) : null;
 
   useEffect(() => {
     if (protocols.length > 0 && !selected) setSelected(protocols[0]);
@@ -60,7 +65,7 @@ export default function ProtocolsPage() {
       <div className="protocols-page">
         <div className="protocols-error">
           <h2>Unable to load protocols</h2>
-          <p>{error}</p>
+          <NoticeBlock notice={error} />
           <button onClick={() => protocolsQuery.refetch()}>Retry</button>
         </div>
       </div>
